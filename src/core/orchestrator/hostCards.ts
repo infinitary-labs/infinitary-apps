@@ -15,7 +15,9 @@ import {
   forgeSignInTitle,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "@shared/forges";
+import { said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
+import { SAVED_RESETS_PAGE } from "@shared/quota";
 import type { SeatPauseClass } from "./seat";
 
 /**
@@ -278,6 +280,24 @@ export function creditsOfferCardId(accountId: string, deviceId?: string): string
 }
 
 /**
+ * A spent account's saved resets on its run-out card (docs/quota.md, "Saved
+ * resets"): how many would refill its allowance now, and a link to the
+ * provider's usage page, where the captain uses one. Infinitary never uses
+ * a reset itself. Empty for a provider with no such page.
+ */
+export function savedResetsWords(input: { account: string; provider: string; count: number }) {
+  const page = SAVED_RESETS_PAGE[input.provider];
+  if (!page || input.count < 1) return "";
+  const now = saidMark(said("cardSavedResetsNow", { account: input.account, count: input.count }));
+  const link = saidMark(
+    said("cardSavedResetsOpenPage", { site: new URL(page).host }),
+    "a",
+    `href="${page}"`,
+  );
+  return `${now} ${link}`;
+}
+
+/**
  * The crew's run-out card (INF-4104 piece 2): crew work would drop to a
  * weaker model or wait because an account's allowance is spent, while its
  * provider says the account has credits and its Keep going on credits
@@ -291,6 +311,8 @@ export function creditsOfferCard(input: {
   /** When its allowance resets, in clock time, when known. */
   resetsAt?: string;
   credits: { usedPercent?: number; balance?: string };
+  /** Saved resets that would apply now, by its provider and count (`savedResetsWords`). */
+  savedResets?: { provider: string; count: number };
   /**
    * The computer that runs work the account is on, by id and as words say
    * where ("on Mac mini"): its switch is saved there, so the button sends
@@ -300,6 +322,9 @@ export function creditsOfferCard(input: {
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
   const { computer } = input;
   const until = input.resetsAt ? ` until ${input.resetsAt}` : "";
+  const resets = input.savedResets
+    ? ` ${savedResetsWords({ account: input.name, ...input.savedResets })}`
+    : "";
   return {
     id: creditsOfferCardId(input.accountId, computer?.deviceId),
     title: computer
@@ -307,8 +332,8 @@ export function creditsOfferCard(input: {
       : `${input.name} has used up its allowance${until}`,
     meta: "Crew work",
     body: computer
-      ? `${creditsOfferSentence(input.credits)} Crew work ${computer.where} drops to a weaker model or waits until then unless you keep going on credits. Crew work there would then spend them only after every included allowance.`
-      : `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.`,
+      ? `${creditsOfferSentence(input.credits)} Crew work ${computer.where} drops to a weaker model or waits until then unless you keep going on credits. Crew work there would then spend them only after every included allowance.${resets}`
+      : `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.${resets}`,
     actions: [
       keepGoingAction(computer ? `${input.accountId}@${computer.deviceId}` : input.accountId, true),
     ],

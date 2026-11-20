@@ -1209,6 +1209,12 @@
   "settingsSubscriptionsRetry": "Reintentar",
   "settingsSubscriptionsRetrying": "Reintentando...",
   "settingsSubscriptionsRowActions": "Acciones de {account}",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "one": "{count} restablecimiento guardado · úsalo en {site}",
+    "many": "{count} restablecimientos guardados · usa uno en {site}",
+    "other": "{count} restablecimientos guardados · usa uno en {site}"
+  },
   "settingsSubscriptionsSignIn": "Iniciar sesión",
   "settingsSubscriptionsSignInAgainState": "Vuelve a iniciar sesión.",
   "settingsSubscriptionsSignedIn": "sesión iniciada",

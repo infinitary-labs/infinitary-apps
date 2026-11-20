@@ -9639,6 +9639,24 @@
                                       "state"
                                     ]
                                   },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
+                                    ]
+                                  },
                                   "keepGoingOnCredits": {
                                     "type": "boolean"
                                   },
@@ -27696,6 +27714,24 @@
                         "state"
                       ]
                     },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ]
+                    },
                     "keepGoingOnCredits": {
                       "type": "boolean"
                     },
@@ -27861,6 +27897,24 @@
                         "state"
                       ]
                     },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ]
+                    },
                     "keepGoingOnCredits": {
                       "type": "boolean"
                     },
@@ -28024,6 +28078,24 @@
                       },
                       "required": [
                         "state"
+                      ]
+                    },
+                    "savedResets": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "applicable": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "available"
                       ]
                     },
                     "keepGoingOnCredits": {
@@ -73908,6 +73980,24 @@
                                 "state"
                               ]
                             },
+                            "savedResets": {
+                              "type": "object",
+                              "properties": {
+                                "available": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "applicable": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "available"
+                              ]
+                            },
                             "keepGoingOnCredits": {
                               "type": "boolean"
                             },
@@ -78216,6 +78306,24 @@
                   },
                   "required": [
                     "state"
+                  ]
+                },
+                "savedResets": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "applicable": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "available"
                   ]
                 },
                 "keepGoingOnCredits": {
@@ -85708,6 +85816,24 @@
                                       "state"
                                     ]
                                   },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
+                                    ]
+                                  },
                                   "keepGoingOnCredits": {
                                     "type": "boolean"
                                   },
@@ -87215,6 +87341,24 @@
                                     },
                                     "required": [
                                       "state"
+                                    ]
+                                  },
+                                  "savedResets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "available": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "applicable": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "available"
                                     ]
                                   },
                                   "keepGoingOnCredits": {
@@ -91191,6 +91335,24 @@
                             },
                             "required": [
                               "state"
+                            ]
+                          },
+                          "savedResets": {
+                            "type": "object",
+                            "properties": {
+                              "available": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "applicable": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "available"
                             ]
                           },
                           "keepGoingOnCredits": {

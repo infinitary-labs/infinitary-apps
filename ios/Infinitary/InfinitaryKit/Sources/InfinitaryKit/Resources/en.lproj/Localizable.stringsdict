@@ -259,6 +259,22 @@
       <string>%1$ld parts removed</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ has a saved reset you can use now to refill its allowance.</string>
+      <key>other</key>
+      <string>%1$@ has %2$ld saved resets you can use now to refill its allowance.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1825,6 +1841,22 @@
       <string>%1$ld repository</string>
       <key>other</key>
       <string>%1$ld repositories</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld saved reset · use it on %2$@</string>
+      <key>other</key>
+      <string>%1$ld saved resets · use one on %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

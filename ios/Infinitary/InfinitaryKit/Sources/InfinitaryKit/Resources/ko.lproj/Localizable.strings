@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "변경 링크를 쓸 수 없음";
 "cardRevisionMore" = "%1$@개 더";
 "cardRevisionShowFewer" = "적게 보기";
+"cardSavedResetsOpenPage" = "%1$@에서 사용량 페이지 열기";
 "cardSinceSeenApproved" = "이전 버전을 승인함 · %1$@";
 "cardSinceSeenChose" = "“%1$@”을(를) 고름 · %2$@";
 "cardSinceSeenSaw" = "확인한 카드 이후 · %1$@";

@@ -4,6 +4,7 @@ import {
   type QuotaCreditState,
   type QuotaProviderView,
   type QuotaSnapshotView,
+  savedResetsNow,
   servedProviderOf,
 } from "@shared/quota";
 import { effectiveFromProvider, limitingResetOf } from "./catalog";
@@ -108,6 +109,8 @@ export type CreditsOffer = {
   name: string;
   resetsAt?: string;
   credits: { usedPercent?: number; balance?: string };
+  /** Saved resets that would apply now, when its provider says so (docs/quota.md, "Saved resets"). */
+  savedResets?: { provider: string; count: number };
 };
 
 /**
@@ -136,11 +139,15 @@ export function creditsOffers(
     if (offered.has(accountId)) continue;
     offered.add(accountId);
     const reset = limitingResetOf(row, now);
+    const savedResets = savedResetsNow(row);
     offers.push({
       accountId,
       name: nameOf(row),
       ...(reset !== undefined ? { resetsAt: clockTime(reset) } : {}),
       credits,
+      ...(savedResets !== undefined
+        ? { savedResets: { provider: row.provider, count: savedResets } }
+        : {}),
     });
   }
   return offers;

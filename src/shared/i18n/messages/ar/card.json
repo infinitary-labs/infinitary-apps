@@ -234,6 +234,16 @@
   "cardRevisionLinksUnavailable": "روابط التغيير غير متاحة",
   "cardRevisionMore": "{count} أخرى",
   "cardRevisionShowFewer": "عرض أقل",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "zero": "لدى {account} إعادات تعيين محفوظة ({count}) يمكنك استخدام إحداها الآن لتجديد رصيده.",
+    "one": "لدى {account} إعادة تعيين محفوظة يمكنك استخدامها الآن لتجديد رصيده.",
+    "two": "لدى {account} إعادتا تعيين محفوظتان يمكنك استخدام إحداهما الآن لتجديد رصيده.",
+    "few": "لدى {account} إعادات تعيين محفوظة ({count}) يمكنك استخدام إحداها الآن لتجديد رصيده.",
+    "many": "لدى {account} إعادات تعيين محفوظة ({count}) يمكنك استخدام إحداها الآن لتجديد رصيده.",
+    "other": "لدى {account} إعادات تعيين محفوظة ({count}) يمكنك استخدام إحداها الآن لتجديد رصيده."
+  },
+  "cardSavedResetsOpenPage": "افتح صفحة الاستخدام على {site}",
   "cardSinceSeenApproved": "وافقت على نسخة سابقة · {when}",
   "cardSinceSeenChose": "اخترت «{button}» · {when}",
   "cardSinceSeenSaw": "منذ البطاقة التي رأيتها · {when}",

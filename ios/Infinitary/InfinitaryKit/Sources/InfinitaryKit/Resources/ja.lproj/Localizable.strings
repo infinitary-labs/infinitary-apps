@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "変更箇所へのリンクは利用できません";
 "cardRevisionMore" = "ほか%1$@件";
 "cardRevisionShowFewer" = "表示を減らす";
+"cardSavedResetsOpenPage" = "%1$@ の使用量ページを開く";
 "cardSinceSeenApproved" = "以前のバージョンを承認しました · %1$@";
 "cardSinceSeenChose" = "「%1$@」を選択しました · %2$@";
 "cardSinceSeenSaw" = "前に見たカードから · %1$@";

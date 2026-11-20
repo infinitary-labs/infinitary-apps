@@ -190,6 +190,12 @@
   "cardRevisionLinksUnavailable": "Änderungslinks nicht verfügbar",
   "cardRevisionMore": "{count} weitere",
   "cardRevisionShowFewer": "Weniger anzeigen",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "one": "{account} hat einen gespeicherten Reset, mit dem du sein Kontingent jetzt wieder auffüllen kannst.",
+    "other": "{account} hat {count} gespeicherte Resets, mit denen du sein Kontingent jetzt wieder auffüllen kannst."
+  },
+  "cardSavedResetsOpenPage": "Nutzungsseite auf {site} öffnen",
   "cardSinceSeenApproved": "Du hast eine frühere Version genehmigt · {when}",
   "cardSinceSeenChose": "Du hast „{button}“ gewählt · {when}",
   "cardSinceSeenSaw": "Seit der Karte, die du gesehen hast · {when}",

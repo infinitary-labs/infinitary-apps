@@ -179,6 +179,11 @@
   "cardRevisionLinksUnavailable": "変更箇所へのリンクは利用できません",
   "cardRevisionMore": "ほか{count}件",
   "cardRevisionShowFewer": "表示を減らす",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "other": "{account} には今すぐ使える保存済みのリセットが {count} 回分あり、利用枠を回復できます。"
+  },
+  "cardSavedResetsOpenPage": "{site} の使用量ページを開く",
   "cardSinceSeenApproved": "以前のバージョンを承認しました · {when}",
   "cardSinceSeenChose": "「{button}」を選択しました · {when}",
   "cardSinceSeenSaw": "前に見たカードから · {when}",

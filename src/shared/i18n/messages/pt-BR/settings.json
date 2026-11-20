@@ -1209,6 +1209,12 @@
   "settingsSubscriptionsRetry": "Tentar de novo",
   "settingsSubscriptionsRetrying": "Tentando de novo...",
   "settingsSubscriptionsRowActions": "Ações de {account}",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "one": "{count} redefinição salva · use em {site}",
+    "many": "{count} redefinições salvas · use uma em {site}",
+    "other": "{count} redefinições salvas · use uma em {site}"
+  },
   "settingsSubscriptionsSignIn": "Fazer login",
   "settingsSubscriptionsSignInAgainState": "Faça login de novo.",
   "settingsSubscriptionsSignedIn": "login feito",

@@ -1165,6 +1165,10 @@
   "settingsSubscriptionsRetry": "再試行",
   "settingsSubscriptionsRetrying": "再試行中...",
   "settingsSubscriptionsRowActions": "{account} の操作",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "other": "保存済みのリセット {count} 回分 · {site} で使用"
+  },
   "settingsSubscriptionsSignIn": "サインイン",
   "settingsSubscriptionsSignInAgainState": "もう一度サインインしてください。",
   "settingsSubscriptionsSignedIn": "サインイン済み",

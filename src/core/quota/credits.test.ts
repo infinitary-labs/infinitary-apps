@@ -7,8 +7,9 @@ import { parseCodexUsage } from "./providers/codex";
 
 /**
  * The credits fact each provider's usage reading carries (INF-4104 piece 1,
- * docs/quota.md "Credits past the allowance"): what it says, and that it
- * never raises a plan window. The answers are whole provider readings
+ * docs/quota.md "Credits past the allowance"), and Codex's saved resets
+ * (INF-5369 piece 6, "Saved resets"): what each says, and that neither
+ * raises a plan window. The answers are whole provider readings
  * (`tests/fixtures/quota-credits`).
  */
 
@@ -100,5 +101,29 @@ describe("ChatGPT's Codex credits", () => {
     });
     const { credits: _gone, spend_control: _none, ...without } = body;
     expect(parseCodexUsage(without, NOW).credits).toBeUndefined();
+  });
+});
+
+// INF-5369 piece 6 (docs/quota.md, "Saved resets"): the count is shown, never used.
+describe("ChatGPT's saved resets for Codex", () => {
+  // The same live Pro reading: it holds one saved reset that does not apply yet.
+  const body = reading("codex-usage-credits.json") as Record<string, unknown>;
+  const resets = body.rate_limit_reset_credits as Record<string, number>;
+
+  it("are the held and applicable counts as sent, beside unchanged plan windows", () => {
+    const parsed = parseCodexUsage(body, NOW);
+    expect(parsed.savedResets).toEqual({
+      available: resets.available_count,
+      applicable: resets.applicable_available_count,
+    });
+    const { rate_limit_reset_credits: _gone, ...without } = body;
+    expect(parsed.windows).toEqual(parseCodexUsage(without, NOW).windows);
+  });
+
+  it("are unknown, never zero, when the reading carries no count", () => {
+    const { rate_limit_reset_credits: _gone, ...without } = body;
+    expect(parseCodexUsage(without, NOW).savedResets).toBeUndefined();
+    const noCount = { ...body, rate_limit_reset_credits: { applicable_available_count: 0 } };
+    expect(parseCodexUsage(noCount, NOW).savedResets).toBeUndefined();
   });
 });

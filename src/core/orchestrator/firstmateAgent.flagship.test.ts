@@ -1,7 +1,8 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
-import { clockTime } from "@shared/quota";
+import * as m from "@shared/i18n/messages.generated";
+import { clockTime, type QuotaSavedResetsView, SAVED_RESETS_PAGE } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import {
   CLAUDE_ACCOUNT,
@@ -29,6 +30,7 @@ import {
 } from "../../../tests/helpers/firstmateHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { SDKUserMessage } from "../../../tests/helpers/scriptedClaudeQuery";
+import { parseCodexUsage } from "../quota/providers/codex";
 import type { SessionSpec } from "../session/session";
 import { DELIVERY_COMPLETE } from "./contextDelivery";
 import { formatFlagshipError } from "./firstmateSeat";
@@ -222,6 +224,48 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(t.settings.getFirstmateAccount()).toBe("acct_a");
     expect((t.sessions[2] as FakeSession).prompts[0]).toContain("fourth");
     expect(t.cards().some((card) => card.id === "card-fm-no-headroom")).toBe(false);
+  });
+
+  // INF-5369 piece 6 (docs/quota.md, "Saved resets"): shown, never used.
+  it("says on the spent-allowance card when a saved reset would refill the account now, with a link to its usage page", async () => {
+    const live = parseCodexUsage(
+      JSON.parse(
+        readFileSync(
+          join(__dirname, "../../../tests/fixtures/quota-credits/codex-usage-credits.json"),
+          "utf8",
+        ),
+      ),
+      Date.now(),
+    ).savedResets as QuotaSavedResetsView;
+    const spentCard = async (savedResets: QuotaSavedResetsView) => {
+      const t = setupWithFlagship({
+        accounts: [
+          { id: "acct_w", providerId: "openai-codex", label: "Work", enabled: true, savedResets },
+        ],
+      });
+      t.setHeadroom("acct_w", 50);
+      await t.agent.converse("first");
+      (t.sessions[0] as FakeSession).resolveNextPrompt();
+      await tick();
+      t.setHeadroom("acct_w", 0);
+      await t.agent.converse("second");
+      await tick();
+      return t.cards().find((card) => card.id === "card-fm-no-headroom") as Card;
+    };
+
+    const applies = await spentCard({ ...live, applicable: live.available });
+    expect(applies.body).toContain(
+      m.cardSavedResetsNow({ account: "Codex · Work", count: live.available }),
+    );
+    expect(applies.body).toContain(`<a href="${SAVED_RESETS_PAGE.codex}"`);
+    // Shown only: no button uses it.
+    expect(applies.actions.map((action) => action.id)).toEqual([
+      "recheck-allowance",
+      "open-settings",
+    ]);
+
+    // The live reading's saved reset does not apply yet: the card says nothing of it.
+    expect((await spentCard(live)).body).not.toContain(SAVED_RESETS_PAGE.codex);
   });
 
   it("never rebinds mid-turn: a busy session steers instead", async () => {

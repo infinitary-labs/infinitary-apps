@@ -190,6 +190,12 @@
   "cardRevisionLinksUnavailable": "Change links unavailable",
   "cardRevisionMore": "{count} more",
   "cardRevisionShowFewer": "Show fewer",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "one": "{account} has a saved reset you can use now to refill its allowance.",
+    "other": "{account} has {count} saved resets you can use now to refill its allowance."
+  },
+  "cardSavedResetsOpenPage": "Open the usage page on {site}",
   "cardSinceSeenApproved": "You approved an earlier version · {when}",
   "cardSinceSeenChose": "You chose “{button}” · {when}",
   "cardSinceSeenSaw": "Since the card you saw · {when}",

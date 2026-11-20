@@ -1187,6 +1187,11 @@
   "settingsSubscriptionsRetry": "Erneut versuchen",
   "settingsSubscriptionsRetrying": "Neuer Versuch …",
   "settingsSubscriptionsRowActions": "Aktionen für {account}",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "one": "{count} gespeicherter Reset · einlösbar auf {site}",
+    "other": "{count} gespeicherte Resets · einlösbar auf {site}"
+  },
   "settingsSubscriptionsSignIn": "Anmelden",
   "settingsSubscriptionsSignInAgainState": "Melde dich erneut an.",
   "settingsSubscriptionsSignedIn": "angemeldet",

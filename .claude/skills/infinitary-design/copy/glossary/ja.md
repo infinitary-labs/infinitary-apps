@@ -134,6 +134,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | rigor (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} rigor". |
 | Runbooks | ランブック | Settings section name. |
 | Runs on | 実行先 | Record label. |
+| saved reset (a provider's, refills the allowance) | 保存済みのリセット | ChatGPT's saved resets for Codex, counted with 回分; Infinitary never uses one. |
 | Secrets (settings section) | シークレット | The section's own name. |
 | send back (a change out of a batch) | 差し戻す | The usual word for returning work with a reason. |
 | server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |

@@ -122,6 +122,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rigor levels: Quick, Default, Careful | Rápido, Predeterminado, Cuidadoso | Masculine, agreeing with "cuidado": "Cuidado: Rápido". |
 | run (an automation's) | ejecución, ejecutarse | "Próxima ejecución", "Se ejecuta"; the verb is "ejecutar" everywhere. |
 | Runbooks | Manuales | A Settings tab and the folder of guidance it opens. |
+| saved reset (a provider's, refills the allowance) | restablecimiento guardado | ChatGPT's saved resets for Codex; Infinitary never uses one. |
 | Secrets | Secretos | |
 | send back (a change out of a batch) | devolver | "Devolver con un motivo". |
 | server, address (a custom API's) | servidor, dirección | Said only where English names the person's own server and its address. |

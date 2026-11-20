@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "改动链接不可用";
 "cardRevisionMore" = "还有 %1$@ 个";
 "cardRevisionShowFewer" = "收起";
+"cardSavedResetsOpenPage" = "在 %1$@ 打开用量页面";
 "cardSinceSeenApproved" = "你批准了较早的版本 · %1$@";
 "cardSinceSeenChose" = "你选择了“%1$@” · %2$@";
 "cardSinceSeenSaw" = "自你看过的卡片以来 · %1$@";

@@ -678,3 +678,35 @@ describe("Subscriptions rowView: credits past the allowance (INF-4104 piece 1)",
     expect(rowView(account, unread, now).credits).toBeUndefined();
   });
 });
+
+// INF-5369 piece 6 (docs/quota.md, "Saved resets"): the count and where one is used.
+describe("Subscriptions rowView: saved resets", () => {
+  const now = 1_800_000_000_000;
+  const codex = { ...account, providerId: "openai-codex" };
+  const reading = (
+    provider: string,
+    savedResets: QuotaProviderView["savedResets"],
+  ): QuotaProviderView => ({
+    provider,
+    label: provider,
+    status: "ok",
+    stale: false,
+    windows: [{ id: "weekly", label: "weekly", percentRemaining: 16 }],
+    ...(savedResets ? { savedResets } : {}),
+  });
+
+  it("says how many the account holds and where one is used, whether or not one applies now", () => {
+    expect(rowView(codex, reading("codex", { available: 1, applicable: 0 }), now).savedResets).toBe(
+      m.settingsSubscriptionsSavedResets({ count: 1, site: "chatgpt.com" }),
+    );
+    expect(rowView(codex, reading("codex", { available: 3 }), now).savedResets).toBe(
+      m.settingsSubscriptionsSavedResets({ count: 3, site: "chatgpt.com" }),
+    );
+  });
+
+  it("says nothing when none are held, the count is unknown, or the provider has no saved resets", () => {
+    expect(rowView(codex, reading("codex", { available: 0 }), now).savedResets).toBeUndefined();
+    expect(rowView(codex, reading("codex", undefined), now).savedResets).toBeUndefined();
+    expect(rowView(account, reading("claude", { available: 1 }), now).savedResets).toBeUndefined();
+  });
+});

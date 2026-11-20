@@ -201,6 +201,13 @@
   "cardRevisionLinksUnavailable": "Links de alteração indisponíveis",
   "cardRevisionMore": "mais {count}",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "one": "{account} tem uma redefinição salva que você pode usar agora para renovar a franquia.",
+    "many": "{account} tem {count} redefinições salvas que você pode usar agora para renovar a franquia.",
+    "other": "{account} tem {count} redefinições salvas que você pode usar agora para renovar a franquia."
+  },
+  "cardSavedResetsOpenPage": "Abrir a página de uso em {site}",
   "cardSinceSeenApproved": "Você aprovou uma versão anterior · {when}",
   "cardSinceSeenChose": "Você escolheu “{button}” · {when}",
   "cardSinceSeenSaw": "Desde o cartão que você viu · {when}",

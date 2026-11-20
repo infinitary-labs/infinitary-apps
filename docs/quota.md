@@ -196,7 +196,7 @@ Infinitary neither buys credits, switches them on nor sets their limit; the prov
 
 The Subscriptions row says the fact in one line under its meters, then where to change it (`creditsLine` in `src/renderer/src/settings/subscriptionsWords.ts`, `docs/subscriptions-tab.md`).
 Alone the fact routes nothing, picks no account and pauses nothing; the account's Keep going on credits switch below is what lets an account serve on it.
-`src/core/quota/credits.test.ts` reads whole provider answers from `tests/fixtures/quota-credits/`: live Claude and Codex usage readings, the Codex one trimmed of its identity; the client's pushed readings there are written from its published types.
+`src/core/quota/credits.test.ts` reads whole provider answers from `tests/fixtures/quota-credits/`: live Claude and Codex usage readings, the Codex one trimmed of its identity, which also carries its saved resets ("Saved resets" below); the client's pushed readings there are written from its published types.
 
 ## Keep going on credits
 
@@ -229,6 +229,21 @@ The row's menu offers it, and the provider's own limit is the only cap: Infinita
   A later reading whose credits read `available` after `spent` or `off` ends that hold early (`AccountVault.noteCreditsAvailable`), and so does turning the switch on while the credits read `available`.
 - **Feed lines.**
   `CreditsWatch` reads each snapshot against the one before it and says one line when an account that keeps going starts spending credits, and one when its credits run out; a restart says nothing again.
+
+## Saved resets
+
+INF-5369 piece 6.
+ChatGPT can give a Codex account saved resets: each one, used on ChatGPT's own usage page, refills the allowance it covers before that allowance resets on its own.
+The Codex usage reading's `rate_limit_reset_credits` carries how many the account holds (`available_count`) and how many would apply now (`applicable_available_count`), and the row keeps them as `savedResets` (`quotaSavedResetsViewSchema` in `src/shared/quota.ts`, `codexSavedResets` in `src/core/quota/providers/codex.ts`).
+A reading without a count is unknown, never zero, and the row then carries no `savedResets`.
+OpenAI's own Codex client reads only the held count, so what decides whether a reset applies now is the provider's, read from the applicable count as sent: a reading may hold one that does not apply yet.
+It is a fact beside the windows, like credits: it never raises a window, and routing, the account pick and the first mate's pause read nothing from it.
+Infinitary never uses a reset; the captain uses one on the provider's page (`SAVED_RESETS_PAGE`, `https://chatgpt.com/settings/usage` for Codex).
+
+- The Subscriptions row says the held count in one line under its meters, with the site where one is used (`savedResetsLine` in `src/renderer/src/settings/subscriptionsWords.ts`); none held, or an unknown count, says nothing.
+- When the first mate's account runs out and a saved reset applies now (`savedResetsNow`), the spent-allowance card (`card-fm-no-headroom`) says so in its body, naming the account as its row does, with a link to the provider's usage page beside the sentence (`savedResetsWords` in `src/core/orchestrator/hostCards.ts`, `Flagship.savedResetsNow`).
+- The crew's run-out card for an account with credits says the same (`creditsOffers`); an account with no credits to offer raises no crew card, so its saved reset shows on its row and the first mate's card only.
+- The link sits in the card's body rather than among its buttons: a body link opens in the browser from every view, while a new button would be a host operation an older view could not read.
 
 ## Amazon Bedrock refusals
 

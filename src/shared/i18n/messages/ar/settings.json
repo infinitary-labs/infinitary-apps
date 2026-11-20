@@ -1275,6 +1275,15 @@
   "settingsSubscriptionsRetry": "إعادة المحاولة",
   "settingsSubscriptionsRetrying": "جارٍ إعادة المحاولة...",
   "settingsSubscriptionsRowActions": "إجراءات {account}",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "zero": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}",
+    "one": "إعادة تعيين محفوظة واحدة · استخدمها على {site}",
+    "two": "إعادتا تعيين محفوظتان · استخدم واحدة على {site}",
+    "few": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}",
+    "many": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}",
+    "other": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}"
+  },
   "settingsSubscriptionsSignIn": "تسجيل الدخول",
   "settingsSubscriptionsSignInAgainState": "سجّل الدخول مجددًا.",
   "settingsSubscriptionsSignedIn": "مسجّل الدخول",

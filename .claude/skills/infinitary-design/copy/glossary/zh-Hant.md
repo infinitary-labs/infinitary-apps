@@ -127,6 +127,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | rigor levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
 | Runbooks | 作業手冊 | Plain word for the guidance folder. |
 | save point (never said) | 提交 | Never 存檔點. |
+| saved reset (a provider's, refills the allowance) | 已儲存的重設 | ChatGPT's saved resets for Codex, counted with 次; Infinitary never uses one. |
 | schedule (an automation's) | 排程 | As in 依排程. |
 | Secrets | 機密 | The Settings tab; 密鑰 and 秘密 are avoided. |
 | send back (a change out of a batch) | 退回 | |

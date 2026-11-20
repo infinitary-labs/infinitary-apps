@@ -291,6 +291,24 @@
       <string>%1$ld parties retirées</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ a une réinitialisation enregistrée que vous pouvez utiliser maintenant pour renouveler son allocation.</string>
+      <key>many</key>
+      <string>%1$@ a %2$ld réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation.</string>
+      <key>other</key>
+      <string>%1$@ a %2$ld réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2053,6 +2071,24 @@
       <string>%1$ld de dépôts</string>
       <key>other</key>
       <string>%1$ld dépôts</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld réinitialisation enregistrée · à utiliser sur %2$@</string>
+      <key>many</key>
+      <string>%1$ld réinitialisations enregistrées · à utiliser sur %2$@</string>
+      <key>other</key>
+      <string>%1$ld réinitialisations enregistrées · à utiliser sur %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

@@ -29,6 +29,7 @@ import {
   EMPTY_QUOTA_TEXT,
   noReaderText,
   SUBSCRIPTIONS_WORDS,
+  savedResetsLine,
 } from "./subscriptionsWords";
 
 /**
@@ -108,6 +109,8 @@ export type RowView = {
   verdict?: Verdict;
   /** Paying past the allowance, in one line, beside a reading's meters (`creditsLine`). */
   credits?: string;
+  /** Saved resets the account holds and where they are used, in one line (`savedResetsLine`). */
+  savedResets?: string;
   /** The one-line state for a row with no meter to show. */
   stateText?: string;
   stateTone?: "danger";
@@ -336,6 +339,8 @@ export function rowView(
     ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true)
     : undefined;
   if (credits) view.credits = credits;
+  const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : undefined;
+  if (savedResets) view.savedResets = savedResets;
   return withHold(view, account, now);
 }
 

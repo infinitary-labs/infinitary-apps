@@ -3,6 +3,7 @@ import type { CutOff } from "@shared/authFailure";
 import type { Card } from "@shared/cards";
 import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import type { FmEvent } from "@shared/events";
+import type { QuotaSavedResetsView } from "@shared/quota";
 import { vi } from "vitest";
 import { createClaudeSessionFactory } from "../../src/core/claude/session";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
@@ -57,6 +58,8 @@ export type FlagshipAccount = {
   access?: ClaudeAccessSource;
   /** Its Keep going on credits switch, laid over its quota row as the home lays it. */
   keepGoingOnCredits?: boolean;
+  /** Its saved resets, on its quota row as the provider's reading carries them. */
+  savedResets?: QuotaSavedResetsView;
 };
 
 /** Which runtime a Pi-bound spec was served on (the test runtimes carry a kind). */
@@ -139,6 +142,7 @@ export function setupWithFlagship(options: {
             status: "ok" as const,
             stale: false,
             ...(account.keepGoingOnCredits ? { keepGoingOnCredits: true } : {}),
+            ...(account.savedResets ? { savedResets: account.savedResets } : {}),
             windows:
               percent === undefined
                 ? []

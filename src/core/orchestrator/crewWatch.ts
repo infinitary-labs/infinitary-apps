@@ -22,6 +22,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { retireLeftoverBranches } from "./leftoverBranches";
 import { MainCheckWatcher } from "./mainCheckWake";
 import { RunWatcher } from "./runWatch";
+import { ModelWaitError } from "./taskMoves";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
 import { laneText, laneTurnText, renderWake, type WakeBody } from "./wakes";
@@ -491,6 +492,13 @@ export class CrewWatch {
       const resumed = await this.core.sessions.resumeTask(taskId);
       void this.core.turns.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
+      // Waiting for a model is no refused delivery: the rows go back
+      // unspent, and the lane holds until a model can take it.
+      if (caught instanceof ModelWaitError) {
+        this.core.options.inbox.reparkUndelivered(ids);
+        this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
+        return;
+      }
       this.core.restarts.recordRestartOutcome(
         taskId,
         "stopped",

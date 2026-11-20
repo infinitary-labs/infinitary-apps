@@ -239,7 +239,8 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId, selection, spentAt, spentOn } = evaluation;
+    const { result, reasons, candidates, accountId, selection, spentAt, spentOn, named } =
+      evaluation;
     if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt, spentOn);
     this.options.decisions.recordRouting({
       taskId,
@@ -249,13 +250,14 @@ export class Router {
       rule: result.rule,
       served: result.choice ? (result.servedBucket ?? result.bucket) : null,
       reasons,
-      ...((candidates && candidates.length > 0) || accountId || selection
+      ...((candidates && candidates.length > 0) || accountId || selection || named
         ? {
             facts: {
               kind: "routing-candidates" as const,
               candidates: candidates ?? [],
               ...(accountId ? { accountId } : {}),
               ...(selection ? { selection } : {}),
+              ...(named ? { named: named.served } : {}),
             },
           }
         : {}),
@@ -333,8 +335,15 @@ export class Router {
         bound,
         options.placed,
       ) ?? rawCatalog;
-    const available = kept(options.pool?.available ?? this.options.availableModels());
-    const routable = this.options.slots?.routable(available);
+    const pooled = (options.pool?.available ?? this.options.availableModels()).filter(
+      (model) => !without || model.provider !== without,
+    );
+    const available = kept(pooled);
+    // The levels are read from the whole pool, so a model `only` passes over
+    // never lets the starter map stand in; `only` then narrows what they hold.
+    const levels = this.options.slots?.routable(pooled);
+    const routable =
+      levels && only ? { ...levels, models: levels.models.filter((model) => only(model)) } : levels;
     const tier = tierFor(shape);
     const modelId = tier.pin;
     const askPin = modelId
@@ -536,8 +545,9 @@ export class Router {
     return {
       model: { provider: row.provider, id: row.model },
       slot: slot.data,
-      // R0 is the rule of a model named - at the start or by a move.
-      named: row.rule === "R0",
+      // A model named - at the start or by a move - and served; a row from
+      // before that was recorded reads its rule.
+      named: row.named ?? row.rule === "R0",
     };
   }
 
@@ -548,7 +558,8 @@ export class Router {
    * the listed models stand in for placements of the person's own
    * (`ModelSlots.routable`), those defaults include it among `available` -
    * this Mac's models, or a computer's own pool. With no slot record, or
-   * nothing yet known to be available, every model counts as held.
+   * nothing yet known to be available on this Mac, every model counts as
+   * held; a computer's pool known to be empty holds none but a pin or level.
    */
   holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean {
     const key = servedModelKey(ref);
@@ -557,7 +568,8 @@ export class Router {
     const slots = this.options.slots;
     if (!slots || slots.slotsOf(ref).length > 0) return true;
     const models = [...(available ?? this.options.availableModels())];
-    if (models.length === 0) return true;
+    // Nothing known here yet holds it; a computer's pool known to be empty does not.
+    if (models.length === 0) return available === undefined;
     const routable = slots.routable(models);
     if (routable.placed === true) return false;
     return routable.models.some((model) => servedModelKey(model) === key);

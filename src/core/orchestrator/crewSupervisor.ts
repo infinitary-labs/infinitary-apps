@@ -1355,26 +1355,47 @@ export class CrewSupervisor {
   }
 
   /**
-   * The model a conversation reopening on its computer after that computer
-   * restarted opens on, when the one it had left every level: routed again
-   * among that backend's models there, or "wait" when none can take it
-   * (`TaskMoves.routeAgainIfLeft`). Undefined keeps the one it opened with.
+   * The model a conversation opening again on `machine` - after that
+   * computer restarted, or a turn ended that an open found running there -
+   * asks for, when the one it had left every level: routed again among
+   * that computer's models, with the move recorded only once a
+   * conversation opened on it (`TaskMoves.routeAgainIfLeft`), "wait" when
+   * none can take it and "stale" when the task is no longer that
+   * computer's. Undefined keeps the one it opened with.
    */
-  async reopenModel(
+  reopenModel(
     taskId: string,
-    backend: "pi" | "claude",
+    machine: string,
+    attach: boolean,
   ): ReturnType<NonNullable<PlacedHost["reopenModel"]>> {
-    const routed = await this.moves.routeAgainIfLeft(taskId, {
-      machine: this.facts.machineOf(taskId),
-      backend,
+    // Answered at once when nothing can have left, so a reopen that keeps
+    // its model sends its open as soon as it would have without routing.
+    if (!this.moves.mayRouteAgain(taskId)) return undefined;
+    return this.moves.routeAgainIfLeft(taskId, { machine, attach }).then((routed) => {
+      if (!routed || routed === "wait" || routed === "stale") return routed;
+      const commit = routed.commit;
+      if (!commit) return undefined;
+      return {
+        model: routed.model,
+        ...(routed.binding ? { accountId: routed.binding } : {}),
+        thinking: { level: routed.thinkingLevel, ...(routed.quick ? { quick: true } : {}) },
+        commit,
+      };
     });
-    if (routed === "wait") return "wait";
-    if (!routed || routed === "stale") return undefined;
-    return {
-      model: routed.model,
-      ...(routed.binding ? { accountId: routed.binding } : {}),
-      thinkingLevel: routed.thinkingLevel,
-    };
+  }
+
+  /**
+   * A task's conversation did not open again on its computer in the
+   * session this crewmate holds (`PlacedHost.letGo`): the crewmate lets it
+   * go, between turns, so its next turn opens a new one by the ordinary
+   * resume.
+   */
+  placedLetGo(taskId: string): void {
+    const task = this.tasks.get(taskId);
+    if (!task || task.turn.closing) return;
+    this.sessions.releaseSession(task);
+    this.tasks.delete(taskId);
+    this.facts.broadcastCrewCounts();
   }
 
   /**

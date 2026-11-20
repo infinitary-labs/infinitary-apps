@@ -116,6 +116,34 @@ describe("AccountSelector", () => {
     );
   });
 
+  it("prefers an account whose list confirms the routed model over one with no list", async () => {
+    const db = openInMemoryDatabase();
+    const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
+    const selector = new AccountSelector({
+      pool: accounts,
+      // The roomier account has read no list yet; the other's lists Terra.
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 70 },
+            { accountId: "acct_b", percent: 20 },
+          ]),
+      },
+      accountModels: () => [
+        { accountId: "acct_b", models: [{ provider: "openai-codex", id: "gpt-6.1-terra" }] },
+      ],
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(db),
+    });
+    expect(
+      await selector.selectForSpawn("task-1", "openai-codex", { model: "gpt-6.1-terra" }),
+    ).toBe("acct_b");
+    // With no account confirming the model, the one with no list still serves.
+    expect(await selector.selectForSpawn("task-2", "openai-codex", { model: "gpt-6.1-luna" })).toBe(
+      "acct_a",
+    );
+  });
+
   // INF-443 piece 2: the record shows each account's reading and fate.
   it("saves every account's reading and what became of it", async () => {
     const db = openInMemoryDatabase();

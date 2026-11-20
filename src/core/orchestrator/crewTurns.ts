@@ -47,7 +47,7 @@ import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
 import { reviewCoversHead } from "./reviewCarry";
-import { installText } from "./taskMoves";
+import { installText, ModelWaitError } from "./taskMoves";
 import { keptReportNote, laneTurnText, renderWake, type TypedWake } from "./wakes";
 
 /**
@@ -1183,6 +1183,13 @@ export class CrewTurns {
       };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
+      // The restart stays on its lane and opens once a model can take it.
+      if (caught instanceof ModelWaitError)
+        return {
+          ok: true,
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
+          text: `${handle} opens its new conversation once a model can take it: ${message}`,
+        };
       this.core.options.tasks.note(taskId, `its new conversation could not open: ${message}`, {
         news: true,
       });
@@ -1555,6 +1562,9 @@ export class CrewTurns {
       else if (!resumed.turn.busy && !resumed.turn.closing)
         void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
     } catch (caught) {
+      // The restart stays on its lane, said once, and opens fresh once a
+      // model can take it (`CrewSessions.waitingRestart`).
+      if (caught instanceof ModelWaitError) return;
       const message = caught instanceof Error ? caught.message : String(caught);
       this.core.options.tasks.note(task.id, `its new conversation could not open: ${message}`, {
         news: true,

@@ -14,6 +14,7 @@ import {
   api,
   MODEL,
   model,
+  OTHER_MODEL,
   PROVIDER,
   placed,
   sessionHostHooks,
@@ -406,6 +407,28 @@ describe("a conversation held on a computer that runs work", () => {
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);
     expect(api.requests.at(-1)?.body.tools?.map((tool) => tool.name)).toContain("prepare_change");
+  });
+
+  // Intent: a task routed again re-opens its idle conversation there on the new model (docs/helper.md).
+  it("re-opens an idle conversation on the model a later open names", async () => {
+    const at = await placed();
+    const opened = await at.open();
+    expect(opened.state.model).toEqual({ provider: PROVIDER, id: MODEL });
+    model([{ text: "Started." }, { text: "On the other model." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+
+    const again = await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:2`,
+        task: TASK,
+        spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL } },
+      },
+    ]);
+    expect(again.state.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
+    await at.ended(2);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
   });
 
   // Intent: INF-311's accepted whole-call deadline includes waiting for prior events.

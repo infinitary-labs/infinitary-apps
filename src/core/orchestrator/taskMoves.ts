@@ -7,7 +7,7 @@ import { COMPUTER, HERE } from "@shared/deviceNames";
 import { englishOf, said } from "@shared/i18n/said";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import { AUTOMATIC_COMPUTER, type ComputerMove } from "@shared/placement";
-import { backendForProvider, PROVIDER_CATALOG } from "@shared/providers";
+import { PROVIDER_CATALOG } from "@shared/providers";
 import { agoWords, leftBehindLine, moveOutOfReach } from "@shared/recordBar";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { levelDefaultReasoning, type WorkShape } from "@shared/routingPolicy";
@@ -53,7 +53,6 @@ function warnMove(caught: unknown): void {
   console.warn("[crew] a move to another computer could not go on yet:", caught);
 }
 
-/** What the task moves reach of the supervisor beyond its options. */
 /** The model a task routed again to, the account it binds here or there, and how it opens. */
 export type RoutedAgain = {
   model: { provider: string; id: string };
@@ -62,8 +61,29 @@ export type RoutedAgain = {
   /** The account of a computer that runs work that serves it there. */
   binding?: string;
   thinkingLevel: NonNullable<CrewmateSpec["thinkingLevel"]>;
+  /** Quick care opens a rung lower, as its start did, unless an effort was chosen. */
+  quick?: true;
   providerName: string;
+  /**
+   * On a computer that runs work, the move is recorded only once that
+   * computer answers that a conversation opened on this model: `commit`
+   * writes it then, and answers false when a stop, a close or another move
+   * took the task meanwhile. A conversation it reattached to, still on the
+   * old model, records nothing. Absent here, where the move is recorded as
+   * it is chosen.
+   */
+  commit?: () => boolean;
 };
+
+/**
+ * A new conversation does not open: the model the task routed to left
+ * every level and no other model where it opens can take it (`routeAgainIfLeft`).
+ * The task says why once and its lane holds (`waitsForModel`); a reopen that
+ * meets this is no failure and is tried again when that changes.
+ */
+export class ModelWaitError extends Error {}
+
+/** What the task moves reach of the supervisor beyond its options. */
 
 export type TaskMovesHost = {
   now(): number;
@@ -424,33 +444,57 @@ export class TaskMoves {
    * work, or where a move to another computer took it - the task routes
    * again on its own shape, as its start did - a review still away from its
    * builder's provider (R9) - among the models that computer's sign-ins
-   * serve. A custom connection routes only among its own models, and a
-   * conversation reopening in place there only among its backend's. The
-   * new routing row, the record's model and account and one timeline and
-   * feed line commit together. It answers the model the conversation opens
-   * with, and on this Mac its account. Undefined keeps the routed model: a
-   * level, a pin or the defaults standing in for levels still hold it, the
-   * newest model chosen was named (at the start or by a move), or it never
-   * routed. "wait" says no other model on the levels that one of the
-   * computer's accounts serves can take it: the conversation does not open,
-   * the task's lane holds (`waitsForModel`) and it says so once. "stale"
-   * says a stop, a quit, a close or another move took the task while it
-   * waited, so the reopen opens nothing; the account it picked is recorded
-   * only with the move it commits.
+   * serve. A custom connection routes only among its own models. It answers
+   * the model the conversation opens with, its effort, and on this Mac its
+   * account; here the new routing row, the record's model and account and
+   * one timeline and feed line commit together, and on a computer that runs
+   * work only once that computer answers the conversation opened on it
+   * (`RoutedAgain.commit`). Undefined keeps the routed model: a level, a
+   * pin or the defaults standing in for levels still hold it, the newest
+   * model chosen was named and served (at the start or by a move), or it
+   * never routed. "wait" says no other model on the levels that one of the
+   * computer's accounts serves can take it: the conversation does not
+   * open, the task's lane holds (`waitsForModel`) and it says so once; an
+   * open that only reattaches to a conversation open there (`attach`) keeps
+   * its model instead and waits for nothing. "stale" says a stop, a quit, a
+   * close or another move took the task while it waited, so the reopen
+   * opens nothing; the account it picked is recorded only with the move it
+   * commits.
    */
+  /**
+   * Whether the task's next conversation may need routing again
+   * (`routeAgainIfLeft`), read at once from the record and Settings: it is
+   * active, its newest model was routed rather than named, and no pin or
+   * level holds that model. A no clears its wait for a model.
+   */
+  mayRouteAgain(taskId: string): boolean {
+    const router = this.options.router;
+    const record = this.options.tasks.get(taskId);
+    const routed = router?.servedChoice(taskId);
+    const may =
+      !!router &&
+      record?.status === "active" &&
+      !!routed &&
+      !routed.named &&
+      // A pool known to be empty: only a pin or a level holds it.
+      !router.holdsAtALevel(routed.model, []);
+    if (!may) this.modelWaits.delete(taskId);
+    return may;
+  }
+
   async routeAgainIfLeft(
     taskId: string,
     asking: {
       /** The computer the conversation opens on; the task's own by default. */
       machine?: string;
-      /** The backend of a conversation reopening in place there. */
-      backend?: "pi" | "claude";
       /** This open is a move's own, so that move does not supersede it. */
       ownMove?: boolean;
+      /** The open may reattach to a conversation open there, which no wait holds. */
+      attach?: boolean;
     } = {},
   ): Promise<RoutedAgain | "stale" | "wait" | undefined> {
     const router = this.options.router;
-    if (!router) return undefined;
+    if (!router || !this.mayRouteAgain(taskId)) return undefined;
     const machine = asking.machine ?? this.host.machineOf(taskId);
     const local = machine === LOCAL_MACHINE_ID;
     // A computer that runs work routes among its own sign-ins.
@@ -459,7 +503,7 @@ export class TaskMoves {
     const left = (record: TaskRecord | undefined) => {
       const routed = router.servedChoice(taskId);
       if (!record || record.status !== "active" || !routed) return undefined;
-      // The newest model named - at the start or by a move - is kept.
+      // The newest model named and served - at the start or by a move - is kept.
       if (routed.named) return undefined;
       return router.holdsAtALevel(routed.model, pool?.available) ? undefined : routed.model;
     };
@@ -495,7 +539,6 @@ export class TaskMoves {
       const avoidProvider = builder ? router.servedProvider(builder) : undefined;
       const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
       const custom = isCustomApiProvider(from.provider);
-      const backend = asking.backend;
       const prepared = await router.prepare({
         ...(pool ? { pool } : {}),
         ...(avoidProvider ? { avoidProvider } : {}),
@@ -504,9 +547,7 @@ export class TaskMoves {
       // A replacement no account there serves is passed over for the next.
       const passed = new Set<string>();
       const only = (model: { provider: string; id: string }) =>
-        (!custom || model.provider === from.provider) &&
-        (!backend || backendForProvider(model.provider) === backend) &&
-        !passed.has(offeringKey(model));
+        (!custom || model.provider === from.provider) && !passed.has(offeringKey(model));
       const look = () => {
         const preview = router.preview(record.prompt, shape, { ...prepared, only });
         const choice = preview.result.choice;
@@ -547,36 +588,47 @@ export class TaskMoves {
           left: this.host.modelName(from),
           model: this.host.modelName(to),
         });
-        this.options.tasks.atomic(
-          () => {
-            pick?.record();
-            router.commit(taskId, now.preview);
-            this.options.tasks.placement.recordMove(taskId, {
-              model: to,
-              accountId: accountId ?? null,
-              actor: "host",
-              text: englishOf(fact),
-              data: {
-                rerouted: { from: offeringKey(from), to: offeringKey(to) },
-                said: fact,
-                feedLine: true,
-              },
-            });
-          },
-          () => pick?.selected(),
-        );
-        this.modelWaits.delete(taskId);
+        const commit = () => {
+          if (stale()) return false;
+          this.options.tasks.atomic(
+            () => {
+              pick?.record();
+              router.commit(taskId, now.preview);
+              this.options.tasks.placement.recordMove(taskId, {
+                model: to,
+                accountId: accountId ?? null,
+                actor: "host",
+                text: englishOf(fact),
+                data: {
+                  rerouted: { from: offeringKey(from), to: offeringKey(to) },
+                  said: fact,
+                  feedLine: true,
+                },
+              });
+            },
+            () => pick?.selected(),
+          );
+          this.modelWaits.delete(taskId);
+          return true;
+        };
+        if (local) commit();
         const level = now.preview.result.servedBucket ?? now.preview.result.bucket;
+        const chosen =
+          record.shape?.override_reasoning ?? router.reasoningChoice(to, level) ?? undefined;
         return {
           model: to,
           ...(accountId ? { accountId } : {}),
           ...(binding ? { binding } : {}),
-          thinkingLevel: this.effortFor(record, to, level),
+          thinkingLevel: chosen ?? levelDefaultReasoning(level),
+          ...(record.shape?.rigor === "quick" && !chosen ? { quick: true as const } : {}),
           providerName: this.providerName(to.provider),
+          ...(local ? {} : { commit }),
         };
       }
       if (stale()) return "stale";
       if (!left(this.options.tasks.get(taskId))) return undefined;
+      // A conversation open there, which this open may only reattach to, keeps its model.
+      if (asking.attach) return undefined;
       this.waitForModel(taskId, from, machine);
       return "wait";
     });
@@ -584,13 +636,18 @@ export class TaskMoves {
 
   /**
    * Whether a task waits for a model to take it (`routeAgainIfLeft`): its
-   * lane holds while Settings and the models that could serve stay as they
-   * were when the wait began, so a change to either lets it try again.
+   * lane holds while it stays active and its routing choice, Settings, the
+   * models here and what its computer last said it serves stay as they
+   * were when the wait began, so a change to any lets it try again.
    */
   waitsForModel(taskId: string): boolean {
     const began = this.modelWaits.get(taskId);
     if (began === undefined) return false;
-    if (began === this.modelsNow(this.host.machineOf(taskId))) return true;
+    if (
+      this.options.tasks.get(taskId)?.status === "active" &&
+      began === this.modelsNow(taskId, this.host.machineOf(taskId))
+    )
+      return true;
     this.modelWaits.delete(taskId);
     return false;
   }
@@ -607,7 +664,7 @@ export class TaskMoves {
 
   /** Holds the task's lane for a model, and says why once, until it routes again. */
   private waitForModel(taskId: string, from: { provider: string; id: string }, machine: string) {
-    this.modelWaits.set(taskId, this.modelsNow(machine));
+    this.modelWaits.set(taskId, this.modelsNow(taskId, machine));
     const key = offeringKey(from);
     const last = this.options.tasks
       .timeline(taskId)
@@ -623,9 +680,19 @@ export class TaskMoves {
     });
   }
 
-  /** What a wait for a model compares: where it opens, and the routing settings, levels and models here. */
-  private modelsNow(machine: string): string {
-    return `${machine}\n${this.options.router?.routingState() ?? ""}`;
+  /**
+   * What a wait for a model compares: where it opens, the task's newest
+   * routing choice (a move writes a newer one), the routing settings,
+   * levels and models here, and what that computer last said it serves.
+   */
+  private modelsNow(taskId: string, machine: string): string {
+    const routed = this.options.router?.servedChoice(taskId);
+    return [
+      machine,
+      routed ? offeringKey(routed.model) : "",
+      this.options.router?.routingState() ?? "",
+      machine === LOCAL_MACHINE_ID ? "" : (this.options.machines?.servedState?.(machine) ?? ""),
+    ].join("\n");
   }
 
   /**
@@ -1086,9 +1153,10 @@ export class TaskMoves {
       if (move.phase === "waiting") void this.runComputerMove(record.id).catch(warnMove);
       else if (move.phase === "moving")
         await this.endUnfinishedMove(record.id, "Infinitary stopped while its work moved");
-      else if (move.phase === "retiring" && (move.restartFrom !== undefined || move.preparing))
-        void this.reopenMovedTask(record.id).catch(warnMove);
-      else if (move.phase === "retiring") await this.retireMovedSource(record.id);
+      else if (move.phase === "retiring" && (move.restartFrom !== undefined || move.preparing)) {
+        // A reopen waiting for a model goes again once that wait ends.
+        if (!this.waitsForModel(record.id)) void this.reopenMovedTask(record.id).catch(warnMove);
+      } else if (move.phase === "retiring") await this.retireMovedSource(record.id);
       else await this.undoMovedDestination(record.id);
     }
     // A task closed meanwhile moves no further; what its move left goes with its close.
@@ -1389,7 +1457,9 @@ export class TaskMoves {
         this.options.tasks.placement.setComputerMove(taskId, rest);
       }
     } catch (caught) {
-      // Its record names the destination: the next tick reopens it there.
+      // Its record names the destination: the next tick reopens it there,
+      // and a wait for a model already said why once.
+      if (caught instanceof ModelWaitError) return;
       const problem = `it moved, but could not reopen yet: ${errorText(caught)}`;
       const move = this.options.tasks.get(taskId)?.shape?.computer_move;
       if (move && move.problem !== problem) {

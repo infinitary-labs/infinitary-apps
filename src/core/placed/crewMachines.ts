@@ -44,21 +44,43 @@ export type PlacedHost = {
    */
   toolsNow?(taskId: string): readonly string[] | undefined;
   /**
-   * The model a conversation that opens there again after that computer
-   * restarted opens on, when the one it opened with left every level
-   * (docs/routing.md, "A model that left every level"): another its
-   * backend serves there, with that computer's own account for it, or
-   * "wait" when none can take it, so it does not open on the one that left.
-   * Undefined keeps the model it opened with.
+   * The model a conversation that opens on `machine` again - after that
+   * computer restarted, or a turn ended that an open found running there -
+   * asks for, when the one it had left every level (docs/routing.md, "A
+   * model that left every level"): another that computer serves, with its
+   * own account there and the effort it opens at, and `commit`, which
+   * records the move once that computer answers a conversation opened on
+   * it. "wait" when none can take it, so it does not open on the one that
+   * left; "stale" when a stop, a close or a move took the task meanwhile,
+   * so nothing is sent. Undefined, answered at once when nothing can have
+   * left, keeps the model it opened with. With `attach`, the conversation
+   * is open there and the open may reattach to it, so no wait holds it and
+   * it keeps its model when none can take it.
    */
   reopenModel?(
     taskId: string,
-    backend: "pi" | "claude",
-  ): Promise<
-    | { model: { provider: string; id: string }; accountId?: string; thinkingLevel?: string }
-    | "wait"
-    | undefined
-  >;
+    machine: string,
+    attach: boolean,
+  ):
+    | Promise<
+        | {
+            model: { provider: string; id: string };
+            accountId?: string;
+            thinking: { level: "low" | "medium" | "high" | "xhigh" | "off"; quick?: boolean };
+            commit(): boolean;
+          }
+        | "wait"
+        | "stale"
+        | undefined
+      >
+    | undefined;
+  /**
+   * The conversation this crewmate holds did not open there again - no
+   * model there can take it, or the one that can runs on the other backend
+   * - so the crewmate here lets go of it: the task's next turn opens a new
+   * one through the ordinary resume, which routes it again.
+   */
+  letGo?(taskId: string): void;
   /**
    * A computer the task moved off while it was out of reach is back and its
    * copy is kept (docs/helper.md, "Moving a task off a computer that is out
@@ -89,6 +111,12 @@ export type CrewMachines = {
    * True while the roster is unread, since nothing new can open then.
    */
   conversationOpen?(machine: string, taskId: string): boolean;
+  /**
+   * What that computer last said it serves, for a wait for a model to
+   * compare (`TaskMoves.waitsForModel`); a sign-in it adds or an allowance
+   * it reads again changes it.
+   */
+  servedState?(machine: string): string;
   /**
    * Since when the task's computer, in reach, has been catching up with it:
    * from the contact that brought the computer back, or from when its

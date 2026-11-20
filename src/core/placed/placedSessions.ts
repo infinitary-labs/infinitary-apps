@@ -12,6 +12,8 @@ import type { FmEvent } from "@shared/events";
 import { said, saidLine } from "@shared/i18n/said";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import { keepsAtClose, leftoversOf } from "@shared/leftoverPrograms";
+import { offeringKey } from "@shared/modelSlots";
+import { backendForProvider } from "@shared/providers";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
@@ -641,6 +643,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.accounts.served(machine);
   }
 
+  servedState(machine: string): string {
+    return this.accounts.servedState(machine);
+  }
+
   servingAccount(session: ModelSession): string | undefined {
     return this.accounts.servingAccount(session);
   }
@@ -1149,15 +1155,29 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     session: PlacedSession,
     deviceId: string,
     owed = false,
+    onlyIfRouted = false,
   ): Promise<void> {
     const opened = this.specForReopen(placed);
     if (!opened) return Promise.resolve();
     const resume = session.resumeToken();
+    // Still this computer's, in the session this Mac holds, after each wait.
+    const ours = () => heldSession(placed) === session && placed.deviceId === deviceId;
+    let routed: Awaited<ReturnType<NonNullable<PlacedHost["reopenModel"]>>>;
     const reopening = (async () => {
-      // A model that left every level opens on another its backend serves
-      // there, or not at all until one can take it.
-      const routed = await this.host?.reopenModel?.(placed.task, opened.binding.backend);
-      if (routed === "wait") throw new Error("no model on its levels can take it there");
+      // A model that left every level opens on another that computer
+      // serves, or not at all until one can take it (docs/routing.md).
+      routed = await this.host?.reopenModel?.(placed.task, deviceId, owed || onlyIfRouted);
+      if (routed === "stale" || !ours()) return undefined;
+      if (
+        routed === "wait" ||
+        (routed && backendForProvider(routed.model.provider) !== opened.binding.backend)
+      ) {
+        // Nothing opens in this session: the task's next turn opens a new
+        // conversation through the ordinary resume, which routes it again.
+        this.host?.letGo?.(placed.task);
+        return undefined;
+      }
+      if (!routed && onlyIfRouted) return undefined;
       const spec: PlacedSpec = routed
         ? placedSpecSchema.parse({
             ...opened,
@@ -1167,10 +1187,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
               provider: routed.model.provider,
             },
             model: routed.model,
-            thinking: {
-              ...opened.thinking,
-              ...(routed.thinkingLevel ? { level: routed.thinkingLevel } : {}),
-            },
+            thinking: routed.thinking,
           })
         : opened;
       if (routed) placed.spec = spec;
@@ -1183,9 +1200,20 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ]);
     })()
       .then((raw) => {
+        if (raw === undefined) return;
         const { state } = openAnswerSchema.parse(raw);
         placed.reopenOwed = state.streaming;
         session.reopened(state);
+        // The move is recorded only for a conversation that opened on the
+        // new model; one it reattached to, still on the old, records nothing.
+        if (
+          routed &&
+          typeof routed === "object" &&
+          state.model &&
+          offeringKey(state.model) === offeringKey(routed.model) &&
+          ours()
+        )
+          routed.commit();
         if (!session.letGo) this.host?.reopened(placed.task);
       })
       .catch((caught: unknown) => {
@@ -1580,6 +1608,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       // Opened there again from its files: a conversation that started over is carried on as at a restart.
       session.reopened(answer.state);
       if (answer.state.renewal) this.host?.reopened(placed.task);
+      // It opened on the model it had; one that left every level opens on another now.
+      void this.reopen(placed, session, deviceId, false, true);
     } else if (answer.status === "changed" && session) {
       // It did not open there again by itself.
       void this.reopen(placed, session, deviceId);

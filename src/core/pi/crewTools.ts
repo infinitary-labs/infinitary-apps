@@ -1,5 +1,6 @@
 import { formatUsd } from "@shared/costLimit";
 import { DONE_WHYS, type DoneWhy } from "@shared/deliveryFacts";
+import { softHoldWords } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { RepoDelivery } from "@shared/repos";
@@ -538,7 +539,7 @@ export function heldSteerText(taskId: string, hold?: LaneHold): string {
     case "hand-over":
       return `Task ${taskId} is still receiving files handed over to it, ${kept} right after them. ${tail}`;
     case "model":
-      return `Task ${taskId}'s model is on no level in Settings any more and no other model there can take it, ${kept} once one can. ${tail}`;
+      return `Task ${taskId}'s model is on no level in Settings any more and no other model there can take it, ${kept} once one can. ${softHoldWords("model-levels", "firstmate")} ${tail}`;
     case "account":
       return `Task ${taskId}'s account is not answering right now, ${kept} when it answers again; you will hear when it does. ${tail}`;
     case "update":

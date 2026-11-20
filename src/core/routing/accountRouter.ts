@@ -47,12 +47,18 @@ export type AccountSelectorOptions = {
    * The models each account lists (`AccountVault.availableModelsByAccount`):
    * a crewmate's pick leaves out an account whose list names other models
    * but not this one, so the account bound serves the model routing chose.
-   * An account with no list, or an empty one, is not ruled out.
+   * An account with no list, or an empty one, stands in only when no
+   * sibling's list names the model.
    */
   accountModels?: () => { accountId: string; models: { provider: string; id: string }[] }[];
 };
 
 export class AccountSelector {
+  private readonly listsByEvaluation = new WeakMap<
+    PlacedWorkData,
+    ReturnType<NonNullable<AccountSelectorOptions["accountModels"]>> | undefined
+  >();
+
   constructor(private readonly options: AccountSelectorOptions) {}
 
   /**
@@ -182,6 +188,18 @@ export class AccountSelector {
     });
   }
 
+  /**
+   * Which models each account's sign-in lists, read once per routing
+   * evaluation: every model it ranks shares that evaluation's `placed`
+   * read, and an actual pick prepares its own.
+   */
+  private modelLists(placed: PlacedWorkData | undefined) {
+    if (!placed) return this.options.accountModels?.();
+    if (!this.listsByEvaluation.has(placed))
+      this.listsByEvaluation.set(placed, this.options.accountModels?.());
+    return this.listsByEvaluation.get(placed);
+  }
+
   private candidatesFor(
     piProviderId: string,
     model: string | undefined,
@@ -194,13 +212,20 @@ export class AccountSelector {
     // Every account is scored against one read of the placed work.
     const placedWork = this.options.placedWork;
     const data = placed;
-    const lists = model ? this.options.accountModels?.() : undefined;
-    const servesModel = (accountId: string) => {
+    const lists = model ? this.modelLists(placed) : undefined;
+    // An account whose sign-in lists the model serves it; one with no list
+    // yet stands in only when no sibling's list confirms the model.
+    const serving = (accountId: string): boolean | undefined => {
       const listed = lists?.find((row) => row.accountId === accountId)?.models;
-      if (!listed || listed.length === 0) return true;
+      if (!listed || listed.length === 0) return undefined;
       return listed.some((entry) => entry.provider === piProviderId && entry.id === model);
     };
-    const pool = this.options.pool.list(piProviderId).filter((account) => servesModel(account.id));
+    const accounts = this.options.pool.list(piProviderId);
+    const confirmed = accounts.filter((account) => serving(account.id) === true);
+    const pool =
+      confirmed.length > 0
+        ? confirmed
+        : accounts.filter((account) => serving(account.id) === undefined);
     return pool.map((account) => {
       const row = rows?.find(
         (provider) => provider.accountId === account.id && provider.provider === quotaId,

@@ -55,6 +55,8 @@ import { moveWorkFolder, olderWorkFolder } from "./workFolderMove";
 
 export const PROVIDER = "fm-placed";
 export const MODEL = "stub-1";
+/** A second model the same stub connection serves, for a conversation that changes model. */
+export const OTHER_MODEL = "stub-2";
 export const TASK = "task-placed";
 const BUILDER = { name: "builder", uid: 502 };
 
@@ -259,7 +261,7 @@ const runs: HelperRun[] = [];
 export function sessionHostHooks(): void {
   beforeAll(async () => {
     api = await startStubApi(() => true);
-    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL }, [OTHER_MODEL]);
   });
   afterAll(async () => {
     await api.close();

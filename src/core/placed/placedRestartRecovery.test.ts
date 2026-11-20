@@ -3,6 +3,8 @@ import {
   api,
   gate,
   model,
+  OTHER_MODEL,
+  PROVIDER,
   placedWorldHooks,
   type Step,
   said,
@@ -109,4 +111,52 @@ describe("recovery after a work computer quits mid-turn", () => {
       }
     },
   );
+});
+
+// A model that left every level (docs/helper.md, "A model that left every
+// level"): the conversation a computer's restart opens again opens on the
+// model the task routed to, and the move is recorded only once that
+// computer answers it open on that model; a wait opens nothing there.
+describe("reopening after a work computer restarts, when the task's model left every level", () => {
+  it("records the move only once that computer answers the conversation open on the new model", async () => {
+    const at = await world();
+    const taskId = "t-rerouted";
+    model([{ text: "Started." }, { text: "On the other model." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const commit = vi.fn(() => true);
+    const asked = vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit,
+    });
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => commit.mock.calls.length).toBe(1);
+    // A conversation opened anew, not one reattached to.
+    expect(asked).toHaveBeenCalledWith(taskId, expect.any(String), false);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => api.requests.length).toBeGreaterThan(requests);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  it("opens nothing there and lets the task go when no model can take it", async () => {
+    const at = await world();
+    const taskId = "t-waiting";
+    model([{ text: "Started." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue("wait");
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+
+    await at.restartComputer();
+    await expect.poll(() => letGo.mock.calls.length).toBe(1);
+    expect(letGo).toHaveBeenCalledWith(taskId);
+    expect(api.requests.length).toBe(requests);
+  });
 });

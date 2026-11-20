@@ -73,6 +73,11 @@ export class PlacedAccounts
     return { ...pool, deviceId: machine };
   }
 
+  /** What that computer last said of its sign-ins, as one comparable string. */
+  servedState(machine: string): string {
+    return JSON.stringify(this.options.saidSignIns?.(machine) ?? null);
+  }
+
   servingAccount(session: ModelSession): string | undefined {
     return session instanceof PlacedSession ? session.servingAccount() : undefined;
   }

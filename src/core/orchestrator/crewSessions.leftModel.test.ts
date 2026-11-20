@@ -8,6 +8,7 @@
  * real Router and a real ModelSlots record, so taking a model off its levels
  * is the same `setSlotMembership` call the Models board makes.
  */
+import { softHoldWords } from "@shared/holds";
 import { englishOf, said } from "@shared/i18n/said";
 import { offeringKey, SLOTS } from "@shared/modelSlots";
 import { expect, it, vi } from "vitest";
@@ -19,6 +20,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { heldSteerText } from "../pi/crewTools";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { QuotaService } from "../quota/quotaService";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
@@ -488,7 +490,31 @@ it("waits and says so once when no other model can take the task, and its lane h
   expect(waitNotes(h, taskId)).toEqual([words]);
   // While nothing changed, the lane holds: the next message is kept, not tried.
   expect(await relaunched.steer.steerCrewmate(taskId, "and the logs")).toBe("recorded-held");
+  // The first mate hears the hold and its way out.
+  expect(heldSteerText(taskId, relaunched.facts.laneHold(taskId))).toContain(
+    softHoldWords("model-levels", "firstmate"),
+  );
   await relaunched.disposeAll();
+
+  // The next launch's inbox sweep meets the same wait: the messages go back
+  // undelivered, their delivery attempts unspent.
+  const swept = reboot(
+    h,
+    vi.fn(async () => fakeCrewmate({ model: terra })),
+    { specs, router: h.router as unknown as Router, accounts: noAccount.accounts },
+  );
+  await swept.watch.sweepInbox(Date.now() + 60_000);
+  await tick();
+  expect(specs).toEqual([]);
+  expect(
+    h.db
+      .prepare("SELECT attempts, delivered_at FROM inbox WHERE recipient = ? ORDER BY id")
+      .all(taskId),
+  ).toEqual([
+    { attempts: 0, delivered_at: null },
+    { attempts: 0, delivered_at: null },
+  ]);
+  await swept.disposeAll();
 
   // The next launch tries once more and finds the same: it says nothing new.
   expect(await relaunchAndSteer(h, taskId, terra, noAccount.accounts)).toBeUndefined();
@@ -566,14 +592,16 @@ it("routes a task on a computer that runs work among that computer's own models 
   } as unknown as CrewMachines;
   const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
 
-  expect(await relaunched.reopenModel(taskId, "pi")).toMatchObject({
-    model: luna,
-    accountId: "there-codex",
-  });
+  const routed = await relaunched.reopenModel(taskId, "mini", false);
+  expect(routed).toMatchObject({ model: luna, accountId: "there-codex" });
+  // Nothing is recorded until that computer answers a conversation opened on Luna.
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(0);
+  expect(typeof routed === "object" && routed.commit()).toBe(true);
   expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
   expect(reroutedNotes(h, taskId)).toHaveLength(1);
   // Luna holds a level: the next reopen there keeps it.
-  expect(await relaunched.reopenModel(taskId, "pi")).toBeUndefined();
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBeUndefined();
   await relaunched.disposeAll();
 });
 
@@ -615,4 +643,127 @@ it("routes a custom connection's task only among that connection's models, on it
   expect(routedModels(h, taskId)).toEqual([dawn.id, dusk.id]);
   expect(h.tasks.get(taskId)?.accountId).toBe("acct-custom");
   expect(reroutedNotes(h, taskId)).toHaveLength(1);
+});
+
+it("waits on a computer that runs work when none of its sign-ins serves a model, unless it reattaches", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel();
+  // That computer answers its sign-ins: none serves any model.
+  const machines = {
+    served: async () => ({
+      available: [],
+      catalog: [],
+      note: "the computer's own sign-ins",
+      accounts: new Map(),
+      modelAccounts: new Map(),
+    }),
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+
+  // A conversation already open there keeps its model; a new one waits.
+  expect(await relaunched.reopenModel(taskId, "mini", true)).toBeUndefined();
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
+  await relaunched.disposeAll();
+});
+
+it("keeps the context-limit restart through a wait for a model, then opens it fresh", async () => {
+  const routing = realRouting();
+  // Sol has an account here; Terra has one only once `terraSignedIn`.
+  let terraSignedIn = false;
+  const accountFor = (crew?: { model?: string }) =>
+    crew?.model === terra.id && !terraSignedIn ? undefined : "acct-codex";
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async (_task: string, _provider: string, crew?: { model?: string }) =>
+      accountFor(crew),
+    ),
+    pickForSpawn: vi.fn(async (_task: string, _provider: string, crew?: { model?: string }) => {
+      const accountId = accountFor(crew);
+      return { ...(accountId ? { accountId } : {}), record: () => {}, selected: () => {} };
+    }),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+  };
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make, accounts });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the big logs",
+    intent: intentOf("read every log part and report"),
+  });
+  await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+
+  // While the task runs, Sol leaves every level, and Terra has no account.
+  routing.takeSolOffEveryLevel();
+  crewmate.emit({
+    type: "turn_failed",
+    taskId,
+    error: "This request exceeds the context window. Shorten it before trying again.",
+    contextOverflow: true,
+  });
+  crewmate.emit({ type: "turn_end", taskId });
+  crewmate.finishPrompt();
+  await tick();
+  await tick();
+  // The restart meets the wait: nothing opens, and it says so once.
+  expect(h.sessionSpecs).toHaveLength(1);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
+  await h.supervisor.disposeAll();
+
+  // A later launch where Terra is signed in opens the kept restart fresh on Terra.
+  terraSignedIn = true;
+  const opened = await relaunchAndSteer(h, taskId, terra, accounts);
+  expect(opened?.model).toEqual(terra);
+  // A new conversation, not the one the context limit filled.
+  expect(opened?.resumeToken).toBeUndefined();
+  expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
+});
+
+it("waits rather than let the starter map stand in when the only model on the levels has no account", async () => {
+  const routing = realRouting([sol, terra, luna, opus]);
+  // Every model has an account here but Opus.
+  const accountFor = (provider: string) => (provider === opus.provider ? undefined : "acct-codex");
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async (_task: string, provider: string) => accountFor(provider)),
+    pickForSpawn: vi.fn(async (_task: string, provider: string) => {
+      const accountId = accountFor(provider);
+      return { ...(accountId ? { accountId } : {}), record: () => {}, selected: () => {} };
+    }),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+  };
+  const crewmate = fakeCrewmate({ model: luna });
+  const h = setup(crewmate, { realRouter: routing.make, accounts });
+  // The person places Luna at high in Sol's place, and the task starts on Luna.
+  routing.takeOffEveryLevel(sol);
+  routing.takeOffEveryLevel(terra);
+  routing.placeHigh(luna);
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project and report"),
+  });
+  await tick();
+  expect(h.specs[0]?.model).toEqual(luna);
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.disposeAll();
+
+  // Luna leaves every level, and Opus, with no account here, takes high alone.
+  routing.takeOffEveryLevel(luna);
+  routing.placeHigh(opus);
+
+  // Passing over Opus leaves no level model: the starter map's Sol does not stand in.
+  expect(await relaunchAndSteer(h, taskId, sol, accounts)).toBeUndefined();
+  expect(routedModels(h, taskId)).toEqual([luna.id]);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
 });

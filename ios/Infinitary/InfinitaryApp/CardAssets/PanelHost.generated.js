@@ -103159,6 +103159,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       restsOn: "consent",
       name: "the cost limit"
     },
+    // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+    "model-levels": {
+      level: "soft",
+      restsOn: "record",
+      name: "the model levels",
+      way: "the captain places a model that can take it on a level in Settings, names one for the task, or adds a sign-in that serves one where it runs"
+    },
     "host-rules": {
       level: "fixed",
       restsOn: "outside fact",

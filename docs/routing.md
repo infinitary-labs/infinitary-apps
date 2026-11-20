@@ -28,7 +28,8 @@ That hold's gate carries its cause (`TaskGate.cause`: `pictures`, or `empty` whe
 Whether a model reads pictures is the catalog's own label: its def lists `image` among its input, and a custom connection's model does only once its check proved **Reads pictures** (`docs/custom-api.md`).
 A model no runtime knows, such as Claude on its own client, is unknown rather than text only, so it stays a candidate.
 A pin bypasses the check as it bypasses the ladder: a model named for the task takes it, and its first prompt still refuses pictures it cannot read.
-Every model move of a task whose brief carries pictures routes with the need too (`TaskMoves.planMove`), so it moves only to a model that reads them, even when its first turn, pictures and all, was never delivered; a move to another computer keeps its model.
+Every model move of a task whose brief carries pictures routes with the need too (`TaskMoves.planMove`), so it moves only to a model that reads them, even when its first turn, pictures and all, was never delivered.
+A move to another computer checks before it moves that the destination serves the task's current model; the new conversation it opens there then follows "A model that left every level" below, which can route it to another model there.
 Making pictures is not a routing need.
 
 ## Models no allowance is read for
@@ -79,16 +80,21 @@ Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
 ## A model that left every level
 
 A running task's next conversation - a reopen after a quit, the restart after the model's context limit or repeated refusals, a reopen on a computer that runs work after that computer restarted, or the conversation a move to another computer opens there - asks for the model of its newest routing choice only while routing would still place that model where the conversation opens (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, a Settings pin names it, or, while the starter map or the listed models stand in for placements of the person's own (`ModelSlots.routable`'s `placed`), those defaults include it among the models that computer's accounts serve.
-With no slot record, or nothing yet known to be available there, every model counts as held.
-The task also keeps the model when its newest routing choice was a model named, at its start or by a move (rule R0), so a reopen never undoes the latest model the person asked for.
-An open that reattaches to a conversation still open on its computer starts no new conversation and routes nothing (`CrewMachines.conversationOpen`).
+With no slot record, or nothing yet known to be available on this Mac, every model counts as held; a computer that runs work whose pool is known to be empty holds only a pinned or placed model.
+The task also keeps the model when its newest routing choice served a model named, at its start or by a move, so a reopen never undoes the latest model the person asked for; the routing row records whether the named model was served (`named` in its facts), and a row from before that reads its rule R0.
 Otherwise the task routes again on its own shape before its conversation opens (`TaskMoves.routeAgainIfLeft`), inside `Router.inOrder`, as its start did - a review still prefers a provider other than its builder's (R9) - among the models where it opens: this Mac's, or that computer's own sign-ins (docs/helper.md, "Its own sign-ins").
-A task on a custom connection routes only among that connection's models, on its account, so it never moves to another server on its own; a conversation reopening in place on a computer that runs work routes only among the models its backend serves there.
-A replacement no account there serves is passed over for the next, and when the replacement chosen left its level while its account was picked, the task takes the one routing picks now.
-The new routing row, the record's model and account, and one timeline and feed line naming the model that left and the one the task uses now commit in one transaction, the line saved as a fact any language words; the account picked is marked selected only once that transaction committed (`AccountSelector.pickForSpawn`), and binds only an account whose sign-in lists the model.
-The conversation then opens as a reopen does, on the newest routing choice and its effort, and the newest routing row names a held model, so a later reopen keeps it and says nothing more.
-When no other model on the levels that an account there serves can take the task, its conversation does not open: the task waits, its lane holds (`TaskMoves.waitsForModel`, a `model` lane hold) while Settings and the models available stay as they were, and one timeline and feed line says so (`crewmateWaitsForModel`), said again only after the task routed again.
-A change to the levels, the pins or the models available lets the next message or sweep try again.
+The levels are read from the whole pool there, and a replacement no account there serves is passed over within them, so passing one over never lets the starter map stand in.
+A task on a custom connection routes only among that connection's models, on its account, so it never moves to another server on its own.
+When the replacement chosen left its level while its account was picked, the task takes the one routing picks now.
+On this Mac the new routing row, the record's model and account, and one timeline and feed line naming the model that left and the one the task uses now commit in one transaction before the conversation opens, the line saved as a fact any language words; the account picked is marked selected only once that transaction committed (`AccountSelector.pickForSpawn`), and binds an account whose sign-in lists the model, one with no list standing in only when no sibling's list names it.
+On a computer that runs work the same writes wait for that computer's answer, and happen only when it says the conversation opened on the new model (`RoutedAgain.commit`); the open carries that computer's account for the model and the effort routing chose, Quick care a rung lower unless an effort was chosen.
+An open that finds the conversation still open there may only reattach to it: a turn in progress keeps its model and the home asks again when it ends, an idle one opens again on the new model, and a conversation that only reattached records nothing.
+The conversation then opens as a reopen does, and the newest routing row names a held model, so a later reopen keeps it and says nothing more.
+When no other model on the levels that an account there serves can take the task, its conversation does not open: the task waits, its lane holds (`TaskMoves.waitsForModel`, a `model` lane hold, the `model-levels` hold in docs/delivery-rigor.md) and one timeline and feed line says so (`crewmateWaitsForModel`), said again only after the task routed again.
+A restart that meets the wait stays on the task's lane as its restart reason, so it still opens a new conversation once a model can take it, after a relaunch too; a computer move's reopen waits without saying it could not reopen, and a waiting delivery spends none of its attempts.
+On a computer that runs work, a reopen after it restarted lets its crewmate here go instead, so the next message opens the conversation through the ordinary resume; so does one whose replacement runs on the other backend.
+An open that only reattaches to a conversation open there waits for nothing and keeps its model.
+The wait ends when the task's routing choice, the levels, the pins, the models here or what that computer last said of its sign-ins change, or when the task closes, and the next message or sweep tries again.
 A move, a stop, a quit or a close that takes the task while it routes supersedes the reopen: it opens nothing, and the account it picked is recorded only with a move it commits.
 
 ## A level's words

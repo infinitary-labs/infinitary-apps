@@ -6,7 +6,7 @@ import { isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import { parseOfferingKey } from "@shared/modelSlots";
+import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/personalSet";
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
@@ -38,6 +38,7 @@ import {
 } from "./crewSession";
 import { CrewTurn } from "./crewTurn";
 import { describeStatus } from "./settleService";
+import { ModelWaitError } from "./taskMoves";
 import { conversationRestartWake } from "./turnWakes";
 
 /**
@@ -286,7 +287,7 @@ export class CrewSessions {
         renewal ? "renewal" : movedTo ? "move" : "unopenable",
         machine,
       );
-      this.recordRestart(task, machine, restart);
+      this.recordRestart(task.id, task.key, machine, restart);
     }
   }
 
@@ -298,9 +299,14 @@ export class CrewSessions {
    * back serves the wake first, and a quit before that turn ends clean
    * still has the row.
    */
-  private recordRestart(task: TaskRuntime, machine: string, restart: CrewmateRestart): void {
+  private recordRestart(
+    taskId: string,
+    taskKey: string,
+    machine: string,
+    restart: CrewmateRestart,
+  ): void {
     const briefed = this.core.options.tasks
-      .timeline(task.id)
+      .timeline(taskId)
       .filter((event) => event.kind === "briefed")
       .at(-1);
     const brief = briefed ? this.core.options.tasks.servedBrief(briefed) : undefined;
@@ -310,23 +316,44 @@ export class CrewSessions {
       isAbsolute(restart.from) ? restart.from : join(dir, `${restart.from}.jsonl`);
     let earlier: string | undefined;
     if (machine === LOCAL_MACHINE_ID) {
-      const path = named(crewmateSessionsDir(this.core.options.paths, task.id));
+      const path = named(crewmateSessionsDir(this.core.options.paths, taskId));
       if (existsSync(path)) earlier = path;
     } else {
-      const folders = this.core.options.machines?.folders(machine, task.id);
+      const folders = this.core.options.machines?.folders(machine, taskId);
       if (folders) earlier = named(folders.sessions);
     }
     this.core.options.inbox.enqueueWake(
-      task.id,
+      taskId,
       conversationRestartWake({
         restart,
-        taskKey: task.key,
+        taskKey,
         ...(brief ? { brief } : {}),
         ...(earlier ? { earlier } : {}),
       }),
       "agent",
-      task.id,
+      taskId,
     );
+  }
+
+  /**
+   * A restart that waited for a model (`ModelWaitError`), still on the lane:
+   * its reason replaces the conversation the record still names, so the
+   * open that follows starts fresh as that restart asked, after a relaunch
+   * too.
+   */
+  private waitingRestart(record: TaskRecord): CrewmateRestart | undefined {
+    if (!record.sessionFile) return undefined;
+    for (const row of this.core.options.inbox.allFor(record.id)) {
+      const facts = row.facts;
+      if (facts?.kind !== "conversation-restart") continue;
+      const restart = facts.restart;
+      if (
+        (restart.changed === "context" || restart.changed === "refused") &&
+        restart.from === record.sessionFile
+      )
+        return restart;
+    }
+    return undefined;
   }
 
   /**
@@ -594,6 +621,7 @@ export class CrewSessions {
     const movedFrom = moved?.restartFrom;
     const fresh: CrewmateRestart | undefined =
       restart ??
+      (move ? undefined : this.waitingRestart(record)) ??
       (!move && movedFrom !== undefined
         ? {
             from: movedFrom,
@@ -628,18 +656,24 @@ export class CrewSessions {
       );
     // A model that left every level routes again before a new conversation
     // opens, wherever it opens (docs/routing.md, "A model that left every
-    // level"); a move names its model, and an open that reattaches to a
-    // conversation open on its computer starts none.
+    // level"); a move names its model. An open that may reattach to a
+    // conversation open on its computer waits for no model, and its move
+    // is recorded only if that computer opens a new conversation on it.
     const moving = fresh?.changed === "computer";
-    const reattaches =
+    const attach =
       machine !== LOCAL_MACHINE_ID &&
       !fresh &&
       this.core.options.machines?.conversationOpen?.(machine, record.id) === true;
-    const routedAgain =
-      move || reattaches
-        ? undefined
-        : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving });
-    if (routedAgain === "wait") throw new Error(this.core.moves.modelWaitWords(record.id));
+    const routedAgain = move
+      ? undefined
+      : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving, attach });
+    if (routedAgain === "wait") {
+      // A restart that waits for a model is kept on the lane, so it opens
+      // fresh once one can take it (`waitingRestart`).
+      if (fresh && fresh.changed !== "computer")
+        this.recordRestart(record.id, record.key || record.id, machine, fresh);
+      throw new ModelWaitError(this.core.moves.modelWaitWords(record.id));
+    }
     // A stop, a quit, a close or another move - to another computer, or to
     // another model, which writes a newer routing choice - while this reopen
     // waited took the task: it registers and opens nothing for it.
@@ -660,7 +694,8 @@ export class CrewSessions {
     };
     if (routedAgain === "stale" || superseded())
       throw new Error("This task's crewmate was let go while its conversation opened.");
-    const target = move ?? routedAgain;
+    const rerouted = routedAgain;
+    const target = move ?? rerouted;
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.
     const selecting = target
@@ -747,10 +782,17 @@ export class CrewSessions {
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
           ...(move
             ? { model: move.model, thinkingLevel: move.thinkingLevel }
-            : this.reopenedOn(record)),
+            : rerouted
+              ? {
+                  model: rerouted.model,
+                  thinkingLevel: rerouted.thinkingLevel,
+                  ...(rerouted.quick ? { quick: true } : {}),
+                }
+              : this.reopenedOn(record)),
           ...this.core.toolHooks.crewmateHooks(task, livePersonal),
         },
-        attachment.accountId,
+        // A computer that runs work binds the account there routing chose.
+        rerouted?.binding ?? attachment.accountId,
         record.model ?? undefined,
         target?.providerName,
       );
@@ -759,6 +801,11 @@ export class CrewSessions {
       throw caught;
     }
     task.session = session;
+    // There, the move is recorded once the conversation opened on its model;
+    // one it reattached to, still on the old model, records nothing.
+    const opened = session.modelRef();
+    if (rerouted?.commit && opened && offeringKey(opened) === offeringKey(rerouted.model))
+      rerouted.commit();
     this.endIfLetGo(task);
     task.unsubscribe = await this.core.toolHooks.follow(task, session);
     this.endIfLetGo(task);
@@ -769,10 +816,13 @@ export class CrewSessions {
       session,
       task.conversationBegan ?? (target || fresh ? "move" : "resume"),
     );
-    if (fresh) this.recordRestart(task, machine, fresh);
-    const opened = this.core.options.tasks.get(record.id)?.shape?.computer_move;
-    if (opened?.restartFrom !== undefined) {
-      const { restartFrom: _told, ...rest } = opened;
+    if (fresh) {
+      this.recordRestart(task.id, task.key, machine, fresh);
+      if (fresh.changed === "context") task.contextRecovered = true;
+    }
+    const movedThere = this.core.options.tasks.get(record.id)?.shape?.computer_move;
+    if (movedThere?.restartFrom !== undefined) {
+      const { restartFrom: _told, ...rest } = movedThere;
       this.core.options.tasks.placement.setComputerMove(record.id, rest);
     }
     livePersonal?.beginLiveTask(record.id);

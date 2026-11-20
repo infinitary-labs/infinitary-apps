@@ -162,6 +162,8 @@ export type CandidateFacts =
       candidates: RoutingCandidateFact[];
       accountId?: string;
       selection?: SelectionFacts;
+      /** The task named a model (rule R0): whether this choice serves it. */
+      named?: boolean;
     }
   | {
       kind: "account-candidates";
@@ -194,6 +196,8 @@ export type RoutingDecision = {
   rule: string | null;
   served: string | null;
   at: number;
+  /** Whether the model the task named was served; absent on rows from before that was recorded. */
+  named?: boolean;
 };
 
 export type AccountDecisionInput = {
@@ -233,6 +237,8 @@ type RoutingRow = {
   rule: string | null;
   served: string | null;
   at: number;
+  /** `latestChosenSlots` only: the facts' named flag, as SQLite reads a JSON boolean. */
+  named?: number | null;
 };
 
 /** What flag_missed_escalation asks the store to label. */
@@ -307,6 +313,7 @@ function fromRoutingRow(row: RoutingRow): RoutingDecision {
     rule: row.rule,
     served: row.served,
     at: row.at,
+    ...(row.named === 0 || row.named === 1 ? { named: row.named === 1 } : {}),
   };
 }
 
@@ -544,7 +551,8 @@ export class DecisionStore {
     const rows = prepared(
       this.db,
       `SELECT latest.id, latest.task_id, latest.provider, latest.model, latest.bucket,
-         latest.rule, latest.served, latest.at
+         latest.rule, latest.served, latest.at,
+         json_extract(latest.facts_json, '$.named') AS named
        FROM json_each(?) AS asked CROSS JOIN decisions AS latest
        WHERE latest.id = (
          SELECT id FROM decisions WHERE kind = 'routing' AND task_id = asked.value

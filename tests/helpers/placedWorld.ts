@@ -65,6 +65,8 @@ export const PROVIDER = "fm-placed";
 /** The task commands' launcher (`resources/axi-bin`), which a granted shell finds on its path. */
 const AXI_BIN_DIR = resolve(__dirname, "../../resources/axi-bin");
 export const MODEL = "stub-1";
+/** A second model the same stub connection serves, for a task routed again there. */
+export const OTHER_MODEL = "stub-2";
 const BUILDER = { name: "builder", uid: 502 };
 
 /** The model's stub API and the runtime over it, started once for each test file. */
@@ -89,7 +91,7 @@ export function placedWorldHooks(file: { now: () => number; reset: () => void })
   clock = file.now;
   beforeAll(async () => {
     api = await startStubApi(() => true);
-    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL }, [OTHER_MODEL]);
   });
   afterAll(async () => {
     await api.close();

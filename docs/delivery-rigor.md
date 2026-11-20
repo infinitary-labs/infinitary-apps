@@ -609,6 +609,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `cost-limit` | soft | consent | a task, and everything under it, past its cost limit (docs/usage.md, "The cost limit") | the captain's click on its card, or the override |
+| `model-levels` | soft | record | a task's next conversation while the model it routed to left every level and no model where it runs can take it (docs/routing.md, "A model that left every level") | the captain places a model that can take it on a level, names one for the task, or adds a sign-in that serves one where it runs |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |
@@ -617,7 +618,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 
 Every refusal ends with its hold's sentence.
 `softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
-A soft hold with its own way (`escalation`, `program-bound`, `start-waits`) names that way instead.
+A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `model-levels`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**

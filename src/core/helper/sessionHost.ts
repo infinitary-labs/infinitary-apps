@@ -874,10 +874,10 @@ export class SessionHost {
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {
-      // An idle conversation whose named tools or instructions changed,
-      // because the home reopened it for a contract this computer now
-      // speaks, lets go and opens again, so a version-gated tool arrives
-      // without a restart here. A turn in progress keeps the tools it
+      // An idle conversation whose named tools, instructions or model
+      // changed, because the home reopened it for a contract this computer
+      // now speaks or routed it off a model that left, lets go and opens
+      // again, so a version-gated tool arrives without a restart here. A turn in progress keeps the tools it
       // started with, and so does one its crewmate carries on by itself:
       // closing it would cut that turn and lose what it still sends, such
       // as a report waiting for the home. Its answer says it still streams,
@@ -1057,11 +1057,19 @@ export class SessionHost {
     return this.stateOf(held);
   }
 
-  /** Whether this open names tools or instructions the held conversation was not opened with. */
+  /**
+   * Whether this open names tools, instructions or a model the held
+   * conversation was not opened with: the home routed it again off a model
+   * that left every level (docs/routing.md), and an idle conversation opens
+   * again on the new one.
+   */
   private contractMoved(held: Held, spec: PlacedSpec, sourceFacts: string): boolean {
     const opened = held.opened;
     if (!opened) return false;
+    const model = (asked: PlacedSpec | undefined) =>
+      asked?.model ? `${asked.model.provider}/${asked.model.id}` : "";
     return (
+      model(held.spec) !== model(spec) ||
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
       opened.sourceContext !== sourceFacts ||

@@ -30,7 +30,7 @@ import { agreedGrant } from "../personal/framedPanels";
 import { PersonalExtensions } from "../personal/personalExtensions";
 import { PersonalStore } from "../personal/personalStore";
 import { Runbooks, stageRunbookSkills } from "../runbooks/runbooks";
-import { runbookAddedLine, runbookPanelsWords, runbookRemovedLine } from "../runbooks/words";
+import { runbookAddedLine, runbookRemovedLine } from "../runbooks/words";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import { SettingsStore } from "../storage/settingsStore";
@@ -968,15 +968,15 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(card?.body).toContain("Common workflows off");
         expect(card?.body).toContain("runs nothing");
         // The add card names the panel the runbook shows while it is on, and what it reads.
-        expect(card?.body).toContain(runbookPanelsWords());
+        expect(card?.body).toContain(m.cardRunbookAddPanels());
         // The line is saved as its catalog fact, so each reader words it in
         // their own language, whatever the home spoke when it raised the card.
         const french = inLanguage("fr", () => m.cardRunbookAddPanels());
-        expect(french).not.toBe(runbookPanelsWords());
+        expect(french).not.toBe(m.cardRunbookAddPanels());
         expect(inLanguage("fr", () => wordSaidMarks(card?.body ?? ""))).toContain(
           escapeHtml(french),
         );
-        expect(wordSaidMarks(card?.body ?? "")).toContain(runbookPanelsWords());
+        expect(wordSaidMarks(card?.body ?? "")).toContain(m.cardRunbookAddPanels());
         expect(card?.body).toContain("<b>Token watch</b>");
         expect(h.installed()).toEqual([]);
         expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(

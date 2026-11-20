@@ -1,12 +1,6 @@
-import * as m from "@shared/i18n/messages.generated";
-
 /** Shared words for the installer, its consent card and the journeys reading them. */
 export function runbookConsentTitle(name: string): string {
   return `Add ${name}?`;
-}
-/** The add card's line before the panels a runbook shows while it is on, in the captain's language. */
-export function runbookPanelsWords(): string {
-  return m.cardRunbookAddPanels();
 }
 export function runbookAddedLine(name: string, author: string, replacement?: string): string {
   return `added "${name}", a runbook by ${author}${replacement ? `; ${replacement} off` : ""}`;

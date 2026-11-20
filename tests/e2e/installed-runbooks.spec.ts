@@ -4,10 +4,10 @@ import { expect, test } from "@playwright/test";
 import {
   runbookAddedLine,
   runbookConsentTitle,
-  runbookPanelsWords,
   runbookRemovedLine,
 } from "../../src/core/runbooks/words";
 import { ACTIONS } from "../../src/shared/actions";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { runbookManifestSchema } from "../../src/shared/runbooks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -72,7 +72,7 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     await promptInput(at.page).press("Enter");
     await expect(shownCard(at.page, title)).toBeVisible();
     await expect(cardBody(at.page, title).locator("body")).toContainText(`${workflows.name} off`);
-    await expect(cardBody(at.page, title).locator("body")).toContainText(runbookPanelsWords());
+    await expect(cardBody(at.page, title).locator("body")).toContainText(m.cardRunbookAddPanels());
     await expect(cardBody(at.page, title).locator("li b")).toHaveText("Reading list");
     expect(
       (await at.page.evaluate(() => window.infinitary.settings.getRunbooks())).some(

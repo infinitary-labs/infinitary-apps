@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import * as m from "../../src/shared/i18n/messages.generated";
@@ -27,21 +28,30 @@ const HOME = "Mac mini";
 const VIEW = "MacBook Air";
 const OLDER = "0.0.1";
 
-/** The app open on the other computer: older, and its update stood in unless it cannot follow. */
-function viewEnv(follows: boolean): Record<string, string> {
+/**
+ * The app open on the other computer: older, and its update stood in unless
+ * it cannot follow. Its stand-in installer writes each version that reached
+ * it into `installs`.
+ */
+function viewEnv(installs: string | null): Record<string, string> {
   return {
     INFINITARY_DEVICE_NAME: VIEW,
     INFINITARY_UPDATE_CURRENT_VERSION: OLDER,
-    ...(follows ? { INFINITARY_MAC_UPDATE_STAND_IN: OLDER } : {}),
+    ...(installs
+      ? {
+          INFINITARY_MAC_UPDATE_STAND_IN: OLDER,
+          INFINITARY_MAC_UPDATE_STAND_IN_INSTALLS: installs,
+        }
+      : {}),
   };
 }
 
 /** The app on the other computer, joined as a view of the computer whose window makes the link. */
-async function viewJoining(home: LaunchedApp, follows: boolean): Promise<LaunchedApp> {
+async function viewJoining(home: LaunchedApp, installs: string | null): Promise<LaunchedApp> {
   const invite = await home.page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
   const view = await launchApp({
     userDataDir: scratchDir("infinitary-app-follows-view-"),
-    env: viewEnv(follows),
+    env: viewEnv(installs),
   });
   // Joining starts the window over, so its answer may never return to this page.
   await view.page.evaluate((link) => {
@@ -73,14 +83,18 @@ async function step(row: Locator, said: string, words: string): Promise<void> {
   await expect(line).toHaveText(words);
 }
 
+/** Each version that reached the app's own installer, once its last check passed. */
+const installed = (installs: string): string[] =>
+  existsSync(installs) ? readFileSync(installs, "utf8").split("\n").filter(Boolean) : [];
+
 /**
- * The app's own installer got the first mate's computer's exact version:
- * the stand-in install, which never answers, holds it installing.
+ * The app's own installer got the first mate's computer's exact version, as
+ * many times as the app started again on it so far.
  */
-async function installing(view: LaunchedApp, version: string): Promise<void> {
+async function installing(installs: string, version: string, times: number): Promise<void> {
   await expect
-    .poll(() => view.page.evaluate(() => window.infinitary.update.status()), { timeout: 60_000 })
-    .toMatchObject({ phase: "installing", latestVersion: version });
+    .poll(() => installed(installs), { timeout: 60_000 })
+    .toEqual(Array.from({ length: times }, () => version));
 }
 
 /** Moves the focus by Tab alone until it rests on `target`, as a person reaches it. */
@@ -120,30 +134,29 @@ test("an app on another computer gets the first mate's computer's version by its
     const version = await home.page.evaluate(
       async () => (await window.infinitary.update.status()).currentVersion,
     );
-    let view = await viewJoining(home, true);
+    const installs = join(scratchDir("infinitary-app-follows-installs-"), "installs");
+    let view = await viewJoining(home, installs);
     opened.push(view);
 
     // Nobody uses the app: it gets the version and starts again on it by itself.
     let row = await viewRow(home);
     await step(row, "restarting", m.devicesAppRestarting({ version }));
-    await installing(view, version);
+    await installing(installs, version, 1);
     await regionShot(row, test.info().outputPath("by-itself.png"));
 
     // Someone left words unsent there: it waits, and starts again once they are gone.
     const viewDir = view.userDataDir;
     await view.close();
     await home.close();
-    view = await launchApp({ userDataDir: viewDir, env: viewEnv(true) });
+    view = await launchApp({ userDataDir: viewDir, env: viewEnv(installs) });
     opened.push(view);
     await wordsLeft(view.page);
     home = await homeAgain();
     opened.push(home);
     row = await viewRow(home);
     await step(row, "waiting", m.devicesAppWaiting({ version }));
-    // Ready, and nothing installs while the words wait there.
-    expect((await view.page.evaluate(() => window.infinitary.update.status())).phase).not.toBe(
-      "installing",
-    );
+    // Ready, and nothing reaches the installer while the words wait there.
+    expect(installed(installs)).toEqual([version]);
     const update = row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) });
     await expect(update).toHaveText(m.devicesUpdateApp());
     await regionShot(row, test.info().outputPath("waiting.png"));
@@ -154,12 +167,12 @@ test("an app on another computer gets the first mate's computer's version by its
     }
     await promptInput(view.page).fill("");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
-    await installing(view, version);
+    await installing(installs, version, 2);
 
     // Words unsent again: Update app on the row, by keys, starts it at once.
     await view.close();
     await home.close();
-    view = await launchApp({ userDataDir: viewDir, env: viewEnv(true) });
+    view = await launchApp({ userDataDir: viewDir, env: viewEnv(installs) });
     opened.push(view);
     await wordsLeft(view.page);
     home = await homeAgain();
@@ -172,7 +185,7 @@ test("an app on another computer gets the first mate's computer's version by its
     );
     await home.page.keyboard.press("Enter");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
-    await installing(view, version);
+    await installing(installs, version, 3);
     if (kept) await regionShot(row, join(kept, "app-update-pressed-row.png"));
     // The words there were never sent anywhere: they wait in its composer.
     await expect(promptInput(view.page)).toHaveValue("check the harbour lights");
@@ -194,7 +207,7 @@ test("an app on another computer that cannot update by itself says why on its ro
     const version = await home.page.evaluate(
       async () => (await window.infinitary.update.status()).currentVersion,
     );
-    const view = await viewJoining(home, false);
+    const view = await viewJoining(home, null);
     opened.push(view);
 
     const row = await viewRow(home);

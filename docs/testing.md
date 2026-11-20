@@ -828,7 +828,7 @@ That job publishes the selection, keeps `phone-placement` and deals the selectio
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
 A manual request that chooses its parts runs one `native-phone` job for each job the chooser dealt, each on its own phone Mac at once (INF-5387's plan, piece 2, after the captain's "how can we make them last <30m at max").
 The chooser builds the passes the request's devices run (`requestPasses` in `scripts/affected-phone.ts`), each a device, a part, a round and any named tests, and deals them into jobs of at most 19 recorded minutes (`dealPhonePasses` in `scripts/phone-test-plan.ts`, `PHONE_JOB_BUDGET_MS` in `scripts/phone-deadlines.ts`).
-The job count is the passes' recorded minutes over 19, rounded up, and one more while a pass longer than 19 minutes by itself would leave a job past it; such a pass then runs in a job of its own.
+The job count is the passes' recorded minutes over 19, rounded up, and one more while a job of more than one pass would be past 19; a pass longer than 19 minutes by itself runs in a job of its own, and no other job passes 19.
 Passes go longest first to the lightest job, a pass of a part with no recorded time counting as the median part, and a pass joins a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the lightest choice would.
 A job may hold several devices, and its name gives its number and devices, such as `job 2 of 5: iPad, iPhone`.
 `tests/phone-chooser.test.ts` holds, over generated selections, that the dealt jobs together hold exactly the passes a job of each of the request's devices would run, none lost and none doubled.
@@ -874,7 +874,7 @@ The phone queue is served from every Mac place the placement service runs, the t
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
-A dealt job and its gate step are stopped at 25 minutes: a job of 19 recorded minutes ends near 13 minutes on a phone Mac with two simulators and near 19 on one with one, setup included.
+A dealt job is stopped at 25 minutes and its gate step at 21, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run: a job of 19 recorded minutes ends near 13 minutes on a phone Mac with two simulators and near 19 on one with one, setup included.
 The phone release's call keeps its job's 345 minutes, 165 for setup, the ordinary pass, cleanup and evidence upload and 90 for each of two further passes it never runs, and its gate step's 90; there is no command-admission wait.
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.

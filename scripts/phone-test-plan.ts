@@ -375,7 +375,7 @@ export type PhoneDealtJob = { number: number; passes: PhoneJob[] };
 
 /** INF-5387's plan, piece 2: deals a request's passes into jobs of at most `budget` recorded milliseconds, each run on
  * its own phone Mac. The count is the passes' recorded time over the budget, rounded up, and one more while the
- * dealing leaves a job past it (only a pass longer than the budget by itself, which then runs alone). Passes go longest
+ * dealing leaves a job of more than one pass past it; a pass longer than the budget by itself runs alone. Passes go longest
  * first to the lightest job, as `phoneLanePlan` shares a device's parts among its simulators, except that a pass goes
  * to a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the
  * lightest choice would. Every pass is dealt exactly once, and each job keeps its passes in plan order. */
@@ -390,7 +390,8 @@ export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTim
     const lighter = <Job extends { load: number }>(best: Job, job: Job) => job.load < best.load ? job : best;
     for (const index of order) {
       const lightest = jobs.reduce(lighter);
-      const longest = Math.max(lightest.load + ms[index]!, total / count, ...jobs.map((job) => job.load));
+      // Never past the budget, so a pass longer than it by itself raises no other job's bound.
+      const longest = Math.min(budget, Math.max(lightest.load + ms[index]!, total / count, ...jobs.map((job) => job.load)));
       const holders = jobs.filter((job) => job.load + ms[index]! <= longest
         && job.indices.some((each) => passes[each]!.device === passes[index]!.device));
       const chosen = holders.length ? holders.reduce(lighter) : lightest;
@@ -401,7 +402,8 @@ export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTim
   };
   let count = Math.max(1, Math.ceil(total / budget));
   let jobs = deal(count);
-  while (jobs.some((job) => job.load > budget) && count < passes.length) jobs = deal(++count);
+  // A job past the budget holding one pass is that pass alone; only a job past it with more passes needs another job.
+  while (jobs.some((job) => job.load > budget && job.indices.length > 1) && count < passes.length) jobs = deal(++count);
   const dealt = jobs.filter((job) => job.indices.length).map((job) => job.indices.toSorted((a, b) => a - b));
   // The job that holds the Mac part comes first, beside the package tests whose build it reuses.
   const onMac = (indices: number[]) => indices.some((index) => partOnMac(passes[index]!.part));

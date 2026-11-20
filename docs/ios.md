@@ -1340,7 +1340,7 @@ Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a p
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
-A dealt job's gate step and the job itself are stopped at 25 minutes; the phone release's gate step keeps 90 minutes.
+A dealt job's gate step is stopped at 21 minutes, inside the job's 25, so an over-long gate fails the job and still keeps its results; the phone release's gate step keeps 90 minutes.
 Both sequential and parallel device lanes must finish within that same limit.
 Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
 Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).

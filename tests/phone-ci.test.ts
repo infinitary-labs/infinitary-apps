@@ -416,9 +416,9 @@ describe("the native gate on an affected request", () => {
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
   // INF-2582: the two edited-part passes run in the same gate, each with the same 90 minutes, and the job
   // keeps 165 minutes for the ordinary pass and 90 more for each further pass.
-  // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, and a dealt job and its gate are
-  // stopped at 25 minutes; a call, which runs no further pass, keeps its gate's 90 and its job's limit.
-  it("caps a call's gate at ninety minutes within its job's limit, and a dealt job at 25", () => {
+  // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, a dealt job is stopped at 25 minutes
+  // and its gate at 21; a call, which runs no further pass, keeps its gate's 90 and its job's limit.
+  it("caps a call's gate at ninety minutes and a dealt job's gate at 21, each within its job's limit", () => {
     const limits = (matrix: Plain) => {
       const contexts = { matrix };
       return [
@@ -437,7 +437,8 @@ describe("the native gate on an affected request", () => {
       expect(stepsThatRun(route).filter(isGate)).toHaveLength(1);
     for (const device of ["every", "ipad", "duo", "iphone"])
       expect(limits({ device, key: device })).toEqual([90, 165 + 90 * 2]);
-    for (const job of FULL_JOBS) expect(limits(job)).toEqual([25, 25]);
+    // The gate stops first, so an over-long one fails its job, which still keeps its results.
+    for (const job of FULL_JOBS) expect(limits(job)).toEqual([21, 25]);
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone

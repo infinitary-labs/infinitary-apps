@@ -757,14 +757,30 @@ describe("dealing a request's passes into jobs", () => {
     );
   });
   it("runs a pass longer than the budget in a job of its own, and keeps every other job inside it", () => {
-    const longest = every.reduce((best, pass) =>
-      phonePassMs(pass, recorded) > phonePassMs(best, recorded) ? pass : best,
+    // A part recorded well past the budget beside ten short ones: the long pass runs alone, the short ones fill as
+    // few jobs as the budget needs, and none of those passes it.
+    const [long, ...short] = PHONE_PARTS.filter(({ name }) => !partOnMac(name))
+      .slice(0, 11)
+      .map(({ name }) => name);
+    const times: PhonePassTimes = {
+      [long!]: { iphone: 25 * 60_000 },
+      ...Object.fromEntries(short.map((part) => [part, { iphone: 2 * 60_000 }])),
+    };
+    const passes = phonePasses(["iphone"], { parts: [long!, ...short] });
+    const jobs = dealPhonePasses(passes, times);
+    const alone = jobs.find((job) => job.passes.some((pass) => pass.part === long))!;
+    expect(alone.passes.map((pass) => pass.part)).toEqual([long]);
+    const others = jobs.filter((job) => job !== alone);
+    for (const job of others)
+      expect(load(job.passes, times)).toBeLessThanOrEqual(PHONE_JOB_BUDGET_MS);
+    expect(others).toHaveLength(
+      Math.ceil(
+        load(
+          passes.filter((pass) => pass.part !== long),
+          times,
+        ) / PHONE_JOB_BUDGET_MS,
+      ),
     );
-    const budget = phonePassMs(longest, recorded) - 1;
-    const jobs = dealPhonePasses(every, recorded, budget);
-    const alone = jobs.find((job) => job.passes.includes(longest))!;
-    expect(alone.passes).toEqual([longest]);
-    for (const job of jobs) if (job !== alone) expect(load(job.passes)).toBeLessThanOrEqual(budget);
   });
   it("keeps a device's passes together when the balance allows", () => {
     // Four parts on both devices, each as long on the iPad as on the iPhone: two jobs of one device each balance.

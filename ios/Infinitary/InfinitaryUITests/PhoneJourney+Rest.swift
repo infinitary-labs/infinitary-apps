@@ -212,7 +212,10 @@ extension PhoneJourney {
         try pressBrowsingKey(XCUIKeyboardKey.tab.rawValue)
         let selectedCrew = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'crew-task-' AND value BEGINSWITH 'Selected, '")).firstMatch
         XCTAssertTrue(selectedCrew.waitForPresence(timeout: 10), "Tab reaches a real crewmate")
-        XCTAssertTrue(selectedCrew.isHittable, "The selected crewmate is visible in the panned scene")
+        // INF-3631: the first mate's 280-point square hides a crewmate's square from XCTest's hit test while it passes
+        // under it. A program's moon on the inner side of its ring rides there, and its ring's turn carries it clear.
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in selectedCrew.isHittable }, object: nil, timeout: 20), .completed,
+                       "The selected crewmate is visible in the panned scene: \(selectedCrew.frame), scene \(scene.frame)")
         let selectedWords = selectedCrew.label.components(separatedBy: ", ")
         let selectedKey = try XCTUnwrap(selectedWords.first)
         let selectedTitle = selectedWords.dropFirst().joined(separator: ", ")

@@ -21,7 +21,6 @@ struct PhoneSceneTouches: UIViewRepresentable {
 final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
     struct Target {
         let id: String, task: PhoneTask, computer: String, point: CGPoint, label: String, words: String
-        var mark = false
     }
     let crew: PhoneSceneMotion
     var roster: PhoneSceneRoster?
@@ -62,7 +61,7 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         }
         let marks = frame.marks.map { mark -> (Target, Int) in
             (Target(id: mark.id, task: mark.task, computer: mark.computerID, point: shifted(mark.point), label: mark.task.key + ", " + mark.task.title,
-                    words: PhoneMessages.phoneSceneProgramParts(count: mark.parts.count), mark: true), roster.order[mark.task.id] ?? roster.tasks.count)
+                    words: PhoneMessages.phoneSceneProgramParts(count: mark.parts.count)), roster.order[mark.task.id] ?? roster.tasks.count)
         }
         return (glyphs + marks).sorted { $0.1 == $1.1 ? $0.0.id < $1.0.id : $0.1 < $1.1 }.map(\.0)
     }
@@ -76,17 +75,6 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         }
     }
     static func square(_ point: CGPoint) -> CGRect { CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44) }
-    /// The square accessibility reads for `target`. A program keeps its whole 44-point square, which answers touch. A
-    /// crewmate's shrinks where another target sits closer, a program's moons sitting closer than 44 points to their
-    /// neighbours, so no other square covers its center and a query there finds it. A moon rides at least 24 points from
-    /// its program's center, so the program's square never covers it either.
-    func square(of target: Target, among all: [Target]) -> CGRect {
-        if target.mark { return Self.square(target.point) }
-        let gap = all.lazy.filter { $0.id != target.id }
-            .map { max(abs($0.point.x - target.point.x), abs($0.point.y - target.point.y)) }.min() ?? .infinity
-        let half = max(1, min(22, gap / 2))
-        return CGRect(x: target.point.x - half, y: target.point.y - half, width: half * 2, height: half * 2)
-    }
 
     /// Where and when the finger landed. The tap is recognized only as the finger lifts, while the crew keep moving on
     /// the render thread; the crewmate under the finger is the one the frame on screen at touch-down drew there, as a
@@ -143,16 +131,13 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
             set {}
         }
         override var accessibilityFrameInContainerSpace: CGRect {
-            get {
-                guard let view, let target else { return .zero }
-                return view.square(of: target, among: view.targets())
-            }
+            get { target.map { PhoneSceneTouchView.square($0.point) } ?? .zero }
             set {}
         }
         override var accessibilityFrame: CGRect {
             get {
                 guard let view, let target else { return .zero }
-                return UIAccessibility.convertToScreenCoordinates(view.square(of: target, among: view.targets()), in: view)
+                return UIAccessibility.convertToScreenCoordinates(PhoneSceneTouchView.square(target.point), in: view)
             }
             set {}
         }

@@ -27,8 +27,9 @@ public struct PhonePushComputer: Codable, Equatable, Sendable {
 /// key of each kept computer the part opens each push with, and the push address, its service and the relay's grant
 /// for them, which every kept computer shares.
 public struct PhonePushHeld: Codable, Equatable, Sendable {
-    /// 32 random bytes in base64url, for AES-256-GCM: the first kept computer's key, and the one key of a record kept
-    /// before the phone kept several computers, which an older build reads.
+    /// 32 random bytes in base64url, for AES-256-GCM: the one key of a record kept before the phone kept a key per
+    /// computer. Once it keeps one per computer, this key belongs to no computer, so an older build that reads it hands
+    /// a key no computer seals with.
     public var key: String
     /// INF-5265: each kept computer's own key, or none in a record kept before; the app fills it once it reads its
     /// saved computers (`PhonePushes.kept`).

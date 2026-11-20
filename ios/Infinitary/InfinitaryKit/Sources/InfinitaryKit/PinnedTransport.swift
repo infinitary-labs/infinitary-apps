@@ -93,15 +93,24 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
 
     /// INF-5265: whether the computer answers at one of its addresses, by the pinned, non-mutating check a join sends
     /// first (`GET /connection` answering 426). It opens no session and sends no hello, so the phone can look at a kept
-    /// computer it does not show.
+    /// computer it does not show. Every address is tried at once, each through this transport's pin check and within
+    /// its pairing timeout, so a route that times out or answers with another key does not hide one that answers.
     public func answers(at addresses: [String]) async -> Bool {
-        for address in addresses {
-            guard !Task.isCancelled, let url = try? JoinLink.url(address, path: PhoneContract.connectionPath) else { continue }
-            if let (_, response) = try? await session.data(for: URLRequest(url: url)),
-               (response as? HTTPURLResponse)?.statusCode == 426 { return true }
-            if rejectedPin.withLock({ $0 }) { return false }
+        let urls = addresses.compactMap { try? JoinLink.url($0, path: PhoneContract.connectionPath) }
+        let session: URLSession = self.session
+        return await withTaskGroup(of: Bool.self) { group in
+            for url in urls {
+                group.addTask {
+                    guard let (_, response) = try? await session.data(for: URLRequest(url: url)) else { return false }
+                    return (response as? HTTPURLResponse)?.statusCode == 426
+                }
+            }
+            for await answered in group where answered {
+                group.cancelAll()
+                return true
+            }
+            return false
         }
-        return false
     }
 
     private func pair(_ link: JoinLink, at address: String, name: String, again: Bool = false) async throws -> JoinedMac {

@@ -169,6 +169,18 @@ export async function startPhoneHome(
   const googleStandIn = await startPhoneGoogle();
   // INF-4794: the home's phone sender posts to a stand-in relay, which pushes to the part's simulator.
   const pushRelay = await startPhonePushRelay(controls?.push?.bind(controls));
+  // INF-5265: the key the phone handed this home, as a short digest, so a part compares two homes' keys and one home's
+  // key across a relaunch without reading the key.
+  const pushReading = () => {
+    const targets = core.services.devices.pushTargets();
+    return {
+      ...pushRelay.state(),
+      registered: targets.length > 0,
+      keys: targets.map((target) =>
+        createHash("sha256").update(target.registration.key).digest("hex").slice(0, 16),
+      ),
+    };
+  };
   process.env.INFINITARY_PUSH_RELAY_URL = pushRelay.url;
   const userData = join(root, "app");
   const paths = appPathsFor(userData);
@@ -2682,10 +2694,7 @@ export async function startPhoneHome(
           break;
         // INF-4794: the stand-in relay's asks and pushes, and whether this home keeps the phone's registration.
         case "GET push-state": {
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
-          };
+          result = pushReading();
           break;
         }
         // Waits up to a minute for the phone to hand a registration with the grant the stand-in relay pushed it.
@@ -2693,10 +2702,15 @@ export async function startPhoneHome(
           const deadline = Date.now() + 60_000;
           while (core.services.devices.pushTargets().length === 0 && Date.now() < deadline)
             await new Promise((resolve) => setTimeout(resolve, 250));
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
-          };
+          result = pushReading();
+          break;
+        }
+        // INF-5265: waits up to half a minute for this home to have sent a card sealed to its stand-in relay.
+        case "POST push-sent": {
+          const deadline = Date.now() + 30_000;
+          while (pushRelay.state().pushes === 0 && Date.now() < deadline)
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          result = pushReading();
           break;
         }
         // INF-4794: the home lets go of the phone's registration, as it does when the phone hands null, so the
@@ -2704,10 +2718,7 @@ export async function startPhoneHome(
         case "POST push-cleared": {
           for (const target of core.services.devices.pushTargets())
             core.services.devices.setPush(target.deviceId, null);
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
-          };
+          result = pushReading();
           break;
         }
         // INF-5265: a second computer beside this one, which the phone joins with a link of its own.

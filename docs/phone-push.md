@@ -21,6 +21,7 @@ The phone gets its grant by asking the relay's `POST /v1/register` with its toke
 Each registration costs the phone one of Apple's background pushes, which Apple keeps to a few an hour, so the phone registers only when it holds no unexpired grant for its current push address and environment, when its grant nears its 30-day expiry, or when its computer answers that it did not keep the grant.
 It hands the registration it holds on each welcome, which costs nothing.
 A phone that keeps several computers hands each the same token and grant but a key of its own, so no computer opens another's pushes; the phone tries each key it keeps and names the computer whose key opened a push (`docs/ios.md`, "Card pushes").
+It hands them only at each computer's own welcome, so a computer the phone does not show keeps the grant it was last handed until it expires.
 Nothing changes on the computer: each one holds one registration for the phone, as before.
 
 The computer answers `{ "kept": true }` when it keeps the registration, and `{ "kept": false }` for null or for a grant the relay already refused this run (a 410 or a 403 below): then the phone registers anew and hands the new grant.

@@ -268,7 +268,8 @@ struct PhonePushTests {
         // The next computer it joins in the same sitting asks iOS for an address, then gets a new grant and key.
         let handedBefore = outside.handed.count
         let registeredBefore = outside.registered
-        await pushes.reached(takesPushes: true, hand: outside.hand)
+        pushes.kept([office])
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
         #expect(outside.registered == registeredBefore + 1)
         #expect(outside.handed.count == handedBefore, "No registration to hand before the new address has its grant")
         let nextAddress = Data(repeating: 0xcd, count: 32)
@@ -277,7 +278,9 @@ struct PhonePushTests {
         #expect(outside.posts.last?["token"] == next)
         await pushes.pushArrived(outside.grantPush(grant(expiring: 30)))
         #expect(outside.handed.last??.token == next)
-        #expect(outside.handed.last??.key == fresh.key)
+        let officeKey = try #require(outside.held?.computers?.first?.key)
+        #expect(officeKey != key)
+        #expect(outside.handed.last??.key == officeKey)
     }
 
     /// The captain's answer on INF-4794's review: show the notification when Infinitary is open but out of reach.
@@ -433,7 +436,8 @@ struct PhonePushTests {
         let pushes = outside.pushes()
         pushes.kept([studio])
         #expect(outside.held?.computers == [PhonePushComputer(pin: studio.pin, name: studio.name, key: key)])
-        #expect(outside.held?.key == key)
+        // The record's own key now belongs to no computer, so an older build hands no computer's key.
+        #expect(outside.held?.key != key)
         await pushes.opened()
         await pushes.tokenArrived(address)
         await pushes.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
@@ -443,7 +447,8 @@ struct PhonePushTests {
         pushes.kept([office, studio])
         let officeKey = try #require(outside.held?.computers?.first { $0.pin == office.pin }?.key)
         #expect(officeKey != key)
-        #expect(outside.held?.key == key, "The first computer's key stays the record's own key")
+        #expect(outside.held.map { held in held.computers?.contains { $0.key == held.key } } == false,
+                "The record's own key is no computer's")
         await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
         #expect(outside.handed.last??.key == officeKey)
         #expect(outside.handed.last??.grant == grant(expiring: 20))
@@ -452,6 +457,26 @@ struct PhonePushTests {
         // Renamed on the computer: the name follows; the key does not change.
         pushes.kept([(office.pin, "Work laptop"), studio])
         #expect(outside.held?.computers?.first { $0.pin == office.pin } == PhonePushComputer(pin: office.pin, name: "Work laptop", key: officeKey))
+    }
+
+    /// The captain's pick on INF-5265's review, "Keep keys separate": a computer added after another was forgotten gets a
+    /// new key, never the forgotten one's or the record's own.
+    @MainActor @Test func aComputerAddedLaterNeverTakesAnotherComputersKey() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        pushes.kept([studio, office])
+        let studioKey = try #require(outside.held?.computers?.first?.key)
+        let officeKey = try #require(outside.held?.computers?.last?.key)
+        pushes.kept([office])
+        let lab = (pin: "c2VwYXJhdGUtbGFiLXBpbi0", name: "Lab Mac")
+        pushes.kept([office, lab])
+        let held = try #require(outside.held)
+        let labKey = try #require(held.computers?.first { $0.pin == lab.pin }?.key)
+        #expect(![studioKey, officeKey, held.key].contains(labKey))
+        // With no computer named, a record with a key per computer hands none.
+        #expect(PhonePush.registration(held, token: token, environment: .production, now: outside.now) == nil)
     }
 
     /// A computer the phone keeps no key for yet is handed no registration, never another computer's key.
@@ -577,7 +602,7 @@ struct PhonePushTests {
         #expect(outside.removed == ["n1"])
         let held = try #require(outside.held)
         #expect(held.computers == [PhonePushComputer(pin: office.pin, name: office.name, key: officeKey)])
-        #expect(held.key == officeKey, "The forgotten computer's key is kept nowhere")
+        #expect(held.key != key && held.key != officeKey, "The forgotten computer's key is kept nowhere")
         #expect(held.token == token && held.grant == grant(expiring: 20))
 
         outside.removed = []

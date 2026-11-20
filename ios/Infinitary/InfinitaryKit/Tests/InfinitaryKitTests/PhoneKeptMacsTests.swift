@@ -35,31 +35,33 @@ struct PhoneKeptMacsTests {
         #expect(kept.shown == nil && kept.all.isEmpty)
     }
 
-    @Test func savesTheShownWhereAnOlderBuildReadsIt() throws {
+    /// The captain's pick on INF-5265's review: the list is saved whole at once, and the one record a build before
+    /// saved is read as that computer, shown, with no new join.
+    @Test func savesTheListWholeAndReadsTheOneRecordFromBefore() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("kept-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }
         let files = PhoneKeptMacsFiles(folder: folder)
+        #expect(try files.read() == PhoneKeptMacs())
         // A phone that saved one computer before: JoinedMac.json alone, as the build before wrote it.
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try JSONEncoder().encode(studio).write(to: files.shownURL)
-        #expect(try PhoneKeptMacs(shown: files.readShown(), others: files.readOthers()) == PhoneKeptMacs(shown: studio))
+        try JSONEncoder().encode(studio).write(to: files.legacyURL)
+        var kept = try files.read()
+        #expect(kept == PhoneKeptMacs(shown: studio))
 
-        var kept = PhoneKeptMacs(shown: studio)
         kept.joined(office)
         try files.save(kept)
-        // An older build reads the shown computer from the file it always read.
-        #expect(try JSONDecoder().decode(JoinedMac.self, from: Data(contentsOf: files.shownURL)) == office)
-        #expect(try PhoneKeptMacs(shown: files.readShown(), others: files.readOthers()) == kept)
-        #expect(try files.othersURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        #expect(try files.read() == kept)
+        #expect(!FileManager.default.fileExists(atPath: files.legacyURL.path), "The list now holds the computer from before")
+        #expect(try files.url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
 
-        // A write cut after the others but before the shown lists the shown computer twice: it reads as shown.
-        #expect(PhoneKeptMacs(shown: office, others: [office, studio]) == kept)
+        // A switch saved: both computers stay, the other one shown.
+        kept.show(studio.pin)
+        try files.save(kept)
+        #expect(try files.read() == PhoneKeptMacs(shown: studio, others: [office]))
 
         kept.forgetShown()
-        try files.save(kept)
-        #expect(!FileManager.default.fileExists(atPath: files.othersURL.path))
         kept.forgetShown()
         try files.save(kept)
-        #expect(!FileManager.default.fileExists(atPath: files.shownURL.path))
+        #expect(try files.read() == PhoneKeptMacs())
     }
 }

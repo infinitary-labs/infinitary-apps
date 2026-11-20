@@ -55,50 +55,44 @@ public struct PhoneKeptMacs: Equatable, Sendable {
     }
 }
 
-/// Where the kept computers live: the shown one in `JoinedMac.json`, as before, so an older build still opens the one
-/// it showed, and the others beside it in `KeptMacs.json`. Both are readable after the first unlock and left out of
-/// backups, as the one record was.
+/// Where the kept computers live: one record, `KeptMacs.json`, written whole at once, so a switch or a forget cut short
+/// leaves the list as it was before or after, never a computer missing (the captain's pick on INF-5265's review, "Save
+/// both together; older versions may not see the latest selection"). A phone that saved one computer before has only
+/// `JoinedMac.json`, which is read as that computer, shown, until the first save replaces it. It is readable after the
+/// first unlock and left out of backups, as the one record was.
 public struct PhoneKeptMacsFiles: Sendable {
-    public let shownURL: URL
-    public let othersURL: URL
+    public let url: URL
+    /// The one computer a build before this one saved.
+    public let legacyURL: URL
 
     public init(folder: URL) {
-        shownURL = folder.appendingPathComponent("JoinedMac.json")
-        othersURL = folder.appendingPathComponent("KeptMacs.json")
+        url = folder.appendingPathComponent("KeptMacs.json")
+        legacyURL = folder.appendingPathComponent("JoinedMac.json")
     }
 
-    /// The shown computer's record, or none before the first join.
-    public func readShown() throws -> JoinedMac? {
-        guard FileManager.default.fileExists(atPath: shownURL.path) else { return nil }
-        return try JSONDecoder().decode(JoinedMac.self, from: Data(contentsOf: shownURL))
+    private struct Record: Codable {
+        var shown: JoinedMac?
+        var others: [JoinedMac]
     }
 
-    /// The other kept computers. A phone that saved one computer before has none, so it moves to the list with no
-    /// new join.
-    public func readOthers() throws -> [JoinedMac] {
-        guard FileManager.default.fileExists(atPath: othersURL.path) else { return [] }
-        return try JSONDecoder().decode([JoinedMac].self, from: Data(contentsOf: othersURL))
+    /// The kept computers, or none before the first join.
+    public func read() throws -> PhoneKeptMacs {
+        if FileManager.default.fileExists(atPath: url.path) {
+            let record = try JSONDecoder().decode(Record.self, from: Data(contentsOf: url))
+            return PhoneKeptMacs(shown: record.shown, others: record.others)
+        }
+        guard FileManager.default.fileExists(atPath: legacyURL.path) else { return PhoneKeptMacs() }
+        return PhoneKeptMacs(shown: try JSONDecoder().decode(JoinedMac.self, from: Data(contentsOf: legacyURL)))
     }
 
-    /// Writes the others first, then the shown one, so a write cut between them leaves the shown computer listed
-    /// twice, which `PhoneKeptMacs` reads as shown, never a computer missing.
+    /// Writes the whole list at once, then lets go of the one record from before, which this list now holds.
     public func save(_ kept: PhoneKeptMacs) throws {
-        try FileManager.default.createDirectory(at: shownURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if kept.others.isEmpty { try remove(othersURL) } else { try write(JSONEncoder().encode(kept.others), to: othersURL) }
-        if let shown = kept.shown { try write(JSONEncoder().encode(shown), to: shownURL) } else { try remove(shownURL) }
-    }
-
-    /// Removes the others' file alone, such as one that cannot be read.
-    public func removeOthers() throws { try remove(othersURL) }
-
-    private func write(_ data: Data, to url: URL) throws {
-        try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        var url = url
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(Record(shown: kept.shown, others: kept.others))
+            .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        var saved = url
         var values = URLResourceValues(); values.isExcludedFromBackup = true
-        try url.setResourceValues(values)
-    }
-
-    private func remove(_ url: URL) throws {
-        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+        try saved.setResourceValues(values)
+        if FileManager.default.fileExists(atPath: legacyURL.path) { try FileManager.default.removeItem(at: legacyURL) }
     }
 }

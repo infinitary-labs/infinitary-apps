@@ -74,16 +74,20 @@ public enum PhonePush {
                                     computer: String? = nil) -> PhonePushRegistration? {
         guard held.token == token, held.environment == environment, let grant = held.grant,
               let expiry = expiry(grant), expiry > now, token.wholeMatch(of: tokenShape) != nil else { return nil }
-        // A computer the phone keeps no key for yet gets none, never another computer's key.
-        guard let key = computer.map({ pin in held.computers?.first { $0.pin == pin }?.key }) ?? held.key else { return nil }
+        // A computer the phone keeps no key for yet gets none, never another computer's key; the record's own key is
+        // handed only from a record kept before the phone kept a key per computer.
+        let key: String? = if let computer { held.computers?.first { $0.pin == computer }?.key }
+            else if held.computers == nil { held.key } else { nil }
+        guard let key else { return nil }
         return PhonePushRegistration(token: token, environment: environment, grant: grant, key: key)
     }
 
     /// Whether the phone asks the relay for a grant: it holds none for this address and service, or its grant expires
     /// within `renewBefore`.
     public static func needsGrant(_ held: PhonePushHeld, token: String, environment: PhonePushEnvironment, now: Date) -> Bool {
-        guard let registration = registration(held, token: token, environment: environment, now: now),
-              let expiry = expiry(registration.grant) else { return true }
+        // The grant is the address's alone, whichever computer's key goes with it.
+        guard held.token == token, held.environment == environment, let grant = held.grant, let expiry = expiry(grant),
+              expiry > now, token.wholeMatch(of: tokenShape) != nil else { return true }
         return expiry.timeIntervalSince(now) < renewBefore
     }
 
@@ -211,26 +215,29 @@ public struct PhonePushEffects {
 
     /// INF-5265: the computers the phone keeps, by pin and name. Each gets its own key, named for the notification
     /// part, and a forgotten one's key goes. A record kept before gives its one key to the one computer kept then, the
-    /// key that computer already holds, and a phone's first computer takes the record's key.
+    /// key that computer already holds, once; every computer added after gets a new key, never one another computer
+    /// held. The record's own key then belongs to no computer (the captain's pick on INF-5265's review, "Keep keys
+    /// separate; do not support notifications after downgrading"), so an older build hands no computer's key.
     public func kept(_ kept: [(pin: String, name: String)]) {
         // No computer kept is the last one forgotten, which `forgot` owns; here it would drop every key.
         guard !kept.isEmpty else { return }
         var held = keep()
         let before = held
         var computers = held.computers ?? []
-        if held.computers == nil, kept.count == 1 {
-            computers = [PhonePushComputer(pin: kept[0].pin, name: kept[0].name, key: held.key)]
-            held.untagged = kept[0].pin
+        if held.computers == nil {
+            if kept.count == 1 {
+                computers = [PhonePushComputer(pin: kept[0].pin, name: kept[0].name, key: held.key)]
+                held.untagged = kept[0].pin
+            }
+            held.key = PhonePushSeal.newKey()
         }
         computers.removeAll { computer in !kept.contains { $0.pin == computer.pin } }
         if let untagged = held.untagged, !kept.contains(where: { $0.pin == untagged }) { held.untagged = nil }
         for computer in kept {
             if let index = computers.firstIndex(where: { $0.pin == computer.pin }) { computers[index].name = computer.name; continue }
-            computers.append(PhonePushComputer(pin: computer.pin, name: computer.name,
-                                               key: computers.isEmpty ? held.key : PhonePushSeal.newKey()))
+            computers.append(PhonePushComputer(pin: computer.pin, name: computer.name, key: PhonePushSeal.newKey()))
         }
         held.computers = computers
-        if let first = computers.first { held.key = first.key }
         guard held != before else { return }
         self.held = held; effects.save(held)
     }
@@ -269,10 +276,10 @@ public struct PhonePushEffects {
             // Committed before the wait for iOS's list, so a later join or forget starts from this record.
             let before = held
             held.computers = rest
-            held.key = rest[0].key
             if held.untagged == computer { held.untagged = nil }
             self.held = held; effects.save(held)
-            let shown = await effects.delivered().filter { owner(named: $0.computer, in: before) == computer }.map(\.id)
+            // One that opened no card names no computer, so it is no one's to remove here.
+            let shown = await effects.delivered().filter { $0.cardID != nil && owner(named: $0.computer, in: before) == computer }.map(\.id)
             if !shown.isEmpty { effects.remove(shown) }
             return
         }

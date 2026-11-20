@@ -46,13 +46,14 @@ A timeout or missing reply never repeats a pairing request: the Mac may already 
 An explicit `paired` refusal leaves a fresh invitation unspent, so that one confirmed invitation may use `again` once to recover the same phone identity.
 A wrong pin never sends the invitation to that address or replaces the saved pin.
 
-The saved app records are `JoinedMac.json`, the computer shown, and `KeptMacs.json`, every other kept computer with the one shown most recently first (`PhoneKeptMacs`): each holds public addresses, pin, device identifier and name.
-Both have file protection and are excluded from backup; no invitation code, card, feed line or cursor is saved there.
-The phone writes the others before the shown one, so a write cut between them leaves the shown computer listed twice, never one missing; a phone that saved one computer before has no `KeptMacs.json` and keeps that computer with no new join, key or question.
+The saved app record is `KeptMacs.json` (`PhoneKeptMacsFiles`): the computer shown and every other kept computer, the one shown most recently first (`PhoneKeptMacs`), each with public addresses, pin, device identifier and name.
+It has file protection and is excluded from backup; no invitation code, card, feed line or cursor is saved there.
+The phone writes it whole at once, so a switch, join or forget cut short leaves the list as it was before or after, never a computer missing (the captain's pick on INF-5265's review, "Save both together; older versions may not see the latest selection").
+A phone that saved one computer before has only `JoinedMac.json`, which is read as that computer, shown, with no new join, key or question; the first save writes `KeptMacs.json` and removes `JoinedMac.json`, so an older build opened after it finds no computer and needs a new link.
 The Keychain identity survives relaunch, Leave and local Forget; it is never replaced because the network is unavailable.
 Protected identity and saved-Mac reads start on activation, not prewarm, and a failed read is retried on activation or joining with a visible explanation if it still fails.
 A saved-Mac read suggests unlocking only for `CocoaError(.fileReadNoPermission)` or unavailable protected data; other temporary read failures retain the record and offer another attempt.
-An undecodable record, invalid pin or invalid address discards only that computer, retains the phone's identity and the other kept computers, explains the local reset and allows a fresh confirmed link; an undecodable `KeptMacs.json` goes alone, and the shown computer stays.
+An invalid pin or invalid address discards only that computer and keeps the others; an undecodable record discards the kept computers; either way the phone retains its identity, explains the local reset and allows a fresh confirmed link.
 
 ### Several computers
 
@@ -64,9 +65,11 @@ A tap on a computer shows it: the phone stops the shown computer's connection, s
 The phone never switches by itself (the captain's pick, "Stay on my choice"): on each open, each settled network change and each time the sheet opens, it sends each other kept computer the pinned, non-mutating `GET /connection` a join sends first, which opens no session, and marks the ones that answer 426 as Answers now and the rest as Not answering from here.
 The sheet opens with its first row focused, so on a keyboard the up and down arrows move among the rows, Return or Space presses one, and Command-I opens it.
 With more than one computer kept, the top bar's computer button names the computer shown beside its glyph, and VoiceOver reads that name in place of Your computer.
-Leave and Forget act on the computer shown; the kept computer shown most recently shows next, or the first screen when none is left.
+Leave and Forget act on the computer their confirmation named, even when a notification's tap showed another before the answer came; forgetting the shown one shows the kept computer shown most recently next, or the first screen when none is left.
+A change of network that leaves no usable path marks every other computer Not answering from here and stops the look under way, so a list open while a private network goes away does not keep an old mark.
+Each look tries every saved address of a computer at once, each through the pinned check with the pairing timeout, so an address that times out or answers with another key does not hide one that answers.
 A computer that removes the phone is forgotten alone: while another is kept, it shows with a line saying the removed one removed this device; otherwise the Removed screen shows as before.
-The homes part (`PhoneJourney+Homes.swift`) joins the test home and a second real home in a process of its own (`tests/helpers/phoneSecondHome.ts`), switches by keys, taps a notification from the one not shown and leaves one; `PhoneKeptMacsTests` holds the saved list, its order and the move from one record.
+The homes part (`PhoneJourney+Homes.swift`) joins the test home and a second real home in a process of its own (`tests/helpers/phoneSecondHome.ts`) by its pasted link, checks each computer shows only its own cards and seals under its own key at its own stand-in relay, follows the other computer's mark as its home goes offline and back with no switch, switches by keys, keeps both with their keys through a relaunch, taps a notification from the one not shown and leaves each in turn to the first screen; `PhoneKeptMacsTests` holds the saved list, its order, the whole-record save and the move from one record.
 
 ### Joining by its address
 
@@ -767,7 +770,10 @@ That row says whether notifications are on, or off in the device's own Settings 
 
 The phone keeps one record in a push keychain group it shares with its notification part (`PhonePushStore`), apart from the app's own group, so the part reaches no other key the phone keeps, on this device only and readable after the first unlock: a sealing key for each kept computer with its pin and name, its push address and service, the relay's grant and when it last asked for one.
 One push address and grant serve every kept computer, and each computer gets its own sealing key, handed at its welcome, so no computer can open another's pushes (INF-5265).
-A phone that kept one computer's key before keeps that key for that computer, and a computer joined next gets a new one; the phone hands a computer only its own key, never another's.
+A phone that kept one computer's key before keeps that key for that computer, once; every computer added after gets a new key, never one another computer held, and the phone hands a computer only its own key (the captain's pick on INF-5265's review, "Keep keys separate; do not support notifications after downgrading").
+The record's own `key` field, which an older build reads, then holds a key no computer seals with, so an older build opened after it shows no card's words in its notifications.
+The record learns the kept computers only once the phone has read them after the first unlock, and a list read as empty drops no key: only forgetting the last computer does.
+The grant and address reach a computer only at its own welcome, so a kept computer that is not shown keeps the grant it was last handed; once that grant expires, up to 30 days after it was handed and as little as three, or iOS gives a new address, that computer sends nothing until it is shown again.
 It asks the relay's `POST /v1/register` only when it holds no unexpired grant for its current address and service, when its grant has three days left, or when its computer answers `{ "kept": false }`, and at most once an hour, since each ask costs one of Apple's few background pushes.
 The grant arrives as a background push (`UIBackgroundModes` `remote-notification`), and the phone keeps it and hands it on.
 Its service is read from the build's provisioning profile: a development build names `development`, and a TestFlight or App Store build, which carries none, is `production`.

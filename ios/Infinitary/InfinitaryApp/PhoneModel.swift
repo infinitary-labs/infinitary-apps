@@ -79,15 +79,13 @@ struct AddressJoin: Equatable {
     private let files: PhoneKeptMacsFiles
     private let trustedURL: URL
     private let loadIdentity: () throws -> PhoneIdentity
-    private let readMac: () throws -> JoinedMac?
-    private let readOthers: () throws -> [JoinedMac]
+    private let readKept: () throws -> PhoneKeptMacs
     private let protectedDataAvailable: @MainActor () -> Bool
     /// Signs in to a typed address and asks its home for a link (`SSHJoin.link`); a test stands in for the home.
     private let askLink: @MainActor (SSHAddress, SSHHostKey?, PhoneSSHKey) async throws -> JoinLink
 
     init(loadIdentity: @escaping () throws -> PhoneIdentity = PhoneIdentity.loadOrCreate,
          readMac: (() throws -> JoinedMac?)? = nil,
-         readOthers: (() throws -> [JoinedMac])? = nil,
          protectedDataAvailable: @escaping @MainActor () -> Bool = { UIApplication.shared.isProtectedDataAvailable },
          askLink: @escaping @MainActor (SSHAddress, SSHHostKey?, PhoneSSHKey) async throws -> JoinLink = {
              try await SSHJoin.link($0, trusted: $1, key: $2)
@@ -99,9 +97,8 @@ struct AddressJoin: Equatable {
         self.loadIdentity = loadIdentity
         self.protectedDataAvailable = protectedDataAvailable
         self.askLink = askLink
-        // A test that names the shown record keeps no others unless it names them too.
-        self.readOthers = readOthers ?? (readMac == nil ? files.readOthers : { [] })
-        self.readMac = readMac ?? files.readShown
+        // A test names the one record it stands in for, shown, as a build before saved it.
+        self.readKept = readMac.map { read in { PhoneKeptMacs(shown: try read()) } } ?? files.read
         // Prewarm can construct the model before first unlock. Read protected data on activation.
         nearby.changed = { [weak self] addresses in self?.connection?.found(addresses: addresses) }
         network.pathUpdateHandler = { [weak self] path in
@@ -136,10 +133,10 @@ struct AddressJoin: Equatable {
         guard connection == nil, !busy else { return true }
         do {
             identity = try identity ?? loadIdentity()
-            let mac = try readMac()
-            kept = PhoneKeptMacs(shown: mac, others: try keptOthers())
-            // The others' file outlived the shown record, as an older build's Forget leaves it: the next one shows.
-            if mac == nil, !kept.others.isEmpty { kept.forgetShown(); try? files.save(kept) }
+            let read = try readKept()
+            kept = PhoneKeptMacs(shown: read.shown, others: read.others.filter(Self.usable))
+            // A list saved with none shown shows the one shown most recently.
+            if kept.shown == nil, !kept.others.isEmpty { kept.forgetShown(); try? files.save(kept) }
             restored = true
             keptPushes()
             if let mac = kept.shown {
@@ -154,8 +151,7 @@ struct AddressJoin: Equatable {
             if identity == nil { problem = error.localizedDescription }
             else if needsUnlock(error) { problem = PhoneMessages.phoneModelReadSavedUnlock() }
             else if error is DecodingError || (error as? CocoaError)?.code == .fileReadCorruptFile {
-                // The shown record is damaged: the others stay, and the one shown most recently shows.
-                kept = PhoneKeptMacs(shown: nil, others: (try? keptOthers()) ?? [])
+                kept = PhoneKeptMacs()
                 restored = true
                 return discardDamagedMac()
             } else { problem = PhoneMessages.phoneModelReadSavedRetry() }
@@ -172,16 +168,6 @@ struct AddressJoin: Equatable {
     private static func usable(_ mac: JoinedMac) -> Bool {
         JoinLink.validKey(mac.pin) && !mac.addresses.isEmpty && mac.addresses.count <= 25 && !mac.deviceID.isEmpty
             && !mac.name.isEmpty && mac.addresses.allSatisfy({ (try? JoinLink.url($0, path: "/")) != nil })
-    }
-
-    /// The other kept computers that can be dialled. A file that cannot be read for its protection waits for an unlock
-    /// as the shown record does; one that is damaged goes, and the shown computer stays.
-    private func keptOthers() throws -> [JoinedMac] {
-        do { return try readOthers().filter(Self.usable) } catch {
-            guard error is DecodingError || (error as? CocoaError)?.code == .fileReadCorruptFile else { throw error }
-            try? files.removeOthers()
-            return []
-        }
     }
 
     private func needsUnlock(_ error: Error) -> Bool {

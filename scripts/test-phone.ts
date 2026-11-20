@@ -341,7 +341,8 @@ const recording = {
     if (!simulator) throw new Error("No owned simulator exists");
     const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, phoneBundle, "data"])).trim());
     if (!container.split("/").includes(simulator)) throw new Error("The app container is not on this run's simulator");
-    const saved = join(container, "Library", "Application Support", "JoinedMac.json");
+    // INF-5265: the phone keeps its computers in one record (docs/ios.md, "Saved records").
+    const saved = join(container, "Library", "Application Support", "KeptMacs.json");
     const bytes = readFileSync(saved);
     // Reproduce a truncated version of the actual saved record, never another simulator's data.
     writeFileSync(saved, bytes.subarray(0, bytes.length - 8));

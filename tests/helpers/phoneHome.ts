@@ -1180,6 +1180,14 @@ export async function startPhoneHome(
         case "POST panel-write":
           result = await panels.write(41);
           break;
+        // The music on at the computer, which a panel reading settings.current shows.
+        case "POST panel-music-on": {
+          const look = await core.dispatch("inf:settings:appearance:get", []);
+          result = await core.dispatch("inf:settings:appearance:set", [
+            { ...look, ambientMusic: true },
+          ]);
+          break;
+        }
         case "POST panel-note":
           result = await panels.note(1);
           break;

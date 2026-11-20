@@ -5,7 +5,7 @@ extension PhoneJourney {
     /// INF-3830 piece 2, the captain's entry=tab and layout=column: the computer's panels on a fourth tab, opened with
     /// Command-4, each drawn under its title and owner word. Data: the test home's real core serves the fixture panel
     /// (tests/fixtures/phone-panels/phone-tally), its built files and the panel library this checkout builds; the panel reads
-    /// the board, shows its store's tally and adds one through its background work; a second fixture
+    /// the board and the computer's music, shows its store's tally and adds one through its background work; a second fixture
     /// (tests/fixtures/phone-panels/phone-shy) decides for itself whether it shows. Completion: the tab is absent with no
     /// panel, and appears and leaves as the self-deciding panel says it shows and does not; a library file the build did not make leaves the panel's place saying so; the panel draws, follows a write
     /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop with Retry,
@@ -46,6 +46,12 @@ extension PhoneJourney {
         // A write on the computer reaches the drawn panel without reopening the tab.
         _ = try await home("panel-write")
         XCTAssertTrue(tally(41).waitForPresence(timeout: 20), app.debugDescription)
+
+        // The panel reads the computer's settings (`settings.current`): this phone says it reads them, so the computer
+        // sends the panel at all, and the music turned on there reaches the drawn panel.
+        XCTAssertTrue(app.webViews.staticTexts["Music off"].waitForPresence(timeout: 20), app.debugDescription)
+        _ = try await home("panel-music-on")
+        XCTAssertTrue(app.webViews.staticTexts["Music on"].waitForPresence(timeout: 20), app.debugDescription)
 
         // A press runs on the computer exactly once.
         let add = app.webViews.buttons["Add one"]

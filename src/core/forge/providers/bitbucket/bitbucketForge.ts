@@ -400,7 +400,8 @@ export class BitbucketForge implements Forge {
     let sha: string | undefined;
     let mergedHead: string | undefined;
     try {
-      if (merged?.state !== "MERGED") merged = await this.pullRequest(id);
+      // Only an answer naming this pull request confirms its merge.
+      if (merged?.state !== "MERGED" || merged.id !== id) merged = await this.pullRequest(id);
       if (merged.state === "MERGED") {
         sha = await this.fullCommit(merged.merge_commit?.hash).catch(() => undefined);
         // The version merged is read, never assumed.
@@ -460,7 +461,7 @@ export class BitbucketForge implements Forge {
       { draft: false },
       beforeSend,
     );
-    const ready = await this.changeOf(updated.body as PullRequestJson);
+    const ready = await this.changeOf(updated.body as PullRequestJson, request.id);
     if (ready.draft)
       throw new ForgeError(
         "refused",
@@ -589,8 +590,13 @@ export class BitbucketForge implements Forge {
     return "clean";
   }
 
-  private async changeOf(request: PullRequestJson | null): Promise<ForgeChange> {
-    if (!request || typeof request.id !== "number")
+  /** `expected`: the pull request a write named, which its answer must be about. */
+  private async changeOf(request: PullRequestJson | null, expected?: number): Promise<ForgeChange> {
+    if (
+      !request ||
+      typeof request.id !== "number" ||
+      (expected !== undefined && request.id !== expected)
+    )
       throw unreadableError(this.place, "the pull request");
     return {
       number: request.id,
@@ -630,8 +636,9 @@ export class BitbucketForge implements Forge {
 
   private async pullRequest(id: number): Promise<PullRequestJson> {
     const request = await this.read<PullRequestJson | null>(this.pullRequestPath(id));
-    if (!request || typeof request.id !== "number")
-      throw unreadableError(this.place, `pull request #${id}`);
+    // An answer about another pull request is no reading of this one: it
+    // settles no merge and confirms none (INF-5193).
+    if (!request || request.id !== id) throw unreadableError(this.place, `pull request #${id}`);
     return request;
   }
 

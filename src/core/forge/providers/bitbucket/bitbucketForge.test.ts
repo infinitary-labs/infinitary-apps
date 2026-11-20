@@ -345,6 +345,35 @@ describe("a Bitbucket Cloud pull request", () => {
     await expect(forge.pull(9)).rejects.toMatchObject({ failure: "transient" });
   });
 
+  // INF-5193 (the review of Bitbucket's merge): an answer about another pull
+  // request is no reading of this one, so it confirms no merge and settles
+  // no merge whose outcome is unknown.
+  it("confirms no merge and reads nothing from an answer about another pull request", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () =>
+        Response.json(pullRequest({ id: 8, state: "MERGED" })),
+      [`GET ${REPO}/pullrequests/7`]: () =>
+        Response.json(pullRequest({ id: 8, state: "DECLINED" })),
+      ...commits(HEAD, MERGED),
+    });
+    await expect(forge.putIn(change, HEAD)).rejects.toBeInstanceOf(ForgeMergeUnconfirmed);
+    expect(sent.filter((request) => request.method === "POST")).toHaveLength(1);
+    await expect(forge.pull(7)).rejects.toBeInstanceOf(ForgeError);
+  });
+
+  it("does not take an answer about another pull request as this draft made ready", async () => {
+    const { forge } = standIn({
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({ draft: true })),
+      [`PUT ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({ id: 8 })),
+      ...commits(HEAD),
+    });
+    await expect(forge.markReady({ ...change, draft: true }, () => {})).rejects.toBeInstanceOf(
+      ForgeError,
+    );
+  });
+
   it("replaces only the description, leaving a title a person changed since", async () => {
     const { forge, sent } = standIn({
       [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),

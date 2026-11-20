@@ -3,8 +3,8 @@
  * phone app shows come from the catalog, through `PhoneMessages`, so a Swift
  * file under the phone's roots holds no words typed in for a person to read.
  * The files that still do are on `PHONE_RAW_WORDS_LEDGER` with how many runs
- * of words each holds, and the ledger only shrinks, as the window's does
- * (`scripts/raw-words.ts`).
+ * of words each may hold, and the check fails only when a file gains words,
+ * as the window's does (`scripts/raw-words.ts`).
  *
  * Swift has no parser here, so the check reads each file's string literals
  * with a small lexer that skips comments, and counts a literal whose text
@@ -18,7 +18,7 @@
  * comment on their line or the line above: a product name, or text that is
  * not shown.
  *
- *   node scripts/phone-raw-words.ts          exits 1 naming each file out of step with the ledger
+ *   node scripts/phone-raw-words.ts          exits 1 naming each file that gained raw words
  *   node scripts/phone-raw-words.ts --list   every file holding raw words, with its count
  *   node scripts/phone-raw-words.ts --show <file>   each run of raw words in one file
  */
@@ -191,7 +191,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       for (const [path, count] of Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)))
         if (count) console.log(`  "${path}": ${count},`);
     } else {
-      const problems = ledgerProblems(counts, PHONE_RAW_WORDS_LEDGER, "scripts/phone-raw-words.ts");
+      const problems = ledgerProblems(counts, PHONE_RAW_WORDS_LEDGER);
       if (problems.length) {
         console.error(problems.join("\n"));
         process.exitCode = 1;

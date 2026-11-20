@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "raw-words-growth-only",
+      "reason": "Changes only the project's untranslated-word check: it fails when a file gains words and no longer asks each change to lower its count."
+    }
+  ]
+}

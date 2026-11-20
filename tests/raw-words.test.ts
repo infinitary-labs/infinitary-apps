@@ -3,8 +3,8 @@ import { isCheckedFile, ledgerProblems, RAW_WORDS_LEDGER, rawWordsIn } from "../
 import { FOLLOWS_COMPUTER } from "../src/shared/i18n/start";
 
 // The approved plan (INF-3674, "What done looks like"): pnpm check refuses
-// raw words outside the ledger, and the ledger only shrinks until it is
-// empty when the window's words have moved into the catalog.
+// raw words outside the ledger until it is empty when the window's words have
+// moved into the catalog.
 
 const COMPONENT = `
 import * as m from "@shared/i18n/messages.generated";
@@ -50,31 +50,38 @@ it("reads the window, the app's own panels and the shared, core, main and preloa
   expect(isCheckedFile("src/core/orchestrator/settleWords.test.ts")).toBe(false);
 });
 
-it("refuses raw words outside the ledger, a listed file that gains some, and a ledger that does not shrink", () => {
+// The captain's fix (INF-5395, fix 1): "Let the untranslated-word check fail
+// only when a file gains words, and let the merge batch lower the counts
+// itself." A file gains words against the ledger or against its own count
+// where the branch started, which is main's count once a batch has merged.
+it("fails only when a file gains raw words, never when one lost some", () => {
   const ledger = {
     "src/renderer/src/a.tsx": 3,
-    "src/renderer/src/b.tsx": 2,
+    "src/renderer/src/b.tsx": 5,
     "src/renderer/src/c.tsx": 1,
+    "src/renderer/src/e.tsx": 4,
   };
   expect(
     ledgerProblems(
       {
         "src/renderer/src/a.tsx": 4,
-        "src/renderer/src/b.tsx": 1,
+        "src/renderer/src/b.tsx": 3,
         "src/renderer/src/c.tsx": 0,
         "src/renderer/src/d.tsx": 2,
+        "src/renderer/src/e.tsx": 2,
       },
       ledger,
+      { "src/renderer/src/b.tsx": 2, "src/renderer/src/e.tsx": 3 },
     ),
   ).toEqual([
-    "src/renderer/src/a.tsx: 4 run(s) of raw words, more than the ledger's 3; put the new words in the catalog (docs/i18n.md), the ledger only shrinks",
-    "scripts/raw-words.ts: src/renderer/src/b.tsx now holds 1 run(s) of raw words; lower its entry to 1",
+    "src/renderer/src/a.tsx: 4 run(s) of raw words, more than the ledger's 3; put the new words in the catalog (docs/i18n.md)",
+    "src/renderer/src/b.tsx: 3 run(s) of raw words, more than the 2 it held where this branch started; put the new words in the catalog (docs/i18n.md)",
     "src/renderer/src/d.tsx: 2 run(s) of words typed in for a person to read; put them in the catalog (docs/i18n.md), or say why one stays with i18n-exempt",
-    "scripts/raw-words.ts: src/renderer/src/c.tsx holds no raw words now; remove its entry, and the ledger shrinks",
   ]);
-  expect(ledgerProblems({ "src/renderer/src/a.tsx": 3 }, { "src/renderer/src/a.tsx": 3 })).toEqual(
-    [],
-  );
+  // Two changes that each lowered one file meet in a batch with the ledger untouched.
+  expect(
+    ledgerProblems({ "src/renderer/src/a.tsx": 1 }, ledger, { "src/renderer/src/a.tsx": 2 }),
+  ).toEqual([]);
 });
 
 // The captain's answer to the review of the first languages (INF-3850):

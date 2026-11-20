@@ -732,9 +732,16 @@ export class GitHubForge implements Forge {
   async putIn(
     change: ForgeChange,
     headSha: string,
-    way: MergeWay = "squash",
+    way: MergeWay | undefined,
   ): Promise<MergeAnswer> {
     this.requireMaintainer();
+    // The project's merges are read before every merge (`mergeWays`), never assumed.
+    if (!way)
+      throw new ForgeError(
+        "refused",
+        `no merge this project allows was read before merging ${this.label(change)}`,
+        true,
+      );
     const path = `${this.repoPath()}/pulls/${numbered(change)}/merge`;
     // `sha` is GitHub's "match head commit" guard: the merge is refused if
     // the change moved on after its checks were read.

@@ -404,6 +404,7 @@
         "!src/core/orchestrator/changePublication.mergedStory.test.ts",
         "!src/core/orchestrator/mergeReviews.test.ts",
         "!tests/gitlabMergeReview.test.ts",
+        "!tests/mergeCardWay.test.ts",
         "!src/core/orchestrator/settleService.test.ts",
         "!src/core/orchestrator/handedResult.test.ts",
         "!src/core/placed/placedCallbacks.test.ts",

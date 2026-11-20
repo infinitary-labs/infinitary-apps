@@ -108,6 +108,8 @@ describe("shared story delivery boundaries", () => {
                 "Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.",
             },
             repaired,
+            // This stand-in forge reads no allowed merges, so none is chosen for it.
+            undefined,
           );
           // Nothing is published, uploaded, refreshed or rewritten on the override's account.
           expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(before);
@@ -148,6 +150,8 @@ describe("shared story delivery boundaries", () => {
       expect(putIn).toHaveBeenCalledWith(
         { ...at.forge.change, squashMessage: "The plain description." },
         original,
+        // This stand-in forge reads no allowed merges, so none is chosen for it.
+        undefined,
       );
       // Marking none: the ledger is exactly as it was before the merge.
       expect(unpublished).toMatchObject({ revisions: [], receipts: [] });
@@ -168,6 +172,8 @@ describe("shared story delivery boundaries", () => {
       expect(at.putIn).toHaveBeenCalledWith(
         { ...at.forge.change, squashMessage: "The repaired change is ready." },
         repaired,
+        // This stand-in forge reads no allowed merges, so none is chosen for it.
+        undefined,
       );
       expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toEqual(published);
     });
@@ -546,6 +552,8 @@ describe("shared story delivery boundaries", () => {
     expect(putIn).toHaveBeenCalledWith(
       { ...at.forge.change, squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING) },
       repaired,
+      // This stand-in forge reads no allowed merges, so none is chosen for it.
+      undefined,
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
     expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toMatchObject({
@@ -622,6 +630,8 @@ describe("shared story delivery boundaries", () => {
     expect(putIn).toHaveBeenCalledWith(
       { ...at.forge.change, squashMessage: presentationCommitMessage(at.story, BUNDLED_NAMING) },
       repaired,
+      // This stand-in forge reads no allowed merges, so none is chosen for it.
+      undefined,
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
     expect(putIn.mock.calls[0]?.[0].body).not.toContain(`demonstrated version ${original}`);
@@ -1804,6 +1814,8 @@ describe("shared story delivery boundaries", () => {
           body: region,
         }),
         original,
+        // This stand-in forge reads no allowed merges, so none is chosen for it.
+        undefined,
       );
       expect(at.forge.change?.title).not.toBe(story.title);
       expect(at.update).not.toHaveBeenCalled();

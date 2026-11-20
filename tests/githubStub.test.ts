@@ -270,7 +270,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
     const read = await forge.changeFor(branch);
     expect(read).toMatchObject({ headSha: sha("second"), title: TITLE, body: BODY });
 
-    await forge.putIn(read as NonNullable<typeof read>, sha("second"));
+    await forge.putIn(read as NonNullable<typeof read>, sha("second"), "squash");
     expect(github.merges()).toEqual([
       { number: 100, sha: sha("second"), method: "squash", title: TITLE, message: BODY },
     ]);
@@ -316,7 +316,9 @@ describe("the GitHub stand-in, through the app's forge", () => {
       const checked = await forge.openChange({ branch, title: TITLE, body: BODY });
       heads[branch] = sha("pushed-after");
 
-      const refusal = await forge.putIn(checked, sha("checked")).catch((caught: unknown) => caught);
+      const refusal = await forge
+        .putIn(checked, sha("checked"), "squash")
+        .catch((caught: unknown) => caught);
       expect(refusal).toBeInstanceOf(ForgeError);
       expect(refusal).toMatchObject({ failure: "refused" });
       expect(String((refusal as Error).message)).toContain("Head branch was modified");
@@ -338,7 +340,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
         base: "main",
         readiness: "clean",
       });
-      await expect(forge.putIn(change, sha("approved"))).rejects.toMatchObject({
+      await expect(forge.putIn(change, sha("approved"), "squash")).rejects.toMatchObject({
         failure: "refused",
         message: expect.stringContaining("merge conflicts"),
       });
@@ -351,7 +353,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
       const repaired = (await forge.changeFor(branch)) as NonNullable<
         Awaited<ReturnType<typeof forge.changeFor>>
       >;
-      await expect(forge.putIn(repaired, sha("repaired"))).resolves.toEqual({
+      await expect(forge.putIn(repaired, sha("repaired"), "squash")).resolves.toEqual({
         sha: sha("repaired"),
       });
       expect(github.merges().map((merge) => merge.sha)).toEqual([sha("repaired")]);
@@ -372,7 +374,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
         heads[branch] = sha("late-push");
       });
 
-      await expect(forge.putIn(checked, sha("checked"))).rejects.toMatchObject({
+      await expect(forge.putIn(checked, sha("checked"), "squash")).rejects.toMatchObject({
         failure: "refused",
       });
       expect(github.merges()).toEqual([]);
@@ -386,6 +388,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
         forge.putIn(
           { number: 99, url: null, branch: "fm/task-meter", headSha: sha("first"), title: TITLE },
           sha("first"),
+          "squash",
         ),
       ).rejects.toMatchObject({ failure: "not-found" });
       expect(github.merges()).toEqual([]);
@@ -397,9 +400,9 @@ describe("the GitHub stand-in, through the app's forge", () => {
       const change = await forge.changeFor("fm/task-meter");
       expect(change?.title).toBe("Crewmate's work");
 
-      await expect(forge.putIn(change as NonNullable<typeof change>, sha("first"))).rejects.toThrow(
-        /does not follow the naming runbook/,
-      );
+      await expect(
+        forge.putIn(change as NonNullable<typeof change>, sha("first"), "squash"),
+      ).rejects.toThrow(/does not follow the naming runbook/);
       expect(mergeRequests(github)).toEqual([]);
     });
 

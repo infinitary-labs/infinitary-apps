@@ -96,7 +96,7 @@ describe("merging a batch's merge request on GitLab", () => {
       title: "fix(parser): read dates with a time zone",
       squashMessage: "- Dates with a time zone are read as written.",
     };
-    await forge.putIn(own, head);
+    await forge.putIn(own, head, "squash");
     expect(calls.map((call) => call.body)).toEqual([
       {
         sha: head,

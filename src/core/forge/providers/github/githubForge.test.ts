@@ -892,7 +892,7 @@ describe("GitHubForge", () => {
       body: "<!-- infinitary-story:sample:start -->\n## What changed\nKeep upload\\_receipts on restart\\.\n### Risk\n| Dimension | Level | Why |",
       squashMessage,
     };
-    await forge.putIn(change, change.headSha);
+    await forge.putIn(change, change.headSha, "squash");
     await forge.putInSkippingRules(change, change.headSha);
     expect(seen).toHaveLength(2);
     for (const request of seen)
@@ -985,10 +985,10 @@ describe("GitHubForge", () => {
       title: "fix: correct meter",
       body: "Why",
     };
-    await forge.putIn(change, "feedbeef");
-    await expect(forge.putIn({ ...change, title: "Plain change" }, "feedbeef")).rejects.toThrow(
-      /does not follow the naming runbook/,
-    );
+    await forge.putIn(change, "feedbeef", "squash");
+    await expect(
+      forge.putIn({ ...change, title: "Plain change" }, "feedbeef", "squash"),
+    ).rejects.toThrow(/does not follow the naming runbook/);
     await forge.close(change);
     expect(seen.map((request) => [request.method, request.url, request.body])).toEqual([
       [
@@ -1231,6 +1231,7 @@ describe("GitHubForge", () => {
       forge.putIn(
         { number: 23, url: null, branch: "b", headSha: "old", title: "fix: correct meter" },
         "old",
+        "squash",
       ),
     ).rejects.toMatchObject({
       failure: "refused",

@@ -25,6 +25,7 @@ import {
   isTransientForgeFailure,
   messageWithoutPresentation,
 } from "../forge";
+import { wayToSend } from "../forge/mergeWays";
 import { currentChange } from "../storage/changeProjection";
 import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
 import { requireNamed } from "../workspace/naming";
@@ -459,6 +460,8 @@ export class ChangeMerge {
           assertBranchStoryAddress(destination, this.context.approvedOrigin(taskId));
         }
       }
+      // The merge the project allows, read where it lives before anything is sent.
+      const way = await wayToSend(forge, publishedChange);
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       const withdrawn =
@@ -471,7 +474,7 @@ export class ChangeMerge {
         };
       }
       dispatched = true;
-      const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
+      const receipt = await forge.putIn(publishedChange, publishedChange.headSha, way);
       if (receipt?.queued) return hostQueued(forge, change);
       return {
         ok: true,

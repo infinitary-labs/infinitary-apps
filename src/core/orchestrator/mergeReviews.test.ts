@@ -411,6 +411,8 @@ describe("reviewed contributor changes", () => {
       expect(sent).toHaveBeenCalledWith(
         expect.objectContaining({ title: review.title, headSha: review.headSha }),
         review.headSha,
+        // This stand-in forge reads no allowed merges, so none is chosen for it.
+        undefined,
       );
     },
   );

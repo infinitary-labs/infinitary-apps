@@ -410,9 +410,16 @@ export class GitLabForge implements Forge {
   async putIn(
     change: ForgeChange,
     headSha: string,
-    way: MergeWay = "squash",
+    way: MergeWay | undefined,
   ): Promise<{ sha?: string }> {
     this.requireMaintainer();
+    // The project's merges are read before every merge (`mergeWays`), never assumed.
+    if (!way)
+      throw new ForgeError(
+        "refused",
+        `no merge this project allows was read before merging ${this.label(change)}`,
+        true,
+      );
     const iid = numbered(change, this.place);
     const title = requireNamed(
       change.title ?? "",

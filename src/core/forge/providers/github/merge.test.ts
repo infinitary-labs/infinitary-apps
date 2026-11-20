@@ -44,7 +44,7 @@ describe("a merge on GitHub", () => {
       })),
       sleeps,
     );
-    await expect(forge.putIn(merging, "feedbeef")).resolves.toEqual({ sha: "squash01" });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ sha: "squash01" });
     expect(seen.map((request) => `${request.method} ${request.url}`)).toEqual([
       `PUT ${MERGE_ASYNC}`,
       `GET ${MERGE_ASYNC}/0b9f7d3a-52c1-4e8b-9a6d-1f4c2e7b8a90`,
@@ -68,7 +68,7 @@ describe("a merge on GitHub", () => {
       })),
       [],
     );
-    await expect(forge.putIn(merging, "feedbeef")).resolves.toEqual({ queued: true });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ queued: true });
   });
 
   // GitHub's own answer, read on a real branch with a merge queue, to the
@@ -98,7 +98,7 @@ describe("a merge on GitHub", () => {
       })),
       [],
     );
-    await expect(forge.putIn(merging, "feedbeef")).resolves.toEqual({ queued: true });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ queued: true });
     const sent = seen.filter((request) => request.method === "PUT");
     expect(sent.map((request) => request.body)).toEqual([
       { sha: "feedbeef", merge_method: "squash", commit_title: "fix: meter", commit_message: "" },
@@ -114,7 +114,7 @@ describe("a merge on GitHub", () => {
       queueBranch(() => ({ status: "failed", details: { message: said } })),
       [],
     );
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       failure: "refused",
       message: `GitHub did not merge #23: ${said}`,
     });
@@ -125,7 +125,7 @@ describe("a merge on GitHub", () => {
     const { forge, seen } = await stub({
       [`PUT ${MERGE_ASYNC}`]: () => ({ json: { status: "enqueued", details: {} } }),
     });
-    await expect(forge.putIn(merging, "feedbeef")).resolves.toEqual({ queued: true });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ queued: true });
     expect(seen).toHaveLength(1);
   });
 
@@ -137,13 +137,13 @@ describe("a merge on GitHub", () => {
       background(() => ({ status: "failed", details: { message: said } })),
       [],
     );
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       name: "ForgeError",
       failure: "refused",
       message: `GitHub did not merge #23: ${said}`,
     });
     said = "Base branch was modified. Review and try the merge again.";
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       name: "ForgeBaseMoved",
       failure: "refused",
       message: `GitHub did not merge #23: ${said}`,
@@ -157,7 +157,7 @@ describe("a merge on GitHub", () => {
       "still",
     );
     const { forge, seen } = await stub(routes, sleeps);
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       failure: "transient",
       message: "GitHub had not finished merging #23 when the app stopped reading",
     });
@@ -170,13 +170,17 @@ describe("a merge on GitHub", () => {
       status: 409,
       json: { message: "A merge request is already pending for this pull request" },
     });
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({ failure: "transient" });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      failure: "transient",
+    });
     // A version that moved is GitHub's verdict, never a merge still running.
     routes[`PUT ${MERGE_ASYNC}`] = () => ({
       status: 409,
       json: { message: "Head branch was modified. Review and try the merge again." },
     });
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({ failure: "refused" });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      failure: "refused",
+    });
   });
 
   it("merges directly on a GitHub that does not know the background merge, and takes that merge only when GitHub says it merged", async () => {
@@ -186,7 +190,7 @@ describe("a merge on GitHub", () => {
     const { forge, seen } = await stub({
       "PUT /repos/octo/meter/pulls/23/merge": () => answer,
     });
-    await expect(forge.putIn(merging, "feedbeef")).resolves.toEqual({ sha: "squash01" });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ sha: "squash01" });
     expect(seen.map((request) => `${request.method} ${request.url}`)).toEqual([
       `PUT ${MERGE_ASYNC}`,
       "PUT /repos/octo/meter/pulls/23/merge",
@@ -200,29 +204,40 @@ describe("a merge on GitHub", () => {
       [`PUT ${MERGE_ASYNC}`]: () => ({ status: 400, json: VERSION_REFUSAL }),
       "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: { merged: true, sha: "squash02" } }),
     });
-    await expect(older.putIn(merging, "feedbeef")).resolves.toEqual({ sha: "squash02" });
+    await expect(older.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ sha: "squash02" });
     expect(olderSeen.map((request) => `${request.method} ${request.url}`)).toEqual([
       `PUT ${MERGE_ASYNC}`,
       "PUT /repos/octo/meter/pulls/23/merge",
     ]);
     expect(olderSeen[1]?.body).toMatchObject({ merge_method: "squash" });
     answer = { json: { merged: false, message: "Base branch was modified" } };
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       failure: "refused",
       message: "GitHub did not confirm the merge of #23: Base branch was modified",
     });
     const refusal = "Base branch was modified. Review and try the merge again.";
     answer = { status: 405, json: { message: refusal } };
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       name: "ForgeBaseMoved",
       failure: "refused",
       message: `GitHub answered 405 to PUT /repos/octo/meter/pulls/23/merge: ${refusal}`,
     });
     answer = { status: 405, json: { message: "Pull Request has merge conflicts" } };
-    await expect(forge.putIn(merging, "feedbeef")).rejects.toMatchObject({
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
       name: "ForgeError",
       failure: "refused",
     });
+  });
+
+  it("refuses a merge whose way was not read from the project, with nothing sent", async () => {
+    // Intent: a merge card's click sent a squash the project did not allow;
+    // no caller may send a merge it did not read from the project's settings.
+    const { forge, seen } = await stub({});
+    await expect(forge.putIn(merging, "feedbeef", undefined)).rejects.toMatchObject({
+      failure: "refused",
+      beforeSend: true,
+    });
+    expect(seen).toEqual([]);
   });
 
   it("says GitHub's reason when it refuses a request with only Bad Request as its message", async () => {

@@ -144,7 +144,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
 
       // The branch moved on after its checks were read: GitLab refuses the stale head.
       heads[BRANCH] = sha("one more commit");
-      await expect(forge.putIn(change, change.headSha)).rejects.toMatchObject({
+      await expect(forge.putIn(change, change.headSha, "squash")).rejects.toMatchObject({
         failure: "refused",
         message: expect.stringContaining("409"),
       });
@@ -154,7 +154,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       // A head that conflicts with newer work on main is refused, and reads as a conflict.
       const moved = { ...change, headSha: heads[BRANCH] as string };
       gitlab.conflicts(() => true);
-      await expect(forge.putIn(moved, moved.headSha)).rejects.toMatchObject({
+      await expect(forge.putIn(moved, moved.headSha, "squash")).rejects.toMatchObject({
         failure: "refused",
         message: expect.stringContaining("Branch cannot be merged"),
       });
@@ -162,7 +162,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       expect(gitlab.merges()).toEqual([]);
 
       gitlab.conflicts(() => false);
-      const receipt = await forge.putIn(moved, moved.headSha);
+      const receipt = await forge.putIn(moved, moved.headSha, "squash");
       expect(gitlab.merges()).toEqual([
         { iid: 1, sha: moved.headSha, squash: true, message: `${TITLE}\n\n${BODY}` },
       ]);
@@ -171,7 +171,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       expect(receipt).toEqual({ sha: merged.mergedSha });
       expect(await forge.changeFor(BRANCH)).toBeNull();
       // A merge request no longer open is refused, never merged twice.
-      await expect(forge.putIn(moved, moved.headSha)).rejects.toMatchObject({
+      await expect(forge.putIn(moved, moved.headSha, "squash")).rejects.toMatchObject({
         failure: "refused",
       });
       expect(gitlab.merges()).toHaveLength(1);
@@ -180,7 +180,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
     it("refuses a title the naming runbook refuses before asking GitLab to merge", async () => {
       const { gitlab, forge } = await forgeOver(host, { [BRANCH]: sha("meter head") });
       const change = await forge.openChange({ branch: BRANCH, title: "Meter fix", body: BODY });
-      await expect(forge.putIn(change, change.headSha)).rejects.toThrow(/Meter fix/);
+      await expect(forge.putIn(change, change.headSha, "squash")).rejects.toThrow(/Meter fix/);
       expect(gitlab.requests().filter((line) => line.endsWith("/merge"))).toEqual([]);
     });
   },
@@ -799,7 +799,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       const change = await at.forge.changeFor(STORY_BRANCH);
       if (!change) throw new Error("The merge request is not open");
       const ready = await after.assertPublished(TASK, change, at.forge);
-      await at.forge.putIn(ready, ready.headSha);
+      await at.forge.putIn(ready, ready.headSha, "squash");
       expect(at.gitlab.merges()).toEqual([
         {
           iid: 1,
@@ -849,7 +849,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       const ready = await at.forge.markReady(draft as ForgeChange, () => {});
       expect(ready).toMatchObject({ title: "feat!: carry the evidence" });
       const published = await service.assertPublished(TASK, ready, at.forge);
-      await at.forge.putIn(published, published.headSha);
+      await at.forge.putIn(published, published.headSha, "squash");
       expect(at.gitlab.merges()[0]?.message.split("\n")[0]).toBe("feat!: carry the evidence");
     } finally {
       at.db.close();

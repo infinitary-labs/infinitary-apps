@@ -104,7 +104,7 @@ describe("PlainGitForge", () => {
   it("puts it in by fast-forwarding the host's default branch onto the checked head", async () => {
     const { bare, head, forge } = plainHost();
     const sent = await forge.openChange({ branch: "fm/task-1", title: "Fix", body: "" });
-    await forge.putIn(sent, head);
+    await forge.putIn(sent, head, undefined);
     expect(run(bare, "rev-parse", "refs/heads/main")).toBe(head);
   });
 
@@ -112,7 +112,7 @@ describe("PlainGitForge", () => {
     const { bare, repo, head, forge } = plainHost();
     const sent = await forge.openChange({ branch: "fm/task-1", title: "Fix", body: "" });
     await expect(
-      forge.putIn(sent, "0000000000000000000000000000000000000000"),
+      forge.putIn(sent, "0000000000000000000000000000000000000000", undefined),
     ).rejects.toMatchObject({ failure: "refused" });
 
     // Someone else put work in on main meanwhile.
@@ -120,7 +120,7 @@ describe("PlainGitForge", () => {
     run(repo, "commit", "--allow-empty", "-m", "someone else");
     run(repo, "push", "origin", "HEAD:refs/heads/main");
     const moved = run(bare, "rev-parse", "refs/heads/main");
-    await expect(forge.putIn(sent, head)).rejects.toMatchObject({ failure: "refused" });
+    await expect(forge.putIn(sent, head, undefined)).rejects.toMatchObject({ failure: "refused" });
     expect(run(bare, "rev-parse", "refs/heads/main")).toBe(moved);
   });
 

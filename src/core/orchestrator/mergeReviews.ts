@@ -16,6 +16,7 @@ import {
   isSignInForgeFailure,
   isTransientForgeFailure,
 } from "../forge";
+import { wayToSend } from "../forge/mergeWays";
 import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
 import {
@@ -851,10 +852,12 @@ export class MergeReviews {
         }));
         if (!last.ok) return { ok: false, text: `Cannot merge: ${last.text}`, stop: last.stop };
       }
+      // The merge the project allows, read where it lives before anything is sent.
+      const way = await wayToSend(forge, change);
       const stopped = guard?.beforeDispatch(candidate.headSha);
       if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
       dispatched = true;
-      const sent = await forge.putIn(change, candidate.headSha);
+      const sent = await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha);
     } catch (caught) {

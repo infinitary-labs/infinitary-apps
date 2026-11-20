@@ -488,9 +488,7 @@ export class ChangeContext {
     if (pin) {
       const advertised = await readOrigin(["ls-remote", "--exit-code", "--symref", remote, "HEAD"]);
       const lines = advertised.split("\n");
-      name = lines
-        .find((line) => line.startsWith("ref: refs/heads/") && line.endsWith("\tHEAD"))
-        ?.slice("ref: refs/heads/".length, -"\tHEAD".length);
+      name = /^ref: refs\/heads\/(.+)\tHEAD$/m.exec(advertised)?.[1];
       tip = lines
         .find((line) => /^(?:[0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/.test(line))
         ?.split("\t")[0];

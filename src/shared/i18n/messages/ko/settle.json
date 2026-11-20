@@ -8,5 +8,6 @@
   "settleMerging": "병합 중",
   "settleMergingAfterTurn": "선원이 하던 일을 마치면 병합해요",
   "settleMergingChange": "{change} 병합 중",
-  "settleMergingChangeAfterTurn": "선원이 하던 일을 마치면 {change}을(를) 병합해요"
+  "settleMergingChangeAfterTurn": "선원이 하던 일을 마치면 {change}을(를) 병합해요",
+  "settleProjectAddressChanged": "프로젝트 주소가 변경되었습니다. 새 병합 카드를 표시하세요."
 }

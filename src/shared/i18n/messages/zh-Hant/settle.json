@@ -8,5 +8,6 @@
   "settleMerging": "正在合併",
   "settleMergingAfterTurn": "等負責的船員做完手邊的事，就會合併",
   "settleMergingChange": "正在合併 {change}",
-  "settleMergingChangeAfterTurn": "等負責的船員做完手邊的事，就合併 {change}"
+  "settleMergingChangeAfterTurn": "等負責的船員做完手邊的事，就合併 {change}",
+  "settleProjectAddressChanged": "專案位址已變更。請顯示一張新的合併卡片。"
 }

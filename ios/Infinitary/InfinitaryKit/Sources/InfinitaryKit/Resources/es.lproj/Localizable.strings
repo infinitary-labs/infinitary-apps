@@ -3280,6 +3280,7 @@
 "settleMergingAfterTurn" = "Fusionando cuando su tripulante termine lo que está haciendo";
 "settleMergingChange" = "Fusionando %1$@";
 "settleMergingChangeAfterTurn" = "Fusionando %1$@ cuando su tripulante termine lo que está haciendo";
+"settleProjectAddressChanged" = "La dirección del proyecto cambió. Muestra una nueva tarjeta de fusión.";
 "shellAmbientPause" = "Pausar música ambiental";
 "shellAmbientPlay" = "Reproducir música ambiental";
 "shellAmbientQuiet" = "En silencio mientras hablas";

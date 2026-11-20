@@ -167,10 +167,10 @@ function storyForge() {
   let destination = formerDestination;
   let pushed = "";
   const forge = Object.assign(new FakeForge(), {
-    change: null,
     storyDestination: async () => destination,
     branchHead: async () => pushed,
   });
+  forge.change = null;
   return {
     forge,
     destination: (next: HostedPresentationDestination) => {
@@ -365,7 +365,7 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
   it.each(["address-bound", "legacy unbound"])(
     "refuses the former plain Git card and sends only a fresh click (%s)",
     async (offerStyle) => {
-      let runMerge: ReturnType<typeof createChangeDelivery>["settleHooks"]["mergePullRequest"];
+      let runMerge: ReturnType<typeof createChangeDelivery>["merges"]["merge"];
       const merge = vi.fn<typeof runMerge>((...args) => runMerge(...args));
       const { db, tasks, repos, supervisor } = setupCrew(fakeCrewmate(), {
         mergePullRequest: merge,
@@ -397,14 +397,14 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         mediaDir: () => repo.path,
         head: async () => original,
       });
-      const { publication, settleHooks } = createChangeDelivery({
+      const { publication, merges } = createChangeDelivery({
         tasks,
         repos,
         presentations,
         forgeFor: () => forge,
         validateRange: async () => {},
       });
-      runMerge = settleHooks.mergePullRequest;
+      runMerge = merges.merge.bind(merges);
       const putIn = vi.spyOn(forge, "putIn");
       const prepare = async () => {
         const story = staged(original);

@@ -8,5 +8,6 @@
   "settleMerging": "Merging",
   "settleMergingAfterTurn": "Merging once its crewmate finishes what it is doing",
   "settleMergingChange": "Merging {change}",
-  "settleMergingChangeAfterTurn": "Merging {change} once its crewmate finishes what it is doing"
+  "settleMergingChangeAfterTurn": "Merging {change} once its crewmate finishes what it is doing",
+  "settleProjectAddressChanged": "The project address changed. Show a new merge card."
 }

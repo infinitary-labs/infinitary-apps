@@ -8,5 +8,6 @@
   "settleMerging": "Fusionando",
   "settleMergingAfterTurn": "Fusionando cuando su tripulante termine lo que está haciendo",
   "settleMergingChange": "Fusionando {change}",
-  "settleMergingChangeAfterTurn": "Fusionando {change} cuando su tripulante termine lo que está haciendo"
+  "settleMergingChangeAfterTurn": "Fusionando {change} cuando su tripulante termine lo que está haciendo",
+  "settleProjectAddressChanged": "La dirección del proyecto cambió. Muestra una nueva tarjeta de fusión."
 }

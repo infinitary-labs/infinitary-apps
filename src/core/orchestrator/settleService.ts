@@ -164,7 +164,7 @@ export class SettleService {
             offer.cardId === click.cardId && offer.offerId === click.offerId && offer.retired,
         )
       )
-        return "the project address changed; show a fresh merge card";
+        return englishOf(said("settleProjectAddressChanged"));
       if (signature !== JSON.stringify(this.host.tasks.policiesOf(record)))
         return "its policies changed; recheck the current requirements before trying again";
       if (this.locks.working(taskId)) return "its crewmate is still working";

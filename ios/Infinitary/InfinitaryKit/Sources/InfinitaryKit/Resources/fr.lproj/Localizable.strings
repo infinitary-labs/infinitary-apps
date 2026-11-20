@@ -3280,6 +3280,7 @@
 "settleMergingAfterTurn" = "Fusion dès que son équipier aura fini ce qu’il fait";
 "settleMergingChange" = "Fusion de %1$@";
 "settleMergingChangeAfterTurn" = "Fusion de %1$@ dès que son équipier aura fini ce qu’il fait";
+"settleProjectAddressChanged" = "L’adresse du projet a changé. Affichez une nouvelle carte de fusion.";
 "shellAmbientPause" = "Mettre en pause la musique d’ambiance";
 "shellAmbientPlay" = "Lire la musique d’ambiance";
 "shellAmbientQuiet" = "En silence pendant que vous parlez";

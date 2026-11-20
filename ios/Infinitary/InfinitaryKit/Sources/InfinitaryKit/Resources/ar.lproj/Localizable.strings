@@ -3280,6 +3280,7 @@
 "settleMergingAfterTurn" = "سيتم الدمج بعد أن ينهي فرد الطاقم ما يفعله";
 "settleMergingChange" = "جارٍ دمج %1$@";
 "settleMergingChangeAfterTurn" = "سيُدمج %1$@ بعد أن ينهي فرد الطاقم ما يفعله";
+"settleProjectAddressChanged" = "تغيّر عنوان المشروع. اعرض بطاقة دمج جديدة.";
 "shellAmbientPause" = "إيقاف الموسيقى المحيطية مؤقتًا";
 "shellAmbientPlay" = "تشغيل الموسيقى المحيطية";
 "shellAmbientQuiet" = "هدوء أثناء حديثك";

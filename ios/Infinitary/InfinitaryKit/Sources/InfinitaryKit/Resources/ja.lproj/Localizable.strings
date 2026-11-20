@@ -3280,6 +3280,7 @@
 "settleMergingAfterTurn" = "担当の乗組員が今の作業を終えたらマージします";
 "settleMergingChange" = "%1$@ をマージ中";
 "settleMergingChangeAfterTurn" = "担当の乗組員が今の作業を終えたら %1$@ をマージします";
+"settleProjectAddressChanged" = "プロジェクトのアドレスが変更されました。新しいマージカードを表示してください。";
 "shellAmbientPause" = "環境音楽を一時停止";
 "shellAmbientPlay" = "環境音楽を再生";
 "shellAmbientQuiet" = "話している間は消音";

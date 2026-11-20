@@ -8,5 +8,6 @@
   "settleMerging": "Mesclando",
   "settleMergingAfterTurn": "Mesclando assim que o tripulante terminar o que está fazendo",
   "settleMergingChange": "Mesclando {change}",
-  "settleMergingChangeAfterTurn": "Mesclando {change} assim que o tripulante terminar o que está fazendo"
+  "settleMergingChangeAfterTurn": "Mesclando {change} assim que o tripulante terminar o que está fazendo",
+  "settleProjectAddressChanged": "O endereço do projeto mudou. Mostre um novo cartão de mesclagem."
 }

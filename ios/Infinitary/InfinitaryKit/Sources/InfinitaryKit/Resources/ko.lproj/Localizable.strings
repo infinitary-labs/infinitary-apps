@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "선원이 하던 일을 마치면 병합해요";
 "settleMergingChange" = "%1$@ 병합 중";
 "settleMergingChangeAfterTurn" = "선원이 하던 일을 마치면 %1$@을(를) 병합해요";
+"settleProjectAddressChanged" = "프로젝트 주소가 변경되었습니다. 새 병합 카드를 표시하세요.";
 "shellAmbientPause" = "배경 음악 일시 정지";
 "shellAmbientPlay" = "배경 음악 재생";
 "shellAmbientQuiet" = "말하는 동안 음소거";

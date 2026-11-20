@@ -17057,6 +17057,28 @@
                   "words",
                   "notes"
                 ]
+              },
+              "passed": {
+                "type": "object",
+                "properties": {
+                  "answers": {
+                    "maxItems": 256,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "words": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "notes": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                }
               }
             },
             "required": [

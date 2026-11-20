@@ -1,5 +1,5 @@
 import { CARD_DRAFTS } from "@shared/cardDrafts";
-import { fillShownBodies } from "../cards/draftFill";
+import { fillShownBodies, forgetNextBirth } from "../cards/draftFill";
 import { changesOff } from "../devices/viewWords";
 import { type DraftBase, type DraftLocal, DraftSync, withDraftAnswers } from "./draftSync";
 import { withoutKey } from "./stack";
@@ -70,7 +70,9 @@ export function startCardDrafts(
       return card ? (card.lifecycleId ?? null) : undefined;
     },
     apply: (cardId, parts) => {
-      const filled = parts.answers ? fillShownBodies(cardId, parts.answers) : false;
+      const filled = parts.answers
+        ? fillShownBodies(cardId, parts.answers, get().cardAnswers[cardId]?.answers)
+        : false;
       const typing = parts.words !== undefined && typingReply(cardId);
       if (parts.words !== undefined) {
         if (typing)
@@ -164,6 +166,7 @@ export function startCardDrafts(
     }
   };
   subscribe((state, previous) => {
+    let reread = false;
     for (const cardId of new Set([
       ...Object.keys(state.cardAnswers),
       ...Object.keys(previous.cardAnswers),
@@ -186,17 +189,26 @@ export function startCardDrafts(
       // words and notes this window held for its earlier opening, before
       // its body draws.
       const present = new Set(state.cards.map((card) => card.id));
-      for (const card of previous.cards) if (!present.has(card.id)) sync.forget(card.id);
+      for (const card of previous.cards)
+        if (!present.has(card.id)) {
+          sync.forget(card.id);
+          waitingWords.delete(card.id);
+          forgetNextBirth(card.id);
+        }
       const anew: string[] = [];
+      const before = new Map(previous.cards.map((card) => [card.id, card.lifecycleId ?? null]));
+      let arrived = false;
       for (const card of state.cards) {
         const opening = card.lifecycleId ?? null;
         const known = knownOpening(card.id);
         openings.set(card.id, opening);
         if (known !== undefined && known !== opening) anew.push(card.id);
+        if (before.get(card.id) !== opening) arrived = true;
       }
       for (const cardId of anew) {
         sync.forget(cardId);
         waitingWords.delete(cardId);
+        forgetNextBirth(cardId);
       }
       if (anew.length > 0)
         set((s) => ({
@@ -204,6 +216,9 @@ export function startCardDrafts(
           replyDrafts: anew.reduce((left, id) => withoutKey(left, id), s.replyDrafts),
           replyNotes: anew.reduce((left, id) => withoutKey(left, id), s.replyNotes),
         }));
+      // A card or opening the stack now holds may have a draft this window
+      // heard before it knew the card, or never read.
+      if (arrived) reread = true;
     }
     // Each welcome: the link to the first mate came back, replayed or not,
     // or a Mac this one controls came back in reach; live frames and changes
@@ -215,9 +230,10 @@ export function startCardDrafts(
         (now.linkBack ?? 0) > (before.linkBack ?? 0) ||
         (now.caughtUp ?? 0) > (before.caughtUp ?? 0) ||
         (now.role === "view" && changesOff(before) && !changesOff(now));
-      if (back) void readAll();
+      if (back) reread = true;
     }
-    if (state.cardsSnapshotLoaded && !previous.cardsSnapshotLoaded) void readAll();
+    if (state.cardsSnapshotLoaded && !previous.cardsSnapshotLoaded) reread = true;
+    if (reread) void readAll();
   });
   void readAll();
   return sync;

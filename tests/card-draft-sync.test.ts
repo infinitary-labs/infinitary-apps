@@ -89,6 +89,9 @@ class Window {
   local: DraftLocal = { answers: null, words: null, notes: null };
   reachable = true;
   requests: CardDraftChange[] = [];
+  /** The captain is typing here: another window's changes wait, the newest last, as the window holds them. */
+  typing = false;
+  readonly waiting: DraftParts[] = [];
   /** Answers held back until `release`, to show one request in flight. */
   hold = false;
   private held: (() => void)[] = [];
@@ -105,6 +108,10 @@ class Window {
       local: () => this.local,
       lifecycle: () => this.lifecycle,
       apply: (_cardId, parts: DraftParts) => {
+        if (this.typing) {
+          this.waiting.push(parts);
+          return;
+        }
         const answers = new Map((this.local.answers ?? []).map((a) => [a.name, a]));
         for (const answer of parts.answers ?? []) answers.set(answer.name, answer);
         this.local = {
@@ -396,6 +403,41 @@ describe("DraftSync", () => {
     await time.advance(DRAFT_QUIET_MS);
     expect(stored(at)?.answers[0]?.values).toEqual(["json"]);
     expect(laptop.answer("format")).toEqual(["json"]);
+  });
+
+  it("keeps another window's same pick, made first, over a later pick made out of reach", async () => {
+    const { at, time, desk, laptop } = twoWindows();
+    // The laptop's pick is on its way when the desk makes the same pick on its own.
+    laptop.hold = true;
+    laptop.edit({ answers: [pick("format", "csv")] });
+    await time.advance(DRAFT_QUIET_MS);
+    laptop.reachable = false;
+    desk.edit({ answers: [pick("format", "csv")] });
+    await time.advance(DRAFT_QUIET_MS);
+    // Out of reach, the laptop changes the question again.
+    laptop.edit({ answers: [pick("format", "xml")] });
+    // The answer to its first pick holds the same value, but the desk's change took it.
+    laptop.release();
+    await settle();
+    laptop.reachable = true;
+    laptop.welcome();
+    await time.advance(DRAFT_QUIET_MS);
+    expect(stored(at)?.answers[0]?.values).toEqual(["csv"]);
+    expect(laptop.answer("format")).toEqual(["csv"]);
+  });
+
+  it("hands over another window's change back to what this window shows, so an older one never waits", async () => {
+    const { time, desk, laptop } = twoWindows();
+    desk.edit({ words: "Keep the header row" });
+    await time.advance(DRAFT_QUIET_MS);
+    // The desk's captain types on, so another window's changes wait there.
+    desk.typing = true;
+    laptop.edit({ words: "Drop the header row" });
+    await time.advance(DRAFT_QUIET_MS);
+    laptop.edit({ words: "Keep the header row" });
+    await time.advance(DRAFT_QUIET_MS);
+    // The newest change waiting is the words the desk already shows, not the older ones.
+    expect(desk.waiting.at(-1)?.words).toBe("Keep the header row");
   });
 
   it("sends a first pick on an empty draft after a restart that came before the pause", async () => {

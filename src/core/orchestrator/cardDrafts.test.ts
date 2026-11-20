@@ -87,8 +87,11 @@ describe("CardDrafts", () => {
     );
     expect(merged.answers.map((a) => a.name).sort()).toEqual(["format", "when"]);
     // Window B, still at revision 0, sends a stale format: A's newer pick stays.
-    const kept = draftOf(drafts.change(card.id, { since: 0, answers: [pick("format", "json")] }));
+    const stale = drafts.change(card.id, { since: 0, answers: [pick("format", "json")] });
+    const kept = draftOf(stale);
     expect(kept.answers.find((a) => a.name === "format")?.values).toEqual(["csv"]);
+    // The answer says the newer change passed B's format over.
+    expect("passed" in stale && stale.passed).toEqual({ answers: ["format"] });
     // Having heard revision 2, B's change of format is taken.
     const taken = draftOf(drafts.change(card.id, { since: 2, answers: [pick("format", "json")] }));
     expect(taken.answers.find((a) => a.name === "format")?.values).toEqual(["json"]);

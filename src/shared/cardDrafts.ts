@@ -56,12 +56,25 @@ export const cardDraftChangeSchema = z.strictObject({
 export type CardDraftChange = z.infer<typeof cardDraftChangeSchema>;
 
 /**
- * The change's answer: the card's draft as it now stands, or why nothing was
- * kept - the card is no longer open or opened anew, or its answers would pass what a press
- * may send (`CARD_ANSWERS_MAX_BYTES`).
+ * The parts of a change that another window's newer change kept the draft
+ * from taking, named as the change named them: the questions by name, and
+ * the words or the notes.
+ */
+export const cardDraftPassedSchema = z.strictObject({
+  answers: z.array(frameAnswerSchema.shape.name).max(CARD_MAX_ANSWERS).optional(),
+  words: z.literal(true).optional(),
+  notes: z.literal(true).optional(),
+});
+export type CardDraftPassed = z.infer<typeof cardDraftPassedSchema>;
+
+/**
+ * The change's answer: the card's draft as it now stands, with the parts a
+ * newer change kept it from taking (`passed`), or why nothing was kept - the
+ * card is no longer open or opened anew, or its answers would pass what a
+ * press may send (`CARD_ANSWERS_MAX_BYTES`).
  */
 export const cardDraftChangedSchema = z.union([
-  z.strictObject({ draft: cardDraftSchema }),
+  z.strictObject({ draft: cardDraftSchema, passed: cardDraftPassedSchema.optional() }),
   z.strictObject({ refused: z.enum(["closed", "too-large"]) }),
 ]);
 export type CardDraftChanged = z.infer<typeof cardDraftChangedSchema>;

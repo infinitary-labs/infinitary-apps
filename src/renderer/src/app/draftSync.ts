@@ -164,6 +164,8 @@ export class DraftSync {
     }
     this.early.clear();
     for (const cardId of new Set([...cardIds, ...byCard.keys()])) {
+      // A card the stack does not hold yet is read again once it does.
+      if (this.deps.lifecycle(cardId) === undefined) continue;
       const read = byCard.get(cardId);
       // A card with no draft has an empty one of its current opening.
       if (read && !this.current(read)) continue;
@@ -308,14 +310,18 @@ export class DraftSync {
           return;
         }
         // A part changed out of reach again while on its way goes against
-        // what this window just kept - only where the draft kept it.
+        // what this window just kept - only where the draft took this
+        // window's change, not where a newer change passed it over.
         const again = this.dirty.get(cardId);
-        const now = partsOfDraft(answer.draft);
-        for (const [part, value] of sent) {
+        const passed = new Set([
+          ...(answer.passed?.answers ?? []).map(answerPart),
+          ...(answer.passed?.words ? [WORDS] : []),
+          ...(answer.passed?.notes ? [NOTES] : []),
+        ]);
+        for (const part of sent.keys()) {
           const base = again?.get(part);
-          if (base === undefined || base === null) continue;
-          if (canonical(now.get(part)) === canonical(value))
-            again?.set(part, Math.max(base, answer.draft.revision));
+          if (base === undefined || base === null || passed.has(part)) continue;
+          again?.set(part, Math.max(base, answer.draft.revision));
         }
         this.adopt(answer.draft, sent);
         this.flush(cardId);
@@ -350,7 +356,10 @@ export class DraftSync {
       const refused = sent?.has(part) === true && canonical(sent.get(part)) !== canonical(value);
       if (!elsewhere && !refused) continue;
       if (marked?.has(part) || flying?.has(part)) continue;
-      if (canonical(local.get(part)) === canonical(value)) continue;
+      // A value this window already shows goes nowhere at the first take;
+      // after it, it still goes, so it replaces an older change that waits
+      // on a question being typed in.
+      if (!was && canonical(local.get(part)) === canonical(value)) continue;
       take.set(part, value);
     }
     if (!stale) this.heard.set(cardId, draft);
@@ -358,10 +367,14 @@ export class DraftSync {
     if (take.size > 0) this.deps.apply(cardId, draftParts(take));
   }
 
-  /** Whether a draft is of the card's current opening, as far as this window knows it. */
+  /**
+   * Whether a draft is of the card's current opening as this window's stack
+   * holds it; a draft of a card it does not hold, or of another opening, is
+   * read again once the stack holds that card or opening.
+   */
   private current(draft: CardDraft): boolean {
     const lifecycle = this.deps.lifecycle(draft.cardId);
-    return lifecycle === undefined || (draft.lifecycle ?? null) === lifecycle;
+    return lifecycle !== undefined && (draft.lifecycle ?? null) === lifecycle;
   }
 
   /** What this window kept of the card's draft, when it is of the card's current opening. */

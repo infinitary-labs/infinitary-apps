@@ -26,14 +26,24 @@ function windowWith(
   thisMac: object = { role: "home", left: null },
   start: Partial<Record<"cardAnswers" | "replyDrafts" | "replyNotes", object>> = {},
 ) {
-  const drafts = vi.fn(async (): Promise<CardDraft[]> => []);
+  /** The drafts the first mate's computer holds, as a reading answers them. */
+  const held: CardDraft[] = [];
+  const drafts = vi.fn(async (): Promise<CardDraft[]> => [...held]);
+  let hear: (draft: CardDraft) => void = () => {};
   const draft = vi.fn(async (cardId: string, _change: CardDraftChange) => ({
     draft: { cardId, revision: 1, answers: [], words: "", notes: [] },
   }));
   vi.stubGlobal("window", {
     infinitary: {
       app: { healthcheck: async () => ({ changes }) },
-      cards: { drafts, draft, onDraft: () => () => {} },
+      cards: {
+        drafts,
+        draft,
+        onDraft: (listener: (draft: CardDraft) => void) => {
+          hear = listener;
+          return () => {};
+        },
+      },
     },
   });
   let state = {
@@ -74,7 +84,12 @@ function windowWith(
   /** The stack loads, or a later snapshot arrives, holding these cards. */
   const stack = (cards: object[]) =>
     change({ cards, cardsSnapshotLoaded: true } as unknown as Partial<ShellState>);
-  return { drafts, draft, type, back, stack, state: () => state };
+  /** Another window's change, as its live frame arrives and as the home then holds it. */
+  const live = (next: CardDraft) => {
+    held.splice(0, held.length, next);
+    hear(next);
+  };
+  return { drafts, draft, type, back, stack, live, state: () => state };
 }
 
 /** This window's own storage, as a node test has none. */
@@ -189,5 +204,26 @@ describe("startCardDrafts", () => {
       lifecycle: "opening-1",
       answers: [{ name: "harbour", values: ["south"] }],
     });
+  });
+
+  it("takes a reopened card's draft that arrived before the stack held the new opening", async () => {
+    vi.useFakeTimers();
+    stubStorage();
+    const at = windowWith([CARD_DRAFTS]);
+    at.stack([{ id: "card-1", lifecycleId: "opening-1" }]);
+    await vi.runAllTimersAsync();
+    // The card opened anew; another window's words for it arrive before this stack hears of it.
+    at.live({
+      cardId: "card-1",
+      lifecycle: "opening-2",
+      revision: 1,
+      answers: [],
+      words: "For the new offer",
+      notes: [],
+    });
+    expect(at.state().replyDrafts).toEqual({});
+    at.stack([{ id: "card-1", lifecycleId: "opening-2" }]);
+    await vi.runAllTimersAsync();
+    expect(at.state().replyDrafts).toEqual({ "card-1": "For the new offer" });
   });
 });

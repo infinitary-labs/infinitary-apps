@@ -42,6 +42,7 @@ import { CardSound } from "../../cards/CardSound";
 import { ChatButton, LiveMessageList, ThreadSegments } from "../../cards/CardThread";
 import { useCardReadingPlace } from "../../cards/cardReadingPlace";
 import { useCardTask } from "../../cards/cardTask";
+import { birthFill } from "../../cards/draftFill";
 import { choiceOrder, footerGroups, footerVariant } from "../../cards/footerGroups";
 import {
   CardFactsFrame,
@@ -693,7 +694,8 @@ export function StackedCard({
               if (mainMessageRefusal(shell) === null) shell.beginDraft(text);
             }}
             form={{
-              fill: () => useShellStore.getState().cardAnswers[card.id]?.answers,
+              fill: () =>
+                birthFill(card.id, useShellStore.getState().cardAnswers[card.id]?.answers),
               onAnswers: (reading) => {
                 if (admitted.current) setCardAnswers(card.id, reading);
                 else heldAnswers.current = reading;

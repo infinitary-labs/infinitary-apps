@@ -2,6 +2,7 @@ import {
   type CardDraft,
   type CardDraftChange,
   type CardDraftChanged,
+  type CardDraftPassed,
   emptyDraft,
 } from "@shared/cardDrafts";
 import type { CardNote } from "@shared/cardNotes";
@@ -103,9 +104,16 @@ export class CardDrafts {
          ON CONFLICT(card_id, part) DO UPDATE SET value_json = excluded.value_json, revision = excluded.revision`,
       );
       let moved = false;
+      const passed: CardDraftPassed = {};
       for (const [part, value] of partsOf(change)) {
         const now = byPart.get(part);
-        if (now && (now.revision > change.since || now.value_json === value)) continue;
+        if (now && now.revision > change.since) {
+          if (part === WORDS) passed.words = true;
+          else if (part === NOTES) passed.notes = true;
+          else passed.answers = [...(passed.answers ?? []), part.slice(ANSWER.length)];
+          continue;
+        }
+        if (now?.value_json === value) continue;
         write.run(cardId, part, value, revision);
         moved = true;
       }
@@ -115,7 +123,8 @@ export class CardDrafts {
         cardAnswersBytes(draft.answers) > CARD_ANSWERS_MAX_BYTES
       )
         throw new DraftTooLarge();
-      return moved ? { draft, moved: true } : { draft };
+      const answer = Object.keys(passed).length > 0 ? { draft, passed } : { draft };
+      return moved ? { ...answer, moved: true } : answer;
     });
     let changed: ReturnType<typeof result>;
     try {
@@ -125,8 +134,9 @@ export class CardDrafts {
       throw error;
     }
     if ("draft" in changed) {
-      if (changed.moved) this.push(changed.draft);
-      return { draft: changed.draft };
+      const { moved, ...answer } = changed;
+      if (moved) this.push(answer.draft);
+      return answer;
     }
     return changed;
   }

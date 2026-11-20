@@ -380,16 +380,11 @@ ${FRAME_QUESTION_SCRIPT}
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
-    var staged = false;
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
       if (answer.json) {
-        // A preview's settings live in its own script, which reads them only
-        // at its birth: another window's are kept for the body's next birth.
-        if (typeof answer.values[0] === "string") {
-          staged = staged || (live && form.staged[answer.name] !== answer.values[0]);
-          form.staged[answer.name] = answer.values[0];
-        }
+        // A preview's settings live in its own script, which reads them only at its birth.
+        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
         return;
       }
       var group = byName[answer.name];
@@ -448,8 +443,6 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
-    // Settings kept for the next birth are read with the rest, so the app keeps them too.
-    if (staged && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
   // The field under a Something else row: the app's own, with no name, so

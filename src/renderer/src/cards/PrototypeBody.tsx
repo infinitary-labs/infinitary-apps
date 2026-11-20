@@ -10,7 +10,7 @@ import {
   viewablePictures,
 } from "@shared/cardPictures";
 import type { CardWidth } from "@shared/cards";
-import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
+import { isPlayableBody, REVISION_TARGETS_MAX } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { wordSaidBody } from "@shared/i18n/said";
 import type {
@@ -567,7 +567,7 @@ function cardFrameSpec(
       // A playable preview's drawings are its own controls' (INF-3107): a press opens
       // nothing from them, only the body's own script asking (`inf.picture`).
       const set = admitted()
-        ? viewablePictures(index, pictures, asked === true || !isPreviewBody(props.body))
+        ? viewablePictures(index, pictures, asked === true || !isPlayableBody(props.body))
         : undefined;
       if (set) fromCaptain(() => props.onPicture?.(set, frameRef.current));
     },

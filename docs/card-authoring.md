@@ -53,8 +53,10 @@ It is not a separate kind.
 **When a card shows options, the options are that card's actions.**
 
 Such a card is a decision because it has actions: the same chrome, exactly the declared actions, one `default`.
-Two things read the body's shape instead (`isPreviewBody` in `src/shared/cards.ts`: the body carries a `<style>` sheet, a `<canvas>`, or a `<script>` outside every `<figure>`) - the shape lint leaves a preview's markup alone, and the first mate's on-screen-card line quotes no excerpt from it.
+Two things read the body's shape instead (`isPreviewBody` in `src/shared/cards.ts`: the body carries a `<style>` sheet, a `<canvas>`, or a `<script>` outside every `<figure>`) - the change bars leave a preview alone, and the first mate's on-screen-card line quotes no excerpt from it.
 A body without one of those is prose, and is held to the prose rules however it is laid out.
+Its questions follow a narrower test (`isPlayableBody`: a `<canvas>`, or a `<script>` outside every `<figure>`): only a body that runs controls of its own is a playable preview, whose form controls are settings - the question lint leaves them alone, the footer counts them answered, and none is tagged Default or stepped through.
+A body that only brings a `<style>` sheet asks its questions as every other decision does.
 A script inside a figure only moves that figure (FI3-796, the captain's yes), so its card keeps the shape lint, the change bars, the excerpt and the width rule; it still runs on the mount path, as every scripted body does.
 
 ## Actions and effects
@@ -825,7 +827,7 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
 - The bridge watches the named controls only after the host's `form` message, which only a card body's mount sends.
   On every `input`, `change` and document change it posts the one-way `answers` message: `answered`, `of`, `changed`, `picked`, `defaults` (the skippable questions left untouched, whose Default a click would send), and the answers themselves, which are the shell's draft.
 - The footer shows the count as its queue group: "1 to answer" while required questions lack an answer, else "2 of 3 picked", then " · 2 defaults" for the skipped questions and " · 1 changed"; words written under Something else count as a pick.
-  On a card whose body is not a preview the count is a stepper through the questions, in the order the body draws them: the count goes to the next unanswered question, arrows beside it go to the previous and the next, and ⌘J and ⇧⌘J, Enter, Shift+Enter and the number keys answer them from the keyboard (`docs/keyboard.md`, "Moving between a card's questions").
+  On a card whose body is not a playable preview (`isPlayableBody`; a style sheet alone does not make one) the count is a stepper through the questions, in the order the body draws them: the count goes to the next unanswered question, arrows beside it go to the previous and the next, and ⌘J and ⇧⌘J, Enter, Shift+Enter and the number keys answer them from the keyboard (`docs/keyboard.md`, "Moving between a card's questions").
   An author needs nothing more than the facts above for it: each named question is a stop, its picked or Recommended option where focus lands.
   Only the default closing button waits for required answers; it stays focusable and clicking or pressing Enter focuses the first empty required question without sending.
   Other choices send whatever is picked.
@@ -1181,14 +1183,14 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 - **What the captain sees.**
   The snapshot carries `Card.changes`: when the shown version was written, how many parts are new and how many of the seen version's parts are gone, and where each new part starts in the body.
   The card's head draws "Revised 14:02 · 2 parts new · 1 removed" under the title; the body's frame draws a 2 px accent bar beside each new part, in a gutter it borrows from the card's padding so the text does not move (`cardBodyMarkup`, `CARD_CHANGES_STYLE`).
-  More than half the parts new reads "Rewritten 14:02" with no bars; a playable preview (a body with its own style sheet, canvas, or a script outside every figure) gets the line and no bars.
+  More than half the parts new reads "Rewritten 14:02" with no bars; a preview (a body with its own style sheet, canvas, or a script outside every figure) gets the line and no bars.
   A figure that moves by its own script is a part like any other, and the mount path draws its bars as srcdoc does; a change to the script alone is no change.
   A change only to the title or the buttons gets the line alone, and a change only to what the host itself rewrites gets nothing.
 - **What the crewmate is told (FI3-627).**
   The captain's reply is best met by editing only the parts the captain's words changed, so the comparison above can mark them; the `body_file` parameter and the card body folder note nudge toward that and allow a full rewrite when the answer itself changed shape (the opening sentence then says what changed).
   It is a nudge, never a rule.
   When a crewmate revises a card the captain has seen, the `emit_card` result also carries the app's own count (`CardService.revisionChanges`, the same comparison against the newest seen version, read on the newest write instead of the stage's): parts new and removed, and "Rewritten" with no change bars when over half is new.
-  A playable preview gets the counts only, a card never seen gets none, and nothing is refused.
+  A preview gets the counts only, a card never seen gets none, and nothing is refused.
   The author may redo a needless rewrite as edits before it closes out, while the captain has not been shown the card.
 - **Nothing else.**
   No new table, no setting and no previous-version switch; when a card reaches the stage, its checks, pictures and size limit are unchanged.

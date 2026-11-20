@@ -88472,15 +88472,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   ]);
   const cardAuthorSchema = _enum(["crewmate", "firstmate", "host"]);
   const PREVIEW_TAGS = /<!--[\s\S]*?(?:-->|$)|<(script|style)(?=[\s>/])[^>]*>(?:[\s\S]*?<\/\1\s*>|[\s\S]*$)|<(\/?)(figure|canvas)(?=[\s>/])[^>]*>/gi;
-  function isPreviewBody(body) {
+  function bodyShape(body) {
     let figures = 0;
+    let styled = false;
     for (const [, raw, close, tag] of body.matchAll(PREVIEW_TAGS)) {
       const name = (raw ?? tag ?? "").toLowerCase();
-      if (name === "style" || name === "canvas" && !close) return true;
-      if (name === "script" && figures === 0) return true;
+      if (name === "style") styled = true;
+      if (name === "canvas" && !close || name === "script" && figures === 0) {
+        return { styled, playable: true };
+      }
       if (name === "figure") figures = close ? Math.max(0, figures - 1) : figures + 1;
     }
-    return false;
+    return { styled, playable: false };
+  }
+  function isPlayableBody(body) {
+    return bodyShape(body).playable;
   }
   const cardActionSchema = object({
     id: string(),
@@ -98258,7 +98264,7 @@ svg { ${pinned} }
       documentID = message.document;
       void native({ type: "ready" }).catch(() => {
       });
-      send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...isPreviewBody(input.body) ? { preview: true } : {} });
+      send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...isPlayableBody(input.body) ? { preview: true } : {} });
       send({ type: "keys", pictures: true, escape: false, expand: true, ...input.readOnly || input.expanded ? {} : { sound: true } });
       send({ type: "width", width: input.width });
       send({ type: "text-scale", scale });
@@ -98329,7 +98335,7 @@ svg { ${pinned} }
       }
       case "image": {
         if (!document.hasFocus() || !navigator.userActivation.isActive) return;
-        const set = viewablePictures(message.index, message.pictures, message.asked === true || !isPreviewBody(input.body));
+        const set = viewablePictures(message.index, message.pictures, message.asked === true || !isPlayableBody(input.body));
         if (set) void native({ type: "image", ...set }).catch(() => {
         });
         break;
@@ -98423,7 +98429,7 @@ svg { ${pinned} }
       const split = value.card && takesTaskFacts(value.card) ? splitSettleFacts(value.body) : void 0;
       const marks = (value.marks ?? []).map((mark) => split && mark > split.at ? mark - split.facts.length : mark);
       linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys.includes(key)) : [];
-      void native({ type: "mounted", facts: split?.facts ?? null, preview: isPreviewBody(value.body) }).catch(() => {
+      void native({ type: "mounted", facts: split?.facts ?? null, preview: isPlayableBody(value.body) }).catch(() => {
       });
       const shown = split?.body ?? value.body;
       const cover = value.expanded ? expandedStamp(value.expanded.index, value.expanded.state) : "";

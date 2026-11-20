@@ -1,5 +1,5 @@
 ---
-source: 3edaa579d4cd1bcf
+source: 01b32db6f45c0f7c
 title: التشغيل الأول
 description: ما يعرضه Infinitary أول مرة تفتحه، وكيف تربط اشتراكًا، وكيف تضيف مشروعك الأول.
 ---
@@ -17,7 +17,7 @@ description: ما يعرضه Infinitary أول مرة تفتحه، وكيف تر
 > أعدّني على حاسوب يبقى قيد التشغيل قدر الإمكان.
 > أجهزتك الأخرى تحتاج إلى أن أكون مستيقظًا.
 
-تحت ذلك زر لكل مزوّد يستطيع نائب القبطان استخدامه: Codex وGrok وClaude وKimi Code وCopilot وOpenRouter وAPI مخصصة.
+تحت ذلك زر لكل مزوّد يستطيع نائب القبطان استخدامه: Codex وGrok وClaude وKimi Code وCopilot وOpenRouter وAmazon Bedrock وAPI مخصصة.
 
 <img class="picture-dark" src="/pictures/first-launch-dark.webp" alt="التشغيل الأول: نائب القبطان في وسط النافذة، وعبارات الترحيب، وزر لكل مزوّد." width="1280" height="652" />
 <img class="picture-light" src="/pictures/first-launch-light.webp" alt="التشغيل الأول: نائب القبطان في وسط النافذة، وعبارات الترحيب، وزر لكل مزوّد." width="1280" height="652" />
@@ -32,6 +32,7 @@ description: ما يعرضه Infinitary أول مرة تفتحه، وكيف تر
    بعضهم يفتح صفحة تسجيل الدخول في متصفحك.
    يعرض Copilot وKimi Code رمزًا: اضغط **نسخ الرمز**، ثم أدخله على موقع المزوّد.
    يأخذ OpenRouter مفتاح API تلصقه.
+   مع Amazon Bedrock، اختر منطقة واستخدم ملف تعريف AWS على هذا الحاسوب أو الصق مفتاح API لـ Bedrock.
    المزوّد الذي يتيح الطريقتين يسألك هل تريد **تسجيل الدخول عبر متصفحك** أم لصق **مفتاح API**.
 3. انتظر بينما تقول النافذة إنها تتصل.
    حين يستطيع الاشتراك الإجابة، تتلاشى شاشة الترحيب ويُفتح مربع الرسالة.

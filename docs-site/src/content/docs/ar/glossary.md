@@ -1,5 +1,5 @@
 ---
-source: 80ebd694490447e1
+source: 72cf3e89cd5a9c83
 title: المصطلحات
 description: الكلمات التي يستخدمها Infinitary بمعنى خاص به، كل منها في جملة أو جملتين، مع رابط إلى الصفحة التي تشرحه.
 ---
@@ -118,7 +118,7 @@ description: الكلمات التي يستخدمها Infinitary بمعنى خا
 
 المفتاح الوحيد الذي يرسل إلينا أي شيء: أحداث استخدام مجهولة الهوية، دون أي نص كتبته، ودون أسماء أو مسارات.
 تجده في الإعدادات ← **عام**، تحت **المشاركة**.
-انظر [ما يغادر حاسوبك](/ar/what-leaves-your-computer/#diagnostics-the-one-thing-sent-to-us).
+انظر [ما يغادر حاسوبك](/ar/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 
 ## F {#f}
 

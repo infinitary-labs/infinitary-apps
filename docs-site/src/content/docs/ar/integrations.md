@@ -1,7 +1,7 @@
 ---
-source: 3e17ba40ed00fd52
+source: 23f230a7454bad9c
 title: التكاملات
-description: ربط GitHub وGitLab وGoogle وخوادم MCP كي يصل إليها نائب القبطان والطاقم، واختيار ما يجوز لكل منها فعله دون أن يسألك.
+description: ربط GitHub وGitLab وBitbucket وGoogle وخوادم MCP كي يصل إليها نائب القبطان والطاقم، واختيار ما يجوز لكل منها فعله دون أن يسألك.
 ---
 
 التكامل اتصال بشيء خارج مشاريعك، مثل GitHub أو Gmail أو خدمة خاصة بك.
@@ -30,17 +30,19 @@ description: ربط GitHub وGitLab وGoogle وخوادم MCP كي يصل إلي
 يمكنك أيضًا أن تطلب من نائب القبطان ربط شيء ما.
 تسجيل الدخول قرارك دائمًا، لذا يرسل إليك نائب القبطان بطاقة تفتح هذا القسم.
 
-## GitHub وGitLab وGitHub Enterprise {#github-gitlab-and-github-enterprise}
+## GitHub وGitLab وGitHub Enterprise وBitbucket {#github-gitlab-github-enterprise-and-bitbucket}
 
 يُحفظ هنا تسجيل دخولك إلى حيث تُستضاف مشاريعك.
-راجع [المشاريع](/ar/projects/#your-github-or-gitlab-sign-in) لتعرف كيف يستخدمه Infinitary لاستنساخ مشروع وعرض تغييراته.
+راجع [المشاريع](/ar/projects/#your-github-gitlab-or-bitbucket-sign-in) لتعرف كيف يستخدمه Infinitary لاستنساخ مشروع وعرض تغييراته.
 
 - **GitHub**: تُدخل رمزًا في صفحة GitHub في متصفحك.
   إذا كان GitHub CLI على هذا الحاسوب وكانت مؤسستك تحظر تطبيقات مثل Infinitary، فإن **استخدام GitHub CLI** يستخدم تسجيل الدخول الذي يحمله GitHub CLI بالفعل.
 - **GitLab**: تسجّل الدخول في متصفحك أو تلصق مفتاحًا، على gitlab.com أو على خادم GitLab الخاص بك.
 - **GitHub Enterprise**: تُنشئ مفتاحًا على خادمك الخاص وتلصقه هنا.
+- **Bitbucket**: تُنشئ رمز API في حسابك على Atlassian وتلصقه هنا، لـ bitbucket.org.
+  يعرض صفه الحساب الذي سجّلت الدخول به؛ وليس له بعد إجراءات لنائب القبطان والطاقم.
 
-لكل صف من هذه الصفوف إجراءان: واحد يقرأ، وآخر يغيّر شيئًا، مثل **تغيير شيء على GitHub**.
+لكل صف من صفوف GitHub وGitLab وGitHub Enterprise إجراءان: واحد يقرأ، وآخر يغيّر شيئًا، مثل **تغيير شيء على GitHub**.
 يستخدمهما نائب القبطان والطاقم للبحث عن أمور أو التصرف هناك خارج عمل المهمة نفسها.
 أما فرع المهمة وطلب السحب الخاص بها وفحوصاتها ودمجها فتتبع إعدادات مشروعك.
 

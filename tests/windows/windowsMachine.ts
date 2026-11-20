@@ -16,12 +16,23 @@ export const powershellPath = join(
   "powershell.exe",
 );
 
+/**
+ * Windows PowerShell 5.1 writes to a pipe in the console's code page, which
+ * cannot hold every letter the app's words use (accents, typographic
+ * apostrophes), so each read answers in UTF-8, as it is decoded.
+ */
+const UTF8_OUTPUT = "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; ";
+
 function run(command: string, env: Record<string, string>): string {
-  return execFileSync(powershellPath, ["-NoProfile", "-NonInteractive", "-Command", command], {
-    env: { ...process.env, ...env },
-    encoding: "utf8",
-    windowsHide: true,
-  }).trim();
+  return execFileSync(
+    powershellPath,
+    ["-NoProfile", "-NonInteractive", "-Command", UTF8_OUTPUT + command],
+    {
+      env: { ...process.env, ...env },
+      encoding: "utf8",
+      windowsHide: true,
+    },
+  ).trim();
 }
 
 /** Runs a Windows PowerShell script that answers one value, and parses its JSON. */

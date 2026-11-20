@@ -9,7 +9,7 @@ import {
   TIERED_STORY_HEADINGS,
   textOf,
 } from "@shared/cardHeadings";
-import { ANYTHING_ELSE_ANSWER, isPreviewBody, mergeEffectOf, settleEffectOf } from "@shared/cards";
+import { ANYTHING_ELSE_ANSWER, isPlayableBody, mergeEffectOf, settleEffectOf } from "@shared/cards";
 import { hasHook } from "@shared/codeNames";
 import type { Rigor } from "@shared/rigor";
 import { ElementType, parseDocument } from "htmlparser2";
@@ -664,11 +664,13 @@ export function lintCardShape(card: ShapedCard): string | undefined {
   // A product fact: no figure text under 11 px, in a preview too.
   const figureRefusal = figureTypeRefusal(card.body);
   if (figureRefusal) return figureRefusal;
-  // A preview is the mock of a thing, whose controls carry its settings: the
-  // question rules below read a body as a question, so a preview returns
-  // before them. Shape, not kind, decides (isPreviewBody). The action rules
-  // above still apply: a preview that offers a choice is still a decision.
-  if (isPreviewBody(card.body)) return undefined;
+  // A playable preview is the mock of a thing, whose controls carry its
+  // settings: the question rules below read a body as a question, so a
+  // playable preview returns before them. Shape, not kind, decides
+  // (isPlayableBody); a body that only brings a style sheet still asks
+  // questions (INF-5452). The action rules above still apply: a preview that
+  // offers a choice is still a decision.
+  if (isPlayableBody(card.body)) return undefined;
 
   const escaped = escapedBodyRefusal(card.body);
   if (escaped) return escaped;

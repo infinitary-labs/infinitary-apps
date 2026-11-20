@@ -647,7 +647,7 @@ export type HostMessage =
       type: "form";
       fill: CardAnswer[] | null;
       readOnly?: true;
-      /** A playable preview's body (`isPreviewBody`): its questions are settings, so none is tagged Default. */
+      /** A playable preview's body (`isPlayableBody`): its questions are settings, so none is tagged Default. */
       preview?: true;
     }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "collect"; seq: number; focusUnpicked?: boolean }

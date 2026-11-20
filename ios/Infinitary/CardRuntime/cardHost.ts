@@ -1,4 +1,4 @@
-import { type Card, cardAnswersSchema, cardQuestionsSchema, isPreviewBody, splitSettleFacts, takesTaskFacts } from "../../../src/shared/cards";
+import { type Card, cardAnswersSchema, cardQuestionsSchema, isPlayableBody, splitSettleFacts, takesTaskFacts } from "../../../src/shared/cards";
 import { cardDataName, cardDataNames, demoSources, isReadableLogSource, logSources, playableSoundKind, soundSources, viewablePictures } from "../../../src/shared/cardPictures";
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
@@ -99,7 +99,7 @@ window.addEventListener("message", (event: MessageEvent) => {
     // INF-1338: the body can answer a ping from here on, so the native watchdog starts counting its own answers.
     void native({ type: "ready" }).catch(() => {});
     // INF-4425: a playable preview's questions are settings, so none is tagged Default.
-    send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...(isPreviewBody(input.body) ? { preview: true } : {}) });
+    send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...(isPlayableBody(input.body) ? { preview: true } : {}) });
     // INF-3881: a part such as the map opens live in a cover of its own (`inf.expand`); inside the cover the same call
     // only tells the phone where the part now stands.
     // A card that may still be answered plays its sound clips in the strip under its body, so the bridge draws their
@@ -160,7 +160,7 @@ window.addEventListener("message", (event: MessageEvent) => {
       if (!document.hasFocus() || !navigator.userActivation.isActive) return;
       // INF-3107: a tapped diagram comes as a picture of its own; a playable preview's drawings open
       // nothing from a tap, only when its own script asks (`inf.picture`).
-      const set = viewablePictures(message.index, message.pictures, message.asked === true || !isPreviewBody(input.body));
+      const set = viewablePictures(message.index, message.pictures, message.asked === true || !isPlayableBody(input.body));
       if (set) void native({ type: "image", ...set }).catch(() => {});
       break;
     }
@@ -239,7 +239,7 @@ window.phoneCard = {
     const split = value.card && takesTaskFacts(value.card) ? splitSettleFacts(value.body) : undefined;
     const marks = (value.marks ?? []).map((mark) => (split && mark > split.at ? mark - split.facts.length : mark));
     linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys!.includes(key)) : [];
-    void native({ type: "mounted", facts: split?.facts ?? null, preview: isPreviewBody(value.body) }).catch(() => {});
+    void native({ type: "mounted", facts: split?.facts ?? null, preview: isPlayableBody(value.body) }).catch(() => {});
     // INF-3296: the body carries the stamp the bridge's reveal asks for, as the Mac's revision navigation writes it,
     // after every part, so no part's offset moves. A plain-words body is drawn as the Mac draws it, its paragraphs parts.
     const shown = split?.body ?? value.body;

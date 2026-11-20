@@ -71,7 +71,7 @@ import { InPlaceWork } from "./inPlaceWork";
 import { TaskIntake } from "./intake";
 import { IntegrationAsks } from "./integrationAsks";
 import { renderReviewBrief } from "./intentBrief";
-import { mergeHold } from "./mergeAuthorization";
+import { mergeHold, standingAuthorization } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
@@ -343,7 +343,13 @@ export class CrewSupervisor {
       now: this.now,
       tasks: options.tasks,
       cardStore: options.cardStore,
-      syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
+      syncCaptainGate: (taskId, at) => {
+        this.ladder.syncCaptainGate(taskId, at);
+        // A card about the task moved: a merge kept for the review's answers
+        // looks again (INF-5396's audit, finding 2).
+        if (standingAuthorization(options.tasks.get(taskId)?.delivery)?.waiting?.on === "questions")
+          this.settling.locks.retryWhenFree(taskId);
+      },
       closeAnsweredTask: (card, action, by) =>
         this.settling.declared.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts.strip(taskId),

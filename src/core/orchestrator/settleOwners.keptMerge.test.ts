@@ -1730,4 +1730,57 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
     await h.supervisor.disposeAll();
   });
+
+  // INF-5396's audit, finding 2: a review passed with two questions still
+  // waiting on the captain, its builder's merge card named neither, and the
+  // captain's click merged before they were answered. The merge card names
+  // the review's open question, and the click waits for its answer.
+  it("names the review's open question on the merge card and holds the captain's merge until it is answered", async () => {
+    const h = await approved();
+    seedTask(h.tasks, {
+      id: "review01",
+      title: "Review: Ship the meter",
+      parentId: h.taskId,
+      status: "idle",
+      shape: { kind: "review", kind_source: "host:review", basis: h.taskId },
+    });
+    const question = h.supervisor.cards.emitCrewmateCard(
+      "review01",
+      {
+        title: "Review of the meter: keep the Later copy?",
+        body: "<p>The empty meter says Later.</p>",
+        asking: true,
+        actions: [
+          { id: "keep", label: "Keep the copy", default: true },
+          { id: "change", label: "Change it" },
+        ],
+      },
+      "m",
+    );
+    // The reviewer's turn ended, and the review passed; its question
+    // outlives it (INF-4338's direction D).
+    h.supervisor.cards.closeOut({ kind: "crewmate", taskId: "review01" }, "idle");
+    h.tasks.close("review01", { status: "done", reason: "finished", actor: "host" });
+    await tick();
+    const merge = () => h.cards().find((entry) => entry.id === h.card.id);
+    expect(merge()?.body).toContain("Review of the meter: keep the Later copy?");
+
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("questions"));
+    expect(h.forge.merges).toEqual([]);
+
+    // The answer reaches the builder, which says it leaves the approved
+    // work as it was; the kept merge then goes through.
+    h.supervisor.cardActions.act(question, "keep");
+    await tick();
+    expect(h.cards().map((card) => card.id)).not.toContain(question);
+    expect(h.forge.merges).toEqual([]);
+    await h.declare({
+      captainGuidance: { mark: 1, impact: "none", evidence: "The captain kept the copy." },
+    });
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+    expect(h.authorization()?.status).toBe("consumed");
+    await h.supervisor.disposeAll();
+  });
 });

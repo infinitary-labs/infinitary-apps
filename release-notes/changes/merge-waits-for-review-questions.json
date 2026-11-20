@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-waits-for-review-questions",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge waits for your answers to its review's questions",
+      "body": "When a review of a change asks you something, the change's merge card now lists those questions at its top, and merging waits until you answer them. Your click is kept, so the merge goes through once the questions are answered. Before, a change could merge while its review was still waiting on you.",
+      "picture": {
+        "dark": "merge-waits-for-review-questions-dark.webp",
+        "light": "merge-waits-for-review-questions-light.webp",
+        "alt": "A merge card whose top says the merge waits until you answer the review, listing the review's question above the change's Why"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

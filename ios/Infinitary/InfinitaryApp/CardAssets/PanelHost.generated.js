@@ -27751,6 +27751,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Cannot merge yet: ${place} holds it for a required review or another rule on the main branch. Your merge is kept and runs once ${place} allows it.`;
   }
+  function keptQuestions() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الدمج حاليًا: ما زالت المراجعة تنتظر إجابتك. قرار الدمج محفوظ، ويُنفَّذ بعد أن تجيب.`;
+      case "de":
+        return `Noch kein Zusammenführen möglich: Die Review-Fragen warten noch auf deine Antwort. Dein Zusammenführen bleibt vorgemerkt und läuft, sobald du sie beantwortet hast.`;
+      case "es":
+        return `Todavía no se puede fusionar: la revisión aún espera tu respuesta. Tu fusión queda pendiente y se hace cuando respondas.`;
+      case "fr":
+        return `Fusion impossible pour l’instant : la revue attend encore votre réponse. Votre fusion est conservée et s’exécutera dès que vous aurez répondu.`;
+      case "ja":
+        return `まだマージできません：レビューがあなたの回答を待っています。マージの承認はそのまま残り、回答すると実行されます。`;
+      case "ko":
+        return `아직 병합할 수 없어요: 검토가 아직 답을 기다리고 있어요. 병합 승인은 유지되며, 답하면 병합해요.`;
+      case "pt-BR":
+        return `Ainda não é possível mesclar: a revisão ainda aguarda sua resposta. Sua mesclagem está guardada e acontece assim que você responder.`;
+      case "zh-Hans":
+        return `暂时无法合并：审查还在等你回答。你的合并已保留，你回答后就会执行。`;
+      case "zh-Hant":
+        return `還不能合併：審查還在等你回答。你的合併會保留，你回答後就會執行。`;
+      case "en-XA":
+        return `[Çáññöţ ɱéŕĝé ýéţ: ţĥé ŕéṽîéŵ îš šţîļļ ŵáîţîñĝ ƒöŕ ýöûŕ áñšŵéŕ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé ýöû áñšŵéŕ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Cannot merge yet: the review is still waiting for your answer. Your merge is kept and runs once you answer it.‬`;
+    }
+    return `Cannot merge yet: the review is still waiting for your answer. Your merge is kept and runs once you answer it.`;
+  }
   function keptQueueOwn() {
     switch (currentLanguage()) {
       case "ar":
@@ -28320,6 +28347,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Set in this project's settings.‬`;
     }
     return `Set in this project's settings.`;
+  }
+  function mergeWaitsForReview() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينتظر هذا الدمج إجابتك عن المراجعة:`;
+      case "de":
+        return `Das Zusammenführen wartet auf deine Antworten zu diesen Review-Fragen:`;
+      case "es":
+        return `Esta fusión espera a que respondas a la revisión:`;
+      case "fr":
+        return `Cette fusion attend que vous répondiez à la revue :`;
+      case "ja":
+        return `このマージは、レビューへのあなたの回答を待っています：`;
+      case "ko":
+        return `이 병합은 검토에 대한 답을 기다려요:`;
+      case "pt-BR":
+        return `Esta mesclagem espera você responder à revisão:`;
+      case "zh-Hans":
+        return `此合并会等你回答审查的问题：`;
+      case "zh-Hant":
+        return `此合併會等你回答審查的問題：`;
+      case "en-XA":
+        return `[Ţĥîš ɱéŕĝé ŵáîţš ûñţîļ ýöû áñšŵéŕ ţĥé ŕéṽîéŵ: ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This merge waits until you answer the review:‬`;
+    }
+    return `This merge waits until you answer the review:`;
   }
   function mergedAt(input2) {
     const at = input2.at;
@@ -83710,6 +83764,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     keptHostQueue,
     keptHostRemoved,
     keptProtected,
+    keptQuestions,
     keptQueueOwn,
     keptRefused,
     keptRepair,
@@ -83731,6 +83786,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     mergeHeldPushed,
     mergeSetByFirstMate,
     mergeSetInProject,
+    mergeWaitsForReview,
     mergedAt,
     mergedChangeOn,
     mergedChangeOnHost,
@@ -86393,6 +86449,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "keptHostQueue": ["place"],
     "keptHostRemoved": ["place"],
     "keptProtected": ["place"],
+    "keptQuestions": [],
     "keptQueueOwn": [],
     "keptRefused": ["place"],
     "keptRepair": [],
@@ -86414,6 +86471,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "mergeHeldPushed": [],
     "mergeSetByFirstMate": [],
     "mergeSetInProject": [],
+    "mergeWaitsForReview": [],
     "mergedAt": ["at"],
     "mergedChangeOn": ["change", "place"],
     "mergedChangeOnHost": ["change"],

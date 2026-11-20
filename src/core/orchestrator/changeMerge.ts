@@ -120,6 +120,8 @@ export type MergeStop =
   | "host-queue"
   /** The host removed the change from its own merge queue without merging it. */
   | "host-removed"
+  /** The review's questions wait on the captain's answers (INF-5396's audit, finding 2). */
+  | "questions"
   | "refused";
 
 /**

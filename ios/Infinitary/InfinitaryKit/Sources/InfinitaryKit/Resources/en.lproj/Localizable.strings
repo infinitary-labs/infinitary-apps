@@ -751,6 +751,7 @@
 "keptHostQueue" = "Waiting for the merge queue: %1$@ took this version into your project's merge queue. Your merge is kept. %1$@ merges it after the queue's checks pass.";
 "keptHostRemoved" = "Cannot merge yet: %1$@ removed this version from your project's merge queue without merging it. Your merge is kept. A fixed version from its crewmate goes to the queue again.";
 "keptProtected" = "Cannot merge yet: %1$@ holds it for a required review or another rule on the main branch. Your merge is kept and runs once %1$@ allows it.";
+"keptQuestions" = "Cannot merge yet: the review is still waiting for your answer. Your merge is kept and runs once you answer it.";
 "keptQueueOwn" = "Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass.";
 "keptRefused" = "Cannot merge yet: %1$@ refused it. Your merge is kept and runs again once its crewmate has fixed the cause.";
 "keptRepair" = "Cannot merge yet: it changed after the card you approved. Your merge is kept and runs once its crewmate shows the work is still what you approved.";
@@ -982,6 +983,7 @@
 "mergeHeldPushed" = "A newer version was pushed after this card went up. Merge returns when this card shows the newer version.";
 "mergeSetByFirstMate" = "Set by your first mate for this task.";
 "mergeSetInProject" = "Set in this project's settings.";
+"mergeWaitsForReview" = "This merge waits until you answer the review:";
 "mergedAt" = "Merged at %1$@";
 "mergedChangeOn" = "Merged %1$@ on %2$@";
 "mergedChangeOnHost" = "Merged %1$@ on the project's host";

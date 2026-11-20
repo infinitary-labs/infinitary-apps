@@ -902,6 +902,8 @@ export function keptFeedSaid(wait: MergeWait, place: string, checks?: string): S
       return said("keptHostQueue", where);
     case "host-removed":
       return said("keptHostRemoved", where);
+    case "questions":
+      return said("keptQuestions");
   }
 }
 
@@ -974,6 +976,9 @@ export function keptNote(
       return `${kept} The project merges the captain's approved changes together: ${head} is in line for one batch pull request, as one commit of its own, and the host merges that pull request once its checks pass. A change the batch leaves out, or the only change of a batch whose checks fail, wakes its crewmate; a failed batch of several is told to you once. Nothing is needed from you now. ${declare}`;
     case "host-queue":
       return `${kept} ${place} took ${head} into the merge queue of its branch: it is queued there, not merged. ${place} merges it once the queue's own checks pass, and the task closes then; the host reads the queue on its own and sends nothing again meanwhile. Nothing is needed from you or the crewmate. ${declare}`;
+    case "questions":
+      // i18n-exempt: a note served to the first mate, not shown to a person
+      return `${kept} The review's questions about the task still wait on the captain's answers, and the merge waits for them: the host runs it once they are answered. Nothing is needed from you or the crewmate.`;
     case "host-removed":
       return `${kept} ${place} removed ${head} from the merge queue of its branch without merging it, and the host sends nothing again at that version on its own. Steer the crewmate to read why on the pull request's page (failed checks of the queue's group, a conflict with the branch, or someone removed it). A fault in the change it fixes in a new version, which the host sends to the queue once its repair is declared; with nothing left to change, it answers the removal with check_change's answered verdict at ${head}, and the host sends that version to the queue once more when its turn ends. ${declare}`;
   }

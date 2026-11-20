@@ -211,7 +211,9 @@ export type MergeWait =
   /** The host's own merge queue took this version and has not merged it yet. */
   | "host-queue"
   /** The host removed this version from its own merge queue without merging it. */
-  | "host-removed";
+  | "host-removed"
+  /** The review's questions about the task wait on the captain's answers. */
+  | "questions";
 
 /**
  * The captain's merge approval (FI3-304), version 1: minted by his click on

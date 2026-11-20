@@ -307,6 +307,7 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request.
 Before it sends the merge, the app reads that the branch is still at the checked version and that Bitbucket reports no conflict, draft or blocking rule.
 Bitbucket's merge itself holds to no version, so a push in the moment after that read goes in with it, and the app says so rather than promising the checked version alone.
+That is the chosen guarantee: the merge stays one click, best effort at the checked version, with this limit said in the release note and on the task, rather than handing the merge to Bitbucket until it can hold a merge to a version.
 A Bitbucket project added before the app opened pull requests there delivers this way from its next task, with no setting to change; without a sign-in, `open_change` and the merge answer the same refusal as on GitHub, whose ways are signing in and keeping the project on this Mac.
 `BitbucketForge` (`providers/bitbucket/bitbucketForge.ts`) reaches the project at `/repositories/<workspace>/<name>` through `BitbucketClient`, whose writes (`request`, `write`) send JSON with the same token, bounds and refusals as its reads.
 

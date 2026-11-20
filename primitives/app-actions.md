@@ -30,7 +30,7 @@ The captain's click alone is no ground: a control with none of these is a catalo
 ## Owner and entry points
 
 - The catalog: `ACTIONS`, `ActionTier`, `ActionLine`, `actionRefusal` and `actionActors` in [`src/shared/actions.ts`](../src/shared/actions.ts).
-- The appearance lines and the one-off acts: [`src/shared/appearanceActions.ts`](../src/shared/appearanceActions.ts) and [`src/shared/settingsActs.ts`](../src/shared/settingsActs.ts), spread into `ACTIONS`.
+- The appearance lines, the panel line and the one-off acts: [`src/shared/appearanceActions.ts`](../src/shared/appearanceActions.ts), [`src/shared/panelActions.ts`](../src/shared/panelActions.ts) and [`src/shared/settingsActs.ts`](../src/shared/settingsActs.ts), spread into `ACTIONS`.
 - Coverage and exceptions: `EXCEPTION_GROUNDS`, `ACTION_EXCEPTIONS`, `ACTION_FIELD_EXCEPTIONS`, `HOST_ACTION_EXCEPTIONS`, `unaccountedChanges`, `groundlessExcuses` and `uncoveredSettings` in [`src/shared/actionCoverage.ts`](../src/shared/actionCoverage.ts).
 - The one dispatcher: `createCoreDispatcher` in [`src/core/dispatcher.ts`](../src/core/dispatcher.ts), whose catalog change (`createCatalogDispatch` in [`src/core/dispatcher/catalogDispatch.ts`](../src/core/dispatcher/catalogDispatch.ts)) enforces actor permissions independently of any tool and writes the trail (`SETTLE_MS`).
 - The first mate's tools: `app_state` and `app_change` in `createAppTools` ([`src/core/pi/appTools.ts`](../src/core/pi/appTools.ts)), with `handoverOffer` for hand-over cards.

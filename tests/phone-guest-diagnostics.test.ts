@@ -1,11 +1,12 @@
 import type { ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
-import type { FSWatcher } from "node:fs";
+import { type FSWatcher, readFileSync } from "node:fs";
 import { appendFile, mkdir, readFile, rename, stat, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { phoneExecutionArguments } from "../scripts/phone-test-plan";
+import { phonePartBudget } from "../scripts/phone-deadlines";
+import { PHONE_PART_TIMES, partTimes, phoneExecutionArguments } from "../scripts/phone-test-plan";
 import { phoneProxyReadings } from "./fixtures/phone-proxy-readings";
 import {
   observePhoneLauncherLog,
@@ -26,7 +27,14 @@ const simulator = "B0AD50AE-A822-4B59-85B6-04B82BAF532A";
 const launcher = 5901;
 const lookupPid = 7414;
 const savedLogDirectory = `/private/var/folders/p7/f_99nxmj7s16qrxbl0cbpz4r0000gn/T/infinitary-native-ZCG3xx/home/Library/Logs/CoreSimulator/${simulator}`;
-const execution = phoneExecutionArguments(false);
+// The guest observer runs beside a cards part, sampling as long as its test may run (INF-5387's plan, piece 1).
+const execution = phoneExecutionArguments(
+  false,
+  phonePartBudget(
+    "cards-diagram",
+    partTimes(readFileSync(join(import.meta.dirname, "..", PHONE_PART_TIMES), "utf8")),
+  ) / 1000,
+);
 const captureSeconds = Number(
   execution[execution.indexOf("-maximum-test-execution-time-allowance") + 1],
 );

@@ -34,8 +34,9 @@ export type LimitRests = "record" | "outside fact" | "consent" | "physical limit
 
 export type LimitEntry = { rests: LimitRests; way: string };
 
-/** The code the ledger reads: the host's, never the window's drawing or a test. */
-export const LIMIT_ROOTS = ["src/core", "src/shared", "src/main", "src/preload"] as const;
+/** The code the ledger reads: the host's, never the window's drawing or a test, and the phone check's command
+ * deadlines (INF-5387's plan, piece 1), each of which rests on recorded times. */
+export const LIMIT_ROOTS = ["src/core", "src/shared", "src/main", "src/preload", "scripts/phone-deadlines.ts"] as const;
 
 /** A name is a limit's when one of its words, split at `_`, is one of these. */
 export const LIMIT_WORDS = ["MAX", "MIN", "CAP", "LIMIT", "LIMITS", "BUDGET", "CEILING", "FLOOR"];
@@ -46,6 +47,18 @@ const physical = (way: string): LimitEntry => ({ rests: "physical limit", way })
 
 /** Each limit that rests on a fact, consent or a physical limit, by file, with its way out. */
 export const LIMITS: Record<string, Record<string, LimitEntry>> = {
+  "scripts/phone-deadlines.ts": {
+    PHONE_COMMAND_BUDGET_MS: record(
+      "the command is ended and its processes and simulator kept in hung-*.txt; the check fails naming it, retries nothing, and its failed job is requested again",
+    ),
+    PHONE_BUILD_BUDGET_MS: record("the build is ended and kept as hung-*.txt; the check fails naming it and is requested again"),
+    PHONE_PACKAGE_TESTS_BUDGET_MS: record(
+      "the package tests are ended and kept as hung-*.txt; their failure is reported and the simulator tests still run",
+    ),
+    PHONE_PART_BUDGET_FLOOR_MS: record(
+      "a part past twice its recorded time fails naming itself; a part that grew records its new time in scripts/phone-part-times.json",
+    ),
+  },
   "src/core/claude/claudeCostReports.ts": {
     CLAUDE_COST_REPORT_BODY_MAX: physical("a local export over 1 MiB is refused; terminal usage accounting remains available"),
   },
@@ -735,7 +748,7 @@ export function namedLimitsIn(path: string, text: string): NamedLimit[] {
 /** Whether the ledger reads this file. */
 export function readsFile(path: string): boolean {
   return (
-    LIMIT_ROOTS.some((root) => path.startsWith(`${root}/`)) &&
+    LIMIT_ROOTS.some((root) => path === root || path.startsWith(`${root}/`)) &&
     /\.tsx?$/.test(path) &&
     !/\.test\.tsx?$/.test(path)
   );

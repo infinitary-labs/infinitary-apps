@@ -369,7 +369,8 @@ describe("each Mac job's kind", () => {
  * every matrix entry, as a request or pull request starts it.
  */
 it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, unless LINUX_QUEUES names its kind", () => {
-  const gate = ["journeys.yml:choose-journeys"];
+  // INF-5387's plan, piece 1: the phone request's chooser takes the journeys' chooser's fast line.
+  const gate = ["journeys.yml:choose-journeys", "phone.yml:request"];
   const hostedAlways = [
     "release.yml:resolve",
     "release.yml:notes",
@@ -423,7 +424,6 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // INF-4496: the size warning line reads line counts with plain Node.
     light: [
       "verify.yml:request",
-      "phone.yml:request",
       "size-warning.yml:size-warning",
       // The docs site's check builds and browses the site, nothing that needs a desktop.
       "docs-site.yml:build-and-check",
@@ -436,7 +436,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "replay.yml:replay-gate",
       "prompt-budget.yml:prompt-budget",
     ],
-    gate: ["journeys.yml:choose-journeys"],
+    gate: ["journeys.yml:choose-journeys", "phone.yml:request"],
     checks: ["verify.yml:lane", "verify.yml:linux-tests"],
     // The app journeys a request or a sweep runs on Linux, which may overflow to a
     // compute Mac's arm64 Linux guest when no PC place is free.

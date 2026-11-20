@@ -20,6 +20,8 @@ const INPUTS = [
   "scripts/phone-pin.json",
   // INF-1596: the sweep of earlier runs' simulators and scratch folders at the gate's start.
   "scripts/phone-leftovers.ts",
+  // INF-5387 piece 1: the deadline of every command the gate runs.
+  "scripts/phone-deadlines.ts",
   // INF-1066: native geometry generation and the scene journey's real home fixture.
   "scripts/generate-phone-scene.ts", "tests/helpers/phoneScene.ts", "scripts/phone-recording.ts",
   "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts", "tests/helpers/phoneWebContent.ts",

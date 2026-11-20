@@ -780,17 +780,18 @@ describe("the phone check request guard (INF-2576)", () => {
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("task");
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("reason");
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("device");
-    // Refused on a light Linux machine, never in the phone guests' line; the phone release's
-    // call, which passes its resolved source, stays on GitHub's hosted Ubuntu.
+    // Refused on the fast gate line the journeys' chooser takes (INF-5387's plan, piece 1), never in
+    // the phone guests' line; the phone release's call, which passes its resolved source, stays on
+    // GitHub's hosted Ubuntu.
     const runner = (inputs: Record<string, string>) =>
       workflowValue(phone.jobs.request?.["runs-on"] ?? "", {
         inputs,
         vars: {
           MAC_QUEUES: JSON.stringify({ phone: "mini-mac-phone" }),
-          LINUX_QUEUES: JSON.stringify({ light: "shell-pc-light" }),
+          LINUX_QUEUES: JSON.stringify({ light: "shell-pc-light", gate: "shell-pc-gate" }),
         },
       });
-    expect(runner({})).toBe("shell-pc-light");
+    expect(runner({})).toBe("shell-pc-gate");
     expect(runner({ source_commit: "a".repeat(40) })).toBe("ubuntu-24.04");
   });
 

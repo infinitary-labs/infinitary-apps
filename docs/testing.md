@@ -346,8 +346,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The same image gives pnpm's downloads ten minutes and four more tries, which `.github/actions/pnpm` gives a GitHub-hosted runner ("pnpm's own download").
   The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
   Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow (the overflow's kind is `journeys`), `verify.yml`'s Linux lanes, the replay gate and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
-  The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys`.
-  The placement service's runners on that label take only this job and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
+  The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys` and `phone.yml`'s `request`.
+  The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
   Main and release Linux jobs run on GitHub's hosted Ubuntu instead, except a publishing release's packages when its release queue is configured ("A release's hosted machines").
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
@@ -816,7 +816,7 @@ A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull jour
 INF-2539 removed its pull request selection; an affected request chooses parts, and the phone release runs every part ("Main's desktop release check").
 An affected request selects the device gates for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, the launcher `scripts/test-phone.ts` and every module it loads short of the app's own code and the test home `tests/helpers/phoneHome.ts`: among them `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, the failure timers and load clock `tests/helpers/budgets.ts`, the scratch folders `tests/helpers/scratchDirs.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts`, the Duo's hinge helper `scripts/phone-hinge.ts` and the test plan helper `scripts/phone-test-plan.ts`.
+The setup inputs are `phone.yml`, the launcher `scripts/test-phone.ts` and every module it loads short of the app's own code and the test home `tests/helpers/phoneHome.ts`: among them `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, the failure timers and load clock `tests/helpers/budgets.ts`, the scratch folders `tests/helpers/scratchDirs.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the command deadlines `scripts/phone-deadlines.ts`, the simulator selector `scripts/phone-simulator.ts`, the Duo's hinge helper `scripts/phone-hinge.ts` and the test plan helper `scripts/phone-test-plan.ts`.
 The test home is an input itself, and so are the helpers chosen for it one by one, such as the Google stand-in `tests/helpers/phoneGoogle.ts` and the journey stand-in `tests/e2e/mockProvider.ts`.
 `tests/phone-ci.test.ts` walks the launcher's imports, stopping at the app's code under `src/` and at the test home, and fails when a module it reaches is not an input (INF-1242).
 What the launcher reads is an input too: the simulator pin `scripts/phone-pin.json`, the part times `scripts/phone-part-times.json`, each part's recorded work `scripts/phone-work.json`, the hinge helper's source `scripts/phone-hinge.m` and the library photo a part chooses.
@@ -1216,7 +1216,7 @@ It does not repeat the release's other stages: the replay gate and the package s
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-workflows-journey-requests.test.ts` the workflow's shape.
 
-The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 90-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
+The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with each ordinary XCTest allowance its part's deadline, a deadline on every command the gate runs, and a 90-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
 Its on-demand `parts`, `starve` and `perf` inputs select native parts and reproduce twelve-second stalls without changing assertions or app deadlines.
 
 ### Journeys on request
@@ -1620,9 +1620,9 @@ So a journey request's Linux part that holds one (`FAR_LINUX_JOURNEYS`, `tests/e
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
-| `light` | `verify.yml`'s `request`, `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), `size-warning.yml`'s `size-warning`, and `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first) | `LINUX_RUNNER` |
+| `light` | `verify.yml`'s `request`, `size-warning.yml`'s `size-warning`, and `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first) | `LINUX_RUNNER` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
-| `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
+| `gate` | `journeys.yml`'s `choose-journeys`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), the two choosers a Mac job waits on (INF-5387's plan, piece 1) | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |
 | `journeys` | `source-journeys.yml`'s `source-desktop`, the app journeys a request, an alpha or the swept batch runs on Linux, unless the caller asks for hosted or a request's part holds a journey whose far computer is this one: a queue whose places are the PC's Linux places first and then each compute Mac's arm64 Linux guest, which takes the job only while no PC place can | `LINUX_RUNNER` |
 | `typecheck` | `ci.yml`'s `typecheck-lint-build`, the branch check: `fleet-linux-pr`, whose places are the PC's six Linux places first and then each compute Mac's arm64 Linux guest, which takes the job only while no PC place can | `LINUX_RUNNER` |

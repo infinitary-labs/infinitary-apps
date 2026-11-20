@@ -65,8 +65,12 @@ public struct PhoneKeptMacsFiles: Sendable {
     /// The one computer a build before this one saved.
     public let legacyURL: URL
 
+    /// Where a save writes the new list before it replaces the old one: a folder left out of backups.
+    public let stagingURL: URL
+
     public init(folder: URL) {
         url = folder.appendingPathComponent("KeptMacs.json")
+        stagingURL = folder.appendingPathComponent("KeptMacsStaging", isDirectory: true)
         legacyURL = folder.appendingPathComponent("JoinedMac.json")
     }
 
@@ -86,19 +90,25 @@ public struct PhoneKeptMacsFiles: Sendable {
     }
 
     /// Writes the whole list at once, then lets go of the one record from before, which this list now holds. The new
-    /// list is written beside the old one, protected and left out of backups, and only then renamed over it, so the
-    /// list on disk is always whole and never one a backup may take (INF-5265's review). The rename is the save: once
-    /// it lands, it throws no more, so a caller never keeps the list from before while the next launch reads this one.
-    /// Removing the record from before is tried again on each save, and it is never read once this one exists.
+    /// list is written in a staging folder beside it, left out of backups before anything is written there, protected
+    /// and left out of backups itself, and only then renamed over the list, so no copy of the list is ever one a backup
+    /// may take (INF-5265's review); a stage a stopped save left behind is removed by the next save. The rename is the
+    /// save: once it lands, it throws no more, so a caller never keeps the list from before while the next launch
+    /// reads this one. Removing the record from before is tried again on each save, and it is never read once this
+    /// one exists.
     public func save(_ kept: PhoneKeptMacs) throws {
-        let folder = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        var staged = folder.appendingPathComponent(".KeptMacs-\(UUID().uuidString).json")
+        var stages = stagingURL
+        try FileManager.default.createDirectory(at: stages, withIntermediateDirectories: true)
+        var excluded = URLResourceValues(); excluded.isExcludedFromBackup = true
+        try stages.setResourceValues(excluded)
+        for left in (try? FileManager.default.contentsOfDirectory(at: stages, includingPropertiesForKeys: nil)) ?? [] {
+            try? FileManager.default.removeItem(at: left)
+        }
+        var staged = stages.appendingPathComponent("\(UUID().uuidString).json")
         do {
             try JSONEncoder().encode(Record(shown: kept.shown, others: kept.others))
                 .write(to: staged, options: [.withoutOverwriting, .completeFileProtectionUntilFirstUserAuthentication])
-            var values = URLResourceValues(); values.isExcludedFromBackup = true
-            try staged.setResourceValues(values)
+            try staged.setResourceValues(excluded)
             guard rename(staged.path, url.path) == 0 else { throw CocoaError(.fileWriteUnknown) }
         } catch {
             try? FileManager.default.removeItem(at: staged)

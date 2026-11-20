@@ -58,9 +58,15 @@ struct PhoneKeptMacsTests {
         kept.show(studio.pin)
         try files.save(kept)
         #expect(try files.read() == PhoneKeptMacs(shown: studio, others: [office]))
-        // Each save is out of backups the moment it replaces the list, and leaves nothing staged beside it.
+        // Each save is out of backups the moment it replaces the list, and is staged only in a folder out of backups,
+        // where a stage a stopped save left behind goes with the next save.
         #expect(try files.url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
-        #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path) == ["KeptMacs.json"])
+        #expect(try files.stagingURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: files.stagingURL.path).isEmpty)
+        try Data("{".utf8).write(to: files.stagingURL.appendingPathComponent("stopped.json"))
+        try files.save(kept)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: files.stagingURL.path).isEmpty)
+        #expect(try Set(FileManager.default.contentsOfDirectory(atPath: folder.path)) == ["KeptMacs.json", "KeptMacsStaging"])
 
         kept.forgetShown()
         kept.forgetShown()

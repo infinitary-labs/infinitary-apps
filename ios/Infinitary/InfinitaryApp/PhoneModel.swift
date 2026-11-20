@@ -458,7 +458,8 @@ struct AddressJoin: Equatable {
     func active(_ active: Bool) {
         foreground = active
         if active {
-            endBackgroundTime(); _ = restore(); nearby.start(); connection?.start(); lookAtOthers()
+            // The list is handed to the push record on each open, connected or not, so a refused write is tried again.
+            endBackgroundTime(); _ = restore(); keptPushes(); nearby.start(); connection?.start(); lookAtOthers()
             // INF-2631: the app's start and each time it comes to the front, handed to the computer.
             if !launched { launched = true; connection?.noteUsage(.launch) }
             connection?.noteUsage(.opened)

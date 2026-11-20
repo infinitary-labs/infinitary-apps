@@ -153,21 +153,24 @@ struct PhonePushTests {
     @MainActor @Test func asksTheRelayOnceAndHandsItsGrantOnEveryWelcome() async throws {
         let outside = Outside()
         let pushes = outside.pushes()
+        // INF-5265: the app hands the push record its computer before it opens; the address is asked for only then.
+        await pushes.kept([studio])?.value
         await pushes.opened()
         #expect(outside.registered == 1)
         await pushes.tokenArrived(address)
         #expect(outside.posts == [["token": token, "environment": "production"]])
         // The relay's grant arrives by a background push and goes to the computer at once.
-        await pushes.reached(takesPushes: true, hand: outside.hand)
+        await pushes.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
         #expect(outside.handed.isEmpty)
         #expect(await pushes.pushArrived(outside.grantPush(grant(expiring: 30))))
-        let key = try #require(outside.held?.key)
+        let key = try #require(outside.held?.computers?.first?.key)
         #expect(outside.handed == [PhonePushRegistration(token: token, environment: .production, grant: grant(expiring: 30), key: key)])
         // The next run's open, address and welcome hand the same grant and ask the relay nothing.
         let next = outside.pushes()
+        await next.kept([studio])?.value
         await next.opened()
         await next.tokenArrived(address)
-        await next.reached(takesPushes: true, hand: outside.hand)
+        await next.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
         #expect(outside.posts.count == 1)
         #expect(outside.handed.last??.grant == grant(expiring: 30))
         #expect(outside.handed.last??.key == key)
@@ -575,7 +578,7 @@ struct PhonePushTests {
         let outside = Outside()
         outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
         let pushes = outside.pushes()
-        pushes.kept([studio, office])
+        await pushes.kept([studio, office])?.value
         let officeKey = try #require(outside.held?.computers?.last?.key)
         outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-41d6e0b2-export-retries", nil, office.pin),
                              ("n3", nil, nil, nil)]
@@ -612,6 +615,36 @@ struct PhonePushTests {
         outside.removed = []
         await pushes.kept([studio])?.value
         #expect(outside.removed == ["n1", "n2"], "Each list removes what is still shown, so a removal cut short is tried again")
+    }
+
+    /// A cleanup reads who is kept once iOS answered: a pass begun before a computer was joined leaves that computer's
+    /// notifications, and an empty list's pass removes nothing of a computer joined meanwhile.
+    @MainActor @Test func aCleanupKeepsTheNotificationsOfAComputerJoinedMeanwhile() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        await pushes.kept([studio])?.value
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-41d6e0b2-export-retries", nil, office.pin)]
+        let emptied = pushes.kept([])
+        let narrowed = pushes.kept([office])
+        await emptied?.value
+        await narrowed?.value
+        #expect(outside.removed == ["n1", "n1"])
+    }
+
+    /// Opening Infinitary asks iOS for the push address only while a computer is kept, so it never takes back the
+    /// address the last forget gave up.
+    @MainActor @Test func opensWithoutAnAddressWhileNoComputerIsKept() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        await pushes.kept([studio])?.value
+        await pushes.kept([])?.value
+        await pushes.opened()
+        #expect(outside.registered == 0)
+        pushes.kept([office])
+        await pushes.opened()
+        #expect(outside.registered == 1)
     }
 
     /// A write the Keychain refuses changes nothing the notification part or a computer sees: no new computer's key is

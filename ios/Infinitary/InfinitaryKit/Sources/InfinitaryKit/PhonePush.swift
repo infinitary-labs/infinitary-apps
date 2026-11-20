@@ -208,9 +208,11 @@ public struct PhonePushEffects {
     }
 
     /// Infinitary came to the front: iOS's setting is read again, since iOS tells no app when it changes.
+    /// INF-5265: it asks iOS for the push address only while the phone keeps a computer; with none kept, the address
+    /// the last forget gave up stays given up, and the next join asks for one.
     public func opened() async {
         permission = await effects.permission()
-        if permission == .on { effects.registerForPushes() }
+        if permission == .on, keep()?.computers?.isEmpty == false { effects.registerForPushes() }
         update()
         await handOver()
     }
@@ -226,14 +228,15 @@ public struct PhonePushEffects {
     /// notifications. An empty list is the last computer forgotten, which lets go of the push address too. The record
     /// changes only once the Keychain confirmed the write; until then nothing changes and the next list tries again.
     /// Each time, every notification for a card whose computer is not kept goes, and every one goes while none is
-    /// kept, so a cleanup cut short is finished by the next list. It answers that removal, under way, or nil when the
+    /// kept, so a cleanup cut short is finished by the next list; who is kept is read once iOS answered, so a pass
+    /// never removes a notification of a computer joined meanwhile. It answers that removal, under way, or nil when the
     /// record could not be read or written.
     @discardableResult public func kept(_ kept: [(pin: String, name: String)]) -> Task<Void, Never>? {
         guard var held = keep() else { return nil }
         let before = held
         if kept.isEmpty {
             guard before.computers == [] || reset() else { return nil }
-            return Task { await removeDelivered { _ in true } }
+            return Task { await removeUnkept() }
         }
         var computers = held.computers ?? []
         if held.computers == nil {
@@ -251,10 +254,7 @@ public struct PhonePushEffects {
         }
         held.computers = computers
         guard held == before || commit(held) else { return nil }
-        let pins = Set(kept.map(\.pin))
-        return Task {
-            await removeDelivered { $0.cardID != nil && self.owner(named: $0.computer, in: held).map(pins.contains) != true }
-        }
+        return Task { await removeUnkept() }
     }
 
     /// The computer's welcome reached In reach: `hand` asks `inf:devices:push` on this connection, and hands the key
@@ -291,17 +291,16 @@ public struct PhonePushEffects {
         let rest = (held.computers ?? []).filter { $0.pin != computer }
         if let computer, !rest.isEmpty {
             // Committed before the wait for iOS's list, so a later join or forget starts from this record.
-            let before = held
             held.computers = rest
             if held.untagged == computer { held.untagged = nil }
             // A write that fails changes nothing; the list handed next lets go of the key and its notifications.
             guard commit(held) else { return }
-            // One that opened no card names no computer, so it is no one's to remove here.
-            await removeDelivered { $0.cardID != nil && self.owner(named: $0.computer, in: before) == computer }
+            // `untagged` went with it, so a notification from before that was this computer's has no kept owner.
+            await removeUnkept()
             return
         }
         reset()
-        await removeDelivered { _ in true }
+        await removeUnkept()
     }
 
     /// The last computer is forgotten: no handover, no push address, and a new key that belongs to no computer. False
@@ -321,10 +320,23 @@ public struct PhonePushEffects {
         return true
     }
 
-    /// Removes the notifications shown now that `which` picks.
+    /// Removes the notifications shown now that `which` picks; `which` runs once iOS answered, so it reads the record
+    /// as it stands then.
     private func removeDelivered(_ which: ((id: String, cardID: String?, push: String?, computer: String?)) -> Bool) async {
         let gone = await effects.delivered().filter(which).map(\.id)
         if !gone.isEmpty { effects.remove(gone) }
+    }
+
+    /// Removes every notification for a card whose computer the record does not keep now, and every one while it keeps
+    /// none. One that opened no card stays while a computer is kept, since no one knows whose it is.
+    private func removeUnkept() async {
+        await removeDelivered { shown in
+            guard let held = self.held, let computers = held.computers else { return false }
+            guard !computers.isEmpty else { return true }
+            guard shown.cardID != nil else { return false }
+            let owner = self.owner(named: shown.computer, in: held)
+            return !computers.contains { $0.pin == owner }
+        }
     }
 
     /// INF-5265: the computer a shown notification came from: the one it names, or for one that names none, shown

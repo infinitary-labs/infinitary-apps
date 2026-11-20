@@ -207,25 +207,57 @@ describe("a Bitbucket Cloud pull request", () => {
     expect(await forge.putIn(change, HEAD)).toEqual({ sha: MERGED, mergedHead: NEWER });
   });
 
-  it("reads a ref that moved during the merge as the base moving, and a merge queue's 202 as queued", async () => {
-    const branch = `GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`;
-    const moved = standIn({
-      [branch]: () => Response.json({ target: { hash: HEAD } }),
+  it("reads a ref that moved during the merge as the base moving", async () => {
+    const { forge } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
       [`POST ${REPO}/pullrequests/7/merge`]: () =>
         Response.json(
           { type: "error", error: { message: "A ref was updated during the merge." } },
           { status: 409 },
         ),
     });
-    await expect(moved.forge.putIn(change, HEAD)).rejects.toBeInstanceOf(ForgeBaseMoved);
-    const queued = standIn({
-      [branch]: () => Response.json({ target: { hash: HEAD } }),
-      [`POST ${REPO}/pullrequests/7/merge`]: () =>
-        new Response(null, {
-          status: 202,
-          headers: { Location: `${API}${REPO}/pullrequests/7/merge/task-status/1` },
+    await expect(forge.putIn(change, HEAD)).rejects.toBeInstanceOf(ForgeBaseMoved);
+  });
+
+  it.each([
+    [
+      "a 202 whose merge has not finished",
+      () => new Response(JSON.stringify({ task_id: "merge-1" }), { status: 202 }),
+      pullRequest({}),
+    ],
+    [
+      "a merge that does not name the version it merged",
+      () =>
+        Response.json({
+          ...pullRequest({ state: "MERGED" }),
+          source: { branch: { name: BRANCH }, commit: null },
         }),
+      pullRequest({}),
+    ],
+  ])("leaves %s unknown, sending the merge once", async (_case, answer, after) => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: answer,
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(after),
+      ...commits(HEAD, MERGED),
     });
-    expect(await queued.forge.putIn(change, HEAD)).toEqual({ queued: true });
+    const outcome = await forge.putIn(change, HEAD).catch((error: unknown) => error);
+    expect(outcome).toBeInstanceOf(ForgeError);
+    expect(outcome).toMatchObject({ failure: "transient" });
+    expect(sent.filter((request) => request.method === "POST")).toHaveLength(1);
+  });
+
+  it("replaces only the description, leaving a title a person changed since", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),
+      [`PUT ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),
+      ...commits(HEAD),
+    });
+    await forge.updateChangeBody(change, "The story, published.");
+    expect(sent.find((request) => request.method === "PUT")?.body).toEqual({
+      description: "The story, published.",
+    });
   });
 });

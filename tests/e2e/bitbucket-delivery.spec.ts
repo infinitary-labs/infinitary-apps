@@ -45,10 +45,12 @@ import { factsStrip, shownCard } from "./stack";
  * like github and gitlab, reaching parity as much as possible": a crewmate
  * pushes its branch and opens a pull request on bitbucket.org with its own
  * tools, the build statuses on its version read as the card's checks, and
- * the captain's click squash-merges exactly the version those checks read -
- * while a branch that moved, a conflict, a failed, running or stopped build
- * each stop the click with nothing merged, and a push that lands while
- * Bitbucket merges is merged and told.
+ * the captain's click squash-merges the version those checks read - while a
+ * branch that moved, a conflict, a rule wanting an approval, a draft, a
+ * failed, running or stopped build each stop the click with nothing merged,
+ * a merge Bitbucket has not finished is never sent twice, and a push that
+ * lands in the moment Bitbucket merges is merged and told: Bitbucket's merge
+ * names no version to hold it to.
  *
  * Bitbucket is a local stand-in (`./bitbucketStub.ts`) the app reaches
  * through its kept key sign-in, its real Bitbucket forge and its real git;
@@ -190,10 +192,15 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
   }
 });
 
-/** What the task's record says stopped a merge: its notes' problems, and its checks. */
-function stopOf(task: TaskDetail | null): { problem: string; ci: string | undefined } {
+/** What the task's record says stopped a merge: its notes, their problems, and its checks. */
+function stopOf(task: TaskDetail | null): {
+  notes: string;
+  problem: string;
+  ci: string | undefined;
+} {
   const notes = (task?.events ?? []).filter((event) => event.kind === "note");
   return {
+    notes: notes.map((event) => event.text).join("\n"),
     problem: notes.map((event) => String(event.data?.problem ?? "")).join("\n"),
     ci: task?.delivery?.ci,
   };
@@ -213,6 +220,7 @@ type Repo = { branch: string; push: (subject: string) => void; head: () => strin
 async function seededMerge(
   arrange: (bitbucket: BitbucketStub, repo: Repo) => void,
   crewVerdict?: "ready" | "red",
+  signedIn = true,
 ) {
   const userDataDir = scratchDir("infinitary-bitbucket-merge-");
   const taskId = "notestask";
@@ -237,7 +245,7 @@ async function seededMerge(
   bitbucket.gitOf(gitIn(repoDir));
   bitbucket.openPullRequest({ branch, ...CHANGE });
   arrange(bitbucket, repo);
-  seedBitbucketSignIn(userDataDir);
+  if (signedIn) seedBitbucketSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   seedProject(db, {
     id: "repo-notes",
@@ -348,15 +356,50 @@ const REFUSALS: {
     crewVerdict: "ready",
     stoppedBy: (stop, branch) => stop.problem.includes(branch),
   },
+  // Bitbucket's merge would not hold to the branch's rules for an owner's
+  // sign-in: its own readiness is read first, and a pull request it holds
+  // is never asked to merge.
   {
     change: "a conflict with newer work on main",
     arrange: (bitbucket) => {
       bitbucket.conflicts(true);
-      return "resolve all merge conflicts";
+      return "conflict";
+    },
+    asksBitbucket: false,
+    crewVerdict: "ready",
+    stoppedBy: (stop, readiness) => stop.notes.includes(` as ${readiness}`),
+  },
+  {
+    change: "a rule on main that wants an approval it lacks",
+    arrange: (bitbucket) => {
+      bitbucket.requireApproval(true);
+      return "blocked";
+    },
+    asksBitbucket: false,
+    crewVerdict: "ready",
+    stoppedBy: (stop, readiness) => stop.notes.includes(` as ${readiness}`),
+  },
+  {
+    change: "a pull request turned back into a draft",
+    arrange: (bitbucket) => {
+      bitbucket.markDraft(1);
+      return "draft";
+    },
+    asksBitbucket: false,
+    crewVerdict: "ready",
+    stoppedBy: (stop, readiness) => stop.notes.includes(` as ${readiness}`),
+  },
+  {
+    // Bitbucket's 202 is a merge it has not finished: the pull request is
+    // read, and a merge request whose outcome is not known is never resent.
+    change: "a merge Bitbucket accepted and has not finished",
+    arrange: (bitbucket) => {
+      bitbucket.mergeLater(true);
+      return "#1";
     },
     asksBitbucket: true,
     crewVerdict: "ready",
-    stoppedBy: (stop, answer) => stop.problem.includes(answer),
+    stoppedBy: (stop, label) => stop.problem.includes(label),
   },
   {
     change: "a failed build",
@@ -442,6 +485,26 @@ test("a push that lands while Bitbucket merges is merged with the approved versi
       englishOf(said("mergedChangeNewerOn", { change: "#1", place: "Bitbucket" })),
     );
     await expect.poll(detail).toMatchObject({ status: "done", closedReason: "merged" });
+  } finally {
+    await merge.close();
+  }
+});
+
+test("a Bitbucket project added before pull requests, with no sign-in on file, merges nothing and asks for the sign-in or keeping it here", async () => {
+  const merge = await seededMerge(() => {}, "ready", false);
+  try {
+    const { page, key, detail, bitbucket } = merge;
+    // The refusal names the task and the host whose sign-in it needs.
+    await expect
+      .poll(async () => {
+        const { notes } = stopOf(await detail());
+        return notes.includes('"Sync the notes"') && notes.includes("Bitbucket");
+      })
+      .toBe(true);
+    expect(bitbucket.merges()).toEqual([]);
+    expect(bitbucket.requests().filter((request) => request.startsWith("POST "))).toEqual([]);
+    await expect(putInLine(page, key)).toHaveCount(0);
+    expect(await detail()).toMatchObject({ status: "active", closedReason: null });
   } finally {
     await merge.close();
   }

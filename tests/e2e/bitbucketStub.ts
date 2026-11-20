@@ -125,6 +125,10 @@ export async function startBitbucketStub() {
   /** The build status every commit carries unless a test names others: one that passed. */
   let statuses: BitbucketStubStatus[] = [{ key: "build", name: "Build", state: "SUCCESSFUL" }];
   let conflicted = false;
+  /** A rule on main that wants an approval this pull request lacks, which an owner's sign-in may still merge past. */
+  let approvalRequired = false;
+  /** Bitbucket answers a merge 202 and is still merging it in the background. */
+  let mergesLater = false;
   let onMergeRequest: () => void = () => {};
   let onBranchRead: (branch: string) => void = () => {};
   const started = new Date().toISOString();
@@ -310,6 +314,17 @@ export async function startBitbucketStub() {
     } else if (method === "GET" && part === "/mergeability/checks") {
       send(200, {
         values: [
+          ...(approvalRequired
+            ? [
+                {
+                  type: "standard_merge_check",
+                  status: "FAILED",
+                  required: true,
+                  blocking: true,
+                  check: { kind: "minimum_approvals" },
+                },
+              ]
+            : []),
           conflicted
             ? {
                 type: "git_mergeability_check",
@@ -337,6 +352,9 @@ export async function startBitbucketStub() {
           type: "error",
           error: { message: "You can't merge until you resolve all merge conflicts." },
         });
+      } else if (mergesLater) {
+        // The merge runs in the background: the pull request stays open for now.
+        send(202, { task_id: "merge-1" });
       } else {
         // Bitbucket merges whatever the branch holds when the merge arrives.
         merges.push({
@@ -456,6 +474,19 @@ export async function startBitbucketStub() {
     conflicts: (on: boolean) => {
       conflicted = on;
     },
+    /** Whether main's rules want an approval the pull requests lack. */
+    requireApproval: (on: boolean) => {
+      approvalRequired = on;
+    },
+    /** Turn an open pull request into a draft, as its author would on its page. */
+    markDraft: (id: number) => {
+      const request = pullRequests.get(id);
+      if (request) request.draft = true;
+    },
+    /** Whether Bitbucket answers a merge 202 and finishes it later. */
+    mergeLater: (on: boolean) => {
+      mergesLater = on;
+    },
     /** Runs when a merge arrives, before Bitbucket reads the branch it merges. */
     onMergeRequest: (apply: () => void) => {
       onMergeRequest = apply;
@@ -465,14 +496,19 @@ export async function startBitbucketStub() {
       onBranchRead = apply;
     },
     /** Open a pull request as a person would on Bitbucket's own page. */
-    openPullRequest: (input: { branch: string; title: string; description?: string }) => {
+    openPullRequest: (input: {
+      branch: string;
+      title: string;
+      description?: string;
+      draft?: boolean;
+    }) => {
       const request: StubPullRequest = {
         id: nextId++,
         branch: input.branch,
         title: input.title,
         description: input.description ?? "",
         state: "OPEN",
-        draft: false,
+        draft: input.draft === true,
       };
       pullRequests.set(request.id, request);
       return request.id;

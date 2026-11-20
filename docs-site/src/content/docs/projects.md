@@ -85,7 +85,7 @@ Infinitary remembers your focus when you restart it.
 Open a project in **Settings → Projects** to choose how its finished work is merged.
 **Where changes go** offers:
 
-- **pull requests**: each change is offered as a pull request on GitHub or GitLab.
+- **pull requests**: each change is offered as a pull request on GitHub, GitLab or Bitbucket.
 - **batched pull requests**: your approved changes are combined into one batch pull request, one commit for each change, and merged once its checks pass.
 - **local merge**: the change is merged into the project on this computer, with no pull request.
 

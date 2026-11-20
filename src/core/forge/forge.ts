@@ -266,9 +266,9 @@ export type MergeAnswer = {
   sha?: string;
   queued?: true;
   /**
-   * The version the host says it merged, where its merge takes no version
-   * to hold it to (Bitbucket Cloud): when it is not the one asked for, a
-   * push landed between the app's read and the merge.
+   * The full version the host says it merged, where its merge takes no
+   * version to hold it to (`Forge.mergeNamesNoVersion`): when it is not the
+   * one asked for, a push landed between the app's read and the merge.
    */
   mergedHead?: string;
 };
@@ -399,6 +399,13 @@ export interface Forge {
    * green with zero checks; the app watches nothing there and says so.
    */
   readonly hasChecks: boolean;
+  /**
+   * The host's merge takes no version to hold it to (Bitbucket Cloud), and
+   * an owner's sign-in may merge past its rules. Every merge then reads the
+   * pull request's own readiness first, and a merge request whose answer
+   * never came is never sent again: only a read says how it ended.
+   */
+  readonly mergeNamesNoVersion?: true;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */

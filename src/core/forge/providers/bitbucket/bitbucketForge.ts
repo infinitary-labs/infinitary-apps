@@ -100,6 +100,8 @@ export class BitbucketForge implements Forge {
   /** "Bitbucket" on bitbucket.org. */
   readonly place: string;
   readonly hasChecks = true;
+  /** Bitbucket's merge names no version: the app reads readiness first and never resends. */
+  readonly mergeNamesNoVersion = true as const;
   /** A Bitbucket repository is always `workspace/name`: nothing nests. */
   readonly nestedNamespace = false;
   private readonly client: BitbucketClient;
@@ -254,7 +256,7 @@ export class BitbucketForge implements Forge {
     await this.client.write(
       "PUT",
       this.pullRequestPath(id),
-      { title: title ?? request.title, description: body },
+      { ...(title !== undefined ? { title } : {}), description: body },
       // i18n-exempt: names the request in an error served to the crewmate
       "replacing the description",
     );
@@ -359,22 +361,26 @@ export class BitbucketForge implements Forge {
         throw new ForgeBaseMoved(caught.message);
       throw caught;
     }
-    // A merge queue on the main branch takes the change instead of merging it now.
-    if (answer.status === 202) return { queued: true };
-    let merged = answer.body as PullRequestJson | null;
+    // A 202 is Bitbucket still merging in the background: the pull request
+    // is read, and one that has not merged yet is an outcome not yet known,
+    // which only a later read settles; nothing is sent again.
+    let merged = answer.status === 202 ? null : (answer.body as PullRequestJson | null);
     if (merged?.state !== "MERGED") {
       merged = await this.pullRequest(id);
       if (merged.state !== "MERGED")
-        throw new ForgeError("refused", `${this.place} did not confirm the merge of #${id}`);
+        throw answer.status === 202
+          ? new ForgeError(
+              "transient",
+              `${this.place} accepted the merge of #${id} and has not finished it; nothing is sent again until a read shows how it ended.`,
+            )
+          : new ForgeError("refused", `${this.place} did not confirm the merge of #${id}`);
     }
     const sha = await this.fullCommit(merged.merge_commit?.hash).catch(() => undefined);
-    const mergedHead = await this.fullCommit(merged.source?.commit?.hash).catch(
-      () => merged?.source?.commit?.hash ?? undefined,
-    );
-    return {
-      ...(sha ? { sha } : {}),
-      ...(mergedHead ? { mergedHead } : {}),
-    };
+    // The version merged is read, never assumed: an answer that does not name
+    // it leaves the merge unverified, for a read of the pull request to settle.
+    const mergedHead = await this.fullCommit(merged.source?.commit?.hash);
+    if (!mergedHead) throw unreadableError(this.place, `the version #${id} merged`);
+    return { ...(sha ? { sha } : {}), mergedHead };
   }
 
   async markReady(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange> {
@@ -393,7 +399,7 @@ export class BitbucketForge implements Forge {
     const updated = await this.client.request(
       "PUT",
       this.pullRequestPath(request.id),
-      { title: request.title, draft: false },
+      { draft: false },
       beforeSend,
     );
     const ready = await this.changeOf(updated.body as PullRequestJson);

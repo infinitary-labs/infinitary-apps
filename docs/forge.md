@@ -304,7 +304,8 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 
 ## Bitbucket pull requests
 
-A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the checked version.
+A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request while its branch is still at the checked version.
+Bitbucket's merge holds to no version, so a push in the moment it merges goes in with it, and the app says so rather than promising the checked version alone.
 A Bitbucket project added before the app opened pull requests there delivers this way from its next task, with no setting to change; without a sign-in, `open_change` and the merge answer the same refusal as on GitHub, whose ways are signing in and keeping the project on this Mac.
 `BitbucketForge` (`providers/bitbucket/bitbucketForge.ts`) reaches the project at `/repositories/<workspace>/<name>` through `BitbucketClient`, whose writes (`request`, `write`) send JSON with the same token, bounds and refusals as its reads.
 
@@ -313,22 +314,26 @@ A Bitbucket project added before the app opened pull requests there delivers thi
   It is named `#N` with Bitbucket's page under `pull-requests/`, and recorded on the task as `changeLabel`, `prNumber` and `prUrl`.
   Bitbucket names a pull request's commits by a short id; the forge reads each back as the full id (`GET /commit/<id>?fields=hash`) before the app keeps it, and a branch's head comes from `GET /refs/branches/<name>`.
 - **Its story** is the saved story's text in Markdown: Bitbucket keeps no pictures in a description, so every picture stays on the merge card (`media: "card-only"`), and the story's folds are plain `###` sections instead of `<details>`, which Bitbucket would show as text.
-  A description is replaced only after the pull request is read again and still holds the version and words the app read (`updateChangeBody`), since Bitbucket's write has no condition of its own.
+  A description is replaced only after the pull request is read again and still holds the version and words the app read (`updateChangeBody`), since Bitbucket's write has no condition of its own; the write sends the title only when the story changes it, so a title a person changed since is kept.
   Its size limit is 32,768 characters (`NATIVE.bitbucket` in `presentation.ts`), an assumed bound: Atlassian publishes none.
   A repository has no number, so the story's place names it by the first 52 bits of its UUID, the same for the same repository each time.
 - **Its checks** are the build statuses on the head (`GET /commit/<head>/statuses`), which every check service posts there, Bitbucket Pipelines included: one check per status key, `SUCCESSFUL` success, `FAILED` failure, `STOPPED` cancelled, and `INPROGRESS` pending.
   A reading that stops at its fifth page is marked incomplete; no status yet is an empty reading, which the shared green rule keeps pending.
 - **Its readiness** (`pull`) reads Bitbucket's own mergeability checks (`GET /pullrequests/<N>/mergeability/checks`): a draft is a draft; a Git check with `conflicts` is a conflict; a blocking `maximum_commits_behind` rule is behind; any other blocking rule is blocked; a Git check that has not passed, or any check still pending or unknown, is computing; otherwise it is clean.
 - **Its merge** (`putIn`) checks the title against the active naming runbook, then reads the branch: Bitbucket's merge takes no version, so a branch that moved past the checked version sends nothing and is refused.
+  Before that, every merge reads the pull request's readiness, the captain's own click included (`Forge.mergeNamesNoVersion`): an owner's sign-in may merge past a rule Bitbucket does not enforce, so a conflict, a draft or a blocking rule sends no merge.
   It then asks `POST /pullrequests/<N>/merge` with `merge_strategy: squash` and the message `<title>`, a blank line and the story's plain summary.
-  A 409, a ref that moved during the merge, reads as the base moving; a 202 is Bitbucket's merge queue taking it, read as queued; any other answer but merged is refused.
-  A push that lands between that read and the merge is merged with it: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), and the merge line says the merge included a push made after the approved version instead of hiding it.
+  A 409, a ref that moved during the merge, reads as the base moving; any other answer but merged is refused.
+  A 202 is Bitbucket still merging in the background: the pull request is read, and one not merged yet is an outcome the app does not know.
+  A merge request whose answer is unknown, a 202, a lost answer or one that names no merged version, is never sent again: the pull request is read back, and only a merge read there settles it.
+  A push that lands between the branch read and the merge is merged with it, since nothing holds the merge to the read version: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), the receipt records that version, and the merge line says the merge included a push made after the approved version instead of hiding it.
+  The same holds for a merge found already made, and for a pull request named by its number (`check_change pull`).
 - **Its words** name the host: "Merged #4 on Bitbucket." and the host's own words for a conflict.
 - **Its allowance** is Bitbucket's hourly request limit; a 429 that names its wait (`Retry-After`) is a spent allowance until then (`ForgeAllowanceSpent`), never a sign-out.
 
-Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409 and the 202, and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a failed, running or stopped build each merging nothing, and a push during the merge merged and told.
+Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409, a 202 and an answer naming no version each sent once, and a description replaced without its title; `mergeReviews.test.ts` holds a numbered review's receipt naming the version that merged; and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a rule wanting an approval, a draft, a failed, running or stopped build each merging nothing, a merge Bitbucket has not finished asked once, and a push during the merge merged and told.
 
-**Not yet:** a manual Pipelines step told apart from a running one, the crew's reach through the gateway (`api`, workflow logs and artifacts), the open pull requests panel and its wakes, batches, Bitbucket's own merge queue beyond reading a queued answer, forks, and Bitbucket Data Center.
+**Not yet:** a manual Pipelines step told apart from a running one, the crew's reach through the gateway (`api`, the raw write rules and an integration's scopes, workflow logs and artifacts), the open pull requests panel and its wakes, batches, forks, and Bitbucket Data Center.
 
 ## GitLab merge requests
 
@@ -704,7 +709,7 @@ The sign-in, consent and unknown-outcome boundaries are unchanged.
 A project whose pull requests run no checks is a recorded fact on the project, not something each change declares again (INF-2114).
 The record is the project's `noChecks` (`RepoView`, the `no_checks_json` column), and `RepoRegistry` is its only writer.
 Settings → Projects shows it as Require pull request checks, on for every project; off is the record.
-The switch is offered only where checks can run: a project that ships through pull requests on GitHub or GitLab (`readsPullRequestChecks` in `src/shared/repos.ts`).
+The switch is offered only where checks can run: a project that ships through pull requests on GitHub, GitLab or Bitbucket (`readsPullRequestChecks` in `src/shared/repos.ts`).
 A plain Git host, a project kept on this Mac or one that merges locally reads no pull request checks already, so it needs no record.
 `RepoRegistry.checkConfigure` refuses to turn the switch off for such a project, as the patch leaves it, whoever asks (`NO_CHECKS_REFUSAL`); turning it on is always accepted.
 
@@ -775,7 +780,7 @@ A crewmate on a computer that runs work does the same with a branch it checked o
 The crewmate pushes a branch to where that project lives and names it with `branch`; the branch needs a name other than the task's own branch, which names the task's own change.
 The home reads that branch from the project's host into the project's folder under a private ref (`refs/infinitary/opened/<task>`), beside its default branch, and checks the branch's own commit names there, so a placed task's crewmate needs nothing brought home.
 The change opens through that project's host with `body` as its description: it carries no saved story, since `prepare_change` prepares the task's own project's.
-The project must be on a host with pull requests (GitHub or GitLab); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
+The project must be on a host with pull requests (GitHub, GitLab or Bitbucket); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
 The opened pull request becomes the task's current change through a review that names its project (`MergeReview.repoId`), so `check_change`, the check watch, `check_change pull` of that number, the kept approval, the merge card's merge and the reads by number after a merge all go to that project, and the change record keeps it under that project's id.
 When a saved request names a different repository, its number does not identify a request at the project's new address.
 It merges as its own pull request at the captain's click, whatever that project's delivery: a pull request a task names by number joins no batch ("Batches of your own").
@@ -1372,7 +1377,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The app checks new save-point subjects and change titles against the active naming runbook's rule before opening and putting in a change (`docs/runbooks.md`, Commit and PR naming); it holds no form of its own.
 The built-in Commit and PR naming runbook asks for `type(scope): summary` or `type: summary`: the scope is optional and open-ended, the types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs` and `perf`, and a breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
 A runbook that replaces it decides all of this instead, and with no naming runbook on no name is checked.
-An existing change's current title on GitHub or GitLab is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), and GitLab a squash or merge commit whose message is the title, a blank line and the description.
+An existing change's current title on GitHub, GitLab or Bitbucket is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), GitLab a squash or merge commit whose message is the title, a blank line and the description, and Bitbucket a squash whose commit message is the title, a blank line and the description.
 The app does not rewrite older commits; incoming commits are checked relative to the common base.
 For a change it opens or puts in, that base is measured from the fetched `origin/<default>` when it exists, so a local default branch this Mac has not pulled never makes merged commits look like the branch's own.
 Merge commits are skipped: git names them, and they bring in no work of the branch's own.
@@ -1659,7 +1664,7 @@ An approved prerequisite publication names the task's own project and branch and
 On a saved-story host it uses the existing publisher and attachment barrier, carrying the draft flag through the same opening rather than bypassing the story.
 The publisher rechecks and consumes that authority after its preflight and before any upload; a failed preflight leaves the permission unused.
 Ordinary Careful publication likewise rechecks the current proof and code clearance after that asynchronous preflight.
-Once current proof and independent review pass, the host-owned `markReady` operation uses GitHub GraphQL or removes GitLab's `Draft: ` prefix; the agent-facing REST-only gateway never gains GraphQL access.
+Once current proof and independent review pass, the host-owned `markReady` operation uses GitHub GraphQL, removes GitLab's `Draft: ` prefix or sends Bitbucket's `draft: false`; the agent-facing REST-only gateway never gains GraphQL access.
 The host persists an unknown readiness outcome before sending and reconciles a later ready reading without another write.
 A later still-draft reading settles that readiness attempt as not applied and permits another idempotent request, never concurrently with an outstanding attempt.
 Readiness failures remain on the task record and in tool feedback without preventing check readings.

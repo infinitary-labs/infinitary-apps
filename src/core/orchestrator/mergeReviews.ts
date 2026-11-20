@@ -36,6 +36,8 @@ import {
   type MergeAttempt,
   type MergeGuard,
   type MergeStop,
+  otherMerged,
+  otherMergedWords,
   type PrOutcome,
   readDecided,
   readinessStop,
@@ -811,17 +813,22 @@ export class MergeReviews {
       title: pull.title ?? review.title,
       body: "",
     };
-    const merged = (sha?: string): PrOutcome => ({
-      ok: true,
-      text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.`,
-      receipt: this.storeReviewReceipt(
-        taskId,
-        review.id,
-        candidate.headSha,
-        sha,
-        guard?.unattended ? undefined : "captain",
-      ),
-    });
+    // The receipt names the version that merged: on a host whose merge names
+    // no version, a push after the read may have gone in instead, and is told.
+    const merged = (sha?: string, head?: string): PrOutcome => {
+      const newer = otherMerged(candidate.headSha, head);
+      return {
+        ok: true,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${newer ? ` ${otherMergedWords(forge, newer, candidate.headSha)}` : ""}`,
+        receipt: this.storeReviewReceipt(
+          taskId,
+          review.id,
+          newer ?? candidate.headSha,
+          sha,
+          guard?.unattended ? undefined : "captain",
+        ),
+      };
+    };
     let dispatched = false;
     try {
       if (!isForkReview(review) && hasChangeRequests(forge.kind))
@@ -859,13 +866,14 @@ export class MergeReviews {
       dispatched = true;
       const sent = await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
-      return merged(sent?.sha);
+      return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       const after = dispatched
         ? await forge.pull?.(review.number).catch(() => undefined)
         : undefined;
-      if (after?.merged && after.headSha === candidate.headSha) return merged(after.mergedSha);
+      if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
+        return merged(after.mergedSha, after.headSha);
       const stop = guard
         ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
           (dispatched ? "outcome" : undefined))

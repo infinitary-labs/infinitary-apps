@@ -275,7 +275,7 @@ export function readsPullRequestChecks(
 
 /** Why a project that reads no pull request checks cannot turn Require pull request checks off. */
 export const NO_CHECKS_REFUSAL =
-  "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub or GitLab. This project's changes do not, so no check holds its merge.";
+  "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub, GitLab or Bitbucket. This project's changes do not, so no check holds its merge.";
 
 /** Why batched pull requests cannot be chosen while no runbook that is on offers them. */
 export const BATCHES_OFF_REFUSAL =

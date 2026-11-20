@@ -1,5 +1,5 @@
-import type { ChangeRequestKind } from "@shared/forgeKinds";
 import type { IntegrationScope } from "@shared/writeAsk";
+import type { RawApiKind } from "../forge/api";
 
 /**
  * What one Allow for the rest of this task covers for each kind
@@ -48,7 +48,7 @@ function bare(path: string): string {
  * or one with a segment that could leave it, is its own place, exactly as
  * written without its query.
  */
-export function forgeScope(kind: ChangeRequestKind): (input: unknown) => IntegrationScope {
+export function forgeScope(kind: RawApiKind): (input: unknown) => IntegrationScope {
   const place = FORGE_PLACES[kind];
   return (input) => {
     const { method = "GET", path } = input as { method?: string; path: string };
@@ -60,29 +60,22 @@ export function forgeScope(kind: ChangeRequestKind): (input: unknown) => Integra
   };
 }
 
-/** A repository named by its owner and name under `root`, as GitHub's `repos` and Bitbucket's `repositories` are. */
-function ownerAndName(root: string): {
-  of: (parts: string[], method: string) => IntegrationScope | undefined;
-} {
-  return {
-    of: ([first, owner, name], method) => {
-      if (first !== root || !owner || !name) return undefined;
-      const place = `${owner}/${name}`.toLowerCase();
-      return { key: `${method} /${root}/${place}`, words: `${method} requests to ${place}` };
-    },
-  };
-}
-
 /** Each kind's own place in a REST path: a repository, or a project by its id. */
 const FORGE_PLACES: Record<
-  ChangeRequestKind,
+  RawApiKind,
   {
     /** The one segment that may hold an escaped slash. */
     encodedAt?: number;
     of: (parts: string[], method: string) => IntegrationScope | undefined;
   }
 > = {
-  github: ownerAndName("repos"),
+  github: {
+    of: ([root, first, second], method) => {
+      if (root !== "repos" || !first || !second) return undefined;
+      const place = `${first}/${second}`.toLowerCase();
+      return { key: `${method} /repos/${place}`, words: `${method} requests to ${place}` };
+    },
+  },
   gitlab: {
     encodedAt: 1,
     of: ([root, first], method) => {
@@ -97,7 +90,6 @@ const FORGE_PLACES: Record<
       return { key: `${method} /projects/${id}`, words: `${method} requests to project ${name}` };
     },
   },
-  bitbucket: ownerAndName("repositories"),
 };
 
 /** Who a calendar change notifies, by `send_updates`. */

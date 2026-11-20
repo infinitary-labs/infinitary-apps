@@ -104,7 +104,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
 
 The older folder stays as it was, with only the marker added: it is the recovery copy, and nothing deletes it.
 A move stopped before its copy was checked - a restart included - leaves nothing changed, and the next launch takes that staged copy away and starts again; one stopped after resumes from the last state its record names, and never copies again.
-A full disk, the older app still open, its background work still running, another launch already moving, or saved work newer than this build reads stops the move with nothing changed.
+A full disk, the older app's window still open, an older copy that will not stop (below), another launch already moving, or saved work newer than this build reads stops the move with nothing changed.
 
 When both folders hold saved work, the hand-over asks which to open and never merges them.
 Bringing the older work moves the app's own folder aside first, to `<folder>-set-aside-<time>` beside it, and names that folder in the record.
@@ -122,6 +122,21 @@ A packaged app ignores it, and a development run's hand-over leaves the computer
 
 A computer that only runs work opens no window, so its work run makes the same move of the whole folder before it starts, and hands its background to the new app's label in the new folder (`docs/helper.md`, "Under the other name").
 A window's saved work in that folder moves with it, as the window's own move would take the work; while the older app's window has the folder open, the work runs from the older folder and tries again at its next start.
+
+### An older copy still running
+
+An older copy may still hold the older folder with no window: its background work, by `work/running.lock`, or a run a command started, such as one left in a terminal, by Chromium's `SingletonLock` (INF-5468's plan, piece 3).
+The hand-over and the work run take over from it before the move instead of refusing (`src/core/folderMove/takeOver.ts`):
+
+1. It reads the process the lock names and confirms by its program that it is Infinitary or Firstmate 3000, on a Mac from `ps` and on Linux from `/proc/<pid>/cmdline`; `work run` among its arguments is background work, `run` a command's run, and neither a window.
+2. For background work it lets go of the agent the older folder's `installed.json` records, as an update's pause does (`pauseInBackground`), so the service manager does not start that run again, unless this process is that agent's own run (`runsUnderAgent`).
+   A command's run has no agent to let go: its start entry starts it again only after a failure, never after a clean stop (`docs/run.md`).
+3. It sends the ordinary stop, which saves and exits, and waits up to fifteen seconds for the lock to be let go (`STOPPED_RUN_WAIT_MS`), then makes the move.
+
+The window says "Stopping Firstmate 3000's background work" meanwhile.
+A copy that has not let go by then is never ended without the person: the window says it has not stopped and offers Stop it now, which ends it at once, beside Quit, and the work run ends for its background to start it again.
+An older copy with its window open keeps the person's own Quit and the refusal's words, and a process that is not ours, or whose program cannot be read (Windows), is never stopped, so the refusal stands.
+Once taken over, a copy that holds the folder again shows the refusal, and Try again takes over once more.
 
 The system keeps start at login per app, so the new app cannot read the older one's.
 Firstmate 3000 records it in `start-at-login.json` each time it opens and each time the person changes it (`src/core/storage/startAtLoginRecord.ts`), and the move hands that record to the new app; on Linux the older app's autostart entry goes, since it would start the same program again.
@@ -158,6 +173,7 @@ Saved work is protected from stable 0.1.25 onward (`docs/alpha.md`, "Activating 
 - `saved-data-refusal.spec.ts`: isolated Electron journeys for future database and incompatible non-database format; each sees the explanation with no normal bridge and verifies protected files unchanged after quit.
   Screenshots go to the run's own results folder.
 - `older-profile.spec.ts`: a profile an older release saved opens in this build and works ("Profiles saved by an older release", below).
+- `src/core/folderMove/takeOver.integration.test.ts`: real processes holding a scratch older folder - background work whose recorded agent is let go first, a command's run, a window left alone, a process that is not ours, the agent this process runs under never let go, a copy that ignores the stop running on until Stop it now, and the work run bringing the work over instead of ending.
 - `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, with Claude's sessions of the home's and the work's working copies, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, a stop before the copy is checked, resuming after the check and after the commit, a full disk, the older app open, another move, newer saved work, and Bring refused while Infinitary runs from inside its own folder or its background work runs there.
 
 ## Profiles saved by an older release

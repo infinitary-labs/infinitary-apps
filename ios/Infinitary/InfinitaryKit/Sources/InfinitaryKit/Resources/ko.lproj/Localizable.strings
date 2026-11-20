@@ -738,6 +738,12 @@
 "filePreparing" = "준비 중";
 "fileReady" = "준비됨";
 "fileReadyAnnounce" = "%1$@ 준비됨";
+"handoverQuit" = "종료";
+"handoverStopNow" = "지금 중지";
+"handoverStoppingText" = "%1$@이(가) 창 없이 아직 실행 중이고 저장된 작업을 열어 두고 있어요. %2$@이(가) 저장하고 중지하도록 요청하고 있으며, 그다음 알아서 이어 가요.";
+"handoverStoppingTitle" = "%1$@의 백그라운드 작업을 중지하는 중";
+"handoverWontStopText" = "%1$@이(가) 저장하고 중지하도록 요청했지만 저장된 작업을 아직 열어 두고 있어요. 지금 중지를 누르면 기다리지 않고 종료해요. 아무것도 바뀌지 않았어요.";
+"handoverWontStopTitle" = "%1$@이(가) 중지되지 않았어요";
 "integrationsSignInAgain" = "페이지 다시 열기";
 "integrationsSignInCancel" = "취소";
 "integrationsSignInWaiting" = "브라우저에서 %1$@ 로그인을 마무리하세요.";

@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "退出",
+  "handoverStopNow": "立即停止",
+  "handoverStoppingText": "{from} 仍在这里无窗口运行，并占用着你保存的工作。{to} 正在请它保存并停止，随后会自行继续。",
+  "handoverStoppingTitle": "正在停止 {from} 的后台工作",
+  "handoverWontStopText": "{to} 已请它保存并停止，但它仍占用着你保存的工作。“立即停止”会直接结束它，不再等待。没有做任何更改。",
+  "handoverWontStopTitle": "{from} 没有停止"
+}

@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "Quit",
+  "handoverStopNow": "Stop it now",
+  "handoverStoppingText": "{from} is still running here with no window, and it holds your saved work. {to} is asking it to save and stop, then carries on by itself.",
+  "handoverStoppingTitle": "Stopping {from}'s background work",
+  "handoverWontStopText": "{to} asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.",
+  "handoverWontStopTitle": "{from} has not stopped"
+}

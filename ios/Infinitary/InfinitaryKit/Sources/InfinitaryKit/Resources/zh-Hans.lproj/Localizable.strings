@@ -738,6 +738,12 @@
 "filePreparing" = "正在准备";
 "fileReady" = "已就绪";
 "fileReadyAnnounce" = "%1$@ 已就绪";
+"handoverQuit" = "退出";
+"handoverStopNow" = "立即停止";
+"handoverStoppingText" = "%1$@ 仍在这里无窗口运行，并占用着你保存的工作。%2$@ 正在请它保存并停止，随后会自行继续。";
+"handoverStoppingTitle" = "正在停止 %1$@ 的后台工作";
+"handoverWontStopText" = "%1$@ 已请它保存并停止，但它仍占用着你保存的工作。“立即停止”会直接结束它，不再等待。没有做任何更改。";
+"handoverWontStopTitle" = "%1$@ 没有停止";
 "integrationsSignInAgain" = "重新打开页面";
 "integrationsSignInCancel" = "取消";
 "integrationsSignInWaiting" = "请在浏览器中完成 %1$@ 的登录。";

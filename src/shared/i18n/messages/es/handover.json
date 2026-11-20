@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "Salir",
+  "handoverStopNow": "Detenerlo ahora",
+  "handoverStoppingText": "{from} sigue ejecutándose aquí sin ventana y tiene abierto tu trabajo guardado. {to} le está pidiendo que guarde y se detenga, y luego continúa por sí solo.",
+  "handoverStoppingTitle": "Deteniendo el trabajo en segundo plano de {from}",
+  "handoverWontStopText": "{to} le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.",
+  "handoverWontStopTitle": "{from} no se ha detenido"
+}

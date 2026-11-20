@@ -1,10 +1,12 @@
 import { dirname, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import type { MoveDeps } from "../folderMove/move";
+import type { TakeOverDeps } from "../folderMove/takeOver";
 import {
   type BackgroundContext,
   type Launcher,
   moveInBackground,
+  pauseInBackground,
   readInstalled,
   rewriteInBackground,
 } from "./background";
@@ -22,10 +24,14 @@ import { type HelperPlace, workFolderNow } from "./place";
  * folder, and only a process other than the agent's own run can set up an
  * agent anew under the same label.
  *
- * A move another process holds up - the older app's run letting the folder
- * go, another move under way - ends this run, and the background starts it
- * again. Any other refusal leaves the work where it is for this run, which
- * goes on from the older folder, and the next run tries again.
+ * An older copy with no window holding the older folder - its background
+ * work, or a run a command started - is taken over first, as the window's
+ * hand-over does (src/core/folderMove/takeOver.ts): its agent let go, the
+ * ordinary stop sent, and the move made once it let the folder go. One that
+ * does not stop, another move under way, or a move committed and not
+ * finished ends this run, and the background starts it again. Any other
+ * refusal leaves the work where it is for this run, which goes on from the
+ * older folder, and the next run tries again.
  */
 
 export type MoveWorkOptions = {
@@ -38,6 +44,8 @@ export type MoveWorkOptions = {
   /** What the background carries of this process's environment. */
   env: Readonly<Record<string, string>>;
   deps: MoveDeps;
+  /** Stand-ins for the take-over's reads and signals, as a test gives them. */
+  takeOver?: Partial<TakeOverDeps>;
   log: (line: string) => void;
 };
 
@@ -67,7 +75,32 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
     return stay("its agent is under this app's own label already");
   // The move itself loads only when one is due.
   const { runMove } = await import("../folderMove/move");
-  const outcome = await runMove(move, options.deps);
+  let outcome = await runMove(move, options.deps);
+  if (
+    outcome.kind === "refused" &&
+    (outcome.refusal.reason === "old-work-running" || outcome.refusal.reason === "old-app-open")
+  ) {
+    const { takeOverOlderCopy } = await import("../folderMove/takeOver");
+    const background = options.background(place.dataDir, place.folderSpelling);
+    const taken = await takeOverOlderCopy(move.from, {
+      platform: options.deps.platform,
+      hostname: options.deps.hostname,
+      ...(options.deps.alive ? { alive: options.deps.alive } : {}),
+      ...(background ? { unloadAgent: (service) => pauseInBackground(background, service) } : {}),
+      ...options.takeOver,
+    });
+    if (taken.kind === "stopped") {
+      // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
+      log(
+        `stopped the older copy's ${taken.copy === "work" ? "background work" : "run"} holding ${move.from}${taken.unloaded ? `, after letting its agent ${taken.unloaded} go` : ""}`,
+      );
+      outcome = await runMove(move, options.deps);
+    } else if (taken.kind === "still-running") {
+      // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
+      log(`the older copy holding ${move.from} did not stop when asked`);
+      return { kind: "later" };
+    }
+  }
   if (outcome.kind === "refused") {
     const { refusal } = outcome;
     if (refusal.reason === "busy" || refusal.reason === "old-work-running")

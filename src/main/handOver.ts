@@ -1,5 +1,6 @@
 import type { FolderMove } from "@core/folderMove/due";
 import { type MoveChoice, type MoveDeps, type MoveProgress, runMove } from "@core/folderMove/move";
+import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "@core/folderMove/takeOver";
 import { nativeTheme } from "electron";
 import {
   actionOf,
@@ -18,7 +19,10 @@ import { standaloneDocument, standaloneWindow } from "./savedDataRefusal";
  * person sees while an app with a new identity brings an older folder's
  * saved work into its own, before anything opens either folder. It shows
  * the move as it goes, asks which work to open when both folders hold some,
- * and says why a move stopped with a way to try again. While it counts,
+ * and says why a move stopped with a way to try again. An older copy still
+ * running with no window that holds the older folder is taken over first:
+ * asked to save and stop, and ended only on the person's Stop it now when it
+ * does not (src/core/folderMove/takeOver.ts). While it counts,
  * copies and checks, Quit, continue later stops the move - which leaves
  * nothing changed - and quits; the next launch starts it again. Once the work is in,
  * it turns on start at login when the older app had it, and starts the app
@@ -39,6 +43,8 @@ export type HandOverOptions = {
   names: HandOverNames;
   hidden: boolean;
   deps: Omit<MoveDeps, "progress">;
+  /** How the window takes over from an older copy holding the older folder; absent, it only says to quit it. */
+  takeOver?: TakeOverDeps;
   /** Turns start at login on for this app. */
   startAtLogin: () => void;
   /** Starts the app again, now on its own folder, and ends this process. */
@@ -170,6 +176,9 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
 
   try {
     let choice: MoveChoice | undefined;
+    // One take-over per try: a copy that holds the folder again after it is
+    // the person's to see, with today's words.
+    let tookOver = false;
     for (;;) {
       moveStarted = Date.now();
       stepStarted = moveStarted;
@@ -199,9 +208,32 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
         return;
       }
       if (outcome.kind === "refused") {
+        const held =
+          outcome.refusal.reason === "old-app-open" ||
+          outcome.refusal.reason === "old-work-running";
+        if (held && options.takeOver && !tookOver) {
+          tookOver = true;
+          await show({ kind: "stopping" });
+          const taken = await takeOverOlderCopy(move.from, options.takeOver);
+          if (taken.kind === "free" || taken.kind === "stopped") continue;
+          if (taken.kind === "still-running") {
+            await show({ kind: "wont-stop" });
+            const action = await nextAction();
+            if (action !== "force") {
+              options.quit();
+              return;
+            }
+            await show({ kind: "stopping" });
+            await stopOlderCopyNow(move.from, taken.pid, options.takeOver);
+            continue;
+          }
+        }
         await show(outcome);
         const action = await nextAction();
-        if (action === "again") continue;
+        if (action === "again") {
+          tookOver = false;
+          continue;
+        }
         options.quit();
         return;
       }

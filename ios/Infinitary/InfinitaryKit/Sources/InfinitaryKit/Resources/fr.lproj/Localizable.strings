@@ -738,6 +738,12 @@
 "filePreparing" = "Préparation";
 "fileReady" = "Prêt";
 "fileReadyAnnounce" = "%1$@ prêt";
+"handoverQuit" = "Quitter";
+"handoverStopNow" = "L’arrêter maintenant";
+"handoverStoppingText" = "%1$@ tourne encore ici sans fenêtre et garde votre travail enregistré ouvert. %2$@ lui demande d’enregistrer et de s’arrêter, puis continue de lui-même.";
+"handoverStoppingTitle" = "Arrêt du travail en arrière-plan de %1$@";
+"handoverWontStopText" = "%1$@ lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.";
+"handoverWontStopTitle" = "%1$@ ne s’est pas arrêté";
 "integrationsSignInAgain" = "Rouvrir la page";
 "integrationsSignInCancel" = "Annuler";
 "integrationsSignInWaiting" = "Terminez la connexion à %1$@ dans votre navigateur.";

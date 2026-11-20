@@ -738,6 +738,12 @@
 "filePreparing" = "قيد التجهيز";
 "fileReady" = "جاهز";
 "fileReadyAnnounce" = "%1$@ جاهز";
+"handoverQuit" = "إنهاء";
+"handoverStopNow" = "إيقافه الآن";
+"handoverStoppingText" = "لا يزال %1$@ يعمل هنا دون نافذة، ويُبقي عملك المحفوظ مفتوحًا. يطلب منه %2$@ أن يحفظ ويتوقف، ثم يتابع من تلقاء نفسه.";
+"handoverStoppingTitle" = "جارٍ إيقاف العمل في الخلفية لـ %1$@";
+"handoverWontStopText" = "طلب %1$@ منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. يُنهيه «إيقافه الآن» دون انتظار. لم يتغير شيء.";
+"handoverWontStopTitle" = "لم يتوقف %1$@";
 "integrationsSignInAgain" = "فتح الصفحة مرة أخرى";
 "integrationsSignInCancel" = "إلغاء";
 "integrationsSignInWaiting" = "أكمل تسجيل الدخول إلى %1$@ في متصفحك.";

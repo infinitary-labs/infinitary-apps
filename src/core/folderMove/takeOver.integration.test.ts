@@ -1,0 +1,241 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { workLabelOf } from "@shared/codeNames";
+import { afterEach, describe, expect, it } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { pauseInBackground, writeInstalled } from "../helper/background";
+import { moveWork } from "../helper/moveWork";
+import { helperPlace } from "../helper/place";
+import { isProfileRetired } from "../storage/retiredProfile";
+import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "./takeOver";
+
+/**
+ * Taking over from the older copy that holds the saved work (INF-5468's
+ * plan, piece 3). The intent is the second user's report: his legacy
+ * Firstmate 3000, started from a terminal, held the folder until he found
+ * and killed its process by hand, and only then could the update go
+ * through. Each case starts a real process that holds a scratch older
+ * folder the way an older copy does - background work by
+ * `work/running.lock`, a run a command started or a window by Chromium's
+ * `SingletonLock` - and reads its program and arguments as the system keeps
+ * them. That process is Node, standing in for our program by name;
+ * launchctl is a stand-in that writes down what it was asked.
+ */
+
+const OLDER_LABEL = workLabelOf("fm", "release");
+const HOSTNAME = "builder-mac";
+/** The stand-in older copy runs as Node, named as one of our programs here. */
+const PROGRAMS = [basename(process.execPath)];
+
+/** The stand-in older copy: holds the folder as its arguments say, saves and exits on the ordinary stop unless stubborn. */
+const HOLDER = `
+const { mkdirSync, rmSync, symlinkSync, writeFileSync, appendFileSync } = require("node:fs");
+const { join } = require("node:path");
+const [from, log, stubborn, ...words] = process.argv.slice(2);
+const work = words.includes("work");
+const lock = work ? join(from, "work", "running.lock") : join(from, "SingletonLock");
+if (work) { mkdirSync(join(from, "work"), { recursive: true }); writeFileSync(lock, process.pid + "\\n"); }
+else symlinkSync(${JSON.stringify(HOSTNAME)} + "-" + process.pid, lock);
+process.on("SIGTERM", () => {
+  appendFileSync(log, "asked to stop\\n");
+  if (stubborn === "stubborn") return;
+  appendFileSync(log, "saved\\n");
+  rmSync(lock, { force: true });
+  process.exit(0);
+});
+appendFileSync(log, "holding\\n");
+setInterval(() => {}, 1000);
+`;
+
+type Holder = {
+  child: ChildProcess;
+  log: string;
+  ended: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
+  said: () => string[];
+};
+
+async function hold(
+  from: string,
+  words: string[],
+  options: { stubborn?: boolean } = {},
+): Promise<Holder> {
+  const dir = scratchDir("infinitary-take-over-holder-");
+  const script = join(dir, "holder.cjs");
+  const log = join(dir, "holder.log");
+  writeFileSync(script, HOLDER);
+  writeFileSync(log, "");
+  const child = spawn(
+    process.execPath,
+    [script, from, log, options.stubborn ? "stubborn" : "polite", ...words],
+    { stdio: "ignore" },
+  );
+  const ended = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) =>
+    child.on("exit", (code, signal) => resolve({ code, signal })),
+  );
+  const said = () => readFileSync(log, "utf8").split("\n").filter(Boolean);
+  for (let at = 0; !said().includes("holding"); at += 1) {
+    if (at > 100) throw new Error("The stand-in older copy never took the folder.");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return { child, log, ended, said };
+}
+
+function stillRunning(holder: Holder): boolean {
+  return holder.child.exitCode === null && holder.child.signalCode === null;
+}
+
+/** An older folder with saved work, its background agent recorded, and a launchctl stand-in. */
+function olderFolder() {
+  const appData = scratchDir("infinitary-take-over-");
+  const homeDir = scratchDir("infinitary-take-over-home-");
+  const from = join(appData, "firstmate-3000");
+  const work = join(from, "work");
+  mkdirSync(work, { recursive: true });
+  const file = join(homeDir, "Library", "LaunchAgents", `${OLDER_LABEL}.plist`);
+  writeInstalled(work, { service: { label: OLDER_LABEL, file }, app: null });
+  const asked: string[][] = [];
+  const launchctl = async (args: readonly string[]) => {
+    asked.push([...args]);
+    return { ok: true, output: "" };
+  };
+  const deps: TakeOverDeps = {
+    platform: process.platform,
+    hostname: HOSTNAME,
+    programs: PROGRAMS,
+    runsUnder: () => false,
+    unloadAgent: (service) =>
+      pauseInBackground(
+        { flavor: "release", dataDir: work, spelling: "fm", homeDir, uid: 502, launchctl },
+        service,
+      ),
+    waitMs: 5000,
+  };
+  return { appData, homeDir, from, work, asked, deps };
+}
+
+const holders: Holder[] = [];
+async function started(from: string, words: string[], options?: { stubborn?: boolean }) {
+  const holder = await hold(from, words, options);
+  holders.push(holder);
+  return holder;
+}
+
+describe("taking over from the older copy that holds the saved work", () => {
+  afterEach(() => {
+    for (const holder of holders.splice(0)) if (stillRunning(holder)) holder.child.kill("SIGKILL");
+  });
+
+  it("lets go of the older copy's background agent first, then its work run saves and exits", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["work", "run"]);
+    expect(await takeOverOlderCopy(at.from, at.deps)).toEqual({
+      kind: "stopped",
+      copy: "work",
+      unloaded: OLDER_LABEL,
+    });
+    expect(at.asked).toEqual([["bootout", `gui/502/${OLDER_LABEL}`]]);
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+    expect(holder.said()).toEqual(["holding", "asked to stop", "saved"]);
+    expect(existsSync(join(at.work, "running.lock"))).toBe(false);
+  });
+
+  it("stops a run a command started, which has no agent to let go", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["run"]);
+    expect(await takeOverOlderCopy(at.from, at.deps)).toEqual({ kind: "stopped", copy: "run" });
+    expect(at.asked).toEqual([]);
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+  });
+
+  it("leaves an older copy with its window open to the person's own Quit", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, []);
+    expect(await takeOverOlderCopy(at.from, at.deps)).toEqual({ kind: "left", why: "window" });
+    expect(stillRunning(holder)).toBe(true);
+    expect(holder.said()).toEqual(["holding"]);
+    expect(at.asked).toEqual([]);
+  });
+
+  it("never stops a process that is not ours", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["work", "run"]);
+    expect(
+      await takeOverOlderCopy(at.from, { ...at.deps, programs: ["Infinitary", "infinitary"] }),
+    ).toEqual({ kind: "left", why: "not-ours" });
+    expect(stillRunning(holder)).toBe(true);
+    expect(holder.said()).toEqual(["holding"]);
+    expect(at.asked).toEqual([]);
+  });
+
+  it("never lets go of the agent this process itself runs under", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["work", "run"]);
+    expect(
+      await takeOverOlderCopy(at.from, {
+        ...at.deps,
+        runsUnder: (label) => label === OLDER_LABEL,
+      }),
+    ).toEqual({ kind: "stopped", copy: "work" });
+    expect(at.asked).toEqual([]);
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+  });
+
+  it("asks before forcing: a copy that ignores the stop runs on until Stop it now", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["run"], { stubborn: true });
+    expect(await takeOverOlderCopy(at.from, { ...at.deps, waitMs: 500 })).toEqual({
+      kind: "still-running",
+      pid: holder.child.pid,
+      copy: "run",
+    });
+    expect(stillRunning(holder)).toBe(true);
+    expect(holder.said()).toEqual(["holding", "asked to stop"]);
+    expect(await stopOlderCopyNow(at.from, holder.child.pid as number, at.deps)).toBe(true);
+    expect(await holder.ended).toEqual({ code: null, signal: "SIGKILL" });
+  });
+
+  it("brings the work over from a work run instead of ending to be started again", async () => {
+    const at = olderFolder();
+    writeFileSync(join(at.work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
+    const holder = await started(at.from, ["work", "run"]);
+    const place = helperPlace({
+      packaged: true,
+      flavor: "release",
+      appData: at.appData,
+      env: {},
+      spelling: "inf",
+    });
+    expect(place.dataDir).toBe(at.work);
+    const notes: string[] = [];
+    const moved = await moveWork({
+      place,
+      background: (dataDir, spelling) => ({
+        flavor: "release",
+        dataDir,
+        spelling,
+        homeDir: at.homeDir,
+        uid: 502,
+        launchctl: async (args) => {
+          at.asked.push([...args]);
+          return { ok: true, output: "" };
+        },
+      }),
+      launcher: { executable: "/opt/infinitary/infinitary", args: [] },
+      env: {},
+      deps: {
+        platform: "linux",
+        claudeConfigDir: scratchDir("infinitary-take-over-claude-"),
+        hostname: HOSTNAME,
+      },
+      takeOver: { platform: process.platform, programs: PROGRAMS, runsUnder: () => false },
+      log: (line) => notes.push(line),
+    });
+    expect(moved).toEqual({ kind: "handed-over" });
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+    expect(at.asked[0]).toEqual(["bootout", `gui/502/${OLDER_LABEL}`]);
+    expect(isProfileRetired(at.from)).toBe(true);
+    expect(existsSync(join(at.appData, "infinitary", "work", "home.json"))).toBe(true);
+    expect(notes[0]).toContain(`after letting its agent ${OLDER_LABEL} go`);
+  });
+});

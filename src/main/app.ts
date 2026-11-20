@@ -8,7 +8,7 @@ import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
-import { startInBackground } from "@core/helper/background";
+import { pauseInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { watchRunStop } from "@core/helper/windowsTask";
@@ -750,6 +750,7 @@ export async function startApp(
         }
       }
       if (move) {
+        const serviceManager = work.serviceManager;
         await runHandOver(move, {
           names: { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) },
           hidden: hideWindow,
@@ -757,6 +758,28 @@ export async function startApp(
             platform: hostPlatform(),
             claudeConfigDir: defaultClaudeConfigDir(),
             hostname: hostname(),
+          },
+          // An older copy still running with no window is asked to stop,
+          // its background agent let go first (src/core/folderMove/takeOver.ts).
+          takeOver: {
+            platform: hostPlatform(),
+            hostname: hostname(),
+            ...(serviceManager
+              ? {
+                  unloadAgent: (service) =>
+                    pauseInBackground(
+                      {
+                        flavor: work.place.flavor,
+                        dataDir: join(move.from, "work"),
+                        spelling: work.place.folderSpelling,
+                        homeDir: homedir(),
+                        uid: process.getuid?.() ?? userInfo().uid,
+                        ...serviceManager,
+                      },
+                      service,
+                    ),
+                }
+              : {}),
           },
           startAtLogin: () => {
             // A development run's rehearsal leaves this computer's login items alone.

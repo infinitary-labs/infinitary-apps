@@ -971,6 +971,10 @@ export function DevicesTabView(
           onKeyDown={(event) => {
             if (event.key !== "Escape" || (question === homeMove.asking && homeMove.progress))
               return;
+            // A row's ⋯ menu owns its own Escape: it closes the menu, never the question beside it.
+            const from = event.target as HTMLElement;
+            if (from.closest('[role="menu"]') || from.getAttribute("aria-expanded") === "true")
+              return;
             const approval = inspector.current?.querySelector<HTMLButtonElement>(
               '[data-secret-question="device"] button',
             );

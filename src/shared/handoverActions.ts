@@ -112,7 +112,7 @@ export const handoverLines = {
       if (!offersAddressChange(device))
         throw new Error(`${HERE.This} does not reach ${label} by its address now.`);
       return deviceCard("app-device-change-address", device, `Change the address of ${label}?`, [
-        `Open ${label} in Settings → Devices and type the address it answers at now.`,
+        `Open ${label} in Settings → Devices, choose Change address in its ⋯ menu, and type the address it answers at now.`,
         `${HERE.This} looks there first and keeps the new address only if the same ${COMPUTER.one} answers.`,
       ]);
     },
@@ -142,7 +142,7 @@ export const handoverLines = {
         `Move your first mate to ${label}?`,
         [
           `Your first mate and its record would then run on ${label}, and ${HERE.this} would control it from there.`,
-          `Move your first mate here shows what differs after the move first. Only your Move now starts it.`,
+          `Move your first mate here, in its ⋯ menu, shows what differs after the move first. Only your Move now starts it.`,
         ],
         true,
       );
@@ -176,7 +176,7 @@ export const handoverLines = {
         `Keep a copy of your first mate on ${label}?`,
         [
           `${label} would keep a live copy of your first mate's record, so it can take over if ${HERE.this} is lost. The copy is never opened there.`,
-          `Open ${label} in Settings → Devices and choose Keep a copy here.`,
+          `Open ${label} in Settings → Devices and choose Keep a copy here in its ⋯ menu.`,
         ],
         true,
       );

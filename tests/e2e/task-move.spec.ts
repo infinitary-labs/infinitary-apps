@@ -792,7 +792,8 @@ test("a computer that joins again under a new key carries its earlier entry's ta
   await test.step("Settings -> Devices names the earlier entry, and by keys its task carries on here", async () => {
     await openDevices(page);
     const newRow = page.locator(`[data-device-row="${again}"]`);
-    await expect(newRow.locator("[data-device-earlier]")).toHaveText(
+    // The strip's sentence, beside its Carry its tasks on here button.
+    await expect(newRow.locator("[data-device-earlier] [data-notice-text]")).toHaveText(
       m.settingsDevicesCarryEarlier({ count: 1 }),
     );
     // Both entries go by the label Settings -> Devices gives the new one.

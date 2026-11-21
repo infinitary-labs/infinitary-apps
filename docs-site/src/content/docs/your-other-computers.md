@@ -56,7 +56,7 @@ Each computer keeps its own Appearance, Keyboard and Panels.
 Other Settings sections are read and changed on the computer where your first mate lives.
 
 To stop, open Settings → **Devices** on that computer and press **Leave**.
-To cut a computer off from the computer where your first mate lives, press **Remove** on its row.
+To cut a computer off from the computer where your first mate lives, open its menu, the three dots on its row, and choose **Remove**.
 A computer that only controls your first mate needs a new link to come back.
 
 ## A computer that runs work
@@ -89,7 +89,7 @@ Each copy adds one line to the task's Activity, naming the file and the computer
 
 ## Move your first mate
 
-On the row of a computer that runs work, **Move your first mate here** moves your first mate there.
+In the menu of a computer that runs work, the three dots on its row, **Move your first mate here** moves your first mate there.
 A list first shows anything that stands in the way.
 [Secrets](/secrets/) stay on the computer it leaves, and you sign in again there to your subscriptions.
 
@@ -99,7 +99,7 @@ A computer that runs work can keep a live copy of your first mate's record.
 If the computer where your first mate lives is then lost, or out of reach for long, that computer can [take over](#take-over).
 
 1. On the computer where your first mate lives, open Settings → **Devices** and pick the other computer.
-2. Press **Keep a copy here** on its row.
+2. Open its menu, the three dots on its row, and choose **Keep a copy here**.
 
 It takes one full copy, then each change your first mate saves.
 Its row says where the copy stands, such as **Copy in sync** or **Copy catching up · 3 changes**, and while it is out of reach, **Copy from** a time.
@@ -111,7 +111,7 @@ On its own, the copy holds none of your projects, sign-ins or Secrets:
 
 - When it takes over, each project is cloned again from where it lives.
   A project kept only on the computer that was lost starts there empty.
-- **Ready to take over**, on its row, lists what that computer would still need, such as a sign-in of its own to each subscription your first mate uses, and to where your projects live.
+- **Ready to take over**, in its menu, lists what that computer would still need, such as a sign-in of its own to each subscription your first mate uses, and to where your projects live.
   A button for each, such as **Sign in to GitHub there**, starts that sign-in from this window.
 - **Keep Secrets there**, in the same list, keeps your Secrets with the copy once you confirm on that computer itself.
   See [Secrets](/secrets/#when-your-first-mate-moves).

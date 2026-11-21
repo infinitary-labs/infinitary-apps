@@ -1277,6 +1277,23 @@ function appVersionLine(device: { system?: DeviceSystem | undefined }, version: 
   return `Its app has Infinitary ${version.app}.`;
 }
 
+/**
+ * The version every copy on a computer runs when each runs this computer's
+ * own (design skill `components/devices/DevicesTab`, "Each copy's version"):
+ * its app's and its work's, or the one of them that is connected. Settings ->
+ * Devices marks it on the row's mono line instead of saying a sentence;
+ * undefined for a phone, whose app has a version of its own, and whenever a
+ * copy differs or says nothing.
+ */
+export function sharedVersion(device: DeviceView): string | undefined {
+  if (isPhone(device) || device.otherVersion) return undefined;
+  const app = device.appVersion;
+  const work = device.workVersion;
+  if (app && (!app.same || app.app === undefined)) return undefined;
+  if (app && work && work !== app.app) return undefined;
+  return work ?? app?.app;
+}
+
 /** The words of Remove, for a card and the feed. */
 export const deviceWords = {
   label: deviceLabel,
@@ -1304,14 +1321,14 @@ export const deviceWords = {
    * What Settings -> Devices says of the version each copy on a device runs
    * (design skill `components/devices/DevicesTab`, "Each copy's version"):
    * the app open there, then its work on this computer's version, in one
-   * line when both run this computer's; null when it says nothing of either.
+   * line; null when it says nothing of either, or when every copy runs
+   * this computer's version (`sharedVersion`, a mark on the row's mono line).
    * Work on another version is said by `otherVersion`.
    */
   copyVersions(device: DeviceView): string | null {
+    if (sharedVersion(device)) return null;
     const app = device.appVersion;
     const work = device.workVersion;
-    if (app?.same && work === app.app)
-      return `Its app and its work run Infinitary ${work}, as ${HERE.this} does.`;
     const lines: string[] = [];
     if (app) lines.push(appVersionLine(device, app));
     if (work) lines.push(`Its work runs Infinitary ${work}, as ${HERE.this} does.`);

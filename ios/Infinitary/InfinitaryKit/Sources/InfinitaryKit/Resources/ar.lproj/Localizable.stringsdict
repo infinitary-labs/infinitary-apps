@@ -2595,6 +2595,30 @@
       <string>%1$ld مهمة</string>
     </dict>
   </dict>
+  <key>settingsDevicesTasksWait</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>تنتظر %1$ld مهمة حتى يعود.</string>
+      <key>one</key>
+      <string>تنتظر مهمته حتى يعود.</string>
+      <key>two</key>
+      <string>تنتظر مهمتاه حتى يعود.</string>
+      <key>few</key>
+      <string>تنتظر %1$ld مهام حتى يعود.</string>
+      <key>many</key>
+      <string>تنتظر %1$ld مهمةً حتى يعود.</string>
+      <key>other</key>
+      <string>تنتظر %1$ld مهمة حتى يعود.</string>
+    </dict>
+  </dict>
   <key>settingsDevicesWayCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -416,3 +416,95 @@ select.fm-runs-on {
   font-size: var(--text-xs);
   color: var(--fg-3);
 }
+
+/* A device's row (components/devices/DevicesTab, "The row"): the head with
+   its dot, name, one status and the ⋯ menu; the facts under the name; then
+   one strip per thing that needs the captain, its sentence beside its one
+   button. Every state fills these parts in this order. */
+.fm-devices-entry {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+[data-device-inspector] .fm-devices-entry {
+  flex-wrap: nowrap;
+}
+
+/* A Secrets question under a phone's switch grows the facts, never the head. */
+.fm-devices-entry:has([data-secret-question]) {
+  align-items: stretch;
+}
+
+.fm-devices-entry:has([data-secret-question]) .fm-devices-dot {
+  margin-top: 0;
+}
+
+.fm-devices-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.fm-devices-head .fm-devices-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm-devices-head .fm-devices-state {
+  white-space: normal;
+  text-align: end;
+}
+
+/* The kebab keeps the head's height: it reaches into the row's padding. */
+.fm-devices-more {
+  margin-block: -4px;
+  margin-inline-end: -6px;
+}
+
+/* Inset to the name's left edge: the dot's width and the head's gap. */
+.fm-devices-facts,
+.fm-devices-notices {
+  margin-inline-start: calc(7px + var(--space-3));
+  min-width: 0;
+}
+
+.fm-devices-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.fm-devices-notices {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-3);
+}
+
+/* The button drops under a long sentence, to the right. */
+.fm-devices-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-4);
+  padding-block: 10px;
+  border-top: 1px solid var(--line-1);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-devices-notice:last-child {
+  padding-bottom: 0;
+}
+
+.fm-devices-notice-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.fm-devices-notice[data-tone="warn"] .fm-devices-notice-text {
+  color: var(--warn);
+}

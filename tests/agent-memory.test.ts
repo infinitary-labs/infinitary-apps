@@ -88,7 +88,7 @@ describe("the size check on AGENTS.md", () => {
         listed.filter((name) => name !== page),
         listed,
       ),
-    ).toEqual([expect.stringContaining(`docs/${page} is not listed`)]);
+    ).toEqual([expect.stringContaining(`${page} is not listed`)]);
     expect(
       indexProblems(
         listed,

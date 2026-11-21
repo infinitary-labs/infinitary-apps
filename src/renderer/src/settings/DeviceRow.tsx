@@ -30,6 +30,7 @@ import {
   deviceSummary,
   heldLine,
   offersFixWork,
+  type RowAct,
   removeLines,
   sshStoppedLine,
   strandedLine,
@@ -271,9 +272,6 @@ export function DeviceRow({
     </div>
   );
 }
-
-/** What a row's ⋯ menu offers, in its order: the rarely used actions, then Remove. */
-export type RowAct = "address" | "home-move" | "standby-ready" | "standby-keep" | "remove";
 
 /**
  * The ⋯ menu's actions for a device, each under `@shared/deviceActs`'s own

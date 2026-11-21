@@ -7,7 +7,7 @@ import type { DeviceView } from "@shared/devices";
 import type { WorkOutcome } from "@shared/remoteLogin";
 import electronPath from "electron";
 import { appPathsFor } from "../../src/core/paths";
-import type { RowAct } from "../../src/renderer/src/settings/DeviceRow";
+import type { RowAct } from "../../src/renderer/src/settings/devicesWords";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";

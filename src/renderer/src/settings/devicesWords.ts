@@ -313,6 +313,9 @@ export function deviceIdentity(device: DeviceView, now: number): string {
   return `${whatDevice(device)} · ${joined}${reached ? ` · ${reached}` : ""}${version}`;
 }
 
+/** What a row's ⋯ menu offers, in its order: the rarely used actions, then Remove. */
+export type RowAct = "address" | "home-move" | "standby-ready" | "standby-keep" | "remove";
+
 /**
  * The one status on a device's head, in its most exact words (design skill
  * `components/devices/DevicesTab`, "The row"): a computer in reach says its

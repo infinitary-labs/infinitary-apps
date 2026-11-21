@@ -54,6 +54,7 @@ Every device's row has the same shape, a head, plain facts, and strips:
 - One strip per thing that needs the captain, each a `--text-sm` sentence with its one small secondary button on the right, over a 1px `--line-1` rule.
   A strip in `--warn` says something is wrong; the rest read `--fg-1`.
   The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Update" or "Install older version"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; and an app behind this computer's, with no button.
+
 The ⋯ holds the rare actions, in this order: "Change address", "Move your first mate here", "Keep a copy here" or "Ready to take over", then a separator and "Remove" in the danger tone.
 Each item stands only where the rules below offer it; a phone's ⋯ holds Remove alone, and a row with nothing to offer has no ⋯.
 The ⋯ is a Tab stop; Enter or Space opens it, the arrows walk its items, Escape closes it without touching a question open beside the row, and focus comes back to the ⋯ after a pick or when the question an item opened closes.

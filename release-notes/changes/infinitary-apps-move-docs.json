@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "infinitary-apps-move-docs",
+      "reason": "Internal: the docs now say the code lives in infinitary-labs/infinitary-apps and Infinitary's earlier history in infinitary-labs/infinitary-archive. Nothing in the app changes."
+    }
+  ]
+}

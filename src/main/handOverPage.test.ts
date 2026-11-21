@@ -56,6 +56,21 @@ describe("the hand-over window's page", () => {
     expect(working.buttons.map((button) => button.asks)).toEqual(["again", "quit"]);
   });
 
+  // INF-5468's plan, piece 3: an older copy running with no window is asked
+  // to stop, and only the person's click ends one that did not.
+  it("says it is stopping the older copy, then asks before ending one that did not stop", () => {
+    const stopping = read({ kind: "stopping" });
+    expect(stopping.heading).toBe("Stopping Firstmate 3000's background work");
+    expect(stopping.buttons).toEqual([]);
+    const wontStop = read({ kind: "wont-stop" });
+    expect(wontStop.heading).toBe("Firstmate 3000 has not stopped");
+    expect(wontStop.buttons).toEqual([
+      { label: "Stop it now", asks: "force" },
+      { label: "Quit", asks: "quit" },
+    ]);
+    expect(actionOf(`${HAND_OVER_ADDRESS}?do=force`)).toBe("force");
+  });
+
   it("reads each button's navigation and nothing else", () => {
     expect(actionOf(`${HAND_OVER_ADDRESS}?do=bring`)).toBe("bring");
     expect(actionOf(`${HAND_OVER_ADDRESS}?do=delete`)).toBeUndefined();

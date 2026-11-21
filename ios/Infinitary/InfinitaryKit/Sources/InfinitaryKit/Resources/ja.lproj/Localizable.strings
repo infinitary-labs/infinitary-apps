@@ -747,6 +747,12 @@
 "filePreparing" = "準備中";
 "fileReady" = "準備完了";
 "fileReadyAnnounce" = "%1$@ の準備ができました";
+"handoverQuit" = "終了";
+"handoverStopNow" = "今すぐ停止";
+"handoverStoppingText" = "%1$@ がウインドウなしでまだ動いていて、保存した作業を開いたままです。%2$@ が保存して停止するよう求めています。停止したら、そのまま続けます。";
+"handoverStoppingTitle" = "%1$@ のバックグラウンドの作業を停止しています";
+"handoverWontStopText" = "%1$@ は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。";
+"handoverWontStopTitle" = "%1$@ が停止していません";
 "integrationsSignInAgain" = "ページをもう一度開く";
 "integrationsSignInCancel" = "キャンセル";
 "integrationsSignInWaiting" = "ブラウザで %1$@ へのサインインを完了してください。";

@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "Beenden",
+  "handoverStopNow": "Jetzt stoppen",
+  "handoverStoppingText": "{from} läuft hier noch ohne Fenster und hält deine gespeicherte Arbeit. {to} bittet es, zu speichern und zu stoppen, und macht dann von selbst weiter.",
+  "handoverStoppingTitle": "Die Hintergrundarbeit von {from} wird gestoppt",
+  "handoverWontStopText": "{to} hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Jetzt stoppen beendet es, ohne zu warten. Es wurde nichts geändert.",
+  "handoverWontStopTitle": "{from} hat nicht gestoppt"
+}

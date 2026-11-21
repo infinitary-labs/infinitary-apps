@@ -747,6 +747,12 @@
 "filePreparing" = "Preparando";
 "fileReady" = "Listo";
 "fileReadyAnnounce" = "%1$@ listo";
+"handoverQuit" = "Salir";
+"handoverStopNow" = "Detenerlo ahora";
+"handoverStoppingText" = "%1$@ sigue ejecutándose aquí sin ventana y tiene abierto tu trabajo guardado. %2$@ le está pidiendo que guarde y se detenga, y luego continúa por sí solo.";
+"handoverStoppingTitle" = "Deteniendo el trabajo en segundo plano de %1$@";
+"handoverWontStopText" = "%1$@ le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.";
+"handoverWontStopTitle" = "%1$@ no se ha detenido";
 "integrationsSignInAgain" = "Abrir la página otra vez";
 "integrationsSignInCancel" = "Cancelar";
 "integrationsSignInWaiting" = "Termina de iniciar sesión en %1$@ en tu navegador.";

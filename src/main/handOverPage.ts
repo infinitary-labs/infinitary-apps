@@ -6,6 +6,7 @@ import type {
   MoveRefusal,
 } from "@core/folderMove/move";
 import { formatDateTime, formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 
 /**
  * What the one-time move's hand-over window shows (./handOver.ts), as a
@@ -14,7 +15,9 @@ import { formatDateTime, formatNumber } from "@shared/i18n/format";
  * stopped. Every button is a form's submit button; the window reads which
  * one was pressed from the navigation it starts and stops it there. While
  * the move works, the window redraws the page's live part (`workingLive`)
- * as it goes.
+ * as it goes. While it takes over from an older copy still running with no
+ * window (src/core/folderMove/takeOver.ts), it says so, and asks before it
+ * ends one that did not stop.
  */
 
 /** The two apps by the names a person knows them: `from` Firstmate 3000, `to` Infinitary. */
@@ -27,12 +30,16 @@ export type HandOverView =
   | { kind: "working"; progress: MoveProgress; clock?: MoveClock }
   | { kind: "ask"; from: FolderSummary; to: FolderSummary }
   | { kind: "moved" }
-  | { kind: "refused"; refusal: MoveRefusal };
+  | { kind: "refused"; refusal: MoveRefusal }
+  /** Asking the older copy holding the saved work to save and stop. */
+  | { kind: "stopping" }
+  /** It was asked and still holds the saved work. */
+  | { kind: "wont-stop" };
 
-/** What a button asks the window to do. */
-export type HandOverAction = "bring" | "keep" | "later" | "again" | "quit";
+/** What a button asks the window to do: `force` ends the older copy that did not stop. */
+export type HandOverAction = "bring" | "keep" | "later" | "again" | "quit" | "force";
 
-const ACTIONS: readonly HandOverAction[] = ["bring", "keep", "later", "again", "quit"];
+const ACTIONS: readonly HandOverAction[] = ["bring", "keep", "later", "again", "quit", "force"];
 
 /** Where every button's form goes: a name nothing answers, read and stopped by the window. */
 export const HAND_OVER_ADDRESS = "https://hand-over.invalid/";
@@ -296,6 +303,20 @@ export function handOverBody(view: HandOverView, names: HandOverNames): string {
         <h1>Your saved work is in ${escapeHtml(names.to)}</h1>
         <p class="status" role="status">Opening ${escapeHtml(names.to)}.</p>
         <div class="bar" aria-hidden="true"><div style="width: 100%"></div></div>
+      </main>`;
+    case "stopping":
+      return `<main aria-label="${escapeHtml(m.handoverStoppingTitle({ from: names.from }))}">
+        <h1>${escapeHtml(m.handoverStoppingTitle({ from: names.from }))}</h1>
+        <p class="status" role="status">${escapeHtml(m.handoverStoppingText(names))}</p>
+      </main>`;
+    case "wont-stop":
+      return `<main aria-label="${escapeHtml(m.handoverWontStopTitle({ from: names.from }))}">
+        <h1>${escapeHtml(m.handoverWontStopTitle({ from: names.from }))}</h1>
+        <p role="alert">${escapeHtml(m.handoverWontStopText({ to: names.to }))}</p>
+        ${buttons([
+          { action: "force", label: m.handoverStopNow(), primary: true },
+          { action: "quit", label: m.handoverQuit() },
+        ])}
       </main>`;
     case "refused": {
       const words = refusalWords(view.refusal, names);

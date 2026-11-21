@@ -27836,6 +27836,173 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} ready`;
   }
+  function handoverQuit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إنهاء`;
+      case "de":
+        return `Beenden`;
+      case "es":
+        return `Salir`;
+      case "fr":
+        return `Quitter`;
+      case "ja":
+        return `終了`;
+      case "ko":
+        return `종료`;
+      case "pt-BR":
+        return `Encerrar`;
+      case "zh-Hans":
+        return `退出`;
+      case "zh-Hant":
+        return `結束`;
+      case "en-XA":
+        return `[Ǫûîţ ~~]`;
+      case "ar-XB":
+        return `‮Quit‬`;
+    }
+    return `Quit`;
+  }
+  function handoverStopNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقافه الآن`;
+      case "de":
+        return `Jetzt stoppen`;
+      case "es":
+        return `Detenerlo ahora`;
+      case "fr":
+        return `L’arrêter maintenant`;
+      case "ja":
+        return `今すぐ停止`;
+      case "ko":
+        return `지금 중지`;
+      case "pt-BR":
+        return `Parar agora`;
+      case "zh-Hans":
+        return `立即停止`;
+      case "zh-Hant":
+        return `立即停止`;
+      case "en-XA":
+        return `[Šţöþ îţ ñöŵ ~~~~]`;
+      case "ar-XB":
+        return `‮Stop it now‬`;
+    }
+    return `Stop it now`;
+  }
+  function handoverStoppingText(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يزال ${from} يعمل هنا دون نافذة، ويُبقي عملك المحفوظ مفتوحًا. يطلب منه ${to} أن يحفظ ويتوقف، ثم يتابع من تلقاء نفسه.`;
+      case "de":
+        return `${from} läuft hier noch ohne Fenster und hält deine gespeicherte Arbeit. ${to} bittet es, zu speichern und zu stoppen, und macht dann von selbst weiter.`;
+      case "es":
+        return `${from} sigue ejecutándose aquí sin ventana y tiene abierto tu trabajo guardado. ${to} le está pidiendo que guarde y se detenga, y luego continúa por sí solo.`;
+      case "fr":
+        return `${from} tourne encore ici sans fenêtre et garde votre travail enregistré ouvert. ${to} lui demande d’enregistrer et de s’arrêter, puis continue de lui-même.`;
+      case "ja":
+        return `${from} がウインドウなしでまだ動いていて、保存した作業を開いたままです。${to} が保存して停止するよう求めています。停止したら、そのまま続けます。`;
+      case "ko":
+        return `${from}이(가) 창 없이 아직 실행 중이고 저장된 작업을 열어 두고 있어요. ${to}이(가) 저장하고 중지하도록 요청하고 있으며, 그다음 알아서 이어 가요.`;
+      case "pt-BR":
+        return `O ${from} ainda está rodando aqui sem janela e mantém seu trabalho salvo aberto. O ${to} está pedindo que ele salve e pare, e depois continua sozinho.`;
+      case "zh-Hans":
+        return `${from} 仍在这里无窗口运行，并占用着你保存的工作。${to} 正在请它保存并停止，随后会自行继续。`;
+      case "zh-Hant":
+        return `${from} 仍在這裡以無視窗方式執行，並佔用著你儲存的工作。${to} 正在請它儲存並停止，之後會自行繼續。`;
+      case "en-XA":
+        return `[${from} îš šţîļļ ŕûññîñĝ ĥéŕé ŵîţĥ ñö ŵîñðöŵ, áñð îţ ĥöļðš ýöûŕ šáṽéð ŵöŕķ. ${to} îš ášķîñĝ îţ ţö šáṽé áñð šţöþ, ţĥéñ çáŕŕîéš öñ ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ is still running here with no window, and it holds your saved work. ‬${to}‮ is asking it to save and stop, then carries on by itself.‬`;
+    }
+    return `${from} is still running here with no window, and it holds your saved work. ${to} is asking it to save and stop, then carries on by itself.`;
+  }
+  function handoverStoppingTitle(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ إيقاف العمل في الخلفية لـ ${from}`;
+      case "de":
+        return `Die Hintergrundarbeit von ${from} wird gestoppt`;
+      case "es":
+        return `Deteniendo el trabajo en segundo plano de ${from}`;
+      case "fr":
+        return `Arrêt du travail en arrière-plan de ${from}`;
+      case "ja":
+        return `${from} のバックグラウンドの作業を停止しています`;
+      case "ko":
+        return `${from}의 백그라운드 작업을 중지하는 중`;
+      case "pt-BR":
+        return `Parando o trabalho em segundo plano do ${from}`;
+      case "zh-Hans":
+        return `正在停止 ${from} 的后台工作`;
+      case "zh-Hant":
+        return `正在停止 ${from} 的背景工作`;
+      case "en-XA":
+        return `[Šţöþþîñĝ ${from}'š ƀáçķĝŕöûñð ŵöŕķ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stopping ‬${from}‮'s background work‬`;
+    }
+    return `Stopping ${from}'s background work`;
+  }
+  function handoverWontStopText(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب ${to} منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. يُنهيه «إيقافه الآن» دون انتظار. لم يتغير شيء.`;
+      case "de":
+        return `${to} hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Jetzt stoppen beendet es, ohne zu warten. Es wurde nichts geändert.`;
+      case "es":
+        return `${to} le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.`;
+      case "fr":
+        return `${to} lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.`;
+      case "ja":
+        return `${to} は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。`;
+      case "ko":
+        return `${to}이(가) 저장하고 중지하도록 요청했지만 저장된 작업을 아직 열어 두고 있어요. 지금 중지를 누르면 기다리지 않고 종료해요. 아무것도 바뀌지 않았어요.`;
+      case "pt-BR":
+        return `O ${to} pediu que ele salvasse e parasse, e ele ainda mantém seu trabalho salvo aberto. Parar agora o encerra sem esperar. Nada foi alterado.`;
+      case "zh-Hans":
+        return `${to} 已请它保存并停止，但它仍占用着你保存的工作。“立即停止”会直接结束它，不再等待。没有做任何更改。`;
+      case "zh-Hant":
+        return `${to} 已請它儲存並停止，但它仍佔用著你儲存的工作。「立即停止」會直接結束它，不再等待。沒有做任何變更。`;
+      case "en-XA":
+        return `[${to} ášķéð îţ ţö šáṽé áñð šţöþ, áñð îţ šţîļļ ĥöļðš ýöûŕ šáṽéð ŵöŕķ. Šţöþ îţ ñöŵ éñðš îţ ŵîţĥöûţ ŵáîţîñĝ. Ñöţĥîñĝ ĥáš ƀééñ çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.‬`;
+    }
+    return `${to} asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.`;
+  }
+  function handoverWontStopTitle(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتوقف ${from}`;
+      case "de":
+        return `${from} hat nicht gestoppt`;
+      case "es":
+        return `${from} no se ha detenido`;
+      case "fr":
+        return `${from} ne s’est pas arrêté`;
+      case "ja":
+        return `${from} が停止していません`;
+      case "ko":
+        return `${from}이(가) 중지되지 않았어요`;
+      case "pt-BR":
+        return `O ${from} não parou`;
+      case "zh-Hans":
+        return `${from} 没有停止`;
+      case "zh-Hant":
+        return `${from} 沒有停止`;
+      case "en-XA":
+        return `[${from} ĥáš ñöţ šţöþþéð ~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ has not stopped‬`;
+    }
+    return `${from} has not stopped`;
+  }
   function integrationsSignInAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -85422,6 +85589,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     filePreparing,
     fileReady,
     fileReadyAnnounce,
+    handoverQuit,
+    handoverStopNow,
+    handoverStoppingText,
+    handoverStoppingTitle,
+    handoverWontStopText,
+    handoverWontStopTitle,
     integrationsSignInAgain,
     integrationsSignInCancel,
     integrationsSignInWaiting,
@@ -88155,6 +88328,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "filePreparing": [],
     "fileReady": [],
     "fileReadyAnnounce": ["name"],
+    "handoverQuit": [],
+    "handoverStopNow": [],
+    "handoverStoppingText": ["from", "to"],
+    "handoverStoppingTitle": ["from"],
+    "handoverWontStopText": ["to"],
+    "handoverWontStopTitle": ["from"],
     "integrationsSignInAgain": [],
     "integrationsSignInCancel": [],
     "integrationsSignInWaiting": ["name"],

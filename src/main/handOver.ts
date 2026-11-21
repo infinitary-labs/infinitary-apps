@@ -1,5 +1,8 @@
 import type { FolderMove } from "@core/folderMove/due";
 import { type MoveChoice, type MoveDeps, type MoveProgress, runMove } from "@core/folderMove/move";
+import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "@core/folderMove/takeOver";
+import type { Service } from "@core/helper/background";
+import { isProfileRetired } from "@core/storage/retiredProfile";
 import { nativeTheme } from "electron";
 import {
   actionOf,
@@ -18,11 +21,15 @@ import { standaloneDocument, standaloneWindow } from "./savedDataRefusal";
  * person sees while an app with a new identity brings an older folder's
  * saved work into its own, before anything opens either folder. It shows
  * the move as it goes, asks which work to open when both folders hold some,
- * and says why a move stopped with a way to try again. While it counts,
+ * and says why a move stopped with a way to try again. An older copy still
+ * running with no window that holds the older folder is taken over first:
+ * asked to save and stop, and ended only on the person's Stop it now when it
+ * does not (src/core/folderMove/takeOver.ts). While it counts,
  * copies and checks, Quit, continue later stops the move - which leaves
  * nothing changed - and quits; the next launch starts it again. Once the work is in,
- * it turns on start at login when the older app had it, and starts the app
- * again on its own folder.
+ * it turns on start at login when the older app had it, hands the work's
+ * background to this app's own label, and starts the app again on its own
+ * folder.
  *
  * Chromium keeps its own files in userData from the moment it starts, so
  * the hand-over runs on a throwaway profile of its own beside the folders
@@ -39,8 +46,12 @@ export type HandOverOptions = {
   names: HandOverNames;
   hidden: boolean;
   deps: Omit<MoveDeps, "progress">;
+  /** How the window takes over from an older copy holding the older folder; absent, it only says to quit it. */
+  takeOver?: TakeOverDeps;
   /** Turns start at login on for this app. */
   startAtLogin: () => void;
+  /** Hands the moved work's background to this app's own label, so the older agent's file starts nothing again (`handBackgroundOver`). */
+  handBackground?: () => Promise<unknown>;
   /** Starts the app again, now on its own folder, and ends this process. */
   relaunch: () => void;
   quit: () => void;
@@ -81,10 +92,28 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       ),
     );
   };
+  // Agents the take-over let go: started again whenever the hand-over ends
+  // without moving, so the older copy's work runs as it did.
+  const paused: Service[] = [];
+  let left = false;
+  const leave = async () => {
+    if (left) return;
+    left = true;
+    // Once the move committed, the older folder is a frozen recovery copy: nothing starts on it again.
+    const retired = isProfileRetired(move.from);
+    for (const service of paused.splice(0))
+      if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
+    options.quit();
+  };
+  // Once the work is in, the background goes to this app's label with it; a failure leaves it for the work check.
+  const handBackground = () => options.handBackground?.().catch(() => undefined);
+  let closed = false;
+  let takingOver = false;
   win.on("closed", () => {
     if (finished) return;
+    closed = true;
     if (moving) quitWhileMoving();
-    else options.quit();
+    else if (!takingOver) void leave();
   });
   let answer: ((action: HandOverAction) => void) | undefined;
   win.webContents.on("will-navigate", (event, url) => {
@@ -170,6 +199,9 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
 
   try {
     let choice: MoveChoice | undefined;
+    // One take-over per try: a copy that holds the folder again after it is
+    // the person's to see, with today's words.
+    let tookOver = false;
     for (;;) {
       moveStarted = Date.now();
       stepStarted = moveStarted;
@@ -182,10 +214,15 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       ).finally(() => {
         moving = false;
       });
+      // The work is in: a close from here on lets the app open on it, as relaunch does.
+      if (outcome.kind === "moved") finished = true;
       if (stop.signal.aborted) {
-        if (outcome.kind === "moved" && outcome.startAtLogin) options.startAtLogin();
-        finished = true;
-        options.quit();
+        if (outcome.kind === "moved") {
+          if (outcome.startAtLogin) options.startAtLogin();
+          await handBackground();
+          finished = true;
+          options.quit();
+        } else await leave();
         return;
       }
       if (outcome.kind === "ask") {
@@ -195,19 +232,66 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
           choice = action;
           continue;
         }
-        options.quit();
+        await leave();
         return;
       }
       if (outcome.kind === "refused") {
+        const held =
+          outcome.refusal.reason === "old-app-open" ||
+          outcome.refusal.reason === "old-work-running";
+        if (held && options.takeOver && !tookOver) {
+          tookOver = true;
+          takingOver = true;
+          // The stopping words show only once the holder is one of ours with no window.
+          const taken = await takeOverOlderCopy(move.from, {
+            ...options.takeOver,
+            stopping: () => show({ kind: "stopping" }),
+          }).finally(() => {
+            takingOver = false;
+          });
+          if (taken.kind !== "free" && taken.kind !== "left" && taken.unloaded)
+            paused.push(taken.unloaded);
+          if (closed) {
+            await leave();
+            return;
+          }
+          if (taken.kind === "free" || taken.kind === "stopped") continue;
+          if (taken.kind === "still-running") {
+            await show({ kind: "wont-stop" });
+            const action = await nextAction();
+            if (action !== "force") {
+              await leave();
+              return;
+            }
+            // Taking over from here on: a close during the stopping view waits for the forced end, then leaves.
+            takingOver = true;
+            await show({ kind: "stopping" });
+            const forced = await stopOlderCopyNow(move.from, taken.pid, options.takeOver).finally(
+              () => {
+                takingOver = false;
+              },
+            );
+            if (forced.unloaded) paused.push(forced.unloaded);
+            if (closed) {
+              await leave();
+              return;
+            }
+            continue;
+          }
+        }
         await show(outcome);
         const action = await nextAction();
-        if (action === "again") continue;
-        options.quit();
+        if (action === "again") {
+          tookOver = false;
+          continue;
+        }
+        await leave();
         return;
       }
       if (outcome.kind === "moved") {
         await show({ kind: "moved" });
         if (outcome.startAtLogin) options.startAtLogin();
+        await handBackground();
         // Long enough to read that the work is in before the window gives way to the app.
         await new Promise((resolve) => setTimeout(resolve, READY_HOLD_MS));
       }

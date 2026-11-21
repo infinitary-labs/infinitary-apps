@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "Encerrar",
+  "handoverStopNow": "Parar agora",
+  "handoverStoppingText": "O {from} ainda está rodando aqui sem janela e mantém seu trabalho salvo aberto. O {to} está pedindo que ele salve e pare, e depois continua sozinho.",
+  "handoverStoppingTitle": "Parando o trabalho em segundo plano do {from}",
+  "handoverWontStopText": "O {to} pediu que ele salvasse e parasse, e ele ainda mantém seu trabalho salvo aberto. Parar agora o encerra sem esperar. Nada foi alterado.",
+  "handoverWontStopTitle": "O {from} não parou"
+}

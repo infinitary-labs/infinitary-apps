@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "older-copy-stops-at-update",
+      "kind": "fix",
+      "title": "An older copy still running no longer stops the update",
+      "body": "When Firstmate 3000 or an earlier Infinitary is still running with no window, such as background work or one started from a terminal, Infinitary now asks it to save and stop, then brings your saved work over. If it does not stop, Infinitary asks before ending it.",
+      "area": "updates",
+      "noPicture": "The window shows its one new line only for the few seconds the older copy takes to stop, so a still picture shows little.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

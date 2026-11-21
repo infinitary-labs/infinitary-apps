@@ -1018,6 +1018,11 @@
     "other": "أُرجع {count} تغيير. يُعاد جمع بقية الدفعة."
   },
   "settingsProjectsBatchTryAgain": "إعادة المحاولة",
+  "settingsProjectsBatchWaiting": "الدفعة تنتظر دمجها",
+  "settingsProjectsBatchWaitingSince": "تنتظر منذ {since}: قبِل {place} الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.",
+  "settingsProjectsBatchWaitingSinceHost": "تنتظر منذ {since}: قبِل مستضيف المشروع الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.",
+  "settingsProjectsBatchWaitingStillOpen": "لم يُغلق {place} طلب السحب {label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.",
+  "settingsProjectsBatchWaitingStillOpenHost": "لم يُغلق مستضيف المشروع طلب السحب {label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.",
   "settingsProjectsCare": "العناية",
   "settingsProjectsCareNone": "لا شيء",
   "settingsProjectsCarePersonal": "لا شيء هنا يمر عبر بوابة.",

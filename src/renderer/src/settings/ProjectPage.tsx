@@ -2,6 +2,7 @@ import {
   BATCH_GAP_CHOICES,
   BATCH_GAP_WORDS,
   keepsCommits,
+  mergeWait,
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
@@ -28,7 +29,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button, GroupedPills, Input, Switch } from "../design";
 import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 import { AddProject } from "./AddProject";
-import { BatchHoldPanel } from "./BatchHoldPanel";
+import { BatchHoldPanel, BatchWaitPanel } from "./BatchHoldPanel";
 import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { MoveRepository } from "./MoveRepository";
 import { ProjectCostLimit } from "./ProjectCostLimit";
@@ -541,6 +542,8 @@ function RepositorySettings({
   // Batches of this person's own: the app combines the approved changes, with nothing to set up.
   const ownBatch = !personal && ownsBatches(repo.delivery, repo) === true;
   const held = !personal && repo.batch?.open?.hold ? repo.batch.open : undefined;
+  // A merge the host took and still reads as running: shown, with Try again, while it lasts.
+  const waiting = personal ? undefined : mergeWait(repo.batch?.open);
   // A project that allows only squash merges is not offered batches.
   const squashOnly =
     !personal &&
@@ -611,6 +614,9 @@ function RepositorySettings({
       {squashOnly && <BatchNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
       {ownBatch && <BatchNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
       {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
+      {waiting && repo.batch?.open && (
+        <BatchWaitPanel repo={repo} batch={repo.batch.open} wait={waiting} />
+      )}
       {ownBatch && (
         <PolicyRow
           title={BATCH_GAP_WORDS.title}

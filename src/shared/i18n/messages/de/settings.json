@@ -616,6 +616,8 @@
   "settingsForgeConnecting": "Wird verbunden ...",
   "settingsForgeDeviceRole": "klont und pusht seine eigene Arbeit",
   "settingsForgeEnterCode": "Gib diesen Code auf {host} ein:",
+  "settingsForgeKeyDataCenterScopes": "Gib dem Token die Berechtigungen Project read und Repository write.",
+  "settingsForgeKeyNotDataCenter": "{host} hat nicht wie Bitbucket Data Center 8.19 oder neuer geantwortet. Prüf die Adresse.",
   "settingsForgeMakeKey": "Einen Schlüssel auf {host} erstellen",
   "settingsForgeNewCode": "Neuen Code holen",
   "settingsForgeNotSignedIn": "nicht bei {host} angemeldet",

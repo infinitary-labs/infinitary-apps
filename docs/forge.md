@@ -29,7 +29,7 @@ A `Forge` is per repository.
 `createForgeResolver` in `src/core/forge/index.ts` picks it from the repository's `host`, which the registry stamps from its `origin` through `forgeOf` (`src/shared/forge.ts`) at insert and migration 40 backfilled for older rows (logged in `forge_backfill`).
 The composition root binds an implementation per kind (`ForgeBindings`); a kind with none is a plain host.
 GitHub, GitLab and Bitbucket are bound; they are the kinds with change requests (`hasChangeRequests`, `src/shared/forge.ts`), which the merge path, the kept merge approval and the settle words read instead of naming GitHub.
-Bitbucket is Bitbucket Cloud at bitbucket.org ("Bitbucket sign-in and projects" and "Bitbucket pull requests" below).
+Bitbucket is Bitbucket Cloud at bitbucket.org ("Bitbucket sign-in and projects" and "Bitbucket pull requests" below), and Bitbucket Data Center 8.19 or newer at any other address ("Bitbucket Data Center" below).
 
 ## Contributing through an owned fork
 
@@ -87,7 +87,7 @@ The provider tests, `projectContributions.test.ts`, and the `fork-contribution.s
   `INFINITARY_GITHUB_API_URL` (github.com) and `INFINITARY_GITHUB_ENTERPRISE_API_URL` (every enterprise host) are honoured only in an unpackaged app.
   The home's forge wiring (`src/core/forge/homeForges.ts`) binds every GitHub project to it; no other program's GitHub sign-in is ever read, and the app no longer runs any GitHub tool of the Mac's.
 - `gitlab`: `providers/gitlab/gitlabForge.ts`, GitLab's REST API (`/api/v4`) with the app’s own sign-in, on gitlab.com and on each self-hosted server ("GitLab merge requests" below).
-- `bitbucket`: `providers/bitbucket/bitbucketForge.ts`, Bitbucket Cloud's REST API (`/2.0`) with the app's own API token sign-in, at bitbucket.org ("Bitbucket pull requests" below).
+- `bitbucket`: `providers/bitbucket/bitbucketForge.ts`, Bitbucket Cloud's REST API (`/2.0`) with the app's own API token sign-in, at bitbucket.org ("Bitbucket pull requests" below); at any other address, `providers/bitbucket/dataCenterForge.ts`, a Bitbucket Data Center server's REST API (`/rest/api/latest`) with the person's HTTP access token ("Bitbucket Data Center" below).
 - `git`: `providers/plainGit.ts`, git against the repository's own `origin` with prompts off.
 - `none`: `providers/noHost.ts`.
   There is nowhere to send a change.
@@ -279,8 +279,8 @@ No shared application is registered on gitlab.com; guided per-host registration 
 
 ## Bitbucket sign-in and projects
 
-Bitbucket Cloud signs in with an API token the person makes on their Atlassian account, and only at bitbucket.org; Bitbucket Data Center is not offered yet.
-The Bitbucket chip in Settings -> Integrations opens the key form at bitbucket.org; another address is refused as not that kind of server (`ForgeServer.publicOnly`).
+Bitbucket Cloud signs in with an API token the person makes on their Atlassian account, at bitbucket.org.
+The Bitbucket chip in Settings -> Integrations opens the key form at bitbucket.org; another address is a Bitbucket Data Center server ("Bitbucket Data Center" below).
 The form says to make the key on the person's Atlassian account, and Make a key names and opens Atlassian's API tokens page at id.atlassian.com (`SignInHost.keyAccount`, `forgeKeyPlace`).
 That page cannot tick scopes itself, so the form names them: create the token with scopes, pick Bitbucket as the app, and tick `read:user`, `read:workspace`, `read:repository`, `write:repository`, `read:pullrequest`, `write:pullrequest`, `read:pipeline` and `write:pipeline`, each ending in `:bitbucket`.
 Those are the scopes the app reads and writes with for Bitbucket's pull requests and the crew's reach, so one token serves them all.
@@ -364,7 +364,37 @@ A Bitbucket project added before the app opened pull requests there delivers thi
 
 Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409, a 202 and an answer naming no version each sent once, a failed branch read sending nothing, the last check run as the request leaves, a 202's task reference kept only for this pull request and its failure read, a description replaced without its title, the main branch's strategies and no merge sent without one, the merge queue's 202 and pending task read as queued, Bitbucket's 400 as its refusal, the crew's own marked comments and a commit's changed files, and the fork's facts, reuse, making and pull request read in the fork; `src/core/workspace/projectContributions.test.ts` holds a Bitbucket fork made only after the consent click; `mergeReviews.test.ts` holds a numbered review's receipt naming the version that merged; and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a rule wanting an approval, a draft, a failed, running or stopped build each merging nothing, a merge Bitbucket has not finished asked once, and a push during the merge merged and told.
 
-**Not yet:** a manual Pipelines step told apart from a running one, reviewing someone else's pull request from a fork, and Bitbucket Data Center.
+**Not yet:** a manual Pipelines step told apart from a running one, and reviewing someone else's pull request from a fork.
+
+## Bitbucket Data Center
+
+A Bitbucket Data Center server is kind `bitbucket` at its own address, as a GitLab server is kind `gitlab`: any address but bitbucket.org is one.
+Its row in `src/shared/forgeKinds.ts` carries the facts that differ on a server (`ServerFacts`, read through `serverFactsAt`): a project's page is `projects/<KEY>/repos/<slug>`, or `users/<name>/repos/<slug>` for a person's own project, and the server takes no batches yet, so its projects offer pull requests and a local merge.
+A project's address over HTTPS is `https://<server>/scm/<key>/<slug>.git`, which the app reads as the owner `scm/<key>`; over SSH the owner is `<key>`; both are the project `<KEY>` (`dataCenterProjectKey`).
+A server with a context path or on another port is not offered.
+
+The key form at a server's address says to make an HTTP access token on that server, under Manage account -> HTTP access tokens, and names its permissions: Project read and Repository write (`forgeKeyScopesText`); it never names the Atlassian account.
+`createBitbucketServer` asks the server who the token is: `GET /rest/api/latest/application-properties` must name Bitbucket at 8.19 or newer, since the pull request reads and the version-held merge below need it, and an older server or an address that is not Bitbucket's is refused as not that kind of server, in words naming Bitbucket Data Center 8.19 (`forgeKeyProblemText`).
+It then reads `GET /rest/api/latest/users?limit=1` with the token and names the person from the answer's `X-AUSERNAME` header, or from `/plugins/servlet/applinks/whoami` when an answer carries none.
+That name is the sign-in's git user (`ForgeWhoAmI.gitUser`): git over HTTPS takes the person's own name with the token as the password.
+`DataCenterClient` (`providers/bitbucket/dataCenterClient.ts`) sends the token as `Authorization: Bearer` only to that server's `/rest/` paths, refuses redirects, bounds each answer to 256 KiB and each request to 30 seconds, and pages a list by `start` and `nextPageStart`.
+Data Center answers 401 both for a token it does not accept and for a permission the token lacks, so a 401 naming an `AuthorisationException` is `permission` and only another 401 asks the health service to check the sign-in.
+`bitbucketDataCenterBaseFor` uses `https://<server>`; `INFINITARY_BITBUCKET_DATA_CENTER_URL` overrides it only in an unpackaged development/test run.
+
+`DataCenterProjects` (`providers/bitbucket/dataCenterProjects.ts`) lists `GET /rest/api/latest/repos?permission=REPO_READ`, 100 per page up to ten pages, and says when the listing was cut; an exact `KEY/slug` is looked up directly.
+A project's clone address is the server's own HTTPS clone link with the account's name taken out.
+
+`DataCenterForge` (`providers/bitbucket/dataCenterForge.ts`) reaches the repository at `/rest/api/latest/projects/<KEY>/repos/<slug>`:
+
+- **Its ordinary change** is a pull request from the project's own branch onto the default branch (`POST /pull-requests` with `fromRef` and `toRef`, as a draft when asked), named `#N`; its head is the full commit id the server names (`fromRef.latestCommit`), and `changeFor` lists the branch's open outgoing pull requests (`at`, `direction=OUTGOING`).
+- **Its story** is the saved story's Markdown with every picture on the merge card (`media: "card-only"`); a description is replaced at the version read (`PUT` with `version`), keeping the reviewers, and the server refuses an older version.
+- **Its checks** are the build statuses on the head (`GET /rest/build-status/latest/commits/<id>`), the newest per key; a cancelled build reads cancelled.
+- **Its readiness** is the server's own merge check (`GET .../pull-requests/<N>/merge`): a draft, a conflict, any veto such as a missing approval or build, or not known yet.
+- **Its merge** is a squash where the repository's merge strategies allow one, otherwise a rebase merge (`rebase-no-ff`), then a merge commit (`no-ff`), read from `GET .../settings/pull-requests`.
+  The app reads the pull request, sends nothing when its head is not the checked version, and merges at the version it read (`POST .../merge?version=<N>`): a push in between moves the version, the server refuses the merge with a 409, and nothing goes in.
+- **Closing** declines the pull request at its version, and a branch is deleted through `branch-utils`.
+
+**Not yet on Data Center:** the crew's gateway (`api`), comments and their wake, the main-failure wake, Pipelines-style run logs, forks, batches, the personal panel's open pull requests, and a computer that runs work signing in there before it has this version.
 
 ## GitLab merge requests
 
@@ -418,7 +448,7 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub, GitHub Enterpri
   Its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work" (`way`), and its git's helper asks that computer's GitHub CLI at each push.
   An older computer that sends no `githubCli` is offered the code alone.
 - **Hosts on the person's own server, there.**
-  The computer's `ForgeSignIns` also holds the same servers as this Mac (`forgeSignInServers`): GitHub Enterprise and GitLab, on gitlab.com or the person's own server, and Bitbucket at bitbucket.org ("Hosts on your own server", "GitLab sign-in" and "Bitbucket sign-in" above).
+  The computer's `ForgeSignIns` also holds the same servers as this Mac (`forgeSignInServers`): GitHub Enterprise and GitLab, on gitlab.com or the person's own server, and Bitbucket, at bitbucket.org or on a Bitbucket Data Center server ("Hosts on your own server", "GitLab sign-in", "Bitbucket sign-in" and "Bitbucket Data Center" above).
   Its forges list them (`servers`), and Settings -> Integrations draws a chip for each under that computer's rows, "GitHub Enterprise on Mac mini" and "GitLab on Mac mini", which opens the same key form, or GitLab's browser setup, naming that computer.
   A key is typed here and sent once with `inf:devices:forge-sign-in-key`, which asks the computer `inf:sign-ins:forge-key` (`DeviceSignIns.forgeWithKey`); the computer asks the server who the key is and keeps it, and answers only whether it kept it, so this Mac keeps nothing of it.
   GitLab's browser code runs there like GitHub's (`inf:devices:forge-sign-in-browser`, `inf:sign-ins:forge-browser`): the computer asks the server for the code with the Application ID the captain entered here, the code shows under the chips, and the computer keeps the sign-in.

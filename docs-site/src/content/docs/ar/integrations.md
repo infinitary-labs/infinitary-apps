@@ -1,5 +1,5 @@
 ---
-source: 48dd73d5a1c0ec46
+source: a2f4b38f0b300f73
 title: التكاملات
 description: ربط GitHub وGitLab وBitbucket وGoogle وخوادم MCP كي يصل إليها نائب القبطان والطاقم، واختيار ما يجوز لكل منها فعله دون أن يسألك.
 ---
@@ -40,6 +40,8 @@ description: ربط GitHub وGitLab وBitbucket وGoogle وخوادم MCP كي �
 - **GitLab**: تسجّل الدخول في متصفحك أو تلصق مفتاحًا، على gitlab.com أو على خادم GitLab الخاص بك.
 - **GitHub Enterprise**: تُنشئ مفتاحًا على خادمك الخاص وتلصقه هنا.
 - **Bitbucket**: تُنشئ رمز API في حسابك على Atlassian وتلصقه هنا، لـ bitbucket.org.
+  ولخادم Bitbucket Data Center الخاص بك، بالإصدار 8.19 أو أحدث، تُدخل عنوانه وتلصق رمز وصول HTTP تُنشئه عليه، بصلاحيتي Project read وRepository write.
+  لا يقدّم صف Data Center أي إجراءات بعد.
 
 لكل صف إجراءان: واحد يقرأ، وآخر يغيّر شيئًا، مثل **تغيير شيء على GitHub**.
 يستخدمهما نائب القبطان والطاقم للبحث عن أمور أو التصرف هناك خارج عمل المهمة نفسها.

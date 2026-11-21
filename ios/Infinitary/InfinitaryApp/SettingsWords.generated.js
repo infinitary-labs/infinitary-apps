@@ -12856,8 +12856,9 @@ ${events}` : prompt;
       quickActions: false,
       holdsOnlyKnownHosts: true,
       addressExample: "bitbucket.org",
-      // Atlassian keeps every API token on the person's account, not on bitbucket.org.
-      keyPage: () => "https://id.atlassian.com/manage-profile/security/api-tokens",
+      // Atlassian keeps every Cloud API token on the person's account, not on
+      // bitbucket.org; a Data Center server keeps its HTTP access tokens itself.
+      keyPage: (host) => host === "bitbucket.org" ? "https://id.atlassian.com/manage-profile/security/api-tokens" : `https://${host}/plugins/servlet/access-tokens/manage`,
       keyAccount: "your Atlassian account",
       keyScopes: [
         "read:user:bitbucket",
@@ -12869,15 +12870,31 @@ ${events}` : prompt;
         "read:pipeline:bitbucket",
         "write:pipeline:bitbucket"
       ],
-      batches: true
+      batches: true,
+      // Bitbucket Data Center on the person's own server: its own pages, and no
+      // batches until its batch pull request is built (`docs/forge.md`,
+      // "Bitbucket Data Center").
+      server: { projectPage: bitbucketServerProjectPage, batches: false }
     }
   };
+  function bitbucketServerProjectPage(owner, name) {
+    const segments = owner.split("/").filter(Boolean);
+    const key = (segments[0]?.toLowerCase() === "scm" ? segments.slice(1) : segments).join("/");
+    const slug = encodeURIComponent(name.toLowerCase());
+    if (key.startsWith("~"))
+      return `users/${encodeURIComponent(key.slice(1).toLowerCase())}/repos/${slug}`;
+    return `projects/${encodeURIComponent(key.toUpperCase())}/repos/${slug}`;
+  }
   function changeRequestKind(kind) {
     return CHANGE_REQUEST_KINDS.find((entry) => entry === kind);
   }
   function changeRequestHost(kind) {
     const known = changeRequestKind(kind);
     return known ? CHANGE_REQUEST_HOSTS[known] : void 0;
+  }
+  function serverFactsAt(kind, host) {
+    const facts = changeRequestHost(kind);
+    return facts && host && host !== facts.publicHost ? facts.server : void 0;
   }
   function hasChangeRequests(kind) {
     return changeRequestKind(kind) !== void 0;
@@ -14878,7 +14895,8 @@ ${events}` : prompt;
     name: string().nullable()
   }).nullable();
   function hostTakesBatches(host) {
-    return changeRequestHost(host?.kind)?.batches ?? false;
+    const server = serverFactsAt(host?.kind, host?.name);
+    return server ? server.batches : changeRequestHost(host?.kind)?.batches ?? false;
   }
   function readsPullRequestChecks(repo) {
     return repo.kind !== "personal" && opensPullRequest(repo.delivery) && !!repo.origin && hasChangeRequests(repo.host?.kind);

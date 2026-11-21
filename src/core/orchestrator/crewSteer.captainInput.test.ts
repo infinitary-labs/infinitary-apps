@@ -1,3 +1,5 @@
+import { type CardNote, MARKED_PICTURES_LINE } from "@shared/cardNotes";
+import type { TurnImage } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -6,8 +8,6 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
-import { type CardNote, MARKED_PICTURES_LINE } from "@shared/cardNotes";
-import type { TurnImage } from "@shared/cards";
 import type { InboxRow } from "../storage/inboxStore";
 import { TaskEventStore } from "../storage/taskEventStore";
 import { renderWake, replyWordsSpan, type WakeFacts } from "./wakes";

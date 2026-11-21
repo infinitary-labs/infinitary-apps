@@ -162,11 +162,14 @@ import XCTest
                 let computerID = try XCTUnwrap(layout["computerID"] as? String)
                 let places = try XCTUnwrap(layout["places"] as? [String: [String: Any]])
                 let program = try XCTUnwrap(roster.computers.first { $0.id == computerID }?.programs.first { $0.id == programID })
-                XCTAssertEqual(Set(program.branches.map(\.id)), Set(places.keys))
-                for branch in program.branches {
-                    let expected = try XCTUnwrap(places[branch.id])
-                    XCTAssertEqual(cos(branch.angle) * branch.distance, try XCTUnwrap(expected["x"] as? Double), accuracy: 0.000001)
-                    XCTAssertEqual(sin(branch.angle) * branch.distance, try XCTUnwrap(expected["y"] as? Double), accuracy: 0.000001)
+                // Where each running part circles on its program's rings at the start, as the desktop's layoutProgram.
+                let native = program.places(at: 0)
+                XCTAssertEqual(Set(native.map(\.id)), Set(places.keys))
+                for place in native {
+                    let expected = try XCTUnwrap(places[place.id])
+                    XCTAssertEqual(place.x, try XCTUnwrap(expected["x"] as? Double), accuracy: 0.000001)
+                    XCTAssertEqual(place.y, try XCTUnwrap(expected["y"] as? Double), accuracy: 0.000001)
+                    XCTAssertEqual(place.z, try XCTUnwrap(expected["z"] as? Double), accuracy: 0.000001)
                 }
             }
             let motion = PhoneSceneMotion()

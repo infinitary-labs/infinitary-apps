@@ -1,12 +1,19 @@
 // A task with parts on the crew orbit: its mark, seated on the first orbit
-// among the crew, the constellation its running parts draw
-// (./constellation.ts lays it out), and the results that ride its branches
-// to the mark and home. The orbit model (./orbit.ts) keeps the programs,
+// among the crew, its running parts circling it on a small tilted ring
+// (./constellation.ts lays them out), the gem its finished parts build round
+// the mark, and the results that fly to the mark and home. The orbit model (./orbit.ts) keeps the programs,
 // spaces their marks with its crew and feeds them every frame; here a
 // program's state changes, its parts are placed, and it is painted.
 
 import { clamp01, easeInOut, type Spring } from "../face";
-import { CONSTELLATION, layoutProgram, type NodePlace, type ProgramPart } from "./constellation";
+import {
+  CONSTELLATION,
+  layoutProgram,
+  type MoonRing,
+  type NodePlace,
+  type ProgramPart,
+  ringPoint,
+} from "./constellation";
 import type {
   CrewmateFrame,
   LeaveMode,
@@ -22,12 +29,14 @@ import { SCENE_REACH_PX } from "./satellites";
 /** A landing brightens what it lands on for this long: a steer its crewmate, a result its mark. */
 export const FLASH_MS = 360;
 
-/** A result riding a constellation's branches: node ids from where it starts, the program's id at the root. */
+/** A result flying to the mark: the part it starts from and the program's id, or the program's id alone going home. */
 type RoutePacket = { route: string[]; at: number; home: boolean };
 
 export type ProgramState = {
   id: string;
   parts: ProgramPart[];
+  /** How much of the program has finished, 0..1, for its gem (`programShare`). */
+  share: number;
   /**
    * The mark's seat on the first orbit, travelling with it: an occupant
    * like a crewmate, so the plane spaces crew and marks evenly together
@@ -42,32 +51,25 @@ export type ProgramState = {
   packets: RoutePacket[];
 };
 
-/** A live part's node, and every part of its parent, whose waits are branches. */
-export type Seat = { x: number; y: number; z: number; siblings: ReadonlySet<string> };
+/** Where a running part circles this frame. */
+export type Seat = { x: number; y: number; z: number };
 
-/** A program's mark and the places of its parts, in scene space before a remote cluster's projection. */
+/** A program's mark, where its parts circle and their rings, in scene space before a remote cluster's projection. */
 export type ProgramLayout = {
   program: ProgramState;
   root: SceneSlot;
   places: Map<string, NodePlace>;
+  rings: MoonRing[];
+  /** The stage's clock, seconds, which turns the gem. */
+  seconds: number;
 };
 
-/**
- * A program's running parts as they are now. A part that starts under
- * another running part's released wait takes a packet down that branch.
- * True when what it draws changed.
- */
-export function takeParts(program: ProgramState, parts: ProgramPart[], now: number): boolean {
-  const before = new Set(program.parts.map((part) => part.id));
-  for (const part of parts) {
-    if (before.has(part.id)) continue;
-    for (const parent of part.parents)
-      program.packets.push({ route: [parent, part.id], at: now, home: false });
-  }
-  const key = (parts: readonly ProgramPart[]) =>
-    parts.map((part) => `${part.id}:${part.state}:${part.parents.join("+")}`).join();
-  if (key(program.parts) === key(parts)) return false;
+/** A program's running parts and its share finished as they are now. True when what it draws changed. */
+export function takeParts(program: ProgramState, parts: ProgramPart[], share: number): boolean {
+  const key = (parts: readonly ProgramPart[]) => parts.map((part) => part.id).join();
+  if (key(program.parts) === key(parts) && program.share === share) return false;
   program.parts = parts;
+  program.share = share;
   return true;
 }
 
@@ -86,19 +88,6 @@ export function programOfPart(
   for (const program of programs)
     if (!program.leaving && program.parts.some((part) => part.id === id)) return program;
   return undefined;
-}
-
-/** A part's way up to the mark, by its first parent at each step. */
-export function routeHome(program: ProgramState, id: string): string[] {
-  const byId = new Map(program.parts.map((part) => [part.id, part]));
-  const route = [id];
-  let at = byId.get(id);
-  while (at?.parents[0] && !route.includes(at.parents[0])) {
-    route.push(at.parents[0]);
-    at = byId.get(at.parents[0]);
-  }
-  route.push(program.id);
-  return route;
 }
 
 /**
@@ -130,37 +119,41 @@ export function layoutPrograms(
   return [...programs].map((program) => {
     const angle = program.rootAngle.x + planePhase(0, slotTime);
     const root = { ...scene(0, angle, radius), radius };
-    const places = layoutProgram(
+    const seconds = slotTime / 1000;
+    const { places, rings } = layoutProgram(
       program.parts,
       root,
       SCENE_REACH_PX,
       CONSTELLATION.crewGapPx / share,
+      seconds,
     );
-    return { program, root, places };
+    return { program, root, places, rings, seconds };
   });
 }
 
-/** Where each live part sits at its node, for its crewmate to be drawn there (./companions.ts). */
+/** Where each live part circles, for its crewmate to be drawn there (./companions.ts). */
 export function partSeats(layouts: readonly ProgramLayout[]): Map<string, Seat> {
   const seats = new Map<string, Seat>();
   for (const layout of layouts) {
     if (layout.program.leaving) continue;
-    const siblings = new Set(layout.program.parts.map((part) => part.id));
     for (const part of layout.program.parts) {
       const place = layout.places.get(part.id);
       if (part.state === "live" && place)
-        seats.set(part.id, { x: place.x, y: place.y, z: layout.root.z, siblings });
+        seats.set(part.id, { x: place.x, y: place.y, z: layout.root.z + place.z });
     }
   }
   return seats;
 }
 
+/** The faint ring line's points round a ring: enough that its ellipse reads smooth at the stage's size. */
+const RING_LINE_POINTS = 48;
+
 /**
- * Paint-ready constellations, and their results in flight among the
- * packets: a branch lights while a result rides it, the mark lights when
- * one lands, and a result that reaches the core is `receive`d there. A
- * closing program folds into its mark, which then falls home, or fades;
- * `ended` names each one that has finished going, for the orbit to forget.
+ * Paint-ready programs, and their results in flight among the packets: a
+ * part's result flies to the mark, which lights when it lands, and a result
+ * that reaches the core is `receive`d there. A closing program folds its
+ * rings into its mark, which then falls home, or fades; `ended` names each
+ * one that has finished going, for the orbit to forget.
  */
 export function programFrames(
   layouts: readonly ProgramLayout[],
@@ -174,10 +167,10 @@ export function programFrames(
 ): { frames: ProgramFrame[]; ended: string[] } {
   const frames: ProgramFrame[] = [];
   const drawn = new Map(crew.filter((c) => c.phase !== "leaving").map((c) => [c.id, c]));
-  // A result that climbs from a part just finished starts at its crewmate, going or not.
+  // A result from a part just finished starts at its crewmate, going or not.
   const anywhere = new Map(crew.map((c) => [c.id, c]));
   const ended: string[] = [];
-  for (const { program, root, places } of layouts) {
+  for (const { program, root, places, rings, seconds } of layouts) {
     const t = program.leaving
       ? settled
         ? 1
@@ -199,25 +192,22 @@ export function programFrames(
         : 1 - easeIn(clamp01(t))
       : 1;
     const rootPoint = project(root, root.radius);
-    const at = new Map<string, Point>();
     const nodes: ProgramFrame["nodes"] = [];
-    // Only a part whose crewmate is drawn here is a node: nothing else is painted.
-    for (const part of program.parts) {
+    // Only a part whose crewmate is drawn here is a node, and a closed program has none.
+    for (const part of program.leaving ? [] : program.parts) {
       const mate = places.has(part.id) ? drawn.get(part.id) : undefined;
-      if (!mate) continue;
-      at.set(part.id, { x: mate.x, y: mate.y });
-      nodes.push({ id: part.id, x: mate.x, y: mate.y });
+      if (mate) nodes.push({ id: part.id, x: mate.x, y: mate.y });
     }
     // The mark falls home over the last stretch of a done close.
     const fall = home ? easeIn(clamp01((t - foldMs) / (1 - foldMs))) : 0;
     const mark = { x: rootPoint.x * (1 - fall), y: rootPoint.y * (1 - fall) };
-    at.set(program.id, mark);
-    const lit = new Set<string>();
     const keep: RoutePacket[] = [];
     for (const packet of program.packets) {
-      const points = packet.route
-        .map((id) => at.get(id) ?? anywhere.get(id))
-        .filter((p): p is Point => !!p);
+      const points: Point[] = [];
+      for (const id of packet.route) {
+        const at = id === program.id ? mark : anywhere.get(id);
+        if (at) points.push({ x: at.x, y: at.y });
+      }
       if (packet.home) points.push({ x: 0, y: 0 });
       const legs = Math.max(1, points.length - 1);
       const dur = tuning.packetMs * (0.6 + 0.4 * legs);
@@ -233,9 +223,6 @@ export function programFrames(
       const a = points[leg] as Point;
       const b = points[leg + 1] as Point;
       const s = along - leg;
-      const from = packet.route[leg];
-      const to = packet.route[leg + 1];
-      if (from && to) lit.add(`${from}>${to}`).add(`${to}>${from}`);
       packets.push({
         direction: "report",
         x: a.x + (b.x - a.x) * s,
@@ -245,13 +232,20 @@ export function programFrames(
       });
     }
     program.packets = keep;
-    const branches: ProgramFrame["branches"] = [];
-    for (const part of program.parts) {
-      if (!at.has(part.id)) continue;
-      const parents = part.parents.filter((id) => at.has(id));
-      for (const fromId of parents.length ? parents : [program.id])
-        branches.push({ fromId, toId: part.id, lit: lit.has(`${fromId}>${part.id}`) });
-    }
+    // The faint ring line the parts circle on, drawn through the same
+    // projection as the crew; it folds into the mark on a done close.
+    const lines: ProgramFrame["rings"] = [];
+    if (fold < 1)
+      for (const ring of rings) {
+        const folded = { ...ring, radius: ring.radius * (1 - fold) };
+        const line: ProgramFrame["rings"][number] = [];
+        for (let i = 0; i <= RING_LINE_POINTS; i++) {
+          const at = ringPoint(folded, (i / RING_LINE_POINTS) * Math.PI * 2);
+          const p = project({ x: root.x + at.x, y: root.y + at.y, depth: root.depth }, root.radius);
+          line.push({ x: p.x * (1 - fall), y: p.y * (1 - fall), near: at.z > 0 });
+        }
+        lines.push(line);
+      }
     // The fall is the one result home: it lands in the core.
     if (home && t > 0 && fall > 0)
       packets.push({ direction: "report", x: mark.x, y: mark.y, t: fall, alpha: 1 - fall });
@@ -262,8 +256,10 @@ export function programFrames(
       depth: rootPoint.depth,
       alpha: fade * (1 - fall),
       lit: settled ? 0 : clamp01(1 - (now - program.litAt) / FLASH_MS),
+      gem: home ? 1 : program.share,
+      spin: seconds * CONSTELLATION.gemSpinRadS,
       nodes: fold >= 1 ? [] : nodes,
-      branches: fold >= 1 ? [] : branches,
+      rings: lines,
     });
   }
   return { frames, ended };

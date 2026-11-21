@@ -41,8 +41,8 @@ import { BATCH_GATE } from "@shared/batchGate";
 // toward the cluster.
 //
 // Beside it: the screen-space paths and ellipses (./orbitPaths.ts), the
-// companions that circle a blocker or sit at a node (./companions.ts), and
-// the tasks with parts drawn as constellations (./programs.ts).
+// companions that circle a blocker or a program's mark (./companions.ts), and
+// the tasks with parts drawn as their parts circling a mark (./programs.ts).
 
 import type { CenterCue } from "@shared/dependencyVisual";
 import type { Slot } from "@shared/modelSlots";
@@ -50,7 +50,7 @@ import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
 import { type WarpFrame, warpCrewTravel } from "../warp";
 import { type CircleBase, companionTargets, seatParts, withReviewCues } from "./companions";
-import { type Program, runningParts } from "./constellation";
+import { type Program, programShare, runningParts } from "./constellation";
 import { FIXED_STARS, skyPlaces, twinkleOf } from "./fixedStars";
 import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import {
@@ -73,7 +73,6 @@ import {
   partSeats,
   programFrames,
   programOfPart,
-  routeHome,
   type Seat,
   takeParts,
 } from "./programs";
@@ -273,10 +272,10 @@ export type PacketFrame = {
 export type DependencyLink = { fromId: string; toId: string; kind: "wait" | "review" };
 
 /**
- * A task with parts as a branching constellation (./constellation.ts): the
- * program's mark on the first orbit, a node for every running part whose
- * crewmate is drawn there, and a branch for every link it hangs from. A
- * finished or unstarted part draws nothing (INF-1037). Px from the
+ * A task with parts (./constellation.ts): the program's mark on the first
+ * orbit, a node for every running part whose crewmate is drawn there as it
+ * circles the mark, the faint rings they circle on, and the gem round the
+ * mark. A finished or unstarted part draws nothing (INF-1037). Px from the
  * Firstmate's center, like a crewmate.
  */
 export type ProgramFrame = {
@@ -287,10 +286,14 @@ export type ProgramFrame = {
   alpha: number;
   /** 0..1: a result has just landed on the mark. */
   lit: number;
+  /** 0..1: the share of its parts finished, as the gem's wires; 0 draws the plain ring. */
+  gem: number;
+  /** The gem's turn, radians. */
+  spin: number;
   /** Each running part, where its crewmate is drawn. */
   nodes: Array<{ id: string; x: number; y: number }>;
-  /** `fromId` is the program's own id at the root. */
-  branches: Array<{ fromId: string; toId: string; lit: boolean }>;
+  /** Each ring the parts circle on, as a closed line; `near` is its half toward the viewer. */
+  rings: Array<Array<{ x: number; y: number; near: boolean }>>;
 };
 
 export type OrbitFrame = {
@@ -320,7 +323,7 @@ export type OrbitFrame = {
   idle: number;
   /** An arrow for every wait and review on this orbit, circling or on a slot. Empty when there are none. */
   links: DependencyLink[];
-  /** Every task with parts on this orbit, as a constellation. Empty when there are none. */
+  /** Every task with parts on this orbit, its parts circling its mark. Empty when there are none. */
   programs: ProgramFrame[];
   /** The hairline joining the fixed stars, neighbour to neighbour; absent when there are none. */
   starJoins?: StarJoin[];
@@ -585,11 +588,9 @@ export class CrewOrbit {
    * The board's tasks with parts (./constellation.ts), of which only the
    * running parts draw (INF-1037). A program first draws once one of its
    * parts is underway and keeps its mark while it is open, even with none
-   * running; a part that starts under another running part's released wait
-   * takes a packet down that branch; the
-   * parent's close folds the tree into its mark (done), which then falls
-   * home, or fades it (dropped). A closed program the stage never drew
-   * draws nothing.
+   * running, and its gem gains a wire as each part finishes; the parent's
+   * close folds the rings into its mark (done), which then falls home, or
+   * fades it (dropped). A closed program the stage never drew draws nothing.
    */
   setPrograms(list: readonly Program[], now: number): void {
     let changed = false;
@@ -599,12 +600,14 @@ export class CrewOrbit {
       seen.add(program.id);
       const had = this.programs.get(program.id);
       const parts = runningParts(program.parts);
+      const share = programShare(program);
       if (!had) {
         if (program.state !== "live" || parts.length === 0) continue;
         const rootSlot = this.openPlaneSlot(0);
         this.programs.set(program.id, {
           id: program.id,
           parts,
+          share,
           rootSlot,
           rootAngle: new Spring(rootSlot, 0.7, 1),
           leaving: null,
@@ -617,7 +620,8 @@ export class CrewOrbit {
         continue;
       }
       if (had.leaving) continue;
-      if (takeParts(had, parts, now)) changed = true;
+      // A closing program keeps the rings it last drew, to fold them into its mark.
+      if (program.state === "live" && takeParts(had, parts, share)) changed = true;
       if (program.state !== "live") {
         endProgram(had, program.state === "done" ? "home" : "away", now);
         changed = true;
@@ -788,13 +792,13 @@ export class CrewOrbit {
   signal(id: string, direction: PacketDirection, now: number): void {
     const c = this.crew.get(id);
     if (direction === "report") {
-      // A part's report is its result: it climbs its branches to the mark.
+      // A part's report is its result: it flies to its program's mark.
       // The program's own report, with no crewmate of its own here, is the
       // one result home.
       const owner =
         c && c.phase !== "leaving" ? programOfPart(this.programs.values(), id) : undefined;
       const program = this.programs.get(id);
-      if (owner) owner.packets.push({ route: routeHome(owner, id), at: now, home: false });
+      if (owner) owner.packets.push({ route: [id, owner.id], at: now, home: false });
       else if (!c && program && !program.leaving)
         program.packets.push({ route: [id], at: now, home: true });
       if (owner || (!c && program)) {
@@ -1469,7 +1473,7 @@ export class CrewOrbit {
       if (program?.leaving === "home" && !settled) this.cues.push({ kind: "receive" });
     }
     if (ended.length > 0) this.bump();
-    // The warp's riders: every orbiting crewmate not drawn on a constellation.
+    // The warp's riders: every orbiting crewmate not circling a program's mark.
     if (w) {
       const riders = crewFrames.filter(
         (f) => f.phase === "orbiting" && !seats.has(f.id) && (f.star ?? 0) < 0.5,
@@ -1506,7 +1510,7 @@ export class CrewOrbit {
    * Ease each pinned crewmate to its place in the sky and back (INF-3634):
    * the constellation over the occupied orbits, in pin order. A spark flies
    * to its slot first and rises once it arrives; a part seated on its
-   * program's branches stays there; a departing star leaves from where it
+   * program's ring stays there; a departing star leaves from where it
    * hangs. Returns the hairline joining the stars.
    */
   private applyStars(

@@ -114,24 +114,24 @@ As two related glyphs close in on screen the arrow's clearance gives way, so a s
 Crew cross and pass close to one another freely; nothing moves a crewmate aside to keep it clear of another.
 A missing blocker, or one with no crewmate yet, is a named link in the summary, never an invented crewmate and never a move.
 Continuing, paused and unknown work keep their slots, colors, solids, labels and review cues.
-Only visible main-orbit occupants take angular seats (INF-1375, approved A), including visible program rings but excluding crew on relationship circles and program branches.
+Only visible main-orbit occupants take angular seats (INF-1375, approved A), including visible program rings but excluding crew on relationship circles and program rings.
 Logical orbit membership still controls allocation and growth; a fallback crew member counts wherever it is drawn.
 Clearing the wait opens a seat in the widest visible gap on the same orbit and the offset glides home on the existing springs.
 Survivors keep their circular order, and Reduce Motion snaps to the resolved layout.
 Reduced motion paints one settled frame.
 Row inspection does not pause the stage; pointing at the glyph still does.
 
-A task split into parts (captain's INF-799 choice, the branching constellation): the parent is a small hollow ring on the first orbit, travelling with it, and only its running parts draw, each as its crewmate on a branch (INF-1037); a finished, unstarted or dropped part draws nothing.
-A running part hangs from the ring, or from a running part it still waits on under a released wait.
-Layers grow outward from the ring, 60 px for the first and each later one 0.82 of the one before, each layer spread evenly across 70 degrees and ordered by its parents' angles so a chain stays straight.
-Crewmates keep their full size and a glyph's width (25 px) apart: a crowded layer widens its fan up to 180 degrees, then moves outward; the whole graph scales about the ring when a node would leave the stage.
-With parts running on several computers, each computer's group draws its own copy of the ring with the crewmates running there.
-A branch has the wait arrow's weight (`--fg-3` at 0.28, 1 px, no arrowhead) and lights in the accent at 0.7 and 1.4 px while a result rides it.
-A working or idle part keeps its own solid, heat, label and spark, seated at its node without reserving an invisible main-orbit seat.
-A part's report climbs its branches to the ring, which lights as it lands.
+A task split into parts (captain's INF-5365 choice, moons): the parent is a small hollow ring on the first orbit, travelling with it, and only its running parts draw, each as its crewmate circling the ring on a tilted moon ring (INF-1037); a finished, unstarted or dropped part draws nothing.
+Up to ten parts share one ring of at least 40 px, tilted 40 degrees and turning 26 degrees a second, evenly spaced in the order filed; more take a second ring at least 26 px further out, tilted 22 degrees and turning the other way.
+The ring line is faint, the quiet color at 0.3 in front of the mark and 0.13 behind it, 1 px; parts in front draw over the mark.
+Crewmates keep their full size and at least 30 px of arc each; the whole program scales about the mark when a part would leave the stage.
+Inside the mark a 10 px icosahedron gem turns slowly in the accent, gaining a wire for each thirtieth of the program finished, at least one, and whole when the program is done.
+With parts running on several computers, each computer's group draws its own copy of the mark with the crewmates running there, each gem showing the whole program.
+A working or idle part keeps its own solid, heat, label, spark and wait arrows, circling without reserving an invisible main-orbit seat.
+A part's report flies straight to the mark, which lights as it lands, its newest wire white-hot for a moment.
 Pointing at the ring opens its summary with the program's parts under its head: a PARTS row with the counts ("20 finished, 5 running, 0 waiting"), under it a 3 px bar of each state's share (finished `--fg-3`, running `--accent`, waiting a `--line-2` outline, 2 px apart), and a RUNNING row with each running part's key (mono, `--text-xs`, opens its record) and, in `--fg-3`, the computer it runs on.
-When the parent closes done the tree folds into its ring, which falls home into the first mate as the one result home; a dropped parent fades where it stands.
-A parent with a crewmate of its own keeps today's look, and only branches the graph recorded are drawn.
+When the parent closes done its rings fold into the mark, the gem whole, and the mark falls home into the first mate as the one result home; a dropped parent fades where it stands.
+A parent with a crewmate of its own keeps today's look.
 Reduced motion paints one settled frame.
 
 ## Batch gate

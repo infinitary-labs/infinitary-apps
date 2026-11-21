@@ -18,12 +18,21 @@
     "acrossMs": 1000
   },
   "program": {
-    "branchPx": 60,
-    "branchDecay": 0.82,
-    "spreadDeg": 70,
+    "ringPx": 40,
+    "tiltDeg": 40,
+    "speedDegS": 26,
+    "secondRingPastParts": 10,
+    "ringLineNear": 0.3,
+    "ringLineFar": 0.13,
+    "partArcPx": 30,
+    "ringStepPx": 26,
+    "secondTiltDropDeg": 18,
+    "firstNodeRad": -0.3,
+    "secondNodeRad": 1.1,
     "rootMarkPx": 5,
     "crewGapPx": 25,
-    "widestSpreadDeg": 180
+    "gemPx": 10,
+    "gemSpinRadS": 0.5
   },
   "firstmateID": "firstmate",
   "dependency": {
@@ -1271,6 +1280,128 @@
       "nodes": 12
     }
   },
+  "gemWires": [
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      5
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      0,
+      7
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      2,
+      8
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      6
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      3,
+      9
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      4,
+      9
+    ],
+    [
+      3,
+      11
+    ],
+    [
+      7,
+      11
+    ],
+    [
+      5,
+      11
+    ],
+    [
+      9,
+      11
+    ],
+    [
+      4,
+      10
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ]
+  ],
   "planes": [
     {
       "radius": 256,

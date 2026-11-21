@@ -79,11 +79,11 @@ async function viewRow(home: LaunchedApp): Promise<Locator> {
   return selectDevice(home.page, id as string);
 }
 
-/** The row's line under the app's version says the step it is at. */
+/** The row's notice under the app's version says the step it is at, beside Update app while offered. */
 async function step(row: Locator, said: string, words: string): Promise<void> {
-  const line = row.locator("[data-device-app-follow]");
-  await expect(line).toHaveAttribute("data-device-app-follow", said, { timeout: 60_000 });
-  await expect(line).toHaveText(words);
+  const notice = row.locator("[data-device-app-follow]");
+  await expect(notice).toHaveAttribute("data-device-app-follow", said, { timeout: 60_000 });
+  await expect(notice.locator("[data-notice-text]")).toHaveText(words);
 }
 
 /** Each version that reached the app's own installer, once its last check passed. */
@@ -231,12 +231,15 @@ test("an app on another computer that cannot update by itself says why on its ro
     opened.push(view);
 
     const row = await viewRow(home);
-    const line = row.locator("[data-device-app-follow]");
-    await expect(line).toHaveAttribute("data-device-app-follow", "cannot", { timeout: 60_000 });
-    await expect(line).toHaveText(
+    const notice = row.locator("[data-device-app-follow]");
+    await expect(notice).toHaveAttribute("data-device-app-follow", "cannot", { timeout: 60_000 });
+    await expect(notice.locator("[data-notice-text]")).toHaveText(
       `${m.devicesAppCannot({ version })} ${m.devicesAppWhyInstallation({ version })}`,
     );
-    await expect(line).toHaveAttribute("data-tone", "warn");
+    await expect(notice).toHaveAttribute("data-tone", "warn");
+    await expect(
+      row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) }),
+    ).toHaveCount(0);
     const kept = evidence();
     if (kept) await regionShot(row, join(kept, "app-cannot-row.png"));
 

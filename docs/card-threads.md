@@ -607,6 +607,7 @@ The place of the note being written, marked again, is that note with the words w
 
 The place and the page a note marks (`docs/task-browser.md`, "Pointing at a page") are the named contract change `card-note-places`.
 A view whose hello does not list it, the phone included, reads each such note folded into the line's words: its label, mark number, place and comment.
+A draft's notes are never folded: a desktop view that keeps card drafts and does not list the change reads a waiting note without its place or page, and once it changes that card's notes every window reads that note with no mark (`src/shared/contract-changes/card-note-places.md`).
 
 `cardNoteMarks.test.ts` holds a mark's geometry as a pointer or the keys make it, and where each number is drawn.
 `tests/cardNotes.test.ts` holds the place's bounds, the numbering and the author's lines, and `cardCompatibility.test.ts` the fold for a view that reads no place.

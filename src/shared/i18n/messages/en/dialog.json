@@ -3,5 +3,7 @@
   "dialogAttach": "Attach",
   "dialogCancel": "Cancel",
   "dialogChoose": "Choose",
-  "dialogExport": "Export"
+  "dialogExport": "Export",
+  "dialogOpenInDock": "Infinitary is already open.",
+  "dialogOpenInDockDetail": "Click Infinitary in the Dock to show its window."
 }

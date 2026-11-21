@@ -46,6 +46,7 @@ import {
   readableLocale,
   SOURCE_LANGUAGE,
 } from "@shared/i18n/languages";
+import * as m from "@shared/i18n/messages.generated";
 import {
   chosenLanguage,
   defaultLanguage,
@@ -131,7 +132,7 @@ import {
   startedByAgent,
 } from "./runEnvironment";
 import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
-import { bundleOf, openNewCopy, openWindowOnReopen } from "./runReopen";
+import { bundleOf, openNewCopy, openWindowOnReopen, reopenOlderWindow } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -794,6 +795,11 @@ export async function startApp(
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
+      // macOS's reopen reached this launch rather than the window it was meant for (`reopenOlderWindow`).
+      let activatedSelf = false;
+      app.once("activate", () => {
+        activatedSelf = true;
+      });
       const kind = await lockHolderKind({
         running: () => runningByCommand(dataDir),
         answered: () => existsSync(answer),
@@ -808,11 +814,39 @@ export async function startApp(
         // A pipe is read again each second, so a command's pipe gone is seen and its next holder asked.
         readEveryMs: onWindows ? 1_000 : STOPPED_RUN_WAIT_MS,
       });
+      const answeredByWindow = existsSync(answer);
       rmSync(answer, { force: true });
       console.warn(
         `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${kind === "free" ? "nothing now" : `a ${kind}`}`,
       );
-      if (kind !== "window") relaunchWith(process.argv.slice(1));
+      // A window told only by what it runs as is one from before the answer: on a Mac it may have
+      // closed its last window and opened none at the ask, so it is asked once to reopen as a click
+      // in the Dock does, and the person is told to click it there where that is not confirmed.
+      const reopened =
+        kind === "window" && !answeredByWindow && hostPlatform() === "darwin"
+          ? await reopenOlderWindow({
+              bundle: app.isPackaged ? bundleOf(process.execPath) : null,
+              holderAlive: () => typeof lockHolderNow() === "number",
+              reachedSelf: () => activatedSelf,
+            })
+          : null;
+      if (reopened === "unconfirmed") {
+        await app.whenReady();
+        setCurrentLanguage(
+          startLanguage(
+            app.getPreferredSystemLanguages(),
+            languageOverride(process.env, app.isPackaged),
+          ),
+        );
+        app.focus({ steal: true });
+        await dialog.showMessageBox({
+          type: "info",
+          title: "Infinitary",
+          message: m.dialogOpenInDock(),
+          detail: m.dialogOpenInDockDetail(),
+        });
+      }
+      if (kind !== "window" || reopened === "gone") relaunchWith(process.argv.slice(1));
       app.quit();
     } else app.quit();
   } else {

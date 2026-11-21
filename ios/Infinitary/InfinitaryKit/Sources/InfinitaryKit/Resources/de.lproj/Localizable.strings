@@ -833,6 +833,8 @@
 "dialogCancel" = "Abbrechen";
 "dialogChoose" = "Wählen";
 "dialogExport" = "Exportieren";
+"dialogOpenInDock" = "Infinitary ist bereits geöffnet.";
+"dialogOpenInDockDetail" = "Klick im Dock auf Infinitary, um sein Fenster zu zeigen.";
 "feedAnswered" = "Beantwortet";
 "feedAnsweredWith" = "Beantwortet: %1$@";
 "feedAsksFirst" = "fragt vorher";

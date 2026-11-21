@@ -913,6 +913,8 @@
   {"said":{"m":"dialogCancel"},"words":"Cancel"},
   {"said":{"m":"dialogChoose"},"words":"Choose"},
   {"said":{"m":"dialogExport"},"words":"Export"},
+  {"said":{"m":"dialogOpenInDock"},"words":"Infinitary is already open."},
+  {"said":{"m":"dialogOpenInDockDetail"},"words":"Click Infinitary in the Dock to show its window."},
   {"said":{"m":"feedAnswered"},"words":"Answered"},
   {"said":{"m":"feedAnsweredWith","a":{"answer":"‹answer›"}},"words":"Answered: ‹answer›"},
   {"said":{"m":"feedAsksFirst"},"words":"asks first"},

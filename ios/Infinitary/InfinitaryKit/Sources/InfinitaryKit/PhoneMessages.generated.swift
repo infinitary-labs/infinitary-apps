@@ -882,6 +882,8 @@ public enum PhoneMessages {
     public static func `dialogCancel`() -> String { PhoneWords.format("dialogCancel", []) }
     public static func `dialogChoose`() -> String { PhoneWords.format("dialogChoose", []) }
     public static func `dialogExport`() -> String { PhoneWords.format("dialogExport", []) }
+    public static func `dialogOpenInDock`() -> String { PhoneWords.format("dialogOpenInDock", []) }
+    public static func `dialogOpenInDockDetail`() -> String { PhoneWords.format("dialogOpenInDockDetail", []) }
     public static func `feedAnswered`() -> String { PhoneWords.format("feedAnswered", []) }
     public static func `feedAnsweredWith`(`answer`: String) -> String { PhoneWords.format("feedAnsweredWith", [`answer`]) }
     public static func `feedAsksFirst`() -> String { PhoneWords.format("feedAsksFirst", []) }
@@ -4998,6 +5000,8 @@ extension PhoneWords {
         "dialogCancel": [],
         "dialogChoose": [],
         "dialogExport": [],
+        "dialogOpenInDock": [],
+        "dialogOpenInDockDetail": [],
         "feedAnswered": [],
         "feedAnsweredWith": ["answer"],
         "feedAsksFirst": [],

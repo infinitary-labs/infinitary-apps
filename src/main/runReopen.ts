@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { dirname } from "node:path";
 import { hostEnv } from "@core/hostEnv";
+import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 
 /**
  * Clicking Infinitary while only its command runs (docs/run.md, "Opened
@@ -64,4 +65,41 @@ export function openWindowOnReopen(options: {
     options.app.setActivationPolicy("prohibited");
     open(bundle, options.args);
   });
+}
+
+/** macOS's own open, asking the running app at `bundle` to reopen as a click in the Dock does; whether macOS took it. */
+export function askReopen(bundle: string): Promise<boolean> {
+  return new Promise((done) =>
+    execFile(
+      "/usr/bin/open",
+      ["-a", bundle],
+      { env: hostEnv(), timeout: RESOURCE_READ_TIMEOUT_MS },
+      (error) => done(!error),
+    ),
+  );
+}
+
+/**
+ * A launch refused the folder's lock by a window from before the launch's
+ * ask had an answer, told only by what it runs as (`holderIsWindow`), on a
+ * Mac (docs/run.md, "Opened while it runs"): that older window brings itself
+ * forward on the ask while it has a window, but one whose last window was
+ * closed keeps running in the Dock and opens nothing. The launch asks it
+ * once to reopen, as a click in the Dock does, through macOS's own open
+ * (`askReopen`), which every version opens its window on. `asked` once macOS
+ * took the ask; `gone` where the window ended meanwhile, so nothing is
+ * asked and the folder may be free; `unconfirmed` where it cannot be asked,
+ * macOS refused it, or it reached this launch instead (`reachedSelf`), for
+ * the launch to tell the person to click Infinitary in the Dock.
+ */
+export async function reopenOlderWindow(options: {
+  bundle: string | null;
+  holderAlive: () => boolean;
+  reachedSelf: () => boolean;
+  ask?: (bundle: string) => Promise<boolean>;
+}): Promise<"asked" | "gone" | "unconfirmed"> {
+  if (!options.holderAlive()) return "gone";
+  if (options.bundle === null) return "unconfirmed";
+  const taken = await (options.ask ?? askReopen)(options.bundle);
+  return taken && !options.reachedSelf() ? "asked" : "unconfirmed";
 }

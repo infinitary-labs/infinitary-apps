@@ -3,5 +3,7 @@
   "dialogAttach": "添付",
   "dialogCancel": "キャンセル",
   "dialogChoose": "選択",
-  "dialogExport": "書き出す"
+  "dialogExport": "書き出す",
+  "dialogOpenInDock": "Infinitary はすでに開いています。",
+  "dialogOpenInDockDetail": "Dock の Infinitary をクリックすると、ウインドウが表示されます。"
 }

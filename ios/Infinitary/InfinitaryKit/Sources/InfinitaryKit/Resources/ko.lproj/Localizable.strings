@@ -833,6 +833,8 @@
 "dialogCancel" = "취소";
 "dialogChoose" = "선택";
 "dialogExport" = "내보내기";
+"dialogOpenInDock" = "Infinitary가 이미 열려 있습니다.";
+"dialogOpenInDockDetail" = "Dock에서 Infinitary를 클릭하면 창이 표시됩니다.";
 "feedAnswered" = "답변함";
 "feedAnsweredWith" = "답변함: %1$@";
 "feedAsksFirst" = "먼저 물어봄";

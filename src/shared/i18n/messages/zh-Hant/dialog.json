@@ -3,5 +3,7 @@
   "dialogAttach": "附加",
   "dialogCancel": "取消",
   "dialogChoose": "選擇",
-  "dialogExport": "匯出"
+  "dialogExport": "匯出",
+  "dialogOpenInDock": "Infinitary 已經開啟。",
+  "dialogOpenInDockDetail": "按一下 Dock 中的 Infinitary 以顯示它的視窗。"
 }

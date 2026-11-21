@@ -29524,6 +29524,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Export`;
   }
+  function dialogOpenInDock() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary مفتوح بالفعل.`;
+      case "de":
+        return `Infinitary ist bereits geöffnet.`;
+      case "es":
+        return `Infinitary ya está abierto.`;
+      case "fr":
+        return `Infinitary est déjà ouvert.`;
+      case "ja":
+        return `Infinitary はすでに開いています。`;
+      case "ko":
+        return `Infinitary가 이미 열려 있습니다.`;
+      case "pt-BR":
+        return `O Infinitary já está aberto.`;
+      case "zh-Hans":
+        return `Infinitary 已经打开。`;
+      case "zh-Hant":
+        return `Infinitary 已經開啟。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš áļŕéáðý öþéñ. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is already open.‬`;
+    }
+    return `Infinitary is already open.`;
+  }
+  function dialogOpenInDockDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انقر على Infinitary في شريط Dock لإظهار نافذته.`;
+      case "de":
+        return `Klick im Dock auf Infinitary, um sein Fenster zu zeigen.`;
+      case "es":
+        return `Haz clic en Infinitary en el Dock para mostrar su ventana.`;
+      case "fr":
+        return `Cliquez sur Infinitary dans le Dock pour afficher sa fenêtre.`;
+      case "ja":
+        return `Dock の Infinitary をクリックすると、ウインドウが表示されます。`;
+      case "ko":
+        return `Dock에서 Infinitary를 클릭하면 창이 표시됩니다.`;
+      case "pt-BR":
+        return `Clique no Infinitary no Dock para mostrar a janela dele.`;
+      case "zh-Hans":
+        return `点按程序坞中的 Infinitary 以显示它的窗口。`;
+      case "zh-Hant":
+        return `按一下 Dock 中的 Infinitary 以顯示它的視窗。`;
+      case "en-XA":
+        return `[Çļîçķ Îñƒîñîţáŕý îñ ţĥé Ðöçķ ţö šĥöŵ îţš ŵîñðöŵ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Click Infinitary in the Dock to show its window.‬`;
+    }
+    return `Click Infinitary in the Dock to show its window.`;
+  }
   function feedAnswered() {
     switch (currentLanguage()) {
       case "ar":
@@ -95060,6 +95114,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     dialogCancel,
     dialogChoose,
     dialogExport,
+    dialogOpenInDock,
+    dialogOpenInDockDetail,
     feedAnswered,
     feedAnsweredWith,
     feedAsksFirst,
@@ -98108,6 +98164,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "dialogCancel": [],
     "dialogChoose": [],
     "dialogExport": [],
+    "dialogOpenInDock": [],
+    "dialogOpenInDockDetail": [],
     "feedAnswered": [],
     "feedAnsweredWith": ["answer"],
     "feedAsksFirst": [],

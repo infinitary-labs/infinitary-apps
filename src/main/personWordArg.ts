@@ -90,6 +90,11 @@ export const WORD_PROFILE_PREFIX = "infinitary-word-";
 export const WORD_PROFILES_RESERVED = ".infinitary-word-profiles";
 /** What the profiles' folder's mark says, whole. */
 export const WORD_PROFILES_MARK = "infinitary-word-profiles:1\n";
+/**
+ * What names a word's folder moved aside to be removed, in the folder it was in: never a profile's
+ * name, so only the one remover that moved it reads it.
+ */
+export const WORD_REMOVING_PREFIX = ".infinitary-word-removing-";
 /** The file in a profile naming the one copy that uses it: its process number and a line's end. */
 export const WORD_OWNER_FILE = "infinitary-word.pid";
 /** The copy's own temporary folder, inside its profile (`TEMP` and `TMP` name it). */

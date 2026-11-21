@@ -1,7 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
-  chmodSync,
   closeSync,
   constants,
   fstatSync,
@@ -15,10 +14,17 @@ import {
   type Stats,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
-import { type AccessRun, keepOwnerOnly, powerShellAccess } from "@core/storage/ownerOnly";
+import {
+  type AccessRun,
+  keepOwnerOnly,
+  ownerOnlyVerdict,
+  powerShellAccess,
+  readAccessList,
+  UNFINISHED_MARK,
+} from "@core/storage/ownerOnly";
 import { readLinuxInstallation } from "@core/update/linuxInstall";
 import * as m from "@shared/i18n/messages.generated";
 import { languageOverride, startLanguage } from "@shared/i18n/start";
@@ -35,6 +41,7 @@ import {
   WORD_PROFILE_PREFIX,
   WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
+  WORD_REMOVING_PREFIX,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -150,65 +157,112 @@ export { wordProfilesBeside } from "@core/folderMove/due";
 /** Its process number and the line's end, and nothing else: anything longer is no owner file of ours. */
 const OWNER_FILE_BYTES = 16;
 
+/** The profiles' folder a launch keeps its words' profiles in, and which folder it was. */
+export type ProfilesFolder = { path: string; made: Stats };
+
 /**
- * Makes the profiles' folder and says whether it is this app's and this account's alone. Only a
- * folder this app made, marked whole before it took its name (`WORD_PROFILES_RESERVED`), is ever
- * used: one already there without that mark, with a mark of any other kind, or away from Windows
- * one it or its mark belongs to another account, or a link, is left exactly as it is. Away from
- * Windows it must have no access for anyone else (a wider mode of its own is narrowed); on Windows
- * it gets an owner-only access list of its own (`keepOwnerOnly`).
+ * The profiles' folder this app keeps for this account, or null where it has none it can trust; it
+ * then starts no copy. Only a folder this app made and marked (`WORD_PROFILES_RESERVED`) after it
+ * was this account's alone is used. Away from Windows the folder it goes in must be this account's
+ * with no one else able to change it, so nothing else can put another folder in its place. A
+ * folder already at its name that is not one of these is left exactly as it is, never changed,
+ * read into or used, and the next name beside it is tried (`-2`, `-3`), so a launch ended between
+ * making its folder and marking it leaves that name aside rather than every later word unshown.
  */
 export async function ownProfilesFolder(
   root: string,
   platform: NodeJS.Platform,
   access: AccessRun = powerShellAccess,
-): Promise<boolean> {
+): Promise<ProfilesFolder | null> {
   try {
-    if (!reserveProfilesFolder(root, platform)) {
-      console.warn("[app] a word's profiles' folder is there but not this app's; it is left alone");
-      return false;
+    if (platform !== "win32" && !onlyThisAccountChanges(dirname(root))) {
+      console.warn("[app] a word's profiles would go where others can change them; none is made");
+      return null;
     }
-    if (platform === "win32")
-      return (await keepOwnerOnly([root], access)).kept[0]?.kind === "owner-only";
-    if ((lstatSync(root).mode & 0o077) !== 0) chmodSync(root, 0o700);
-    return (lstatSync(root).mode & 0o077) === 0;
+    for (const path of [root, `${root}-2`, `${root}-3`]) {
+      const kept = await keepProfilesFolder(path, platform, access);
+      if (kept !== "not-ours") return kept;
+      console.warn("[app] a word's profiles' folder is there but not this app's; it is left alone");
+    }
+    return null;
   } catch (error) {
     console.warn(`[app] could not keep a word's profiles private: ${(error as Error).message}`);
-    return false;
+    return null;
   }
 }
 
 /**
- * Makes the profiles' folder whole, or finds one this app made. Where nothing is there, a folder of
- * its own beside it (`.making-`) gets the mark first and then takes the name in one move, which
- * never replaces a folder holding anything; so the name never stands for a folder without its mark,
- * and a launch ended halfway leaves only its own `.making-` folder. Where the move loses to another
- * launch, or anything is there already, the folder is this app's only where it is a real folder,
- * not a link, holding the mark whole (`isProfilesMark`), and away from Windows both are this
- * account's.
+ * Makes the profiles' folder at one name, or finds this app's there. A folder it makes is this
+ * account's alone before its mark goes in: made with no access for anyone else, or on Windows given
+ * an owner-only access list of its own (`keepOwnerOnly`); one that cannot be is taken away again
+ * while still the same, empty folder. A folder already there is read and never changed: it is this
+ * app's only where it is a real folder, not a link, already this account's alone - on Windows its
+ * access list read as owner-only, with no list left half set - holding the mark whole
+ * (`isProfilesMark`), and still the same folder once all of that is read.
  */
-function reserveProfilesFolder(root: string, platform: NodeJS.Platform): boolean {
-  if (entryOf(root) === null) {
-    const making = `${root}.making-${randomUUID()}`;
-    mkdirSync(making, { mode: 0o700 });
-    const made = lstatSync(making);
-    try {
-      writeFileSync(join(making, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK, {
-        flag: "wx",
-        mode: 0o600,
-      });
-      renameSync(making, root);
-    } catch (error) {
-      removeIfSame(making, made);
-      const code = (error as NodeJS.ErrnoException).code;
-      // Another launch's folder took the name first: it is read as any folder already there.
-      if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM") throw error;
-    }
+async function keepProfilesFolder(
+  path: string,
+  platform: NodeJS.Platform,
+  access: AccessRun,
+): Promise<ProfilesFolder | "not-ours" | null> {
+  let made: Stats;
+  try {
+    mkdirSync(path, { mode: 0o700 });
+    made = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    const found = entryOf(path);
+    if (found === null || !found.isDirectory() || found.isSymbolicLink()) return "not-ours";
+    if (!(await aloneNow(path, found, platform, access))) return "not-ours";
+    if (!isProfilesMark(join(path, WORD_PROFILES_RESERVED), platform)) return "not-ours";
+    const still = entryOf(path);
+    return still !== null && sameMade(still, found) ? { path, made: found } : "not-ours";
   }
-  const folder = entryOf(root);
-  if (folder === null || !folder.isDirectory() || folder.isSymbolicLink()) return false;
-  if (platform !== "win32" && folder.uid !== process.getuid?.()) return false;
-  return isProfilesMark(join(root, WORD_PROFILES_RESERVED), platform);
+  const alone =
+    platform === "win32"
+      ? (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only"
+      : made.uid === process.getuid?.() && (made.mode & 0o077) === 0;
+  const still = entryOf(path);
+  if (!alone || still === null || !sameMade(still, made)) {
+    if (still !== null && sameMade(still, made)) removeIfSame(path, made);
+    return null;
+  }
+  try {
+    writeFileSync(join(path, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK, {
+      flag: "wx",
+      mode: 0o600,
+    });
+  } catch (error) {
+    removeIfSame(path, made);
+    throw error;
+  }
+  return { path, made };
+}
+
+/** Whether a folder already there is this account's alone, read without changing it. */
+async function aloneNow(
+  path: string,
+  found: Stats,
+  platform: NodeJS.Platform,
+  access: AccessRun,
+): Promise<boolean> {
+  if (platform !== "win32") return found.uid === process.getuid?.() && (found.mode & 0o077) === 0;
+  if (entryOf(join(path, UNFINISHED_MARK)) !== null) return false;
+  const answer = await access({ set: [], read: [path] });
+  const sddl = answer.read[0]?.sddl;
+  return !!sddl && ownerOnlyVerdict(readAccessList(sddl), answer.user) === "owner-only";
+}
+
+/** A real folder of this account's that no other account can add to, rename in or remove from. */
+function onlyThisAccountChanges(folder: string): boolean {
+  const found = entryOf(folder);
+  return (
+    found !== null &&
+    found.isDirectory() &&
+    !found.isSymbolicLink() &&
+    found.uid === process.getuid?.() &&
+    (found.mode & 0o022) === 0
+  );
 }
 
 /** The profiles' folder's mark: a plain file of this account's saying `WORD_PROFILES_MARK` whole. */
@@ -221,19 +275,50 @@ function isProfilesMark(path: string, platform: NodeJS.Platform): boolean {
   );
 }
 
+/** Whether the profiles' folder is still the one this launch reserved. */
+const stillReserved = (folder: ProfilesFolder) => {
+  const now = entryOf(folder.path);
+  return now !== null && now.isDirectory() && sameMade(now, folder.made);
+};
+
 /**
- * Removes a folder this launch made, only while its path still names that folder: one replaced
- * since, by whatever moved it away, is left as it is.
+ * Removes a folder this launch made or found ended, only while its path still names that folder,
+ * by device, number and birth. It first moves the folder to a name of its own beside it
+ * (`WORD_REMOVING_PREFIX`), which no other remover reads, and checks again what it moved: only
+ * that folder goes, so one remover alone owns it through its removal. Anything else it moved, or
+ * what of it could not be removed, goes back to its name where that is still free, for a later
+ * look, and is otherwise left at the name it was moved to.
  */
-function removeIfSame(path: string, made: { dev: number; ino: number }): void {
+function removeIfSame(path: string, made: Stats): void {
   const now = entryOf(path);
-  if (now === null || !now.isDirectory() || !sameEntry(now, made)) return;
+  if (now === null || !now.isDirectory() || !sameMade(now, made)) return;
+  const aside = join(dirname(path), `${WORD_REMOVING_PREFIX}${randomUUID()}`);
   try {
-    rmSync(path, { recursive: true, force: true });
+    renameSync(path, aside);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+      console.warn(`[app] could not remove a word's folder: ${(error as Error).message}`);
+    return;
+  }
+  const moved = entryOf(aside);
+  const ours = moved !== null && moved.isDirectory() && sameMade(moved, made);
+  try {
+    if (ours) rmSync(aside, { recursive: true, force: true });
   } catch (error) {
     console.warn(`[app] could not remove a word's folder: ${(error as Error).message}`);
   }
+  if (entryOf(aside) === null) return;
+  // What could not go, or was not this launch's, goes back to its name for a later look.
+  try {
+    if (entryOf(path) === null) renameSync(aside, path);
+    else console.warn("[app] a word's folder was set aside beside one that took its name");
+  } catch (error) {
+    console.warn(`[app] could not put back a word's folder: ${(error as Error).message}`);
+  }
 }
+
+/** A folder this launch made or read, still the same: its device, number and birth. */
+const sameMade = (a: Stats, b: Stats) => sameEntry(a, b) && a.birthtimeMs === b.birthtimeMs;
 
 /** Which entry a path is, by device and number: the same only while nothing replaced it. */
 const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: number }) =>
@@ -289,7 +374,9 @@ function readSmallFile(path: string, most: number): { text: string; file: Stats 
  * never named itself, whose owner file is not one of ours, or whose copy still runs or whose number
  * another program took since, is left as it is.
  */
-function reclaimWordProfiles(root: string): void {
+function reclaimWordProfiles(folder: ProfilesFolder): void {
+  const root = folder.path;
+  if (!stillReserved(folder)) return;
   let names: string[];
   try {
     names = readdirSync(root).filter((name) => name.startsWith(WORD_PROFILE_PREFIX));
@@ -298,21 +385,17 @@ function reclaimWordProfiles(root: string): void {
   }
   for (const name of names) {
     const profile = join(root, name);
-    const folder = entryOf(profile);
-    if (folder === null || !folder.isDirectory()) continue;
+    const found = entryOf(profile);
+    if (found === null || !found.isDirectory()) continue;
     const owner = profileOwner(profile);
     if (owner === null || !processGone(owner.pid)) continue;
     // The same folder and the same whole owner file, read again just before it goes: a profile
     // where either was replaced or changed since is left as it is.
     const now = entryOf(profile);
-    if (now === null || !now.isDirectory() || !sameEntry(now, folder)) continue;
+    if (now === null || !now.isDirectory() || !sameMade(now, found)) continue;
     const still = profileOwner(profile);
     if (still === null || still.pid !== owner.pid || !sameEntry(still, owner)) continue;
-    try {
-      rmSync(profile, { recursive: true, force: true });
-    } catch (error) {
-      console.warn(`[app] could not remove a word's profile: ${(error as Error).message}`);
-    }
+    removeIfSame(profile, found);
   }
 }
 
@@ -359,10 +442,11 @@ export async function askPersonWord(
 ): Promise<PersonReply | null> {
   const { signal, profiles } = options;
   if (signal?.aborted) return null;
-  if (profiles === null || !(await ownProfilesFolder(profiles, hostPlatform()))) return "unshown";
+  const folder = profiles === null ? null : await ownProfilesFolder(profiles, hostPlatform());
+  if (folder === null) return "unshown";
   if (signal?.aborted) return null;
-  reclaimWordProfiles(profiles);
-  const profile = join(profiles, `${WORD_PROFILE_PREFIX}${randomUUID()}`);
+  reclaimWordProfiles(folder);
+  const profile = join(folder.path, `${WORD_PROFILE_PREFIX}${randomUUID()}`);
   const temp = join(profile, WORD_TEMP_DIR);
   // Its profile and temporary folder are there before the copy runs, so its temporary files
   // have a place from its start; it names itself there before using either. Only the profile
@@ -377,6 +461,8 @@ export async function askPersonWord(
   }
   const cleanUp = () => removeIfSame(profile, made);
   try {
+    // Made in the folder this launch reserved, and in no other put in its place.
+    if (!stillReserved(folder)) throw new Error("its profiles' folder was replaced");
     mkdirSync(temp, { mode: 0o700 });
   } catch (error) {
     console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);

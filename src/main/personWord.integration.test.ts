@@ -218,9 +218,26 @@ describe("a refused launch's copy that shows a word", () => {
       const marks = scratchDir("person-word-marks-");
       expect(
         await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles }),
-      ).toBe("unshown");
+      ).toBe(0);
       expect(readdirSync(elsewhere)).toEqual([]);
+      expect(readdirSync(`${profiles}-2`)).toEqual([WORD_PROFILES_RESERVED]);
+    },
+  );
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "makes no profile where another account could put a folder in its place",
+    async () => {
+      const shared = scratchDir("person-word-shared-");
+      chmodSync(shared, 0o777);
+      const marks = scratchDir("person-word-marks-");
+      expect(
+        await askPersonWord("dock", {
+          launcher: launcher(copyProgram(), "zero", marks),
+          profiles: join(shared, "word-profiles"),
+        }),
+      ).toBe("unshown");
       expect(existsSync(join(marks, "started"))).toBe(false);
+      expect(readdirSync(shared)).toEqual([]);
     },
   );
 
@@ -232,66 +249,42 @@ describe("a refused launch's copy that shows a word", () => {
       askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
     expect(await ask(made)).toBe(0);
     expect(readdirSync(made)).toEqual([WORD_PROFILES_RESERVED]);
+    expect(readFileSync(join(made, WORD_PROFILES_RESERVED), "utf8")).toBe(WORD_PROFILES_MARK);
     expect(await ask(made)).toBe(0);
-    // A folder of the same name the app never made: never scanned, changed or used.
-    const found = profilesFolder();
-    mkdirSync(found, { recursive: true, mode: 0o755 });
-    chmodSync(found, 0o755);
-    mkdirSync(join(found, "infinitary-word-theirs"));
-    writeFileSync(join(found, "infinitary-word-theirs", WORD_OWNER_FILE), `${await endedPid()}\n`);
-    const before = statSync(found).mode;
-    const unmarked = scratchDir("person-word-marks-");
-    expect(
-      await askPersonWord("dock", {
-        launcher: launcher(copyProgram(), "zero", unmarked),
-        profiles: found,
-      }),
-    ).toBe("unshown");
-    expect(existsSync(join(unmarked, "started"))).toBe(false);
-    expect(readdirSync(found)).toEqual(["infinitary-word-theirs"]);
-    expect(statSync(found).mode).toBe(before);
-  });
-
-  it("leaves a folder whose mark is not the app's whole mark alone", async () => {
-    for (const said of ["", `${WORD_PROFILES_MARK}more`, "someone else's\n"]) {
+    expect(existsSync(`${made}-2`)).toBe(false);
+    // A folder at that name the app never made, unmarked as one a launch left between making and
+    // marking it, or marked any other way: never scanned, changed or used, and the next name is.
+    for (const said of [null, "", `${WORD_PROFILES_MARK}more`, "someone else's\n"]) {
       const found = profilesFolder();
-      mkdirSync(found, { recursive: true, mode: 0o755 });
-      chmodSync(found, 0o755);
-      writeFileSync(join(found, WORD_PROFILES_RESERVED), said);
+      mkdirSync(found, { recursive: true, mode: 0o700 });
+      if (said !== null) writeFileSync(join(found, WORD_PROFILES_RESERVED), said);
       mkdirSync(join(found, "infinitary-word-theirs"));
       writeFileSync(
         join(found, "infinitary-word-theirs", WORD_OWNER_FILE),
         `${await endedPid()}\n`,
       );
-      const marks = scratchDir("person-word-marks-");
-      expect(
-        await askPersonWord("dock", {
-          launcher: launcher(copyProgram(), "zero", marks),
-          profiles: found,
-        }),
-      ).toBe("unshown");
-      expect(existsSync(join(marks, "started"))).toBe(false);
-      expect(readdirSync(found).sort()).toEqual([WORD_PROFILES_RESERVED, "infinitary-word-theirs"]);
-      expect(statSync(found).mode & 0o777).toBe(0o755);
+      const before = statSync(found);
+      const names = readdirSync(found).sort();
+      expect(await ask(found)).toBe(0);
+      expect(readdirSync(found).sort()).toEqual(names);
+      const after = statSync(found);
+      expect([after.ino, after.mode]).toEqual([before.ino, before.mode]);
+      expect(readdirSync(`${found}-2`)).toEqual([WORD_PROFILES_RESERVED]);
     }
   });
 
-  it("makes its profiles' folder whole beside a half-made one a launch left", async () => {
-    const profiles = profilesFolder();
-    // A launch that ended while making it leaves only its own folder, never the name unmarked.
-    const left = `${profiles}.making-left`;
-    mkdirSync(left, { recursive: true });
+  it("starts no copy where every name for its profiles' folder is taken", async () => {
+    const found = profilesFolder();
+    for (const path of [found, `${found}-2`, `${found}-3`]) mkdirSync(path, { recursive: true });
     const marks = scratchDir("person-word-marks-");
     expect(
-      await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles }),
-    ).toBe(0);
-    expect(readdirSync(profiles)).toEqual([WORD_PROFILES_RESERVED]);
-    expect(readFileSync(join(profiles, WORD_PROFILES_RESERVED), "utf8")).toBe(WORD_PROFILES_MARK);
-    expect(existsSync(left)).toBe(true);
-    // Its own making folder went into the name, with no other left beside it.
-    expect(readdirSync(join(profiles, "..")).filter((name) => name.includes(".making-"))).toEqual([
-      "word-profiles.making-left",
-    ]);
+      await askPersonWord("dock", {
+        launcher: launcher(copyProgram(), "zero", marks),
+        profiles: found,
+      }),
+    ).toBe("unshown");
+    expect(existsSync(join(marks, "started"))).toBe(false);
+    for (const path of [found, `${found}-2`, `${found}-3`]) expect(readdirSync(path)).toEqual([]);
   });
 
   it("keeps the press and leaves a folder that replaced the copy's profile", async () => {

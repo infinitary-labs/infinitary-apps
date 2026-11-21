@@ -22,6 +22,8 @@ import {
   replyLine,
   WORD_BUTTONS,
   WORD_OWNER_FILE,
+  WORD_PROFILES_MARK,
+  WORD_PROFILES_RESERVED,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -170,7 +172,10 @@ describe("a refused launch's word to the person", () => {
     const user = "S-1-5-21-1-2-3-1001";
     const group = "S-1-5-21-1-2-3-513";
     const other = "S-1-5-21-9-9-9-1002";
-    const answering = (sddl: string): AccessRun & { asks: AccessAsk[] } => {
+    const answering = (
+      sddl: string,
+      at: (path: string) => string = () => sddl,
+    ): AccessRun & { asks: AccessAsk[] } => {
       const asks: AccessAsk[] = [];
       return Object.assign(
         async (ask: AccessAsk) => {
@@ -178,7 +183,7 @@ describe("a refused launch's word to the person", () => {
           return {
             user,
             set: ask.set.map((each) => ({ path: each.path, error: null })),
-            read: ask.read.map((path) => ({ path, sddl, error: null })),
+            read: ask.read.map((path) => ({ path, sddl: at(path), error: null })),
           };
         },
         { asks },
@@ -187,8 +192,31 @@ describe("a refused launch's word to the person", () => {
     const root = () => join(scratchDir("person-word-windows-"), "word-profiles");
     const own = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
     const ownRoot = root();
-    expect(await ownProfilesFolder(ownRoot, "win32", own)).toBe(true);
+    expect((await ownProfilesFolder(ownRoot, "win32", own))?.path).toBe(ownRoot);
     expect(own.asks[0]?.read).toEqual([ownRoot]);
+    // Found again by a later launch through one read, with nothing set on it.
+    const again = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    expect((await ownProfilesFolder(ownRoot, "win32", again))?.path).toBe(ownRoot);
+    expect(again.asks).toEqual([{ set: [], read: [ownRoot] }]);
+    // One already there that is not owner-only, or whose mark is not the app's, is only read:
+    // no access list is set on it, and a folder at the next name is made instead.
+    const shared = root();
+    mkdirSync(shared, { recursive: true });
+    writeFileSync(join(shared, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+    const inherited = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`, (path) =>
+      path === shared
+        ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
+        : `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`,
+    );
+    expect((await ownProfilesFolder(shared, "win32", inherited))?.path).toBe(`${shared}-2`);
+    expect(inherited.asks.flatMap((ask) => ask.set.map((each) => each.path))).not.toContain(shared);
+    const marked = root();
+    mkdirSync(marked, { recursive: true });
+    writeFileSync(join(marked, WORD_PROFILES_RESERVED), "someone else's\n");
+    const malformed = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    expect((await ownProfilesFolder(marked, "win32", malformed))?.path).toBe(`${marked}-2`);
+    expect(malformed.asks.flatMap((ask) => ask.set.map((each) => each.path))).not.toContain(marked);
+    expect(readFileSync(join(marked, WORD_PROFILES_RESERVED), "utf8")).toBe("someone else's\n");
     // A folder already there that another account owns is never taken as private.
     expect(
       await ownProfilesFolder(
@@ -196,20 +224,22 @@ describe("a refused launch's word to the person", () => {
         "win32",
         answering(`O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})`),
       ),
-    ).toBe(false);
+    ).toBeNull();
     // Nor one Windows could not be asked about.
     const unread: AccessRun = async () => {
       throw new Error("no PowerShell");
     };
-    expect(await ownProfilesFolder(root(), "win32", unread)).toBe(false);
+    expect(await ownProfilesFolder(root(), "win32", unread)).toBeNull();
     // Nor a link to a folder elsewhere, which is never asked about.
     if (process.platform !== "win32") {
       const linked = root();
       mkdirSync(join(linked, ".."), { recursive: true });
       symlinkSync(scratchDir("person-word-elsewhere-"), linked);
       const asked = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
-      expect(await ownProfilesFolder(linked, "win32", asked)).toBe(false);
-      expect(asked.asks).toEqual([]);
+      expect((await ownProfilesFolder(linked, "win32", asked))?.path).toBe(`${linked}-2`);
+      expect(
+        asked.asks.flatMap((ask) => [...ask.read, ...ask.set.map((each) => each.path)]),
+      ).toEqual([`${linked}-2`]);
     }
   });
 });

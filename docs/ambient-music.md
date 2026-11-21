@@ -99,7 +99,7 @@ The meter is the broadcast standard's (ITU-R BS.1770, `loudness.ts`), so each cr
 The measurement takes one to nine seconds in the window, and the music starts once it ends; a style that cannot be read or measured plays Star cruise.
 The person's own `mix` tilts a layer louder or quieter on top of the balance, and -60 silences it.
 
-Rain is a soft bed of filtered noise with scattered drops, and wind a band of noise whose pitch and loudness drift in slow gusts (`player.ts`).
+Rain is a dark, pink hush with many faint, rounded drops, some ringing as they land in water, kept between 250 Hz and 4.2 kHz, and wind a band of noise whose pitch and loudness drift in slow gusts (`player.ts`).
 At its fullest each reads about -32.5 LUFS alone, 2 dB above the sea's waves, and the style sets how much of it plays.
 
 The styles are `ambientOwnStyles` in the look, at most 12, kept in a row of their own, `ambient-own-styles`, so an older build never meets them, and a view from before the change is never sent them (`src/shared/contract-changes/ambient-own-styles.md`).

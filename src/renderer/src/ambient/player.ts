@@ -59,7 +59,7 @@ const WAVES = 0.4 * 0.3;
  * style's own amount: about -32.5 LUFS alone, 2 dB above the sea's waves
  * (-34.5), so it stays a wash under the music.
  */
-const RAIN = 0.1;
+const RAIN = 0.16;
 /** How loud its wind plays at its fullest: as loud alone as the rain. */
 const WIND = 0.26;
 
@@ -180,38 +180,64 @@ function easeSeam(data: Float32Array, seam: number): void {
 }
 
 /**
- * Four seconds of soft rain that loops: a low bed of noise, and drops, each
- * a few milliseconds of noise that dies away, about sixty a second on each
- * side at random strengths.
+ * Eight seconds of soft rain that loops, written as rain sounds rather than
+ * as static: a pink bed, the hush of distant rain, and about 140 drops a
+ * second on each side, most of them faint. A drop is either a soft tap, a
+ * burst of noise rounded off by its own small filter, or the short rising
+ * ring a drop makes landing in water, at a pitch of its own.
  */
 function rainfall(ctx: BaseAudioContext, seed: number): { buffer: AudioBuffer; loopEnd: number } {
-  const length = Math.floor(ctx.sampleRate * 4);
-  const seam = 1200;
-  const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+  const rate = ctx.sampleRate;
+  const length = Math.floor(rate * 8);
+  const seam = 2400;
+  const buffer = ctx.createBuffer(2, length, rate);
   let a = (seed ^ 0x2c1b3c6d) | 0;
   const random = () => {
     a = (Math.imul(a, 1664525) + 1013904223) | 0;
     return (a >>> 0) / 4294967296;
   };
-  const perSample = 60 / ctx.sampleRate;
+  const drops = Math.round(8 * 140);
   for (let channel = 0; channel < 2; channel += 1) {
     const data = buffer.getChannelData(channel);
-    let low = 0;
-    let drop = 0;
-    let fall = 0;
+    // Pink noise (Paul Kellet's three-pole filter): the hush.
+    let b0 = 0;
+    let b1 = 0;
+    let b2 = 0;
     for (let i = 0; i < length; i += 1) {
-      if (random() < perSample) {
-        drop = random() ** 2;
-        fall = Math.exp(-1 / (ctx.sampleRate * (0.002 + random() * 0.006)));
-      }
       const white = random() * 2 - 1;
-      low += (white - low) * 0.5;
-      data[i] = low * 0.25 + white * drop;
-      drop *= fall;
+      b0 = 0.99765 * b0 + white * 0.099046;
+      b1 = 0.963 * b1 + white * 0.2965164;
+      b2 = 0.57 * b2 + white * 1.0526913;
+      data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.06;
+    }
+    for (let n = 0; n < drops; n += 1) {
+      const at = Math.floor(random() * length);
+      const strength = random() ** 3;
+      if (random() < 0.3) {
+        const pitch = 1300 + random() * 2600;
+        const tau = (0.003 + random() * 0.007) * rate;
+        const span = Math.floor(tau * 5);
+        let phase = 0;
+        for (let j = 0; j < span; j += 1) {
+          phase += (2 * Math.PI * pitch * (1 + (0.5 * j) / span)) / rate;
+          const k = (at + j) % length;
+          data[k] = (data[k] as number) + strength * 0.35 * Math.sin(phase) * Math.exp(-j / tau);
+        }
+      } else {
+        const tau = (0.001 + random() * 0.004) * rate;
+        const span = Math.floor(tau * 5);
+        const round = 0.12 + random() * 0.45;
+        let tap = 0;
+        for (let j = 0; j < span; j += 1) {
+          tap += (random() * 2 - 1 - tap) * round;
+          const k = (at + j) % length;
+          data[k] = (data[k] as number) + strength * 0.8 * tap * Math.exp(-j / tau);
+        }
+      }
     }
     easeSeam(data, seam);
   }
-  return { buffer, loopEnd: (length - seam) / ctx.sampleRate };
+  return { buffer, loopEnd: (length - seam) / rate };
 }
 
 /** Three seconds of soft, dark noise that loops: the sea's wash. */
@@ -471,8 +497,8 @@ export class AmbientPlayer {
   }
 
   /**
-   * Soft rain: the drops' noise kept between 400 Hz and 5.2 kHz, so it
-   * patters without hiss, its level drifting a little as rain does.
+   * Soft rain: kept between 250 Hz and 4.2 kHz, so it patters without
+   * hiss, its level drifting a little as rain does.
    */
   private rain(
     amount: number,
@@ -487,11 +513,11 @@ export class AmbientPlayer {
     source.loopEnd = loopEnd;
     const high = keep(ctx.createBiquadFilter());
     high.type = "highpass";
-    high.frequency.value = 400;
+    high.frequency.value = 250;
     const low = keep(ctx.createBiquadFilter());
     low.type = "lowpass";
-    low.frequency.value = 5200;
-    low.Q.value = 0.3;
+    low.frequency.value = 4200;
+    low.Q.value = 0.5;
     const level = keep(ctx.createGain());
     level.gain.value = 0;
     level.gain.setTargetAtTime(RAIN * amount, this.start, 1);

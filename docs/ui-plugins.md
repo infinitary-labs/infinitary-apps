@@ -448,7 +448,7 @@ The card keeps both on its row (`cards.live_reads_json`), and a revision passes 
 
 The window grants them only while the card is open: the stack passes a card's reads to its body (`PrototypeBody`'s `cardFrameSpec`, through `frameReads` in `src/shared/reads.ts`, the same helper a personal panel's mount uses), and an ended card or a past card passes none.
 When a card's declaration changes under a mounted frame - the card closed, or a revision dropped a read or changed its views - the frame controller ends each subscription the new declaration no longer grants and tells the script's `onError` with `read_not_declared`; the body keeps what it last drew.
-An older desktop view reads a card without the two fields (`liveReads` in `src/core/connection/cardCompatibility.ts`, the `card-live-reads` contract change); a phone shows the body without live reads for now.
+An older desktop view reads a card without the two fields (`liveReads` in `src/core/connection/cardCompatibility.ts`, the `card-live-reads` contract change); the phone's card page answers them through the same executor, catalog and subscription owner (`docs/ios.md`, "Cards on the phone").
 The security review is `docs/live-prototype-security.md`, "Live reads on a crewmate's card".
 
 ## The one plugin vehicle (Phase A)

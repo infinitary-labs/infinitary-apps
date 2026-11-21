@@ -823,6 +823,8 @@ private struct PhoneCardPane: View {
         .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
         .onChange(of: pick == nil) { _, closed in if closed { shapeFrame() } }
+        // INF-5531 piece 2: the body's live reads follow the card, so one its author ended stops updating at once.
+        .onChange(of: CardWebHost.liveReads(card, part: .body), initial: true) { _, _ in host.declare(card) }
         // Only the shown card speaks for the reply's focus; one that slides aside lets its field go.
         // INF-3427: a text box in the body that holds the keyboard counts as the card's own field here too.
         // INF-3746: the note editor's comment counts too, so the pager and the message box step aside for it.

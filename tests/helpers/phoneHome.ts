@@ -63,6 +63,7 @@ import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budget
 import { claimedPort } from "./claimedPort";
 import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
+import { phoneCardReadControls } from "./phoneCardReads";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneChord,
@@ -241,6 +242,7 @@ export async function startPhoneHome(
   const google = phoneGoogleControls(core);
   const settingsRules = options.settings ? await seedPhoneAutomations(core) : {};
   const panels = phonePanelControls(core, frameLib);
+  const cardReads = phoneCardReadControls(core);
   const readings = {
     cards: 0,
     feed: 0,
@@ -1194,6 +1196,16 @@ export async function startPhoneHome(
           break;
         case "GET panel-state":
           result = await panels.state();
+          break;
+        // INF-5531 piece 2's phone part: a crewmate's card that reads live, a task added under it, and its end.
+        case "POST live-card":
+          result = await cardReads.card();
+          break;
+        case "POST live-card-add-task":
+          result = await cardReads.addTask();
+          break;
+        case "POST live-card-end":
+          result = await cardReads.end();
           break;
         case "GET state":
           result = {

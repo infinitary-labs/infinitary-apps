@@ -415,6 +415,8 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     }
     /// The pushes a panel's page hears: what its reads re-read on, and its store's and the panel list's own.
     public static let pushes: Set<String> = ["inf:cards", "inf:computers:resources", "inf:event", "inf:forges", "inf:plugins:db", "inf:plugins:personal", "inf:quota", "inf:shell:preferences", "inf:tasks", "inf:tasks:delta"]
+    /// The asks a crewmate card's page may make for its live reads: only reads, never a panel's store, files or work.
+    public static let cardReads: Set<PhonePanelRequest> = [.automationKept, .automationList, .cardsList, .computersResources, .feedRecent, .forgesChanges, .knowledgeCollections, .knowledgeConcepts, .knowledgeDirection, .knowledgeDirections, .knowledgeEntry, .knowledgeFindings, .knowledgeGraph, .quotaSnapshot, .sqlQuery, .tasksBoard, .tasksDetail, .tasksSearch]
     public static let change = "panels-on-the-phone"
 }
 

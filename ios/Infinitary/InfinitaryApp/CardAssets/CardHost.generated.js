@@ -1077,8 +1077,8 @@
       const lines = content.split("\n").filter((x) => x);
       const minIndent = Math.min(...lines.map((x) => x.length - x.trimStart().length));
       const dedented = lines.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
-      for (const line of dedented) {
-        this.content.push(line);
+      for (const line2 of dedented) {
+        this.content.push(line2);
       }
     }
     compile() {
@@ -1812,42 +1812,42 @@
       }
       doc.write(`const newResult = {};`);
       for (const key of normalized.keys) {
-        const id = ids[key];
+        const id2 = ids[key];
         const k = esc(key);
         const schema = shape[key];
         const isOptionalIn = schema?._zod?.optin === "optional";
         const isOptionalOut = schema?._zod?.optout === "optional";
-        doc.write(`const ${id} = ${parseStr(key)};`);
+        doc.write(`const ${id2} = ${parseStr(key)};`);
         if (isOptionalIn && isOptionalOut) {
           doc.write(`
-        if (${id}.issues.length) {
+        if (${id2}.issues.length) {
           if (${k} in input) {
-            payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+            payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
               ...iss,
               path: iss.path ? [${k}, ...iss.path] : [${k}]
             })));
           }
         }
         
-        if (${id}.value === undefined) {
+        if (${id2}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
           }
         } else {
-          newResult[${k}] = ${id}.value;
+          newResult[${k}] = ${id2}.value;
         }
         
       `);
         } else if (!isOptionalIn) {
           doc.write(`
-        const ${id}_present = ${k} in input;
-        if (${id}.issues.length) {
-          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+        const ${id2}_present = ${k} in input;
+        if (${id2}.issues.length) {
+          payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
             ...iss,
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        if (!${id}_present && !${id}.issues.length) {
+        if (!${id2}_present && !${id2}.issues.length) {
           payload.issues.push({
             code: "invalid_type",
             expected: "nonoptional",
@@ -1856,30 +1856,30 @@
           });
         }
 
-        if (${id}_present) {
-          if (${id}.value === undefined) {
+        if (${id2}_present) {
+          if (${id2}.value === undefined) {
             newResult[${k}] = undefined;
           } else {
-            newResult[${k}] = ${id}.value;
+            newResult[${k}] = ${id2}.value;
           }
         }
 
       `);
         } else {
           doc.write(`
-        if (${id}.issues.length) {
-          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+        if (${id2}.issues.length) {
+          payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
             ...iss,
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
         
-        if (${id}.value === undefined) {
+        if (${id2}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
           }
         } else {
-          newResult[${k}] = ${id}.value;
+          newResult[${k}] = ${id2}.value;
         }
         
       `);
@@ -2149,6 +2149,112 @@
     }
     result.value = merged.data;
     return result;
+  }
+  const $ZodTuple = /* @__PURE__ */ $constructor("$ZodTuple", (inst, def) => {
+    $ZodType.init(inst, def);
+    const items = def.items;
+    inst._zod.parse = (payload, ctx) => {
+      const input2 = payload.value;
+      if (!Array.isArray(input2)) {
+        payload.issues.push({
+          input: input2,
+          inst,
+          expected: "tuple",
+          code: "invalid_type"
+        });
+        return payload;
+      }
+      payload.value = [];
+      const proms = [];
+      const optinStart = getTupleOptStart(items, "optin");
+      const optoutStart = getTupleOptStart(items, "optout");
+      if (!def.rest) {
+        if (input2.length < optinStart) {
+          payload.issues.push({
+            code: "too_small",
+            minimum: optinStart,
+            inclusive: true,
+            input: input2,
+            inst,
+            origin: "array"
+          });
+          return payload;
+        }
+        if (input2.length > items.length) {
+          payload.issues.push({
+            code: "too_big",
+            maximum: items.length,
+            inclusive: true,
+            input: input2,
+            inst,
+            origin: "array"
+          });
+        }
+      }
+      const itemResults = new Array(items.length);
+      for (let i = 0; i < items.length; i++) {
+        const r = items[i]._zod.run({ value: input2[i], issues: [] }, ctx);
+        if (r instanceof Promise) {
+          proms.push(r.then((rr) => {
+            itemResults[i] = rr;
+          }));
+        } else {
+          itemResults[i] = r;
+        }
+      }
+      if (def.rest) {
+        let i = items.length - 1;
+        const rest = input2.slice(items.length);
+        for (const el of rest) {
+          i++;
+          const result = def.rest._zod.run({ value: el, issues: [] }, ctx);
+          if (result instanceof Promise) {
+            proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+          } else {
+            handleTupleResult(result, payload, i);
+          }
+        }
+      }
+      if (proms.length) {
+        return Promise.all(proms).then(() => handleTupleResults(itemResults, payload, items, input2, optoutStart));
+      }
+      return handleTupleResults(itemResults, payload, items, input2, optoutStart);
+    };
+  });
+  function getTupleOptStart(items, key) {
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (items[i]._zod[key] !== "optional")
+        return i + 1;
+    }
+    return 0;
+  }
+  function handleTupleResult(result, final, index) {
+    if (result.issues.length) {
+      final.issues.push(...prefixIssues(index, result.issues));
+    }
+    final.value[index] = result.value;
+  }
+  function handleTupleResults(itemResults, final, items, input2, optoutStart) {
+    for (let i = 0; i < items.length; i++) {
+      const r = itemResults[i];
+      const isPresent = i < input2.length;
+      if (r.issues.length) {
+        if (!isPresent && i >= optoutStart) {
+          final.value.length = i;
+          break;
+        }
+        final.issues.push(...prefixIssues(i, r.issues));
+      }
+      final.value[i] = r.value;
+    }
+    for (let i = final.value.length - 1; i >= input2.length; i--) {
+      if (items[i]._zod.optout === "optional" && final.value[i] === void 0) {
+        final.value.length = i;
+      } else {
+        break;
+      }
+    }
+    return final;
   }
   const $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
     $ZodType.init(inst, def);
@@ -3250,42 +3356,42 @@
     if (!root)
       throw new Error("Unprocessed schema. This is a bug in Zod.");
     const idToSchema = /* @__PURE__ */ new Map();
-    for (const entry of ctx.seen.entries()) {
-      const id = ctx.metadataRegistry.get(entry[0])?.id;
-      if (id) {
-        const existing = idToSchema.get(id);
-        if (existing && existing !== entry[0]) {
-          throw new Error(`Duplicate schema id "${id}" detected during JSON Schema conversion. Two different schemas cannot share the same id when converted together.`);
+    for (const entry2 of ctx.seen.entries()) {
+      const id2 = ctx.metadataRegistry.get(entry2[0])?.id;
+      if (id2) {
+        const existing = idToSchema.get(id2);
+        if (existing && existing !== entry2[0]) {
+          throw new Error(`Duplicate schema id "${id2}" detected during JSON Schema conversion. Two different schemas cannot share the same id when converted together.`);
         }
-        idToSchema.set(id, entry[0]);
+        idToSchema.set(id2, entry2[0]);
       }
     }
-    const makeURI = (entry) => {
+    const makeURI = (entry2) => {
       const defsSegment = ctx.target === "draft-2020-12" ? "$defs" : "definitions";
       if (ctx.external) {
-        const externalId = ctx.external.registry.get(entry[0])?.id;
-        const uriGenerator = ctx.external.uri ?? ((id2) => id2);
+        const externalId = ctx.external.registry.get(entry2[0])?.id;
+        const uriGenerator = ctx.external.uri ?? ((id3) => id3);
         if (externalId) {
           return { ref: uriGenerator(externalId) };
         }
-        const id = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
-        entry[1].defId = id;
-        return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
+        const id2 = entry2[1].defId ?? entry2[1].schema.id ?? `schema${ctx.counter++}`;
+        entry2[1].defId = id2;
+        return { defId: id2, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id2}` };
       }
-      if (entry[1] === root) {
+      if (entry2[1] === root) {
         return { ref: "#" };
       }
       const uriPrefix = `#`;
       const defUriPrefix = `${uriPrefix}/${defsSegment}/`;
-      const defId = entry[1].schema.id ?? `__schema${ctx.counter++}`;
+      const defId = entry2[1].schema.id ?? `__schema${ctx.counter++}`;
       return { defId, ref: defUriPrefix + defId };
     };
-    const extractToDef = (entry) => {
-      if (entry[1].schema.$ref) {
+    const extractToDef = (entry2) => {
+      if (entry2[1].schema.$ref) {
         return;
       }
-      const seen = entry[1];
-      const { ref, defId } = makeURI(entry);
+      const seen = entry2[1];
+      const { ref, defId } = makeURI(entry2);
       seen.def = { ...seen.schema };
       if (defId)
         seen.defId = defId;
@@ -3296,8 +3402,8 @@
       schema2.$ref = ref;
     };
     if (ctx.cycles === "throw") {
-      for (const entry of ctx.seen.entries()) {
-        const seen = entry[1];
+      for (const entry2 of ctx.seen.entries()) {
+        const seen = entry2[1];
         if (seen.cycle) {
           throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
 
@@ -3305,31 +3411,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         }
       }
     }
-    for (const entry of ctx.seen.entries()) {
-      const seen = entry[1];
-      if (schema === entry[0]) {
-        extractToDef(entry);
+    for (const entry2 of ctx.seen.entries()) {
+      const seen = entry2[1];
+      if (schema === entry2[0]) {
+        extractToDef(entry2);
         continue;
       }
       if (ctx.external) {
-        const ext = ctx.external.registry.get(entry[0])?.id;
-        if (schema !== entry[0] && ext) {
-          extractToDef(entry);
+        const ext = ctx.external.registry.get(entry2[0])?.id;
+        if (schema !== entry2[0] && ext) {
+          extractToDef(entry2);
           continue;
         }
       }
-      const id = ctx.metadataRegistry.get(entry[0])?.id;
-      if (id) {
-        extractToDef(entry);
+      const id2 = ctx.metadataRegistry.get(entry2[0])?.id;
+      if (id2) {
+        extractToDef(entry2);
         continue;
       }
       if (seen.cycle) {
-        extractToDef(entry);
+        extractToDef(entry2);
         continue;
       }
       if (seen.count > 1) {
         if (ctx.reused === "ref") {
-          extractToDef(entry);
+          extractToDef(entry2);
           continue;
         }
       }
@@ -3401,8 +3507,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         path: seen.path ?? []
       });
     };
-    for (const entry of [...ctx.seen.entries()].reverse()) {
-      flattenRef(entry[0]);
+    for (const entry2 of [...ctx.seen.entries()].reverse()) {
+      flattenRef(entry2[0]);
     }
     const result = {};
     if (ctx.target === "draft-2020-12") {
@@ -3414,18 +3520,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     } else if (ctx.target === "openapi-3.0") ;
     else ;
     if (ctx.external?.uri) {
-      const id = ctx.external.registry.get(schema)?.id;
-      if (!id)
+      const id2 = ctx.external.registry.get(schema)?.id;
+      if (!id2)
         throw new Error("Schema is missing an `id` property");
-      result.$id = ctx.external.uri(id);
+      result.$id = ctx.external.uri(id2);
     }
     Object.assign(result, root.def ?? root.schema);
     const rootMetaId = ctx.metadataRegistry.get(schema)?.id;
     if (rootMetaId !== void 0 && result.id === rootMetaId)
       delete result.id;
     const defs = ctx.external?.defs ?? {};
-    for (const entry of ctx.seen.entries()) {
-      const seen = entry[1];
+    for (const entry2 of ctx.seen.entries()) {
+      const seen = entry2[1];
       if (seen.def && seen.defId) {
         if (seen.def.id === seen.defId)
           delete seen.def.id;
@@ -3758,6 +3864,48 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ...isSimpleIntersection(b) ? b.allOf : [b]
     ];
     json.allOf = allOf;
+  };
+  const tupleProcessor = (schema, ctx, _json, params) => {
+    const json = _json;
+    const def = schema._zod.def;
+    json.type = "array";
+    const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
+    const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
+    const prefixItems = def.items.map((x, i) => process(x, ctx, {
+      ...params,
+      path: [...params.path, prefixPath, i]
+    }));
+    const rest = def.rest ? process(def.rest, ctx, {
+      ...params,
+      path: [...params.path, restPath, ...ctx.target === "openapi-3.0" ? [def.items.length] : []]
+    }) : null;
+    if (ctx.target === "draft-2020-12") {
+      json.prefixItems = prefixItems;
+      if (rest) {
+        json.items = rest;
+      }
+    } else if (ctx.target === "openapi-3.0") {
+      json.items = {
+        anyOf: prefixItems
+      };
+      if (rest) {
+        json.items.anyOf.push(rest);
+      }
+      json.minItems = prefixItems.length;
+      if (!rest) {
+        json.maxItems = prefixItems.length;
+      }
+    } else {
+      json.items = prefixItems;
+      if (rest) {
+        json.additionalItems = rest;
+      }
+    }
+    const { minimum, maximum } = schema._zod.bag;
+    if (typeof minimum === "number")
+      json.minItems = minimum;
+    if (typeof maximum === "number")
+      json.maxItems = maximum;
   };
   const recordProcessor = (schema, ctx, _json, params) => {
     const json = _json;
@@ -4516,6 +4664,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       right
     });
   }
+  const ZodTuple = /* @__PURE__ */ $constructor("ZodTuple", (inst, def) => {
+    $ZodTuple.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => tupleProcessor(inst, ctx, json, params);
+    inst.rest = (rest) => inst.clone({
+      ...inst._zod.def,
+      rest
+    });
+  });
+  function tuple(items, _paramsOrRest, _params) {
+    const hasRest = _paramsOrRest instanceof $ZodType;
+    const params = hasRest ? _params : _paramsOrRest;
+    const rest = hasRest ? _paramsOrRest : null;
+    return new ZodTuple({
+      type: "tuple",
+      items,
+      rest,
+      ...normalizeParams(params)
+    });
+  }
   const ZodRecord = /* @__PURE__ */ $constructor("ZodRecord", (inst, def) => {
     $ZodRecord.init(inst, def);
     ZodType.init(inst, def);
@@ -4535,6 +4703,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return new ZodRecord({
       type: "record",
       keyType,
+      valueType,
+      ...normalizeParams(params)
+    });
+  }
+  function partialRecord(keyType, valueType, params) {
+    const k = clone(keyType);
+    k._zod.values = void 0;
+    return new ZodRecord({
+      type: "record",
+      keyType: k,
       valueType,
       ...normalizeParams(params)
     });
@@ -4790,6 +4968,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function superRefine(fn, params) {
     return /* @__PURE__ */ _superRefine(fn, params);
   }
+  function _instanceof(cls, params = {}) {
+    const inst = new ZodCustom({
+      type: "custom",
+      check: "custom",
+      fn: (data) => data instanceof cls,
+      abort: true,
+      ...normalizeParams(params)
+    });
+    inst._zod.bag.Class = cls;
+    inst._zod.check = (payload) => {
+      if (!(payload.value instanceof cls)) {
+        payload.issues.push({
+          code: "invalid_type",
+          expected: cls.name,
+          input: payload.value,
+          inst,
+          path: [...inst._zod.def.path ?? []]
+        });
+      }
+    };
+    return inst;
+  }
   const SOURCE_LANGUAGE = "en";
   const PSEUDO_LANGUAGES = ["en-XA", "ar-XB"];
   function isPseudoLanguage(tag) {
@@ -4857,6 +5057,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   function formatNumber(value, options) {
     return value.toLocaleString(languageLocale(), options);
+  }
+  function formatDate(at, options) {
+    return new Date(at).toLocaleDateString(regionalLocale(), options);
   }
   function formatTime(at, options) {
     return new Date(at).toLocaleTimeString(regionalLocale(), options);
@@ -6677,61 +6880,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Crew use for these models is set on the Models board in Settings, under Intelligence.`;
   }
   function accountsCustomApiDestinationMixed(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات.`;
+        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered2}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات.`;
       case "de":
-        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk.`;
+        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered2} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk.`;
       case "es":
-        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Apuntan a más de un tipo de red.`;
+        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered2}. Apuntan a más de un tipo de red.`;
       case "fr":
-        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Ces réponses pointent vers plusieurs types de réseau.`;
+        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered2}. Ces réponses pointent vers plusieurs types de réseau.`;
       case "ja":
-        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。これらは複数の種類のネットワークを指しています。`;
+        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered2} でした。これらは複数の種類のネットワークを指しています。`;
       case "ko":
-        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요.`;
+        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered2}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요.`;
       case "pt-BR":
-        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Essas respostas apontam para mais de um tipo de rede.`;
+        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered2}. Essas respostas apontam para mais de um tipo de rede.`;
       case "zh-Hans":
-        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。这些结果指向不止一种网络。`;
+        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered2}。这些结果指向不止一种网络。`;
       case "zh-Hant":
-        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。這些回應指向不只一種網路。`;
+        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered2}。這些回應指向不只一種網路。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered2}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary can't send to this address. DNS answered ‬${answered}‮. They point to more than one kind of network.‬`;
+        return `‮Infinitary can't send to this address. DNS answered ‬${answered2}‮. They point to more than one kind of network.‬`;
     }
-    return `Infinitary can't send to this address. DNS answered ${answered}. They point to more than one kind of network.`;
+    return `Infinitary can't send to this address. DNS answered ${answered2}. They point to more than one kind of network.`;
   }
   function accountsCustomApiDestinationMixedNever(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     const here = input2.here;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
+        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered2}. وهذه الإجابات تشير إلى أكثر من نوع واحد من الشبكات. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
       case "de":
-        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
+        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered2} geantwortet. Sie verweisen auf mehr als eine Art von Netzwerk. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
       case "es":
-        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Apuntan a más de un tipo de red. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
+        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered2}. Apuntan a más de un tipo de red. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
       case "fr":
-        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Ces réponses pointent vers plusieurs types de réseau. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
+        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered2}. Ces réponses pointent vers plusieurs types de réseau. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
       case "ja":
-        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。これらは複数の種類のネットワークを指しています。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
+        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered2} でした。これらは複数の種類のネットワークを指しています。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
       case "ko":
-        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
+        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered2}(으)로 답했어요. 이 답들은 두 종류 이상의 네트워크를 가리켜요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
       case "pt-BR":
-        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Essas respostas apontam para mais de um tipo de rede. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
+        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered2}. Essas respostas apontam para mais de um tipo de rede. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
       case "zh-Hans":
-        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。这些结果指向不止一种网络。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
+        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered2}。这些结果指向不止一种网络。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
       case "zh-Hant":
-        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。這些回應指向不只一種網路。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
+        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered2}。這些回應指向不只一種網路。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered2}. Ţĥéý þöîñţ ţö ɱöŕé ţĥáñ öñé ķîñð öƒ ñéţŵöŕķ. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary can't send to this address. DNS answered ‬${answered}‮. They point to more than one kind of network. Infinitary makes no exception for an answer that points to ‬${here}‮, a link-local or a cloud metadata address.‬`;
+        return `‮Infinitary can't send to this address. DNS answered ‬${answered2}‮. They point to more than one kind of network. Infinitary makes no exception for an answer that points to ‬${here}‮, a link-local or a cloud metadata address.‬`;
     }
-    return `Infinitary can't send to this address. DNS answered ${answered}. They point to more than one kind of network. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
+    return `Infinitary can't send to this address. DNS answered ${answered2}. They point to more than one kind of network. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
   }
   function accountsCustomApiDestinationRefused() {
     switch (currentLanguage()) {
@@ -6761,61 +6964,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.`;
   }
   function accountsCustomApiDestinationReserved(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم.`;
+        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered2}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم.`;
       case "de":
-        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet.`;
+        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered2} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet.`;
       case "es":
-        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre.`;
+        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered2}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre.`;
       case "fr":
-        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms.`;
+        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered2}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms.`;
       case "ja":
-        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。`;
+        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered2} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。`;
       case "ko":
-        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요.`;
+        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered2}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요.`;
       case "pt-BR":
-        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome.`;
+        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered2}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome.`;
       case "zh-Hans":
-        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。`;
+        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered2}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。`;
       case "zh-Hant":
-        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。`;
+        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered2}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered2}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary can't send to this address. DNS answered ‬${answered}‮. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.‬`;
+        return `‮Infinitary can't send to this address. DNS answered ‬${answered2}‮. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.‬`;
     }
-    return `Infinitary can't send to this address. DNS answered ${answered}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.`;
+    return `Infinitary can't send to this address. DNS answered ${answered2}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name.`;
   }
   function accountsCustomApiDestinationReservedNever(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     const here = input2.here;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
+        return `لا يستطيع Infinitary الإرسال إلى هذا العنوان. أجاب DNS بـ ${answered2}. غالبًا ما تأتي الإجابة المحجوزة من تطبيق وكيل أو مرشّح DNS يجيب عن كل اسم. لا يستثني Infinitary أي إجابة تشير إلى ${here} أو إلى عنوان ربط محلي أو عنوان بيانات وصفية سحابية.`;
       case "de":
-        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
+        return `Infinitary kann nicht an diese Adresse senden. DNS hat mit ${answered2} geantwortet. Eine reservierte Antwort kommt oft von einer Proxy-App oder einem DNS-Filter, der für jeden Namen antwortet. Infinitary macht keine Ausnahme für eine Antwort, die auf ${here}, eine Link-Local-Adresse oder eine Cloud-Metadatenadresse verweist.`;
       case "es":
-        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
+        return `Infinitary no puede enviar a esta dirección. El DNS respondió ${answered2}. Una respuesta reservada suele venir de una app de proxy o de un filtro DNS que responde por cualquier nombre. Infinitary no hace excepciones con una respuesta que apunte a ${here}, a una dirección de enlace local o a una dirección de metadatos de la nube.`;
       case "fr":
-        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
+        return `Infinitary ne peut pas envoyer à cette adresse. Le DNS a répondu ${answered2}. Une réponse réservée vient souvent d’une app proxy ou d’un filtre DNS qui répond pour tous les noms. Infinitary ne fait aucune exception pour une réponse qui pointe vers ${here}, une adresse lien-local ou une adresse de métadonnées cloud.`;
       case "ja":
-        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
+        return `Infinitary はこのアドレスに送信できません。DNS の応答は ${answered2} でした。予約済みの応答は、すべての名前に応答するプロキシアプリや DNS フィルターから返されることがよくあります。${here}、リンクローカルアドレス、クラウドのメタデータアドレスを指す応答に、Infinitary は例外を設けません。`;
       case "ko":
-        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
+        return `Infinitary는 이 주소로 보낼 수 없어요. DNS가 ${answered2}(으)로 답했어요. 예약된 답은 모든 이름에 답하는 프록시 앱이나 DNS 필터에서 오는 경우가 많아요. Infinitary는 ${here}, 링크 로컬 주소, 클라우드 메타데이터 주소를 가리키는 답에는 예외를 두지 않아요.`;
       case "pt-BR":
-        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
+        return `O Infinitary não pode enviar para este endereço. O DNS respondeu ${answered2}. Uma resposta reservada costuma vir de um app de proxy ou de um filtro de DNS que responde por qualquer nome. O Infinitary não abre exceção para uma resposta que aponte para ${here}, para um endereço link-local ou para um endereço de metadados de nuvem.`;
       case "zh-Hans":
-        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
+        return `Infinitary 无法发送到此地址。DNS 返回了 ${answered2}。保留地址的返回结果通常来自代理应用，或会替所有名称作答的 DNS 过滤器。对于指向 ${here}、链路本地地址或云元数据地址的结果，Infinitary 不设例外。`;
       case "zh-Hant":
-        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
+        return `Infinitary 無法傳送到這個位址。DNS 回應了 ${answered2}。保留位址的回應通常來自代理程式，或會替所有名稱回應的 DNS 過濾器。對於指向 ${here}、鏈路本機位址或雲端中繼資料位址的回應，Infinitary 不設例外。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý çáñ'ţ šéñð ţö ţĥîš áððŕéšš. ÐÑŠ áñšŵéŕéð ${answered2}. Å ŕéšéŕṽéð áñšŵéŕ öƒţéñ çöɱéš ƒŕöɱ á þŕöẋý áþþ öŕ á ÐÑŠ ƒîļţéŕ ţĥáţ áñšŵéŕš ƒöŕ éṽéŕý ñáɱé. Îñƒîñîţáŕý ɱáķéš ñö éẋçéþţîöñ ƒöŕ áñ áñšŵéŕ ţĥáţ þöîñţš ţö ${here}, á ļîñķ-ļöçáļ öŕ á çļöûð ɱéţáðáţá áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary can't send to this address. DNS answered ‬${answered}‮. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to ‬${here}‮, a link-local or a cloud metadata address.‬`;
+        return `‮Infinitary can't send to this address. DNS answered ‬${answered2}‮. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to ‬${here}‮, a link-local or a cloud metadata address.‬`;
     }
-    return `Infinitary can't send to this address. DNS answered ${answered}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
+    return `Infinitary can't send to this address. DNS answered ${answered2}. A reserved answer often comes from a proxy app or a DNS filter that answers for every name. Infinitary makes no exception for an answer that points to ${here}, a link-local or a cloud metadata address.`;
   }
   function accountsCustomApiDialogLabel() {
     switch (currentLanguage()) {
@@ -11440,33 +11643,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Done · closes ${key} as answered; the answer stays on its record`;
   }
   function cardAnswersAnswered(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     const total = input2.total;
     switch (currentLanguage()) {
       case "ar":
-        return `أُجيب عن ${answered} من ${total}`;
+        return `أُجيب عن ${answered2} من ${total}`;
       case "de":
-        return `${answered} von ${total} beantwortet`;
+        return `${answered2} von ${total} beantwortet`;
       case "es":
-        return `${answered} de ${total} respondidas`;
+        return `${answered2} de ${total} respondidas`;
       case "fr":
-        return `${answered} sur ${total} avec réponse`;
+        return `${answered2} sur ${total} avec réponse`;
       case "ja":
-        return `${answered}/${total} 回答済み`;
+        return `${answered2}/${total} 回答済み`;
       case "ko":
-        return `${total}개 중 ${answered}개 답함`;
+        return `${total}개 중 ${answered2}개 답함`;
       case "pt-BR":
-        return `${answered} de ${total} respondidas`;
+        return `${answered2} de ${total} respondidas`;
       case "zh-Hans":
-        return `已回答 ${answered} / ${total}`;
+        return `已回答 ${answered2} / ${total}`;
       case "zh-Hant":
-        return `已回答 ${answered}/${total}`;
+        return `已回答 ${answered2}/${total}`;
       case "en-XA":
-        return `[${answered} öƒ ${total} áñšŵéŕéð ~~~~~]`;
+        return `[${answered2} öƒ ${total} áñšŵéŕéð ~~~~~]`;
       case "ar-XB":
-        return `${answered}‮ of ‬${total}‮ answered‬`;
+        return `${answered2}‮ of ‬${total}‮ answered‬`;
     }
-    return `${answered} of ${total} answered`;
+    return `${answered2} of ${total} answered`;
   }
   function cardAnswersChanged(input2) {
     const changed = input2.changed;
@@ -11593,33 +11796,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   }
   function cardAnswersPicked(input2) {
-    const answered = input2.answered;
+    const answered2 = input2.answered;
     const total = input2.total;
     switch (currentLanguage()) {
       case "ar":
-        return `اختير ${answered} من ${total}`;
+        return `اختير ${answered2} من ${total}`;
       case "de":
-        return `${answered} von ${total} gewählt`;
+        return `${answered2} von ${total} gewählt`;
       case "es":
-        return `${answered} de ${total} elegidas`;
+        return `${answered2} de ${total} elegidas`;
       case "fr":
-        return `${answered} sur ${total} choisies`;
+        return `${answered2} sur ${total} choisies`;
       case "ja":
-        return `${answered}/${total} 選択済み`;
+        return `${answered2}/${total} 選択済み`;
       case "ko":
-        return `${total}개 중 ${answered}개 고름`;
+        return `${total}개 중 ${answered2}개 고름`;
       case "pt-BR":
-        return `${answered} de ${total} escolhidas`;
+        return `${answered2} de ${total} escolhidas`;
       case "zh-Hans":
-        return `已选 ${answered} / ${total}`;
+        return `已选 ${answered2} / ${total}`;
       case "zh-Hant":
-        return `已選 ${answered}/${total}`;
+        return `已選 ${answered2}/${total}`;
       case "en-XA":
-        return `[${answered} öƒ ${total} þîçķéð ~~~~]`;
+        return `[${answered2} öƒ ${total} þîçķéð ~~~~]`;
       case "ar-XB":
-        return `${answered}‮ of ‬${total}‮ picked‬`;
+        return `${answered2}‮ of ‬${total}‮ picked‬`;
     }
-    return `${answered} of ${total} picked`;
+    return `${answered2} of ${total} picked`;
   }
   function cardAnswersToAnswer(input2) {
     const count = formatNumber(input2.count);
@@ -13695,62 +13898,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Why`;
   }
   function cardKnowledgeConceptRef(input2) {
-    const id = input2.id;
+    const id2 = input2.id;
     const title = input2.title;
     switch (currentLanguage()) {
       case "ar":
-        return `مفهوم ${id}: ${title}`;
+        return `مفهوم ${id2}: ${title}`;
       case "de":
-        return `Begriff ${id}: ${title}`;
+        return `Begriff ${id2}: ${title}`;
       case "es":
-        return `Concepto ${id}: ${title}`;
+        return `Concepto ${id2}: ${title}`;
       case "fr":
-        return `Concept ${id} : ${title}`;
+        return `Concept ${id2} : ${title}`;
       case "ja":
-        return `概念 ${id}：${title}`;
+        return `概念 ${id2}：${title}`;
       case "ko":
-        return `개념 ${id}: ${title}`;
+        return `개념 ${id2}: ${title}`;
       case "pt-BR":
-        return `Conceito ${id}: ${title}`;
+        return `Conceito ${id2}: ${title}`;
       case "zh-Hans":
-        return `概念 ${id}：${title}`;
+        return `概念 ${id2}：${title}`;
       case "zh-Hant":
-        return `概念 ${id}：${title}`;
+        return `概念 ${id2}：${title}`;
       case "en-XA":
-        return `[Çöñçéþţ ${id}: ${title} ~~~~]`;
+        return `[Çöñçéþţ ${id2}: ${title} ~~~~]`;
       case "ar-XB":
-        return `‮Concept ‬${id}‮: ‬${title}`;
+        return `‮Concept ‬${id2}‮: ‬${title}`;
     }
-    return `Concept ${id}: ${title}`;
+    return `Concept ${id2}: ${title}`;
   }
   function cardKnowledgeFindingRef(input2) {
-    const id = input2.id;
+    const id2 = input2.id;
     const title = input2.title;
     switch (currentLanguage()) {
       case "ar":
-        return `نتيجة ${id}: ${title}`;
+        return `نتيجة ${id2}: ${title}`;
       case "de":
-        return `Erkenntnis ${id}: ${title}`;
+        return `Erkenntnis ${id2}: ${title}`;
       case "es":
-        return `Hallazgo ${id}: ${title}`;
+        return `Hallazgo ${id2}: ${title}`;
       case "fr":
-        return `Constat ${id} : ${title}`;
+        return `Constat ${id2} : ${title}`;
       case "ja":
-        return `知見 ${id}：${title}`;
+        return `知見 ${id2}：${title}`;
       case "ko":
-        return `발견 ${id}: ${title}`;
+        return `발견 ${id2}: ${title}`;
       case "pt-BR":
-        return `Constatação ${id}: ${title}`;
+        return `Constatação ${id2}: ${title}`;
       case "zh-Hans":
-        return `发现 ${id}：${title}`;
+        return `发现 ${id2}：${title}`;
       case "zh-Hant":
-        return `發現 ${id}：${title}`;
+        return `發現 ${id2}：${title}`;
       case "en-XA":
-        return `[Ƒîñðîñĝ ${id}: ${title} ~~~~]`;
+        return `[Ƒîñðîñĝ ${id2}: ${title} ~~~~]`;
       case "ar-XB":
-        return `‮Finding ‬${id}‮: ‬${title}`;
+        return `‮Finding ‬${id2}‮: ‬${title}`;
     }
-    return `Finding ${id}: ${title}`;
+    return `Finding ${id2}: ${title}`;
   }
   function cardKnowledgeRetired() {
     switch (currentLanguage()) {
@@ -36361,61 +36564,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Concept`;
   }
   function recordUseCurrentRevision(input2) {
-    const revision = input2.revision;
+    const revision2 = input2.revision;
     switch (currentLanguage()) {
       case "ar":
-        return `استُخدم التعديل ${revision}، وهو الحالي`;
+        return `استُخدم التعديل ${revision2}، وهو الحالي`;
       case "de":
-        return `Revision ${revision} genutzt, die aktuelle`;
+        return `Revision ${revision2} genutzt, die aktuelle`;
       case "es":
-        return `usó la versión ${revision}, la actual`;
+        return `usó la versión ${revision2}, la actual`;
       case "fr":
-        return `révision ${revision} utilisée, l’actuelle`;
+        return `révision ${revision2} utilisée, l’actuelle`;
       case "ja":
-        return `改訂${revision}を使用（現在の改訂）`;
+        return `改訂${revision2}を使用（現在の改訂）`;
       case "ko":
-        return `수정본 ${revision} 사용, 현재 수정본`;
+        return `수정본 ${revision2} 사용, 현재 수정본`;
       case "pt-BR":
-        return `usou a versão ${revision}, a atual`;
+        return `usou a versão ${revision2}, a atual`;
       case "zh-Hans":
-        return `使用了修订 ${revision}，即当前修订`;
+        return `使用了修订 ${revision2}，即当前修订`;
       case "zh-Hant":
-        return `使用了修訂 ${revision}，也就是目前的修訂`;
+        return `使用了修訂 ${revision2}，也就是目前的修訂`;
       case "en-XA":
-        return `[ûšéð ŕéṽîšîöñ ${revision}, ţĥé çûŕŕéñţ öñé ~~~~~~~~~~~]`;
+        return `[ûšéð ŕéṽîšîöñ ${revision2}, ţĥé çûŕŕéñţ öñé ~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮used revision ‬${revision}‮, the current one‬`;
+        return `‮used revision ‬${revision2}‮, the current one‬`;
     }
-    return `used revision ${revision}, the current one`;
+    return `used revision ${revision2}, the current one`;
   }
   function recordUseEarlierRevision(input2) {
     const current = input2.current;
-    const revision = input2.revision;
+    const revision2 = input2.revision;
     switch (currentLanguage()) {
       case "ar":
-        return `استُخدم التعديل ${revision} · التعديل الحالي ${current}`;
+        return `استُخدم التعديل ${revision2} · التعديل الحالي ${current}`;
       case "de":
-        return `Revision ${revision} genutzt · aktuelle Revision ${current}`;
+        return `Revision ${revision2} genutzt · aktuelle Revision ${current}`;
       case "es":
-        return `usó la versión ${revision} · versión actual ${current}`;
+        return `usó la versión ${revision2} · versión actual ${current}`;
       case "fr":
-        return `révision ${revision} utilisée · révision actuelle ${current}`;
+        return `révision ${revision2} utilisée · révision actuelle ${current}`;
       case "ja":
-        return `改訂${revision}を使用 · 現在は改訂${current}`;
+        return `改訂${revision2}を使用 · 現在は改訂${current}`;
       case "ko":
-        return `수정본 ${revision} 사용 · 현재 수정본 ${current}`;
+        return `수정본 ${revision2} 사용 · 현재 수정본 ${current}`;
       case "pt-BR":
-        return `usou a versão ${revision} · versão atual ${current}`;
+        return `usou a versão ${revision2} · versão atual ${current}`;
       case "zh-Hans":
-        return `使用了修订 ${revision} · 当前修订 ${current}`;
+        return `使用了修订 ${revision2} · 当前修订 ${current}`;
       case "zh-Hant":
-        return `使用了修訂 ${revision} · 目前修訂 ${current}`;
+        return `使用了修訂 ${revision2} · 目前修訂 ${current}`;
       case "en-XA":
-        return `[ûšéð ŕéṽîšîöñ ${revision} · çûŕŕéñţ ŕéṽîšîöñ ${current} ~~~~~~~~~~~~]`;
+        return `[ûšéð ŕéṽîšîöñ ${revision2} · çûŕŕéñţ ŕéṽîšîöñ ${current} ~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮used revision ‬${revision}‮ · current revision ‬${current}`;
+        return `‮used revision ‬${revision2}‮ · current revision ‬${current}`;
     }
-    return `used revision ${revision} · current revision ${current}`;
+    return `used revision ${revision2} · current revision ${current}`;
   }
   function recordUseFinding() {
     switch (currentLanguage()) {
@@ -50362,60 +50565,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `idle`;
   }
   function settingsDevicesIntroHere(input2) {
-    const reads = input2.reads;
+    const reads2 = input2.reads;
     switch (currentLanguage()) {
       case "ar":
-        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هنا. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads}`;
+        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هنا. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads2}`;
       case "de":
-        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads}`;
+        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads2}`;
       case "es":
-        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads}`;
+        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads2}`;
       case "fr":
-        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads}`;
+        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads2}`;
       case "ja":
-        return `一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads}`;
+        return `一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads2}`;
       case "ko":
-        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads}`;
+        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads2}`;
       case "pt-BR":
-        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam aqui. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads}`;
+        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam aqui. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads2}`;
       case "zh-Hans":
-        return `你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads}`;
+        return `你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads2}`;
       case "zh-Hant":
-        return `你的大副在這台電腦上。它的任務和對話都留在這裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads}`;
+        return `你的大副在這台電腦上。它的任務和對話都留在這裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads2}`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads2} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads}`;
+        return `‮Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads2}`;
     }
-    return `Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads}`;
+    return `Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads2}`;
   }
   function settingsDevicesIntroThere(input2) {
-    const reads = input2.reads;
+    const reads2 = input2.reads;
     switch (currentLanguage()) {
       case "ar":
-        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هناك. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads}`;
+        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هناك. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads2}`;
       case "de":
-        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben dort. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads}`;
+        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben dort. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads2}`;
       case "es":
-        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan allí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads}`;
+        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan allí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads2}`;
       case "fr":
-        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation y restent. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads}`;
+        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation y restent. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads2}`;
       case "ja":
-        return `一等航海士はこのコンピューターにいます。タスクと会話はそちらに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads}`;
+        return `一等航海士はこのコンピューターにいます。タスクと会話はそちらに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads2}`;
       case "ko":
-        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 그곳에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads}`;
+        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 그곳에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads2}`;
       case "pt-BR":
-        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam lá. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads}`;
+        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam lá. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads2}`;
       case "zh-Hans":
-        return `你的大副在这台电脑上。它的任务和对话都留在那里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads}`;
+        return `你的大副在这台电脑上。它的任务和对话都留在那里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads2}`;
       case "zh-Hant":
-        return `你的大副在這台電腦上。它的任務和對話都留在那裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads}`;
+        return `你的大副在這台電腦上。它的任務和對話都留在那裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads2}`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ţĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ţĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads2} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads}`;
+        return `‮Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads2}`;
     }
-    return `Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads}`;
+    return `Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads2}`;
   }
   function settingsDevicesJoined(input2) {
     const when = input2.when;
@@ -56758,33 +56961,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `Open applications on ${host} and choose ${add}.`;
   }
   function settingsForgeBrowserStepSave(input2) {
-    const id = input2.id;
+    const id2 = input2.id;
     const secret = input2.secret;
     switch (currentLanguage()) {
       case "ar":
-        return `احفظ التطبيق والصق ${id} الخاص به أدناه، وليس ${secret}.`;
+        return `احفظ التطبيق والصق ${id2} الخاص به أدناه، وليس ${secret}.`;
       case "de":
-        return `Speichere die Anwendung und füg unten ihre ${id} ein, nicht ihr ${secret}.`;
+        return `Speichere die Anwendung und füg unten ihre ${id2} ein, nicht ihr ${secret}.`;
       case "es":
-        return `Guarda la aplicación y pega abajo su ${id}, no su ${secret}.`;
+        return `Guarda la aplicación y pega abajo su ${id2}, no su ${secret}.`;
       case "fr":
-        return `Enregistrez l’application et collez son ${id} ci-dessous, pas son ${secret}.`;
+        return `Enregistrez l’application et collez son ${id2} ci-dessous, pas son ${secret}.`;
       case "ja":
-        return `アプリケーションを保存し、${secret} ではなく ${id} を下に貼り付けます。`;
+        return `アプリケーションを保存し、${secret} ではなく ${id2} を下に貼り付けます。`;
       case "ko":
-        return `애플리케이션을 저장하고 ${secret}이(가) 아닌 ${id}을(를) 아래에 붙여 넣으세요.`;
+        return `애플리케이션을 저장하고 ${secret}이(가) 아닌 ${id2}을(를) 아래에 붙여 넣으세요.`;
       case "pt-BR":
-        return `Salve o aplicativo e cole abaixo o ${id} dele, não o ${secret}.`;
+        return `Salve o aplicativo e cole abaixo o ${id2} dele, não o ${secret}.`;
       case "zh-Hans":
-        return `保存该应用，然后把它的 ${id} 粘贴到下方，而不是它的 ${secret}。`;
+        return `保存该应用，然后把它的 ${id2} 粘贴到下方，而不是它的 ${secret}。`;
       case "zh-Hant":
-        return `儲存這個應用程式，然後把它的 ${id} 貼到下方，不是它的 ${secret}。`;
+        return `儲存這個應用程式，然後把它的 ${id2} 貼到下方，不是它的 ${secret}。`;
       case "en-XA":
-        return `[Šáṽé ţĥé áþþļîçáţîöñ áñð þášţé îţš ${id} ƀéļöŵ, ñöţ îţš ${secret}. ~~~~~~~~~~~~~~~~~~]`;
+        return `[Šáṽé ţĥé áþþļîçáţîöñ áñð þášţé îţš ${id2} ƀéļöŵ, ñöţ îţš ${secret}. ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Save the application and paste its ‬${id}‮ below, not its ‬${secret}‮.‬`;
+        return `‮Save the application and paste its ‬${id2}‮ below, not its ‬${secret}‮.‬`;
     }
-    return `Save the application and paste its ${id} below, not its ${secret}.`;
+    return `Save the application and paste its ${id2} below, not its ${secret}.`;
   }
   function settingsForgeBrowserStepScopes(input2) {
     const api = input2.api;
@@ -75030,60 +75233,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `${finished} · ${where}`;
   }
   function settingsUsageModelBreakdownTokens(input2) {
-    const line = input2.line;
+    const line2 = input2.line;
     switch (currentLanguage()) {
       case "ar":
-        return `${line} · تفصيل الرموز`;
+        return `${line2} · تفصيل الرموز`;
       case "de":
-        return `${line} · Aufschlüsselung der Tokens`;
+        return `${line2} · Aufschlüsselung der Tokens`;
       case "es":
-        return `${line} · Desglose de tokens`;
+        return `${line2} · Desglose de tokens`;
       case "fr":
-        return `${line} · Répartition des jetons`;
+        return `${line2} · Répartition des jetons`;
       case "ja":
-        return `${line} · トークンの内訳`;
+        return `${line2} · トークンの内訳`;
       case "ko":
-        return `${line} · 토큰 내역`;
+        return `${line2} · 토큰 내역`;
       case "pt-BR":
-        return `${line} · Detalhamento de tokens`;
+        return `${line2} · Detalhamento de tokens`;
       case "zh-Hans":
-        return `${line} · token 明细`;
+        return `${line2} · token 明细`;
       case "zh-Hant":
-        return `${line} · token 明細`;
+        return `${line2} · token 明細`;
       case "en-XA":
-        return `[${line} · Ţöķéñ ƀŕéáķðöŵñ ~~~~~~]`;
+        return `[${line2} · Ţöķéñ ƀŕéáķðöŵñ ~~~~~~]`;
       case "ar-XB":
-        return `${line}‮ · Token breakdown‬`;
+        return `${line2}‮ · Token breakdown‬`;
     }
-    return `${line} · Token breakdown`;
+    return `${line2} · Token breakdown`;
   }
   function settingsUsageModelBreakdownUsd(input2) {
-    const line = input2.line;
+    const line2 = input2.line;
     switch (currentLanguage()) {
       case "ar":
-        return `${line} · تفصيل الدولارات التقديرية`;
+        return `${line2} · تفصيل الدولارات التقديرية`;
       case "de":
-        return `${line} · Aufschlüsselung in geschätzten USD`;
+        return `${line2} · Aufschlüsselung in geschätzten USD`;
       case "es":
-        return `${line} · Desglose estimado en USD`;
+        return `${line2} · Desglose estimado en USD`;
       case "fr":
-        return `${line} · Répartition estimée en USD`;
+        return `${line2} · Répartition estimée en USD`;
       case "ja":
-        return `${line} · 推定ドルの内訳`;
+        return `${line2} · 推定ドルの内訳`;
       case "ko":
-        return `${line} · 추정 USD 내역`;
+        return `${line2} · 추정 USD 내역`;
       case "pt-BR":
-        return `${line} · Detalhamento estimado em USD`;
+        return `${line2} · Detalhamento estimado em USD`;
       case "zh-Hans":
-        return `${line} · 估算美元明细`;
+        return `${line2} · 估算美元明细`;
       case "zh-Hant":
-        return `${line} · 估計美元明細`;
+        return `${line2} · 估計美元明細`;
       case "en-XA":
-        return `[${line} · Éšţîɱáţéð ÛŠÐ ƀŕéáķðöŵñ ~~~~~~~~~]`;
+        return `[${line2} · Éšţîɱáţéð ÛŠÐ ƀŕéáķðöŵñ ~~~~~~~~~]`;
       case "ar-XB":
-        return `${line}‮ · Estimated USD breakdown‬`;
+        return `${line2}‮ · Estimated USD breakdown‬`;
     }
-    return `${line} · Estimated USD breakdown`;
+    return `${line2} · Estimated USD breakdown`;
   }
   function settingsUsageModelDetails(input2) {
     const model = input2.model;
@@ -92704,6 +92907,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     batch: cardFilesSavedSchema.omit({ path: true }).nullable()
   });
   _enum(["opened", "revealed", "missing", "failed"]);
+  function formatDurationShort(ms) {
+    const totalMinutes = Math.max(0, Math.round(ms / 6e4));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor(totalMinutes % (60 * 24) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    return `${minutes}m`;
+  }
   const cardCornerSchema = object({
     icon: literal("minus"),
     label: string(),
@@ -92717,6 +92929,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The click closes the note's task as answered. */
     closesTask: boolean()
   });
+  function answerWaitWords(since, now) {
+    return `Answer ready · waiting ${formatDurationShort(Math.max(0, now - since))}`;
+  }
   const NOTE_LINE_POINTS_MAX = 256;
   const NOTE_PLACE_LINES_MAX = 8;
   const pixel = number().int().nonnegative();
@@ -92841,7 +93056,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     operationId: string().min(1).max(128),
     sameAction: boolean()
   });
-  object({
+  const captainActionSchema = object({
     requirements: array(
       object({
         source: string(),
@@ -92860,17 +93075,48 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     completedAt: number().optional(),
     cancelledReason: string().optional()
   });
-  object({
+  const requiredActionStatusSchema = object({
     cardId: string(),
     state: _enum(["blocked", "ready", "deferred", "confirmed", "checked", "cancelled"]),
     result: string()
   });
   const rigorSchema = _enum(["quick", "standard", "reviewed"]);
-  _enum(["pass", "findings", "blocked"]);
-  _enum(["low", "medium", "high"]);
+  const EVIDENCE_HEADINGS = [
+    "Intent",
+    "What changed",
+    "Verified",
+    "Risk",
+    "Not done"
+  ];
+  function evidenceHeadingOf(line2) {
+    const bare = line2.trim().replace(/^[#>\-*_\s]+/, "");
+    for (const heading of EVIDENCE_HEADINGS) {
+      if (bare.slice(0, heading.length).toLowerCase() !== heading.toLowerCase()) continue;
+      const after = bare.slice(heading.length).replace(/^[*_`]+/, "");
+      if (after.trim() === "" || after.trimStart().startsWith(":")) {
+        return {
+          heading,
+          rest: after.trimStart().replace(/^:[*_`]*/, "").trim()
+        };
+      }
+    }
+    return void 0;
+  }
+  function withoutIntentLead(report) {
+    const lines = report.split(/\r?\n/);
+    const first = lines.findIndex((line2) => line2.trim() !== "");
+    const lead = first === -1 ? void 0 : evidenceHeadingOf(lines[first] ?? "");
+    if (lead?.heading !== "Intent") return report;
+    const next2 = lines.findIndex((line2, index) => index > first && evidenceHeadingOf(line2));
+    if (next2 === -1) return [lead.rest, ...lines.slice(first + 1)].join("\n");
+    const section = evidenceHeadingOf(lines[next2] ?? "");
+    return [section?.rest ?? "", ...lines.slice(next2 + 1)].join("\n");
+  }
+  const reviewVerdictSchema = _enum(["pass", "findings", "blocked"]);
+  const reviewRiskSchema = _enum(["low", "medium", "high"]);
   const findingSeveritySchema = _enum(["error", "warning", "info"]);
   const findingActionSchema = _enum(["auto-fix", "ask-user", "no-op"]);
-  object({
+  const reviewFindingSchema = object({
     id: string().trim().min(1).max(64),
     severity: findingSeveritySchema,
     file: string().trim().min(1).optional(),
@@ -92906,6 +93152,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   const THROUGH_THE_COMMAND = "command";
   const throughSchema = literal(THROUGH_THE_COMMAND);
+  function isReadyDecision(card) {
+    return !card.awaiting && card.actions.length > 0;
+  }
   const cardAuthorSchema = _enum(["crewmate", "firstmate", "host"]);
   const PREVIEW_TAGS = /<!--[\s\S]*?(?:-->|$)|<(script|style)(?=[\s>/])[^>]*>(?:[\s\S]*?<\/\1\s*>|[\s\S]*$)|<(\/?)(figure|canvas)(?=[\s>/])[^>]*>/gi;
   function bodyShape(body) {
@@ -93705,7 +93954,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     object({ state: literal("ready"), collections: array(knowledgeCollectionSchema) }),
     unavailableSchema
   ]);
-  strictObject({
+  const knowledgeGraphArgsSchema = strictObject({
     scope: scopeSchema,
     /** A concept whose neighborhood alone is drawn. */
     focus: entryIdSchema.optional(),
@@ -93760,7 +94009,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
-  strictObject({
+  const knowledgeConceptsArgsSchema = strictObject({
     scope: scopeSchema,
     query: string().max(QUERY_MAX).optional(),
     /** From 0. */
@@ -93784,7 +94033,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     unavailableSchema
   ]);
   const knowledgeFindingFilterSchema = _enum(["all", "recheck", "differing"]);
-  strictObject({
+  const knowledgeFindingsArgsSchema = strictObject({
     scope: scopeSchema,
     query: string().max(QUERY_MAX).optional(),
     filter: knowledgeFindingFilterSchema.optional(),
@@ -93830,6 +94079,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     revision: number().int().positive(),
     updatedAt: number()
   });
+  const knowledgeDirectionsArgsSchema = knowledgeConceptsArgsSchema;
   discriminatedUnion("state", [
     object({
       state: literal("ready"),
@@ -93840,7 +94090,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
-  strictObject({
+  const knowledgeDirectionArgsSchema = strictObject({
     id: string().min(1).max(64),
     page: number().int().min(0).max(1e4).optional()
   });
@@ -93898,7 +94148,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     op: _enum(["add", "revise", "retire"]),
     direction: knowledgeDirectionRowSchema
   });
-  strictObject({
+  const knowledgeEntryArgsSchema = strictObject({
     id: entryIdSchema,
     /** An earlier revision to read instead of the current one. */
     revision: number().int().positive().optional()
@@ -94042,7 +94292,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const KNOWLEDGE_ID_IN_TEXT = "(?<![A-Za-z0-9_-])[cf]-[a-z0-9]{6}(?![A-Za-z0-9_-])";
   const KNOWLEDGE_ID_EXACT = /^[cf]-[a-z0-9]{6}$/;
   const KNOWLEDGE_REFS_MAX = 32;
-  strictObject({
+  const knowledgeRefsArgsSchema = strictObject({
     ids: array(entryIdSchema).min(1).max(KNOWLEDGE_REFS_MAX)
   });
   const knowledgeRefSchema = object({
@@ -94060,7 +94310,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     object({ state: literal("ready"), refs: array(knowledgeRefSchema) }),
     unavailableSchema
   ]);
-  strictObject({ task: string().min(1).max(64) });
+  const knowledgeUsesArgsSchema = strictObject({ task: string().min(1).max(64) });
   const knowledgeTaskUseSchema = object({
     id: string(),
     kind: _enum(["concept", "finding"]),
@@ -94153,6 +94403,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   });
   const FRAME_BRIDGE_VERSION = 2;
   const ACTION_VALUE_MAX_BYTES = 4096;
+  const FRAME_MAX_SUBSCRIPTIONS = 32;
   const FRAME_MAX_PICTURES = 1024;
   const FRAME_PICTURE_SRC_MAX = 16 * 1024 * 1024;
   const FRAME_FIND_TEXT_MAX = 16 * 1024 * 1024;
@@ -96439,6 +96690,38 @@ ${FRAME_TAG_SCRIPT}
     }
   };
 `;
+  function transferReadValue(previous, next2) {
+    const reuse = [];
+    const compact = (before, after, key) => {
+      if (!Array.isArray(before)) return after;
+      const positions = /* @__PURE__ */ new Map();
+      before.forEach((item, index) => {
+        if (item !== null && typeof item === "object") positions.set(item, index);
+      });
+      const added = [];
+      const indices = after.map((item) => {
+        const index = item !== null && typeof item === "object" ? positions.get(item) : void 0;
+        if (index !== void 0) return index;
+        return -added.push(item);
+      });
+      if (added.length === after.length) return after;
+      reuse.push({ key, indices });
+      return added;
+    };
+    let value = next2;
+    if (Array.isArray(next2)) {
+      value = compact(previous, next2, null);
+    } else if (next2 && typeof next2 === "object" && previous && typeof previous === "object") {
+      const fields = { ...next2 };
+      for (const [key, field] of Object.entries(fields)) {
+        if (Array.isArray(field)) {
+          fields[key] = compact(previous[key], field, key);
+        }
+      }
+      if (reuse.length) value = fields;
+    }
+    return reuse.length ? { value, reuse } : { value };
+  }
   const READ_VALUE_DECODER = `function (previous, message) {
   var value = message.value;
   (message.reuse || []).forEach(function (array) {
@@ -97271,7 +97554,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     _null()
   ]);
   const sqlTextSchema = string().min(1).refine((value) => utf8Bytes(value) <= SQL_LIMITS.textBytes, "a query is at most 4 KB");
-  strictObject({
+  const sqlQuerySchema = strictObject({
     sql: sqlTextSchema,
     params: array(sqlParamSchema).max(SQL_LIMITS.params).optional()
   });
@@ -97299,6 +97582,15 @@ ${FRAME_KEYBOARD_SCRIPT}
     message: string()
   });
   union([sqlRefusalSchema, sqlRowsSchema]);
+  function sameSqlAnswer(a, b) {
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    const left = a;
+    const right = b;
+    if ("refused" in left || "refused" in right) {
+      return left.refused === right.refused && left.message === right.message;
+    }
+    return left.truncated === right.truncated && JSON.stringify(left.columns) === JSON.stringify(right.columns) && JSON.stringify(left.rows) === JSON.stringify(right.rows);
+  }
   function searchWords(words2) {
     return words2.split(/[,、，]/).map((word) => word.trim()).filter(Boolean);
   }
@@ -98497,17 +98789,17 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [{ key: "ArrowUp" }, { key: "p", ctrl: true }]
     }
   };
-  function isWindowCommand(id) {
-    return KEYBOARD_COMMANDS[id].scope === "window";
+  function isWindowCommand(id2) {
+    return KEYBOARD_COMMANDS[id2].scope === "window";
   }
-  function isShellCommand(id) {
-    const command = KEYBOARD_COMMANDS[id];
+  function isShellCommand(id2) {
+    const command = KEYBOARD_COMMANDS[id2];
     return command.runs === "shell";
   }
   const COMMAND_IDS = Object.keys(KEYBOARD_COMMANDS);
   COMMAND_IDS.filter(isShellCommand);
   COMMAND_IDS.filter(
-    (id) => isWindowCommand(id) && !isShellCommand(id)
+    (id2) => isWindowCommand(id2) && !isShellCommand(id2)
   );
   function systemChord(chord, system) {
     if (system === "mac" || !chord.meta && !chord.ctrl) return chord;
@@ -98535,12 +98827,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     }
     return pressed2;
   }
-  function catalogKeys(id, system = "mac") {
-    return systemKeys(KEYBOARD_COMMANDS[id].keys, system);
+  function catalogKeys(id2, system = "mac") {
+    return systemKeys(KEYBOARD_COMMANDS[id2].keys, system);
   }
   function catalogBindings(system) {
     return Object.fromEntries(
-      COMMAND_IDS.map((id) => [id, catalogKeys(id, system)])
+      COMMAND_IDS.map((id2) => [id2, catalogKeys(id2, system)])
     );
   }
   catalogBindings("mac");
@@ -98709,10 +99001,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     header: panelHeaderSchema.optional(),
     commands: panelCommandsSchema.optional()
   });
-  function uniqueIds(items, id, ctx, slot) {
+  function uniqueIds(items, id2, ctx, slot) {
     const seen = /* @__PURE__ */ new Set();
     for (const item of items) {
-      const key = id(item);
+      const key = id2(item);
       if (seen.has(key)) {
         ctx.addIssue({ code: "custom", message: `duplicate ${slot} id "${key}"` });
       }
@@ -101772,7 +102064,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   function tagOf(node) {
     return node.name?.toLowerCase() ?? "";
   }
-  function words$1(node) {
+  function words$3(node) {
     const collect = (each) => {
       if (each.type === Text$1) return each.data ?? "";
       if (!isElement(each) || NON_COPY.has(tagOf(each))) return "";
@@ -101815,16 +102107,16 @@ ${FRAME_KEYBOARD_SCRIPT}
   }
   function labelOf(choice, root) {
     for (let at = choice.parent; at; at = at.parent) if (tagOf(at) === "label") return at;
-    const id = choice.attribs?.id;
-    if (!id) return void 0;
-    return descendants(root, (each) => tagOf(each) === "label" && each.attribs?.for === id)[0];
+    const id2 = choice.attribs?.id;
+    if (!id2) return void 0;
+    return descendants(root, (each) => tagOf(each) === "label" && each.attribs?.for === id2)[0];
   }
   function labelWords(label, html) {
     return (label.children ?? []).filter((child) => tagOf(child) !== "input").map((child) => html.slice(child.startIndex ?? 0, (child.endIndex ?? -1) + 1)).join("").trim();
   }
   function readTable(table, root, html) {
     const [header, ...body] = rowsOf(table);
-    const headings = header ? cellsOf(header).slice(1).map(words$1) : [];
+    const headings = header ? cellsOf(header).slice(1).map(words$3) : [];
     if (headings.length < 2) {
       return {
         // i18n-exempt: a card check refusal served to the author model, never shown
@@ -101836,7 +102128,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     for (const row of body) {
       const cells = cellsOf(row);
       const option = hookValue(row.attribs, "option");
-      const shown = words$1(cells[0] ?? row);
+      const shown = words$3(cells[0] ?? row);
       const name = shown || "a row";
       if (option === void 0) {
         return {
@@ -102919,6 +103211,14 @@ ${REVISION_HIGHLIGHT_STYLE}`;
     m: string(),
     a: record(string(), union([leafFillSchema, saidPartSchema])).optional()
   });
+  function said(m, ...args) {
+    const [a] = args;
+    return a && Object.keys(a).length ? { m, a } : { m };
+  }
+  function saidPart(m, ...args) {
+    const [a] = args;
+    return a && Object.keys(a).length ? { m, a } : { m };
+  }
   function isMessage(name) {
     return Object.hasOwn(MESSAGES, name);
   }
@@ -102940,6 +103240,13 @@ ${REVISION_HIGHLIGHT_STYLE}`;
     }
     const word = MESSAGES[fact.m];
     return word(input2);
+  }
+  function englishOf(fact) {
+    return inLanguage(SOURCE_LANGUAGE, () => wordSaid(fact)) ?? "";
+  }
+  function wordedLine(line2) {
+    if (!line2.said) return line2.text;
+    return wordSaid(line2.said) ?? line2.text;
   }
   const ESCAPES = {
     "&": "&amp;",
@@ -103075,20 +103382,20 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       eye(1)
     ].join("");
   }
-  const words = (x, y, width, height, text, extra = "") => `<foreignObject x="${x}" y="${y}" width="${width}" height="${height}"><div style="font-size:var(--text-sm);line-height:1.45;color:var(--fg-2)${extra}">${text}</div></foreignObject>`;
-  const picture = (said = chapterWords(), named = labels()) => `<svg viewBox="0 0 520 190" width="520" style="display:block;font-size:var(--text-sm)">
+  const words$2 = (x, y, width, height, text, extra = "") => `<foreignObject x="${x}" y="${y}" width="${width}" height="${height}"><div style="font-size:var(--text-sm);line-height:1.45;color:var(--fg-2)${extra}">${text}</div></foreignObject>`;
+  const picture = (said2 = chapterWords(), named = labels()) => `<svg viewBox="0 0 520 190" width="520" style="display:block;font-size:var(--text-sm)">
 <rect x="0.5" y="0.5" width="519" height="189" rx="8" style="fill:var(--bg-1);stroke:var(--line-1)"/>
 <g data-part="firstmate" style="visibility:hidden">${firstmateStill(263, 66, 50)}</g>
 <g data-part="box"><rect data-look="box" x="190" y="122" width="140" height="18" rx="9" style="fill:none;stroke:var(--accent)"/><text data-look="box-label" x="260" y="135" text-anchor="middle" style="fill:var(--fg-1)">${named.box}</text>
-${words(140, 146, 240, 42, said.box, ";text-align:center").replace("<div ", `<div data-part="words" data-last="${said.end}" `)}</g>
-<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words(171, 48, 180, 50, said.card, ";color:var(--fg-1)")}</g>
+${words$2(140, 146, 240, 42, said2.box, ";text-align:center").replace("<div ", `<div data-part="words" data-last="${said2.end}" `)}</g>
+<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words$2(171, 48, 180, 50, said2.card, ";color:var(--fg-1)")}</g>
 <g data-part="activity"><line x1="130" y1="1" x2="130" y2="189" style="stroke:var(--line-1)"/><text x="14" y="24" style="fill:var(--fg-1)">${named.activity}</text>
 <g style="fill:var(--line-2)"><circle cx="18" cy="42" r="2.5"/><rect x="26" y="40.5" width="88" height="3" rx="1.5"/><circle cx="18" cy="58" r="2.5"/><rect x="26" y="56.5" width="70" height="3" rx="1.5"/><circle cx="18" cy="74" r="2.5"/><rect x="26" y="72.5" width="94" height="3" rx="1.5"/></g>
-${words(12, 88, 112, 98, said.activity)}
+${words$2(12, 88, 112, 98, said2.activity)}
 <path data-look="crew" d="M374 12l9 16h-18zM374 12v16" style="fill:none;stroke:var(--line-2);stroke-linejoin:round"/><path d="M364 24C300 18 200 26 132 40" style="fill:none;stroke:var(--line-2);stroke-dasharray:3 3"/></g>
 <g data-part="tasks"><line x1="390" y1="1" x2="390" y2="189" style="stroke:var(--line-1)"/><text x="404" y="24" style="fill:var(--fg-1)">${named.tasks}</text>
 <g style="fill:var(--line-2)"><rect data-look="task" x="404" y="40.5" width="96" height="3" rx="1.5"/><rect x="404" y="56.5" width="72" height="3" rx="1.5"/><rect x="404" y="72.5" width="84" height="3" rx="1.5"/></g>
-${words(402, 88, 112, 98, said.tasks)}</g>
+${words$2(402, 88, 112, 98, said2.tasks)}</g>
 </svg>`;
   const steps = () => `<div data-welcome-steps hidden><div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-2);max-width:520px">
 <span data-dots style="display:inline-flex;gap:6px" aria-hidden="true">${'<span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-2)"></span>'.repeat(WELCOME_CHAPTERS)}</span>
@@ -103211,6 +103518,7697 @@ ${startersHtml()}`;
   function appBodyOf(saved) {
     return saved.includes(WELCOME_BODY_MARK) ? welcomeBody() : void 0;
   }
+  const planItemStateSchema = _enum(["done", "current", "next", "skipped"]);
+  const planItemSchema = strictObject({
+    /** What the item is, in a few words. */
+    label: string().min(1),
+    /** The word or two under its dot on the summary, cut there when it does not fit. */
+    short: string().min(1),
+    state: planItemStateSchema
+  });
+  array(planItemSchema).min(1);
+  const taskPlanItemSchema = planItemSchema.extend({ since: number() });
+  const taskPlanSchema = object({
+    items: array(taskPlanItemSchema),
+    at: number()
+  });
+  const crewPictureRefSchema = object({
+    ref: string(),
+    mimeType: string()
+  });
+  const crewResultTextSchema = object({
+    text: string(),
+    /** How many characters past the cut were left out. */
+    cut: number().int().nonnegative()
+  });
+  const crewPictureSchema = object({
+    mimeType: string(),
+    data: string()
+  });
+  const crewResultSchema = object({
+    /** Where the result sits in the crewmate's sessions, to read its whole text. */
+    ref: string(),
+    /** How many lines the whole result held. */
+    lines: number().int().nonnegative(),
+    /** Its first line, cut at `CREW_CALL_TEXT_MAX`. */
+    preview: string(),
+    error: boolean(),
+    pictures: array(crewPictureRefSchema)
+  });
+  const crewDiffLineSchema = object({
+    kind: _enum(["context", "removed", "added", "gap"]),
+    text: string()
+  });
+  const crewDiffSchema = object({
+    added: number().int().nonnegative(),
+    removed: number().int().nonnegative(),
+    lines: array(crewDiffLineSchema),
+    /** Lines past `CREW_DIFF_LINES_MAX`, left out. */
+    more: number().int().nonnegative()
+  });
+  const crewSenderSchema = _enum(["captain", "firstmate", "app"]);
+  const line$1 = { id: string(), at: number() };
+  const crewLineSchema = discriminatedUnion("kind", [
+    /** The brief the crewmate ran from, folded to one line. */
+    object({ kind: literal("brief"), ...line$1, text: string() }),
+    /** The crewmate's own words. */
+    object({ kind: literal("said"), ...line$1, text: string() }),
+    /**
+     * A call to a tool, in two lines: the tool, its target and the line the
+     * crewmate wrote to say what it does; then its result, folded. Null
+     * while the call has not answered.
+     */
+    object({
+      kind: literal("tool"),
+      ...line$1,
+      name: string(),
+      /** The call's main argument in one line: a path in the working copy, a command, a page. */
+      target: string(),
+      /** The one line the crewmate wrote with the call, or a plain reading when it wrote none. */
+      reading: string(),
+      result: crewResultSchema.nullable(),
+      /** What an edit or a write changed, from its arguments. */
+      diff: crewDiffSchema.optional()
+    }),
+    /** A line the crewmate was told, and by whom; queued until its session holds it. */
+    object({
+      kind: literal("sent"),
+      ...line$1,
+      from: crewSenderSchema,
+      text: string(),
+      queued: boolean(),
+      /** How the captain sent it: typed here, or replied under a card. */
+      via: _enum(["crewmate-tab", "thread", "other"]).optional()
+    }),
+    /** The plan it reported with a progress note. */
+    object({
+      kind: literal("plan"),
+      ...line$1,
+      text: string(),
+      items: array(object({ label: string(), state: planItemStateSchema }))
+    }),
+    /** A report, its headline and its whole text. */
+    object({ kind: literal("report"), ...line$1, summary: string(), text: string() }),
+    /** A card it put up; its id when the call named one. */
+    object({
+      kind: literal("card"),
+      ...line$1,
+      title: string(),
+      cardId: string().nullable()
+    }),
+    /** The pull request it opened. */
+    object({ kind: literal("change"), ...line$1, title: string() }),
+    /** A turn someone stopped before it finished, and who. */
+    object({ kind: literal("stopped"), ...line$1, by: crewSenderSchema }),
+    /** Its conversation was shortened to fit. */
+    object({ kind: literal("compacted"), ...line$1 }),
+    /** A turn the model could not finish, in its error's words. */
+    object({ kind: literal("failed"), ...line$1, text: string() })
+  ]);
+  object({
+    taskId: string(),
+    /** Lines before the first one carried, left out past `CREW_TRANSCRIPT_LINES_MAX`. */
+    earlier: number().int().nonnegative(),
+    lines: array(crewLineSchema),
+    /** Moves whenever the lines do, so a re-read that says the same thing is not delivered again. */
+    revision: string()
+  });
+  object({
+    taskId: string(),
+    /** What it is writing now. */
+    text: string(),
+    /** When its running turn began; null while none runs. */
+    since: number().nullable()
+  });
+  union([
+    object({ ok: literal(true) }),
+    object({ ok: literal(false), text: string() })
+  ]);
+  const providerViewSchema = object({
+    id: string(),
+    name: string(),
+    /**
+     * Catalog placement. `key` is an API-key sign-in. `escape_hatch` remains
+     * so an older view still parses; nothing in the catalog uses it, and the
+     * chip labels both as "API key".
+     */
+    tier: _enum(["subscription", "key", "escape_hatch"]),
+    /** Auth methods Pi offers for this provider. */
+    authTypes: array(_enum(["oauth", "api_key"])),
+    /**
+     * Why there is no way in right now, when the provider's backend has a
+     * sentence for it and `authTypes` is empty: `note` is the short line on the
+     * chip, `detail` the sentence behind it. A Claude account runs the Claude
+     * Code the person installed (F14), so a Mac without it says so here.
+     */
+    unavailable: object({ note: string(), detail: string() }).optional(),
+    /** Whether credentials are currently configured. */
+    connected: boolean(),
+    /** Which auth type is active when connected. */
+    activeAuthType: _enum(["oauth", "api_key"]).optional(),
+    /** Whether the provider charges by use rather than supplying a subscription allowance. */
+    billedPerToken: boolean()
+  });
+  const authPromptSchema = object({
+    promptId: string(),
+    providerId: string(),
+    /** Which account row this prompt belongs to, when a login is account-scoped. */
+    accountId: string().optional(),
+    kind: _enum(["text", "secret", "select", "manual_code"]),
+    message: string(),
+    placeholder: string().optional(),
+    options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
+  });
+  const authNoticeSchema = object({
+    providerId: string(),
+    /** Which account row this notice belongs to, when a login is account-scoped. */
+    accountId: string().optional(),
+    kind: _enum(["info", "auth_url", "device_code", "progress"]),
+    message: string(),
+    url: string().optional(),
+    userCode: string().optional(),
+    /**
+     * When a device code stops working, in epoch milliseconds, from the
+     * provider's own answer (`expires_in`): the code step says the code
+     * expired once a sign-in ends past it.
+     */
+    expiresAt: number().optional()
+  });
+  const backendIdSchema = _enum(["pi", "claude"]);
+  const STATUS_PATTERNS = [
+    // formatProviderError "<status>: <body>"; SDK messages leading with the status.
+    /^\s*40[13]\b/,
+    // formatProviderError "<prefix> (<status>): <body>".
+    /\(40[13]\)/,
+    // "status code 401", "Error Code 403", '"status": 401'.
+    /\b(?:status(?:\s+code)?|code)["']?\s*[:=]?\s*["']?40[13]\b/i,
+    // "401 Unauthorized" / "403 Forbidden" reason-phrase pairs anywhere.
+    /\b40[13]\s+(?:unauthorized|forbidden)\b/i
+  ];
+  const REASON_PHRASE_PATTERN = /\b(?:unauthorized|forbidden)\b/i;
+  const AUTH_CODE_PATTERN = /\b(?:invalid_api_key|authentication_error|unauthenticated|permission_denied|permission_error|invalid_grant|invalid_token|token_expired|access_denied)\b/i;
+  const PI_PREFLIGHT_PATTERNS = [
+    /^No API key (?:found )?for /m,
+    /^Authentication failed for "/m
+  ];
+  function isAuthFailureMessage(message) {
+    return STATUS_PATTERNS.some((pattern) => pattern.test(message)) || REASON_PHRASE_PATTERN.test(message) || AUTH_CODE_PATTERN.test(message) || PI_PREFLIGHT_PATTERNS.some((pattern) => pattern.test(message));
+  }
+  const CUT_OFF_CLASSES = ["signed_out", "no_headroom", "refused"];
+  const CLAUDE_ACCESS_SOURCES = ["organization", "claude-settings"];
+  const ACCOUNT_LABEL_MAX = 64;
+  const credentialKindSchema = _enum(["subscription_oauth", "api_key"]);
+  const accountViewSchema = object({
+    id: string(),
+    providerId: string(),
+    kind: credentialKindSchema,
+    /** User-facing name: Claude follows its current identity; other providers can be renamed. */
+    label: string(),
+    /** Disabled accounts keep their credentials but leave the selection pool. */
+    enabled: boolean(),
+    /** Whether the store currently holds a usable credential. */
+    connected: boolean(),
+    /**
+     * Local proof this account needs a sign-in (a lapsed refresh token).
+     * Distinct from a missing first-run login and from a retryable miss.
+     */
+    needsReauth: boolean().optional(),
+    /** The provider-level account pin (the one that always wins selection). */
+    pinned: boolean(),
+    /**
+     * Keep going on credits (docs/quota.md): once its allowance is spent, the
+     * account keeps serving on the credits set up with its provider. Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
+    createdAt: number(),
+    lastConnectedAt: number().optional(),
+    /**
+     * Who the provider says signed in - an email or org - where the provider
+     * reports one at all: Claude's email, or the GitHub username a Copilot
+     * account signed in as. Never a credential, and never the internal
+     * account id.
+     */
+    identity: string().optional(),
+    /** The plan the provider reports ("Max", "Pro"), when it reports one. */
+    plan: string().optional(),
+    /**
+     * Where a Claude account's access comes from when it is not a
+     * subscription sign-in: a token command set up for Claude Code by an
+     * organization, or in the person's own Claude Code settings
+     * (`src/shared/claudeAccess.ts`). Absent for a subscription.
+     */
+    access: _enum(CLAUDE_ACCESS_SOURCES).optional(),
+    /**
+     * Who set the address a Claude subscription's requests go to, when Claude
+     * Code's settings name an address and no token command. Absent otherwise.
+     */
+    gateway: _enum(CLAUDE_ACCESS_SOURCES).optional(),
+    /**
+     * Why this account cannot serve right now although its credential is
+     * fine, in the backend's own sentence: a Claude account whose machine has
+     * no Claude Code, or one too old (`src/shared/claudeClient.ts`). Rendered
+     * verbatim; absent when the account can serve.
+     */
+    detail: string().optional(),
+    /**
+     * A typed cut-off standing on this account (docs/quota.md, "Typed
+     * cut-offs"): its class, when it was seen, and a spent allowance's reset
+     * (epoch ms). A computer that runs work tells its home this with its
+     * sign-ins, so a task there waits as one on the home's own accounts does
+     * (docs/helper.md, "Its own sign-ins"). Absent when none stands.
+     */
+    cutOff: object({
+      class: _enum(CUT_OFF_CLASSES),
+      since: number(),
+      resetsAt: number().optional()
+    }).optional()
+  });
+  const machineLoginOutcomeSchema = _enum(["signed-out", "kept", "not-signed-out"]);
+  const commandEndingSchema = _enum([
+    "quit",
+    "signal",
+    "updated",
+    "restart",
+    "start-failed",
+    "crashed",
+    "not-answering"
+  ]);
+  const commandNoticeSchema = strictObject({
+    /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+    state: _enum(["waiting", "stopped"]),
+    ending: commandEndingSchema,
+    /**
+     * Set when this window started the program itself (docs/run.md, "The
+     * window starts it"): the person never ran a command, so the line speaks
+     * of their first mate, and Start it here starts that program again.
+     */
+    byWindow: literal(true).optional()
+  });
+  const HERE = {
+    this: "this computer"
+  };
+  ({
+    this: saidPart("placeThisComputer"),
+    here: saidPart("placeHere")
+  });
+  const workSetupReasonSchema = _enum([
+    "other-home",
+    "other-entry",
+    "removal-unfinished",
+    "app-place",
+    "background-off",
+    "no-background",
+    "newer-work",
+    "local-network",
+    "not-reached"
+  ]);
+  strictObject({
+    state: _enum(["running", "starting", "blocked"]),
+    reason: workSetupReasonSchema.optional(),
+    copyGone: literal(true).optional()
+  });
+  const deviceWorkSetupSchema = strictObject({
+    state: _enum(["starting", "blocked"]),
+    reason: workSetupReasonSchema.optional()
+  });
+  strictObject({ deviceId: string().min(1).max(64) });
+  const deviceKindSchema = _enum(["mac", "work", "view"]);
+  const deviceRoleSchema = _enum(["view", "work"]);
+  const deviceSystemSchema = _enum(["macos", "linux", "windows", "ios"]);
+  const deviceChipSchema = _enum(["arm64", "x64"]);
+  const PAIRING_LINK_PREFIX = "infinitary://join?";
+  const KEY_TEXT_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+  const keyTextSchema = string().regex(KEY_TEXT_PATTERN);
+  const deviceNameSchema = string().trim().min(1).max(64).regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u);
+  const hostLabel = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+  const HOST_NAME = new RegExp(`^(?=.{1,253}$)${hostLabel}(?:\\.${hostLabel})*$`, "i");
+  const IPV6 = /^[0-9a-f:.]{2,45}$/i;
+  const dialAddressSchema = string().refine((text) => splitDialAddress(text) !== null, {
+    message: "Expected host:port"
+  });
+  function splitDialAddress(text) {
+    const match = /^(?:\[([^\]]+)\]|([^:[\]]+)):(\d{1,5})$/.exec(text);
+    if (!match) return null;
+    const [, v6, name, portText] = match;
+    const port = Number(portText);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+    if (v6 !== void 0) return IPV6.test(v6) && v6.includes(":") ? { host: v6, port } : null;
+    return name !== void 0 && HOST_NAME.test(name) ? { host: name, port } : null;
+  }
+  const homeViaSchema = literal("ssh");
+  const PAIRING_LINK_ALSO_MAX = 8;
+  strictObject({
+    /** The kind the home made the link for. */
+    kind: deviceKindSchema,
+    /** Where to dial, unless `via` says the device reaches the home another way. */
+    at: dialAddressSchema,
+    /** The home's pin: SHA-256 of its public key, base64url. */
+    key: keyTextSchema,
+    /** The one-use code. */
+    code: keyTextSchema,
+    /** How the device reaches the home; absent, at `at`. */
+    via: homeViaSchema.optional(),
+    /**
+     * The other addresses to try, after `at`, when the first does not answer.
+     * One optional part, so a link without it reads as before.
+     */
+    also: array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX).optional()
+  });
+  const deviceUserNameSchema = string().min(1).max(64).regex(/^[A-Za-z0-9_](?:[A-Za-z0-9_.@ -]*[A-Za-z0-9_.@-])?$/);
+  const deviceRemovalStageSchema = _enum(["when-back", "bringing-work", "cleaning-up"]);
+  strictObject({
+    into: string().min(1).max(64),
+    cert: string().min(1).max(8192),
+    signature: string().regex(/^[A-Za-z0-9_-]+$/).max(512)
+  });
+  _enum(["when-back", "now"]);
+  const foundToolsSchema = strictObject({
+    git: boolean(),
+    claudeCode: boolean()
+  });
+  const deviceUpdateBySchema = _enum(["remote-login", "connection", "command"]);
+  const deviceOtherVersionSchema = strictObject({
+    app: string().min(1).max(64).optional(),
+    than: _enum(["older", "newer"]).optional(),
+    takesWork: boolean(),
+    updateBy: deviceUpdateBySchema,
+    downloads: literal(true).optional()
+  });
+  const deviceAppVersionSchema = strictObject({
+    app: string().min(1).max(64).optional(),
+    than: _enum(["older", "newer"]).optional(),
+    same: literal(true).optional()
+  });
+  const sshStopReasonSchema = _enum([
+    "host-unknown",
+    "host-changed",
+    "key-refused",
+    "key-locked",
+    "agent-declined",
+    "agent-not-running",
+    "forwarding-refused",
+    "not-set-up",
+    "other-home"
+  ]);
+  const automaticStartupSchema = _enum([
+    "available",
+    "at-login",
+    "failed",
+    "unavailable",
+    "unknown"
+  ]);
+  const deviceSshSchema = strictObject({
+    state: _enum(["connected", "connecting", "reconnecting", "at-login", "not-started", "stopped"]),
+    reason: sshStopReasonSchema.optional(),
+    automaticStartup: automaticStartupSchema.optional()
+  });
+  const computerReachSchema = _enum([
+    "in-reach",
+    "connecting",
+    "reconnecting",
+    "out-of-reach"
+  ]);
+  const deviceViewSchema = strictObject({
+    id: string().min(1).max(64),
+    kind: deviceKindSchema,
+    name: deviceNameSchema,
+    /** When it joined, in milliseconds since the epoch. */
+    pairedAt: number().int().nonnegative(),
+    /**
+     * The macOS user a computer that runs work runs as, as it said when it
+     * joined; absent for a view.
+     */
+    user: deviceUserNameSchema.optional(),
+    automaticStartup: automaticStartupSchema.optional(),
+    /**
+     * Whether it joined from this Mac itself - another macOS user here, or a
+     * second app on this Mac - as the home saw where it dialed from. Absent on
+     * a device that joined before the home recorded it.
+     */
+    onThisMac: boolean().optional(),
+    /**
+     * The address its person added it at over Remote Login, such as
+     * `sam@mini.local` (docs/devices.md, "Adding a computer by its address"): the
+     * home updates Firstmate there, and removes what it set up there, the same
+     * way. Absent on a device added by a link or a command.
+     */
+    remoteLogin: string().min(1).max(255).optional(),
+    /** A verified address used only for an Ubuntu package update, not for pairing. */
+    packageUpdateAt: string().min(1).max(255).optional(),
+    /**
+     * The system it runs and its chip, as its last hello said them
+     * (docs/devices.md, "What a device is"); absent on a device that has not
+     * said them since the home began keeping them.
+     */
+    system: deviceSystemSchema.optional(),
+    chip: deviceChipSchema.optional(),
+    // What the home reads of each device right now, for Settings -> Devices
+    // (docs/devices.md, "Your devices"); never saved in the list.
+    /** It is in reach: a computer that runs work takes work, a Mac that controls this Firstmate is connected. */
+    inReach: boolean().optional(),
+    /**
+     * Connected now on another version of Firstmate than this Mac's, whether
+     * or not it takes work; absent while it runs this Mac's version, and while
+     * it is out of reach, when the home cannot tell.
+     */
+    otherVersion: deviceOtherVersionSchema.optional(),
+    /**
+     * The version of Infinitary its work runs, while connected on this
+     * computer's version; one on another version says it in `otherVersion`.
+     */
+    workVersion: string().min(1).max(64).optional(),
+    /**
+     * The Infinitary app open on it now, while it controls this computer:
+     * its version, and how it compares with this computer's. Absent while no
+     * app is open there, when this computer cannot tell.
+     */
+    appVersion: deviceAppVersionSchema.optional(),
+    /** When it was last in reach, in milliseconds since the epoch. */
+    seenAt: number().int().nonnegative().optional(),
+    /**
+     * When the connection the row calls connected began, in milliseconds
+     * since the epoch. Absent while it is not connected. A "could not reach"
+     * line goes when this is newer than the line (protocol 8.17).
+     */
+    connectedAt: number().int().nonnegative().optional(),
+    /** Firstmate is open on it, controlling this Firstmate now. */
+    controlling: boolean().optional(),
+    /** Another user on this Mac, out of reach since this Mac restarted: nobody has logged in as it since. */
+    restartedSince: boolean().optional(),
+    /**
+     * Out of reach, and this Mac's address changed since it was last in
+     * reach: it still looks for this Mac where it found it then, until it
+     * hears where this Mac is now (docs/devices.md, "Finding the home again").
+     */
+    addressChanged: boolean().optional(),
+    /**
+     * Out of reach, never in reach since it joined from another Mac, and it
+     * dials this Mac itself on the local network, where macOS there holds its
+     * work's dial until someone at that Mac allows it; adding it by its
+     * address reaches it over this Mac's own SSH instead (docs/devices.md,
+     * "Held on the local network").
+     */
+    heldOnLocalNetwork: boolean().optional(),
+    /**
+     * Where it last reached this computer, from what pairing keeps: on this
+     * network, or on the private network. Absent when it has not, or it
+     * reached this computer itself.
+     */
+    reachedOn: _enum(["local", "private"]).optional(),
+    /** How many tasks run there now. */
+    tasks: number().int().nonnegative().optional(),
+    /** The projects whose Runs on names it. */
+    runs: array(string()).optional(),
+    /**
+     * Where this Mac's own SSH connection to it stands, for a computer added
+     * by its address (docs/devices.md, "Through the home's SSH"); absent for
+     * every other device, and while this Mac keeps no such connection.
+     */
+    ssh: deviceSshSchema.optional(),
+    /**
+     * Where its removal stands: waiting until it is back, bringing its
+     * unmerged work here, then taking it off the list so it removes what
+     * Firstmate set up there.
+     */
+    removal: deviceRemovalStageSchema.optional(),
+    /**
+     * A computer that runs work, joined again under a new key (docs/devices.md,
+     * "Joined again"): the ids of earlier entries that run work, are out of
+     * reach, have its name and user, joined before it, and still hold tasks
+     * or projects. A fact the home states; only the captain's click acts on it.
+     */
+    earlier: array(string().min(1).max(64)).max(16).optional(),
+    /**
+     * Out of reach with started tasks that can move: how many the home can
+     * carry on to another computer (`inf:devices:carry-on`). An independent
+     * review follows its builder, so it is not counted; Remove now stops it.
+     * Absent from a home without that change.
+     */
+    carriesOn: number().int().positive().optional(),
+    /**
+     * Its tasks are being carried on to this computer, by id
+     * (`RUNS_ON_THIS_MAC` for the home), until it is removed.
+     */
+    carrying: string().min(1).max(64).optional(),
+    /**
+     * A Mac whose window is connected while its work is not in reach: whether
+     * its work is being set up, or why it is not running or has not reached
+     * this computer (`work-setup`, docs/devices.md, "A Mac that has not
+     * finished setting up"). Absent otherwise, and for a Mac whose window has
+     * not said.
+     */
+    workSetup: deviceWorkSetupSchema.optional()
+  });
+  strictObject({
+    moving: number().int().nonnegative(),
+    stayed: array(string().min(1).max(2e3)).max(500)
+  });
+  deviceViewSchema.pick({
+    id: true,
+    name: true,
+    inReach: true
+  });
+  const deviceCommandForSchema = _enum(["another-mac", "another-user"]);
+  strictObject({
+    kind: deviceKindSchema,
+    /** A phone link prefers detected private-network addresses, retaining local fallbacks. */
+    phone: literal(true).optional(),
+    /**
+     * Where the link tells the device to dial; when absent, the private
+     * address in use, or loopback for another user on this Mac or a Mac with none.
+     */
+    at: dialAddressSchema.optional(),
+    /**
+     * Wrap the link in the command for one: `another-mac` for kind `mac`,
+     * `another-user` for kind `work`, which only a command adds.
+     */
+    command: deviceCommandForSchema.optional()
+  });
+  strictObject({
+    /** The link's own handle, which Stop it names; not a secret, and not the link. */
+    id: string().min(1).max(64),
+    link: string().startsWith(PAIRING_LINK_PREFIX),
+    kind: deviceKindSchema,
+    expiresAt: number().int().nonnegative(),
+    /**
+     * The command that carries the link, when one was asked for: as secret as
+     * the link. Its length is bounded by the longest word Linux lets a program
+     * take (MAX_ARG_STRLEN, 128 KiB), so each word of a command within it can run.
+     */
+    command: strictObject({ for: deviceCommandForSchema, text: string().min(1).max(131072) }).optional()
+  });
+  const deviceAddressNetworkSchema = _enum(["local", "private"]);
+  const deviceFirewallSchema = strictObject({
+    name: _enum(["ufw", "firewalld", "nixos"]),
+    port: number().int().min(1).max(65535)
+  });
+  const windowsFirewallSchema = strictObject({
+    name: literal("windows"),
+    port: number().int().min(1).max(65535),
+    program: string().min(1).max(1024),
+    profiles: array(_enum(["domain", "private", "public"])).min(1).max(3),
+    blockRule: boolean(),
+    blockAll: boolean()
+  });
+  strictObject({
+    addresses: array(
+      strictObject({ address: string().min(1).max(64), network: deviceAddressNetworkSchema })
+    ),
+    chosen: string().min(1).max(64).nullable(),
+    current: string().min(1).max(64).nullable(),
+    /** This computer's name on the local network, such as `kuns-macbook-pro.local`, when it has one. */
+    name: string().min(1).max(253).optional(),
+    firewall: deviceFirewallSchema.optional(),
+    /** On a Windows home, its firewall that may keep devices out; absent when none is known to. */
+    windowsFirewall: windowsFirewallSchema.optional()
+  });
+  strictObject({
+    /** The address that answered last, dialed first. */
+    at: dialAddressSchema,
+    /**
+     * The home's other addresses, tried after `at` (docs/devices.md, "Finding
+     * the home again"): the link's other addresses, then each welcome's list,
+     * as many as a link carries. Absent on one that reaches its home only
+     * through the home's SSH. Never saved in the grant's own file, which an
+     * older version must still read: `JoinedHome` keeps them beside it.
+     */
+    also: array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX).optional(),
+    /** The home's pin. */
+    homeKey: keyTextSchema,
+    deviceId: string().min(1).max(64),
+    kind: deviceKindSchema,
+    /** The device's own private key, PKCS#8 PEM. */
+    key: string().min(1).max(8192),
+    /** The device's own self-signed certificate, PEM. */
+    cert: string().min(1).max(8192),
+    /** How it reaches its home; absent, at `at`. */
+    via: homeViaSchema.optional(),
+    /**
+     * For a computer that runs work: whether it runs on its home's own Mac, as
+     * the home found where it joined from (`onThisMac` on the home's list) and
+     * says in each welcome (docs/helper.md, "In the background"). Absent until
+     * the home has said it.
+     */
+    onHomeMac: boolean().optional()
+  });
+  const leftReasonSchema = _enum(["left", "removed"]);
+  const viewContactSchema = _enum(["reaching", "in-reach", "lost", "closed"]);
+  const takeOverOfferSchema = strictObject({
+    copyAt: number().int().nonnegative(),
+    goodbye: _enum(["sleep", "quit"]).nullable(),
+    copies: array(
+      strictObject({
+        name: string().min(1).max(64),
+        copyAt: number().int().nonnegative().nullable(),
+        newer: boolean()
+      })
+    ).max(64),
+    ready: boolean(),
+    asked: strictObject({
+      state: _enum(["running", "started", "refused"]),
+      text: string().min(1).max(600)
+    }).nullable()
+  });
+  const STEPPED_DOWN_LINES = 20;
+  const steppedDownSchema = strictObject({
+    from: string().min(1).max(160),
+    at: number().int().nonnegative(),
+    since: number().int().nonnegative().nullable(),
+    lines: array(
+      strictObject({
+        task: string().max(160),
+        at: number().int().nonnegative(),
+        text: string().max(300)
+      })
+    ).max(STEPPED_DOWN_LINES)
+  });
+  discriminatedUnion("role", [
+    strictObject({
+      role: literal("home"),
+      left: strictObject({
+        name: string().min(1).max(128),
+        reason: leftReasonSchema,
+        at: number().int().nonnegative()
+      }).nullable(),
+      /**
+       * The times the window here read everything again after a gap in what
+       * its first mate told it over the local door; absent until the first.
+       */
+      caughtUp: number().int().positive().optional(),
+      /**
+       * The times the window's link to its first mate over the local door came
+       * back after a drop, replayed or not; absent until the first. The window
+       * asks its one-time reads again on each.
+       */
+      linkBack: number().int().positive().optional(),
+      /**
+       * The window was opened beside Infinitary started by a command, which no
+       * longer runs (`./commandNotice.ts`): absent while it runs, and in a
+       * window whose own program runs the first mate.
+       */
+      command: commandNoticeSchema.optional(),
+      /**
+       * The window stands beside Infinitary started by a command, which runs
+       * the first mate in a program of its own (docs/run.md, "Quit and Stop"):
+       * quitting closes only the window, and Settings → General offers Stop.
+       */
+      byCommand: literal(true).optional()
+    }),
+    strictObject({
+      role: literal("view"),
+      name: string().min(1).max(128),
+      address: string().min(1).max(256),
+      joinedAt: number().int().nonnegative(),
+      contact: viewContactSchema,
+      readOnly: _enum(["newer-there", "older-there"]).nullable(),
+      /**
+       * While `readOnly`, the first mate there still hears this Mac's
+       * plain-text messages (the `messages-while-reading` contract change), so
+       * the message box stays on (docs/view.md, "Two versions apart").
+       */
+      messagesWhileReading: literal(true).optional(),
+      /**
+       * The first mate there answers its own update's requests
+       * (`inf:home-update:*`, the `home-update` contract change), so Settings
+       * → General offers its Update row (docs/view.md, "Updating the first
+       * mate's computer").
+       */
+      homeUpdates: literal(true).optional(),
+      heardAt: number().int().nonnegative().nullable(),
+      caughtUp: number().int().nonnegative(),
+      /**
+       * The times this Mac's link to the first mate there came back after a
+       * drop, replayed or not; absent until the first. The window asks its
+       * one-time reads again on each.
+       */
+      linkBack: number().int().positive().optional(),
+      /**
+       * The pushes this Mac missed are still arriving from a welcome that
+       * replays them, so the window says it is catching up until they are in
+       * (docs/view.md, "Live, catching up or out of reach").
+       */
+      replaying: literal(true).optional(),
+      runsWork: boolean().optional(),
+      /**
+       * The first mate there is too old to answer what every view now asks
+       * (the `every-view-asks` contract change), so its settings and sign-ins
+       * wait for an update there (docs/view.md, "A first mate on an older version").
+       */
+      needsUpdateThere: literal(true).optional(),
+      /**
+       * The first mate there is too old to show a task's browser here (the
+       * `browser-from-any-view` contract change), so its view says to update
+       * Infinitary there (docs/view.md, "A task's browser on a view").
+       */
+      browserNeedsUpdateThere: literal(true).optional(),
+      /**
+       * The first mate there cannot take a sign-in's return from this computer
+       * (the `sign-in-return` contract change), so a sign-in whose page comes
+       * back to that computer waits for an update there (docs/view.md, "A
+       * sign-in that returns to the first mate's computer").
+       */
+      returnsNeedUpdateThere: literal(true).optional(),
+      /**
+       * A sign-in there waits for its page's return from this computer, by the
+       * return's id: `caught` while this computer listens for the browser, and
+       * false when it could not, so Settings asks for the address instead.
+       */
+      signInReturn: strictObject({ id: string().min(1).max(64), caught: boolean() }).optional(),
+      /**
+       * The first mate there does not answer a view its computers, phones
+       * and Knowledge (the `devices-from-a-view` contract change), so Devices
+       * waits for an update there (docs/view.md, "A first mate on an older version").
+       */
+      devicesNeedUpdateThere: literal(true).optional(),
+      /**
+       * This Mac keeps a copy of the first mate's record and the first mate
+       * is out of reach: Take over, with what it is based on (docs/devices.md,
+       * "Taking over"). Absent while that Mac is in reach, or this Mac keeps
+       * no whole copy.
+       */
+      takeOver: takeOverOfferSchema.optional(),
+      /**
+       * This Mac's own work half is not running, or has not reached the first
+       * mate's computer, and why (docs/view.md, "A Mac that runs work"): the
+       * window's notice says so with Try again. Absent while it runs and is
+       * in reach, or is still being set up.
+       */
+      workSetup: deviceWorkSetupSchema.optional(),
+      /**
+       * A second first mate answered with the same home number but another
+       * takeover (docs/devices.md, "Two homes with one number"): this Mac
+       * refused it and stays with the one it knew; its name when it said one.
+       */
+      twoHomes: strictObject({ name: string().max(200).nullable() }).optional(),
+      /**
+       * This Mac was the first mate's home until a computer that kept a copy
+       * took over (docs/devices.md, "An old home that returns"): what it saved
+       * after that copy, which never reached it. Absent otherwise.
+       */
+      steppedDown: steppedDownSchema.optional(),
+      /**
+       * The first mate's computer removed the entry this window held while this
+       * Mac's work still runs for it as another, so the window carries on as
+       * that one (docs/view.md, "A Mac that runs work"): when it did. Absent
+       * otherwise.
+       */
+      carriedOn: strictObject({ at: number().int().nonnegative() }).optional()
+    })
+  ]);
+  discriminatedUnion("ok", [
+    strictObject({ ok: literal(true) }),
+    strictObject({
+      ok: literal(false),
+      refused: _enum([
+        "not-a-link",
+        "kind",
+        "used",
+        "expired",
+        "unknown",
+        "unreachable",
+        "not-that-mac",
+        "other"
+      ])
+    })
+  ]);
+  function userDisplayName(user) {
+    return `${user.charAt(0).toUpperCase()}${user.slice(1)}`;
+  }
+  function foundWords(found) {
+    if (found.git && found.claudeCode) return "It has git and Claude Code, and no sign-ins yet.";
+    if (found.git) return "It has git, and no Claude Code or sign-ins yet.";
+    if (found.claudeCode) return "It has Claude Code, and no git or sign-ins yet.";
+    return "It has no git, Claude Code or sign-ins yet.";
+  }
+  function deviceJoinedLine(joined) {
+    const way = joined.reachedOn === "private" ? ` It reached ${HERE.this} on your private network.` : joined.reachedOn === "local" ? ` It reached ${HERE.this} on this network.` : "";
+    if (joined.again && joined.kind === "view")
+      return `${deviceLabel(joined)} found ${HERE.this} again. It can control your first mate.${way}`;
+    if (joined.again)
+      return `${deviceLabel(joined)} found ${HERE.this} again. It runs work as before.${way}`;
+    if (joined.kind === "view")
+      return `${joined.name} joined. It can control your first mate. Your first mate's tasks and conversation stay on ${HERE.this}.${way}`;
+    if (joined.kind === "mac" && !joined.found)
+      return `${joined.name} joined. It can control your first mate and run its work. Your first mate's tasks and conversation stay on ${HERE.this}.${way}`;
+    if (joined.onThisMac && joined.user)
+      return `Running as ${userDisplayName(joined.user)} is set up. It runs work only, and has no sign-ins yet.`;
+    return joined.found ? `${joined.name} joined your devices. ${foundWords(joined.found)}${way}` : `${joined.name} joined your devices.${way}`;
+  }
+  function deviceLabel(device) {
+    return device.onThisMac && device.user ? `Running as ${userDisplayName(device.user)}` : device.name;
+  }
+  const REPLY_EMOTES = ["nod", "salute", "tick", "tuck", "aww"];
+  const FIRSTMATE_EMOTES = [
+    "greet",
+    "celebrate",
+    "ponder",
+    "confused",
+    "fidget",
+    ...REPLY_EMOTES
+  ];
+  const EMOTE_WORDS_MAX = 40;
+  function emoteWords(raw) {
+    const text = (raw ?? "").replace(/\s+/gu, " ").replace(new RegExp("\\p{Cc}", "gu"), "").replace(/ {2,}/g, " ").trim();
+    if (!text) return { kind: "none" };
+    const length = [...text].length;
+    return length > EMOTE_WORDS_MAX ? { kind: "too-long", length } : { kind: "words", text };
+  }
+  const lastTurnEligibilitySchema = _enum(["completed", "queued"]);
+  const lastTurnReplySchema = object({
+    text: string(),
+    /** The turn failed or paused: the line says what went wrong, in plain words. */
+    problem: boolean().optional(),
+    /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
+    eligibility: lastTurnEligibilitySchema.optional(),
+    /**
+     * The Firstmate's closing words as it wrote them, line breaks kept, when
+     * they differ from the one-line `text`: the reply note shows them
+     * (docs/composer.md "The reply note"). Absent, the note shows `text`.
+     */
+    words: string().optional()
+  });
+  const lastRoundSchema = object({
+    /** The captain's words; empty for a message that was only pictures. */
+    you: string(),
+    /** The Firstmate's reply line, or null while none has been given. */
+    reply: lastTurnReplySchema.nullable(),
+    /** The message came from the captain's own command, `infinitary-axi`, not the window. */
+    through: throughSchema.optional()
+  });
+  lastRoundSchema.extend({
+    previous: lastRoundSchema.nullable().optional()
+  });
+  const crewSpeedSchema = _enum(["standard", "fast", "ultrafast"]);
+  object({
+    requested: crewSpeedSchema,
+    sent: crewSpeedSchema,
+    /** Only a provider reply can confirm service. */
+    confirmed: string().optional(),
+    reason: string().optional()
+  });
+  const reasoningSchema = object({
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    lower: _enum(["quick", "capped"]).optional()
+  });
+  const slotSchema = _enum(["premium", "high", "medium", "low"]);
+  const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningCapabilitiesSchema = object({
+    levels: array(reasoningChoiceSchema),
+    fixed: _enum(["off", "default"]).optional()
+  });
+  const reasoningOverridesSchema = record(
+    string(),
+    partialRecord(slotSchema, reasoningChoiceSchema)
+  );
+  object({
+    version: literal(1),
+    /** offering → slots. An absent key or an empty array is OFF: never auto-picked, still pinnable. */
+    assignments: record(string(), slotMembershipSchema),
+    /** every offering this install has ever been offered. Seeding only touches keys absent here. */
+    seen: array(string()),
+    /** Choices survive membership changes; absent means inherit. */
+    reasoning: reasoningOverridesSchema.optional(),
+    /** Per offering, shared by every account; absent means Standard. */
+    speed: record(string(), crewSpeedSchema).optional(),
+    /**
+     * offering → when it arrived as announced news (epoch ms), for the board's
+     * "new" mark. Saved, so a later catalog read or a restart keeps the mark
+     * until the person changes the model's levels or it has had a week.
+     */
+    arrived: record(string(), number()).optional()
+  });
+  record(string(), array(string()));
+  const servedStartersSchema = object({
+    schema: literal(1),
+    starters: record(string(), record(string(), array(slotSchema)))
+  });
+  object({
+    starters: servedStartersSchema.shape.starters.nullable(),
+    checkedAt: number()
+  });
+  const slotModelViewSchema = object({
+    /** Pi provider id serving this model (never the quota id). */
+    provider: string(),
+    providerLabel: string(),
+    id: string(),
+    label: string(),
+    /** empty = off (in no slot); may carry more than one. */
+    slots: array(slotSchema),
+    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
+    speed: crewSpeedSchema.optional(),
+    /** Union of fresh account capabilities, not a promise about a routed account. */
+    speeds: array(crewSpeedSchema).optional(),
+    reasoning: partialRecord(
+      slotSchema,
+      object({
+        chosen: reasoningChoiceSchema.optional(),
+        effective: reasoningSchema.optional()
+      })
+    ).optional(),
+    /**
+     * Arrived as announced news after this install had already seen the
+     * provider's catalog, within the last week and with its levels untouched since.
+     */
+    isNew: boolean().optional(),
+    /** The computer the model runs on, when it is not this Mac's. */
+    place: string().min(1).max(64).optional()
+  });
+  object({
+    /** The listed rows (docs/model-lists.md): what the board shows. */
+    models: array(slotModelViewSchema),
+    /**
+     * Everything else the signed-in accounts serve, for the "use a model by
+     * name" controls. Never rows on the board; choosing one keeps it, which
+     * lists it from then on.
+     */
+    byName: array(slotModelViewSchema).default([]),
+    /**
+     * True when nothing currently available is assigned, so routing is running
+     * off the starter map (or the whole signed-in pool). The surface says so.
+     */
+    usingDefaults: boolean()
+  });
+  const intelligenceBucketSchema = slotSchema;
+  function isHigh(code) {
+    return code >= 55296 && code <= 56319;
+  }
+  function isLow(code) {
+    return code >= 56320 && code <= 57343;
+  }
+  function cutText(text, max) {
+    if (text.length <= max) return text;
+    const end = Math.max(0, max);
+    if (end > 0 && isHigh(text.charCodeAt(end - 1)) && isLow(text.charCodeAt(end))) {
+      return text.slice(0, end - 1);
+    }
+    return text.slice(0, end);
+  }
+  const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  strictObject({
+    id: string().min(1).max(64),
+    kind: _enum(["image"]),
+    name: string().max(120),
+    mimeType: _enum(IMAGE_TYPES),
+    bytes: number().int().nonnegative(),
+    sha256: string().length(64),
+    /** The copy's path relative to the attachments folder: `<message id>/<file>`. */
+    file: string().min(1).max(200)
+  });
+  discriminatedUnion("kind", [
+    object({ kind: literal("regular"), path: string().min(1).max(4096) }),
+    object({ kind: literal("no-path") }),
+    /** A folder, with its path: the main message box offers it as a project (docs/composer.md, "Files"). */
+    object({ kind: literal("folder"), path: string().min(1).max(4096).optional() }),
+    object({ kind: literal("shortcut") }),
+    object({ kind: literal("other") })
+  ]);
+  discriminatedUnion("kind", [
+    object({
+      kind: literal("image"),
+      name: string().max(120),
+      mimeType: _enum(IMAGE_TYPES),
+      data: _instanceof(Uint8Array)
+    }),
+    object({
+      kind: literal("text"),
+      name: string().max(120),
+      data: _instanceof(Uint8Array)
+    }),
+    /** An unsupported format: only its path comes back, for the composer to type. */
+    object({
+      kind: literal("unsupported"),
+      name: string().max(120),
+      path: string().min(1).max(4096)
+    }),
+    object({ kind: literal("too-big"), name: string().max(120), image: boolean() }),
+    object({ kind: literal("folder"), name: string().max(120) }),
+    object({ kind: literal("shortcut"), name: string().max(120) }),
+    object({ kind: literal("unreadable"), name: string().max(120) })
+  ]);
+  const remoteLoginAddressSchema = string().trim().min(1).max(255).regex(
+    /^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}|ssh:\/\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\[[A-Za-z0-9:.%]{2,64}\]):[1-9][0-9]{0,4})$/
+  );
+  const remoteLoginStageSchema = _enum([
+    "reaching",
+    "setting-up",
+    "finding",
+    "updating",
+    "removing",
+    "done",
+    "refused"
+  ]);
+  const remoteLoginCopySchema = object({
+    state: _enum(["preparing", "sending", "starting"]),
+    sent: number().int().nonnegative().optional(),
+    /** A separately downloaded file, whose total is only present when the release states it. */
+    download: object({
+      received: number().int().nonnegative(),
+      total: number().int().positive().optional()
+    }).optional()
+  });
+  const remoteLoginRefusalSchema = _enum([
+    "key-locked",
+    "agent-declined",
+    "agent-not-running",
+    "key-refused",
+    "password-off",
+    "password-wrong",
+    "key-not-taken",
+    "remote-login-off",
+    "unreachable",
+    "host-unknown",
+    "host-changed",
+    "other-system",
+    "needs-tools",
+    "sandbox-off",
+    "cannot-install",
+    "no-build",
+    "build-unverified",
+    "already-joined",
+    "still-answers",
+    "in-reach",
+    "same-user",
+    "cannot-send",
+    "not-set-up",
+    "busy",
+    "forwarding-refused",
+    "another-computer",
+    "failed",
+    "out-of-reach",
+    "not-updatable",
+    "current"
+  ]);
+  const backgroundStateSchema = _enum([
+    "running",
+    "at-login",
+    "failed",
+    "none",
+    "unavailable",
+    "unknown"
+  ]);
+  discriminatedUnion("firstmate", [
+    strictObject({
+      firstmate: literal("joined"),
+      background: backgroundStateSchema,
+      /**
+       * It left another Firstmate first, as the home's captain agreed (`leave`):
+       * how many working copies it kept for their unmerged work, and how many
+       * things it could not remove.
+       */
+      left: strictObject({
+        kept: number().int().nonnegative().max(64),
+        unremoved: number().int().nonnegative().max(64)
+      }).optional()
+    }),
+    strictObject({ firstmate: literal("updated"), background: backgroundStateSchema }),
+    strictObject({
+      firstmate: literal("removed"),
+      kept: array(string().max(4096)).max(64),
+      /** Kept because its work history could not be read, not known to be empty. */
+      unreadable: array(string().max(4096)).max(64).optional(),
+      /** What it meant to remove and could not yet. */
+      unremoved: array(string().max(4096)).max(64).optional()
+    }),
+    strictObject({ firstmate: literal("refused"), reason: string().min(1).max(64) })
+  ]);
+  strictObject({
+    /** The captain agreed to leave the other Firstmate that user runs work for. */
+    leave: literal(true).optional(),
+    /**
+     * The check line the captain said was that Mac. Absent, a Mac this Mac has
+     * not checked answers the question instead of signing in.
+     */
+    confirm: string().min(1).max(160).optional(),
+    /**
+     * That user's password there, typed once by the captain after the Mac did
+     * not let the captain's key in (docs/devices.md, "The password, once").
+     * Firstmate types it only to let its own key in, after the check line, and
+     * keeps none of it.
+     */
+    password: string().min(1).max(1024).optional()
+  });
+  const remoteLoginPasswordQuestionSchema = strictObject({
+    asks: literal("password"),
+    address: string().min(1).max(255),
+    user: string().min(1).max(64).optional(),
+    wrong: literal(true).optional(),
+    for: _enum(["install", "update"]).optional(),
+    deviceId: string().min(1).max(64).optional()
+  });
+  strictObject({
+    refused: remoteLoginRefusalSchema,
+    lines: array(string().max(1024)).max(4),
+    /** The change there may already have happened, so nothing offers to try it again. */
+    uncertain: literal(true).optional()
+  });
+  const remoteLoginConfirmQuestionSchema = strictObject({
+    asks: literal("confirm"),
+    address: string().min(1).max(255),
+    line: string().min(1).max(160)
+  });
+  union([
+    deviceViewSchema,
+    strictObject({
+      asks: literal("leave"),
+      address: string().min(1).max(255),
+      name: string().min(1).max(255).optional()
+    }),
+    remoteLoginConfirmQuestionSchema,
+    remoteLoginPasswordQuestionSchema
+  ]);
+  strictObject({
+    asks: literal("package-address"),
+    address: remoteLoginAddressSchema.optional(),
+    /** Why the address tried on its own was refused, said above it so it can be corrected. */
+    lines: array(string().max(1024)).max(4).optional()
+  });
+  strictObject({
+    password: string().min(1).max(1024).optional(),
+    address: remoteLoginAddressSchema.optional(),
+    confirm: string().min(1).max(160).optional(),
+    packageFallback: literal(true).optional()
+  });
+  const remoteLoginDoingSchema = _enum(["add", "update", "remove", "address"]);
+  const batchChangeSchema = object({
+    taskId: string(),
+    branch: string(),
+    /** The approved version of the branch. */
+    head: string(),
+    /** The change's checked title: its commit's subject in a batch. */
+    title: string(),
+    /** The commit's body: the story's What changed and any breaking footer. */
+    body: string(),
+    /** When it was approved (epoch ms): the line's order. */
+    at: number(),
+    /** Its own pull request, where it has one; closed with a link once the batch merges. */
+    number: number().int().positive().optional(),
+    /**
+     * The branch its own pull request targets, when that is not the default
+     * branch: a change stacked on another. It joins a batch only once that
+     * branch's work is already in, so a batch never carries unapproved work.
+     */
+    base: string().optional(),
+    /**
+     * The task whose approved version this change was built on, while that
+     * task had not merged (docs/task-graph.md, "A part that starts at
+     * approval"); `base` names its pushed branch. The change waits in line,
+     * never left out, until that task's work is merged or ahead of it.
+     */
+    after: string().optional(),
+    /** Declared the held batch's fix: it joins that batch and ends the hold. */
+    fix: literal(true).optional(),
+    /**
+     * The held batch version a fix was built on, once a combine verified it:
+     * the fix is carried as its own difference from it from then on, and is
+     * left out, never carried whole, when its branch no longer builds on it.
+     */
+    heldBase: string().optional()
+  });
+  const batchMemberSchema = batchChangeSchema.extend({ commit: string() });
+  const batchHoldSchema = object({
+    at: number(),
+    /** The batch's version the hold is about. */
+    head: string(),
+    reason: _enum(["checks", "merge-way", "rules"]),
+    /** The failed checks' names, as the host reads them. */
+    checks: array(string()),
+    /** The host's own words for a merge it refused. */
+    detail: string().optional(),
+    /**
+     * The checks of the held version that were cancelled, skipped or still
+     * unfinished when last read: none of them ran to an end on its changes.
+     * Absent where it is not known: the reading was incomplete, the batch is
+     * held for something other than its checks, or the hold was kept before
+     * it was recorded.
+     */
+    notRun: array(string()).optional()
+  });
+  const openBatchSchema = object({
+    /** Approved repository address when this batch branch was first pushed. */
+    origin: string().nullable().optional(),
+    /** The batch branch the app owns. */
+    branch: string(),
+    /** Its version: the last member's commit. */
+    head: string(),
+    /** The default branch's commit it was combined onto. */
+    base: string(),
+    /** Absent until the host confirmed the pull request. */
+    number: number().int().positive().optional(),
+    url: string().nullable().optional(),
+    /** Empty once every member was withdrawn: the pull request is then closed. */
+    members: array(batchMemberSchema),
+    since: number(),
+    hold: batchHoldSchema.optional(),
+    /**
+     * The version the host's own merge queue took (docs/forge.md, "The host's
+     * merge queue"): its place there is read, and nothing is sent again.
+     */
+    queued: string().optional(),
+    /**
+     * The version a merge was sent at whose outcome the host did not confirm,
+     * on a host whose merge names no version (docs/forge.md, "Batches of your
+     * own"): later passes read how it ended and never send it again.
+     * `mergeTask` is the host's own reference to that merge, when it gave one.
+     */
+    unconfirmed: object({ head: string(), mergeTask: string().optional() }).optional(),
+    /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
+    stale: literal(true).optional(),
+    /**
+     * The repair whose declaration sent changes back beside its own fix: the
+     * batch stays held at its version until that task's change is approved,
+     * even once every member has left. Empty once that task closed first: the
+     * batch stays held until another declared fix is approved or Try again.
+     */
+    awaits: string().optional(),
+    /**
+     * Its repair's judgment that the held version passed on a rerun of its
+     * failed checks, such as the project's own rerun of the failed tests: at
+     * `head`, the failed checks named in `checks` are answered, and the batch
+     * merges once every other check passed. A fix declared meanwhile goes to
+     * the next batch. A combine at a new version drops it.
+     */
+    passed: object({ head: string(), checks: array(string()) }).optional()
+  });
+  const batchReceiptSchema = object({
+    taskId: string(),
+    head: string(),
+    sha: string().optional(),
+    /** The batch's pull request. */
+    number: number().int().positive(),
+    url: string().nullable().optional(),
+    at: number()
+  });
+  const batchSendBackSchema = object({
+    taskId: string(),
+    /** The version sent back. */
+    head: string(),
+    reason: string(),
+    at: number(),
+    /** The batch's pull request, where it was opened. */
+    number: number().int().positive().optional(),
+    url: string().nullable().optional(),
+    /** The batch's checks that failed at the held version. */
+    failed: array(string()),
+    /**
+     * The batch's checks that were cancelled, skipped or unfinished there;
+     * absent where its hold kept no such list, so they are not known.
+     */
+    notRun: array(string()).optional()
+  });
+  const batchLeftOutSchema = object({
+    taskId: string(),
+    head: string(),
+    reason: string(),
+    at: number(),
+    /**
+     * The task of the approved change ahead of it in the batch that it clashes
+     * with, where it still combines with the default branch alone: nothing can
+     * be done until that change merges or leaves the batch. Absent when it
+     * clashes with the default branch itself.
+     */
+    ahead: string().optional()
+  });
+  const mergeWaysSchema = object({
+    squash: boolean(),
+    rebase: boolean(),
+    merge: boolean()
+  });
+  const batchRecordSchema = object({
+    line: array(batchChangeSchema),
+    open: openBatchSchema.optional(),
+    receipts: array(batchReceiptSchema),
+    leftOut: array(batchLeftOutSchema),
+    /** The merges the project allows, as last read where it lives. */
+    ways: mergeWaysSchema.optional(),
+    /** Tasks whose change a repair declared the held batch's fix. */
+    fixes: array(string()).optional(),
+    /** Every send-back of an open task's change, oldest first (`BatchSendBack`). */
+    sentBack: array(batchSendBackSchema).optional(),
+    /**
+     * Every version of the project's batch that held, newest first, kept
+     * while a declared fix is outstanding and otherwise until a batch merges
+     * or ends, through each combine and a batch closed and put back in line:
+     * a declared fix built on one of them
+     * combines as its own difference from that version, so it can change what
+     * members wrote, and never carries a change sent back.
+     */
+    held: array(string()).optional(),
+    /**
+     * The held version each declared fix was verified to build on, by task,
+     * kept with its repair, not with the change in line or in the batch, until
+     * a batch merges with the fix or its task closes: every later version of
+     * the fix is carried from it, or left out when it no longer builds on it.
+     */
+    fixBases: record(string(), string()).optional(),
+    /**
+     * When the project's last batch formed from the line (epoch ms): a
+     * project's batch gap counts from it (`batchGap` on the project). A held
+     * batch combined again by its repair forms no new batch, so it moves nothing.
+     */
+    formed: number().optional()
+  });
+  discriminatedUnion("action", [
+    object({ action: literal("try-again"), head: string().min(1) }),
+    object({
+      action: literal("send-back"),
+      head: string().min(1),
+      changes: array(
+        object({
+          taskId: string().min(1),
+          reason: string().trim().min(1)
+        })
+      ).min(1)
+    })
+  ]);
+  object({
+    fix: boolean().optional(),
+    sendBack: array(object({ task: string(), reason: string() })).optional(),
+    /**
+     * The held version, a full commit id, when a rerun passed its failed
+     * checks: it merges at that version once its other checks pass, and a
+     * fix declared beside it or meanwhile goes to the next batch.
+     */
+    passed: string().optional(),
+    evidence: string()
+  });
+  const contributionProjectSchema = strictObject({
+    id: number().int().positive(),
+    fullName: string().min(1),
+    origin: string().url()
+  });
+  const contributionDestinationSchema = _enum(["upstream", "fork"]);
+  const contributionRouteSchema = strictObject({
+    upstream: contributionProjectSchema,
+    fork: contributionProjectSchema.nullable(),
+    /** An imported owned fork waits for the person's choice, never a host guess. */
+    destination: contributionDestinationSchema.nullable(),
+    /** Written before a create request; an uncertain request is never sent twice. */
+    creationAttempted: boolean().optional()
+  });
+  strictObject({
+    number: number().int().positive(),
+    state: _enum(["open", "merged", "closed"]),
+    updatedAt: string().optional()
+  });
+  const costLimitSchema = union([
+    strictObject({ usd: number().positive().finite() }),
+    strictObject({ none: literal(true) })
+  ]);
+  object({
+    limit: costLimitSchema,
+    recent: object({
+      asked: number().int().nonnegative(),
+      tasks: number().int().nonnegative(),
+      days: number().int().positive()
+    })
+  });
+  const taskCostViewSchema = object({
+    usd: number().nonnegative(),
+    unpriced: number().int().nonnegative(),
+    limit: costLimitSchema,
+    source: _enum(["task", "project", "app"])
+  });
+  const loadDemandSchema = object({
+    cpu: number().finite().positive(),
+    memoryBytes: number().int().positive().max(Number.MAX_SAFE_INTEGER)
+  });
+  const loadRunSchema = object({
+    id: string().uuid(),
+    taskId: string().min(1),
+    demand: loadDemandSchema,
+    state: _enum(["waiting", "running"]),
+    ahead: number().int().nonnegative(),
+    reason: _enum(["line", "capacity", "pressure", "unavailable"]).optional()
+  });
+  const loadSnapshotSchema = object({ runs: array(loadRunSchema) });
+  const computerLoadReadingSchema = loadSnapshotSchema.extend({
+    status: _enum(["fresh", "unknown"])
+  });
+  const LOAD_ORDER = "inf:computer:load";
+  ({
+    [LOAD_ORDER]: {
+      request: tuple([object({ overrides: array(string().min(1)) })])
+    }
+  });
+  const stopLabelSchema = string().trim().min(1).max(120);
+  const stopCommandSchema = string().trim().min(1).max(4e3);
+  const taskStopSchema = object({
+    id: string().regex(/^s[1-9][0-9]*$/),
+    label: stopLabelSchema,
+    command: stopCommandSchema,
+    /** The folder the crewmate's shell was in when it registered the stop. */
+    cwd: string().max(4096).optional(),
+    /** When it was registered, in ms since the epoch. */
+    at: number().int().nonnegative()
+  });
+  const taskKeepSchema = object({
+    id: string().regex(/^s[1-9][0-9]*$/),
+    label: stopLabelSchema,
+    check: stopCommandSchema,
+    remove: stopCommandSchema,
+    /** The kept folder for the job's files. */
+    folder: string().min(1).max(4096),
+    /** The system account the job runs as: the one the crewmate's shell runs as there. */
+    account: string().max(256),
+    cwd: string().max(4096).optional(),
+    at: number().int().nonnegative()
+  });
+  object({
+    next: number().int().positive(),
+    stops: array(taskStopSchema),
+    keeps: array(taskKeepSchema).optional()
+  });
+  const stopOutcomeSchema = object({
+    label: stopLabelSchema,
+    outcome: _enum(["ran", "failed", "timed-out"]),
+    exitCode: number().int().optional()
+  });
+  const programOutcomeSchema = object({
+    pid: number().int().positive(),
+    /** The program's own short name, as the system lists it. */
+    name: string().max(64),
+    outcome: _enum(["ended", "killed", "gone", "survived"]),
+    /**
+     * Its birth as the system listed it at the close, so a later end can tell
+     * it from a new program given the same number.
+     */
+    started: string().max(64).optional()
+  });
+  const leftoversReportSchema = object({
+    stops: array(stopOutcomeSchema),
+    programs: array(programOutcomeSchema),
+    handedTo: string().min(1).max(64).optional(),
+    handed: number().int().nonnegative().optional(),
+    holders: _enum(["checked", "unsupported", "unreadable"]),
+    /**
+     * The close kept what it could not finish in the task's folder there
+     * (`leftBehindSchema`), so the computer's list says when it is cleared.
+     */
+    keptInFile: literal(true).optional(),
+    /** The keeps a merged or answered close left running, which the home records (`KeptJobs`). */
+    kept: array(taskKeepSchema.omit({ cwd: true, at: true })).optional(),
+    /** How each keep's remove went at a discard, cancel or failure close, after the stops. */
+    removed: array(stopOutcomeSchema).optional(),
+    /** How many keeps went to `handedTo` with the stops. */
+    handedKeeps: number().int().nonnegative().optional()
+  });
+  ({
+    request: {
+      carriedTo: object({ task: string().regex(/^[A-Za-z0-9_-]{1,64}$/), key: string().min(1).max(64) }).optional(),
+      /** When the task started, in ms since the epoch: a program running before it is not its leftover. */
+      startedAt: number().int().nonnegative().optional(),
+      /**
+       * What the close does with the task's keeps (`kept-jobs.md`): a merged or
+       * answered close keeps them running, any other runs their removes.
+       * Absent, as from a home without the change, they are removed.
+       */
+      keeps: _enum(["keep", "remove"]).optional()
+    },
+    response: object({ ok: literal(true), leftovers: leftoversReportSchema.optional() })
+  });
+  object({
+    stops: array(
+      taskStopSchema.extend({
+        outcome: _enum(["failed", "timed-out"]),
+        exitCode: number().int().optional()
+      })
+    ),
+    programs: array(
+      object({
+        pid: number().int().positive(),
+        name: string().max(64),
+        started: string().min(1).max(64)
+      })
+    )
+  });
+  const taskIdSchema = string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+  object({
+    stops: array(
+      object({
+        task: taskIdSchema,
+        id: string().regex(/^s[1-9][0-9]*$/),
+        label: stopLabelSchema,
+        outcome: _enum(["failed", "timed-out"]),
+        exitCode: number().int().optional(),
+        /** Only in the stops command's own answer to a look on that computer, never in the order. */
+        command: stopCommandSchema.optional(),
+        cwd: string().max(4096).optional()
+      })
+    ),
+    programs: array(
+      object({
+        task: taskIdSchema,
+        pid: number().int().positive(),
+        name: string().max(64),
+        started: string().min(1).max(64)
+      })
+    ),
+    runs: array(
+      object({
+        task: taskIdSchema,
+        id: string().uuid(),
+        state: _enum(["waiting", "running"]),
+        demand: loadDemandSchema
+      })
+    ),
+    kept: array(taskIdSchema)
+  });
+  const LEFT_BEHIND_ORDER = "inf:computer:left-behind";
+  ({
+    [LEFT_BEHIND_ORDER]: {
+      request: tuple([])
+    }
+  });
+  const keptCheckOutcomeSchema = _enum([
+    "running",
+    "not-running",
+    "timed-out",
+    "unreachable"
+  ]);
+  const keptRemoveFailureSchema = _enum(["failed", "timed-out", "unreachable"]);
+  const keptCheckSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptCheckOutcomeSchema
+  });
+  const keptRemoveFailedSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptRemoveFailureSchema,
+    exitCode: number().int().optional()
+  });
+  const keptJobViewSchema = object({
+    /** Its kept folder's own name (`<task>-<keep id>`), with `@` and the computer's id for a job on a computer that runs work. */
+    id: string().min(1).max(256),
+    label: stopLabelSchema,
+    /** The computer that runs work it runs on, by device id; null for the home itself. */
+    computer: string().min(1).max(128).nullable(),
+    /** That computer's name, as Settings → Computers names it. */
+    computerName: string().max(256),
+    account: string().max(256),
+    task: string().min(1).max(64),
+    key: string().max(64),
+    /** When its task's close kept it, in ms since the epoch. */
+    at: number().int().nonnegative(),
+    checked: keptCheckSchema.optional(),
+    removeFailed: keptRemoveFailedSchema.optional()
+  });
+  object({
+    jobs: array(keptJobViewSchema)
+  });
+  object({
+    id: string(),
+    removed: boolean(),
+    job: keptJobViewSchema.optional()
+  });
+  const KEPT_JOB_ORDER = "inf:computer:kept-job";
+  ({
+    [KEPT_JOB_ORDER]: {
+      request: tuple([
+        object({
+          action: _enum(["check", "remove"]),
+          label: stopLabelSchema,
+          command: stopCommandSchema,
+          folder: string().min(1).max(4096)
+        })
+      ]),
+      response: object({
+        outcome: _enum(["ran", "failed", "timed-out"]),
+        exitCode: number().int().optional()
+      })
+    }
+  });
+  const RESOURCE_SAMPLE_MS = 250;
+  const RESOURCE_MAX_SAMPLE_MS = 5e3;
+  const RESOURCE_MAX_AGE_MS = 1e4;
+  const RESOURCE_ORDER = "inf:computer:resources";
+  const bytes = number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+  const macMemoryPressureSchema = _enum(["normal", "warning", "critical"]);
+  const resourceMemorySchema = object({
+    totalBytes: bytes.positive(),
+    /** Swap occupancy, not part of installed memory or the placement allowance. */
+    swapUsedBytes: bytes.optional(),
+    freeBytes: bytes,
+    /** Linux MemAvailable. A reading with this is Linux to the one memory figure. */
+    availableBytes: bytes.optional(),
+    /** macOS facts. A reading with either of these is a Mac to the one memory figure. */
+    purgeableBytes: bytes.optional(),
+    fileBackedBytes: bytes.optional(),
+    /** macOS inactive and speculative pages. Absent on Linux, an older computer, or a failed read. */
+    inactiveBytes: bytes.optional(),
+    speculativeBytes: bytes.optional(),
+    /** Absent when macOS did not report a pressure level with this sample. */
+    memoryPressure: macMemoryPressureSchema.optional()
+  });
+  const processShareSchema = object({
+    processCount: number().int().nonnegative(),
+    residentBytes: bytes,
+    /** Processor equivalents from cumulative process-time deltas; omitted for new/unreadable processes. */
+    cpuCores: number().nonnegative().optional()
+  });
+  const processResourcesSchema = discriminatedUnion("status", [
+    object({
+      status: literal("sampled"),
+      processCount: number().int().nonnegative(),
+      tasks: array(processShareSchema.extend({ taskId: string().min(1) })),
+      other: processShareSchema
+    }),
+    object({ status: literal("unknown") })
+  ]);
+  const stamp = {
+    /** One sampler lifetime; no host clock or permanent hardware identifier crosses. */
+    epoch: string().uuid(),
+    sequence: number().int().positive().max(Number.MAX_SAFE_INTEGER)
+  };
+  const sampledResourceObservationSchema = object({
+    ...stamp,
+    status: literal("sampled"),
+    sampleMs: number().min(RESOURCE_SAMPLE_MS).max(RESOURCE_MAX_SAMPLE_MS),
+    cpu: object({
+      logicalCpus: number().int().positive().max(65536),
+      /** Mean idle share over a CPU-time delta, not a load average. */
+      idleFraction: number().min(0).max(1)
+    }),
+    memory: resourceMemorySchema,
+    /** Absent on older computers. Process identifiers never cross the connection. */
+    processes: processResourcesSchema.optional()
+  });
+  discriminatedUnion("status", [
+    sampledResourceObservationSchema,
+    object({
+      ...stamp,
+      status: literal("unknown"),
+      reason: _enum(["unavailable", "interrupted"])
+    })
+  ]);
+  const computerResourceReadingSchema = discriminatedUnion("status", [
+    object({
+      status: literal("fresh"),
+      observation: sampledResourceObservationSchema,
+      ageMs: number().nonnegative().max(RESOURCE_MAX_AGE_MS),
+      /**
+       * Installed memory the home counts as used, once, by Automatic's rule.
+       * Absent when the reading has no figure. At most `totalBytes`
+       * (`validMemoryUsedBytes`).
+       */
+      memoryUsedBytes: bytes.optional()
+    }),
+    object({
+      status: literal("unknown"),
+      reason: _enum([
+        "missing",
+        "stale",
+        "out-of-reach",
+        "unsupported",
+        "unavailable",
+        "invalid",
+        "timeout"
+      ])
+    })
+  ]);
+  object({
+    computers: array(
+      object({
+        computerId: string().min(1).max(128).nullable(),
+        label: string().min(1).max(256),
+        reading: computerResourceReadingSchema,
+        load: computerLoadReadingSchema.optional()
+      })
+    )
+  });
+  const RESOURCE_DEMAND_RENEW_MS = 5e3;
+  ({
+    [RESOURCE_ORDER]: {
+      request: tuple([])
+    }
+  });
+  function panelComputerResources(view) {
+    return {
+      computers: view.computers.map((computer) => ({
+        computerId: computer.computerId,
+        label: computer.label,
+        reading: panelReading(computer.reading)
+      }))
+    };
+  }
+  function panelReading(reading) {
+    if (reading.status !== "fresh") return reading;
+    const { memoryPressure } = reading.observation.memory;
+    return {
+      status: "fresh",
+      ageMs: reading.ageMs,
+      ...reading.memoryUsedBytes === void 0 ? {} : { memoryUsedBytes: reading.memoryUsedBytes },
+      observation: {
+        status: "sampled",
+        epoch: reading.observation.epoch,
+        sequence: reading.observation.sequence,
+        sampleMs: reading.observation.sampleMs,
+        cpu: {
+          logicalCpus: reading.observation.cpu.logicalCpus,
+          idleFraction: reading.observation.cpu.idleFraction
+        },
+        memory: {
+          totalBytes: reading.observation.memory.totalBytes,
+          ...memoryPressure === void 0 ? {} : { memoryPressure }
+        }
+      }
+    };
+  }
+  const customNetworkModeSchema = _enum(["public", "private", "local"]);
+  const customApiAnswerSchema = object({
+    address: string().max(64),
+    kind: _enum(["local", "private", "public", "reserved"])
+  });
+  const customApiFailureCategorySchema = _enum([
+    "address",
+    "destination",
+    "credential",
+    "header",
+    "redirect",
+    "key-rejected",
+    "access-refused",
+    "not-found",
+    "rate-limit",
+    "server",
+    "certificate",
+    "network",
+    "timeout",
+    "stalled",
+    "cancelled",
+    "closed",
+    "oversized",
+    "malformed",
+    "certificate-policy",
+    "incompatible",
+    "limits",
+    "context-limit"
+  ]);
+  const customProtocolSchema = _enum([
+    "openai-completions",
+    "openai-responses",
+    "anthropic-messages"
+  ]);
+  const customCacheRetentionSchema = _enum(["none", "short", "long"]);
+  object({
+    id: string(),
+    label: string(),
+    protocol: customProtocolSchema,
+    cacheRetentions: array(customCacheRetentionSchema)
+  });
+  const customModelInputSchema = object({
+    id: string().min(1).max(256),
+    context: number().int().nonnegative(),
+    output: number().int().nonnegative(),
+    /** Absent on older connections: reasoning off and explicit caching off. */
+    reasoningProfile: string().max(512).optional(),
+    cacheRetention: customCacheRetentionSchema.optional()
+  });
+  const customHeaderInputSchema = object({
+    name: string().max(128),
+    value: string().max(8192),
+    secret: boolean()
+  });
+  const CUSTOM_API_MAX_HEADERS = 20;
+  const customApiInputSchema = object({
+    label: string().trim().min(1).max(64),
+    baseUrl: string().max(4096),
+    mode: customNetworkModeSchema,
+    protocol: customProtocolSchema,
+    /** The only secret-bearing request; never returned by any view. */
+    key: string().max(8192),
+    noKey: boolean(),
+    /** Settings-approved shell command; only its stdout token stays in memory. */
+    tokenCommand: object({ command: string().min(1), refreshSeconds: number().int().positive() }).optional(),
+    /** Absent in connections saved before FI3-974. */
+    headers: array(customHeaderInputSchema).max(CUSTOM_API_MAX_HEADERS).default([]),
+    approvedDestination: string().max(4096),
+    // Legacy field name retained for saved-data compatibility; approves HTTP in any mode.
+    unencryptedLocalApproved: boolean(),
+    certificates: object({ pem: string().max(65536), fingerprints: array(string()).max(8) }).optional(),
+    allowStorageDefault: boolean(),
+    storageApproved: boolean(),
+    /** May be empty while a draft reads the server's model list; saving needs one. */
+    models: array(customModelInputSchema).max(100),
+    /** Same-address candidate only. A changed address creates a new connection. */
+    replaceAccountId: string().optional(),
+    /** Re-edit a private draft without returning its literal key to the UI. */
+    sourceDraftId: string().optional(),
+    /** Reuse the same connection's public CAs after fingerprint approval. */
+    useExistingCertificates: boolean().optional(),
+    /**
+     * The canonical address the person made an exception for, after the form
+     * told them what DNS answered: its name may then point to reserved or mixed
+     * networks. Absent, the network check refuses those answers, as always.
+     */
+    addressException: string().max(4096).optional()
+  });
+  const customApiConnectInputSchema = customApiInputSchema.omit({ mode: true });
+  const customListedModelSchema = object({
+    id: string().min(1).max(256),
+    context: number().int().positive().optional(),
+    output: number().int().positive().optional()
+  });
+  const customCertificateViewSchema = object({
+    subject: string(),
+    issuer: string(),
+    fingerprint: string(),
+    validFrom: string(),
+    validTo: string()
+  });
+  object({
+    destination: string(),
+    certificates: array(customCertificateViewSchema),
+    suggestion: string().optional()
+  });
+  const customApiViewSchema = object({
+    draftId: string().optional(),
+    accountId: string().optional(),
+    label: string(),
+    baseUrl: string(),
+    mode: customNetworkModeSchema,
+    protocol: customProtocolSchema,
+    keyPresent: boolean(),
+    tokenCommand: object({ command: string(), refreshSeconds: number().int().positive() }).optional(),
+    tokenCommandFailed: boolean().optional(),
+    noKey: boolean(),
+    /** A secret header's value is never returned. */
+    headers: array(object({ name: string(), secret: boolean(), value: string().optional() })).default([]),
+    enabled: boolean(),
+    allowStorageDefault: boolean(),
+    /** The person made an exception for this address's DNS answers. */
+    addressException: boolean().optional(),
+    certificates: array(customCertificateViewSchema),
+    models: array(
+      customModelInputSchema.extend({
+        checked: boolean(),
+        readsPictures: boolean().optional(),
+        state: _enum([
+          "untested",
+          "checking",
+          "checked",
+          "unreachable",
+          "key-rejected",
+          "incompatible"
+        ]),
+        failure: string().optional(),
+        /** Why the last check failed, for the form to place at the row or field at fault. */
+        category: customApiFailureCategorySchema.optional()
+      })
+    )
+  });
+  const customApiFailureSchema = object({
+    category: customApiFailureCategorySchema,
+    /** A base address to offer instead, when the one entered ends in an operation. */
+    suggestion: string().optional(),
+    /** `address`: the address, key or form was refused; `list`: the server's model list failed. */
+    stage: _enum(["address", "list"])
+  });
+  object({
+    view: customApiViewSchema.optional(),
+    listed: array(customListedModelSchema).optional(),
+    failure: customApiFailureSchema.optional()
+  });
+  object({
+    destination: string().optional(),
+    network: customNetworkModeSchema.optional(),
+    suggestion: string().optional(),
+    failure: customApiFailureCategorySchema.optional(),
+    /** `destination`: what DNS answered for the name, each with the network it points to. */
+    answers: array(customApiAnswerSchema).optional(),
+    /** `destination`: the person may make an exception for this address. */
+    exceptionOffered: boolean().optional()
+  });
+  const forgeSignInStateSchema = _enum(["ok", "needs_reauth", "unavailable", "unknown"]);
+  const forgeServerViewSchema = object({
+    kind: string().min(1).max(32),
+    /** What that kind of server is called ("GitHub Enterprise"). */
+    name: string().min(1).max(64),
+    /** This kind also offers browser sign-in with a registered application. */
+    browser: boolean().optional()
+  }).strict();
+  const forgeSignInViewSchema = object({
+    /** The host name the sign-in is for, lower case ("github.com"). */
+    host: string().min(1).max(253),
+    /** The person's word for the host ("GitHub", a GitHub Enterprise host's address). */
+    name: string().min(1).max(64),
+    /** Who the host says the person is; null until it has answered once. */
+    login: string().max(100).nullable(),
+    state: forgeSignInStateSchema,
+    /** How many of the person's projects live on this host. */
+    projects: number().int().nonnegative(),
+    /** When the sign-in was made. */
+    since: number().int().nonnegative(),
+    /** Public application identifier, never an application secret. */
+    applicationId: string().max(256).optional(),
+    /** The kind of server and the methods it offers. */
+    server: forgeServerViewSchema.optional(),
+    /** The sign-in is GitHub CLI's, asked each time it is needed; absent for the app's own. */
+    way: _enum(["cli"]).optional()
+  }).strict();
+  const forgeHostViewSchema = object({
+    host: string().min(1).max(253),
+    name: string().min(1).max(64),
+    /** The kind of server and the methods it offers. */
+    server: forgeServerViewSchema.optional()
+  }).strict();
+  const forgeSignInFlowSchema = object({
+    host: string().min(1).max(253),
+    userCode: string().min(1).max(32),
+    verificationUri: string().url(),
+    expiresAt: number().int().nonnegative()
+  }).strict();
+  const forgeStartProblemSchema = _enum([
+    "not-allowed",
+    "client",
+    "scope",
+    "not-found",
+    "unreachable",
+    "answer"
+  ]);
+  const forgeSignInEndSchema = object({
+    host: string().min(1).max(253),
+    end: _enum(["expired", "failed"]),
+    /** Why a browser sign-in could not start, as the host answered; absent when it gave no reason. */
+    problem: forgeStartProblemSchema.optional()
+  }).strict();
+  object({
+    signIns: array(forgeSignInViewSchema),
+    hosts: array(forgeHostViewSchema),
+    /** The kinds of server a host can be added by its address and a key: a chip each. */
+    servers: array(forgeServerViewSchema).optional(),
+    flow: forgeSignInFlowSchema.nullable(),
+    ended: forgeSignInEndSchema.nullable(),
+    /** GitHub CLI is installed on this computer, so a GitHub host can sign in through it. */
+    githubCli: boolean().optional()
+  }).strict();
+  const forgeProjectSchema = object({
+    fullName: string(),
+    cloneUrl: string(),
+    url: string().nullable(),
+    updatedAt: string().nullable(),
+    private: boolean()
+  });
+  object({
+    projects: array(forgeProjectSchema),
+    complete: boolean()
+  });
+  const forgeKeySignInSchema = object({
+    kind: string().min(1).max(32),
+    address: string().min(1).max(2e3),
+    key: string().min(1).max(1024)
+  }).strict();
+  const forgeBrowserSignInSchema = object({
+    kind: string().min(1).max(32),
+    address: string().min(1).max(2e3),
+    applicationId: string().trim().regex(/^[A-Za-z0-9_-]{20,256}$/)
+  }).strict();
+  const forgeKeyProblemSchema = _enum([
+    "address",
+    "public-host",
+    "key",
+    "refused",
+    "unreachable",
+    "not-server"
+  ]);
+  discriminatedUnion("ok", [
+    object({ ok: literal(true), host: string().min(1).max(253) }).strict(),
+    object({
+      ok: literal(false),
+      problem: forgeKeyProblemSchema,
+      host: string().max(253).nullable()
+    }).strict()
+  ]);
+  const forgeCliProblemSchema = _enum([
+    "not-github",
+    "missing",
+    "none",
+    "refused",
+    "unreachable",
+    "failed"
+  ]);
+  discriminatedUnion("ok", [
+    object({ ok: literal(true), host: string().min(1).max(253) }).strict(),
+    object({
+      ok: literal(false),
+      problem: forgeCliProblemSchema,
+      host: string().max(253).nullable()
+    }).strict()
+  ]);
+  const FORGE_HOST_NAME = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/;
+  const forgeChangeRowSchema = object({
+    host: string().min(1).max(253),
+    /** `owner/name`; a GitLab project's whole path, `group/subgroup/name`. */
+    project: string().min(1).max(200),
+    number: number().int().nonnegative(),
+    /** The host's own name for it: `#12` on GitHub, `!4` on GitLab. */
+    label: string().min(1).max(32).optional(),
+    title: string().max(1e3),
+    url: string().max(2e3),
+    draft: boolean(),
+    checks: _enum(["passed", "failed", "pending", "none"]),
+    updatedAt: string().max(64).nullable()
+  }).strict();
+  object({
+    /** Whether any host has the app's sign-in; with none there is nothing to list. */
+    signedIn: boolean(),
+    /** False when a signed-in host could not be read this time; the rows are then empty. */
+    reachable: boolean(),
+    changes: array(forgeChangeRowSchema)
+  }).strict();
+  const quotaWindowViewSchema = object({
+    id: string(),
+    label: string(),
+    percentRemaining: number().optional(),
+    /**
+     * Pace vocabulary: "ahead" is usage ahead of the reset
+     * clock (burning faster than linear - conserve), "behind" is usage behind
+     * the clock (allowance on track to go unused).
+     */
+    pace: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    resetText: string().optional(),
+    /**
+     * The trusted cycle evidence: the window's own reset
+     * instant and cycle length, when the vendor supplied them. Everything
+     * derived - pace, runway, spend priority - is recomputed from these at
+     * read time rather than persisted, so a stored snapshot never carries a
+     * stale projection.
+     */
+    resetsAtMs: number().optional(),
+    startsAtMs: number().optional(),
+    windowSeconds: number().optional()
+  });
+  const QUOTA_CREDIT_STATES = ["available", "spent", "off", "unknown"];
+  const quotaCreditsViewSchema = object({
+    state: _enum(QUOTA_CREDIT_STATES),
+    /** The share of a monthly spend limit used, 0–100, where the provider gives one (Claude). */
+    usedPercent: number().optional(),
+    /** The balance left, in the provider's own words (ChatGPT's "15.00"). */
+    balance: string().optional(),
+    /** The provider says the credits have no limit. */
+    unlimited: boolean().optional(),
+    /** The provider says this account is answering on credits right now. */
+    inUse: boolean().optional()
+  });
+  const quotaSavedResetsViewSchema = object({
+    available: number().int().nonnegative(),
+    applicable: number().int().nonnegative().optional()
+  });
+  const quotaProviderViewSchema = object({
+    /** Quota provider id: codex, grok, claude, copilot. */
+    provider: string(),
+    label: string(),
+    /**
+     * The vault account these windows belong to (broker phase 2). Absent only
+     * in legacy fixtures/snapshots, which render as a single unnamed account.
+     */
+    accountId: string().optional(),
+    /** The account's user label ("Personal", "Work #2"). */
+    accountLabel: string().optional(),
+    plan: string().optional(),
+    /** Provider-reported identity (an email or org), when the fetch knows it. */
+    account: string().optional(),
+    /**
+     * What the sensor actually established, kept distinct so the surface can
+     * say it (quota reliability, 2026-09-04):
+     * - `ok` a real reading,
+     * - `auth_required` the terminal re-auth state (CD-3): reached only from
+     *   proof - a lapsed refresh token (`refresh_token_lapsed`) or a vendor
+     *   rejection that SURVIVED a real renewal (`rejected_after_renewal`).
+     *   The ONLY status that may say "sign in again", raise the re-auth card,
+     *   or clear a recovered card. Transient failures never take this shape,
+     * - `rate_limited` the vendor asked us to back off (`retryAfter` when given),
+     * - `unavailable` we could not find out this time (network, timeout, a
+     *   non-2xx, an unreadable store, a renewal that could not run). Transient
+     *   by assumption; last-known-good survives it,
+     * - `not_measured` Infinitary does not read a usage window for this sign-in.
+     *   NOT a claim that the credential cannot expose one,
+     * - `skipped` the account was not sensed on this pass.
+     * `error` remains only so older persisted snapshots still parse.
+     */
+    status: _enum([
+      "ok",
+      "auth_required",
+      "rate_limited",
+      "unavailable",
+      "not_measured",
+      "error",
+      "skipped"
+    ]),
+    stale: boolean(),
+    /**
+     * When these windows were actually measured. Present whenever a row is
+     * carried forward, so a stale card can state its age instead of borrowing
+     * the new snapshot's fetch time.
+     */
+    measuredAt: number().optional(),
+    /**
+     * A sanitized machine reason for a non-ok status: a code from our own
+     * vocabulary, never provider text, never a header, never a URL.
+     */
+    reason: string().optional(),
+    /** RFC 9110 Retry-After, as the vendor sent it, when it sent one. */
+    retryAfter: string().optional(),
+    windows: array(quotaWindowViewSchema),
+    /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
+    credits: quotaCreditsViewSchema.optional(),
+    /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
+    savedResets: quotaSavedResetsViewSchema.optional(),
+    /**
+     * The account's Keep going on credits switch is on, as the vault holds it
+     * (`answersOnCredits`). Absent is off.
+     */
+    keepGoingOnCredits: boolean().optional(),
+    /**
+     * Disclosed uncertainty, in the user's words, for a row with no window.
+     * The surface renders it instead of a silent blank, and it is never a
+     * substitute for a real window. It says what Infinitary did or did not do -
+     * never that a credential is incapable of exposing usage, which no test
+     * here has established.
+     */
+    detail: string().optional()
+  });
+  const quotaSnapshotViewSchema = object({
+    generatedAt: string(),
+    fetchedAt: number(),
+    providers: array(quotaProviderViewSchema)
+  });
+  const catalogModelViewSchema = object({
+    /** Quota provider id. */
+    provider: string(),
+    id: string(),
+    label: string(),
+    effectivePercentRemaining: number().optional(),
+    paceStatus: _enum(["ahead", "on_pace", "behind", "unknown"]).optional(),
+    /**
+     * The per-scope selection signal: positive means paid
+     * allowance is on track to reach reset unused (spend here first), zero is
+     * exact utilization, negative is overdrawn against the reset clock.
+     * Absent means unmeasurable - never rendered or ranked as zero.
+     */
+    spendPriority: number().optional(),
+    /**
+     * Whether every window bounding this scope is projected, at its observed
+     * burn, to last until its reset (INF-898): true lasts, false runs out
+     * first (or is spent). Absent means the runway is unknown.
+     */
+    lastsThroughReset: boolean().optional(),
+    /**
+     * Every allowance serving this model is spent, and an account serving it
+     * answers on credits (`answersOnCredits`): the model still routes, in the
+     * last band, after every included allowance. Absent is not on credits.
+     */
+    onCredits: boolean().optional()
+  });
+  object({
+    generatedAt: string(),
+    models: array(catalogModelViewSchema)
+  });
+  const modelPinSchema = object({ provider: string(), id: string() });
+  object({ provider: string(), id: string() });
+  object({
+    // Kept on the wire for older paired views; the home always reports true.
+    dynamicRouting: boolean(),
+    pins: array(modelPinSchema),
+    dormantPins: array(modelPinSchema).optional()
+  });
+  const savedResetResultSchema = object({
+    outcome: _enum(["used", "nothing-to-reset", "none-left"]),
+    left: number().int().nonnegative().optional()
+  });
+  strictObject({
+    deviceId: string().min(1).max(64).optional(),
+    signIn: boolean().optional()
+  });
+  const signInIdSchema = string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+  const SIGN_IN_ANSWER_MAX_CHARS = 16384;
+  const okSchema = object({ ok: literal(true) });
+  const forgeHostSchema = string().min(1).max(253).regex(FORGE_HOST_NAME);
+  const computerForgesSchema = object({
+    signIns: array(
+      object({
+        host: forgeHostSchema,
+        /** The person's word for the host ("GitHub"). */
+        name: string().min(1).max(64),
+        /** Who the host says it is signed in as; null until it has answered once. */
+        login: string().max(100).nullable(),
+        state: forgeSignInStateSchema,
+        /** When the sign-in was made there. */
+        since: number().int().nonnegative(),
+        /** Made through that computer's own GitHub CLI, which it asks for each sign-in. */
+        way: literal("cli").optional(),
+        /** A host on the person's own server, or GitLab: its kind (`computer-forge-servers`). */
+        server: forgeServerViewSchema.optional(),
+        /** The public Application ID a GitLab browser sign-in used there; never a secret. */
+        applicationId: string().max(256).optional()
+      })
+    ),
+    /**
+     * The hosts a sign-in row is drawn for: each one that signs in with a
+     * code whatever the computer has (github.com), and each other one it is
+     * signed in to, with its kind.
+     */
+    hosts: array(
+      object({
+        host: forgeHostSchema,
+        name: string().min(1).max(64),
+        server: forgeServerViewSchema.optional()
+      })
+    ),
+    /**
+     * The kinds of server it signs in to by an address there, with a key or,
+     * for GitLab, a browser code (`inf:sign-ins:forge-key`,
+     * `inf:sign-ins:forge-browser`): GitHub Enterprise and GitLab. Absent from
+     * a computer without `computer-forge-servers`, which signs in to
+     * github.com alone.
+     */
+    servers: array(forgeServerViewSchema).optional(),
+    /**
+     * GitHub CLI is installed there, so its GitHub row offers "Use GitHub CLI"
+     * (`inf:sign-ins:forge-cli`). An older computer that leaves it out
+     * offers the code alone; major 15 includes this capability.
+     */
+    githubCli: boolean().optional()
+  });
+  const computerServedModelSchema = object({
+    speeds: array(crewSpeedSchema).optional(),
+    speedsUntil: number().int().nonnegative().optional(),
+    reasoningCapabilities: reasoningCapabilitiesSchema.optional(),
+    provider: string().min(1).max(256),
+    id: string().min(1).max(256),
+    name: string().max(256).optional()
+  });
+  const SERVED_MODELS_MAX = 2e3;
+  const ACCOUNT_LIST_ID_MAX = 256;
+  const computerServedAccountSchema = object({
+    accountId: string().min(1).max(256),
+    models: array(computerServedModelSchema).max(SERVED_MODELS_MAX),
+    /**
+     * The ids a Codex or Grok account's own model list named in its last
+     * successful read there; `models` is Pi's catalog for it, unnarrowed. The
+     * home narrows `models` by it behind its own rail, which protects the
+     * models the captain kept (`narrowServedThere`). Absent before a read,
+     * after a failed one, and from a computer older than protocol 8.7.
+     */
+    accountList: array(string().min(1).max(ACCOUNT_LIST_ID_MAX)).max(SERVED_MODELS_MAX).optional()
+  });
+  const computerSignInsSchema$1 = object({
+    /** Every provider it offers, with why one cannot sign in there (Claude Code not installed). */
+    providers: array(providerViewSchema),
+    accounts: array(accountViewSchema),
+    /** Its last reading of each account's allowance; null before the first. */
+    quota: quotaSnapshotViewSchema.nullable(),
+    /** Its own sign-ins where projects live; absent from a computer older than `FORGE_SIGN_INS_SINCE`. */
+    forges: computerForgesSchema.optional(),
+    /**
+     * Its custom API connections, as the form draws them. Absent from a
+     * computer older than `CUSTOM_API_SIGN_INS_SINCE`; a computer that knows
+     * them sends the array, empty when it holds none. No view carries a key.
+     */
+    custom: array(customApiViewSchema).max(32).optional(),
+    /**
+     * The models each account there can serve, as that computer read them.
+     * A provider this Mac's catalog does not list (OpenRouter, a custom
+     * connection) is routed from this list. Absent from a computer older
+     * than `CUSTOM_API_SIGN_INS_SINCE`.
+     */
+    served: array(computerServedAccountSchema).max(64).optional()
+  });
+  const signInStepSchema = discriminatedUnion("kind", [
+    /** It waits for the captain: a choice, a code to paste back, or a key. */
+    object({ kind: literal("prompt"), prompt: authPromptSchema }),
+    /** Where it is: a link to open, a code to read, progress. */
+    object({ kind: literal("notice"), notice: authNoticeSchema }),
+    object({
+      kind: literal("ended"),
+      /**
+       * `signs-in-there`: a provider that signs in only on that computer itself
+       * had no login there to adopt; the home says where to log in. Only a
+       * computer older than `FORGE_SIGN_INS_SINCE` says it, of Claude Code,
+       * which now signs in there with a code pasted back.
+       */
+      outcome: _enum(["signed-in", "failed", "cancelled", "signs-in-there"]),
+      /** The account it signed in, on that computer. */
+      accountId: string().optional(),
+      /**
+       * What using one of the account's saved Codex resets came to
+       * (`inf:sign-ins:use-saved-reset`), on a use that ended with a clear
+       * answer; its outcome is then `signed-in`, which an older view reads as
+       * a flow that ended as asked.
+       */
+      savedReset: savedResetResultSchema.optional(),
+      /** Why it failed, in the provider's or the computer's words. */
+      error: string().optional()
+    })
+  ]);
+  ({
+    "inf:sign-ins:list": {
+      request: tuple([])
+    },
+    /**
+     * Starts a sign-in there: a new account, or `accountId` again. It answers
+     * once it has started; its steps and its end come as `inf:work:sign-in`.
+     */
+    "inf:sign-ins:start": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          providerId: string().min(1).max(256),
+          type: _enum(["oauth", "api_key"]),
+          accountId: string().min(1).max(256).optional()
+        })
+      ])
+    },
+    /** What the captain typed or chose for one prompt, sent once; `null` stops the sign-in. */
+    "inf:sign-ins:answer": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          promptId: string().min(1).max(128),
+          value: string().max(SIGN_IN_ANSWER_MAX_CHARS).nullable()
+        })
+      ])
+    },
+    "inf:sign-ins:cancel": {
+      request: tuple([object({ signInId: signInIdSchema })])
+    },
+    /**
+     * Signs that computer out of one account: its store there is deleted.
+     * For a Claude account it answers what became of that computer's own
+     * Claude login (`login`): signed out when Firstmate made it there from a
+     * pasted code, kept when it did not. A computer older than this answers
+     * without it.
+     */
+    "inf:sign-ins:remove": {
+      request: tuple([object({ accountId: string().min(1).max(256) })]),
+      response: okSchema.extend({ login: machineLoginOutcomeSchema.optional() })
+    },
+    /**
+     * Starts the computer's own sign-in where projects live (GitHub's device
+     * flow), there, from `FORGE_SIGN_INS_SINCE`. Its code to read comes as a
+     * `notice` step and its end as `ended`; nothing is typed, and
+     * `inf:sign-ins:cancel` stops it.
+     */
+    "inf:sign-ins:forge": {
+      request: tuple([object({ signInId: signInIdSchema, host: forgeHostSchema })])
+    },
+    /**
+     * Signs that computer in to a GitHub host through its own GitHub CLI's
+     * sign-in, there (docs/forge.md, "A computer's own sign-in"): it asks
+     * GitHub CLI and the host who that is, and keeps only the way and the
+     * program's path. No token crosses; the answer says only whether it was
+     * kept. Offered where its forges say `githubCli`.
+     */
+    "inf:sign-ins:forge-cli": {
+      request: tuple([object({ host: forgeHostSchema })])
+    },
+    /**
+     * Signs that computer in to GitLab or a host on the person's own server
+     * with a key made there, from `computer-forge-servers` (docs/forge.md, "A
+     * computer's own sign-in"). The key rides this order once and is kept only
+     * in that computer's store; the answer says whether the host answered for
+     * it, never the key.
+     */
+    "inf:sign-ins:forge-key": {
+      request: tuple([forgeKeySignInSchema])
+    },
+    /**
+     * Starts GitLab's browser code sign-in there with a public application the
+     * person registered on that host, from `computer-forge-servers`. Its code
+     * to read comes as a `notice` step and its end as `ended`, as
+     * `inf:sign-ins:forge`'s do.
+     */
+    "inf:sign-ins:forge-browser": {
+      request: tuple([forgeBrowserSignInSchema.extend({ signInId: signInIdSchema })])
+    },
+    /** Signs that computer out where a project lives: its sign-in there is deleted. */
+    "inf:sign-ins:forge-out": {
+      request: tuple([object({ host: forgeHostSchema })])
+    },
+    /**
+     * A custom API connection typed at the home and kept on this computer,
+     * from `CUSTOM_API_SIGN_INS_SINCE`. The address is read here, so localhost
+     * is this computer. The key and headers ride once inside `custom-connect`
+     * and are kept only in this computer's store. Disconnect reuses
+     * `inf:sign-ins:remove`.
+     */
+    "inf:sign-ins:custom-address": {
+      request: tuple([string().max(4096)])
+    },
+    "inf:sign-ins:custom-profiles": {
+      request: tuple([])
+    },
+    "inf:sign-ins:custom-review": {
+      request: tuple([
+        string().max(4096),
+        customNetworkModeSchema,
+        string().max(65536).optional()
+      ])
+    },
+    "inf:sign-ins:custom-connect": {
+      request: tuple([customApiConnectInputSchema])
+    },
+    "inf:sign-ins:custom-check": {
+      request: tuple([string().min(1).max(128), string().min(1).max(256)])
+    },
+    "inf:sign-ins:custom-discover": {
+      request: tuple([string().min(1).max(128)])
+    },
+    "inf:sign-ins:custom-cancel": {
+      request: tuple([string().min(1).max(128)])
+    },
+    "inf:sign-ins:custom-save": {
+      request: tuple([string().min(1).max(128), boolean()])
+    },
+    "inf:sign-ins:custom-recheck": {
+      request: tuple([string().min(1).max(256)])
+    },
+    /**
+     * Turns one of that computer's own accounts' Keep going on credits switch
+     * on or off (docs/quota.md), saved only there, from the contract change
+     * `computer-keep-going`. Only the account id and the switch cross; its
+     * rows reach the home as that computer's sign-ins, whole.
+     */
+    "inf:sign-ins:keep-going": {
+      request: tuple([object({ accountId: string().min(1).max(256), on: boolean() })])
+    },
+    /**
+     * Renames, pauses or resumes, and prefers one of that computer's own
+     * accounts, saved only there, from the contract change
+     * `computer-account-settings`. Its rows reach the home as that computer's
+     * sign-ins, whole, so its routing there reads the same switch and pin.
+     */
+    "inf:sign-ins:rename": {
+      request: tuple([
+        object({
+          accountId: string().min(1).max(256),
+          label: string().min(1).max(ACCOUNT_LABEL_MAX)
+        })
+      ])
+    },
+    "inf:sign-ins:set-enabled": {
+      request: tuple([object({ accountId: string().min(1).max(256), enabled: boolean() })])
+    },
+    /** One account per provider crew work prefers there; null clears it. */
+    "inf:sign-ins:pin": {
+      request: tuple([
+        object({
+          providerId: string().min(1).max(256),
+          accountId: string().min(1).max(256).nullable()
+        })
+      ])
+    },
+    /**
+     * Uses one of that computer's own Codex accounts' saved resets there
+     * (docs/codex-client.md), from the contract change `use-saved-reset`. It
+     * answers once it has started; with `signIn`, Codex may sign in to the
+     * account, its link and paste-back prompt coming as `inf:work:sign-in`
+     * steps, and the end is a `signed-in` step carrying `savedReset`.
+     */
+    "inf:sign-ins:use-saved-reset": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          accountId: string().min(1).max(256),
+          signIn: boolean()
+        })
+      ])
+    },
+    /**
+     * Reads every account's allowance there now, rather than at its next
+     * tick (`computer-account-settings`); the reading reaches the home as
+     * that computer's sign-ins, whole, and this answers once it is read.
+     */
+    "inf:sign-ins:read-allowance": {
+      request: tuple([])
+    }
+  });
+  ({
+    "inf:work:sign-in": {
+      request: tuple([object({ signInId: signInIdSchema, step: signInStepSchema })])
+    },
+    "inf:work:sign-ins": {
+      request: tuple([computerSignInsSchema$1])
+    }
+  });
+  const deviceSignInFlowSchema = object({
+    signInId: signInIdSchema,
+    deviceId: string(),
+    providerId: string(),
+    accountId: string().optional(),
+    target: _enum(["account", "forge"]),
+    notice: authNoticeSchema.optional(),
+    link: string().optional()
+  }).and(
+    discriminatedUnion("phase", [
+      object({
+        phase: literal("running"),
+        prompt: authPromptSchema.optional(),
+        ended: never().optional()
+      }),
+      object({
+        phase: literal("ended"),
+        prompt: never().optional(),
+        ended: signInStepSchema.options[2]
+      })
+    ])
+  );
+  object({
+    /** Window contact, independent of work reach; absent for work-only computers. */
+    controlling: boolean().optional(),
+    workSetup: deviceWorkSetupSchema.optional(),
+    heldOnLocalNetwork: boolean().optional(),
+    deviceId: string(),
+    /** Its own name, as it joined (`docs/devices.md`). */
+    name: string(),
+    /** The macOS user it runs as, for one that runs as another user on this Mac. */
+    user: string().optional(),
+    onThisMac: boolean(),
+    reach: computerReachSchema,
+    /** What it last said, or null before it said anything since this home started. */
+    signIns: computerSignInsSchema$1.nullable(),
+    /** When it last said it, in ms since the epoch. */
+    asOf: number().optional(),
+    /** It was asked and did not answer: its version may not sign in from here. */
+    unanswered: boolean().optional(),
+    /**
+     * It speaks the custom API orders (`CUSTOM_API_SIGN_INS_SINCE`). Absent
+     * means it does not, so the chip stays disabled.
+     */
+    customApi: boolean().optional(),
+    /**
+     * It takes Keep going on credits for its own accounts (the contract change
+     * `computer-keep-going`). Absent means it does not, so the item stays dim.
+     */
+    keepGoing: boolean().optional(),
+    /**
+     * It renames, pauses and prefers its own accounts and reads its allowance
+     * on request (the contract change `computer-account-settings`). Absent
+     * means it does not, so those items stay dim.
+     */
+    accountSettings: boolean().optional(),
+    /**
+     * It uses its own Codex accounts' saved resets there (the contract change
+     * `use-saved-reset`). Absent means it does not, so the item is not offered.
+     */
+    savedReset: boolean().optional(),
+    /** Active sign-ins and failures awaiting Done; absent on an older home. */
+    flows: array(deviceSignInFlowSchema).optional()
+  });
+  object({
+    signInId: signInIdSchema,
+    deviceId: string(),
+    /** The provider, or for a sign-in where projects live, its host ("github.com"). */
+    providerId: string(),
+    /** The account signing in again, when it is not a new one. */
+    accountId: string().optional(),
+    step: signInStepSchema
+  });
+  function deviceSignedOutLine(event) {
+    const { who, provider } = event;
+    switch (event.login) {
+      case "signed-out":
+        return {
+          kind: "info",
+          text: `Infinitary signed ${who} out of the ${provider} login it made.`
+        };
+      case "kept":
+        return {
+          kind: "info",
+          text: `Infinitary stopped using ${who}'s ${provider} login. It stays, since Infinitary did not make it.`
+        };
+      case "not-signed-out":
+        return {
+          kind: "warn",
+          text: `Infinitary stopped using ${who}'s ${provider} login, but could not sign it out.`
+        };
+      default:
+        return { kind: "info", text: `${who} is signed out of ${provider}.` };
+    }
+  }
+  const placementSystemSchema = _enum(["macos", "linux"]);
+  const workSystemSchema = _enum(["macos", "linux", "windows"]);
+  const placementProfileSchema = _enum(["conversation", "standard", "heavy"]);
+  const placementRequirementsSchema = strictObject({
+    systems: array(placementSystemSchema).min(1).max(2).optional(),
+    chips: array(deviceChipSchema).min(1).max(2).optional(),
+    tools: array(string().regex(/^[A-Za-z0-9][A-Za-z0-9._+-]{0,79}$/)).max(32).optional(),
+    profile: placementProfileSchema.optional()
+  });
+  const placementInheritedSchema = _enum(["systems", "chips"]);
+  const placementRejectionSchema = _enum([
+    "requirements-invalid",
+    "out-of-reach",
+    "older-firstmate",
+    "work-disabled",
+    "bound-elsewhere",
+    "platform-unknown",
+    "system-incompatible",
+    "chip-incompatible",
+    "tool-unknown",
+    "tool-unavailable",
+    "project-unknown",
+    "project-unavailable",
+    "model-unknown",
+    "model-unavailable",
+    "model-floor",
+    "physical-computer-unknown",
+    "resources-unknown",
+    "resources-stale",
+    "resources-invalid",
+    "reservations-invalid",
+    "memory-unavailable",
+    "cpu-busy",
+    "memory-busy",
+    "model-preferred-elsewhere"
+  ]);
+  const factSchema = _enum(["available", "unavailable", "unknown"]);
+  const RESOLVED_TOOL_LIMIT = 65;
+  strictObject({
+    tools: array(placementRequirementsSchema.shape.tools.unwrap().element).max(RESOLVED_TOOL_LIMIT),
+    /** The exact project's origin, stripped of embedded sign-in material. */
+    origin: string().min(1).max(4096).optional()
+  });
+  const placementFactsSchema = object({
+    system: workSystemSchema.optional(),
+    chip: deviceChipSchema.optional(),
+    /**
+     * Hash of the system identity of the computer its readings measure, a virtual
+     * machine's own, common to every user; unknown fails closed.
+     */
+    physicalComputerId: string().regex(/^[a-f0-9]{64}$/).nullable(),
+    tools: record(string(), factSchema),
+    projectAccess: factSchema
+  });
+  placementFactsSchema.extend({
+    /** Actual identities served by this computer's own accounts, never the home's catalog. */
+    signIns: computerSignInsSchema$1.nullable()
+  });
+  const demandSchema = object({
+    cpu: number().nonnegative(),
+    memoryBytes: number().int().nonnegative()
+  });
+  const modelSchema = object({ provider: string().max(256), id: string().max(256) });
+  const placementSnapshotSchema = object({
+    version: literal(1),
+    at: number(),
+    computerId: string().nullable(),
+    computerName: string().max(256),
+    physicalComputerId: string().regex(/^[a-f0-9]{64}$/),
+    orderId: string().min(1).max(128),
+    origin: string().max(4096).optional(),
+    /** Present only when an answered basis changed the ordinary placement winner. */
+    basis: object({
+      taskId: string(),
+      taskKey: string(),
+      computerId: string().nullable()
+    }).optional(),
+    /**
+     * Present when the decision model picked this computer, reading the
+     * person's standing directions (`src/core/placed/computerChoice.ts`), with
+     * the model that answered. Absent when the ordinary rules chose.
+     */
+    picked: object({ source: string().max(256).optional() }).optional(),
+    demand: demandSchema,
+    model: modelSchema,
+    acceptedFallback: boolean(),
+    requirements: placementRequirementsSchema.extend({
+      tools: array(placementRequirementsSchema.shape.tools.unwrap().element).max(RESOLVED_TOOL_LIMIT),
+      /** The platform fields filled from the home's own; absent on a historical snapshot. */
+      inherited: array(placementInheritedSchema).max(2).optional()
+    }),
+    candidateCount: number().int().positive(),
+    candidates: array(
+      object({
+        computerId: string().nullable(),
+        name: string().max(256),
+        physicalComputerId: string().regex(/^[a-f0-9]{64}$/).nullable(),
+        rejections: array(placementRejectionSchema).max(32),
+        /** The core's one reach reading when it was compared; absent for this Mac and on a historical row. Out of reach reads connecting while it was connecting. */
+        reach: computerReachSchema.optional(),
+        missingTools: array(string().max(80)).max(RESOLVED_TOOL_LIMIT),
+        /** What its fresh reading said it runs; absent when unread and on a historical row. */
+        system: deviceSystemSchema.optional(),
+        chip: deviceChipSchema.optional(),
+        reading: computerResourceReadingSchema,
+        factsAgeMs: number().nonnegative().nullable(),
+        capacity: demandSchema.nullable(),
+        reserved: demandSchema,
+        remaining: demandSchema.nullable(),
+        model: modelSchema.nullable(),
+        preferenceRank: number().nonnegative().nullable()
+      })
+    ).max(64)
+  });
+  object({
+    snapshot: placementSnapshotSchema,
+    /** Pending until a proven end, or a later observation includes running demand. */
+    reservation: _enum(["pending", "observed", "ended"]),
+    /** Written before asynchronous preparation, so closing an unsent start is provably safe. */
+    preparationStarted: boolean().optional()
+  });
+  const placementWaitKindSchema = _enum(["model", "room", "other"]);
+  const placementWaitSchema = object({
+    kind: placementWaitKindSchema,
+    words: string(),
+    /** When this kind of placement wait began; unchanged by fresh resource readings. */
+    since: number().optional()
+  });
+  const computerMoveSchema = object({
+    from: string().min(1),
+    to: string().min(1),
+    by: _enum(["captain", "firstmate"]),
+    at: number(),
+    phase: _enum(["waiting", "moving", "retiring", "undoing"]),
+    fromDir: string().optional(),
+    restartFrom: string().optional(),
+    preparing: literal(true).optional(),
+    keep: array(string().min(1).max(4096)).max(256).optional(),
+    away: object({ head: string().min(1), at: number().optional() }).optional(),
+    problem: string().optional()
+  });
+  const homeCopySchema = object({ sha: string().min(1), at: number() });
+  const awayCopySchema = object({
+    from: string().min(1),
+    head: string().min(1),
+    at: number(),
+    kept: object({
+      sha: string().min(1).optional(),
+      ref: string().min(1).optional(),
+      folder: string().min(1).optional(),
+      at: number(),
+      removed: number().optional()
+    }).optional(),
+    told: literal(true).optional()
+  });
+  const repoSetupKindSchema = _enum(["clone", "init", "adopt"]);
+  const projectKeyChoiceSchema = string().trim().min(1).max(16);
+  const projectJoinSchema = string().trim().min(1).max(16);
+  discriminatedUnion("kind", [
+    strictObject({
+      kind: literal("clone"),
+      origin: string().trim().min(1),
+      name: string().optional(),
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
+    }),
+    strictObject({
+      kind: literal("init"),
+      name: string().trim().min(1),
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
+    }),
+    strictObject({
+      kind: literal("adopt"),
+      path: string().trim().min(1),
+      name: string().optional(),
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
+    })
+  ]);
+  const repoKindSchema = _enum(["project", "personal"]);
+  const repoDeliverySchema = _enum(["direct-pr", "queue-pr", "local-only"]);
+  const repoHostSchema = object({
+    kind: _enum(["github", "gitlab", "bitbucket", "git"]),
+    name: string().nullable()
+  }).nullable();
+  const batchGapSchema = number().int().positive();
+  object({
+    contributionDestination: contributionDestinationSchema.optional(),
+    placementRequirements: placementRequirementsSchema.nullable().optional(),
+    delivery: repoDeliverySchema.optional(),
+    autonomy: boolean().optional(),
+    rigor: rigorSchema.nullable().optional(),
+    costLimit: costLimitSchema.nullable().optional(),
+    scope: string().nullable().optional(),
+    name: string().trim().min(1).max(120).optional(),
+    path: string().trim().min(1).max(4096).optional(),
+    origin: string().trim().min(1).max(4096).nullable().optional(),
+    /**
+     * Settings → Projects' Require pull request checks (docs/forge.md, "A
+     * project with no checks"): false records that the project runs no
+     * checks, true ends that record.
+     */
+    requireChecks: boolean().optional(),
+    /**
+     * Settings → Projects' When a batch starts, for a batched project
+     * (docs/forge.md, "The batch gap"): the least time in minutes from one
+     * batch's start to the next, or null to start one as soon as a change is approved.
+     */
+    batchGap: batchGapSchema.nullable().optional()
+  }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several"
+  });
+  const noChecksRecordSchema = object({
+    at: number(),
+    task: string().optional(),
+    head: string().optional(),
+    evidence: string().optional()
+  });
+  const repoViewSchema = object({
+    id: string(),
+    /** The fleet name (unique; names the fleet-root entry), shown in surfaces. */
+    name: string(),
+    /** What work belongs here, in the captain's words; personal takes no scope. */
+    scope: string().nullable().optional(),
+    /** The repo's real working directory (external for adopted repos). */
+    path: string(),
+    setupKind: repoSetupKindSchema,
+    /**
+     * The workspace's nature (`project` or `personal`), migration 37. There
+     * is exactly one `personal` row - the app's own personal workspace - and
+     * it takes no delivery, autonomy or rigor.
+     */
+    kind: repoKindSchema,
+    /** Remote URL when known: the clone source, or a detected origin on adopt. */
+    origin: string().nullable(),
+    /** Where the project lives, read from `origin`; null = kept on this Mac. */
+    host: repoHostSchema,
+    contribution: contributionRouteSchema.optional(),
+    /** A successful host inspection, including a direct route with no fork requirement. */
+    contributionChecked: boolean().optional(),
+    delivery: repoDeliverySchema,
+    /** On = the agent may land green finished work on this repo by itself. */
+    autonomy: boolean(),
+    /**
+     * The repository's standing delivery rigor (delivery rigor phase 3), set
+     * by talking or Settings → Projects; null = the host derives it per task
+     * from the posture and the intelligence tier (`rigorFor` in `./rigor.ts`).
+     */
+    rigor: rigorSchema.nullable(),
+    /** Null follows Settings → Intelligence; absent on older homes. */
+    costLimit: costLimitSchema.nullable().optional(),
+    /**
+     * Where the project's next task starts (multi-machine piece 11,
+     * docs/helper.md "Runs on"): the id of a paired computer that runs work,
+     * or null for this Mac.
+     */
+    runsOn: string().nullable(),
+    placementRequirements: placementRequirementsSchema.optional(),
+    /**
+     * This person's line of approved changes and open batch in the project,
+     * while there is either (docs/forge.md, "Batches of your own").
+     */
+    batch: batchRecordSchema.optional(),
+    /**
+     * The record that the project runs no pull request checks, while it has
+     * one; absent, its changes' checks hold their merge (docs/forge.md, "A
+     * project with no checks").
+     */
+    noChecks: noChecksRecordSchema.optional(),
+    /**
+     * The least time in minutes from one of this person's batches starting
+     * to the next (docs/forge.md, "The batch gap"); absent, a batch starts as
+     * soon as a change is approved. A held batch's repair never waits for it.
+     */
+    batchGap: batchGapSchema.optional(),
+    /**
+     * Whether a runbook that is on at the home offers batched pull requests,
+     * so the project may newly choose them (`deliveryChoices`); absent from an
+     * older home, which offers them by host alone.
+     */
+    batchesOffered: boolean().optional()
+  });
+  object({
+    repo: repoViewSchema,
+    created: boolean(),
+    initializedGit: boolean().optional(),
+    createdInitialCommit: boolean().optional()
+  });
+  discriminatedUnion("kind", [
+    object({ kind: literal("card"), cardId: string().min(1) }),
+    object({ kind: literal("already"), name: string().min(1) })
+  ]);
+  union([
+    string().trim().min(1),
+    strictObject({ own: literal(true), key: string().trim().min(1).optional() })
+  ]);
+  object({
+    project: object({ id: string(), key: string(), name: string() }),
+    repos: array(object({ id: string(), name: string() })),
+    tasks: number().int().nonnegative()
+  });
+  object({
+    tasks: array(
+      object({
+        key: string(),
+        title: string(),
+        status: _enum(["planned", "working"])
+      })
+    )
+  });
+  object({
+    path: string(),
+    custom: boolean()
+  });
+  const accountHoldSchema = object({
+    class: _enum(CUT_OFF_CLASSES),
+    provider: string(),
+    resetsAt: number().optional(),
+    /**
+     * Where the account is, for a task on a computer that runs work, which
+     * runs on that computer's own sign-in ("on Mac mini", "as Builder");
+     * absent for this Mac's own.
+     */
+    where: string().optional()
+  });
+  const workPostureSchema = object({
+    state: _enum(["active", "idle", "paused", "unknown"]),
+    reason: _enum([
+      "turn",
+      "job",
+      "checks",
+      "guidance",
+      "settlement",
+      "timed-wait",
+      "captain",
+      "inactive",
+      "access",
+      "dependency",
+      "unobserved"
+    ]),
+    /** Present on `access` while a typed cut-off stands on the task's account. */
+    hold: accountHoldSchema.optional(),
+    /**
+     * A crewmate failing at its provider (docs/inbox.md): `retrying` on the
+     * guidance posture while the app retries on its own, `stuck` once the same
+     * refusal stopped the retry. Older views ignore it and keep the reason's words.
+     */
+    atProvider: _enum(["retrying", "stuck"]).optional(),
+    /** Pending batch status on the offered version; older views keep their checks look. */
+    batch: _enum(["waiting", "in-batch", "paused"]).optional(),
+    /** The watched contribution is open with its upstream maintainers. */
+    maintainers: boolean().optional()
+  });
+  const AT_PROVIDER_WORDS = {
+    retrying: "Retrying at its provider",
+    stuck: "Stuck at its provider"
+  };
+  function workPostureLabel(posture) {
+    if (posture.maintainers) return "Waiting for the maintainers";
+    if (posture.reason === "checks" && posture.batch) return "Waiting for the batch check";
+    if (posture.atProvider) return AT_PROVIDER_WORDS[posture.atProvider];
+    const reasons = {
+      turn: "Working",
+      job: "Background work continues",
+      checks: "Waiting for checks",
+      guidance: "A reply is queued",
+      settlement: "Finishing the task",
+      "timed-wait": "Waiting to continue automatically",
+      // A supervision hold need not have a ready card; taskStatusOf owns that choice.
+      captain: "Work is paused",
+      inactive: "No continuing work",
+      access: "Paused for access",
+      dependency: "Blocked by another task",
+      unobserved: "Background work is unknown"
+    };
+    return reasons[posture.reason];
+  }
+  const usageCostSourceSchema = _enum(["listed-prices", "claude", "reported"]);
+  const usageCountsSchema = object({
+    input: number().optional(),
+    output: number().optional(),
+    cacheRead: number().optional(),
+    cacheWrite: number().optional(),
+    /** Reported thinking tokens, already included in output; never add to totals. */
+    reasoning: number().optional(),
+    cost: number().optional(),
+    /** The estimate by token category, where the session priced each one apart. */
+    costParts: object({
+      input: number().optional(),
+      output: number().optional(),
+      cacheRead: number().optional(),
+      cacheWrite: number().optional()
+    }).optional(),
+    costSource: usageCostSourceSchema.optional()
+  });
+  const usageSchema = usageCountsSchema.extend({
+    /**
+     * Each model that served the turn, with its own share, when the session
+     * names them (Claude does: a turn can call several). The counts above are
+     * their sum.
+     */
+    models: array(usageCountsSchema.extend({ model: string().min(1) })).optional()
+  });
+  const cutOffSchema = object({
+    class: _enum(CUT_OFF_CLASSES),
+    resetsAt: number().optional()
+  });
+  const taskStatusSchema$1 = _enum(["completed", "cancelled", "failed"]);
+  const feedRunSchema = object({ id: string(), withdrawn: boolean().optional() });
+  discriminatedUnion("type", [
+    object({
+      type: literal("task_started"),
+      taskId: string(),
+      title: string(),
+      machineId: string(),
+      crewmate: string()
+    }),
+    object({ type: literal("assistant_delta"), taskId: string(), text: string() }),
+    object({ type: literal("thinking_delta"), taskId: string(), text: string() }),
+    object({
+      type: literal("tool_start"),
+      taskId: string(),
+      callId: string(),
+      toolName: string()
+    }),
+    object({
+      type: literal("tool_end"),
+      taskId: string(),
+      callId: string(),
+      toolName: string(),
+      isError: boolean(),
+      /** Usage reported by model-powered tool work, separate from a conversational turn. */
+      usage: usageSchema.optional()
+    }),
+    object({ type: literal("turn_end"), taskId: string(), usage: usageSchema.optional() }),
+    /**
+     * A turn that ended in a provider error (Pi resolves these instead of
+     * throwing, so without this event the failure would be invisible). The
+     * supervisor enriches crewmate ones with the crewmate name and task title.
+     */
+    object({
+      type: literal("turn_failed"),
+      taskId: string(),
+      error: string(),
+      /**
+       * The typed cut-off behind the failure, when the backend reported one
+       * in its own fields (docs/quota.md "Typed cut-offs"). Absent on an
+       * ordinary failure, and on every failure from a backend that reports
+       * prose only.
+       */
+      cutOff: cutOffSchema.optional(),
+      /** The backend exhausted its own context-length recovery. */
+      contextOverflow: literal(true).optional(),
+      /**
+       * The Firstmate's seat paused on this cut-off: its pause line and card
+       * speak for the failure. Absent when the cut-off paused nothing (a
+       * spent allowance with no known reset), which is an ordinary failure.
+       */
+      paused: boolean().optional(),
+      crewmate: string().optional(),
+      title: string().optional()
+    }),
+    object({
+      type: literal("task_finished"),
+      taskId: string(),
+      status: taskStatusSchema$1,
+      error: string().optional(),
+      title: string().optional()
+    }),
+    object({
+      type: literal("task_report"),
+      taskId: string(),
+      title: string(),
+      crewmate: string(),
+      /** First sentence of the report, capped, for the feed line. */
+      summary: string().optional()
+    }),
+    /** A finished task's branch was merged locally (Q5, forge-agnostic). */
+    object({
+      type: literal("task_landed"),
+      taskId: string(),
+      title: string(),
+      mode: _enum(["fast-forward", "merge"])
+    }),
+    object({ type: literal("auth_reconnect_required"), providerId: string() }),
+    /** The fleet changed (agent-operated); display surfaces refresh on these. */
+    object({
+      type: literal("repo_setup"),
+      actor: _enum(["captain", "firstmate"]).optional(),
+      repoId: string(),
+      name: string(),
+      path: string(),
+      kind: repoSetupKindSchema,
+      /** The project it joined, by name, when that project holds another repository (INF-4220). */
+      project: string().optional()
+    }),
+    object({
+      type: literal("repo_configured"),
+      /** Exact name, folder or approved address change, when one changed. */
+      description: string().optional(),
+      /**
+       * The line as a fact, worded where it is shown, when the app itself
+       * started or ended the project's no-checks record; `description` is its
+       * English (docs/i18n.md, "Saved facts").
+       */
+      said: saidSchema.optional(),
+      actor: _enum(["captain", "firstmate"]).optional(),
+      repoId: string(),
+      name: string(),
+      delivery: repoDeliverySchema,
+      autonomy: boolean(),
+      /** The standing rigor the repository now declares; null = derived (phase 3). */
+      rigor: rigorSchema.nullable()
+    }),
+    object({
+      type: literal("repo_unregistered"),
+      actor: _enum(["captain", "firstmate"]).optional(),
+      repoId: string(),
+      name: string()
+    }),
+    /**
+     * A project's batch changed (docs/forge.md, "Batches of your own"): the
+     * changes in line, the open batch or its hold. Settings reads the project
+     * again; no feed line.
+     */
+    object({
+      type: literal("repo_batch"),
+      repoId: string()
+    }),
+    /**
+     * A project's Runs on changed (docs/helper.md, "Runs on"): where its next
+     * task starts, a computer that runs work by its id or null for this Mac.
+     * `text` is the whole feed line, in the design skill's words.
+     */
+    object({
+      type: literal("repo_runs_on"),
+      actor: _enum(["captain", "firstmate"]).optional(),
+      repoId: string(),
+      name: string(),
+      runsOn: string().nullable(),
+      text: string(),
+      /** The line as a fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+      said: saidSchema.optional()
+    }),
+    /**
+     * A device used its link and is on the home's list (docs/devices.md).
+     * `name` is the device's own words, drawn as text; nothing of the link
+     * rides it. A computer that runs work adds the macOS user it runs as,
+     * whether it is another user on this Mac, and what it said it has there.
+     * `again`: a device already on the list used the link to find this Mac
+     * where it is now, and stays as it was (docs/devices.md, "Finding the
+     * home again").
+     */
+    object({
+      type: literal("device_joined"),
+      deviceId: string(),
+      name: string(),
+      kind: deviceKindSchema,
+      user: string().optional(),
+      onThisMac: boolean().optional(),
+      found: foundToolsSchema.optional(),
+      again: boolean().optional(),
+      /** Where it reached this computer, when the socket says. */
+      reachedOn: _enum(["local", "private"]).optional()
+    }),
+    /**
+     * A step of adding a Mac by its address, updating Firstmate there, or
+     * removing what Firstmate set up there, over Remote Login (docs/devices.md,
+     * "Adding a computer by its address"). `text` is the whole feed line, in the
+     * design skill's words; a refusal is two of them, each `warn`. `stage`
+     * and `deviceId` are typed facts Settings -> Devices follows; nothing of a
+     * link rides it.
+     */
+    object({
+      type: literal("device_setup"),
+      address: string(),
+      doing: remoteLoginDoingSchema,
+      stage: remoteLoginStageSchema,
+      /** The other Mac's own name, once the home heard it. */
+      name: string().optional(),
+      deviceId: string().optional(),
+      text: string(),
+      tone: _enum(["info", "warn"]),
+      /** How far the copy of Firstmate has gone there, while it is set up or found again. */
+      copy: remoteLoginCopySchema.optional(),
+      /**
+       * The run of lines this one belongs to (`feedRunSchema`): each later
+       * count of the copy sent so far rewrites the line before it.
+       */
+      run: feedRunSchema.optional()
+    }),
+    /**
+     * A change in this Mac's own SSH connection to a computer it added by its
+     * address, said once (docs/devices.md, "Through the home's SSH"): it
+     * stopped trying until Try again, came back after that, the work there
+     * could not start, or this Mac gave up removing what it set up on one it
+     * removed. Nothing secret rides it.
+     */
+    object({
+      type: literal("device_connection"),
+      deviceId: string(),
+      name: string(),
+      state: _enum(["stopped", "connected", "not-started", "gave-up"]),
+      text: string(),
+      tone: _enum(["info", "warn"])
+    }),
+    /**
+     * One step of updating Firstmate on a computer that runs work over the
+     * connection (docs/devices.md, "Updating over the connection"): what the
+     * feed says, and each refusal's two `warn` lines. Nothing secret rides it.
+     */
+    object({
+      type: literal("device_update"),
+      deviceId: string(),
+      name: string(),
+      stage: _enum(["updating", "done", "refused"]),
+      text: string(),
+      tone: _enum(["info", "warn"]),
+      /**
+       * How far Firstmate has gone there (docs/devices.md, "Downloading over
+       * the connection"): its download's count, this computer's send's, or
+       * starting it again.
+       */
+      copy: remoteLoginCopySchema.optional(),
+      /** The run of lines this one belongs to (`feedRunSchema`): each later count rewrites the line before it. */
+      run: feedRunSchema.optional()
+    }),
+    /**
+     * A device's person chose Leave on it, and it is off the home's list
+     * (docs/devices.md, "Leave"). `name` is the device's own words.
+     */
+    object({
+      type: literal("device_left"),
+      deviceId: string(),
+      name: string(),
+      kind: deviceKindSchema
+    }),
+    /**
+     * A computer that runs work signed in to one of its own subscriptions
+     * (docs/helper.md, "Its own sign-ins"). `who` is how the home names it -
+     * its own name, or the macOS user it runs as here - and `provider` the
+     * subscription's name; nothing the captain typed rides it.
+     */
+    object({
+      type: literal("device_signed_in"),
+      deviceId: string(),
+      who: string(),
+      provider: string()
+    }),
+    /**
+     * The captain signed a computer that runs work out of one of its own
+     * subscriptions (Disconnect). For Claude, `login` is what became of that
+     * computer's own Claude login: signed out when Firstmate made it there
+     * from a pasted code, kept when it did not; absent when the computer did
+     * not say.
+     */
+    object({
+      type: literal("device_signed_out"),
+      deviceId: string(),
+      who: string(),
+      provider: string(),
+      login: machineLoginOutcomeSchema.optional()
+    }),
+    /**
+     * A short FYI line from the Firstmate agent for the activity feed. One
+     * that names its task is a row on that task's record, which the feed
+     * reads back (docs/task-record.md, "What Activity holds"), so it never
+     * reaches a client as itself.
+     */
+    object({
+      type: literal("firstmate_note"),
+      text: string(),
+      taskId: string().optional(),
+      /** A task-less host notice may carry a physical warning; older views still receive its text. */
+      tone: _enum(["info", "warn"]).optional(),
+      /** The note as a fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+      said: saidSchema.optional()
+    }),
+    /**
+     * A character reaction, drained by the character renderer: one the
+     * Firstmate asked for with its emote tool, or a reply emote the host fired
+     * for a captain turn's steer (nod), note (tuck) or personalize (tick).
+     * `text` is the emote's few words, already clean by the shared rule
+     * (`emoteWords`): the Firstmate's own, or on a reply the host fired the
+     * app's own words (`AUTOMATIC_EMOTE_WORDS`), marked `automatic`. The
+     * window shows them only as the turn's reply line, which the core chooses
+     * and sends as `firstmate_reply`.
+     */
+    object({
+      type: literal("firstmate_emote"),
+      emote: _enum(FIRSTMATE_EMOTES),
+      text: string().refine((text) => {
+        const words2 = emoteWords(text);
+        return words2.kind === "words" && words2.text === text;
+      }, "emote words must be clean and at most EMOTE_WORDS_MAX characters").optional(),
+      automatic: literal(true).optional()
+    }),
+    /**
+     * A durable note was written (create/revise/retire/restore). The text is
+     * the feed body after "noted - "; the word memory never reaches the UI.
+     */
+    object({ type: literal("memory_noted"), text: string() }),
+    /**
+     * The Firstmate applied a preference on the captain's word (talk-to-
+     * personalize Step 1: theme, a panel's rail or visibility, a surface
+     * removed). One feed line, never a card; the
+     * text is the whole line. Catalog actions stamp their actor; older events
+     * without one retain the Firstmate personalization wording.
+     */
+    object({
+      type: literal("personalized"),
+      text: string(),
+      actor: _enum(["captain", "firstmate"]).optional(),
+      /**
+       * The captain's settled run this line belongs to (docs/orchestrator-contract.md,
+       * "Settled runs"): a later step of the same run rewrites the run's line
+       * in place while it is still Activity's newest, and `withdrawn` takes
+       * the line away because the run came back where it started.
+       */
+      run: feedRunSchema.optional()
+    }),
+    /**
+     * A closed card was brought forward as a read-only past card (FI3-579
+     * piece 4, `inf:cards:show-past`). The shell opens its held entry; nothing
+     * is stored and no card is raised.
+     */
+    object({ type: literal("past_card_shown"), cardId: string() }),
+    /**
+     * A card still on the stack was brought to its front (What's new,
+     * `inf:release-notes:show`). The shell shows it; nothing is stored.
+     */
+    object({ type: literal("open_card_shown"), cardId: string() }),
+    /**
+     * The first mate opened a task's record in the captain's window
+     * (`show-task`, `inf:tasks:show`). The shell opens it; nothing is stored.
+     * A window from before ignores a type it does not know.
+     */
+    object({ type: literal("task_record_shown"), taskId: string() }),
+    /**
+     * The first mate opened Settings in the captain's window on a section and
+     * what it shows (`show-settings`, `inf:settings:show`), as a panel's
+     * `point.openSettings` does. Nothing is stored.
+     */
+    object({
+      type: literal("settings_shown"),
+      section: string(),
+      item: string().optional()
+    }),
+    /**
+     * A task's own browser changed for the captain (docs/task-browser.md, "The
+     * view"): it opened, moved, acted or stopped. Per-task invalidation for
+     * `tasks.detail`, which carries its fact; nothing is stored or shown.
+     */
+    object({ type: literal("task_browser"), taskId: string() }),
+    /**
+     * A write changed knowledge (docs/knowledge.md, "The browser"), or the
+     * purge cleared it. Invalidation for the browser's reads; nothing is
+     * stored or shown, and only an alpha or development build sends it.
+     */
+    object({ type: literal("knowledge_changed") }),
+    /** The captain submitted a home-input turn (text and/or images). */
+    object({
+      type: literal("user_turn"),
+      text: string(),
+      /** Sent from the captain's own command, `infinitary-axi`, not the window. */
+      through: throughSchema.optional()
+    }),
+    /**
+     * The Firstmate's reply line to the captain's last message, sent as the
+     * turn that read it ends and before its busy signal falls (src/shared/
+     * lastTurn.ts, docs/composer.md "The last turn"); the same line is kept
+     * beside the message for the next launch.
+     */
+    object({
+      type: literal("firstmate_reply"),
+      text: string(),
+      problem: boolean().optional(),
+      /** Typed completion: absent is unknown, and the line stays. */
+      eligibility: lastTurnEligibilitySchema.optional(),
+      /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
+      words: string().optional()
+    }),
+    /**
+     * A task record changed (task-system P3): per-task invalidation for
+     * `tasks.detail`. `seq` is the board sequence the change committed
+     * under, the same one the next `inf:tasks` push carries. Emitted after
+     * the commit, never from memory.
+     */
+    object({
+      type: literal("task_changed"),
+      taskId: string(),
+      key: string(),
+      kind: _enum(["work", "question", "decision", "operation"]),
+      status: _enum(["open", "active", "done", "dropped"]),
+      /**
+       * The status the record carried before this change, as the emitter
+       * last saw it; null for a row it had not seen. A status transition is
+       * `from !== status` - the one thing a reaction (the character's emote,
+       * P5) may key on, so a later write on a closed row never re-fires it.
+       */
+      from: _enum(["open", "active", "done", "dropped"]).nullable(),
+      activity: _enum(["starting", "running", "idle", "interrupted"]).nullable(),
+      workPosture: workPostureSchema.optional(),
+      /**
+       * A work task's served slot as the board reads it (`TaskView.tier`),
+       * so the crew orbit can paint the crewmate's solid; null when it never
+       * routed. Absent on a non-work row.
+       */
+      tier: slotSchema.nullable().optional(),
+      /** Builder id only for a host-commissioned review; null on other work. */
+      reviewOf: string().nullable().optional(),
+      /** Actual task placement, not the project's current Runs on. */
+      executionDeviceId: string().nullable().optional(),
+      closedReason: _enum([
+        "landed",
+        "merged",
+        "released",
+        "answered",
+        "settled",
+        "finished",
+        "cancelled",
+        "discarded",
+        "failed",
+        "superseded"
+      ]).nullable(),
+      seq: number()
+    }),
+    /**
+     * A timeline event landed on a task (task-system P3): the feed's source.
+     * `text` is the feed-ready line the core authored from the event and its
+     * record (src/core/tasks/taskFeed.ts), `feed` whether it belongs in the
+     * global feed (a crewmate's own progress notes do not).
+     */
+    object({
+      type: literal("task_event"),
+      taskId: string(),
+      key: string(),
+      kind: string(),
+      text: string(),
+      at: number(),
+      feed: boolean(),
+      /**
+       * Something sent reached the crewmate: words entered its turn, its turn
+       * was stopped, its task closed under it or was edited (INF-759). The
+       * center draws one spark out to it then. An announcement of its own,
+       * never on a recorded event: `kind` is `reached`, `text` is empty and
+       * `feed` false. Absent on every timeline event.
+       */
+      reached: literal(true).optional(),
+      /** A feed line's fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+      said: saidSchema.optional()
+    }),
+    /**
+     * The Firstmate agent's own busy state (drives the thinking phase), and
+     * whether it is shortening its conversation now (the character's cinch);
+     * absent means not.
+     */
+    object({
+      type: literal("firstmate_state"),
+      busy: boolean(),
+      folding: boolean().optional()
+    }),
+    /** Live crew strip counts: runtimes plus queued work. */
+    object({
+      type: literal("crew_counts"),
+      working: number(),
+      idle: number(),
+      queued: number()
+    })
+  ]);
+  object({
+    working: number(),
+    idle: number(),
+    queued: number()
+  });
+  const FIRSTMATE_SESSION_ID = "firstmate";
+  const observeSessionKindSchema = _enum(["orchestrator", "crewmate"]);
+  const observeSessionStatusSchema = _enum([
+    "streaming",
+    "idle",
+    "done",
+    "failed",
+    "cancelled",
+    "interrupted",
+    "none"
+  ]);
+  const observeRecordedUsageSchema = object({
+    input: number(),
+    output: number(),
+    cacheRead: number(),
+    cacheWrite: number(),
+    cost: number().optional(),
+    records: number(),
+    reported: object({
+      input: number(),
+      output: number(),
+      cacheRead: number(),
+      cacheWrite: number()
+    }),
+    priced: number()
+  });
+  const observeUsageModelSchema = observeRecordedUsageSchema.extend({
+    provider: string().nullable(),
+    model: string().nullable(),
+    attribution: _enum(["served", "requested", "historical"])
+  });
+  const observeUsageTotalsSchema = object({
+    input: number(),
+    output: number(),
+    cacheRead: number(),
+    cacheWrite: number(),
+    cost: number().optional(),
+    /** Legacy record count, NOT a count of conversation turns. Kept for older clients. */
+    turns: number(),
+    /** Additive coverage facts; old clients keep their existing shape. */
+    records: number().optional(),
+    reported: observeRecordedUsageSchema.shape.reported.optional(),
+    priced: number().optional(),
+    models: array(observeUsageModelSchema).optional()
+  });
+  const observeRoutingSchema = object({
+    /** The slot the policy asked for (`tasks.difficulty`). */
+    tier: string().nullable(),
+    /** The slot the ladder actually served, null when none was recorded. */
+    served: string().nullable(),
+    /** The policy row that answered (R0-R10); null on a row routed before it. */
+    rule: string().nullable(),
+    /** What the host took the work to be, and how that kind was established. */
+    kind: string().nullable(),
+    kindSource: string().nullable(),
+    /** The delivery rigor the host derived (delivery rigor phase 3), null before it. */
+    rigor: string().nullable(),
+    /**
+     * What the host derived the task DELIVERS - `answer` or `change`
+     * (crew-posture rationalization Task B); null on a row shaped before the
+     * axis existed.
+     */
+    deliverable: string().nullable(),
+    /**
+     * The review's latest verdict and its risk (`pass · risk low`) - on the
+     * builder whose change was read, and on the review task that returned it.
+     */
+    review: string().nullable(),
+    /** On a review task: the title of the builder it reviews. */
+    reviewOf: string().nullable()
+  });
+  const observeSessionSummarySchema = object({
+    id: string(),
+    kind: observeSessionKindSchema,
+    title: string(),
+    taskId: string(),
+    repo: string().nullable(),
+    model: string().nullable(),
+    status: observeSessionStatusSchema,
+    startedAt: number().nullable(),
+    endedAt: number().nullable(),
+    usage: observeUsageTotalsSchema.nullable(),
+    error: string().nullable(),
+    authFailure: boolean(),
+    /**
+     * The backend that serves this session's transcript. The main session's
+     * is the seat that wrote its file (Pi, or Claude since W1); a crewmate's
+     * is the backend of the account it ran on, or null when that account is
+     * no longer registered.
+     */
+    backend: backendIdSchema.nullable(),
+    /**
+     * Why no transcript can be shown, in plain words, or null when one was
+     * read (even if it holds no turns yet). The detail pane renders it in
+     * place of the turns, so "nothing to show" is never a blank pane.
+     */
+    transcriptNote: string().nullable(),
+    /**
+     * The routing facts (S5), on a crewmate whose row carries a work shape.
+     * Null on the main session - it is not routed by the policy -
+     * and on a crewmate commissioned before the shape existed.
+     */
+    routing: observeRoutingSchema.nullable()
+  });
+  const observeTurnKindSchema = _enum([
+    "context",
+    "user",
+    "op",
+    "assistant",
+    "tool",
+    "usage",
+    "error",
+    "compaction"
+  ]);
+  const observeTurnSchema = object({
+    id: string(),
+    at: number(),
+    kind: observeTurnKindSchema,
+    text: string(),
+    toolName: string().optional(),
+    isError: boolean().optional(),
+    usage: usageSchema.optional(),
+    model: string().optional()
+  });
+  const observeCardThreadSchema = object({
+    cardId: string(),
+    title: string(),
+    messages: array(cardMessageSchema)
+  });
+  observeSessionSummarySchema.extend({
+    turns: array(observeTurnSchema),
+    /** Open cards on this session that have a thread, oldest message first. */
+    threads: array(observeCardThreadSchema).default([])
+  });
+  const observeLiveToolSchema = object({
+    callId: string(),
+    toolName: string(),
+    isError: boolean().optional()
+  });
+  object({
+    id: string(),
+    text: string(),
+    tools: array(observeLiveToolSchema)
+  });
+  const FORGE_PLACE = String.raw`(?:GitHub|GitLab|[a-z0-9-]+(?:\.[a-z0-9-]+)+)`;
+  const ANSWERED = `^${FORGE_PLACE} answered`;
+  function answered(statuses) {
+    return new RegExp(`${ANSWERED} (?:${statuses}) to [A-Z]+ /`);
+  }
+  function isMergeConflict(error) {
+    return error !== void 0 && (/^GitHub (?:answered 40[59] to PUT \S+\/merge(?:-async)?|did not merge \S+): .*(?:merge conflicts|not mergeable)/i.test(
+      error
+    ) || new RegExp(`${ANSWERED} 4(?:06|22) to PUT \\S+/merge: Branch cannot be merged`).test(error));
+  }
+  function isRunawayProviderError(error) {
+    return /max_time_limit/i.test(error) || /internal error during token generation/i.test(error) || /timed out after/i.test(error);
+  }
+  const SIGN_IN_LINE = "the provider did not accept your sign-in - sign in again";
+  const ALLOWANCE_LINE = "your plan's allowance ran out - it comes back when it resets";
+  const GIT_RULES = [
+    // The app's own sign-in where projects live (git integration PR 1.2):
+    // the forge seam's words for no sign-in, and a host's REST answers as the
+    // REST forges phrase them (`GitHub answered <status> to <request>`).
+    {
+      test: (error) => /^Not signed in to [^()]+ \([a-z0-9.-]+\)/.test(error),
+      line: `the app is not signed in where the project lives - sign in under Settings, Projects, or keep the project on ${HERE.this}`
+    },
+    {
+      test: (error) => answered("401").test(error),
+      line: `the project's host did not accept the sign-in on ${HERE.this} - sign in again under Settings, Projects`
+    },
+    {
+      test: (error) => answered("403").test(error),
+      line: "the project's host did not allow it - ask the project's owner for access"
+    },
+    {
+      test: (error) => answered("404").test(error),
+      line: "the project could not be found where it lives"
+    },
+    {
+      // The merge endpoint's refusal of a change that conflicts with newer
+      // work: retrying cannot help, bringing the change up to date does.
+      test: isMergeConflict,
+      line: "it conflicts with newer work in the project - its crewmate needs to bring it up to date"
+    },
+    {
+      test: (error) => new RegExp(`^could not reach ${FORGE_PLACE}: `).test(error) || answered("50[234]").test(error),
+      line: "could not reach the project's host - try again"
+    },
+    {
+      test: (error) => /could not read (?:Username|Password) for '|Authentication failed for '|Permission denied \(publickey\)|gh auth login|HTTP 401: Bad credentials/.test(
+        error
+      ),
+      line: `the project's host did not accept the sign-in on ${HERE.this}`
+    },
+    {
+      test: (error) => /remote: Repository not found|Could not resolve to a Repository/.test(error),
+      line: "the project could not be found where it lives"
+    },
+    {
+      test: (error) => /Could not resolve host: |Failed to connect to \S+ port \d+|error connecting to api\.github\.com/.test(
+        error
+      ),
+      line: "could not reach the project's host - try again"
+    },
+    {
+      test: (error) => /^The repository has uncommitted changes/m.test(error),
+      line: "your project has edits that are not committed yet - commit or set them aside first"
+    },
+    {
+      test: (error) => /^The repository is on a detached HEAD/m.test(error),
+      line: "your project is not on a named branch - switch to one first"
+    },
+    {
+      test: (error) => /hit a conflict; resolve it manually/.test(error),
+      line: "could not bring it up to date - the work and your project changed the same place"
+    }
+  ];
+  const RULES = [
+    ...GIT_RULES,
+    {
+      test: (error) => isAuthFailureMessage(error) || error.includes("No signed-in model"),
+      line: SIGN_IN_LINE,
+      readsClass: true
+    },
+    { test: isRunawayProviderError, line: "the model ran out of time on its answer - try again" },
+    {
+      // Checked before the rate limit: a 429 that says the allowance is spent
+      // is the allowance, not a request to slow down.
+      test: (error) => /\b(?:insufficient_quota|quota exceeded|exceeded your current quota|usage limit|out of credits)\b/i.test(
+        error
+      ),
+      line: ALLOWANCE_LINE,
+      readsClass: true
+    },
+    {
+      test: (error) => /^\s*429\b|\(429\)|\b(?:status(?:\s+code)?|code)["']?\s*[:=]?\s*["']?429\b|\brate[_ -]?limit|\btoo many requests\b/i.test(
+        error
+      ),
+      line: "the provider asked to slow down - try again shortly",
+      readsClass: true
+    },
+    {
+      test: (error) => /\b(?:context[_ ]length|context window|maximum context|prompt is too long|context_length_exceeded)\b/i.test(
+        error
+      ),
+      line: "the conversation grew too long for the model - try again"
+    },
+    {
+      test: (error) => /\b(?:ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH)\b|\bconnection error\b|\bfetch failed\b|\bsocket hang up\b|\bnetwork error\b/i.test(
+        error
+      ),
+      line: "could not reach the provider - try again"
+    },
+    {
+      test: (error) => /^\s*5\d\d\b|\(5\d\d\)|\b(?:status(?:\s+code)?|code|upstream)["']?\s*[:=]?\s*["']?5\d\d\b|\boverloaded\b|\binternal server error\b|\bservice unavailable\b|\bbad gateway\b/i.test(
+        error
+      ),
+      line: "the provider had a problem on its side - try again"
+    },
+    {
+      test: (error) => /\bENOENT\b|\bcommand not found\b/i.test(error),
+      line: `something it needed is missing on ${HERE.this}`
+    },
+    {
+      test: (error) => /\b(?:AbortError|aborted)\b/i.test(error),
+      line: "it was stopped before it finished"
+    }
+  ];
+  const PLAIN_PROBLEM_FALLBACK = "something went wrong - try again";
+  RULES.filter((rule) => !rule.readsClass);
+  function plainProblem(error, typed) {
+    const raw = error?.trim() ?? "";
+    if (!raw) return PLAIN_PROBLEM_FALLBACK;
+    const rules = RULES;
+    return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+  }
+  const checkStateSchema = _enum([
+    "success",
+    "failure",
+    "error",
+    "cancelled",
+    "timed_out",
+    "action_required",
+    "startup_failure",
+    "stale",
+    "skipped",
+    "neutral",
+    "pending"
+  ]);
+  const checkItemSchema = object({
+    name: string(),
+    state: checkStateSchema,
+    manual: boolean().optional(),
+    failureAllowed: boolean().optional()
+  });
+  const checkSnapshotSchema = object({
+    headSha: string(),
+    /**
+     * The pull request the reading was of, as the reader named it (INF-1873):
+     * the task's own, or one it selected to read. The change record binds the
+     * reading to that pull request by this number, never by its head alone.
+     */
+    prNumber: number().int().positive().optional(),
+    items: array(checkItemSchema),
+    complete: boolean().optional(),
+    /** Why part of this reading could not be obtained, not a sign-out inference. */
+    problem: string().optional(),
+    absenceDeclared: boolean()
+  });
+  object({
+    /** The default branch's version the checks were read on. */
+    sha: string(),
+    at: number(),
+    items: array(object({ name: string(), state: checkStateSchema }))
+  });
+  const recordDeliveryFactSchema = object({
+    basis: _enum(["checked", "stated", "unread"]),
+    text: string().min(1)
+  });
+  const HOLDS = {
+    "asks-first": {
+      level: "soft",
+      restsOn: "consent",
+      name: "asking first"
+    },
+    decisions: {
+      level: "soft",
+      restsOn: "record",
+      name: "the open decisions"
+    },
+    waits: {
+      level: "soft",
+      restsOn: "record",
+      name: "the waits"
+    },
+    parts: {
+      level: "soft",
+      restsOn: "record",
+      name: "the open parts"
+    },
+    checks: {
+      level: "soft",
+      restsOn: "record",
+      name: "the checks"
+    },
+    proof: {
+      level: "soft",
+      restsOn: "record",
+      name: "the delivery proof"
+    },
+    story: {
+      level: "soft",
+      restsOn: "consent",
+      name: "the saved story"
+    },
+    escalation: {
+      level: "soft",
+      restsOn: "made-up number",
+      name: "the stronger-model limit",
+      way: "the captain names the model"
+    },
+    "program-bound": {
+      level: "soft",
+      restsOn: "consent",
+      name: "the program's bound",
+      way: "on the captain's words the crewmate that started it raises it with start_program, or the first mate with update_task program_bound"
+    },
+    "start-waits": {
+      level: "soft",
+      restsOn: "record",
+      name: "a start's waits",
+      way: "the first mate removes the wait on the captain's words"
+    },
+    "load-line": {
+      level: "soft",
+      restsOn: "record",
+      name: "the heavy-run line"
+    },
+    "cost-limit": {
+      level: "soft",
+      restsOn: "consent",
+      name: "the cost limit"
+    },
+    // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+    "model-levels": {
+      level: "soft",
+      restsOn: "record",
+      name: "the model levels",
+      way: "the captain places a model that can take it on a level in Settings, names one for the task, or adds a sign-in that serves one where it runs"
+    },
+    "host-rules": {
+      level: "fixed",
+      restsOn: "outside fact",
+      name: "the rules where the project lives"
+    },
+    "nothing-to-merge": {
+      level: "fixed",
+      restsOn: "physical limit",
+      name: "nothing to merge"
+    },
+    "sign-in": {
+      level: "fixed",
+      restsOn: "outside fact",
+      name: "the sign-in"
+    },
+    "sent-once": {
+      level: "fixed",
+      restsOn: "outside fact",
+      name: "sending once"
+    },
+    "recorded-path": {
+      level: "fixed",
+      restsOn: "physical limit",
+      name: "the recorded path"
+    }
+  };
+  const HOLD_KINDS = Object.keys(HOLDS);
+  HOLD_KINDS.filter(
+    (kind) => HOLDS[kind].level === "soft" && !("way" in HOLDS[kind])
+  );
+  const words$1 = string().trim().min(1).max(4e3);
+  const id = string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/);
+  const head = string().regex(/^[a-f0-9]{40,64}$/);
+  const revision = number().int().nonnegative();
+  const validationVerdictSchema = _enum(["go", "no-go", "inconclusive", "no-surface"]);
+  const validationScenarioSchema = object({
+    id,
+    source: words$1,
+    importance: _enum(["required", "supplementary"]),
+    action: words$1,
+    expected: words$1,
+    adverse: words$1,
+    environment: words$1,
+    signal: words$1,
+    /** The actual product, service or device the claim requires. */
+    boundary: words$1,
+    /**
+     * INF-1824: what a run uses or reaches that needs the captain's consent, in
+     * the check's own words. Declared, a run of this check needs its approval.
+     */
+    resources: words$1.optional(),
+    /** What one run of this check costs; an approval covers runs that fit it. */
+    cost: words$1.optional()
+  });
+  const validationObservationSchema = object({
+    scenario: id,
+    result: _enum(["pass", "fail", "untested"]),
+    live: boolean(),
+    actual: words$1,
+    evidence: array(id).max(32),
+    standIns: array(words$1).max(20),
+    unproven: array(words$1).max(20),
+    attempted: array(words$1).max(20),
+    missingCapability: words$1.optional(),
+    reason: words$1.optional()
+  });
+  const validationEvidenceSourceSchema = object({
+    id,
+    path: words$1,
+    description: words$1,
+    /** A recording's still frame, checked by the existing card-media owner. */
+    poster: words$1.optional()
+  });
+  const validationEvidenceSchema = object({
+    id,
+    description: words$1,
+    digest: string().regex(/^[a-f0-9]{64}$/),
+    bytes: number().int().positive().max(16 * 1024 * 1024),
+    file: string().regex(/^[a-zA-Z0-9_-]+\.(png|jpg|webp|mp4|gif|txt|json|log)$/),
+    /** An immutable text excerpt or rendered attachment, not the original mutable path. */
+    text: string().max(1024 * 1024).optional(),
+    picture: string().optional(),
+    media: string().optional(),
+    durationMs: number().int().positive().optional(),
+    posterFile: string().optional(),
+    posterDigest: string().regex(/^[a-f0-9]{64}$/).optional()
+  });
+  const runFields = {
+    kind: literal("run"),
+    id,
+    head,
+    scenarioRevision: revision,
+    completion: _enum(["complete", "interrupted", "unknown"]),
+    verdict: validationVerdictSchema,
+    reason: words$1,
+    observations: array(validationObservationSchema).max(100)
+  };
+  const validationRunInputSchema = object({
+    ...runFields,
+    evidence: array(validationEvidenceSourceSchema).max(32)
+  });
+  const validationRunSchema = object({
+    ...runFields,
+    evidence: array(validationEvidenceSchema).max(32),
+    revision,
+    deviceId: string().nullable(),
+    at: number(),
+    /** Check request ids that actually authorized this run, kept for the private audit. */
+    checkApprovals: array(id).optional()
+  });
+  const validationReviewSchema = object({
+    kind: literal("review"),
+    head,
+    revision,
+    code: _enum(["clear", "findings", "blocked"]),
+    /** The findings the code judgment rests on (INF-1875): the verdict is this record, never a line of the report. */
+    findings: array(reviewFindingSchema).max(100).optional(),
+    /** The reviewer's risk of merging the change as it stands, recorded beside the checks and never a hold. */
+    risk: object({ level: reviewRiskSchema, why: words$1 }).optional(),
+    coverage: _enum(["complete", "missing"]),
+    coverageReason: words$1,
+    effects: array(id).max(100),
+    omitted: array(words$1).max(100),
+    verdict: validationVerdictSchema,
+    reason: words$1
+  });
+  const validationForgeWriteSchema = object({
+    host: string().min(1).max(255),
+    method: _enum(["POST", "PATCH", "PUT", "DELETE"]),
+    path: string().min(1).max(4096),
+    /** SHA-256 of the exact JSON body bytes, absent only when the call has no body. */
+    bodyDigest: string().regex(/^[a-f0-9]{64}$/).optional()
+  });
+  const validationEffectSchema = object({
+    kind: literal("effect"),
+    id,
+    head,
+    scenario: id,
+    action: words$1,
+    destination: words$1,
+    audience: words$1,
+    visibility: _enum(["captain-only", "others", "uncertain"]),
+    persistent: boolean(),
+    purpose: words$1,
+    lastingEffects: words$1,
+    cleanup: words$1,
+    access: words$1,
+    /** A reproduction before the first edit has no changed code to clear. */
+    preChange: boolean(),
+    /** Only a task's own PR needed to obtain proof; never permits merge or marks proof accepted. */
+    prerequisitePublication: boolean(),
+    publication: object({ repoId: id, branch: words$1 }).optional(),
+    /** A declared forge write is bound to the exact call sent, not merely a permission id. */
+    forgeWrite: validationForgeWriteSchema.optional(),
+    /** Current consent to use after exact independent review: direction id, standing, or a kept yes card. */
+    allowance: string().min(1).max(200).optional()
+  });
+  const validationGapSchema = object({
+    kind: literal("gap"),
+    id,
+    head,
+    scenario: id,
+    missingCapability: words$1,
+    reason: words$1,
+    alternatives: array(object({ attempted: words$1, result: words$1 })).min(1).max(20),
+    remedies: array(words$1).min(1).max(20)
+  });
+  const validationCheckSchema = object({
+    kind: literal("check"),
+    id,
+    head,
+    scenario: id,
+    /**
+     * INF-4446: the yes on the task's Already allowed list that the crewmate
+     * judged covers the check's declared resources and cost per run: a kept
+     * yes's card, `standing` for the captain's standing override, or a `d:` direction id. The
+     * approval rests on that yes, with no new card, while it stands.
+     */
+    allowance: string().min(1).max(200).optional()
+  });
+  const validationRequestSchema = discriminatedUnion("kind", [
+    validationEffectSchema,
+    validationGapSchema,
+    validationCheckSchema
+  ]);
+  const validationPlanSchema = object({
+    kind: literal("plan"),
+    /** Compare-and-set, including zero for a task's first scenario set. */
+    previousRevision: revision,
+    reason: words$1,
+    scenarios: array(validationScenarioSchema).max(100)
+  });
+  const validationDecisionSchema = object({
+    kind: literal("decision"),
+    request: id,
+    /** An already emitted ordinary decision on this task; only its exact chrome choice grants permission. */
+    card: string().min(1).max(200),
+    action: id
+  });
+  const validationEffectStateSchema = object({
+    kind: literal("effect-state"),
+    request: id,
+    state: _enum(["started", "succeeded", "failed", "unknown"]),
+    evidence: words$1
+  });
+  discriminatedUnion("kind", [
+    validationPlanSchema,
+    validationRunInputSchema,
+    validationReviewSchema,
+    object({ kind: literal("request"), request: validationRequestSchema }),
+    validationEffectStateSchema
+  ]);
+  discriminatedUnion("kind", [
+    validationPlanSchema,
+    object({ ...runFields, evidence: array(validationEvidenceSchema).max(32) }),
+    validationReviewSchema,
+    object({ kind: literal("request"), request: validationRequestSchema }),
+    validationDecisionSchema,
+    validationEffectStateSchema
+  ]);
+  const validationPermissionSchema = object({
+    request: validationRequestSchema,
+    scenario: validationScenarioSchema,
+    state: _enum([
+      "requested",
+      "approved",
+      "declined",
+      "expired",
+      "started",
+      "succeeded",
+      "failed",
+      "unknown"
+    ]),
+    at: number(),
+    decision: object({
+      card: string(),
+      offer: string(),
+      action: string(),
+      lifecycle: string().optional()
+    }).optional(),
+    answer: object({ at: number(), action: string(), label: string() }).optional(),
+    outcome: words$1.optional(),
+    /** Source of the approval, once granted: a kept card, standing override, or project direction. */
+    yes: string().min(1).max(200).optional(),
+    /** The named source as of the request, never rebound to later words under the same id. */
+    allowanceSnapshot: object({ at: number(), revision: number().int().positive().optional() }).optional()
+  });
+  object({
+    /** Changes to facts a reviewer reads, excluding judgments themselves. Older records start at zero. */
+    stateRevision: revision.optional(),
+    scenarioRevision: revision,
+    scenarios: array(validationScenarioSchema),
+    plans: array(
+      object({
+        revision,
+        reason: words$1,
+        scenarios: array(validationScenarioSchema),
+        at: number()
+      })
+    ),
+    runs: array(validationRunSchema),
+    reviews: array(
+      validationReviewSchema.extend({
+        reviewer: string(),
+        stateRevision: revision.optional(),
+        at: number(),
+        scenarioRevision: revision
+      })
+    ),
+    permissions: array(validationPermissionSchema)
+  });
+  const liveValidationSummarySchema = object({
+    label: string(),
+    line: string().optional(),
+    reason: string(),
+    head: string().optional(),
+    revision: number(),
+    /** Optional for readers of records served by an older home. */
+    live: number().int().nonnegative().optional(),
+    total: number().int().nonnegative().optional(),
+    verdict: string().optional(),
+    /** Private audit only; never published in forge Markdown. */
+    approvals: array(object({ scenario: string(), source: string(), runs: number() })).optional(),
+    rows: array(
+      object({
+        id: string(),
+        action: string(),
+        supplementary: boolean().optional(),
+        result: string(),
+        reason: string(),
+        evidence: array(validationEvidenceSchema)
+      })
+    )
+  });
+  const crewBandSchema = _enum(["room", "conserve", "near_floor", "unknown"]);
+  const crewDecidedBySchema = _enum([
+    "named",
+    "pinned",
+    "band",
+    "spend-priority",
+    "recency",
+    "runway-order",
+    "only-candidate"
+  ]);
+  const modelChoiceCandidateSchema = object({
+    /** The model as `provider/id`, named through the one model-name lookup. */
+    model: string(),
+    picked: boolean(),
+    band: crewBandSchema.optional(),
+    /**
+     * Its allowance was used up and it keeps going on the account's credits
+     * (routing's `credits` band); its `band` then reads `near_floor`.
+     */
+    onCredits: literal(true).optional(),
+    percentRemaining: number().optional(),
+    /** The score it was ranked by, after placed work where placed work applied. */
+    spendPriority: number().optional(),
+    /** The score before placed work, when placed work changed it. */
+    rawSpendPriority: number().optional(),
+    /** The most allowance, in percentage points, unfinished work was estimated to use. */
+    placedWorkPoints: number().optional(),
+    measuredAt: number().optional(),
+    resetsAtMs: number().optional()
+  });
+  const modelChoiceSchema = object({
+    decidedBy: crewDecidedBySchema,
+    floorPercent: number(),
+    /** Ranked as the router ranked them: the picked one and those eligible beside it. */
+    candidates: array(modelChoiceCandidateSchema),
+    /**
+     * Set when models with no allowance reading took turns for the choice
+     * (INF-3782): the picked one was the one picked least recently.
+     */
+    turns: literal(true).optional()
+  });
+  const folderRefreshCauseSchema = _enum([
+    "missing",
+    "no-origin",
+    "no-default-branch",
+    "dirty",
+    "detached",
+    "other-branch",
+    "fetch-failed",
+    "no-remote-branch",
+    "diverged",
+    "changed",
+    "fast-forward-refused",
+    "unreadable"
+  ]);
+  const folderNoticedSchema = _enum(["merge", "start", "branch-home", "land", "app-start"]);
+  const taskPolicyEditsSchema = object({
+    delivery: repoDeliverySchema.nullable().optional(),
+    autonomy: boolean().nullable().optional(),
+    rigor: rigorSchema.nullable().optional()
+  });
+  const taskPolicyStateSchema = taskPolicyEditsSchema.extend({
+    revision: number().int().nonnegative()
+  });
+  const sourceSchema = _enum(["task", "project"]);
+  const effectiveTaskPoliciesSchema = object({
+    delivery: object({ value: repoDeliverySchema, source: sourceSchema }),
+    autonomy: object({ value: boolean(), source: sourceSchema }),
+    rigor: object({ value: rigorSchema, source: sourceSchema, requested: rigorSchema }),
+    revision: number().int().nonnegative()
+  });
+  const taskRunsOnSchema = object({
+    label: string(),
+    source: _enum(["task", "parent", "project"]),
+    reason: string().optional(),
+    candidates: array(string()).max(65).optional()
+  });
+  const workKindSchema = _enum([
+    "plan",
+    "research",
+    "retrieval",
+    "reproduce",
+    "implement",
+    "fix",
+    "chore",
+    "review",
+    "unclear"
+  ]);
+  const deliverableSchema = _enum(["answer", "change", "operation"]);
+  const escalationSchema = object({
+    /** The task key whose result the captain rejected. */
+    from: string(),
+    /** 1-based position in the lineage; bounded by `maxEscalations`. */
+    attempt: number().int().positive(),
+    /** The tier this attempt runs at; an escalation never routes downward. */
+    floor: intelligenceBucketSchema
+  });
+  const workShapeSchema = object({
+    /** Current edits; original asks and dispatch stamps remain provenance. */
+    policies: taskPolicyStateSchema.optional(),
+    kind: workKindSchema,
+    /** Work persists across turns until explicitly finished. */
+    ongoing: boolean().optional(),
+    /** The first mate's requested intelligence; premium still needs the captain's ask. */
+    intelligence: intelligenceBucketSchema.optional(),
+    /** The task whose report is the spec or the reproduction, when one exists. */
+    basis: string().optional(),
+    /**
+     * Whether that basis resolved to a real task that is done or carries an
+     * outcome. A claimed spec never buys a cheaper tier by itself, so an
+     * unverified basis is treated as absent. Derived by the host at every
+     * read (`TaskService.graph.basisHolds`) and handed to the table with the
+     * shape; the task record never stores it.
+     */
+    basis_verified: boolean().optional(),
+    /** The captain asked for premium in words. */
+    premium_ask: boolean().optional(),
+    /** The captain named a specific model (bare id or provider-qualified key). */
+    override_model_id: string().optional(),
+    /**
+     * A review's model the decision model picked from the person's standing
+     * directions (`provider/model`, docs/delivery-rigor.md, "Which model
+     * reviews"): a preference, never a pin. Routing tries it first while it
+     * passes the ladder's own checks, and otherwise chooses as usual and says
+     * why; nothing ever waits for it.
+     */
+    review_model: string().optional(),
+    /** Only the captain requests a faster speed; absent inherits the model default. */
+    override_speed: crewSpeedSchema.optional(),
+    /**
+     * The captain named this task's reasoning effort. It wins over the
+     * Settings → Models choice and the level's default for this task alone,
+     * capped to what the serving model offers; absent inherits them.
+     */
+    override_reasoning: reasoningChoiceSchema.optional(),
+    /** The task the captain rejected; the Firstmate's escalation ask (S4). */
+    escalate_from: string().optional(),
+    /** The host's stamp for that ask (S4). */
+    escalation: escalationSchema.optional(),
+    /** How the kind was established, for the audit row (e.g. `classifier:xai/grok-4.6`). */
+    kind_source: string().optional(),
+    /**
+     * The captain said in words how carefully this work should ship
+     * (delivery rigor phase 2). The Firstmate passes it only then, the way it
+     * passes `premium_ask`; the host derives the rigor from it and the other
+     * facts (`src/shared/rigor.ts`).
+     */
+    rigor_ask: rigorSchema.optional(),
+    /**
+     * The captain asked in words for this task to ship at a different
+     * posture than the repository's default. The Firstmate passes it only
+     * then, the way it passes `rigor_ask`; the host uses it for this task
+     * alone (`deliveryFor` in `./repos.ts`) and the repo is unchanged.
+     */
+    delivery_ask: repoDeliverySchema.optional(),
+    /**
+     * The captain said in words whether this task's green work may be merged
+     * by the fleet itself or should be brought to him first. The Firstmate
+     * passes it only then, the way it passes `rigor_ask`; the host uses it
+     * for this task alone (`autonomyFor` in `./repos.ts`) and the
+     * repository's default is unchanged. `false` is an ask too - "ask me
+     * before merging this one" on an autonomous repository - so this field
+     * is read by presence, never by truthiness.
+     */
+    autonomy_ask: boolean().optional(),
+    /**
+     * The captain said in words where this task runs (docs/helper.md, "A
+     * task's own Runs on"): a computer that runs work by its device id, or
+     * `this-mac` (`RUNS_ON_THIS_MAC`). The Firstmate passes it only then, at
+     * spawn or with update_task before the task starts; it wins over the
+     * project's Runs on for this task and for each part of it with none of
+     * its own. Absent follows the parent's, else the project's.
+     */
+    runs_on_ask: string().optional(),
+    placement_requirements: placementRequirementsSchema.optional(),
+    /** Host-owned acceptance of the existing fallback while an Automatic start waits. */
+    placement_fallback_accepted: boolean().optional(),
+    /**
+     * The latest Automatic wait, written by the host onto the record so a
+     * restart keeps the words and does not say the line again (INF-416 piece F).
+     * Not the could-not-start notice. Absent once the task is no longer waiting.
+     */
+    placement_wait: placementWaitSchema.optional(),
+    /** Start-wait source timestamps, never a cached readiness decision. */
+    start_wait_since: object({
+      policy: number().optional(),
+      gate: number().optional(),
+      dependencies: number().optional()
+    }).optional(),
+    /** A started task's move to another computer, written only by the host (`computerMoveSchema`). */
+    computer_move: computerMoveSchema.optional(),
+    /** The commit this Mac last brought home of its branch on a computer that runs work, written only by the host (`homeCopySchema`). */
+    home_copy: homeCopySchema.optional(),
+    /** What it left on computers it moved off while they were out of reach, written only by the host (`awayCopySchema`). */
+    away_copies: array(awayCopySchema).max(16).optional(),
+    /**
+     * The Firstmate's own declaration, made when it creates the task: this is
+     * an internal step of a sequence it is running for an ask, whose answer is
+     * handed to the next step (docs/sequences.md). Its judgment, taught by its
+     * instructions - never inferred by the host, which only stores it and
+     * honours it: `settle_task` done, why answered, closes an answer task only when it
+     * was declared this way, and the brief tells such a step that its report
+     * is the answer handed on. Absent - the default, and every row from
+     * before it - is the captain's own ask, his to close.
+     */
+    internal_step: boolean().optional(),
+    /**
+     * The shape this task's report must carry as its typed result (INF-799
+     * piece 1): a JSON Schema object with an object at its root, declared by
+     * the first mate when it plans or spawns the task. The host prints it in
+     * the brief and checks each report's `result` against it, refusing a
+     * mismatch by naming the first failing field (`src/core/tasks/taskResult.ts`).
+     */
+    result_schema: record(string(), unknown()).optional(),
+    /**
+     * The task, by key, whose last commit this task's working copy starts at
+     * (INF-799 piece 1): its branch head while its working copy is present,
+     * else its kept ref. Declared by the first mate; the host checks it holds
+     * when it is named and again when the task starts.
+     */
+    branch_from: string().optional(),
+    /**
+     * The earlier part of a plan, by key, whose approved merge starts this
+     * task (docs/task-graph.md, "A part that starts at approval"): one of its
+     * `blocks` prerequisites, declared by the first mate to name which wait
+     * the start follows. On batched pull requests a wait starts the task at
+     * its approval without the mark too, unless `needs_merge` names it.
+     */
+    start_at_approval: string().optional(),
+    /**
+     * The `blocks` prerequisites, by key, whose merge this task needs, not
+     * only their code (docs/task-graph.md, "A part that starts at approval"):
+     * declared by the first mate, such as for a release. Each one waits for
+     * its merge on batched pull requests too.
+     */
+    needs_merge: array(string()).optional(),
+    /**
+     * The approved version of an earlier part this task's working copy
+     * started on (`start_at_approval`): that task, its pushed branch and the
+     * approved commit, written by the host at the start. The brief, the
+     * review, the line counts and the batch line read the task's own
+     * difference against it.
+     */
+    built_on: object({ task: string(), branch: string(), head: string() }).optional(),
+    /**
+     * The name the first mate wrote for this task's branch from the naming
+     * runbook's words, before its code (docs/architecture.md, "A task's
+     * branch"). The host checks git would take it when it is written, and
+     * appends a short code from the task's id when the working copy is
+     * first made; with none, the branch is named from the title.
+     */
+    branch: string().optional(),
+    /**
+     * The program this task runs (INF-799 piece 2, docs/programs.md): a plain
+     * JavaScript script the first mate declared, the args it reads, and the
+     * upper bound it proposed on the script's task() calls. A task with a
+     * program has no crewmate and no working copy: the host's runner
+     * evaluates the script in its own process and files each task() call as
+     * a part, a child task. The host checks that the script compiles and
+     * imports nothing, and reads nothing of what it means.
+     */
+    program: object({
+      script: string(),
+      args: unknown().optional(),
+      bound: number().int().positive()
+    }).optional(),
+    /**
+     * Which call of its parent's program filed this part (INF-799 piece 2):
+     * the call's number in the order the script made them, a digest of the
+     * call's prompt and options, and its label. The runner's journal: after
+     * a quit it replays the script, and a call equal to a recorded one takes
+     * that part's result instead of filing another. Written by the host when
+     * it files the part.
+     */
+    program_part: object({
+      call: number().int().nonnegative(),
+      hash: string(),
+      label: string(),
+      /** The script's choice, not a model pin or permission to use premium. */
+      intelligence: intelligenceBucketSchema.optional()
+    }).optional(),
+    /** Firstmate's stated reason for skipping a plan; the host does not judge it. */
+    skipped_plan_because: string().optional(),
+    /**
+     * The rigor the host derived at dispatch and stamped here, so a queued
+     * row and the record both carry what the crewmate was told. Absent on a
+     * row dispatched before phase 2, and on a `review` task, which ships
+     * nothing.
+     */
+    rigor: rigorSchema.optional(),
+    /**
+     * What this task DELIVERS, derived by the host at the mint (Task B).
+     * Optional on the schema so a row shaped before the axis existed parses;
+     * every mint since stamps it, and a row that carries none is read as a
+     * `change`, which is what it shipped at.
+     */
+    deliverable: deliverableSchema.optional(),
+    /**
+     * The autonomy the host derived at dispatch and stamped here, beside the
+     * rigor, so the record carries what the task was commissioned under.
+     * Provenance only: every reader - the settle refusal, `crew_status`, the
+     * fact strip - derives the EFFECTIVE value live from the ask and the
+     * repository, so flipping a repository's default reaches the work
+     * already in flight.
+     */
+    autonomy: boolean().optional(),
+    /**
+     * Free prose about HOW the kind was established, when there is any: a
+     * native decision model's own certainty, or the note that one failed and
+     * the adapter answered in its place (S7b). One reason line on the routing
+     * decision; absent on an ordinary answer. It replaced `kind_confidence`,
+     * which nothing ever filled - the decision interface carries no
+     * confidence, on the captain's call.
+     */
+    kind_detail: string().optional(),
+    /**
+     * The host filed this task to work in place, in its project's own folder,
+     * with no working copy, branch, pull request or completion decision
+     * (INF-549, docs/task-record.md "A folder a merge left behind"). Only the
+     * host writes it, in one of two shapes.
+     *
+     * A folder a merge left behind, or one missing or behind where other work
+     * found it (INF-572), carries the facts the folder was refused on: the default branch, the merged version the folder must reach
+     * (`reach`), origin's default branch as last read (`remote`) and the typed
+     * cause. The host closes the task once the folder is clean, on `branch`
+     * and at or past `reach`.
+     *
+     * A pull request an abandoned task could not close carries that pull
+     * request (`pull`): the host closes the task once it reads it closed.
+     *
+     * The host renders the brief from either at each start.
+     *
+     * Work the first mate declared works in the project's folder
+     * (`in_folder` on its ask, INF-567) carries `folder: true`: its brief is
+     * the first mate's intent, it runs on the computer keeping the folder
+     * whatever the project's Runs on says, and it closes as any task does.
+     */
+    in_place: union([
+      object({
+        /** Absent when origin was missing or named no default branch. */
+        branch: string().optional(),
+        reach: string().optional(),
+        remote: string().optional(),
+        cause: folderRefreshCauseSchema,
+        /** The merged task whose refresh was refused, by key, or the task that found the folder. */
+        after: string().optional(),
+        /** What found the folder so (INF-572); absent on a repair a merge filed before it. */
+        noticed: folderNoticedSchema.optional(),
+        /**
+         * Where the repair's crewmate works when the folder was missing as it
+         * started: the nearest folder above it that exists (INF-572). A resume
+         * opens there again, even once the folder is back; a new start reads
+         * the project's folder again and opens in it when it is there (INF-757).
+         */
+        started_in: string().optional()
+      }),
+      object({
+        pull: object({
+          number: number(),
+          /** The host's own label for it, such as #12 or !12. */
+          label: string(),
+          url: string().optional(),
+          /** The branch it carries where the project lives. */
+          branch: string().optional(),
+          /** What the host answered when Infinitary tried to close it, as it said it. */
+          problem: string().optional()
+        }),
+        /** The abandoned task that opened it, by key and by id. */
+        after: string().optional(),
+        after_id: string()
+      }),
+      object({ folder: literal(true) })
+    ]).optional()
+  });
+  workShapeSchema.pick({
+    ongoing: true,
+    intelligence: true,
+    basis: true,
+    premium_ask: true,
+    override_model_id: true,
+    override_speed: true,
+    override_reasoning: true,
+    escalate_from: true,
+    rigor_ask: true,
+    delivery_ask: true,
+    autonomy_ask: true,
+    runs_on_ask: true,
+    placement_requirements: true,
+    internal_step: true,
+    skipped_plan_because: true,
+    result_schema: true,
+    branch_from: true,
+    start_at_approval: true,
+    needs_merge: true,
+    branch: true,
+    program: true
+  }).extend({
+    kind: workKindSchema.exclude(["review"]).optional(),
+    /**
+     * The task an independent reviewer should read (delivery rigor phase 2).
+     * An ask only: the host commissions the review as a CHILD of that
+     * builder, so the parent edge is the one stored join - the shape never
+     * carries a builder pointer beyond `basis`.
+     */
+    review_of: string().optional(),
+    /**
+     * The first mate's declaration that this task works in its project's
+     * own folder, not a working copy (INF-567): the host stamps
+     * `in_place: { folder: true }` from it.
+     */
+    in_folder: boolean().optional()
+  });
+  const ruleIdSchema = _enum([
+    "R0",
+    "R1a",
+    "R1b",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9",
+    "R10",
+    "R12"
+  ]);
+  object({
+    version: literal(1),
+    /** kind -> tier when no basis is required to tell them apart. */
+    kindTier: object({
+      plan: intelligenceBucketSchema,
+      research: intelligenceBucketSchema,
+      retrieval: intelligenceBucketSchema,
+      reproduce: intelligenceBucketSchema,
+      chore: intelligenceBucketSchema,
+      /** An independent review reads like research (delivery rigor phase 2, Q5). */
+      review: intelligenceBucketSchema
+    }),
+    /** The two kinds whose tier turns on a verified basis. */
+    groundedTier: object({
+      implement: object({
+        grounded: intelligenceBucketSchema,
+        ungrounded: intelligenceBucketSchema
+      }),
+      fix: object({
+        grounded: intelligenceBucketSchema,
+        ungrounded: intelligenceBucketSchema
+      })
+    }),
+    /** R8: what an abstained, failed or skipped classification routes to. */
+    unclearTier: intelligenceBucketSchema,
+    /** R1b's ladder, weakest first. The only automatic path into premium. */
+    escalationLadder: array(intelligenceBucketSchema),
+    /** How many escalations one lineage may spend. */
+    maxEscalations: number().int().nonnegative(),
+    /**
+     * The live thinking level requested for each served tier. Backends clamp
+     * it to the chosen model; a Quick change steps down one offered rung.
+     */
+    effort: object({
+      premium: string(),
+      high: string(),
+      medium: string(),
+      low: string()
+    }).optional()
+  });
+  const modelReasonSchema = object({
+    rule: ruleIdSchema,
+    asked: slotSchema,
+    served: slotSchema,
+    /** R2: the kind the rule read. */
+    kind: _enum(["plan", "research", "reproduce", "review"]).optional(),
+    /** R4, R6: the key of the verified basis. */
+    basis: string().optional(),
+    /** R1b: the key of the attempt the captain rejected. */
+    escalatedFrom: string().optional(),
+    /** A review: the key of the builder whose change it reads. */
+    reviewOf: string().optional(),
+    /** R9: another provider than the builder's serves the review. */
+    elsewhere: boolean().optional(),
+    /** R0: the served model is the one the captain named. */
+    named: boolean().optional(),
+    /** The served model is pinned in Settings, which outranks every slot. */
+    pinned: boolean().optional()
+  });
+  const personalVersionSchema = object({
+    version: string().regex(/^[0-9a-f]{64}$/),
+    since: number(),
+    files: number().int().nonnegative()
+  });
+  const personalReadSchema = union([
+    personalVersionSchema.extend({ home: literal(true) }),
+    personalVersionSchema.extend({ computer: string().min(1).max(256) })
+  ]);
+  const phoneStandbySchema = object({
+    deviceId: string().min(1).max(64),
+    name: deviceNameSchema,
+    pin: string().regex(/^[A-Za-z0-9_-]{43}$/),
+    listens: array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX + 1)
+  });
+  const phoneStandbysSchema = array(phoneStandbySchema).max(64);
+  const takeOverAskedSchema = object({
+    state: _enum(["running", "started", "refused"]),
+    text: string().min(1).max(600)
+  });
+  const STANDBY_PHONE_OFFER = "inf:standby:offer";
+  const STANDBY_PHONE_TAKE_OVER = "inf:standby:take-over";
+  object({
+    /** When its copy is from; null while it holds no whole copy. */
+    copyAt: number().int().nonnegative().nullable(),
+    home: object({
+      name: string().max(160).nullable(),
+      contact: _enum(["reaching", "in-reach", "lost", "closed"]),
+      /** When this computer last heard the home. */
+      heardAt: number().int().nonnegative().nullable(),
+      /** The home said it went to sleep before this computer lost it. */
+      slept: boolean()
+    }),
+    homeNumber: number().int().positive(),
+    copies: array(
+      object({
+        name: string().min(1).max(160),
+        copyAt: number().int().nonnegative().nullable(),
+        newer: boolean()
+      })
+    ).max(64),
+    ready: boolean(),
+    asked: takeOverAskedSchema.nullable()
+  });
+  ({
+    [STANDBY_PHONE_OFFER]: {
+      request: tuple([])
+    },
+    /**
+     * The person's Take over, confirmed on the phone: `id` names the ask, so
+     * one asked again after a dropped link is the same takeover. Answered once
+     * the work there started the first mate or refused; while it still runs
+     * the answer says so.
+     */
+    [STANDBY_PHONE_TAKE_OVER]: {
+      request: tuple([object({ id: string().uuid() })])
+    }
+  });
+  discriminatedUnion("t", [
+    object({
+      t: literal("ask"),
+      id: number().int().nonnegative(),
+      channel: string().min(1).max(64),
+      args: array(unknown()).max(4)
+    }),
+    object({ t: literal("answer"), id: number().int().nonnegative(), value: unknown() }),
+    object({
+      t: literal("refused"),
+      id: number().int().nonnegative(),
+      error: string().max(600)
+    })
+  ]);
+  strictObject({
+    /** The code of the link a command carries; absent from a computer already on the list. */
+    code: string().regex(KEY_TEXT_PATTERN).optional(),
+    /**
+     * The system and chip the asking computer runs (docs/devices.md, "Firstmate
+     * for another system"), from protocol `FETCH_APP_SYSTEM_SINCE` on: the home
+     * answers the Firstmate published for them at its own version, or its own
+     * when it is that system's. A computer that names neither gets the home's
+     * own, as before; one that names a system the home cannot send is `none`.
+     */
+    system: deviceSystemSchema.optional(),
+    chip: deviceChipSchema.optional(),
+    /**
+     * Asks for the Ubuntu package for that system and chip rather than its
+     * AppImage (major 15): the command for another computer
+     * asks it on Ubuntu 24.04 and 26.04 with no Infinitary installed, and
+     * installs it there (docs/devices.md, "Joining by a command"). Only this
+     * home's own command asks it, so no older home is ever asked it.
+     */
+    package: literal("deb").optional(),
+    /**
+     * Asks only whether the code is still open, and sends nothing (from
+     * protocol 8.15): the home answers 204, or the same refusal. A command
+     * asks it before it downloads Firstmate from its published release
+     * (docs/devices.md, "Joining by a command"), and only this home's own
+     * command does, so no older home is ever asked it.
+     */
+    check: literal(true).optional()
+  });
+  const deviceUserSchema = union([
+    strictObject({ name: deviceUserNameSchema, uid: number().int().nonnegative() }),
+    strictObject({
+      name: deviceUserNameSchema,
+      sid: string().regex(/^S-1-\d+(?:-\d+)+$/).max(184)
+    })
+  ]);
+  strictObject({
+    code: string().regex(KEY_TEXT_PATTERN),
+    kind: deviceKindSchema,
+    name: deviceNameSchema,
+    user: deviceUserSchema.optional(),
+    found: foundToolsSchema.optional(),
+    again: literal(true).optional(),
+    /**
+     * The app joining at its own first launch, with its window, rather than
+     * its work mode (docs/view.md, "Joining"): from this Mac itself it joins
+     * as a second app that only controls, never as work run as anyone here.
+     */
+    window: literal(true).optional(),
+    /**
+     * The system the device runs (docs/devices.md, "What a device is").
+     * A phone (`ios`) joins as a `view` whichever link it used, so it is never
+     * a computer that runs work (docs/devices.md, "Joining").
+     */
+    system: deviceSystemSchema.optional()
+  });
+  strictObject({
+    deviceId: string().min(1).max(64),
+    kind: deviceKindSchema
+  });
+  strictObject({
+    refused: _enum([
+      "malformed",
+      "unknown",
+      "unproven",
+      "kind",
+      "paired",
+      "same-user",
+      "used",
+      "expired",
+      "removed"
+    ]),
+    reason: string()
+  });
+  strictObject({
+    refused: _enum(["malformed", "unknown", "kind", "used", "expired", "none"]),
+    reason: string()
+  });
+  const CONNECTION_MAX_FRAME_BYTES = 64 * 1024 * 1024;
+  const versionSchema = string().regex(/^\d+\.\d+\.\d+$/);
+  const connectionCursorSchema = strictObject({
+    epoch: string().min(1).max(64),
+    seq: number().int().nonnegative()
+  });
+  const spellingsSchema = array(string().min(1).max(32)).max(16).optional();
+  const changesSchema = array(string().min(1).max(64)).max(256).optional();
+  const requestIdSchema = union([number().int().nonnegative(), string().min(1).max(64)]);
+  const invokeFrameSchema = object({
+    t: literal("invoke"),
+    id: requestIdSchema,
+    channel: string().min(1).max(128),
+    args: unknown()
+  });
+  const resultFrameSchemas = [
+    object({
+      t: literal("result"),
+      id: requestIdSchema,
+      ok: literal(true),
+      value: unknown().optional()
+    }),
+    object({
+      t: literal("result"),
+      id: requestIdSchema,
+      ok: literal(false),
+      error: string()
+    })
+  ];
+  union([
+    discriminatedUnion("t", [
+      object({
+        t: literal("hello"),
+        /** The contract version the device speaks (`PROTOCOL_VERSION`); the version rule reads its major. */
+        protocolVersion: versionSchema,
+        /**
+         * The version of Firstmate the device runs, the app's own, which the
+         * home says in Settings -> Devices when it is not its own
+         * (docs/devices.md, "Another version"). Absent from a device too old
+         * to say it.
+         */
+        appVersion: string().min(1).max(64).optional(),
+        /**
+         * A computer that runs work went back to the copy it kept, because the
+         * one an update brought did not reach the home (docs/helper.md, "A copy
+         * that does not start"), which is the home's own version, the one it
+         * sent. Said until the home has heard it.
+         */
+        failedUpdate: literal(true).optional(),
+        /** The last push it saw on an earlier connection; absent on a first one. */
+        cursor: connectionCursorSchema.optional(),
+        /**
+         * A computer's join dials once only to hear the home's name
+         * (docs/helper.md, "Joining"): the home welcomes it, and counts
+         * nothing of it as that computer in reach, so Devices can tell a
+         * computer whose work never reached the home since it joined.
+         */
+        nameOnly: literal(true).optional(),
+        automaticStartup: automaticStartupSchema.optional(),
+        /**
+         * What this connection of the device does (docs/connection.md,
+         * "Hello"): `view`, Firstmate open there controlling this one, or
+         * `work`, its work. A Mac that does both says it on each; absent, a
+         * device does what its kind does, and a Mac its work.
+         */
+        as: deviceRoleSchema.optional(),
+        /**
+         * For a view: the oldest home major it can still change things on, its
+         * own build's `VIEW_FLOOR` (docs/contract.md, "The version rule"), so a
+         * newer view keeps changing things on an older home. Absent from a
+         * view too old to say it, which changes things on its own major and
+         * newer only; a computer that runs work never says it.
+         */
+        viewFloor: number().int().nonnegative().optional(),
+        /**
+         * The system the device runs and its chip (docs/devices.md, "What a
+         * device is"), which the home keeps beside its kind. Absent from a
+         * device too old to say them, or on a system it has no word for.
+         */
+        system: deviceSystemSchema.optional(),
+        chip: deviceChipSchema.optional(),
+        spellings: spellingsSchema,
+        changes: changesSchema
+      }),
+      invokeFrameSchema,
+      object({ t: literal("leave") })
+    ]),
+    ...resultFrameSchemas
+  ]);
+  union([
+    object({
+      t: literal("welcome"),
+      protocolVersion: versionSchema,
+      /** The journal's run and its newest push; the cursor a device starts from. */
+      epoch: string().min(1).max(64),
+      seq: number().int().nonnegative(),
+      catchUp: _enum(["replay", "reload"]),
+      /**
+       * What the version rule lets this device ask, from the version its hello
+       * spoke and, for a view, the floor it said: everything, or the reads
+       * alone (`contractAccess`).
+       */
+      access: _enum(["full", "read"]),
+      /**
+       * The home Mac's own name, such as its computer name, which a view says
+       * it controls. Absent when the home could not read it.
+       */
+      name: deviceNameSchema.optional(),
+      /** Authenticated routing alternatives; absent on an older home. */
+      addresses: array(dialAddressSchema).optional(),
+      /**
+       * Which home of its record this is: 1 until the first mate moves to
+       * another computer, then one more at each move (`home-move`,
+       * docs/devices.md "Moving the first mate"). A device that heard a higher
+       * number refuses this home. Absent on a home from before, read as 1.
+       */
+      homeNumber: number().int().positive().optional(),
+      /**
+       * The takeover that made this home from a copy (`standby-take-over`,
+       * docs/devices.md "Taking over"): a device keeps it beside the home
+       * number, and refuses another home that says the same number with
+       * another id. Absent on a home a move or a first join made.
+       */
+      takeOver: string().uuid().optional(),
+      /**
+       * For a phone: each computer that keeps a copy, with its own key and
+       * where it listens, so a phone that cannot reach this home asks one of
+       * them to take over (`standby-phone`, docs/devices.md "Taking over from a
+       * phone"). Absent for a computer, and on a home from before.
+       */
+      standbys: phoneStandbysSchema.optional(),
+      /**
+       * For a computer that runs work alone: whether its version may take new
+       * work from this home, which needs the same major (`takesWork`,
+       * docs/helper.md). Absent for a view.
+       */
+      takesWork: boolean().optional(),
+      /**
+       * For a computer that runs work: whether it runs on the home's own Mac,
+       * as the home found where it joined from (`onThisMac` on its list), which
+       * decides the priority its work runs at (docs/helper.md, "In the
+       * background"). Absent for a view, and while the home's list does not
+       * say (protocol 9.1).
+       */
+      onHomeMac: boolean().optional(),
+      /**
+       * Sent only to a view from before one rule for every view
+       * (`every-view-asks`), which waits to hear it before it asks what every
+       * view now may. No build on this major reads it; a major that breaks
+       * views removes it.
+       */
+      startedByCommand: literal(true).optional(),
+      spellings: spellingsSchema,
+      changes: changesSchema
+    }),
+    object({
+      t: literal("push"),
+      seq: number().int().positive(),
+      channel: string(),
+      payload: unknown()
+    }),
+    /**
+     * A push for this connection alone, such as a picture of a task's page it
+     * watches (docs/connection.md, "Live pushes"): never numbered, journaled or
+     * replayed, so it moves no cursor. A device that does not know it ignores it.
+     */
+    object({
+      t: literal("live"),
+      channel: string(),
+      payload: unknown()
+    }),
+    /**
+     * To a device whose hello listed `frame-parts`: the next frame, longer
+     * than one piece, comes as whole text messages after this one, each a
+     * piece of its JSON text, whose UTF-8 bytes add up to `bytes`
+     * (docs/connection.md, "Pacing and liveness").
+     */
+    object({
+      t: literal("parts"),
+      bytes: number().int().positive().max(CONNECTION_MAX_FRAME_BYTES)
+    }),
+    ...resultFrameSchemas,
+    invokeFrameSchema
+  ]);
+  const TASK_BROWSER_PAGE_MIN = { width: 320, height: 240 };
+  const TASK_BROWSER_PAGE_MAX = { width: 3840, height: 2400 };
+  const taskBrowserSizeSchema = object({
+    width: number().int().min(TASK_BROWSER_PAGE_MIN.width).max(TASK_BROWSER_PAGE_MAX.width),
+    height: number().int().min(TASK_BROWSER_PAGE_MIN.height).max(TASK_BROWSER_PAGE_MAX.height)
+  });
+  const TASK_BROWSER_PAGES_MAX = 2;
+  const TASK_BROWSER_STOPS = ["captain", "crewmate", "idle", "gone", "task-closed"];
+  const browserIdentity = {
+    session: string().optional(),
+    generation: number().int().positive().optional()
+  };
+  const TASK_BROWSER_CONTROLS = ["waiting", "taking", "captain"];
+  const TASK_BROWSER_PASTE_MAX = Math.floor(CONNECTION_MAX_FRAME_BYTES / 8);
+  const TASK_BROWSER_REQUEST_MAX = 200;
+  const taskBrowserRequestSchema = object({
+    reason: string().min(1).max(TASK_BROWSER_REQUEST_MAX),
+    after: string().min(1).max(TASK_BROWSER_REQUEST_MAX),
+    /**
+     * The crewmate declared it asks the captain to sign in
+     * (docs/task-browser.md, "Signed-in sites"): the captain's Take control opens the
+     * site in the computer's kept profile. The host never guesses it.
+     */
+    signIn: literal(true).optional()
+  });
+  const SAVED_SIGN_INS_PER_BROWSER = 8;
+  const offeredSignInSchema = object({
+    site: string(),
+    savedAt: number(),
+    failedAt: number().optional()
+  });
+  const taskBrowserPageSchema = object({ site: string(), title: string() });
+  const TASK_BROWSER_ASK_KINDS = [
+    "camera",
+    "microphone",
+    "camera-microphone",
+    "notifications",
+    "clipboard",
+    "passkey"
+  ];
+  const taskBrowserAskSchema = object({
+    id: number().int().positive(),
+    kind: _enum(TASK_BROWSER_ASK_KINDS),
+    site: string(),
+    /** A passkey the captain let run with Use passkey: Chrome's own prompt answers it now. */
+    allowed: literal(true).optional()
+  });
+  const taskBrowserToldSchema = object({
+    kind: literal("passkey"),
+    site: string(),
+    where: _enum(["engine", "away"])
+  });
+  const TASK_BROWSER_ASK_ANSWERS = ["allow", "not-now", "show"];
+  const taskBrowserFactSchema = discriminatedUnion("state", [
+    object({
+      state: literal("open"),
+      /** The current page's host and port, as the address names them (`localhost:5173`). */
+      site: string(),
+      url: string(),
+      title: string(),
+      /**
+       * Every page, in the order they opened, while it holds more than one
+       * (a page opened a second); absent with one. `page` is the current
+       * one's place, from 1, whose site, address and title the fact names.
+       */
+      pages: array(taskBrowserPageSchema).max(TASK_BROWSER_PAGES_MAX).optional(),
+      page: number().int().min(1).max(TASK_BROWSER_PAGES_MAX).optional(),
+      /** What the crewmate did last, in a few words; never what it typed. */
+      did: string().optional(),
+      /** Who holds it besides the crewmate; absent while it is the crewmate's. */
+      control: _enum(TASK_BROWSER_CONTROLS).optional(),
+      /** The crewmate's request for help, while it stands. */
+      request: taskBrowserRequestSchema.optional(),
+      /** The captain has handed it back: it may hold what he signed in to, until it stops. */
+      returned: literal(true).optional(),
+      /**
+       * Started by the captain's own click on a page from the task's project
+       * (docs/task-browser.md, "A page from the project"): his alone, so the
+       * view closes it rather than handing it to a crewmate.
+       */
+      own: literal(true).optional(),
+      /**
+       * The signed-in sites this browser may use (docs/task-browser.md,
+       * "Signed-in sites"): one the captain let it use on its request card,
+       * one whose rule lets tasks use it without asking, or one the captain
+       * signed in to as he held it. Absent while it may use none.
+       */
+      saved: array(string()).min(1).max(SAVED_SIGN_INS_PER_BROWSER).optional(),
+      /**
+       * Its pages run in the computer's kept profile, where the captain's
+       * sign-ins stay (docs/task-browser.md, "Signed-in sites"); absent while
+       * they run in its own empty context.
+       */
+      kept: literal(true).optional(),
+      /**
+       * While the captain holds it in the kept profile, the captain's rule for
+       * the page's site on the computer it runs on (docs/task-browser.md, "The
+       * rule"): the Return control question starts from it. Absent while that
+       * computer lists no sign-in for the site.
+       */
+      rule: _enum(["ask", "automatic"]).optional(),
+      /**
+       * While the captain does not hold it, the signed-in site the computer it
+       * runs on keeps for the page's site, which a request card offers;
+       * absent when it keeps none the browser does not already use.
+       */
+      offer: offeredSignInSchema.optional(),
+      /** While the captain holds it, what its page asks the captain now (docs/task-browser.md, "A site's asks"). */
+      ask: taskBrowserAskSchema.optional(),
+      /** While the captain holds it, the passkey request it last told the site no to. */
+      told: taskBrowserToldSchema.optional(),
+      /**
+       * Nothing answers at the loopback address its page is on: a connection
+       * to it was refused (docs/task-browser.md, "When nothing answers"). It
+       * stays until that address answers again.
+       */
+      unanswered: literal(true).optional(),
+      ...browserIdentity
+    }),
+    object({
+      state: literal("stopped"),
+      site: string(),
+      /** The page it was on: Open again starts there. */
+      url: string(),
+      stopped: _enum(TASK_BROWSER_STOPS),
+      at: number(),
+      /**
+       * It was open when Infinitary quit, read again after the restart from
+       * the page kept with its task (docs/task-browser.md, "After a
+       * restart"); its `stopped` is then `gone`, which a reader without this
+       * field shows.
+       */
+      quit: literal(true).optional(),
+      ...browserIdentity
+    })
+  ]);
+  object({
+    taskId: string().min(1).max(64),
+    data: string().max(8e6),
+    width: number().int().positive(),
+    height: number().int().positive()
+  });
+  const pagePoint = {
+    x: number().min(0).max(TASK_BROWSER_PAGE_MAX.width),
+    y: number().min(0).max(TASK_BROWSER_PAGE_MAX.height)
+  };
+  const modifiers = number().int().min(0).max(15);
+  const taskBrowserInputSchema = discriminatedUnion("kind", [
+    object({
+      kind: literal("pointer"),
+      type: _enum(["move", "down", "up"]),
+      ...pagePoint,
+      button: _enum(["none", "left", "middle", "right"]),
+      clickCount: number().int().min(0).max(3),
+      modifiers
+    }),
+    object({
+      kind: literal("wheel"),
+      ...pagePoint,
+      deltaX: number().min(-1e4).max(1e4),
+      deltaY: number().min(-1e4).max(1e4),
+      modifiers
+    }),
+    object({
+      kind: literal("key"),
+      type: _enum(["down", "up"]),
+      key: string().min(1).max(32),
+      code: string().max(32),
+      keyCode: number().int().min(0).max(255),
+      /** What the key types, for a key that types. */
+      text: string().max(4).optional(),
+      modifiers,
+      /** An editing command the key stands for in the window's own key system: select all, undo, paste. */
+      command: _enum(["selectAll", "undo", "redo", "cut", "copy", "paste"]).optional(),
+      /**
+       * With paste, the words on the clipboard of the computer whose window
+       * the captain pressed it in, which need not be the page's own. Without
+       * it, the page pastes from its own computer's clipboard.
+       */
+      clipboard: string().max(TASK_BROWSER_PASTE_MAX).optional()
+    }),
+    object({ kind: literal("go"), go: _enum(["back", "forward", "reload"]) }),
+    /** The captain's pick in the page selector: the page his input and the crewmate's next look go to. */
+    object({ kind: literal("page"), page: number().int().min(1).max(TASK_BROWSER_PAGES_MAX) })
+  ]);
+  const taskBrowserHandleSchema = object({
+    session: string().min(1).max(64),
+    generation: number().int().positive()
+  });
+  union([
+    object({ ok: literal(true), warning: string().optional() }),
+    object({ ok: literal(false), text: string() })
+  ]);
+  const TASK_BROWSER_PLACES_MAX = 400;
+  const taskBrowserPlaceSchema = object({
+    role: string().max(64),
+    name: string().max(240),
+    x: number().int().nonnegative(),
+    y: number().int().nonnegative(),
+    width: number().int().positive(),
+    height: number().int().positive()
+  });
+  union([
+    object({
+      ok: literal(true),
+      width: number().int().positive(),
+      height: number().int().positive(),
+      url: string().max(2048),
+      title: string().max(240),
+      places: array(taskBrowserPlaceSchema).max(TASK_BROWSER_PLACES_MAX)
+    }),
+    object({ ok: literal(false) })
+  ]);
+  const taskBrowserReturnSchema = object({
+    remember: boolean().optional(),
+    site: string().optional(),
+    savedId: string().optional(),
+    words: string().max(CARD_REPLY_MAX_CHARS).optional(),
+    automatic: boolean().optional()
+  });
+  const savedSignInSchema = object({
+    site: string(),
+    savedAt: number(),
+    id: string().optional(),
+    automatic: boolean().optional()
+  });
+  const computerSignInsSchema = object({
+    deviceId: string(),
+    name: string(),
+    signIns: array(savedSignInSchema),
+    unreachable: literal(true).optional()
+  });
+  object({
+    available: boolean(),
+    signIns: array(savedSignInSchema),
+    computers: array(computerSignInsSchema).optional()
+  });
+  const webCookieSchema = object({
+    name: string(),
+    value: string(),
+    domain: string(),
+    hostOnly: boolean(),
+    path: string(),
+    secure: boolean(),
+    httpOnly: boolean(),
+    expirationDate: number().optional(),
+    sameSite: _enum(["unspecified", "no_restriction", "lax", "strict"])
+  });
+  const originStorageSchema = object({
+    origin: string().min(1),
+    items: array(tuple([string(), string()]))
+  });
+  object({
+    cookies: array(webCookieSchema),
+    storage: array(originStorageSchema),
+    session: array(originStorageSchema).optional()
+  });
+  const taskWaitSchema = object({
+    id: string(),
+    kind: _enum(["dependency", "checks", "run", "job", "allowance", "start", "decision", "backlog"]),
+    label: string(),
+    taskKeys: array(string()).optional(),
+    since: number().optional(),
+    next: object({ kind: _enum(["next-read", "check-back", "reset", "start"]), at: number() }).optional()
+  });
+  const TIMELINE_SCHEMA_VERSION = 1;
+  const TIMELINE_ACTORS = [
+    "captain",
+    "firstmate",
+    "crewmate",
+    "supervisor",
+    "host",
+    "frame"
+  ];
+  const timelineActorSchema = object({ kind: _enum(TIMELINE_ACTORS) });
+  const timelineSourceRefSchema = discriminatedUnion("source", [
+    object({
+      source: literal("task-event"),
+      taskId: string(),
+      eventId: number().int()
+    }),
+    object({
+      source: literal("card-observation"),
+      cardId: string(),
+      lifecycleId: string(),
+      observationId: string(),
+      offerId: string().nullable(),
+      interactionId: string().nullable(),
+      messageId: number().int().nullable()
+    }),
+    object({
+      source: literal("card-message"),
+      cardId: string(),
+      messageId: number().int()
+    }),
+    object({
+      source: literal("session-observation"),
+      observationId: string(),
+      conversation: string()
+    }),
+    object({
+      source: literal("session-action"),
+      file: string(),
+      index: number().int()
+    })
+  ]);
+  const TIMELINE_CONTENT_KINDS = [
+    // Task events.
+    "filing",
+    "ask",
+    "answer",
+    "brief",
+    "dispatch",
+    "steer",
+    "progress",
+    "report",
+    "failure",
+    "card-raised",
+    "card-choice",
+    "status",
+    "link",
+    "move",
+    "change",
+    "check",
+    "merge",
+    "triage",
+    "note",
+    "compacted",
+    "interruption",
+    "decision",
+    "escalation",
+    "review",
+    "cap-reset",
+    "reply",
+    // Card evidence and threads; a choice reads as `card-choice` too.
+    "card-offer",
+    "card-availability",
+    "card-message",
+    "card-exit",
+    "effect-result",
+    "card-seen",
+    // A crewmate's kept session.
+    "session-action",
+    "session-observation"
+  ];
+  const timelineContentSchema = object({
+    kind: _enum(TIMELINE_CONTENT_KINDS),
+    version: literal(1),
+    ref: timelineSourceRefSchema
+  });
+  const timelineLinkSchema = discriminatedUnion("rel", [
+    object({ rel: _enum(["reply", "revision", "cause"]), to: string() }),
+    object({ rel: literal("concern"), taskId: string(), relation: string() })
+  ]);
+  const timelineEntrySchema = object({
+    schemaVersion: literal(TIMELINE_SCHEMA_VERSION),
+    /** Stable across restart: derived from the source's own identity, never from words. */
+    id: string(),
+    /** The task whose timeline it is on. */
+    taskId: string(),
+    /** When it happened, as recorded; null when the source holds no time. */
+    at: number().nullable(),
+    actor: timelineActorSchema.nullable(),
+    /** The same short line wherever the entry appears; the content opens whole from its source. */
+    summary: string(),
+    content: timelineContentSchema,
+    links: array(timelineLinkSchema),
+    /**
+     * Bookkeeping or evidence a view may fold (Activity's folded and
+     * evidence places, a card's availability or seen mark, a crewmate's
+     * actions); it stays on the timeline either way.
+     */
+    quiet: boolean(),
+    /** Other entries' ids the owner recorded as the same occurrence, folded into this one. */
+    aliases: array(string())
+  });
+  const timelineReadingSchema = object({
+    entry: timelineEntrySchema,
+    actorLabel: string(),
+    /** A folded Activity parent, for presentation only, never a claimed cause. */
+    activityRowId: number().int().optional(),
+    text: string().nullable(),
+    /** Exact retained raw text, disclosed beneath the plain reading when present. */
+    details: string().optional()
+  });
+  const taskStatusSchema = _enum(["open", "active", "done", "dropped"]);
+  const taskActivitySchema = _enum(["starting", "running", "idle", "interrupted"]);
+  const taskKindSchema = _enum(["work", "question", "decision", "operation"]);
+  const taskClosedReasonSchema = _enum([
+    "landed",
+    "merged",
+    "released",
+    "answered",
+    "settled",
+    "finished",
+    "cancelled",
+    "discarded",
+    "failed",
+    "superseded"
+  ]);
+  const taskLinkTypeSchema = _enum(["blocks", "related", "discovered-from", "replaced-by"]);
+  const taskEventActorSchema = _enum([
+    "captain",
+    "firstmate",
+    "crewmate",
+    "supervisor",
+    "host"
+  ]);
+  const taskEventKindSchema = _enum([
+    "created",
+    "ask",
+    "answered",
+    "briefed",
+    "dispatched",
+    "steered",
+    "progress",
+    "report",
+    "failed",
+    "card_raised",
+    "card_resolved",
+    "status",
+    "linked",
+    "unlinked",
+    "moved",
+    "pr_opened",
+    "ci",
+    "landed",
+    "merged",
+    "triaged",
+    "note",
+    "compacted",
+    "interrupted",
+    "decided",
+    "escalated",
+    "review",
+    "cap_reset",
+    "replied"
+  ]);
+  const taskDeliveryModeSchema = _enum([...repoDeliverySchema.options, "in-place"]);
+  const runChecksSchema = object({
+    runId: number(),
+    name: string(),
+    state: _enum(["running", "passed", "failed", "cancelled"]),
+    startedAt: number().optional(),
+    finishedAt: number().optional(),
+    /** When the app read it. */
+    at: number()
+  });
+  const taskPullRequestSchema = object({
+    number: number(),
+    url: string().optional(),
+    ci: _enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
+    merged: literal(true).optional(),
+    closes: literal(true).optional()
+  });
+  const taskDeliveryViewSchema = object({
+    captainAction: captainActionSchema.optional(),
+    mode: taskDeliveryModeSchema,
+    /** `prUrl`, `prNumber` and `changeLabel` name the task's current pull request. */
+    prUrl: string().optional(),
+    prNumber: number().optional(),
+    /**
+     * Every pull request on the task, in number order (INF-2490). Only the
+     * record's read carries it, from the changes the record keeps; absent on
+     * a task with none, and on an older home.
+     */
+    pullRequests: array(taskPullRequestSchema).optional(),
+    /** The change's name where the project lives: `#N`, or the sent-up branch. */
+    changeLabel: string().optional(),
+    /** The PR head the last CI read saw. */
+    headSha: string().optional(),
+    ci: _enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
+    ciAt: number().optional(),
+    /** Reported checks; a merge offer itself expresses the crew's judgment. */
+    checks: checkSnapshotSchema.optional(),
+    /**
+     * When the host says the first check on that head started (INF-587):
+     * the checks cell counts from it. Absent until a check has started.
+     */
+    ciStartedAt: number().optional(),
+    /**
+     * When finished checks finished: the last check's finish when they
+     * passed, the first failure's when they failed. Absent while running.
+     */
+    ciFinishedAt: number().optional(),
+    /** A hand-started run's checks; the checks cell shows them while the task has no change. */
+    runChecks: runChecksSchema.optional(),
+    landedMode: _enum(["fast-forward", "merge", "pr"]).optional(),
+    /** The independent review's latest verdict on a reviewed task (delivery rigor phase 2). */
+    reviewVerdict: reviewVerdictSchema.optional(),
+    /** The head the reviewer read. */
+    reviewSha: string().optional(),
+    /** The change reading taken when that review was assigned. */
+    reviewChange: string().optional(),
+    /**
+     * A later head a pass covered, because the change lines matched.
+     * No longer written. An older record's value still covers its head.
+     */
+    reviewCarrySha: string().optional(),
+    /**
+     * Whether a passed review covers `headSha`, the version on offer, by the
+     * home's coverage rule (exact version or the same change reading). Set
+     * only when the review passed and both versions are known; absent from
+     * an older home (INF-3141).
+     */
+    reviewCovers: boolean().optional(),
+    reviewRisk: reviewRiskSchema.optional(),
+    reviewRiskNote: string().optional(),
+    reviewedAt: number().optional(),
+    /**
+     * Legacy count history remains readable; it no longer places holds or changes readiness.
+     */
+    ciRounds: number().optional(),
+    ciRedHead: string().optional(),
+    ciCapAt: number().optional(),
+    reviewRounds: number().optional(),
+    /** The head the last COUNTED findings round read: a round is one per head. */
+    reviewRoundSha: string().optional(),
+    reviewCapAt: number().optional(),
+    reviewCapOwner: _enum(["firstmate", "captain"]).optional(),
+    /** The captain answered a Firstmate decision card on the task since the cap. */
+    capAnsweredAt: number().optional(),
+    /**
+     * The risk assessment on the task's newest completion card: the levels and
+     * lines its crewmate declared
+     * (docs/card-authoring.md "The risk chart"). No overall level exists.
+     */
+    risk: riskAssessmentSchema.optional()
+  });
+  const taskFlagsSchema = object({
+    /** An uncleared `blocks` edge points at it. */
+    blocked: boolean(),
+    /** A gate (quota-reset, at-time, captain) holds it. */
+    held: boolean(),
+    /** An open decision card on it, a captain hold, or a dead blocker. */
+    needsYou: boolean(),
+    /** Open, unblocked, unheld work: dispatches when its start policy is when-ready. */
+    ready: boolean()
+  });
+  const startAttemptSchema = object({
+    phase: _enum(["preparing", "checking"]),
+    /** When the attempt was accepted, for the record's slow-start line. */
+    since: number()
+  });
+  const startNoticeSchema = object({
+    reason: string()
+  });
+  const taskMoveAllowanceSchema = discriminatedUnion("ok", [
+    object({ ok: literal(true) }),
+    object({ ok: literal(false), text: string() })
+  ]);
+  const taskPlaceSchema = object({
+    name: string(),
+    where: string(),
+    /** The core's one reach reading; absent on a historical task place. */
+    reach: computerReachSchema.optional(),
+    /** Connected on an older app, so it takes no new work until updated. */
+    noNewWork: literal(true).optional(),
+    /**
+     * In reach and still catching up with this task, since this time (epoch
+     * ms): its computer came back, or its conversation is opening on this Mac.
+     * Absent once caught up, and while the computer is out of reach.
+     */
+    catchingUpSince: number().optional()
+  });
+  const computerMoveViewSchema = object({
+    from: string(),
+    to: string(),
+    state: _enum(["waiting", "moving", "retiring"]),
+    waitingFor: array(string()),
+    problem: string().optional(),
+    /**
+     * A waiting move whose computer went out of reach: what stays behind if
+     * it moves without that computer now, in one line, and the destination
+     * by device id or `this-mac` for that move. Absent otherwise.
+     */
+    leftBehind: string().optional(),
+    toId: string().optional()
+  });
+  const moveDestinationSchema = object({
+    /** A computer that runs work by its device id, or `this-mac`. */
+    id: string(),
+    name: string(),
+    /** Absent when it can take the task now. */
+    unavailable: string().optional()
+  });
+  discriminatedUnion("ok", [
+    object({
+      ok: literal(true),
+      from: string(),
+      destinations: array(moveDestinationSchema),
+      /**
+       * The computer it runs on is out of reach: what stays behind there if
+       * it moves now, in one line, which the move must leave behind. Absent
+       * when that computer is in reach.
+       */
+      leftBehind: string().optional()
+    }),
+    object({ ok: literal(false), text: string().min(1) })
+  ]);
+  const taskViewSchema = object({
+    id: string(),
+    /** `<PROJECT_KEY>-<seq>`, the conversational handle (D6). */
+    key: string(),
+    projectId: string(),
+    parentId: string().nullable(),
+    /** Builder whose change this active host-commissioned review reads; absent for other work. */
+    reviewOf: string().nullable().optional(),
+    /** Actual execution device; null is the home Mac, absent on an older home. */
+    executionDeviceId: string().nullable().optional(),
+    /**
+     * The task runs a program the host runs (`shape.program`, docs/programs.md):
+     * its parts are its children. Absent on every other task, and on an older
+     * home, so the stage draws a constellation only for a program.
+     */
+    program: literal(true).optional(),
+    /** Where it runs, in words, when another computer runs it; absent on this Mac. */
+    place: taskPlaceSchema.optional(),
+    /**
+     * Started work that may move to another computer now: the record offers
+     * Move to a computer. Absent otherwise, and on an older home.
+     */
+    movable: literal(true).optional(),
+    /** Its move to another computer, while one stands. */
+    computerMove: computerMoveViewSchema.optional(),
+    kind: taskKindSchema,
+    title: string(),
+    goal: string().nullable(),
+    /** 0 urgent .. 3 low. */
+    priority: number(),
+    status: taskStatusSchema,
+    activity: taskActivitySchema.nullable(),
+    workPosture: workPostureSchema.optional(),
+    /** Standing owner facts for permitted desktop wait presentations; absent on older homes. */
+    waits: array(taskWaitSchema).optional(),
+    closedReason: taskClosedReasonSchema.nullable(),
+    startPolicy: _enum(["when-ready", "on-request"]),
+    flags: taskFlagsSchema,
+    /** Keys of live (open/active) blockers; closed edges remain graph history. */
+    blockedBy: array(string()),
+    /**
+     * When each wait in `blockedBy` was recorded, by blocker key (INF-38): a
+     * key with no known time is absent, and so is the whole field on an older
+     * home. A recorded wait's time, never when the crewmate stopped working.
+     */
+    blockedSince: record(string(), number()).optional(),
+    /** Keys of the tasks waiting on this one. */
+    blocks: array(string()),
+    /**
+     * Its parts: how many, how many closed, and the closed ones' ids in the
+     * order they closed, oldest first. `closedIds` is absent on an older home.
+     */
+    children: object({
+      total: number(),
+      closed: number(),
+      closedIds: array(string()).optional()
+    }),
+    assignee: string().nullable(),
+    model: string().nullable(),
+    /**
+     * The intelligence slot the task's crewmate is served on: its newest
+     * routing decision's served slot - the weaker one when the ladder fell
+     * back - or, on a row routed before `served` was recorded, the slot it
+     * asked for. Null when the task never routed. The crew orbit paints it
+     * as the crewmate's solid.
+     */
+    tier: slotSchema.nullable(),
+    repo: object({ name: string(), branch: string() }).nullable(),
+    delivery: taskDeliveryViewSchema.nullable(),
+    /**
+     * The latest report's one-line headline: the summary its crewmate gave,
+     * else its first sentence past any Intent section.
+     */
+    outcomeSummary: string().nullable(),
+    /** Reachable shown ready decision on a live task; not durable attention/holds. */
+    waitingCardId: string().nullable(),
+    /** A saved answer note ready for the captain’s explicit Done, even after reading it. */
+    answerNoteId: string().optional(),
+    answerSince: number().optional(),
+    /** Desktop presentation only; not a decision, gate or task status. */
+    minimizedCardId: string().optional(),
+    /** Its waiting card settles with a merge: only that card's own button merges. Absent otherwise. */
+    waitingCardMerges: literal(true).optional(),
+    /**
+     * Open, underway or dropped work: which lifecycle moves (`TASK_LIFECYCLE_OPS`)
+     * it allows now, and why not, by the task record's own rule
+     * (`taskMovesOf`, src/shared/taskMoves.ts). `inf:task:run` checks again.
+     */
+    moves: object({
+      "start-task": taskMoveAllowanceSchema,
+      "start-again": taskMoveAllowanceSchema.optional(),
+      "stop-task": taskMoveAllowanceSchema,
+      "continue-task": taskMoveAllowanceSchema,
+      "drop-task": taskMoveAllowanceSchema,
+      "queue-task": taskMoveAllowanceSchema,
+      "unqueue-task": taskMoveAllowanceSchema,
+      "show-card": taskMoveAllowanceSchema.optional(),
+      "answer-done": taskMoveAllowanceSchema.optional(),
+      "dismiss-question": taskMoveAllowanceSchema.optional()
+    }).optional(),
+    /**
+     * Its crewmate's last report declared that it waits on the captain
+     * (FI3-435), with or without a card up. Present only while that stands.
+     */
+    captainWait: boolean().optional(),
+    requiredAction: requiredActionStatusSchema.optional(),
+    /** Replacement key, including a stronger-model retry; absent when none replaced it. */
+    replacedBy: string().optional(),
+    /** Origin key when a crewmate filed this row. Absent otherwise. */
+    foundOn: string().optional(),
+    /** Crew-filed, and the captain has not opened the record yet. */
+    filingNew: boolean().optional(),
+    /** Accepted start, not yet a running crewmate. Absent otherwise. */
+    startAttempt: startAttemptSchema.optional(),
+    /** Confirmed manual start failure. Absent once cleared. */
+    startNotice: startNoticeSchema.optional(),
+    /** One dated start wait, shared with the first mate. Absent after starting. */
+    queueWait: object({ line: string(), since: number().optional() }).optional(),
+    /**
+     * Started work that went back to the backlog (INF-2062): when it went.
+     * It waits there for Start with its work kept. Absent otherwise, and on an older home.
+     */
+    backlogSince: number().optional(),
+    /**
+     * When the captain pinned it to the top of Tasks (INF-3127): it lists in
+     * Pinned whatever its state. Absent while it is not pinned, and on an older home.
+     */
+    pinnedAt: number().optional(),
+    createdAt: number(),
+    updatedAt: number(),
+    startedAt: number().nullable(),
+    closedAt: number().nullable()
+  });
+  function isUnstartedWork(task) {
+    return task.kind === "work" && task.status === "open" && task.startedAt == null && task.activity == null;
+  }
+  const dropEffectTaskSchema = object({
+    key: string(),
+    title: string()
+  });
+  const dropEffectsSchema = object({
+    parts: array(dropEffectTaskSchema.extend({ started: boolean() })),
+    waiting: array(dropEffectTaskSchema),
+    underway: array(dropEffectTaskSchema)
+  });
+  const taskLinkViewSchema = object({
+    fromId: string(),
+    toId: string(),
+    type: taskLinkTypeSchema
+  });
+  const projectRepoViewSchema = object({
+    /** The repository's id, as `project-move` names it (INF-5005); an older home sends none. */
+    id: string().optional(),
+    name: string(),
+    delivery: repoDeliverySchema,
+    autonomy: boolean(),
+    /**
+     * The repository's kind: `personal` for the app's own workspace
+     * (major 15). An older home sends none, read as `project`.
+     */
+    kind: repoKindSchema.optional()
+  });
+  const projectViewSchema = object({
+    id: string(),
+    key: string(),
+    name: string(),
+    /** The project's first repository, for a reader of one; null for Scratch. */
+    repo: projectRepoViewSchema.nullable(),
+    /**
+     * Every repository the project holds, first first (INF-4220); an older
+     * home sends none, read as `repo` alone.
+     */
+    repos: array(projectRepoViewSchema).optional(),
+    archived: boolean(),
+    counts: object({
+      /** Broader durable attention, including holds and dead dependencies. */
+      needsYou: number(),
+      /** Live tasks with a reachable shown ready decision, each counted once. */
+      waitingOnYou: number(),
+      open: number(),
+      active: number(),
+      /** Done within the board's recent window. */
+      doneRecent: number()
+    })
+  });
+  object({
+    /** Monotonic per mutation; a later push with a lower seq is stale. */
+    seq: number(),
+    /** When this snapshot was built. */
+    at: number(),
+    projects: array(projectViewSchema),
+    tasks: array(taskViewSchema),
+    /** Edges whose both ends are on the board. */
+    links: array(taskLinkViewSchema),
+    /**
+     * Present when this board was read without the closed rows
+     * (`inf:tasks:board` with `{ closed: false }`, `boardWithoutClosed`): it
+     * left out every closed row that is not pinned, not a parent of a row it
+     * keeps, not a part of live work and not the task of a card on the stack.
+     * `done` lists the ids of the rows it left out that Tasks shows under Done,
+     * by project id, so a client counts them before it reads them. A delta
+     * that brings one back, or takes one off the whole board, takes its id
+     * out. A snapshot push carries the whole board and none of this.
+     */
+    closedLeftOut: object({ done: record(string(), array(string())) }).optional()
+  });
+  const taskBoardReadSchema = object({ closed: boolean() });
+  const taskEventViewSchema = object({
+    id: number(),
+    at: number(),
+    actor: taskEventActorSchema,
+    kind: taskEventKindSchema,
+    /** The captain-facing event line; the saved event remains the exact source record. */
+    text: string(),
+    data: record(string(), unknown()).nullable(),
+    ref: string().nullable(),
+    feed: boolean()
+  });
+  const taskActivityLineSchema = object({
+    /** The event it reads, so a client can key it. */
+    id: number(),
+    at: number(),
+    kind: taskEventKindSchema,
+    text: string(),
+    /**
+     * The other task that wrote it, when the event is a linked task's that
+     * concerns this one (docs/task-record.md, "Whom an event concerns"), so
+     * a client can name it and open its record. Absent on the task's own.
+     */
+    from: object({ id: string(), key: string() }).optional(),
+    /**
+     * The words of `text` that name a pull request with a page - `[from, to)`,
+     * such as "pull request #612" - and that page, so a client links them
+     * (the design skill's TaskRecord, "Pull request links"). Absent when the
+     * line names none, or the host has no page for it.
+     */
+    change: object({ url: string(), from: number(), to: number() }).optional(),
+    /**
+     * The line is in the first mate's computer's own words (what the host, its
+     * own steering or the first mate wrote), so a computer that controls the
+     * first mate names that computer where it says this computer (docs/view.md,
+     * "The first mate's own words"). Absent on the captain's and a crewmate's
+     * words, and from an older home.
+     */
+    saidHere: literal(true).optional(),
+    /**
+     * The app's own words of `text` saved as a fact (docs/i18n.md, "Saved
+     * facts"), so the window and the phone (`PhoneWords.line`) word the line
+     * in their own language; `text` keeps the English for a reader that words
+     * nothing itself. Absent on every other line, and from an older home.
+     */
+    said: saidSchema.optional()
+  });
+  const taskActionLineSchema = object({
+    at: number(),
+    text: string()
+  });
+  const taskActivityRowSchema = taskActivityLineSchema.extend({
+    folded: array(taskActivityLineSchema).optional(),
+    actions: array(taskActionLineSchema).optional()
+  });
+  const taskAskViewSchema = object({
+    id: string(),
+    at: number(),
+    text: string(),
+    /** How many images rode the ask; never the bytes. */
+    images: number(),
+    attachedVia: string().nullable(),
+    turnState: _enum(["open", "closed", "failed"])
+  });
+  const taskIntentViewSchema = object({
+    goal: string(),
+    userWords: string(),
+    constraints: array(
+      object({
+        kind: _enum([
+          // Retired at contract 4.6 (a plan is its own step now); a stored
+          // intent may still name it.
+          "plan-first",
+          "read-only",
+          "operation",
+          "tests-required",
+          "no-new-deps",
+          "minimal-diff",
+          "free"
+        ]),
+        text: string().optional()
+      })
+    ).optional(),
+    deliveryNote: string().optional()
+  });
+  const taskCardRowSchema = strictObject({
+    id: string(),
+    kind: _enum(["decision", "note"]),
+    title: string(),
+    state: _enum(["open", "closed"]),
+    /** Open but taken off the Mac stack by the captain. */
+    minimized: literal(true).optional(),
+    /** How a closed card ended (`pastCardEndingWords`); absent while it is open. */
+    ending: string().optional(),
+    /** When it ended, or when an open card was raised. */
+    at: number()
+  });
+  taskViewSchema.extend({
+    cost: taskCostViewSchema.optional(),
+    liveValidation: liveValidationSummarySchema.optional(),
+    /** Current policies, separate from dispatch and published delivery history. */
+    policies: effectiveTaskPoliciesSchema.nullable().optional(),
+    /**
+     * Where the task runs, once a computer that runs work is on the list:
+     * where it started, or where it would start now. Absent otherwise, and
+     * for a task that only ever runs on this Mac.
+     */
+    runsOn: taskRunsOnSchema.optional(),
+    placement: placementSnapshotSchema.optional(),
+    /**
+     * The version of the home's personal instructions and skills the task's
+     * newest conversation read, and the computer it read it on
+     * (docs/personal-resources.md). Absent while none read them.
+     */
+    personal: personalReadSchema.optional(),
+    intent: taskIntentViewSchema.nullable(),
+    /** Dispatch-time care; current care lives in policies. */
+    rigor: rigorSchema.nullable(),
+    /**
+     * What the host derived this task DELIVERS (Task B of the crew-posture
+     * rationalization); null on a row shaped before the axis existed, which
+     * shipped as a change.
+     */
+    deliverable: deliverableSchema.nullable(),
+    /**
+     * The task this work builds on, as the record names it (a key or an id),
+     * and whether it holds - done or reported - derived at read, never
+     * stored. Null when no basis was named.
+     */
+    basis: object({ ref: string(), verified: boolean() }).nullable(),
+    /** Firstmate's declared reason for building without a plan, if any. */
+    skippedPlanBecause: string().nullable(),
+    /** The rendered brief the crewmate ran from. */
+    brief: string(),
+    /** The latest complete report; an answer given on a card reads as the card's words. */
+    outcome: string().nullable(),
+    /** The assigned model as the captain knows it ("GPT-6 Sol"); null when none. */
+    modelLabel: string().nullable(),
+    /**
+     * Why the crewmate runs on that model, off its routing decision's typed
+     * columns; absent when the task never routed or the record cannot say.
+     */
+    modelReason: modelReasonSchema.optional(),
+    /**
+     * How the routing decision behind that model compared it with the others
+     * (INF-1714), as saved when it was made; absent before INF-1714 or when the
+     * crewmate runs on another model than the decision chose.
+     */
+    modelChoice: modelChoiceSchema.optional(),
+    /**
+     * The reasoning the crewmate's session opened at on that model, as its
+     * newest dispatch recorded it (FI3-439); absent when the record cannot say
+     * or the crewmate has since moved to another model.
+     */
+    reasoning: reasoningSchema.optional(),
+    /** Every card the task showed, open and past, newest first. */
+    cards: array(taskCardRowSchema),
+    /** The whole timeline, as recorded. */
+    events: array(taskEventViewSchema),
+    /** The timeline condensed for reading (the record's Activity; the popup audit, A8). */
+    activityLog: array(taskActivityRowSchema),
+    /** Every retained source, including evidence, opened read-only from its exact reference. */
+    timeline: array(timelineReadingSchema).optional(),
+    /**
+     * The last sentence the crewmate wrote in its session, with its time
+     * (`CrewActions.said`): its Now line between its notes (INF-557). Absent
+     * or null when it wrote none, or nothing reads its sessions.
+     */
+    said: taskActionLineSchema.nullable().optional(),
+    /**
+     * The latest plan the crewmate reported with a progress note (FI3-734):
+     * the whole list as declared, with its time; null when it never sent one.
+     */
+    plan: taskPlanSchema.nullable(),
+    /**
+     * How a closed row closed: when, and the words recorded with the close
+     * (a drop's reason) when there were any beyond the reason's own word.
+     * A close as done adds the delivery facts it recorded (`facts`), and
+     * `onWord` when the captain's own word asked it (INF-3169's plan, piece
+     * 3); both are absent on any other close, and from an older home.
+     */
+    closing: object({
+      at: number(),
+      note: string().nullable(),
+      facts: array(recordDeliveryFactSchema).optional(),
+      onWord: literal(true).optional()
+    }).nullable(),
+    /**
+     * The newest failure or interruption in plain words (`plainProblem`, whose
+     * sign-in reading is the one classifier's); null when there was none. The
+     * raw error stays on the timeline.
+     */
+    problem: string().nullable(),
+    /**
+     * Why a gate holds open work and what ends the wait, in the captain's
+     * words (`taskHoldWords`, src/shared/taskHold.ts), read from its gate and
+     * its own ask; absent when no gate holds it, or the captain's own does.
+     */
+    hold: object({ title: string(), text: string() }).optional(),
+    asks: array(taskAskViewSchema),
+    /** The filing, in the open on the record. Absent when this row was not crew-filed. */
+    filing: object({
+      why: string(),
+      originKey: string(),
+      verdict: string().nullable()
+    }).optional(),
+    /** Present only while Drop task applies. The footer confirms these lists. */
+    dropEffects: dropEffectsSchema.optional(),
+    /**
+     * The task's own browser on this Mac, as the captain reads it
+     * (docs/task-browser.md, "The view"); absent while it never had one, and
+     * on another computer.
+     */
+    browser: taskBrowserFactSchema.optional()
+  });
+  object({
+    /** The seq the client's board must carry for this delta to apply. */
+    baseSeq: number(),
+    /** The seq the board carries after applying it. */
+    seq: number(),
+    at: number(),
+    /** Rows new or changed since the base, whole. */
+    upserts: array(taskViewSchema),
+    /** Ids of rows that left the board. */
+    removed: array(string()),
+    projects: array(projectViewSchema),
+    links: object({
+      added: array(taskLinkViewSchema),
+      removed: array(taskLinkViewSchema)
+    })
+  });
+  function sortBoardTasks(tasks) {
+    return [...tasks].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  }
+  function linkKey(link) {
+    return `${link.fromId} ${link.toId} ${link.type}`;
+  }
+  function sortBoardLinks(links) {
+    return [...links].sort((a, b) => linkKey(a).localeCompare(linkKey(b)));
+  }
+  function applyTaskBoardDelta(board, delta) {
+    if (delta.seq <= board.seq) return board;
+    if (delta.baseSeq !== board.seq) return null;
+    const rows = new Map(board.tasks.map((task) => [task.id, task]));
+    for (const id2 of delta.removed) rows.delete(id2);
+    for (const task of delta.upserts) rows.set(task.id, task);
+    const links = new Map(board.links.map((link) => [linkKey(link), link]));
+    for (const link of delta.links.removed) links.delete(linkKey(link));
+    for (const link of delta.links.added) links.set(linkKey(link), link);
+    const next2 = {
+      seq: delta.seq,
+      at: delta.at,
+      projects: delta.projects,
+      tasks: sortBoardTasks([...rows.values()]),
+      links: sortBoardLinks([...links.values()])
+    };
+    if (board.closedLeftOut) {
+      const gone = /* @__PURE__ */ new Set([...delta.removed, ...delta.upserts.map((task) => task.id)]);
+      const done = {};
+      for (const [projectId, ids] of Object.entries(board.closedLeftOut.done)) {
+        const left = ids.filter((id2) => !gone.has(id2));
+        if (left.length > 0) done[projectId] = left;
+      }
+      next2.closedLeftOut = { done };
+    }
+    return next2;
+  }
+  object({
+    // The kind supplies the activity line's semantic dot color and accessible label.
+    kind: _enum(["info", "ok", "warn", "danger", "you"]),
+    text: string(),
+    at: number(),
+    /** The task the line is about, by key; a task-less line has none. */
+    taskKey: string().optional(),
+    /**
+     * The timeline event a task line was authored from (`report`,
+     * `dispatched`, `landed`, ...); a task-less line has none. A typed fact,
+     * so a reader finds a line by what happened, never by its words.
+     */
+    event: taskEventKindSchema.optional(),
+    /**
+     * The line is the first mate's computer's own words, so its "this
+     * computer" (`HERE`) is that computer: a computer that controls it shows
+     * the line naming that computer instead (`hereAs`; docs/view.md, "The
+     * first mate's own words"). A line of the captain's or a crewmate's
+     * words has none, and neither does one from a home built before it.
+     */
+    saidHere: literal(true).optional(),
+    /**
+     * The line as a fact, worded where it is shown (docs/i18n.md, "Saved
+     * facts"); `text` is its English, for a reader that words nothing itself.
+     * A line said as it was written, such as a crewmate's, has none.
+     */
+    said: saidSchema.optional()
+  });
+  function taskFeedKind(kind, closedStatus) {
+    if (kind === "landed" || kind === "merged") return "ok";
+    if (kind === "failed") return "danger";
+    if (kind === "ci") return "warn";
+    return "info";
+  }
+  const FEED_REPORT_LIMIT = 120;
+  function reportSummary(text, limit = FEED_REPORT_LIMIT) {
+    const collapsed = withoutIntentLead(text).replace(/\s+/g, " ").trim();
+    if (!collapsed) return "";
+    const sentence = collapsed.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? collapsed;
+    return sentence.length <= limit ? sentence : cutText(sentence, limit).trimEnd();
+  }
+  const FEED_EVENT_TYPES = [
+    "task_event",
+    "firstmate_note",
+    "memory_noted",
+    "personalized",
+    "user_turn",
+    "repo_setup",
+    "repo_configured",
+    "repo_runs_on",
+    "repo_unregistered",
+    "device_joined",
+    "device_setup",
+    "device_update",
+    "device_connection",
+    "device_left",
+    "device_signed_in",
+    "device_signed_out",
+    "turn_failed"
+  ];
+  const feedTypes = new Set(FEED_EVENT_TYPES);
+  function isFeedEvent(event) {
+    return feedTypes.has(event.type);
+  }
+  function byWho(actor) {
+    return actor === "captain" ? saidPart("feedByCaptain") : actor === "firstmate" ? saidPart("feedByFirstMate") : "";
+  }
+  const DELIVERY_SAID = {
+    "direct-pr": saidPart("feedDeliveryPull"),
+    "queue-pr": saidPart("feedDeliveryBatched"),
+    "local-only": saidPart("feedDeliveryLocal"),
+    "in-place": saidPart("feedDeliveryInPlace")
+  };
+  const CARE_SAID = {
+    quick: saidPart("feedCareQuick"),
+    standard: saidPart("feedCareStandard"),
+    reviewed: saidPart("feedCareReviewed")
+  };
+  function line(kind, fact) {
+    return { kind, text: englishOf(fact), said: fact };
+  }
+  function feedLineFrom(event) {
+    if (!isFeedEvent(event)) return null;
+    switch (event.type) {
+      case "task_event":
+        return event.feed ? {
+          kind: taskFeedKind(event.kind),
+          text: event.text,
+          taskKey: event.key,
+          ...event.said ? { said: event.said } : {}
+        } : null;
+      case "firstmate_note":
+        return {
+          kind: event.tone ?? "info",
+          text: event.text,
+          ...event.said ? { said: event.said } : {}
+        };
+      case "memory_noted":
+        return line("info", said("feedRemembered", { text: event.text }));
+      case "personalized":
+        if (event.run?.withdrawn) return null;
+        return line(
+          "info",
+          event.actor === "captain" ? said("feedCaptainSet", { text: event.text }) : event.actor ? said("feedFirstMateSet", { text: event.text }) : said("feedPersonalized", { text: event.text })
+        );
+      case "user_turn": {
+        const preview = reportSummary(event.text);
+        return line("you", preview ? said("feedCaptainSaid", { preview }) : said("feedCaptainImage"));
+      }
+      case "repo_setup": {
+        const fills = { who: byWho(event.actor), name: event.name };
+        if (event.project)
+          return line(
+            "info",
+            said("feedProjectRepositoryAdded", { ...fills, project: event.project })
+          );
+        return line(
+          "info",
+          event.kind === "clone" ? said("feedProjectCloned", fills) : event.kind === "init" ? said("feedProjectCreated", fills) : said("feedProjectLinked", fills)
+        );
+      }
+      case "repo_configured": {
+        if (event.said)
+          return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
+        if (event.description) return { kind: "info", text: event.description };
+        const fills = {
+          who: byWho(event.actor),
+          name: event.name,
+          delivery: DELIVERY_SAID[event.delivery] ?? event.delivery,
+          merging: event.autonomy ? saidPart("feedMergesOnItsOwn") : saidPart("feedAsksFirst")
+        };
+        return line(
+          "info",
+          event.rigor ? said("feedProjectSettingsCare", {
+            ...fills,
+            care: CARE_SAID[event.rigor] ?? event.rigor
+          }) : said("feedProjectSettings", fills)
+        );
+      }
+      case "repo_runs_on":
+        return { kind: "info", text: event.text, ...event.said ? { said: event.said } : {} };
+      case "repo_unregistered":
+        return line(
+          "info",
+          said("feedProjectRemoved", { who: byWho(event.actor), name: event.name })
+        );
+      case "device_joined":
+        return { kind: "info", text: deviceJoinedLine(event) };
+      case "device_setup":
+      case "device_update":
+      case "device_connection":
+        return { kind: event.tone, text: event.text };
+      case "device_left":
+        return line("info", said("feedComputerLeft", { name: event.name }));
+      case "device_signed_in":
+        return line(
+          "info",
+          said("feedComputerSignedIn", { who: event.who, provider: event.provider })
+        );
+      case "device_signed_out":
+        return deviceSignedOutLine(event);
+      case "turn_failed": {
+        if (event.taskId !== FIRSTMATE_SESSION_ID) return null;
+        if (event.paused) return null;
+        return line("danger", said("feedFirstMateProblem", { problem: plainProblem(event.error) }));
+      }
+      default: {
+        const unhandled = event;
+        return unhandled;
+      }
+    }
+  }
+  function feedRunOf(event) {
+    return event.type === "personalized" || event.type === "device_setup" || event.type === "device_update" ? event.run : void 0;
+  }
+  function changesFeed(event) {
+    return feedLineFrom(event) !== null || feedRunOf(event)?.withdrawn === true;
+  }
+  const privateSiteSchema = string().min(1).max(253);
+  object({
+    available: boolean(),
+    sites: array(privateSiteSchema)
+  });
+  discriminatedUnion("ok", [
+    object({ ok: literal(true), sites: array(privateSiteSchema) }),
+    object({ ok: literal(false), text: string() })
+  ]);
+  const PASTE_FILE_MAX_BYTES = 5 * 1024 * 1024;
+  const PASTE_FILES_MAX = 4;
+  array(
+    object({
+      /** The file's display name when the text came from a dropped or chosen file. */
+      name: string().max(120).optional(),
+      text: string().refine((text) => new TextEncoder().encode(text).length <= PASTE_FILE_MAX_BYTES)
+    })
+  ).max(PASTE_FILES_MAX);
+  object({ ok: literal(true) });
+  const TASK_KEYS_PER_READ = 500;
+  ({
+    "inf:feed:recent": {
+      request: tuple([])
+    },
+    "inf:crew:counts": {
+      request: tuple([])
+    },
+    // The task protocol (task-system P3, design section 9): the board a
+    // late-attaching client resyncs from (live pushes ride inf:tasks), one
+    // record in full, and the project index. Reads, plus opening a filing,
+    // which clears its new mark. The record's lifecycle toggles ride
+    // `inf:task:run`; every other write to a task happens by talking to the
+    // Firstmate.
+    // `{ closed: false }` reads it without the closed rows, the first read a
+    // view makes when it comes back (`boardWithoutClosed`).
+    "inf:tasks:board": {
+      request: tuple([taskBoardReadSchema.optional()])
+    },
+    // The first mate's show-task (primitives/app-actions.md): the captain's
+    // window opens the task's record, as a panel's point.openTask does, and
+    // nothing is stored. It answers the task it named.
+    "inf:tasks:show": {
+      request: tuple([string().trim().min(1).max(64)]),
+      response: object({ id: string(), key: string(), title: string() })
+    },
+    "inf:tasks:detail": {
+      request: tuple([string().min(1).max(64)])
+    },
+    // The task card's Crewmate tab (docs/task-card-tabs.md, "The Crewmate
+    // tab"): the crewmate's sessions read as a transcript, its running turn's
+    // words that its session does not hold yet, and one call's whole result
+    // or one picture it holds, read when the tab opens or shows it.
+    "inf:tasks:crewmate": {
+      request: tuple([string().min(1).max(64)])
+    },
+    "inf:tasks:crewmate:live": {
+      request: tuple([string().min(1).max(64)])
+    },
+    "inf:tasks:crewmate:result": {
+      request: tuple([string().min(1).max(64), string().min(1).max(512)]),
+      response: crewResultTextSchema.nullable()
+    },
+    "inf:tasks:crewmate:picture": {
+      request: tuple([string().min(1).max(64), string().min(1).max(512)]),
+      response: crewPictureSchema.nullable()
+    },
+    // Closed work the board no longer lists, found by typed text (FI3-579
+    // piece 3): the Tasks filter's "earlier" group. Empty text finds nothing.
+    "inf:tasks:search": {
+      request: tuple([string().max(200)])
+    },
+    // The recorded tasks with exactly these keys, live or closed at any age
+    // (INF-3896): the window looks up every task key it draws that the board
+    // does not list in one request. A key that names no task is left out.
+    "inf:tasks:keys": {
+      request: tuple([array(string().min(1).max(64)).min(1).max(TASK_KEYS_PER_READ)])
+    },
+    // Opening a filing clears its new mark (quiet ledger). Not a verdict.
+    "inf:tasks:opened": {
+      request: tuple([string().min(1).max(64)]),
+      response: object({ opened: boolean() })
+    },
+    // The captain's view watches a task's browser (docs/task-browser.md, "The
+    // view"): pictures of its page go to whoever asked - a window, or a
+    // computer that controls the first mate over the connection - on
+    // `inf:browser:frame`, until it unwatches, its window reloads or closes, or
+    // its connection goes. False when there is no browser to watch.
+    "inf:browser:watch": {
+      request: tuple([string().min(1).max(64)]),
+      response: object({ watching: boolean() })
+    },
+    "inf:browser:unwatch": {
+      request: tuple([string().min(1).max(64)])
+    },
+    // The room the asker's maximized view gives the task's page, or none once
+    // it is restored (docs/task-browser.md, "The view"): the page lays out at
+    // it while that asker watches. Asked of a watch the asker holds.
+    "inf:browser:size": {
+      request: tuple([string().min(1).max(64), taskBrowserSizeSchema.nullable()])
+    },
+    // A window in a program of its own says when it comes to the front and
+    // when it leaves it (docs/phone-push.md, "When the computer sends"): the
+    // window opened beside a first mate a command started, or a view on
+    // another Mac. The first mate keeps each connection's latest word until
+    // that connection drops, and pushes no card to a phone while one says it
+    // is in front.
+    "inf:window:front": {
+      request: tuple([boolean()])
+    },
+    // The captain's own input to a task's page while he has control
+    // (docs/task-browser.md, "Taking control"): the pointer and keys of the
+    // window he sits at, on whichever computer; the core refuses it unless he
+    // holds the browser, and nothing records it.
+    "inf:browser:input": {
+      request: tuple([string().min(1).max(64), taskBrowserInputSchema])
+    },
+    // What the outline of a task's page names on screen now, each by role, name and
+    // box (docs/task-browser.md, "Pointing at a page"; `card-note-places.md`): read once
+    // when the captain's Point at holds the page's picture, from any view. Names only.
+    "inf:browser:places": {
+      request: tuple([string().min(1).max(64)])
+    },
+    // A task's own browser, from the captain's view of it (docs/task-browser.md,
+    // "The view"): Stop browser, and Open again on a stopped one, from any
+    // view; refused in words when it cannot.
+    "inf:browser:stop": {
+      request: tuple([string().min(1).max(64)])
+    },
+    "inf:browser:reopen": {
+      request: tuple([string().min(1).max(64)])
+    },
+    // The captain's Take control and Return control (docs/task-browser.md,
+    // "Taking control"), naming the browser his view shows, from any view.
+    "inf:browser:take": {
+      request: tuple([string().min(1).max(64), taskBrowserHandleSchema])
+    },
+    // The captain's answer to what a task's page asks (docs/task-browser.md,
+    // "A site's asks"), naming the browser and the ask the captain's view shows.
+    "inf:browser:ask": {
+      request: tuple([
+        string().min(1).max(64),
+        taskBrowserHandleSchema,
+        number().int().positive(),
+        _enum(TASK_BROWSER_ASK_ANSWERS)
+      ])
+    },
+    "inf:browser:return": {
+      request: tuple([
+        string().min(1).max(64),
+        taskBrowserHandleSchema,
+        taskBrowserReturnSchema.optional()
+      ])
+    },
+    // The website sign-ins saved on this Mac for task browsers, and the
+    // captain's Remove in Settings (docs/task-browser.md, "Signed-in sites").
+    // They are this Mac's own, so no paired device asks.
+    "inf:browser:sign-ins": {
+      request: tuple([])
+    },
+    "inf:browser:sign-ins:automatic": {
+      // With a computer that runs work, that computer's own entry (`kept-sign-ins.md`).
+      request: tuple([
+        string().min(1).max(260),
+        string().min(1),
+        boolean(),
+        string().min(1).max(64).optional()
+      ])
+    },
+    "inf:browser:sign-ins:remove": {
+      request: tuple([string().min(1).max(260), string().min(1).max(64).optional()])
+    },
+    "inf:browser:sign-ins:remove-all": {
+      request: tuple([string().min(1).max(64).optional()])
+    },
+    // The captain's private sites list for task browsers on every computer
+    // (docs/task-browser.md, "Private sites"): kept at the home, so a
+    // computer that only runs work never holds it.
+    "inf:browser:private-sites": {
+      request: tuple([])
+    },
+    "inf:browser:private-sites:add": {
+      request: tuple([string().min(1).max(2048)])
+    },
+    "inf:browser:private-sites:remove": {
+      request: tuple([privateSiteSchema])
+    }
+  });
+  const USAGE_PERIODS = ["7d", "30d", "all"];
+  const usagePeriodSchema = _enum(USAGE_PERIODS);
+  const USAGE_SCOPES = ["all", "task", "firstmate", "other"];
+  const usageScopeSchema = _enum(USAGE_SCOPES);
+  const usageQuerySchema = strictObject({
+    period: usagePeriodSchema,
+    scope: usageScopeSchema
+  });
+  _enum(["tokens", "usd"]);
+  const categoriesSchema = (value) => object({ input: value, output: value, cacheRead: value, cacheWrite: value });
+  const usageAmountSchema = object({
+    tokens: categoriesSchema(number()),
+    /** Records summed here. */
+    records: number(),
+    /** Records that reported any token count. */
+    counted: number(),
+    /** Records reporting each token category; absent on older homes, never inferred from counted. */
+    tokenReported: categoriesSchema(number()).optional(),
+    cost: number().nullable(),
+    /** Records with a price. */
+    priced: number(),
+    /** The estimate by category over the priced records that split it, null where none did. */
+    costParts: categoriesSchema(number().nullable()),
+    /** Priced records whose estimate is split by category. */
+    split: number()
+  });
+  const usagePlaceSchema = object({
+    kind: _enum(["task", "firstmate", "other"]),
+    /** The task's key, title and project; null for the Firstmate and other work. */
+    task: object({ key: string(), title: string(), project: string().nullable() }).nullable(),
+    amount: usageAmountSchema
+  });
+  const USAGE_WORK_KINDS = [
+    "plan",
+    "research",
+    "retrieval",
+    "reproduce",
+    "implement",
+    "fix",
+    "chore",
+    "review",
+    "operation"
+  ];
+  const usageWorkKindSchema = _enum(USAGE_WORK_KINDS);
+  const usageProjectSchema = object({
+    /** Null when the record no longer has the task's project. */
+    project: object({ id: string(), name: string() }).nullable(),
+    amount: usageAmountSchema,
+    /** Each kind once; together they are the subtotal, never added to it. */
+    kinds: array(object({ kind: usageWorkKindSchema.nullable(), amount: usageAmountSchema }))
+  });
+  const usageWhereSchema = object({
+    firstmate: usageAmountSchema,
+    projects: array(usageProjectSchema),
+    other: usageAmountSchema
+  });
+  const usageAttributionSchema = _enum(["served", "requested", "recorded"]);
+  const usagePriceSourceSchema = union([usageCostSourceSchema, literal("unrecorded")]);
+  const usageModelSchema = object({
+    /** Stable identity: the provider and model as recorded. */
+    id: string(),
+    provider: string().nullable(),
+    providerName: string().nullable(),
+    model: string().nullable(),
+    /** The model by the name every surface gives it, or its id; null when none was recorded. */
+    name: string().nullable(),
+    attribution: usageAttributionSchema,
+    priceSources: array(usagePriceSourceSchema),
+    amount: usageAmountSchema,
+    /** The work it served: the Firstmate, other work, and its largest tasks. */
+    places: array(usagePlaceSchema),
+    /** Its work, by project and kind, over this model's records alone. */
+    where: usageWhereSchema
+  });
+  const usageDaySchema = object({
+    /** The local calendar date, YYYY-MM-DD. */
+    date: string(),
+    amount: usageAmountSchema
+  });
+  object({
+    query: usageQuerySchema,
+    /** The first local day the period covers; null for all time with nothing recorded. */
+    since: number().nullable(),
+    /** When the summary was read: today is partial until it ends. */
+    at: number(),
+    total: usageAmountSchema,
+    /** Every local day of the period, oldest first, today last. */
+    days: array(usageDaySchema),
+    models: array(usageModelSchema),
+    /**
+     * The Firstmate, other work, and the largest tasks by tokens and by
+     * estimate, so either unit can name its own three largest.
+     */
+    places: array(usagePlaceSchema),
+    /** Where it went, by project and kind of work. */
+    where: usageWhereSchema,
+    /** Tasks finished in the period and kind of work. */
+    finished: number(),
+    /** Tasks finished across all retained history, for the milestones. */
+    finishedEver: number()
+  });
+  const USAGE_TASKS_MAX = 5e3;
+  const usageTasksQuerySchema = strictObject({
+    period: usagePeriodSchema,
+    scope: usageScopeSchema,
+    limit: number().int().min(1).max(USAGE_TASKS_MAX)
+  });
+  const usageTaskSchema = object({
+    task: object({ key: string(), title: string(), project: string().nullable() }),
+    /** When the task was created: the list's order, newest first. */
+    createdAt: number(),
+    amount: usageAmountSchema,
+    reported: categoriesSchema(number()),
+    costReported: categoriesSchema(number())
+  });
+  object({
+    query: usageTasksQuerySchema,
+    /** The newest tasks with recorded usage in the period and work, at most `limit`. */
+    tasks: array(usageTaskSchema),
+    /** How many tasks have recorded usage in the period and work. */
+    matching: number()
+  });
+  function frameReads(reads2, views) {
+    return { reads: [...reads2, ...views.length ? ["sql"] : []], grant: { sql: [...views] } };
+  }
+  function entry(definition) {
+    return definition;
+  }
+  const noArgs = strictObject({});
+  const sessionArgs = strictObject({ id: string().min(1).max(128) });
+  const taskArgs = strictObject({ id: string().min(1).max(64) });
+  const KNOWLEDGE_EVENTS = /* @__PURE__ */ new Set([
+    "knowledge_changed",
+    "repo_setup",
+    "repo_configured",
+    "repo_unregistered"
+  ]);
+  const OBSERVE_RELOAD_EVENTS = /* @__PURE__ */ new Set([
+    "turn_end",
+    "turn_failed",
+    "task_started",
+    "task_finished",
+    "task_report",
+    "firstmate_state",
+    "auth_reconnect_required"
+  ]);
+  const CREWMATE_EVENTS = /* @__PURE__ */ new Set([
+    "tool_start",
+    "tool_end",
+    "turn_end",
+    "turn_failed",
+    "task_finished",
+    "task_changed",
+    "task_event"
+  ]);
+  const CREWMATE_LIVE_EVENTS = /* @__PURE__ */ new Set([
+    "assistant_delta",
+    "tool_start",
+    "tool_end",
+    "turn_end",
+    "turn_failed",
+    "task_finished",
+    "task_changed"
+  ]);
+  const taskIdOf = (event) => "taskId" in event && typeof event.taskId === "string" ? event.taskId : void 0;
+  const OBSERVE_LIVE_EVENTS = /* @__PURE__ */ new Set([
+    "assistant_delta",
+    "tool_start",
+    "tool_end",
+    "turn_end",
+    "turn_failed"
+  ]);
+  const readCatalog = {
+    "computers.resources": entry({
+      channel: "inf:computers:resources",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        valueFromPush: "inf:computers:resources",
+        // Renew the shared core source's demand lease, never sample per subscription.
+        pollMs: RESOURCE_DEMAND_RENEW_MS
+      },
+      description: "Current CPU and memory readings for the computers that run work, with age or why unavailable."
+    }),
+    "observe.sessions": entry({
+      channel: "inf:observe:sessions",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { events: (event) => OBSERVE_RELOAD_EVENTS.has(event.type), pollMs: 2e3 },
+      description: "Every agent session Observe lists (development and alpha builds; docs/dev-observe.md)."
+    }),
+    "observe.session": entry({
+      channel: "inf:observe:detail",
+      args: sessionArgs,
+      toRequest: (args) => [args.id],
+      invalidate: { events: (event) => OBSERVE_RELOAD_EVENTS.has(event.type) },
+      description: "One session's header and transcript, read from its file."
+    }),
+    "observe.live": entry({
+      channel: "inf:observe:live",
+      args: sessionArgs,
+      toRequest: (args) => [args.id],
+      invalidate: {
+        events: (event, args) => OBSERVE_LIVE_EVENTS.has(event.type) && "taskId" in event && event.taskId === args.id
+      },
+      description: "One session's in-flight turn: text and tool calls not yet in its file."
+    }),
+    // Settings → Automation (docs/automation.md): a rule changes by a feed
+    // line (create, save, pause, resume, delete), the Scheduler's own or the
+    // trail of a catalog change; next runs and history move with the clock,
+    // so the read also refreshes while the section is open.
+    "automation.list": entry({
+      channel: "inf:automation:list",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => event.type === "firstmate_note" || event.type === "personalized",
+        pollMs: 3e4
+      },
+      description: "Every automation rule: its name, state, schedule, prompt and next run."
+    }),
+    // Kept running (docs/leftover-programs.md, "Kept running"): a close keeps
+    // a job and writes its timeline line; a Remove's trail is a feed line.
+    "automation.kept": entry({
+      channel: "inf:automation:kept",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => event.type === "firstmate_note" || event.type === "task_event" || event.type === "task_finished" || event.type === "task_landed",
+        pollMs: 3e4
+      },
+      description: "The jobs kept running past their task's close: each one's label, computer, account, task and last check."
+    }),
+    // A delivery is handled when a Firstmate turn ends, which no feed line says.
+    "automation.history": entry({
+      channel: "inf:automation:history",
+      args: strictObject({ id: string().min(1) }),
+      toRequest: (args) => [args.id],
+      invalidate: {
+        events: (event) => event.type === "firstmate_note" || event.type === "personalized" || event.type === "firstmate_state",
+        pollMs: 3e4
+      },
+      description: "One automation rule's recent runs, newest first, each with where its delivery stands."
+    }),
+    // A rule's notes change by the captain's save, whose catalog trail is
+    // read at once, or by a crewmate's report, which the poll reads.
+    "automation.notes": entry({
+      channel: "inf:automation:notes",
+      // Every version unless only the newest is asked for.
+      args: strictObject({
+        id: string().min(1),
+        versions: _enum(["current", "all"]).optional()
+      }),
+      toRequest: (args) => [args.id, args.versions ?? "all"],
+      invalidate: {
+        events: (event) => event.type === "personalized" || event.type === "firstmate_note",
+        pollMs: 3e4
+      },
+      description: "One automation rule's notes, what its runs learned: the newest version, or every version newest first."
+    }),
+    // Settings → Usage (docs/usage.md): re-read when a model response is
+    // recorded or a task changes, so the tab keeps up while it is open.
+    "usage.summary": entry({
+      channel: "inf:usage:summary",
+      args: usageQuerySchema,
+      toRequest: (args) => [args],
+      invalidate: {
+        events: (event) => event.type === "turn_end" || event.type === "tool_end" && event.usage !== void 0,
+        pushes: ["inf:tasks", "inf:tasks:delta"]
+      },
+      description: "Recorded model usage by period and kind of work, in tokens and estimated dollars."
+    }),
+    "usage.tasks": entry({
+      channel: "inf:usage:tasks",
+      args: usageTasksQuerySchema,
+      toRequest: (args) => [args],
+      invalidate: {
+        events: (event) => event.type === "turn_end" || event.type === "tool_end" && event.usage !== void 0,
+        pushes: ["inf:tasks", "inf:tasks:delta"]
+      },
+      description: "The newest tasks with recorded usage by period and kind of work, and their count."
+    }),
+    // The captain's own panels, as the app has them mounted right now
+    // (talk-to-personalize Step 5). Observe's Panels group: not a session -
+    // a mount has no transcript - but the one place a dev can see what
+    // compiled, what is on a rail, what a server module exported, and which
+    // one refused. The push IS the snapshot the core pushes on every
+    // reconcile, so the read takes it as its value.
+    "personal.mounts": entry({
+      channel: "inf:plugins:personal:list",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { valueFromPush: "inf:plugins:personal" },
+      description: "The personal panels the core has mounted, with their state (dev-only)."
+    }),
+    "quota.snapshot": entry({
+      channel: "inf:quota:snapshot",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { pushes: ["inf:quota"] },
+      description: "The latest quota reading across signed-in accounts."
+    }),
+    "feed.recent": entry({
+      channel: "inf:feed:recent",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { events: changesFeed },
+      description: "The persisted activity feed, oldest first."
+    }),
+    "crew.counts": entry({
+      channel: "inf:crew:counts",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { events: (event) => event.type === "crew_counts" },
+      description: "Live crew strip counts."
+    }),
+    "repos.list": entry({
+      channel: "inf:repos:list",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => event.type === "repo_setup" || event.type === "repo_configured" || event.type === "repo_runs_on" || event.type === "repo_batch" || event.type === "repo_unregistered"
+      },
+      description: "The managed fleet. Setup, settings and removal are `app_change` lines shared with Settings."
+    }),
+    "update.status": entry({
+      channel: "inf:update:status",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { pollMs: 6e4 },
+      description: "Whether a newer release is available."
+    }),
+    // The task protocol (task-system P3). The board rides its own push, and
+    // the push carries the board itself - the snapshot the core rebuilt from
+    // SQLite after the commit, equal to a fresh read by construction
+    // (taskProtocol.push.test.ts) - so a subscriber takes the pushed value as it
+    // lands (P4: the now panel paints a row within one coalescing window of
+    // the write) rather than re-reading on every task event; a detail
+    // re-reads only when ITS task changes or gains a timeline event.
+    "tasks.board": entry({
+      channel: "inf:tasks:board",
+      // `closed: false` asks for the board without its closed rows: a reader
+      // that has no use for them yet, so a view's first read stays light.
+      args: strictObject({ closed: literal(false).optional() }),
+      toRequest: (args) => args.closed === false ? [{ closed: false }] : [],
+      narrows: {
+        args: { closed: false },
+        asksLess: (args) => args.closed === false,
+        lesser: (value) => value.closedLeftOut !== void 0
+      },
+      invalidate: {
+        presentation: true,
+        valueFromPush: "inf:tasks",
+        // A newer board, or the whole board where a lesser one is held, is news.
+        sameValue: (current, next2) => {
+          const held = current;
+          const read = next2;
+          if (held.seq !== read.seq) return held.seq > read.seq;
+          return held.closedLeftOut === void 0 || read.closedLeftOut !== void 0;
+        },
+        // Above the measured trigger the core pushes what changed (P5); the
+        // executor folds it onto the board it holds, and a gap re-reads.
+        deltaFromPush: {
+          channel: "inf:tasks:delta",
+          apply: (current, delta) => applyTaskBoardDelta(current, delta)
+        }
+      },
+      description: "The live task board: open, underway, and recently closed work. `closed: false` leaves out the closed rows a reader has no use for yet."
+    }),
+    "tasks.detail": entry({
+      channel: "inf:tasks:detail",
+      args: taskArgs,
+      toRequest: (args) => [args.id],
+      invalidate: {
+        presentation: true,
+        // A card closing or leaving changes the record's Cards row too.
+        pushes: ["inf:tasks", "inf:tasks:delta", "inf:cards"],
+        // Its own browser's fact moves on every command the crewmate runs,
+        // and so does its Now line, which a card's thread shows while the
+        // crewmate works on the captain's reply (INF-990 friction 3).
+        events: (event, args) => event.type === "personalized" || event.type === "repo_configured" || event.type === "turn_end" || event.type === "tool_end" && event.usage !== void 0 || (event.type === "task_changed" || event.type === "task_event" || event.type === "task_browser" || event.type === "tool_start" || event.type === "tool_end") && event.taskId === args.id
+      },
+      description: "One task in full: goal, the captain's words, graph, report, timeline, delivery."
+    }),
+    // The task card's Crewmate tab (docs/task-card-tabs.md, "The Crewmate
+    // tab"): the crewmate's sessions as a transcript, re-read when the task
+    // or its crewmate's calls move, and each second while it shows, since a
+    // call's result lands in the session after the call's own event. An
+    // answer whose sessions and record did not move is not delivered again.
+    "tasks.crewmate": entry({
+      channel: "inf:tasks:crewmate",
+      args: taskArgs,
+      toRequest: (args) => [args.id],
+      invalidate: {
+        events: (event, args) => CREWMATE_EVENTS.has(event.type) && taskIdOf(event) === args.id,
+        pollMs: 1e3,
+        sameValue: (current, next2) => current.revision === next2.revision
+      },
+      description: "One task's crewmate session as a transcript: its words, calls, blocks and what it was told."
+    }),
+    // What the crewmate is writing in its running turn, before its session holds it.
+    "tasks.crewmate.live": entry({
+      channel: "inf:tasks:crewmate:live",
+      args: taskArgs,
+      toRequest: (args) => [args.id],
+      invalidate: {
+        events: (event, args) => CREWMATE_LIVE_EVENTS.has(event.type) && taskIdOf(event) === args.id,
+        sameValue: (current, next2) => current.text === next2.text && current.since === next2.since
+      },
+      description: "What one task's crewmate is writing in its running turn, and since when."
+    }),
+    // Typed text finds closed work the board no longer lists (FI3-579 piece
+    // 3). Re-read when the board changes, so a dropped task appears at once.
+    "tasks.search": entry({
+      channel: "inf:tasks:search",
+      args: strictObject({ query: string().max(200) }),
+      toRequest: (args) => [args.query],
+      invalidate: { pushes: ["inf:tasks", "inf:tasks:delta"] },
+      description: "Closed work older than the board's window, or dropped, matching typed text."
+    }),
+    // The tasks the window's words name by exact key, live or closed at any
+    // age (INF-3896): one request for every key the board does not list.
+    "tasks.keys": entry({
+      channel: "inf:tasks:keys",
+      args: strictObject({
+        keys: array(string().min(1).max(64)).min(1).max(TASK_KEYS_PER_READ)
+      }),
+      toRequest: (args) => [args.keys],
+      invalidate: { pushes: ["inf:tasks", "inf:tasks:delta"] },
+      description: "Recorded tasks, live or closed at any age, with exactly these keys."
+    }),
+    "projects.list": entry({
+      channel: "inf:projects:list",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        presentation: true,
+        pushes: ["inf:tasks", "inf:tasks:delta"],
+        events: (event) => event.type === "repo_setup" || event.type === "repo_configured" || event.type === "repo_runs_on" || event.type === "repo_batch" || event.type === "repo_unregistered"
+      },
+      description: "Scratch plus every project the managed repositories belong to, with live counts."
+    }),
+    // The person's open proposed changes where their projects live (git
+    // integration PR 1.2), read through the app's own sign-in: one request,
+    // re-read when a sign-in changes and every five minutes while a panel
+    // shows it. Not signed in, it answers empty and says so.
+    "forge.changes": entry({
+      channel: "inf:forges:changes",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { pushes: ["inf:forges"], pollMs: 3e5 },
+      description: "Your open pull requests where your projects live, newest first, with their checks."
+    }),
+    // Knowledge (docs/knowledge.md, "The browser"), in alpha and development
+    // builds only: the collections and their counts, a bounded graph of one
+    // collection's concepts, its Concepts and Findings a page at a time, and
+    // one entry whole. Scoped as Firstmate's reads are; a stable build refuses
+    // each before it opens the collection. Re-read after a write and when a
+    // project comes or goes; a finding's sources are checked again then.
+    "knowledge.collections": entry({
+      channel: "inf:knowledge:collections",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => KNOWLEDGE_EVENTS.has(event.type)
+      },
+      description: "Each knowledge collection, private first, with its concepts, findings and directions counted."
+    }),
+    "knowledge.graph": entry({
+      channel: "inf:knowledge:graph",
+      args: knowledgeGraphArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "One collection's concepts and their connections, at most 75 and 200, with what was left out."
+    }),
+    "knowledge.concepts": entry({
+      channel: "inf:knowledge:concepts",
+      args: knowledgeConceptsArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "A page of one collection's concepts, by name or as typed words find them."
+    }),
+    "knowledge.findings": entry({
+      channel: "inf:knowledge:findings",
+      args: knowledgeFindingsArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "A page of one collection's findings with their standing, filtered for rechecking or differing evidence."
+    }),
+    "knowledge.entry": entry({
+      channel: "inf:knowledge:entry",
+      args: knowledgeEntryArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "One concept or finding whole: its evidence, checks, history and declared uses."
+    }),
+    "knowledge.directions": entry({
+      channel: "inf:knowledge:directions",
+      args: knowledgeDirectionsArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: {
+        events: (event) => KNOWLEDGE_EVENTS.has(event.type)
+      },
+      description: "Standing directions for one project, with their origin, never ordinary findings."
+    }),
+    "knowledge.direction": entry({
+      channel: "inf:knowledge:direction",
+      args: knowledgeDirectionArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: {
+        events: (event) => KNOWLEDGE_EVENTS.has(event.type)
+      },
+      description: "One standing direction and its paged edit history, read-only."
+    }),
+    // The entries a card body names, for its references, and what one task's
+    // work declared it used, for its record: re-read after a write, as the
+    // browser's are.
+    "knowledge.refs": entry({
+      channel: "inf:knowledge:refs",
+      args: knowledgeRefsArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "The concepts and findings among the ids a card names, with where each stands."
+    }),
+    "knowledge.uses": entry({
+      channel: "inf:knowledge:uses",
+      args: knowledgeUsesArgsSchema,
+      toRequest: (args) => [args],
+      invalidate: { events: (event) => KNOWLEDGE_EVENTS.has(event.type) },
+      description: "What one task's work declared it used: each revision it relied on beside the current one."
+    }),
+    // The captain's preferences (talk-to-personalize Step 1): the theme and
+    // the rail layout the host applies to the window. Written by the window's
+    // own controls and by the Firstmate's `personalize` tool alike; every
+    // write pushes the whole value, so the read takes the push as its own.
+    "shell.preferences": entry({
+      channel: "inf:shell:preferences",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { valueFromPush: "inf:shell:preferences" },
+      description: "The theme, the rail layout, and the panels switch the host applies for the captain."
+    }),
+    // The record, through SQL (plugin data surface, Phase B; src/shared/sql.ts):
+    // a read-only query over the published views the plugin's grant names -
+    // the host adds the grant, so a subscriber passes the query alone and a
+    // plugin with no grant reaches nothing. Live the way the captain's B3
+    // decided: after any app event (and a quota reading, which is not one)
+    // the host re-runs it on the 40 ms coalescing tick, the query process
+    // answers from what it has unless the database's `data_version` moved,
+    // and an answer that says the same thing is not delivered again.
+    sql: entry({
+      channel: "inf:sql:query",
+      args: sqlQuerySchema,
+      toRequest: (args, grant) => [{ ...args, views: [...grant.sql ?? []] }],
+      invalidate: {
+        events: () => true,
+        pushes: ["inf:quota"],
+        sameValue: sameSqlAnswer
+      },
+      description: "A read-only SQL query over the published views of the app's record."
+    })
+  };
+  const COALESCE_MS = 40;
+  class ReadSubscriptionError extends Error {
+    constructor(code, message) {
+      super(message);
+      this.code = code;
+      this.name = "ReadSubscriptionError";
+    }
+    code;
+  }
+  class ReadExecutor {
+    constructor(api, catalog = readCatalog) {
+      this.api = api;
+      this.catalog = catalog;
+    }
+    api;
+    catalog;
+    /** The running pushed reads, by name and request, while any reader holds one. */
+    shared = /* @__PURE__ */ new Map();
+    /**
+     * Starts one subscription. Throws synchronously when the read is not in
+     * the catalog or the args do not parse; every later failure reaches
+     * `listener.onError`. The returned function stops it. `grant` is the
+     * plugin's, from its manifest, added by the host that binds it - never
+     * something the subscriber passes.
+     */
+    subscribe(name, rawArgs, listener, grant = {}) {
+      const entry2 = Object.hasOwn(this.catalog, name) ? this.catalog[name] : void 0;
+      if (!entry2) throw new ReadSubscriptionError("read_unknown", `no read named "${name}"`);
+      const parsed = entry2.args.safeParse(rawArgs);
+      if (!parsed.success) {
+        throw new ReadSubscriptionError("bad_args", `"${name}" args: ${parsed.error.message}`);
+      }
+      const args = parsed.data;
+      const readName = name;
+      const { invalidate } = entry2;
+      const { narrows } = entry2;
+      const asksLess = narrows?.asksLess(args) ?? false;
+      const whole = asksLess ? entry2.args.parse({}) : args;
+      const key = invalidate.valueFromPush || invalidate.deltaFromPush ? `${name}\0${JSON.stringify(entry2.toRequest(whole, grant))}` : void 0;
+      let source = key === void 0 ? void 0 : this.shared.get(key);
+      if (!source) {
+        source = this.open(readName, entry2, whole, grant, () => {
+          if (key !== void 0) this.shared.delete(key);
+        });
+        if (key !== void 0) this.shared.set(key, source);
+      }
+      return source.join(listener, asksLess);
+    }
+    /** One read's run, held value and invalidations, handed to every reader joined to it. */
+    open(readName, entry2, args, grant, closed) {
+      const listeners2 = /* @__PURE__ */ new Set();
+      const wholeReaders = /* @__PURE__ */ new Set();
+      const { narrows } = entry2;
+      const readArgs = () => narrows && wholeReaders.size === 0 ? narrows.args : args;
+      const each = (send2) => {
+        for (const listener of [...listeners2]) {
+          try {
+            send2(listener);
+          } catch (caught) {
+            queueMicrotask(() => {
+              throw caught;
+            });
+          }
+        }
+      };
+      let disposed = false;
+      let inFlight = false;
+      let inFlightLesser = false;
+      let dirty = false;
+      let timer;
+      let epoch = 0;
+      let current;
+      let hasValue = false;
+      const deliver = (value) => {
+        epoch += 1;
+        current = value;
+        hasValue = true;
+        const shown = this.api.present?.(readName, value) ?? value;
+        each((listener) => listener.onValue(shown));
+      };
+      const { sameValue } = entry2.invalidate;
+      const run = () => {
+        timer = void 0;
+        if (disposed) return;
+        if (inFlight) {
+          dirty = true;
+          return;
+        }
+        inFlight = true;
+        inFlightLesser = narrows !== void 0 && wholeReaders.size === 0;
+        const started = epoch;
+        this.api.read(readName, readArgs(), grant).then((value) => {
+          if (disposed) return;
+          if (started !== epoch) {
+            if (wantsWhole()) dirty = true;
+            return;
+          }
+          if (hasValue && sameValue?.(current, value)) return;
+          deliver(value);
+        }).catch((caught) => {
+          if (!disposed) {
+            const error = {
+              code: "read_failed",
+              message: caught instanceof Error ? caught.message : String(caught)
+            };
+            each((listener) => listener.onError(error));
+          }
+        }).finally(() => {
+          inFlight = false;
+          if (dirty && !disposed) {
+            dirty = false;
+            schedule();
+          }
+        });
+      };
+      const schedule = () => {
+        if (disposed || timer !== void 0) return;
+        timer = setTimeout(run, COALESCE_MS);
+      };
+      const wantsWhole = () => narrows !== void 0 && wholeReaders.size > 0 && hasValue && narrows.lesser(current);
+      const detach = [];
+      const { invalidate } = entry2;
+      if (this.api.onPresentation && invalidate.presentation) {
+        detach.push(
+          this.api.onPresentation(() => {
+            if (disposed || !hasValue) return;
+            epoch += 1;
+            const shown = this.api.present?.(readName, current) ?? current;
+            each((listener) => listener.onValue(shown));
+          })
+        );
+      }
+      if (invalidate.events) {
+        const accepts = invalidate.events;
+        detach.push(
+          this.api.onEvent((event) => {
+            if (accepts(event, args)) schedule();
+          })
+        );
+      }
+      for (const channel of invalidate.pushes ?? []) {
+        detach.push(this.api.onPush(channel, schedule));
+      }
+      if (invalidate.valueFromPush) {
+        detach.push(
+          this.api.onPush(invalidate.valueFromPush, (payload) => {
+            if (disposed || hasValue && sameValue?.(current, payload)) return;
+            deliver(payload);
+          })
+        );
+      }
+      if (invalidate.deltaFromPush) {
+        const { apply } = invalidate.deltaFromPush;
+        detach.push(
+          this.api.onPush(invalidate.deltaFromPush.channel, (payload) => {
+            if (disposed) return;
+            const next2 = hasValue ? apply(current, payload) : null;
+            if (next2 === null) {
+              schedule();
+              return;
+            }
+            if (next2 !== current) deliver(next2);
+          })
+        );
+      }
+      if (invalidate.pollMs) {
+        const poll = setInterval(schedule, invalidate.pollMs);
+        detach.push(() => clearInterval(poll));
+      }
+      if (this.api.onResync) detach.push(this.api.onResync(schedule));
+      const stop = () => {
+        if (disposed) return;
+        disposed = true;
+        if (timer !== void 0) clearTimeout(timer);
+        for (const detachOne of detach) detachOne();
+        closed();
+      };
+      return {
+        join: (subscriber, asksLess = false) => {
+          const listener = {
+            onValue: (value) => subscriber.onValue(value),
+            onError: (error) => subscriber.onError(error)
+          };
+          const first = listeners2.size === 0;
+          listeners2.add(listener);
+          if (narrows && !asksLess) {
+            wholeReaders.add(listener);
+            if (!first && inFlight && inFlightLesser) dirty = true;
+            else if (wantsWhole()) schedule();
+          }
+          if (first) {
+            run();
+          } else if (hasValue) {
+            const joined = epoch;
+            queueMicrotask(() => {
+              if (disposed || !listeners2.has(listener) || epoch !== joined) return;
+              listener.onValue(this.api.present?.(readName, current) ?? current);
+            });
+          } else if (!inFlight) {
+            schedule();
+          }
+          return () => {
+            wholeReaders.delete(listener);
+            if (listeners2.delete(listener) && listeners2.size === 0) stop();
+          };
+        }
+      };
+    }
+  }
+  class FrameSubscriptions {
+    constructor(executor, post, reuseReads2, delivered = () => {
+    }) {
+      this.executor = executor;
+      this.post = post;
+      this.reuseReads = reuseReads2;
+      this.delivered = delivered;
+    }
+    executor;
+    post;
+    reuseReads;
+    delivered;
+    live = /* @__PURE__ */ new Map();
+    /** The read each live subscription names, so a declaration that drops it ends it. */
+    named = /* @__PURE__ */ new Map();
+    /** Subscriptions the host ended because their read is no longer declared. */
+    revoked = /* @__PURE__ */ new Set();
+    get size() {
+      return this.live.size;
+    }
+    /** Starts one subscription, or says why not. */
+    subscribe(declaration2, request) {
+      if (!declaration2.reads.includes(request.read)) {
+        return {
+          code: "read_not_declared",
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
+          message: `plugin "${declaration2.pluginId}" does not declare the read "${request.read}"`
+        };
+      }
+      if (this.live.has(request.sub)) {
+        return { code: "bad_request", message: `subscription ${request.sub} already exists` };
+      }
+      if (this.live.size >= FRAME_MAX_SUBSCRIPTIONS) {
+        return {
+          code: "too_many_subscriptions",
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
+          message: `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`
+        };
+      }
+      const sub = request.sub;
+      let previous;
+      let stop;
+      try {
+        stop = this.executor.subscribe(
+          request.read,
+          request.args,
+          {
+            onValue: (value) => {
+              if (!this.live.has(sub)) return;
+              const transfer = this.reuseReads() ? transferReadValue(previous, value) : { value };
+              previous = value;
+              this.post({ fm: FRAME_BRIDGE_VERSION, type: "data", sub, ...transfer });
+              this.delivered();
+            },
+            onError: (error) => {
+              if (this.live.has(sub))
+                this.post({ fm: FRAME_BRIDGE_VERSION, type: "data", sub, error });
+            }
+          },
+          declaration2.grant
+        );
+      } catch (caught) {
+        if (caught instanceof ReadSubscriptionError)
+          return { code: caught.code, message: caught.message };
+        return {
+          code: "read_failed",
+          message: caught instanceof Error ? caught.message : String(caught)
+        };
+      }
+      this.live.set(sub, stop);
+      this.named.set(sub, request.read);
+      return void 0;
+    }
+    /** Ends one subscription the frame asked to stop, or says why not. */
+    unsubscribe(sub) {
+      if (this.revoked.delete(sub)) return void 0;
+      const stop = this.live.get(sub);
+      if (!stop) return { code: "subscription_unknown", message: `no subscription ${sub}` };
+      this.live.delete(sub);
+      this.named.delete(sub);
+      stop();
+      return void 0;
+    }
+    /**
+     * The frame's declaration changed from `before` to `after`: each
+     * subscription whose read it no longer names, or a `sql` read whose views
+     * changed, ends at once, and the frame's `onError` hears why while it
+     * keeps what it drew.
+     */
+    redeclared(before, after) {
+      const viewsMoved = viewsOf(after.grant) !== viewsOf(before.grant);
+      for (const [sub, read] of this.named) {
+        if (after.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
+        this.live.get(sub)?.();
+        this.live.delete(sub);
+        this.named.delete(sub);
+        this.revoked.add(sub);
+        this.post({
+          fm: FRAME_BRIDGE_VERSION,
+          type: "data",
+          sub,
+          error: {
+            code: "read_not_declared",
+            // i18n-exempt: not shown (a console line, or an error for the panel's code)
+            message: `"${read}" is no longer a read this frame may use`
+          }
+        });
+      }
+    }
+    /** Ends every subscription: the frame's document was replaced or stopped. */
+    drop() {
+      for (const stop of this.live.values()) stop();
+      this.live.clear();
+      this.named.clear();
+      this.revoked.clear();
+    }
+  }
+  function viewsOf(grant) {
+    return (grant?.sql ?? []).join(",");
+  }
+  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
+  const words = {
+    backlog: "Backlog",
+    queued: "Queued",
+    starting: "Starting",
+    working: "Working",
+    idle: "Idle",
+    interrupted: "Interrupted",
+    waiting: "Waiting on you",
+    done: "Done",
+    dropped: "Dropped"
+  };
+  function taskStatusOf(task, now = Date.now()) {
+    const reading = (mark, reason2) => ({
+      mark,
+      word: words[mark],
+      reason: reason2 === words[mark] ? "" : reason2
+    });
+    const connecting = task.place?.reach === "connecting";
+    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
+    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
+    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+    const awayReading = (mark, reason2) => ({
+      ...reading(mark, reason2 ?? awayWords),
+      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
+    });
+    if (task.status === "done") {
+      return reading(
+        "done",
+        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
+      );
+    }
+    if (task.status === "dropped") {
+      return reading(
+        "dropped",
+        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
+      );
+    }
+    if (task.requiredAction)
+      return reading(
+        "waiting",
+        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
+      );
+    if (task.answerNoteId)
+      return {
+        ...reading(
+          "waiting",
+          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
+        ),
+        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
+      };
+    if (task.waitingCardId) {
+      return reading(
+        "waiting",
+        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
+      );
+    }
+    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
+      return reading("starting", "");
+    }
+    if (task.status === "active" && task.backlogSince !== void 0) {
+      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
+    }
+    if (task.startNotice && (task.status === "open" || task.status === "active")) {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      return reading(mark, "Could not start");
+    }
+    if (task.status === "open") {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      if (task.queueWait) return reading(mark, task.queueWait.line);
+      const parts = task.children.total;
+      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
+      if (away) return awayReading(mark, holds);
+      return reading(
+        mark,
+        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
+      );
+    }
+    const waits = task.blockedBy ?? [];
+    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
+    const reason = dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
+    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
+      if (away) return awayReading("working", null);
+      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
+      if (wait === "checks" && task.workPosture?.batch)
+        return { ...reading("working", reason), wait: "batch" };
+      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
+    }
+    if (task.activity === "interrupted") return reading("interrupted", reason);
+    if (away) return awayReading("idle", null);
+    if (!dependency) return reading("idle", reason);
+    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
+    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
+  }
+  function dependencyWaitWords(blockedBy) {
+    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
+  }
+  function waitRecordedTime(at, now) {
+    const date2 = new Date(at);
+    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
+    if (date2.toDateString() === new Date(now).toDateString()) return time2;
+    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
+  }
+  function recordBarOf(task) {
+    if (task.status === "done") return null;
+    if (task.status === "dropped") {
+      return task.kind === "work" && !task.replacedBy && task.children.total === 0 ? { end: null, next: "start-again", blocked: false } : null;
+    }
+    if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
+    const work = task.kind === "work";
+    const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
+    const { mark } = taskStatusOf(task);
+    const parent = task.status === "open" && task.children.total > 0;
+    const backlog = task.status === "active" && task.backlogSince !== void 0;
+    const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
+    const startable = backlog || task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked);
+    const next2 = mark === "waiting" ? task.waitingCardId || task.requiredAction && task.requiredAction.state !== "blocked" ? "show-card" : null : mark === "starting" ? "starting" : !work ? null : startable ? task.startNotice ? "try-again" : "start" : mark === "interrupted" ? "continue" : null;
+    return {
+      end: mark === "starting" ? null : end,
+      next: next2,
+      blocked: next2 === "starting" || (next2 === "start" || next2 === "try-again") && blocked
+    };
+  }
+  const OK = Object.freeze({ ok: true });
+  const no = (text) => ({ ok: false, text });
+  function keyList(keys) {
+    if (keys.length === 0) return "What it waits on";
+    if (keys.length === 1) return keys[0];
+    return `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
+  }
+  function taskMovesOf(task) {
+    if (task.requiredAction && task.status === "open") {
+      const captainOwns = no("This action waits for you, not a crewmate.");
+      return {
+        "answer-done": no("This is not an answer task."),
+        "dismiss-question": no("This is not a question."),
+        "start-task": captainOwns,
+        "start-again": captainOwns,
+        "stop-task": captainOwns,
+        "continue-task": captainOwns,
+        "drop-task": no("Ask your first mate to cancel this action with a reason."),
+        "queue-task": captainOwns,
+        "unqueue-task": captainOwns,
+        "show-card": task.requiredAction.state === "blocked" ? no("Its prerequisites have not finished.") : OK
+      };
+    }
+    if (task.kind === "decision" && task.status === "open" && task.waitingCardId) {
+      const unavailable = no("This question waits for your choice.");
+      return Object.fromEntries(
+        TASK_LIFECYCLE_OPS.map((op) => [
+          op,
+          op === "dismiss-question" || op === "show-card" ? OK : unavailable
+        ])
+      );
+    }
+    if (task.kind !== "work" || task.status !== "open" && task.status !== "active" && task.status !== "dropped") {
+      return void 0;
+    }
+    const bar = recordBarOf(task);
+    const unstarted = isUnstartedWork(task);
+    const parts = task.children.total > 0;
+    const started = no("It has already started.");
+    const starting = bar?.next === "starting";
+    const heldStart = no("It is starting.");
+    const start = starting ? heldStart : bar?.next === "start" || bar?.next === "try-again" ? bar.blocked ? no(`${keyList(task.blockedBy)} must finish first.`) : OK : task.status === "active" ? started : parts ? no("Its parts are the work. Start a part instead.") : bar?.next === "show-card" || task.waitingCardId ? no("It waits for your answer on its card.") : task.startPolicy === "when-ready" ? no("It is queued. It starts by itself once nothing holds it.") : no("It cannot start from here.");
+    const stop = bar?.end === "stop-task" ? OK : unstarted ? no("It has not started. Drop task drops it.") : no("It cannot be stopped from here.");
+    const resume = bar?.next === "continue" ? OK : no("Only interrupted work continues.");
+    const drop = bar?.end === "drop-task" ? OK : task.status === "active" ? no("It has started. Stopping it drops it and keeps a copy of its work.") : no("It cannot be dropped from here.");
+    const underway = task.status === "active";
+    const inBacklog = underway && task.backlogSince !== void 0;
+    const queueGuard = starting ? heldStart : underway ? null : !unstarted ? started : parts ? no("Its parts do the work. Move a part instead.") : null;
+    const queue = queueGuard ?? (underway ? no("It has already started. Start picks it up from the backlog.") : task.startPolicy === "when-ready" ? no("It is already queued.") : OK);
+    const waitsForWord = underway ? inBacklog : task.startPolicy === "on-request";
+    const unqueue = queueGuard ?? (waitsForWord ? no("It already waits for your word.") : OK);
+    return {
+      "answer-done": task.answerNoteId ? OK : no("It has no answer ready."),
+      "dismiss-question": no("This is not a question."),
+      "start-task": start,
+      "start-again": bar?.next === "start-again" ? OK : no("Only dropped work without a replacement or parts starts again."),
+      "stop-task": stop,
+      "continue-task": resume,
+      "drop-task": drop,
+      "queue-task": queue,
+      "unqueue-task": unqueue,
+      "show-card": task.waitingCardId ? OK : no("It has no card to show.")
+    };
+  }
+  function cardMerges(card) {
+    return card?.actions.some((action) => mergeEffectOf(action) !== void 0) ?? false;
+  }
+  function presentTask(task, cards) {
+    const associated = (card) => card.taskId === task.id || card.id === task.waitingCardId;
+    const authorWorking = task.status === "active" && (task.workPosture?.state === "active" || !task.workPosture && task.activity === "running" || cards.some((card) => associated(card) && card.awaiting === "answer"));
+    const minimized = authorWorking ? void 0 : cards.find((card) => card.minimized && associated(card));
+    if (task.minimizedCardId !== minimized?.id) {
+      const { minimizedCardId: _old, ...raw } = task;
+      task = { ...raw, ...minimized ? { minimizedCardId: minimized.id } : {} };
+    }
+    const waitingCard = task.waitingCardId && (task.status === "open" || task.status === "active") ? cards.find(
+      (card) => isReadyDecision(card) && (card.taskId === task.id || card.id === task.waitingCardId)
+    ) : void 0;
+    const waitingCardId = waitingCard?.id ?? null;
+    if (waitingCardId === task.waitingCardId) return task;
+    const { waitingCardMerges: _merges, moves: _moves, ...rest } = task;
+    const presented = { ...rest, waitingCardId };
+    const moves = taskMovesOf(presented);
+    return {
+      ...presented,
+      ...cardMerges(waitingCard) ? { waitingCardMerges: true } : {},
+      ...moves ? { moves } : {}
+    };
+  }
+  function presentProjects(projects, tasks) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const task of tasks) {
+      if (task.answerNoteId || task.waitingCardId || task.minimizedCardId || task.requiredAction && (task.status === "open" || task.status === "active")) {
+        counts.set(task.projectId, (counts.get(task.projectId) ?? 0) + 1);
+      }
+    }
+    return projects.map((project) => ({
+      ...project,
+      counts: { ...project.counts, waitingOnYou: counts.get(project.id) ?? 0 }
+    }));
+  }
+  function presentBoard(board, cards) {
+    const tasks = board.tasks.map((task) => presentTask(task, cards));
+    for (const card of cards) {
+      if (!card.minimized || tasks.some((task) => task.minimizedCardId === card.id || task.id === card.taskId))
+        continue;
+      if (card.taskId) continue;
+      tasks.push({
+        id: minimizedRowId(card.id),
+        key: "",
+        projectId: "",
+        parentId: null,
+        kind: "operation",
+        title: card.title,
+        goal: null,
+        priority: card.priority,
+        status: "open",
+        activity: null,
+        closedReason: null,
+        startPolicy: "on-request",
+        flags: { blocked: false, held: false, needsYou: false, ready: false },
+        blockedBy: [],
+        blocks: [],
+        children: { total: 0, closed: 0 },
+        assignee: null,
+        model: null,
+        tier: null,
+        repo: null,
+        delivery: null,
+        outcomeSummary: null,
+        waitingCardId: null,
+        minimizedCardId: card.id,
+        createdAt: card.createdAt,
+        updatedAt: card.createdAt,
+        startedAt: null,
+        closedAt: null
+      });
+    }
+    return { ...board, tasks, projects: presentProjects(board.projects, tasks) };
+  }
+  const minimizedRowId = (cardId) => `minimized-card:${cardId}`;
+  function phoneReads(ask) {
+    const listeners2 = /* @__PURE__ */ new Map();
+    const resyncs = /* @__PURE__ */ new Set();
+    function listen(channel, listener) {
+      let set = listeners2.get(channel);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        listeners2.set(channel, set);
+      }
+      set.add(listener);
+      return () => {
+        set?.delete(listener);
+      };
+    }
+    let cards = [];
+    let cardsAsked = false;
+    const presentations = /* @__PURE__ */ new Set();
+    function needCards() {
+      if (cardsAsked) return;
+      cardsAsked = true;
+      listen("inf:cards", (payload) => {
+        cards = Array.isArray(payload) ? payload : cards;
+        for (const tell of presentations) tell();
+      });
+      void ask("inf:cards:list", []).then((value) => {
+        if (Array.isArray(value)) {
+          cards = value;
+          for (const tell of presentations) tell();
+        }
+      }).catch(() => {
+      });
+    }
+    let board;
+    function rememberBoard(next2) {
+      if (!board || next2.seq > board.seq || next2.seq === board.seq && (board.closedLeftOut !== void 0 || next2.closedLeftOut === void 0)) board = next2;
+    }
+    const readApi = {
+      read: async (name, args, grant) => {
+        const entry2 = readCatalog[name];
+        if (name === "tasks.board" || name === "tasks.detail") needCards();
+        if (name === "tasks.board" && args.closed === false) {
+          return ask(entry2.channel, entry2.toRequest(args, grant)).catch(() => ask(entry2.channel, entry2.toRequest({}, grant)));
+        }
+        if (name === "projects.list") {
+          needCards();
+          const value = await ask(entry2.channel, entry2.toRequest(args, grant));
+          const boardRead = readCatalog["tasks.board"];
+          rememberBoard(await ask(boardRead.channel, boardRead.toRequest({ closed: false }, void 0)).catch(() => ask(boardRead.channel, boardRead.toRequest({}, void 0))));
+          return value;
+        }
+        return ask(entry2.channel, entry2.toRequest(args, grant));
+      },
+      present: (name, value) => {
+        if (name === "tasks.board") {
+          rememberBoard(value);
+          return presentBoard(value, cards);
+        }
+        if (name === "projects.list" && board) return presentProjects(value, presentBoard(board, cards).tasks);
+        if (name === "tasks.detail") return presentTask(value, cards);
+        if (name === "feed.recent") {
+          return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
+        }
+        if (name === "computers.resources") return panelComputerResources(value);
+        return value;
+      },
+      onPresentation: (listener) => {
+        presentations.add(listener);
+        return () => {
+          presentations.delete(listener);
+        };
+      },
+      onEvent: (listener) => listen("inf:event", (payload) => listener(payload)),
+      onPush: (channel, listener) => listen(channel, listener),
+      onResync: (listener) => {
+        resyncs.add(listener);
+        return () => {
+          resyncs.delete(listener);
+        };
+      }
+    };
+    return {
+      executor: new ReadExecutor(readApi),
+      listen,
+      push(channel, payload) {
+        for (const listener of [...listeners2.get(channel) ?? []]) listener(payload);
+      },
+      resync() {
+        for (const listener of [...resyncs]) listener();
+      }
+    };
+  }
   function phonePressRule() {
     return "\n[data-inf-picture] { -webkit-user-drag: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n";
   }
@@ -103248,6 +111246,13 @@ svg { ${pinned} }
   const collections = /* @__PURE__ */ new Map();
   const send = (message) => frame?.contentWindow?.postMessage({ fm: 2, ...message }, "*");
   const fail = (message) => new Error(message);
+  const reads = phoneReads((channel, args) => native({ type: "ask", channel, args }));
+  let reuseReads = false;
+  const subscriptions = new FrameSubscriptions(reads.executor, (message) => frame?.contentWindow?.postMessage(message, "*"), () => reuseReads);
+  let declaration = declared({});
+  function declared(value) {
+    return { pluginId: "host", ...frameReads(value.reads ?? [], value.sql ?? []) };
+  }
   window.addEventListener("message", (event) => {
     if (!frame || event.source !== frame.contentWindow) return;
     const parsed = frameMessageSchema.safeParse(event.data);
@@ -103256,6 +111261,7 @@ svg { ${pinned} }
     if (message.type === "ready") {
       if (documentID || !message.document) return;
       documentID = message.document;
+      reuseReads = message.reuseReads === true;
       void native({ type: "ready" }).catch(() => {
       });
       send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...isPlayableBody(input.body) ? { preview: true } : {} });
@@ -103306,6 +111312,20 @@ svg { ${pinned} }
           id: message.id,
           ...ok ? { ok, result: value2 } : { ok, error: { code: "refused", message: String(value2) } }
         });
+        const answerRead = (refusal) => send({
+          type: "response",
+          document: documentID,
+          id: message.id,
+          ...refusal ? { ok: false, error: refusal } : { ok: true }
+        });
+        if (request.success && request.data.verb === "subscribe") {
+          answerRead(subscriptions.subscribe(declaration, request.data));
+          break;
+        }
+        if (request.success && request.data.verb === "unsubscribe") {
+          answerRead(subscriptions.unsubscribe(request.data.sub));
+          break;
+        }
         if (request.success && request.data.verb === "data") {
           const name = cardDataName(request.data.src);
           if (!name || !cardDataNames(input.body).includes(name)) {
@@ -103420,6 +111440,8 @@ svg { ${pinned} }
       const value = worded.body === given.body ? given : { ...given, body: worded.body, ...given.marks ? { marks: given.marks.map(worded.at) } : {} };
       input = value;
       scale = textScale(value.textScale);
+      subscriptions.drop();
+      declaration = declared(value);
       const split = value.card && takesTaskFacts(value.card) ? splitSettleFacts(value.body) : void 0;
       const marks = (value.marks ?? []).map((mark) => split && mark > split.at ? mark - split.facts.length : mark);
       linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys.includes(key)) : [];
@@ -103542,6 +111564,20 @@ svg { ${pinned} }
       }
       send({ type: "fill", answers: answers.data });
       return true;
+    },
+    // INF-5531 piece 2: the card's declaration changed under the body, as when its author ended it: a read it no longer
+    // grants ends at once and the body's script hears why, keeping what it drew.
+    reads(value) {
+      const before = declaration;
+      declaration = declared(value);
+      subscriptions.redeclared(before, declaration);
+    },
+    // A push from the computer, or a reload of what the phone held, which the card's live reads read again on.
+    push(channel, payload) {
+      reads.push(channel, payload);
+    },
+    resync() {
+      reads.resync();
     },
     expanded(index, state) {
       if (documentID && !input.expanded && typeof state === "string") send({ type: "expanded", document: documentID, index, state });

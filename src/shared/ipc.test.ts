@@ -428,6 +428,7 @@ describe("ipc contract", () => {
       "inf:devices:add",
       "inf:devices:address:set",
       "inf:devices:addresses",
+      "inf:devices:carry-on",
       "inf:devices:change-address",
       "inf:devices:custom:address",
       "inf:devices:custom:cancel",

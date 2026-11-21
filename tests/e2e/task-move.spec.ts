@@ -14,6 +14,8 @@ import { joinHome } from "../../src/core/helper/join";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import { HERE } from "../../src/shared/deviceNames";
+import { deviceLabel } from "../../src/shared/devices";
+import * as m from "../../src/shared/i18n/messages.generated";
 import {
   computerMoveLine,
   leftBehindLine,
@@ -26,6 +28,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedCall } from "../helpers/scriptedCalls";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { waitForFirstmateIdle } from "./crew";
+import { openDevices } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -132,8 +135,19 @@ async function homeAndComputer() {
   });
   apps.push(app);
   const { page } = app;
+  const { deviceId, dataDir } = await joinComputer(app, "infinitary-e2e-computer-");
+  return { app, page, deviceId, dataDir };
+}
+
+/**
+ * The Mac mini joins the home as builder from a fresh data folder of its
+ * own, signed in to the same Grok key, its model answering at the
+ * stand-in, and its work runs until it is in reach.
+ */
+async function joinComputer(app: LaunchedApp, prefix: string) {
+  const { page } = app;
   const invite = await page.evaluate(() => window.infinitary.devices.invite({ kind: "work" }));
-  const dataDir = scratchDir("infinitary-e2e-computer-");
+  const dataDir = scratchDir(prefix);
   // The computer is signed in to the same Grok key, its model answering at the stand-in.
   const port = app.mockProvider?.port;
   if (!port) throw new Error("The stand-in provider did not start.");
@@ -154,7 +168,7 @@ async function homeAndComputer() {
   await expect
     .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
     .toBe("in-reach");
-  return { app, page, deviceId: joined.grant.deviceId, dataDir };
+  return { deviceId: joined.grant.deviceId, dataDir };
 }
 
 /** The captain's words, answered by a Firstmate turn that makes `calls`; the tools' results. */
@@ -684,4 +698,143 @@ test("a move that fails after its work reached the computer removes what it made
   await expect.poll(() => existsSync(there), { timeout: 30_000 }).toBe(false);
   expect(readdirSync(elsewhere)).toEqual([]);
   expect(readFileSync(join(here, "notes.md"), "utf8")).toBe("the banner's height\n");
+});
+
+// A computer that joins again under a new key (docs/devices.md, "Joined
+// again"; INF-5468's piece 1, the captain's "how he can recover, and what
+// we should do durably"): the Mac mini's data folder is gone and it joins
+// again as a new entry beside its earlier one, out of reach with a task
+// started there. From Settings -> Devices, by keys, Carry its tasks on here
+// continues that task on the new entry, from the commit this Mac holds,
+// with the same key and branch, and the earlier entry leaves the list.
+test("a computer that joins again under a new key carries its earlier entry's task on, by keys, and the earlier entry leaves the list", async () => {
+  test.setTimeout(300_000);
+  const { app, page, deviceId, dataDir } = await homeAndComputer();
+  const project = projectWithOrigin();
+  const { repo } = await page.evaluate(
+    async ({ path, device }) => {
+      const result = await window.infinitary.repos.setup({ kind: "adopt", path, name: "website" });
+      await window.infinitary.devices.runsOn(result.repo.id, device);
+      return result;
+    },
+    { path: project, device: deviceId },
+  );
+  // e2e-typed-words: the captain asks for a task in the project
+  await ask(app, "Fix the menu in website.", [
+    {
+      name: "spawn_crewmate",
+      args: {
+        title: "Fix the menu",
+        goal: "The menu is fixed.",
+        user_words: "Fix the menu in website.",
+        repo_id: repo.id,
+        shape: { skipped_plan_because: "A one-line fix" },
+      },
+    },
+  ]);
+  const { key, id } = await started(page, "Fix the menu");
+  const there = join(dataDir, "worktrees", id);
+  let branch = "";
+  let held = "";
+
+  await test.step("its turn ends on the Mac mini, and this Mac holds its commit", async () => {
+    await expect
+      .poll(async () => (await view(page, id))?.executionDeviceId, { timeout: 60_000 })
+      .toBe(deviceId);
+    await expect
+      .poll(async () => (await view(page, id))?.activity, { timeout: 60_000 })
+      .toBe("idle");
+    branch = (await view(page, id))?.repo?.branch ?? "";
+    expect(branch).not.toBe("");
+    writeFileSync(join(there, "menu.html"), "<nav></nav>\n");
+    const git = (args: string[]) =>
+      execFileSync("git", ["-c", "user.name=E2E", "-c", "user.email=e2e@localhost", ...args], {
+        cwd: there,
+      })
+        .toString()
+        .trim();
+    git(["add", "menu.html"]);
+    git(["commit", "-qm", "the menu"]);
+    held = git(["rev-parse", "HEAD"]);
+    // e2e-typed-words: the captain asks the crewmate to carry on
+    await ask(app, `Ask ${key} to check the menu.`, [
+      { name: "steer_crewmate", args: { task_id: id, message: "Check the menu." } },
+    ]);
+    const homeBranch = () => {
+      try {
+        return execFileSync("git", ["rev-parse", `refs/heads/${branch}`], {
+          cwd: project,
+          stdio: ["ignore", "pipe", "ignore"],
+        })
+          .toString()
+          .trim();
+      } catch {
+        return "";
+      }
+    };
+    await expect.poll(homeBranch, { timeout: 60_000 }).toBe(held);
+  });
+
+  let again = "";
+  let againDir = "";
+  await test.step("the Mac mini stops, and joins again from a fresh data folder", async () => {
+    await expect
+      .poll(async () => (await view(page, id))?.activity, { timeout: 60_000 })
+      .toBe("idle");
+    await Promise.all(runs.splice(0).map((run) => run.stop()));
+    ({ deviceId: again, dataDir: againDir } = await joinComputer(
+      app,
+      "infinitary-e2e-computer-again-",
+    ));
+    expect(again).not.toBe(deviceId);
+  });
+
+  await test.step("Settings -> Devices names the earlier entry, and by keys its task carries on here", async () => {
+    await openDevices(page);
+    const newRow = page.locator(`[data-device-row="${again}"]`);
+    await expect(newRow.locator("[data-device-earlier]")).toHaveText(
+      m.settingsDevicesCarryEarlier({ count: 1 }),
+    );
+    // Both entries go by the label Settings -> Devices gives the new one.
+    const listed = await page.evaluate(() => window.infinitary.devices.list());
+    const entry = listed.find((each) => each.id === again);
+    if (!entry) throw new Error("The new entry is not on the list.");
+    const label = deviceLabel(entry);
+    const carry = newRow.locator("[data-device-carry-here]");
+    await expect(carry).toHaveAccessibleName(m.settingsDevicesCarryHereNamed({ device: label }));
+    await pressKey(carry, "Enter");
+    const question = page.locator(`[data-device-carrying="${again}"]`);
+    await expect(question.locator("[data-device-carry-ask]")).toHaveText(
+      m.settingsDevicesCarryAsk({ count: 1, to: label }),
+    );
+    const cancel = question.getByRole("button", { name: m.settingsDevicesCancel(), exact: true });
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Tab");
+    const confirm = question.locator("[data-device-carry-confirm]");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Enter");
+  });
+
+  await test.step("it runs on the new entry from that commit, with the same key and branch, and the earlier entry is gone", async () => {
+    await expect
+      .poll(async () => (await view(page, id))?.executionDeviceId, { timeout: 60_000 })
+      .toBe(again);
+    await expect
+      .poll(async () => (await view(page, id))?.computerMove, { timeout: 60_000 })
+      .toBeUndefined();
+    expect(await view(page, id)).toMatchObject({ key, status: "active" });
+    expect((await view(page, id))?.repo?.branch).toBe(branch);
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => window.infinitary.devices.list())).map((each) => each.id),
+        { timeout: 60_000 },
+      )
+      .not.toContain(deviceId);
+    await expect(page.locator(`[data-device-row="${deviceId}"]`)).toHaveCount(0);
+    // Its working copy on the new entry starts at the commit this Mac held.
+    const copy = join(againDir, "worktrees", id);
+    await expect.poll(() => existsSync(copy), { timeout: 60_000 }).toBe(true);
+    expect(execFileSync("git", ["rev-parse", "HEAD"], { cwd: copy }).toString().trim()).toBe(held);
+  });
 });

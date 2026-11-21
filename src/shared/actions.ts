@@ -651,8 +651,17 @@ const actionLines = {
     value: z.strictObject({ deviceId: z.string().min(1) }),
     line: `Remove a device when the captain asks: app_change offers the captain one card whose button removes it in Settings → Devices. Only the captain's click removes it; it is cut off at once and needs a new link or command to join again. A computer that runs work has its tasks stopped and its unmerged work brought here first, then removes what was set up there, and its projects run on ${HERE.this}. Name it by its id from app_state.`,
     toRequest: (v) => [v.deviceId],
+    // `earlier` names an entry out of reach that this one joined again
+    // after, and `carriesOn` one whose tasks Settings -> Devices can carry
+    // on elsewhere (docs/devices.md, "Joined again").
     readValue: (c) => ({
-      devices: (c as DeviceView[]).map(({ id, kind, name }) => ({ id, kind, name })),
+      devices: (c as DeviceView[]).map(({ id, kind, name, earlier, carriesOn }) => ({
+        id,
+        kind,
+        name,
+        ...(earlier?.length ? { earlier } : {}),
+        ...(carriesOn ? { carriesOn } : {}),
+      })),
     }),
     done: (v) => deviceWords.removed(v.device as DeviceView),
     offer: (v, c) => {

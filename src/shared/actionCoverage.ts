@@ -68,6 +68,9 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "A paired phone handing where its cards are pushed; not an app setting, and only that phone hands it",
   "inf:devices:fold":
     "A Mac's own window folds its second row into the one its work keeps, proved by that row's key; never a first mate operation",
+  // i18n-exempt: a channel's coverage reason, read by the coverage check, never shown
+  "inf:devices:carry-on":
+    "The captain's own Carry its tasks on in Settings -> Devices, after its one question; the first mate moves a task off a computer out of reach with move_task's leave_behind on the captain's yes",
   "inf:devices:keep":
     "Keep it: takes back the captain's own wait to remove a computer once it is back; nothing is set",
   "inf:devices:add": `Adds a ${COMPUTER.one} over Remote Login on the captain's click in Settings; device-invite only offers the card, and the feed says each step`,

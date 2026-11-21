@@ -1,3 +1,4 @@
+import { englishOf, type Said } from "@shared/i18n/said";
 import {
   type AwayCopy,
   type CommittedPlacement,
@@ -418,9 +419,19 @@ export class TaskPlacement {
   /**
    * One computer's two entries became one (docs/devices.md, "One computer,
    * one entry"): each live task's own Runs on that names the entry that went
-   * names the one kept instead. Answers their ids.
+   * names the one kept instead. Answers their ids. A caller moving them for
+   * another reason, such as carrying a computer's tasks on (docs/devices.md,
+   * "Joined again"), passes the record `line` that says why.
    */
-  moveRunsOn(from: string, into: string, words: string): string[] {
+  moveRunsOn(
+    from: string,
+    into: string,
+    words: string,
+    line: string | Said = `Runs on: ${words}, the one row its computer keeps now`,
+  ): string[] {
+    // A line in the app's words is saved as a fact beside its English (docs/i18n.md, "Saved facts").
+    const text = typeof line === "string" ? line : englishOf(line);
+    const data = typeof line === "string" ? undefined : { said: line };
     const at = this.writer.now();
     const run = this.writer.write(() =>
       this.writer.store.listByStatus("open", "active").flatMap((record) => {
@@ -434,7 +445,8 @@ export class TaskPlacement {
           at,
           actor: "host",
           kind: "note",
-          text: `Runs on: ${words}, the one row its computer keeps now`,
+          text,
+          ...(data ? { data } : {}),
         });
         return [record.id];
       }),

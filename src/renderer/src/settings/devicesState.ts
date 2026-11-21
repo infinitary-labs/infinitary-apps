@@ -275,7 +275,14 @@ export const useSetups = create<SetupStore>((set, get) => {
 });
 
 /** Which click is under way: making a link or a command, or removing a device. */
-export type Busy = "link" | "remove" | null;
+export type Busy = "link" | "remove" | "carry" | null;
+
+/**
+ * Carry its tasks on's question (docs/devices.md, "Joined again"): asked
+ * from `row`, for the tasks of `from`, a computer out of reach; `to` is the
+ * row that joined again, or absent while the captain picks where they go.
+ */
+export type CarryAsk = { row: string; from: string; to?: string };
 
 export type DevicesTabViewProps = {
   devices: DeviceView[];
@@ -358,6 +365,12 @@ export type DevicesTabViewProps = {
   onUpdate: (device: DeviceView) => void;
   onRemove: (deviceId: string, when?: DeviceRemoveWhen) => void;
   onKeep: (deviceId: string) => void;
+  /** Carry its tasks on's open question; absent where it cannot be asked. */
+  carrying?: CarryAsk | null;
+  /** Opens Carry its tasks on's question, or closes it with null. */
+  onAskCarry?: (ask: CarryAsk | null) => void;
+  /** The captain's yes: the tasks of `from` continue on `to`. */
+  onCarry?: (from: string, to: string) => void;
   /** Try again: this Mac's own SSH connection to a computer it stopped trying. */
   onTryAgain: (deviceId: string) => void;
   /**

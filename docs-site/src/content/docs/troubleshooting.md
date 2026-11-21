@@ -73,6 +73,21 @@ On a Mac, macOS may hold Infinitary off the local network until someone at that 
 Its row then offers **Add it by its address** instead.
 See [Your other computers](/your-other-computers/).
 
+## A computer is listed twice
+
+Settings → **Devices** shows the same name twice: one row in reach, and one out of reach with tasks still on it.
+This happens when a computer that runs work joins again after its saved work was deleted, or after Infinitary was installed fresh there.
+The row in reach says "An earlier entry with this name and user is out of reach".
+
+1. On the row in reach, press **Carry its tasks on here**.
+2. Read what continues and what stays behind, then press **Carry them on**.
+3. Each task continues from the last commit the computer where your first mate lives brought home.
+   The earlier row comes off your list once every task has moved.
+
+Commits after that one, edits not committed and files in the old task folders stay with the old entry.
+For a row out of reach with no match, press **Move its tasks to…** and choose a computer.
+See [What deletes your saved work](/update-and-remove/#what-deletes-your-saved-work).
+
 ## The window stops answering
 
 Wait a moment first.

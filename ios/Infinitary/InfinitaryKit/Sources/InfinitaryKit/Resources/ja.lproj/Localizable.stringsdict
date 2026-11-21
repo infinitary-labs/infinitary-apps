@@ -339,6 +339,20 @@
       <string>+%1$ld行</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld件のタスクが連絡がつかない%2$@に残ったため、リストに残ります。</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1387,6 +1401,34 @@
       <string>ld</string>
       <key>other</key>
       <string>新しいイベントが届くたびに実行します。Infinitary は%1$ld分ごとに確認します。</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld件のタスクが%2$@で続きます。それぞれ、このコンピューターが持ち帰った最後のコミットから続きます。</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>同じ名前とユーザーの以前の項目が連絡がつきません。%1$ld件のタスクが待っています。</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

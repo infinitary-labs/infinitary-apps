@@ -339,6 +339,20 @@
       <string>+%1$ld줄</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>작업 %1$ld개가 연락 닿지 않는 %2$@에 남아 있어 목록에 남습니다.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1387,6 +1401,34 @@
       <string>ld</string>
       <key>other</key>
       <string>새 이벤트가 올 때마다. Infinitary는 %1$ld분마다 확인해요.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>작업 %1$ld개가 %2$@에서 이어집니다. 각각 이 컴퓨터가 가져온 마지막 커밋부터 이어집니다.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>같은 이름과 사용자의 이전 항목이 연락 닿지 않음 상태이며, 작업 %1$ld개가 기다리고 있습니다.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

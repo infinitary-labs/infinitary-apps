@@ -45,8 +45,35 @@ export const TEST_PROCESS_MEMORY_BYTES = 2 * 1024 ** 3;
  * files with ten workers peaked at 11.2 GiB on a Mac.
  */
 export function inMemoryWorkers({ cores, memoryBytes }: { cores: number; memoryBytes: number }): number {
-  const byMemory = Math.floor(memoryBytes / TEST_PROCESS_MEMORY_BYTES) - 1;
-  return Math.max(1, Math.min(Math.max(2, cores - 1), byMemory));
+  return Math.max(1, Math.min(Math.max(2, cores - 1), workersMemoryHolds(memoryBytes)));
+}
+
+/**
+ * How many workers the integration cohort, and the probes beside it, start:
+ * one per core up to eight on a Mac, four elsewhere, as long as the computer's
+ * memory holds each and Vitest's own process at `TEST_PROCESS_MEMORY_BYTES`;
+ * always one. An integration worker's share holds the programs its file
+ * starts as well as the worker: the file that runs the quick check held 2.3 GB
+ * with its programs. INF-5632: four on a Linux place with 2 cores and 8 GB
+ * with no swap left 278 MiB free beside Vitest's own 1.4 GiB, and the kernel
+ * ended Vitest's process for memory in the branch check's last reach run.
+ */
+export function integrationWorkers({
+  platform,
+  cores,
+  memoryBytes,
+}: {
+  platform: NodeJS.Platform;
+  cores: number;
+  memoryBytes: number;
+}): number {
+  const byCores = platform === "darwin" ? Math.min(8, cores) : 4;
+  return Math.max(1, Math.min(byCores, workersMemoryHolds(memoryBytes)));
+}
+
+/** The workers the computer's memory holds beside Vitest's own process, a share each. */
+function workersMemoryHolds(memoryBytes: number): number {
+  return Math.floor(memoryBytes / TEST_PROCESS_MEMORY_BYTES) - 1;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

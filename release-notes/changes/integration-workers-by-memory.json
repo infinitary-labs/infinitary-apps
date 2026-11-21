@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "integration-workers-by-memory",
+      "reason": "The project's own test runs start no more integration test workers than the computer's memory holds, so the branch check's tests are not ended for memory on a small Linux runner; nothing in the app changes."
+    }
+  ]
+}

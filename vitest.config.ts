@@ -5,7 +5,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { PROBE_FILES } from "./scripts/affected-probes.ts";
 import { writeCompiledMessages } from "./scripts/generate-messages.ts";
-import { inMemoryWorkers, jobCores, jobMemory } from "./scripts/job-cores.ts";
+import { inMemoryWorkers, integrationWorkers, jobCores, jobMemory } from "./scripts/job-cores.ts";
 import { FRAME_FOCUS_BLINK_FEATURE } from "./src/shared/plugins/containment.ts";
 import { browserCommands } from "./tests/helpers/browserCommands.ts";
 import TimeBalancedSequencer from "./tests/helpers/timeBalancedSequencer.ts";
@@ -166,6 +166,14 @@ const isolatedUnit = [
 // The in-memory cohorts share one group, so one count: a worker per core but
 // one, and no more than the computer's memory holds (scripts/job-cores.ts).
 const inMemory = inMemoryWorkers({ cores: jobCores(), memoryBytes: jobMemory() });
+// Real git, pnpm and child processes: eight on Mac, or fewer for a job sized
+// smaller, four elsewhere, and no more than the computer's memory holds with
+// the programs each file starts (scripts/job-cores.ts).
+const withPrograms = integrationWorkers({
+  platform: process.platform,
+  cores: jobCores(process.env, 8),
+  memoryBytes: jobMemory(),
+});
 
 export default defineConfig({
   resolve: {
@@ -247,11 +255,9 @@ export default defineConfig({
             "./tests/helpers/scratchDirCleanup.ts",
             "./tests/helpers/waitWindow.ts",
           ],
-          // Real git, pnpm and child processes: eight on Mac, or fewer for a job
-          // sized smaller (scripts/job-cores.ts), four elsewhere, after the
-          // in-memory cohorts finish, so the suite is not its own load
-          // generator. Each file states its own budget; the default stays 5 s.
-          maxWorkers: process.platform === "darwin" ? Math.min(8, jobCores(process.env, 8)) : 4,
+          // After the in-memory cohorts finish, so the suite is not its own
+          // load generator. Each file states its own budget; the default stays 5 s.
+          maxWorkers: withPrograms,
           sequence: { groupOrder: 1 },
         },
       },
@@ -318,13 +324,8 @@ export default defineConfig({
           ],
           // On two-CPU Linux runners even two probe workers compete with the
           // plain-Node CLI children and Vite transforms they start. Run one
-          // probe file at a time there; keep the existing larger-host limits.
-          maxWorkers:
-            process.platform === "darwin"
-              ? Math.min(8, jobCores(process.env, 8))
-              : process.platform === "linux" && jobCores() <= 2
-                ? 1
-                : 4,
+          // probe file at a time there; elsewhere, the integration cohort's count.
+          maxWorkers: process.platform === "linux" && jobCores() <= 2 ? 1 : withPrograms,
           sequence: { groupOrder: 2 },
         },
       },

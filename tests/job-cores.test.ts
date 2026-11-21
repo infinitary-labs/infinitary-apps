@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { ciJourneyWorkers, journeyRunNeeds } from "../scripts/heavy-run-place.ts";
-import { inMemoryWorkers, jobCores, TEST_PROCESS_MEMORY_BYTES } from "../scripts/job-cores.ts";
+import {
+  inMemoryWorkers,
+  integrationWorkers,
+  jobCores,
+  TEST_PROCESS_MEMORY_BYTES,
+} from "../scripts/job-cores.ts";
 import { E2E_MAX_WORKERS } from "./e2e/lanes.ts";
 
 // A compute Mac's Linux guest's own readings: 11 cores and 9,065 MiB of
 // memory with no swap (INF-5103).
 const GUEST = { cores: 11, memoryBytes: 9065 * 1024 ** 2 };
+// A PC's Linux place's own readings: 2 cores and 7,941 MiB with no swap (INF-5632).
+const PC_PLACE = { cores: 2, memoryBytes: 7941 * 1024 ** 2 };
 // This Mac mini's own readings: 14 cores and 64 GiB.
 const MAC_MINI = { cores: 14, memoryBytes: 64 * 1024 ** 3 };
 
@@ -38,6 +45,38 @@ describe("inMemoryWorkers", () => {
 
   it("keeps a worker per core but one where memory is no bound", () => {
     expect(inMemoryWorkers(MAC_MINI)).toBe(13);
+  });
+});
+
+describe("integrationWorkers", () => {
+  // INF-5632, the bug a PC's Linux place found: four integration workers there
+  // ran the quick check's programs and the phone's generated-file checks
+  // beside Vitest's own 1.4 GiB process, 278 MiB stayed free, and the kernel
+  // ended Vitest's process in the branch check's last reach run. The place's
+  // own readings stand in for the computer.
+  it("starts no more workers than a 2-core, 8 GB place's memory holds beside Vitest's own process", () => {
+    const workers = integrationWorkers({ platform: "linux", ...PC_PLACE });
+    expect((workers + 1) * TEST_PROCESS_MEMORY_BYTES).toBeLessThanOrEqual(PC_PLACE.memoryBytes);
+    expect(workers).toBeLessThan(4);
+    expect(workers).toBeGreaterThan(1);
+  });
+
+  it("holds a compute Mac's Linux guest to its memory too", () => {
+    const workers = integrationWorkers({ platform: "linux", ...GUEST });
+    expect((workers + 1) * TEST_PROCESS_MEMORY_BYTES).toBeLessThanOrEqual(GUEST.memoryBytes);
+    expect(workers).toBeLessThan(4);
+  });
+
+  it("keeps eight on a Mac, the job's named size, and four elsewhere where memory is no bound", () => {
+    expect(integrationWorkers({ platform: "darwin", ...MAC_MINI })).toBe(8);
+    expect(integrationWorkers({ platform: "darwin", ...MAC_MINI, cores: 6 })).toBe(6);
+    expect(integrationWorkers({ platform: "linux", cores: 4, memoryBytes: 16 * 1024 ** 3 })).toBe(
+      4,
+    );
+  });
+
+  it("always starts one", () => {
+    expect(integrationWorkers({ platform: "linux", cores: 2, memoryBytes: 1024 ** 3 })).toBe(1);
   });
 });
 

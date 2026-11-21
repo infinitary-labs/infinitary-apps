@@ -33,8 +33,9 @@ name: phone
 # device run one job, matrix device "every", whose gate runs every device's lanes from one build on
 # one phone Mac and keeps one part-times.json.
 # INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
-# chooser builds the passes its device jobs ran and deals them into jobs of at most 19 recorded minutes
-# (scripts/affected-phone.ts, `dealPhonePasses`), one phone Mac each, side by side, each stopped at 25 minutes.
+# chooser builds the passes its device jobs ran and deals them into jobs of at most 14 recorded minutes, each device
+# past a job's first counted as 2 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546), one phone Mac each, side
+# by side, each stopped at 25 minutes.
 # The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
 on:
   workflow_call:
@@ -231,8 +232,9 @@ jobs:
       group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.key) }}
       queue: max
       cancel-in-progress: false
-    # INF-5387's plan, piece 2: a dealt job of at most 19 recorded minutes ends near 13 minutes on a phone Mac with two
-    # simulators and 19 on one with one, setup included, so it is stopped at 25. A call keeps its limit for setup,
+    # INF-5387's plan, piece 2, and INF-5546: a dealt job of at most 14 recorded minutes, a later device's start
+    # included, ends its gate near 19.5 minutes on a phone Mac with one simulator and sooner on one with two, and setup
+    # and evidence upload add up to about 3, so it is stopped at 25. A call keeps its limit for setup,
     # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
     # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
     timeout-minutes: ${{ matrix.passes && 25 || 345 }}

@@ -30,6 +30,7 @@ import {
   swiftFunctions,
   UI_TESTS,
 } from "../scripts/affected-phone";
+import { PHONE_JOB_BUDGET_MS } from "../scripts/phone-deadlines";
 import { phoneFileOwners, unownedPhoneFiles } from "../scripts/phone-part-owners";
 import {
   devicePartNames,
@@ -41,8 +42,8 @@ import {
   partDevices,
   partOnMac,
   partSelection,
+  phoneJobMs,
   phonePasses,
-  phonePassMs,
   readPhonePlan,
 } from "../scripts/phone-test-plan";
 
@@ -1168,9 +1169,10 @@ describe("a phone re-run after a pass", () => {
 
 // INF-5387's plan, piece 2 (the captain's "how can we make them last <30m at max", and the approved plan's "A unit
 // test holds that the dealt jobs equal today's pass list exactly"): a manual request's passes are dealt into jobs of at
-// most 19 recorded minutes. Today's pass list is what phone.yml's job of each device ran before: its gate step built
-// arguments from the chooser's outputs, and scripts/test-phone.ts built the passes from them. Both are transcribed here
-// as they stood, and the selections are the chooser's own for generated changes over the real part table.
+// most the job budget's recorded minutes. Today's pass list is what phone.yml's job of each device ran before: its gate
+// step built arguments from the chooser's outputs, and scripts/test-phone.ts built the passes from them. Both are
+// transcribed here as they stood, and the selections are the chooser's own for generated changes over the real part
+// table.
 describe("a request dealt into jobs", () => {
   const RECORDED = JSON.parse(readFileSync(PHONE_PART_TIMES, "utf8"));
   // phone.yml's gate step for one device job, before the request was dealt: the arguments it handed test-phone.
@@ -1284,14 +1286,16 @@ describe("a request dealt into jobs", () => {
     // The generated selections include requests dealt into several jobs, not only single ones.
     expect(dealtRequests).toBeGreaterThan(10);
   });
-  it("deals today's complete request into five jobs of at most 19 recorded minutes", () => {
+  it("deals today's complete request into as few jobs of the job budget as it needs", () => {
     const complete = chooseRequest(EVERY_PART, [], { explicit: true });
     const jobs = requestJobs(complete, RECORDED);
-    const minutes = (passes: readonly PhoneJob[]) =>
-      passes.reduce((sum, pass) => sum + phonePassMs(pass, RECORDED), 0) / 60_000;
-    const total = minutes(jobs.flatMap((job) => job.passes));
-    expect(jobs.length).toBe(Math.ceil(total / 19));
-    for (const job of jobs) expect(minutes(job.passes)).toBeLessThanOrEqual(19);
+    for (const job of jobs)
+      expect(phoneJobMs(job.passes, RECORDED)).toBeLessThanOrEqual(PHONE_JOB_BUDGET_MS);
+    for (const [at, job] of jobs.entries())
+      for (const other of jobs.slice(at + 1))
+        expect(phoneJobMs([...job.passes, ...other.passes], RECORDED)).toBeGreaterThan(
+          PHONE_JOB_BUDGET_MS,
+        );
     expect(jobs.map((job) => job.key)).toEqual(jobs.map((_, index) => `job-${index + 1}`));
     // The Mac part reuses the package tests' build, so it rides the first job, which runs them.
     expect(jobs[0]!.passes.some((pass) => partOnMac(pass.part))).toBe(true);

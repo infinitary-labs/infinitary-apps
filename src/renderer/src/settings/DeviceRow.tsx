@@ -263,7 +263,9 @@ export function DeviceRow({
               data-tone={notice.tone}
               {...notice.hook}
             >
-              <span className="fm-devices-notice-text">{notice.text}</span>
+              <span className="fm-devices-notice-text" data-notice-text="">
+                {notice.text}
+              </span>
               {notice.act}
             </div>
           ))}

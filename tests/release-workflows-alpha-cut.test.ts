@@ -420,20 +420,42 @@ describe("an alpha with nothing new to build", () => {
       expect(result.commands).toEqual([]);
     });
 
-    it("cuts beside a stable rehearsal, a requested alpha, a finished stable and a run with no job yet", async () => {
+    /**
+     * INF-5587: rolling alpha run 12 cut 0.8.5-alpha.12 while stable dry run
+     * 11 rehearsed promoting 0.8.5-alpha.6, the step before that promotion;
+     * an alpha cut beside the rehearsal is still cutting when the promotion
+     * that follows publishes 0.8.5, the order INF-3648's skip prevents.
+     */
+    it("starts no rolling cut while a stable rehearsal is still going", async () => {
+      const rehearsal = { channel: "stable", promote: "0.8.5-alpha.6", dry_run: true };
+      const rehearsing = { id: 511, run_number: 511, status: "in_progress", html_url: url(511) };
+      const jobs = { 511: promotionJobs(rehearsal) };
+      const result = await runGate([], jobs, changed, "", [rehearsing]);
+      expect(jobs[511][0]?.name).toBe("Requested stable rehearsal · Select source and version");
+      expect(result.skip).toBe("true");
+      expect(result.summary).toContain(url(511));
+      expect(result.summary).toContain("A stable is being rehearsed");
+      expect(result.commands).toEqual([]);
+    });
+
+    it("cuts beside an alpha rehearsal, a requested alpha, a finished stable or rehearsal and a run with no job yet", async () => {
       const runs: Run[] = [
         { id: 511, run_number: 511, status: "in_progress", html_url: url(511) },
         { id: 512, run_number: 512, status: "in_progress", html_url: url(512) },
         { id: 509, run_number: 509, status: "completed", html_url: url(509) },
+        { id: 510, run_number: 510, status: "completed", html_url: url(510) },
         { id: 513, run_number: 513, status: "queued", html_url: url(513) },
       ];
+      const finished = (inputs: Record<string, unknown>) =>
+        promotionJobs(inputs).map((job) => ({ ...job, conclusion: "success" }));
       const jobs = {
-        511: promotionJobs({ ...stable, dry_run: true }),
+        511: promotionJobs({ channel: "alpha", dry_run: true }),
         512: promotionJobs({ channel: "alpha", dry_run: false }),
-        509: promotionJobs(stable).map((job) => ({ ...job, conclusion: "success" })),
+        509: finished(stable),
+        510: finished({ ...stable, dry_run: true }),
       };
       const result = await runGate([], jobs, changed, "", runs);
-      expect(jobs[511][0]?.name).toBe("Requested stable rehearsal · Select source and version");
+      expect(jobs[511][0]?.name).toBe("Requested alpha rehearsal · Select source and version");
       expect(result.skip).toBe("false");
       expect(result.reads).toEqual(["release.yml"]);
       expect(result.commands).toHaveLength(1);

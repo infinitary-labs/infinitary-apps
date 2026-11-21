@@ -818,20 +818,21 @@ export async function startApp(
           stopRun();
         });
       // Windows ends a program another one signals with no clean stop, so a
-      // stop is asked through the data folder there (docs/run.md, "On Windows").
-      if (hostPlatform() === "win32")
-        // A stop asked of another run by its process leaves this one going.
-        watchRunStop(
-          app.getPath("userData"),
-          runStartedAt,
-          () => {
-            if (stopping) return;
-            runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
-            stopRun();
-          },
-          undefined,
-          { pid: process.pid, startedAt: runStartedAt.toISOString() },
-        );
+      // stop is asked through the data folder there (docs/run.md, "On Windows");
+      // everywhere, a stop for this run alone is asked so, by its process and
+      // start, since a signal's process number may have passed to another.
+      // A stop asked of another run by its process leaves this one going.
+      watchRunStop(
+        app.getPath("userData"),
+        runStartedAt,
+        () => {
+          if (stopping) return;
+          runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
+          stopRun();
+        },
+        undefined,
+        { pid: process.pid, startedAt: runStartedAt.toISOString() },
+      );
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {

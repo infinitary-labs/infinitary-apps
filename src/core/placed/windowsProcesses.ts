@@ -47,6 +47,9 @@ const PROCESS_TERMINATE = 0x0001;
 const PROCESS_VM_READ = 0x0010;
 const PROCESS_SET_QUOTA = 0x0100;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+const SYNCHRONIZE = 0x0010_0000;
+/** `WaitForSingleObject`'s answer for a program that has ended. */
+const WAIT_OBJECT_0 = 0;
 /** `JOB_OBJECT_QUERY | JOB_OBJECT_ASSIGN_PROCESS | JOB_OBJECT_SET_ATTRIBUTES`. */
 const JOB_ACCESS = 0x0004 | 0x0001 | 0x0010;
 /** `JobObjectBasicProcessIdList`. */
@@ -213,6 +216,8 @@ type Native = {
     user: Buffer,
   ) => number;
   closeHandle: (handle: Handle) => number;
+  terminate: (process: Handle, exitCode: number) => number;
+  wait: (handle: Handle, ms: number) => number;
   createJob: (attributes: null, name: string) => Handle;
   openJob: (access: number, inherit: number, name: string) => Handle;
   assign: (job: Handle, process: Handle) => number;
@@ -250,6 +255,10 @@ function system(): Native {
       "int32_t __stdcall GetProcessTimes(void *process, _Out_ void *created, _Out_ void *exited, _Out_ void *kernel, _Out_ void *user)",
     ),
     closeHandle: kernel32.func("int32_t __stdcall CloseHandle(void *handle)"),
+    // i18n-exempt: a native function's signature, read by no person
+    terminate: kernel32.func("int32_t __stdcall TerminateProcess(void *process, uint32_t code)"),
+    // i18n-exempt: a native function's signature, read by no person
+    wait: kernel32.func("uint32_t __stdcall WaitForSingleObject(void *handle, uint32_t ms)"),
     createJob: kernel32.func(
       "void * __stdcall CreateJobObjectW(void *attributes, const char16_t *name)",
     ),
@@ -400,6 +409,48 @@ export function readWindowsPlaces(
 /** A program's file name, as its holder's name (`node.exe`). */
 export function programName(image: string): string {
   return basename(image.replace(/\\/g, "/"));
+}
+
+/**
+ * The program under `pid`, opened once: its birth, its end by force and
+ * whether it has ended are each asked through that one handle, which keeps
+ * naming that program after it ends, so a later program given its number is
+ * never read or ended. Null where none can be opened: none runs under it,
+ * or it is not this account's to end.
+ */
+export function openWindowsProgram(pid: number): {
+  bornMs: number | undefined;
+  end: () => void;
+  ended: () => Promise<boolean>;
+  close: () => void;
+} | null {
+  try {
+    const { openProcess, closeHandle, terminate, wait, processTimes } = system();
+    const process = openProcess(
+      PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE,
+      0,
+      pid,
+    );
+    if (!process) return null;
+    const created = Buffer.alloc(8);
+    const born = processTimes(process, created, Buffer.alloc(8), Buffer.alloc(8), Buffer.alloc(8))
+      ? Number(created.readBigInt64LE(0) / TICKS_PER_MS - FILETIME_EPOCH_MS)
+      : undefined;
+    let open = true;
+    return {
+      bornMs: born,
+      end: () => {
+        if (!terminate(process, 1)) throw new Error("The program could not be ended.");
+      },
+      ended: async () => wait(process, 0) === WAIT_OBJECT_0,
+      close: () => {
+        if (open) closeHandle(process);
+        open = false;
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** The birth of a living program, read from its own handle. */

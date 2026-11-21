@@ -602,6 +602,7 @@
 "commandMoveRightWords" = "arrow, right, next";
 "commandMoveUp" = "Move up";
 "commandMoveUpWords" = "arrow, up, previous";
+"commandNoticeNotAnsweringRetry" = "Your first mate is running but not answering. Wait for it, or start it here to connect to it again.";
 "commandNoticeWindowCrashed" = "Your first mate stopped without saying why and has not started again. Start it here to start it again.";
 "commandNoticeWindowNotAnswering" = "Your first mate is running but not answering. Restart it to stop it and start it again, or wait for it.";
 "commandNoticeWindowRestarting" = "Your first mate stopped and is starting again. This window waits for it.";

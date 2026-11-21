@@ -180,6 +180,10 @@ export class BesideWindow {
   private answering: Promise<void> | null = null;
   private welcomed = false;
   private closed = false;
+  /** Start it here is stopping a command that does not answer: nothing else is sent until the app starts again. */
+  private recovering = false;
+  /** Reads the records again while they say nothing of whose run a silent one is (`notAnswering`). */
+  private ownerTimer: ReturnType<typeof setInterval> | null = null;
   /** When this window last started the command, until that one welcomes it. */
   private startedAt: number | null;
   /**
@@ -230,6 +234,8 @@ export class BesideWindow {
   joinState(): { owned: OwnedRun | null } | "starting" | "outside" | "unknown" {
     const status = this.options.beside.status();
     if (!this.startsCommand) return status.running === true ? "outside" : "unknown";
+    // Start it here is stopping a silent command: no join is offered until the app starts again.
+    if (this.recovering) return "starting";
     // The same reading settles Restart it, or a start, and names what a join stops.
     this.settleRestart(status);
     this.settleStart(status);
@@ -393,9 +399,12 @@ export class BesideWindow {
    * or its records cannot be read.
    */
   startHere(): boolean {
-    if (this.shown?.state !== "stopped" || this.restart?.settled === false) return false;
-    // A command that runs and does not answer is stopped first, never run beside.
+    if (this.shown?.state !== "stopped" || this.restart?.settled === false || this.recovering)
+      return false;
+    // A command that runs and does not answer is stopped first, never run beside, and nothing else
+    // - a second press, Restart it or a join - is sent while it is being stopped.
     if (this.shown.ending === "not-answering") {
+      this.recovering = true;
       void this.stopUnanswered(this.shown.byWindow === true);
       return true;
     }
@@ -432,7 +441,8 @@ export class BesideWindow {
       this.shown?.ending !== "not-answering" ||
       this.shown.byWindow !== true ||
       !starter ||
-      this.restart?.settled === false
+      this.restart?.settled === false ||
+      this.recovering
     )
       return false;
     const since = this.unansweredSince;
@@ -460,21 +470,27 @@ export class BesideWindow {
       restart.refused = outcome !== "restarted";
       if (this.closed || this.restart !== restart) return;
       const status = this.options.beside.status();
-      // Nothing was ended or started: the run named is not the one its agent holds now. The window
-      // stands as before the press, and the run there is read, and counted, on its own wait.
+      // Nothing was ended or started: the run named is not one its agent started that still runs,
+      // or its program could not be shown to be that run. The window stands as before the press.
       if (outcome === "untouched") {
         this.restart = null;
         this.restarting = false;
         this.startedAt = restart.startedBefore;
         this.settleStart(status);
-        if (sameRun(outgoing, joinedRun(status))) {
-          this.unansweredRun = outgoing;
-          this.unansweredSince = since;
-          this.show(this.notAnswering(status));
-        } else {
-          this.show(null);
-          this.away();
+        // While the window is still connected, only that connection's answers count: no reading of
+        // the records times a run there, which has not been asked anything.
+        if (this.window.inReach()) this.stopReading();
+        else this.away();
+        // A first mate that answered or welcomed meanwhile keeps its answer, or its own wait for one.
+        if (this.wanted?.ending !== "restart") {
+          this.show(this.wanted);
+          return;
         }
+        // Still the one that has not answered: its notice again, naming that run while it holds the
+        // folder. A run there since is named by nobody's silence, so that notice ends nothing.
+        this.unansweredRun = sameRun(outgoing, joinedRun(status)) ? outgoing : null;
+        this.unansweredSince = since;
+        this.show(this.notAnswering(status));
         return;
       }
       if (outcome === "failed") {
@@ -613,6 +629,7 @@ export class BesideWindow {
     // A window closed before its first welcome lets what waited go; its closed link refuses it.
     this.letHeldGo();
     this.stopReading();
+    this.stopOwnerLater();
     this.notices.stop();
     this.window.close();
   }
@@ -787,11 +804,43 @@ export class BesideWindow {
       starter !== undefined &&
       this.unansweredRun !== null &&
       sameRun(ownedRun?.(status) ?? null, this.unansweredRun);
+    // Records that cannot be read say nothing of whose run it is: they are read again until they say.
+    if (starter && this.unansweredRun !== null && status.running === null) this.ownerLater();
     return {
       state: "stopped",
       ending: "not-answering",
       ...(own ? { byWindow: true as const } : {}),
+      // Naming no run, its Start it here stops nothing: the app starting again joins whichever does.
+      ...(this.unansweredRun === null ? { retries: true as const } : {}),
     };
+  }
+
+  /**
+   * The notice that a run does not answer went up while its records could
+   * not be read, so it could not say whether the starter's own agent started
+   * that run. Once they read again, the notice for that same run is drawn
+   * anew, with Restart it where the agent did; never for another run, which
+   * gets a wait of its own.
+   */
+  private ownerLater(): void {
+    if (this.ownerTimer || this.closed) return;
+    const target = this.unansweredRun;
+    this.ownerTimer = setInterval(() => {
+      const status = this.options.beside.status();
+      const still =
+        !this.closed &&
+        this.wanted?.ending === "not-answering" &&
+        sameRun(this.unansweredRun, target);
+      if (still && status.running === null) return;
+      this.stopOwnerLater();
+      if (still) this.show(this.notAnswering(status));
+    }, BESIDE_RUN_READ_MS);
+    this.ownerTimer.unref?.();
+  }
+
+  private stopOwnerLater(): void {
+    if (this.ownerTimer) clearInterval(this.ownerTimer);
+    this.ownerTimer = null;
   }
 
   private answerWaitMs(): number {
@@ -1076,7 +1125,8 @@ export class BesideWindow {
     if (
       was?.state === notice?.state &&
       was?.ending === notice?.ending &&
-      was?.byWindow === notice?.byWindow
+      was?.byWindow === notice?.byWindow &&
+      was?.retries === notice?.retries
     )
       return;
     this.shown = notice;

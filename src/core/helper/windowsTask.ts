@@ -423,16 +423,17 @@ try {
 /**
  * A stop asked of the run on this data folder where no signal can ask it
  * (docs/run.md, "On Windows"): Windows ends a program another one signals at
- * once, with no clean stop, so Stop, a window that lets the command go and
- * Ctrl-C's equivalent from another program write this file instead, and the
- * run stops as a signal stops it on a Mac or Linux (`watchRunStop`).
+ * once, with no clean stop, so Stop and Ctrl-C's equivalent from another
+ * program write this file instead, and the run stops as a signal stops it on
+ * a Mac or Linux (`watchRunStop`).
  */
 export const RUN_STOP_FILE = "run-stop.json";
 
 /**
- * A stop asked of one run alone, by its process and start: a file of its own,
- * which a run from an earlier version never reads, so only the run it names
- * acts on it (`watchRunStop`).
+ * A stop asked of one run alone, by its process and start, on every system:
+ * a signal goes to a process number, which another program may have taken by
+ * the time it arrives. A file of its own, which a run from an earlier version
+ * never reads, so only the run it names acts on it (`watchRunStop`).
  */
 export const RUN_STOP_FOR_FILE = "run-stop-for.json";
 
@@ -484,12 +485,13 @@ export function requestRunStop(
   }
 }
 
-/** How often a run on Windows reads whether a stop was asked of it. */
+/** How often a run reads whether a stop was asked of it through its folder. */
 export const RUN_STOP_READ_MS = 1_000;
 
 /**
- * A run on Windows reads whether a stop was asked of it once a second and
- * stops once one written after its own start is there: one for whichever
+ * A run reads whether a stop was asked of it through its folder once a
+ * second and stops once one written after its own start is there: on
+ * Windows, where no signal asks it, one for whichever
  * runs here (`RUN_STOP_FILE`), or one naming this run, `run`, by its process
  * and start (`RUN_STOP_FOR_FILE`). A request left from before it started, one
  * naming another run, one naming a run when this one knows no identity, and

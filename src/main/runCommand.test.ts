@@ -1,7 +1,8 @@
-import { renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { RUN_AGENT_ENV } from "@core/helper/background";
+import { RUN_STOP_FOR_FILE } from "@core/helper/windowsTask";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
@@ -207,6 +208,28 @@ describe("a window opened beside a run", () => {
     ).toBe(true);
     expect(signalled).toEqual([4242]);
     expect(targets).toEqual([owned]);
+  });
+
+  // The review of INF-5409: a stop for one run alone is asked through the folder by that run's
+  // process and start, on every computer, and no signal goes to its process number, which another
+  // program may have taken by the time it arrives; only that run reads the ask as its own.
+  it("asks a stop for one run through its folder, by its process and start, sending no signal", () => {
+    const dataDir = scratchDir("infinitary-run-marker-");
+    const alive = (pid: number) => pid === 4242;
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
+    symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
+    const owned = ownedRun(dataDir, alive);
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
+    try {
+      expect(stopRunningCommand(dataDir, alive, undefined, owned ?? undefined)).toBe(true);
+      expect(kill).not.toHaveBeenCalled();
+    } finally {
+      kill.mockRestore();
+    }
+    expect(JSON.parse(readFileSync(join(dataDir, RUN_STOP_FOR_FILE), "utf8"))).toMatchObject({
+      pid: 4242,
+      startedAt: "2026-10-25T17:00:00.000Z",
+    });
   });
 
   it("reads a note a crashed run left as nothing running", () => {

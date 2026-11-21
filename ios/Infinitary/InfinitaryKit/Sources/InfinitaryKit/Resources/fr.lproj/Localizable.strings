@@ -602,6 +602,7 @@
 "commandMoveRightWords" = "flèche, droite, suivant";
 "commandMoveUp" = "Monter";
 "commandMoveUpWords" = "flèche, haut, précédent";
+"commandNoticeNotAnsweringRetry" = "Votre second tourne mais ne répond pas. Attendez-le, ou démarrez-le ici pour vous y reconnecter.";
 "commandNoticeWindowCrashed" = "Votre second s’est arrêté sans en dire la raison et n’a pas redémarré. Démarrez-le ici pour le redémarrer.";
 "commandNoticeWindowNotAnswering" = "Votre second tourne mais ne répond pas. Redémarrez-le pour l’arrêter et le démarrer à nouveau, ou attendez-le.";
 "commandNoticeWindowRestarting" = "Votre second s’est arrêté et redémarre. Cette fenêtre l’attend.";

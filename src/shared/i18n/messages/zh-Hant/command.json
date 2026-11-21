@@ -103,6 +103,7 @@
   "commandMoveRightWords": "方向鍵, 右, 下一個",
   "commandMoveUp": "向上移動",
   "commandMoveUpWords": "方向鍵, 上, 上一個",
+  "commandNoticeNotAnsweringRetry": "你的大副正在執行，但沒有回應。等它，或者在這裡開始以重新連接它。",
   "commandNoticeWindowCrashed": "你的大副沒有說明原因就停止了，尚未重新開始。在這裡開始它，即可讓它重新開始。",
   "commandNoticeWindowNotAnswering": "你的大副正在執行，但沒有回應。重新開始它可以停止它並再次開始，或者等它。",
   "commandNoticeWindowRestarting": "你的大副停止了，正在重新開始。這個視窗在等它。",

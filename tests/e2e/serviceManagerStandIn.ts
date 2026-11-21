@@ -113,6 +113,21 @@ function kill(label) {
   try { process.kill(Number(runs[runs.length - 1]), "SIGKILL"); } catch {}
   return 0;
 }
+// The job's run now, by its process number, as launchd's print shows its pid and systemd its
+// MainPID: none while its supervisor waits to start it again, or once it is stopped.
+function current(label) {
+  if (!running(label) || !existsSync(join(STATE, label + ".runs"))) return null;
+  const runs = readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean);
+  const pid = Number(runs[runs.length - 1]);
+  return alive(pid) ? pid : null;
+}
+// Starts the job unless it runs, as launchd's kickstart without -k and systemd's start do: a job
+// already running is left as it is.
+function startLoaded(label) {
+  if (running(label)) return 0;
+  if (!existsSync(jobFile(label))) return 113;
+  return begin(JSON.parse(readFileSync(jobFile(label), "utf8")));
+}
 function supervise(label) {
   const job = JSON.parse(readFileSync(join(STATE, label + ".job.json"), "utf8"));
   writeFileSync(pidFile(label), String(process.pid));
@@ -139,8 +154,14 @@ if (args[0] === "__supervise") supervise(args[1]);
 else if (args[0] === "bootstrap") code = begin(plistJob(args[2]));
 else if (args[0] === "bootout") code = end(args[1].split("/").pop());
 // A domain is always there, and a job until it is stopped, as launchd holds what it loaded.
-else if (args[0] === "print") code = args[1].split("/").length < 3 || !existsSync(goneFile(args[1].split("/").pop())) ? 0 : 113;
+else if (args[0] === "print") {
+  const label = args[1].split("/").length < 3 ? null : args[1].split("/").pop();
+  code = label === null || !existsSync(goneFile(label)) ? 0 : 113;
+  const pid = label === null || code !== 0 ? null : current(label);
+  if (pid !== null) writeSync(1, "\tpid = " + pid + "\n");
+}
 else if (args[0] === "kickstart" && args[1] === "-k") code = kill(args[2].split("/").pop());
+else if (args[0] === "kickstart") code = startLoaded(args[1].split("/").pop());
 else if (args[0] === "--user" && args[1] === "kill" && args[2] === "--signal=SIGKILL") code = kill(args[3]);
 else if (args[0] === "--user" && args[1] === "start") code = begin(unitJob(join(__UNITS__, args[2] + ".service"), args[2]));
 else if (args[0] === "--user" && args[1] === "stop") code = end(args[2]);
@@ -149,6 +170,9 @@ else if (args[0] === "--user" && args[1] === "restart") {
   code = begin(unitJob(join(__UNITS__, args[2]), args[2]));
 }
 // A job's ActiveState, as systemd shows it: active while its supervisor runs, inactive once stopped.
+else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=MainPID") {
+  writeSync(1, String(current(args[4]) ?? 0) + "\n");
+}
 else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=ActiveState" && existsSync(jobFile(args[4]))) {
   writeSync(1, running(args[4]) ? "active\n" : "inactive\n");
 }

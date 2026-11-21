@@ -41,6 +41,13 @@ export const commandNoticeSchema = z.strictObject({
    * of their first mate, and Start it here starts that program again.
    */
   byWindow: z.literal(true).optional(),
+  /**
+   * Set on `not-answering` when the notice names no run that does not
+   * answer: its door named none, or another run holds the folder now.
+   * Start it here then stops nothing, and the app starting again connects
+   * to whichever run is there; the line says so.
+   */
+  retries: z.literal(true).optional(),
 });
 export type CommandNotice = z.infer<typeof commandNoticeSchema>;
 
@@ -79,6 +86,8 @@ export const COMMAND_NOTICE_WORDS = {
           : "Infinitary was updated"
         : "Infinitary stopped",
   line: (notice: CommandNotice): string => {
+    if (notice.ending === "not-answering" && notice.retries)
+      return m.commandNoticeNotAnsweringRetry();
     if (notice.byWindow) return byWindowLine(notice);
     if (notice.state === "waiting")
       return notice.ending === "updated"

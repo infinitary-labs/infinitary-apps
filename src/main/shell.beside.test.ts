@@ -1,34 +1,30 @@
 import { join } from "node:path";
-import { type HomeConnection, startConnection } from "@core/connection/connection";
 import { claimLink } from "@core/devices/dial";
-import { HomeLink } from "@core/devices/homeLink";
+import type { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
-import { DevicePairing } from "@core/devices/pairing";
 import type { RestartOutcome } from "@core/helper/runAgent";
-import type { Card } from "@shared/cards";
+import { COMMAND_NOTICE_WORDS } from "@shared/commandNotice";
 import * as m from "@shared/i18n/messages.generated";
-import { DEFAULT_SAVED_KEYMAP, presetKeymap, type SavedKeymap } from "@shared/keymap";
-import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
+import { presetKeymap, type SavedKeymap } from "@shared/keymap";
+import { DEFAULT_SHELL_PREFERENCES } from "@shared/preferences";
 import { describe, expect, it, vi } from "vitest";
-import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
-  otherMac,
-  ownCore,
-  ownUpdates,
-  shown,
-  stopEachTest,
-  stops,
-} from "../../tests/helpers/shellStandIns";
-import type { StartEntry } from "./besideRun";
+  besideShell,
+  commandRun,
+  JOINED,
+  OWNED,
+  type Records,
+  silentRun,
+  stopped,
+} from "../../tests/helpers/besideShell";
+import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { otherMac, shown, stopEachTest, stops } from "../../tests/helpers/shellStandIns";
 import { BesideWindow } from "./besideWindow";
 import { type OwnedRun, ownedRunOf } from "./runCommand";
-import type { RunStatus } from "./runStatus";
-import { Shell } from "./shell";
 
 /**
- * The window opened beside a command's first mate (docs/run.md): the shell
- * against a stand-in core served on the command's local door, a stand-in for
- * the command's records and starter, and this program's own presence.
+ * The window opened beside a command's first mate (docs/run.md), against
+ * the stand-ins in `tests/helpers/besideShell.ts`.
  */
 
 stopEachTest();
@@ -39,284 +35,6 @@ stopEachTest();
 // rule: the first mate keeps the settings, the records and the crew, and only this window
 // touches the desktop.
 describe("the window beside a command's first mate", () => {
-  const JOINED = { pid: 41, startedAt: "2026-11-01T08:00:00.000Z" };
-  /** The run this app's own agent started, which its window's starter owns. */
-  const OWNED: OwnedRun = JOINED;
-  /** The command's own records in its data folder, as the window reads them. */
-  type Records = Pick<RunStatus, "running" | "run" | "lastStop">;
-  const stopped = (
-    reason: "quit" | "signal" | "updated" | "start-failed",
-    exitCode: number,
-    of = JOINED,
-  ): Records => ({
-    running: false,
-    run: null,
-    // Stopped just now: the wait for a start entry counts from the record's own time.
-    lastStop: { ...of, stoppedAt: new Date().toISOString(), reason, exitCode, lines: [] },
-  });
-
-  /** The command's first mate in another program: a stand-in core served on its local door. */
-  function commandRun() {
-    const run = ownCore();
-    /** What that first mate keeps, and what this computer's window told it. */
-    const there = {
-      look: {
-        ...DEFAULT_SHELL_PREFERENCES,
-        appearance: { ...DEFAULT_SHELL_PREFERENCES.appearance, theme: "light", size: 125 },
-      } as ShellPreferences,
-      keys: DEFAULT_SAVED_KEYMAP as SavedKeymap,
-      showInDock: true,
-      dictation: true,
-      cards: [] as Card[],
-      here: 0,
-      focused: 0,
-      answers: [] as unknown[][],
-      holds: [] as unknown[],
-    };
-    run.dispatch.mockImplementation((async (channel: string, args: unknown[]) => {
-      switch (channel) {
-        case "inf:shell:preferences":
-          return there.look;
-        case "inf:settings:appearance:set":
-          there.look = { ...there.look, appearance: args[0] as ShellPreferences["appearance"] };
-          run.core.events.emit("inf:shell:preferences", there.look);
-          return there.look.appearance;
-        case "inf:settings:keys:get":
-          return { saved: there.keys, unreadable: false };
-        case "inf:settings:keys:set":
-          there.keys = args[0] as SavedKeymap;
-          return { ok: true };
-        case "inf:presence:get":
-          return { startAtLogin: false, showInDock: there.showInDock };
-        case "inf:settings:dictation:get":
-          return { enabled: there.dictation, key: "AltRight" };
-        case "inf:settings:dictation:set":
-          there.dictation = (args[0] as { enabled: boolean }).enabled;
-          return { enabled: there.dictation, key: "AltRight" };
-        case "inf:own-window:here":
-          there.here += 1;
-          return { ok: true };
-        case "inf:own-window:focused":
-          there.focused += 1;
-          return { ok: true };
-        case "inf:own-window:answer":
-          there.answers.push(args);
-          return { ok: true };
-        case "inf:cards:list":
-          return there.cards;
-        case "inf:settings:notifications:get":
-          return true;
-        case "inf:update:hold":
-          there.holds.push(args[0]);
-          return { saved: true, work: { state: "resuming", tasks: ["Fix the flaky test"] } };
-        default:
-          return { run: channel };
-      }
-    }) as never);
-    const doorDir = join(scratchDir("infinitary-shell-beside-"), "local-door");
-    const pairing = new DevicePairing({
-      dir: join(scratchDir("infinitary-shell-beside-"), "devices"),
-      onProblem: () => {},
-    });
-    let connection: HomeConnection | null = null;
-    /**
-     * Opens the command's door, naming the run it stands for, as a command does: the joined run
-     * unless another is given, and none for a door from before doors named their run.
-     */
-    const open = (doorRun: OwnedRun | null = JOINED) => {
-      connection = startConnection({
-        dispatch: run.core.dispatch,
-        events: run.core.events,
-        devices: pairing,
-        localDoor: doorDir,
-        ...(doorRun ? { localDoorRun: doorRun } : {}),
-        port: 0,
-        onProblem: () => {},
-      });
-      return connection;
-    };
-    stops.push(async () => {
-      await connection?.close();
-      pairing.dispose();
-    });
-    return {
-      run,
-      there,
-      doorDir,
-      open,
-      stop: () => connection?.close(),
-      asked: (channel: string) =>
-        run.dispatch.mock.calls.filter(([asked]) => asked === channel).map(([, args]) => args),
-    };
-  }
-
-  /** A command whose first mate welcomes the window and never answers its first ask. */
-  function silentRun() {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
-    // How it answers once it does, as a program started again in its place would.
-    return Object.assign(command, { answer });
-  }
-
-  function besideShell(
-    doorDir: string,
-    options: {
-      records?: Records;
-      entry?: StartEntry;
-      readyMs?: number;
-      installsUpdates?: boolean;
-      programReplaced?: boolean;
-      /** When this window started the command, and the starter it started it with. */
-      startedAt?: number;
-      starts?: boolean;
-      /** How long the window waits for a running command to answer before it says it does not. */
-      answerWaitMs?: number;
-      /** Each dial of the command's door after this turns true never connects, as at a stuck command. */
-      dialHangs?: () => boolean;
-      /** Where each link the window dials the command's door with is kept, to read its connection. */
-      links?: HomeLink[];
-      /** This user's work folder, where a home that added this computer leaves its grant. */
-      workDir?: string;
-      /**
-       * The command running when it is the starter's own - this app's agent started it - or null
-       * for one started by hand; asked each time. With a starter, the agent's run by default.
-       */
-      ownedRun?: (status: Records) => OwnedRun | null;
-    } = {},
-  ) {
-    const startCore = vi.fn(async () => ownCore().core);
-    const relaunch = vi.fn();
-    const restartWindows = vi.fn();
-    const openPage = vi.fn(async (_url: string) => {});
-    const pushes: { channel: string; payload: unknown }[] = [];
-    /** What the command's records say now, and which start entry is in place. */
-    const command = {
-      records: options.records ?? ({ running: true, run: JOINED, lastStop: null } as Records),
-      entry: options.entry ?? (null as StartEntry),
-      programReplaced: options.programReplaced ?? false,
-    };
-    /** This program's own Dock icon, login item, file picker and Notification Center. */
-    const program = {
-      dock: [] as boolean[],
-      startAtLogin: false,
-      picked: ["/home/kai/report.pdf"],
-      notified: [] as { title: string; body: string }[],
-    };
-    /** The command's starter (docs/run.md, "The window starts it"), and Stop's signals. */
-    const starter = {
-      start: vi.fn(async () => true),
-      atLogin: {
-        get: () => starter.login,
-        set: (on: boolean) => {
-          starter.login = on;
-        },
-      },
-      inPlace: () => true,
-      stop: vi.fn(async (_how: { forget: boolean }) => {}),
-      restart: vi.fn(async (_run?: { pid?: number }): Promise<RestartOutcome> => "restarted"),
-      login: false,
-      stops: 0,
-      /** Which run each stop asked to stop, when it named one. */
-      stopped: [] as (OwnedRun | undefined)[],
-    };
-    const made = new Shell({
-      joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
-      openPage,
-      beside: {
-        door: doorDir,
-        crewmatesDir: "/run/crewmates",
-        look: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "look"), () => {}),
-        status: () => command.records,
-        startEntry: () => command.entry,
-        // The entry's own wait is the rule's (besideRun.test.ts); here the window only waits to join.
-        restartWaitMs: 0,
-        presence: {
-          getStartAtLogin: () => program.startAtLogin,
-          setStartAtLogin: (enabled) => {
-            program.startAtLogin = enabled;
-          },
-          setShowInDock: (visible) => program.dock.push(visible),
-        },
-        chooseFiles: async () => program.picked,
-        installsUpdates: options.installsUpdates ?? false,
-        programReplaced: () => command.programReplaced,
-        ...(options.starts ? { starter } : {}),
-        ownedRun: options.ownedRun ?? (() => OWNED),
-        ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
-        ...(options.answerWaitMs === undefined ? {} : { answerWaitMs: options.answerWaitMs }),
-        stopCommand: (only?: OwnedRun) => {
-          starter.stops += 1;
-          starter.stopped.push(only);
-          return command.records.running === true;
-        },
-      },
-      startCore,
-      startConnection: () => {
-        throw new Error("A window beside a command serves no connection.");
-      },
-      ...(options.readyMs !== undefined || options.dialHangs || options.links
-        ? {
-            localWindow: {
-              ...(options.readyMs !== undefined ? { readyMs: options.readyMs } : {}),
-              ...(options.dialHangs || options.links
-                ? {
-                    link: (linkOptions: ConstructorParameters<typeof HomeLink>[0]) => {
-                      const link = new HomeLink({
-                        ...linkOptions,
-                        dial: async (grant, reached) => {
-                          if (options.dialHangs?.()) return new Promise<never>(() => {});
-                          return (
-                            linkOptions.dial?.(grant, reached) ??
-                            Promise.reject(new Error("no dial"))
-                          );
-                        },
-                      });
-                      options.links?.push(link);
-                      return link;
-                    },
-                  }
-                : {}),
-            },
-          }
-        : {}),
-      ...(options.workDir ? { work: { dataDir: options.workDir } } : {}),
-      broadcast: (channel, payload) => pushes.push({ channel, payload }),
-      notifications: {
-        supported: () => true,
-        focused: () => false,
-        show: (notification) => program.notified.push(notification),
-      },
-      deviceName: async () => "MacBook Pro",
-      restartWindows,
-      relaunch,
-      updates: ownUpdates().updates,
-    });
-    stops.push(() => made.dispose());
-    return {
-      shell: made,
-      /**
-       * Starts the window, then waits as the window's first request does: for the
-       * command's first welcome, or for the window to stop waiting for one.
-       */
-      start: async () => {
-        await made.start();
-        await made.dispatch("inf:conversation:state", []).catch(() => {});
-      },
-      startCore,
-      relaunch,
-      restartWindows,
-      openPage,
-      pushes,
-      command,
-      program,
-      starter,
-    };
-  }
-
   it("asks the command's first mate over its door, with no core here", async () => {
     const command = commandRun();
     const opened = command.open();
@@ -1488,7 +1206,7 @@ describe("the window beside a command's first mate", () => {
 
   // The review of INF-5409: a refused Restart it over a run that reconnected and answered the
   // window meanwhile leaves that run as it is, with no notice offering to end it by force.
-  it("puts up no notice when Restart it is refused over a run that answered the window meanwhile", async () => {
+  async function answeredMeanwhile(outcome: RestartOutcome, answers: boolean): Promise<void> {
     const command = commandRun();
     const answer = command.run.dispatch.getMockImplementation();
     /** The window's first request at each welcome, answered once let go. */
@@ -1526,12 +1244,32 @@ describe("the window beside a command's first mate", () => {
     // The window had its answer once it went on to read the rest from that run, and the starter's
     // answer once the window's own handler of it ran, before this test's.
     const reads = command.asked("inf:settings:dictation:get").length;
-    heres[1]?.();
-    await expect.poll(() => command.asked("inf:settings:dictation:get").length).toBe(reads + 1);
-    settle("failed");
+    if (answers) {
+      heres[1]?.();
+      await expect.poll(() => command.asked("inf:settings:dictation:get").length).toBe(reads + 1);
+    }
+    settle(outcome);
     await at.starter.restart.mock.results.at(-1)?.value;
     expect(at.shell.thisMac()).not.toHaveProperty("command");
-    expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    if (answers) {
+      expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+      return;
+    }
+    // Its welcome that has not answered is counted on its own connection's wait.
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+  }
+
+  it("puts up no notice when Restart it is refused over a run that answered the window meanwhile", async () => {
+    await answeredMeanwhile("failed", true);
+  });
+
+  // The review of INF-5409: Restart it that ended and started nothing keeps what the run's new
+  // connection showed meanwhile, as a refused one does: its answer, or its own wait for one.
+  it("keeps a reconnected run's answer, or its own wait, when Restart it ended and started nothing", async () => {
+    await answeredMeanwhile("untouched", true);
+    await answeredMeanwhile("untouched", false);
   });
 
   // The review of INF-5409: the wait for a first mate's answers is its connection's, so records
@@ -1599,6 +1337,11 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
     expect(at.shell.thisMac()).not.toHaveProperty("command.byWindow");
+    // Its words say Start it here connects to it again, never that it stops it.
+    const mac = at.shell.thisMac();
+    const notice = mac.role === "home" ? mac.command : undefined;
+    expect(notice).toMatchObject({ retries: true });
+    expect(notice && COMMAND_NOTICE_WORDS.line(notice)).toBe(m.commandNoticeNotAnsweringRetry());
     expect(at.shell.restartCommand()).toBe(false);
     expect(at.shell.startHere()).toBe(true);
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
@@ -1720,6 +1463,9 @@ describe("the window beside a command's first mate", () => {
   // The review of INF-5409: a Restart it whose starter ended and started nothing, the run named no
   // longer being the one its agent holds, leaves the window as before the press at once: a run
   // started by hand there since is offered as before, never waited for as the run started again.
+  // Its window is still connected to the run that did not answer, so nothing times the run there
+  // from the records, and the notice names no run: past the next wait too, its Start it here
+  // stops nothing and the app starting again connects to whichever run is there.
   it("stands as before the press when Restart it ended and started nothing", async () => {
     const command = silentRun();
     const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
@@ -1743,8 +1489,73 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.restartCommand()).toBe(true);
     await at.starter.restart.mock.results.at(-1)?.value;
     expect(at.shell.followsAdded()).toMatchObject({ joins: false, outside: true });
-    expect(at.shell.thisMac()).not.toHaveProperty("command");
+    const retry = { state: "stopped", ending: "not-answering", retries: true } as const;
+    expect(at.shell.thisMac()).toHaveProperty("command", retry);
+    // Past a reading of the records, a second apart, and the answer wait after it.
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    expect(at.shell.thisMac()).toHaveProperty("command", retry);
+    expect(COMMAND_NOTICE_WORDS.line(retry)).toBe(m.commandNoticeNotAnsweringRetry());
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.shell.startHere()).toBe(true);
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
     expect(at.starter.stop).not.toHaveBeenCalled();
+    expect(at.starter.stopped).toEqual([]);
+  });
+
+  // The review of INF-5409: Start it here over a silent run is one recovery. Until the app starts
+  // again, a second press, Restart it and a join are refused, so its starter is asked to end that
+  // run once and nothing else is sent meanwhile.
+  it("sends nothing more while Start it here is stopping a silent run", async () => {
+    const command = silentRun();
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    // The run takes its time to end.
+    at.starter.stop.mockImplementation(() => new Promise(() => {}));
+    expect(at.shell.startHere()).toBe(true);
+    expect(at.shell.startHere()).toBe(false);
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.shell.followsAdded()).toMatchObject({ joins: false });
+    const force = { forget: false, force: { pid: first.pid, startedAt: first.startedAt } };
+    expect(at.starter.stop.mock.calls).toEqual([[force]]);
+    expect(at.starter.restart).not.toHaveBeenCalled();
+  });
+
+  // The review of INF-5409: a notice that went up while the records could not be read could not
+  // say whose run was silent, so it offered no Restart it. Once the records read again, past the
+  // wait, its notice for that same run offers Restart it where the starter's own agent started it.
+  it("offers Restart it once records that could not be read say the silent run is its agent's", async () => {
+    const command = silentRun();
+    const run = { pid: 42, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: run.pid, startedAt: run.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: null, run: null, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    expect(at.shell.thisMac()).not.toHaveProperty("command.byWindow");
+    at.command.records = { running: true, run, lastStop: null };
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    expect(at.shell.restartCommand()).toBe(true);
+    expect(at.starter.restart.mock.calls).toEqual([[{ pid: run.pid, startedAt: run.startedAt }]]);
   });
 
   // The review of INF-5409: a start this window asked ends only on a welcome from the run its own

@@ -22958,6 +22958,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `arrow, up, previous`;
   }
+  function commandNoticeNotAnsweringRetry() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نائب القبطان يعمل لكنه لا يجيب. انتظره، أو ابدأه هنا لتتصل به من جديد.`;
+      case "de":
+        return `Dein erster Offizier läuft, antwortet aber nicht. Warte auf ihn, oder starte ihn hier, um dich erneut mit ihm zu verbinden.`;
+      case "es":
+        return `Tu primer oficial está en marcha pero no responde. Espéralo, o inícialo aquí para volver a conectarte con él.`;
+      case "fr":
+        return `Votre second tourne mais ne répond pas. Attendez-le, ou démarrez-le ici pour vous y reconnecter.`;
+      case "ja":
+        return `一等航海士は動いていますが応答しません。応答を待つか、ここで開始してもう一度つなぎ直します。`;
+      case "ko":
+        return `일등항해사가 실행 중이지만 응답하지 않아요. 기다리거나, 여기서 시작해 다시 연결해요.`;
+      case "pt-BR":
+        return `Seu imediato está em execução, mas não responde. Espere por ele, ou inicie-o aqui para se conectar a ele de novo.`;
+      case "zh-Hans":
+        return `你的大副正在运行，但没有响应。等它，或者在这里开始以重新连接它。`;
+      case "zh-Hant":
+        return `你的大副正在執行，但沒有回應。等它，或者在這裡開始以重新連接它。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé îš ŕûññîñĝ ƀûţ ñöţ áñšŵéŕîñĝ. Ŵáîţ ƒöŕ îţ, öŕ šţáŕţ îţ ĥéŕé ţö çöññéçţ ţö îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate is running but not answering. Wait for it, or start it here to connect to it again.‬`;
+    }
+    return `Your first mate is running but not answering. Wait for it, or start it here to connect to it again.`;
+  }
   function commandNoticeWindowCrashed() {
     switch (currentLanguage()) {
       case "ar":
@@ -94962,6 +94989,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMoveRightWords,
     commandMoveUp,
     commandMoveUpWords,
+    commandNoticeNotAnsweringRetry,
     commandNoticeWindowCrashed,
     commandNoticeWindowNotAnswering,
     commandNoticeWindowRestarting,
@@ -98008,6 +98036,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMoveRightWords": [],
     "commandMoveUp": [],
     "commandMoveUpWords": [],
+    "commandNoticeNotAnsweringRetry": [],
     "commandNoticeWindowCrashed": [],
     "commandNoticeWindowNotAnswering": [],
     "commandNoticeWindowRestarting": [],
@@ -107538,7 +107567,14 @@ ${FRAME_KEYBOARD_SCRIPT}
      * window starts it"): the person never ran a command, so the line speaks
      * of their first mate, and Start it here starts that program again.
      */
-    byWindow: literal(true).optional()
+    byWindow: literal(true).optional(),
+    /**
+     * Set on `not-answering` when the notice names no run that does not
+     * answer: its door named none, or another run holds the folder now.
+     * Start it here then stops nothing, and the app starting again connects
+     * to whichever run is there; the line says so.
+     */
+    retries: literal(true).optional()
   });
   const saidTimeSchema = strictObject({ time: number() });
   const leafFillSchema = union([string(), number(), saidTimeSchema]);

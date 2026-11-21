@@ -103,6 +103,7 @@
   "commandMoveRightWords": "화살표, 오른쪽, 다음",
   "commandMoveUp": "위로 이동",
   "commandMoveUpWords": "화살표, 위, 이전",
+  "commandNoticeNotAnsweringRetry": "일등항해사가 실행 중이지만 응답하지 않아요. 기다리거나, 여기서 시작해 다시 연결해요.",
   "commandNoticeWindowCrashed": "일등항해사가 이유 없이 멈춘 뒤 다시 시작하지 않았어요. 여기서 시작하면 다시 시작해요.",
   "commandNoticeWindowNotAnswering": "일등항해사가 실행 중이지만 응답하지 않아요. 다시 시작하면 멈춘 뒤 다시 시작해요. 아니면 기다려요.",
   "commandNoticeWindowRestarting": "일등항해사가 멈췄다가 다시 시작하고 있어요. 이 창은 기다리고 있어요.",

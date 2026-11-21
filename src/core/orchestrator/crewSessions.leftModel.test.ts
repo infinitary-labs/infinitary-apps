@@ -9,7 +9,9 @@
  * is the same `setSlotMembership` call the Models board makes.
  */
 import { softHoldWords } from "@shared/holds";
-import { englishOf, said } from "@shared/i18n/said";
+import { inLanguage } from "@shared/i18n/current";
+import { englishOf, said, wordSaid } from "@shared/i18n/said";
+import { wordedActivity } from "@shared/i18n/wordedActivity";
 import { offeringKey, SLOTS } from "@shared/modelSlots";
 import { expect, it, vi } from "vitest";
 import {
@@ -30,6 +32,7 @@ import type { openInMemoryDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
 import { SettingsStore } from "../storage/settingsStore";
 import { TaskProtocol } from "../tasks/taskProtocol";
+import { TaskTimeline } from "../tasks/taskTimeline";
 import type { CrewmateSpec } from "./crewSession";
 import type { AccountAttachment } from "./crewSupervisorOptions";
 
@@ -346,6 +349,7 @@ it("words the reroute's Activity line from its saved fact", async () => {
     emit: () => {},
     now: () => Date.now(),
     coalesceMs: 0,
+    timeline: new TaskTimeline({ tasks: h.tasks }),
   }).detail(taskId);
   const fact = said("crewmateRoutedAgain", {
     left: h.router?.modelLabel(sol) ?? "",
@@ -353,6 +357,18 @@ it("words the reroute's Activity line from its saved fact", async () => {
   });
   const row = record.activityLog.find((line) => line.said);
   expect(row).toMatchObject({ text: englishOf(fact), said: fact });
+  // A window in German shows the line in German, both as the Activity row and
+  // as the timeline reading of its event, which the record draws in its place.
+  const german = inLanguage("de", () => wordSaid(fact));
+  expect(german).not.toBe(englishOf(fact));
+  const shown = inLanguage("de", () => wordedActivity(record));
+  expect(shown.activityLog.find((line) => line.id === row?.id)?.text).toBe(german);
+  const reading = shown.timeline?.find(
+    (entry) =>
+      entry.entry.content.ref.source === "task-event" &&
+      entry.entry.content.ref.eventId === row?.id,
+  );
+  expect(reading?.entry.summary).toBe(german);
 });
 
 it("routes to another provider's model with the account the selector picks, recorded once", async () => {

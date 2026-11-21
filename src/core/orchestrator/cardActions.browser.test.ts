@@ -21,6 +21,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { startWords } from "../browser/pageStartSteps";
 import { BROWSER_SIGN_IN_STEP, EMIT_CARD_TOOL } from "../pi/cardTool";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
 import { bindTool } from "../session/tools";
@@ -947,11 +948,15 @@ describe("a task's own browser (docs/task-browser.md)", () => {
       pages: vi.fn(async () => ({ text: "one page" })),
     };
 
-    async function crewmateWithBrowser(fact: { current: TaskBrowserFact | undefined }) {
+    async function crewmateWithBrowser(
+      fact: { current: TaskBrowserFact | undefined },
+      unstarted = { current: false },
+    ) {
       const h = setup(fakeCrewmate(), {
         browsers: {
           forTask: () => browser,
           fact: () => fact.current,
+          unstarted: () => unstarted.current,
           withCaptain: () => false,
           requestHelp: async () => ({ ok: false, text: "no browser" }),
           takeControl: async () => ({ ok: false, text: "no browser" }),
@@ -1011,6 +1016,47 @@ describe("a task's own browser (docs/task-browser.md)", () => {
       expect(saved()?.attachment).toMatchObject({ label: "View booking", generation: 2 });
       await emitCard.run({ ...DECISION, id: card?.id });
       expect(saved()?.attachment).toBeUndefined();
+    });
+
+    it("tells the task's browser when its crewmate's turn begins and ends, for a build it started", async () => {
+      const crewmate = fakeCrewmate();
+      const turns: string[] = [];
+      const h = setup(crewmate, {
+        browsers: {
+          forTask: () => browser,
+          fact: () => OPEN,
+          withCaptain: () => false,
+          requestHelp: async () => ({ ok: false, text: "no browser" }),
+          takeControl: async () => ({ ok: false, text: "no browser" }),
+          turn: (taskId, running) => turns.push(`${taskId} ${running ? "running" : "ended"}`),
+        },
+      });
+      const { taskId } = await h.supervisor.intake.commission({
+        title: "Check the sign-up page",
+        intent: intentOf("check the sign-up page the project serves"),
+      });
+      await tick();
+      expect(turns).toEqual([`${taskId} running`]);
+      crewmate.finishPrompt();
+      await tick();
+      expect(turns).toEqual([`${taskId} running`, `${taskId} ended`]);
+    });
+
+    it("says in one line, and refuses nothing, when its served page has no saved start", async () => {
+      const fact = { current: OPEN as TaskBrowserFact | undefined };
+      const unstarted = { current: true };
+      const { emitCard, saved } = await crewmateWithBrowser(fact, unstarted);
+      const answer = await emitCard.run({ ...DECISION, browser_button: "Try it" });
+      expect(saved()?.attachment).toMatchObject({ kind: "browser", label: "Try it" });
+      expect(answer.text).toContain(startWords.missing());
+      expect(answer.text.split(startWords.missing())).toHaveLength(2);
+      // With a start saved, or with no button, the answer says nothing of it.
+      unstarted.current = false;
+      const kept = await emitCard.run({ ...DECISION, id: saved()?.id, browser_button: "Try it" });
+      expect(kept.text).not.toContain("--start");
+      unstarted.current = true;
+      const plain = await emitCard.run({ ...DECISION, id: saved()?.id });
+      expect(plain.text).not.toContain("--start");
     });
 
     it("refuses a button with no browser to open, or no label, in words", async () => {

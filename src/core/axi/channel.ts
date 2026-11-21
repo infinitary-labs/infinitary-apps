@@ -659,7 +659,7 @@ export class AxiChannel {
                 ? this.files(grant, message)
                 : tool === STOPS_COMMAND
                   ? this.stops(grant, message, command.cwd)
-                  : this.operate(grant, message);
+                  : this.operate(grant, message, command.cwd);
     // A copy may outlast the command's process: it is kept for the next
     // command before the process is stopped, rather than lost with it.
     const settled = await within(
@@ -987,13 +987,21 @@ export class AxiChannel {
   }
 
   /** The browser's own operation, never its picture's bytes. */
-  private async operate(grant: Grant, message: AxiCallMessage): Promise<ChannelAnswer> {
+  private async operate(
+    grant: Grant,
+    message: AxiCallMessage,
+    cwd: string,
+  ): Promise<ChannelAnswer> {
     const browser = grant.tools.browser;
     const op = message.op as BrowserOp;
     if (!browser || !OPS.has(op)) {
       return { text: "This task has no browser.", refused: "refused" };
     }
-    const input = (message.input ?? {}) as never;
+    const asked = (message.input ?? {}) as { start?: object };
+    // A saved start runs in the folder the command's shell was in, as the channel knows it.
+    const input = (
+      op === "navigate" && asked.start ? { ...asked, start: { ...asked.start, cwd } } : asked
+    ) as never;
     try {
       const { image: _image, ...answer } = await (op === "pages"
         ? browser.pages()

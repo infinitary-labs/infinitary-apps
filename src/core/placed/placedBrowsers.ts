@@ -74,6 +74,8 @@ const KEPT_SIGN_INS = contractChange("kept-sign-ins");
 const BROWSER_ASKS = contractChange("browser-asks");
 /** A page's named places, for the captain's Point at (`card-note-places.md`). */
 const CARD_NOTE_PLACES = contractChange("card-note-places");
+/** A page's saved start there, which lives through its crewmate's turn (`page-start.md`). */
+const PAGE_START = contractChange("page-start");
 
 export type PlacedBrowsersOptions = {
   devices: Pick<WorkDevices, "ask" | "onWorkDevice" | "version">;
@@ -98,12 +100,14 @@ export type PlacedBrowsersOptions = {
 };
 
 /** One task's browser there, as this Mac last heard it. */
-type Heard = { deviceId: string; fact: TaskBrowserFact };
+type Heard = { deviceId: string; fact: TaskBrowserFact; unstarted?: true };
 
 export class PlacedBrowsers implements PlacedBrowserSink {
   private readonly facts = new Map<string, Heard>();
   /** The views here that watch each task's browser there. */
   private readonly watchers = new Map<string, Set<BrowserFrameSink>>();
+  /** Tasks whose crewmate's turn that computer was last told runs. */
+  private readonly turning = new Set<string>();
   /** The room a maximized view gives each task's page, with the view that asked. */
   private readonly sizes = new Map<string, { sink: BrowserFrameSink; size: TaskBrowserSize }>();
   private readonly log: (line: string) => void;
@@ -131,8 +135,13 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     return this.options.privateSites?.list() ?? [];
   }
 
-  heardFact(deviceId: string, task: string, fact: TaskBrowserFact | null): void {
-    this.heard(deviceId, task, fact);
+  heardFact(deviceId: string, task: string, fact: TaskBrowserFact | null, unstarted?: true): void {
+    this.heard(deviceId, task, fact, unstarted);
+  }
+
+  /** Its page is served there with no saved start, as that computer last said. */
+  unstarted(taskId: string): boolean {
+    return this.facts.get(taskId)?.unstarted === true;
   }
 
   heardFrame(task: string, frame: InvokeRequest<"inf:work:browser-frame">[0]["frame"]): void {
@@ -157,7 +166,12 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         });
         return;
       case "unanswered":
-        this.options.onUnanswered?.(task, { site: event.site, url: event.url, once: event.once });
+        this.options.onUnanswered?.(task, {
+          site: event.site,
+          url: event.url,
+          once: event.once,
+          ...(event.start ? { start: event.start } : {}),
+        });
         return;
       case "sign-in":
         // A retired copy from an older computer: nothing on this Mac keeps one.
@@ -224,6 +238,18 @@ export class PlacedBrowsers implements PlacedBrowserSink {
 
   reopen(taskId: string): Promise<TaskBrowserCommandResult> {
     return this.command(taskId, "inf:task-browser:reopen", {});
+  }
+
+  /** A turn of the task's crewmate began or ended; a computer without saved starts is not told. */
+  turn(taskId: string, running: boolean): void {
+    const deviceId = this.options.deviceOf(taskId);
+    if (!deviceId || !listsChange(this.options.devices.version(deviceId)?.changes, PAGE_START))
+      return;
+    // An end is always said: one lost, or forgotten by a restart here, must not keep a build running.
+    if (running && this.turning.has(taskId)) return;
+    if (running) this.turning.add(taskId);
+    else this.turning.delete(taskId);
+    this.tell(taskId, "inf:task-browser:turn", { running });
   }
 
   takeControl(taskId: string, handle?: TaskBrowserHandle): Promise<TaskBrowserCommandResult> {
@@ -444,6 +470,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
    * closes its conversation, and the captain reads it stopped now.
    */
   closeTask(taskId: string): void {
+    this.turning.delete(taskId);
     const heard = this.facts.get(taskId);
     if (heard) {
       const { fact } = heard;
@@ -490,10 +517,15 @@ export class PlacedBrowsers implements PlacedBrowserSink {
 
   // ---- in between ---------------------------------------------------------------
 
-  private heard(deviceId: string, task: string, fact: TaskBrowserFact | null): void {
+  private heard(
+    deviceId: string,
+    task: string,
+    fact: TaskBrowserFact | null,
+    unstarted?: true,
+  ): void {
     // A computer speaks only for the tasks it holds.
     if (this.options.deviceOf(task) !== deviceId) return;
-    if (fact) this.facts.set(task, { deviceId, fact });
+    if (fact) this.facts.set(task, { deviceId, fact, ...(unstarted ? { unstarted } : {}) });
     else this.facts.delete(task);
     this.options.onChange(task);
   }
@@ -512,10 +544,14 @@ export class PlacedBrowsers implements PlacedBrowserSink {
       // A computer that keeps no browsers, or speaks an older contract, has none to say.
       return;
     }
-    const said = new Map(answer.facts.map((entry) => [entry.task, entry.fact]));
+    const said = new Map(answer.facts.map((entry) => [entry.task, entry]));
     for (const [task, heard] of [...this.facts])
       if (heard.deviceId === deviceId && !said.has(task)) this.heard(deviceId, task, null);
-    for (const [task, fact] of said) this.heard(deviceId, task, fact);
+    for (const [task, { fact, unstarted }] of said) this.heard(deviceId, task, fact, unstarted);
+    // A turn's begin or end said while it was out of reach, or before this Mac restarted, again.
+    if (listsChange(this.options.devices.version(deviceId)?.changes, PAGE_START))
+      for (const task of said.keys())
+        this.tell(task, "inf:task-browser:turn", { running: this.turning.has(task) });
     // A change made while it was out of reach reaches its open browsers now.
     if (this.options.privateSites && answer.facts.some((entry) => entry.fact?.state === "open"))
       this.lendSites(deviceId, this.options.privateSites.list());
@@ -644,6 +680,20 @@ export class HomeBrowsers {
 
   reopen(taskId: string): Promise<TaskBrowserCommandResult> {
     return this.there.holds(taskId) ? this.there.reopen(taskId) : this.local.reopen(taskId);
+  }
+
+  /**
+   * A page its computer serves with no saved start for it (emit_card's one
+   * line); a task on another computer keeps its start there, which says so.
+   */
+  unstarted(taskId: string): boolean {
+    return this.there.holds(taskId) ? this.there.unstarted(taskId) : this.local.unstarted(taskId);
+  }
+
+  /** A turn of the task's crewmate began or ended, told to the computer that holds its browser. */
+  turn(taskId: string, running: boolean): void {
+    if (this.there.holds(taskId)) this.there.turn(taskId, running);
+    else this.local.turn(taskId, running);
   }
 
   /**

@@ -1329,7 +1329,12 @@ export class CardActions {
     if (this.core.options.inbox.woken(taskId, unanswered.once)) return;
     tasks.turns.endIdle(taskId);
     const wake: TypedWake = {
-      facts: { kind: "page-unanswered", site: unanswered.site, url: unanswered.url },
+      facts: {
+        kind: "page-unanswered",
+        site: unanswered.site,
+        url: unanswered.url,
+        ...(unanswered.start ? { start: unanswered.start } : {}),
+      },
       once: unanswered.once,
     };
     void this.core.steer.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {

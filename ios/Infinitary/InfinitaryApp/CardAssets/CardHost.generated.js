@@ -13022,6 +13022,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Nothing answers at ${site}, so its crewmate was asked to start it again. The page shows here once it answers.`;
   }
+  function cardBrowserUnansweredStarting(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء يستجيب على ${site}، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.`;
+      case "de":
+        return `Unter ${site} antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.`;
+      case "es":
+        return `Nada responde en ${site}, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.`;
+      case "fr":
+        return `Rien ne répond sur ${site}, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.`;
+      case "ja":
+        return `${site} が応答しないため、Infinitary が再起動しています。応答するとページがここに表示されます。`;
+      case "ko":
+        return `${site}에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.`;
+      case "pt-BR":
+        return `Nada responde em ${site}, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.`;
+      case "zh-Hans":
+        return `${site} 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。`;
+      case "zh-Hant":
+        return `${site} 沒有回應，Infinitary 正在重新啟動它。它一回應，頁面就會顯示在這裡。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ áñšŵéŕš áţ ${site}, šö Îñƒîñîţáŕý îš šţáŕţîñĝ îţ áĝáîñ. Ţĥé þáĝé šĥöŵš ĥéŕé öñçé îţ áñšŵéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing answers at ‬${site}‮, so Infinitary is starting it again. The page shows here once it answers.‬`;
+    }
+    return `Nothing answers at ${site}, so Infinitary is starting it again. The page shows here once it answers.`;
+  }
   function cardBrowserUnansweredWorking(input2) {
     const site = input2.site;
     switch (currentLanguage()) {
@@ -88852,6 +88880,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserStop,
     cardBrowserSurface,
     cardBrowserUnansweredAsked,
+    cardBrowserUnansweredStarting,
     cardBrowserUnansweredWorking,
     cardBrowserWord,
     cardCrewmateLog,
@@ -91717,6 +91746,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserStop": [],
     "cardBrowserSurface": [],
     "cardBrowserUnansweredAsked": ["site"],
+    "cardBrowserUnansweredStarting": ["site"],
     "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
     "cardCrewmateLog": [],

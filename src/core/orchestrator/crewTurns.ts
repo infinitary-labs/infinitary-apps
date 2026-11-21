@@ -217,6 +217,7 @@ export class CrewTurns {
       this.core.options.inbox.reparkUndelivered(task.turn.takeRows());
       const move = task.turn.rest("stopped");
       this.core.options.tasks.turns.setActivity(task.id, "idle");
+      this.turnEnded(task.id);
       this.core.facts.broadcastCrewCounts();
       this.turnOver(task.id);
       this.afterTurn(task, move);
@@ -411,6 +412,8 @@ export class CrewTurns {
     }
     this.core.facts.broadcastCrewCounts();
     this.core.options.tasks.turns.setActivity(task.id, "running");
+    // A build the host started for its page is left alone while the turn runs.
+    this.core.options.browsers?.turn?.(task.id, true);
   }
 
   /**
@@ -907,6 +910,7 @@ export class CrewTurns {
       if (missing.length) this.core.hooks().pokeInbox?.();
     }
     this.core.options.tasks.turns.setActivity(task.id, "idle");
+    this.turnEnded(task.id);
     this.core.options.tasks.turns.markIdle(task.id, {
       providerFailed: providerError !== undefined,
     });
@@ -1054,6 +1058,14 @@ export class CrewTurns {
     }
     if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
     this.afterTurn(task, move, recoverContext);
+  }
+
+  /**
+   * The turn is over, wherever it goes idle: a build whose browser stopped
+   * during it stops now (docs/task-browser.md, "Starting a page again").
+   */
+  private turnEnded(taskId: string): void {
+    this.core.options.browsers?.turn?.(taskId, false);
   }
 
   /** Every idle boundary hands off its deferred work through this one exit. */

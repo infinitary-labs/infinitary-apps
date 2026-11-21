@@ -317,6 +317,7 @@
 "cardBrowserStop" = "Stop browser";
 "cardBrowserSurface" = "Task browser";
 "cardBrowserUnansweredAsked" = "Nothing answers at %1$@, so its crewmate was asked to start it again. The page shows here once it answers.";
+"cardBrowserUnansweredStarting" = "Nothing answers at %1$@, so Infinitary is starting it again. The page shows here once it answers.";
 "cardBrowserUnansweredWorking" = "Nothing answers at %1$@, and its crewmate is working now. The page shows here once it answers.";
 "cardBrowserWord" = "Browser";
 "cardCrewmateLog" = "The crewmate's session";

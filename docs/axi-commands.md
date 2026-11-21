@@ -100,6 +100,7 @@ A ref is written as the outline shows it, with or without `@`: `@g1:e5`, `g1:e5`
 | --- | --- |
 | `infinitary-browser-axi` | Home: the page now, with how to use it, or that no browser is open and how to open one; reads a kept answer. |
 | `open <url>` | Open a public website over https, a private site the captain allowed, or a page this Mac serves. |
+| `open <url> --start <command> --within <seconds>` | The same open of a page this Mac serves, saving the command that starts it and how long it may take to answer, which the host runs when nothing answers there (`docs/task-browser.md`, "Starting a page again"). |
 | `back`, `forward`, `reload` | Move the page; a form's answer is never reloaded. |
 | `snapshot [@ref] [--from <line>] [--find <words>] [--full]` | Read the page as an outline window, from a line or around words; `--full` shows every line; a ref reads a cut passage in full. |
 | `wait <text>` | Wait up to ten seconds for words, then read the part that holds them. |

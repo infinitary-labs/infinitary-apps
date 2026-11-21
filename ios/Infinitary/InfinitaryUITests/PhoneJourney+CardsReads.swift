@@ -85,7 +85,9 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         waitForShownBodyRevealed()
-        XCTAssertTrue(line("count: waiting").waitForPresence(timeout: 20), app.debugDescription)
+        // Its count read was refused at the start, which the script writes once the phone answered it.
+        XCTAssertTrue(line("stopped: read_not_declared").waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(line("count: waiting").exists, app.debugDescription)
         XCTAssertTrue(line("board: waiting").exists, app.debugDescription)
         XCTAssertFalse(line("count: \(later)").exists, "A past card reads nothing live")
         picture("4-past-card-as-written")

@@ -33,7 +33,10 @@ export function phoneCardReadControls(core: Core) {
   };
   let added = 0;
 
-  /** The body's lines, each filled by its script: `count:`, `board:`, `undeclared:`, `view:` and `stopped:`. */
+  /**
+   * The body's lines, each filled by its script: `count:`, `board:`, `undeclared:`, `view:` and `stopped:`, which names
+   * why the count read ended or was refused.
+   */
   const body =
     "<p>The record's tasks, as this card's own script reads them.</p>" +
     "<p data-count>count: waiting</p><p data-board>board: waiting</p>" +
@@ -41,7 +44,9 @@ export function phoneCardReadControls(core: Core) {
     "<script>(function () {" +
     "function put(name, text) { document.querySelector('[data-' + name + ']').textContent = name + ': ' + text; }" +
     "inf.subscribe('sql', { sql: 'SELECT COUNT(*) AS n FROM v_tasks_v1' }, function (value) { put('count', value.rows[0].n); }," +
-    " function (error) { put('stopped', error.code); });" +
+    " function (error) { put('stopped', error.code); })" +
+    // A refusal at the start (a past card's) only rejects `ready`, so it fills the same line.
+    ".ready.catch(function (error) { put('stopped', error.code); });" +
     "inf.subscribe('tasks.board', {}, function () { put('board', 'live'); });" +
     "inf.subscribe('quota.snapshot', {}, function () { put('undeclared', 'answered'); })" +
     ".ready.catch(function (error) { put('undeclared', error.code); });" +

@@ -875,6 +875,9 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       );
       expect((await detail())?.browser).not.toHaveProperty("unanswered");
       expect(wakes()).toBe(1);
+      // The next journey shares this window: leave the card in view, as the steps before did.
+      await view(page, task.id).getByRole("button", { name: "Hide" }).click();
+      await expect(cardRegion).toBeVisible();
     });
   } finally {
     await stopTaskBrowsers(page);

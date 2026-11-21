@@ -1,0 +1,227 @@
+{
+  "name": "Still water",
+  "words": "Singing bowls over a deep drone, very slow, almost no rhythm, for meditation",
+  "bpm": 44,
+  "beats": 4,
+  "grid": 2,
+  "swing": 0,
+  "hold": 4,
+  "key": "D",
+  "scale": "major",
+  "chords": [
+    {
+      "name": "I",
+      "degree": 0,
+      "tones": [0, 4, 1]
+    },
+    {
+      "name": "IV",
+      "degree": 3,
+      "tones": [0, 4, 1]
+    },
+    {
+      "name": "vi",
+      "degree": 5,
+      "tones": [0, 2, 4]
+    },
+    {
+      "name": "V",
+      "degree": 4,
+      "tones": [0, 3, 4]
+    }
+  ],
+  "start": "I",
+  "next": {
+    "I": ["IV", "vi", "IV"],
+    "IV": ["I", "I", "vi"],
+    "vi": ["IV", "I"],
+    "V": ["I"]
+  },
+  "cadence": ["V", "I"],
+  "hands": {
+    "lo": 55,
+    "hi": 79,
+    "center": [62, 69],
+    "start": [57, 62, 64]
+  },
+  "bassLow": 36,
+  "pad": {
+    "timbre": "drone",
+    "anchors": [38, 45, 50],
+    "amp": 0.05,
+    "glide": 1.6,
+    "wobble": [0.05, 60],
+    "drift": [[0.07, 6]]
+  },
+  "room": {
+    "reverb": 5,
+    "wet": 0.9,
+    "echo": {
+      "beats": 1.5,
+      "fb": 0.4,
+      "lp": 1800,
+      "mix": 0.5
+    }
+  },
+  "tone": -3,
+  "buses": {
+    "keys": [4200, 0.9, 0.3],
+    "star": [8000, 1.1, 0.5],
+    "lead": [2600, 0.9, 0.2],
+    "bass": [260, 0.1, 0],
+    "kick": [300, 0.1, 0]
+  },
+  "voices": {
+    "bowl": {
+      "instrument": "mallet",
+      "bus": "keys",
+      "preset": "bowl"
+    },
+    "high": {
+      "instrument": "mallet",
+      "bus": "star",
+      "preset": "handbell"
+    },
+    "sub": {
+      "instrument": "sus",
+      "bus": "bass",
+      "preset": "sub"
+    },
+    "hum": {
+      "instrument": "sus",
+      "bus": "lead",
+      "preset": "noseflute"
+    },
+    "beat": {
+      "instrument": "drum",
+      "bus": "kick",
+      "preset": "deep"
+    },
+    "chime": {
+      "instrument": "mallet",
+      "bus": "cue",
+      "preset": "sonar"
+    },
+    "spark": {
+      "instrument": "glass",
+      "bus": "cue"
+    }
+  },
+  "levels": [
+    {
+      "heat": 0,
+      "layers": {
+        "pad": 1,
+        "keys": 0.8,
+        "bass": 0.7,
+        "star": 0.4
+      }
+    },
+    {
+      "heat": 0.35,
+      "layers": {
+        "pad": 1,
+        "keys": 1,
+        "bass": 0.8,
+        "kick": 0.4,
+        "star": 0.6
+      }
+    },
+    {
+      "heat": 0.7,
+      "layers": {
+        "pad": 0.95,
+        "keys": 1,
+        "bass": 0.85,
+        "kick": 0.5,
+        "star": 0.7,
+        "lead": 0.6
+      }
+    }
+  ],
+  "cue": {
+    "vel": 0.07,
+    "ring": 2.8,
+    "gain": [-0.5, 1]
+  },
+  "parts": [
+    {
+      "part": "hold",
+      "voice": "sub",
+      "pitch": "bass",
+      "vel": 0.8
+    },
+    {
+      "part": "steps",
+      "voice": "bowl",
+      "hits": [[0, "t0@57", 0.6, 10]],
+      "pan": -0.2,
+      "when": {
+        "newChord": true
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "bowl",
+      "hits": [[4, "t1@64", 0.42, 9]],
+      "pan": 0.3,
+      "when": {
+        "bar": "odd",
+        "chance": 0.7
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "bowl",
+      "hits": [[2, "t2@69", 0.35, 8]],
+      "pan": 0.1,
+      "when": {
+        "levels": [1, 2],
+        "bar": "even",
+        "chance": 0.5
+      }
+    },
+    {
+      "part": "pings",
+      "voice": "high",
+      "layer": "star",
+      "p": 0.03,
+      "lo": 74,
+      "hi": 88,
+      "vel": [0.03, 0.05],
+      "pool": "chord",
+      "len": 6
+    },
+    {
+      "part": "steps",
+      "voice": "beat",
+      "hits": [[0, 0, 0.6, 0.6]],
+      "pan": 0,
+      "when": {
+        "layer": "kick",
+        "bar": "even"
+      }
+    },
+    {
+      "part": "tune",
+      "id": "hum",
+      "tune": {
+        "voice": "hum",
+        "form": "A---B---",
+        "center": 69,
+        "pent": true,
+        "vel": 0.7,
+        "legato": 1,
+        "tail": 1.5,
+        "vary": 0.05,
+        "pan": 0,
+        "rhythms": [[[0, 8]], [[0, 4], [4, 4]], [[2, 6]]],
+        "starts": [0, 2, 4],
+        "moves": [-1, 1, -2, 2]
+      },
+      "when": {
+        "playing": "lead"
+      }
+    }
+  ]
+}

@@ -7,17 +7,23 @@
 // does, closing its audio so the computer may sleep, and starts again once
 // someone is back, unless the captain chose to keep it playing.
 //
+// A person's own style (docs/ambient-music.md, "Your own styles") starts once
+// the app has balanced its loudness, a few seconds the first time a session.
+//
 // The window says where it stands on the document, `data-ambient-music`:
 // `off`, `paused`, `away`, `playing`, or `hushed`; and, while its player
 // runs, the style it plays, `data-ambient-style`.
 
-import { ambientStyleOf } from "@shared/preferences";
+import type { SavedOwnStyle } from "@shared/ambientOwn";
+import { type AmbientStyle, ambientStyleIn, DEFAULT_AMBIENT_STYLE } from "@shared/preferences";
 import { useShellStore } from "../app/store";
 import { useCardSound } from "../cards/playingSound";
 import { workingCrew } from "../character/crew/crewSignal";
 import { onCharacterCue } from "../character/emoteSignal";
+import { balanceFor } from "./balance";
 import { crewLevel } from "./composer";
-import { AmbientPlayer } from "./player";
+import { styleFromOwn } from "./own";
+import { AmbientPlayer, type Style } from "./player";
 import { followPresence, usePresence } from "./presence";
 import { STYLES } from "./styles/catalog";
 
@@ -50,6 +56,22 @@ type Playing = {
 };
 
 let playing: Playing | null = null;
+/** A start waiting for its own style's balance; a later change drops it. */
+let pending: number | null = null;
+let starts = 0;
+
+/** The style the window plays now: its id, and the own style it names, if one. */
+function chosen(state = useShellStore.getState()): { id: string; own?: SavedOwnStyle } {
+  const id = ambientStyleIn(state.ambientStyle, state.ambientOwnStyles);
+  const own = state.ambientOwnStyles.find((style) => style.id === id);
+  return own ? { id, own } : { id };
+}
+
+/** What the chosen style plays, so a change to an own style's settings starts it again. */
+function chosenSound(state: ReturnType<typeof useShellStore.getState>): string {
+  const { id, own } = chosen(state);
+  return own ? JSON.stringify(own) : id;
+}
 
 function shouldHush(): boolean {
   const sound = useCardSound.getState();
@@ -93,15 +115,39 @@ export function readAmbientBands(levels: number[]): boolean {
   return true;
 }
 
-function begin(volume: number, style: string): void {
+/** Starts the chosen style; an own style first has its loudness balanced. */
+function begin(): void {
+  const { id, own } = chosen();
+  if (!own) {
+    start(id, STYLES[id as AmbientStyle]);
+    return;
+  }
+  const token = ++starts;
+  pending = token;
+  const go = (style: Style, as: string) => {
+    if (pending !== token) return;
+    pending = null;
+    start(as, style);
+  };
+  balanceFor(own)
+    .then((balance) => styleFromOwn(own, balance))
+    .then(
+      (style) => go(style, id),
+      // Settings this build cannot play, saved by a newer one, play the default.
+      () => go(STYLES[DEFAULT_AMBIENT_STYLE], DEFAULT_AMBIENT_STYLE),
+    );
+  mark();
+}
+
+function start(id: string, style: Style): void {
+  const volume = useShellStore.getState().ambientVolume / 100;
   const ctx = new AudioContext({ latencyHint: "playback", sampleRate: SAMPLE_RATE });
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 512;
   analyser.smoothingTimeConstant = 0;
   analyser.minDecibels = -70;
   analyser.maxDecibels = -25;
-  const id = ambientStyleOf(style);
-  const player = new AmbientPlayer(ctx, STYLES[id], Math.floor(Math.random() * 2 ** 31), {
+  const player = new AmbientPlayer(ctx, style, Math.floor(Math.random() * 2 ** 31), {
     volume,
     analyser,
   });
@@ -126,6 +172,7 @@ function begin(volume: number, style: string): void {
 }
 
 function end(): void {
+  pending = null;
   if (!playing) {
     mark();
     return;
@@ -146,11 +193,12 @@ function end(): void {
 /** Follows the switch, the volume, voice input and card sound; call once the saved look is read. */
 export function followAmbientMusic(): void {
   const follow = () => {
-    const { ambientMusic, ambientPaused, ambientVolume, ambientStyle } = useShellStore.getState();
+    const { ambientMusic, ambientPaused } = useShellStore.getState();
     // Nobody here: close the audio as the pause button does, since a silent
     // hush still holds the computer awake (docs/ambient-music.md).
     if (!ambientMusic || ambientPaused || waitsForSomeone()) return end();
-    if (!playing) return begin(ambientVolume / 100, ambientStyle);
+    if (pending !== null) return;
+    if (!playing) return begin();
     const hush = shouldHush();
     if (hush !== playing.hushed) {
       playing.hushed = hush;
@@ -163,8 +211,14 @@ export function followAmbientMusic(): void {
   useShellStore.subscribe((state, previous) => {
     if (state.ambientVolume !== previous.ambientVolume && playing)
       playing.player.setVolume(state.ambientVolume / 100);
-    // Another style fades this one out and starts the new one from its first bar.
-    if (ambientStyleOf(state.ambientStyle) !== ambientStyleOf(previous.ambientStyle) && playing) {
+    // Another style, or new settings for an own one, fades this one out and
+    // starts the new one from its first bar.
+    if (
+      (state.ambientStyle !== previous.ambientStyle ||
+        state.ambientOwnStyles !== previous.ambientOwnStyles) &&
+      (playing || pending !== null) &&
+      chosenSound(state) !== chosenSound(previous)
+    ) {
       end();
       follow();
     }

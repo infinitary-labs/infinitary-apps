@@ -3254,6 +3254,13 @@ public enum PhoneMessages {
     public static func `settingsSoundAmbientMusic`() -> String { PhoneWords.format("settingsSoundAmbientMusic", []) }
     public static func `settingsSoundAmbientMusicDescription`() -> String { PhoneWords.format("settingsSoundAmbientMusicDescription", []) }
     public static func `settingsSoundHeading`() -> String { PhoneWords.format("settingsSoundHeading", []) }
+    public static func `settingsSoundOwn`() -> String { PhoneWords.format("settingsSoundOwn", []) }
+    public static func `settingsSoundOwnDescribe`() -> String { PhoneWords.format("settingsSoundOwnDescribe", []) }
+    public static func `settingsSoundOwnDescription`() -> String { PhoneWords.format("settingsSoundOwnDescription", []) }
+    public static func `settingsSoundOwnDraft`() -> String { PhoneWords.format("settingsSoundOwnDraft", []) }
+    public static func `settingsSoundOwnNoWords`() -> String { PhoneWords.format("settingsSoundOwnNoWords", []) }
+    public static func `settingsSoundOwnRemove`() -> String { PhoneWords.format("settingsSoundOwnRemove", []) }
+    public static func `settingsSoundOwnRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsSoundOwnRemoveNamed", [`name`]) }
     public static func `settingsSoundPauseWhenAway`() -> String { PhoneWords.format("settingsSoundPauseWhenAway", []) }
     public static func `settingsSoundPauseWhenAwayDescription`() -> String { PhoneWords.format("settingsSoundPauseWhenAwayDescription", []) }
     public static func `settingsSoundStyle`() -> String { PhoneWords.format("settingsSoundStyle", []) }
@@ -3267,6 +3274,7 @@ public enum PhoneMessages {
     public static func `settingsSoundStyleGroupNautical`() -> String { PhoneWords.format("settingsSoundStyleGroupNautical", []) }
     public static func `settingsSoundStyleGroupPirate`() -> String { PhoneWords.format("settingsSoundStyleGroupPirate", []) }
     public static func `settingsSoundStyleGroupSpace`() -> String { PhoneWords.format("settingsSoundStyleGroupSpace", []) }
+    public static func `settingsSoundStyleGroupYours`() -> String { PhoneWords.format("settingsSoundStyleGroupYours", []) }
     public static func `settingsSoundStyleHarborDawn`() -> String { PhoneWords.format("settingsSoundStyleHarborDawn", []) }
     public static func `settingsSoundStyleHarborDawnDescription`() -> String { PhoneWords.format("settingsSoundStyleHarborDawnDescription", []) }
     public static func `settingsSoundStyleIslandMorning`() -> String { PhoneWords.format("settingsSoundStyleIslandMorning", []) }
@@ -7117,6 +7125,13 @@ extension PhoneWords {
         "settingsSoundAmbientMusic": [],
         "settingsSoundAmbientMusicDescription": [],
         "settingsSoundHeading": [],
+        "settingsSoundOwn": [],
+        "settingsSoundOwnDescribe": [],
+        "settingsSoundOwnDescription": [],
+        "settingsSoundOwnDraft": [],
+        "settingsSoundOwnNoWords": [],
+        "settingsSoundOwnRemove": [],
+        "settingsSoundOwnRemoveNamed": ["name"],
         "settingsSoundPauseWhenAway": [],
         "settingsSoundPauseWhenAwayDescription": [],
         "settingsSoundStyle": [],
@@ -7130,6 +7145,7 @@ extension PhoneWords {
         "settingsSoundStyleGroupNautical": [],
         "settingsSoundStyleGroupPirate": [],
         "settingsSoundStyleGroupSpace": [],
+        "settingsSoundStyleGroupYours": [],
         "settingsSoundStyleHarborDawn": [],
         "settingsSoundStyleHarborDawnDescription": [],
         "settingsSoundStyleIslandMorning": [],

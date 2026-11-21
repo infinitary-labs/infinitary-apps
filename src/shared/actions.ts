@@ -1,6 +1,7 @@
 import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import type { AccountView } from "./accounts";
+import { ambientLines } from "./ambientActions";
 import {
   type AutomationList,
   type AutomationRule,
@@ -48,12 +49,7 @@ import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { arrangePanels, movePanel } from "./panelArrangement";
 import { AUTOMATIC_COMPUTER } from "./placement";
 import {
-  AMBIENT_STYLES,
-  type AmbientStyle,
   type Appearance,
-  ambientVolumeSchema,
-  DEFAULT_AMBIENT_STYLE,
-  DEFAULT_AMBIENT_VOLUME,
   type Layout,
   themeSchema,
   uiSizeSchema,
@@ -75,7 +71,6 @@ import {
   runsOnSaid,
 } from "./repos";
 import {
-  ambientMusicValue,
   costLimitValue,
   crewModelNamesValue,
   enabledValue,
@@ -1755,33 +1750,6 @@ const actionLines = {
     readValue: crewModelNamesValue,
     done: (v) => `crew model names ${v.visible ? "shown" : "hidden"}`,
   },
-  "ambient-music": {
-    fields: ["ambientMusic", "ambientVolume", "ambientStyle"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({
-      on: z.boolean(),
-      volume: ambientVolumeSchema.optional(),
-      style: z.enum(AMBIENT_STYLES).optional(),
-    }),
-    line: `Play or stop the ambient music when asked, optionally at a volume of 0-100 percent and in one of its styles (${AMBIENT_STYLES.join(", ")}; ${DEFAULT_AMBIENT_STYLE} is the default): calm music made on the computer that follows the crew.`,
-    toRequest: (v, current) => [
-      {
-        ...(current as Appearance),
-        ambientMusic: v.on,
-        ambientVolume:
-          (v.volume as number | undefined) ??
-          (current as Appearance).ambientVolume ??
-          DEFAULT_AMBIENT_VOLUME,
-        ...(v.style === undefined ? {} : { ambientStyle: v.style as AmbientStyle }),
-      },
-    ],
-    readValue: ambientMusicValue,
-    done: (v) =>
-      `ambient music ${v.on ? "on" : "off"}, volume ${v.volume}%${v.style ? `, style ${v.style}` : ""}`,
-  },
   "panel-collapse": {
     fields: ["collapsedPanels"],
     area: "panels",
@@ -1918,6 +1886,7 @@ const actionLines = {
     }),
     done: (v) => String(v.text),
   },
+  ...ambientLines,
   ...handoverLines,
   ...showLines,
 } as const satisfies Record<string, ActionLine>;

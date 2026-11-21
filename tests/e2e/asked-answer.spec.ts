@@ -8,6 +8,7 @@ import {
   REQUESTED_RESPONSE_OPENING,
   RESPONSE_MISSING_OPENING,
 } from "../../src/core/orchestrator/reportWakes";
+import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../../src/core/storage/inboxStore";
@@ -18,6 +19,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { REACT_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestServedTurn, toolCallCount } from "./providerRequest";
+import { taskKey } from "./rails";
 import {
   ANSWER_CARD_TITLE,
   askedAnswer,
@@ -35,6 +37,8 @@ import {
   START_READER,
   START_READER_WITH_CARD,
 } from "./scenarios/askedAnswer";
+import { showCard } from "./stack";
+import { runFromSearch } from "./windowKeys";
 
 /**
  * A question the first mate asks a crewmate for a captain's message ties
@@ -237,9 +241,28 @@ test("a question the reader never answers keeps the message waiting until the re
     expect(run.open()).toBe(true);
     expect(retriesFor(app, words)).toEqual([]);
 
+    const key = await taskKey(page, READER_TITLE);
     await say(page, CLOSE_READER);
     await expect.poll(() => run.open(), { timeout: 60_000 }).toBe(false);
-    await expect.poll(() => retriesFor(app, words).length, { timeout: 60_000 }).toBe(1);
+    // The message waits no longer than its reader: the app's one closing
+    // note names the reader, a card of the task the message is tied to, so
+    // it is the message's answer, with no retry and no notice.
+    const noteTitle = closingNoteTitle(key, "dropped");
+    await showCard(page, noteTitle);
+    await waitForFirstmateIdle(page);
+    expect(retriesFor(app, words)).toEqual([]);
+    expect(await notices(page)).toEqual([]);
+    const note = (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (card) => card.title === noteTitle,
+    );
+    // The captain's Got it on that note accepts it as the message's answer.
+    await runFromSearch(app.app, page, "cards.done");
+    await expect
+      .poll(
+        () => run.tasks.capture.listAsks().find((ask) => ask.text === words)?.answerCardId ?? null,
+        { timeout: 30_000 },
+      )
+      .toBe(note?.id ?? "missing");
   } finally {
     run.keep();
     await run.app.close();

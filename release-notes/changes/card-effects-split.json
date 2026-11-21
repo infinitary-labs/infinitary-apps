@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-effects-split",
+      "reason": "Move card effect definitions into their own module without changing behavior."
+    }
+  ]
+}

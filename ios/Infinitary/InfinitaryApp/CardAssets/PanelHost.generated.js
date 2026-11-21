@@ -94614,6 +94614,130 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uses: string().max(1e3).optional()
   });
   const afterMergeShownListSchema = array(afterMergeShownSchema);
+  const HOST_OPS = [
+    "restore-account",
+    "move-flagship",
+    "retry-firstmate",
+    "try-again",
+    "keep-going-on-credits",
+    "use-saved-reset",
+    "add-plugin",
+    "decline-plugin",
+    "apply-project-change",
+    "decline-project-change",
+    "plan-queue",
+    "keep-delivery",
+    "add-project",
+    "decline-project",
+    "continue-task",
+    "backlog-task",
+    "move-task",
+    "stop-task",
+    "start-task",
+    "ask-again",
+    "confirm-required-action",
+    "defer-required-action",
+    "allow-cost",
+    "lift-cost-limit",
+    "stop-at-cost",
+    "secrets-decision",
+    "secrets-keep",
+    "turn-on-event-screen",
+    "secrets-bring"
+  ];
+  const settleEffectSchema = object({
+    kind: literal("settle"),
+    mode: literal("discard"),
+    confirm: literal(true).optional(),
+    proceedWithOpen: literal(true).optional()
+  });
+  const mergeEffectSchema = object({
+    kind: literal("merge"),
+    review: string().min(1).max(64).optional(),
+    after: _enum(["close", "continue"]),
+    asksFirst: string().min(1).max(400).optional(),
+    proceedWithOpen: literal(true).optional()
+  });
+  const requestWriteEffectSchema = object({
+    kind: literal("request_write"),
+    ask: string().min(1).max(64),
+    /**
+     * Only the host's integration approval card declares the duration or
+     * refusal; `task` allows it for the rest of the asking task, sent only to
+     * a view that lists `integration-task-allow` (INF-2993).
+     */
+    integration: _enum(["always", "task", "once", "deny"]).optional()
+  });
+  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
+  const signInOnSchema = object({
+    deviceId: string().min(1).max(64),
+    providerId: string().min(1).max(256)
+  });
+  const forgeSignInOnSchema = object({
+    deviceId: string().min(1).max(64),
+    host: string().min(1).max(253)
+  });
+  const settingsPlaceShape = {
+    section: string().min(1).max(64).optional(),
+    item: string().min(1).max(128).regex(/^[^\r\n]*$/).optional(),
+    phone: literal(true).optional(),
+    fromHome: literal(true).optional()
+  };
+  const openEffectSchema = object({
+    kind: literal("open"),
+    target: _enum(["settings", "subscriptions", "projects", "devices", "browser"]),
+    folder: literal(true).optional(),
+    // A Choose folder button on projects (docs/fleet.md)
+    savedSignIn: literal(true).optional(),
+    signIn: string().min(1).max(253).optional(),
+    make: deviceMakeSchema.optional(),
+    remove: string().min(1).max(64).optional(),
+    // The address, as the line's own value schema read it (`remoteLoginAddressSchema`);
+    // `inf:devices:add` reads it again before anything is reached.
+    add: string().min(1).max(255).optional(),
+    update: string().min(1).max(64).optional(),
+    privateSite: string().min(1).max(253).optional(),
+    signInOn: signInOnSchema.optional(),
+    forgeSignInOn: forgeSignInOnSchema.optional(),
+    ...settingsPlaceShape
+  });
+  const TASK_LIFECYCLE_OPS = [
+    "answer-done",
+    "dismiss-question",
+    "start-task",
+    "start-again",
+    "stop-task",
+    "continue-task",
+    "drop-task",
+    "queue-task",
+    "unqueue-task",
+    "show-card"
+  ];
+  _enum(TASK_LIFECYCLE_OPS);
+  object({
+    parts: array(string().min(1).max(64)).max(64),
+    waiting: array(string().min(1).max(64)).max(64),
+    underway: array(string().min(1).max(64)).max(64)
+  });
+  strictObject({ panel: string().min(1).max(40) });
+  const hostEffectSchema = object({
+    kind: literal("host"),
+    op: _enum(HOST_OPS),
+    arg: string().optional()
+  });
+  const cardEffectSchema = discriminatedUnion("kind", [
+    settleEffectSchema,
+    mergeEffectSchema,
+    requestWriteEffectSchema,
+    openEffectSchema,
+    hostEffectSchema
+  ]);
+  discriminatedUnion("kind", [
+    settleEffectSchema,
+    mergeEffectSchema,
+    requestWriteEffectSchema,
+    openEffectSchema
+  ]);
   const CARD_FILE_ID = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})$/;
   const cardFileSchema = strictObject({
     id: string().regex(CARD_FILE_ID),
@@ -94734,37 +94858,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The thread's app line, whole, so every view draws the same words. */
     line: string()
   });
-  const HOST_OPS = [
-    "restore-account",
-    "move-flagship",
-    "retry-firstmate",
-    "try-again",
-    "keep-going-on-credits",
-    "use-saved-reset",
-    "add-plugin",
-    "decline-plugin",
-    "apply-project-change",
-    "decline-project-change",
-    "plan-queue",
-    "keep-delivery",
-    "add-project",
-    "decline-project",
-    "continue-task",
-    "backlog-task",
-    "move-task",
-    "stop-task",
-    "start-task",
-    "ask-again",
-    "confirm-required-action",
-    "defer-required-action",
-    "allow-cost",
-    "lift-cost-limit",
-    "stop-at-cost",
-    "secrets-decision",
-    "secrets-keep",
-    "turn-on-event-screen",
-    "secrets-bring"
-  ];
   const putOffUntilSchema = discriminatedUnion("kind", [
     object({ kind: literal("close"), task: string().min(1).max(64) }),
     object({ kind: literal("date"), at: number().int().nonnegative() }),
@@ -94905,99 +94998,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function isReadyDecision(card) {
     return !card.awaiting && card.actions.length > 0;
   }
-  const settleEffectSchema = object({
-    kind: literal("settle"),
-    mode: literal("discard"),
-    confirm: literal(true).optional(),
-    proceedWithOpen: literal(true).optional()
-  });
-  const mergeEffectSchema = object({
-    kind: literal("merge"),
-    review: string().min(1).max(64).optional(),
-    after: _enum(["close", "continue"]),
-    asksFirst: string().min(1).max(400).optional(),
-    proceedWithOpen: literal(true).optional()
-  });
-  const requestWriteEffectSchema = object({
-    kind: literal("request_write"),
-    ask: string().min(1).max(64),
-    /**
-     * Only the host's integration approval card declares the duration or
-     * refusal; `task` allows it for the rest of the asking task, sent only to
-     * a view that lists `integration-task-allow` (INF-2993).
-     */
-    integration: _enum(["always", "task", "once", "deny"]).optional()
-  });
-  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
-  const signInOnSchema = object({
-    deviceId: string().min(1).max(64),
-    providerId: string().min(1).max(256)
-  });
-  const forgeSignInOnSchema = object({
-    deviceId: string().min(1).max(64),
-    host: string().min(1).max(253)
-  });
-  const settingsPlaceShape = {
-    section: string().min(1).max(64).optional(),
-    item: string().min(1).max(128).regex(/^[^\r\n]*$/).optional(),
-    phone: literal(true).optional(),
-    fromHome: literal(true).optional()
-  };
-  const openEffectSchema = object({
-    kind: literal("open"),
-    target: _enum(["settings", "subscriptions", "projects", "devices", "browser"]),
-    folder: literal(true).optional(),
-    // A Choose folder button on projects (docs/fleet.md)
-    savedSignIn: literal(true).optional(),
-    signIn: string().min(1).max(253).optional(),
-    make: deviceMakeSchema.optional(),
-    remove: string().min(1).max(64).optional(),
-    // The address, as the line's own value schema read it (`remoteLoginAddressSchema`);
-    // `inf:devices:add` reads it again before anything is reached.
-    add: string().min(1).max(255).optional(),
-    update: string().min(1).max(64).optional(),
-    privateSite: string().min(1).max(253).optional(),
-    signInOn: signInOnSchema.optional(),
-    forgeSignInOn: forgeSignInOnSchema.optional(),
-    ...settingsPlaceShape
-  });
-  const TASK_LIFECYCLE_OPS = [
-    "answer-done",
-    "dismiss-question",
-    "start-task",
-    "start-again",
-    "stop-task",
-    "continue-task",
-    "drop-task",
-    "queue-task",
-    "unqueue-task",
-    "show-card"
-  ];
-  _enum(TASK_LIFECYCLE_OPS);
-  object({
-    parts: array(string().min(1).max(64)).max(64),
-    waiting: array(string().min(1).max(64)).max(64),
-    underway: array(string().min(1).max(64)).max(64)
-  });
-  strictObject({ panel: string().min(1).max(40) });
-  const hostEffectSchema = object({
-    kind: literal("host"),
-    op: _enum(HOST_OPS),
-    arg: string().optional()
-  });
-  const cardEffectSchema = discriminatedUnion("kind", [
-    settleEffectSchema,
-    mergeEffectSchema,
-    requestWriteEffectSchema,
-    openEffectSchema,
-    hostEffectSchema
-  ]);
-  discriminatedUnion("kind", [
-    settleEffectSchema,
-    mergeEffectSchema,
-    requestWriteEffectSchema,
-    openEffectSchema
-  ]);
   const cardAuthorSchema = _enum(["crewmate", "firstmate", "host"]);
   const cardActionSchema = object({
     id: string(),

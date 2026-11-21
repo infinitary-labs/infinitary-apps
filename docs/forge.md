@@ -33,9 +33,12 @@ Bitbucket is Bitbucket Cloud at bitbucket.org ("Bitbucket sign-in and projects" 
 
 ## Contributing through an owned fork
 
-On GitHub and GitLab, `ProjectContributions` reads the sign-in's project access and the host's fork relationship through `Forge.contributions` for pull-request delivery, never to prepare a local-only change.
+On GitHub, GitLab and Bitbucket Cloud, `ProjectContributions` reads the sign-in's project access and the host's fork relationship through `Forge.contributions` for pull-request delivery, never to prepare a local-only change.
 The project retains a successful direct-project inspection so later publications do not repeat account and project discovery.
 GitLab resolves absent or lower listed roles through effective membership, including inherited and shared-group membership; a membership 404 confirms a non-member, while other read failures remain failures.
+Bitbucket reads the person's effective permission on the repository (`/user/workspaces/<workspace>/permissions/repositories`): `admin` or `write` may push, `admin` owns it, and a workspace that lists none, or refuses the read, means no access (`providers/bitbucket/contributions.ts`).
+Bitbucket names a repository by a UUID, never a number, so its project identity's number is the UUID's first 52 bits (`bitbucketRepositoryNumber`).
+Its fork is a repository whose parent is the project, in a workspace the person administers (`/forks?role=admin`); a new fork goes to the person's own workspace, or the only one they administer, and with several to choose from nothing is sent and the refusal asks the person to make the fork on Bitbucket.
 A project the sign-in cannot push to uses an existing verified owned fork, or asks on an app-authored project-change card before creating one.
 The project keeps the confirmed fork and reuses it; its route stores host project identities, not credentials.
 A create request is marked attempted before sending, so a lost response is reconciled by reading for the fork and is never automatically repeated.
@@ -59,6 +62,8 @@ Preparation and moves carry the prepared fetch and push addresses together, incl
 A computer that runs the task receives the separate push address only after it advertises `fork-contributions`; an older computer must be updated before preparation or moving work.
 GitHub opens the upstream pull request with the fork's owner and repository as its head.
 GitLab opens the merge request in the source fork with the upstream target project id.
+Bitbucket opens the pull request on the original repository with the fork as its source repository (`source.repository.full_name`), and reads a fork's commits in the fork.
+GitHub and Bitbucket compare a fork's owner and name without case (`contributionOriginMatches`, the kind's `foldsNames`).
 Branch-head and open-change reads retain that source identity rather than confusing an identically named upstream branch.
 
 The contributor's published story is a note without merge actions, not a merge offer.
@@ -95,7 +100,7 @@ A row names the kind's public host, its word for a change and its handle, the `#
 A fact only one part of the core uses, such as a REST path the gateway or the write guard reads, sits in that file as a record keyed by kind, so a missing kind fails the typecheck there.
 A new kind of host is a new row and a new entry in each of those records, never another comparison to GitLab in shared code.
 Every kind the app signs in to is one of those rows (`SIGN_IN_HOSTS`), which also names the account its key page belongs to and the scopes its key form names where that page cannot tick them (Bitbucket's).
-Some shared code still tests whether a kind is GitHub for a GitHub-only behavior, such as a fork's contributions, a story's attachment forms, merging past branch rules, the gateway's sent comments and workflow dispatches, and a placed copy's sign-in words; a new kind reads those as not GitHub until that fact moves into the table or a record.
+Some shared code still tests whether a kind is GitHub for a GitHub-only behavior, such as a story's attachment forms, merging past branch rules, the gateway's sent comments and workflow dispatches, and a placed copy's sign-in words; a new kind reads those as not GitHub until that fact moves into the table or a record.
 
 ## The app's own sign-in (PR 1.2)
 
@@ -304,7 +309,7 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 
 ## Bitbucket pull requests
 
-A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request.
+A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, merges the pull request with a squash where the main branch allows one.
 Before it sends the merge, the app reads that the branch is still at the checked version and that Bitbucket reports no conflict, draft or blocking rule.
 Bitbucket's merge itself holds to no version, so a push in the moment after that read goes in with it, and the app says so rather than promising the checked version alone.
 That is the chosen guarantee: the merge stays one click, best effort at the checked version, with this limit said in the release note and on the task, rather than handing the merge to Bitbucket until it can hold a merge to a version.
@@ -324,7 +329,8 @@ A Bitbucket project added before the app opened pull requests there delivers thi
 - **Its readiness** (`pull`) reads Bitbucket's own mergeability checks (`GET /pullrequests/<N>/mergeability/checks`): a draft is a draft; a Git check with `conflicts` is a conflict; a blocking `maximum_commits_behind` rule is behind; any other blocking rule is blocked; a Git check that has not passed, or any check still pending or unknown, is computing; otherwise it is clean.
 - **Its merge** (`putIn`) checks the title against the active naming runbook, then reads the branch: Bitbucket's merge takes no version, so a branch that moved past the checked version sends nothing and is refused.
   Before that, every merge reads the pull request's readiness, the captain's own click included (`Forge.mergeNamesNoVersion`): an owner's sign-in may merge past a rule Bitbucket does not enforce, so a conflict, a draft or a blocking rule sends no merge.
-  It then asks `POST /pullrequests/<N>/merge` with `merge_strategy: squash` and the message `<title>`, a blank line and the story's plain summary.
+  It then asks `POST /pullrequests/<N>/merge` with the merge strategy and the message `<title>`, a blank line and the story's plain summary.
+  The strategies the main branch allows are read right before (`mergeWays`, `merge_strategies` on `GET /refs/branches/<main>`): one change goes by `squash` where allowed, otherwise `rebase_merge`, then `merge_commit`, and a batch of several as "Batches of your own" says; the fast-forward strategies are never sent, and a branch read without its strategies sends nothing.
   A 409, a ref that moved during the merge, reads as the base moving.
   The approval's last check and the attempt it records run as the merge request leaves, after the branch read and the sign-in (`putIn`'s `beforeSend`, run from the client's send hook; `atDispatch` in `changeMerge.ts`, for the task's own pull request and one named by its number): an approval that ended during those reads sends nothing, the captain's newer guidance that arrived during them holds the merge as the guidance hold does, and a merge interrupted while it still reads holds no attempt.
   A failure before the request left sent nothing (`ForgeError.beforeSend`), so the merge path treats it as a hiccup before sending, never as a merge whose outcome is unknown.
@@ -351,12 +357,14 @@ A Bitbucket project added before the app opened pull requests there delivers thi
   A reference that does not name the pull request is never asked about, and a pending task, an unknown or expired one (which Bitbucket reads as pending) or an unreadable answer keeps the wait.
   A push that lands between the branch read and the merge is merged with it, since nothing holds the merge to the read version: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), the receipt records that version, and the task's merge line in Activity says another version than the approved one merged instead of hiding it.
   The same line and receipt come from one place (`otherMergedFacts`) for a merge confirmed at once, one a reconcile finds made, one found already made, and a pull request named by its number (`check_change pull`), whose reviewed close keeps the line.
+- **Its merge queue**: on a main branch with Bitbucket's merge queue, the merge answers 202 and the pull request reads `queued`, or the merge's task reads pending with its place in the queue (`queued_pullrequest`); either is the typed answer `MergeAnswer.queued`, and the pull request's `queued` flag is the queue read (`inHostQueue`, "The host's merge queue").
+- **Its comments**: the app's own marked comments are listed (`GET /pullrequests/<N>/comments`, the sign-in's own, top-level, not deleted), replaced (`PUT`) and deleted (`Forge.ownComments`), so a batch's stories past its description follow there; a commit's files come from its diffstat (`Forge.commitFiles`).
 - **Its words** name the host: "Merged #4 on Bitbucket." and the host's own words for a conflict.
 - **Its allowance** is Bitbucket's hourly request limit; a 429 that names its wait (`Retry-After`) is a spent allowance until then (`ForgeAllowanceSpent`), never a sign-out.
 
 Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409, a 202 and an answer naming no version each sent once, a failed branch read sending nothing, the last check run as the request leaves, a 202's task reference kept only for this pull request and its failure read, and a description replaced without its title; `mergeReviews.test.ts` holds a numbered review's receipt naming the version that merged; and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a rule wanting an approval, a draft, a failed, running or stopped build each merging nothing, a merge Bitbucket has not finished asked once, and a push during the merge merged and told.
 
-**Not yet:** a manual Pipelines step told apart from a running one, batches, forks, and Bitbucket Data Center.
+**Not yet:** a manual Pipelines step told apart from a running one, reviewing someone else's pull request from a fork, and Bitbucket Data Center.
 
 ## GitLab merge requests
 
@@ -932,6 +940,9 @@ A 409 on the request that names no moved version says a merge of that pull reque
 A GitHub that does not know the call gets the direct merge instead (`putInDirect`): a 404 on the request, or a 400 that names the API version, either of which comes back before anything is sent on.
 A GitHub Enterprise Server without the asynchronous merge is such a GitHub; that fallback is held by scripted answers alone, since no such server was at hand to try it on.
 GitLab and a plain Git host merge as before; a GitLab merge train is not used.
+Bitbucket Cloud's merge queue takes the ordinary merge request itself, with its strategy and words: Bitbucket answers 202 and the pull request reads `queued` ("Bitbucket pull requests"), which is the same typed answer, read again by the pull request's `queued` flag.
+A merge of a Bitbucket pull request the queue took and no flag shows yet, such as a pending task with no place in the queue, is an outcome not known, never queued, and is not sent again.
+Bitbucket's queue is offered only on paid plans, so the stand-in journey holds it, not a live run.
 
 A queued answer is no merge.
 The kept approval then waits on `host-queue` (`hostQueued`, `src/core/orchestrator/changeMerge.ts`) and records on itself the version GitHub took and when (`MergeAuthorization.handed`), apart from the wait, which any later stop replaces.
@@ -975,7 +986,7 @@ The app combines the approved changes at home into one batch pull request per pr
 Nothing is written into the project for it: no workflow, status, label or issue.
 The typed fact that chooses it is the batched delivery on a host that takes a batch pull request (`ownsBatches`, `hostTakesBatches`, `src/shared/repos.ts`).
 A project whose host takes none is refused the choice with its reason (`BATCH_HOST_REFUSAL`).
-It works wherever the forge seam has a host with pull requests and checks: GitHub, GitHub on a team's own server, gitlab.com and GitLab on a team's own server.
+It works wherever the forge seam has a host with pull requests and checks: GitHub, GitHub on a team's own server, gitlab.com, GitLab on a team's own server and Bitbucket Cloud.
 This repository merges this way itself: what its batch runs, and how each pushed task branch is checked, is `docs/testing.md`'s ("The swept batch", "A pushed branch").
 
 A change is a pushed branch with its saved story and no pull request of its own.
@@ -1041,7 +1052,7 @@ A call that limit ends fails the pass, so the next one reads again, and a change
 The combined version is pushed with a lease to a branch the app owns, `infinitary-batch/<id>` (`BATCH_BRANCH_PREFIX`), and opened as one pull request with the captain's sign-in.
 A batch of one carries its change's own title and story, so it reads as that change's pull request would.
 A batch of several is titled in the app's plain words, `merge N approved changes`, in the form the active naming runbook gives a name the app writes itself (`batchTitle`; `chore: merge N approved changes` under the built-in runbook), and its description holds each change's story under its title (`ChangePresentations.batchRegion`).
-Where the project lives a description has a limit, 65,536 characters on GitHub and 1,048,576 on GitLab (`presentationBodyLimit`), and a large batch's stories can pass it together though each fits alone (`batchDescription`, `src/core/batches/description.ts`).
+Where the project lives a description has a limit, 65,536 characters on GitHub, 1,048,576 on GitLab and 32,768 on Bitbucket (`presentationBodyLimit`), and a large batch's stories can pass it together though each fits alone (`batchDescription`, `src/core/batches/description.ts`).
 Then the description keeps the list of changes, says how many stories follow below it, and holds the stories that fit, in order.
 The rest follow in order in the app's own comments on the pull request, each within the host's limit on one comment (`presentationCommentLimit`) and opening with `BATCH_STORIES_MARKER`.
 Each time the description is written, the app reads its own marked comments back and keeps them in step: a changed one is rewritten, a missing one posted and one left over deleted (`Batches.continueIn`, `Forge.ownComments`).
@@ -1049,7 +1060,7 @@ So no comment carries a story the batch no longer holds, a restart writes nothin
 A comment the host refuses is tried again on a later pass, and the batch goes on.
 A story too long for a comment of its own is never cut: it is a missing story, as below.
 When its members change, the same pull request takes the new version, and its title and description are rewritten at the version just read.
-Both hosts refuse a rewrite of a pull request that moved since that read, so a refused one is sent again on the next pass (`Batches.describe`).
+Each host refuses a rewrite of a pull request that moved since that read, Bitbucket by the app reading it again first, so a refused one is sent again on the next pass (`Batches.describe`).
 A story that cannot be written into the description or a comment, such as one whose picture could not be sent, never keeps the batch from opening: the pull request opens or is rewritten without it, Activity names the missing story once for that version of its change (`BATCH_WORDS.noStory`), and each pass writes the description again until every story is in it.
 
 The host's own reading decides what happens next, on each pass of the tick and after each change of the line (`Batches.follow`).
@@ -1060,10 +1071,13 @@ A pull request the host reads as behind or conflicting is combined again onto th
 The merge keeps one commit per change (`mergeWayFor`, `src/shared/batches.ts`).
 A batch of one merges as that change's pull request does, by squash, where the project allows it.
 A batch of several takes a rebase merge where allowed and a merge commit otherwise; on GitLab that is a merge without squash, which keeps every commit under each of its merge methods.
-The merges a project allows are read where it lives (`Forge.mergeWays`): GitHub's merge buttons narrowed by the default branch's rules, the one way of a merge queue among them (`waysUnderRules`, `src/core/forge/mergeWays.ts`), and GitLab's squash setting.
+The merges a project allows are read where it lives (`Forge.mergeWays`): GitHub's merge buttons narrowed by the default branch's rules, the one way of a merge queue among them (`waysUnderRules`, `src/core/forge/mergeWays.ts`), GitLab's squash setting, and the merge strategies Bitbucket's main branch allows.
+On Bitbucket a rebase merge rebases the batch's commits onto main and ends in a merge commit, so each change's rewritten commit is read under that merge commit's second parent.
+A batch merge on a host whose merge names no version (Bitbucket's) whose outcome the host did not confirm is kept as unconfirmed at that version with the host's reference to it (`OpenBatch.unconfirmed`): later passes read the pull request and the queue, and never send it again.
+Merged, it finishes as any batch; queued, it waits in the queue; a reference the host reads as refused, or none at all, holds the batch with the reason `merge-way` (`BATCH_WORDS.notMerged`, `BATCH_WORDS.unconfirmed`), so Try again combines a new version rather than resending it.
 On a default branch with a merge queue of GitHub's own, the merge hands the batch's pull request to that queue and the batch waits there ("The host's merge queue").
 A project that allows only squash merges is not offered batched pull requests: the choice is refused with its reason, and Settings says it under "Where changes go" (`SQUASH_ONLY_WORDS`).
-After the merge the app deletes the batch branch and reads each member's own commit on the default branch (`landedCommits`): the commits as written where the merge kept them, or the rewritten ones matched by title after a rebase merge.
+After the merge the app deletes the batch branch and reads each member's own commit on the default branch (`landedCommits`): the commits as written where the merge kept them, or the rewritten ones matched by title after a rebase merge, under the merge commit's second parent when the rebase ended in one.
 Each member gets a receipt, its task's kept merge reads it and the task closes as merged, naming its own commit; a commit that could not be read stays absent, never guessed.
 The batch gives the app a turn between members' settlements so the window can still respond during a large batch's closes.
 
@@ -1078,7 +1092,7 @@ The first pass after a start reconciles each open batch from the host: a pull re
 Another person's pull request is untouched: one the captain reviews merges as its own pull request through the merge review ("A requested merge").
 It merges at the captain's click and joins no batch, and so does a contribution through a fork (`ChangeContext.ownBatch`).
 
-Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts`; `src/shared/batches.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub and `tests/e2e/gitlab-own-batches.spec.ts` on GitLab.
+Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts`; `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
 
 ### A held batch
 

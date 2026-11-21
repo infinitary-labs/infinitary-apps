@@ -747,6 +747,16 @@
 "filePreparing" = "Préparation";
 "fileReady" = "Prêt";
 "fileReadyAnnounce" = "%1$@ prêt";
+"firstCrewmateCards" = "Quand il aura une réponse, ou qu'il aura besoin que vous choisissiez, je vous la rapporterai ici sous forme de carte comme celle-ci. Seules les cartes ont besoin de vous.";
+"firstCrewmateHandoff" = "J'ai confié votre demande à un équipier. Il travaille en arrière-plan, ce qui peut prendre un moment.";
+"firstCrewmateLater" = "Plus tard";
+"firstCrewmateLaterCard" = "Une carte revient ici";
+"firstCrewmateLaterWhat" = "Une réponse ou un choix";
+"firstCrewmateNow" = "Maintenant";
+"firstCrewmateNowWatch" = "Inutile de le surveiller";
+"firstCrewmateNowWorks" = "Un équipier travaille";
+"firstCrewmatePutAway" = "Vous pouvez ranger cette carte. Le travail continue, et vous pouvez me demander autre chose en attendant.";
+"firstCrewmateTitle" = "Un équipier s'en occupe";
 "handoverQuit" = "Quitter";
 "handoverStopNow" = "L’arrêter maintenant";
 "handoverStoppingText" = "%1$@ tourne encore ici sans fenêtre et garde votre travail enregistré ouvert. %2$@ lui demande d’enregistrer et de s’arrêter, puis continue de lui-même.";

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
+import { putAwayFirstCrewmateNote } from "./firstLaunch";
 import { gitIdentityHome } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
@@ -102,6 +103,8 @@ test("a crewmate on an install signed in only to OpenRouter runs on an OpenRoute
       await input.press("Enter");
       const key = await taskKey(page, title);
       await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
+      // A new person's first crewmate brings its once-only note.
+      await putAwayFirstCrewmateNote(page);
       const card = shownCard(page, DESTINATION_STORY_TITLE);
       await expect(card).toBeVisible({ timeout: 60_000 });
       const board = await page.evaluate(() => window.infinitary.tasks.board());

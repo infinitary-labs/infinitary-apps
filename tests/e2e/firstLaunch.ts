@@ -1,6 +1,8 @@
 import { expect, type Page } from "@playwright/test";
+import { FIRST_CREWMATE_TITLE } from "@shared/firstCrewmateNote";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { promptInput, TASK_PROMPT_SELECTOR } from "./prompt";
+import { expectNoCard, noteDone, shownCard } from "./stack";
 
 export type WelcomeReadinessEvent = {
   kind: "cards" | "ready";
@@ -108,4 +110,18 @@ export async function committedWelcome(page: Page) {
     width: "regular",
   });
   return { ...state, id: id as string };
+}
+
+/**
+ * A new person's first crewmate started (docs/first-launch.md, "The first
+ * crewmate's note"): its note is the shown card, and its Got it puts it
+ * away, so the crewmate's own card arrives on an open stage. A journey that
+ * signs a new profile in through the gate and starts a crewmate calls it
+ * once the start shows.
+ */
+export async function putAwayFirstCrewmateNote(page: Page): Promise<void> {
+  const note = shownCard(page, FIRST_CREWMATE_TITLE);
+  await expect(note).toBeVisible();
+  await noteDone(page, note).click();
+  await expectNoCard(page, FIRST_CREWMATE_TITLE);
 }

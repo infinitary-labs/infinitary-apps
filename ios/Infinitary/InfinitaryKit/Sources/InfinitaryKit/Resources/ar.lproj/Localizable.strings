@@ -747,6 +747,16 @@
 "filePreparing" = "قيد التجهيز";
 "fileReady" = "جاهز";
 "fileReadyAnnounce" = "%1$@ جاهز";
+"firstCrewmateCards" = "عندما تكون لديه إجابة، أو يحتاج إلى أن تختار، أعيد ذلك إليك هنا في بطاقة مثل هذه. البطاقات وحدها هي ما يحتاج إليك.";
+"firstCrewmateHandoff" = "سلّمت طلبك إلى أحد أفراد الطاقم. يعمل في الخلفية، وقد يستغرق ذلك بعض الوقت.";
+"firstCrewmateLater" = "لاحقًا";
+"firstCrewmateLaterCard" = "تعود بطاقة إلى هنا";
+"firstCrewmateLaterWhat" = "إجابة أو خيار";
+"firstCrewmateNow" = "الآن";
+"firstCrewmateNowWatch" = "لا داعي لمراقبته";
+"firstCrewmateNowWorks" = "فرد من الطاقم يعمل";
+"firstCrewmatePutAway" = "يمكنك إخفاء هذه البطاقة. يستمر العمل، ويمكنك أن تطلب مني شيئًا آخر في الأثناء.";
+"firstCrewmateTitle" = "أحد أفراد الطاقم يتولى الأمر";
 "handoverQuit" = "إنهاء";
 "handoverStopNow" = "إيقافه الآن";
 "handoverStoppingText" = "لا يزال %1$@ يعمل هنا دون نافذة، ويُبقي عملك المحفوظ مفتوحًا. يطلب منه %2$@ أن يحفظ ويتوقف، ثم يتابع من تلقاء نفسه.";

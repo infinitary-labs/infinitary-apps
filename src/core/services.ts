@@ -1549,6 +1549,7 @@ export async function createServices(
   reconcileFirstRun = () => firstLaunch.reconcile();
   onCardsChanged = () => firstLaunch.cardsChanged();
   onCaptainTurnAccepted = () => firstLaunch.captainTurnAccepted();
+  eventSeam.attachFirstLaunch(() => firstLaunch.crewmateStarted());
   firstLaunch.begin();
   const livenessInterval = setInterval(
     () => {

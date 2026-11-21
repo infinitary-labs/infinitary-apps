@@ -412,6 +412,7 @@ async function buildRecord() {
     hasActivity: () => true,
     ...crewFacts(tasks),
     createWelcome: () => {},
+    createFirstCrewmateNote: () => {},
     now,
   });
 

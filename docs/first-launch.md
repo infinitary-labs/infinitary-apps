@@ -106,6 +106,7 @@ A press of a starter, Next or Back is not the first turn.
 The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "A card with no reply row").
 It is a regular card, the width its picture was drawn for, which the host sets when it presents the note.
 It teaches default positions, never opens panels or overrides the captain's choices.
+Sending a message does not close it; if that message starts the first crewmate, the welcome steps aside for the first crewmate's note (“The first crewmate's note” below).
 From its creation on a new profile, the Tasks panel shows collapsed on the right, since the welcome's own record is an ask's record (`onRail`, `src/panels/now/rows.ts`), so “Every ask gets a record here.” points at something real.
 On a first installation no What's new card follows it: the welcome is the only card, and the version is recorded quietly as the baseline once the welcome is settled (`docs/release-notes.md` "A first installation").
 
@@ -181,6 +182,38 @@ No tour, legend, setting or dismiss control; colors, motion, the hover summary, 
 
 `stateWords.test.ts` pins the rule on a fake clock (an idle of a few frames before leaving, showings cut short by a card, a color change, a departure, the summary and a stalled clock, and one full showing); `firstRun.test.ts` the record.
 
+## The first crewmate's note
+
+The captain's call of 2026-11-20 (task INF-5532, on a reviewed plan): the moment the first mate hands an ask to a crewmate is where the app differs most from a chat, and nothing said what was happening.
+So when a new person's first crewmate starts, the app shows one note, once per profile, titled “A crewmate is on it”.
+Everything in it is app copy in `src/shared/firstCrewmateNote.ts`, never a model's, and no model is asked.
+
+The body says the ask went to a crewmate that works in the background and can take a while, then draws two panels side by side: Now, “A crewmate works” and “No need to watch it”, beside the crewmate's tetrahedron in ember; Later, “A card comes back here” and “An answer or a choice”, beside a card in `--accent`.
+Under them it says that an answer or a choice comes back as a card like this one and that cards are the only part that needs the person, and that the card can be put away while the work goes on.
+The panels are boxes of text that wrap, not a drawing, so every language fits; on a narrow card the second panel moves under the first.
+Every run of words is a saved fact (`saidMark`) and the title's fact rides `cardWordsMark` (docs/i18n.md, "Saved facts"), so the window and the phone word the note in their own language when they draw it.
+Its record keeps the note's sentences in English as its answer, without the panels.
+
+It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, no reply row, the regular width, and one button, Got it, on Command-1.
+It promises no system notification, and follows the standing notification rule like any note.
+
+- **When.**
+  On the first `task_started` the app broadcasts, of any kind of work, after the event reached every window (`createEventSeam`'s `attachFirstLaunch`, `FirstRunService.noteCrewmateStarted`).
+- **Who.**
+  Only a profile whose welcome was committed (`welcomeState` `consumed`) and that never started a crewmate.
+  The first read of the record decides `firstCrewmateAt` with the crewmate state words: a profile that already has crew history is stamped as past it, so people already using Infinitary never see the note; a profile without the welcome gets its first start stamped and no note.
+- **Once.**
+  `firstCrewmateAt` and `firstCrewmateNoteId` join the first-run record (`src/shared/firstRun.ts`), written in the same commit as the note.
+  Putting it away, a restart, an update and reconnection never show it again; a failed commit leaves the stamp unwritten, so the next start tries again.
+- **The welcome steps aside.**
+  If the welcome is still open at that moment, the app takes it down (resolution `first-crewmate-started`) before the note goes up, so there is one card at a time and the crewmate's first card later arrives on an open stage rather than behind the welcome (the captain's “replace”).
+  Someone partway through the welcome's pages loses their place.
+- **Other cards.**
+  No new rule for the stage: if another card is shown, the note waits as new like any note.
+
+`firstRun.test.ts` pins the record's rule, and `tests/e2e/first-crewmate-note.spec.ts` walks a new profile from the gate through the note, its Got it by key, the working crewmate, its first card and a second crewmate after a restart with no second note.
+A journey that signs a new profile in through the gate and starts a crewmate puts the note away with `putAwayFirstCrewmateNote` (`tests/e2e/firstLaunch.ts`).
+
 ## The create-your-own-panel slot
 
 The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12: once someone's crewmates have finished three tasks, an empty slot at the top of the left rail teaches that they can make a panel of their own, and one click starts the ask.
@@ -218,7 +251,7 @@ The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12:
 
 ## What is deliberately not here
 
-- No first-run flag, no tour of the window, no coach marks on it, no pre-seeded sample task; the welcome's presentation stays inside its own card.
+- No first-run flag, no tour of the window, no coach marks on it, no pre-seeded sample task; the welcome's presentation stays inside its own card, and the first crewmate's note inside its own.
 - One surface teaches personalize, the create-your-own-panel slot above; there is no paragraph in the welcome, no reactive tip and no copy branch on the "Your panels" row.
 - The input while gated does not park a typed turn; the captain chose the disabled input.
   `parkedCaptainTurn` stays what it was, the benched- flagship rung's.

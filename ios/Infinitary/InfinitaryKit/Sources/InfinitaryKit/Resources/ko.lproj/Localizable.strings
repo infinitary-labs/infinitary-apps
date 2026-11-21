@@ -747,6 +747,16 @@
 "filePreparing" = "준비 중";
 "fileReady" = "준비됨";
 "fileReadyAnnounce" = "%1$@ 준비됨";
+"firstCrewmateCards" = "답이 나오거나 선택이 필요하면, 이런 카드로 여기에 가져올게요. 신경 쓸 것은 카드뿐이에요.";
+"firstCrewmateHandoff" = "요청을 선원에게 넘겼어요. 선원은 뒤에서 일하고, 시간이 좀 걸릴 수 있어요.";
+"firstCrewmateLater" = "나중에";
+"firstCrewmateLaterCard" = "카드가 여기로 돌아와요";
+"firstCrewmateLaterWhat" = "답변이나 선택지";
+"firstCrewmateNow" = "지금";
+"firstCrewmateNowWatch" = "지켜볼 필요 없어요";
+"firstCrewmateNowWorks" = "선원이 일하는 중";
+"firstCrewmatePutAway" = "이 카드는 치워도 돼요. 작업은 계속되고, 그동안 다른 일을 맡겨도 돼요.";
+"firstCrewmateTitle" = "선원이 맡았어요";
 "handoverQuit" = "종료";
 "handoverStopNow" = "지금 중지";
 "handoverStoppingText" = "%1$@이(가) 창 없이 아직 실행 중이고 저장된 작업을 열어 두고 있어요. %2$@이(가) 저장하고 중지하도록 요청하고 있으며, 그다음 알아서 이어 가요.";

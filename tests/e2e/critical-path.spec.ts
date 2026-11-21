@@ -4,6 +4,7 @@ import { WELCOME_TITLE } from "@shared/welcome";
 import { GATE_HOME_TITLE } from "../../src/renderer/src/app/firstRunGateWords";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { putAwayFirstCrewmateNote } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { gitIdentityHome } from "./homeFixtures";
 import { launchApp } from "./launch";
@@ -144,6 +145,8 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
       await input.press("Enter");
       const key = await taskKey(page, title);
       await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
+      // A new person's first crewmate brings its once-only note.
+      await putAwayFirstCrewmateNote(page);
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       const task = board.tasks.find((row) => row.key === key);
       if (!task) throw new Error("The started task is not on the board.");

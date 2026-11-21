@@ -227,7 +227,7 @@ export function startHomeFirstmate({
     },
     // A run-out card's Use saved resets on their own: at once when Codex keeps
     // a sign-in for this Mac's own account, else on the account's row.
-    useSavedResets: (arg) => {
+    turnOnSavedResets: (arg) => {
       const there = vault.get(arg) ? undefined : parseAccountKey(arg);
       if (there?.deviceId || !vault.codexSignedIn(arg)) return "sign-in";
       void setUseSavedResets(arg, true, {}).catch((error) =>

@@ -111,9 +111,9 @@ const LOCAL_DOOR_NAME = "Infinitary local door";
 import { Outbox } from "./outbox";
 import {
   type ActionReads,
+  readsAutoSavedResets,
   readsEventScreenOffer,
   readsKeepGoing,
-  readsAutoSavedResets,
   readsSavedReset,
   readsSecretBring,
   readsSecretKeep,

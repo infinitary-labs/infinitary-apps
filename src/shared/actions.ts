@@ -28,7 +28,7 @@ import { hostOfAddress, kindByName } from "./forge";
 import { isServerIntegration, SERVER_INTEGRATION_KINDS, signInHost } from "./forgeKinds";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
-import { englishOf, type Said, said } from "./i18n/said";
+import { englishOf, type Said } from "./i18n/said";
 import {
   INBOX_WORDS,
   INTEGRATION_KIND_NAMES,

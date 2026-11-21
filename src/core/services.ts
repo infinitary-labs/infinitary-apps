@@ -1515,8 +1515,10 @@ export async function createServices(
     offersAutoResets: (accountId, deviceId) => {
       if (!deviceId) {
         const account = vault.get(accountId);
-        return Boolean(account && takesSavedReset(account.providerId)) &&
-          !vault.usesSavedResets(accountId);
+        return (
+          Boolean(account && takesSavedReset(account.providerId)) &&
+          !vault.usesSavedResets(accountId)
+        );
       }
       const account = deviceSignIns
         .lastSaid(deviceId)
@@ -1541,8 +1543,8 @@ export async function createServices(
         deviceSignIns.redeemSavedReset(deviceId, accountId, signIn),
       accountOf: (deviceId, accountId) =>
         deviceSignIns.lastSaid(deviceId)?.accounts.find((account) => account.id === accountId),
-      useSavedResets: (deviceId, accountId, on, signIn) =>
-        deviceSignIns.useSavedResets(deviceId, accountId, on, signIn),
+      setUseSavedResets: (deviceId, accountId, on, signIn) =>
+        deviceSignIns.setUseSavedResets(deviceId, accountId, on, signIn),
     },
     note: (fact) => broadcastEvent({ type: "firstmate_note", ...saidLine(fact) }),
     recheck: () => void quota.refresh("demand"),

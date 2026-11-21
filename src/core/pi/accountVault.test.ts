@@ -983,7 +983,9 @@ describe("a typed cut-off on the account", () => {
     vault.setUseSavedResets(codex.id, true);
     expect((await vault.views()).find((view) => view.id === codex.id)?.useSavedResets).toBe(true);
     vault.setUseSavedResets(codex.id, false);
-    expect((await vault.views()).find((view) => view.id === codex.id)?.useSavedResets).toBeUndefined();
+    expect(
+      (await vault.views()).find((view) => view.id === codex.id)?.useSavedResets,
+    ).toBeUndefined();
 
     const grok = await vault.add("xai", "oauth", bridge());
     expect(() => vault.setUseSavedResets(grok.id, true)).toThrow(

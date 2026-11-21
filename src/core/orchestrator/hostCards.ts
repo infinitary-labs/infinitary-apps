@@ -132,7 +132,7 @@ const USE_SAVED_RESETS_SAID = said("cardUseSavedResets");
  * its key: at once when Codex keeps a sign-in for it, else on the account's
  * row, where Codex signs in first (`auto-saved-resets`).
  */
-export function useSavedResetsAction(accountKey: string): CardAction {
+export function autoResetsAction(accountKey: string): CardAction {
   return {
     id: "use-saved-resets",
     label: englishOf(USE_SAVED_RESETS_SAID),
@@ -402,7 +402,7 @@ export function creditsOfferCard(input: {
     actions: [
       ...(credits ? [keepGoingAction(key, true)] : []),
       ...(resetsPage ? [redeemSavedResetAction(key, !credits)] : []),
-      ...(auto ? [useSavedResetsAction(key)] : []),
+      ...(auto ? [autoResetsAction(key)] : []),
     ],
   };
 }

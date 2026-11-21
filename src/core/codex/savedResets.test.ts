@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STAND_IN_CHATGPT_ID, standInCodex } from "../../../tests/helpers/codexAppServer";
-import type { SavedResetReach } from "./savedReset";
 import type { AuthInteractionBridge } from "../pi/piAuth";
+import type { SavedResetReach } from "./savedReset";
 import { SavedResets, type SavedResetVault, setOwnUseSavedResets } from "./savedResets";
 
 /**
@@ -34,7 +34,7 @@ function home(stand: ReturnType<typeof standInCodex>) {
         throw new Error("no computer in this test");
       },
       accountOf: () => undefined,
-      useSavedResets: async () => {
+      setUseSavedResets: async () => {
         throw new Error("no computer in this test");
       },
     },

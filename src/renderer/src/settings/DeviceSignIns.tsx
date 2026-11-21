@@ -677,7 +677,7 @@ function applySavedReset(deviceId: string, accountId: string): void {
  */
 function applyAutoResets(deviceId: string, accountId: string, on: boolean): void {
   void window.infinitary.accounts
-    .useSavedResets(accountId, on, { deviceId, ...(on ? { signIn: true } : {}) })
+    .setUseSavedResets(accountId, on, { deviceId, ...(on ? { signIn: true } : {}) })
     .catch(() => {});
 }
 

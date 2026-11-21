@@ -551,7 +551,7 @@ export class DeviceSignIns {
    * Turning it on with `signIn` lets Codex there sign in first, its link and
    * paste-back prompt shown under the account's row as a sign-in's are.
    */
-  async useSavedResets(
+  async setUseSavedResets(
     deviceId: string,
     accountId: string,
     on: boolean,

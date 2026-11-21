@@ -265,11 +265,11 @@ The order is accounts with allowance left, then a saved reset, then credits.
 - An abstention, a failed question, the use switched off, or the account's switch off all mean wait: nothing is used and the run-out card keeps its Use a saved reset button.
 - A use goes through the same path as Use a saved reset (`SavedResets.use`), and its feed line says Infinitary used a saved reset on the account so waiting work could continue, with how many are left when Codex says (`savedResetLine`).
   It never shows a sign-in: a use that needs Codex's sign-in fails, says why in the feed and leaves the card's button.
-- The switch sits in the account row's menu (`autoResetsItem`), and the run-out card offers it as a secondary action after Use a saved reset while it is off (`useSavedResetsAction`, the `use-saved-resets` host operation).
+- The switch sits in the account row's menu (`autoResetsItem`), and the run-out card offers it as a secondary action after Use a saved reset while it is off (`autoResetsAction`, the `use-saved-resets` host operation).
   Turning it on while Codex is not signed in to the account starts Codex's sign-in on the row first and uses nothing; the switch stays off if the sign-in does not finish.
   A card's click turns it on at once for this computer's account that Codex is already signed in to, and otherwise opens Settings → Intelligence, whose row starts it with the sign-in (`pendingUseSavedResets`).
 - The catalog line `account-use-saved-resets` (`inf:accounts:use-saved-resets`) is at the own-words tier and takes a `deviceId` for a computer that runs work's account; turning it on there with Codex not signed in is refused with words that say to turn it on from the account's row.
-- A computer that runs work is asked with the `inf:sign-ins:use-saved-resets` order, sent only to a computer that lists the `auto-saved-resets` change (`DeviceSignIns.useSavedResets`); a view that does not list it gets no switch action on the run-out card (`readsAutoSavedResets`).
+- A computer that runs work is asked with the `inf:sign-ins:use-saved-resets` order, sent only to a computer that lists the `auto-saved-resets` change (`DeviceSignIns.setUseSavedResets`); a view that does not list it gets no switch action on the run-out card (`readsAutoSavedResets`).
 
 ## Amazon Bedrock refusals
 

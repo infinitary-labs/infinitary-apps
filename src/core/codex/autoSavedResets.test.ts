@@ -79,7 +79,8 @@ function harness(answer: (state: DecisionState) => DecisionAnswer | undefined): 
       decide: async (_caller, state) => {
         asked.push(state);
         const given = answer(state);
-        return given ? { reset: given } : {};
+        const answers: Record<string, DecisionAnswer> = given ? { reset: given } : {};
+        return answers;
       },
       allowsUse: () => allowed,
     },
@@ -133,7 +134,12 @@ describe("saved resets on their own", () => {
     for (const answer of [
       answered("wait"),
       { value: "wait", outcome: "abstained", version: "sr1-test" } as DecisionAnswer,
-      { value: "wait", outcome: "failed", version: "sr1-test", failure: "timeout" } as DecisionAnswer,
+      {
+        value: "wait",
+        outcome: "failed",
+        version: "sr1-test",
+        reason: "timeout",
+      } as DecisionAnswer,
       undefined,
     ]) {
       const h = harness(() => answer);

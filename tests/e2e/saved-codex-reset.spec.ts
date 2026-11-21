@@ -12,8 +12,8 @@ import {
   say,
 } from "./claudeSeat";
 import { cardBody } from "./frames";
-import { answerDecisionsWithJev, type JevStandIn, startJevStandIn } from "./jevStandIn";
 import { leaveSettings } from "./handoverCards";
+import { answerDecisionsWithJev, type JevStandIn, startJevStandIn } from "./jevStandIn";
 import type { LaunchedApp } from "./launch";
 import { signInCodexHome, writeMockCodexClient } from "./mockCodexClient";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";

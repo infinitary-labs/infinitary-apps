@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { englishOf, said } from "./i18n/said";
 // Types only: decisions.ts reads this module's values for its view.
 import type { DecisionConsentText, DecisionsSettings } from "./decisions";
+import { englishOf, said } from "./i18n/said";
 
 /**
  * The approval screen a Jev or OpenRouter approval saw, kept as its

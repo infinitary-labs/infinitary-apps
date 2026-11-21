@@ -991,7 +991,7 @@ export type FirstmateApi = {
      * Use saved resets on their own, on or off (docs/quota.md); turning it
      * on with `signIn` lets Codex sign in to the account first.
      */
-    useSavedResets: (
+    setUseSavedResets: (
       accountId: string,
       on: boolean,
       options?: UseSavedResetOptions,

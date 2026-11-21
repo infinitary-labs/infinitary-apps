@@ -175,7 +175,7 @@ export type SavedResetsOptions = {
       accountId: string,
     ) => { providerId: string; label: string } | undefined;
     /** That computer's own account's Use saved resets on their own, saved there. */
-    useSavedResets: (
+    setUseSavedResets: (
       deviceId: string,
       accountId: string,
       on: boolean,
@@ -230,7 +230,7 @@ export class SavedResets {
   ): Promise<void> {
     const { deviceId, bridge } = options;
     if (deviceId)
-      await this.options.computers.useSavedResets(deviceId, accountId, on, bridge !== undefined);
+      await this.options.computers.setUseSavedResets(deviceId, accountId, on, bridge !== undefined);
     else await setOwnUseSavedResets(this.options.vault, this.options.reach, accountId, on, bridge);
   }
 

@@ -192,7 +192,11 @@ describe("a computer's own account that used up its allowance", () => {
     expect(ids(offered)).toEqual(["keep-going-on-credits", "use-saved-reset", "use-saved-resets"]);
     const action = offered.raised[0]?.actions?.find((each) => each.id === "use-saved-resets");
     expect(action?.variant).toBe("secondary");
-    expect(action?.effect).toEqual({ kind: "host", op: "use-saved-resets", arg: "acct-codex@mini" });
+    expect(action?.effect).toEqual({
+      kind: "host",
+      op: "use-saved-resets",
+      arg: "acct-codex@mini",
+    });
 
     const notOffered = home({ now: said(100, false, both) }, true, false);
     notOffered.cards.spentAt(["openai-codex"], "mini");

@@ -1211,7 +1211,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:accounts:use-saved-resets": async (accountId, on, options) => {
       const where = options?.deviceId ? { deviceId: options.deviceId } : {};
       if (on && options?.signIn)
-        await stoppable((bridge) => services.setUseSavedResets(accountId, on, { ...where, bridge }));
+        await stoppable((bridge) =>
+          services.setUseSavedResets(accountId, on, { ...where, bridge }),
+        );
       else await services.setUseSavedResets(accountId, on, where);
       return { ok: true as const };
     },

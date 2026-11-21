@@ -167,7 +167,7 @@ export class HostOps {
       case "use-saved-resets": {
         if (!effect.arg) return {};
         // Codex must sign in first: the shell lands on the account's row, which turns it on there.
-        if (this.core.hooks().useSavedResets?.(effect.arg) === "ran") return {};
+        if (this.core.hooks().turnOnSavedResets?.(effect.arg) === "ran") return {};
         return { effect: { kind: "open", target: "subscriptions", useSavedResets: effect.arg } };
       }
       case "restore-account":

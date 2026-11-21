@@ -89,7 +89,7 @@ export type FirstmateAgentOptions = {
    * `ran` when it turned on at once, `sign-in` when the account's row is
    * where it goes on, since Codex has to sign in first.
    */
-  useSavedResets?: (accountKey: string) => "ran" | "sign-in";
+  turnOnSavedResets?: (accountKey: string) => "ran" | "sign-in";
   /**
    * The dev-only local seat (roadmap 1.7) as the boot found it: when set it
    * is the Firstmate's model and runtime outright - no pin, no account, no

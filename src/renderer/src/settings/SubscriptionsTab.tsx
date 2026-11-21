@@ -937,7 +937,7 @@ export function SubscriptionsTab() {
     (account: AccountView) => {
       if (account.useSavedResets) {
         void window.infinitary.accounts
-          .useSavedResets(account.id, false)
+          .setUseSavedResets(account.id, false)
           .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
           .finally(() => void refresh());
         return;
@@ -947,7 +947,7 @@ export function SubscriptionsTab() {
       cancelled.current = false;
       forgetSignInNotice(account.providerId);
       void window.infinitary.accounts
-        .useSavedResets(account.id, true, { signIn: true })
+        .setUseSavedResets(account.id, true, { signIn: true })
         .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
         .finally(() => {
           setBusyAccount(null);

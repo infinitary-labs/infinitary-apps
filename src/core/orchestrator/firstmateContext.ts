@@ -27,7 +27,9 @@ import {
 import {
   listSurfaces,
   panelsOffLine,
+  refusedRunbookPanels,
   SURFACES_CONTEXT_LIMIT,
+  surfaceOwner,
   surfaceState,
 } from "../pi/personalizeTool";
 import { captainLanguageFact } from "../prompts/captainLanguage";
@@ -724,19 +726,21 @@ export class FirstmateContext {
     const personal = personalize.personal();
     const all = listSurfaces(preferences.layout, personal, personalize.gates());
     const mounts = personalize.mounts?.() ?? null;
-    const personalSurfaces = all.filter((surface) => surface.kind === "personal");
+    // The captain's own panels and the ones added, a runbook's included.
+    const personalSurfaces = all.filter((surface) => surface.kind !== "app");
     const listed = new Set(personalSurfaces.slice(0, SURFACES_CONTEXT_LIMIT));
     const shown = all.filter((surface) => surface.kind === "app" || listed.has(surface));
     const omitted =
       personalSurfaces.length - Math.min(personalSurfaces.length, SURFACES_CONTEXT_LIMIT);
     const panelsOff = panelsOffLine(preferences.panels);
+    const refused = refusedRunbookPanels(personal);
     return {
       description: "app_change panel and personalize remove act on these ids",
       theme: preferences.appearance.theme,
       panels: shown.map((surface) => ({
         id: surface.id,
         title: surface.title,
-        owner: surface.kind === "personal" ? "captain" : "app",
+        ...surfaceOwner(surface, personal),
         rail: surface.placement.x,
         position: surface.placement.y,
         // Its place in that slot, from the top: "2 of 3".
@@ -745,6 +749,9 @@ export class FirstmateContext {
         state: surfaceState(surface, mounts),
       })),
       ...(omitted > 0 ? { personal_panels_omitted: omitted } : {}),
+      // A runbook's panel left off, beside the one that holds its id (docs/runbooks.md, "Panels").
+      ...(refused.rows.length > 0 ? { refused_runbook_panels: refused.rows } : {}),
+      ...(refused.more > 0 ? { refused_runbook_panels_omitted: refused.more } : {}),
       ...(panelsOff ? { panels_off: panelsOff } : {}),
     };
   }

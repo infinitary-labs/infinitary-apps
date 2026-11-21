@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "runbook-panels",
+      "kind": "feature",
+      "area": "settings",
+      "title": "A runbook can bring its own panels",
+      "body": "A runbook can now include panels, which show on your rails while the runbook is on and go away when you turn it off. Settings → Runbooks names each runbook's panels under its switch. When you add a runbook from elsewhere, its card lists the panels it brings and what each can read, and adding it agrees to them.",
+      "picture": {
+        "dark": "runbook-panels-dark.webp",
+        "light": "runbook-panels-light.webp",
+        "alt": "A Reading list panel on the right rail, attributed to the Reading desk runbook that brought it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

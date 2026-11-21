@@ -43,7 +43,7 @@ Existing saved records remain panels.
 Nothing is served until the captain chooses Add it on the host's card; Don't add declines and removes the staged files.
 Putting the card aside keeps the staged offer pending without serving or declining it.
 Every runbook update asks again, because new guidance or a different replacement changes what the agents follow even when no panel grant changes.
-The card names the source, author, guidance reach and any built-in it turns off.
+The card names the source, author, guidance reach, any built-in it turns off and the panels it shows ("Panels" below).
 Adding leaves one feed line, including that replacement; the built-in stays available to turn back on.
 An update cannot take a name from a different source or change a panel into a runbook.
 Ask the first mate to remove an added runbook by name; the installer's remove action uses its id and removes its files and record.
@@ -55,11 +55,24 @@ Section paths stay inside the folder and name plain text; skills and parts name 
 The same check runs when the global runbook root reads an installed folder, so an added script or escaping path on disk withdraws that runbook from reach.
 The shared source fetcher's tree and byte bounds apply before admission; npm lifecycle scripts, git hooks and submodules never run.
 
-A manifest may list relative panel folders in `panels`.
-The existing panel compiler checks each folder at admission, but adding the runbook mounts no panel.
+## Panels
+
+A manifest may list relative panel folders in `panels`, and a runbook that is on shows them on the rails; turning it off takes them away.
 Guidance and skill roots cannot overlap these panel folders.
-The installer tells the first mate where those inert sources will live after consent; adding one later uses that folder through the same installer and its separate panel consent card.
-A panel's installed copy has its own record, grant and lifecycle.
+A runbook's panel has the id `<runbook>-<folder name>`, where a runbook that replaces a built-in uses the built-in's id, so a copy keeps your place for the built-in's panel.
+That id is for the rails, the layout and commands; a runbook's panel keeps its saved data and its integration asks under its own runbook's id and folder (`runbookPanelSlice`), so a panel that shares its shown id never reads or loses its data.
+`Runbooks.panels()` lists the on runbooks' panels, and `PersonalExtensions` adds them as a third root beside your panels and added ones (`src/core/personal/framedPanels.ts`).
+They are drawn in a frame like an added panel, with source `installed`, the runbook's name as `by` and its id as `runbook`, and run no code of their own in the app: a `server.ts` mounts nothing.
+A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off, named once in the panel log, and listed with its reason among the window's refused panels (the snapshot's `refused` list), on a row of its own beside the panel that keeps the id.
+A runbook's panel the core will not serve, such as one with background code or one nobody agreed to, is answered refused with that reason too.
+The first mate's surfaces name each runbook's panel by its runbook and list the ones left off, a view of another Mac lists them among its refused panels too, and a list past its bound (`PERSONAL_REFUSED_MAX`, `PANEL_MOUNTS_MAX`) leaves out refused runbook panels, never a drawn one.
+A personal runbook's panel is served what its manifest asks, as your own panels are.
+An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
+A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.
+Settings → Runbooks names a runbook's panels under its switch.
+An added runbook is read only under its record's id: files changed to name another runbook are listed as not available, never served under that one's agreement.
+Removing an added runbook clears every slice of saved data its id owns, whatever its files list now; asking the first mate to remove a runbook's panel answers that its runbook's switch takes it away.
+The same folder can still be added as a panel of its own through the installer's separate panel card, with its own record, grant and lifecycle.
 
 ## Making a new runbook
 
@@ -112,7 +125,7 @@ Every work computer on the Secrets major supports these skills, and the existing
 Pi lists them through its existing resource loader, and Claude stages them through its existing explicit local-skill plugin door with settings sources off.
 Each session writes them in a staging folder of its own beside its record, so no session removes the files another open session of the task still reads (`src/core/session/stagingFolders.ts`, INF-2054).
 HTML parts stay beside their skill and can be read through the same file access.
-No panel is installed just because a runbook holds panel source or parts; panels keep their own installation and consent door.
+Only the folders a manifest lists in `panels` show as panels; panel source or parts anywhere else in a runbook show nothing.
 
 ## Built-ins
 
@@ -179,7 +192,9 @@ The fixed-context test measures the core with the bundled care, testing and deli
 The existing lesson and workflow journeys cover the guidance's consumers.
 The replay gate and the signed-in evaluations serve the bundled runbooks through their shared isolated host (`scripts/replay/isolatedHost.ts`), as a fresh app does; `tests/eval-host-runbooks.test.ts` holds that for the evaluations.
 
-`src/core/plugins/pluginInstaller.test.ts` also drives folder, local git and npm runbooks through real host consent, replacement, skill staging, separate panel consent and removal.
+`src/core/plugins/pluginInstaller.test.ts` also drives folder, local git and npm runbooks through real host consent, replacement, skill staging, its panels' agreement on the add card, separate panel consent and removal.
+`src/core/personal/personalExtensions.test.ts` mounts a runbook's panels under its name, lets your own panel keep its id, and mounts nothing unagreed or with code.
+`tests/e2e/runbook-panel.spec.ts` turns a personal runbook on and off by keys in Settings and finds its panel and its command come and go.
 `tests/e2e/installed-runbooks.spec.ts` adds and declines a runbook by keyboard, checks its persisted switches after restart, observes the served guidance and removes it by talking.
 
 `tests/e2e/personal-runbooks.spec.ts` copies real built-in guidance through the catalog, edits the personal source, switches by keyboard, checks one replacement line and the served prompt, restarts, and restores the built-in.

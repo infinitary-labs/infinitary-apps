@@ -16,10 +16,12 @@ import { PanelStops } from "../panels/panelStops";
 import type { AppPaths } from "../paths";
 import type { PluginRecords } from "../plugins/pluginRecords";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
+import type { Runbooks } from "../runbooks/runbooks";
 import type { SqlService } from "../sql/sqlService";
 import type { AppDatabase } from "../storage/db";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { agreedGrant } from "./framedPanels";
 import { carryPanelInstructions } from "./panelInstructions";
 import { PanelMountsHolder } from "./panelMounts";
 import { PersonalExtensions } from "./personalExtensions";
@@ -73,11 +75,13 @@ export async function startHomePersonal(options: {
   panelAsks: PanelAsks;
   /** The crew, built after the panels and read only once the captain asks again. */
   crew: () => Pick<CrewSupervisor, "cards" | "integrationAsks">;
-  pluginRecords: Pick<PluginRecords, "installed">;
+  pluginRecords: Pick<PluginRecords, "installed" | "get">;
+  /** The runbooks, whose panels show while each is on (docs/runbooks.md, "Panels"). */
+  runbooks: Pick<Runbooks, "panels" | "subscribe">;
   now: () => number;
   emit: CoreEventSink;
 }): Promise<HomePersonal> {
-  const { host, paths, repos, tasks, preferences, panelAsks, pluginRecords } = options;
+  const { host, paths, repos, tasks, preferences, panelAsks, pluginRecords, runbooks } = options;
   const panelMounts = new PanelMountsHolder();
   // Every panel's lines and the host's own about panels go to one file in
   // the data folder, with a window or without one (docs/personal-panels.md,
@@ -177,8 +181,24 @@ export async function startHomePersonal(options: {
               ? [{ id: record.id, name: record.name, capabilities: record.capabilities }]
               : [],
           ),
+      // The third root (docs/runbooks.md, "Panels"): a runbook in your
+      // workspace is served what its panels ask, and an added one what you
+      // agreed to on its add card.
+      runbooks: () =>
+        runbooks.panels().map((panel) => ({
+          id: panel.id,
+          slice: panel.slice,
+          dir: panel.dir,
+          runbook: { id: panel.runbook.id, name: panel.runbook.name },
+          grants:
+            panel.runbook.source === "personal"
+              ? "own"
+              : agreedGrant(pluginRecords.get(panel.runbook.id)?.panels, panel.folder),
+        })),
     },
   });
+  // A switch, a copy, an add or a removal can change which runbook panels show.
+  runbooks.subscribe(() => void personal.refresh());
   // The app's own panels have their places even when no snapshot was pushed
   // (the captain's panels off at launch).
   preferences.reconcile(knownPanels(personal.snapshot()));

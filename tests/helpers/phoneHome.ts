@@ -1177,6 +1177,13 @@ export async function startPhoneHome(
         case "POST panel-shy-remove":
           result = await panels.removeShy();
           break;
+        // docs/runbooks.md, "Panels": a runbook of the captain's own shows its panel while it is on.
+        case "POST panel-runbook-on":
+          result = await panels.runbookOn();
+          break;
+        case "POST panel-runbook-off":
+          result = await panels.runbookOff();
+          break;
         case "POST panel-write":
           result = await panels.write(41);
           break;

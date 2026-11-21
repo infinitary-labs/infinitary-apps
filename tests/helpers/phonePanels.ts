@@ -26,6 +26,11 @@ export const PHONE_PANEL_ID = "phone-tally";
 /** The fixture panel that decides for itself whether it shows (tests/fixtures/phone-panels/phone-shy). */
 export const PHONE_SHY_ID = "phone-shy";
 
+/** A runbook of the captain's own whose one panel is the panel-cards fixture (docs/runbooks.md, "Panels"). */
+export const PHONE_RUNBOOK_ID = "phone-desk";
+/** That panel's id: its runbook's and its folder's. */
+export const PHONE_RUNBOOK_PANEL_ID = `${PHONE_RUNBOOK_ID}-reading`;
+
 /**
  * INF-3830 piece 2's phone part: the computer's side of the Panels journey
  * (ios/Infinitary/InfinitaryUITests/PhoneJourney+Panels.swift). The real core
@@ -40,6 +45,7 @@ export function phonePanelControls(
   frameLib: { dir: string; pins: Record<string, string> },
 ) {
   const folder = join(core.paths.personalWorkspaceDir, PHONE_PANEL_ID);
+  const runbook = join(core.paths.personalWorkspaceDir, "runbooks", PHONE_RUNBOOK_ID);
   const listedAs = async (id: string): Promise<PersonalExtensionView | undefined> =>
     ((await core.dispatch("inf:plugins:personal:list", [])) as PersonalSnapshot).extensions.find(
       (extension) => extension.id === id,
@@ -132,6 +138,45 @@ export function phonePanelControls(
         (value) => value === shown,
         "The shy panel's page never said",
       );
+      return { ok: true };
+    },
+    /** The captain's own runbook, written off and then turned on, so its panel shows only while it is on. */
+    async runbookOn() {
+      await library();
+      cpSync(
+        join(process.cwd(), "tests", "fixtures", "panel-cards", "reading-list"),
+        join(runbook, "reading"),
+        { recursive: true },
+      );
+      writeFileSync(
+        join(runbook, "runbook.json"),
+        JSON.stringify({
+          id: PHONE_RUNBOOK_ID,
+          name: "Phone desk",
+          description: "Keeps a reading list beside your work.",
+          author: "You",
+          version: "1.0.0",
+          panels: ["reading"],
+          startsOff: true,
+        }),
+      );
+      await core.dispatch("inf:settings:runbooks:set", [PHONE_RUNBOOK_ID, true]);
+      await until(
+        (panel) => Boolean(panel?.frame),
+        "The runbook's panel was not built",
+        PHONE_RUNBOOK_PANEL_ID,
+      );
+      return { ok: true };
+    },
+    /** Turned off, the runbook's panel goes; its folder goes after. */
+    async runbookOff() {
+      await core.dispatch("inf:settings:runbooks:set", [PHONE_RUNBOOK_ID, false]);
+      await until(
+        (panel) => panel === undefined,
+        "The runbook's panel stayed after it was turned off",
+        PHONE_RUNBOOK_PANEL_ID,
+      );
+      rmSync(runbook, { recursive: true, force: true });
       return { ok: true };
     },
     async removeShy() {

@@ -247,6 +247,7 @@
   "cardRevisionLinksUnavailable": "روابط التغيير غير متاحة",
   "cardRevisionMore": "{count} أخرى",
   "cardRevisionShowFewer": "عرض أقل",
+  "cardRunbookAddPanels": "أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.",
   "cardSavedResetCrewWaits": "ينتقل عمل الطاقم إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.",
   "cardSavedResetCrewWaitsThere": "ينتقل عمل الطاقم {where} إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.",
   "cardSavedResetsNow": {

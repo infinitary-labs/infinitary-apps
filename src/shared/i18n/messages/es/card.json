@@ -214,6 +214,7 @@
   "cardRevisionLinksUnavailable": "Enlaces de cambios no disponibles",
   "cardRevisionMore": "{count} más",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardRunbookAddPanels": "Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.",
   "cardSavedResetCrewWaits": "El trabajo de la tripulación pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
   "cardSavedResetCrewWaitsThere": "El trabajo de la tripulación {where} pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
   "cardSavedResetsNow": {

@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "Liens de modification indisponibles";
 "cardRevisionMore" = "%1$@ de plus";
 "cardRevisionShowFewer" = "Afficher moins";
+"cardRunbookAddPanels" = "Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.";
 "cardSavedResetCrewWaits" = "Le travail de l’équipage passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.";
 "cardSavedResetCrewWaitsThere" = "Le travail de l’équipage %1$@ passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.";
 "cardSavedResetsOpenPage" = "Ouvrir la page d’utilisation sur %1$@";
@@ -3012,6 +3013,7 @@
 "settingsRunbooksMakeYourOwn" = "Créer les vôtres";
 "settingsRunbooksOpenFailed" = "Impossible d’ouvrir ce dossier. Veuillez réessayer.";
 "settingsRunbooksOpenFolder" = "Ouvrir le dossier";
+"settingsRunbooksPanels" = "Tant qu’elle est activée, elle affiche %1$@ dans vos colonnes.";
 "settingsRunbooksView" = "Voir";
 "settingsRunbooksViewLabel" = "Voir %1$@";
 "settingsRunbooksYours" = "Les vôtres";

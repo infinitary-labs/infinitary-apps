@@ -12,6 +12,7 @@ import {
 import {
   mountKindOf,
   PANEL_MOUNT_WHY_MAX,
+  PANEL_MOUNTS_MAX,
   type PanelMount,
   type PanelMountKind,
   type PanelMounts,
@@ -47,6 +48,8 @@ export type MountFacts = {
   views: readonly PersonalExtensionView[];
   /** What refused a panel, by `refusalKey`. */
   refusals: ReadonlyMap<string, RailRefusal>;
+  /** The runbooks' panels the core left off, as its snapshot names them (docs/runbooks.md, "Panels"). */
+  runbookRefusals?: PersonalSnapshot["refused"];
   bodies: ReadonlyMap<string, PanelBodyState>;
   said: (id: string) => RailSaid;
   isCollapsed: (id: string) => boolean;
@@ -93,6 +96,9 @@ function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
       : facts.views.find((entry) => entry.id === panel.id && mountKindOf(entry.source) === kind);
   const rail: RailSide = effectivePlacement(facts.layout, panel.id, panel.preferredPlacement).x;
   const base = { id: panel.id, kind, version: versionOf(view), rail };
+  // A runbook's panel the core would not serve is refused, with its reason.
+  if (view?.runbook && view.error)
+    return { ...base, state: "refused", why: cut(view.error.message) };
   if (isPanelHidden(facts.layout, panel.id)) return { ...base, state: "hidden", why: null };
   if (panel.source.get() === null) return { ...base, state: "off", why: cut(emptyWhy(view)) };
   const said = facts.said(panel.id);
@@ -158,6 +164,22 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
       why: cut(refusal.why),
     });
   }
+  // A runbook's panel the core left off is named beside any panel that
+  // holds its id, by its runbook, so the answer says why it is missing, in
+  // the room the answer has left after every other panel and the slot.
+  const room = Math.max(0, PANEL_MOUNTS_MAX - mounts.length - 1);
+  for (const refusal of (facts.runbookRefusals ?? []).slice(0, room)) {
+    mounts.push({
+      id: refusal.id,
+      kind: "installed",
+      version: null,
+      state: "refused",
+      rail: null,
+      // i18n-exempt: served to the crew (why a panel is not drawn)
+      why: cut(`${refusal.by}'s panel: ${refusal.why}`),
+      runbook: refusal.runbook,
+    });
+  }
   const slotRail = effectivePlacement(
     facts.layout,
     CREATE_PANEL_SLOT_ID,
@@ -195,11 +217,13 @@ function slotNow(layout: Layout): MountFacts["slot"] {
 }
 
 let views: readonly PersonalExtensionView[] = [];
+let runbookRefusals: PersonalSnapshot["refused"];
 const viewListeners = new Set<() => void>();
 
 /** The panels the core's newest snapshot carries, which the answer names even when no rail took one. */
 export function noteMountSnapshot(snapshot: PersonalSnapshot): void {
   views = snapshot.extensions;
+  runbookRefusals = snapshot.refused;
   for (const listener of [...viewListeners]) listener();
 }
 
@@ -226,6 +250,7 @@ export function startPanelMounts(
       panels: host.sidePanels.list(),
       layout,
       views,
+      runbookRefusals,
       refusals: railRefusals.list(),
       bodies: panelBodies.list(),
       said: (id) => panelRail.get(id),

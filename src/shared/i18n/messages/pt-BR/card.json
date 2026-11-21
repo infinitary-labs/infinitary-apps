@@ -214,6 +214,7 @@
   "cardRevisionLinksUnavailable": "Links de alteração indisponíveis",
   "cardRevisionMore": "mais {count}",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardRunbookAddPanels": "Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.",
   "cardSavedResetCrewWaits": "O trabalho da tripulação passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.",
   "cardSavedResetCrewWaitsThere": "O trabalho da tripulação {where} passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.",
   "cardSavedResetsNow": {

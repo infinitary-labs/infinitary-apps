@@ -553,9 +553,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PERSONAL_STORE_MAX_BYTES: physical("the write throws naming the cap; delete something first"),
     PERSONAL_STORE_VALUE_MAX_BYTES: physical("the write throws naming the bound; nothing changes"),
     PERSONAL_STORE_KEY_MAX_LENGTH: physical("the write throws naming the bound; nothing changes"),
+    PERSONAL_REFUSED_MAX: physical("the panels past it are named in the panel log alone"),
   },
   "src/shared/personal/mounts.ts": {
     PANEL_MOUNT_WHY_MAX: physical("clipped with an ellipsis at the window; the rest is not sent"),
+    PANEL_MOUNTS_MAX: physical("refused runbook panels past it are left out of the answer; the snapshot still lists them"),
   },
   "src/shared/placement.ts": {
     RESOLVED_TOOL_LIMIT: record("none needed: no resolved set can exceed it"),

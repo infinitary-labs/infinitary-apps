@@ -299,6 +299,42 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(reopened.firstmate()).toEqual(original);
     expect(readFileSync(guide, "utf8")).toContain("# Edited workflows");
   });
+  it("lists a runbook's panels by title, offers them only while it is on, and tells listeners of each switch", () => {
+    // Intent: the captain's ask that runbooks can include panels; a copy of
+    // the real Common workflows shows them under the built-in's id.
+    const { settings } = fixture();
+    const personal = join(scratchDir("inf-personal-runbooks-"), "runbooks");
+    const books = new Runbooks(root, settings, () => [], personal);
+    const heard: string[] = [];
+    const stop = books.subscribe(() => heard.push("changed"));
+    books.copy("sequences", "my-workflows", "My workflows");
+    const path = join(personal, "my-workflows");
+    const manifest = JSON.parse(readFileSync(join(path, "runbook.json"), "utf8"));
+    writeFileSync(join(path, "runbook.json"), JSON.stringify({ ...manifest, panels: ["desk"] }));
+    mkdirSync(join(path, "desk"));
+    writeFileSync(join(path, "desk/manifest.json"), JSON.stringify({ title: "Desk" }));
+    const listed = () => books.list().find((book) => book.id === "my-workflows")?.panels;
+    expect(listed()).toEqual([{ id: "sequences-desk", title: "Desk" }]);
+    expect(books.panels()).toEqual([]);
+    books.set("my-workflows", true);
+    expect(books.panels()).toEqual([
+      {
+        id: "sequences-desk",
+        folder: "desk",
+        slice: "my-workflows:desk",
+        dir: join(path, "desk"),
+        runbook: { id: "my-workflows", name: "My workflows", source: "personal" },
+      },
+    ]);
+    // A built-in runbook's own panels never come through this door.
+    expect(books.list().find((book) => book.id === "sequences")?.panels).toBeUndefined();
+    books.set("my-workflows", false);
+    expect(books.panels()).toEqual([]);
+    expect(heard).toEqual(["changed", "changed", "changed"]);
+    stop();
+    books.set("my-workflows", true);
+    expect(heard).toHaveLength(3);
+  });
   it("copies the bundled lesson skills and tested parts into an editable runbook", () => {
     // Intent: INF-1177 piece 4 and the captain's repair request: the real Lessons copy passes unchanged admission.
     const { settings } = fixture();

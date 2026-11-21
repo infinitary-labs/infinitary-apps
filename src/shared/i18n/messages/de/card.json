@@ -203,6 +203,7 @@
   "cardRevisionLinksUnavailable": "Änderungslinks nicht verfügbar",
   "cardRevisionMore": "{count} weitere",
   "cardRevisionShowFewer": "Weniger anzeigen",
+  "cardRunbookAddPanels": "Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.",
   "cardSavedResetCrewWaits": "Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
   "cardSavedResetCrewWaitsThere": "Crew-Arbeit {where} wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
   "cardSavedResetsNow": {

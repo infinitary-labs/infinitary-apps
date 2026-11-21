@@ -1,5 +1,10 @@
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
-import type { PanelMount, PanelMounts } from "@shared/personal/mounts";
+import {
+  PANEL_MOUNTS_MAX,
+  type PanelMount,
+  type PanelMounts,
+  panelMountsSchema,
+} from "@shared/personal/mounts";
 import { DEFAULT_LAYOUT, type Layout } from "@shared/preferences";
 import { READ_NAMES } from "@shared/reads";
 import { afterEach, describe, expect, it } from "vitest";
@@ -55,6 +60,7 @@ function answer(host: PluginHost, snapshot: PersonalSnapshot, layout: Layout = D
     panels: host.sidePanels.list(),
     layout,
     views: snapshot.extensions,
+    runbookRefusals: snapshot.refused,
     refusals: railRefusals.list(),
     bodies: panelBodies.list(),
     said: (id) => panelRail.get(id),
@@ -111,6 +117,97 @@ describe("the window's answer about its panels", () => {
     expect(of(answer(host, renamed), "my-activity", "personal")).toMatchObject({
       state: "drawn",
       rail: "left",
+    });
+  });
+
+  // docs/runbooks.md, "Panels": a panel that holds an id a runbook's panel
+  // also takes keeps it, and the runbook's is listed refused beside it.
+  for (const source of ["yours", "installed"] as const) {
+    it(`names a runbook's panel the core refused for a taken id beside the ${source} panel that keeps it`, () => {
+      const host = new PluginHost({ reads: new Set(READ_NAMES) });
+      plugins = new PersonalPlugins(host, () => {});
+      const refusal = {
+        id: "desk-reading",
+        runbook: "desk",
+        by: "Reading desk",
+        why: "another panel has that id",
+      };
+      const snapshot: PersonalSnapshot = {
+        extensions: [view({ id: "desk-reading", source })],
+        refused: [refusal],
+      };
+      plugins.apply(snapshot);
+      const mounts = answer(host, snapshot);
+      const kind = source === "yours" ? "personal" : "installed";
+      // The panel that keeps the id answers for itself on its own row.
+      const kept = mounts.filter(
+        (mount) => mount.id === "desk-reading" && mount.kind === kind && !mount.runbook,
+      );
+      expect(kept).toHaveLength(1);
+      expect(kept[0]?.state).not.toBe("refused");
+      expect(
+        mounts.filter((mount) => mount.id === "desk-reading" && mount.runbook === "desk"),
+      ).toEqual([
+        {
+          id: "desk-reading",
+          kind: "installed",
+          version: null,
+          state: "refused",
+          rail: null,
+          why: "Reading desk's panel: another panel has that id",
+          runbook: "desk",
+        },
+      ]);
+    });
+  }
+
+  it("keeps every other panel's row and the slot in a full answer, leaving out the runbook panels past its room", () => {
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    builtin = registerBuiltinPlugin(host);
+    plugins = new PersonalPlugins(host, () => {});
+    const snapshot: PersonalSnapshot = {
+      extensions: [view({ id: "desk-reading" })],
+      refused: Array.from({ length: PANEL_MOUNTS_MAX }, (_, index) => ({
+        id: `desk-${index}`,
+        runbook: "desk",
+        by: "Reading desk",
+        why: "another panel has that id",
+      })),
+    };
+    plugins.apply(snapshot);
+    const mounts = answer(host, snapshot);
+    // The answer still parses, so the window's whole answer is sent.
+    expect(panelMountsSchema.safeParse({ panels: mounts }).success).toBe(true);
+    expect(mounts).toHaveLength(PANEL_MOUNTS_MAX);
+    const others = mounts.filter((mount) => !mount.runbook);
+    expect(others.map((mount) => mount.id)).toEqual(
+      expect.arrayContaining(["activity", "desk-reading", "create-panel"]),
+    );
+    expect(mounts.filter((mount) => mount.runbook)).toHaveLength(PANEL_MOUNTS_MAX - others.length);
+  });
+
+  it("names a runbook's panel the core would not serve refused, with the core's reason", () => {
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    plugins = new PersonalPlugins(host, () => {});
+    // The reason the core's check gives a runbook panel that ships server code, passed through as it is.
+    const why =
+      "it ships server code (server.ts), and a panel inside a runbook may not run code of its own in the app.";
+    const snapshot: PersonalSnapshot = {
+      extensions: [
+        view({
+          id: "desk-coded",
+          source: "installed",
+          runbook: "desk",
+          by: "Reading desk",
+          frame: null,
+          error: { stage: "server", message: why },
+        }),
+      ],
+    };
+    plugins.apply(snapshot);
+    expect(of(answer(host, snapshot), "desk-coded", "installed")).toMatchObject({
+      state: "refused",
+      why,
     });
   });
 

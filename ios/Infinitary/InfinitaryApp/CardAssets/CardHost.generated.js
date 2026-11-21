@@ -16263,6 +16263,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardRunbookAddPanels() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
+      case "de":
+        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
+      case "es":
+        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
+      case "ja":
+        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
+      case "ko":
+        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
+      case "zh-Hans":
+        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
+      case "zh-Hant":
+        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
+    }
+    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
+  }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
       case "ar":
@@ -67635,6 +67662,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open folder`;
   }
+  function settingsRunbooksPanels(input2) {
+    const panels = input2.panels;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض ${panels} على أشرطتك.`;
+      case "de":
+        return `Solange er an ist, zeigt er ${panels} auf deinen Leisten.`;
+      case "es":
+        return `Mientras está activo, muestra ${panels} en tus barras.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche ${panels} dans vos colonnes.`;
+      case "ja":
+        return `オンの間、パネル列に ${panels} を表示します。`;
+      case "ko":
+        return `켜져 있는 동안 레일에 보여 주는 패널: ${panels}`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, mostra ${panels} nas suas barras laterais.`;
+      case "zh-Hans":
+        return `开启时，会在侧栏上显示 ${panels}。`;
+      case "zh-Hant":
+        return `開啟時，會在側欄上顯示 ${panels}。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ šĥöŵš ${panels} öñ ýöûŕ ŕáîļš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it shows ‬${panels}‮ on your rails.‬`;
+    }
+    return `While it is on, it shows ${panels} on your rails.`;
+  }
   function settingsRunbooksView() {
     switch (currentLanguage()) {
       case "ar":
@@ -87251,6 +87306,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
+    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -88994,6 +89050,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsRunbooksMakeYourOwn,
     settingsRunbooksOpenFailed,
     settingsRunbooksOpenFolder,
+    settingsRunbooksPanels,
     settingsRunbooksView,
     settingsRunbooksViewLabel,
     settingsRunbooksYours,
@@ -90066,6 +90123,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
+    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],
@@ -91809,6 +91867,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsRunbooksMakeYourOwn": [],
     "settingsRunbooksOpenFailed": [],
     "settingsRunbooksOpenFolder": [],
+    "settingsRunbooksPanels": ["panels"],
     "settingsRunbooksView": [],
     "settingsRunbooksViewLabel": ["name"],
     "settingsRunbooksYours": [],
@@ -98881,8 +98940,16 @@ ${FRAME_KEYBOARD_SCRIPT}
     id: personalIdSchema,
     /** Where it came from, stamped by the host (Phase A item 1). */
     source: _enum(PLUGIN_SOURCES),
-    /** An installed plugin's `name`: the attribution on its header. Null for the captain's own. */
+    /**
+     * An installed plugin's `name`, or the name of the runbook a panel comes
+     * with: the attribution on its header. Null for the captain's own.
+     */
     by: string().min(1).max(40).nullable(),
+    /**
+     * The id of the runbook it comes with (docs/runbooks.md, "Panels"): it is
+     * served as an added panel and leaves when that runbook is turned off.
+     */
+    runbook: string().min(1).max(100).optional(),
     title: string().min(1).max(40),
     placement: personalPlacementSchema,
     order: number().int(),
@@ -98981,6 +99048,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       })
     ).optional()
   });
+  const PERSONAL_REFUSED_MAX = 500;
   object({
     extensions: array(personalExtensionViewSchema),
     /**
@@ -98989,7 +99057,20 @@ ${FRAME_KEYBOARD_SCRIPT}
      * from the rails, which keep each panel's last commit until the build's
      * report. Absent while nothing is being built.
      */
-    drafts: array(personalExtensionViewSchema).optional()
+    drafts: array(personalExtensionViewSchema).optional(),
+    /**
+     * The runbooks' panels left off the rails (docs/runbooks.md, "Panels"):
+     * each by its id, its runbook's id and name, and why, such as another
+     * panel holding its id. Absent when none is.
+     */
+    refused: array(
+      object({
+        id: string().min(1).max(100),
+        runbook: string().min(1).max(100),
+        by: string().max(100),
+        why: string().min(1).max(500)
+      })
+    ).max(PERSONAL_REFUSED_MAX).optional()
   });
   object({
     extensionId: personalIdSchema,

@@ -158,3 +158,14 @@ export const panelLines = {
     done: (v) => `${v.surface} ${v.description}`,
   },
 } as const satisfies Record<string, ActionLine>;
+
+/**
+ * The words of the panel line's Activity lines a move of several panels or a
+ * More pick writes (docs/ui-plugins.md), beside the line they belong to.
+ */
+export const PANEL_LINE_WORDS = {
+  panels: "Panels",
+  reset: "put back where each asks to be",
+  rearranged: "rearranged",
+  morePick: "is the More pick",
+} as const;

@@ -38,6 +38,7 @@ const WORK_REQUEST: ActionException = [
 ];
 
 /** The captain's own clicks and picks on a card. */
+// i18n-exempt: an inventory reason the channel parity test reads, never shown
 const CARD_CLICKS: ActionException = ["consent", "Captain card clicks"];
 
 /** Operations which are not app settings, with the reason they stay outside the table. */

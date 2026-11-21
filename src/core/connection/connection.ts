@@ -87,7 +87,7 @@ import {
 } from "./cardCompatibility";
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
-import { heldAsks } from "./heldAsks";
+import { heldAsks, type LiveToViewArgs } from "./heldAsks";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -506,18 +506,11 @@ export type HomeConnection = {
    */
   routes(): Promise<void>;
   /**
-   * A live frame to each welcomed window of one Mac (`role` view), such as
-   * its Devices row's Fix it (`work-setup`), or only to those that listed
-   * `change`, or with `one` only to the newest of them; false when none is
-   * connected.
+   * A live frame to each welcomed window of one Mac (`role` view), such as its
+   * Devices row's Fix it (`work-setup`), or only those listing `change`, or with
+   * `one` only the newest; false when none is connected.
    */
-  liveToView(
-    deviceId: string,
-    channel: string,
-    payload: unknown,
-    change?: string,
-    one?: boolean,
-  ): boolean;
+  liveToView(...args: LiveToViewArgs): boolean;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -1230,14 +1223,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         });
         return;
       }
-      // A window's answer to an ask comes from the connection it was sent to,
-      // never another window of the same computer.
-      if (channel === "inf:view:answer") {
-        const id = (frame.args as unknown[] | undefined)?.[0];
-        if (!windowAsked.answered(id, client)) {
-          reply({ ok: true, value: { ok: true } });
-          return;
-        }
+      if (windowAsked.stray(channel, frame.args, client)) {
+        reply({ ok: true, value: { ok: true } });
+        return;
       }
       try {
         // A paired view is the captain at another Mac: the same actor the
@@ -1925,11 +1913,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           client.device.id === deviceId &&
           (change === undefined || (client.changes?.includes(change) ?? false)),
       );
-      // An ask one window must answer goes to one connection, the newest,
-      // so its id reaches no other and it runs once.
-      const windows = one ? eligible.slice(-1) : eligible;
-      const askId = (payload as { id?: unknown } | null)?.id;
-      if (one && typeof askId === "string" && windows[0]) windowAsked.hold(askId, windows[0]);
+      const windows = windowAsked.sendTo(eligible, payload, one);
       for (const client of windows)
         client.out.send(
           JSON.stringify({ t: "live", channel: channelIn(channel, client.spelling), payload }),

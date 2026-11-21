@@ -19,6 +19,7 @@ import {
   parseInvokeRequest,
   type WorkInvokeChannel,
 } from "@shared/ipc";
+import { PANEL_LINE_WORDS } from "@shared/panelActions";
 import {
   arrangePanels,
   defaultArrangement,
@@ -410,8 +411,8 @@ export function createCatalogDispatch({
           trail(
             name,
             {
-              surface: "Panels",
-              description: reset ? "put back where each asks to be" : "rearranged",
+              surface: PANEL_LINE_WORDS.panels,
+              description: reset ? PANEL_LINE_WORDS.reset : PANEL_LINE_WORDS.rearranged,
             },
             actor,
           );
@@ -458,11 +459,11 @@ export function createCatalogDispatch({
             sameArrangement(next.arrangement, defaultArrangement(knownPanels(snapshot))) &&
             (old.morePick !== undefined || Object.keys(old.placements ?? {}).length > 0);
           if (picked)
-            trail(name, { surface: picked.title, description: "is the More pick" }, actor);
+            trail(name, { surface: picked.title, description: PANEL_LINE_WORDS.morePick }, actor);
           else if (reset)
             trail(
               name,
-              { surface: "Panels", description: "put back where each asks to be" },
+              { surface: PANEL_LINE_WORDS.panels, description: PANEL_LINE_WORDS.reset },
               actor,
             );
         }

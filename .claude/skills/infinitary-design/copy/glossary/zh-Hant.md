@@ -93,8 +93,10 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | offline, disconnected (never said) | 連絡不上 | Never 離線. |
 | out of reach | 連絡不上 | Avoids 離線 (offline) and 斷線 (disconnected). |
 | panel | 面板 | Counter 個. |
+| personal context (Knowledge) | 個人背景 | What the person tells the first mate about themselves. |
 | phone | 手機 | Standard. |
 | pin (a task) | 釘選 | Taiwan's word, as for a pinned model. |
+| place (a secret's, such as staging or production) | 用途場所 | Tells two secrets with the same name apart; the field is 用途場所（選填）. |
 | plan | 方案 | Taiwan's word for a subscription plan. |
 | plugin, extension (never said) | 面板 | Never 外掛. |
 | PR #N | PR #N | Never translated, stays in mono. |
@@ -139,6 +141,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | shortcut | 快速鍵 | Taiwan's word; 快捷鍵 is mainland. |
 | sign in again | 重新登入 | Standard. |
 | sign-in / sign in | 登入 | Taiwan's word; 登錄 is mainland. |
+| standing direction | 長期指引 | A direction meant to last; 指引 alone where the context is clear. |
 | start | 開始 | Standard. |
 | starter | 開場句 | A sentence the person finishes. |
 | Steer (button) | 引導 | 指引 is a standing direction. |
@@ -146,6 +149,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | story (a change's) | 變更說明 | |
 | subscription | 訂閱方案 | Used on the first-run screen. |
 | tab | 分頁 | Taiwan writes 分頁, not 標籤頁. |
+| take over (another computer's first mate) | 接手 | The Devices button and its confirm say the same. |
 | task | 任務 | Counter 項, as in 另一項任務. |
 | task board | 任務看板 | 看板 alone for the Board view. |
 | task key | 任務編號前綴 | The letters tasks are numbered with, such as {key}-1; 鍵 alone would read as a keyboard key. |

@@ -27,8 +27,8 @@ import {
  * Tasks row does, and resting on it peeks; the open batch, the waiting row
  * and a Last day row put up the details card; Answer in Settings opens the
  * held batch in Settings → Projects. Nothing here merges, tries again or
- * sends back. Every row and chip is one Tab stop with the arrows inside,
- * Enter acts, and F6 brings focus here (`asks.onFocus`).
+ * sends back. Its rows and chips are one Tab stop with the arrows inside,
+ * the Last day toggle a second, Enter acts, and F6 brings focus here (`asks.onFocus`).
  */
 
 /** The chips an open batch shows before "+N more" puts up the card. */

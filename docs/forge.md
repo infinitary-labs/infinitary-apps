@@ -1211,7 +1211,7 @@ Open, it shows:
 - Last day, closed until opened, with each batch that ended.
 
 A chip opens its task, and Answer in Settings opens the held batch in Settings → Projects with focus on it.
-The panel is one Tab stop: the arrows, Home and End move inside it, and F6 reaches it as any panel.
+Its rows and chips are one Tab stop, inside which the arrows, Home and End move; the Last day toggle is a second Tab stop, and F6 reaches the panel as any panel.
 Its header button and the command Show your batches put up its wide details card (`cards/details.tsx`), the same groups in full words - the state with its time, the checks counts and when they were read, each change and why it waits or was left out - and a table of the last day's batches: batch, changes, formed, ended, how long it took and times held.
 The panel has no link to the batch's pull request, since a panel's frame opens no links; Answer in Settings reaches the button that opens it.
 

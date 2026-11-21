@@ -790,3 +790,85 @@ it("tells the first mate there when this Mac's window is in front and when it le
   caughtUp?.("reload");
   expect(said()).toEqual([[true], [false], [true], [true]]);
 });
+
+// INF-5326's piece 4 review: a panel in this Mac's window reads this Mac's own
+// look (docs/view.md, "The switch and the layout"), which a change here never
+// sends to the other Mac, and only the settings the other Mac holds are asked
+// of it. The look's change is told to this Mac's windows, which refreshes the read.
+it("answers a panel's settings read from this Mac's own look, asking the other Mac only for what it holds", async () => {
+  const homeLook: ShellPreferences = DEFAULT_SHELL_PREFERENCES;
+  const asked: [string, unknown[]][] = [];
+  const told: ShellPreferences[] = [];
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-settings-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: (channel, payload) => {
+      if (channel === "inf:shell:preferences") told.push(payload as ShellPreferences);
+    },
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: () => {},
+    onRemoved: () => {},
+    // No update action is used here.
+    updates: {} as UpdateChecker,
+    link: () => ({
+      start: () => {},
+      state: () => ({
+        contact: "in-reach",
+        access: "full",
+        homeVersion: PROTOCOL_VERSION,
+        homeChanges: [],
+        name: null,
+        takesWork: null,
+        onHomeMac: null,
+        heardAt: null,
+        removed: false,
+      }),
+      invoke: (async (channel: string, args: unknown[]) => {
+        asked.push([channel, args]);
+        if (channel === "inf:shell:preferences") return homeLook;
+        if (channel === "inf:settings:current") return { notifications: { enabled: true } };
+        throw new Error(`Unasked ${channel}`);
+      }) as never,
+      leave: async () => true,
+      close: () => {},
+    }),
+  });
+  views.push(view);
+  const own = {
+    ...homeLook.appearance,
+    theme: "light" as const,
+    ambientMusic: true,
+    ambientPaused: true,
+    ambientStyle: "quiet-cove" as const,
+    ambientVolume: 25,
+  };
+  await view.dispatch("inf:settings:appearance:set", [own]);
+  expect(told.at(-1)?.appearance).toEqual(own);
+  asked.length = 0;
+  expect(
+    await view.dispatch("inf:settings:current", [["theme", "ambient-music", "notifications"]]),
+  ).toEqual({
+    theme: { theme: "light" },
+    "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+    notifications: { enabled: true },
+  });
+  expect(asked).toEqual([["inf:settings:current", [["notifications"]]]]);
+  // A read of this Mac's look alone asks the other Mac nothing.
+  asked.length = 0;
+  expect(await view.dispatch("inf:settings:current", [["theme"]])).toEqual({
+    theme: { theme: "light" },
+  });
+  expect(asked).toEqual([]);
+});

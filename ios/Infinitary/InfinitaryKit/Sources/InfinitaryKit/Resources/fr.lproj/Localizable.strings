@@ -1232,6 +1232,7 @@
 "panelMoveNotAsked" = "Seul votre propre clic ou votre propre touche dans ce panneau déplace une tâche. Rien n’a été écrit.";
 "panelRailFolded" = "Panneaux repliés faute de place";
 "panelRailMore" = "%1$@ de plus";
+"panelReadsSettings" = "votre apparence, votre musique et quelques autres réglages";
 "panelRetry" = "Réessayer";
 "panelSaidLineOpen" = "Ouvrir %1$@";
 "panelSettingsAppearance" = "Apparence";

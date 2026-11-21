@@ -9,7 +9,7 @@ import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "./usage";
  * and nothing account-, auth-, or card-shaped is in it.
  */
 describe("the read catalog", () => {
-  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab, and the window's lookup of task keys, and an automation rule's notes, and the jobs kept running past their task's close)", () => {
+  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab, and the window's lookup of task keys, and an automation rule's notes, and the jobs kept running past their task's close, and the settings a panel reads)", () => {
     expect([...READ_NAMES].sort()).toEqual([
       "automation.history",
       "automation.kept",
@@ -35,6 +35,7 @@ describe("the read catalog", () => {
       "projects.list",
       "quota.snapshot",
       "repos.list",
+      "settings.current",
       "shell.preferences",
       "sql",
       "tasks.board",
@@ -73,13 +74,15 @@ describe("the read catalog", () => {
                     ? { task: "t-1" }
                     : name === "tasks.keys"
                       ? { keys: ["INF-1"] }
-                      : "scope" in shape
-                        ? { scope: "captain" }
-                        : "query" in shape
-                          ? { query: "x" }
-                          : "id" in shape
-                            ? { id: "x" }
-                            : {};
+                      : name === "settings.current"
+                        ? { names: ["ambient-music"] }
+                        : "scope" in shape
+                          ? { scope: "captain" }
+                          : "query" in shape
+                            ? { query: "x" }
+                            : "id" in shape
+                              ? { id: "x" }
+                              : {};
       const args = entry.args.parse(sample);
       const request = (entry.toRequest as (a: unknown, grant: object) => unknown[])(args, {});
       expect(invokeContract[entry.channel].request.safeParse(request).success, name).toBe(true);

@@ -552,6 +552,7 @@ describe("ipc contract", () => {
       "inf:settings:appearance:get",
       "inf:settings:cost-limit:get",
       "inf:settings:cost-limit:set",
+      "inf:settings:current",
       "inf:settings:decisions",
       "inf:settings:decisions:set",
       "inf:settings:firstmate-account:get",

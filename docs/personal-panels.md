@@ -85,6 +85,10 @@ It names a reachable shown ready decision on a live task, or null (including hid
 The generated workspace declarations carry both; update them only with `pnpm generate:personal-env`.
 These are read-time projections, not stored readiness or permission to start held work.
 
+`settings.current` reads the app settings a panel may show, by their action catalog names, `reads.subscribe("settings.current", { names }, listener)`: the music's state (on, paused, style and volume), the look and a few switches (`PanelSettingValues`).
+Each catalog line has a panel value or a ground from a closed set for having none (`PANEL_SETTINGS`, `src/shared/panelSettings.ts`), and a name without a value is refused before anything is read.
+It re-reads when the preferences are pushed or a catalog change leaves its `personalized` line.
+
 `computers.resources` reads current CPU and memory observations for the home and each paired work computer, including receiver-owned age or an explicit unavailable reason (`PanelComputerResources`, `docs/helper.md`, "Shared live readings").
 A panel declares it in `reads` and calls `reads.subscribe("computers.resources", listener)`; no server module or polling background task is needed.
 All subscribing screens and panels use the same core source and cache, not one sampler per panel.

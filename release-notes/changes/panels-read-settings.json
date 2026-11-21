@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panels-read-settings",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Your own panels can show your look and music settings",
+      "body": "A panel you or your first mate make can now show whether the ambient music is on or paused, its style and volume, and your theme, fonts, window size and a few other settings, updating as you change them. Settings that name your projects, computers or accounts stay out of reach.",
+      "noPicture": "Nothing in the app looks different until one of your own panels reads a setting.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

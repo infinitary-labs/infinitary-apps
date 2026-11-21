@@ -51,11 +51,9 @@ import {
   AMBIENT_STYLES,
   type AmbientStyle,
   type Appearance,
-  ambientStyleOf,
   ambientVolumeSchema,
   DEFAULT_AMBIENT_STYLE,
   DEFAULT_AMBIENT_VOLUME,
-  DEFAULT_APPEARANCE,
   type Layout,
   themeSchema,
   uiSizeSchema,
@@ -76,6 +74,17 @@ import {
   runsHereOnly,
   runsOnSaid,
 } from "./repos";
+import {
+  ambientMusicValue,
+  costLimitValue,
+  crewModelNamesValue,
+  enabledValue,
+  fontsValue,
+  panelsSwitchValue,
+  sizeValue,
+  themeValue,
+  washValue,
+} from "./settingValues";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import type { ProjectView } from "./tasks";
@@ -886,7 +895,7 @@ const actionLines = {
     value: z.strictObject({ theme: themeSchema }),
     line: "Switch between dark and light when asked, preserving size, window wash and crew model names.",
     toRequest: (v, c) => [{ ...(c as Appearance), theme: v.theme }],
-    readValue: (c) => ({ theme: (c as Appearance).theme }),
+    readValue: themeValue,
     done: (v) => `switched to the ${v.theme} theme`,
   },
   font: {
@@ -905,7 +914,7 @@ const actionLines = {
       const { fonts: _saved, ...look } = c as Appearance;
       return [{ ...look, ...(Object.keys(fonts).length > 0 ? { fonts } : {}) }];
     },
-    readValue: (c) => ({ fonts: (c as Appearance).fonts ?? {} }),
+    readValue: fontsValue,
     // A line is written from the fonts as `readValue` reads them, whoever chose.
     done: (v) => {
       const fonts = (v.fonts ?? {}) as FontChoices;
@@ -1378,9 +1387,7 @@ const actionLines = {
       "panels switch changed",
     ),
     alwaysTrail: false,
-    readValue: (c) => ({
-      enabled: (c as { panels: { enabled: boolean } }).panels.enabled,
-    }),
+    readValue: panelsSwitchValue,
     done: (v) => `panels ${v.enabled ? "on" : "off"}`,
   },
   dictation: {
@@ -1658,7 +1665,7 @@ const actionLines = {
     value: z.strictObject({ limit: costLimitSchema }),
     line: "Set the app's per-task cost limit when asked: {usd} in estimated US dollars, or {none:true} for no limit. It counts each task and everything under it, parts included. Project and task choices take precedence. The default lives in Settings → Intelligence.",
     toRequest: (v) => [v.limit],
-    readValue: (current) => ({ limit: (current as AppCostLimitView).limit }),
+    readValue: costLimitValue,
     done: (v) => {
       const limit = v.limit as AppCostLimitView["limit"];
       return "usd" in limit ? `task cost limit ${formatUsd(limit.usd)}` : "no task cost limit";
@@ -1672,7 +1679,7 @@ const actionLines = {
     value: z.strictObject({ enabled: z.boolean() }),
     line: "Turn notifications on or off when asked.",
     toRequest: (v) => [v.enabled],
-    readValue: (current) => ({ enabled: current }),
+    readValue: enabledValue,
     done: (v) => `notifications ${v.enabled ? "on" : "off"}`,
   },
   runbook: {
@@ -1707,7 +1714,7 @@ const actionLines = {
     value: z.strictObject({ enabled: z.boolean() }),
     line: `Use each ${COMPUTER.one}'s own global instructions and skills for crewmates when asked. Crew rules govern delivery; personal instructions guide style and judgment. MCP and hooks stay off.`,
     toRequest: (v) => [v.enabled],
-    readValue: (current) => ({ enabled: current }),
+    readValue: enabledValue,
     done: (v) => `global instructions and skills ${v.enabled ? "on" : "off"}`,
   },
   "window-wash": {
@@ -1719,9 +1726,7 @@ const actionLines = {
     value: z.strictObject({ strength: washStrengthSchema }),
     line: "Window wash opacity, 0–100 percent, when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), washStrength: v.strength }],
-    readValue: (current) => ({
-      strength: (current as Appearance).washStrength ?? DEFAULT_APPEARANCE.washStrength,
-    }),
+    readValue: washValue,
     done: (v) => `window wash ${v.strength}%`,
     settled: (from, to) => `window wash ${from.strength}% → ${to.strength}%`,
   },
@@ -1734,9 +1739,7 @@ const actionLines = {
     value: z.strictObject({ size: uiSizeSchema }),
     line: "Whole-window size, 100, 110, 125 or 150 percent, when asked: larger makes text and everything around it bigger. The size keys and the View menu step through the same sizes.",
     toRequest: (v, current) => [{ ...(current as Appearance), size: v.size }],
-    readValue: (current) => ({
-      size: (current as Appearance).size ?? DEFAULT_APPEARANCE.size,
-    }),
+    readValue: sizeValue,
     done: (v) => `window size ${v.size}%`,
     settled: (from, to) => `window size ${from.size}% → ${to.size}%`,
   },
@@ -1749,7 +1752,7 @@ const actionLines = {
     value: z.strictObject({ visible: z.boolean() }),
     line: "Show or hide crew model names when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), showCrewModelNames: v.visible }],
-    readValue: (current) => ({ visible: (current as Appearance).showCrewModelNames ?? true }),
+    readValue: crewModelNamesValue,
     done: (v) => `crew model names ${v.visible ? "shown" : "hidden"}`,
   },
   "ambient-music": {
@@ -1775,11 +1778,7 @@ const actionLines = {
         ...(v.style === undefined ? {} : { ambientStyle: v.style as AmbientStyle }),
       },
     ],
-    readValue: (current) => ({
-      on: (current as Appearance).ambientMusic ?? false,
-      volume: (current as Appearance).ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
-      style: ambientStyleOf((current as Appearance).ambientStyle),
-    }),
+    readValue: ambientMusicValue,
     done: (v) =>
       `ambient music ${v.on ? "on" : "off"}, volume ${v.volume}%${v.style ? `, style ${v.style}` : ""}`,
   },

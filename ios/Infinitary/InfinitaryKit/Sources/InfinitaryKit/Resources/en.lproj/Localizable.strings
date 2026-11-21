@@ -1232,6 +1232,7 @@
 "panelMoveNotAsked" = "Only your own click or key in this panel moves a task. Nothing was written.";
 "panelRailFolded" = "Panels folded for room";
 "panelRailMore" = "%1$@ more";
+"panelReadsSettings" = "your look, music and a few other settings";
 "panelRetry" = "Retry";
 "panelSaidLineOpen" = "Open %1$@";
 "panelSettingsAppearance" = "Appearance";

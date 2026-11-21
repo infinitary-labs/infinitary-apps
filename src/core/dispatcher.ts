@@ -19,6 +19,7 @@ import {
 } from "@shared/ipc";
 import { KNOWLEDGE_OFF } from "@shared/knowledge";
 import { OWN_WINDOW_WORDS } from "@shared/ownWindow";
+import { panelSettingsNow } from "@shared/panelSettings";
 import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
 import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
@@ -955,6 +956,17 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:settings:appearance:get": () => services.settings.getAppearance(),
 
     "inf:settings:appearance:set": (appearance) => services.preferences.setAppearance(appearance),
+
+    // What a panel reads of each named setting (`settings.current`): the
+    // line's own current answer, cut to its panel value (src/shared/panelSettings.ts).
+    "inf:settings:current": (names) =>
+      panelSettingsNow(names, async (name) => {
+        // The saved limit alone: the line's own answer also walks recent usage.
+        if (name === "cost-limit") return { limit: services.settings.getTaskCostLimit() };
+        const current = ACTIONS[name].current;
+        if (!current) throw new Error(`${name} holds no setting to read.`);
+        return (handlers as unknown as Record<string, () => unknown>)[current]?.();
+      }),
 
     "inf:settings:layout:get": () => services.settings.getLayout(),
 

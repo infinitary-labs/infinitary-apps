@@ -808,6 +808,10 @@ export async function startApp(
     // run's note and a lock taken, so a window the person quit after it answered stays quit. An ordinary launch waits the same way, for a run known to hold
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
+      // On a Mac this launch never opens a window of its own while it waits: no Dock icon and no
+      // menu bar, so the one Infinitary in the Dock is the holder the person may be told to click,
+      // and a word it shows comes from its copy, which shows no Dock icon either (`askPersonWord`).
+      if (hostPlatform() === "darwin") app.setActivationPolicy("prohibited");
       const answer = join(dataDir, windowAnswerFile(answerAsk));
       // A word to the person (`askPersonWord`): Electron never becomes ready in this launch, refused
       // the lock before it was, so a copy of this program shows the word, and is ended when the word

@@ -5165,8 +5165,9 @@
               }
             },
             "carriesOn": {
-              "type": "boolean",
-              "const": true
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
             },
             "carrying": {
               "type": "string",
@@ -5584,8 +5585,9 @@
                 }
               },
               "carriesOn": {
-                "type": "boolean",
-                "const": true
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
               },
               "carrying": {
                 "type": "string",
@@ -6066,8 +6068,9 @@
                 }
               },
               "carriesOn": {
-                "type": "boolean",
-                "const": true
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
               },
               "carrying": {
                 "type": "string",
@@ -7108,8 +7111,9 @@
             }
           },
           "carriesOn": {
-            "type": "boolean",
-            "const": true
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "carrying": {
             "type": "string",
@@ -7492,8 +7496,9 @@
             }
           },
           "carriesOn": {
-            "type": "boolean",
-            "const": true
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "carrying": {
             "type": "string",
@@ -7835,8 +7840,9 @@
             }
           },
           "carriesOn": {
-            "type": "boolean",
-            "const": true
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "carrying": {
             "type": "string",
@@ -8255,8 +8261,9 @@
                 }
               },
               "carriesOn": {
-                "type": "boolean",
-                "const": true
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
               },
               "carrying": {
                 "type": "string",
@@ -85586,8 +85593,9 @@
               }
             },
             "carriesOn": {
-              "type": "boolean",
-              "const": true
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
             },
             "carrying": {
               "type": "string",

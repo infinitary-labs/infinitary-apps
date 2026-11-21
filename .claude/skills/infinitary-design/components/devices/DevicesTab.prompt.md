@@ -227,6 +227,8 @@ Either one turns the row it was pressed on into one question in place, like Remo
 - From the row out of reach, "Where should the tasks of Mac mini continue?" over grouped pills, one per computer in reach and This Mac, unpicked; the same lines appear once one is picked.
 - A ghost Cancel, focused so Enter moves nothing, and a primary "Carry them on", disabled until a destination is picked.
 
+Every count counts only tasks that move: an independent review follows its builder, stays behind, and stops when the old entry is removed.
+
 After the yes the row out of reach reads "Moving its tasks to Mac mini…" and offers nothing, then leaves the list once every task has moved; the feed says "The tasks of a computer out of reach continue on Mac mini, and that entry is off your list."
 A task the move refuses stands under the tab as the problem, one line each, and the row stays.
 

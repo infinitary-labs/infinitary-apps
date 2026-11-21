@@ -188,7 +188,6 @@ export type ComputersOptions = {
   updateWaitMs?: number;
   /** The list, whole, after any change. */
   emit: (devices: DeviceView[]) => void;
-  /** A note for the log that a removal waiting for a computer could not finish yet. */
   /** A problem for the feed: words, or the app's own words as a saved fact (docs/i18n.md, "Saved facts"). */
   onProblem: (line: string | Said) => void;
   now: () => number;
@@ -257,6 +256,9 @@ export class Computers {
     // run and never composes their records (INF-2240).
     const working = devices.some((device) => deviceRunsWork(device.kind));
     const running = working ? tasks.activeCountsByDevice() : new Map<string, number>();
+    // Reviews follow their builder and never move on their own: a carry
+    // leaves them, and Remove now stops them.
+    const reviews = working ? tasks.activeReviewCountsByDevice() : new Map<string, number>();
     const projects = working ? repos.list() : [];
     const booted = this.options.bootedAt();
     const listening = work.listening();
@@ -312,7 +314,7 @@ export class Computers {
             !this.carrying.has(other.id),
         )
         .map((other) => other.id);
-      const tasksThere = running.get(device.id) ?? 0;
+      const movable = (running.get(device.id) ?? 0) - (reviews.get(device.id) ?? 0);
       return {
         ...device,
         inReach,
@@ -337,8 +339,8 @@ export class Computers {
           projects.filter((repo) => repo.runsOn === device.id).map((repo) => repo.name),
         ...(removal ? { removal } : {}),
         ...(earlier.length > 0 ? { earlier } : {}),
-        ...(!inReach && !version && tasksThere > 0 && !removal && !carrying
-          ? { carriesOn: true as const }
+        ...(!inReach && !version && movable > 0 && !removal && !carrying
+          ? { carriesOn: movable }
           : {}),
         ...(carrying ? { carrying } : {}),
         ...(ssh ? { ssh } : {}),
@@ -569,7 +571,9 @@ export class Computers {
       this.options.runsOnMoved?.(taskId);
     const started = tasks
       .list()
-      .filter((record) => record.deviceId === from && record.status === "active");
+      .filter((record) => record.deviceId === from && record.status === "active")
+      // A review follows its builder: it stays, and Remove now stops it.
+      .filter((record) => record.shape?.kind !== "review");
     const stayed: string[] = [];
     let moving = 0;
     for (const record of started) {
@@ -598,12 +602,14 @@ export class Computers {
   private settleCarries(): void {
     if (this.carrying.size === 0) return;
     const counts = this.options.tasks.activeCountsByDevice();
+    const reviews = this.options.tasks.activeReviewCountsByDevice();
     // A move still under way, in any phase, has not settled where its task runs.
     const moving = this.options.tasks
       .listWithComputerMove()
       .filter((record) => record.status === "active");
     for (const [from, to] of [...this.carrying]) {
-      const left = counts.get(from) ?? 0;
+      // A review left there is settled: Remove now stops it.
+      const left = (counts.get(from) ?? 0) - (reviews.get(from) ?? 0);
       if (left > 0 && moving.some((record) => record.shape?.computer_move?.from === from)) continue;
       this.carrying.delete(from);
       const device = this.options.pairing.list().find((entry) => entry.id === from);

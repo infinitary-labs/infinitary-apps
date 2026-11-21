@@ -656,10 +656,12 @@ export const deviceViewSchema = z.strictObject({
    */
   earlier: z.array(z.string().min(1).max(64)).max(16).optional(),
   /**
-   * Out of reach with started tasks: the home can carry them on to another
-   * computer (`inf:devices:carry-on`). Absent from a home without that change.
+   * Out of reach with started tasks that can move: how many the home can
+   * carry on to another computer (`inf:devices:carry-on`). An independent
+   * review follows its builder, so it is not counted; Remove now stops it.
+   * Absent from a home without that change.
    */
-  carriesOn: z.literal(true).optional(),
+  carriesOn: z.number().int().positive().optional(),
   /**
    * Its tasks are being carried on to this computer, by id
    * (`RUNS_ON_THIS_MAC` for the home), until it is removed.

@@ -208,8 +208,8 @@ export function DeviceRow({
         </span>
         {earlier && (
           <span className="fm-devices-summary" data-device-earlier={earlier.id}>
-            {earlier.tasks
-              ? m.settingsDevicesCarryEarlier({ count: earlier.tasks })
+            {earlier.carriesOn
+              ? m.settingsDevicesCarryEarlier({ count: earlier.carriesOn })
               : m.settingsDevicesCarryEarlierProjects()}
           </span>
         )}
@@ -508,7 +508,8 @@ export function CarryQuestion({
       ];
   const to = picked ? here(carryName(devices, picked)) : "";
   const fromName = deviceLabel(from);
-  const count = from.tasks ?? 0;
+  // Only tasks that move: a review follows its builder, and Remove now stops it.
+  const count = from.carriesOn ?? 0;
   return (
     <div className="fm-devices-row" data-device-carrying={ask.row}>
       <span className="fm-devices-dot" />

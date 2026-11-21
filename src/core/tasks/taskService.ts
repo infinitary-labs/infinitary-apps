@@ -636,6 +636,11 @@ export class TaskService {
     return this.writer.store.countActiveByDevice();
   }
 
+  /** How many active independent reviews each computer holds, counted without composing task records. */
+  activeReviewCountsByDevice(): Map<string, number> {
+    return this.writer.store.countActiveReviewsByDevice();
+  }
+
   /** Recorded overrides standing on this computer, read without composing task records. */
   passingOverridesForComputer(computerId: string, kind: OverridableHold): string[] {
     return this.writer.store.passingOverridesForComputer(computerId, kind);

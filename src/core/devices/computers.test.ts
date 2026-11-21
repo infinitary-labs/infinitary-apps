@@ -804,7 +804,7 @@ describe("a computer that joins again under a new key", () => {
     const row = (id: string) => home.computers.list().find((device) => device.id === id);
     expect(row(again)?.earlier).toEqual([home.deviceId]);
     expect(row(other)?.earlier).toBeUndefined();
-    expect(row(home.deviceId)).toMatchObject({ inReach: false, tasks: 1, carriesOn: true });
+    expect(row(home.deviceId)).toMatchObject({ inReach: false, tasks: 1, carriesOn: 1 });
     expect(row(again)?.carriesOn).toBeUndefined();
   });
 
@@ -855,6 +855,44 @@ describe("a computer that joins again under a new key", () => {
     expect(home.lines.at(-1)).toMatchObject({ deviceId: again, stage: "done", tone: "info" });
   });
 
+  it("leaves a review behind uncounted, and Remove now stops it with the earlier entry", async () => {
+    const asked: string[] = [];
+    const stopped: string[] = [];
+    let tasks: TaskService | undefined;
+    const home = homeAt(ADDRESS, undefined, {
+      carryTask: async (taskId, to) => {
+        asked.push(taskId);
+        tasks?.placement.setDevice(taskId, to);
+        return { ok: true, text: "moving" };
+      },
+      stopTasks: async (deviceId) => {
+        stopped.push(deviceId);
+      },
+    });
+    tasks = home.tasks;
+    started(home, "footer");
+    // Its builder's independent review runs there too, and follows its builder.
+    seedTask(home.tasks, {
+      id: "review",
+      title: "Review the footer",
+      status: "running",
+      intent: { goal: "Review the footer", userWords: "the footer is broken" },
+      shape: { kind: "review" },
+      deviceId: home.deviceId,
+    });
+    const again = joinAgain(home);
+    const row = (id: string) => home.computers.list().find((device) => device.id === id);
+    expect(row(home.deviceId)).toMatchObject({ tasks: 2, carriesOn: 1 });
+
+    const answer = await home.computers.carryOn(home.deviceId, again);
+    await vi.waitFor(() => expect(home.lines).toHaveLength(1));
+
+    expect(answer).toEqual({ moving: 1, stayed: [] });
+    expect(asked).toEqual(["footer"]);
+    expect(stopped).toEqual([home.deviceId]);
+    expect(home.computers.list().map((device) => device.id)).toEqual([again]);
+  });
+
   it("keeps the earlier entry and says why when a task cannot move", async () => {
     const problems: (string | Said)[] = [];
     const home = homeAt(ADDRESS, undefined, {
@@ -868,7 +906,7 @@ describe("a computer that joins again under a new key", () => {
 
     expect(answer).toEqual({ moving: 0, stayed: ["The footer task holds no commit here."] });
     const earlier = home.computers.list().find((device) => device.id === home.deviceId);
-    expect(earlier).toMatchObject({ carriesOn: true, tasks: 1 });
+    expect(earlier).toMatchObject({ carriesOn: 1, tasks: 1 });
     expect(earlier?.carrying).toBeUndefined();
     expect(problems).toEqual([]);
   });

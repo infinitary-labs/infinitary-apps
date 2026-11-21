@@ -670,15 +670,16 @@ The home never treats the two as one computer on its own: a name and a user prov
   Each entry in reach lists in `earlier` the work entries out of reach with the same name, the same user and an earlier join, that still hold a task or a project (`Computers.list`).
   Settings -> Devices says so under the new entry's row, with one button, Carry its tasks on here.
 - **Any entry out of reach.**
-  An entry out of reach that still holds a started task is marked `carriesOn`, and its row offers Move its tasks to..., which asks where: another computer in reach, or this Mac.
+  An entry out of reach that still holds a started task that can move is marked `carriesOn`, with how many, and its row offers Move its tasks to..., which asks where: another computer in reach, or this Mac.
 - **The question.**
   Both buttons open one question in place of the row, saying how many tasks continue, that each continues from the last commit the first mate's computer holds, what stays on the old entry - commits after that one, edits not committed, files git does not track and the files in its task folders there - and that the old entry then comes off the list.
 - **Carrying on.**
   The captain's yes sends `inf:devices:carry-on` with both ids (`Computers.carryOn`).
   Each project whose Runs on named the old entry names the new one, and each live task's Runs on follows (`TaskService.placement.moveRunsOn`).
-  Each started task moves with the move off a computer out of reach (`TaskMoves.requestComputerMove` with its leave-behind flag; `docs/task-moves.md`), and each one that move refuses is named in the answer, with why.
+  Each started task moves with the move off a computer out of reach (`TaskMoves.requestComputerMove` with its leave-behind flag; `docs/helper.md`, "Moving a task off a computer that is out of reach"), and each one that move refuses is named in the answer, with why.
+  An independent review follows its builder and never moves on its own, so the carry leaves it, the question does not count it, and Remove now stops it with the old entry.
 - **Removing the old entry.**
-  When every task moved, the row reads that its tasks are moving, and once no task is left on the old entry and no move from it is still under way, it is removed with Remove now (above, "Remove"), and the feed says its tasks continue on the new entry.
+  When every task moved, the row reads that its tasks are moving, and once no task but a review is left on the old entry and no move from it is still under way, it is removed with Remove now (above, "Remove"), and the feed says its tasks continue on the new entry.
   A task left with no move under way keeps the old entry on the list, and the feed says how many stayed.
 - **What it does not do.**
   It does not bring back what only the old folder held, read the Trash, merge two data folders or attach the old key again.

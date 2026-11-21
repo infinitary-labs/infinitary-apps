@@ -3040,6 +3040,8 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchWaiting`() -> String { PhoneWords.format("settingsProjectsBatchWaiting", []) }
     public static func `settingsProjectsBatchWaitingSince`(`place`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingSince", [`place`, `since`]) }
     public static func `settingsProjectsBatchWaitingSinceHost`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingSinceHost", [`since`]) }
+    public static func `settingsProjectsBatchWaitingStillOpen`(`label`: String, `place`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingStillOpen", [`label`, `place`]) }
+    public static func `settingsProjectsBatchWaitingStillOpenHost`(`label`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingStillOpenHost", [`label`]) }
     public static func `settingsProjectsCare`() -> String { PhoneWords.format("settingsProjectsCare", []) }
     public static func `settingsProjectsCareNone`() -> String { PhoneWords.format("settingsProjectsCareNone", []) }
     public static func `settingsProjectsCarePersonal`() -> String { PhoneWords.format("settingsProjectsCarePersonal", []) }
@@ -6859,6 +6861,8 @@ extension PhoneWords {
         "settingsProjectsBatchWaiting": [],
         "settingsProjectsBatchWaitingSince": ["place", "since"],
         "settingsProjectsBatchWaitingSinceHost": ["since"],
+        "settingsProjectsBatchWaitingStillOpen": ["label", "place"],
+        "settingsProjectsBatchWaitingStillOpenHost": ["label"],
         "settingsProjectsCare": [],
         "settingsProjectsCareNone": [],
         "settingsProjectsCarePersonal": [],

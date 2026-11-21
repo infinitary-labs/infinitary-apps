@@ -697,8 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@ : %1$@ est retenu, car %2$@ n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.";
 "feedBatchHeldUnansweredHost" = "%2$@ : %1$@ est retenu, car l’hébergeur du projet n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.";
 "feedBatchHeldUnnamed" = "%2$@ : %1$@ est retenu, car ses vérifications ont échoué. Les modifications approuvées entre-temps l’attendent.";
-"feedBatchMergeRunning" = "%3$@ : %2$@ a accepté la fusion de %1$@ et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer dans Réglages → Projets envoie une nouvelle fusion.";
-"feedBatchMergeRunningHost" = "%2$@ : l’hébergeur du projet a accepté la fusion de %1$@ et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer dans Réglages → Projets envoie une nouvelle fusion.";
+"feedBatchMergeRunning" = "%3$@ : %2$@ a accepté la fusion de %1$@ et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.";
+"feedBatchMergeRunningHost" = "%2$@ : l’hébergeur du projet a accepté la fusion de %1$@ et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.";
 "feedBatchMergedOne" = "%2$@ : %1$@ a été fusionné.";
 "feedBatchNoStory" = "%2$@ : %1$@ est ouvert sans le récit de %3$@, qui n’a pas pu être ajouté à sa description. Il sera ajouté dès que possible.";
 "feedBatchQueued" = "%3$@ : %2$@ a placé %1$@ dans la file de fusion de la branche principale. Il y sera fusionné une fois les vérifications de la file réussies.";
@@ -2915,8 +2915,10 @@
 "settingsProjectsBatchSendBack" = "Renvoyer avec un motif";
 "settingsProjectsBatchTryAgain" = "Réessayer";
 "settingsProjectsBatchWaiting" = "Lot en attente de sa fusion";
-"settingsProjectsBatchWaitingSince" = "En attente depuis %2$@ : %1$@ a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.";
-"settingsProjectsBatchWaitingSinceHost" = "En attente depuis %1$@ : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.";
+"settingsProjectsBatchWaitingSince" = "En attente depuis %2$@ : %1$@ a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.";
+"settingsProjectsBatchWaitingSinceHost" = "En attente depuis %1$@ : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.";
+"settingsProjectsBatchWaitingStillOpen" = "%2$@ n’a pas fermé %1$@, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.";
+"settingsProjectsBatchWaitingStillOpenHost" = "L’hébergeur du projet n’a pas fermé %1$@, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.";
 "settingsProjectsCare" = "Soin";
 "settingsProjectsCareNone" = "aucun";
 "settingsProjectsCarePersonal" = "Rien ici ne passe par un contrôle.";

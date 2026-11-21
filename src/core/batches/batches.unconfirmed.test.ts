@@ -1,4 +1,5 @@
 import { type BatchChange, mergeWait } from "@shared/batches";
+import { englishOf } from "@shared/i18n/said";
 import { describe, expect, it } from "vitest";
 import { passed, REPO, setup } from "../../../tests/helpers/batchesHarness";
 import { BATCH_WORDS } from "./batches";
@@ -137,24 +138,63 @@ describe("a batch merge whose outcome the host did not confirm", () => {
     expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
   });
 
-  it("answers Try again on a merge still read as running with a new version, and never sends the first merge again", async () => {
+  // The captain's pick on the review of this change: "Try again closes the old
+  // pull request and opens a fresh one", so a merge the host may still finish
+  // can never take a version whose checks never ran.
+  it("answers Try again on a merge still read as running by closing its pull request and combining on a new one, and never sends the first merge again", async () => {
     const home = await unconfirmedBatch("31/merge-1");
-    const head = home.open().head;
+    const { head, branch } = home.open();
     await home.pass();
     expect(mergeWait(home.open())).toBeDefined();
 
     expect(await home.batches.answer(REPO, { action: "try-again", head })).toBeUndefined();
-    const again = home.heard.pushes.at(-1)?.head;
-    expect(again).not.toBe(head);
-    expect(home.open()).toMatchObject({ number: 31, head: again });
+    // The first pull request is closed unmerged and its branch is gone.
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.host.branches.has(branch)).toBe(false);
+    const again = home.heard.pushes.at(-1);
+    expect(again?.branch).not.toBe(branch);
+    expect(home.open()).toMatchObject({ number: 32, branch: again?.branch, head: again?.head });
+    expect(home.open().members.map((member) => member.taskId)).toEqual([
+      PARSER.taskId,
+      EXPORT.taskId,
+    ]);
     expect(mergeWait(home.open())).toBeUndefined();
     expect(home.heard.notes.at(-1)).toEqual(BATCH_WORDS.retried("meter", "#31"));
 
     home.host.report([passed("build")]);
+    home.host.ready("clean");
     await home.pass();
-    expect(home.host.merges.map((merge) => merge.head)).toEqual([head, again]);
+    expect(home.host.merges.map((merge) => [merge.number, merge.head])).toEqual([
+      [31, head],
+      [32, again?.head],
+    ]);
     expect(home.record().open).toBeUndefined();
-    expect(home.place(EXPORT)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+    expect(home.place(EXPORT)).toMatchObject({ state: "merged", receipt: { number: 32 } });
+  });
+
+  it("keeps the wait when the host does not close its pull request, and records a merge that finished as the close was asked", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const head = home.open().head;
+    await home.pass();
+    const wait = mergeWait(home.open());
+    const pushes = home.heard.pushes.length;
+
+    home.host.closeRefusal = "GitHub cannot close a pull request while it merges it.";
+    await expect(home.batches.answerOrThrow(REPO, { action: "try-again", head })).rejects.toThrow(
+      englishOf(BATCH_WORDS.stillOpen("#31", "GitHub")),
+    );
+    expect(mergeWait(home.open())).toEqual(wait);
+    expect(home.host.pulls.get(31)?.state).toBe("open");
+    expect(home.heard.pushes).toHaveLength(pushes);
+    expect(home.host.merges).toHaveLength(1);
+
+    // The host finishes the merge as it is asked to close the pull request.
+    home.host.duringClose = () => home.host.land(31, "rebase");
+    expect(await home.batches.answer(REPO, { action: "try-again", head })).toBe(BATCH_WORDS.ended);
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+    expect(home.heard.pushes).toHaveLength(pushes);
+    expect(home.host.merges).toHaveLength(1);
   });
 
   it("reads the pull request before Try again replaces a wait, so a merge that finished meanwhile is recorded and nothing more is done", async () => {

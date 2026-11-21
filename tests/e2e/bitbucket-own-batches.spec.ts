@@ -53,7 +53,8 @@ const build = (state: BitbucketStubStatus["state"]): BitbucketStubStatus[] => [
  * combines it again on the same pull request. A merge Bitbucket takes and
  * keeps reading as running shows as a wait in Settings and once on the
  * Activity feed, is never asked for again, and Try again on it, by keys,
- * combines a new version (INF-5566). With Bitbucket's merge queue
+ * declines that pull request and combines the changes on a new one, so the
+ * first merge can never take them (INF-5566). With Bitbucket's merge queue
  * on the main branch, the merge Bitbucket answers with its queue reads as
  * queued, nothing is sent again, and the batch finishes once the queue
  * merges it.
@@ -126,6 +127,7 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
   // Each batch pull request's build runs until this journey ends it.
   bitbucket.setPullRequestStatuses(1, build("INPROGRESS"));
   bitbucket.setPullRequestStatuses(2, build("INPROGRESS"));
+  bitbucket.setPullRequestStatuses(3, build("INPROGRESS"));
   seedBitbucketSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   seedProject(db, {
@@ -296,30 +298,38 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     bitbucket.mergeLater(false);
     bitbucket.mergeQueue(true);
 
-    // Try again on the wait, by keys: the same pull request takes a new version, and the wait ends.
+    // Try again on the wait, by keys: Bitbucket declines that pull request, its branch goes,
+    // and a new pull request takes the two changes at a new version, so the first merge
+    // can never take them.
     await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
     await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
     await pressKey(projectLine(page, "repo-notes").getByRole("button"), "Enter");
     await pressKey(waiting.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain }), "Enter");
     await expect(waiting).toHaveCount(0, { timeout: 30_000 });
-    await expect.poll(heldHead, { timeout: 30_000 }).not.toBe(repairedAt);
+    await expect
+      .poll(async () => (await notes())?.batch?.open?.number ?? null, { timeout: 30_000 })
+      .toBe(3);
     const retriedAt = await heldHead();
-    expect((await notes())?.batch?.open).toMatchObject({ number: 2 });
-    expect(bitbucket.pullRequests()).toHaveLength(2);
+    expect(retriedAt).not.toBe(repairedAt);
+    expect(bitbucket.pullRequests()[1]).toMatchObject({ id: 2, state: "DECLINED" });
+    const third = bitbucket.pullRequests()[2];
+    expect(third).toMatchObject({ id: 3, title, state: "OPEN" });
+    expect(third?.branch).not.toBe(second?.branch);
+    expect(bitbucket.deletedBranches()).toEqual([first?.branch, second?.branch]);
     expect(mergeAsked()).toBe(1);
 
     // The new version's build passes: Bitbucket answers the merge with its queue, which reads as queued.
-    bitbucket.setPullRequestStatuses(2, build("SUCCESSFUL"), retriedAt);
+    bitbucket.setPullRequestStatuses(3, build("SUCCESSFUL"), retriedAt);
     await expect
       .poll(async () => (await notes())?.batch?.open?.queued ?? null, { timeout: 30_000 })
       .toBe(retriedAt);
-    expect(bitbucket.queued()).toEqual([2]);
+    expect(bitbucket.queued()).toEqual([3]);
     expect(bitbucket.merges()).toHaveLength(1);
     expect(saved("export")?.closedReason ?? null).toBeNull();
 
     // The queue merges it with a rebase merge under the batch's title, and both tasks close.
-    bitbucket.landQueued(2);
-    expect(bitbucket.merges()[1]).toMatchObject({ id: 2, strategy: "rebase_merge" });
+    bitbucket.landQueued(3);
+    expect(bitbucket.merges()[1]).toMatchObject({ id: 3, strategy: "rebase_merge" });
     expect(bitbucket.merges()[1]?.message.split("\n")[0]).toBe(title);
     // Main keeps one commit for each change, rebased under the merge commit.
     expect(git(["log", "--format=%s", "-1", "main"])).toBe(title);
@@ -341,9 +351,11 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       status: "consumed",
       receipt: { sha: git(["rev-parse", "main^2"]) },
     });
-    // The queue's merge was asked for once, and the app deleted each merged batch's branch.
+    // The declined pull request's merge was never asked for again, and the app deleted each
+    // batch's branch.
+    expect(mergeAsked()).toBe(1);
     expect(bitbucket.merges()).toHaveLength(2);
-    expect(bitbucket.deletedBranches()).toEqual([first?.branch, second?.branch]);
+    expect(bitbucket.deletedBranches()).toEqual([first?.branch, second?.branch, third?.branch]);
   } finally {
     await launched.close();
     await bitbucket.close();

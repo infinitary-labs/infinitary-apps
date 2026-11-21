@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "projects",
       "title": "A batch whose merge Bitbucket keeps showing as running no longer waits in silence",
-      "body": "When Bitbucket takes a batch's merge and keeps showing it as running, Settings → Projects now shows the batch waiting for its merge, with its pull request and Try again, and the Activity feed says so once. Nothing is sent again on its own. If the pull request on Bitbucket shows no merge running, Try again sends a new merge that also carries the changes you approved meanwhile.",
+      "body": "When Bitbucket takes a batch's merge and keeps showing it as running, Settings → Projects now shows the batch waiting for its merge, with its pull request and Try again, and the Activity feed says so once. Nothing is sent again on its own. Try again declines that pull request and opens a new one with the same changes and any you approved meanwhile, so the first merge can never take them.",
       "picture": {
         "dark": "batch-merge-wait-dark.webp",
         "light": "batch-merge-wait-light.webp",

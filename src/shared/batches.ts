@@ -136,7 +136,8 @@ export type OpenBatch = z.infer<typeof openBatchSchema>;
 /**
  * The merge an open batch waits on while its host still reads it as running
  * (`unconfirmed.pending`), at the version the batch holds now: Settings →
- * Projects shows it with Try again. A held batch shows its hold instead.
+ * Projects shows it with Try again, which closes that pull request and
+ * combines its changes on a new one. A held batch shows its hold instead.
  */
 export function mergeWait(
   open: OpenBatch | undefined,
@@ -253,9 +254,12 @@ export type BatchRecord = z.infer<typeof batchRecordSchema>;
 export const EMPTY_BATCH_RECORD: BatchRecord = { line: [], receipts: [], leftOut: [] };
 
 /**
- * A by-hand answer to a held batch, from Settings or a repair: try the
- * batch again, or send changes back, each with its reason. `head` names
- * the held version it answers, so an answer to a hold that ended is refused.
+ * A by-hand answer to a held batch, from Settings, the first mate or a
+ * repair: try the batch again, or send changes back, each with its reason.
+ * Try again also answers a batch waiting on a merge its host still reads as
+ * running (`mergeWait`), which has nothing to send back. `head` names the
+ * held or waiting version it answers, so an answer to a hold or a wait that
+ * ended is refused.
  */
 export const batchAnswerSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("try-again"), head: z.string().min(1) }),

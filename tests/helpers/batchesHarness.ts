@@ -118,6 +118,10 @@ function standInHost(ways: MergeWays) {
     unconfirmNext: undefined as { task?: string } | undefined,
     /** The merge references whose merge the host says failed. */
     refusedTasks: new Set<string>(),
+    /** The host's words for refusing to close a pull request, as Bitbucket may while it merges one. */
+    closeRefusal: undefined as string | undefined,
+    /** Something that happens as the host is asked to close a pull request. */
+    duringClose: undefined as (() => void) | undefined,
     /** The connection drops as the next pull request opens: its answer is lost, and so is every read after. */
     loseNextOpen: false,
     offline: false,
@@ -359,7 +363,13 @@ function standInHost(ways: MergeWays) {
       host.notes.push({ number: change.number as number, note });
       close(change.number);
     },
-    close: async (change: ForgeChange) => close(change.number),
+    close: async (change: ForgeChange) => {
+      const during = host.duringClose;
+      host.duringClose = undefined;
+      during?.();
+      if (host.closeRefusal) throw new ForgeError("refused", host.closeRefusal);
+      close(change.number);
+    },
     label: (change: ForgeChange) => `#${change.number}`,
     url: (change: ForgeChange) => `https://github.com/acme/meter/pull/${change.number}`,
   };

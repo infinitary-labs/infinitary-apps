@@ -26040,58 +26040,58 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const project = input2.project;
     switch (currentLanguage()) {
       case "ar":
-        return `${project}: قبِل ${place} دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة في الإعدادات ← المشاريع ترسل دمجًا جديدًا.`;
+        return `${project}: قبِل ${place} دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة في الإعدادات ← المشاريع تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
       case "de":
-        return `${project}: ${place} hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.`;
+        return `${project}: ${place} hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen unter Einstellungen → Projekte schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
       case "es":
-        return `${project}: ${place} aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.`;
+        return `${project}: ${place} aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar en Configuración → Proyectos cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
       case "fr":
-        return `${project} : ${place} a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer dans Réglages → Projets envoie une nouvelle fusion.`;
+        return `${project} : ${place} a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
       case "ja":
-        return `${project}：${place} が ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、「設定 → プロジェクト」の再試行で新しいマージを送ります。`;
+        return `${project}：${place} が ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。「設定 → プロジェクト」で再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
       case "ko":
-        return `${project}: ${place}이(가) ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 설정 → 프로젝트의 다시 시도로 새 병합을 보내요.`;
+        return `${project}: ${place}이(가) ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 설정 → 프로젝트에서 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
       case "pt-BR":
-        return `${project}: o ${place} aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Se a solicitação de pull lá não mostrar nenhuma mesclagem em andamento, Tentar de novo em Ajustes → Projetos envia uma nova mesclagem.`;
+        return `${project}: o ${place} aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.`;
       case "zh-Hans":
-        return `${project}：${place} 已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。`;
+        return `${project}：${place} 已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。在“设置” → “项目”中重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
       case "zh-Hant":
-        return `${project}：${place} 已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，在「設定 → 專案」中按再試一次會傳送一次新的合併。`;
+        return `${project}：${place} 已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
       case "en-XA":
-        return `[${project}: ${place} ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Îƒ ţĥé þûļļ ŕéǫûéšţ ţĥéŕé šĥöŵš ñö ɱéŕĝé ŕûññîñĝ, Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[${project}: ${place} ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `${project}‮: ‬${place}‮ took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.‬`;
+        return `${project}‮: ‬${place}‮ took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.‬`;
     }
-    return `${project}: ${place} took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.`;
+    return `${project}: ${place} took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.`;
   }
   function feedBatchMergeRunningHost(input2) {
     const label = input2.label;
     const project = input2.project;
     switch (currentLanguage()) {
       case "ar":
-        return `${project}: قبِل مستضيف المشروع دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة في الإعدادات ← المشاريع ترسل دمجًا جديدًا.`;
+        return `${project}: قبِل مستضيف المشروع دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة في الإعدادات ← المشاريع تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
       case "de":
-        return `${project}: Der Host des Projekts hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.`;
+        return `${project}: Der Host des Projekts hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen unter Einstellungen → Projekte schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
       case "es":
-        return `${project}: el sitio que aloja el proyecto aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.`;
+        return `${project}: el sitio que aloja el proyecto aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar en Configuración → Proyectos cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
       case "fr":
-        return `${project} : l’hébergeur du projet a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer dans Réglages → Projets envoie une nouvelle fusion.`;
+        return `${project} : l’hébergeur du projet a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
       case "ja":
-        return `${project}：プロジェクトのホストが ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、「設定 → プロジェクト」の再試行で新しいマージを送ります。`;
+        return `${project}：プロジェクトのホストが ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。「設定 → プロジェクト」で再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
       case "ko":
-        return `${project}: 프로젝트 호스트가 ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 설정 → 프로젝트의 다시 시도로 새 병합을 보내요.`;
+        return `${project}: 프로젝트 호스트가 ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 설정 → 프로젝트에서 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
       case "pt-BR":
-        return `${project}: o host do projeto aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Se a solicitação de pull lá não mostrar nenhuma mesclagem em andamento, Tentar de novo em Ajustes → Projetos envia uma nova mesclagem.`;
+        return `${project}: o host do projeto aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.`;
       case "zh-Hans":
-        return `${project}：项目的托管平台已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。`;
+        return `${project}：项目的托管平台已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。在“设置” → “项目”中重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
       case "zh-Hant":
-        return `${project}：專案的主機已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，在「設定 → 專案」中按再試一次會傳送一次新的合併。`;
+        return `${project}：專案的主機已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
       case "en-XA":
-        return `[${project}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Îƒ ţĥé þûļļ ŕéǫûéšţ ţĥéŕé šĥöŵš ñö ɱéŕĝé ŕûññîñĝ, Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[${project}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `${project}‮: the project's host took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.‬`;
+        return `${project}‮: the project's host took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.‬`;
     }
-    return `${project}: the project's host took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.`;
+    return `${project}: the project's host took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.`;
   }
   function feedBatchMergedMany(input2) {
     const count = formatNumber(input2.count);
@@ -65030,57 +65030,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const since = input2.since;
     switch (currentLanguage()) {
       case "ar":
-        return `تنتظر منذ ${since}: قبِل ${place} الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة ترسل دمجًا جديدًا.`;
+        return `تنتظر منذ ${since}: قبِل ${place} الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
       case "de":
-        return `Wartet seit ${since}: ${place} hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen ein neues Zusammenführen.`;
+        return `Wartet seit ${since}: ${place} hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
       case "es":
-        return `Esperando desde las ${since}: ${place} aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.`;
+        return `Esperando desde las ${since}: ${place} aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
       case "fr":
-        return `En attente depuis ${since} : ${place} a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.`;
+        return `En attente depuis ${since} : ${place} a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
       case "ja":
-        return `${since} から待機中：${place} がマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、再試行すると新しいマージを送ります。`;
+        return `${since} から待機中：${place} がマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
       case "ko":
-        return `${since}부터 대기 중: ${place}이(가) 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 다시 시도로 새 병합을 보내요.`;
+        return `${since}부터 대기 중: ${place}이(가) 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
       case "pt-BR":
-        return `Esperando desde as ${since}: o ${place} aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Se a solicitação de pull lá não mostrar nenhuma mesclagem em andamento, Tentar de novo envia uma nova mesclagem.`;
+        return `Esperando desde as ${since}: o ${place} aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.`;
       case "zh-Hans":
-        return `自 ${since} 起等待：${place} 已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。`;
+        return `自 ${since} 起等待：${place} 已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
       case "zh-Hant":
-        return `從 ${since} 起等待：${place} 已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。`;
+        return `從 ${since} 起等待：${place} 已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
       case "en-XA":
-        return `[Ŵáîţîñĝ šîñçé ${since}: ${place} ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Îƒ ţĥé þûļļ ŕéǫûéšţ ţĥéŕé šĥöŵš ñö ɱéŕĝé ŕûññîñĝ, Ţŕý áĝáîñ šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŵáîţîñĝ šîñçé ${since}: ${place} ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Waiting since ‬${since}‮: ‬${place}‮ took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.‬`;
+        return `‮Waiting since ‬${since}‮: ‬${place}‮ took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.‬`;
     }
-    return `Waiting since ${since}: ${place} took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.`;
+    return `Waiting since ${since}: ${place} took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.`;
   }
   function settingsProjectsBatchWaitingSinceHost(input2) {
     const since = input2.since;
     switch (currentLanguage()) {
       case "ar":
-        return `تنتظر منذ ${since}: قبِل مستضيف المشروع الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة ترسل دمجًا جديدًا.`;
+        return `تنتظر منذ ${since}: قبِل مستضيف المشروع الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
       case "de":
-        return `Wartet seit ${since}: Der Host des Projekts hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen ein neues Zusammenführen.`;
+        return `Wartet seit ${since}: Der Host des Projekts hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
       case "es":
-        return `Esperando desde las ${since}: el sitio que aloja el proyecto aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.`;
+        return `Esperando desde las ${since}: el sitio que aloja el proyecto aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
       case "fr":
-        return `En attente depuis ${since} : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.`;
+        return `En attente depuis ${since} : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
       case "ja":
-        return `${since} から待機中：プロジェクトのホストがマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、再試行すると新しいマージを送ります。`;
+        return `${since} から待機中：プロジェクトのホストがマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
       case "ko":
-        return `${since}부터 대기 중: 프로젝트 호스트가 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 다시 시도로 새 병합을 보내요.`;
+        return `${since}부터 대기 중: 프로젝트 호스트가 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
       case "pt-BR":
-        return `Esperando desde as ${since}: o host do projeto aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Se a solicitação de pull lá não mostrar nenhuma mesclagem em andamento, Tentar de novo envia uma nova mesclagem.`;
+        return `Esperando desde as ${since}: o host do projeto aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.`;
       case "zh-Hans":
-        return `自 ${since} 起等待：项目的托管平台已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。`;
+        return `自 ${since} 起等待：项目的托管平台已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
       case "zh-Hant":
-        return `從 ${since} 起等待：專案的主機已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。`;
+        return `從 ${since} 起等待：專案的主機已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
       case "en-XA":
-        return `[Ŵáîţîñĝ šîñçé ${since}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Îƒ ţĥé þûļļ ŕéǫûéšţ ţĥéŕé šĥöŵš ñö ɱéŕĝé ŕûññîñĝ, Ţŕý áĝáîñ šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŵáîţîñĝ šîñçé ${since}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Waiting since ‬${since}‮: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.‬`;
+        return `‮Waiting since ‬${since}‮: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.‬`;
     }
-    return `Waiting since ${since}: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.`;
+    return `Waiting since ${since}: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.`;
+  }
+  function settingsProjectsBatchWaitingStillOpen(input2) {
+    const label = input2.label;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُغلق ${place} طلب السحب ${label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.`;
+      case "de":
+        return `${place} hat ${label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.`;
+      case "es":
+        return `${place} no cerró ${label}, así que su fusión aún podría terminar. El lote sigue esperando y no se envió nada nuevo.`;
+      case "fr":
+        return `${place} n’a pas fermé ${label}, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.`;
+      case "ja":
+        return `${place} が ${label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。`;
+      case "ko":
+        return `${place}이(가) ${label}을(를) 닫지 않아서 그 병합이 아직 끝날 수 있어요. 일괄 끌어오기 요청은 계속 기다리고, 새로 보낸 것은 없어요.`;
+      case "pt-BR":
+        return `O ${place} não fechou ${label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.`;
+      case "zh-Hans":
+        return `${place} 没有关闭 ${label}，所以它的合并仍可能完成。这批改动继续等待，没有发送任何新内容。`;
+      case "zh-Hant":
+        return `${place} 沒有關閉 ${label}，所以它的合併仍可能完成。批次會繼續等待，沒有傳送任何新內容。`;
+      case "en-XA":
+        return `[${place} ðîð ñöţ çļöšé ${label}, šö îţš ɱéŕĝé ɱáý šţîļļ ƒîñîšĥ. Ţĥé ƀáţçĥ ķééþš ŵáîţîñĝ, áñð ñöţĥîñĝ ñéŵ ŵáš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${place}‮ did not close ‬${label}‮, so its merge may still finish. The batch keeps waiting, and nothing new was sent.‬`;
+    }
+    return `${place} did not close ${label}, so its merge may still finish. The batch keeps waiting, and nothing new was sent.`;
+  }
+  function settingsProjectsBatchWaitingStillOpenHost(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُغلق مستضيف المشروع طلب السحب ${label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.`;
+      case "de":
+        return `Der Host des Projekts hat ${label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.`;
+      case "es":
+        return `El sitio que aloja el proyecto no cerró ${label}, así que su fusión aún podría terminar. El lote sigue esperando y no se envió nada nuevo.`;
+      case "fr":
+        return `L’hébergeur du projet n’a pas fermé ${label}, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.`;
+      case "ja":
+        return `プロジェクトのホストが ${label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。`;
+      case "ko":
+        return `프로젝트 호스트가 ${label}을(를) 닫지 않아서 그 병합이 아직 끝날 수 있어요. 일괄 끌어오기 요청은 계속 기다리고, 새로 보낸 것은 없어요.`;
+      case "pt-BR":
+        return `O host do projeto não fechou ${label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.`;
+      case "zh-Hans":
+        return `项目的托管平台没有关闭 ${label}，所以它的合并仍可能完成。这批改动继续等待，没有发送任何新内容。`;
+      case "zh-Hant":
+        return `專案的主機沒有關閉 ${label}，所以它的合併仍可能完成。批次會繼續等待，沒有傳送任何新內容。`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţ'š ĥöšţ ðîð ñöţ çļöšé ${label}, šö îţš ɱéŕĝé ɱáý šţîļļ ƒîñîšĥ. Ţĥé ƀáţçĥ ķééþš ŵáîţîñĝ, áñð ñöţĥîñĝ ñéŵ ŵáš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The project's host did not close ‬${label}‮, so its merge may still finish. The batch keeps waiting, and nothing new was sent.‬`;
+    }
+    return `The project's host did not close ${label}, so its merge may still finish. The batch keeps waiting, and nothing new was sent.`;
   }
   function settingsProjectsCare() {
     switch (currentLanguage()) {
@@ -88935,6 +88992,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchWaiting,
     settingsProjectsBatchWaitingSince,
     settingsProjectsBatchWaitingSinceHost,
+    settingsProjectsBatchWaitingStillOpen,
+    settingsProjectsBatchWaitingStillOpenHost,
     settingsProjectsCare,
     settingsProjectsCareNone,
     settingsProjectsCarePersonal,
@@ -91751,6 +91810,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchWaiting": [],
     "settingsProjectsBatchWaitingSince": ["place", "since"],
     "settingsProjectsBatchWaitingSinceHost": ["since"],
+    "settingsProjectsBatchWaitingStillOpen": ["label", "place"],
+    "settingsProjectsBatchWaitingStillOpenHost": ["label"],
     "settingsProjectsCare": [],
     "settingsProjectsCareNone": [],
     "settingsProjectsCarePersonal": [],

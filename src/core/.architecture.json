@@ -2164,7 +2164,7 @@
         {
           "from": "waiting for its merge",
           "to": "merged",
-          "why": "the host finishes the merge",
+          "why": "the host finishes the merge, or its merge queue takes it and merges it from there",
           "by": "batches"
         },
         {
@@ -2176,7 +2176,13 @@
         {
           "from": "waiting for its merge",
           "to": "checking",
-          "why": "Try again, when the pull request shows no merge running, combines a new version",
+          "why": "Try again closes its pull request and combines its changes with the line on a new branch and pull request",
+          "by": "batches"
+        },
+        {
+          "from": "waiting for its merge",
+          "to": "waiting for its merge",
+          "why": "the host does not close its pull request on Try again, so its merge may still finish",
           "by": "batches"
         },
         {

@@ -94,6 +94,8 @@ BUNDLED_GIT_VERSION="$("$SCRIPT_DIR/check-bundled-git.sh" "$APP_DIR")" || exit 1
 # writes each name, a NUL, then ": " and the description, which for a
 # universal file runs on over several lines, so each description ends where
 # the next name, known from the list, begins.
+# A failed file run adds a part of its own, so the count below refuses it,
+# as the per-file run stopped the gate under set -e.
 FILES=()
 while IFS= read -r -d '' f; do
   FILES+=("$f")
@@ -103,7 +105,7 @@ PARTS=()
 while IFS= read -r -d '' part; do
   PARTS+=("$part")
 done < <(
-  printf '%s\0' "${FILES[@]}" | xargs -0 file --print0 --no-pad -e ascii -e encoding -e text -- || echo "file failed"
+  printf '%s\0' "${FILES[@]}" | xargs -0 file --print0 --no-pad -e ascii -e encoding -e text -- || printf '\0file failed'
   printf '\0'
 )
 [[ "${#PARTS[@]}" -eq $((${#FILES[@]} + 1)) && "${PARTS[0]}" == "${FILES[0]}" ]] \

@@ -924,7 +924,8 @@ describe("a window opened beside a run", () => {
       try {
         await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
         const swapped = look(pipe, { leavesAtAsk: true });
-        await expect.poll(() => swapped.reads.length).toBeGreaterThanOrEqual(1);
+        // Shown to be a command first: a second read starts only once the first was taken.
+        await expect.poll(() => swapped.reads.length).toBeGreaterThanOrEqual(2);
         expect(swapped.asks).toEqual([]);
         letGo();
         expect(await swapped.kind).toBe("free");

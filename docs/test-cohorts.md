@@ -227,6 +227,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/reviews.tier.test.ts` | real git in scratch projects for the reviewed tier, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleOwners.keptMerge.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.8 s) |
+| `src/core/orchestrator/settleOwners.keptMergeUnknown.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default |
 | `src/core/orchestrator/starts.automatic.test.ts` | real git for a task Automatic places, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/starts.lost.test.ts` | real git in a scratch project for a task placed on a stand-in computer that runs work, at the run's own priority | 5 s default (Mac slowest case 0.4 s) |
 | `src/core/orchestrator/taskMoves.computer.test.ts` | real git across two computers' working copies, at the run's own priority | 10 s on the moves to another computer, kept: its slowest case (Mac fastest 4.4 s) mostly waits out a quit's fixed 2 s settle, 1.4 s with that wait shortened; 5 s default elsewhere |

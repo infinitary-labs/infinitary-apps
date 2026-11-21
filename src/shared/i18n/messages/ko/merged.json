@@ -1,5 +1,6 @@
 {
   "mergedAt": "{at}에 병합됨",
+  "mergedChangeNewerOn": "{place}에서 {change} 병합됨, 승인된 버전 이후의 푸시가 포함됨",
   "mergedChangeOn": "{place}에서 {change} 병합됨",
   "mergedChangeOnHost": "프로젝트 호스트에서 {change} 병합됨",
   "mergedChangeWhereItLives": "프로젝트가 있는 곳에서 {change} 병합됨",

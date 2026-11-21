@@ -16,6 +16,24 @@ export function publicationRepo<T extends ForgeRepo>(record: TaskRecord, repo: T
     : repo;
 }
 
+/**
+ * The managed repository a kept approval pinned its pull request in
+ * (INF-5193): the task's own project first, as it publishes, then any other
+ * managed one. Its origin must name the pinned repository and its forge the
+ * pinned host, so a project repointed to another host since, whose task
+ * still publishes under the old origin, never answers for it.
+ */
+export function pinnedRequestRepo<T extends ForgeRepo & { id: string }>(
+  record: TaskRecord,
+  repos: { get(id: string): T | undefined; list(): T[] },
+  place: { host: string; owner: string; name: string },
+): T | undefined {
+  const own = record.repoId ? repos.get(record.repoId) : undefined;
+  return [...(own ? [own] : []), ...repos.list()]
+    .map((item) => publicationRepo(record, item))
+    .find((item) => item.host?.name === place.host && requestAtRepo(item, place));
+}
+
 /** Verify saved evidence before using the number, independently of whichever request is selected. */
 export function savedRequestAtRepo(
   record: TaskRecord,

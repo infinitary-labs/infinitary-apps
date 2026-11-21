@@ -1,5 +1,6 @@
 {
   "mergedAt": "Mesclada às {at}",
+  "mergedChangeNewerOn": "{change} mesclada no {place}, com um envio feito depois da versão aprovada",
   "mergedChangeOn": "{change} mesclada no {place}",
   "mergedChangeOnHost": "{change} mesclada no host do projeto",
   "mergedChangeWhereItLives": "{change} mesclada onde o projeto fica",

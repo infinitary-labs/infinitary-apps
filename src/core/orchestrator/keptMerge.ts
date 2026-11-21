@@ -1,8 +1,9 @@
 import { currentCheckStatus } from "@shared/checkSnapshot";
+import { forgePlace } from "@shared/forge";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
-import { mergedReceipt } from "./changeMerge";
+import { mergedReceipt, otherMergedFacts } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
@@ -13,6 +14,7 @@ import {
   standingAuthorization,
   wakesFirstmate,
 } from "./mergeAuthorization";
+import { pinnedRequestRepo } from "./publicationRepo";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
@@ -320,15 +322,21 @@ export class KeptMerge {
    * An attempt token outlived its answer - the app quit or the answer
    * never came (FI3-304 section 5). The pinned pull request decides: merged
    * means the approval is spent and the task closes once; closed ends it;
-   * open at the same head clears the token and runs every gate again; an
-   * unreadable one waits.
+   * open clears the token and runs every gate again, except on a host whose
+   * merge names no version, where open proves nothing and it waits like an
+   * unreadable one, never sending again, until it reads merged or closed;
+   * a host refusing the read of the merge it took (`attempt.task`) keeps
+   * that wait.
    */
   private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
     const readPull = this.host.readPull;
     let pull: ForgePull | undefined;
     try {
       const number = authorization.target.prNumber;
-      pull = readPull && number !== undefined ? await readPull(taskId, number) : undefined;
+      pull =
+        readPull && number !== undefined
+          ? await readPull(taskId, number, authorization.attempt?.task, authorization.target)
+          : undefined;
     } catch {
       pull = undefined;
     }
@@ -342,13 +350,31 @@ export class KeptMerge {
       return;
     }
     const now = this.host.now();
-    if (!pull) {
+    // An open read cannot show that a merge sent to a host naming no version
+    // did not go in (a 202 still merging, or an answer that never came): it
+    // stays read-only, and only a read showing it merged or closed moves it.
+    // The attempt is carried into any later approval of the same pull
+    // request, so no click sends again while the outcome is unknown.
+    if (!pull || (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion)) {
       const retries = (current.retries ?? 0) + 1;
+      // The host refused the read of the merge it took: the merge may have
+      // failed, or the task may not be this pull request's, and nothing says
+      // which. The reference is dropped, so it is asked about once, and the
+      // task says once that the pull request is merged or closed on the host.
+      const refused = pull?.mergeTaskRefused && current.attempt?.task !== undefined;
       this.approvals.patchStanding(taskId, {
         waiting: { on: "outcome", head: candidateHead(current), at: now },
         retries,
         retryAt: retryAfter("outcome", retries, now),
+        ...(refused && current.attempt ? { attempt: { ...current.attempt, task: undefined } } : {}),
       });
+      if (refused)
+        this.host.tasks.note(
+          taskId,
+          // i18n-exempt: an English timeline note, like the approval's other notes
+          "The host would not say how the merge it took ended, so the merge stays unsent until its pull request reads merged or closed on the host; nothing is sent again.",
+          { news: true, feed: true },
+        );
       return;
     }
     if (pull.merged) {
@@ -356,6 +382,9 @@ export class KeptMerge {
       return;
     }
     if (pull.state !== "open") {
+      // Closed without merging: the merge sent did not go in, so nothing is
+      // left unsettled for a later approval to read back.
+      this.approvals.patchStanding(taskId, { attempt: undefined });
       this.approvals.endAuthorization(
         taskId,
         "invalidated",
@@ -377,6 +406,18 @@ export class KeptMerge {
     const lease = this.locks.claim(taskId, "merge-pr");
     try {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+      const named = this.host.tasks.get(taskId);
+      // The version it merged against the approved one, said as the merge
+      // said it at once (INF-5193): a push after approval is told.
+      const other = otherMergedFacts(
+        placeOf(this.host.repos, named, "") || null,
+        changeName(named, pull.number),
+        pull.headSha,
+        // The version the original send was approved at, not a later
+        // approval's: a push after that click is told even when a newer
+        // approval stands (INF-5193).
+        authorization ? (authorization.attempt?.head ?? candidateHead(authorization)) : undefined,
+      );
       // A kept approval of a reviewed pull request merged it (INF-2490):
       // its merge card declared what follows (INF-2744).
       if (authorization?.review) {
@@ -386,7 +427,8 @@ export class KeptMerge {
           authorization.review,
           {
             ok: true,
-            text: `Merged ${changeName(this.host.tasks.get(taskId), pull.number)} on ${placeOf(this.host.repos, this.host.tasks.get(taskId))}.${then === "continue" ? " The task stays open." : ""}`,
+            text: `Merged ${changeName(named, pull.number)} on ${placeOf(this.host.repos, named)}.${other.told}${then === "continue" ? " The task stays open." : ""}`,
+            ...other.line,
             receipt: mergedReceipt(pull),
           },
           then,
@@ -398,7 +440,7 @@ export class KeptMerge {
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));
       const record = this.host.tasks.get(taskId);
-      const text = `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}.`;
+      const text = `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}.${other.told}`;
       // Something else on the task still open keeps it open (INF-2525).
       const stillOpen = record
         ? await this.settle.stillOpen(record, pull.number, authorization?.after)
@@ -420,6 +462,7 @@ export class KeptMerge {
         reason: "merged",
         actor: authorization?.issuer === "autonomy" ? "host" : "captain",
         text,
+        ...(other.line ? { data: { line: other.line.line, lineSaid: other.line.lineSaid } } : {}),
         delivery: { landedMode: "pr", ...(pull.mergedSha ? { mergedSha: pull.mergedSha } : {}) },
       });
       this.settle.reportOutcome(
@@ -438,7 +481,8 @@ export class KeptMerge {
   /**
    * The tick's rider: every standing approval whose timed wait came due
    * runs again (FI3-304: persisted delayed reconciliation, never a hot loop
-   * that a restart resets).
+   * that a restart resets), and every send no standing approval reads is
+   * read back (`reconcileUnsettledSends`).
    */
   reconcileMergeAuthorizations(now: number): void {
     for (const record of this.host.tasks.listLive()) {
@@ -456,6 +500,123 @@ export class KeptMerge {
         console.warn("[settle] a kept merge approval could not run:", caught);
       });
     }
+    // One pass at a time: a slow read is never overtaken by the next tick's.
+    if (this.readingUnsettled) return;
+    this.readingUnsettled = true;
+    void this.reconcileUnsettledSends(now)
+      .catch((caught: unknown) => {
+        console.warn("[settle] a merge sent earlier could not be read back:", caught);
+      })
+      .finally(() => {
+        this.readingUnsettled = false;
+      });
+  }
+
+  private readingUnsettled = false;
+  /** When each unsettled send was last read, by task and attempt token: the minute pass's backoff. */
+  private readonly unsettledReads = new Map<string, { retries: number; retryAt?: number }>();
+
+  /**
+   * Merges sent whose outcome was never read back that no standing approval
+   * reads (INF-5193): an ended approval's attempt and the unsettled entries
+   * carried past it, on any task, closed ones included. Each is read in the
+   * repository its approval pinned: one reading merged or closed is settled
+   * and leaves the record, so it holds no send of that pull request any
+   * more (`KeptApproval.unresolvedSend`); one reading open, or unreadable,
+   * stays, read again on the outcome wait's backoff. A merge it finds made
+   * is said once on its task. Nothing is ever sent from here.
+   */
+  async reconcileUnsettledSends(now: number): Promise<void> {
+    const readPull = this.host.readPull;
+    if (!readPull) return;
+    for (const record of this.host.tasks.unresolvedMergeSends()) {
+      const top = record.delivery?.mergeAuthorization;
+      if (!top) continue;
+      const sends = [
+        ...(top.attempt && top.status !== "standing"
+          ? [{ target: top.target, attempt: top.attempt }]
+          : []),
+        ...(top.unsettled ?? []),
+      ];
+      for (const send of sends) {
+        const key = `${record.id}:${send.attempt.token}`;
+        const due = this.unsettledReads.get(key);
+        if (due?.retryAt !== undefined && due.retryAt > now) continue;
+        const number = send.target.prNumber;
+        let pull: ForgePull | undefined;
+        try {
+          pull =
+            number === undefined
+              ? undefined
+              : await readPull(record.id, number, send.attempt.task, send.target);
+        } catch {
+          pull = undefined;
+        }
+        const settled = pull && (pull.merged || pull.state !== "open");
+        if (!settled) {
+          const retries = (due?.retries ?? 0) + 1;
+          this.unsettledReads.set(key, { retries, retryAt: retryAfter("outcome", retries, now) });
+          if (pull?.mergeTaskRefused) this.leaveUnsettled(record.id, send.attempt.token, true);
+          continue;
+        }
+        this.unsettledReads.delete(key);
+        if (!this.leaveUnsettled(record.id, send.attempt.token, false) || !pull?.merged) continue;
+        const named = this.host.tasks.get(record.id);
+        // Said where it was read, and against the version that send was
+        // approved at: a push after that click is told (INF-5193).
+        const destination = named
+          ? pinnedRequestRepo(named, this.host.repos, send.target)
+          : undefined;
+        const place =
+          (destination?.host
+            ? forgePlace({ kind: destination.host.kind, host: destination.host.name })
+            : null) ?? placeOf(this.host.repos, named, "");
+        const change = changeName(named, pull.number);
+        const other = otherMergedFacts(place || null, change, pull.headSha, send.attempt.head);
+        this.host.tasks.note(
+          record.id,
+          // i18n-exempt: an English timeline note, like the approval's other notes
+          `The merge sent earlier of ${change} went in on ${place || "the project's host"}.${other.told}`,
+          {
+            news: true,
+            feed: true,
+            ...(other.line
+              ? { data: { line: other.line.line, lineSaid: other.line.lineSaid } }
+              : {}),
+          },
+        );
+      }
+    }
+  }
+
+  /**
+   * Settle one unsettled send on the task's approval record, read again now:
+   * drop it, or with `taskOnly` only the host's reference to it, which was
+   * refused and is asked about once. Only a send still where it was read
+   * moves: one a standing approval took meanwhile is that approval's to read.
+   */
+  private leaveUnsettled(taskId: string, token: string, taskOnly: boolean): boolean {
+    const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+    if (!top) return false;
+    const settle = <T extends { token: string; task?: string }>(attempt: T): T | undefined =>
+      taskOnly ? { ...attempt, task: undefined } : undefined;
+    if (top.attempt?.token === token && top.status !== "standing") {
+      this.host.tasks.delivery.recordPermissionRecords(taskId, {
+        mergeAuthorization: { ...top, attempt: settle(top.attempt) },
+      });
+      return true;
+    }
+    const entry = top.unsettled?.find((item) => item.attempt.token === token);
+    if (!entry) return false;
+    const rest = (top.unsettled ?? []).flatMap((item) => {
+      if (item !== entry) return [item];
+      const attempt = settle(item.attempt);
+      return attempt ? [{ ...item, attempt }] : [];
+    });
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
+      mergeAuthorization: { ...top, unsettled: rest.length > 0 ? rest : undefined },
+    });
+    return true;
   }
 
   /**

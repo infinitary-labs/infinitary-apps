@@ -86,6 +86,7 @@ export {
   ForgeAllowanceSpent,
   ForgeBaseMoved,
   ForgeError,
+  ForgeMergeUnconfirmed,
   ForgeWriteError,
   isRedCheckState,
   isSignInForgeFailure,
@@ -217,8 +218,9 @@ export type {
  * home's forge wiring (`homeForges.ts`) chooses it: GitHub - github.com and
  * every GitHub Enterprise host - is the REST `GitHubForge` with the app's
  * own sign-in for that host (PR 1.2), and GitLab - gitlab.com and every self-hosted
- * server - is the REST `GitLabForge` with the app's own sign-in. A kind with
- * no binding - Bitbucket until its own file exists - is a plain Git host.
+ * server - is the REST `GitLabForge` with the app's own sign-in, and
+ * Bitbucket - bitbucket.org - is the REST `BitbucketForge`. A kind with no
+ * binding is a plain Git host.
  */
 export type ForgeBindings = Partial<Record<ForgeKind, (location: ForgeLocation) => Forge>>;
 
@@ -269,9 +271,9 @@ export function forgeLocationOf(repo: ForgeRepo): ForgeLocation {
 /**
  * The forge for a repository. A project with no host (or no repository at
  * all) is kept on this Mac; a kind with a binding is its implementation
- * (GitHub or GitLab, on its public host or the person's own server); a
- * plain Git host - and Bitbucket until its own file exists - sends its work
- * up as a branch.
+ * (GitHub or GitLab, on its public host or the person's own server, and
+ * Bitbucket on bitbucket.org); a plain Git host sends its work up as a
+ * branch.
  */
 export function createForgeResolver(
   bindings: ForgeBindings,

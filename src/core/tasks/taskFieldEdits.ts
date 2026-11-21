@@ -405,8 +405,8 @@ export function updateTaskFields(
               endedAt: at,
               generation: approval.generation + 1,
               reason: "the task's policy changed",
-              // Policy reversal is not an explicit withdrawal hold.
-              attempt: undefined,
+              // Policy reversal is not an explicit withdrawal hold. A merge
+              // sent whose outcome is unknown stays (`endedAuthorization`).
               retryAt: undefined,
               waiting: undefined,
               // Approvals of its other pull requests end with it once the

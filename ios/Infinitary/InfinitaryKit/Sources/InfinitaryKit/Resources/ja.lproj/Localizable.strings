@@ -987,6 +987,7 @@
 "mergeSetInProject" = "このプロジェクトの設定で決まっています。";
 "mergeWaitsForReview" = "このマージは、レビューへのあなたの回答を待っています：";
 "mergedAt" = "%1$@ にマージ";
+"mergedChangeNewerOn" = "%2$@ で %1$@ をマージしました。承認後のバージョンへのプッシュも含まれています";
 "mergedChangeOn" = "%2$@ で %1$@ をマージしました";
 "mergedChangeOnHost" = "プロジェクトのホストで %1$@ をマージしました";
 "mergedChangeWhereItLives" = "プロジェクトの保管先で %1$@ をマージしました";

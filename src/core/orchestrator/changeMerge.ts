@@ -16,6 +16,7 @@ import {
   ForgeBaseMoved,
   type ForgeChange,
   ForgeError,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   type ForgeReadiness,
   type ForgeRuleset,
@@ -44,7 +45,12 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import { type MergedStory, mergedStoryOf } from "./mergedStory";
-import { publicationRepo, requestAtRepo, savedRequestAtRepo } from "./publicationRepo";
+import {
+  pinnedRequestRepo,
+  publicationRepo,
+  requestAtRepo,
+  savedRequestAtRepo,
+} from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
 import { taskContributesUpstream } from "./workShape";
 
@@ -91,6 +97,12 @@ export type PrOutcome = {
    * not tell.
    */
   skip?: { may: true; rules: SkippedRule[] } | { may: false; why: string };
+  /**
+   * The host's own reference to a merge it took and has not confirmed
+   * (`ForgeMergeUnconfirmed.mergeTask`): kept on the approval's attempt, so
+   * a later read asks the host how it ended.
+   */
+  mergeTask?: string;
 };
 
 /**
@@ -161,6 +173,14 @@ export type MergeGuard = {
    * version once more; without one only the captain's own click does.
    */
   handed?: () => { answered: boolean } | undefined;
+  /**
+   * A merge of this pull request sent earlier, from this task or another,
+   * whose outcome was never read back: nothing is sent until it is, and the
+   * merge waits on that outcome (`stop: "outcome"`).
+   */
+  unresolved?: () => string | undefined;
+  /** Where the approved pull request lives: what a read-back reads, never the selected project. */
+  place?: { host: string; owner: string; name: string };
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
@@ -194,7 +214,60 @@ export type MergeAttempt = PrOutcome & {
   transient?: boolean;
   dispatched?: boolean;
   baseMoved?: boolean;
+  /** A merge request whose answer never came on a host whose merge names no version: never sent again. */
+  noResend?: boolean;
 };
+
+/**
+ * An approval that ended, newer guidance that held it (`guidance`), or a
+ * merge sent earlier whose outcome is unread (`outcome`), at its last check
+ * before the merge request left: nothing was sent.
+ */
+export class MergeWithdrawn extends ForgeError {
+  constructor(
+    why: string,
+    readonly stop: "withdrawn" | "guidance" | "outcome" = "withdrawn",
+  ) {
+    super("refused", why, true);
+    this.name = "MergeWithdrawn";
+  }
+}
+
+/**
+ * The approval's last checks before a merge, and the attempt it records
+ * (`held`, `check`, then `onSent`), at the moment the request leaves: on a
+ * host whose merge names no version they run inside the merge as the request
+ * leaves, after every read before it, and the hook is returned for
+ * `Forge.putIn`; elsewhere they run now. Newer guidance (`held`) or a check
+ * that answers why stops the merge (`MergeWithdrawn`), and so does a merge
+ * of the pull request sent earlier whose outcome is unread (`unresolved`). On a
+ * host whose merge names no version only a kept approval's merge (`guard`) is
+ * sent: its attempt record is what reads back a merge whose outcome is unknown.
+ */
+export function atDispatch(
+  forge: Forge,
+  guard: Pick<MergeGuard, "held" | "unresolved"> | undefined,
+  check: () => string | undefined,
+  onSent: () => void,
+): (() => void) | undefined {
+  const run = () => {
+    if (!guard && forge.mergeNamesNoVersion)
+      // i18n-exempt: served to the first mate in the merge answer, stays English
+      throw new MergeWithdrawn(
+        `${forge.place} merges whatever version the branch is at when it takes the merge, so the app sends it only under the captain's merge approval from the merge card, or the app's under autonomy, which reads back a merge whose outcome is unknown before sending again`,
+      );
+    const earlier = guard?.unresolved?.();
+    if (earlier) throw new MergeWithdrawn(earlier, "outcome");
+    const hold = guard?.held?.();
+    if (hold) throw new MergeWithdrawn(hold, "guidance");
+    const why = check();
+    if (why) throw new MergeWithdrawn(why);
+    onSent();
+  };
+  if (forge.mergeNamesNoVersion) return run;
+  run();
+  return undefined;
+}
 
 /** What a merge says of a change that joins this person's batch. */
 export const BATCH_MERGE_WORDS = {
@@ -265,10 +338,15 @@ export class ChangeMerge {
         const after = await this.readBack(taskId, guard);
         if (after.merged) return after.merged;
         if (after.closed) return after.closed;
-        if (after.open !== true) {
-          return { ...stripAttempt(attempt), stop: after.open === false ? "moved" : "outcome" };
+        if (after.open !== true || attempt.noResend) {
+          return {
+            ...stripAttempt(attempt),
+            // A send whose host names no version may still go in: never "moved".
+            stop: after.open === false && !attempt.noResend ? "moved" : "outcome",
+          };
         }
       }
+      if (attempt.noResend) break;
       const delay = MERGE_RETRY_DELAYS_MS[i];
       if (delay === undefined) break;
       await sleep(delay);
@@ -311,7 +389,8 @@ export class ChangeMerge {
     // The pull request the task names was merged outside the app: nothing
     // is sent, and the merge is the one already made (FI3-213).
     const merged = status.merged;
-    if (reading?.overall === "merged" && merged) return alreadyMerged(merged.forge, merged.pull);
+    if (reading?.overall === "merged" && merged)
+      return alreadyMerged(merged.forge, merged.pull, guard?.head);
     // The approval pins one pull request: no open one for the branch is
     // read back by its number, merged or closed, never taken as either.
     if (guard && reading?.overall === "no-pr") {
@@ -414,7 +493,13 @@ export class ChangeMerge {
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
-      if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended || settle)) {
+      // A host whose merge names no version is read this way on every merge,
+      // the captain's own click included: its merge would not hold to the
+      // version or, for an owner's sign-in, to the branch's rules.
+      if (
+        hasChangeRequests(forge.kind) &&
+        (guard?.unattended || boundary?.unattended || settle || forge.mergeNamesNoVersion)
+      ) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
         const number = guard?.prNumber ?? change.number;
@@ -426,7 +511,7 @@ export class ChangeMerge {
         );
         // The host's own merge queue merges whenever its checks pass: a merge
         // made since the checks were read is the merge, never a closed pull request.
-        if (pull.merged) return alreadyMerged(forge, pull);
+        if (pull.merged) return alreadyMerged(forge, pull, head);
         const held = readinessStop(forge, pull, { head });
         if (held) return held;
       }
@@ -464,26 +549,45 @@ export class ChangeMerge {
       const way = await wayToSend(forge, publishedChange);
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
-      const withdrawn =
-        guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
-      if (withdrawn) {
-        return {
-          ok: false,
-          text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
-          stop: "withdrawn",
-        };
-      }
-      dispatched = true;
-      const receipt = await forge.putIn(publishedChange, publishedChange.headSha, way);
+      const leaving = atDispatch(
+        forge,
+        guard,
+        () => guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha),
+        () => {
+          dispatched = true;
+        },
+      );
+      const receipt = leaving
+        ? await forge.putIn(publishedChange, publishedChange.headSha, way, leaving)
+        : await forge.putIn(publishedChange, publishedChange.headSha, way);
       if (receipt?.queued) return hostQueued(forge, change);
+      // A host whose merge names no version says which one it merged: a
+      // push between the app's read and the merge went in too, is told, and
+      // the receipt names the version that merged.
+      const newer = otherMerged(change.headSha, receipt?.mergedHead);
       return {
         ok: true,
-        ...this.putInText(taskId, forge, change),
+        ...this.putInText(taskId, forge, change, newer),
         ...(guard
-          ? { receipt: { head: change.headSha, ...(receipt?.sha ? { sha: receipt.sha } : {}) } }
+          ? {
+              receipt: {
+                head: newer ?? change.headSha,
+                ...(receipt?.sha ? { sha: receipt.sha } : {}),
+              },
+            }
           : {}),
       };
     } catch (caught) {
+      if (caught instanceof MergeWithdrawn) {
+        if (caught.stop !== "withdrawn")
+          // i18n-exempt: served to the crewmate in the merge answer, stays English
+          return { ok: false, text: `Cannot merge yet: ${caught.message}.`, stop: caught.stop };
+        return {
+          ok: false,
+          text: `Cannot merge: ${caught.message}${caught.message.endsWith(".") ? "" : "."}`,
+          stop: "withdrawn",
+        };
+      }
       const message = caught instanceof Error ? caught.message : String(caught);
       const repoId = this.options.tasks.get(taskId)?.repoId;
       const stop = guard ? await this.refusalStop(forge, guard, caught, message) : undefined;
@@ -491,12 +595,20 @@ export class ChangeMerge {
       // pull request's own state already says why it cannot merge.
       const baseMoved =
         caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing");
+      // A request the host says never left sent nothing, whatever was marked.
+      const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       return {
         ok: false,
         text: `Cannot merge: ${message}`,
         problem: message,
         ...(isTransientForgeFailure(caught) ? { transient: true } : {}),
-        ...(dispatched ? { dispatched: true } : {}),
+        ...(sent ? { dispatched: true } : {}),
+        ...(sent && forge.mergeNamesNoVersion && isTransientForgeFailure(caught)
+          ? { noResend: true }
+          : {}),
+        ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
+          ? { mergeTask: caught.mergeTask }
+          : {}),
         ...(baseMoved ? { baseMoved: true } : {}),
         ...(stop ? { stop } : {}),
         ...(isSignInForgeFailure(caught) ? { signIn: this.context.signInFact(forge, repoId) } : {}),
@@ -883,19 +995,41 @@ export class ChangeMerge {
    * approval's reconcile asks after a restart or an answer that never came.
    * Undefined where the host has no pull requests or the task no change.
    */
-  async pullState(taskId: string, prNumber: number): Promise<ForgePull | undefined> {
+  async pullState(
+    taskId: string,
+    prNumber: number,
+    mergeTask?: string,
+    place?: { host: string; owner: string; name: string },
+  ): Promise<ForgePull | undefined> {
     const record = this.options.tasks.get(taskId);
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (!record || !repo || !opensPullRequest(deliveryForRecord(record, repo.delivery)))
+    if (!record) return undefined;
+    // A kept approval's read names the repository it pinned (`place`): it is
+    // read there, whatever the task's own project delivers now or whether it
+    // is still managed, so a merge sent earlier is always read back, and a
+    // number another project shares never answers it.
+    const pinned = place ? this.pinnedRepo(record, place) : undefined;
+    if (place && !pinned) return undefined;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (!pinned && (!repo || !opensPullRequest(deliveryForRecord(record, repo.delivery))))
       return undefined;
     // Reading a named pull request needs the project's saved host identity,
     // not a local branch or folder (nor an in-reach work computer): the
     // task's own project, or the other managed one the task opened that
     // number in (INF-2510).
-    const elsewhere = this.projectOfNumber(record, prNumber);
+    const elsewhere = pinned ? undefined : this.projectOfNumber(record, prNumber);
     if (elsewhere === null) return undefined;
-    const forge = this.options.forgeFor(elsewhere ?? publicationRepo(record, repo));
-    return forge.pull ? this.context.pullOf(forge, prNumber) : undefined;
+    const own = pinned ?? elsewhere ?? (repo ? publicationRepo(record, repo) : undefined);
+    if (!own) return undefined;
+    const forge = this.options.forgeFor(own);
+    if (!forge.pull) return undefined;
+    const pull = await this.context.pullOf(forge, prNumber);
+    // A merge the host took and had not confirmed, still open: the host's
+    // own word on that merge says whether it failed.
+    if (mergeTask && forge.mergeTaskRefused && pull.state === "open" && !pull.merged) {
+      if (await forge.mergeTaskRefused(prNumber, mergeTask))
+        return { ...pull, mergeTaskRefused: true };
+    }
+    return pull;
   }
 
   /**
@@ -980,9 +1114,35 @@ export class ChangeMerge {
     if (await forge.inHostQueue(change.number)) return hostQueued(forge, change);
     // The host may have merged it between the two reads.
     const pull = await this.context.pullOf(forge, change.number);
-    if (pull.merged) return alreadyMerged(forge, pull);
+    if (pull.merged) return alreadyMerged(forge, pull, guard.head);
     if (pull.state !== "open") return closedUnmerged(forge, pull);
     return guard.unattended && !handed.answered ? hostRemoved(forge, change) : undefined;
+  }
+
+  /** The managed repository a kept approval pinned its pull request in (`pinnedRequestRepo`). */
+  private pinnedRepo(
+    record: TaskRecord,
+    place: { host: string; owner: string; name: string },
+  ): RepoView | undefined {
+    return pinnedRequestRepo(record, this.options.repos, place);
+  }
+
+  /**
+   * The forge a read-back reads: the repository the approval pinned when it
+   * names one, so a number another project shares never answers it, and the
+   * task's located project otherwise.
+   */
+  private pinnedForge(
+    taskId: string,
+    place: { host: string; owner: string; name: string } | undefined,
+  ): Forge | undefined {
+    if (!place) {
+      const located = this.context.locate(taskId);
+      return "said" in located ? undefined : located.forge;
+    }
+    const record = this.options.tasks.get(taskId);
+    const pinned = record ? this.pinnedRepo(record, place) : undefined;
+    return pinned ? this.options.forgeFor(pinned) : undefined;
   }
 
   /**
@@ -995,16 +1155,16 @@ export class ChangeMerge {
     taskId: string,
     guard: MergeGuard,
   ): Promise<{ merged?: PrOutcome; closed?: PrOutcome; open?: boolean }> {
-    const located = this.context.locate(taskId);
-    if ("said" in located || guard.prNumber === undefined) return {};
+    const forge = this.pinnedForge(taskId, guard.place);
+    if (!forge || guard.prNumber === undefined) return {};
     let pull: ForgePull;
     try {
-      pull = await this.context.pullOf(located.forge, guard.prNumber);
+      pull = await this.context.pullOf(forge, guard.prNumber);
     } catch {
       return {};
     }
-    if (pull.merged) return { merged: alreadyMerged(located.forge, pull) };
-    if (pull.state !== "open") return { closed: closedUnmerged(located.forge, pull) };
+    if (pull.merged) return { merged: alreadyMerged(forge, pull, guard.head) };
+    if (pull.state !== "open") return { closed: closedUnmerged(forge, pull) };
     return { open: pull.headSha === guard.head };
   }
 
@@ -1218,17 +1378,23 @@ export class ChangeMerge {
     taskId: string,
     forge: Forge,
     change: ForgeChange,
+    /** The newer version the host merged instead of the approved one, when it said so. */
+    newer?: string,
   ): { text: string; line: string; lineSaid: Said } {
     const url = forge.url(change);
     const where = forge.place ? `on ${forge.place}` : "where the project lives";
     const place = forge.place;
     if (change.number !== undefined) {
       const label = forge.label(change);
-      const lineSaid = place
-        ? said("mergedChangeOn", { change: label, place })
-        : said("mergedChangeWhereItLives", { change: label });
+      const lineSaid =
+        place && newer
+          ? said("mergedChangeNewerOn", { change: label, place })
+          : place
+            ? said("mergedChangeOn", { change: label, place })
+            : said("mergedChangeWhereItLives", { change: label });
       const line = englishOf(lineSaid);
-      return { text: `${line}.${url ? ` ${url}` : ""}`, line, lineSaid };
+      const { told } = otherMergedFacts(place, label, newer, change.headSha);
+      return { text: `${line}.${url ? ` ${url}` : ""}${told}`, line, lineSaid };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
     const lineSaid = place ? said("mergedOn", { place }) : said("mergedWhereItLives");
@@ -1311,11 +1477,46 @@ function closedUnmerged(forge: Forge, pull: ForgePull): PrOutcome {
   };
 }
 
-function alreadyMerged(forge: Forge, pull: ForgePull): PrOutcome {
+function alreadyMerged(forge: Forge, pull: ForgePull, approved?: string): PrOutcome {
+  const other = otherMergedFacts(
+    forge.place,
+    numberLabel(forge, pull.number),
+    pull.headSha,
+    approved,
+  );
   return {
     ok: true,
-    text: `${numberLabel(forge, pull.number)} is already merged ${placeWords(forge)}.`,
+    text: `${numberLabel(forge, pull.number)} is already merged ${placeWords(forge)}.${other.told}`,
+    ...other.line,
     receipt: mergedReceipt(pull),
+  };
+}
+
+/** The version a merge went in at, when the host names one other than the approved version. */
+export function otherMerged(approved: string, merged: string | undefined): string | undefined {
+  return merged !== undefined && merged !== approved ? merged : undefined;
+}
+
+/**
+ * Every merged result's one reading of the version that went in against the
+ * approved one: when they differ, the words the crewmate hears (`told`, with
+ * its leading space) and the merge's Activity line saying a push made after
+ * the approved version went in too, which the captain sees. Empty when they
+ * match or either is unknown.
+ */
+export function otherMergedFacts(
+  place: string | null,
+  change: string,
+  merged: string | undefined,
+  approved: string | undefined,
+): { told: string; line?: { line: string; lineSaid: Said } } {
+  const newer = approved === undefined ? undefined : otherMerged(approved, merged);
+  if (!newer) return { told: "" };
+  const lineSaid = place ? said("mergedChangeNewerOn", { change, place }) : undefined;
+  return {
+    // i18n-exempt: served to the crewmate in the merge answer, stays English
+    told: ` ${place ?? "The host"} merged version ${newer}, not the approved version ${approved}: a push landed after the merge was approved, and its work is merged without approval. The task's merge line tells the captain.`,
+    ...(lineSaid ? { line: { line: englishOf(lineSaid), lineSaid } } : {}),
   };
 }
 

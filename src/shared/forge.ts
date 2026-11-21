@@ -3,9 +3,7 @@
  * the forge seam of phase 1 reuses this parser). A project with no origin
  * lives only on this Mac (`none`); GitHub, GitLab and Bitbucket are named
  * by their public hosts; any other remote is a plain Git host (`git`),
- * including a remote on this Mac's own disk. Bitbucket is recognised so a
- * surface can name the host, and until its own file exists it behaves as a
- * plain host.
+ * including a remote on this Mac's own disk.
  *
  * A host on the person's own server is the kind of host it runs once the
  * app knows it (`docs/forge.md`, "Hosts on your own server"): GitHub
@@ -49,7 +47,8 @@ export const GITHUB_COM = "github.com";
 /**
  * The kinds whose proposed change is a numbered request the app opens,
  * reads and merges through the host's API, with readiness and a kept merge
- * approval (FI3-304): GitHub's pull requests and GitLab's merge requests.
+ * approval (FI3-304): GitHub's and Bitbucket's pull requests and GitLab's
+ * merge requests.
  * Every other kind sends a branch up, or keeps the work on this Mac. The
  * forge seam binds exactly these kinds to a forge with `pull`
  * (`src/core/forge/index.ts`).
@@ -79,9 +78,12 @@ export function branchComparePage(where: {
 }): string | null {
   const path = (value: string) => value.split("/").map(encodeURIComponent).join("/");
   const project = `https://${where.host}/${path(where.owner)}/${encodeURIComponent(where.name)}`;
-  const range = `${path(where.base)}...${path(where.branch)}`;
   const facts = changeRequestHost(where.kind);
-  return facts ? `${project}/${facts.comparePath}/${range}` : null;
+  if (!facts) return null;
+  const range =
+    facts.compareRange?.(path(where.base), path(where.branch)) ??
+    `${path(where.base)}...${path(where.branch)}`;
+  return `${project}/${facts.comparePath}/${range}`;
 }
 
 /** A host on the person's own server the app knows, and the kind of host it runs. */

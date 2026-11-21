@@ -91,9 +91,11 @@ function missingMediaWords(story: ChangePresentation, asset: PresentationAsset):
 export const GITHUB_STORY_BODY_LIMIT = presentationBodyLimit("github.com");
 
 /** What each kind calls the two branches a change joins, in its one-open-change rule. */
+// i18n-exempt: a tool answer served to the crewmate, not shown to a person
 const BRANCH_PAIR_WORDS: Record<ChangeRequestKind, string> = {
   github: "head and base",
   gitlab: "source and target branch",
+  bitbucket: "source and destination branch",
 };
 
 /** The host's own words in a crewmate's tool text: GitHub's pull request, GitLab's merge request. */

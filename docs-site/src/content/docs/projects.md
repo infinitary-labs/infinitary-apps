@@ -48,7 +48,8 @@ For GitLab, you can sign in in your browser or paste a key, on gitlab.com or on 
 For Bitbucket, you make an API token on your Atlassian account and paste it, for projects on bitbucket.org.
 The key form names the scopes to tick on Atlassian's page.
 Your Bitbucket projects are listed from the workspaces you belong to; with many, some may not be checked, and the list says so.
-For now, a Bitbucket project's changes are offered as a branch, not as a pull request.
+A Bitbucket project's changes are offered as pull requests, as on GitHub and GitLab; a project you added before this works the same way from its next task.
+A Bitbucket pull request's description carries the story as text, and its pictures stay on the card.
 Your sign-in stays on this computer.
 
 If a sign-in stops working, a card asks you to sign in again.
@@ -84,7 +85,7 @@ Infinitary remembers your focus when you restart it.
 Open a project in **Settings → Projects** to choose how its finished work is merged.
 **Where changes go** offers:
 
-- **pull requests**: each change is offered as a pull request on GitHub or GitLab.
+- **pull requests**: each change is offered as a pull request on GitHub, GitLab or Bitbucket.
 - **batched pull requests**: your approved changes are combined into one batch pull request, one commit for each change, and merged once its checks pass.
 - **local merge**: the change is merged into the project on this computer, with no pull request.
 

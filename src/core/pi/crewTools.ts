@@ -847,7 +847,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Settle task",
     description:
       "merge-pr rechecks and merges the task's current pull request (fast-forwards on plain Git), or closes it as merged " +
-      "if already merged and no question or other pull request is open. land merges locally, never for direct-PR. " +
+      "if already merged and no question or other pull request is open; on Bitbucket it only closes an already-merged one, and a new merge goes through the merge card's approval, even with autonomy on. land merges locally, never for direct-PR. " +
       "discard removes unwanted work unmerged; never discard results. done closes it and names why: answered " +
       "(an answer reported or handed on), finished (verified work with nothing to merge), released (you independently " +
       "verified its delivery through an external release; evidence names it), carried_on (carried_by) or merged (delivered_in: any pull request in its project, or a commit on main). " +

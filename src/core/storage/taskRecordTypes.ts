@@ -315,8 +315,22 @@ export type MergeAuthorization = {
   /** When the tick tries a timed wait again, and how many times it has. */
   retryAt?: number;
   retries?: number;
-  /** Persisted right before the merge request is sent; its answer clears it. */
-  attempt?: { token: string; head: string; at: number };
+  /**
+   * Persisted right before the merge request is sent; its answer clears it.
+   * `task` is the host's own reference to a merge it took and has not
+   * confirmed, which a later read asks how it ended.
+   */
+  attempt?: { token: string; head: string; at: number; task?: string };
+  /**
+   * Merges sent under earlier approvals of the task's other pull requests,
+   * or of this one, whose outcome was never read back, kept by pull request
+   * through every approval that replaces them; a later approval of that pull
+   * request takes its entry as its own attempt (`carryUnsettled`).
+   */
+  unsettled?: {
+    target: MergeAuthorization["target"];
+    attempt: NonNullable<MergeAuthorization["attempt"]>;
+  }[];
   /** The merge GitHub confirmed. */
   receipt?: { head: string; sha?: string; at: number };
   /**

@@ -626,6 +626,11 @@ export class TaskService {
     return this.writer.store.pendingQueueRemovals();
   }
 
+  /** Approval records holding a merge whose outcome was never read back, including tasks that already closed. */
+  unresolvedMergeSends(): TaskRecord[] {
+    return this.writer.store.unresolvedMergeSends();
+  }
+
   /** How many active rows each computer that runs work holds, by its id, counted without composing task records. */
   activeCountsByDevice(): Map<string, number> {
     return this.writer.store.countActiveByDevice();

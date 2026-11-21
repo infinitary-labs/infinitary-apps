@@ -240,9 +240,9 @@ test("signs in to Bitbucket with an API token, refuses a bad one, clones a liste
     await pressKey(page.getByRole("button", { name: "Back", exact: true }), "Enter");
     await page.evaluate(() => window.infinitary.forges.projects("bitbucket.org").catch(() => []));
     await expect(shownCard(page, signInAgain)).toBeVisible({ timeout: 30_000 });
-    // It names what stops on Bitbucket, never pull requests the app does not open there yet.
+    // It names what stops on Bitbucket: the pull requests the app opens, checks and merges there.
     await expect(cardBody(page, signInAgain).locator("p").first()).toHaveText(
-      forgeRefusedText(BITBUCKET.name, "bitbucket"),
+      forgeRefusedText(BITBUCKET.name),
     );
     if (evidence)
       await regionShot(shownCard(page, signInAgain), join(evidence, "sign-in-again-card.png"));

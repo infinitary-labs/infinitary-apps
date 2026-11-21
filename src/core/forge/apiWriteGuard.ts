@@ -1,6 +1,5 @@
-import type { ChangeRequestKind } from "@shared/forgeKinds";
 import { fixedHoldWords } from "@shared/holds";
-import type { ApiRoute } from "./api";
+import type { ApiRoute, RawApiKind } from "./api";
 import { ForgeError } from "./forge";
 
 /** Raw API writes never substitute for the version-pinned merge card. */
@@ -23,7 +22,7 @@ type WriteGrammar = {
   }) => Promise<string | undefined>;
 };
 
-const WRITE_GRAMMAR: Record<ChangeRequestKind, WriteGrammar> = {
+const WRITE_GRAMMAR: Record<RawApiKind, WriteGrammar> = {
   github: {
     merges: (rest) =>
       /^pulls\/\d+\/(?:merge(?:-async)?|update-branch)(?:\/|$)/.test(rest) ||
@@ -66,7 +65,7 @@ const WRITE_GRAMMAR: Record<ChangeRequestKind, WriteGrammar> = {
  * could move it; an unreadable destination refuses the write, never guesses.
  */
 export async function guardApiWrite(
-  kind: ChangeRequestKind,
+  kind: RawApiKind,
   route: ApiRoute,
   body: unknown,
   defaultBranch: () => Promise<string>,

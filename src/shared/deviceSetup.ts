@@ -43,10 +43,7 @@ export const GITHUB_HOST = "github.com";
  * sign-in"): a host it lists, such as github.com, or one of a kind of
  * server it signs in to by an address, such as GitLab or GitHub Enterprise.
  * Undefined for a project kept only here, on a plain Git host, or on a host
- * a computer too old to offer it would be tried for instead. A Bitbucket
- * project is undefined too: it sends its branch up with the computer's own
- * git sign-in until Bitbucket's pull requests are built, so no task waits
- * for the app's sign-in there before it starts.
+ * a computer too old to offer it would be tried for instead.
  */
 export function computerForgeHost(
   forges: ComputerSignIns["forges"],

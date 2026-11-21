@@ -5,24 +5,22 @@
  * their public host or the person's own server. Shared code reads a fact
  * from this table instead of comparing a kind to a host's name, so a new
  * kind of host is one more row here, never another branch in every file.
- * A kind the app signs in to before it opens changes there (Bitbucket) has
- * a row of its sign-in facts alone (`SIGN_IN_HOSTS`).
+ * Bitbucket Cloud's pull requests are one more row (`docs/forge.md`,
+ * "Bitbucket pull requests").
  *
  * Pure: nothing here reads git, the network or a sign-in.
  */
 
 /** The kinds whose proposed change is a numbered request, in the order the app lists their servers' sign-ins. */
-export const CHANGE_REQUEST_KINDS = ["github", "gitlab"] as const;
+export const CHANGE_REQUEST_KINDS = ["github", "gitlab", "bitbucket"] as const;
 
 export type ChangeRequestKind = (typeof CHANGE_REQUEST_KINDS)[number];
 
 /**
  * The kinds the app keeps its own sign-in for: every kind whose changes are
- * numbered requests, and Bitbucket, whose sign-in and project listing come
- * before its pull requests (`docs/forge.md`, "Bitbucket sign-in and
- * projects"). A Bitbucket project still sends its work up as a branch.
+ * numbered requests.
  */
-export const SIGN_IN_KINDS = [...CHANGE_REQUEST_KINDS, "bitbucket"] as const;
+export const SIGN_IN_KINDS = CHANGE_REQUEST_KINDS;
 
 export type SignInKind = (typeof SIGN_IN_KINDS)[number];
 
@@ -58,11 +56,6 @@ export type SignInHost = {
    */
   keyAccount?: string;
   /**
-   * What stops when the host refuses the sign-in, where it is not the
-   * kind's numbered changes: the refused sign-in card names it.
-   */
-  refusedStops?: string;
-  /**
    * The scopes the key needs, which the key form names because the key
    * page cannot tick them itself; absent where the page ticks them.
    */
@@ -84,6 +77,11 @@ export type ChangeRequestHost = SignInHost & {
   requestPaths: readonly string[];
   /** The page comparing two branches, under the project's page. */
   comparePath: string;
+  /**
+   * How the compare page names the branch a change adds and the branch it
+   * builds on, already spelled for a link: `base...branch` where absent.
+   */
+  compareRange?: (base: string, branch: string) => string;
   /** Whether the host reads a project's owner and name without regard to case. */
   foldsNames: boolean;
   /** What the host writes before a draft's own title. */
@@ -137,45 +135,52 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
       `https://${host}/-/user_settings/personal_access_tokens?name=Infinitary&scopes=api`,
     batches: true,
   },
-};
-
-/**
- * Bitbucket Cloud's sign-in: an API token the person makes on their
- * Atlassian account with Bitbucket's scopes, sent as a bearer token
- * (`docs/forge.md`, "Bitbucket sign-in and projects"). The scopes are the
- * ones the app reads and writes with once Bitbucket's pull requests and
- * the crew's reach are built, so one key serves them all.
- */
-export const BITBUCKET_SIGN_IN: SignInHost = {
-  kind: "bitbucket",
-  publicHost: "bitbucket.org",
-  serverIntegration: "bitbucket",
-  serverIdPrefix: "bitbucket",
-  publicHostIsServerRow: true,
-  holdsOnlyKnownHosts: true,
-  addressExample: "bitbucket.org",
-  // Atlassian keeps every API token on the person's account, not on bitbucket.org.
-  keyPage: () => "https://id.atlassian.com/manage-profile/security/api-tokens",
-  keyAccount: "your Atlassian account",
-  // Until its pull requests are built, Bitbucket's sign-in lists, clones and pushes.
-  refusedStops: "list, clone or push your projects",
-  keyScopes: [
-    "read:user:bitbucket",
-    "read:workspace:bitbucket",
-    "read:repository:bitbucket",
-    "write:repository:bitbucket",
-    "read:pullrequest:bitbucket",
-    "write:pullrequest:bitbucket",
-    "read:pipeline:bitbucket",
-    "write:pipeline:bitbucket",
-  ],
+  /**
+   * Bitbucket Cloud (`docs/forge.md`, "Bitbucket pull requests"): an API
+   * token the person makes on their Atlassian account with Bitbucket's
+   * scopes, sent as a bearer token; its pull requests are `#N` under
+   * `pull-requests/`. The scopes are the ones the app reads and writes
+   * with once the crew's reach is built too, so one key serves them all.
+   */
+  bitbucket: {
+    kind: "bitbucket",
+    publicHost: "bitbucket.org",
+    serverIntegration: "bitbucket",
+    serverIdPrefix: "bitbucket",
+    publicHostIsServerRow: true,
+    changeWord: "pull request",
+    handle: "pr",
+    numberPrefix: "#",
+    requestPath: "pull-requests",
+    requestPaths: ["pull-requests"],
+    comparePath: "branches/compare",
+    // Bitbucket names the branch first, then the branch it builds on, split by a carriage return.
+    compareRange: (base, branch) => `${branch}%0D${base}`,
+    // Bitbucket's workspace and repository names are lower case in every address.
+    foldsNames: true,
+    quickActions: false,
+    holdsOnlyKnownHosts: true,
+    addressExample: "bitbucket.org",
+    // Atlassian keeps every API token on the person's account, not on bitbucket.org.
+    keyPage: () => "https://id.atlassian.com/manage-profile/security/api-tokens",
+    keyAccount: "your Atlassian account",
+    keyScopes: [
+      "read:user:bitbucket",
+      "read:workspace:bitbucket",
+      "read:repository:bitbucket",
+      "write:repository:bitbucket",
+      "read:pullrequest:bitbucket",
+      "write:pullrequest:bitbucket",
+      "read:pipeline:bitbucket",
+      "write:pipeline:bitbucket",
+    ],
+    // Batches of a person's own on Bitbucket come with its merge queue, a later change.
+    batches: false,
+  },
 };
 
 /** Every kind the app signs in to, with what each owns about its sign-in. */
-export const SIGN_IN_HOSTS: Readonly<Record<SignInKind, SignInHost>> = {
-  ...CHANGE_REQUEST_HOSTS,
-  bitbucket: BITBUCKET_SIGN_IN,
-};
+export const SIGN_IN_HOSTS: Readonly<Record<SignInKind, SignInHost>> = CHANGE_REQUEST_HOSTS;
 
 /** The kind, when it is one whose changes are numbered requests. */
 export function changeRequestKind(kind: string | null | undefined): ChangeRequestKind | undefined {

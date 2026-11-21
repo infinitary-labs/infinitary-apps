@@ -1274,3 +1274,46 @@ describe("a review's click on a project that gets batches of the person's own (d
     expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
   });
 });
+
+describe('a review\'s click on a host whose merge names no version (docs/forge.md, "Bitbucket pull requests")', () => {
+  // Intent: the captain's ask for Bitbucket "just like github and gitlab" (INF-5193): Bitbucket's
+  // merge holds to no version, so a push in the moment it merges goes in too; the review's
+  // receipt names the version that merged, never the approved one, and the crewmate hears it.
+  it("records the version the host merged when a push landed after the approved one", async () => {
+    const { service, forge, task, host, prepare, reviews } = await onGitHub();
+    host.pull = openPull({ branch: "their/reading" });
+    forge.atHead[HEAD] = [{ name: "build", state: "success" }];
+    const review = await prepare();
+    const newer = "9a8b7c6d5e4f30211203f4e5d6c7b8a9f0e1d2c3";
+    forge.putIn = async () => ({
+      sha: "c0ffee00d15ea5e0b16b00b5ca5cade0ddba11ed",
+      mergedHead: newer,
+    });
+    const outcome = await service.reviews.mergeReview(task.id, review.id);
+    expect(outcome).toMatchObject({ ok: true, receipt: { head: newer } });
+    expect(outcome.text).toContain(newer);
+    expect(reviews().find((item) => item.id === review.id)?.receipt?.head).toBe(newer);
+    expect(outcome.line).toContain("#23");
+  });
+
+  it("records and tells a merge already made at a later push on a host whose merge names no version", async () => {
+    const { service, forge, task, host, prepare, reviews } = await onGitHub();
+    Object.assign(forge, { mergeNamesNoVersion: true });
+    host.pull = openPull({ branch: "their/reading" });
+    forge.atHead[HEAD] = [{ name: "build", state: "success" }];
+    const review = await prepare();
+    const newer = "9a8b7c6d5e4f30211203f4e5d6c7b8a9f0e1d2c3";
+    host.pull = openPull({
+      branch: "their/reading",
+      state: "closed",
+      merged: true,
+      headSha: newer,
+      mergedSha: "c0ffee00d15ea5e0b16b00b5ca5cade0ddba11ed",
+    });
+    const outcome = await service.reviews.mergeReview(task.id, review.id);
+    expect(outcome).toMatchObject({ ok: true, receipt: { head: newer, already: true } });
+    expect(outcome.text).toContain(newer);
+    expect(outcome.line).toContain("#23");
+    expect(reviews().find((item) => item.id === review.id)?.receipt?.head).toBe(newer);
+  });
+});

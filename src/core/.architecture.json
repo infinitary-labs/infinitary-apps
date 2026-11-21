@@ -346,7 +346,7 @@
       "about": "Working copies on the computer"
     },
     {
-      "name": "GitHub and GitLab",
+      "name": "GitHub, GitLab and Bitbucket",
       "about": "Where projects live"
     },
     {
@@ -1553,12 +1553,12 @@
     },
     {
       "from": "forge",
-      "to": "GitHub and GitLab",
+      "to": "GitHub, GitLab and Bitbucket",
       "why": "opens changes, reads checks and merges"
     },
     {
       "from": "integrations",
-      "to": "GitHub and GitLab",
+      "to": "GitHub, GitLab and Bitbucket",
       "why": "reaches GitHub outside the projects"
     },
     {

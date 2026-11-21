@@ -57,6 +57,17 @@ function tableExists(db: AppDatabase, name: string): boolean {
  * settle that has not run under `pendingSettle`, so no reader changes.
  * Only TaskStore writes these tables, beneath TaskService.
  */
+/**
+ * A task's approval record holding a merge sent whose outcome was never read
+ * back: an attempt, or unsettled entries carried past it (INF-5193). Kept
+ * after the task closes, so the partial index `task_permissions_unresolved_send`
+ * (queryIndexes.ts) seeks those rows alone, never closed history.
+ */
+// i18n-exempt: SQL, never shown to a person
+export const UNRESOLVED_SEND = `CASE WHEN json_valid(merge_authorization_json)
+  THEN json_type(merge_authorization_json, '$.attempt') = 'object'
+    OR json_type(merge_authorization_json, '$.unsettled') = 'array' END`;
+
 export class TaskDeliveryStore {
   private present = false;
 
@@ -75,6 +86,17 @@ export class TaskDeliveryStore {
       `SELECT task_id FROM task_permissions
       WHERE json_valid(merge_authorization_json)
         AND json_type(merge_authorization_json, '$.queueRemovals') = 'array'`,
+    ).all() as { task_id: string }[];
+    return rows.map((row) => row.task_id);
+  }
+
+  unresolvedSendTaskIds(): string[] {
+    if (!this.exists()) return [];
+    const rows = prepared(
+      this.db,
+      // i18n-exempt: SQL, never shown to a person
+      `SELECT task_id FROM task_permissions
+      WHERE (${UNRESOLVED_SEND}) = 1`,
     ).all() as { task_id: string }[];
     return rows.map((row) => row.task_id);
   }

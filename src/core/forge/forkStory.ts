@@ -1,13 +1,13 @@
-import { type ChangeRequestKind, changePageUrl, changeRequestKind } from "@shared/forgeKinds";
+import { changePageUrl } from "@shared/forgeKinds";
 import { isForkReview, type MergeReview } from "@shared/mergeReview";
-import { API_PER_PAGE_MAX, OversizedAnswer, smallerPage } from "./api";
+import { API_PER_PAGE_MAX, OversizedAnswer, type RawApiKind, rawApiKind, smallerPage } from "./api";
 import type { Forge, ForgeChange } from "./forge";
 import { ForgeError, ForgeWriteError } from "./forge";
 import { presentationRegionMarkers } from "./presentation";
 
 /** Where each kind keeps a change's comments, and how one is rewritten. */
 const STORY_COMMENTS: Record<
-  ChangeRequestKind,
+  RawApiKind,
   {
     list: (project: string, number: number) => string;
     update: (
@@ -46,7 +46,7 @@ export function forkStoryForge(forge: Forge, review: MergeReview, taskId: string
     throw new ForgeError("unsupported", "This host cannot publish a review story comment.");
   const readPull = forge.pull.bind(forge);
   const project = `${review.owner}/${review.name}`;
-  const storyComments = STORY_COMMENTS[changeRequestKind(forge.kind) ?? "github"];
+  const storyComments = STORY_COMMENTS[rawApiKind(forge.kind) ?? "github"];
   const root = storyComments.list(project, review.number);
   const marker = presentationRegionMarkers(taskId).start;
   type Comment = { id: number; body: string };

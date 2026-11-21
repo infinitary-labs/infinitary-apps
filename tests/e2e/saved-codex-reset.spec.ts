@@ -12,13 +12,13 @@ import {
   say,
 } from "./claudeSeat";
 import { cardBody } from "./frames";
+import { answerDecisionsWithJev, type JevStandIn, startJevStandIn } from "./jevStandIn";
 import { leaveSettings } from "./handoverCards";
 import type { LaunchedApp } from "./launch";
 import { signInCodexHome, writeMockCodexClient } from "./mockCodexClient";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
-import { savedResetChoice } from "./scenarios/savedResetChoice";
 import { feedLineOf } from "./rails";
 import { shownCard } from "./stack";
 import { starterFor } from "./starters";
@@ -36,7 +36,8 @@ import { focusOn, pressKey } from "./windowKeys";
  * account's sign-in. The system browser is a recorder here. With the
  * account's Use saved resets on their own turned on from its row by keys
  * (piece 2, docs/quota.md "Saved resets on their own"), the spent first mate
- * has a reset used with no click once its decision answers use.
+ * has a reset used with no click once the decision model, here a Jev
+ * stand-in (`jevStandIn.ts`), answers use.
  */
 
 /** The live Codex reading's saved resets (`tests/fixtures/quota-credits`), here applying now. */
@@ -326,17 +327,22 @@ test("Use saved resets on their own, turned on from a Codex row by keys, uses th
   });
   let mock: MockProviderServer | undefined;
   let launched: LaunchedApp | undefined;
+  let jev: JevStandIn | undefined;
   try {
-    mock = await startMockProvider({ scenarios: [savedResetChoice] });
+    // The decision model answers use for the saved-reset question.
+    jev = await startJevStandIn((id) => (id === "reset" ? "use" : undefined));
+    mock = await startMockProvider();
     launched = await launchClaudeSeat({
       mockProvider: mock,
       withCodex: true,
       env: {
         INFINITARY_QUOTA_FIXTURE_DIR: spentReadings(now, 2),
         INFINITARY_CODEX_CLI: codex.path,
+        INFINITARY_JEV_URL: jev.url,
       },
     });
     const { page } = launched;
+    await answerDecisionsWithJev(page);
     await recordOpens(launched);
     signInCodexHome(
       launched.userDataDir,
@@ -395,8 +401,14 @@ test("Use saved resets on their own, turned on from a Codex row by keys, uses th
         .map((request) => request.params?.creditId),
     ).toEqual(["reset-sooner"]);
     expect(await opened(launched)).toEqual([]);
+    // It was asked once, with the waiting work and the resets that apply now.
+    const asked = jev.asked.filter((question) => question.id === "reset");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.state.waiting_work).toBe("first mate");
+    expect(String(asked[0]?.state.saved_resets_that_apply_now)).toBe("2");
   } finally {
     await launched?.close();
     await mock?.close();
+    await jev?.close();
   }
 });

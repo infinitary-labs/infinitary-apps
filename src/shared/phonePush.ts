@@ -118,3 +118,52 @@ export const phonePushRelayRequestSchema = z.strictObject({
   sealed: z.string(),
 });
 export type PhonePushRelayRequest = z.infer<typeof phonePushRelayRequestSchema>;
+
+/**
+ * Where the phone leaves a sealed letter for one computer it keeps, beside
+ * `PHONE_PUSH_RELAY` on the same relay: its `letter` request
+ * (docs/phone-push.md, "Letters").
+ */
+export function phoneLetterRelay(pushRelay: string): string {
+  return new URL("letter", pushRelay).toString();
+}
+
+/** Where a computer reads its box: the relay's `letter/read` request. */
+export function phoneLetterReadRelay(pushRelay: string): string {
+  return new URL("letter/read", pushRelay).toString();
+}
+
+/**
+ * The HKDF-SHA256 info strings a phone and one computer derive a letter's box
+ * and its sealing key with, from that computer's sealing key, with no salt.
+ * The box names where the letter waits; the relay sees it, never the key.
+ */
+export const LETTER_BOX_INFO = "infinitary-push letter box v1";
+export const LETTER_SEAL_INFO = "infinitary-push letter seal v1";
+
+/**
+ * What one letter says once a computer opens it: renew, with the phone's
+ * current push address, its service and the relay's grant for them; or stop,
+ * when the phone forgot this computer. `at` is when the phone wrote it, in
+ * milliseconds since 1970 by the phone's clock: a computer takes a letter
+ * only when it is newer than the last it took.
+ */
+export const phonePushLetterSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    v: z.literal(1),
+    kind: z.literal("renew"),
+    token: phonePushRegistrationSchema.shape.token,
+    environment: phonePushEnvironmentSchema,
+    grant: phonePushRegistrationSchema.shape.grant,
+    at: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    v: z.literal(1),
+    kind: z.literal("stop"),
+    at: z.number().int().nonnegative(),
+  }),
+]);
+export type PhonePushLetter = z.infer<typeof phonePushLetterSchema>;
+
+/** What the relay answers a box read that holds a letter. */
+export const phoneLetterReadAnswerSchema = z.object({ sealed: z.string().min(1) });

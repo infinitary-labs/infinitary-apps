@@ -104,6 +104,10 @@ extension PhonePushes {
             unregisterForPushes: { UIApplication.shared.unregisterForRemoteNotifications() },
             post: { [relay] url, body in
                 guard let relay else { return await PhonePushRelay.post(url, body).status }
+                // A letter goes to the stand-in's own letter request beside its register request (INF-5275).
+                guard url == PhonePush.register else {
+                    return await PhonePushRelay.post(relay.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent), body).status
+                }
                 // The phone check's stand-in relay answers with the grant, which a simulator cannot take by a
                 // background push; it arrives as the relay's push would.
                 let (status, answer) = await PhonePushRelay.post(relay, body)

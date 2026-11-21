@@ -1281,6 +1281,19 @@ describe("a phone's usage events reach Diagnostics through its computer", () => 
 // window is in front, and nothing once the phone is removed or leaves. The
 // relay is a stand-in on loopback; the phone opens what it was posted as
 // docs/phone-push.md says a phone does.
+/** Letters the phone's own code sealed (INF-5275), which the computer opens. */
+const LETTERS = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        "../../ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhonePushLetters.json",
+        import.meta.url,
+      ),
+    ),
+    "utf8",
+  ),
+);
+
 describe("a phone's cards reach it sealed through the push relay", () => {
   let userDataDir: string;
   let core: Core;
@@ -1291,6 +1304,10 @@ describe("a phone's cards reach it sealed through the push relay", () => {
   let focused = false;
   const posted: string[] = [];
   const withdrawals: string[] = [];
+  // INF-5275: the stand-in relay keeps letters by box, as the relay's
+  // letter requests do, and refuses the grants named here with a 403.
+  const letters = new Map<string, string>();
+  const refusedGrants = new Set<string>();
 
   beforeAll(async () => {
     const { createServer } = await import("node:http");
@@ -1300,9 +1317,15 @@ describe("a phone's cards reach it sealed through the push relay", () => {
         raw += chunk.toString("utf8");
       });
       request.on("end", () => {
+        if (request.method === "POST" && request.url === "/v1/letter/read") {
+          const sealed = letters.get(JSON.parse(raw).box);
+          response.statusCode = sealed ? 200 : 204;
+          response.end(sealed ? JSON.stringify({ sealed }) : undefined);
+          return;
+        }
         if (request.method === "POST" && request.url === "/v1/push") posted.push(raw);
         if (request.method === "POST" && request.url === "/v1/withdraw") withdrawals.push(raw);
-        response.statusCode = relayStatus;
+        response.statusCode = refusedGrants.has(JSON.parse(raw || "{}").grant) ? 403 : relayStatus;
         response.end();
       });
     });
@@ -1548,6 +1571,69 @@ describe("a phone's cards reach it sealed through the push relay", () => {
     await gone.phone.close();
     await withdrawn.phone.close();
     await removed.phone.closed;
+  }, 60_000);
+
+  // INF-5275's plan, piece 2: a computer the phone keeps but is not showing
+  // cannot hear its renewed grant, so the phone leaves it a sealed letter at
+  // the relay. Here the letter is one the phone's own code sealed
+  // (`PhonePushLetters.json`), and the phone is out of reach.
+  it("delivers a card after its old grant was refused, through the letter the phone left in its box", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" } });
+    // The grant the phone handed expires before the one its letter carries.
+    const old = {
+      ...registration(),
+      key: LETTERS.key,
+      grant: `1797000000.${randomBytes(32).toString("base64url")}`,
+    };
+    expect(await phone.invoke("inf:devices:push", [old])).toEqual({ kept: true });
+    await phone.close();
+    letters.set(LETTERS.box, LETTERS.renew.sealed);
+    refusedGrants.add(old.grant);
+    const before = posted.length;
+    try {
+      await card("card-after-renewal", "Pick a venue");
+      // The relay refuses the old grant; the box holds a newer one, and the
+      // same card goes once more under it, sealed under the key kept.
+      // Another phone an earlier test left on the list hears the card too.
+      const mine = () =>
+        posted
+          .slice(before)
+          .filter((raw) =>
+            [old.grant, LETTERS.renew.opens.grant].includes(
+              phonePushRelayRequestSchema.parse(JSON.parse(raw)).grant,
+            ),
+          );
+      await waitFor(() => mine().length === 2, 10_000);
+      const [refused, again] = mine().map((raw) => opened(old.key, raw));
+      expect(refused?.request.grant).toBe(old.grant);
+      expect(again?.request).toMatchObject({
+        token: LETTERS.renew.opens.token,
+        grant: LETTERS.renew.opens.grant,
+        environment: LETTERS.renew.opens.environment,
+      });
+      expect(again?.card.cardId).toBe("card-after-renewal");
+      expect(again?.card.push).toBe(refused?.card.push);
+      // pushes.json keeps the shape an older app reads; the letter's time is
+      // kept in a file of its own.
+      expect(pushesFile()[grant.deviceId]).toEqual({
+        token: LETTERS.renew.opens.token,
+        environment: LETTERS.renew.opens.environment,
+        grant: LETTERS.renew.opens.grant,
+        key: old.key,
+        at: expect.any(Number),
+      });
+      const kept = JSON.parse(
+        readFileSync(join(userDataDir, "devices", "push-letters.json"), "utf8"),
+      ).devices[grant.deviceId];
+      expect(kept).toEqual({ read: expect.any(Number), at: LETTERS.renew.opens.at });
+    } finally {
+      letters.clear();
+      refusedGrants.clear();
+      await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    }
   }, 60_000);
 
   // INF-5209's plan, piece 3: a card pushed to a phone that takes

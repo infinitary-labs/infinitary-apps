@@ -42,6 +42,7 @@ import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
 import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS } from "@shared/secrets";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
+import { letterBox } from "../../src/core/phoneLetters";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
 import {
@@ -178,6 +179,10 @@ export async function startPhoneHome(
     return {
       ...pushRelay.state(),
       registered: targets.length > 0,
+      // INF-5275: whether the phone left each kept registration's computer a letter at this stand-in relay.
+      lettered:
+        targets.length > 0 &&
+        targets.every((target) => pushRelay.holds(letterBox(target.registration.key))),
       keys: targets.map((target) =>
         createHash("sha256").update(target.registration.key).digest("hex").slice(0, 16),
       ),
@@ -2723,6 +2728,14 @@ export async function startPhoneHome(
         case "POST push-registered": {
           const deadline = Date.now() + 60_000;
           while (core.services.devices.pushTargets().length === 0 && Date.now() < deadline)
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          result = pushReading();
+          break;
+        }
+        // INF-5275: waits up to half a minute for the phone's letter to this home to reach the stand-in relay.
+        case "POST push-lettered": {
+          const deadline = Date.now() + 30_000;
+          while (!pushReading().lettered && Date.now() < deadline)
             await new Promise((resolve) => setTimeout(resolve, 250));
           result = pushReading();
           break;

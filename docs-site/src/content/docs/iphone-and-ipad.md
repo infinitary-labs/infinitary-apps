@@ -86,12 +86,12 @@ If it cannot reach it, it says "Your computer is out of reach. Check that Infini
 
 With notifications on, your phone shows a notification for each new card, even while Infinitary is closed there.
 With more than one computer kept, each one sends its own, and the notification names the computer it came from; tapping it shows that computer and opens the card.
-A computer you have not shown for a while may stop sending them after a few days, until you show it again.
+Each computer keeps sending them while you show another one: your phone leaves it a sealed note through Infinitary's relay whenever its notification permission renews, which only that computer can read.
 
 ## Leave or remove
 
 To stop showing your computer, tap the computer button at the right of the phone's top bar and choose **Leave** with your computer's name.
-The phone forgets that computer and its notifications.
+The phone forgets that computer and its notifications, and leaves it a sealed note so it stops sending them within a day, even while it is out of reach.
 When it is out of reach, **Forget** does the same on the phone alone.
 Your other kept computers stay: the one you showed most recently shows next, and with none left the phone welcomes you as at first.
 On your computer, **Remove** in the phone's menu in Settings → **Devices**, the three dots on its row, cuts it off at once.

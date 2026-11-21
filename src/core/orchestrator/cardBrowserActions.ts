@@ -17,6 +17,7 @@ import {
   USE_SAVED_SIGN_IN_ACTION,
 } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
+import { startWords } from "../browser/pageStartSteps";
 import type { DeclaredAction, EmittedAction, EmittedCardInput } from "../session/tools";
 import { projectPageFile } from "../workspace/projectPage";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -209,6 +210,17 @@ export class CardBrowserActions {
       generation: fact.generation,
       ...(handoff ? { handoff: true as const } : {}),
     };
+  }
+
+  /**
+   * The one fact line emit_card adds for a browser button whose page this
+   * computer serves with no saved start (docs/task-browser.md, "Starting a
+   * page again"): the card goes up, and the crewmate reads how a stopped
+   * server comes back. Empty for every other card.
+   */
+  startReminder(taskId: string, attachment: LiveAttachment | undefined): string {
+    if (attachment?.kind !== "browser" || attachment.handoff) return "";
+    return this.options.browsers?.unstarted?.(taskId) ? startWords.missing() : "";
   }
 
   /**

@@ -134,6 +134,13 @@ export type BrowserNavigateInput = {
   go?: "back" | "forward" | "reload";
   /** Switch to the browser's page with this place, from 1. */
   page?: number;
+  /**
+   * With `url`, the command that starts the page and how long it may take
+   * to answer, saved for the host to run when nothing answers there
+   * (`open --start`, docs/task-browser.md, "Starting a page again"). The
+   * channel adds the shell's folder.
+   */
+  start?: { command: string; withinSeconds: number; cwd?: string };
 };
 export type BrowserInspectInput = {
   show?: "console" | "network";
@@ -382,7 +389,8 @@ function loadLead(browser: Browser, outcome: HostLoadOutcome, done: string, href
   if (tunnel) notices.blocked.delete(hostname);
   switch (outcome.code) {
     case "ERR_CONNECTION_REFUSED":
-      return `Nothing answered at ${href}. Start the project's server first (in the background), then run ${browserCommand("open <url>")} again.`;
+      // i18n-exempt: a command answer served to the crewmate, not shown to a person
+      return `Nothing answered at ${href}. Start the project's server first (in the background), then run ${browserCommand("open <url>")} again, or run ${browserCommand("open <url> --start '<command>' --within <seconds>")} so Infinitary starts it now and again whenever the captain opens the page and nothing answers.`;
     case "ERR_TUNNEL_CONNECTION_FAILED":
     case "ERR_PROXY_CONNECTION_FAILED":
       return (

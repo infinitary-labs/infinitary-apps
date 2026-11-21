@@ -39,7 +39,14 @@ export const browserOrders = {
     effect: "read",
     request: z.tuple([]),
     response: z.object({
-      facts: z.array(z.object({ task: placedTaskIdSchema, fact: taskBrowserFactSchema })),
+      facts: z.array(
+        z.object({
+          task: placedTaskIdSchema,
+          fact: taskBrowserFactSchema,
+          /** Its page is served there with no saved start (`page-start`): emit_card's one line. */
+          unstarted: z.literal(true).optional(),
+        }),
+      ),
     }),
   },
   /** Whether the captain watches the task's browser now: pictures come while he does. */
@@ -129,6 +136,16 @@ export const browserOrders = {
     effect: "change",
     request: aboutBrowser({}),
     response: taskBrowserCommandResultSchema,
+  },
+  /**
+   * A turn of the task's crewmate began or ended at the home (`page-start`):
+   * a build Infinitary started there lives through the turn, and stops at its
+   * end if the browser is still stopped.
+   */
+  "inf:task-browser:turn": {
+    effect: "change",
+    request: aboutBrowser({ running: z.boolean() }),
+    response: doneSchema,
   },
   /** A crewmate's card asks the captain to take over: the browser pauses before the card goes up. */
   "inf:task-browser:request": {

@@ -405,7 +405,11 @@ export class JobManager {
   }
 }
 
-function killGroup(job: RunningJob, signal: NodeJS.Signals): void {
+/** Kill a detached shell and every program in its group (its job tree on Windows). */
+export function killGroup(
+  job: { child: ReturnType<typeof spawn>; windows: boolean },
+  signal: NodeJS.Signals,
+): void {
   const pid = job.child.pid;
   if (!pid) return;
   if (job.windows) {

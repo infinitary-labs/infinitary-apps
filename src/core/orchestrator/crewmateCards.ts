@@ -1054,7 +1054,9 @@ export class CrewmateCards {
         ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."
         : "";
     const placeWords = captainPlaceWords(this.options.captainPlaces?.latest(), this.host.now());
-    const answer = (text: string) => `${text}${advisory}${unmarked}${pausedWords}${placeWords}`;
+    const startLine = this.browser.startReminder(task.id, attachment);
+    const answer = (text: string) =>
+      `${text}${advisory}${unmarked}${pausedWords}${placeWords}${startLine}`;
     // A revision that went up while the checks run says what still holds
     // the merge, and what to do once they pass.
     const gated = (risk?: RiskAssessment) =>

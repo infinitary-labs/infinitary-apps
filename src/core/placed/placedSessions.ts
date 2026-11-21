@@ -773,8 +773,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw new Error(`That task is closed on ${HERE.this}.`);
     // A browser's fact and pictures are said once, and the next says it whole.
     if (channel === "inf:work:browser") {
-      const { fact } = request as InvokeRequest<"inf:work:browser">[0];
-      this.options.browsers?.()?.heardFact(deviceId, asked.task, fact);
+      const { fact, unstarted } = request as InvokeRequest<"inf:work:browser">[0];
+      this.options.browsers?.()?.heardFact(deviceId, asked.task, fact, unstarted);
       return { ok: true } as InvokeResponse<C>;
     }
     if (channel === "inf:work:browser-frame") {

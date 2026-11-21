@@ -155,6 +155,8 @@ export type CaptainFacts =
       site: string;
       /** The page's address, bare of its query and fragment. */
       url: string;
+      /** The saved start the host ran first and how it failed (docs/task-browser.md, "Starting a page again"). */
+      start?: { command: string; exit?: number | null; ranOut?: true; log: string };
     }
   | {
       /**

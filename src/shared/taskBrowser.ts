@@ -267,6 +267,12 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      * stays until that address answers again.
      */
     unanswered: z.literal(true).optional(),
+    /**
+     * While nothing answers there, Infinitary runs the start command its
+     * crewmate saved for the page and waits for it to answer
+     * (docs/task-browser.md, "Starting a page again").
+     */
+    starting: z.literal(true).optional(),
     ...browserIdentity,
   }),
   z.object({
@@ -636,9 +642,15 @@ export function stopViewWords(fact: Extract<TaskBrowserFact, { state: "stopped" 
 /**
  * The view's line while nothing answers at its page's address
  * (docs/task-browser.md, "When nothing answers"): its crewmate was asked to
- * start it again, or is working now and was not asked.
+ * start it again, or is working now and was not asked; or, with `starting`,
+ * Infinitary runs the start its crewmate saved ("Starting a page again").
  */
-export function unansweredWords(site: string, driver: TaskBrowserDriver): string {
+export function unansweredWords(
+  site: string,
+  driver: TaskBrowserDriver,
+  starting?: boolean,
+): string {
+  if (starting) return m.cardBrowserUnansweredStarting({ site });
   return driver === "crewmate"
     ? m.cardBrowserUnansweredWorking({ site })
     : m.cardBrowserUnansweredAsked({ site });

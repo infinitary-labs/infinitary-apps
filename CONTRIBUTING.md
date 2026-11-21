@@ -2,7 +2,23 @@
 
 Infinitary Labs, Inc. licenses its own Infinitary source code and documentation under the MIT License (see `LICENSE` and `NOTICE`). Third-party material retains its own terms and notices.
 [`infinitary-apps`](https://github.com/infinitary-labs/infinitary-apps) is the home for source, issues, pull requests and releases, not a mirror.
-The maintainers have not finalized the contributor agreement. Please open an issue to discuss a change before sending an outside pull request; outside contributions will not be merged until that policy is in place.
+For a large change, open an issue to discuss it before sending a pull request.
+
+## Contributor License Agreement
+
+Before a contribution from outside the maintainers can be merged, its author accepts the [Contributor License Agreement](CLA.md).
+You accept once, and it covers that contribution and every later one.
+To accept, tick the box at the end of the pull request template, or reply to your pull request with exactly this sentence:
+
+> I agree that my submission is governed by the Contributor License Agreement
+
+The pull request's "Contributor License Agreement" check then records your GitHub account, the pull request and the agreement's version in the project's public record issue, and passes.
+Until you accept, the check fails and leaves one comment saying how.
+Only the pull request's author can accept, and a new version of the agreement asks again.
+
+Material that is not your own work goes in a separate submission (section 3 of the agreement): keep the copyright and license information it came with, and in the pull request's description write "Submission containing materials of a third party:" followed by the third party's name and any licenses or other restrictions you know of.
+
+A maintainer approves each run of the project's checks on an outside pull request before it starts (`docs/public-ci.md`, "Outside contributors").
 
 ## How the code is worked on
 

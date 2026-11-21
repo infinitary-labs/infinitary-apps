@@ -64,6 +64,7 @@ import {
   windowsCrew,
 } from "./windowsCrew";
 import {
+  closeShownWindow,
   consoleText,
   openConsole,
   pressDialogButton,
@@ -72,6 +73,7 @@ import {
   runProcesses,
   runTask,
   screenshot,
+  showsWindow,
   startMenuEntry,
   stillRunning,
   topAppProcesses,
@@ -393,11 +395,42 @@ test("the Windows installer installs for this person, offers Git, starts the com
     const ownWindow = await windowOpened();
     // A second launch while that window holds the data folder's own lock (the review of INF-5409):
     // refused Electron's lock on this PC, it asks the window to answer through the lock itself,
-    // and the window's answer ends it, starting no command and no second window.
-    const refused = spawn(executable, [], { stdio: "ignore" });
-    expect(
-      await new Promise<number | null>((resolve) => refused.once("exit", (code) => resolve(code))),
-    ).toBe(0);
+    // and the window's answer ends it, starting no command and no second window. On this PC a
+    // refused launch calls its holder a window only from that window's answer, never from what the
+    // holder runs as (`holderIsWindow`), so the launch's own last line is the window's receipt: a
+    // launch that ended at once, or on anything else, never says it.
+    const refusedLaunch = async (name: string): Promise<string> => {
+      const launch = spawn(executable, [], { stdio: ["ignore", "pipe", "pipe"] });
+      let said = "";
+      launch.stdout?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      launch.stderr?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      const code = await new Promise<number | null>((resolve) =>
+        launch.once("exit", (exitCode) => resolve(exitCode)),
+      );
+      keep(name, said);
+      expect(code, said).toBe(0);
+      return said;
+    };
+    const ANSWERED = "[app] the launch found the folder held by a window";
+    expect(await refusedLaunch("refused-launch.txt")).toContain(ANSWERED);
+    expect(topAppProcesses().map((app) => app.pid)).toEqual([ownWindow]);
+    expect(showsWindow(ownWindow)).toBe(true);
+    expect(runProcesses()).toEqual([]);
+    expect(runTask(label)).toBe(null);
+    // The person closes that last window: on this PC the app keeps its first mate by the clock's
+    // icon with no window, as a Mac keeps it in the Dock. A launch refused then is answered by
+    // that same program, which opens its window again for the person, and ends; no second app and
+    // no command start.
+    expect(closeShownWindow(ownWindow)).toBe(true);
+    await expect.poll(() => showsWindow(ownWindow), { timeout: 30_000 }).toBe(false);
+    expect(topAppProcesses().map((app) => app.pid)).toEqual([ownWindow]);
+    expect(await refusedLaunch("refused-launch-no-window.txt")).toContain(ANSWERED);
+    await expect.poll(() => showsWindow(ownWindow), { timeout: 30_000 }).toBe(true);
+    if (evidence) screenshot(join(evidence, "window-opened-again-for-a-launch.png"));
     expect(topAppProcesses().map((app) => app.pid)).toEqual([ownWindow]);
     expect(runProcesses()).toEqual([]);
     expect(runTask(label)).toBe(null);
@@ -429,11 +462,18 @@ test("the Windows installer installs for this person, offers Git, starts the com
         .map((app) => app.pid)
         .filter((pid) => !commands.has(pid));
     };
+    // That window's receipt is what it does for the person: closed by them first, it keeps
+    // working by the clock's icon, and the launch it receives opens it again, which a launch that
+    // ended at once would leave closed.
+    expect(closeShownWindow(window)).toBe(true);
+    await expect.poll(() => showsWindow(window), { timeout: 30_000 }).toBe(false);
+    expect(windows()).toEqual([window]);
     const second = spawn(executable, [], { stdio: "ignore" });
     const secondEnd = await new Promise<number | null>((resolve) =>
       second.once("exit", (code) => resolve(code)),
     );
     expect(secondEnd).toBe(0);
+    await expect.poll(() => showsWindow(window), { timeout: 30_000 }).toBe(true);
     expect(windows()).toEqual([window]);
     // Closing the window leaves the command and its first mate running.
     await closeWindow(window);

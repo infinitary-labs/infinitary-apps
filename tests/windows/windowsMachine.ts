@@ -229,6 +229,31 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
   );
 }
 
+/**
+ * Whether the process shows a window a person can see: Windows names a
+ * process's main window only while one of its top-level windows is visible.
+ */
+export function showsWindow(pid: number): boolean {
+  return ps<boolean>(
+    `$p = Get-Process -Id ([int]$env:SHOWN_PID) -ErrorAction SilentlyContinue
+    [bool]($p -and $p.MainWindowHandle -ne [IntPtr]::Zero)`,
+    { SHOWN_PID: String(pid) },
+  );
+}
+
+/**
+ * Closes the process's visible window as a person's click on its close
+ * button does: Windows sends that window the same close message. False
+ * when it shows none.
+ */
+export function closeShownWindow(pid: number): boolean {
+  return ps<boolean>(
+    `$p = Get-Process -Id ([int]$env:CLOSE_PID) -ErrorAction SilentlyContinue
+    [bool]($p -and $p.CloseMainWindow())`,
+    { CLOSE_PID: String(pid) },
+  );
+}
+
 /** A picture of the whole screen, for the check's evidence. */
 /**
  * The words of every window `pid` shows, as Windows' accessibility tree

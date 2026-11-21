@@ -313,11 +313,13 @@ extension PhoneJourney {
     }
 
     /// INF-1926, the captain's "standard sheet interaction": a tap above the sheet closes it, with no close mark.
+    /// The tap waits for the sheet to hold still, not the window: the scene shows above the sheet, and through the held
+    /// first mate turn it draws the first mate at work, so the window never holds still (phone run 44863171152's iPad).
     private func closeCrewSummary() {
         let preview = app.otherElements["crew-preview"], window = app.windows.firstMatch
         waitForSteadyTarget(preview)
         let screen = window.frame, top = (screen.minY + max(screen.minY, preview.frame.minY - 48)) / 2
-        tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (top - screen.minY) / screen.height)))
+        tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (top - screen.minY) / screen.height)), steady: preview)
         XCTAssertTrue(preview.waitForAbsence(timeout: 10), "The crew summary stayed open: \(app.debugDescription)")
     }
 

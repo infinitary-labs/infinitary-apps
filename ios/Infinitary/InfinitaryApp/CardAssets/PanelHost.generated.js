@@ -26682,6 +26682,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Its app has Infinitary ${version2} ready and starts again on it once nobody uses it there.`;
   }
+  function devicesAppWaitingWords(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى تطبيقه Infinitary ${version2} جاهزًا، ويُعاد تشغيله عليه حين تُرسل الكلمات المكتوبة هناك أو تُمسح.`;
+      case "de":
+        return `Seine App hat Infinitary ${version2} bereit und startet damit neu, sobald die dort getippten Worte gesendet oder gelöscht sind.`;
+      case "es":
+        return `Su app tiene Infinitary ${version2} lista y se reinicia con ella cuando las palabras escritas allí se envíen o se borren.`;
+      case "fr":
+        return `Son app a Infinitary ${version2} prêt et redémarre dessus dès que les mots tapés là-bas sont envoyés ou effacés.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} の準備ができており、そこで入力された文が送信または消去されると再起動します。`;
+      case "ko":
+        return `그 앱은 Infinitary ${version2}이(가) 준비되어 있고, 그곳에 입력한 글이 보내지거나 지워지면 다시 시작해요.`;
+      case "pt-BR":
+        return `O app dele tem o Infinitary ${version2} pronto e reinicia nele quando as palavras digitadas lá forem enviadas ou apagadas.`;
+      case "zh-Hans":
+        return `它的应用已准备好 Infinitary ${version2}，等那里输入的文字发送或清除后就会重新启动。`;
+      case "zh-Hant":
+        return `它的應用程式已準備好 Infinitary ${version2}，等那裡輸入的文字送出或清除後就會重新啟動。`;
+      case "en-XA":
+        return `[Îţš áþþ ĥáš Îñƒîñîţáŕý ${version2} ŕéáðý áñð šţáŕţš áĝáîñ öñ îţ öñçé ţĥé ŵöŕðš ţýþéð ţĥéŕé áŕé šéñţ öŕ çļéáŕéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app has Infinitary ‬${version2}‮ ready and starts again on it once the words typed there are sent or cleared.‬`;
+    }
+    return `Its app has Infinitary ${version2} ready and starts again on it once the words typed there are sent or cleared.`;
+  }
   function devicesAppWhyInstallation(input2) {
     const version2 = input2.version;
     switch (currentLanguage()) {
@@ -91786,6 +91814,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesAppGetting,
     devicesAppRestarting,
     devicesAppWaiting,
+    devicesAppWaitingWords,
     devicesAppWhyInstallation,
     devicesAppWhyOwnWindow,
     devicesAppWhyPackageManager,
@@ -94715,6 +94744,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesAppGetting": ["percent", "version"],
     "devicesAppRestarting": ["version"],
     "devicesAppWaiting": ["version"],
+    "devicesAppWaitingWords": ["version"],
     "devicesAppWhyInstallation": ["version"],
     "devicesAppWhyOwnWindow": [],
     "devicesAppWhyPackageManager": [],
@@ -103942,7 +103972,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     percent: number().min(0).max(100).optional(),
     reason: appFollowReasonSchema.optional(),
     /** The app's own words for what stopped it, said after the home's. */
-    problem: string().min(1).max(400).optional()
+    problem: string().min(1).max(400).optional(),
+    /**
+     * On `waiting`: the row's Update was pressed, so it waits only for the
+     * words typed there to be sent, not for nobody to use the app.
+     */
+    pressed: literal(true).optional()
   });
   strictObject({ deviceId: string().min(1).max(64) });
   const commandEndingSchema = _enum([

@@ -11,6 +11,7 @@
   "devicesAppGetting": "它的應用程式正在自行更新到 Infinitary {version}：已下載 {percent}%。",
   "devicesAppRestarting": "它的應用程式正以 Infinitary {version} 重新啟動。",
   "devicesAppWaiting": "它的應用程式已準備好 Infinitary {version}，等那裡沒人使用時就會重新啟動。",
+  "devicesAppWaitingWords": "它的應用程式已準備好 Infinitary {version}，等那裡輸入的文字送出或清除後就會重新啟動。",
   "devicesAppWhyInstallation": "它無法在那裡的安裝位置取代自己，請在那裡安裝 Infinitary {version}。",
   "devicesAppWhyOwnWindow": "它只能在那裡自己的視窗中更新，請在那裡更新。",
   "devicesAppWhyPackageManager": "它在那裡由套件管理工具安裝，請在那裡用該套件管理工具更新。",

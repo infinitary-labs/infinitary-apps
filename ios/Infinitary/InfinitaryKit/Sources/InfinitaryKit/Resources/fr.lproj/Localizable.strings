@@ -730,6 +730,7 @@
 "devicesAppGetting" = "Son app se met à jour seule vers Infinitary %2$@ : %1$@ %% téléchargés.";
 "devicesAppRestarting" = "Son app redémarre sur Infinitary %1$@.";
 "devicesAppWaiting" = "Son app a Infinitary %1$@ prêt et redémarre dessus dès que personne ne l’utilise là-bas.";
+"devicesAppWaitingWords" = "Son app a Infinitary %1$@ prêt et redémarre dessus dès que les mots tapés là-bas sont envoyés ou effacés.";
 "devicesAppWhyInstallation" = "Elle ne peut pas se remplacer là où elle est installée : installe donc Infinitary %1$@ là-bas.";
 "devicesAppWhyOwnWindow" = "Elle ne se met à jour que depuis sa propre fenêtre là-bas : mets-la donc à jour là-bas.";
 "devicesAppWhyPackageManager" = "Un gestionnaire de paquets l’a installée là-bas : mets-la donc à jour là-bas avec ce gestionnaire de paquets.";

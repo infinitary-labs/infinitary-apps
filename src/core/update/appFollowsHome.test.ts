@@ -128,7 +128,8 @@ describe("an app following the version of the computer it controls", () => {
     await a.settle();
     await a.ready({ ok: true });
     expect(a.install).not.toHaveBeenCalled();
-    expect(a.told.map((report) => report.step)).toEqual(["getting", "waiting"]);
+    // The row says the press waits only for the words there.
+    expect(a.told.at(-1)).toEqual({ version: "0.8.4-alpha.649", step: "waiting", pressed: true });
     // The words are sent, and a window is still in front: the press still holds.
     a.send();
     a.follows.noticed();
@@ -143,12 +144,13 @@ describe("an app following the version of the computer it controls", () => {
     a.follows.connected();
     await a.settle();
     await a.ready({ ok: true });
-    expect(a.told.map((report) => report.step)).toEqual(["getting", "waiting"]);
-    // The row shows Update app on that waiting step: the press installs nothing over the words.
+    expect(a.told.at(-1)).toEqual({ version: "0.8.4-alpha.649", step: "waiting" });
+    // The row shows Update app on that waiting step: the press installs nothing over the words,
+    // and the row hears that it now waits only for them.
     a.follows.askedNow();
     await a.settle();
     expect(a.install).not.toHaveBeenCalled();
-    expect(a.told.at(-1)).toMatchObject({ step: "waiting" });
+    expect(a.told.at(-1)).toEqual({ version: "0.8.4-alpha.649", step: "waiting", pressed: true });
     // The words are sent, and a window is still in front: the press still holds.
     a.send();
     a.follows.noticed();

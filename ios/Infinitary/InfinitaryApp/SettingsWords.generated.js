@@ -13024,7 +13024,12 @@ ${events}` : prompt;
     percent: number().min(0).max(100).optional(),
     reason: appFollowReasonSchema.optional(),
     /** The app's own words for what stopped it, said after the home's. */
-    problem: string().min(1).max(400).optional()
+    problem: string().min(1).max(400).optional(),
+    /**
+     * On `waiting`: the row's Update was pressed, so it waits only for the
+     * words typed there to be sent, not for nobody to use the app.
+     */
+    pressed: literal(true).optional()
   });
   strictObject({ deviceId: string().min(1).max(64) });
   const commandEndingSchema = _enum([

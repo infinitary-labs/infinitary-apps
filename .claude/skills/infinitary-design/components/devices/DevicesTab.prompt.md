@@ -339,7 +339,7 @@ An app behind this computer's - older, or too old to say - turns the line into t
 A computer whose work runs this computer's version while its app does not adds "Its work runs Infinitary 0.8.4, as this computer does."
 A phone's app has versions of its own, never compared: "Its app has version 0.1.0 (212).", the version and build its own Settings shows.
 A copy out of reach or not open says nothing of its version, and while a computer updates the line gives way to the update's own.
-An app behind this computer's updates itself to this computer's version while nobody uses it there, and a line under its version says each step, `--text-sm --fg-2`: "Its app updates to Infinitary 0.8.4 by itself: 40% downloaded.", "Its app has Infinitary 0.8.4 ready and starts again on it once nobody uses it there.", "Its app starts again on Infinitary 0.8.4."
+An app behind this computer's updates itself to this computer's version while nobody uses it there, and a line under its version says each step, `--text-sm --fg-2`: "Its app updates to Infinitary 0.8.4 by itself: 40% downloaded.", "Its app has Infinitary 0.8.4 ready and starts again on it once nobody uses it there.", after Update app "Its app has Infinitary 0.8.4 ready and starts again on it once the words typed there are sent or cleared.", "Its app starts again on Infinitary 0.8.4."
 One that cannot says so in `--warn` with what to do there ("Its app cannot update to Infinitary 0.8.4 by itself.
 It updates only from its own window there, so update it there."), and one that tried says "Its app could not update to Infinitary 0.8.4 by itself.
 Update app tries again."

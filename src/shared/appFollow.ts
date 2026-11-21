@@ -54,6 +54,11 @@ export const appFollowReportSchema = z.strictObject({
   reason: appFollowReasonSchema.optional(),
   /** The app's own words for what stopped it, said after the home's. */
   problem: z.string().min(1).max(400).optional(),
+  /**
+   * On `waiting`: the row's Update was pressed, so it waits only for the
+   * words typed there to be sent, not for nobody to use the app.
+   */
+  pressed: z.literal(true).optional(),
 });
 export type AppFollowReport = z.infer<typeof appFollowReportSchema>;
 
@@ -105,7 +110,9 @@ export function appFollowLine(report: AppFollowReport): string {
     case "getting":
       return m.devicesAppGetting({ version, percent: String(report.percent ?? 0) });
     case "waiting":
-      return m.devicesAppWaiting({ version });
+      return report.pressed
+        ? m.devicesAppWaitingWords({ version })
+        : m.devicesAppWaiting({ version });
     case "restarting":
       return m.devicesAppRestarting({ version });
     case "cannot":

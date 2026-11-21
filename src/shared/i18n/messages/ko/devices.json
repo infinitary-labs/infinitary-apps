@@ -11,6 +11,7 @@
   "devicesAppGetting": "그 앱이 Infinitary {version}(으)로 스스로 업데이트하는 중이에요: {percent}% 내려받음.",
   "devicesAppRestarting": "그 앱이 Infinitary {version}(으)로 다시 시작해요.",
   "devicesAppWaiting": "그 앱은 Infinitary {version}이(가) 준비되어 있고, 그곳에서 아무도 쓰지 않을 때 다시 시작해요.",
+  "devicesAppWaitingWords": "그 앱은 Infinitary {version}이(가) 준비되어 있고, 그곳에 입력한 글이 보내지거나 지워지면 다시 시작해요.",
   "devicesAppWhyInstallation": "그곳에 설치된 위치에서는 스스로를 바꿀 수 없으니, 그곳에서 Infinitary {version}을(를) 설치하세요.",
   "devicesAppWhyOwnWindow": "그곳의 자체 창에서만 업데이트되니, 그곳에서 업데이트하세요.",
   "devicesAppWhyPackageManager": "그곳에서는 패키지 관리자가 설치했으니, 그 패키지 관리자로 업데이트하세요.",

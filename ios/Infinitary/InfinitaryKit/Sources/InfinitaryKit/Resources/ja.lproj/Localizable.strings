@@ -730,6 +730,7 @@
 "devicesAppGetting" = "そのアプリは Infinitary %2$@ へ自動でアップデート中です：%1$@%% ダウンロード済み。";
 "devicesAppRestarting" = "そのアプリは Infinitary %1$@ で再起動します。";
 "devicesAppWaiting" = "そのアプリは Infinitary %1$@ の準備ができており、そこで誰も使っていないときに再起動します。";
+"devicesAppWaitingWords" = "そのアプリは Infinitary %1$@ の準備ができており、そこで入力された文が送信または消去されると再起動します。";
 "devicesAppWhyInstallation" = "インストールされている場所では自分自身を置き換えられないため、そこで Infinitary %1$@ をインストールしてください。";
 "devicesAppWhyOwnWindow" = "そこにある自身のウインドウからしかアップデートできないため、そこでアップデートしてください。";
 "devicesAppWhyPackageManager" = "そこではパッケージマネージャーがインストールしたため、そのパッケージマネージャーでアップデートしてください。";

@@ -11,6 +11,7 @@
   "devicesAppGetting": "そのアプリは Infinitary {version} へ自動でアップデート中です：{percent}% ダウンロード済み。",
   "devicesAppRestarting": "そのアプリは Infinitary {version} で再起動します。",
   "devicesAppWaiting": "そのアプリは Infinitary {version} の準備ができており、そこで誰も使っていないときに再起動します。",
+  "devicesAppWaitingWords": "そのアプリは Infinitary {version} の準備ができており、そこで入力された文が送信または消去されると再起動します。",
   "devicesAppWhyInstallation": "インストールされている場所では自分自身を置き換えられないため、そこで Infinitary {version} をインストールしてください。",
   "devicesAppWhyOwnWindow": "そこにある自身のウインドウからしかアップデートできないため、そこでアップデートしてください。",
   "devicesAppWhyPackageManager": "そこではパッケージマネージャーがインストールしたため、そのパッケージマネージャーでアップデートしてください。",

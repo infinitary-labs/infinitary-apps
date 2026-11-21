@@ -730,6 +730,7 @@
 "devicesAppGetting" = "Its app updates to Infinitary %2$@ by itself: %1$@%% downloaded.";
 "devicesAppRestarting" = "Its app starts again on Infinitary %1$@.";
 "devicesAppWaiting" = "Its app has Infinitary %1$@ ready and starts again on it once nobody uses it there.";
+"devicesAppWaitingWords" = "Its app has Infinitary %1$@ ready and starts again on it once the words typed there are sent or cleared.";
 "devicesAppWhyInstallation" = "It cannot replace itself where it is installed there, so install Infinitary %1$@ there.";
 "devicesAppWhyOwnWindow" = "It updates only from its own window there, so update it there.";
 "devicesAppWhyPackageManager" = "A package manager installed it there, so update it there with that package manager.";

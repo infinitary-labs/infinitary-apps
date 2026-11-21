@@ -199,10 +199,12 @@ test("an app on another computer gets the first mate's computer's version by its
       row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) }),
     );
     await home.page.keyboard.press("Enter");
+    // The press reached the app: the row says it now waits only for the words typed there.
+    await step(row, "waiting", m.devicesAppWaitingWords({ version }));
     // The words there were never sent anywhere: they wait in its composer, and the app with them.
     await expect(promptInput(view.page)).toHaveValue("check the harbour lights");
-    await step(row, "waiting", m.devicesAppWaiting({ version }));
     expect(installed(installs)).toEqual([version, version]);
+    if (kept) await regionShot(row, join(kept, "app-waiting-words-row.png"));
     await promptInput(view.page).fill("");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
     await installing(installs, version, 3);

@@ -11,6 +11,7 @@
   "devicesAppGetting": "Its app updates to Infinitary {version} by itself: {percent}% downloaded.",
   "devicesAppRestarting": "Its app starts again on Infinitary {version}.",
   "devicesAppWaiting": "Its app has Infinitary {version} ready and starts again on it once nobody uses it there.",
+  "devicesAppWaitingWords": "Its app has Infinitary {version} ready and starts again on it once the words typed there are sent or cleared.",
   "devicesAppWhyInstallation": "It cannot replace itself where it is installed there, so install Infinitary {version} there.",
   "devicesAppWhyOwnWindow": "It updates only from its own window there, so update it there.",
   "devicesAppWhyPackageManager": "A package manager installed it there, so update it there with that package manager.",

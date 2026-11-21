@@ -6092,6 +6092,10 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 400
+                    },
+                    "pressed": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -6555,6 +6559,10 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 400
+                      },
+                      "pressed": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -7081,6 +7089,10 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 400
+                      },
+                      "pressed": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -8167,6 +8179,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "pressed": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -8595,6 +8611,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "pressed": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -8982,6 +9002,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "pressed": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -9361,6 +9385,10 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 400
+              },
+              "pressed": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [
@@ -9607,6 +9635,10 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 400
+                      },
+                      "pressed": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -98582,6 +98614,10 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 400
+                    },
+                    "pressed": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [

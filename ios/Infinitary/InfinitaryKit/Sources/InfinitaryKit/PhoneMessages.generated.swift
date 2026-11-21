@@ -778,6 +778,7 @@ public enum PhoneMessages {
     public static func `devicesAppGetting`(`percent`: String, `version`: String) -> String { PhoneWords.format("devicesAppGetting", [`percent`, `version`]) }
     public static func `devicesAppRestarting`(`version`: String) -> String { PhoneWords.format("devicesAppRestarting", [`version`]) }
     public static func `devicesAppWaiting`(`version`: String) -> String { PhoneWords.format("devicesAppWaiting", [`version`]) }
+    public static func `devicesAppWaitingWords`(`version`: String) -> String { PhoneWords.format("devicesAppWaitingWords", [`version`]) }
     public static func `devicesAppWhyInstallation`(`version`: String) -> String { PhoneWords.format("devicesAppWhyInstallation", [`version`]) }
     public static func `devicesAppWhyOwnWindow`() -> String { PhoneWords.format("devicesAppWhyOwnWindow", []) }
     public static func `devicesAppWhyPackageManager`() -> String { PhoneWords.format("devicesAppWhyPackageManager", []) }
@@ -4775,6 +4776,7 @@ extension PhoneWords {
         "devicesAppGetting": ["percent", "version"],
         "devicesAppRestarting": ["version"],
         "devicesAppWaiting": ["version"],
+        "devicesAppWaitingWords": ["version"],
         "devicesAppWhyInstallation": ["version"],
         "devicesAppWhyOwnWindow": [],
         "devicesAppWhyPackageManager": [],

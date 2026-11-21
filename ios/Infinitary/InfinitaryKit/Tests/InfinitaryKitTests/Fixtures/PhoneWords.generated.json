@@ -806,6 +806,7 @@
   {"said":{"m":"devicesAppGetting","a":{"percent":"‹percent›","version":"‹version›"}},"words":"Its app updates to Infinitary ‹version› by itself: ‹percent›% downloaded."},
   {"said":{"m":"devicesAppRestarting","a":{"version":"‹version›"}},"words":"Its app starts again on Infinitary ‹version›."},
   {"said":{"m":"devicesAppWaiting","a":{"version":"‹version›"}},"words":"Its app has Infinitary ‹version› ready and starts again on it once nobody uses it there."},
+  {"said":{"m":"devicesAppWaitingWords","a":{"version":"‹version›"}},"words":"Its app has Infinitary ‹version› ready and starts again on it once the words typed there are sent or cleared."},
   {"said":{"m":"devicesAppWhyInstallation","a":{"version":"‹version›"}},"words":"It cannot replace itself where it is installed there, so install Infinitary ‹version› there."},
   {"said":{"m":"devicesAppWhyOwnWindow"},"words":"It updates only from its own window there, so update it there."},
   {"said":{"m":"devicesAppWhyPackageManager"},"words":"A package manager installed it there, so update it there with that package manager."},

@@ -209,7 +209,7 @@ export class AppFollowsHome {
       await this.install(home);
       return;
     }
-    this.tell({ version: home, step: "waiting" });
+    this.tell({ version: home, step: "waiting", ...(this.now ? { pressed: true } : {}) });
   }
 
   /**
@@ -224,7 +224,7 @@ export class AppFollowsHome {
     if (this.waiting !== version || this.disposed || !installFollowed) return;
     const asked = this.now;
     if (!this.free(asked)) {
-      this.tell({ version, step: "waiting" });
+      this.tell({ version, step: "waiting", ...(asked ? { pressed: true } : {}) });
       return;
     }
     const connection = this.connection;
@@ -241,7 +241,7 @@ export class AppFollowsHome {
     if (result.later) {
       this.waiting = version;
       this.now = asked;
-      this.tell({ version, step: "waiting" });
+      this.tell({ version, step: "waiting", ...(asked ? { pressed: true } : {}) });
       return;
     }
     this.tell({

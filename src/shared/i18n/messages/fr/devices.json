@@ -11,6 +11,7 @@
   "devicesAppGetting": "Son app se met à jour seule vers Infinitary {version} : {percent} % téléchargés.",
   "devicesAppRestarting": "Son app redémarre sur Infinitary {version}.",
   "devicesAppWaiting": "Son app a Infinitary {version} prêt et redémarre dessus dès que personne ne l’utilise là-bas.",
+  "devicesAppWaitingWords": "Son app a Infinitary {version} prêt et redémarre dessus dès que les mots tapés là-bas sont envoyés ou effacés.",
   "devicesAppWhyInstallation": "Elle ne peut pas se remplacer là où elle est installée : installe donc Infinitary {version} là-bas.",
   "devicesAppWhyOwnWindow": "Elle ne se met à jour que depuis sa propre fenêtre là-bas : mets-la donc à jour là-bas.",
   "devicesAppWhyPackageManager": "Un gestionnaire de paquets l’a installée là-bas : mets-la donc à jour là-bas avec ce gestionnaire de paquets.",

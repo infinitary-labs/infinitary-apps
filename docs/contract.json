@@ -55667,6 +55667,19 @@
           "thirdCrewmateDoneAt": {
             "type": "number"
           },
+          "firstCrewmateAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "firstCrewmateNoteId": {
+            "type": "string"
+          },
           "gateOpen": {
             "type": "boolean"
           },
@@ -55777,6 +55790,19 @@
           },
           "thirdCrewmateDoneAt": {
             "type": "number"
+          },
+          "firstCrewmateAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "firstCrewmateNoteId": {
+            "type": "string"
           },
           "gateOpen": {
             "type": "boolean"

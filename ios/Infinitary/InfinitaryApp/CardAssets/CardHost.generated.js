@@ -27913,6 +27913,276 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} ready`;
   }
+  function firstCrewmateCards() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما تكون لديه إجابة، أو يحتاج إلى أن تختار، أعيد ذلك إليك هنا في بطاقة مثل هذه. البطاقات وحدها هي ما يحتاج إليك.`;
+      case "de":
+        return `Wenn es eine Antwort hat oder du etwas entscheiden musst, bringe ich das als Karte wie diese hierher. Nur die Karten brauchen dich.`;
+      case "es":
+        return `Cuando tenga una respuesta, o necesite que elijas, te lo traigo aquí en una tarjeta como esta. Las tarjetas son lo único que te necesita.`;
+      case "fr":
+        return `Quand il aura une réponse, ou qu'il aura besoin que vous choisissiez, je vous la rapporterai ici sous forme de carte comme celle-ci. Seules les cartes ont besoin de vous.`;
+      case "ja":
+        return `回答が出たときや、選んでいただく必要があるときは、このようなカードでここにお届けします。対応が必要なのはカードだけです。`;
+      case "ko":
+        return `답이 나오거나 선택이 필요하면, 이런 카드로 여기에 가져올게요. 신경 쓸 것은 카드뿐이에요.`;
+      case "pt-BR":
+        return `Quando ele tiver uma resposta, ou precisar que você escolha, eu trago isso aqui em um cartão como este. Só os cartões precisam de você.`;
+      case "zh-Hans":
+        return `等它有了答案，或需要你做选择时，我会用像这样的卡片把它带回这里。只有卡片需要你处理。`;
+      case "zh-Hant":
+        return `等它有了答案，或需要你做選擇時，我會用像這張一樣的卡片把它帶回這裡。只有卡片需要你處理。`;
+      case "en-XA":
+        return `[Ŵĥéñ îţ ĥáš áñ áñšŵéŕ, öŕ ñééðš ýöû ţö çĥööšé, Î ƀŕîñĝ ţĥáţ ƀáçķ ĥéŕé áš á çáŕð ļîķé ţĥîš öñé. Çáŕðš áŕé ţĥé öñļý þáŕţ ţĥáţ ñééðš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When it has an answer, or needs you to choose, I bring that back here as a card like this one. Cards are the only part that needs you.‬`;
+    }
+    return `When it has an answer, or needs you to choose, I bring that back here as a card like this one. Cards are the only part that needs you.`;
+  }
+  function firstCrewmateHandoff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سلّمت طلبك إلى أحد أفراد الطاقم. يعمل في الخلفية، وقد يستغرق ذلك بعض الوقت.`;
+      case "de":
+        return `Ich habe deine Bitte an ein Crewmitglied gegeben. Es arbeitet im Hintergrund, und das kann eine Weile dauern.`;
+      case "es":
+        return `Le pasé tu petición a un tripulante. Trabaja en segundo plano, y eso puede llevar un rato.`;
+      case "fr":
+        return `J'ai confié votre demande à un équipier. Il travaille en arrière-plan, ce qui peut prendre un moment.`;
+      case "ja":
+        return `ご依頼を乗組員に渡しました。乗組員はバックグラウンドで作業するので、少し時間がかかることがあります。`;
+      case "ko":
+        return `요청을 선원에게 넘겼어요. 선원은 뒤에서 일하고, 시간이 좀 걸릴 수 있어요.`;
+      case "pt-BR":
+        return `Passei seu pedido para um tripulante. Ele trabalha em segundo plano, e isso pode levar um tempo.`;
+      case "zh-Hans":
+        return `我把你的请求交给了一位船员。它在后台工作，可能需要一些时间。`;
+      case "zh-Hant":
+        return `我把你的要求交給了一位船員。它在背景工作，可能需要一些時間。`;
+      case "en-XA":
+        return `[Î ĝáṽé ýöûŕ ášķ ţö á çŕéŵɱáţé. Îţ ŵöŕķš îñ ţĥé ƀáçķĝŕöûñð, áñð ţĥáţ çáñ ţáķé á ŵĥîļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮I gave your ask to a crewmate. It works in the background, and that can take a while.‬`;
+    }
+    return `I gave your ask to a crewmate. It works in the background, and that can take a while.`;
+  }
+  function firstCrewmateLater() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لاحقًا`;
+      case "de":
+        return `Später`;
+      case "es":
+        return `Después`;
+      case "fr":
+        return `Plus tard`;
+      case "ja":
+        return `あとで`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Depois`;
+      case "zh-Hans":
+        return `之后`;
+      case "zh-Hant":
+        return `之後`;
+      case "en-XA":
+        return `[Ļáţéŕ ~~]`;
+      case "ar-XB":
+        return `‮Later‬`;
+    }
+    return `Later`;
+  }
+  function firstCrewmateLaterCard() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعود بطاقة إلى هنا`;
+      case "de":
+        return `Eine Karte kommt hierher zurück`;
+      case "es":
+        return `Vuelve una tarjeta aquí`;
+      case "fr":
+        return `Une carte revient ici`;
+      case "ja":
+        return `カードがここに戻ります`;
+      case "ko":
+        return `카드가 여기로 돌아와요`;
+      case "pt-BR":
+        return `Um cartão volta aqui`;
+      case "zh-Hans":
+        return `卡片会回到这里`;
+      case "zh-Hant":
+        return `卡片會回到這裡`;
+      case "en-XA":
+        return `[Å çáŕð çöɱéš ƀáçķ ĥéŕé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A card comes back here‬`;
+    }
+    return `A card comes back here`;
+  }
+  function firstCrewmateLaterWhat() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إجابة أو خيار`;
+      case "de":
+        return `Eine Antwort oder eine Entscheidung`;
+      case "es":
+        return `Una respuesta o una elección`;
+      case "fr":
+        return `Une réponse ou un choix`;
+      case "ja":
+        return `回答か選択肢`;
+      case "ko":
+        return `답변이나 선택지`;
+      case "pt-BR":
+        return `Uma resposta ou uma escolha`;
+      case "zh-Hans":
+        return `一个答案或一个选择`;
+      case "zh-Hant":
+        return `一個答案或一個選擇`;
+      case "en-XA":
+        return `[Åñ áñšŵéŕ öŕ á çĥöîçé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮An answer or a choice‬`;
+    }
+    return `An answer or a choice`;
+  }
+  function firstCrewmateNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الآن`;
+      case "de":
+        return `Jetzt`;
+      case "es":
+        return `Ahora`;
+      case "fr":
+        return `Maintenant`;
+      case "ja":
+        return `いま`;
+      case "ko":
+        return `지금`;
+      case "pt-BR":
+        return `Agora`;
+      case "zh-Hans":
+        return `现在`;
+      case "zh-Hant":
+        return `現在`;
+      case "en-XA":
+        return `[Ñöŵ ~]`;
+      case "ar-XB":
+        return `‮Now‬`;
+    }
+    return `Now`;
+  }
+  function firstCrewmateNowWatch() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا داعي لمراقبته`;
+      case "de":
+        return `Du musst nicht zusehen`;
+      case "es":
+        return `No hace falta vigilarlo`;
+      case "fr":
+        return `Inutile de le surveiller`;
+      case "ja":
+        return `見守る必要はありません`;
+      case "ko":
+        return `지켜볼 필요 없어요`;
+      case "pt-BR":
+        return `Não precisa acompanhar`;
+      case "zh-Hans":
+        return `不必盯着看`;
+      case "zh-Hant":
+        return `不必盯著看`;
+      case "en-XA":
+        return `[Ñö ñééð ţö ŵáţçĥ îţ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮No need to watch it‬`;
+    }
+    return `No need to watch it`;
+  }
+  function firstCrewmateNowWorks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فرد من الطاقم يعمل`;
+      case "de":
+        return `Ein Crewmitglied arbeitet`;
+      case "es":
+        return `Un tripulante trabaja`;
+      case "fr":
+        return `Un équipier travaille`;
+      case "ja":
+        return `乗組員が作業中`;
+      case "ko":
+        return `선원이 일하는 중`;
+      case "pt-BR":
+        return `Um tripulante trabalha`;
+      case "zh-Hans":
+        return `船员在工作`;
+      case "zh-Hant":
+        return `船員在工作`;
+      case "en-XA":
+        return `[Å çŕéŵɱáţé ŵöŕķš ~~~~~~]`;
+      case "ar-XB":
+        return `‮A crewmate works‬`;
+    }
+    return `A crewmate works`;
+  }
+  function firstCrewmatePutAway() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنك إخفاء هذه البطاقة. يستمر العمل، ويمكنك أن تطلب مني شيئًا آخر في الأثناء.`;
+      case "de":
+        return `Du kannst diese Karte weglegen. Die Arbeit geht weiter, und du kannst mich in der Zwischenzeit um etwas anderes bitten.`;
+      case "es":
+        return `Puedes guardar esta tarjeta. El trabajo sigue, y mientras tanto puedes pedirme otra cosa.`;
+      case "fr":
+        return `Vous pouvez ranger cette carte. Le travail continue, et vous pouvez me demander autre chose en attendant.`;
+      case "ja":
+        return `このカードはしまって大丈夫です。作業は続きますし、その間にほかのことを頼むこともできます。`;
+      case "ko":
+        return `이 카드는 치워도 돼요. 작업은 계속되고, 그동안 다른 일을 맡겨도 돼요.`;
+      case "pt-BR":
+        return `Você pode guardar este cartão. O trabalho continua, e enquanto isso você pode me pedir outra coisa.`;
+      case "zh-Hans":
+        return `你可以收起这张卡片。工作会继续进行，同时你也可以让我做别的事。`;
+      case "zh-Hant":
+        return `你可以收起這張卡片。工作會繼續進行，同時你也可以請我做別的事。`;
+      case "en-XA":
+        return `[Ýöû çáñ þûţ ţĥîš çáŕð áŵáý. Ţĥé ŵöŕķ ĝöéš öñ, áñð ýöû çáñ ášķ ɱé ƒöŕ šöɱéţĥîñĝ éļšé ɱéáñŵĥîļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You can put this card away. The work goes on, and you can ask me for something else meanwhile.‬`;
+    }
+    return `You can put this card away. The work goes on, and you can ask me for something else meanwhile.`;
+  }
+  function firstCrewmateTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أحد أفراد الطاقم يتولى الأمر`;
+      case "de":
+        return `Ein Crewmitglied ist dran`;
+      case "es":
+        return `Un tripulante se encarga`;
+      case "fr":
+        return `Un équipier s'en occupe`;
+      case "ja":
+        return `乗組員が取りかかりました`;
+      case "ko":
+        return `선원이 맡았어요`;
+      case "pt-BR":
+        return `Um tripulante está cuidando disso`;
+      case "zh-Hans":
+        return `一位船员已接手`;
+      case "zh-Hant":
+        return `一位船員已接手`;
+      case "en-XA":
+        return `[Å çŕéŵɱáţé îš öñ îţ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮A crewmate is on it‬`;
+    }
+    return `A crewmate is on it`;
+  }
   function handoverQuit() {
     switch (currentLanguage()) {
       case "ar":
@@ -86213,6 +86483,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     filePreparing,
     fileReady,
     fileReadyAnnounce,
+    firstCrewmateCards,
+    firstCrewmateHandoff,
+    firstCrewmateLater,
+    firstCrewmateLaterCard,
+    firstCrewmateLaterWhat,
+    firstCrewmateNow,
+    firstCrewmateNowWatch,
+    firstCrewmateNowWorks,
+    firstCrewmatePutAway,
+    firstCrewmateTitle,
     handoverQuit,
     handoverRunBothFolders,
     handoverRunBusy,
@@ -88981,6 +89261,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "filePreparing": [],
     "fileReady": [],
     "fileReadyAnnounce": ["name"],
+    "firstCrewmateCards": [],
+    "firstCrewmateHandoff": [],
+    "firstCrewmateLater": [],
+    "firstCrewmateLaterCard": [],
+    "firstCrewmateLaterWhat": [],
+    "firstCrewmateNow": [],
+    "firstCrewmateNowWatch": [],
+    "firstCrewmateNowWorks": [],
+    "firstCrewmatePutAway": [],
+    "firstCrewmateTitle": [],
     "handoverQuit": [],
     "handoverRunBothFolders": ["from", "to"],
     "handoverRunBusy": ["to"],

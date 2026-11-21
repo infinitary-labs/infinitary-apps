@@ -1,4 +1,6 @@
+import { FIRST_CREWMATE_NOTE } from "@shared/firstCrewmateNote";
 import type { CrewWord, FirstRunRecord, FirstRunView, FreshCheck } from "@shared/firstRun";
+import type { CardService } from "./orchestrator/cardService";
 import type { CardStore } from "./storage/cardStore";
 import type { TaskService } from "./tasks/taskService";
 import type { RepoRegistry } from "./workspace/repoRegistry";
@@ -27,6 +29,11 @@ export type FirstRunOptions = {
   thirdCrewmateDone: () => boolean;
   /** Commit the note, completed answer and consume callback in one transaction, then publish. */
   createWelcome: (consume: (cardId: string) => void) => void;
+  /**
+   * Commit the first crewmate's note with the record callback in one
+   * transaction, then publish; put away the welcome first when it is open.
+   */
+  createFirstCrewmateNote: (record: (cardId: string) => void, welcomeCardId?: string) => void;
   onStep?: (step: FirstRunStep) => void;
   now?: () => number;
 };
@@ -75,6 +82,28 @@ export function crewFacts(
   };
 }
 
+/**
+ * How the first crewmate's note goes up (docs/first-launch.md "The first
+ * crewmate's note"). The welcome steps aside for it (INF-5532, the
+ * captain's "replace"): one card at a time, so the crewmate's first card
+ * arrives on an open stage rather than behind the welcome. Like the
+ * welcome, the note takes no reply and is the regular card its picture was
+ * drawn for.
+ */
+export function presentFirstCrewmateNote(
+  cards: Pick<CardService, "addRecordedFirstmateNote" | "has" | "takeDown">,
+): FirstRunOptions["createFirstCrewmateNote"] {
+  return (record, welcomeCardId) => {
+    if (welcomeCardId && cards.has(welcomeCardId)) {
+      cards.takeDown(welcomeCardId, "first-crewmate-started");
+    }
+    cards.addRecordedFirstmateNote(FIRST_CREWMATE_NOTE, record, {
+      replies: false,
+      width: "regular",
+    });
+  };
+}
+
 /** Durable once-only delivery, independent of the derived setup gate. */
 export class FirstRunService {
   private lastOpen: boolean | undefined;
@@ -96,13 +125,18 @@ export class FirstRunService {
     }
     try {
       let record = this.options.settings.getFirstRun();
-      if (record.workingWordAt === undefined || record.idleWordAt === undefined) {
+      if (
+        record.workingWordAt === undefined ||
+        record.idleWordAt === undefined ||
+        record.firstCrewmateAt === undefined
+      ) {
         // Decided once, before a first crewmate can exist on a new profile.
         const taught = this.options.hasCrewHistory() ? this.now() : null;
         record = {
           ...record,
           workingWordAt: record.workingWordAt ?? taught,
           idleWordAt: record.idleWordAt ?? taught,
+          firstCrewmateAt: record.firstCrewmateAt ?? taught,
         };
         this.options.settings.setFirstRun(record);
       }
@@ -171,6 +205,34 @@ export class FirstRunService {
         : {}),
     });
     this.options.onStep?.("first_turn");
+  }
+
+  /**
+   * A crewmate started (docs/first-launch.md "The first crewmate's note"):
+   * the profile's first start is recorded once, and on a profile that had
+   * the welcome it presents the note in the same commit. A profile whose
+   * record was never read, or that is past its first start, gets nothing.
+   */
+  noteCrewmateStarted(): void {
+    const record = this.options.settings.getFirstRun();
+    if (record.firstCrewmateAt !== null) return;
+    const at = this.now();
+    try {
+      if (record.welcomeState !== "consumed") {
+        this.options.settings.setFirstRun({ ...record, firstCrewmateAt: at });
+        return;
+      }
+      this.options.createFirstCrewmateNote((cardId) => {
+        this.options.settings.setFirstRun({
+          ...record,
+          firstCrewmateAt: at,
+          firstCrewmateNoteId: cardId,
+        });
+      }, record.welcomeCardId);
+    } catch (error) {
+      // A failed note never holds the crewmate's start; the next start tries again.
+      console.warn("[first-run] the first crewmate's note could not be committed:", error);
+    }
   }
 
   /** A state word was shown in full: recorded once, never overwritten. */

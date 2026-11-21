@@ -20,6 +20,8 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Under it, "To begin, press one and finish the sentence:" and three starters (Clone a project, Start a new project, Work in a folder on my computer), whose press puts the start of an ask in the message box with the caret after it, sending nothing.
   On the first mate's own computer, Work in a folder on my computer opens the system's folder picker instead and adds the chosen folder as a project; a quiet line under the card's title then names it and points at the message box, where focus goes, and a refusal takes the card's error line.
   The note has the shared minimize corner and no reply row; on a first installation no What's new card follows it, and the Tasks panel shows collapsed on the right from its creation on.
+  When a new person's first crewmate starts, the app shows one more note, once, titled "A crewmate is on it" (INF-5532; copy in the app's `src/shared/firstCrewmateNote.ts`): one sentence on the handoff, two wrapping text panels side by side - Now, beside the crewmate's tetrahedron in ember, and Later, beside a card on `--accent-dim` with an `--accent` border - then two sentences saying cards are the only part that needs the person and the card can be put away.
+  Regular width, no reply row, one Got it; a welcome still open steps aside for it.
   Older installations and preconfigured starts are skipped; pending survives restart, creation is atomic and once-only, dismissal stays final, and an accepted first ask skips any still-uncreated introduction.
   A paused account alone does not qualify.
   Existing cards stay shown, and focus and panel choices stay unchanged.

@@ -10,8 +10,8 @@ import { z } from "zod";
  * such account is ever removed. The record remembers only moments that
  * happen once: committed welcome creation, the captain's first turn, which
  * ends the first-run placeholder, each crewmate state word taught, the
- * first task of the captain's that finished, and the third of their
- * crewmates that finished. Delivery eligibility is durable; it never
+ * first task of the captain's that finished, the third of their
+ * crewmates that finished, and their first crewmate's start. Delivery eligibility is durable; it never
  * substitutes for the derived gate.
  */
 export const firstRunRecordSchema = z.object({
@@ -44,6 +44,15 @@ export const firstRunRecordSchema = z.object({
    * not yet. Recorded once, at the first read that finds three, never cleared.
    */
   thirdCrewmateDoneAt: z.number().optional(),
+  /**
+   * When a new person's first crewmate started (docs/first-launch.md "The
+   * first crewmate's note"); null = not yet. Absent until the core first
+   * reads the record, which marks a profile that already has crew history
+   * as past it. Recorded once, at that first start, never cleared.
+   */
+  firstCrewmateAt: z.number().nullable().optional(),
+  /** The note that start presented, when the profile had the welcome; kept after it is put away. */
+  firstCrewmateNoteId: z.string().optional(),
 });
 export type FirstRunRecord = z.infer<typeof firstRunRecordSchema>;
 

@@ -1,6 +1,13 @@
+import { FIRST_CREWMATE_ANSWER, FIRST_CREWMATE_TITLE } from "@shared/firstCrewmateNote";
 import { WELCOME_ANSWER, WELCOME_NOTE, WELCOME_TITLE } from "@shared/welcome";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { crewFacts, FirstRunService, type FirstRunStep, hasPriorActivity } from "./firstRun";
+import {
+  crewFacts,
+  FirstRunService,
+  type FirstRunStep,
+  hasPriorActivity,
+  presentFirstCrewmateNote,
+} from "./firstRun";
 import { CardService } from "./orchestrator/cardService";
 import { CardStore } from "./storage/cardStore";
 import { openInMemoryDatabase } from "./storage/db";
@@ -49,6 +56,8 @@ function setup(initialOpen = true) {
           width: "regular",
         });
       },
+      createFirstCrewmateNote: (record, welcomeCardId) =>
+        presentFirstCrewmateNote(cards)(record, welcomeCardId),
       onStep: (step) => steps.push(step),
       now: () => clock,
     });
@@ -370,6 +379,83 @@ describe("crewmate state words", () => {
   });
 });
 
+// docs/first-launch.md, "The first crewmate's note" (INF-5532's approved plan).
+describe("the first crewmate's note", () => {
+  const openTitles = (f: ReturnType<typeof setup>) =>
+    f
+      .cards()
+      .snapshot()
+      .map((card) => card.title);
+
+  it("puts the open welcome away and shows the note once, at a new person's first start", () => {
+    const f = setup();
+    f.service().view();
+    f.ready();
+    const welcome = f.service().view();
+    expect(welcome).toMatchObject({ welcomeState: "consumed", firstCrewmateAt: null });
+    expect(openTitles(f)).toEqual([WELCOME_TITLE]);
+    seedTask(f.tasks, { id: "first", title: "First work", status: "running" });
+    f.tick();
+    f.service().noteCrewmateStarted();
+    const record = f.settings.getFirstRun();
+    expect(record.firstCrewmateAt).toBe(1001);
+    expect(openTitles(f)).toEqual([FIRST_CREWMATE_TITLE]);
+    expect(f.cards().snapshot()[0]).toMatchObject({
+      id: record.firstCrewmateNoteId,
+      author: "firstmate",
+      actions: [],
+      replies: false,
+      width: "regular",
+    });
+    // Its record keeps the note in words, and the welcome is settled as put away.
+    expect(f.tasks.capture.taskForCard(record.firstCrewmateNoteId as string)).toMatchObject({
+      kind: "question",
+      status: "done",
+      outcome: FIRST_CREWMATE_ANSWER,
+    });
+    expect(f.cardStore.listOpen().map((card) => card.id)).toEqual([record.firstCrewmateNoteId]);
+    // A second start, a restart, and the note put away never bring it back.
+    f.cards().takeDown(record.firstCrewmateNoteId as string, "read");
+    f.tick();
+    f.service().noteCrewmateStarted();
+    f.restart();
+    f.service().view();
+    f.service().noteCrewmateStarted();
+    expect(openTitles(f)).toEqual([]);
+    expect(f.settings.getFirstRun()).toMatchObject({
+      firstCrewmateAt: 1001,
+      firstCrewmateNoteId: record.firstCrewmateNoteId,
+    });
+    f.close();
+  });
+
+  it("shows nothing to a profile without the welcome, or one that already had a crewmate", () => {
+    const skipped = setup(false);
+    expect(skipped.service().view()).toMatchObject({
+      welcomeState: "skipped",
+      firstCrewmateAt: null,
+    });
+    skipped.service().noteCrewmateStarted();
+    expect(openTitles(skipped)).toEqual([]);
+    expect(skipped.settings.getFirstRun()).toMatchObject({ firstCrewmateAt: 1000 });
+    expect(skipped.settings.getFirstRun().firstCrewmateNoteId).toBeUndefined();
+    skipped.close();
+
+    const crewed = setup();
+    crewed.service().view();
+    crewed.ready();
+    crewed.service().view();
+    // A record from before this version, written once its welcome was consumed.
+    const { firstCrewmateAt: _, ...older } = crewed.settings.getFirstRun();
+    crewed.settings.setFirstRun(older);
+    seedTask(crewed.tasks, { id: "built-before", title: "Earlier work", status: "completed" });
+    expect(crewed.service().view().firstCrewmateAt).toBe(1000);
+    crewed.service().noteCrewmateStarted();
+    expect(openTitles(crewed)).toEqual([WELCOME_TITLE]);
+    crewed.close();
+  });
+});
+
 describe("the first finished task (kept for a view on an older version)", () => {
   it("counts no host note or app change, then records the first answered question once", () => {
     const f = setup();
@@ -472,6 +558,7 @@ describe("a connection's fresh check", () => {
       hasFinishedTask: () => false,
       thirdCrewmateDone: () => false,
       createWelcome: () => {},
+      createFirstCrewmateNote: () => {},
     });
     expect(service.view()).toMatchObject({ gateOpen: true, freshCheck });
     open = false;

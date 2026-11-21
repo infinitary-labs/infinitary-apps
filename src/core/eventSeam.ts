@@ -27,6 +27,8 @@ export type EventSeam = {
   attachPresentation: (hear: (event: FmEvent) => void) => void;
   /** Observe's live buffer hears every event from here on. */
   attachObserve: (observe: (event: FmEvent) => void) => void;
+  /** The first launch hears each crewmate's start from here on (docs/first-launch.md). */
+  attachFirstLaunch: (started: () => void) => void;
 };
 
 export function createEventSeam(options: {
@@ -40,6 +42,7 @@ export function createEventSeam(options: {
   const { tasks, activity, sharing, crewLive, emit } = options;
   let observeEvent: (event: FmEvent) => void = () => {};
   let hearPresentation: (event: FmEvent) => void = () => {};
+  let crewmateStarted: () => void = () => {};
   // The run whose line is Activity's newest, with that line's row
   // (`feedRunOf`): the captain's settled run on one setting
   // (docs/orchestrator-contract.md, "Settled runs"), or a copy's count of
@@ -81,6 +84,8 @@ export function createEventSeam(options: {
     observeEvent(event);
     crewLive.apply(event);
     emit("inf:event", event);
+    // After the start reached every window, so its note follows the crewmate.
+    if (event.type === "task_started") crewmateStarted();
   };
   return {
     broadcastEvent,
@@ -90,6 +95,9 @@ export function createEventSeam(options: {
     },
     attachObserve: (observe) => {
       observeEvent = observe;
+    },
+    attachFirstLaunch: (started) => {
+      crewmateStarted = started;
     },
   };
 }

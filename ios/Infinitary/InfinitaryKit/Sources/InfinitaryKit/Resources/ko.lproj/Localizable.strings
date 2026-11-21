@@ -757,6 +757,16 @@
 "filePreparing" = "준비 중";
 "fileReady" = "준비됨";
 "fileReadyAnnounce" = "%1$@ 준비됨";
+"firstCrewmateCards" = "답이 나오거나 선택이 필요하면, 이런 카드로 여기에 가져올게요. 신경 쓸 것은 카드뿐이에요.";
+"firstCrewmateHandoff" = "요청을 선원에게 넘겼어요. 선원은 뒤에서 일하고, 시간이 좀 걸릴 수 있어요.";
+"firstCrewmateLater" = "나중에";
+"firstCrewmateLaterCard" = "카드가 여기로 돌아와요";
+"firstCrewmateLaterWhat" = "답변이나 선택지";
+"firstCrewmateNow" = "지금";
+"firstCrewmateNowWatch" = "지켜볼 필요 없어요";
+"firstCrewmateNowWorks" = "선원이 일하는 중";
+"firstCrewmatePutAway" = "이 카드는 치워도 돼요. 작업은 계속되고, 그동안 다른 일을 맡겨도 돼요.";
+"firstCrewmateTitle" = "선원이 맡았어요";
 "handoverQuit" = "종료";
 "handoverRunBothFolders" = "%2$@이(가) 두 곳에서 저장된 작업을 찾았어요. 자체 폴더와 %1$@의 폴더예요. %2$@을(를) 창으로 한 번 열어 열 작업을 선택한 다음, 이 명령을 다시 실행하세요.";
 "handoverRunBusy" = "%1$@이(가) 이미 저장된 작업을 옮기고 있어요. 그 이동이 끝나면 이 명령을 다시 실행하세요.";

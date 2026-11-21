@@ -697,6 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@：%2$@ 沒有確認合併，pull request 在那裡仍然開著，%1$@ 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。";
 "feedBatchHeldUnansweredHost" = "%2$@：專案的主機沒有確認合併，pull request 在那裡仍然開著，%1$@ 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。";
 "feedBatchHeldUnnamed" = "%2$@：檢查失敗，%1$@ 已暫緩。期間核准的變更會等它。";
+"feedBatchMergeRunning" = "%3$@：%2$@ 已接受 %1$@ 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，在「設定 → 專案」中按再試一次會傳送一次新的合併。";
+"feedBatchMergeRunningHost" = "%2$@：專案的主機已接受 %1$@ 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，在「設定 → 專案」中按再試一次會傳送一次新的合併。";
 "feedBatchMergedOne" = "%2$@：%1$@ 已合併。";
 "feedBatchNoStory" = "%2$@：%1$@ 已開啟，但缺少 %3$@ 的變更說明，無法加入它的描述。一有可能就會加入。";
 "feedBatchQueued" = "%3$@：%2$@ 已把 %1$@ 排入主分支的合併佇列。佇列的檢查通過後，它就會在那裡合併。";
@@ -2912,6 +2914,9 @@
 "settingsProjectsBatchRetried" = "正在重新合成這個批次。檢查會在新版本上執行。";
 "settingsProjectsBatchSendBack" = "附上原因退回";
 "settingsProjectsBatchTryAgain" = "再試一次";
+"settingsProjectsBatchWaiting" = "批次正在等待合併";
+"settingsProjectsBatchWaitingSince" = "從 %2$@ 起等待：%1$@ 已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。";
+"settingsProjectsBatchWaitingSinceHost" = "從 %1$@ 起等待：專案的主機已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。";
 "settingsProjectsCare" = "謹慎度";
 "settingsProjectsCareNone" = "無";
 "settingsProjectsCarePersonal" = "這裡的內容不經過任何關卡。";

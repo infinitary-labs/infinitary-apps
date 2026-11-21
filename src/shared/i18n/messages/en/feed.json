@@ -19,6 +19,8 @@
   "feedBatchHeldUnanswered": "{project}: {label} is held because {place} did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.",
   "feedBatchHeldUnansweredHost": "{project}: {label} is held because the project's host did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.",
   "feedBatchHeldUnnamed": "{project}: {label} is held because its checks failed. Changes approved meanwhile wait for it.",
+  "feedBatchMergeRunning": "{project}: {place} took the merge of {label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.",
+  "feedBatchMergeRunningHost": "{project}: the project's host took the merge of {label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.",
   "feedBatchMergedMany": {
     "plural": "count",
     "one": "{project}: {label} merged with {count} change, one commit each.",

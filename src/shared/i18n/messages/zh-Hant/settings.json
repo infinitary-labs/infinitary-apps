@@ -901,6 +901,9 @@
     "other": "已退回 {count} 項變更。批次的其餘部分會重新合成。"
   },
   "settingsProjectsBatchTryAgain": "再試一次",
+  "settingsProjectsBatchWaiting": "批次正在等待合併",
+  "settingsProjectsBatchWaitingSince": "從 {since} 起等待：{place} 已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。",
+  "settingsProjectsBatchWaitingSinceHost": "從 {since} 起等待：專案的主機已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。如果那裡的 pull request 沒有顯示進行中的合併，再試一次會傳送一次新的合併。",
   "settingsProjectsCare": "謹慎度",
   "settingsProjectsCareNone": "無",
   "settingsProjectsCarePersonal": "這裡的內容不經過任何關卡。",

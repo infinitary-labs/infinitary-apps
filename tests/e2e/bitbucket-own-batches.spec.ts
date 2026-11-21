@@ -1,12 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { batchTitle } from "../../src/core/batches/batches";
+import { BATCH_WORDS, batchTitle } from "../../src/core/batches/batches";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
-import { BATCH_HOLD_WORDS, BATCH_OWN_WORDS } from "../../src/renderer/src/settings/projectsWords";
-import { BATCH_BRANCH_PREFIX } from "../../src/shared/batches";
+import {
+  BATCH_HOLD_WORDS,
+  BATCH_OWN_WORDS,
+  BATCH_WAIT_WORDS,
+} from "../../src/renderer/src/settings/projectsWords";
+import { BATCH_BRANCH_PREFIX, mergeWait } from "../../src/shared/batches";
 import { changeNumberLabel } from "../../src/shared/forge";
+import { saidLine } from "../../src/shared/i18n/said";
 import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
@@ -15,10 +20,12 @@ import {
   seedBitbucketSignIn,
   startBitbucketStub,
 } from "./bitbucketStub";
+import { leaveSettings } from "./handoverCards";
 import { launchApp, SHORT_TICK } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { projectLine, projectSettings } from "./projects";
 import { promptInput } from "./prompt";
+import { feedLineOf } from "./rails";
 import { readSavedData } from "./savedData";
 import {
   ownBatch,
@@ -43,7 +50,10 @@ const build = (state: BitbucketStubStatus["state"]): BitbucketStubStatus[] => [
  * squashed under the change's title; a batch of several keeps one commit
  * per change, with Bitbucket's rebase merge where the branch allows it. A
  * batch whose build failed holds, and Try again in Settings, by keys,
- * combines it again on the same pull request. With Bitbucket's merge queue
+ * combines it again on the same pull request. A merge Bitbucket takes and
+ * keeps reading as running shows as a wait in Settings and once on the
+ * Activity feed, is never asked for again, and Try again on it, by keys,
+ * combines a new version (INF-5566). With Bitbucket's merge queue
  * on the main branch, the merge Bitbucket answers with its queue reads as
  * queued, nothing is sent again, and the batch finishes once the queue
  * merges it.
@@ -60,7 +70,7 @@ const build = (state: BitbucketStubStatus["state"]): BitbucketStubStatus[] => [
  * queue, main's commits and each task's close. Requires desktop Electron
  * and local git; no real sign-in or shared pull request.
  */
-test("approved changes of a Bitbucket project merge in batches of the captain's own: one squashed, two rebased as their own commits through the merge queue after Try again by keys", async () => {
+test("approved changes of a Bitbucket project merge in batches of the captain's own: one squashed, two rebased as their own commits through the merge queue after Try again by keys on a hold and on a merge still running", async () => {
   test.setTimeout(5 * 60_000);
   const userDataDir = scratchDir("infinitary-bitbucket-own-batches-");
   const repoDir = join(userDataDir, "field-notes");
@@ -241,8 +251,8 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       }),
     ).toBeVisible();
 
-    // Bitbucket's merge queue is turned on for main while the batch holds.
-    bitbucket.mergeQueue(true);
+    // Bitbucket takes the next merge with a 202 and keeps reading its task as pending.
+    bitbucket.mergeLater(true);
 
     // Try again, by keys: the same pull request takes a new version, and the hold ends.
     await pressKey(panel.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain }), "Enter");
@@ -253,11 +263,56 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     expect(bitbucket.pullRequests()).toHaveLength(2);
     expect(bitbucket.merges()).toHaveLength(1);
 
-    // The new version's build passes: Bitbucket answers the merge with its queue, which reads as queued.
+    // INF-5566, the captain's "Show the wait in Settings and the feed, with
+    // Try again": the new version's build passes and its merge is asked for
+    // once, which Bitbucket still reads as running. Settings shows the wait
+    // with its pull request, and nothing is sent again.
+    const mergeAsked = () =>
+      bitbucket.requests().filter((line) => /^POST .*\/pullrequests\/2\/merge$/.test(line)).length;
     bitbucket.setPullRequestStatuses(2, build("SUCCESSFUL"), repairedAt);
     await expect
-      .poll(async () => (await notes())?.batch?.open?.queued ?? null, { timeout: 30_000 })
+      .poll(async () => mergeWait((await notes())?.batch?.open)?.head ?? null, { timeout: 30_000 })
       .toBe(repairedAt);
+    const waiting = row.locator('[data-batch-wait="repo-notes"]');
+    await expect(waiting.getByText(BATCH_WAIT_WORDS.title)).toBeVisible({ timeout: 30_000 });
+    await expect(
+      waiting.getByRole("button", {
+        name: BATCH_HOLD_WORDS.open(changeNumberLabel("bitbucket", 2)),
+      }),
+    ).toBeVisible();
+    expect(mergeAsked()).toBe(1);
+    expect(bitbucket.merges()).toHaveLength(1);
+
+    // The Activity feed says it once, naming Bitbucket.
+    await leaveSettings(page);
+    await expect(
+      feedLineOf(page, {
+        type: "firstmate_note",
+        ...saidLine(BATCH_WORDS.mergeRunning("field-notes", "#2", "Bitbucket")),
+      }),
+    ).toHaveCount(1, { timeout: 30_000 });
+
+    // Bitbucket's merge queue is turned on for main, and its merges no longer stall.
+    bitbucket.mergeLater(false);
+    bitbucket.mergeQueue(true);
+
+    // Try again on the wait, by keys: the same pull request takes a new version, and the wait ends.
+    await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
+    await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
+    await pressKey(projectLine(page, "repo-notes").getByRole("button"), "Enter");
+    await pressKey(waiting.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain }), "Enter");
+    await expect(waiting).toHaveCount(0, { timeout: 30_000 });
+    await expect.poll(heldHead, { timeout: 30_000 }).not.toBe(repairedAt);
+    const retriedAt = await heldHead();
+    expect((await notes())?.batch?.open).toMatchObject({ number: 2 });
+    expect(bitbucket.pullRequests()).toHaveLength(2);
+    expect(mergeAsked()).toBe(1);
+
+    // The new version's build passes: Bitbucket answers the merge with its queue, which reads as queued.
+    bitbucket.setPullRequestStatuses(2, build("SUCCESSFUL"), retriedAt);
+    await expect
+      .poll(async () => (await notes())?.batch?.open?.queued ?? null, { timeout: 30_000 })
+      .toBe(retriedAt);
     expect(bitbucket.queued()).toEqual([2]);
     expect(bitbucket.merges()).toHaveLength(1);
     expect(saved("export")?.closedReason ?? null).toBeNull();

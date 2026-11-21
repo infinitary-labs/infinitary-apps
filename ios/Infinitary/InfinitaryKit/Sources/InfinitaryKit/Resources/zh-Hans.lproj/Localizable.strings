@@ -697,6 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@：%2$@ 没有确认合并，拉取请求在那里仍然开着，%1$@ 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。";
 "feedBatchHeldUnansweredHost" = "%2$@：项目的托管平台没有确认合并，拉取请求在那里仍然开着，%1$@ 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。";
 "feedBatchHeldUnnamed" = "%2$@：检查失败，%1$@ 已暂缓。期间批准的改动会等它。";
+"feedBatchMergeRunning" = "%3$@：%2$@ 已接受 %1$@ 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。";
+"feedBatchMergeRunningHost" = "%2$@：项目的托管平台已接受 %1$@ 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。";
 "feedBatchMergedOne" = "%2$@：%1$@ 已合并。";
 "feedBatchNoStory" = "%2$@：%1$@ 已打开，但缺少 %3$@ 的改动说明，未能加入它的描述。一旦可以就会加入。";
 "feedBatchQueued" = "%3$@：%2$@ 已把 %1$@ 放入主分支的合并队列。队列的检查通过后，它会在那里合并。";
@@ -2912,6 +2914,9 @@
 "settingsProjectsBatchRetried" = "正在重新合成这批改动。检查会在新版本上运行。";
 "settingsProjectsBatchSendBack" = "说明原因并退回";
 "settingsProjectsBatchTryAgain" = "重试";
+"settingsProjectsBatchWaiting" = "这批改动正在等待合并";
+"settingsProjectsBatchWaitingSince" = "自 %2$@ 起等待：%1$@ 已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。";
+"settingsProjectsBatchWaitingSinceHost" = "自 %1$@ 起等待：项目的托管平台已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。";
 "settingsProjectsCare" = "把关";
 "settingsProjectsCareNone" = "无";
 "settingsProjectsCarePersonal" = "这里的内容不经过任何把关。";

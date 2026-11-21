@@ -12666,8 +12666,11 @@ ${events}` : prompt;
      * on a host whose merge names no version (docs/forge.md, "Batches of your
      * own"): later passes read how it ended and never send it again.
      * `mergeTask` is the host's own reference to that merge, when it gave one.
+     * `pending` is when a pass first read the host's merge as still running:
+     * from then Settings → Projects shows the wait with Try again, and the
+     * Activity feed said so once. No time decides that the merge ended.
      */
-    unconfirmed: object({ head: string(), mergeTask: string().optional() }).optional(),
+    unconfirmed: object({ head: string(), mergeTask: string().optional(), pending: number().optional() }).optional(),
     /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
     stale: literal(true).optional(),
     /**

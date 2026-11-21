@@ -18,6 +18,8 @@
   "feedBatchHeldUnanswered": "{project}：{place} 没有确认合并，拉取请求在那里仍然开着，{label} 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。",
   "feedBatchHeldUnansweredHost": "{project}：项目的托管平台没有确认合并，拉取请求在那里仍然开着，{label} 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。",
   "feedBatchHeldUnnamed": "{project}：检查失败，{label} 已暂缓。期间批准的改动会等它。",
+  "feedBatchMergeRunning": "{project}：{place} 已接受 {label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。",
+  "feedBatchMergeRunningHost": "{project}：项目的托管平台已接受 {label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，在“设置” → “项目”中重试会发送一次新的合并。",
   "feedBatchMergedMany": {
     "plural": "count",
     "other": "{project}：{label} 已连同 {count} 个改动合并，每个改动一个提交。"

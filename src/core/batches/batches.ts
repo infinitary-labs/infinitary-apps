@@ -11,6 +11,7 @@ import {
   EMPTY_BATCH_RECORD,
   keepsCommits,
   type MergeWays,
+  mergeWait,
   mergeWayFor,
   type OpenBatch,
   SQUASH_ONLY_WORDS,
@@ -117,6 +118,11 @@ export const BATCH_WORDS = {
     place
       ? said("feedBatchQueued", { project, label, place })
       : said("feedBatchQueuedHost", { project, label }),
+  /** A merge the host took and still reads as running: said once, and never sent again. */
+  mergeRunning: (project: string, label: string, place: string | null | undefined): Said =>
+    place
+      ? said("feedBatchMergeRunning", { project, label, place })
+      : said("feedBatchMergeRunningHost", { project, label }),
   /** A hold detail's name for a host that names no place of its own. */
   host: "The project's host",
   /** The hold's saved detail, which the batch's status reads in English. */
@@ -446,12 +452,22 @@ export class Batches {
   async answer(repoId: string, answer: BatchAnswer, fix?: string): Promise<string | undefined> {
     const refused = await this.serial(repoId, async () => {
       const repo = this.options.repos.get(repoId);
-      const record = this.record(repoId);
+      let record = this.record(repoId);
       const open = record.open;
-      if (!repo || !open?.hold || open.hold.head !== answer.head) return BATCH_WORDS.ended;
+      // A merge the host still reads as running takes Try again alone (`mergeWait`).
+      const waiting = answer.action === "try-again" && mergeWait(open)?.head === answer.head;
+      if (!repo || !open || (!waiting && open.hold?.head !== answer.head)) return BATCH_WORDS.ended;
       if (!this.atBatchAddress(repo, open)) return BATCH_WORDS.ended;
       const label = this.label(repo, open);
       if (answer.action === "try-again") {
+        if (waiting) {
+          // The pass's own reading first: a merge that finished, was queued or was refused
+          // meanwhile is followed as it is, and the first merge is never sent again.
+          record = await this.follow(repo, record);
+          const now = record.open;
+          if (!now || (mergeWait(now)?.head !== answer.head && now.hold?.head !== answer.head))
+            return BATCH_WORDS.ended;
+        }
         await this.recombine(repo, release(record), "line");
         this.clashesEnded(repoId);
         this.options.note(BATCH_WORDS.retried(repo.name, label));
@@ -817,7 +833,8 @@ export class Batches {
    * the pull request still open: never sent again. The host's merge queue
    * holding it reads as queued; the host's own word that the merge failed,
    * or no word at all, holds the batch with nothing sent until Try again;
-   * a merge the host still reports as running waits. Undefined once the
+   * a merge the host still reports as running waits, shown from the first
+   * such reading with Try again (`mergeWait`). Undefined once the
    * passes go on as before, the record cleared of it.
    */
   private async settleUnconfirmed(
@@ -836,8 +853,21 @@ export class Batches {
     const task = unconfirmed?.mergeTask;
     const refused =
       task && forge.mergeTaskRefused ? await forge.mergeTaskRefused(number, task) : !task;
-    // The host's own merge is still running: the next pass reads it again.
-    if (!refused) return record;
+    // The host's own merge is still running: the next pass reads it again. From the first
+    // such reading Settings shows the wait with Try again, and the feed says it once, since a
+    // host can read a merge that never ends as running too.
+    if (!refused) {
+      if (unconfirmed?.pending !== undefined) return record;
+      const waiting = this.save(repo.id, {
+        ...record,
+        open: {
+          ...open,
+          unconfirmed: { head: open.head, ...unconfirmed, pending: this.options.now() },
+        },
+      });
+      this.options.note(BATCH_WORDS.mergeRunning(repo.name, this.label(repo, open), forge.place));
+      return waiting;
+    }
     const place = forge.place ?? BATCH_WORDS.host;
     const detail = task ? BATCH_WORDS.notMerged(place) : BATCH_WORDS.unconfirmed(place);
     const held = hold(

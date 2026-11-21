@@ -1077,6 +1077,9 @@ On Bitbucket a rebase merge rebases the batch's commits onto main and ends in a 
 A batch merge on a host whose merge names no version (Bitbucket's) whose outcome the host did not confirm is kept as unconfirmed at that version with the host's reference to it (`OpenBatch.unconfirmed`): later passes read the pull request and the queue, and never send it again.
 Merged, it finishes as any batch; queued, it waits in the queue; a reference the host reads as refused, or none at all, holds the batch with the reason `merge-way` (`BATCH_WORDS.notMerged`, `BATCH_WORDS.unconfirmed`), so Try again combines a new version rather than resending it.
 The Activity feed calls the merge refused only on the host's own word (`BATCH_WORDS.refused`); a merge the host never answered gets its own line saying so (`BATCH_WORDS.unanswered`).
+A merge the host still reads as running waits, with no hold and no time limit, since Bitbucket reads an unknown or expired reference as pending too and the app cannot tell a slow merge from one that never ends.
+The first pass that reads it so keeps when (`OpenBatch.unconfirmed.pending`), says it once on the Activity feed (`BATCH_WORDS.mergeRunning`), and from then Settings → Projects shows the wait under "Where changes go", with its pull request and Try again (`mergeWait`, `BatchWaitPanel`), so a merge that never ends cannot hold the project's line in silence.
+Try again first reads the pull request as a pass does, so a merge that finished, was queued or was refused meanwhile is followed as it is; a merge still read as running is replaced by a new version combined with the changes waiting in line, and the first merge is never sent again.
 On a default branch with a merge queue of GitHub's own, the merge hands the batch's pull request to that queue and the batch waits there ("The host's merge queue").
 A project that allows only squash merges is not offered batched pull requests: the choice is refused with its reason, and Settings says it under "Where changes go" (`SQUASH_ONLY_WORDS`).
 After the merge the app deletes the batch branch and reads each member's own commit on the default branch (`landedCommits`): the commits as written where the merge kept them, or the rewritten ones matched by title after a rebase merge, under the merge commit's second parent when the rebase ended in one.
@@ -1149,7 +1152,8 @@ The declaration is refused for another version, for a batch held for something o
 A combine at a new version drops it.
 Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): why it holds and since when, a button that opens its pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
 Try again combines the batch again at a new version with every change waiting in line, so its checks run again.
-The first mate sends the same answers through `app_change`'s `project-batch-answer`: Try again on its own judgment, and a send-back only on the captain's own words.
+A batch waiting on a merge its host still reads as running shows in the same place (`BatchWaitPanel`): since when, a button that opens its pull request, and Try again, with nothing to send back since nothing failed.
+The first mate sends the same answers through `app_change`'s `project-batch-answer`: Try again on its own judgment, and a send-back only on the captain's own words; it reads held batches only, so a merge still running is answered in Settings.
 Its line on the feed names the answer that was asked (`ACTIONS["project-batch-answer"].done`).
 Every answer names the held version it answers (`BatchAnswer`, `inf:repos:batch-answer`), so one for a hold that already ended is refused in words and changes nothing.
 A merge the host refused is never sent again at that version: Try again makes a new one.

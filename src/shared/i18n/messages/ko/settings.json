@@ -895,6 +895,9 @@
     "other": "변경 {count}개를 돌려보냈어요. 나머지는 다시 묶어요."
   },
   "settingsProjectsBatchTryAgain": "다시 시도",
+  "settingsProjectsBatchWaiting": "일괄 끌어오기 요청 병합 대기 중",
+  "settingsProjectsBatchWaitingSince": "{since}부터 대기 중: {place}이(가) 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 다시 시도로 새 병합을 보내요.",
+  "settingsProjectsBatchWaitingSinceHost": "{since}부터 대기 중: 프로젝트 호스트가 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 그곳의 끌어오기 요청에 진행 중인 병합이 보이지 않으면, 다시 시도로 새 병합을 보내요.",
   "settingsProjectsCare": "주의 수준",
   "settingsProjectsCareNone": "없음",
   "settingsProjectsCarePersonal": "여기서는 어떤 관문도 거치지 않아요.",

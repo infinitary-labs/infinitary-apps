@@ -1,10 +1,10 @@
 import type { BatchAnswer, OpenBatch } from "@shared/batches";
-import { changeNumberLabel } from "@shared/forge";
+import { changeNumberLabel, forgePlace } from "@shared/forge";
 import { formatTime } from "@shared/i18n/format";
 import type { RepoView } from "@shared/repos";
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { Button, Input } from "../design";
-import { BATCH_HOLD_WORDS } from "./projectsWords";
+import { BATCH_HOLD_WORDS, BATCH_WAIT_WORDS } from "./projectsWords";
 import { SettingError } from "./settingRows";
 
 /**
@@ -23,9 +23,7 @@ export function BatchHoldPanel({
 }) {
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [chosen, setChosen] = useState<string[]>([]);
-  const [busy, setBusy] = useState<BatchAnswer["action"] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  const { busy, error, setError, done, send } = useBatchAnswer(repo.id);
   const hold = batch.hold;
   const since = formatTime(hold.at, { hour: "numeric", minute: "2-digit" });
   const summary =
@@ -37,19 +35,9 @@ export function BatchHoldPanel({
           ? BATCH_HOLD_WORDS.refused(since, hold.detail)
           : BATCH_HOLD_WORDS.noWay(since);
   const answer = async (made: BatchAnswer, words: string) => {
-    setBusy(made.action);
-    setError(null);
-    setDone(null);
-    try {
-      await window.infinitary.repos.batchAnswer(repo.id, made);
-      setDone(words);
-      setChosen([]);
-      setReasons({});
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setBusy(null);
-    }
+    if (!(await send(made, words))) return;
+    setChosen([]);
+    setReasons({});
   };
   const sendBack = () => {
     if (chosen.length === 0) {
@@ -71,18 +59,7 @@ export function BatchHoldPanel({
     <section
       aria-label={BATCH_HOLD_WORDS.title}
       data-batch-hold={repo.id}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-        marginBottom: "var(--space-3)",
-        padding: "var(--space-3)",
-        border: "1px solid var(--line-1)",
-        borderRadius: "var(--radius-m)",
-        background: "var(--warn-dim)",
-        fontSize: "var(--text-xs)",
-        color: "var(--fg-2)",
-      }}
+      style={panelStyle("var(--warn-dim)")}
     >
       <div
         role="status"
@@ -188,4 +165,107 @@ export function BatchHoldPanel({
       <SettingError error={error} surface="batch-hold" />
     </section>
   );
+}
+
+/**
+ * A batch whose merge the host took and still reads as running, under
+ * "Where changes go" (docs/forge.md, "Batches of your own"): since when,
+ * its pull request, and Try again for a merge the pull request there shows
+ * is not running. Nothing is sent again until then.
+ */
+export function BatchWaitPanel({
+  repo,
+  batch,
+  wait,
+}: {
+  repo: Pick<RepoView, "id" | "host">;
+  batch: OpenBatch;
+  wait: { head: string; pending: number };
+}) {
+  const { busy, error, done, send } = useBatchAnswer(repo.id);
+  const since = formatTime(wait.pending, { hour: "numeric", minute: "2-digit" });
+  const place = repo.host ? forgePlace({ kind: repo.host.kind, host: repo.host.name }) : null;
+  const url = batch.url;
+  return (
+    <section
+      aria-label={BATCH_WAIT_WORDS.title}
+      data-batch-wait={repo.id}
+      style={panelStyle("var(--bg-2)")}
+    >
+      <div
+        role="status"
+        style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}
+      >
+        <span style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
+          {BATCH_WAIT_WORDS.title}
+        </span>
+        <span data-batch-wait-summary>{BATCH_WAIT_WORDS.since(since, place)}</span>
+      </div>
+      <div
+        style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}
+      >
+        {url && batch.number !== undefined && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void window.infinitary.app.openExternal(url).catch(() => {})}
+          >
+            {BATCH_HOLD_WORDS.open(changeNumberLabel(repo.host?.kind, batch.number))}
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={busy !== null}
+          pending={busy === "try-again"}
+          onClick={() =>
+            void send({ action: "try-again", head: wait.head }, BATCH_HOLD_WORDS.retried)
+          }
+        >
+          {BATCH_HOLD_WORDS.tryAgain}
+        </Button>
+      </div>
+      {done && <div role="status">{done}</div>}
+      <SettingError error={error} surface="batch-wait" />
+    </section>
+  );
+}
+
+/** One answer to a project's open batch at a time, with its words once done or its refusal. */
+function useBatchAnswer(repoId: string) {
+  const [busy, setBusy] = useState<BatchAnswer["action"] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const send = async (made: BatchAnswer, words: string): Promise<boolean> => {
+    setBusy(made.action);
+    setError(null);
+    setDone(null);
+    try {
+      await window.infinitary.repos.batchAnswer(repoId, made);
+      setDone(words);
+      return true;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+  return { busy, error, setError, done, send };
+}
+
+/** The box a batch's panel under "Where changes go" draws, on its state's background. */
+function panelStyle(background: string): CSSProperties {
+  return {
+    display: "flex",
+    flexDirection: "column",
+    gap: "var(--space-2)",
+    marginBottom: "var(--space-3)",
+    padding: "var(--space-3)",
+    border: "1px solid var(--line-1)",
+    borderRadius: "var(--radius-m)",
+    background,
+    fontSize: "var(--text-xs)",
+    color: "var(--fg-2)",
+  };
 }

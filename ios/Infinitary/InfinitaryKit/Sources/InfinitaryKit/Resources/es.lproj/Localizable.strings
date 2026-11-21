@@ -697,6 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@: %1$@ está retenido porque %2$@ no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.";
 "feedBatchHeldUnansweredHost" = "%2$@: %1$@ está retenido porque el sitio que aloja el proyecto no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ está retenido porque fallaron sus comprobaciones. Los cambios aprobados mientras tanto lo esperan.";
+"feedBatchMergeRunning" = "%3$@: %2$@ aceptó la fusión de %1$@ y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.";
+"feedBatchMergeRunningHost" = "%2$@: el sitio que aloja el proyecto aceptó la fusión de %1$@ y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.";
 "feedBatchMergedOne" = "%2$@: se fusionó %1$@.";
 "feedBatchNoStory" = "%2$@: %1$@ está abierto sin la historia de %3$@, que no se pudo añadir a su descripción. Se añadirá en cuanto se pueda.";
 "feedBatchQueued" = "%3$@: %2$@ puso %1$@ en la cola de fusión de la rama principal. Se fusiona allí cuando se superen las comprobaciones de la cola.";
@@ -2912,6 +2914,9 @@
 "settingsProjectsBatchRetried" = "Combinando el lote de nuevo. Sus comprobaciones se ejecutan sobre la versión nueva.";
 "settingsProjectsBatchSendBack" = "Devolver con un motivo";
 "settingsProjectsBatchTryAgain" = "Volver a intentar";
+"settingsProjectsBatchWaiting" = "Lote esperando su fusión";
+"settingsProjectsBatchWaitingSince" = "Esperando desde las %2$@: %1$@ aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.";
+"settingsProjectsBatchWaitingSinceHost" = "Esperando desde las %1$@: el sitio que aloja el proyecto aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.";
 "settingsProjectsCare" = "Cuidado";
 "settingsProjectsCareNone" = "ninguno";
 "settingsProjectsCarePersonal" = "Aquí nada pasa por un control.";

@@ -947,6 +947,9 @@
     "other": "Se devolvieron {count} cambios. El resto del lote se combina de nuevo."
   },
   "settingsProjectsBatchTryAgain": "Volver a intentar",
+  "settingsProjectsBatchWaiting": "Lote esperando su fusión",
+  "settingsProjectsBatchWaitingSince": "Esperando desde las {since}: {place} aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.",
+  "settingsProjectsBatchWaitingSinceHost": "Esperando desde las {since}: el sitio que aloja el proyecto aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar envía una fusión nueva.",
   "settingsProjectsCare": "Cuidado",
   "settingsProjectsCareNone": "ninguno",
   "settingsProjectsCarePersonal": "Aquí nada pasa por un control.",

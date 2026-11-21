@@ -697,6 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@: %1$@ is held because %2$@ did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.";
 "feedBatchHeldUnansweredHost" = "%2$@: %1$@ is held because the project's host did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ is held because its checks failed. Changes approved meanwhile wait for it.";
+"feedBatchMergeRunning" = "%3$@: %2$@ took the merge of %1$@ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.";
+"feedBatchMergeRunningHost" = "%2$@: the project's host took the merge of %1$@ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again in Settings → Projects sends a new merge.";
 "feedBatchMergedOne" = "%2$@: %1$@ merged.";
 "feedBatchNoStory" = "%2$@: %1$@ is open without the story of %3$@, which could not be added to its description. It is added as soon as it can be.";
 "feedBatchQueued" = "%3$@: %2$@ took %1$@ into the main branch's merge queue. It merges there once the queue's checks pass.";
@@ -2912,6 +2914,9 @@
 "settingsProjectsBatchRetried" = "Combining the batch again. Its checks run on the new version.";
 "settingsProjectsBatchSendBack" = "Send back with a reason";
 "settingsProjectsBatchTryAgain" = "Try again";
+"settingsProjectsBatchWaiting" = "Batch waiting for its merge";
+"settingsProjectsBatchWaitingSince" = "Waiting since %2$@: %1$@ took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.";
+"settingsProjectsBatchWaitingSinceHost" = "Waiting since %1$@: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.";
 "settingsProjectsCare" = "Rigor";
 "settingsProjectsCareNone" = "none";
 "settingsProjectsCarePersonal" = "Nothing here passes through a gate.";

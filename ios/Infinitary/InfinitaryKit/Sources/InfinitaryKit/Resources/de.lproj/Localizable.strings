@@ -697,6 +697,8 @@
 "feedBatchHeldUnanswered" = "%3$@: %1$@ ist angehalten, weil %2$@ das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.";
 "feedBatchHeldUnansweredHost" = "%2$@: %1$@ ist angehalten, weil der Host des Projekts das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ ist angehalten, weil seine Überprüfungen fehlgeschlagen sind. Inzwischen bestätigte Änderungen warten darauf.";
+"feedBatchMergeRunning" = "%3$@: %2$@ hat das Zusammenführen von %1$@ angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.";
+"feedBatchMergeRunningHost" = "%2$@: Der Host des Projekts hat das Zusammenführen von %1$@ angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.";
 "feedBatchMergedOne" = "%2$@: %1$@ wurde zusammengeführt.";
 "feedBatchNoStory" = "%2$@: %1$@ ist ohne die Geschichte von %3$@ offen, die seiner Beschreibung nicht hinzugefügt werden konnte. Sie wird hinzugefügt, sobald es geht.";
 "feedBatchQueued" = "%3$@: %2$@ hat %1$@ in die Merge-Warteschlange des Hauptbranchs aufgenommen. Er wird dort zusammengeführt, sobald die Überprüfungen der Warteschlange erfolgreich sind.";
@@ -2912,6 +2914,9 @@
 "settingsProjectsBatchRetried" = "Das Bündel wird neu zusammengestellt. Seine Überprüfungen laufen auf der neuen Version.";
 "settingsProjectsBatchSendBack" = "Mit Begründung zurückschicken";
 "settingsProjectsBatchTryAgain" = "Erneut versuchen";
+"settingsProjectsBatchWaiting" = "Bündel wartet auf sein Zusammenführen";
+"settingsProjectsBatchWaitingSince" = "Wartet seit %2$@: %1$@ hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen ein neues Zusammenführen.";
+"settingsProjectsBatchWaitingSinceHost" = "Wartet seit %1$@: Der Host des Projekts hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen ein neues Zusammenführen.";
 "settingsProjectsCare" = "Sorgfalt";
 "settingsProjectsCareNone" = "keine";
 "settingsProjectsCarePersonal" = "Hier geht nichts durch eine Prüfstelle.";

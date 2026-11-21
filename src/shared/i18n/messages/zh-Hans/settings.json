@@ -901,6 +901,9 @@
     "other": "已退回 {count} 个改动。这批改动的其余部分会重新合成。"
   },
   "settingsProjectsBatchTryAgain": "重试",
+  "settingsProjectsBatchWaiting": "这批改动正在等待合并",
+  "settingsProjectsBatchWaitingSince": "自 {since} 起等待：{place} 已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。",
+  "settingsProjectsBatchWaitingSinceHost": "自 {since} 起等待：项目的托管平台已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。如果那里的拉取请求没有显示正在进行的合并，重试会发送一次新的合并。",
   "settingsProjectsCare": "把关",
   "settingsProjectsCareNone": "无",
   "settingsProjectsCarePersonal": "这里的内容不经过任何把关。",

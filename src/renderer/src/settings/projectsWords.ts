@@ -125,6 +125,17 @@ export const BATCH_HOLD_WORDS = {
   sentBack: (changes: number) => m.settingsProjectsBatchSentBack({ count: changes }),
 };
 
+/** A batch whose merge the host took and still reads as running (`BatchWaitPanel`). */
+export const BATCH_WAIT_WORDS = {
+  get title() {
+    return m.settingsProjectsBatchWaiting();
+  },
+  since: (since: string, place: string | null) =>
+    place
+      ? m.settingsProjectsBatchWaitingSince({ since, place })
+      : m.settingsProjectsBatchWaitingSinceHost({ since }),
+};
+
 /** What "Where changes go" says on a project whose host takes no batch pull request. */
 export function batchNoHostWords(): string {
   return m.settingsProjectsBatchNoHost();

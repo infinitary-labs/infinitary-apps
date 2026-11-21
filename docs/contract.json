@@ -2400,6 +2400,9 @@
                         },
                         "mergeTask": {
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "number"
                         }
                       },
                       "required": [
@@ -3249,6 +3252,9 @@
                           },
                           "mergeTask": {
                             "type": "string"
+                          },
+                          "pending": {
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -4428,6 +4434,9 @@
                       },
                       "mergeTask": {
                         "type": "string"
+                      },
+                      "pending": {
+                        "type": "number"
                       }
                     },
                     "required": [
@@ -9541,6 +9550,9 @@
                       },
                       "mergeTask": {
                         "type": "string"
+                      },
+                      "pending": {
+                        "type": "number"
                       }
                     },
                     "required": [

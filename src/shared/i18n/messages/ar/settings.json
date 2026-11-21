@@ -1016,6 +1016,9 @@
     "other": "أُرجع {count} تغيير. يُعاد جمع بقية الدفعة."
   },
   "settingsProjectsBatchTryAgain": "إعادة المحاولة",
+  "settingsProjectsBatchWaiting": "الدفعة تنتظر دمجها",
+  "settingsProjectsBatchWaitingSince": "تنتظر منذ {since}: قبِل {place} الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة ترسل دمجًا جديدًا.",
+  "settingsProjectsBatchWaitingSinceHost": "تنتظر منذ {since}: قبِل مستضيف المشروع الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إذا لم يُظهر طلب السحب هناك أي دمج قيد التنفيذ، فإن إعادة المحاولة ترسل دمجًا جديدًا.",
   "settingsProjectsCare": "العناية",
   "settingsProjectsCareNone": "لا شيء",
   "settingsProjectsCarePersonal": "لا شيء هنا يمر عبر بوابة.",

@@ -901,6 +901,9 @@
     "other": "変更{count}件を差し戻しました。残りの変更をまとめ直します。"
   },
   "settingsProjectsBatchTryAgain": "再試行",
+  "settingsProjectsBatchWaiting": "一括プルリクエストのマージを待機中",
+  "settingsProjectsBatchWaitingSince": "{since} から待機中：{place} がマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、再試行すると新しいマージを送ります。",
+  "settingsProjectsBatchWaitingSinceHost": "{since} から待機中：プロジェクトのホストがマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。そこのプルリクエストで実行中のマージが表示されていなければ、再試行すると新しいマージを送ります。",
   "settingsProjectsCare": "慎重さ",
   "settingsProjectsCareNone": "なし",
   "settingsProjectsCarePersonal": "ここでは何も関門を通りません。",

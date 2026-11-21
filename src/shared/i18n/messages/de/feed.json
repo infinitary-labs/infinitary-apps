@@ -19,6 +19,8 @@
   "feedBatchHeldUnanswered": "{project}: {label} ist angehalten, weil {place} das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.",
   "feedBatchHeldUnansweredHost": "{project}: {label} ist angehalten, weil der Host des Projekts das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.",
   "feedBatchHeldUnnamed": "{project}: {label} ist angehalten, weil seine Überprüfungen fehlgeschlagen sind. Inzwischen bestätigte Änderungen warten darauf.",
+  "feedBatchMergeRunning": "{project}: {place} hat das Zusammenführen von {label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.",
+  "feedBatchMergeRunningHost": "{project}: Der Host des Projekts hat das Zusammenführen von {label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Wenn der Pull Request dort kein laufendes Zusammenführen zeigt, sendet Erneut versuchen unter Einstellungen → Projekte ein neues Zusammenführen.",
   "feedBatchMergedMany": {
     "plural": "count",
     "one": "{project}: {label} wurde mit {count} Änderung zusammengeführt, mit einem Commit je Änderung.",

@@ -20,6 +20,8 @@
   "feedBatchHeldUnanswered": "{project}: {label} está retenido porque {place} no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.",
   "feedBatchHeldUnansweredHost": "{project}: {label} está retenido porque el sitio que aloja el proyecto no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.",
   "feedBatchHeldUnnamed": "{project}: {label} está retenido porque fallaron sus comprobaciones. Los cambios aprobados mientras tanto lo esperan.",
+  "feedBatchMergeRunning": "{project}: {place} aceptó la fusión de {label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.",
+  "feedBatchMergeRunningHost": "{project}: el sitio que aloja el proyecto aceptó la fusión de {label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Si la solicitud de incorporación de cambios allí no muestra ninguna fusión en curso, Volver a intentar en Configuración → Proyectos envía una fusión nueva.",
   "feedBatchMergedMany": {
     "plural": "count",
     "one": "{project}: se fusionó {label} con {count} cambio, una confirmación por cada uno.",

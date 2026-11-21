@@ -924,6 +924,9 @@
     "other": "Sent {count} changes back. The rest of the batch is combined again."
   },
   "settingsProjectsBatchTryAgain": "Try again",
+  "settingsProjectsBatchWaiting": "Batch waiting for its merge",
+  "settingsProjectsBatchWaitingSince": "Waiting since {since}: {place} took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.",
+  "settingsProjectsBatchWaitingSinceHost": "Waiting since {since}: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. If the pull request there shows no merge running, Try again sends a new merge.",
   "settingsProjectsCare": "Rigor",
   "settingsProjectsCareNone": "none",
   "settingsProjectsCarePersonal": "Nothing here passes through a gate.",

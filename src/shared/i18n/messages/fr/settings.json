@@ -947,6 +947,9 @@
     "other": "{count} modifications renvoyées. Le reste du lot est de nouveau regroupé."
   },
   "settingsProjectsBatchTryAgain": "Réessayer",
+  "settingsProjectsBatchWaiting": "Lot en attente de sa fusion",
+  "settingsProjectsBatchWaitingSince": "En attente depuis {since} : {place} a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.",
+  "settingsProjectsBatchWaitingSinceHost": "En attente depuis {since} : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Si la demande de tirage n’y montre aucune fusion en cours, Réessayer envoie une nouvelle fusion.",
   "settingsProjectsCare": "Soin",
   "settingsProjectsCareNone": "aucun",
   "settingsProjectsCarePersonal": "Rien ici ne passe par un contrôle.",

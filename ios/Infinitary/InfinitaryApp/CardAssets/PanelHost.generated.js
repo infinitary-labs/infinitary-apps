@@ -99335,6 +99335,13 @@ ${FRAME_KEYBOARD_SCRIPT}
      * merge queue"): its place there is read, and nothing is sent again.
      */
     queued: string().optional(),
+    /**
+     * The version a merge was sent at whose outcome the host did not confirm,
+     * on a host whose merge names no version (docs/forge.md, "Batches of your
+     * own"): later passes read how it ended and never send it again.
+     * `mergeTask` is the host's own reference to that merge, when it gave one.
+     */
+    unconfirmed: object({ head: string(), mergeTask: string().optional() }).optional(),
     /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
     stale: literal(true).optional(),
     /**

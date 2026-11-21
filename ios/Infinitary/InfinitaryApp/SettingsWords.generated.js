@@ -12661,6 +12661,13 @@ ${events}` : prompt;
      * merge queue"): its place there is read, and nothing is sent again.
      */
     queued: string().optional(),
+    /**
+     * The version a merge was sent at whose outcome the host did not confirm,
+     * on a host whose merge names no version (docs/forge.md, "Batches of your
+     * own"): later passes read how it ended and never send it again.
+     * `mergeTask` is the host's own reference to that merge, when it gave one.
+     */
+    unconfirmed: object({ head: string(), mergeTask: string().optional() }).optional(),
     /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
     stale: literal(true).optional(),
     /**
@@ -12862,8 +12869,7 @@ ${events}` : prompt;
         "read:pipeline:bitbucket",
         "write:pipeline:bitbucket"
       ],
-      // Batches of a person's own on Bitbucket come with its merge queue, a later change.
-      batches: false
+      batches: true
     }
   };
   function changeRequestKind(kind) {

@@ -10,6 +10,7 @@ import {
   MEMORY_FILE,
   memoryProblems,
   pointerProblems,
+  pointersIn,
   wordCount,
   wordProblem,
 } from "../scripts/agent-memory.ts";
@@ -53,32 +54,46 @@ describe("the size check on AGENTS.md", () => {
     ).toBeUndefined();
   });
 
+  // Each case breaks one pointer the file holds now, found by reading it, so a
+  // later trim that drops any one pointer leaves the case standing.
+  const lines = memory.split("\n");
+  const quoted = pointersIn(memory).find((pointer) => pointer.headings.length);
+  /** The file with one line rewritten. */
+  const withLine = (line: number, edit: (text: string) => string) =>
+    lines.map((text, at) => (at === line - 1 ? edit(text) : text)).join("\n");
+
   it("refuses a path that does not exist and a quoted heading its page does not have", () => {
-    const moved = memory.replace("`docs/forge.md`", "`docs/where-projects-live.md`");
+    if (!quoted) throw new Error(`${MEMORY_FILE} quotes no section heading after a path`);
+    const moved = withLine(quoted.line, (text) =>
+      text.replace(`\`${quoted.path}\``, "`docs/no-such-page.md`"),
+    );
     expect(pointerProblems(moved, root)).toEqual([
-      expect.stringMatching(/`docs\/where-projects-live\.md` does not exist/),
+      expect.stringMatching(/`docs\/no-such-page\.md` does not exist/),
     ]);
-    const renamed = memory.replace('"The swept batch"', '"The combined batch"');
+    const heading = quoted.headings[0] ?? "";
+    const renamed = withLine(quoted.line, (text) =>
+      text.replace(`"${heading}"`, '"No such section"'),
+    );
     expect(pointerProblems(renamed, root)).toEqual([
-      expect.stringMatching(/`docs\/testing\.md` has no section "The combined batch"/),
+      expect.stringMatching(/has no section "No such section"/),
     ]);
   });
 
   it("refuses a docs page the index leaves out and a listed page that is gone", () => {
     const listed = listedPages(index);
-    expect(listed).toContain("testing.md");
-    const pages = [...listed];
+    const [page] = listed;
+    if (!page) throw new Error(`${DOCS_INDEX} lists no page`);
     expect(
       indexProblems(
-        listed.filter((page) => page !== "forge.md"),
-        pages,
+        listed.filter((name) => name !== page),
+        listed,
       ),
-    ).toEqual([expect.stringMatching(/docs\/forge\.md is not listed/)]);
+    ).toEqual([expect.stringContaining(`docs/${page} is not listed`)]);
     expect(
       indexProblems(
         listed,
-        pages.filter((page) => page !== "forge.md"),
+        listed.filter((name) => name !== page),
       ),
-    ).toEqual([expect.stringMatching(/lists forge\.md, which is not under docs\//)]);
+    ).toEqual([expect.stringContaining(`lists ${page}, which is not under docs/`)]);
   });
 });

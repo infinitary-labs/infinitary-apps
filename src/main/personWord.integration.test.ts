@@ -62,7 +62,12 @@ function copyProgram(): string {
     `
     import { existsSync, mkdirSync, chmodSync, renameSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
-    import { claimWordProfile, endWithRequester, replyLine } from ${sourceUrl("personWordArg.ts")};
+    import {
+      claimWordProfile,
+      endWithRequester,
+      endWithRequesterOffMain,
+      replyLine,
+    } from ${sourceUrl("personWordArg.ts")};
     const [mode, marks] = process.argv.slice(2);
     const profile = process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice(16) ?? "";
     const say = (text, code = 0) => process.stdout.write(text, () => process.exit(code));
@@ -92,6 +97,14 @@ function copyProgram(): string {
       mkdirSync(profile);
       writeFileSync(join(profile, "theirs"), "");
       writeFileSync(join(marks, "profile"), profile);
+      say(replyLine(0));
+    } else if (mode === "blocked") {
+      // Its main thread held the way a Mac holds it under a box with no window of its own: neither
+      // its input's end nor an ordinary end reaches that thread, and only a bounded wait ends it.
+      if (process.platform !== "win32") process.on("SIGTERM", () => {});
+      endWithRequesterOffMain();
+      writeFileSync(join(marks, "pid"), String(process.pid));
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30_000);
       say(replyLine(0));
     } else if (mode === "wait") {
       // Shows its box until its requester goes; where an ordinary end can be ignored, only that
@@ -701,6 +714,31 @@ describe("a refused launch's copy that shows a word", () => {
       await release(marks);
     }
   });
+
+  it.skipIf(process.platform === "win32")(
+    "ends a word taken away even while its box holds the copy's main thread",
+    async () => {
+      const profiles = profilesFolder();
+      const marks = scratchDir("person-word-marks-");
+      const taken = new AbortController();
+      const asked = askPersonWord("dock", {
+        launcher: launcher(copyProgram(), "blocked", marks),
+        profiles,
+        signal: taken.signal,
+      });
+      try {
+        await until(() => existsSync(join(marks, "pid")), "the copy's start");
+        const copy = Number(readFileSync(join(marks, "pid"), "utf8"));
+        taken.abort();
+        expect(await asked).toBeNull();
+        await until(() => !alive(copy), "the copy's end");
+        await until(() => wordProfiles(keptAt(profiles)).length === 0, "the profile's removal");
+      } finally {
+        // A copy left running by a failure ends on its own bounded wait.
+        taken.abort();
+      }
+    },
+  );
 
   it("ends the copy when the launch that asked for it dies, keeps its files through the next holder's clearing, and a later ask removes its profile", async () => {
     const profiles = profilesFolder();

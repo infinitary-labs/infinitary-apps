@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { Worker } from "node:worker_threads";
 
 /** A word a window launch refused the folder's lock says to the person (./personWord.ts). */
 export type PersonWord = "dock" | "once-closed";
@@ -65,6 +66,38 @@ export function endWithRequester(input: NodeJS.ReadableStream, end: () => void):
   input.once("error", once);
   input.resume();
 }
+
+/**
+ * The copy's input read on a thread of its own, which ends the copy the moment that input ends: on
+ * a Mac a box with no window of its own keeps the copy's main thread until it is pressed, so the
+ * input's end never reaches `endWithRequester` there, nor does an ordinary end, and the copy would
+ * outlive the launch that asked for it. Ended at once, box and all, as the word it showed is no
+ * longer wanted; its profile goes as any ended copy's does.
+ */
+export function endWithRequesterOffMain(): void {
+  new Worker(INPUT_WATCH, { eval: true }).unref();
+}
+
+/** The thread `endWithRequesterOffMain` runs: it waits on the input until it ends, then ends the copy. */
+const INPUT_WATCH = `
+const { readSync } = require("node:fs");
+const read = Buffer.alloc(64);
+const nap = new Int32Array(new SharedArrayBuffer(4));
+for (;;) {
+  let got = 0;
+  try {
+    got = readSync(0, read);
+  } catch (error) {
+    // An input the main thread reads too may have nothing yet; any other failure is its end.
+    if (error.code === "EAGAIN") {
+      Atomics.wait(nap, 0, 0, 100);
+      continue;
+    }
+  }
+  if (got === 0) break;
+}
+process.kill(process.pid, "SIGKILL");
+`;
 
 /**
  * Whether the copy's throwaway profile may be made in the folder for them beside the data folder

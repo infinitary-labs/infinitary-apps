@@ -39,6 +39,7 @@ import type { MessageBoxOptions } from "electron";
 import {
   claimWordProfile,
   endWithRequester,
+  endWithRequesterOffMain,
   PERSON_WORD_ARG,
   type PersonReply,
   type PersonWord,
@@ -136,7 +137,8 @@ export function personWordBox(word: PersonWord, preferred: readonly string[], pa
 /**
  * The copy that shows one word: it keeps out of the Dock, so the Infinitary the word names there is
  * the only one to click, names itself in its profile (`claimWordProfile`), and ends with the launch
- * that asked for it (`endWithRequester`). Once
+ * that asked for it (`endWithRequester`, and on a Mac, whose box holds the copy's main thread,
+ * `endWithRequesterOffMain`). Once
  * Electron is ready it shows the box in front of whatever the person uses now and writes the button
  * pressed, or that the box could not be shown, and ends.
  */
@@ -149,6 +151,7 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
     return;
   }
   endWithRequester(process.stdin, () => app.exit(0));
+  if (hostPlatform() === "darwin") endWithRequesterOffMain();
   await app.whenReady();
   const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
   let reply: PersonReply = "unshown";

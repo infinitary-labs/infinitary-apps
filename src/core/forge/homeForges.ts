@@ -32,6 +32,8 @@ import {
 import { BitbucketForge } from "./providers/bitbucket/bitbucketForge";
 import { readBitbucketOpenChanges } from "./providers/bitbucket/changes";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
+import { bitbucketDataCenterBaseFor } from "./providers/bitbucket/dataCenterClient";
+import { DataCenterForge } from "./providers/bitbucket/dataCenterForge";
 import { readOpenChanges } from "./providers/github/changes";
 import { GitHubForge, githubApiBaseFor } from "./providers/github/githubForge";
 import { readGitLabOpenChanges } from "./providers/gitlab/changes";
@@ -153,8 +155,16 @@ export function startHomeForges(options: {
       onSignInRejected: () => forgeSignIns.rejected(forgeHost),
     });
   };
-  const bitbucketForge = (location: ForgeLocation) => {
+  const bitbucketForge = (location: ForgeLocation): Forge => {
     const forgeHost = location.host ?? "bitbucket.org";
+    // Any address but bitbucket.org is a Bitbucket Data Center server.
+    if (forgeHost !== "bitbucket.org")
+      return new DataCenterForge(location, {
+        namingRule,
+        token: () => forgeSignIns.token(forgeHost),
+        serverUrl: bitbucketDataCenterBaseFor(forgeHost, forgeEndpoints),
+        onSignInRejected: () => forgeSignIns.rejected(forgeHost),
+      });
     return new BitbucketForge(location, {
       namingRule,
       token: () => forgeSignIns.token(forgeHost),
@@ -163,8 +173,9 @@ export function startHomeForges(options: {
     });
   };
   // Which forge serves each kind of host: GitHub's and GitLab's, each on its
-  // public host and on the person's own server, and Bitbucket Cloud's. A
-  // kind with none here is a plain Git host.
+  // public host and on the person's own server, and Bitbucket's, Cloud's at
+  // bitbucket.org and Data Center's on a server. A kind with none here is a
+  // plain Git host.
   const kindForges: Record<ChangeRequestKind, (location: ForgeLocation) => Forge> = {
     github: githubForge,
     gitlab: gitlabForge,
@@ -227,7 +238,8 @@ export function startHomeForges(options: {
   };
   // The `forge.changes` panel read: every host with a sign-in, read with it
   // - github.com, each GitHub Enterprise host, gitlab.com, each GitLab
-  // server and Bitbucket Cloud - newest first across them. A host
+  // server and Bitbucket Cloud (a Bitbucket Data Center server is not read
+  // here yet) - newest first across them. A host
   // that cannot be read this time answers nothing, never a guess.
   const changes = async (): Promise<ForgeChangesView> => {
     const hosts = forgeSignIns.view().signIns.flatMap((row) => {
@@ -258,13 +270,16 @@ export function startHomeForges(options: {
           apiBaseUrl: gitlabApiBaseFor(forgeHost, forgeEndpoints),
           onSignInRejected: () => forgeSignIns.rejected(forgeHost),
         }),
-      bitbucket: (forgeHost, token) =>
-        readBitbucketOpenChanges({
-          host: forgeHost,
-          token: async () => token,
-          apiBaseUrl: bitbucketApiBaseFor(forgeHost, forgeEndpoints),
-          onSignInRejected: () => forgeSignIns.rejected(forgeHost),
-        }),
+      // A Bitbucket Data Center server's open pull requests are not read here yet.
+      bitbucket: async (forgeHost, token) =>
+        forgeHost !== "bitbucket.org"
+          ? []
+          : readBitbucketOpenChanges({
+              host: forgeHost,
+              token: async () => token,
+              apiBaseUrl: bitbucketApiBaseFor(forgeHost, forgeEndpoints),
+              onSignInRejected: () => forgeSignIns.rejected(forgeHost),
+            }),
     };
     if (hosts.length === 0) return { signedIn: false, reachable: true, changes: [] };
     let reachable = true;

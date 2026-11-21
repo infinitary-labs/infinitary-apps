@@ -90,6 +90,24 @@ export type ChangeRequestHost = SignInHost & {
   quickActions: boolean;
   /** Whether a project here may choose batched pull requests. */
   batches: boolean;
+  /**
+   * What a server of this kind does differently from its public host, where
+   * the person's own server runs another product: Bitbucket Data Center
+   * beside Bitbucket Cloud (`docs/forge.md`, "Bitbucket Data Center").
+   * Absent where a server answers as the public host does.
+   */
+  server?: ServerFacts;
+};
+
+/** What a server of a kind does differently from the kind's public host. */
+export type ServerFacts = {
+  /**
+   * A project's page under the server, from the owner and name its address
+   * names (`scm/prj` and `repo` for `https://host/scm/prj/repo.git`).
+   */
+  projectPage: (owner: string, name: string) => string;
+  /** Whether a project on the server may choose batched pull requests. */
+  batches: boolean;
 };
 
 export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequestHost>> = {
@@ -161,8 +179,12 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
     quickActions: false,
     holdsOnlyKnownHosts: true,
     addressExample: "bitbucket.org",
-    // Atlassian keeps every API token on the person's account, not on bitbucket.org.
-    keyPage: () => "https://id.atlassian.com/manage-profile/security/api-tokens",
+    // Atlassian keeps every Cloud API token on the person's account, not on
+    // bitbucket.org; a Data Center server keeps its HTTP access tokens itself.
+    keyPage: (host) =>
+      host === "bitbucket.org"
+        ? "https://id.atlassian.com/manage-profile/security/api-tokens"
+        : `https://${host}/plugins/servlet/access-tokens/manage`,
     keyAccount: "your Atlassian account",
     keyScopes: [
       "read:user:bitbucket",
@@ -175,8 +197,28 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
       "write:pipeline:bitbucket",
     ],
     batches: true,
+    // Bitbucket Data Center on the person's own server: its own pages, and no
+    // batches until its batch pull request is built (`docs/forge.md`,
+    // "Bitbucket Data Center").
+    server: { projectPage: bitbucketServerProjectPage, batches: false },
   },
 };
+
+/**
+ * A Bitbucket Data Center repository's page: `projects/<KEY>/repos/<slug>`,
+ * or `users/<name>/repos/<slug>` for a person's own repository (`~name`).
+ * An HTTPS clone address names the project under `scm/` in lower case, so
+ * that segment is dropped and the key is written as Data Center keeps it,
+ * in capitals.
+ */
+export function bitbucketServerProjectPage(owner: string, name: string): string {
+  const segments = owner.split("/").filter(Boolean);
+  const key = (segments[0]?.toLowerCase() === "scm" ? segments.slice(1) : segments).join("/");
+  const slug = encodeURIComponent(name.toLowerCase());
+  if (key.startsWith("~"))
+    return `users/${encodeURIComponent(key.slice(1).toLowerCase())}/repos/${slug}`;
+  return `projects/${encodeURIComponent(key.toUpperCase())}/repos/${slug}`;
+}
 
 /** Every kind the app signs in to, with what each owns about its sign-in. */
 export const SIGN_IN_HOSTS: Readonly<Record<SignInKind, SignInHost>> = CHANGE_REQUEST_HOSTS;
@@ -259,6 +301,18 @@ export function keyFormStartHost(kind: string | null | undefined): string {
   return facts?.publicHostIsServerRow ? facts.publicHost : "";
 }
 
+/**
+ * What a host of this kind on the person's own server does differently,
+ * or undefined where it answers as the kind's public host does.
+ */
+export function serverFactsAt(
+  kind: string | null | undefined,
+  host: string | null | undefined,
+): ServerFacts | undefined {
+  const facts = changeRequestHost(kind);
+  return facts && host && host !== facts.publicHost ? facts.server : undefined;
+}
+
 /** The page of change `number` in the project at `project` (`owner/name`, already spelled for a link). */
 export function changePageUrl(
   kind: string | null | undefined,
@@ -266,5 +320,11 @@ export function changePageUrl(
   project: string,
   number: number,
 ): string {
-  return `https://${host}/${project}/${changeHostOf(kind).requestPath}/${number}`;
+  const server = serverFactsAt(kind, host);
+  const slash = project.lastIndexOf("/");
+  const page =
+    server && slash > 0
+      ? server.projectPage(project.slice(0, slash), project.slice(slash + 1))
+      : project;
+  return `https://${host}/${page}/${changeHostOf(kind).requestPath}/${number}`;
 }

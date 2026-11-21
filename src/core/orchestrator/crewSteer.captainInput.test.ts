@@ -10,7 +10,7 @@ import { type CardNote, MARKED_PICTURES_LINE } from "@shared/cardNotes";
 import type { TurnImage } from "@shared/cards";
 import type { InboxRow } from "../storage/inboxStore";
 import { TaskEventStore } from "../storage/taskEventStore";
-import { renderWake, replyWordsSpan } from "./wakes";
+import { renderWake, replyWordsSpan, type WakeFacts } from "./wakes";
 
 /**
  * Intent: the approved detector includes genuine captain text from either
@@ -120,7 +120,7 @@ describe("captain input from the Crewmate tab", () => {
         images: [picture],
       }),
     ).toEqual({ ok: true });
-    const bare = { kind: "crewmate-tab-line", words: "", notes: [note] } as const;
+    const bare: WakeFacts = { kind: "crewmate-tab-line", words: "", notes: [note] };
     const alone = renderWake({ facts: bare });
     const said = replyWordsSpan({ facts: bare });
     expect(said && alone.slice(said.from, said.to).split("\n")).toEqual([
@@ -136,7 +136,11 @@ describe("captain input from the Crewmate tab", () => {
     );
 
     await h.supervisor.steer.steerFromCrewmateTab(taskId, " Fix the label too ", { notes: [note] });
-    const facts = { kind: "crewmate-tab-line", words: "Fix the label too", notes: [note] } as const;
+    const facts: WakeFacts = {
+      kind: "crewmate-tab-line",
+      words: "Fix the label too",
+      notes: [note],
+    };
     const worded = renderWake({ facts });
     expect(crewmate.steer).toHaveBeenLastCalledWith(
       worded,

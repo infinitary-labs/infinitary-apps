@@ -6,7 +6,7 @@ import {
   forgePlace,
   hasChangeRequests,
 } from "@shared/forge";
-import { changeRequestHost } from "@shared/forgeKinds";
+import { changeRequestHost, serverFactsAt } from "@shared/forgeKinds";
 import type { RepoView } from "@shared/repos";
 import type { Forge, ForgeLocation } from "./forge";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
@@ -255,6 +255,16 @@ export function requestLinkAtRepo(repo: ForgeRepo, link: string | undefined): bo
   if (!link) return false;
   const parent = link.replace(new RegExp(`/(?:${changePagePaths()})/\\d+/?$`), "");
   if (parent === link) return false;
+  // A server whose project page is not its clone path (Bitbucket Data
+  // Center's `projects/KEY/repos/slug` for `scm/key/slug`) is matched on
+  // the page the repository's own address names.
+  const here = forgeOf(repo.origin);
+  const server = serverFactsAt(repo.host?.kind, here.host);
+  if (server && here.host && here.owner && here.name)
+    return (
+      parent.toLowerCase() ===
+      `https://${here.host}/${server.projectPage(here.owner, here.name)}`.toLowerCase()
+    );
   const { host, owner, name } = forgeOf(parent);
   return !!host && !!owner && !!name && requestAtRepo(repo, { host, owner, name });
 }

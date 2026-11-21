@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { forgeHostIntegration } from "../../../integrations";
 import { ForgeError } from "../../forge";
+import { requestLinkAtRepo } from "../../index";
 import { ForgeSignInStore, ForgeSignIns } from "../../signIns";
 import { dataCenterFailureOf } from "./dataCenterClient";
 import { DataCenterForge } from "./dataCenterForge";
@@ -459,5 +460,21 @@ describe("Bitbucket Data Center in Integrations", () => {
     expect(binding.connections()).toEqual([
       expect.objectContaining({ host: HOST, name: HOST, account: "jane.doe", actions: [] }),
     ]);
+  });
+});
+
+describe("a Data Center pull request's page", () => {
+  // Data Center's page is projects/KEY/repos/slug while its clone address is scm/key/slug.
+  it("belongs to the repository whose clone address names it, and to no other", () => {
+    const repo = (origin: string) => ({
+      path: "/work/field-notes",
+      origin,
+      host: { kind: "bitbucket" as const, name: HOST },
+    });
+    const page = `https://${HOST}/projects/FLD/repos/field-notes/pull-requests/1`;
+    expect(requestLinkAtRepo(repo(`https://${HOST}/scm/fld/field-notes.git`), page)).toBe(true);
+    expect(requestLinkAtRepo(repo(`ssh://git@${HOST}:7999/fld/field-notes.git`), page)).toBe(true);
+    expect(requestLinkAtRepo(repo(`https://${HOST}/scm/fld/other-notes.git`), page)).toBe(false);
+    expect(requestLinkAtRepo(repo(`https://${HOST}/scm/abc/field-notes.git`), page)).toBe(false);
   });
 });

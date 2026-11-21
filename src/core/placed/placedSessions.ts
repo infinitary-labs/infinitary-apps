@@ -1,5 +1,4 @@
 import { existsSync, renameSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
 import {
   speaksChangePresentations,
   speaksKnowledge,
@@ -32,12 +31,10 @@ import {
   listsChange,
 } from "../connection/contractChanges";
 import {
-  dueIn,
   dueRule,
   type OutsideDue,
   type PlacedOutsideVisit,
   rewriteOutsideData,
-  textFilesUnder,
 } from "../integrations";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
 import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
@@ -259,6 +256,8 @@ type Placed = {
   adoptingSince: number | undefined;
   /** Opens asked there and not yet answered. */
   asking: number;
+  /** A cleanup of words from outside under way there, which an open waits for. */
+  cleaning: Promise<void> | undefined;
   /**
    * An open there again (`reopen`) under way, which a prompt or steer waits
    * for: true once that computer confirmed the conversation open.
@@ -1299,6 +1298,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const placed = this.load(task, deviceId);
     placed.asking += 1;
     try {
+      while (placed.cleaning) await placed.cleaning;
       const answer = await this.options.devices.ask(deviceId, "inf:session:open", [
         { orderId: `open:${task}:${this.options.now()}`, task, spec },
       ]);
@@ -1651,15 +1651,24 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
     // An open there still unanswered could give this Mac a conversation the cleanup lets go.
-    if (placed.asking > 0 || placed.adopting) return "waiting";
+    if (placed.asking > 0 || placed.adopting || placed.cleaning) return "waiting";
     // An older computer opens the conversation again by itself, unchecked: this Mac lets its own
-    // go first, so the next words open one there that is checked as new, whatever it answers.
+    // go first, once its turn is over, and never reattaches to what it opens (`refusedThere`).
     const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
     if (older && heldSession(placed)) {
-      if (heldSession(placed)?.isStreaming()) return "waiting";
-      this.host?.letGo?.(placed.task);
+      if (!heldSession(placed)?.isStreaming()) this.host?.letGo?.(placed.task);
+      if (heldSession(placed)) return "waiting";
     }
-    let answer: WorkOrderResponse<"inf:session:delete-outside">;
+    if (older) this.refuseHeld(placed.task, true);
+    // Opens there, and words to it, wait for the cleanup and for the reopen it asks.
+    let cleaned: (open: boolean | Promise<boolean>) => void = () => {};
+    const gate = new Promise<boolean>((done) => (cleaned = done));
+    placed.cleaning = gate.then(() => undefined);
+    const before = placed.reopening;
+    const held = gate.then(async (open) => open && (await before) !== false);
+    placed.reopening = held;
+    let answer: WorkOrderResponse<"inf:session:delete-outside"> | undefined;
+    let lost: unknown;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
         await this.options.devices.ask(deviceId, "inf:session:delete-outside", [
@@ -1675,29 +1684,25 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ]),
       );
     } catch (caught) {
-      if (caught instanceof DeviceOutOfReachError) return { computer, until: "reach" };
-      throw caught;
+      lost = caught;
+    }
+    placed.cleaning = undefined;
+    // The session held once it answered, which an open asked during the cleanup cannot change.
+    const session = older ? undefined : heldSession(placed);
+    // Let go of there, not opened again by itself, or not known: this Mac opens it again, routed first.
+    // Words it gave back unspent meanwhile go once that open settled.
+    if (session && (!answer || answer.reopen || answer.status === "changed"))
+      void this.reopen(placed, session, deviceId).then(() => this.host?.caughtUp([placed.task]));
+    if (placed.reopening === held) placed.reopening = before;
+    cleaned(placed.reopening ?? true);
+    if (!answer) {
+      if (lost instanceof DeviceOutOfReachError) return { computer, until: "reach" };
+      throw lost;
     }
     if (answer.status === "waiting") return "waiting";
-    // The session held once it answered, which may have opened while it was asked.
-    const session = older ? undefined : heldSession(placed);
-    // Let go of there, or not opened again by itself: this Mac opens it again, routed first.
-    if (session && (answer.reopen || answer.status === "changed"))
-      void this.reopen(placed, session, deviceId);
-    // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
-    const names = new Set(answer.files);
-    const recordDir = placed.record.dir;
-    for (const file of textFilesUnder(recordDir))
-      if (await dueIn(file, rule, due.legacy, undefined))
-        names.add(relative(recordDir, file).split(sep).join("/"));
-    if (names.size > 0) {
-      const copied = await placed.record.copyWhole([...names]);
-      // A file it no longer holds is copied no more, so this Mac's copy is replaced here.
-      for (const name of copied.absent)
-        rewriteOutsideData(join(recordDir, ...name.split("/")), rule, due.legacy);
-      if (copied.short.length > 0) return "waiting";
-    }
-    return answer.status === "changed" || answers > 0 || names.size > 0 ? "changed" : "unchanged";
+    const copied = await placed.record.replaceDue(answer.files, rule, due.legacy);
+    if (copied.short) return "waiting";
+    return answer.status === "changed" || answers > 0 || copied.any ? "changed" : "unchanged";
   }
 
   /**
@@ -1902,6 +1907,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       adopting: undefined,
       adoptingSince: undefined,
       asking: 0,
+      cleaning: undefined,
       reopening: undefined,
       said: undefined,
       reopenOwed: false,

@@ -41,9 +41,10 @@ placedWorldHooks({ now: Date.now, reset: () => {} });
 /** That computer signed in to two Codex accounts, one serving the starter and one GPT-6 Sol. */
 const SOL = { provider: "openai-codex", id: "gpt-6-sol" };
 const STARTER = { provider: "openai-codex", id: CODEX_MEDIUM_STARTER };
-async function codexThere() {
+async function codexThere(changes?: string[]) {
   const runs = await piStubRuntime(api.url, STARTER, [SOL.id]);
   return world(undefined, {
+    ...(changes ? { changes } : {}),
     routing: THIS_MAC_ON_NEWER_CODEX,
     signedInTo: [
       computerAccount("acct_codex_other", "openai-codex"),
@@ -1093,6 +1094,128 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
     expect(said(api.requests.at(-1))).toContain(DUE_NOTE);
     expect(said(api.requests.at(-1))).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 15 findings 1 and 3: words sent while a cleanup's answer
+  // is out wait for it, so none reaches the conversation it lets go; it opens
+  // again routed, and the words reach GPT-6 Sol once, without the words removed.
+  it("holds words sent during a cleanup until the conversation it lets go opens again routed", async () => {
+    const at = await codexThere();
+    const taskId = "t-during";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    const answer = gate();
+    const asked = recordAsks(home, async (channel) => {
+      if (channel === "inf:session:delete-outside") await answer.held;
+    });
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    const cleaning = home.placed.deleteOutside(record, DUE);
+    await expect
+      .poll(() => asked.map((ask) => ask.channel))
+      .toContain("inf:session:delete-outside");
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    // Its turn starts here, and its words wait for the cleanup's answer.
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("running");
+    // While the cleanup's answer is out, nothing opens there and no words go.
+    expect(asked.map((ask) => ask.channel)).not.toContain("inf:session:open");
+    expect(api.requests.length).toBe(requests);
+
+    answer.open();
+    expect(await cleaning).toBe("changed");
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).toContain(DUE_NOTE);
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 15 findings 1 and 3: a cleanup whose answer is lost after
+  // that computer acted may have let the conversation go there, so this Mac
+  // opens it again routed before any words go; the next pass finishes this
+  // Mac's copy.
+  it("opens the conversation again routed when a cleanup's answer is lost", async () => {
+    const at = await codexThere();
+    const taskId = "t-lost";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    let lose = true;
+    recordAsks(home, async (channel) => {
+      if (channel !== "inf:session:delete-outside" || !lose) return;
+      lose = false;
+      throw new Error("The connection dropped.");
+    });
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    await expect(home.placed.deleteOutside(record, DUE)).rejects.toThrow("The connection dropped.");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    // Words sent while it opens again go only once it opened, once.
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).toContain(DUE_NOTE);
+    expect(said(sent[0])).not.toContain(SECRET);
+
+    await expect.poll(() => home.placed.deleteOutside(record, DUE)).not.toBe("waiting");
+    expect(filesHolding(here, SECRET)).toEqual([]);
+  });
+
+  // INF-5438 round 15 findings 2 and 3: the conversation an older computer
+  // opens again by itself after a cleanup is never reattached to, so once the
+  // starter left its level the next words route to GPT-6 Sol, which that
+  // computer serves, rather than wait for its update.
+  it("routes the next words to a model that can take them after an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-left";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    // This Mac restarts, so its roster names the conversation that computer opened again.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const after = at.home();
+    await after.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => after.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(after.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(after.supervisor.moves.refusedThere(taskId)).toBe(false);
+    expect(rerouted(after, taskId)).toHaveLength(1);
   });
 });
 

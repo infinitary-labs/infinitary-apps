@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "use-saved-codex-resets-on-their-own",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Let Infinitary use saved Codex resets on its own",
+      "body": "Each Codex account's menu in Subscriptions now has Use saved resets on their own, off until you turn it on. With it on, when work waits on that account's used-up allowance and no other account at that level has room, Infinitary weighs using a saved reset against waiting for the refill, and uses one before any credits when the wait is long. The activity feed says each time it does. Turning it on asks Codex to sign in to that ChatGPT account first, if it has not yet, and the run-out card offers the same switch beside Use a saved reset.",
+      "picture": {
+        "dark": "use-saved-codex-resets-on-their-own-dark.webp",
+        "light": "use-saved-codex-resets-on-their-own-light.webp",
+        "alt": "A Codex account's menu in Subscriptions with Use saved resets on their own under Use a saved reset"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -14,7 +14,7 @@ import {
 import { cardBody } from "./frames";
 import { leaveSettings } from "./handoverCards";
 import type { LaunchedApp } from "./launch";
-import { writeMockCodexClient } from "./mockCodexClient";
+import { signInCodexHome, writeMockCodexClient } from "./mockCodexClient";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
@@ -31,7 +31,8 @@ import { focusOn, pressKey } from "./windowKeys";
  * the reset, and the account's Subscriptions row says the count. The card's
  * Use a saved reset (INF-5478's plan, piece 1; docs/codex-client.md) uses one
  * through the Codex CLI, here a stand-in (`mockCodexClient.ts`), signing it
- * in on the account's row first. The system browser is a recorder here.
+ * in on the account's row first, or at once when Codex already keeps the
+ * account's sign-in. The system browser is a recorder here.
  */
 
 /** The live Codex reading's saved resets (`tests/fixtures/quota-credits`), here applying now. */
@@ -231,6 +232,76 @@ test("Use a saved reset on a spent Codex seat's card signs Codex in on the accou
       .requests()
       .filter((request) => request.method === "account/rateLimitResetCredit/consume");
     expect(consumed.map((request) => request.params?.creditId)).toEqual(["reset-sooner"]);
+  } finally {
+    await launched?.close();
+    await mock?.close();
+  }
+});
+
+test("Use a saved reset on a spent Codex seat's card, with Codex already signed in to the account, uses the reset that expires first at once, with no row and no browser", async () => {
+  test.setTimeout(3 * 60_000);
+  const now = Date.now();
+  const second = Math.floor(now / 1000);
+  const codex = writeMockCodexClient(scratchDir("infinitary-saved-reset-codex-"), {
+    accountId: CODEX_SEAT_CHATGPT_ID,
+    available: 2,
+    credits: [
+      { id: "reset-later", status: "available", expiresAt: second + 20 * 86_400 },
+      { id: "reset-sooner", status: "available", expiresAt: second + 3 * 86_400 },
+    ],
+  });
+  let mock: MockProviderServer | undefined;
+  let launched: LaunchedApp | undefined;
+  try {
+    mock = await startMockProvider();
+    launched = await launchClaudeSeat({
+      mockProvider: mock,
+      withCodex: true,
+      env: {
+        INFINITARY_QUOTA_FIXTURE_DIR: spentReadings(now, 2),
+        INFINITARY_CODEX_CLI: codex.path,
+      },
+    });
+    const { page } = launched;
+    await recordOpens(launched);
+    // Codex already keeps this account's sign-in in the account's own Codex home, as its sign-in leaves it.
+    signInCodexHome(
+      launched.userDataDir,
+      "openai-codex",
+      CODEX_SEAT_ACCOUNT,
+      CODEX_SEAT_CHATGPT_ID,
+    );
+    const label = (await page.evaluate(() => window.infinitary.accounts.list())).find(
+      (account) => account.id === CODEX_SEAT_ACCOUNT,
+    )?.label;
+    await page.evaluate(
+      (id) => window.infinitary.settings.setFirstmateModel({ provider: "openai-codex", id }),
+      starterFor("openai-codex", "high"),
+    );
+    await say(page, "sound the channel");
+
+    const title = firstmatePauseTitle("no_headroom", "Codex");
+    await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
+    await pressKey(
+      shownCard(page, title).getByRole("button", { name: m.cardUseSavedReset(), exact: true }),
+      "Enter",
+    );
+    await expect(
+      feedLineOf(page, {
+        type: "firstmate_note",
+        text: m.accountsSavedResetUsed({ account: `Codex · ${label}`, count: 1 }),
+      }),
+    ).toBeVisible({ timeout: 30_000 });
+    const methods = codex.requests().map((request) => request.method);
+    expect(methods).not.toContain("account/login/start");
+    expect(
+      codex
+        .requests()
+        .filter((request) => request.method === "account/rateLimitResetCredit/consume")
+        .map((request) => request.params?.creditId),
+    ).toEqual(["reset-sooner"]);
+    expect(await opened(launched)).toEqual([]);
+    await expect(page.locator("[data-settings-column]")).toHaveCount(0);
   } finally {
     await launched?.close();
     await mock?.close();

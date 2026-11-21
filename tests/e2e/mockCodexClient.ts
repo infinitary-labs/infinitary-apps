@@ -151,3 +151,22 @@ lines.on("close", () => {
         : [],
   };
 }
+
+/**
+ * Leaves the sign-in file the stand-in's ChatGPT sign-in writes in an
+ * account's own Codex home (docs/codex-client.md), as Codex keeps it after
+ * the account was signed in once.
+ */
+export function signInCodexHome(
+  userDataDir: string,
+  providerId: string,
+  accountId: string,
+  chatgptId: string,
+): void {
+  const home = join(userDataDir, "accounts", providerId, accountId, "codex");
+  mkdirSync(home, { recursive: true });
+  writeFileSync(
+    join(home, "auth.json"),
+    JSON.stringify({ auth_mode: "chatgpt", tokens: { account_id: chatgptId } }),
+  );
+}

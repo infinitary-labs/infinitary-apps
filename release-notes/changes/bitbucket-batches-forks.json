@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "bitbucket-batches-forks",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Bitbucket projects take batched pull requests and contribute from your fork",
+      "body": "A Bitbucket project can now choose batched pull requests in Settings → Projects, as GitHub and GitLab projects do: your approved changes go out together in one pull request and merge once its builds pass, one commit for each change. Merges follow the strategies the main branch allows on bitbucket.org, and a main branch with Bitbucket's merge queue takes the merge into its queue, which the task waits on. On a Bitbucket project you can only read, your crewmate offers its work from your own fork, making the fork in your workspace once you agree.",
+      "picture": {
+        "dark": "bitbucket-batches-forks-dark.webp",
+        "light": "bitbucket-batches-forks-light.webp",
+        "alt": "Settings → Projects for a Bitbucket project: Where changes go offers local merge, pull requests and batched pull requests."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -15,6 +15,8 @@
   "feedBatchHeldRefused": "{project}：合併在專案所在處遭到拒絕，{label} 已暫緩：{detail}",
   "feedBatchHeldRemoved": "{project}：合併在專案所在處遭到拒絕，{label} 已暫緩：{place} 沒有合併就把 pull request 移出合併佇列；原因見那裡的頁面。",
   "feedBatchHeldRemovedHost": "{project}：合併在專案所在處遭到拒絕，{label} 已暫緩：專案的主機沒有合併就把 pull request 移出合併佇列；原因見那裡的頁面。",
+  "feedBatchHeldUnanswered": "{project}：{place} 沒有確認合併，pull request 在那裡仍然開著，{label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。",
+  "feedBatchHeldUnansweredHost": "{project}：專案的主機沒有確認合併，pull request 在那裡仍然開著，{label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。",
   "feedBatchHeldUnnamed": "{project}：檢查失敗，{label} 已暫緩。期間核准的變更會等它。",
   "feedBatchMergedMany": {
     "plural": "count",

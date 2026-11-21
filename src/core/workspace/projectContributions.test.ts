@@ -25,6 +25,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   createForgeResolver,
   type Forge,
+  ForgeAllowanceSpent,
   type ForgeLocation,
   type ForgePull,
   ForgeWriteError,
@@ -55,7 +56,7 @@ afterEach(() => {
 });
 
 /** Approved change D: real repositories prove the upstream base and fork-only branch push. */
-async function fixture(imported = true) {
+async function fixture(imported = true, host = "github.com") {
   const root = scratchDir("infinitary-contribution-route-");
   const gitConfig = join(root, "gitconfig");
   writeFileSync(gitConfig, "");
@@ -96,12 +97,12 @@ async function fixture(imported = true) {
   const upstream: ContributionProject = {
     id: 1,
     fullName: "examples/project",
-    origin: "https://github.com/examples/project.git",
+    origin: `https://${host}/examples/project.git`,
   };
   const fork: ContributionProject = {
     id: 2,
     fullName: "contributor/project",
-    origin: "https://github.com/contributor/project.git",
+    origin: `https://${host}/contributor/project.git`,
   };
   for (const [project, dir] of [
     [upstream, upstreamDir],
@@ -675,6 +676,21 @@ describe("approved once-per-project contribution consent", () => {
     expect(world.events.at(-1)).toMatchObject({ type: "repo_configured", repoId: world.repo.id });
   });
 
+  // A spent allowance is the host refusing before it did anything, as Bitbucket's 429 on its workspace reads.
+  it("allows another explicit fork attempt after the host's allowance ran out", async () => {
+    const world = await fixture(false);
+    world.create.mockRejectedValueOnce(
+      new ForgeAllowanceSpent(Date.now() + 60_000, "The host's hourly allowance is spent."),
+    );
+    const service = world.make();
+    await service.discover(world.repo.id);
+    await service.answer(world.choose(world.offer(), "make-fork"));
+    expect(world.repos.get(world.repo.id)?.contribution?.creationAttempted).toBe(false);
+    await service.answer(world.choose(world.offer(), "make-fork"));
+    expect(world.create).toHaveBeenCalledTimes(2);
+    expect(world.repos.get(world.repo.id)?.contribution?.fork).toEqual(world.fork);
+  });
+
   it("a work computer fetches upstream but sends its task branch only to the owned fork", async () => {
     const world = await fixture(false);
     const config = join(world.root, "computer-gitconfig");
@@ -740,6 +756,34 @@ describe("approved once-per-project contribution consent", () => {
     });
     home.repos.configure(home.repo.id, { origin: home.fork.origin });
     expect(home.repos.get(home.repo.id)?.contribution?.fork).toEqual(home.fork);
+  });
+
+  // INF-5186 piece 5: Bitbucket reads a workspace and repository name without
+  // regard to case, as GitHub does.
+  it("accepts Bitbucket's spelling of an imported fork in another case without losing its route", async () => {
+    const home = await fixture(true, "bitbucket.org");
+    expect(home.repos.get(home.repo.id)?.host?.kind).toBe("bitbucket");
+    home.repos.configure(home.repo.id, {
+      origin: home.fork.origin.replace(home.fork.fullName, home.fork.fullName.toUpperCase()),
+    });
+    await home.make().discover(home.repo.id);
+    expect(home.repos.get(home.repo.id)?.contribution).toMatchObject({
+      destination: null,
+      fork: home.fork,
+    });
+  });
+
+  it("makes a Bitbucket fork only after the consent click and contributes from it", async () => {
+    const world = await fixture(false, "bitbucket.org");
+    const service = world.make();
+    await service.discover(world.repo.id);
+    expect(world.create).not.toHaveBeenCalled();
+    await service.answer(world.choose(world.cards[0], "make-fork"));
+    expect(world.create).toHaveBeenCalledTimes(1);
+    expect(world.repos.get(world.repo.id)?.contribution).toMatchObject({
+      destination: "upstream",
+      fork: world.fork,
+    });
   });
 
   it("waits for an in-flight target choice before capturing a new task's contribution route", async () => {

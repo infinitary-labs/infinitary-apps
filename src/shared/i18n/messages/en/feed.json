@@ -16,6 +16,8 @@
   "feedBatchHeldRefused": "{project}: {label} is held because the merge was refused where the project lives: {detail}",
   "feedBatchHeldRemoved": "{project}: {label} is held because the merge was refused where the project lives: {place} removed the pull request from its merge queue without merging it; its page there says why.",
   "feedBatchHeldRemovedHost": "{project}: {label} is held because the merge was refused where the project lives: the project's host removed the pull request from its merge queue without merging it; its page there says why.",
+  "feedBatchHeldUnanswered": "{project}: {label} is held because {place} did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.",
+  "feedBatchHeldUnansweredHost": "{project}: {label} is held because the project's host did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.",
   "feedBatchHeldUnnamed": "{project}: {label} is held because its checks failed. Changes approved meanwhile wait for it.",
   "feedBatchMergedMany": {
     "plural": "count",

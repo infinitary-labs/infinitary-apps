@@ -17,6 +17,8 @@
   "feedBatchHeldRefused": "{project}: {label} está retido porque a mesclagem foi recusada onde o projeto fica: {detail}",
   "feedBatchHeldRemoved": "{project}: {label} está retido porque a mesclagem foi recusada onde o projeto fica: o {place} tirou a solicitação de pull da fila de mesclagem sem mesclá-la; a página dela lá diz por quê.",
   "feedBatchHeldRemovedHost": "{project}: {label} está retido porque a mesclagem foi recusada onde o projeto fica: o host do projeto tirou a solicitação de pull da fila de mesclagem sem mesclá-la; a página dela lá diz por quê.",
+  "feedBatchHeldUnanswered": "{project}: {label} está retido porque o {place} não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.",
+  "feedBatchHeldUnansweredHost": "{project}: {label} está retido porque o host do projeto não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.",
   "feedBatchHeldUnnamed": "{project}: {label} está retido porque as verificações falharam. As alterações aprovadas enquanto isso esperam por ele.",
   "feedBatchMergedMany": {
     "plural": "count",

@@ -389,6 +389,90 @@ export const FRAME_BASE_STYLE = `
     margin-inline-start: var(--space-2); white-space: nowrap;
   }
   [data-inf-as-built] { margin-top: var(--space-1); margin-right: var(--space-1); }
+  /* The tradeoff chart (docs/card-authoring.md, "The tradeoff chart"),
+     drawn from the author's table marked data-inf-tradeoff: each option one
+     mark that a press picks, the question's own option picked with it. Two
+     headings are one plane, the first up and the second across; three or
+     more are a small radar on each option. Outward, up and right are always
+     more of a heading. The recommended option's mark takes the accent, and
+     the picked one its ring filled and an accent border. */
+  [data-inf-tradeoff-chart] { margin: var(--space-2) 0; }
+  [data-inf-tradeoff-pick] {
+    cursor: pointer; border: 1px solid var(--line-1); border-radius: var(--radius-m);
+    background: var(--bg-1); color: var(--fg-2);
+  }
+  [data-inf-tradeoff-ring] {
+    display: inline-block; box-sizing: border-box; width: 11px; height: 11px; margin-inline-end: var(--space-1);
+    border: 1.5px solid var(--line-2); border-radius: 50%; vertical-align: -1px;
+  }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring] { border: 3.5px solid var(--accent); }
+  [data-inf-tradeoff-current] [data-inf-tradeoff-words]::before {
+    content: "${AS_BUILT_WORDS}"; display: inline-block; margin-inline-end: var(--space-1); white-space: nowrap;
+    color: var(--fg-2); border: 1px solid var(--line-2); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-words]::after {
+    content: "Recommended"; display: inline-block; margin-inline-start: var(--space-2); white-space: nowrap;
+    color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  [data-inf-tradeoff-default] [data-inf-tradeoff-words]::after { content: "${DEFAULT_WORDS}"; }
+  [data-inf-tradeoff-chart="radar"] {
+    display: grid; gap: var(--space-2);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  }
+  [data-inf-tradeoff-chart="radar"] > [data-inf-tradeoff-pick] {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: var(--space-2);
+  }
+  [data-inf-tradeoff-chart="radar"] svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+  [data-inf-tradeoff-chart="radar"] p { margin: 0; align-self: stretch; }
+  [data-inf-tradeoff-chart] text {
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; fill: var(--fg-3);
+  }
+  [data-inf-tradeoff-grid] { fill: none; stroke: var(--line-1); }
+  [data-inf-tradeoff-shape] {
+    fill: var(--fg-3); fill-opacity: 0.2; stroke: var(--fg-1); stroke-width: 1.75; stroke-linejoin: round;
+  }
+  [data-inf-tradeoff-dot] { fill: var(--fg-2); }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-shape] {
+    fill: var(--accent-dim); fill-opacity: 1; stroke: var(--accent); stroke-width: 2;
+  }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-dot] { fill: var(--accent); }
+  [data-inf-tradeoff-axis] {
+    font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; color: var(--fg-3);
+  }
+  [data-inf-tradeoff-axis="up"]::before { content: "\\2191\\00a0"; }
+  [data-inf-tradeoff-axis="across"] { text-align: end; }
+  [data-inf-tradeoff-axis="across"]::after { content: "\\00a0\\2192"; }
+  [data-inf-tradeoff-plane] {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--space-1) 0;
+    border-inline-start: 1.5px solid var(--fg-3); border-block-end: 1.5px solid var(--fg-3);
+  }
+  [data-inf-tradeoff-cell] {
+    display: flex; flex-direction: column; justify-content: center; gap: var(--space-1);
+    min-height: calc(2lh + var(--space-3)); padding: var(--space-1);
+    border-inline-end: 1px dashed var(--line-1); border-block-start: 1px dashed var(--line-1);
+  }
+  [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] {
+    padding: var(--space-1) var(--space-2); font-size: var(--text-sm); overflow-wrap: break-word;
+  }
+  [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
+    white-space: normal; max-width: 100%;
+  }
+  /* A narrow plane's cells are too slim for a pill: its tag becomes a line of
+     small words above or below the option's, broken only between words. */
+  [data-inf-tradeoff-plane] { container-type: inline-size; }
+  @container (max-width: 480px) {
+    [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] { padding: var(--space-1); }
+    [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
+      display: block; margin: 0; padding: 0; border: 0; background: none; font-size: 10px;
+    }
+  }
+  [data-inf-tradeoff-recommended][data-inf-tradeoff-pick], [data-inf-tradeoff-default][data-inf-tradeoff-pick] { border-color: var(--accent-dim); }
+  [data-inf-tradeoff-pick][data-inf-tradeoff-picked] { border-color: var(--accent); color: var(--fg-1); }
+  [data-inf-tradeoff-x="1"] { grid-column: 1; } [data-inf-tradeoff-x="2"] { grid-column: 2; } [data-inf-tradeoff-x="3"] { grid-column: 3; }
+  [data-inf-tradeoff-y="3"] { grid-row: 1; } [data-inf-tradeoff-y="2"] { grid-row: 2; } [data-inf-tradeoff-y="1"] { grid-row: 3; }
+  details[data-inf-tradeoff-table] { margin: var(--space-1) 0 var(--space-2); }
   textarea { width: 100%; min-height: 64px; resize: vertical; }
   /* A question's Something else row (FI3-1002): the field the bridge opens
      under it while it is picked - one line, growing to three - indented to

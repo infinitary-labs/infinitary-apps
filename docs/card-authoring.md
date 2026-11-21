@@ -554,6 +554,24 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.
 
+### The tradeoff chart
+
+A question whose options each give something up can lay the tradeoff out as a table the app draws (INF-5510's plan, piece 2): a review finding's question does (Review finding attribution, below).
+The author writes a plain table marked `data-inf-tradeoff` inside the question's fieldset, under its options.
+Its first row is an empty cell, then one cell per heading where the options differ, two or more; a heading names a quality of the whole product, such as user experience, security or ship fast, written as the author chose it.
+Each later row is one option, a `<tr data-inf-option="<value>">` naming the value of the question's own radio or checkbox it stands for, its option's words in a few words in the first cell, then one cell per heading with `data-inf-level` of `high`, `medium` or `low` and a few words for this change.
+High is always the most of what the heading names, so a heading is named for what the person wants more of: ship fast, never work now.
+
+Every reader - the window, a view of another computer and the phone - draws the table when it builds the body's markup (`withTradeoffCharts`, `src/shared/tradeoffChart.ts`, from `cardBodyMarkup`), so a revision's refresh keeps the drawing and the core measures the drawn size.
+Two headings draw one plane, the first heading up and the second across, with each option a mark in the cell its two levels name; three or more draw a small radar on each option, its outer ring high.
+Each option appears once on the chart, beside its words, the As built pill on the option marked `data-inf-current` and the Recommended pill, or Default on a question the captain may skip, on the one marked `data-inf-recommended`, whose shape takes the accent.
+A press on an option's mark picks the question's own option, and the mark shows it picked (`FRAME_TAG_SCRIPT`); the option's own row stays the keyboard's way to reach and pick it, so the chart adds no stop to the Tab order and is hidden from screen readers, which read the table.
+The table as written follows the chart in a fold, The tradeoff as a table.
+The radar tiles wrap to one column and the plane's words wrap in a narrow card, so neither scrolls sideways.
+In a plane too narrow for a pill, the As built and Recommended tags become a line of small words beside the option's, broken only between words.
+The app reads no heading's or option's words: at the `emit_card` boundary the card checks refuse only a table it could not draw (`tradeoffProblem`): fewer than two headings, a row naming no option of its question, a row without a level in every heading's cell, or no row for the option marked `data-inf-current`.
+A view or phone too old to know the chart shows the table as written.
+
 ### Style
 
 Prefer the design system, so a card looks like the app: design-token CSS variables (`--fg-1`, `--accent`, `--line-2`, `--font-mono`, ...) and the helper classes `inf-mono`, `inf-muted`, `inf-row`, `inf-grid`, `inf-panel`.
@@ -578,6 +596,7 @@ The vocabulary beyond plain text:
   Nothing else loads.
 - Data: a `<script type="application/json" src>` naming a JSON file in the working copy or the evidence folder, which the host checks and keeps and the body's script reads through the bridge (Data by reference, above).
 - Parts: an empty `<script data-inf-part="map"></script>` naming one of the app's own parts, whose code every reader puts in its place (Parts by reference, above).
+- A tradeoff: a `<table data-inf-tradeoff>` under a question's options, which every reader draws as a chart (The tradeoff chart, below).
 - Sizing: whatever units the body needs; relative ones follow the card.
 
 Links open through the app's safe external opener: https anywhere, plus http to loopback (`localhost`, `127.0.0.1`, `[::1]`) and to genuine `.localhost` subdomains, single-level or nested (`http://app.localhost:1355`, `http://task-1.soapbox.localhost:1355`).
@@ -1347,7 +1366,7 @@ A declaration grants no execution permission; a successful merge creates durable
 ## Review finding attribution
 
 An independent reviewer puts its ask-user findings to the captain on its own decision card (INF-4338, direction D); the host labels any decision card from an independent review Review finding.
-It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a plain table of it: one row per option, as built included, one column per product-level heading where the options differ, and a High, Medium or Low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
+It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a tradeoff table of it, which the app draws as a chart (The tradeoff chart, above): one row per option, as built included, one column per product-level heading where the options differ, and a high, medium or low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
 Findings it settled itself are listed in a fold, and again on the builder's merge card.
 Its head names the review task, as every crewmate card's does, and the card draws the builder's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
 The captain's choice goes to the builder the review reads, and a reply under the card goes to the reviewer.

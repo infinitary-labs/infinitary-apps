@@ -277,5 +277,6 @@
   "cardThreadWrittenAfterClose": "Escrito depois que o cartão foi fechado",
   "cardThreadWrittenBy": "Escrito por {label}",
   "cardThreadWrittenByAfterClose": "Escrito por {label}, depois que o cartão foi fechado",
+  "cardTradeoffTable": "A comparação em tabela",
   "cardUseSavedReset": "Usar uma redefinição salva"
 }

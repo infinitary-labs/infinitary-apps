@@ -616,6 +616,32 @@ describe("lintCardShape (both boundaries)", () => {
     });
   });
 
+  it("refuses a tradeoff chart with no row for what the code does now (INF-5510's plan, piece 2)", () => {
+    const body = [
+      "<p>One choice on which pages stay signed in.</p>",
+      "<fieldset><legend>Which pages should stay signed in?</legend>",
+      '<label><input type="radio" name="via" value="as-built" data-inf-current> Keep every page you open</label>',
+      '<label><input type="radio" name="via" value="redirects-only" data-inf-recommended> Keep only pages the site sent you through</label>',
+      '<label><input type="radio" name="via" value="other" data-inf-write-in> Something else</label>',
+      "<table data-inf-tradeoff><tr><th></th><th>Security</th><th>Ship fast</th></tr>",
+      '<tr data-inf-option="redirects-only"><th>Only pages the site sent you through</th><td data-inf-level="high">your mail stays yours</td><td data-inf-level="medium">a medium change</td></tr>',
+      "</table></fieldset>",
+    ].join("");
+    const card = decision({
+      body,
+      actions: [
+        { id: "later", label: "Not now" },
+        { id: "answer", label: "Send", default: true },
+      ],
+    });
+    expect(lintCardShape(card)).toContain("has no row for what the code does now");
+    const asBuilt =
+      '<tr data-inf-option="as-built"><th>Keep every page</th><td data-inf-level="low">later tasks open your mail</td><td data-inf-level="high">ready now</td></tr>';
+    expect(
+      lintCardShape({ ...card, body: body.replace("</table>", `${asBuilt}</table>`) }),
+    ).toBeUndefined();
+  });
+
   describe("every question with options offers Something else (FI3-1002)", () => {
     const LEAD =
       "<p>Settle who may write and what the report holds.</p><p>Each call changes what reaches the project.</p>";

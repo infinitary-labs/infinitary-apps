@@ -80,6 +80,38 @@ export const FRAME_TAG_SCRIPT = `  // A question the captain may skip (INF-4425)
       tagSelect(select, "data-inf-current", "data-inf-as-built", ${JSON.stringify(AS_BUILT_WORDS)});
       tagSelect(select, "data-inf-recommended", "data-inf-recommendation", group && skippable(group) ? ${JSON.stringify(DEFAULT_WORDS)} : "Recommended");
     });
+    tagTradeoffs();
+  }
+  // The tradeoff chart (docs/card-authoring.md, "The tradeoff chart"): each
+  // option's mark on it follows the option it stands for - filled while that
+  // option is picked, and its Recommended pill worded Default where the
+  // option's own is. The marks come drawn from the markup; only these two
+  // states are the script's.
+  function tradeoffChoice(mark) {
+    var value = mark.getAttribute("data-inf-tradeoff-pick");
+    var scope = mark.closest("fieldset") || document;
+    return Array.from(scope.querySelectorAll("input:is([type=radio], [type=checkbox])")).find(function (control) {
+      return control.value === value;
+    }) || null;
+  }
+  function tagTradeoffs() {
+    document.querySelectorAll("[data-inf-tradeoff-pick]").forEach(function (mark) {
+      var control = tradeoffChoice(mark);
+      var picked = Boolean(control && control.checked);
+      if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
+      var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
+      if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+    });
+  }
+  // A press on an option's mark picks the option, as a press on its row
+  // would; the option's own control stays the keyboard's way to it.
+  function pickTradeoff(event) {
+    var mark = event.target && event.target.closest ? event.target.closest("[data-inf-tradeoff-pick]") : null;
+    if (!mark || form.locked) return;
+    var control = tradeoffChoice(mark);
+    if (!control || control.disabled) return;
+    if (control.type === "radio" && control.checked) return;
+    control.click();
   }
   // The words of the option a skip sends, as a pick of it would read.
   function defaultLabel(group, value) {

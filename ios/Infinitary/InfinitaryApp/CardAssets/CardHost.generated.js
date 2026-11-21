@@ -17709,6 +17709,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Written by ${label}, after the card closed`;
   }
+  function cardTradeoffTable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الموازنة في جدول`;
+      case "de":
+        return `Die Abwägung als Tabelle`;
+      case "es":
+        return `La comparación en una tabla`;
+      case "fr":
+        return `Le compromis sous forme de tableau`;
+      case "ja":
+        return `トレードオフを表で見る`;
+      case "ko":
+        return `장단점을 표로 보기`;
+      case "pt-BR":
+        return `A comparação em tabela`;
+      case "zh-Hans":
+        return `以表格查看取舍`;
+      case "zh-Hant":
+        return `以表格檢視取捨`;
+      case "en-XA":
+        return `[Ţĥé ţŕáðéöƒƒ áš á ţáƀļé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tradeoff as a table‬`;
+    }
+    return `The tradeoff as a table`;
+  }
   function cardUseSavedReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -87181,6 +87208,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenAfterClose,
     cardThreadWrittenBy,
     cardThreadWrittenByAfterClose,
+    cardTradeoffTable,
     cardUseSavedReset,
     closeYourFirstMate,
     closedDropped,
@@ -89992,6 +90020,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenAfterClose": [],
     "cardThreadWrittenBy": ["label"],
     "cardThreadWrittenByAfterClose": ["label"],
+    "cardTradeoffTable": [],
     "cardUseSavedReset": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
@@ -92663,6 +92692,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       (spelling) => `data-${spelling}-${name}`
     );
   }
+  function hasHook(attribs, name) {
+    return hookValue(attribs, name) !== void 0;
+  }
+  function hookValue(attribs, name) {
+    if (!attribs) return void 0;
+    for (const attribute of hookAttributes(name))
+      if (Object.hasOwn(attribs, attribute)) return attribs[attribute];
+    return void 0;
+  }
   function splitSettleFacts(body) {
     const at = Math.max(
       ...SPELLINGS.map((spelling) => body.lastIndexOf(`<div class="${spelling}-facts" data-facts>`))
@@ -94875,6 +94913,38 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       tagSelect(select, "data-inf-current", "data-inf-as-built", ${JSON.stringify(AS_BUILT_WORDS)});
       tagSelect(select, "data-inf-recommended", "data-inf-recommendation", group && skippable(group) ? ${JSON.stringify(DEFAULT_WORDS)} : "Recommended");
     });
+    tagTradeoffs();
+  }
+  // The tradeoff chart (docs/card-authoring.md, "The tradeoff chart"): each
+  // option's mark on it follows the option it stands for - filled while that
+  // option is picked, and its Recommended pill worded Default where the
+  // option's own is. The marks come drawn from the markup; only these two
+  // states are the script's.
+  function tradeoffChoice(mark) {
+    var value = mark.getAttribute("data-inf-tradeoff-pick");
+    var scope = mark.closest("fieldset") || document;
+    return Array.from(scope.querySelectorAll("input:is([type=radio], [type=checkbox])")).find(function (control) {
+      return control.value === value;
+    }) || null;
+  }
+  function tagTradeoffs() {
+    document.querySelectorAll("[data-inf-tradeoff-pick]").forEach(function (mark) {
+      var control = tradeoffChoice(mark);
+      var picked = Boolean(control && control.checked);
+      if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
+      var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
+      if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+    });
+  }
+  // A press on an option's mark picks the option, as a press on its row
+  // would; the option's own control stays the keyboard's way to it.
+  function pickTradeoff(event) {
+    var mark = event.target && event.target.closest ? event.target.closest("[data-inf-tradeoff-pick]") : null;
+    if (!mark || form.locked) return;
+    var control = tradeoffChoice(mark);
+    if (!control || control.disabled) return;
+    if (control.type === "radio" && control.checked) return;
+    control.click();
   }
   // The words of the option a skip sends, as a pick of it would read.
   function defaultLabel(group, value) {
@@ -95429,6 +95499,7 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("input", watch, true);
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
+      document.addEventListener("click", pickTradeoff);
       // Focus leaves on the next turn, once the next element holds it.
       document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
       window.addEventListener("blur", settleWaiting);
@@ -96004,7 +96075,7 @@ ${FRAME_TAG_SCRIPT}
   // viewer, as a picture does - the outermost drawing in a figure, or one
   // drawn the width of what holds it. A small mark beside words, a drawing
   // inside a control and one in a caption are not diagrams.
-  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption";
+  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption, [data-inf-tradeoff-pick]";
   function outermostDrawing(element) {
     var drawing = element && element.closest ? element.closest("svg") : null;
     while (drawing && drawing.parentElement && drawing.parentElement.closest("svg")) {
@@ -96911,7 +96982,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-bgLU+7GZu3JaZWF3oBVIwlHR53zOWCgYLbvh/CCfLj0=";
+  const FRAME_BRIDGE_SHA256 = "sha256-7iWiw5ZxOGaTz9L3ZQsP0esyx54FnjxB2084XW8cET0=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -101588,6 +101659,233 @@ ${FRAME_KEYBOARD_SCRIPT}
     walk(document2.children);
     return result;
   }
+  const TRADEOFF_LEVELS = ["low", "medium", "high"];
+  function isElement(node) {
+    return ELEMENT_TYPES.has(node.type);
+  }
+  function tagOf(node) {
+    return node.name?.toLowerCase() ?? "";
+  }
+  function words$1(node) {
+    const collect = (each) => {
+      if (each.type === Text$1) return each.data ?? "";
+      if (!isElement(each) || NON_COPY.has(tagOf(each))) return "";
+      return (each.children ?? []).map(collect).join("");
+    };
+    return collect(node).replace(/\s+/g, " ").trim();
+  }
+  function descendants(node, keep, into = []) {
+    for (const child of node.children ?? []) {
+      if (!isElement(child)) continue;
+      if (keep(child)) into.push(child);
+      descendants(child, keep, into);
+    }
+    return into;
+  }
+  function cellsOf(row) {
+    return (row.children ?? []).filter((child) => ["th", "td"].includes(tagOf(child)));
+  }
+  function rowsOf(table) {
+    const rows = [];
+    for (const child of table.children ?? []) {
+      const tag = tagOf(child);
+      if (tag === "tr") rows.push(child);
+      else if (tag === "thead" || tag === "tbody" || tag === "tfoot") {
+        for (const row of child.children ?? []) if (tagOf(row) === "tr") rows.push(row);
+      }
+    }
+    return rows;
+  }
+  function questionOf(table, root) {
+    for (let at = table.parent; at; at = at.parent) if (tagOf(at) === "fieldset") return at;
+    return root;
+  }
+  function choicesIn(question) {
+    return descendants(question, (each) => {
+      if (tagOf(each) !== "input") return false;
+      const type = (each.attribs?.type ?? "").toLowerCase();
+      return type === "radio" || type === "checkbox";
+    });
+  }
+  function readTable(table, root) {
+    const [header, ...body] = rowsOf(table);
+    const headings = header ? cellsOf(header).slice(1).map(words$1) : [];
+    if (headings.length < 2) {
+      return {
+        // i18n-exempt: a card check refusal served to the author model, never shown
+        problem: `a <table data-inf-tradeoff> names ${headings.length} heading${headings.length === 1 ? "" : "s"} in its first row; it draws two or more: an empty first cell, then one cell per heading where the options differ.`
+      };
+    }
+    const choices = choicesIn(questionOf(table, root));
+    const rows = [];
+    for (const row of body) {
+      const cells = cellsOf(row);
+      const option = hookValue(row.attribs, "option");
+      const shown = words$1(cells[0] ?? row);
+      const name = shown || "a row";
+      if (option === void 0) {
+        return {
+          // i18n-exempt: a card check refusal served to the author model, never shown
+          problem: `the tradeoff row "${name}" names no option: put data-inf-option="<value>" on its <tr>, the value of the question's option it stands for.`
+        };
+      }
+      const choice = choices.find((each) => (each.attribs?.value ?? "on") === option);
+      if (!choice) {
+        return {
+          // i18n-exempt: a card check refusal served to the author model, never shown
+          problem: `the tradeoff row "${name}" names the option "${option}", which its question does not offer; data-inf-option holds the value of one of the question's own radios or checkboxes.`
+        };
+      }
+      const levelCells = cells.slice(1);
+      if (levelCells.length !== headings.length) {
+        return {
+          // i18n-exempt: a card check refusal served to the author model, never shown
+          problem: `the tradeoff row "${name}" has ${levelCells.length} level cell${levelCells.length === 1 ? "" : "s"} for ${headings.length} headings; give it one cell per heading after the option's words.`
+        };
+      }
+      const levels = [];
+      for (const cell of levelCells) {
+        const level = hookValue(cell.attribs, "level")?.toLowerCase();
+        if (!TRADEOFF_LEVELS.includes(level)) {
+          return {
+            // i18n-exempt: a card check refusal served to the author model, never shown
+            problem: `the tradeoff row "${name}" has a cell with no level; put data-inf-level="high", "medium" or "low" on every cell, high always the most of what its heading names.`
+          };
+        }
+        levels.push(level);
+      }
+      rows.push({
+        option,
+        words: shown,
+        levels,
+        current: hasHook(choice.attribs, "current"),
+        recommended: hasHook(choice.attribs, "recommended")
+      });
+    }
+    if (!rows.some((row) => row.current)) {
+      if (!choices.some((choice) => hasHook(choice.attribs, "current"))) {
+        return {
+          // i18n-exempt: a card check refusal served to the author model, never shown
+          problem: "a <table data-inf-tradeoff> sits in a question with no option marked data-inf-current: put data-inf-current on the <input> of what the code does now, never on its label, and give that option its own row."
+        };
+      }
+      return {
+        // i18n-exempt: a card check refusal served to the author model, never shown
+        problem: "a <table data-inf-tradeoff> has no row for what the code does now: give the question's option marked data-inf-current its own row, so the captain sees what each way gains or gives up against it."
+      };
+    }
+    return {
+      table: {
+        start: table.startIndex ?? 0,
+        end: (table.endIndex ?? 0) + 1,
+        headings,
+        rows
+      }
+    };
+  }
+  function readAll(html) {
+    if (!html.includes("data-inf-tradeoff")) return [];
+    const root = parseDocument(html, {
+      decodeEntities: true,
+      withStartIndices: true,
+      withEndIndices: true
+    });
+    const tables = descendants(
+      root,
+      (each) => tagOf(each) === "table" && hasHook(each.attribs, "tradeoff")
+    );
+    return tables.map((table) => readTable(table, root));
+  }
+  function tradeoffTables(html) {
+    return readAll(html).flatMap((read) => read.table ? [read.table] : []);
+  }
+  function rank(level) {
+    return TRADEOFF_LEVELS.indexOf(level) + 1;
+  }
+  function pickAttributes(row) {
+    return ` data-inf-tradeoff-pick="${escapeHtml$1(row.option)}"${row.current ? " data-inf-tradeoff-current" : ""}${row.recommended ? " data-inf-tradeoff-recommended" : ""}`;
+  }
+  function optionWords(row) {
+    return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${escapeHtml$1(row.words)}</span>`;
+  }
+  const RADAR_RADIUS = 46;
+  const LABEL_GAP = 8;
+  const LETTER_WIDTH = 6.8;
+  function round$1(n) {
+    return String(Math.round(n * 10) / 10);
+  }
+  function radarSvg(headings, levels) {
+    const count = headings.length;
+    const angle = (i) => -Math.PI / 2 + i * 2 * Math.PI / count;
+    const point = (i, r) => [Math.cos(angle(i)) * r, Math.sin(angle(i)) * r];
+    const polygon = (r) => headings.map((_, i) => point(i, r(i)).map(round$1).join(",")).join(" ");
+    let minX = -RADAR_RADIUS;
+    let maxX = RADAR_RADIUS;
+    let minY = -RADAR_RADIUS;
+    let maxY = RADAR_RADIUS;
+    const labels2 = headings.map((heading, i) => {
+      const [x, y] = point(i, RADAR_RADIUS + LABEL_GAP);
+      const cos = Math.cos(angle(i));
+      const sin = Math.sin(angle(i));
+      const anchor = Math.abs(cos) < 0.3 ? "middle" : cos > 0 ? "start" : "end";
+      const baseline = sin < -0.3 ? y - 2 : sin > 0.3 ? y + 10 : y + 4;
+      const width2 = heading.length * LETTER_WIDTH;
+      const left = anchor === "middle" ? x - width2 / 2 : anchor === "start" ? x : x - width2;
+      minX = Math.min(minX, left);
+      maxX = Math.max(maxX, left + width2);
+      minY = Math.min(minY, baseline - 10);
+      maxY = Math.max(maxY, baseline + 3);
+      return `<text x="${round$1(x)}" y="${round$1(baseline)}" text-anchor="${anchor}">${escapeHtml$1(heading)}</text>`;
+    });
+    const rings = [1, 2, 3].map(
+      (k) => `<polygon data-inf-tradeoff-grid points="${polygon(() => RADAR_RADIUS * k / 3)}"/>`
+    ).join("");
+    const spokes = headings.map((_, i) => {
+      const [x, y] = point(i, RADAR_RADIUS);
+      return `<line data-inf-tradeoff-grid x1="0" y1="0" x2="${round$1(x)}" y2="${round$1(y)}"/>`;
+    }).join("");
+    const reach = (i) => RADAR_RADIUS * rank(levels[i] ?? "low") / 3;
+    const dots = headings.map((_, i) => {
+      const [x, y] = point(i, reach(i));
+      return `<circle data-inf-tradeoff-dot cx="${round$1(x)}" cy="${round$1(y)}" r="3"/>`;
+    }).join("");
+    const width = maxX - minX + 4;
+    const height = maxY - minY + 4;
+    return `<svg viewBox="${round$1(minX - 2)} ${round$1(minY - 2)} ${round$1(width)} ${round$1(height)}" width="${round$1(width)}" height="${round$1(height)}" aria-hidden="true">${rings}${spokes}<polygon data-inf-tradeoff-shape points="${polygon(reach)}"/>${dots}${labels2.join("")}</svg>`;
+  }
+  function radarChart(table) {
+    const tiles = table.rows.map(
+      (row) => `<div${pickAttributes(row)}>${radarSvg(table.headings, row.levels)}<p>${optionWords(row)}</p></div>`
+    ).join("");
+    return `<div data-inf-tradeoff-chart="radar" aria-hidden="true">${tiles}</div>`;
+  }
+  function scatterChart(table) {
+    const [up = "", across = ""] = table.headings;
+    const cells = [];
+    for (const y of [3, 2, 1]) {
+      for (const x of [1, 2, 3]) {
+        const here = table.rows.filter(
+          (row) => rank(row.levels[0] ?? "low") === y && rank(row.levels[1] ?? "low") === x
+        );
+        const marks = here.map((row) => `<div${pickAttributes(row)}>${optionWords(row)}</div>`).join("");
+        cells.push(
+          `<div data-inf-tradeoff-cell data-inf-tradeoff-x="${x}" data-inf-tradeoff-y="${y}">${marks}</div>`
+        );
+      }
+    }
+    return `<div data-inf-tradeoff-chart="scatter" aria-hidden="true"><div data-inf-tradeoff-axis="up">${escapeHtml$1(up)}</div><div data-inf-tradeoff-plane>${cells.join("")}</div><div data-inf-tradeoff-axis="across">${escapeHtml$1(across)}</div></div>`;
+  }
+  function withTradeoffCharts(html) {
+    const tables = tradeoffTables(html);
+    if (tables.length === 0) return html;
+    let drawn = html;
+    for (const table of [...tables].reverse()) {
+      const chart = table.headings.length === 2 ? scatterChart(table) : radarChart(table);
+      const written = drawn.slice(table.start, table.end);
+      drawn = `${drawn.slice(0, table.start)}${chart}<details data-inf-tradeoff-table><summary>${escapeHtml$1(cardTradeoffTable())}</summary>${written}</details>${drawn.slice(table.end)}`;
+    }
+    return drawn;
+  }
   function cardBodyHtml(body) {
     return /<[a-z][\s\S]*>/i.test(body) ? body : plainTextBody(body);
   }
@@ -101618,13 +101916,16 @@ ${FRAME_KEYBOARD_SCRIPT}
       marked = `${marked.slice(0, at)}${targets.includes(start) ? ` data-inf-target="${start}"` : ""}${changed ? ` data-inf-changed="${n}"` : ""}${marked.slice(at)}`;
       if (changed) bars.push(n);
     }
-    if (bars.length === 0) return { html: withAppParts(marked), marked: false };
+    if (bars.length === 0) return { html: drawnParts(marked), marked: false };
     const anchors = bars.map((n) => `[data-inf-changed="${n}"]{anchor-name:--fm-new-${n}}`).join("");
     const drawn = bars.map((n) => `<i data-inf-bar="" style="position-anchor:--fm-new-${n}"></i>`).join("");
     return {
-      html: `${withAppParts(marked)}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
+      html: `${drawnParts(marked)}<style>${anchors}</style><div data-inf-bars="" aria-hidden="true">${drawn}</div>`,
       marked: true
     };
+  }
+  function drawnParts(html) {
+    return withTradeoffCharts(withAppParts(html));
   }
   const revealsCss = `/* Shared by the shell and frame documents; no geometry or close choreography. */
 [data-in-place-reveal="drift"] {
@@ -102212,6 +102513,90 @@ a:hover {
     margin-inline-start: var(--space-2); white-space: nowrap;
   }
   [data-inf-as-built] { margin-top: var(--space-1); margin-right: var(--space-1); }
+  /* The tradeoff chart (docs/card-authoring.md, "The tradeoff chart"),
+     drawn from the author's table marked data-inf-tradeoff: each option one
+     mark that a press picks, the question's own option picked with it. Two
+     headings are one plane, the first up and the second across; three or
+     more are a small radar on each option. Outward, up and right are always
+     more of a heading. The recommended option's mark takes the accent, and
+     the picked one its ring filled and an accent border. */
+  [data-inf-tradeoff-chart] { margin: var(--space-2) 0; }
+  [data-inf-tradeoff-pick] {
+    cursor: pointer; border: 1px solid var(--line-1); border-radius: var(--radius-m);
+    background: var(--bg-1); color: var(--fg-2);
+  }
+  [data-inf-tradeoff-ring] {
+    display: inline-block; box-sizing: border-box; width: 11px; height: 11px; margin-inline-end: var(--space-1);
+    border: 1.5px solid var(--line-2); border-radius: 50%; vertical-align: -1px;
+  }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring] { border: 3.5px solid var(--accent); }
+  [data-inf-tradeoff-current] [data-inf-tradeoff-words]::before {
+    content: "${AS_BUILT_WORDS}"; display: inline-block; margin-inline-end: var(--space-1); white-space: nowrap;
+    color: var(--fg-2); border: 1px solid var(--line-2); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-words]::after {
+    content: "Recommended"; display: inline-block; margin-inline-start: var(--space-2); white-space: nowrap;
+    color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  [data-inf-tradeoff-default] [data-inf-tradeoff-words]::after { content: "${DEFAULT_WORDS}"; }
+  [data-inf-tradeoff-chart="radar"] {
+    display: grid; gap: var(--space-2);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  }
+  [data-inf-tradeoff-chart="radar"] > [data-inf-tradeoff-pick] {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: var(--space-2);
+  }
+  [data-inf-tradeoff-chart="radar"] svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+  [data-inf-tradeoff-chart="radar"] p { margin: 0; align-self: stretch; }
+  [data-inf-tradeoff-chart] text {
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; fill: var(--fg-3);
+  }
+  [data-inf-tradeoff-grid] { fill: none; stroke: var(--line-1); }
+  [data-inf-tradeoff-shape] {
+    fill: var(--fg-3); fill-opacity: 0.2; stroke: var(--fg-1); stroke-width: 1.75; stroke-linejoin: round;
+  }
+  [data-inf-tradeoff-dot] { fill: var(--fg-2); }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-shape] {
+    fill: var(--accent-dim); fill-opacity: 1; stroke: var(--accent); stroke-width: 2;
+  }
+  :is([data-inf-tradeoff-recommended], [data-inf-tradeoff-default]) [data-inf-tradeoff-dot] { fill: var(--accent); }
+  [data-inf-tradeoff-axis] {
+    font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; color: var(--fg-3);
+  }
+  [data-inf-tradeoff-axis="up"]::before { content: "\\2191\\00a0"; }
+  [data-inf-tradeoff-axis="across"] { text-align: end; }
+  [data-inf-tradeoff-axis="across"]::after { content: "\\00a0\\2192"; }
+  [data-inf-tradeoff-plane] {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--space-1) 0;
+    border-inline-start: 1.5px solid var(--fg-3); border-block-end: 1.5px solid var(--fg-3);
+  }
+  [data-inf-tradeoff-cell] {
+    display: flex; flex-direction: column; justify-content: center; gap: var(--space-1);
+    min-height: calc(2lh + var(--space-3)); padding: var(--space-1);
+    border-inline-end: 1px dashed var(--line-1); border-block-start: 1px dashed var(--line-1);
+  }
+  [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] {
+    padding: var(--space-1) var(--space-2); font-size: var(--text-sm); overflow-wrap: break-word;
+  }
+  [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
+    white-space: normal; max-width: 100%;
+  }
+  /* A narrow plane's cells are too slim for a pill: its tag becomes a line of
+     small words above or below the option's, broken only between words. */
+  [data-inf-tradeoff-plane] { container-type: inline-size; }
+  @container (max-width: 480px) {
+    [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] { padding: var(--space-1); }
+    [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
+      display: block; margin: 0; padding: 0; border: 0; background: none; font-size: 10px;
+    }
+  }
+  [data-inf-tradeoff-recommended][data-inf-tradeoff-pick], [data-inf-tradeoff-default][data-inf-tradeoff-pick] { border-color: var(--accent-dim); }
+  [data-inf-tradeoff-pick][data-inf-tradeoff-picked] { border-color: var(--accent); color: var(--fg-1); }
+  [data-inf-tradeoff-x="1"] { grid-column: 1; } [data-inf-tradeoff-x="2"] { grid-column: 2; } [data-inf-tradeoff-x="3"] { grid-column: 3; }
+  [data-inf-tradeoff-y="3"] { grid-row: 1; } [data-inf-tradeoff-y="2"] { grid-row: 2; } [data-inf-tradeoff-y="1"] { grid-row: 3; }
+  details[data-inf-tradeoff-table] { margin: var(--space-1) 0 var(--space-2); }
   textarea { width: 100%; min-height: 64px; resize: vertical; }
   /* A question's Something else row (FI3-1002): the field the bridge opens
      under it while it is picked - one line, growing to three - indented to

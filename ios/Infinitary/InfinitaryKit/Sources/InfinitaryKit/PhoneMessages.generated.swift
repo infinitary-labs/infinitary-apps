@@ -438,6 +438,7 @@ public enum PhoneMessages {
     public static func `cardThreadWrittenAfterClose`() -> String { PhoneWords.format("cardThreadWrittenAfterClose", []) }
     public static func `cardThreadWrittenBy`(`label`: String) -> String { PhoneWords.format("cardThreadWrittenBy", [`label`]) }
     public static func `cardThreadWrittenByAfterClose`(`label`: String) -> String { PhoneWords.format("cardThreadWrittenByAfterClose", [`label`]) }
+    public static func `cardTradeoffTable`() -> String { PhoneWords.format("cardTradeoffTable", []) }
     public static func `cardUseSavedReset`() -> String { PhoneWords.format("cardUseSavedReset", []) }
     public static func `closeYourFirstMate`(`sentence`: String) -> String { PhoneWords.format("closeYourFirstMate", [`sentence`]) }
     public static func `closedDropped`(`key`: String) -> String { PhoneWords.format("closedDropped", [`key`]) }
@@ -4252,6 +4253,7 @@ extension PhoneWords {
         "cardThreadWrittenAfterClose": [],
         "cardThreadWrittenBy": ["label"],
         "cardThreadWrittenByAfterClose": ["label"],
+        "cardTradeoffTable": [],
         "cardUseSavedReset": [],
         "closeYourFirstMate": ["sentence"],
         "closedDropped": ["key"],

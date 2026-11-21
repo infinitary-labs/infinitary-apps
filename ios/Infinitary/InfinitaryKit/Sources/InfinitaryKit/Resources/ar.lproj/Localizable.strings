@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "كُتبت بعد إغلاق البطاقة";
 "cardThreadWrittenBy" = "كتبها %1$@";
 "cardThreadWrittenByAfterClose" = "كتبها %1$@ بعد إغلاق البطاقة";
+"cardTradeoffTable" = "الموازنة في جدول";
 "cardUseSavedReset" = "استخدم إعادة تعيين محفوظة";
 "closeYourFirstMate" = "نائب القبطان: «%1$@»";
 "closedDropped" = "أُسقطت %1$@";

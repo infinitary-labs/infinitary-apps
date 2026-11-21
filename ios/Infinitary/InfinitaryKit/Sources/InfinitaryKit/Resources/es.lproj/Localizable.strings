@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "Escrita después de cerrarse la tarjeta";
 "cardThreadWrittenBy" = "Escrita por %1$@";
 "cardThreadWrittenByAfterClose" = "Escrita por %1$@ después de cerrarse la tarjeta";
+"cardTradeoffTable" = "La comparación en una tabla";
 "cardUseSavedReset" = "Usar un restablecimiento guardado";
 "closeYourFirstMate" = "Tu primer oficial: «%1$@»";
 "closedDropped" = "%1$@ abandonada";

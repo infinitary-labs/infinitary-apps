@@ -154,7 +154,7 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
   // viewer, as a picture does - the outermost drawing in a figure, or one
   // drawn the width of what holds it. A small mark beside words, a drawing
   // inside a control and one in a caption are not diagrams.
-  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption";
+  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption, [data-inf-tradeoff-pick]";
   function outermostDrawing(element) {
     var drawing = element && element.closest ? element.closest("svg") : null;
     while (drawing && drawing.parentElement && drawing.parentElement.closest("svg")) {

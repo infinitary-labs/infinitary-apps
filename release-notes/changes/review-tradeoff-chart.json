@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "review-tradeoff-chart",
+      "kind": "feature",
+      "area": "cards",
+      "title": "A review question draws its tradeoff as a chart you pick from",
+      "body": "When a reviewer asks you to choose how to fix something, the card now draws what each way gains and gives up: a small chart on each option, or one shared chart when only two things are weighed. What the code does now is tagged As built, the reviewer's pick is tagged Recommended, and you can pick an option by clicking its chart or with the keyboard as before. The same comparison stays a table one click away.",
+      "picture": {
+        "dark": "review-tradeoff-chart-dark.webp",
+        "light": "review-tradeoff-chart-light.webp",
+        "alt": "Four small triangle charts on a card, one per option, weighing security, user experience and ship fast, the recommended one drawn in the accent color"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

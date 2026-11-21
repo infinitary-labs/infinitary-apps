@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "Written after the card closed";
 "cardThreadWrittenBy" = "Written by %1$@";
 "cardThreadWrittenByAfterClose" = "Written by %1$@, after the card closed";
+"cardTradeoffTable" = "The tradeoff as a table";
 "cardUseSavedReset" = "Use a saved reset";
 "closeYourFirstMate" = "Your first mate: “%1$@”";
 "closedDropped" = "%1$@ dropped";

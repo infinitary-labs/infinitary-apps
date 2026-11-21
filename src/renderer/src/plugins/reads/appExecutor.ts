@@ -47,6 +47,11 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // card layer subscribes directly, because a thread belongs to the card
   // on screen rather than to a panel.
   "inf:cards:thread": (_channel, listener) => window.infinitary.cards.onThread(listener),
+  // Each open card's unsent draft (docs/card-authoring.md, "Unsent picks
+  // follow you"): no read names it - the card drafts follower subscribes
+  // directly; an older preload without it hears nothing.
+  "inf:cards:draft": (_channel, listener) =>
+    window.infinitary.cards.onDraft?.(listener) ?? (() => {}),
   // The payload rides along: `tasks.board` takes the pushed board as its
   // value (the preload validated it like any invoke response). Every task
   // change pushes it, so it crosses the bridge once as text and is parsed

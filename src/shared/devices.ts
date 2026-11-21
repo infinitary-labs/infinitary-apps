@@ -1056,6 +1056,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
     heardAt: z.number().int().nonnegative().nullable(),
     caughtUp: z.number().int().nonnegative(),
     /**
+     * The times this Mac's link to the first mate there came back after a
+     * drop, replayed or not; absent until the first. The window asks its
+     * one-time reads again on each.
+     */
+    linkBack: z.number().int().positive().optional(),
+    /**
      * The pushes this Mac missed are still arriving from a welcome that
      * replays them, so the window says it is catching up until they are in
      * (docs/view.md, "Live, catching up or out of reach").

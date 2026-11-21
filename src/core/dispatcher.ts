@@ -598,6 +598,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:cards:thread": (cardId) => services.supervisor.cards.thread(cardId),
+    "inf:cards:drafts": () => services.cardDrafts.read(),
+    "inf:cards:draft": (cardId, change) => services.cardDrafts.change(cardId, change),
 
     ...cardMediaHandlers(services),
 

@@ -91358,23 +91358,81 @@ ${FRAME_QUESTION_SCRIPT}
     }
     post(message);
   }
-  function fillForm(answers) {
+  // The question the captain is typing in now: a text field of it, or its
+  // Something else field, holds focus in a document that has it. A pick
+  // under focus is no typing, and takes another window's change at once.
+  function typingIn(group) {
+    var focused = document.activeElement;
+    if (!focused || !document.hasFocus()) return false;
+    // A preview's setting has no control of its own: any field the preview
+    // takes words in holds it while the captain types there.
+    if (group.staged) return takesWords(focused);
+    if (group.controls.indexOf(focused) >= 0) return kindOf(focused) === "text";
+    return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
+  }
+  function takesWords(element) {
+    return element.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(element.tagName) && kindOf(element) === "text" && element.type !== "range" && element.type !== "color");
+  }
+  // Another window's change to a question being typed in waits, with the
+  // question's answer it arrived over, until typing there stops; the
+  // captain's own words since then keep it from showing.
+  function settleWaiting() {
+    var names = Object.keys(form.waiting);
+    if (names.length === 0 || form.locked) return;
+    var byName = {};
+    questions().forEach(function (group) { byName[group.name] = group; });
+    var due = [];
+    names.forEach(function (name) {
+      var group = byName[name];
+      if (group && typingIn(group)) return;
+      var waiting = form.waiting[name];
+      delete form.waiting[name];
+      if (group && JSON.stringify(answerOf(group)) === waiting.over) due.push(waiting.answer);
+    });
+    if (due.length > 0) fillForm(due, true);
+  }
+  // A draft by name: a new document's (\`live\` false), or another window's
+  // change to the body on screen (\`live\` true), which waits on the
+  // question being typed in and takes back a field emptied to its proposal.
+  function fillForm(answers, live) {
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
+    var applied = [];
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
+      var group = byName[answer.name];
       if (answer.json) {
-        if (typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's setting goes through the preview's own controls, by
+        // the function it staged the setting with, as if the captain set
+        // them; a preview that gave none keeps what it shows and sends.
+        var apply = form.appliers[answer.name];
+        if (!apply || typeof answer.values[0] !== "string") return;
+        if (live) delete form.waiting[answer.name];
+        if (live && group && typingIn(group)) {
+          // Words the captain types in the preview after this arrived are
+          // theirs, even where the preview stages them only later.
+          form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)), staged: true };
+          return;
+        }
+        // What a press sends is only what the preview stages from it: one
+        // that refuses or fails on the setting keeps its own.
+        try {
+          applied.push({ apply: apply, value: JSON.parse(answer.values[0]) });
+        } catch (error) {}
         return;
       }
-      var group = byName[answer.name];
       if (!group || group.staged) return;
+      if (live) delete form.waiting[answer.name];
+      if (live && typingIn(group)) {
+        form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)) };
+        return;
+      }
       // A skip is the card's own proposal: a live form leaves the question
       // untouched, so it still shows and sends its Default; a past card
       // draws the Default the skip sent.
       if (answer.skipped && !form.locked) return;
-      if (!answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
+      if (!live && !answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
       var values = answer.values.map(String);
       // A restored change the captain made is still the captain's: an
       // emptied checkbox question stays touched, so its default comes back
@@ -91419,6 +91477,17 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
+    form.applying = applied.length > 0;
+    try {
+      applied.forEach(function (setting) {
+        try {
+          setting.apply(setting.value);
+        } catch (error) {}
+      });
+    } finally {
+      form.applying = false;
+    }
+    if (applied.length > 0 && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
   // The field under a Something else row: the app's own, with no name, so
@@ -91502,10 +91571,20 @@ ${FRAME_TAG_SCRIPT}
         form.touched[target.name] = true;
       };
       document.addEventListener("input", touch, true);
+      // The captain's words in a preview's field outrank a setting waiting on them.
+      document.addEventListener("input", function (event) {
+        if (form.filling || form.applying || !event.target || !takesWords(event.target)) return;
+        Object.keys(form.waiting).forEach(function (name) {
+          if (form.waiting[name].staged) delete form.waiting[name];
+        });
+      }, true);
       document.addEventListener("change", touch, true);
       document.addEventListener("input", watch, true);
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
+      // Focus leaves on the next turn, once the next element holds it.
+      document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
+      window.addEventListener("blur", settleWaiting);
       new MutationObserver(watch).observe(document.documentElement, {
         childList: true,
         subtree: true,
@@ -92331,7 +92410,7 @@ ${FRAME_TAG_SCRIPT}
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
+  var form = { on: false, locked: false, preview: false, fill: null, filling: false, applying: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -92577,6 +92656,9 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       if (hold) hold.form = true;
       else if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startForm);
       else startForm();
+    } else if (data.type === "fill") {
+      // Another window's change to the draft: applied to the body on screen.
+      if (form.on && !form.locked && Array.isArray(data.answers)) fillForm(data.answers, true);
     } else if (data.type === "tasks") {
       var known = {};
       var any = false;
@@ -92761,10 +92843,13 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
     // A part full screen, and its state in the copy (FRAME_EXPAND_SCRIPT).
     expand: expandPart,
     expanded: expandedState,
-    stage: function (name, value) {
+    stage: function (name, value, apply) {
       var json = value === undefined ? undefined : JSON.stringify(value);
       if (json === undefined) delete form.staged[String(name)];
       else form.staged[String(name)] = json;
+      // The function to apply a setting stays until the setting is unstaged.
+      if (json === undefined) delete form.appliers[String(name)];
+      else if (typeof apply === "function") form.appliers[String(name)] = apply;
       if (form.on) readForm();
     }
   };
@@ -92937,7 +93022,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-iFsWKjoCYRKPlWDOQeKJU0waV/6OLCh3l7ZRscKEbd4=";
+  const FRAME_BRIDGE_SHA256 = "sha256-qLBUmI4YlM+mVVYVg8riNbB15iQZxP6KX6xFMssJKrw=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

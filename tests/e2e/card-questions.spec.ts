@@ -618,7 +618,9 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
       "<p>Drag the tilt, then choose.</p>",
       '<label><input type="checkbox" name="trail" value="on" checked> Leave a trail</label>',
       '<label>Tilt <input id="tilt" type="range" min="0" max="90" value="16"></label>',
-      "<script>document.getElementById('tilt').oninput = (event) => inf.stage('look', { tiltDeg: Number(event.target.value) });</script>",
+      // The body gives the bridge `apply`, so a setting restored when the
+      // card comes back moves its own dial (INF-5446).
+      "<script>const tilt = document.getElementById('tilt'); const apply = (look) => { tilt.value = String(look.tiltDeg); stage(); }; function stage() { inf.stage('look', { tiltDeg: Number(tilt.value) }, apply); } tilt.oninput = stage; stage();</script>",
     ].join(""),
   );
   db.close();
@@ -639,16 +641,17 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
     await expect(closeQuestion(page)).toHaveCount(0);
 
     await showCard(page, LOOK_TITLE);
-    // The body's own script runs; the bridge still reads its form.
-    await expect(answersLine(page)).toHaveText(answeredLine(1, 1));
+    // The body's own script runs and stages its snapshot; the bridge still reads its form.
+    await expect(answersLine(page)).toHaveText(answeredLine(2, 2, 1));
     const frame = cardBody(page, LOOK_TITLE);
     await frame.locator("#tilt").evaluate((input: HTMLInputElement) => {
       input.value = "42";
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    await expect(answersLine(page)).toHaveText(answeredLine(2, 2, 1));
 
     await putAwayAndRestore(page, LOOK_TITLE);
+    // The restored setting moved the body's own dial back to what was picked.
+    await expect(cardBody(page, LOOK_TITLE).locator("#tilt")).toHaveValue("42");
 
     await page.getByRole("button", { name: "Use this look", exact: true }).click();
     await expectNoCard(page, LOOK_TITLE);

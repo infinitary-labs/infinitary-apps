@@ -80,6 +80,7 @@ import {
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
   CARD_ANSWER_SKIPPED,
+  CARD_DRAFTS_CHANGE,
   type CardReads,
   cardPushFor,
   legacyCardSnapshot,
@@ -249,6 +250,14 @@ function viewHas(hello: ViewHello, name: FoldedInto16): boolean {
 
 /** The push the computers' readings ride (`COMPUTER_READINGS_LIVE`). */
 const READINGS_CHANNEL = "inf:computers:resources";
+
+/**
+ * The push a card's draft rides (`CARD_DRAFTS_CHANGE`): a window reads every
+ * draft again at each welcome, so a change it missed while dropped is never
+ * replayed, and a stream of picks and words never pushes a dropped view's
+ * place out of the journal.
+ */
+const DRAFTS_CHANNEL = "inf:cards:draft";
 
 /**
  * How a view is sent a push that stays outside the numbering: as a `live`
@@ -591,6 +600,8 @@ type Client = {
   streamed: Unnumbered;
   /** How it is sent the computers' readings (`COMPUTER_READINGS_LIVE`), as `streamed` is. */
   readings: Unnumbered;
+  /** How it is sent a card's draft (`CARD_DRAFTS_CHANGE`): live once its hello lists the change, else not at all. */
+  drafts: Unnumbered;
   access: ContractAccess;
   closing: boolean;
   /** What the home writes to it, paced by its answers. */
@@ -948,7 +959,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ? (client: Client) => client.streamed
           : channel === READINGS_CHANNEL
             ? (client: Client) => client.readings
-            : null;
+            : channel === DRAFTS_CHANNEL
+              ? (client: Client) => client.drafts
+              : null;
       if (unnumbered) {
         try {
           sendUnnumbered(channel, payload, unnumbered);
@@ -1098,6 +1111,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
+      client.drafts = listsChange(hello.changes, CARD_DRAFTS_CHANGE) ? "live" : "none";
       // From the welcome on, a long frame goes as parts to a device that reads them.
       client.out.parts = readsFrameParts(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
@@ -1351,6 +1365,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         },
         streamed: "none",
         readings: "none",
+        drafts: "none",
         access: "read",
         closing: false,
         out: new Outbox(ws, pacing),

@@ -62,6 +62,7 @@ import { authorAnswer } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
+import { CardDrafts } from "./orchestrator/cardDrafts";
 import { type ChangeDelivery, createChangeDelivery } from "./orchestrator/changeDelivery";
 import { ChangePresentations } from "./orchestrator/changePresentations";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
@@ -1597,6 +1598,7 @@ export async function createServices(
     windowsInFront,
     recordDatabase: db,
     cardFiles: homeCardFileReads((cardId) => cardStore.get(cardId), paths, files),
+    cardDrafts: new CardDrafts(db, (draft) => emit("inf:cards:draft", draft)),
     captainPlaces,
     timeline,
     auth,

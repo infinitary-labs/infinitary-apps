@@ -28,6 +28,7 @@ import type { JobManager } from "./jobs/jobManager";
 import type { KnowledgeService } from "./knowledge/knowledgeService";
 import type { ServedModels } from "./models/servedModels";
 import type { ObserveService } from "./observe/observeService";
+import type { CardDrafts } from "./orchestrator/cardDrafts";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import type { Flagship } from "./orchestrator/flagship";
@@ -93,6 +94,8 @@ export type CoreServices = {
   recordDatabase: AppDatabase;
   /** A card's files for the captain, read a piece at a time for a window's Save (docs/card-authoring.md). */
   cardFiles: CardFileReads;
+  /** Each open card's unsent draft, which every window follows (docs/card-authoring.md, "Unsent picks follow you"). */
+  cardDrafts: CardDrafts;
   /** Where the captain's input comes from: the computer or phone whose window sent it (docs/devices.md). */
   captainPlaces: CaptainPlaces;
   /** The windows in programs of their own that say they are in front, which hold a phone's pushes (docs/phone-push.md). */

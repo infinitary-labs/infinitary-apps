@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardDraftSchema } from "./cardDrafts";
 import { cardsSnapshotSchema, cardThreadSchema } from "./cards";
 import { activityChannels } from "./channels/activity";
 import { cardChannels } from "./channels/cards";
@@ -315,6 +316,10 @@ export const pushContract = {
   "inf:cards": { payload: cardsSnapshotSchema, surface: "core" },
   // One card's thread, whole, after any message lands on it.
   "inf:cards:thread": { payload: cardThreadSchema, surface: "core" },
+  // One open card's draft, whole, after a window changed it: a `live`
+  // frame to each view whose hello lists `card-drafts`, never numbered or
+  // kept (docs/connection.md, "Live pushes").
+  "inf:cards:draft": { payload: cardDraftSchema, surface: "core" },
   // The captain clicked a card's notification: the window takes which card
   // (`inf:cards:take-notified`) and brings it to the front (src/main/notifiedCard.ts).
   "inf:cards:notified": { payload: z.object({}), surface: "host" },

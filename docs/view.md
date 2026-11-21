@@ -379,6 +379,13 @@ A card's button whose click opens a Settings section is sent, and opens that sec
 Only a first mate too old to answer it keeps the button from being sent (`doneThereWords`): it says so on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line, and the card stays on both Macs.
 The card's other buttons, such as Move to Grok beside Sign in, are sent as before, and while changes are off every button is marked off.
 
+## Unsent picks on a view
+
+A card's unsent picks, the words in its field and its queued notes are kept at the first mate's computer and follow the captain between every window that shows the card, this one and the window there included (`docs/card-authoring.md`, "Unsent picks follow you").
+A pick made while that Mac is out of reach waits here and goes once it is back, unless another window changed the same question meanwhile.
+Every welcome after the first, replayed or not and however short the drop, counts in `thisMac`'s `linkBack`, and the window reads every draft again on each, since a draft's live frames are never replayed (`ViewBackend`, `src/main/view/viewBackend.ts`).
+A first mate too old to list the `card-drafts` change keeps none, and each window keeps its own as before.
+
 ## A task's browser on a view
 
 A task's browser shows its page in any window, wherever the first mate lives: the window asks the other Mac to watch the task, and the other Mac sends its pictures over the connection to this Mac alone (`docs/task-browser.md`, "The view"; `docs/connection.md`, "Live pushes").

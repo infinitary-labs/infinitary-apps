@@ -263,6 +263,12 @@ export class ViewBackend {
   private readonly joined: JoinedHome;
   private readonly record: Joined;
   private caughtUp = 0;
+  /** The times the link came back after a drop, replayed or not (`ThisMac`'s `linkBack`). */
+  private linkBack = 0;
+  /** Whether the link was welcomed before, so the next welcome is a return. */
+  private welcomedOnce = false;
+  /** A return counted that the window has not been told yet. */
+  private linkBackUntold = false;
   /** The pushes a replaying welcome sent again are still arriving. */
   private replaying = false;
   private readonly pictures = new Map<string, Uint8Array>();
@@ -313,6 +319,7 @@ export class ViewBackend {
     );
     if (options.from) {
       this.caughtUp = options.from.caughtUp;
+      this.linkBack = options.from.linkBack;
       options.from.browsers.handTo(this.browsers);
     }
     this.taking =
@@ -400,6 +407,8 @@ export class ViewBackend {
         // The computers' live readings, outside the numbering.
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload);
+        // An open card's draft another window changed, outside the numbering.
+        if (channel === "inf:cards:draft") options.broadcast("inf:cards:draft", payload);
       },
       // Counted before the state turns in reach, and said with it, so the
       // window goes from out of reach to catching up with no moment of live
@@ -407,8 +416,17 @@ export class ViewBackend {
       onWelcoming: (catchUp, missed) => {
         this.replaying = catchUp === "replay" && missed > 0;
         if (catchUp === "reload") this.caughtUp += 1;
+        // A return, replayed or not and however short the drop: the window
+        // asks its one-time reads again, live pushes it missed among them.
+        if (this.welcomedOnce) {
+          this.linkBack += 1;
+          this.linkBackUntold = true;
+        }
+        this.welcomedOnce = true;
       },
       onCaughtUp: (catchUp) => {
+        // A return within the link's grace changes no state, so it is said here.
+        if (this.linkBackUntold) this.changed();
         this.taking?.heardAgain();
         // The first mate there forgot it with the last connection.
         if (this.inFront) this.sayFront(true);
@@ -470,6 +488,7 @@ export class ViewBackend {
         : {}),
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
+      ...(this.linkBack > 0 ? { linkBack: this.linkBack } : {}),
       ...(this.replaying ? { replaying: true as const } : {}),
       ...(this.record.grant.kind === "mac" ? { runsWork: true } : {}),
       ...(this.options.carriedOn !== undefined
@@ -920,6 +939,7 @@ export class ViewBackend {
   }
 
   private changed(): void {
+    this.linkBackUntold = false;
     if (!this.disposed) this.options.onThisMac(this.thisMac());
   }
 

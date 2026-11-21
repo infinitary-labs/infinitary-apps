@@ -698,9 +698,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A prompt-budget trim says that rule, the reply field, pictures, a preview's look and the project's language in fewer words.
   // A prompt-budget trim after INF-4425 says the skip rule, the draft button, the fact strip, runbook precedence, and time and language in fewer words.
   // The prompt-budget trim keeps these rules while shortening their wording and examples.
+  // INF-5446 (the captain chose to apply synced settings through the preview's own controls) adds inf.stage's apply and the card's unsent draft.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "c84db5c78a8fed3e8186661622d6bf679d4307c7578687c597ed96ee84e82ef4",
+    "c970480fa8093975d710be6384c179863144a731d46ead7d18efac6a42c41191",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

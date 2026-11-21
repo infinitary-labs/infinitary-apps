@@ -134,7 +134,8 @@ None of these blocks the choice, and the definitions never reach the author's wa
 A skipped question is worded from its answer's own `skipped` mark, never from them (`docs/card-authoring.md`, "Questions in the body").
 
 Definitions ride only the reading a footer click asked for.
-The draft the shell keeps while the captain picks is never recorded: closing a card sends nothing, and a restart loses it, exactly as before.
+The draft of picks, words and notes the captain has not sent is never recorded as evidence: it is kept apart in `card_drafts` on the first mate's computer and shown in every window ("Unsent picks follow you" in `docs/card-authoring.md`), it survives a restart until the card closes, and closing the card deletes it and sends nothing.
+Only a press or a reply submits answers, and only then do they reach this record.
 
 ### The task slice
 

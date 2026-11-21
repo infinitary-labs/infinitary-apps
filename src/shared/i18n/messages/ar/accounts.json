@@ -226,5 +226,16 @@
     "many": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت {count}.",
     "other": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت {count}."
   },
-  "accountsSavedResetUsedChecking": "استُخدمت إعادة تعيين محفوظة لـ {account}. يعيد Infinitary التحقق من رصيده."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "zero": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. لم يتبقَّ أي منها.",
+    "one": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. تبقّت واحدة.",
+    "two": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. تبقّت اثنتان.",
+    "few": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. تبقّت {count}.",
+    "many": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. تبقّت {count}.",
+    "other": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. تبقّت {count}."
+  },
+  "accountsSavedResetUsedAutoChecking": "استخدم Infinitary إعادة تعيين محفوظة لـ {account} كي يستمر العمل المنتظر. يعيد التحقق من الرصيد.",
+  "accountsSavedResetUsedChecking": "استُخدمت إعادة تعيين محفوظة لـ {account}. يعيد Infinitary التحقق من رصيده.",
+  "accountsUseSavedResetsSignInFirst": "لم يسجّل Codex الدخول إلى {account} بعد، لذا يبقى «استخدام إعادات التعيين المحفوظة تلقائيًا» متوقفًا. شغّله من صف الحساب في الإعدادات ليسجّل Codex الدخول."
 }

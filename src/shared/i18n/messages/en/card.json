@@ -264,5 +264,6 @@
   "cardThreadWrittenBy": "Written by {label}",
   "cardThreadWrittenByAfterClose": "Written by {label}, after the card closed",
   "cardTradeoffTable": "The tradeoff as a table",
-  "cardUseSavedReset": "Use a saved reset"
+  "cardUseSavedReset": "Use a saved reset",
+  "cardUseSavedResets": "Use saved resets on their own"
 }

@@ -1388,6 +1388,12 @@ export const shellEffectSchema = z.object({
    * first (docs/codex-client.md; the contract change `use-saved-reset`).
    */
   useSavedReset: z.string().optional(),
+  /**
+   * Settings -> Intelligence turns this account's Use saved resets on their
+   * own on on arrival, by its key (`accountKey`), with Codex signing in on
+   * its row first (docs/quota.md; the contract change `auto-saved-resets`).
+   */
+  useSavedResets: z.string().optional(),
   /** The host whose sign-in Settings -> Projects starts on arrival. */
   signIn: z.string().optional(),
   /** Settings -> Devices makes a link, or a command, on arrival. */

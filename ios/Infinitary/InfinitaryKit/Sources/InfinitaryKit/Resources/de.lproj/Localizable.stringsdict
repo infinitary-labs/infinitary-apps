@@ -35,6 +35,22 @@
       <string>Einen gespeicherten Reset von %1$@ eingelöst. Es bleiben %2$ld.</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Infinitary hat einen gespeicherten Reset von %1$@ eingelöst, damit wartende Arbeit weitergeht. Es bleibt %2$ld.</string>
+      <key>other</key>
+      <string>Infinitary hat einen gespeicherten Reset von %1$@ eingelöst, damit wartende Arbeit weitergeht. Es bleiben %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

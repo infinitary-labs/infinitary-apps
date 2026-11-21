@@ -364,6 +364,7 @@ describe("ipc contract", () => {
       "inf:accounts:set-enabled",
       "inf:accounts:sign-in",
       "inf:accounts:use-saved-reset",
+      "inf:accounts:use-saved-resets",
       "inf:app:first-run",
       "inf:app:first-run:crew-word",
       "inf:app:healthcheck",

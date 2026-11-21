@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "Inicia sesión en la cuenta de ChatGPT de %1$@ en tu navegador para que Codex pueda usar su restablecimiento guardado.";
 "accountsSavedResetUnclear" = "Codex no dijo si se usó un restablecimiento de %1$@. Volver a intentarlo pregunta por el mismo restablecimiento y nunca usa un segundo.";
 "accountsSavedResetUnverified" = "Infinitary no pudo confirmar que Codex inició sesión en la misma cuenta de ChatGPT que %1$@, así que no se usó ningún restablecimiento.";
+"accountsSavedResetUsedAutoChecking" = "Infinitary usó un restablecimiento guardado de %1$@ para que el trabajo en espera continúe. Vuelve a consultar la asignación.";
 "accountsSavedResetUsedChecking" = "Se usó un restablecimiento guardado de %1$@. Infinitary vuelve a consultar su asignación.";
+"accountsUseSavedResetsSignInFirst" = "Codex todavía no inició sesión en %1$@, así que «Usar restablecimientos guardados por sí solo» sigue desactivado. Actívalo en la fila de la cuenta en Ajustes para iniciar sesión en Codex.";
 "activityPanelLinesLabel" = "Líneas de actividad";
 "attachCancelled" = "Se canceló %1$@";
 "automationEventsSkipped" = "Eventos omitidos";
@@ -415,6 +417,7 @@
 "cardThreadWrittenByAfterClose" = "Escrita por %1$@ después de cerrarse la tarjeta";
 "cardTradeoffTable" = "La comparación en una tabla";
 "cardUseSavedReset" = "Usar un restablecimiento guardado";
+"cardUseSavedResets" = "Usar restablecimientos guardados por sí solo";
 "closeYourFirstMate" = "Tu primer oficial: «%1$@»";
 "closedDropped" = "%1$@ abandonada";
 "closedFinished" = "%1$@ terminada";
@@ -2349,6 +2352,8 @@
 "settingsCostLimitSwitchLabel" = "Preguntar antes de que una tarea gaste más";
 "settingsCostLimitTitle" = "Preguntar antes de que una tarea gaste más de";
 "settingsDecisionUseKindReads" = "Cada tarea nueva se ejecuta con un modelo adecuado al trabajo, así que las tareas sencillas gastan menos de la asignación de tu plan. Para ello, lee el título y el objetivo de la tarea, tus palabras, su proyecto y el trabajo relacionado.";
+"settingsDecisionUseSavedResetName" = "Usar un restablecimiento guardado o esperar";
+"settingsDecisionUseSavedResetReads" = "Cuando hay trabajo esperando una cuenta de Codex con «Usar restablecimientos guardados por sí solo» activado, sopesa usar uno de sus restablecimientos guardados frente a esperar a que se renueve la asignación. Lee el plan de la cuenta, cuánto queda de cada asignación y cuándo se renueva, cuántos restablecimientos guardados tiene y qué trabajo espera.";
 "settingsDecisionsActions" = "Acciones del modelo de decisiones";
 "settingsDecisionsAnswerWith" = "Responder las decisiones con %1$@";
 "settingsDecisionsAuto" = "automático · tu modelo más barato con nivel asignado";
@@ -3190,8 +3195,11 @@
 "settingsSubscriptionsMenuResume" = "Reanudar";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Dejar de gastar créditos";
 "settingsSubscriptionsMenuStopPreferring" = "Dejar de preferir para el trabajo de la tripulación";
+"settingsSubscriptionsMenuStopUsingResets" = "Dejar de usar restablecimientos guardados por sí solo";
 "settingsSubscriptionsMenuUseReset" = "Usar un restablecimiento guardado";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex inicia sesión y usa el que vence primero";
+"settingsSubscriptionsMenuUseResets" = "Usar restablecimientos guardados por sí solo";
+"settingsSubscriptionsMenuUseResetsDetail" = "Solo cuando hay trabajo en espera y ninguna cuenta tiene asignación";
 "settingsSubscriptionsNoReader" = "Infinitary no lee la asignación de este proveedor.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ configurada · Infinitary no lee la asignación de este proveedor.";
 "settingsSubscriptionsNotChosenYet" = "Sin elegir todavía";

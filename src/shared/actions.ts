@@ -74,6 +74,7 @@ import {
   runsHereOnly,
   runsOnSaid,
 } from "./repos";
+import { savedResetLines } from "./savedResetActions";
 import {
   ambientMusicValue,
   costLimitValue,
@@ -838,6 +839,7 @@ const actionLines = {
             paused: !account.enabled,
             preferred: account.pinned,
             keepGoingOnCredits: account.keepGoingOnCredits === true,
+            useSavedResets: account.useSavedResets === true,
           })) ?? [],
         projectSignIns: device.signIns?.forges?.signIns.map((signIn) => signIn.host) ?? [],
       })),
@@ -1598,22 +1600,6 @@ const actionLines = {
     }),
     done: (v) => `account ${v.accountId} ${v.on ? "keeps going" : "stops"} on credits`,
   },
-  "account-use-reset": {
-    area: "intelligence",
-    tier: "own-words",
-    change: "inf:accounts:use-saved-reset",
-    current: "inf:accounts:list",
-    value: z.strictObject({
-      accountId: z.string().min(1),
-      deviceId: z.string().min(1).max(64).optional(),
-    }),
-    line: "Use one of a Codex account's saved resets by id, only on typed captain words: the Codex CLI on that computer uses the one that expires first, and a reset used cannot be given back. It needs Codex signed in to the account; when it is not, the refusal says to choose Use a saved reset on the account's row in Settings. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
-    toRequest: (v) => (v.deviceId ? [v.accountId, { deviceId: v.deviceId }] : [v.accountId]),
-    readValue: (c) => ({
-      accounts: (c as AccountView[]).map((a) => ({ id: a.id, provider: a.providerId })),
-    }),
-    done: (v) => `${englishOf(said("cardUseSavedReset"))}: ${v.accountId}`,
-  },
   "account-disconnect": {
     area: "intelligence",
     tier: "own-words",
@@ -1920,6 +1906,7 @@ const actionLines = {
   },
   ...handoverLines,
   ...showLines,
+  ...savedResetLines,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
 /** The value an action accepts, as its line's schema reads it (unknown where a line is built generically). */

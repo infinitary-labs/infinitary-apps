@@ -61,6 +61,9 @@ While a saved reset applies now, a Codex row's menu also holds "Use a saved rese
 Choosing it runs the use on the row: Codex's sign-in, when it needs one, shows its link and asks for the address the browser ended on under the row as a sign-in does; a refusal stays under the row, and the feed says what the use came to.
 On a computer that runs work's own account the item is dim, with a note to update Infinitary there first, until that computer lists the `use-saved-reset` change.
 It is reached the same way and is chosen rarely, so it adds no command either; a card's Use a saved reset opens this tab and starts it on the account's row.
+Every Codex row's menu also holds "Use saved resets on their own", the account's switch (`autoResetsItem`, `docs/quota.md` "Saved resets on their own"), with "Only when work waits and no account has room" under it; while it is on the item reads "Stop using saved resets on their own".
+Turning it on while Codex is not signed in to the account shows Codex's sign-in under the row first, as Use a saved reset does, and uses nothing.
+On a computer that runs work's own account the item is dim, with a note to update Infinitary there first, until that computer lists the `auto-saved-resets` change; it is a setting chosen now and then, so it adds no command.
 An unknown runway has no verdict, while an already empty scope still reports empty now.
 `SubscriptionsTab.test.ts` owns verdict wording and boundaries; `tests/e2e/subscriptions-instruments.spec.ts` checks that the tab renders the scope projection from an isolated allowance snapshot.
 

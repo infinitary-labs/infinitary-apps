@@ -9976,6 +9976,9 @@
                           "keepGoingOnCredits": {
                             "type": "boolean"
                           },
+                          "useSavedResets": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "number"
                           },
@@ -10730,6 +10733,9 @@
               "type": "boolean"
             },
             "savedReset": {
+              "type": "boolean"
+            },
+            "autoSavedResets": {
               "type": "boolean"
             },
             "flows": {
@@ -13645,6 +13651,7 @@
                               "try-again",
                               "keep-going-on-credits",
                               "use-saved-reset",
+                              "use-saved-resets",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -14468,6 +14475,9 @@
               "useSavedReset": {
                 "type": "string"
               },
+              "useSavedResets": {
+                "type": "string"
+              },
               "signIn": {
                 "type": "string"
               },
@@ -15115,6 +15125,7 @@
                                 "try-again",
                                 "keep-going-on-credits",
                                 "use-saved-reset",
+                                "use-saved-resets",
                                 "add-plugin",
                                 "decline-plugin",
                                 "apply-project-change",
@@ -23941,6 +23952,9 @@
             "keepGoingOnCredits": {
               "type": "boolean"
             },
+            "useSavedResets": {
+              "type": "boolean"
+            },
             "createdAt": {
               "type": "number"
             },
@@ -24075,6 +24089,9 @@
           "keepGoingOnCredits": {
             "type": "boolean"
           },
+          "useSavedResets": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "number"
           },
@@ -24185,6 +24202,9 @@
             "type": "boolean"
           },
           "keepGoingOnCredits": {
+            "type": "boolean"
+          },
+          "useSavedResets": {
             "type": "boolean"
           },
           "createdAt": {
@@ -24433,6 +24453,49 @@
         },
         "required": [
           "outcome"
+        ]
+      }
+    },
+    "inf:accounts:use-saved-resets": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "deviceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "signIn": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
         ]
       }
     },
@@ -65659,6 +65722,7 @@
                                     "try-again",
                                     "keep-going-on-credits",
                                     "use-saved-reset",
+                                    "use-saved-resets",
                                     "add-plugin",
                                     "decline-plugin",
                                     "apply-project-change",
@@ -76742,6 +76806,9 @@
                     "keepGoingOnCredits": {
                       "type": "boolean"
                     },
+                    "useSavedResets": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "number"
                     },
@@ -79978,6 +80045,7 @@
                               "try-again",
                               "keep-going-on-credits",
                               "use-saved-reset",
+                              "use-saved-resets",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -89072,6 +89140,9 @@
                           "keepGoingOnCredits": {
                             "type": "boolean"
                           },
+                          "useSavedResets": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "number"
                           },
@@ -89826,6 +89897,9 @@
               "type": "boolean"
             },
             "savedReset": {
+              "type": "boolean"
+            },
+            "autoSavedResets": {
               "type": "boolean"
             },
             "flows": {
@@ -90642,6 +90716,9 @@
                             "type": "boolean"
                           },
                           "keepGoingOnCredits": {
+                            "type": "boolean"
+                          },
+                          "useSavedResets": {
                             "type": "boolean"
                           },
                           "createdAt": {
@@ -94658,6 +94735,9 @@
                   "keepGoingOnCredits": {
                     "type": "boolean"
                   },
+                  "useSavedResets": {
+                    "type": "boolean"
+                  },
                   "createdAt": {
                     "type": "number"
                   },
@@ -97544,6 +97624,54 @@
               "required": [
                 "signInId",
                 "accountId",
+                "signIn"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:use-saved-resets": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "signInId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "on": {
+                  "type": "boolean"
+                },
+                "signIn": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "signInId",
+                "accountId",
+                "on",
                 "signIn"
               ]
             }

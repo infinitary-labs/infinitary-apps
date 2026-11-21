@@ -51,6 +51,30 @@
       <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت %2$ld.</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. لم يتبقَّ أي منها.</string>
+      <key>one</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. تبقّت واحدة.</string>
+      <key>two</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. تبقّت اثنتان.</string>
+      <key>few</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. تبقّت %2$ld.</string>
+      <key>many</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. تبقّت %2$ld.</string>
+      <key>other</key>
+      <string>استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. تبقّت %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

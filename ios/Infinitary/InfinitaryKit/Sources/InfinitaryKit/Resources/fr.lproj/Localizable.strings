@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "Connectez-vous au compte ChatGPT de %1$@ dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.";
 "accountsSavedResetUnclear" = "Codex n’a pas dit si une réinitialisation de %1$@ a été utilisée. Réessayer porte sur la même réinitialisation et n’en utilise jamais une deuxième.";
 "accountsSavedResetUnverified" = "Infinitary n’a pas pu confirmer que Codex est connecté au même compte ChatGPT que %1$@, donc aucune réinitialisation n’a été utilisée.";
+"accountsSavedResetUsedAutoChecking" = "Infinitary a utilisé une réinitialisation enregistrée de %1$@ pour que le travail en attente continue. Il revérifie l’allocation.";
 "accountsSavedResetUsedChecking" = "Une réinitialisation enregistrée de %1$@ a été utilisée. Infinitary revérifie son allocation.";
+"accountsUseSavedResetsSignInFirst" = "Codex n’est pas encore connecté à %1$@, donc « Utiliser les réinitialisations enregistrées d’office » reste désactivé. Activez-le sur la ligne du compte dans les réglages pour connecter Codex.";
 "activityPanelLinesLabel" = "Lignes d’activité";
 "attachCancelled" = "%1$@ annulé";
 "automationEventsSkipped" = "Événements ignorés";
@@ -415,6 +417,7 @@
 "cardThreadWrittenByAfterClose" = "Écrite par %1$@, après la fermeture de la carte";
 "cardTradeoffTable" = "Le compromis sous forme de tableau";
 "cardUseSavedReset" = "Utiliser une réinitialisation enregistrée";
+"cardUseSavedResets" = "Utiliser les réinitialisations enregistrées d’office";
 "closeYourFirstMate" = "Votre second : « %1$@ »";
 "closedDropped" = "%1$@ écartée";
 "closedFinished" = "%1$@ terminée";
@@ -2349,6 +2352,8 @@
 "settingsCostLimitSwitchLabel" = "Demander avant qu’une tâche dépense davantage";
 "settingsCostLimitTitle" = "Demander avant qu’une tâche dépense plus de";
 "settingsDecisionUseKindReads" = "Chaque nouvelle tâche s’exécute sur un modèle adapté au travail, pour que les tâches simples consomment moins de l’allocation de votre forfait. Pour cela, elle lit le titre et l’objectif de la tâche, vos mots, son projet et le travail lié.";
+"settingsDecisionUseSavedResetName" = "Utiliser une réinitialisation enregistrée ou attendre";
+"settingsDecisionUseSavedResetReads" = "Quand du travail attend un compte Codex dont « Utiliser les réinitialisations enregistrées d’office » est activé, il compare l’utilisation d’une de ses réinitialisations enregistrées avec l’attente du renouvellement de l’allocation. Il lit le forfait du compte, ce qui reste de chaque allocation et quand elle se renouvelle, combien de réinitialisations enregistrées il détient et quel travail attend.";
 "settingsDecisionsActions" = "Actions du modèle de décision";
 "settingsDecisionsAnswerWith" = "Répondre aux décisions avec %1$@";
 "settingsDecisionsAuto" = "automatique · votre modèle le moins cher placé dans un niveau";
@@ -3190,8 +3195,11 @@
 "settingsSubscriptionsMenuResume" = "Reprendre";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Arrêter de dépenser des crédits";
 "settingsSubscriptionsMenuStopPreferring" = "Ne plus privilégier pour le travail de l’équipage";
+"settingsSubscriptionsMenuStopUsingResets" = "Ne plus utiliser les réinitialisations enregistrées d’office";
 "settingsSubscriptionsMenuUseReset" = "Utiliser une réinitialisation enregistrée";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex se connecte et utilise celle qui expire en premier";
+"settingsSubscriptionsMenuUseResets" = "Utiliser les réinitialisations enregistrées d’office";
+"settingsSubscriptionsMenuUseResetsDetail" = "Seulement quand du travail attend et qu’aucun compte n’a d’allocation";
 "settingsSubscriptionsNoReader" = "Infinitary ne lit pas l’allocation de ce fournisseur.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ définie · Infinitary ne lit pas l’allocation de ce fournisseur.";
 "settingsSubscriptionsNotChosenYet" = "Pas encore choisi";

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { Said } from "@shared/i18n/said";
 import { said } from "@shared/i18n/said";
 import { catalogEntry } from "@shared/providers";
@@ -7,7 +8,7 @@ import type { AuthInteractionBridge } from "../pi/piAuth";
 import { chatgptAccountId } from "../quota/providers/codex";
 import { CodexAppServer, type StartCodexProcess } from "./appServer";
 import { type CodexCliCheck, checkCodexCli } from "./codexCli";
-import { redeemSavedReset, type SavedResetReach } from "./savedReset";
+import { redeemSavedReset, type SavedResetReach, signInForSavedResets } from "./savedReset";
 
 /**
  * Where a computer's own accounts reach the saved-reset use
@@ -20,6 +21,7 @@ import { redeemSavedReset, type SavedResetReach } from "./savedReset";
 /** What of an account store a use needs: `AccountVault`'s own methods. */
 export type SavedResetVault = {
   get: (accountId: string) => { providerId: string; label: string } | undefined;
+  setUseSavedResets: (accountId: string, on: boolean) => void;
   codexHome: (accountId: string) => string;
   codexSignedIn: (accountId: string) => boolean;
   savedResetAttempt: (accountId: string) => { key: string; creditId?: string } | undefined;
@@ -84,6 +86,39 @@ export async function redeemOwnSavedReset(
 }
 
 /**
+ * Turns this computer's own account's Use saved resets on their own on or
+ * off (docs/quota.md, "Saved resets on their own"). Turning it on signs
+ * Codex in first when it keeps no sign-in for the account, through the
+ * bridge, and checks it is the same ChatGPT account; nothing is used.
+ */
+export async function setOwnUseSavedResets(
+  vault: SavedResetVault,
+  reach: SavedResetReach,
+  accountId: string,
+  on: boolean,
+  bridge?: AuthInteractionBridge,
+): Promise<void> {
+  const account = vault.get(accountId);
+  if (!account) throw new Error("The account is no longer registered.");
+  if (on) {
+    if (!takesSavedReset(account.providerId))
+      throw new Error("This account has no saved resets Codex can use.");
+    const signedIn = vault.codexSignedIn(accountId);
+    if (!signedIn && !bridge)
+      throw new Error(m.accountsUseSavedResetsSignInFirst({ account: accountWords(account) }));
+    // From Settings, Codex's sign-in is checked even when one is kept.
+    if (!signedIn || bridge)
+      await signInForSavedResets(reach, {
+        accountId,
+        providerId: account.providerId,
+        account: accountWords(account),
+        ...(bridge ? { bridge } : {}),
+      });
+  }
+  vault.setUseSavedResets(accountId, on);
+}
+
+/**
  * Signs the Codex CLI out of a Codex home, before the account it belongs to
  * is removed. Best effort: a missing or old Codex leaves the folder to the
  * removal.
@@ -109,8 +144,15 @@ export async function signOutCodexHome(
   }
 }
 
-/** The feed line a clear outcome says, naming the account. */
-export function savedResetLine(account: string, result: SavedResetResult): Said {
+/**
+ * The feed line a clear outcome says, naming the account; `auto` says
+ * Infinitary used it on its own so waiting work could continue.
+ */
+export function savedResetLine(account: string, result: SavedResetResult, auto?: boolean): Said {
+  if (auto && result.outcome === "used")
+    return result.left !== undefined
+      ? said("accountsSavedResetUsedAuto", { account, count: result.left })
+      : said("accountsSavedResetUsedAutoChecking", { account });
   if (result.outcome === "nothing-to-reset") return said("accountsSavedResetNothing", { account });
   if (result.outcome === "none-left") return said("accountsSavedResetNoneLeft", { account });
   return result.left !== undefined
@@ -132,6 +174,13 @@ export type SavedResetsOptions = {
       deviceId: string,
       accountId: string,
     ) => { providerId: string; label: string } | undefined;
+    /** That computer's own account's Use saved resets on their own, saved there. */
+    useSavedResets: (
+      deviceId: string,
+      accountId: string,
+      on: boolean,
+      signIn: boolean,
+    ) => Promise<unknown>;
   };
   /** One feed line. */
   note: (fact: Said) => void;
@@ -153,19 +202,36 @@ export class SavedResets {
    */
   async use(
     accountId: string,
-    options: { deviceId?: string; bridge?: AuthInteractionBridge },
+    options: { deviceId?: string; bridge?: AuthInteractionBridge; auto?: boolean },
   ): Promise<SavedResetResult> {
-    const { deviceId, bridge } = options;
+    const { deviceId, bridge, auto } = options;
     const account = deviceId
       ? this.options.computers.accountOf(deviceId, accountId)
       : this.options.vault.get(accountId);
     const result = deviceId
       ? await this.options.computers.redeemSavedReset(deviceId, accountId, bridge !== undefined)
       : await redeemOwnSavedReset(this.options.vault, this.options.reach, accountId, bridge);
-    this.options.note(savedResetLine(account ? accountWords(account) : accountId, result));
+    this.options.note(savedResetLine(account ? accountWords(account) : accountId, result, auto));
     if (result.outcome !== "nothing-to-reset") this.options.recheck();
     if (result.outcome === "used") this.options.used?.(accountId, deviceId);
     return result;
+  }
+
+  /**
+   * Turns the account's Use saved resets on their own on or off, here or
+   * with `deviceId` on that computer, saved where the account is. Turning
+   * it on signs Codex in first when it must; without a bridge an account
+   * Codex is not signed in to is refused with words saying where.
+   */
+  async setUseSavedResets(
+    accountId: string,
+    on: boolean,
+    options: { deviceId?: string; bridge?: AuthInteractionBridge },
+  ): Promise<void> {
+    const { deviceId, bridge } = options;
+    if (deviceId)
+      await this.options.computers.useSavedResets(deviceId, accountId, on, bridge !== undefined);
+    else await setOwnUseSavedResets(this.options.vault, this.options.reach, accountId, on, bridge);
   }
 
   /** Whether Codex keeps a sign-in for this computer's own account, so a use needs no browser. */

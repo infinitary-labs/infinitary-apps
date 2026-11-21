@@ -83,6 +83,12 @@ export type DeviceAccountRowProps = {
    */
   savedReset?: { onSelect: () => void; updateNote?: string };
   /**
+   * Its Use saved resets on their own item, saved on that computer
+   * (docs/quota.md): absent where its provider keeps none. `updateNote`
+   * says why it is dim while that computer cannot take it yet.
+   */
+  autoResets?: { onSelect: () => void; updateNote?: string };
+  /**
    * Rename, Pause or Resume, and Prefer for crew work there, each saved on
    * that computer (docs/helper.md, "Its own sign-ins"). `updateNote` says
    * why they are dim while that computer's Infinitary cannot take them yet.
@@ -178,6 +184,19 @@ export function DeviceSignInGroups({
     // One that cannot start (an older or unreachable computer) ends under the row, saying why.
     if (device.flows) applySavedReset(deviceId, pendingUse.slice(0, at));
   }, [pendingUse, groups]);
+
+  // A run-out card's Use saved resets on their own lands here with that computer's account.
+  const pendingAuto = useShellStore((s) => s.pendingUseSavedResets);
+  useEffect(() => {
+    const at = pendingAuto?.lastIndexOf("@") ?? -1;
+    if (!pendingAuto || at <= 0) return;
+    const deviceId = pendingAuto.slice(at + 1);
+    const device = groups.find((entry) => entry.deviceId === deviceId);
+    if (!device) return;
+    useShellStore.getState().clearPendingUseSavedResets();
+    if (device.reach === "in-reach" && device.autoSavedResets && device.flows)
+      applyAutoResets(deviceId, pendingAuto.slice(0, at), true);
+  }, [pendingAuto, groups]);
 
   const answer = (flow: Flow, value: string | null) => {
     const { signInId, prompt } = flow;
@@ -300,6 +319,17 @@ export function DeviceSignInGroups({
                             savedReset: {
                               onSelect: () => applySavedReset(device.deviceId, account.id),
                               ...(device.savedReset && device.flows
+                                ? {}
+                                : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
+                            },
+                            autoResets: {
+                              onSelect: () =>
+                                applyAutoResets(
+                                  device.deviceId,
+                                  account.id,
+                                  account.useSavedResets !== true,
+                                ),
+                              ...(device.autoSavedResets && device.flows
                                 ? {}
                                 : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
                             },
@@ -637,6 +667,17 @@ export function DeviceSignInAside({
 function applySavedReset(deviceId: string, accountId: string): void {
   void window.infinitary.accounts
     .redeemSavedReset(accountId, { deviceId, signIn: true })
+    .catch(() => {});
+}
+
+/**
+ * Turns that computer's own account's Use saved resets on their own on or
+ * off there (docs/quota.md). Turning it on lets Codex there sign in on the
+ * row first when it must; a refusal stays under the row as the flow's end.
+ */
+function applyAutoResets(deviceId: string, accountId: string, on: boolean): void {
+  void window.infinitary.accounts
+    .useSavedResets(accountId, on, { deviceId, ...(on ? { signIn: true } : {}) })
     .catch(() => {});
 }
 

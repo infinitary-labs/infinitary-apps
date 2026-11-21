@@ -15,7 +15,7 @@ import {
   forgeSignInTitle,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "@shared/forges";
-import { cardWordsMark, englishOf, said, saidMark } from "@shared/i18n/said";
+import { cardWordsMark, englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { SAVED_RESETS_PAGE } from "@shared/quota";
 import type { SeatPauseClass } from "./seat";
@@ -121,6 +121,23 @@ export function redeemSavedResetAction(accountKey: string, primary: boolean): Ca
     variant: primary ? "primary" : "secondary",
     ...(primary ? { default: true } : {}),
     effect: { kind: "host", op: "use-saved-reset", arg: accountKey },
+  };
+}
+
+/** A run-out card's offer to turn on Use saved resets on their own (docs/quota.md). */
+const USE_SAVED_RESETS_SAID = said("cardUseSavedResets");
+
+/**
+ * The action that turns on an account's Use saved resets on their own, by
+ * its key: at once when Codex keeps a sign-in for it, else on the account's
+ * row, where Codex signs in first (`auto-saved-resets`).
+ */
+export function useSavedResetsAction(accountKey: string): CardAction {
+  return {
+    id: "use-saved-resets",
+    label: englishOf(USE_SAVED_RESETS_SAID),
+    variant: "secondary",
+    effect: { kind: "host", op: "use-saved-resets", arg: accountKey },
   };
 }
 
@@ -308,9 +325,13 @@ export function creditsOfferCardId(accountId: string, deviceId?: string): string
  * resets"): how many would refill its allowance now, and a link to the
  * provider's usage page, where the captain can use one without Infinitary;
  * the card's Use a saved reset uses one through Codex (docs/codex-client.md),
- * and these words carry its label's fact. Empty for a provider with no such page.
+ * and these words carry its label's fact, with any other button's in `labels`
+ * (one mark holds a card's labels). Empty for a provider with no such page.
  */
-export function savedResetsWords(input: { account: string; provider: string; count: number }) {
+export function savedResetsWords(
+  input: { account: string; provider: string; count: number },
+  labels: readonly Said[] = [],
+) {
   const page = SAVED_RESETS_PAGE[input.provider];
   if (!page || input.count < 1) return "";
   const now = saidMark(said("cardSavedResetsNow", { account: input.account, count: input.count }));
@@ -319,7 +340,7 @@ export function savedResetsWords(input: { account: string; provider: string; cou
     "a",
     `href="${page}"`,
   );
-  return `${now} ${link}${cardWordsMark([USE_SAVED_RESET_SAID])}`;
+  return `${now} ${link}${cardWordsMark([USE_SAVED_RESET_SAID, ...labels])}`;
 }
 
 /**
@@ -340,6 +361,11 @@ export function creditsOfferCard(input: {
   /** Saved resets that would apply now, by its provider and count (`savedResetsWords`). */
   savedResets?: { provider: string; count: number };
   /**
+   * The account's Use saved resets on their own is off and can be turned on
+   * where it is (docs/quota.md): the card offers it beside the reset.
+   */
+  offerAutoResets?: boolean;
+  /**
    * The computer that runs work the account is on, by id and as words say
    * where ("on Mac mini"): its switch is saved there, so the button sends
    * the account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
@@ -348,8 +374,13 @@ export function creditsOfferCard(input: {
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
   const { computer } = input;
   const until = input.resetsAt ? ` until ${input.resetsAt}` : "";
+  const resetsPage = input.savedResets && SAVED_RESETS_PAGE[input.savedResets.provider];
+  const auto = Boolean(resetsPage && input.offerAutoResets);
   const resets = input.savedResets
-    ? ` ${savedResetsWords({ account: input.name, ...input.savedResets })}`
+    ? ` ${savedResetsWords(
+        { account: input.name, ...input.savedResets },
+        auto ? [USE_SAVED_RESETS_SAID] : [],
+      )}`
     : "";
   const key = computer ? `${input.accountId}@${computer.deviceId}` : input.accountId;
   const { credits } = input;
@@ -370,9 +401,8 @@ export function creditsOfferCard(input: {
         : `${creditsOfferSentence(credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.${resets}`,
     actions: [
       ...(credits ? [keepGoingAction(key, true)] : []),
-      ...(input.savedResets && SAVED_RESETS_PAGE[input.savedResets.provider]
-        ? [redeemSavedResetAction(key, !credits)]
-        : []),
+      ...(resetsPage ? [redeemSavedResetAction(key, !credits)] : []),
+      ...(auto ? [useSavedResetsAction(key)] : []),
     ],
   };
 }

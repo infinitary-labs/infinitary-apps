@@ -39,6 +39,24 @@
       <string>Uma redefinição salva de %1$@ foi usada. Restam %2$ld.</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>O Infinitary usou uma redefinição salva de %1$@ para o trabalho em espera continuar. Resta %2$ld.</string>
+      <key>many</key>
+      <string>O Infinitary usou uma redefinição salva de %1$@ para o trabalho em espera continuar. Restam %2$ld.</string>
+      <key>other</key>
+      <string>O Infinitary usou uma redefinição salva de %1$@ para o trabalho em espera continuar. Restam %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

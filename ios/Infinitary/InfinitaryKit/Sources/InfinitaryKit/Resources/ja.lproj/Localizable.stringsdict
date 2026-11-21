@@ -31,6 +31,20 @@
       <string>%1$@ の保存済みのリセットを使いました。残りは %2$ld 回分です。</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>待っている作業を続けるため、Infinitary が %1$@ の保存済みのリセットを使いました。残りは %2$ld 回分です。</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -44,6 +44,12 @@ export function accountTrail(
   };
   if (name === "account-pause")
     return { value, step: { target, from: !account?.enabled, to: !args[1] } };
+  if (name === "account-use-saved-resets") {
+    return {
+      value,
+      step: { target, from: account?.useSavedResets === true, to: args[1] === true },
+    };
+  }
   if (name === "account-keep-going") {
     return {
       value,

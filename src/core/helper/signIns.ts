@@ -12,7 +12,12 @@ import {
 } from "@shared/signIns";
 import { claudeReasoningCapabilities } from "../claude/reasoning";
 import type { SavedResetReach } from "../codex/savedReset";
-import { redeemOwnSavedReset, savedResetReach, signOutCodexHome } from "../codex/savedResets";
+import {
+  redeemOwnSavedReset,
+  savedResetReach,
+  setOwnUseSavedResets,
+  signOutCodexHome,
+} from "../codex/savedResets";
 import type { HostKeychain } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import {
@@ -321,6 +326,33 @@ export class SignInHost {
           // The allowance it refilled reaches the home as this computer's sign-ins.
           async () => {
             await this.options.accounts.readAllowance("demand");
+          },
+        );
+        return { ok: true };
+      }
+      case "inf:sign-ins:use-saved-resets": {
+        const [turn] = request as SignInOrderRequest<"inf:sign-ins:use-saved-resets">;
+        this.ownAccount(turn.accountId);
+        const reach = this.options.savedResets;
+        if (!reach) throw new Error("This computer cannot use a saved reset.");
+        const { vault } = this.options.accounts;
+        // Asked again: it is already running.
+        if (this.running.has(turn.signInId)) return { ok: true };
+        this.run(
+          turn.signInId,
+          async (bridge) => {
+            await setOwnUseSavedResets(
+              vault,
+              reach,
+              turn.accountId,
+              turn.on,
+              turn.signIn ? bridge : undefined,
+            );
+            return { kind: "ended", outcome: "signed-in", accountId: turn.accountId };
+          },
+          // The switch reaches the home on this computer's account rows.
+          async () => {
+            await this.report();
           },
         );
         return { ok: true };

@@ -113,6 +113,7 @@ import {
   type ActionReads,
   readsEventScreenOffer,
   readsKeepGoing,
+  readsAutoSavedResets,
   readsSavedReset,
   readsSecretBring,
   readsSecretKeep,
@@ -1120,6 +1121,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         eventScreen: readsEventScreenOffer(hello.changes, hello.system),
         secretBring: readsSecretBring(hello.changes),
         savedReset: readsSavedReset(hello.changes),
+        autoSavedResets: readsAutoSavedResets(hello.changes),
       };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
@@ -1379,6 +1381,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           eventScreen: false,
           secretBring: false,
           savedReset: false,
+          autoSavedResets: false,
         },
         streamed: "none",
         readings: "none",

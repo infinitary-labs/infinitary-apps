@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "Faça login na conta do ChatGPT de %1$@ no navegador, para o Codex poder usar a redefinição salva.";
 "accountsSavedResetUnclear" = "O Codex não disse se uma redefinição de %1$@ foi usada. Tentar de novo pergunta pela mesma redefinição e nunca usa uma segunda.";
 "accountsSavedResetUnverified" = "O Infinitary não conseguiu confirmar que o Codex fez login na mesma conta do ChatGPT que %1$@, então nenhuma redefinição foi usada.";
+"accountsSavedResetUsedAutoChecking" = "O Infinitary usou uma redefinição salva de %1$@ para o trabalho em espera continuar. Ele está lendo a franquia de novo.";
 "accountsSavedResetUsedChecking" = "Uma redefinição salva de %1$@ foi usada. O Infinitary está lendo a franquia de novo.";
+"accountsUseSavedResetsSignInFirst" = "O Codex ainda não fez login em %1$@, então “Usar redefinições salvas por conta própria” continua desligado. Ligue na linha da conta nas configurações para fazer login no Codex.";
 "activityPanelLinesLabel" = "Linhas de atividade";
 "attachCancelled" = "%1$@ cancelado";
 "automationEventsSkipped" = "Eventos ignorados";
@@ -415,6 +417,7 @@
 "cardThreadWrittenByAfterClose" = "Escrito por %1$@, depois que o cartão foi fechado";
 "cardTradeoffTable" = "A comparação em tabela";
 "cardUseSavedReset" = "Usar uma redefinição salva";
+"cardUseSavedResets" = "Usar redefinições salvas por conta própria";
 "closeYourFirstMate" = "Seu imediato: “%1$@”";
 "closedDropped" = "%1$@ abandonada";
 "closedFinished" = "%1$@ concluída";
@@ -2349,6 +2352,8 @@
 "settingsCostLimitSwitchLabel" = "Perguntar antes que uma tarefa gaste mais";
 "settingsCostLimitTitle" = "Perguntar antes que uma tarefa gaste mais de";
 "settingsDecisionUseKindReads" = "Cada tarefa nova roda em um modelo adequado ao trabalho, então tarefas simples gastam menos da franquia do seu plano. Para isso, lê o título e o objetivo da tarefa, suas palavras, o projeto dela e o trabalho relacionado.";
+"settingsDecisionUseSavedResetName" = "Usar uma redefinição salva ou esperar";
+"settingsDecisionUseSavedResetReads" = "Quando há trabalho esperando uma conta do Codex com “Usar redefinições salvas por conta própria” ligado, ele pesa usar uma das redefinições salvas contra esperar a franquia se renovar. Ele lê o plano da conta, quanto resta de cada franquia e quando ela se renova, quantas redefinições salvas a conta tem e qual trabalho espera.";
 "settingsDecisionsActions" = "Ações do modelo de decisão";
 "settingsDecisionsAnswerWith" = "Responder decisões com %1$@";
 "settingsDecisionsAuto" = "automático · seu modelo mais barato com nível";
@@ -3190,8 +3195,11 @@
 "settingsSubscriptionsMenuResume" = "Retomar";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Parar de gastar créditos";
 "settingsSubscriptionsMenuStopPreferring" = "Deixar de preferir para o trabalho da tripulação";
+"settingsSubscriptionsMenuStopUsingResets" = "Parar de usar redefinições salvas por conta própria";
 "settingsSubscriptionsMenuUseReset" = "Usar uma redefinição salva";
 "settingsSubscriptionsMenuUseResetDetail" = "O Codex faz login e usa a que vence primeiro";
+"settingsSubscriptionsMenuUseResets" = "Usar redefinições salvas por conta própria";
+"settingsSubscriptionsMenuUseResetsDetail" = "Só quando há trabalho esperando e nenhuma conta tem franquia";
 "settingsSubscriptionsNoReader" = "O Infinitary não lê a franquia deste provedor.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ definida · O Infinitary não lê a franquia deste provedor.";
 "settingsSubscriptionsNotChosenYet" = "Ainda não escolhida";

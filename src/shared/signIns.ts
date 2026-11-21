@@ -462,6 +462,26 @@ export const signInOrders = {
     response: okSchema,
   },
   /**
+   * Turns that computer's own Codex account's Use saved resets on their own
+   * on or off there (docs/quota.md, "Saved resets on their own"), from the
+   * contract change `auto-saved-resets`. It answers once it has started;
+   * turning it on with `signIn` lets Codex sign in to the account first, its
+   * link and paste-back prompt coming as `inf:work:sign-in` steps, and the
+   * end is a `signed-in` step once the switch is saved.
+   */
+  "inf:sign-ins:use-saved-resets": {
+    effect: "change",
+    request: z.tuple([
+      z.object({
+        signInId: signInIdSchema,
+        accountId: z.string().min(1).max(256),
+        on: z.boolean(),
+        signIn: z.boolean(),
+      }),
+    ]),
+    response: okSchema,
+  },
+  /**
    * Reads every account's allowance there now, rather than at its next
    * tick (`computer-account-settings`); the reading reaches the home as
    * that computer's sign-ins, whole, and this answers once it is read.
@@ -580,6 +600,12 @@ export const deviceSignInsSchema = z.object({
    * `use-saved-reset`). Absent means it does not, so the item is not offered.
    */
   savedReset: z.boolean().optional(),
+  /**
+   * It takes Use saved resets on their own for its own Codex accounts (the
+   * contract change `auto-saved-resets`). Absent means it does not, so the
+   * item stays dim.
+   */
+  autoSavedResets: z.boolean().optional(),
   /** Active sign-ins and failures awaiting Done; absent on an older home. */
   flows: z.array(deviceSignInFlowSchema).optional(),
 });

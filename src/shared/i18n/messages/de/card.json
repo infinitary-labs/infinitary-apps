@@ -264,5 +264,6 @@
   "cardThreadWrittenBy": "Geschrieben von {label}",
   "cardThreadWrittenByAfterClose": "Geschrieben von {label}, nachdem die Karte geschlossen wurde",
   "cardTradeoffTable": "Die Abwägung als Tabelle",
-  "cardUseSavedReset": "Gespeicherten Reset einlösen"
+  "cardUseSavedReset": "Gespeicherten Reset einlösen",
+  "cardUseSavedResets": "Gespeicherte Resets selbst einlösen"
 }

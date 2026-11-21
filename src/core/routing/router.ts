@@ -109,6 +109,12 @@ export type RoutePreview = {
    * once the decision is committed.
    */
   spentAt?: string[];
+  /**
+   * Providers whose allowance is spent at the asked level and whose chosen
+   * account keeps going on credits: a saved reset comes before credits
+   * (docs/quota.md, "Saved resets on their own").
+   */
+  creditsAt?: string[];
   /** The computer that runs work whose sign-ins `spentAt` names; absent, this Mac's own. */
   spentOn?: string;
 };
@@ -199,6 +205,11 @@ export class Router {
        * run-out card (docs/quota.md "Keep going on credits").
        */
       onSpentAt?: (piProviders: string[], deviceId?: string) => void;
+      /**
+       * A committed decision chose an account that keeps going on credits
+       * past its spent allowance (`RoutePreview.creditsAt`).
+       */
+      onCreditsAt?: (piProviders: string[], deviceId?: string) => void;
     },
   ) {}
 
@@ -241,9 +252,19 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId, selection, spentAt, spentOn, named } =
-      evaluation;
+    const {
+      result,
+      reasons,
+      candidates,
+      accountId,
+      selection,
+      spentAt,
+      creditsAt,
+      spentOn,
+      named,
+    } = evaluation;
     if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt, spentOn);
+    if (creditsAt && creditsAt.length > 0) this.options.onCreditsAt?.(creditsAt, spentOn);
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -489,6 +510,7 @@ export class Router {
       ...(modelId ? { named: { model: modelId, served: Boolean(askPin && matches(askPin)) } } : {}),
       requiresReasoningWait: requiresReasoningWait(shape, result),
       ...spentAtLevel(decision, options.pool),
+      ...creditsAtLevel(decision, catalog as RankedModel[], options.pool),
       candidates: decision.candidates.map((candidate) => {
         const ranked = (catalog as RankedModel[]).find(
           (model) => servedModelKey(model) === `${candidate.provider}/${candidate.model}`,
@@ -678,6 +700,24 @@ function spentAtLevel(
   ];
   if (providers.length === 0) return {};
   return { spentAt: providers, ...(pool?.deviceId ? { spentOn: pool.deviceId } : {}) };
+}
+
+/**
+ * The provider of a decision's choice when the account it binds keeps going
+ * on credits past its spent allowance, on this Mac's own sign-ins or on one
+ * computer that runs work's.
+ */
+function creditsAtLevel(
+  decision: ReturnType<typeof route>,
+  catalog: readonly RankedModel[],
+  pool: RoutingPool | undefined,
+): { creditsAt?: string[]; spentOn?: string } {
+  if (pool && !pool.deviceId) return {};
+  const choice = decision.choice;
+  if (!choice) return {};
+  const chosen = catalog.find((model) => servedModelKey(model) === servedModelKey(choice));
+  if (chosen?.onCredits !== true) return {};
+  return { creditsAt: [choice.provider], ...(pool?.deviceId ? { spentOn: pool.deviceId } : {}) };
 }
 
 /** Premium asks and escalation keep the supervisor's existing never-downward gate. */

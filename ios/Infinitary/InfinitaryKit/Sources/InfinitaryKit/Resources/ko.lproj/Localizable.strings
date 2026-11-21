@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "브라우저에서 %1$@의 ChatGPT 계정에 로그인하면 Codex가 저장된 재설정을 사용할 수 있어요.";
 "accountsSavedResetUnclear" = "%1$@의 재설정이 사용됐는지 Codex가 알려 주지 않았어요. 다시 시도하면 같은 재설정을 확인하며 두 번째 재설정은 사용하지 않아요.";
 "accountsSavedResetUnverified" = "Codex가 %1$@와 같은 ChatGPT 계정에 로그인했는지 Infinitary가 확인하지 못해 재설정을 사용하지 않았어요.";
+"accountsSavedResetUsedAutoChecking" = "기다리는 작업을 계속하도록 Infinitary가 %1$@의 저장된 재설정을 사용했어요. 사용량을 다시 확인하고 있어요.";
 "accountsSavedResetUsedChecking" = "%1$@의 저장된 재설정을 사용했어요. Infinitary가 사용량을 다시 확인하고 있어요.";
+"accountsUseSavedResetsSignInFirst" = "Codex가 아직 %1$@에 로그인하지 않아 ‘저장된 재설정 자동 사용’은 꺼져 있어요. 설정에서 계정 행에서 켜면 Codex에 로그인해요.";
 "activityPanelLinesLabel" = "활동 줄";
 "attachCancelled" = "%1$@ 취소됨";
 "automationEventsSkipped" = "건너뛴 이벤트";
@@ -415,6 +417,7 @@
 "cardThreadWrittenByAfterClose" = "%1$@ 작성, 카드가 닫힌 뒤";
 "cardTradeoffTable" = "장단점을 표로 보기";
 "cardUseSavedReset" = "저장된 재설정 사용";
+"cardUseSavedResets" = "저장된 재설정 자동 사용";
 "closeYourFirstMate" = "일등항해사: “%1$@”";
 "closedDropped" = "%1$@ 중단됨";
 "closedFinished" = "%1$@ 끝남";
@@ -2349,6 +2352,8 @@
 "settingsCostLimitSwitchLabel" = "작업이 더 쓰기 전에 묻기";
 "settingsCostLimitTitle" = "작업이 이 금액보다 더 쓰기 전에 묻기";
 "settingsDecisionUseKindReads" = "새 작업마다 작업에 맞는 모델로 실행돼서, 쉬운 작업은 사용 한도를 덜 써요. 작업의 제목과 목표, 직접 쓴 말, 프로젝트와 관련 작업을 읽어요.";
+"settingsDecisionUseSavedResetName" = "저장된 재설정 사용 또는 대기";
+"settingsDecisionUseSavedResetReads" = "‘저장된 재설정 자동 사용’이 켜진 Codex 계정에서 작업이 기다릴 때, 저장된 재설정을 쓸지 사용 한도가 다시 채워지길 기다릴지 판단해요. 계정의 요금제, 각 사용 한도의 남은 양과 다시 채워지는 시점, 저장된 재설정 수, 기다리는 작업을 읽어요.";
 "settingsDecisionsActions" = "결정 모델 동작";
 "settingsDecisionsAnswerWith" = "%1$@(으)로 결정에 답하기";
 "settingsDecisionsAuto" = "자동 · 수준에 둔 모델 중 가장 저렴한 모델";
@@ -3192,8 +3197,11 @@
 "settingsSubscriptionsMenuResume" = "재개";
 "settingsSubscriptionsMenuStopKeepingGoing" = "크레딧 사용 그만하기";
 "settingsSubscriptionsMenuStopPreferring" = "선원 작업에 우선 사용 그만하기";
+"settingsSubscriptionsMenuStopUsingResets" = "저장된 재설정 자동 사용 그만하기";
 "settingsSubscriptionsMenuUseReset" = "저장된 재설정 사용";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex가 로그인해 가장 먼저 만료되는 재설정을 사용해요";
+"settingsSubscriptionsMenuUseResets" = "저장된 재설정 자동 사용";
+"settingsSubscriptionsMenuUseResetsDetail" = "작업이 기다리고 남은 사용 한도가 있는 계정이 없을 때만";
 "settingsSubscriptionsNoReader" = "Infinitary는 이 제공자의 사용 한도를 읽지 않아요.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ 설정됨 · Infinitary는 이 제공자의 사용 한도를 읽지 않아요.";
 "settingsSubscriptionsNotChosenYet" = "아직 고르지 않음";

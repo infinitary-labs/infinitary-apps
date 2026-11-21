@@ -10783,6 +10783,129 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `Used a saved reset on ${account}. It has ${count} left.`;
     }
   }
+  function accountsSavedResetUsedAuto(input2) {
+    const account = input2.account;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. لم يتبقَّ أي منها.`;
+          case "one":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت واحدة.`;
+          case "two":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت اثنتان.`;
+          case "few":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          case "many":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          default:
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleibt ${count}.`;
+          default:
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleiben ${count}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Queda ${count}.`;
+          case "many":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+          default:
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          case "many":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          default:
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。残りは ${count} 回分です。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. ${count}개 남았어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Resta ${count}.`;
+          case "many":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+          default:
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置，还剩 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設，還剩 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+          default:
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+      default:
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+    }
+  }
+  function accountsSavedResetUsedAutoChecking(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. يعيد التحقق من الرصيد.`;
+      case "de":
+        return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es prüft das Kontingent erneut.`;
+      case "es":
+        return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Vuelve a consultar la asignación.`;
+      case "fr":
+        return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il revérifie l’allocation.`;
+      case "ja":
+        return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。利用枠を読み取り直しています。`;
+      case "ko":
+        return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. 사용량을 다시 확인하고 있어요.`;
+      case "pt-BR":
+        return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Ele está lendo a franquia de novo.`;
+      case "zh-Hans":
+        return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置。它正在重新检查额度。`;
+      case "zh-Hant":
+        return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設。它正在重新檢查額度。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ îš çĥéçķîñĝ ţĥé áļļöŵáñçé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It is checking the allowance again.‬`;
+    }
+    return `Infinitary used a saved reset on ${account} so waiting work could continue. It is checking the allowance again.`;
+  }
   function accountsSavedResetUsedChecking(input2) {
     const account = input2.account;
     switch (currentLanguage()) {
@@ -10810,6 +10933,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Used a saved reset on ‬${account}‮. Infinitary is checking its allowance again.‬`;
     }
     return `Used a saved reset on ${account}. Infinitary is checking its allowance again.`;
+  }
+  function accountsUseSavedResetsSignInFirst(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يسجّل Codex الدخول إلى ${account} بعد، لذا يبقى «استخدام إعادات التعيين المحفوظة تلقائيًا» متوقفًا. شغّله من صف الحساب في الإعدادات ليسجّل Codex الدخول.`;
+      case "de":
+        return `Codex ist noch nicht bei ${account} angemeldet, daher bleibt „Gespeicherte Resets selbst einlösen“ aus. Schalte es in den Einstellungen bei der Zeile des Kontos ein, um Codex anzumelden.`;
+      case "es":
+        return `Codex todavía no inició sesión en ${account}, así que «Usar restablecimientos guardados por sí solo» sigue desactivado. Actívalo en la fila de la cuenta en Ajustes para iniciar sesión en Codex.`;
+      case "fr":
+        return `Codex n’est pas encore connecté à ${account}, donc « Utiliser les réinitialisations enregistrées d’office » reste désactivé. Activez-le sur la ligne du compte dans les réglages pour connecter Codex.`;
+      case "ja":
+        return `Codex はまだ ${account} にサインインしていないため、「保存済みのリセットを自動で使う」はオフのままです。設定でこのアカウントの行からオンにすると、Codex がサインインします。`;
+      case "ko":
+        return `Codex가 아직 ${account}에 로그인하지 않아 ‘저장된 재설정 자동 사용’은 꺼져 있어요. 설정에서 계정 행에서 켜면 Codex에 로그인해요.`;
+      case "pt-BR":
+        return `O Codex ainda não fez login em ${account}, então “Usar redefinições salvas por conta própria” continua desligado. Ligue na linha da conta nas configurações para fazer login no Codex.`;
+      case "zh-Hans":
+        return `Codex 尚未登录 ${account}，因此“自动使用已保存的重置”保持关闭。请在设置中该账户那一行打开它，让 Codex 登录。`;
+      case "zh-Hant":
+        return `Codex 尚未登入 ${account}，因此「自動使用已儲存的重設」保持關閉。請在設定中該帳號那一列開啟它，讓 Codex 登入。`;
+      case "en-XA":
+        return `[Çöðéẋ îš ñöţ šîĝñéð îñ ţö ${account} ýéţ, šö Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ šţáýš öƒƒ. Ţûŕñ îţ öñ ƒŕöɱ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex is not signed in to ‬${account}‮ yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.‬`;
+    }
+    return `Codex is not signed in to ${account} yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.`;
   }
   function attachCancelled(input2) {
     const name = input2.name;
@@ -16263,33 +16414,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
-  function cardRunbookAddPanels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
-      case "de":
-        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
-      case "es":
-        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
-      case "fr":
-        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
-      case "ja":
-        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
-      case "ko":
-        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
-      case "pt-BR":
-        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
-      case "zh-Hans":
-        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
-      case "zh-Hant":
-        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
-      case "en-XA":
-        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
-    }
-    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
-  }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
       case "ar":
@@ -17736,33 +17860,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Written by ${label}, after the card closed`;
   }
-  function cardTradeoffTable() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `الموازنة في جدول`;
-      case "de":
-        return `Die Abwägung als Tabelle`;
-      case "es":
-        return `La comparación en una tabla`;
-      case "fr":
-        return `Le compromis sous forme de tableau`;
-      case "ja":
-        return `トレードオフを表で見る`;
-      case "ko":
-        return `장단점을 표로 보기`;
-      case "pt-BR":
-        return `A comparação em tabela`;
-      case "zh-Hans":
-        return `以表格查看取舍`;
-      case "zh-Hant":
-        return `以表格檢視取捨`;
-      case "en-XA":
-        return `[Ţĥé ţŕáðéöƒƒ áš á ţáƀļé ~~~~~~~~]`;
-      case "ar-XB":
-        return `‮The tradeoff as a table‬`;
-    }
-    return `The tradeoff as a table`;
-  }
   function cardUseSavedReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -17789,6 +17886,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Use a saved reset‬`;
     }
     return `Use a saved reset`;
+  }
+  function cardUseSavedResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
   }
   function closeYourFirstMate(input2) {
     const sentence = input2.sentence;
@@ -23901,35 +24025,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Report`;
   }
-  function crewmateRoutedAgain(input2) {
-    const left = input2.left;
-    const model = input2.model;
-    switch (currentLanguage()) {
-      case "ar":
-        return `لم يعد ${left} في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن ${model}`;
-      case "de":
-        return `${left} ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt ${model}`;
-      case "es":
-        return `${left} ya no está en ningún nivel de Configuración, así que esta tarea ahora usa ${model}`;
-      case "fr":
-        return `${left} n’est plus dans aucun niveau des Réglages, donc cette tâche utilise désormais ${model}`;
-      case "ja":
-        return `${left} は設定のどのレベルにもなくなったため、このタスクは今後 ${model} を使います`;
-      case "ko":
-        return `${left}이(가) 설정의 어떤 수준에도 없어서 이 작업은 이제 ${model}을(를) 사용합니다`;
-      case "pt-BR":
-        return `${left} não está mais em nenhum nível dos Ajustes, então esta tarefa agora usa ${model}`;
-      case "zh-Hans":
-        return `${left} 已不在设置中的任何级别里，所以这个任务现在改用 ${model}`;
-      case "zh-Hant":
-        return `${left} 已不在設定中的任何等級裡，所以這個任務現在改用 ${model}`;
-      case "en-XA":
-        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, šö ţĥîš ţášķ ñöŵ ûšéš ${model} ~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `${left}‮ is on no level in Settings any more, so this task now uses ‬${model}`;
-    }
-    return `${left} is on no level in Settings any more, so this task now uses ${model}`;
-  }
   function crewmateRunning() {
     switch (currentLanguage()) {
       case "ar":
@@ -24199,63 +24294,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Waiting on you‬`;
     }
     return `Waiting on you`;
-  }
-  function crewmateWaitsForModel(input2) {
-    const left = input2.left;
-    switch (currentLanguage()) {
-      case "ar":
-        return `لم يعد ${left} في أي مستوى في الإعدادات، ولا يستطيع أي نموذج آخر في مستوياتك تولي هذه المهمة، لذا تنتظر حتى يستطيع أحدها`;
-      case "de":
-        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann`;
-      case "es":
-        return `${left} ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda`;
-      case "fr":
-        return `${left} n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse`;
-      case "ja":
-        return `${left} は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます`;
-      case "ko":
-        return `${left}이(가) 설정의 어떤 수준에도 없고 수준에 있는 다른 모델도 이 작업을 맡을 수 없어서, 맡을 수 있는 모델이 생길 때까지 기다립니다`;
-      case "pt-BR":
-        return `${left} não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa`;
-      case "zh-Hans":
-        return `${left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手`;
-      case "zh-Hant":
-        return `${left} 已不在設定中的任何等級裡，你的等級中也沒有其他模型能接手這個任務，所以它會等到有模型能接手`;
-      case "en-XA":
-        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ñö öţĥéŕ ɱöðéļ öñ ýöûŕ ļéṽéļš çáñ ţáķé ţĥîš ţášķ, šö îţ ŵáîţš ûñţîļ öñé çáñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `${left}‮ is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can‬`;
-    }
-    return `${left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can`;
-  }
-  function crewmateWaitsForUpdate(input2) {
-    const computer = input2.computer;
-    const left = input2.left;
-    switch (currentLanguage()) {
-      case "ar":
-        return `لم يعد ${left} في أي مستوى في الإعدادات، ويحتاج ${computer} إلى تحديث قبل أن تنتقل هذه المهمة إلى نموذج آخر هناك، لذا تنتظر حتى ذلك الحين`;
-      case "de":
-        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und ${computer} braucht ein Update, bevor diese Aufgabe dort zu einem anderen Modell wechseln kann, deshalb wartet sie bis dahin`;
-      case "es":
-        return `${left} ya no está en ningún nivel de Configuración y ${computer} necesita una actualización antes de que esta tarea pueda pasar a otro modelo allí, así que espera hasta entonces`;
-      case "fr":
-        return `${left} n’est plus dans aucun niveau des Réglages, et ${computer} doit être mis à jour avant que cette tâche puisse passer à un autre modèle là-bas, donc elle attend jusque-là`;
-      case "ja":
-        return `${left} は設定のどのレベルにもなくなりました。${computer} を更新するまで、このタスクはそこで別のモデルに移れないため、それまで待ちます`;
-      case "ko":
-        return `${left}이(가) 설정의 어떤 수준에도 없습니다. ${computer}을(를) 업데이트해야 이 작업이 그곳에서 다른 모델로 옮겨갈 수 있으므로 그때까지 기다립니다`;
-      case "pt-BR":
-        return `${left} não está mais em nenhum nível dos Ajustes e ${computer} precisa de uma atualização antes que esta tarefa possa passar para outro modelo lá, então ela espera até lá`;
-      case "zh-Hans":
-        return `${left} 已不在设置中的任何级别里，而 ${computer} 需要更新后这个任务才能在那里改用其他模型，所以它会等到那时`;
-      case "zh-Hant":
-        return `${left} 已不在設定中的任何等級裡，而 ${computer} 需要更新後這個任務才能在那裡改用其他模型，所以它會等到那時`;
-      case "en-XA":
-        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ${computer} ñééðš áñ ûþðáţé ƀéƒöŕé ţĥîš ţášķ çáñ ɱöṽé ţö áñöţĥéŕ ɱöðéļ ţĥéŕé, šö îţ ŵáîţš ûñţîļ ţĥéñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `${left}‮ is on no level in Settings any more, and ‬${computer}‮ needs an update before this task can move to another model there, so it waits until then‬`;
-    }
-    return `${left} is on no level in Settings any more, and ${computer} needs an update before this task can move to another model there, so it waits until then`;
   }
   function crewmateWorking() {
     switch (currentLanguage()) {
@@ -31905,33 +31943,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count}‮ more‬`;
     }
     return `${count} more`;
-  }
-  function panelReadsSettings() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `مظهرك وموسيقاك وبعض الإعدادات الأخرى`;
-      case "de":
-        return `dein Erscheinungsbild, deine Musik und einige weitere Einstellungen`;
-      case "es":
-        return `tu apariencia, tu música y algunos ajustes más`;
-      case "fr":
-        return `votre apparence, votre musique et quelques autres réglages`;
-      case "ja":
-        return `外観、音楽、その他いくつかの設定`;
-      case "ko":
-        return `모양, 음악 및 몇 가지 다른 설정`;
-      case "pt-BR":
-        return `sua aparência, sua música e algumas outras configurações`;
-      case "zh-Hans":
-        return `你的外观、音乐和其他几项设置`;
-      case "zh-Hant":
-        return `你的外觀、音樂和其他幾項設定`;
-      case "en-XA":
-        return `[ýöûŕ ļööķ, ɱûšîç áñð á ƒéŵ öţĥéŕ šéţţîñĝš ~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮your look, music and a few other settings‬`;
-    }
-    return `your look, music and a few other settings`;
   }
   function panelRetry() {
     switch (currentLanguage()) {
@@ -47702,6 +47713,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.‬`;
     }
     return `Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.`;
+  }
+  function settingsDecisionUseSavedResetName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادة تعيين محفوظة أو الانتظار`;
+      case "de":
+        return `Gespeicherten Reset einlösen oder warten`;
+      case "es":
+        return `Usar un restablecimiento guardado o esperar`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée ou attendre`;
+      case "ja":
+        return `保存済みのリセットを使うか待つか`;
+      case "ko":
+        return `저장된 재설정 사용 또는 대기`;
+      case "pt-BR":
+        return `Usar uma redefinição salva ou esperar`;
+      case "zh-Hans":
+        return `使用已保存的重置还是等待`;
+      case "zh-Hant":
+        return `使用已儲存的重設還是等待`;
+      case "en-XA":
+        return `[Ûšé á šáṽéð ŕéšéţ öŕ ŵáîţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use a saved reset or wait‬`;
+    }
+    return `Use a saved reset or wait`;
+  }
+  function settingsDecisionUseSavedResetReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما ينتظر العمل حسابًا في Codex شُغّل له «استخدام إعادات التعيين المحفوظة تلقائيًا»، يوازن بين استخدام إحدى إعادات التعيين المحفوظة وانتظار تجدد الرصيد. يقرأ خطة الحساب، وما تبقّى من كل رصيد وموعد تجدده، وعدد إعادات التعيين المحفوظة لديه، وأي عمل ينتظر.`;
+      case "de":
+        return `Wenn Arbeit auf ein Codex-Konto wartet, bei dem „Gespeicherte Resets selbst einlösen“ an ist, wägt es ab, ob ein gespeicherter Reset eingelöst oder auf das Auffüllen des Kontingents gewartet wird. Es liest den Plan des Kontos, wie viel von jedem Kontingent übrig ist und wann es sich auffüllt, wie viele gespeicherte Resets es hat und welche Arbeit wartet.`;
+      case "es":
+        return `Cuando hay trabajo esperando una cuenta de Codex con «Usar restablecimientos guardados por sí solo» activado, sopesa usar uno de sus restablecimientos guardados frente a esperar a que se renueve la asignación. Lee el plan de la cuenta, cuánto queda de cada asignación y cuándo se renueva, cuántos restablecimientos guardados tiene y qué trabajo espera.`;
+      case "fr":
+        return `Quand du travail attend un compte Codex dont « Utiliser les réinitialisations enregistrées d’office » est activé, il compare l’utilisation d’une de ses réinitialisations enregistrées avec l’attente du renouvellement de l’allocation. Il lit le forfait du compte, ce qui reste de chaque allocation et quand elle se renouvelle, combien de réinitialisations enregistrées il détient et quel travail attend.`;
+      case "ja":
+        return `「保存済みのリセットを自動で使う」がオンの Codex アカウントで作業が待っているとき、保存済みのリセットを使うか、利用枠の回復を待つかを判断します。アカウントのプラン、各利用枠の残りと回復までの時間、保存済みのリセットの数、待っている作業を読み取ります。`;
+      case "ko":
+        return `‘저장된 재설정 자동 사용’이 켜진 Codex 계정에서 작업이 기다릴 때, 저장된 재설정을 쓸지 사용 한도가 다시 채워지길 기다릴지 판단해요. 계정의 요금제, 각 사용 한도의 남은 양과 다시 채워지는 시점, 저장된 재설정 수, 기다리는 작업을 읽어요.`;
+      case "pt-BR":
+        return `Quando há trabalho esperando uma conta do Codex com “Usar redefinições salvas por conta própria” ligado, ele pesa usar uma das redefinições salvas contra esperar a franquia se renovar. Ele lê o plano da conta, quanto resta de cada franquia e quando ela se renova, quantas redefinições salvas a conta tem e qual trabalho espera.`;
+      case "zh-Hans":
+        return `当工作在等待一个开启了“自动使用已保存的重置”的 Codex 账户时，它权衡是使用一次已保存的重置，还是等待额度恢复。它读取该账户的套餐、每项额度的剩余量和恢复时间、持有的已保存的重置次数，以及等待中的工作。`;
+      case "zh-Hant":
+        return `當工作在等待一個開啟了「自動使用已儲存的重設」的 Codex 帳號時，它權衡是使用一次已儲存的重設，還是等待額度恢復。它讀取該帳號的方案、每項額度的剩餘量和恢復時間、持有的已儲存的重設次數，以及等待中的工作。`;
+      case "en-XA":
+        return `[Ŵĥéñ ŵöŕķ ŵáîţš öñ á Çöðéẋ áççöûñţ ŵĥöšé Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ îš öñ, îţ ŵéîĝĥš ûšîñĝ öñé öƒ îţš šáṽéð ŕéšéţš áĝáîñšţ ŵáîţîñĝ ƒöŕ ţĥé áļļöŵáñçé ţö ŕéƒîļļ. Îţ ŕéáðš ţĥé áççöûñţ'š þļáñ, ĥöŵ ɱûçĥ öƒ éáçĥ áļļöŵáñçé îš ļéƒţ áñð ŵĥéñ îţ ŕéƒîļļš, ĥöŵ ɱáñý šáṽéð ŕéšéţš îţ ĥöļðš, áñð ŵĥîçĥ ŵöŕķ ŵáîţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.‬`;
+    }
+    return `When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.`;
   }
   function settingsDecisionsActions() {
     switch (currentLanguage()) {
@@ -67689,34 +67754,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open folder`;
   }
-  function settingsRunbooksPanels(input2) {
-    const panels = input2.panels;
-    switch (currentLanguage()) {
-      case "ar":
-        return `أثناء تشغيله، يعرض ${panels} على أشرطتك.`;
-      case "de":
-        return `Solange er an ist, zeigt er ${panels} auf deinen Leisten.`;
-      case "es":
-        return `Mientras está activo, muestra ${panels} en tus barras.`;
-      case "fr":
-        return `Tant qu’elle est activée, elle affiche ${panels} dans vos colonnes.`;
-      case "ja":
-        return `オンの間、パネル列に ${panels} を表示します。`;
-      case "ko":
-        return `켜져 있는 동안 레일에 보여 주는 패널: ${panels}`;
-      case "pt-BR":
-        return `Enquanto estiver ativado, mostra ${panels} nas suas barras laterais.`;
-      case "zh-Hans":
-        return `开启时，会在侧栏上显示 ${panels}。`;
-      case "zh-Hant":
-        return `開啟時，會在側欄上顯示 ${panels}。`;
-      case "en-XA":
-        return `[Ŵĥîļé îţ îš öñ, îţ šĥöŵš ${panels} öñ ýöûŕ ŕáîļš. ~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮While it is on, it shows ‬${panels}‮ on your rails.‬`;
-    }
-    return `While it is on, it shows ${panels} on your rails.`;
-  }
   function settingsRunbooksView() {
     switch (currentLanguage()) {
       case "ar":
@@ -72479,6 +72516,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Stop preferring for crew work`;
   }
+  function settingsSubscriptionsMenuStopUsingResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets nicht mehr selbst einlösen`;
+      case "es":
+        return `Dejar de usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Ne plus utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットの自動使用をやめる`;
+      case "ko":
+        return `저장된 재설정 자동 사용 그만하기`;
+      case "pt-BR":
+        return `Parar de usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `停止自动使用已保存的重置`;
+      case "zh-Hant":
+        return `停止自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Šţöþ ûšîñĝ šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stop using saved resets on their own‬`;
+    }
+    return `Stop using saved resets on their own`;
+  }
   function settingsSubscriptionsMenuUseReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -72532,6 +72596,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Codex signs in and uses the one that expires first‬`;
     }
     return `Codex signs in and uses the one that expires first`;
+  }
+  function settingsSubscriptionsMenuUseResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
+  }
+  function settingsSubscriptionsMenuUseResetsDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فقط عندما ينتظر العمل ولا يبقى رصيد في أي حساب`;
+      case "de":
+        return `Nur wenn Arbeit wartet und kein Konto Kontingent hat`;
+      case "es":
+        return `Solo cuando hay trabajo en espera y ninguna cuenta tiene asignación`;
+      case "fr":
+        return `Seulement quand du travail attend et qu’aucun compte n’a d’allocation`;
+      case "ja":
+        return `作業が待っていて、どのアカウントにも利用枠がないときだけ`;
+      case "ko":
+        return `작업이 기다리고 남은 사용 한도가 있는 계정이 없을 때만`;
+      case "pt-BR":
+        return `Só quando há trabalho esperando e nenhuma conta tem franquia`;
+      case "zh-Hans":
+        return `仅在有工作等待且没有账户还有额度时`;
+      case "zh-Hant":
+        return `僅在有工作等待且沒有帳號還有額度時`;
+      case "en-XA":
+        return `[Öñļý ŵĥéñ ŵöŕķ ŵáîţš áñð ñö áççöûñţ ĥáš ŕööɱ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only when work waits and no account has room‬`;
+    }
+    return `Only when work waits and no account has room`;
   }
   function settingsSubscriptionsNoReader() {
     switch (currentLanguage()) {
@@ -87162,7 +87280,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsSavedResetUnclear,
     accountsSavedResetUnverified,
     accountsSavedResetUsed,
+    accountsSavedResetUsedAuto,
+    accountsSavedResetUsedAutoChecking,
     accountsSavedResetUsedChecking,
+    accountsUseSavedResetsSignInFirst,
     attachCancelled,
     automationEventsSkipped,
     automationRunAlsoSkipped,
@@ -87333,7 +87454,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
-    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -87377,8 +87497,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenAfterClose,
     cardThreadWrittenBy,
     cardThreadWrittenByAfterClose,
-    cardTradeoffTable,
     cardUseSavedReset,
+    cardUseSavedResets,
     closeYourFirstMate,
     closedDropped,
     closedFinished,
@@ -87595,7 +87715,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateProgress,
     crewmateQueued,
     crewmateReport,
-    crewmateRoutedAgain,
     crewmateRunning,
     crewmateSendsTo,
     crewmateShowCard,
@@ -87606,8 +87725,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateStopping,
     crewmateUnreadable,
     crewmateWaiting,
-    crewmateWaitsForModel,
-    crewmateWaitsForUpdate,
     crewmateWorking,
     devicesCarriedOn,
     devicesCarryNotRemoved,
@@ -87871,7 +87988,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
-    panelReadsSettings,
     panelRetry,
     panelSaidLineOpen,
     panelSettingsAppearance,
@@ -88394,6 +88510,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsCostLimitSwitchLabel,
     settingsCostLimitTitle,
     settingsDecisionUseKindReads,
+    settingsDecisionUseSavedResetName,
+    settingsDecisionUseSavedResetReads,
     settingsDecisionsActions,
     settingsDecisionsAnswerWith,
     settingsDecisionsAuto,
@@ -89078,7 +89196,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsRunbooksMakeYourOwn,
     settingsRunbooksOpenFailed,
     settingsRunbooksOpenFolder,
-    settingsRunbooksPanels,
     settingsRunbooksView,
     settingsRunbooksViewLabel,
     settingsRunbooksYours,
@@ -89254,8 +89371,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsMenuResume,
     settingsSubscriptionsMenuStopKeepingGoing,
     settingsSubscriptionsMenuStopPreferring,
+    settingsSubscriptionsMenuStopUsingResets,
     settingsSubscriptionsMenuUseReset,
     settingsSubscriptionsMenuUseResetDetail,
+    settingsSubscriptionsMenuUseResets,
+    settingsSubscriptionsMenuUseResetsDetail,
     settingsSubscriptionsNoReader,
     settingsSubscriptionsNoReaderKey,
     settingsSubscriptionsNotChosenYet,
@@ -89980,7 +90100,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsSavedResetUnclear": ["account"],
     "accountsSavedResetUnverified": ["account"],
     "accountsSavedResetUsed": ["account", "count"],
+    "accountsSavedResetUsedAuto": ["account", "count"],
+    "accountsSavedResetUsedAutoChecking": ["account"],
     "accountsSavedResetUsedChecking": ["account"],
+    "accountsUseSavedResetsSignInFirst": ["account"],
     "attachCancelled": ["name"],
     "automationEventsSkipped": [],
     "automationRunAlsoSkipped": ["count"],
@@ -90151,7 +90274,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
-    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],
@@ -90195,8 +90317,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenAfterClose": [],
     "cardThreadWrittenBy": ["label"],
     "cardThreadWrittenByAfterClose": ["label"],
-    "cardTradeoffTable": [],
     "cardUseSavedReset": [],
+    "cardUseSavedResets": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
     "closedFinished": ["key"],
@@ -90413,7 +90535,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateProgress": [],
     "crewmateQueued": [],
     "crewmateReport": [],
-    "crewmateRoutedAgain": ["left", "model"],
     "crewmateRunning": [],
     "crewmateSendsTo": [],
     "crewmateShowCard": [],
@@ -90424,8 +90545,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateStopping": [],
     "crewmateUnreadable": [],
     "crewmateWaiting": [],
-    "crewmateWaitsForModel": ["left"],
-    "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
@@ -90689,7 +90808,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
-    "panelReadsSettings": [],
     "panelRetry": [],
     "panelSaidLineOpen": ["panelTitle"],
     "panelSettingsAppearance": [],
@@ -91212,6 +91330,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsCostLimitSwitchLabel": [],
     "settingsCostLimitTitle": [],
     "settingsDecisionUseKindReads": [],
+    "settingsDecisionUseSavedResetName": [],
+    "settingsDecisionUseSavedResetReads": [],
     "settingsDecisionsActions": [],
     "settingsDecisionsAnswerWith": ["model"],
     "settingsDecisionsAuto": [],
@@ -91896,7 +92016,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsRunbooksMakeYourOwn": [],
     "settingsRunbooksOpenFailed": [],
     "settingsRunbooksOpenFolder": [],
-    "settingsRunbooksPanels": ["panels"],
     "settingsRunbooksView": [],
     "settingsRunbooksViewLabel": ["name"],
     "settingsRunbooksYours": [],
@@ -92072,8 +92191,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsMenuResume": [],
     "settingsSubscriptionsMenuStopKeepingGoing": [],
     "settingsSubscriptionsMenuStopPreferring": [],
+    "settingsSubscriptionsMenuStopUsingResets": [],
     "settingsSubscriptionsMenuUseReset": [],
     "settingsSubscriptionsMenuUseResetDetail": [],
+    "settingsSubscriptionsMenuUseResets": [],
+    "settingsSubscriptionsMenuUseResetsDetail": [],
     "settingsSubscriptionsNoReader": [],
     "settingsSubscriptionsNoReaderKey": ["apiKey"],
     "settingsSubscriptionsNotChosenYet": [],
@@ -92639,6 +92761,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "try-again",
     "keep-going-on-credits",
     "use-saved-reset",
+    "use-saved-resets",
     "add-plugin",
     "decline-plugin",
     "apply-project-change",
@@ -93603,6 +93726,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * first (docs/codex-client.md; the contract change `use-saved-reset`).
      */
     useSavedReset: string().optional(),
+    /**
+     * Settings -> Intelligence turns this account's Use saved resets on their
+     * own on on arrival, by its key (`accountKey`), with Codex signing in on
+     * its row first (docs/quota.md; the contract change `auto-saved-resets`).
+     */
+    useSavedResets: string().optional(),
     /** The host whose sign-in Settings -> Projects starts on arrival. */
     signIn: string().optional(),
     /** Settings -> Devices makes a link, or a command, on arrival. */
@@ -102120,7 +102249,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       const own = table.rows.every((row) => row.placed);
       const chart = table.headings.length === 2 ? scatterChart(table, own) : radarChart(table, own);
       const written = html.slice(table.start, table.end);
-      const fold = `<details data-inf-tradeoff-table><summary>${escapeHtml$1(cardTradeoffTable())}</summary>${written}</details>`;
+      const fold = `<details data-inf-tradeoff-table><summary>${escapeHtml$1((void 0)())}</summary>${written}</details>`;
       if (!own) {
         edits.push({ at: table.start, end: table.end, put: `${chart}${fold}` });
         continue;

@@ -71,6 +71,8 @@ export function startHomeFirstmate({
   vault,
   setKeepGoingOnCredits,
   redeemSavedReset,
+  setUseSavedResets,
+  savedResetsSpent,
   broadcastEvent,
   sessionFactories,
   localSeat,
@@ -120,6 +122,10 @@ export function startHomeFirstmate({
   setKeepGoingOnCredits: CoreServices["setKeepGoingOnCredits"];
   /** Late-bound like it: using a saved Codex reset (docs/codex-client.md). */
   redeemSavedReset: CoreServices["redeemSavedReset"];
+  /** Late-bound like it: Use saved resets on their own (docs/quota.md). */
+  setUseSavedResets: CoreServices["setUseSavedResets"];
+  /** Late-bound: the first mate's spent account, weighed for a saved reset (`AutoSavedResets.spentHere`). */
+  savedResetsSpent: (accountId: string) => void;
   broadcastEvent: (event: FmEvent) => void;
   sessionFactories: SessionFactories;
   localSeat: FirstmateAgentOptions["localOrchestrator"];
@@ -219,6 +225,17 @@ export function startHomeFirstmate({
       );
       return "ran";
     },
+    // A run-out card's Use saved resets on their own: at once when Codex keeps
+    // a sign-in for this Mac's own account, else on the account's row.
+    useSavedResets: (arg) => {
+      const there = vault.get(arg) ? undefined : parseAccountKey(arg);
+      if (there?.deviceId || !vault.codexSignedIn(arg)) return "sign-in";
+      void setUseSavedResets(arg, true, {}).catch((error) =>
+        broadcastEvent({ type: "firstmate_note", text: String(error?.message ?? error) }),
+      );
+      return "ran";
+    },
+    savedResetsSpent,
     // Each backend's seat (W1): the seat preset, opened by the one factory
     // per backend.
     seats: sessionFactories,

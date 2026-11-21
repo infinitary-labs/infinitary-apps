@@ -31,6 +31,20 @@
       <string>已使用 %1$@ 的一次已儲存的重設，還剩 %2$ld 次。</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>為讓等待中的工作繼續，Infinitary 使用了 %1$@ 的一次已儲存的重設，還剩 %2$ld 次。</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

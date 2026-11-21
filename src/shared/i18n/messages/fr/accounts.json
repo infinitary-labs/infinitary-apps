@@ -220,5 +220,13 @@
     "many": "Une réinitialisation enregistrée de {account} a été utilisée. Il en reste {count}.",
     "other": "Une réinitialisation enregistrée de {account} a été utilisée. Il en reste {count}."
   },
-  "accountsSavedResetUsedChecking": "Une réinitialisation enregistrée de {account} a été utilisée. Infinitary revérifie son allocation."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "one": "Infinitary a utilisé une réinitialisation enregistrée de {account} pour que le travail en attente continue. Il en reste {count}.",
+    "many": "Infinitary a utilisé une réinitialisation enregistrée de {account} pour que le travail en attente continue. Il en reste {count}.",
+    "other": "Infinitary a utilisé une réinitialisation enregistrée de {account} pour que le travail en attente continue. Il en reste {count}."
+  },
+  "accountsSavedResetUsedAutoChecking": "Infinitary a utilisé une réinitialisation enregistrée de {account} pour que le travail en attente continue. Il revérifie l’allocation.",
+  "accountsSavedResetUsedChecking": "Une réinitialisation enregistrée de {account} a été utilisée. Infinitary revérifie son allocation.",
+  "accountsUseSavedResetsSignInFirst": "Codex n’est pas encore connecté à {account}, donc « Utiliser les réinitialisations enregistrées d’office » reste désactivé. Activez-le sur la ligne du compte dans les réglages pour connecter Codex."
 }

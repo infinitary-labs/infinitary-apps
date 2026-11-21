@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "Sign in to the ChatGPT account of %1$@ in your browser, so Codex can use its saved reset.";
 "accountsSavedResetUnclear" = "Codex did not say whether a reset of %1$@ was used. Trying again asks about the same reset and never uses a second one.";
 "accountsSavedResetUnverified" = "Infinitary could not confirm that Codex is signed in to the same ChatGPT account as %1$@, so no reset was used.";
+"accountsSavedResetUsedAutoChecking" = "Infinitary used a saved reset on %1$@ so waiting work could continue. It is checking the allowance again.";
 "accountsSavedResetUsedChecking" = "Used a saved reset on %1$@. Infinitary is checking its allowance again.";
+"accountsUseSavedResetsSignInFirst" = "Codex is not signed in to %1$@ yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.";
 "activityPanelLinesLabel" = "Activity lines";
 "attachCancelled" = "Cancelled %1$@";
 "automationEventsSkipped" = "Events skipped";
@@ -415,6 +417,7 @@
 "cardThreadWrittenByAfterClose" = "Written by %1$@, after the card closed";
 "cardTradeoffTable" = "The tradeoff as a table";
 "cardUseSavedReset" = "Use a saved reset";
+"cardUseSavedResets" = "Use saved resets on their own";
 "closeYourFirstMate" = "Your first mate: “%1$@”";
 "closedDropped" = "%1$@ dropped";
 "closedFinished" = "%1$@ finished";
@@ -2349,6 +2352,8 @@
 "settingsCostLimitSwitchLabel" = "Ask before a task spends more";
 "settingsCostLimitTitle" = "Ask before a task spends more than";
 "settingsDecisionUseKindReads" = "Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.";
+"settingsDecisionUseSavedResetName" = "Use a saved reset or wait";
+"settingsDecisionUseSavedResetReads" = "When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.";
 "settingsDecisionsActions" = "Decision model actions";
 "settingsDecisionsAnswerWith" = "Answer decisions with %1$@";
 "settingsDecisionsAuto" = "auto · your cheapest slotted model";
@@ -3190,8 +3195,11 @@
 "settingsSubscriptionsMenuResume" = "Resume";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Stop spending credits";
 "settingsSubscriptionsMenuStopPreferring" = "Stop preferring for crew work";
+"settingsSubscriptionsMenuStopUsingResets" = "Stop using saved resets on their own";
 "settingsSubscriptionsMenuUseReset" = "Use a saved reset";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex signs in and uses the one that expires first";
+"settingsSubscriptionsMenuUseResets" = "Use saved resets on their own";
+"settingsSubscriptionsMenuUseResetsDetail" = "Only when work waits and no account has room";
 "settingsSubscriptionsNoReader" = "Infinitary doesn't read the allowance for this provider.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ set · Infinitary doesn't read the allowance for this provider.";
 "settingsSubscriptionsNotChosenYet" = "Not chosen yet";

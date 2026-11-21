@@ -55,6 +55,8 @@ export function startHomeRouting(options: {
   ticker: Ticker;
   /** A committed crew decision dropped a level or waits on these providers' spent allowance. */
   onSpentAt?: (piProviders: string[], deviceId?: string) => void;
+  /** A committed crew decision chose an account that keeps going on credits (`RoutePreview.creditsAt`). */
+  onCreditsAt?: (piProviders: string[], deviceId?: string) => void;
 }): HomeRouting {
   const { standIns, settings, vault, served, auth, quota, placedWork, ledger, ticker } = options;
   // The routing pool: account-served models plus base-runtime custom
@@ -212,6 +214,7 @@ export function startHomeRouting(options: {
     withheldModels: () => vault.withheldModels(),
     crewAccount: (provider, model, placed) => accounts.crewAccount(provider, model, placed),
     ...(options.onSpentAt ? { onSpentAt: options.onSpentAt } : {}),
+    ...(options.onCreditsAt ? { onCreditsAt: options.onCreditsAt } : {}),
   });
   return {
     availableModels,

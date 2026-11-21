@@ -249,5 +249,6 @@
   "cardThreadWrittenBy": "{label} が作成",
   "cardThreadWrittenByAfterClose": "{label} が作成（カードを閉じた後）",
   "cardTradeoffTable": "トレードオフを表で見る",
-  "cardUseSavedReset": "保存済みのリセットを使う"
+  "cardUseSavedReset": "保存済みのリセットを使う",
+  "cardUseSavedResets": "保存済みのリセットを自動で使う"
 }

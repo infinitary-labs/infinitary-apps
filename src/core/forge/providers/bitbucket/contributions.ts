@@ -167,12 +167,13 @@ export class BitbucketContributions implements ForgeContributions {
       typeof user?.uuid === "string"
         ? administered.find((workspace) => workspace.uuid === user.uuid)
         : undefined;
-    const only = administered.length === 1 ? administered[0] : undefined;
+    // A list past the pages read may hold more: never take the first page's one as the only one.
+    const only = administered.length === 1 && !link ? administered[0] : undefined;
     const chosen = personal ?? only;
     if (chosen) return chosen.slug;
     throw new ForgeError(
       "refused",
-      administered.length === 0
+      administered.length === 0 && !link
         ? "You administer no Bitbucket workspace to make your fork in, so nothing was sent. Make a workspace on Bitbucket, then choose Make my fork again."
         : "You administer several Bitbucket workspaces, so nothing was sent. Make your fork on Bitbucket in the workspace you want, then choose Make my fork again to use it.",
       true,

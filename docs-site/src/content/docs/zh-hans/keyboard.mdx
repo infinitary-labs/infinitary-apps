@@ -1,0 +1,603 @@
+---
+title: 键盘
+description: Infinitary 中每个可以用键盘运行的命令，以及它在每套预设下于 Mac 和 Linux 上的按键。
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Infinitary 中的一切都能用键盘完成。
+Tab 在控件之间移动，方向键在列表内移动。
+
+## 命令搜索 {#command-search}
+
+在 Mac 上按 <kbd>⌘K</kbd>，在 Linux 上按 <kbd>Ctrl+K</kbd>，打开命令搜索。
+输入几个词，用方向键选择一个命令，然后按 Enter。
+本页的每个命令都在那里，旁边是它的按键，没有按键的命令也在其中。
+
+## 预设 {#presets}
+
+Infinitary 自带几套按键，称为预设：Vim、Emacs、VS Code、Tmux、Legacy。
+新安装的 Infinitary 从 Vim 开始。
+只有在预设出现之前就用过 Infinitary 的人才会看到 Legacy。
+在**设置**的**键盘**下选择一套预设。
+
+## 更改按键 {#change-a-key}
+
+在**设置**的**键盘**下，每个命令都有**录制**、**移除**和**重置**。
+点击**录制**，按下你想要的按键，然后按 Enter 保存。
+如果另一个命令已经在用这些按键，Infinitary 会在做出任何更改之前告诉你是哪一个。
+
+## 每个命令及其按键 {#every-command-and-its-keys}
+
+短横线表示该命令还没有按键：从命令搜索中运行它，或者给它一个你自己的按键。
+中间有空格的两个按键要一个接一个地按。
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**窗口中的任何地方**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 搜索命令 | <kbd>&#58;</kbd> 不在打字时, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 不在打字时, <kbd>Ctrl+K</kbd> |
+| 前往主消息框 | <kbd>I</kbd> 不在打字时, <kbd>⌘L</kbd> | <kbd>I</kbd> 不在打字时, <kbd>Ctrl+L</kbd> |
+| 前往卡片的回复框 | <kbd>R</kbd> 不在打字时, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 不在打字时, <kbd>Ctrl+Shift+L</kbd> |
+| 前往卡片正文 | <kbd>G C</kbd> 不在打字时 | <kbd>G C</kbd> 不在打字时 |
+| 前往卡片的按钮 | <kbd>G A</kbd> 不在打字时 | <kbd>G A</kbd> 不在打字时 |
+| 点击推荐的选项 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 点击第二个选项 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 点击第三个选项 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 点击第四个选项 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 前往窗口的下一个部分 | <kbd>⌃W W</kbd> 不在打字时, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 前往窗口的上一个部分 | <kbd>⌃W P</kbd> 不在打字时, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 前往窗口左侧的部分 | <kbd>⌃W H</kbd> 不在打字时, <kbd>⌃H</kbd> 不在打字时 | — |
+| 前往窗口下方的部分 | <kbd>⌃W J</kbd> 不在打字时, <kbd>⌃J</kbd> 不在打字时 | — |
+| 前往窗口上方的部分 | <kbd>⌃W K</kbd> 不在打字时, <kbd>⌃K</kbd> 不在打字时 | — |
+| 前往窗口右侧的部分 | <kbd>⌃W L</kbd> 不在打字时, <kbd>⌃L</kbd> 不在打字时 | — |
+| 向左移动 | <kbd>H</kbd> 不在打字时 | <kbd>H</kbd> 不在打字时 |
+| 向下移动 | <kbd>J</kbd> 不在打字时, <kbd>⌃N</kbd> | <kbd>J</kbd> 不在打字时 |
+| 向上移动 | <kbd>K</kbd> 不在打字时, <kbd>⌃P</kbd> | <kbd>K</kbd> 不在打字时 |
+| 向右移动 | <kbd>L</kbd> 不在打字时 | <kbd>L</kbd> 不在打字时 |
+| 移到开头 | <kbd>G G</kbd> 不在打字时 | <kbd>G G</kbd> 不在打字时 |
+| 移到末尾 | <kbd>⇧G</kbd> 不在打字时 | <kbd>Shift+G</kbd> 不在打字时 |
+| 向上翻一页 | <kbd>⌃U</kbd> 不在打字时, <kbd>⌃B</kbd> 不在打字时 | — |
+| 向下翻一页 | <kbd>⌃D</kbd> 不在打字时, <kbd>⌃F</kbd> 不在打字时 | — |
+| 取消 | <kbd>⌃&#91;</kbd> | — |
+| 上一组工作电脑 | — | — |
+| 下一组工作电脑 | — | — |
+| 聚焦于一个项目 | <kbd>G P</kbd> 不在打字时, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 不在打字时, <kbd>Ctrl+Shift+P</kbd> |
+| 显示所有项目 | — | — |
+| 显示上一张卡片 | <kbd>⇧H</kbd> 不在打字时, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 不在打字时, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 显示下一张卡片 | <kbd>⇧L</kbd> 不在打字时, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 不在打字时, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 显示下一张新卡片 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 把卡片放到一边 | <kbd>Q</kbd> 不在打字时, <kbd>⌃W C</kbd> 不在打字时, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 不在打字时, <kbd>Ctrl+Shift+M</kbd> |
+| 把所有卡片放到一边或拿回来 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 点击便笺的&#8220;完成&#8221;或&#8220;知道了&#8221; | — | — |
+| 拒绝卡片上的所有选项 | — | — |
+| 最大化或还原卡片 | <kbd>⌃W O</kbd> 不在打字时 | — |
+| 在此卡片中查找 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 查找下一个匹配 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 查找上一个匹配 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 前往下一处修改过的区域 | <kbd>&#93; C</kbd> 不在打字时 | <kbd>&#93; C</kbd> 不在打字时 |
+| 前往下一个问题 | <kbd>&#125;</kbd> 不在打字时, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 不在打字时, <kbd>Ctrl+J</kbd> |
+| 前往上一个问题 | <kbd>&#123;</kbd> 不在打字时, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 不在打字时, <kbd>Ctrl+Shift+J</kbd> |
+| 前往下一个未回答的问题 | — | — |
+| 指向卡片的某个部分 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 显示或隐藏卡片的讨论 | <kbd>Z A</kbd> 不在打字时, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 不在打字时, <kbd>Ctrl+&#92;</kbd> |
+| 前往讨论中的新消息 | — | — |
+| 播放或暂停卡片的声音 | — | — |
+| 显示信息 | — | — |
+| 显示卡片 | — | — |
+| 显示动态 | — | — |
+| 显示船员 | — | — |
+| 接管或交还浏览器控制权 | — | — |
+| 前往浏览器页面 | — | — |
+| 返回卡片 | — | — |
+| 将任务移到另一台电脑 | — | — |
+| 将任务关闭为已完成 | — | — |
+| 显示浏览器 | — | — |
+| 下一个标签页 | <kbd>G T</kbd> 不在打字时, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 不在打字时 |
+| 上一个标签页 | <kbd>G ⇧T</kbd> 不在打字时, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 不在打字时 |
+| Find a task | <kbd>&#47;</kbd> 不在打字时, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> 不在打字时, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> 不在打字时, <kbd>⌘B</kbd> | <kbd>G B</kbd> 不在打字时, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 打开设置 | <kbd>G S</kbd> 不在打字时, <kbd>⌘,</kbd> | <kbd>G S</kbd> 不在打字时, <kbd>Ctrl+,</kbd> |
+| 打开键盘设置 | <kbd>&#63;</kbd> 不在打字时 | <kbd>&#63;</kbd> 不在打字时 |
+| 排列面板 | — | — |
+| 显示可用的更新 | — | — |
+| 稍后更新 | — | — |
+| 检查更新 | — | — |
+| 更新大副所在的电脑 | — | — |
+| 显示新功能 | — | — |
+| 打开大副的回复 | — | — |
+| 打开操作手册 | — | — |
+| 打开你的操作手册文件夹 | — | — |
+| 打开用量 | — | — |
+| 打开自动化 | — | — |
+| 打开集成 | — | — |
+| 暂停所有自动化 | — | — |
+| 播放或暂停环境音乐 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 切换用量单位 | — | — |
+| 重新检查额度 | — | — |
+| 放大所有内容 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 缩小所有内容 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 恢复为默认大小 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**在主消息框和卡片回复中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 删除到行首 | <kbd>⌃U</kbd> | — |
+| 删除到行尾 | <kbd>⌃K</kbd> | — |
+| 删除光标前的词 | <kbd>⌃W</kbd> | — |
+| 恢复上次删除的内容 | <kbd>⌃Y</kbd> | — |
+
+**在主消息框中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 找回上一条发送的消息 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**窗口中的任何地方**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 搜索命令 | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| 前往主消息框 | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> 不在打字时, <kbd>Ctrl+L</kbd> |
+| 前往卡片的回复框 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 前往卡片正文 | — | — |
+| 前往卡片的按钮 | — | — |
+| 点击推荐的选项 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 点击第二个选项 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 点击第三个选项 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 点击第四个选项 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 前往窗口的下一个部分 | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> 不在打字时, <kbd>F6</kbd> |
+| 前往窗口的上一个部分 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 前往窗口左侧的部分 | — | — |
+| 前往窗口下方的部分 | — | — |
+| 前往窗口上方的部分 | — | — |
+| 前往窗口右侧的部分 | — | — |
+| 向左移动 | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| 向下移动 | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| 向上移动 | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| 向右移动 | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| 移到开头 | <kbd>&#60;</kbd> 不在打字时 | <kbd>&#60;</kbd> 不在打字时 |
+| 移到末尾 | <kbd>&#62;</kbd> 不在打字时 | <kbd>&#62;</kbd> 不在打字时 |
+| 向上翻一页 | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| 向下翻一页 | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> 不在打字时 |
+| 取消 | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| 上一组工作电脑 | — | — |
+| 下一组工作电脑 | — | — |
+| 聚焦于一个项目 | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> 不在打字时, <kbd>Ctrl+Shift+P</kbd> |
+| 显示所有项目 | — | — |
+| 显示上一张卡片 | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> 不在打字时, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 显示下一张卡片 | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> 不在打字时, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 显示下一张新卡片 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 把卡片放到一边 | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> 不在打字时, <kbd>Ctrl+X K</kbd> 不在打字时, <kbd>Ctrl+Shift+M</kbd> |
+| 把所有卡片放到一边或拿回来 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 点击便笺的&#8220;完成&#8221;或&#8220;知道了&#8221; | — | — |
+| 拒绝卡片上的所有选项 | — | — |
+| 最大化或还原卡片 | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> 不在打字时 |
+| 在此卡片中查找 | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| 查找下一个匹配 | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| 查找上一个匹配 | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| 前往下一处修改过的区域 | — | — |
+| 前往下一个问题 | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> 不在打字时, <kbd>Ctrl+J</kbd> |
+| 前往上一个问题 | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> 不在打字时, <kbd>Ctrl+Shift+J</kbd> |
+| 前往下一个未回答的问题 | — | — |
+| 指向卡片的某个部分 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 显示或隐藏卡片的讨论 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 前往讨论中的新消息 | — | — |
+| 播放或暂停卡片的声音 | — | — |
+| 显示信息 | — | — |
+| 显示卡片 | — | — |
+| 显示动态 | — | — |
+| 显示船员 | — | — |
+| 接管或交还浏览器控制权 | — | — |
+| 前往浏览器页面 | — | — |
+| 返回卡片 | — | — |
+| 将任务移到另一台电脑 | — | — |
+| 将任务关闭为已完成 | — | — |
+| 显示浏览器 | — | — |
+| 下一个标签页 | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| 上一个标签页 | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> 不在打字时, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> 不在打字时 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 打开设置 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 打开键盘设置 | <kbd>⌃H B</kbd> 不在打字时 | <kbd>Ctrl+H B</kbd> 不在打字时 |
+| 排列面板 | — | — |
+| 显示可用的更新 | — | — |
+| 稍后更新 | — | — |
+| 检查更新 | — | — |
+| 更新大副所在的电脑 | — | — |
+| 显示新功能 | <kbd>⌃H N</kbd> 不在打字时 | <kbd>Ctrl+H N</kbd> 不在打字时 |
+| 打开大副的回复 | — | — |
+| 打开操作手册 | — | — |
+| 打开你的操作手册文件夹 | — | — |
+| 打开用量 | — | — |
+| 打开自动化 | — | — |
+| 打开集成 | — | — |
+| 暂停所有自动化 | — | — |
+| 播放或暂停环境音乐 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 切换用量单位 | — | — |
+| 重新检查额度 | — | — |
+| 放大所有内容 | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> 不在打字时, <kbd>Ctrl+X Ctrl+=</kbd> 不在打字时, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 缩小所有内容 | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> 不在打字时, <kbd>Ctrl+Minus</kbd> |
+| 恢复为默认大小 | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> 不在打字时, <kbd>Ctrl+0</kbd> |
+
+**在主消息框和卡片回复中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 删除到行首 | <kbd>⌃U</kbd> | — |
+| 删除到行尾 | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| 删除光标前的词 | <kbd>⌃W</kbd> | — |
+| 恢复上次删除的内容 | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**在主消息框中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 找回上一条发送的消息 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**窗口中的任何地方**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 搜索命令 | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| 前往主消息框 | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| 前往卡片的回复框 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 前往卡片正文 | — | — |
+| 前往卡片的按钮 | — | — |
+| 点击推荐的选项 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 点击第二个选项 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 点击第三个选项 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 点击第四个选项 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 前往窗口的下一个部分 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 前往窗口的上一个部分 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 前往窗口左侧的部分 | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| 前往窗口下方的部分 | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| 前往窗口上方的部分 | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| 前往窗口右侧的部分 | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| 向左移动 | — | — |
+| 向下移动 | — | — |
+| 向上移动 | — | — |
+| 向右移动 | — | — |
+| 移到开头 | — | — |
+| 移到末尾 | — | — |
+| 向上翻一页 | — | — |
+| 向下翻一页 | — | — |
+| 取消 | — | — |
+| 上一组工作电脑 | — | — |
+| 下一组工作电脑 | — | — |
+| 聚焦于一个项目 | <kbd>⌃R</kbd> | — |
+| 显示所有项目 | — | — |
+| 显示上一张卡片 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 显示下一张卡片 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 显示下一张新卡片 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 把卡片放到一边 | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| 把所有卡片放到一边或拿回来 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 点击便笺的&#8220;完成&#8221;或&#8220;知道了&#8221; | — | — |
+| 拒绝卡片上的所有选项 | — | — |
+| 最大化或还原卡片 | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| 在此卡片中查找 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 查找下一个匹配 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 查找上一个匹配 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 前往下一处修改过的区域 | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| 前往下一个问题 | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| 前往上一个问题 | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| 前往下一个未回答的问题 | — | — |
+| 指向卡片的某个部分 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 显示或隐藏卡片的讨论 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 前往讨论中的新消息 | — | — |
+| 播放或暂停卡片的声音 | — | — |
+| 显示信息 | — | — |
+| 显示卡片 | — | — |
+| 显示动态 | — | — |
+| 显示船员 | <kbd>⌃&#96;</kbd> | — |
+| 接管或交还浏览器控制权 | — | — |
+| 前往浏览器页面 | — | — |
+| 返回卡片 | — | — |
+| 将任务移到另一台电脑 | — | — |
+| 将任务关闭为已完成 | — | — |
+| 显示浏览器 | — | — |
+| 下一个标签页 | <kbd>⌃⇥</kbd> | — |
+| 上一个标签页 | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 打开设置 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 打开键盘设置 | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| 排列面板 | — | — |
+| 显示可用的更新 | — | — |
+| 稍后更新 | — | — |
+| 检查更新 | — | — |
+| 更新大副所在的电脑 | — | — |
+| 显示新功能 | — | — |
+| 打开大副的回复 | — | — |
+| 打开操作手册 | — | — |
+| 打开你的操作手册文件夹 | — | — |
+| 打开用量 | — | — |
+| 打开自动化 | — | — |
+| 打开集成 | — | — |
+| 暂停所有自动化 | — | — |
+| 播放或暂停环境音乐 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 切换用量单位 | — | — |
+| 重新检查额度 | — | — |
+| 放大所有内容 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 缩小所有内容 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 恢复为默认大小 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**在主消息框和卡片回复中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 删除到行首 | <kbd>⌃U</kbd> | — |
+| 删除到行尾 | <kbd>⌃K</kbd> | — |
+| 删除光标前的词 | <kbd>⌃W</kbd> | — |
+| 恢复上次删除的内容 | <kbd>⌃Y</kbd> | — |
+
+**在主消息框中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 找回上一条发送的消息 | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**窗口中的任何地方**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 搜索命令 | <kbd>&#58;</kbd> 不在打字时, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 不在打字时, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| 前往主消息框 | <kbd>I</kbd> 不在打字时, <kbd>⌘L</kbd> | <kbd>I</kbd> 不在打字时, <kbd>Ctrl+L</kbd> |
+| 前往卡片的回复框 | <kbd>R</kbd> 不在打字时, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 不在打字时, <kbd>Ctrl+Shift+L</kbd> |
+| 前往卡片正文 | <kbd>G C</kbd> 不在打字时, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> 不在打字时, <kbd>Ctrl+B &#91;</kbd> |
+| 前往卡片的按钮 | <kbd>G A</kbd> 不在打字时 | <kbd>G A</kbd> 不在打字时 |
+| 点击推荐的选项 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 点击第二个选项 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 点击第三个选项 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 点击第四个选项 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 前往窗口的下一个部分 | <kbd>⌃W W</kbd> 不在打字时, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| 前往窗口的上一个部分 | <kbd>⌃W P</kbd> 不在打字时, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 前往窗口左侧的部分 | <kbd>⌃W H</kbd> 不在打字时, <kbd>⌃H</kbd> 不在打字时, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| 前往窗口下方的部分 | <kbd>⌃W J</kbd> 不在打字时, <kbd>⌃J</kbd> 不在打字时, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| 前往窗口上方的部分 | <kbd>⌃W K</kbd> 不在打字时, <kbd>⌃K</kbd> 不在打字时, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| 前往窗口右侧的部分 | <kbd>⌃W L</kbd> 不在打字时, <kbd>⌃L</kbd> 不在打字时, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| 向左移动 | <kbd>H</kbd> 不在打字时 | <kbd>H</kbd> 不在打字时 |
+| 向下移动 | <kbd>J</kbd> 不在打字时, <kbd>⌃N</kbd> | <kbd>J</kbd> 不在打字时 |
+| 向上移动 | <kbd>K</kbd> 不在打字时, <kbd>⌃P</kbd> | <kbd>K</kbd> 不在打字时 |
+| 向右移动 | <kbd>L</kbd> 不在打字时 | <kbd>L</kbd> 不在打字时 |
+| 移到开头 | <kbd>G G</kbd> 不在打字时 | <kbd>G G</kbd> 不在打字时 |
+| 移到末尾 | <kbd>⇧G</kbd> 不在打字时 | <kbd>Shift+G</kbd> 不在打字时 |
+| 向上翻一页 | <kbd>⌃U</kbd> 不在打字时 | — |
+| 向下翻一页 | <kbd>⌃D</kbd> 不在打字时, <kbd>⌃F</kbd> 不在打字时 | — |
+| 取消 | <kbd>⌃&#91;</kbd> | — |
+| 上一组工作电脑 | — | — |
+| 下一组工作电脑 | — | — |
+| 聚焦于一个项目 | <kbd>G P</kbd> 不在打字时, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 不在打字时, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| 显示所有项目 | — | — |
+| 显示上一张卡片 | <kbd>⇧H</kbd> 不在打字时, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 不在打字时, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 显示下一张卡片 | <kbd>⇧L</kbd> 不在打字时, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 不在打字时, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 显示下一张新卡片 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 把卡片放到一边 | <kbd>Q</kbd> 不在打字时, <kbd>⌃W C</kbd> 不在打字时, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 不在打字时, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| 把所有卡片放到一边或拿回来 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 点击便笺的&#8220;完成&#8221;或&#8220;知道了&#8221; | — | — |
+| 拒绝卡片上的所有选项 | — | — |
+| 最大化或还原卡片 | <kbd>⌃W O</kbd> 不在打字时, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| 在此卡片中查找 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 查找下一个匹配 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 查找上一个匹配 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 前往下一处修改过的区域 | <kbd>&#93; C</kbd> 不在打字时 | <kbd>&#93; C</kbd> 不在打字时 |
+| 前往下一个问题 | <kbd>&#125;</kbd> 不在打字时, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 不在打字时, <kbd>Ctrl+J</kbd> |
+| 前往上一个问题 | <kbd>&#123;</kbd> 不在打字时, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 不在打字时, <kbd>Ctrl+Shift+J</kbd> |
+| 前往下一个未回答的问题 | — | — |
+| 指向卡片的某个部分 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 显示或隐藏卡片的讨论 | <kbd>Z A</kbd> 不在打字时, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 不在打字时, <kbd>Ctrl+&#92;</kbd> |
+| 前往讨论中的新消息 | — | — |
+| 播放或暂停卡片的声音 | — | — |
+| 显示信息 | — | — |
+| 显示卡片 | — | — |
+| 显示动态 | — | — |
+| 显示船员 | — | — |
+| 接管或交还浏览器控制权 | — | — |
+| 前往浏览器页面 | — | — |
+| 返回卡片 | — | — |
+| 将任务移到另一台电脑 | — | — |
+| 将任务关闭为已完成 | — | — |
+| 显示浏览器 | — | — |
+| 下一个标签页 | <kbd>G T</kbd> 不在打字时, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 不在打字时 |
+| 上一个标签页 | <kbd>G ⇧T</kbd> 不在打字时, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 不在打字时 |
+| Find a task | <kbd>&#47;</kbd> 不在打字时, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> 不在打字时, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> 不在打字时, <kbd>⌘B</kbd> | <kbd>G B</kbd> 不在打字时 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 打开设置 | <kbd>G S</kbd> 不在打字时, <kbd>⌘,</kbd> | <kbd>G S</kbd> 不在打字时, <kbd>Ctrl+,</kbd> |
+| 打开键盘设置 | <kbd>&#63;</kbd> 不在打字时, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> 不在打字时, <kbd>Ctrl+B &#63;</kbd> |
+| 排列面板 | — | — |
+| 显示可用的更新 | — | — |
+| 稍后更新 | — | — |
+| 检查更新 | — | — |
+| 更新大副所在的电脑 | — | — |
+| 显示新功能 | — | — |
+| 打开大副的回复 | — | — |
+| 打开操作手册 | — | — |
+| 打开你的操作手册文件夹 | — | — |
+| 打开用量 | — | — |
+| 打开自动化 | — | — |
+| 打开集成 | — | — |
+| 暂停所有自动化 | — | — |
+| 播放或暂停环境音乐 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 切换用量单位 | — | — |
+| 重新检查额度 | — | — |
+| 放大所有内容 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 缩小所有内容 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 恢复为默认大小 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**在主消息框和卡片回复中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 删除到行首 | <kbd>⌃U</kbd> | — |
+| 删除到行尾 | <kbd>⌃K</kbd> | — |
+| 删除光标前的词 | <kbd>⌃W</kbd> | — |
+| 恢复上次删除的内容 | <kbd>⌃Y</kbd> | — |
+
+**在主消息框中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 找回上一条发送的消息 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**窗口中的任何地方**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 搜索命令 | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| 前往主消息框 | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| 前往卡片的回复框 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 前往卡片正文 | — | — |
+| 前往卡片的按钮 | — | — |
+| 点击推荐的选项 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 点击第二个选项 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 点击第三个选项 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 点击第四个选项 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 前往窗口的下一个部分 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 前往窗口的上一个部分 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 前往窗口左侧的部分 | — | — |
+| 前往窗口下方的部分 | — | — |
+| 前往窗口上方的部分 | — | — |
+| 前往窗口右侧的部分 | — | — |
+| 向左移动 | — | — |
+| 向下移动 | — | — |
+| 向上移动 | — | — |
+| 向右移动 | — | — |
+| 移到开头 | — | — |
+| 移到末尾 | — | — |
+| 向上翻一页 | — | — |
+| 向下翻一页 | — | — |
+| 取消 | — | — |
+| 上一组工作电脑 | — | — |
+| 下一组工作电脑 | — | — |
+| 聚焦于一个项目 | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| 显示所有项目 | — | — |
+| 显示上一张卡片 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 显示下一张卡片 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 显示下一张新卡片 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 把卡片放到一边 | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| 把所有卡片放到一边或拿回来 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 点击便笺的&#8220;完成&#8221;或&#8220;知道了&#8221; | — | — |
+| 拒绝卡片上的所有选项 | — | — |
+| 最大化或还原卡片 | — | — |
+| 在此卡片中查找 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 查找下一个匹配 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 查找上一个匹配 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 前往下一处修改过的区域 | — | — |
+| 前往下一个问题 | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| 前往上一个问题 | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| 前往下一个未回答的问题 | — | — |
+| 指向卡片的某个部分 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 显示或隐藏卡片的讨论 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 前往讨论中的新消息 | — | — |
+| 播放或暂停卡片的声音 | — | — |
+| 显示信息 | — | — |
+| 显示卡片 | — | — |
+| 显示动态 | — | — |
+| 显示船员 | — | — |
+| 接管或交还浏览器控制权 | — | — |
+| 前往浏览器页面 | — | — |
+| 返回卡片 | — | — |
+| 将任务移到另一台电脑 | — | — |
+| 将任务关闭为已完成 | — | — |
+| 显示浏览器 | — | — |
+| 下一个标签页 | — | — |
+| 上一个标签页 | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 打开设置 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 打开键盘设置 | — | — |
+| 排列面板 | — | — |
+| 显示可用的更新 | — | — |
+| 稍后更新 | — | — |
+| 检查更新 | — | — |
+| 更新大副所在的电脑 | — | — |
+| 显示新功能 | — | — |
+| 打开大副的回复 | — | — |
+| 打开操作手册 | — | — |
+| 打开你的操作手册文件夹 | — | — |
+| 打开用量 | — | — |
+| 打开自动化 | — | — |
+| 打开集成 | — | — |
+| 暂停所有自动化 | — | — |
+| 播放或暂停环境音乐 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 切换用量单位 | — | — |
+| 重新检查额度 | — | — |
+| 放大所有内容 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 缩小所有内容 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 恢复为默认大小 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**在主消息框和卡片回复中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 删除到行首 | <kbd>⌃U</kbd> | — |
+| 删除到行尾 | <kbd>⌃K</kbd> | — |
+| 删除光标前的词 | <kbd>⌃W</kbd> | — |
+| 恢复上次删除的内容 | <kbd>⌃Y</kbd> | — |
+
+**在主消息框中**
+
+| 命令 | Mac | Linux |
+| --- | --- | --- |
+| 找回上一条发送的消息 | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

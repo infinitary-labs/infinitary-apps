@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "変更箇所へのリンクは利用できません";
 "cardRevisionMore" = "ほか%1$@件";
 "cardRevisionShowFewer" = "表示を減らす";
+"cardRunbookAddPanels" = "オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。";
 "cardSavedResetCrewWaits" = "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
 "cardSavedResetCrewWaitsThere" = "保存済みのリセットを使わない限り、%1$@の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
 "cardSavedResetsOpenPage" = "%1$@ の使用量ページを開く";
@@ -3012,6 +3013,7 @@
 "settingsRunbooksMakeYourOwn" = "自分で作る";
 "settingsRunbooksOpenFailed" = "このフォルダを開けませんでした。もう一度お試しください。";
 "settingsRunbooksOpenFolder" = "フォルダを開く";
+"settingsRunbooksPanels" = "オンの間、パネル列に %1$@ を表示します。";
 "settingsRunbooksView" = "表示";
 "settingsRunbooksViewLabel" = "%1$@ を表示";
 "settingsRunbooksYours" = "あなたのランブック";

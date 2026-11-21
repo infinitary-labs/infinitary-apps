@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "Änderungslinks nicht verfügbar";
 "cardRevisionMore" = "%1$@ weitere";
 "cardRevisionShowFewer" = "Weniger anzeigen";
+"cardRunbookAddPanels" = "Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.";
 "cardSavedResetCrewWaits" = "Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.";
 "cardSavedResetCrewWaitsThere" = "Crew-Arbeit %1$@ wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.";
 "cardSavedResetsOpenPage" = "Nutzungsseite auf %1$@ öffnen";
@@ -3012,6 +3013,7 @@
 "settingsRunbooksMakeYourOwn" = "Eigenen erstellen";
 "settingsRunbooksOpenFailed" = "Dieser Ordner konnte nicht geöffnet werden. Bitte versuch es noch einmal.";
 "settingsRunbooksOpenFolder" = "Ordner öffnen";
+"settingsRunbooksPanels" = "Solange er an ist, zeigt er %1$@ auf deinen Leisten.";
 "settingsRunbooksView" = "Ansehen";
 "settingsRunbooksViewLabel" = "%1$@ ansehen";
 "settingsRunbooksYours" = "Deine";

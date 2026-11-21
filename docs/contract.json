@@ -52699,6 +52699,24 @@
             },
             "error": {
               "type": "string"
+            },
+            "panels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title"
+                ]
+              }
             }
           },
           "required": [
@@ -52760,6 +52778,24 @@
             },
             "error": {
               "type": "string"
+            },
+            "panels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title"
+                ]
+              }
             }
           },
           "required": [
@@ -52817,6 +52853,24 @@
             },
             "error": {
               "type": "string"
+            },
+            "panels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title"
+                ]
+              }
             }
           },
           "required": [
@@ -62655,6 +62709,11 @@
                     }
                   ]
                 },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
@@ -63157,6 +63216,11 @@
                     }
                   ]
                 },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
@@ -63628,6 +63692,40 @@
                 "error"
               ]
             }
+          },
+          "refused": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "by": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "why": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "id",
+                "runbook",
+                "by",
+                "why"
+              ]
+            }
           }
         },
         "required": [
@@ -63900,6 +63998,11 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "runbook": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
                     }
                   },
                   "required": [
@@ -85401,6 +85504,11 @@
                     }
                   ]
                 },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
@@ -85903,6 +86011,11 @@
                     }
                   ]
                 },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
@@ -86372,6 +86485,40 @@
                 "commands",
                 "server",
                 "error"
+              ]
+            }
+          },
+          "refused": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "runbook": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "by": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "why": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "id",
+                "runbook",
+                "by",
+                "why"
               ]
             }
           }

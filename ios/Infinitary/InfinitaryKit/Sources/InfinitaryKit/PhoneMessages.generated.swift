@@ -395,6 +395,7 @@ public enum PhoneMessages {
     public static func `cardRevisionLinksUnavailable`() -> String { PhoneWords.format("cardRevisionLinksUnavailable", []) }
     public static func `cardRevisionMore`(`count`: String) -> String { PhoneWords.format("cardRevisionMore", [`count`]) }
     public static func `cardRevisionShowFewer`() -> String { PhoneWords.format("cardRevisionShowFewer", []) }
+    public static func `cardRunbookAddPanels`() -> String { PhoneWords.format("cardRunbookAddPanels", []) }
     public static func `cardSavedResetCrewWaits`() -> String { PhoneWords.format("cardSavedResetCrewWaits", []) }
     public static func `cardSavedResetCrewWaitsThere`(`where`: String) -> String { PhoneWords.format("cardSavedResetCrewWaitsThere", [`where`]) }
     public static func `cardSavedResetsNow`(`account`: String, `count`: Int) -> String { PhoneWords.format("cardSavedResetsNow", [`account`, `count`]) }
@@ -3137,6 +3138,7 @@ public enum PhoneMessages {
     public static func `settingsRunbooksMakeYourOwn`() -> String { PhoneWords.format("settingsRunbooksMakeYourOwn", []) }
     public static func `settingsRunbooksOpenFailed`() -> String { PhoneWords.format("settingsRunbooksOpenFailed", []) }
     public static func `settingsRunbooksOpenFolder`() -> String { PhoneWords.format("settingsRunbooksOpenFolder", []) }
+    public static func `settingsRunbooksPanels`(`panels`: String) -> String { PhoneWords.format("settingsRunbooksPanels", [`panels`]) }
     public static func `settingsRunbooksView`() -> String { PhoneWords.format("settingsRunbooksView", []) }
     public static func `settingsRunbooksViewLabel`(`name`: String) -> String { PhoneWords.format("settingsRunbooksViewLabel", [`name`]) }
     public static func `settingsRunbooksYours`() -> String { PhoneWords.format("settingsRunbooksYours", []) }
@@ -4221,6 +4223,7 @@ extension PhoneWords {
         "cardRevisionLinksUnavailable": [],
         "cardRevisionMore": ["count"],
         "cardRevisionShowFewer": [],
+        "cardRunbookAddPanels": [],
         "cardSavedResetCrewWaits": [],
         "cardSavedResetCrewWaitsThere": ["where"],
         "cardSavedResetsNow": ["account", "count"],
@@ -6963,6 +6966,7 @@ extension PhoneWords {
         "settingsRunbooksMakeYourOwn": [],
         "settingsRunbooksOpenFailed": [],
         "settingsRunbooksOpenFolder": [],
+        "settingsRunbooksPanels": ["panels"],
         "settingsRunbooksView": [],
         "settingsRunbooksViewLabel": ["name"],
         "settingsRunbooksYours": [],

@@ -1047,6 +1047,7 @@
   "settingsRunbooksMakeYourOwn": "Crea los tuyos",
   "settingsRunbooksOpenFailed": "No se pudo abrir esta carpeta. Inténtalo de nuevo.",
   "settingsRunbooksOpenFolder": "Abrir carpeta",
+  "settingsRunbooksPanels": "Mientras está activo, muestra {panels} en tus barras.",
   "settingsRunbooksView": "Ver",
   "settingsRunbooksViewLabel": "Ver {name}",
   "settingsRunbooksYours": "Tuyos",

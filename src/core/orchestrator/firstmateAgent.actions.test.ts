@@ -618,6 +618,90 @@ describe("FirstmateAgent", () => {
     expect(state("now")).toBe("no word from the window");
   });
 
+  // docs/runbooks.md, "Panels": the first mate's own context names a runbook's
+  // panel by its runbook, and one left off for a taken id beside the panel
+  // that keeps it, read through the window's own row for that panel.
+  it("lists a runbook's panel and one left off beside the panel that holds its id", async () => {
+    const panel = (
+      id: string,
+      title: string,
+      source: "yours" | "installed",
+      by: string | null,
+    ) => ({
+      id,
+      source,
+      by,
+      title,
+      placement: { x: "right" as const, y: "top" as const },
+      order: 100,
+      size: "content" as const,
+      present: true,
+      ownPresence: false,
+      moves: false,
+      running: false,
+      reads: [],
+      sql: [],
+      panel: null,
+      frame: { version: "abc" },
+      server: null,
+      cardViews: [],
+      cards: {},
+      header: [],
+      commands: [],
+      error: null,
+    });
+    const { agent } = setup({
+      personal: {
+        extensions: [
+          panel("desk-reading", "My reading", "yours", null),
+          { ...panel("desk-notes", "Notes", "installed", "Reading desk"), runbook: "desk" },
+          panel("token-watch", "Token watch", "installed", "Studio"),
+        ],
+        refused: [
+          {
+            id: "desk-reading",
+            runbook: "desk",
+            by: "Reading desk",
+            why: "another panel has that id",
+          },
+        ],
+      },
+      mounts: {
+        panels: [
+          {
+            id: "desk-reading",
+            kind: "installed",
+            version: null,
+            state: "refused",
+            rail: null,
+            why: "Reading desk's panel: another panel has that id",
+            runbook: "desk",
+          },
+          {
+            id: "desk-reading",
+            kind: "personal",
+            version: "abc",
+            state: "drawn",
+            rail: "right",
+            why: null,
+          },
+        ],
+      },
+    });
+    await agent.converse("what panels do I have?");
+    const context = decodeContext(agent.buildContextBlock());
+    expect(context.surfaces.panels).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "desk-reading", owner: "captain", state: "drawn" }),
+        expect.objectContaining({ id: "desk-notes", owner: "runbook", by: "Reading desk" }),
+        expect.objectContaining({ id: "token-watch", owner: "added", by: "Studio" }),
+      ]),
+    );
+    expect(
+      (context.surfaces as { refused_runbook_panels?: unknown }).refused_runbook_panels,
+    ).toEqual([{ id: "desk-reading", runbook: "Reading desk", why: "another panel has that id" }]);
+  });
+
   it("refuses to remove a surface on an operational wake (Step 1)", async () => {
     const { agent, specs, session, settings, removedPersonal } = setup({
       personal: {

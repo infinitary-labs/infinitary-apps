@@ -59,7 +59,8 @@ export function personalDraftPanelId(id: string): string {
 /**
  * Where a plugin came from (one plugin vehicle, Phase A; captain's A1a):
  * `yours` is the captain's own personal workspace, `installed` one he added
- * from npm, a git address or a folder. The host stamps it from the root it
+ * from npm, a git address or a folder, or a panel inside a runbook that is
+ * on (`runbook` names it). The host stamps it from the root it
  * found the plugin in - never from the manifest - and it decides the
  * privilege, never how the plugin is written.
  */
@@ -330,8 +331,16 @@ export const personalExtensionViewSchema = z.object({
   id: personalIdSchema,
   /** Where it came from, stamped by the host (Phase A item 1). */
   source: z.enum(PLUGIN_SOURCES),
-  /** An installed plugin's `name`: the attribution on its header. Null for the captain's own. */
+  /**
+   * An installed plugin's `name`, or the name of the runbook a panel comes
+   * with: the attribution on its header. Null for the captain's own.
+   */
   by: z.string().min(1).max(40).nullable(),
+  /**
+   * The id of the runbook it comes with (docs/runbooks.md, "Panels"): it is
+   * served as an added panel and leaves when that runbook is turned off.
+   */
+  runbook: z.string().min(1).max(100).optional(),
   title: z.string().min(1).max(40),
   placement: personalPlacementSchema,
   order: z.number().int(),
@@ -440,6 +449,9 @@ export const personalExtensionViewSchema = z.object({
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 
+/** The most runbook panels a snapshot lists as left off; the rest are named in the panel log alone. */
+export const PERSONAL_REFUSED_MAX = 500;
+
 export const personalSnapshotSchema = z.object({
   extensions: z.array(personalExtensionViewSchema),
   /**
@@ -449,6 +461,22 @@ export const personalSnapshotSchema = z.object({
    * report. Absent while nothing is being built.
    */
   drafts: z.array(personalExtensionViewSchema).optional(),
+  /**
+   * The runbooks' panels left off the rails (docs/runbooks.md, "Panels"):
+   * each by its id, its runbook's id and name, and why, such as another
+   * panel holding its id. Absent when none is.
+   */
+  refused: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(100),
+        runbook: z.string().min(1).max(100),
+        by: z.string().max(100),
+        why: z.string().min(1).max(500),
+      }),
+    )
+    .max(PERSONAL_REFUSED_MAX)
+    .optional(),
 });
 export type PersonalSnapshot = z.infer<typeof personalSnapshotSchema>;
 

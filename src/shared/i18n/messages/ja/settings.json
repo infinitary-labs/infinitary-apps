@@ -997,6 +997,7 @@
   "settingsRunbooksMakeYourOwn": "自分で作る",
   "settingsRunbooksOpenFailed": "このフォルダを開けませんでした。もう一度お試しください。",
   "settingsRunbooksOpenFolder": "フォルダを開く",
+  "settingsRunbooksPanels": "オンの間、パネル列に {panels} を表示します。",
   "settingsRunbooksView": "表示",
   "settingsRunbooksViewLabel": "{name} を表示",
   "settingsRunbooksYours": "あなたのランブック",

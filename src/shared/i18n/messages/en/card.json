@@ -203,6 +203,7 @@
   "cardRevisionLinksUnavailable": "Change links unavailable",
   "cardRevisionMore": "{count} more",
   "cardRevisionShowFewer": "Show fewer",
+  "cardRunbookAddPanels": "While it is on, it also shows these panels on your rail. Adding it agrees to them too.",
   "cardSavedResetCrewWaits": "Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
   "cardSavedResetCrewWaitsThere": "Crew work {where} drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
   "cardSavedResetsNow": {

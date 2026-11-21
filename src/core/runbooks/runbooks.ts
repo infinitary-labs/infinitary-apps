@@ -23,6 +23,8 @@ import {
   type RunbookView,
   runbookManifestSchema,
   runbookMatches,
+  runbookPanelId,
+  runbookPanelSlice,
 } from "../../shared/runbooks";
 import { skillFolders } from "../session/projectResources";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -59,9 +61,25 @@ export function crewRunbookText(served: { text: string; sha: string }): string {
   return `${served.text}\n\nRunbook resources: ${served.sha}.`;
 }
 
+/**
+ * One panel a runbook that is on shows (docs/runbooks.md, "Panels"): its
+ * folder, the id it is shown under, and the runbook it comes with.
+ */
+export type RunbookPanel = {
+  id: string;
+  /** The folder as the runbook's manifest names it. */
+  folder: string;
+  /** Where its saved data is kept (`runbookPanelSlice`). */
+  slice: string;
+  dir: string;
+  runbook: { id: string; name: string; source: "installed" | "personal" };
+};
+
 /** Bundled, installed and personal folders supply procedure. SettingsStore alone owns their switches. */
 export class Runbooks {
   private readonly bundled: Entry[];
+  /** Who hears that a switch, a copy or a turned-on built-in may have changed what is on. */
+  private readonly listeners = new Set<() => void>();
   constructor(
     root: string,
     private readonly settings: Pick<SettingsStore, "getRunbookStates" | "setRunbookStates">,
@@ -94,6 +112,32 @@ export class Runbooks {
   builtins(): RunbookManifest[] {
     return this.bundled.map(({ manifest }) => manifest);
   }
+  /** Hears every switch, copy and kept offer; returns the way to stop hearing. */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  private changed(): void {
+    for (const listener of this.listeners) listener();
+  }
+  /**
+   * The panels the runbooks you made or added show while they are on
+   * (docs/runbooks.md, "Panels"), in runbook then manifest order. A built-in
+   * runbook's panels are not read here.
+   */
+  panels(): RunbookPanel[] {
+    return this.enabled().flatMap(({ manifest, dir, source }) =>
+      source === "builtin"
+        ? []
+        : (manifest.panels ?? []).map((folder) => ({
+            id: runbookPanelId(manifest, folder),
+            folder,
+            slice: runbookPanelSlice(manifest.id, folder),
+            dir: contained(dir, folder),
+            runbook: { id: manifest.id, name: manifest.name, source },
+          })),
+    );
+  }
   /**
    * The map part the Advanced architecture runbook ships, which a story's map
    * view draws in on its merge card whether or not the runbook is on now
@@ -114,6 +158,10 @@ export class Runbooks {
     for (const { dir, source } of folders) {
       try {
         const manifest = checkRunbookFiles(dir);
+        // An added runbook is its record's, whose folder bears its id: files
+        // changed to name another never borrow that one's grants or data.
+        if (source === "installed" && manifest.id !== basename(dir))
+          throw new Error("This runbook's files now name another runbook. Add it again.");
         if (entries.some((entry) => entry.manifest.id === manifest.id)) continue;
         entries.push({ manifest, dir, source });
       } catch (error) {
@@ -216,6 +264,7 @@ export class Runbooks {
       rmSync(dir, { recursive: true, force: true });
       throw error;
     }
+    this.changed();
     return this.list();
   }
   list(): RunbookView[] {
@@ -229,6 +278,14 @@ export class Runbooks {
         enabled: states[manifest.id] ?? !manifest.startsOff,
         source,
         ...(source === "personal" ? { path: dir } : {}),
+        ...(source !== "builtin" && manifest.panels?.length
+          ? {
+              panels: manifest.panels.map((folder) => ({
+                id: runbookPanelId(manifest, folder),
+                title: panelTitle(dir, folder),
+              })),
+            }
+          : {}),
       })),
       ...unreadable,
     ];
@@ -249,6 +306,7 @@ export class Runbooks {
       if (projects.length > 0) throw new Error(offerInUse(offer, projects));
     }
     this.settings.setRunbookStates(states);
+    this.changed();
     return this.list();
   }
   /**
@@ -269,23 +327,24 @@ export class Runbooks {
       const kept = (manifest.offers ?? []).some(
         (offer) => !offered.has(offer) && this.using(offer).length > 0,
       );
-      if (kept)
+      if (kept) {
         this.settings.setRunbookStates({
           ...this.settings.getRunbookStates(),
           [manifest.id]: true,
         });
+        this.changed();
+      }
     }
   }
+  /** The runbooks that are on, from one scan and one read of the switches. */
+  private enabled(): Entry[] {
+    const states = this.settings.getRunbookStates();
+    return this.entries.filter(({ manifest }) => states[manifest.id] ?? !manifest.startsOff);
+  }
   private active(project?: string): Entry[] {
-    const on = new Set(
-      this.list()
-        .filter((entry) => entry.enabled)
-        .map((entry) => entry.id),
-    );
-    return this.entries.filter(
+    return this.enabled().filter(
       ({ manifest }) =>
-        on.has(manifest.id) &&
-        (!manifest.projects || (project !== undefined && manifest.projects.includes(project))),
+        !manifest.projects || (project !== undefined && manifest.projects.includes(project)),
     );
   }
   firstmate(): { text: string; sha: string } {
@@ -373,6 +432,19 @@ export function offerInUse(offer: RunbookOffer, projects: string[]): string {
       ? projects[0]
       : `${projects.slice(0, -1).join(", ")} and ${projects[projects.length - 1]}`;
   return `${names} still ${projects.length === 1 ? "uses" : "use"} ${OFFER_NAMES[offer]}. Choose another way for changes to go in Settings, under Projects, then turn this runbook off.`;
+}
+
+/** A runbook panel's title as its manifest names it, or its folder's name. */
+function panelTitle(dir: string, folder: string): string {
+  try {
+    const raw = JSON.parse(readFileSync(join(contained(dir, folder), "manifest.json"), "utf8")) as {
+      title?: unknown;
+    };
+    if (typeof raw.title === "string" && raw.title) return raw.title;
+  } catch {
+    // An unreadable manifest is named by its folder; the panel says why it does not show.
+  }
+  return basename(folder);
 }
 
 function contained(root: string, file: string): string {

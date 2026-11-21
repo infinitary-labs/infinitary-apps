@@ -27,8 +27,9 @@ const GUIDANCE_FILES = new Set([
   ".bmp",
 ]);
 
-/** Admission and every subsequent read share the guidance-only boundary. Panels are inert source,
- * checked by the panel compiler at admission and installed only through their own consent. */
+/** Admission and every subsequent read share the guidance-only boundary. A panel folder holds
+ * panel source, which the panel service checks and compiles as an added panel's while the runbook
+ * is on (docs/runbooks.md, "Panels"). */
 export function checkRunbookFiles(
   root: string,
 ): RunbookManifest & { author: string; version: string } {

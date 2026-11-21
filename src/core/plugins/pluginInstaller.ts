@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
+import { said, saidMark } from "@shared/i18n/said";
 import type { PersonalManifest } from "@shared/personal/contracts";
 import {
   manifestCapabilities,
@@ -19,6 +20,7 @@ import {
   unservableGrants,
 } from "@shared/plugins/manifest";
 import { panelCardsProblem } from "@shared/plugins/panelCards";
+import { runbookPanelId, runbookPanelSlice } from "@shared/runbooks";
 import { READ_WORDS, viewWords } from "@shared/vocabulary";
 import { compilePersonalModule, PERSONAL_ENTRY_FILES } from "../personal/compiler";
 import { errorText } from "../personal/errorText";
@@ -71,9 +73,11 @@ import {
  *    consented capabilities, says so in one feed line, and rescans - the
  *    plugin host then registers it beside the captain's own panels.
  *
- * A tree with runbook.json takes guidance admission instead: no runtime or
- * panel mounts, its own consent every time, and a declared built-in replacement.
- * Included panels remain inert sources until separately added and consented.
+ * A tree with runbook.json takes guidance admission instead: its own consent
+ * every time, and a declared built-in replacement. Its add card names each
+ * panel the runbook lists and what it can read, and one click agrees to the
+ * guidance and the panels together; the record keeps each panel's grants,
+ * and the panels show while the runbook is on (docs/runbooks.md, "Panels").
  *
  * An update of a panel already added asks again only when its
  * capabilities differ from what he agreed to; otherwise it goes straight
@@ -309,13 +313,24 @@ export class PluginInstaller {
         (existing?.pending && existing.pending.kind !== "runbook")
       )
         return "Not added: that name was already added from somewhere else; remove it first.";
+      const panels: Record<string, PluginCapabilities> = {};
+      const panelLines: string[] = [];
       for (const panel of manifest.panels ?? []) {
+        const panelId = runbookPanelId(manifest, panel);
+        if (!PERSONAL_ID_PATTERN.test(panelId) || panelId.length > PERSONAL_ID_MAX_LENGTH)
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
+          return `Not added: its panel folder "${panel}" cannot name a panel (lowercase letters, digits and single dashes, at most ${PERSONAL_ID_MAX_LENGTH} characters with the runbook's id).`;
         const cache = join(this.options.checkCacheDir, randomUUID());
-        const checked = await checkPluginTree(join(fetched.dir, panel), id, cache).finally(() =>
-          rm(cache, { recursive: true, force: true }),
-        );
+        const checked = await checkPluginTree(join(fetched.dir, panel), panelId, cache, {
+          inRunbook: true,
+        }).finally(() => rm(cache, { recursive: true, force: true }));
         if ("refusal" in checked)
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
           return `Not added: a panel inside the runbook was refused: ${checked.refusal}`;
+        panels[panel] = checked.capabilities;
+        panelLines.push(
+          `<li><b>${escapeHtml(checked.manifest.title ?? panelId)}</b>${grantWords(checked.capabilities).join("")}</li>`,
+        );
       }
       const staged: StagedPlugin = {
         kind: "runbook",
@@ -326,6 +341,7 @@ export class PluginInstaller {
         version: manifest.version,
         title: manifest.name,
         capabilities: {},
+        ...(panelLines.length ? { panels } : {}),
         stagedAt: Date.now(),
       };
       const dir = join(this.options.stagingDir, id);
@@ -345,8 +361,8 @@ export class PluginInstaller {
           (replacement
             ? `<p>Adding it turns ${escapeHtml(replacement)} off. You can turn that built-in runbook back on.</p>`
             : "") +
-          ((manifest.panels?.length ?? 0)
-            ? "<p>Panels inside stay off. Adding each panel needs its own consent card.</p>"
+          (panelLines.length
+            ? `${saidMark(said("cardRunbookAddPanels"), "p")}<ul>${panelLines.join("")}</ul>`
             : ""),
         actions: [
           {
@@ -364,10 +380,7 @@ export class PluginInstaller {
           },
         ],
       });
-      const panels = (manifest.panels ?? []).map((panel) =>
-        join(this.options.pluginsDir, id, panel),
-      );
-      return `The runbook is fetched and pinned. Only the captain's consent card adds it. Say nothing more about it.${panels.length ? ` Panel folders stay inert; add each separately after consent: ${panels.join(", ")}.` : ""}`;
+      return "The runbook is fetched and pinned. Only the captain's consent card adds it, with the panels it names. Say nothing more about it.";
     } catch (error) {
       return `Not added: ${errorText(error)}`;
     }
@@ -423,6 +436,8 @@ export class PluginInstaller {
         type: "personalized",
         text: runbookAddedLine(staged.title, staged.name, replacement),
       });
+      // Its panels show once the click is through, the agreement recorded.
+      await this.options.refresh();
       return;
     }
     const panelsOn = this.options.panelsOn();
@@ -447,11 +462,19 @@ export class PluginInstaller {
     const record = this.options.records.get(id);
     if (!record?.installedAt) return { removed: false };
     const title = await readTitle(join(this.options.pluginsDir, id), id, record.kind);
+    // A runbook's panels keep their data under the runbook's own name; every
+    // slice it owns goes with it, whatever its files list now.
+    const owned = runbookPanelSlice(id, "");
+    const slices =
+      record.kind === "runbook"
+        ? this.options.store.slices().filter((slice) => slice.startsWith(owned))
+        : [];
     await rm(join(this.options.pluginsDir, id), { recursive: true, force: true });
     await rm(join(this.options.stagingDir, id), { recursive: true, force: true });
     this.options.cards.withdraw(consentCardId(id), "removed");
     this.options.records.delete(id);
     this.options.store.clearExtension(id);
+    for (const slice of slices) this.options.store.clearExtension(slice);
     await this.options.refresh();
     return { removed: true, title };
   }
@@ -472,6 +495,10 @@ export async function checkPluginTree(
   dir: string,
   id: string,
   cacheRoot: string,
+  options: {
+    /** A panel inside a runbook, whose runbook names its author and version. */
+    inRunbook?: boolean;
+  } = {},
 ): Promise<CheckedPlugin | { refusal: string }> {
   let raw: unknown;
   try {
@@ -486,15 +513,17 @@ export async function checkPluginTree(
     return { refusal: `its manifest.json${where} is not one this app reads (${issue?.message}).` };
   }
   const manifest = parsed.data;
-  if (!manifest.name || !manifest.version) {
+  if (!options.inRunbook && (!manifest.name || !manifest.version)) {
     return {
       refusal: "its manifest.json names no author name and version, which adding one needs.",
     };
   }
   if (await isFile(join(dir, PERSONAL_ENTRY_FILES.server))) {
     return {
-      refusal:
-        "it ships server code (server.ts), and a panel added from elsewhere may not run code of its own in the app.",
+      // i18n-exempt: a refusal served to the agent and shown in the developer-only Observe view, which stays English
+      refusal: options.inRunbook
+        ? "it ships server code (server.ts), and a panel inside a runbook may not run code of its own in the app."
+        : "it ships server code (server.ts), and a panel added from elsewhere may not run code of its own in the app.",
     };
   }
   if (!(await isFile(join(dir, PERSONAL_ENTRY_FILES.panel)))) {
@@ -566,38 +595,12 @@ function consentCard(
   staged: StagedPlugin,
   agreed: PluginCapabilities | null,
 ): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
-  const summary = consentSummary(staged.capabilities);
-  const reads = [
-    ...summary.reads.map(
-      (name) => `${READ_WORDS[name] ?? name} (<code>${escapeHtml(name)}</code>)`,
-    ),
-    ...summary.views.map((view) => `${viewWords(view)} (<code>${escapeHtml(view)}</code>)`),
-  ];
   const update = agreed !== null;
   const lines = [
     update
       ? `<p>A new version of <b>${escapeHtml(staged.title)}</b>, a panel by ${escapeHtml(staged.name)}, asks for something different from what you agreed to. Version ${escapeHtml(staged.version)}, from <code>${escapeHtml(staged.spec)}</code>.</p>`
       : `<p>This adds <b>${escapeHtml(staged.title)}</b>, ${panelByWords(escapeHtml(staged.name), escapeHtml(staged.version))}, from <code>${escapeHtml(staged.spec)}</code>.</p>`,
-    reads.length > 0
-      ? `<p>${CAN_READ_WORDS} ${reads.join(", ")}.</p>`
-      : "<p>It reads nothing of yours.</p>",
-    // Each integration it names, with the actions and events it uses and why.
-    ...(summary.integrations.length > 0
-      ? [
-          `<p>${escapeHtml(CAN_USE_WORDS)}</p><ul>${summary.integrations
-            .map((use) => `<li>${integrationUseWords(use)}</li>`)
-            .join("")}</ul>`,
-        ]
-      : []),
-    // Moves are the one grant that changes your work, so they get their own line.
-    ...(summary.moves ? [`<p>${MOVES_WORDS}</p>`] : []),
-    `<p>It ${
-      summary.storageBytes === null
-        ? "keeps a little data of its own"
-        : `keeps up to ${byteWords(summary.storageBytes)} of data of its own`
-    }, ${
-      summary.integrations.length > 0 ? SENDS_ONLY_THROUGH_WORDS : SENDS_NOTHING_WORDS
-    }, and runs no code of its own in the app.</p>`,
+    ...grantWords(staged.capabilities),
   ];
   return {
     id: consentCardId(id),
@@ -620,6 +623,43 @@ function consentCard(
       },
     ],
   };
+}
+
+/**
+ * What a panel can do, one paragraph each, in the captain's words: what it
+ * reads, each integration it uses, whether it moves tasks, and what it keeps
+ * and sends. An added panel's card and a runbook's add card both say it.
+ */
+function grantWords(capabilities: PluginCapabilities): string[] {
+  const summary = consentSummary(capabilities);
+  const reads = [
+    ...summary.reads.map(
+      (name) => `${READ_WORDS[name] ?? name} (<code>${escapeHtml(name)}</code>)`,
+    ),
+    ...summary.views.map((view) => `${viewWords(view)} (<code>${escapeHtml(view)}</code>)`),
+  ];
+  return [
+    reads.length > 0
+      ? `<p>${CAN_READ_WORDS} ${reads.join(", ")}.</p>`
+      : "<p>It reads nothing of yours.</p>",
+    // Each integration it names, with the actions and events it uses and why.
+    ...(summary.integrations.length > 0
+      ? [
+          `<p>${escapeHtml(CAN_USE_WORDS)}</p><ul>${summary.integrations
+            .map((use) => `<li>${integrationUseWords(use)}</li>`)
+            .join("")}</ul>`,
+        ]
+      : []),
+    // Moves are the one grant that changes your work, so they get their own line.
+    ...(summary.moves ? [`<p>${MOVES_WORDS}</p>`] : []),
+    `<p>It ${
+      summary.storageBytes === null
+        ? "keeps a little data of its own"
+        : `keeps up to ${byteWords(summary.storageBytes)} of data of its own`
+    }, ${
+      summary.integrations.length > 0 ? SENDS_ONLY_THROUGH_WORDS : SENDS_NOTHING_WORDS
+    }, and runs no code of its own in the app.</p>`,
+  ];
 }
 
 /** One integration a panel names, on its consent card: what it uses and why, in its words. */

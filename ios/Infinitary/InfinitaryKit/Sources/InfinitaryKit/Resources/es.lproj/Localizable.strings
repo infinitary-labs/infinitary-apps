@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "Enlaces de cambios no disponibles";
 "cardRevisionMore" = "%1$@ más";
 "cardRevisionShowFewer" = "Mostrar menos";
+"cardRunbookAddPanels" = "Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.";
 "cardSavedResetCrewWaits" = "El trabajo de la tripulación pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.";
 "cardSavedResetCrewWaitsThere" = "El trabajo de la tripulación %1$@ pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.";
 "cardSavedResetsOpenPage" = "Abrir la página de uso en %1$@";
@@ -3012,6 +3013,7 @@
 "settingsRunbooksMakeYourOwn" = "Crea los tuyos";
 "settingsRunbooksOpenFailed" = "No se pudo abrir esta carpeta. Inténtalo de nuevo.";
 "settingsRunbooksOpenFolder" = "Abrir carpeta";
+"settingsRunbooksPanels" = "Mientras está activo, muestra %1$@ en tus barras.";
 "settingsRunbooksView" = "Ver";
 "settingsRunbooksViewLabel" = "Ver %1$@";
 "settingsRunbooksYours" = "Tuyos";

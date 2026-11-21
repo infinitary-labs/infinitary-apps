@@ -46,8 +46,15 @@ An empty array matches nothing.
 An optional top-level `projects` array restricts the whole runbook, including skills, to those project ids.
 Never narrow the reach when the captain asked for every crewmate.
 A runbook may also name a `parts` folder for HTML parts and pictures.
-Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook.
+Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook; the one exception is a panel folder listed in `panels`, below, which holds a panel's own source.
 Do not install a panel just because a runbook carries parts.
+
+## Show panels while the runbook is on
+
+A runbook may list panel folders in `panels`, such as `"panels": ["batches"]` for `runbooks/<id>/batches/`.
+Each folder is a panel written as the `personal-panel` skill says, with a `manifest.json` and `panel.tsx`, and no `server.ts`: a runbook's panel runs no code of its own in the app.
+While the runbook is on, its panels show on the rails as `<id>-<folder>`, or under the built-in's id for a copy that names `replaces`; turning it off takes them away.
+Keep panel folders apart from the guidance, skills and parts folders.
 
 ## Name commits and pull requests
 

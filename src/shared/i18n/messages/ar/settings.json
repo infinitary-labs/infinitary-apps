@@ -1122,6 +1122,7 @@
   "settingsRunbooksMakeYourOwn": "اصنع دليلك",
   "settingsRunbooksOpenFailed": "تعذّر فتح هذا المجلد. حاول مرة أخرى.",
   "settingsRunbooksOpenFolder": "فتح المجلد",
+  "settingsRunbooksPanels": "أثناء تشغيله، يعرض {panels} على أشرطتك.",
   "settingsRunbooksView": "عرض",
   "settingsRunbooksViewLabel": "عرض {name}",
   "settingsRunbooksYours": "أدلتك",

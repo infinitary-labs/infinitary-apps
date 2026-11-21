@@ -1497,6 +1497,12 @@ export const MIGRATIONS: readonly Migration[] = [
   `,
   // A crewmate card's declared live reads and views (`addCardLiveReads`).
   addCardLiveReads,
+  // What the captain agreed each panel of an added runbook may do, by its
+  // folder (docs/runbooks.md, "Panels"), from the runbook's own add card.
+  // Null on every existing row: an added runbook's panels show nothing until
+  // the runbook is added again and its card asks. `PluginRecords` is the only
+  // writer; no published view reads it. Dropping the column reverses it.
+  (db) => addColumn(db, "plugins", "panels_json", "TEXT"),
 ];
 
 /**

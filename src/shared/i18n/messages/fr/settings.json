@@ -1047,6 +1047,7 @@
   "settingsRunbooksMakeYourOwn": "Créer les vôtres",
   "settingsRunbooksOpenFailed": "Impossible d’ouvrir ce dossier. Veuillez réessayer.",
   "settingsRunbooksOpenFolder": "Ouvrir le dossier",
+  "settingsRunbooksPanels": "Tant qu’elle est activée, elle affiche {panels} dans vos colonnes.",
   "settingsRunbooksView": "Voir",
   "settingsRunbooksViewLabel": "Voir {name}",
   "settingsRunbooksYours": "Les vôtres",

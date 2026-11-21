@@ -932,6 +932,7 @@ export async function createServices(
     panelAsks,
     crew: () => supervisor,
     pluginRecords,
+    runbooks,
     now: ticker.now,
     emit,
   });

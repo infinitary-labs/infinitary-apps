@@ -339,10 +339,12 @@ The library, the skills, the tidy-up and the look above all apply.
 What differs is where it runs and what it is served, and that is the host's call, never the author's.
 
 **The manifest** is the same file with two more things a panel for others must carry: `name` (the maker, shown as the panel's attribution) and `version` (semver; an update is a new version).
+A panel inside a runbook, a folder its `runbook.json` lists under `panels`, carries neither: its runbook's name is its attribution and its runbook's version is its version (`docs/runbooks.md`, "Panels").
 Its card views (`cards/<view>.tsx`) are checked and pinned with its panel when it is added, and a card, button or command its manifest names that the folder does not have refuses the whole folder.
 The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `integrations` (each connection it uses, with its actions, events and why, listed on the card), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on the captain's click or key, in a line of its own on the card).
 The retired `net` and `secrets` are refused for every panel, saying to name an integration instead: a panel reaches a service outside your projects only through the captain's own connections, each action under its rule in Settings (`docs/integrations.md`, "How a panel reaches them").
 There is no `server.ts`: a tree holding one is refused.
+A runbook's panels are agreed on that runbook's own add card, which lists each with its grants, rather than on a card of their own; a runbook in the captain's workspace is served what its panels ask, as the captain's own panels are.
 
 **Where it runs.**
 In the frame realm: a sandboxed frame at a host of its own, loading the app's own React and `@infinitary/ui` from the shell's pinned lib (so it looks like the app), with `PanelProps` built over the bridge:

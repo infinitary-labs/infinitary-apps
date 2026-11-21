@@ -1,3 +1,4 @@
+import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { RunbookView } from "@shared/runbooks";
 import { RUNBOOK_EXAMPLES, RUNBOOK_VIEW_NOTE } from "@shared/runbookWords";
@@ -38,6 +39,15 @@ export function RunbooksTab() {
       id={`runbook-${book.id}`}
       title={book.name}
       description={book.description}
+      detail={
+        book.panels?.length ? (
+          <span data-runbook-panels="">
+            {m.settingsRunbooksPanels({
+              panels: formatList(book.panels.map((panel) => panel.title)),
+            })}
+          </span>
+        ) : undefined
+      }
       error={book.error}
       control={
         book.error ? null : (

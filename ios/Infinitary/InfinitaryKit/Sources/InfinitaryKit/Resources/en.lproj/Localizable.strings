@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "Change links unavailable";
 "cardRevisionMore" = "%1$@ more";
 "cardRevisionShowFewer" = "Show fewer";
+"cardRunbookAddPanels" = "While it is on, it also shows these panels on your rail. Adding it agrees to them too.";
 "cardSavedResetCrewWaits" = "Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.";
 "cardSavedResetCrewWaitsThere" = "Crew work %1$@ drops to a weaker model or waits until its allowance resets, unless you use a saved reset.";
 "cardSavedResetsOpenPage" = "Open the usage page on %1$@";
@@ -3012,6 +3013,7 @@
 "settingsRunbooksMakeYourOwn" = "Make your own";
 "settingsRunbooksOpenFailed" = "Could not open this folder. Please try again.";
 "settingsRunbooksOpenFolder" = "Open folder";
+"settingsRunbooksPanels" = "While it is on, it shows %1$@ on your rails.";
 "settingsRunbooksView" = "View";
 "settingsRunbooksViewLabel" = "View %1$@";
 "settingsRunbooksYours" = "Yours";

@@ -1047,6 +1047,7 @@
   "settingsRunbooksMakeYourOwn": "Crie os seus",
   "settingsRunbooksOpenFailed": "Não foi possível abrir esta pasta. Tente de novo.",
   "settingsRunbooksOpenFolder": "Abrir pasta",
+  "settingsRunbooksPanels": "Enquanto estiver ativado, mostra {panels} nas suas barras laterais.",
   "settingsRunbooksView": "Ver",
   "settingsRunbooksViewLabel": "Ver {name}",
   "settingsRunbooksYours": "Seus",

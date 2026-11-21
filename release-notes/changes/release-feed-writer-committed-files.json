@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-feed-writer-committed-files",
+      "reason": "Release tooling: the release workflow's feed writer no longer loads the compiled message catalog, which its checkout never builds, so a release can advance the update feeds; nothing in the app changes."
+    }
+  ]
+}

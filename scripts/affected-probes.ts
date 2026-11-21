@@ -106,6 +106,7 @@ export const PROBES = [
       "src/core/update/",
       "src/main/host/macInstallation.ts",
       "src/shared/update.ts",
+      "src/shared/updateChannel.ts",
       "tests/helpers/olderCask.ts",
       "tests/helpers/standInGh.ts",
     ],

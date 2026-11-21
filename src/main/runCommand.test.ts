@@ -769,11 +769,12 @@ describe("a window opened beside a run", () => {
   // command from before that pipe holds none either: it is waited for, never taken for a window,
   // until it answers, notes itself or lets the lock go, and one that let it go after showing nothing
   // is the person's to judge. A pipe that goes while the lock stays held is a holder that changed
-  // unseen, asked once. Read through a real local socket.
-  it("tells a command on an unnamed lock by the pipe it holds, and takes no pipe for nothing known", async () => {
-    const pipe = join(socketScratchDir("inf-pipe-"), "run.sock");
-    expect(await commandPipeHeld(pipe)).toBe(false);
+  // unseen, asked once. Read through a real local socket, each case on a pipe of its own, so each
+  // stays within a unit test's time on a busy machine.
+  describe("telling a command on an unnamed lock by the pipe it holds", () => {
+    const newPipe = () => join(socketScratchDir("inf-pipe-"), "run.sock");
     const look = (
+      pipe: string,
       shows: {
         running?: () => boolean;
         answered?: () => boolean;
@@ -819,96 +820,128 @@ describe("a window opened beside a run", () => {
     };
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // A command that has not noted itself yet: read again after each wait, never asked again.
-    let letGo = holdCommandPipe(pipe);
-    expect(await commandPipeHeld(pipe)).toBe(true);
-    let noted = false;
-    const command = look({ running: () => noted });
-    await wait(400);
-    expect(command.settled()).toBeNull();
-    expect(command.reads.length).toBeGreaterThanOrEqual(2);
-    expect(command.asks).toEqual([]);
-    expect(command.unknowns).toEqual([]);
-    noted = true;
-    expect(await command.kind).toBe("run");
+    it("reads a command that has not noted itself yet again after each wait, and never asks it again", async () => {
+      const pipe = newPipe();
+      expect(await commandPipeHeld(pipe)).toBe(false);
+      const letGo = holdCommandPipe(pipe);
+      try {
+        expect(await commandPipeHeld(pipe)).toBe(true);
+        let noted = false;
+        const command = look(pipe, { running: () => noted });
+        await wait(400);
+        expect(command.settled()).toBeNull();
+        expect(command.reads.length).toBeGreaterThanOrEqual(2);
+        expect(command.asks).toEqual([]);
+        expect(command.unknowns).toEqual([]);
+        noted = true;
+        expect(await command.kind).toBe("run");
+      } finally {
+        letGo();
+      }
+    });
 
     // The command ends and a window takes the lock between two looks: its pipe gone, the window is
     // asked once and answers.
-    let answered = false;
-    const handover = look({ answered: () => answered });
-    await wait(200);
-    letGo();
-    await expect.poll(() => commandPipeHeld(pipe)).toBe(false);
-    await expect.poll(() => handover.asks.length).toBe(1);
-    await wait(300);
-    expect(handover.settled()).toBeNull();
-    expect(handover.asks).toHaveLength(1);
-    answered = true;
-    expect(await handover.kind).toBe("window");
+    it("asks a window that took the lock once a command's pipe goes, once, and takes its answer", async () => {
+      const pipe = newPipe();
+      const letGo = holdCommandPipe(pipe);
+      await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
+      let answered = false;
+      const handover = look(pipe, { answered: () => answered });
+      await wait(200);
+      letGo();
+      await expect.poll(() => commandPipeHeld(pipe)).toBe(false);
+      await expect.poll(() => handover.asks.length).toBe(1);
+      await wait(300);
+      expect(handover.settled()).toBeNull();
+      expect(handover.asks).toHaveLength(1);
+      answered = true;
+      expect(await handover.kind).toBe("window");
+    });
 
     // No pipe from the start: a window from before windows answered, or a command from before the
     // pipe. Waited for and asked nothing, until the lock is let go; the launch is told once that
     // the holder still shows nothing, so it may ask the person what to do when it closes.
-    const silent = look();
-    await wait(400);
-    expect(silent.settled()).toBeNull();
-    expect(silent.asks).toEqual([]);
-    expect(silent.reads.length).toBeGreaterThanOrEqual(3);
-    expect(silent.unknowns).toHaveLength(1);
-    silent.leave();
-    expect(await silent.kind).toBe("free");
-    expect(silent.asks).toHaveLength(1);
+    it("waits on a holder with no pipe, asking nothing until the lock is let go, and tells it once", async () => {
+      const silent = look(newPipe());
+      await wait(400);
+      expect(silent.settled()).toBeNull();
+      expect(silent.asks).toEqual([]);
+      expect(silent.reads.length).toBeGreaterThanOrEqual(3);
+      expect(silent.unknowns).toHaveLength(1);
+      silent.leave();
+      expect(await silent.kind).toBe("free");
+      expect(silent.asks).toHaveLength(1);
+    });
 
     // One that showed nothing and lets the lock go before its second read, as an older window the
     // person quit: the launch is told before it acts on the folder free, as for one read twice.
-    const early = look({ leavesAfterRead: true });
-    let unknownsAtFree = -1;
-    void early.kind.then(() => (unknownsAtFree = early.unknowns.length));
-    expect(await early.kind).toBe("free");
-    expect(unknownsAtFree).toBe(1);
-    expect(early.reads).toHaveLength(1);
-
     // One that lets the lock go before anything was read of it, or while its first read is on its
     // way, was never shown to be a command: the launch is told before it acts on the folder free.
-    const unseen = look();
-    unseen.leave();
-    expect(await unseen.kind).toBe("free");
-    expect(unseen.unknowns).toHaveLength(1);
-    const midRead = look({ leavesDuringRead: true });
-    expect(await midRead.kind).toBe("free");
-    expect(midRead.reads).toHaveLength(1);
-    expect(midRead.unknowns).toHaveLength(1);
+    it("tells the launch of a holder that showed nothing and let the lock go, before it acts on free", async () => {
+      const pipe = newPipe();
+      const early = look(pipe, { leavesAfterRead: true });
+      let unknownsAtFree = -1;
+      void early.kind.then(() => (unknownsAtFree = early.unknowns.length));
+      expect(await early.kind).toBe("free");
+      expect(unknownsAtFree).toBe(1);
+      expect(early.reads).toHaveLength(1);
+
+      const unseen = look(pipe);
+      unseen.leave();
+      expect(await unseen.kind).toBe("free");
+      expect(unseen.unknowns).toHaveLength(1);
+      const midRead = look(pipe, { leavesDuringRead: true });
+      expect(await midRead.kind).toBe("free");
+      expect(midRead.reads).toHaveLength(1);
+      expect(midRead.unknowns).toHaveLength(1);
+    });
 
     // A holder shown to be a command by its pipe that lets the lock go is no question.
-    letGo = holdCommandPipe(pipe);
-    await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
-    const ended = look();
-    // A second read starts only once the first was taken.
-    await expect.poll(() => ended.reads.length).toBeGreaterThanOrEqual(2);
-    ended.leave();
-    letGo();
-    expect(await ended.kind).toBe("free");
-    expect(ended.unknowns).toEqual([]);
+    it("asks nothing of a command shown by its pipe that lets the lock go", async () => {
+      const pipe = newPipe();
+      const letGo = holdCommandPipe(pipe);
+      try {
+        await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
+        const ended = look(pipe);
+        // A second read starts only once the first was taken.
+        await expect.poll(() => ended.reads.length).toBeGreaterThanOrEqual(2);
+        ended.leave();
+        letGo();
+        expect(await ended.kind).toBe("free");
+        expect(ended.unknowns).toEqual([]);
+      } finally {
+        letGo();
+      }
+    });
 
     // A holder shown to be a command by its pipe whose pipe goes while the lock stays held, as one
     // replaced unseen by an older window that then quits before the ask: never read, so the launch
     // is told before it acts on the folder free.
-    letGo = holdCommandPipe(pipe);
-    await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
-    const swapped = look({ leavesAtAsk: true });
-    await expect.poll(() => swapped.reads.length).toBeGreaterThanOrEqual(1);
-    expect(swapped.asks).toEqual([]);
-    letGo();
-    expect(await swapped.kind).toBe("free");
-    expect(swapped.asks).toHaveLength(1);
-    expect(swapped.unknowns).toHaveLength(1);
+    it("asks once and tells the launch when a command's pipe goes while the lock stays held", async () => {
+      const pipe = newPipe();
+      const letGo = holdCommandPipe(pipe);
+      try {
+        await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
+        const swapped = look(pipe, { leavesAtAsk: true });
+        await expect.poll(() => swapped.reads.length).toBeGreaterThanOrEqual(1);
+        expect(swapped.asks).toEqual([]);
+        letGo();
+        expect(await swapped.kind).toBe("free");
+        expect(swapped.asks).toHaveLength(1);
+        expect(swapped.unknowns).toHaveLength(1);
+      } finally {
+        letGo();
+      }
+    });
 
     // The pipe's name follows the folder, whatever its letters' case.
-    expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));
-    expect(commandPipe("C:\\Users\\a\\Infinitary")).not.toBe(
-      commandPipe("C:\\Users\\b\\Infinitary"),
-    );
-    letGo = () => {};
+    it("names the pipe after the folder, whatever its letters' case", () => {
+      expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));
+      expect(commandPipe("C:\\Users\\a\\Infinitary")).not.toBe(
+        commandPipe("C:\\Users\\b\\Infinitary"),
+      );
+    });
   });
 
   // The review of INF-5409: the whole handoff to a window, through the window's own handling of a

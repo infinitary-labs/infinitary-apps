@@ -793,14 +793,24 @@ export const MOCK_START_WOKEN_REPORT = "Nothing answered at the build page, so I
 export const BUILD_PAGE_TITLE = "Build page";
 
 /**
+ * Each build page's gate, by its port: a file the journey makes when the
+ * build may answer, so what the view shows while it starts follows the
+ * journey's order, never a clock. The stand-in runs in the journey's own
+ * process, so the journey sets it here.
+ */
+export const BUILD_PAGE_GATES = new Map<number, string>();
+
+/**
  * The command that starts the build page: a real server on this computer
- * that listens on its port two seconds after it starts, as a project's
- * build does once it compiles.
+ * that serves its port once its gate is open, as a project's build does
+ * once it compiles.
  */
 export function buildPageCommand(port: number): string {
   const page = `<!doctype html><title>${BUILD_PAGE_TITLE}</title><h1>${BUILD_PAGE_TITLE}</h1><p>The build answers.</p>`;
-  const code = `setTimeout(() => require("http").createServer((q, s) => { s.writeHead(200, { "content-type": "text/html; charset=utf-8" }); s.end(${JSON.stringify(page)}); }).listen(${port}, "127.0.0.1"), 2000)`;
-  return `'${process.execPath}' -e '${code}'`;
+  const code = `require("http").createServer((q, s) => { s.writeHead(200, { "content-type": "text/html; charset=utf-8" }); s.end(${JSON.stringify(page)}); }).listen(${port}, "127.0.0.1")`;
+  const gate = BUILD_PAGE_GATES.get(port);
+  const wait = gate ? `while [ ! -f '${gate}' ]; do sleep 0.05; done; ` : "";
+  return `${wait}exec '${process.execPath}' -e '${code}'`;
 }
 
 /** The saved start's next scripted step, from the browser answers so far. */

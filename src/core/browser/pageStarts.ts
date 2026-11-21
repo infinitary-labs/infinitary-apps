@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import {
+  appendFileSync,
   chmodSync,
   closeSync,
   mkdirSync,
@@ -19,7 +20,7 @@ import { hostPlatform } from "../platform";
 import { atUtilityQos } from "../utilityQos";
 import { browserCommand } from "./commandWords";
 import type { BrowserAnswer, BrowserNavigateInput } from "./crewmateCommands";
-import { type AnswerProbe, type AnswerTarget, probeLoopback } from "./pageAnswers";
+import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
 
 /**
  * The command that starts a task's page, as its crewmate saved it with
@@ -181,12 +182,15 @@ export class PageStarts {
         clearTimeout(limit);
         resolve(outcome);
       };
-      child.once("error", () => settle({ kind: "failed", exit: null, log }));
-      child.once("exit", (code) => {
+      // A shell that never started (its folder gone) ends the run as an exit does, saying why.
+      const ended = (code: number | null, error?: Error) => {
         release();
         if (this.running.get(taskId) === run) this.running.delete(taskId);
+        if (error) writeLog(log, `${error.message}\n`);
         settle(run.stopped ? { kind: "stopped" } : { kind: "failed", exit: code, log });
-      });
+      };
+      child.once("error", (error) => ended(null, error));
+      child.once("exit", (code) => ended(code));
       const poll = setInterval(() => {
         void probe(target.host, target.port).then((reading) => {
           if (reading !== "answered" || run.stopped || settled) return;
@@ -231,6 +235,15 @@ export class PageStarts {
   }
 }
 
+/** One line more in a start's log; a log that cannot be written loses only that line. */
+function writeLog(log: string, line: string): void {
+  try {
+    appendFileSync(log, line, { mode: 0o600 });
+  } catch {
+    // The wake still names the log and how the start failed.
+  }
+}
+
 /** The open command as a crewmate writes it with a start. */
 // i18n-exempt: a command's usage, read in the crewmate's shell
 const OPEN_WITH_START = "open <url> --start '<command>' --within <seconds>";
@@ -268,6 +281,39 @@ export const startWords = {
       ? `Nothing answered at ${start.origin}, so Infinitary ran your --start command in ${start.folder}, but ${outcome.ranOut ? `nothing answered within ${start.withinMs / 1000} seconds, so it stopped it` : `it exited (code ${outcome.exit ?? "none"}) before anything answered`}. Its output is in ${outcome.log}. The command is still saved; fix it and run ${browserCommand(OPEN_WITH_START)} again.`
       : "The start was stopped before its page answered, because this task's browser stopped.",
 };
+
+/**
+ * A crewmate's open with `--start`, before its page is opened: the start
+ * is kept, and run at once when nothing answers there. It runs outside the
+ * task's command queue, so the captain's own moves on the browser never
+ * wait behind a build; the open follows with the line it returns.
+ */
+export async function startBeforeOpen(input: {
+  taskId: string;
+  url: string | undefined;
+  asked: NonNullable<BrowserNavigateInput["start"]>;
+  starts: Pick<PageStarts, "keep" | "run"> | undefined;
+  probe: AnswerProbe | undefined;
+}): Promise<{ refused: string } | { next: string; started: boolean }> {
+  const { asked, starts } = input;
+  const target = input.url ? answerTarget(input.url) : undefined;
+  const why = startRefusal({ starts: Boolean(starts), target, asked });
+  if (why || !starts || !target || !asked.cwd) return { refused: why ?? "" };
+  const start: PageStart = {
+    command: asked.command,
+    folder: asked.cwd,
+    origin: target.origin,
+    withinMs: asked.withinSeconds * 1000,
+  };
+  starts.keep(input.taskId, start);
+  const reading = await (input.probe ?? probeLoopback)(target.host, target.port).catch(
+    () => "unknown" as const,
+  );
+  if (reading !== "refused") return { next: startWords.saved(start), started: false };
+  const outcome = await starts.run(input.taskId, start, target);
+  if (outcome.kind !== "answered") return { refused: startWords.failed(start, outcome) };
+  return { next: startWords.started(start, outcome.log), started: true };
+}
 
 /** A browser answer with one more line ahead of its help. */
 export function withNext(answer: BrowserAnswer, line: string): BrowserAnswer {

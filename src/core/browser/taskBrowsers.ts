@@ -75,7 +75,7 @@ import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
 import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
-import { type PageStart, type PageStarts, startRefusal, startWords, withNext } from "./pageStarts";
+import { type PageStart, type PageStarts, startBeforeOpen, withNext } from "./pageStarts";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
@@ -589,10 +589,23 @@ export class TaskBrowsers {
   forTask(taskId: string): CrewmateBrowser {
     const commands = this.commands;
     return {
-      navigate: (input) =>
-        this.queues
-          .run(taskId, async () => this.held(taskId) ?? this.navigateNow(taskId, input))
-          .finally(() => this.answeredAgain(taskId)),
+      navigate: async ({ start: asked, ...input }) => {
+        const { starts, probe } = this.options;
+        // A saved start runs before the queue: the captain's moves never wait behind a build.
+        const before =
+          asked && !this.held(taskId)
+            ? await startBeforeOpen({ taskId, url: input.url, asked, starts, probe })
+            : undefined;
+        if (before && "refused" in before) return refused(before.refused);
+        return this.queues
+          .run(taskId, async () => {
+            const answer = this.held(taskId) ?? (await commands.navigate(taskId, input));
+            // A build the host started stops with its browser: with no browser, nothing keeps it.
+            if (before?.started && !this.browsers.has(taskId)) this.options.starts?.stop(taskId);
+            return before && !answer.refused ? withNext(answer, before.next) : answer;
+          })
+          .finally(() => this.answeredAgain(taskId));
+      },
       inspect: (input) =>
         this.queues.run(taskId, async () => this.held(taskId) ?? commands.inspect(taskId, input)),
       act: (input) =>
@@ -1792,10 +1805,14 @@ export class TaskBrowsers {
     void starts.run(taskId, start, target).then(async (outcome) => {
       if (this.browsers.get(taskId) !== browser || outcome.kind === "stopped") return;
       if (outcome.kind === "answered") {
+        // Only the press that started it loads the page again, and only one still on its origin.
+        if (!fresh) return;
         await this.queues.run(taskId, async () => {
+          const now = this.pageAddress(browser);
           if (this.browsers.get(taskId) !== browser) return;
+          if (answerTarget(now)?.origin !== outage.origin) return;
           const entry = browser.current;
-          const loaded = await loadOwn(entry, entry.page.load(address));
+          const loaded = await loadOwn(entry, entry.page.load(now));
           if (!loaded.ok) entry.moved = undefined;
         });
         await this.checkAnswers(taskId, browser, { wake: false });
@@ -1816,39 +1833,6 @@ export class TaskBrowsers {
       });
     });
     if (fresh) this.options.onChange?.(taskId);
-  }
-
-  /**
-   * A crewmate's open, with the start it saves for its page when it names
-   * one (`open <url> --start <command> --within <seconds>`): kept, and run
-   * at once when nothing answers there, the page opening once it does.
-   */
-  private async navigateNow(taskId: string, input: BrowserNavigateInput): Promise<BrowserAnswer> {
-    const { start: asked, ...rest } = input;
-    if (!asked) return this.commands.navigate(taskId, rest);
-    const starts = this.options.starts;
-    const target = rest.url ? answerTarget(rest.url) : undefined;
-    const why = startRefusal({ starts: Boolean(starts), target, asked });
-    if (why || !starts || !target || !asked.cwd) return refused(why ?? "");
-    const start: PageStart = {
-      command: asked.command,
-      folder: asked.cwd,
-      origin: target.origin,
-      withinMs: asked.withinSeconds * 1000,
-    };
-    starts.keep(taskId, start);
-    const reading = await (this.options.probe ?? probeLoopback)(target.host, target.port).catch(
-      () => "unknown" as const,
-    );
-    if (reading !== "refused") {
-      return withNext(await this.commands.navigate(taskId, rest), startWords.saved(start));
-    }
-    const outcome = await starts.run(taskId, start, target);
-    if (outcome.kind !== "answered") return refused(startWords.failed(start, outcome));
-    const answer = await this.commands.navigate(taskId, rest);
-    // A build the host started stops with its browser: with no browser, nothing keeps it.
-    if (!this.browsers.has(taskId)) starts.stop(taskId);
-    return withNext(answer, startWords.started(start, outcome.log));
   }
 
   /** Whether the task's current page is on the origin of its running outage; no outage, no notice. */

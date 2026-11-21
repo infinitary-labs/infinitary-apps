@@ -107,6 +107,26 @@ describe("a page's saved start", () => {
     expect(readFileSync(join(folders, "t1", PAGE_START_LOG), "utf8")).toContain("cannot build");
   });
 
+  it("fails at once, saying why, when its folder is gone, and starts again once it is fixed", async () => {
+    const folders = scratchDir("infinitary-page-starts-");
+    const starts = startsIn(folders);
+    const port = await freePort();
+    const target = answerTarget(`http://127.0.0.1:${port}/`);
+    if (!target) throw new Error("no target");
+    const gone = startFor(port, serverCommand(port), 20_000, join(folders, "removed"));
+    const outcome = await starts.run("t1", gone, target);
+    expect(outcome).toEqual({
+      kind: "failed",
+      exit: null,
+      log: join(folders, "t1", PAGE_START_LOG),
+    });
+    expect(starts.starting("t1")).toBe(false);
+    expect(readFileSync(join(folders, "t1", PAGE_START_LOG), "utf8")).toContain("ENOENT");
+    // The crewmate's corrected start runs, rather than the failure coming back.
+    const fixed = await starts.run("t1", { ...gone, folder: folders }, target);
+    expect(fixed.kind).toBe("answered");
+  });
+
   it("stops the program and fails when its wait runs out", async () => {
     const folders = scratchDir("infinitary-page-starts-");
     const starts = startsIn(folders);

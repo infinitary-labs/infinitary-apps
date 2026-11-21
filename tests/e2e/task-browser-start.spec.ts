@@ -1,9 +1,11 @@
+import { rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { PAGE_UNANSWERED_OPENING } from "../../src/core/prompts/pageUnanswered";
 import { unansweredWords } from "../../src/shared/taskBrowser";
+import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -11,6 +13,7 @@ import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { isTaskRequest, providerMessages } from "./providerRequest";
 import {
+  BUILD_PAGE_GATES,
   BUILD_PAGE_TITLE,
   MOCK_BROWSER_BUTTON,
   MOCK_START_CARD_REPORT,
@@ -32,8 +35,8 @@ import { focusOn, pressKey } from "./windowKeys";
  * starts it again and shows the page, with no turn of the crewmate's.
  *
  * The build is a real program on this computer (`buildPageCommand`): a
- * server that listens on its port two seconds after it starts, so the
- * view's line while it starts can be seen.
+ * server that listens on its port only once the journey opens its gate,
+ * so the view's line while it starts is read before it can answer.
  */
 
 let launched: LaunchedApp;
@@ -73,6 +76,10 @@ test("a saved start brings a card's build back on Try it, with no turn of its cr
   const port = await freePort();
   const url = `http://127.0.0.1:${port}/`;
   const title = `${TASK_BROWSER_START_MARKER}${url} then`;
+  // The build answers only while its gate is open: each step opens or shuts it.
+  const gate = join(scratchDir("infinitary-build-gate-"), "open");
+  BUILD_PAGE_GATES.set(port, gate);
+  writeFileSync(gate, "");
   const detail = async (): Promise<TaskDetail | null> =>
     page.evaluate(async (wanted) => {
       const row = (await window.infinitary.tasks.board()).tasks.find(
@@ -114,6 +121,8 @@ test("a saved start brings a card's build back on Try it, with no turn of its cr
       await expect.poll(() => answers(url), { timeout: 10_000 }).toBe(false);
       await view(page, task.id).getByRole("button", { name: "Hide" }).click();
       await expect(shownCard(page, MOCK_START_CARD_TITLE)).toBeVisible();
+      // The build will not answer until the view has been read while it starts.
+      rmSync(gate);
     });
 
     await test.step("Try it starts the saved build again and shows its page, waking nobody", async () => {
@@ -137,7 +146,8 @@ test("a saved start brings a card's build back on Try it, with no turn of its cr
           ready: () => page.mouse.move(1, 1),
         });
       }
-      // The build answers: the page loads.
+      // The build may answer now: the page loads.
+      writeFileSync(gate, "");
       await expect
         .poll(async () => (await detail())?.browser, { timeout: 30_000 })
         .toMatchObject({ state: "open", url, title: BUILD_PAGE_TITLE });
@@ -156,5 +166,6 @@ test("a saved start brings a card's build back on Try it, with no turn of its cr
     // Stopping its browser stops the build Infinitary started.
     await stopTaskBrowsers(page);
     await expect.poll(() => answers(url), { timeout: 10_000 }).toBe(false);
+    BUILD_PAGE_GATES.delete(port);
   }
 });

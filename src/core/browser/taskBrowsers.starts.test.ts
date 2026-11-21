@@ -16,7 +16,12 @@ import type { TaskBrowsersOptions } from "./taskBrowsers";
 
 type StartsStandIn = NonNullable<TaskBrowsersOptions["starts"]> & {
   saved: Map<string, PageStart>;
-  runs: { taskId: string; start: PageStart; settle: (outcome: StartOutcome) => void }[];
+  runs: {
+    taskId: string;
+    start: PageStart;
+    outcome: Promise<StartOutcome>;
+    settle: (outcome: StartOutcome) => void;
+  }[];
   calls: string[];
 };
 
@@ -38,11 +43,15 @@ function startsStandIn(): StartsStandIn {
     },
     starting: (taskId) => waiting.has(taskId),
     run: (taskId, start) => {
+      // A start still waiting is shared, as PageStarts shares it.
+      const current = runs.findLast((run) => run.taskId === taskId);
+      if (current && waiting.has(taskId)) return current.outcome;
       waiting.add(taskId);
       const outcome = deferred<StartOutcome>();
       runs.push({
         taskId,
         start,
+        outcome: outcome.promise,
         settle: (settled) => {
           waiting.delete(taskId);
           outcome.resolve(settled);
@@ -89,6 +98,23 @@ describe("a crewmate's open with --start", () => {
     expect(pages[0]?.effects).toContain("load http://localhost:5173/settings");
     expect(done.next?.[0]).toContain("Infinitary ran your --start command in /work/copy");
     expect(done.next?.[0]).toContain(LOG);
+  });
+
+  it("waits for its build outside the task's queue, so the captain's press is not held behind it", async () => {
+    let reading: AnswerReading = "answered";
+    const starts = startsStandIn();
+    const { browsers } = harness({ starts, probe: async () => reading });
+    await browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
+    browsers.stopByCaptain("t1");
+    reading = "refused";
+    const open = browsers.forTask("t1").navigate({ url: "http://localhost:5173/", start: START });
+    await flush();
+    expect(starts.runs).toHaveLength(1);
+    // The captain's Open again answers while the crewmate's build still starts.
+    await expect(browsers.reopen("t1")).resolves.toMatchObject({ ok: true });
+    reading = "answered";
+    starts.runs[0]?.settle({ kind: "answered", log: LOG });
+    expect((await open).next?.[0]).toContain("Infinitary ran your --start command");
   });
 
   it("only keeps the start when something already answers there", async () => {
@@ -170,6 +196,27 @@ describe("the captain's press on a page with a saved start", () => {
     expect(browsers.fact("t1")).not.toHaveProperty("unanswered");
     expect(browsers.fact("t1")).not.toHaveProperty("starting");
     expect(unanswered).toEqual([]);
+  });
+
+  it("loads the page again once, from the press that started it, and never over a page that moved on", async () => {
+    const { browsers, starts, pages, answers } = await stoppedBuild();
+    await browsers.reopen("t1");
+    // The captain looks again while it starts: the same run, no second load.
+    const unwatch = browsers.watch("t1", () => undefined);
+    await flush();
+    unwatch();
+    expect(starts.runs).toHaveLength(1);
+    // The crewmate moves the page elsewhere before the build answers.
+    answers("answered");
+    await browsers.forTask("t1").navigate({ url: "http://127.0.0.1:8080/docs" });
+    starts.runs[0]?.settle({ kind: "answered", log: LOG });
+    await flush();
+    await flush();
+    const loads = pages.at(-1)?.effects.filter((effect) => effect.startsWith("load ")) ?? [];
+    expect(loads).toEqual([
+      "load http://localhost:5173/settings",
+      "load http://127.0.0.1:8080/docs",
+    ]);
   });
 
   it("wakes the crewmate once with how the start failed, and runs it no more in that outage", async () => {

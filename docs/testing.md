@@ -687,7 +687,7 @@ A red run reaches the crew through the captain's own Automation rules on GitHub'
 The repair fixes forward, and a revert is the last resort, on the captain's click.
 A failed journey fails the alpha's run, `release.yml`'s "Alpha from main run N", not main's, so a rule watches `release` too (the captain on INF-2508: "Yes: watch the release workflow on main too").
 A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
-That alpha ends green without cutting while an earlier alpha is still being cut or a stable is being promoted, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
+That alpha ends green without cutting while an earlier alpha is still being cut or a stable is being promoted or rehearsed, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
 The alpha reuses main's checks after reading both owners and every latest per-job result on that exact source, and runs every journey itself unless the swept batch ran them ("The swept batch"); release-specific gates still run.
 Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` lane and its Linux test groups run the same typecheck, lint, build and every unit, integration and probe test, so the five jobs ran them twice (INF-2340, the captain's route "drop-ci-main").
 The full check runs no run-alone pass either; the proof of edited journeys runs it at author time ("Each test owns its prerequisites").

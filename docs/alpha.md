@@ -442,7 +442,7 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 ## Cutting an alpha
 
 A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
-The alpha cuts only when no earlier alpha is still being cut, no stable is being promoted, and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
+The alpha cuts only when no earlier alpha is still being cut, no stable is being promoted or rehearsed, and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
 Main's last job, once every check before it passed, dispatches `release.yml` with `channel` alpha, the checked source as `candidate`, and its own run as `main_run` and `main_run_number`.
 It starts the cut by dispatch, naming its own run, rather than by a completion trigger on `release.yml` (INF-3738).
 A check started by hand dispatches nothing.
@@ -475,10 +475,12 @@ It skips in three cases:
 1. **An earlier alpha is still being cut.**
    While an earlier rolling alpha run is still going, no new one cuts, whatever either holds (the captain: "as long as there's one main alpha release still happening, don't start any new alpha cuts. doesn't matter what changes are in each").
    An earlier run counts once its notes job exists, so a run still deciding whether to skip never stops another.
-2. **A stable is being promoted.**
+2. **A stable is being promoted or rehearsed.**
    A promotion tags its version only when it publishes, so an alpha numbered meanwhile takes the newest stable tag before it and can share the promoted stable's numeric core.
    A stable outranks every alpha of its own core, so once the stable reaches the alpha feed, subscribers are never offered that alpha, and its update check fails (INF-3648: `0.7.0-alpha.510`, cut while `0.7.0` was promoted).
-   While a requested stable run is still going, no rolling alpha cuts; a run counts once its first job exists, and a stable rehearsal, which publishes nothing, never counts.
+   While a requested stable run is still going, no rolling alpha cuts; a run counts once its first job exists.
+   A stable rehearsal counts too: it publishes nothing, but the promotion it rehearses follows it, and an alpha cut beside the rehearsal is still cutting when that stable publishes (INF-5587: `0.8.5-alpha.12`, cut while `0.8.5` was rehearsed).
+   An alpha rehearsal never counts.
 3. **Nothing the desktop app is built from changed.**
    `node scripts/release-notes.ts desktop-changes --source <commit>` finds the previous release by the notes check's own rule and lists the paths that changed since it on the desktop build list, `scripts/desktop-build.ts`.
    An empty list skips; a source with no previous release cuts.
@@ -592,7 +594,7 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    It keeps the picks, as the stable's source release names them: `node scripts/release-notes.ts manifest --version <X.Y.Z> --highlights <picks> --write`.
    Pinning a promoted stable without `--highlights` is refused.
 
-The next alpha is numbered from the new stable tag ("The signed channel workflow"); no rolling alpha cuts while the promotion runs ("An alpha with nothing new to build").
+The next alpha is numbered from the new stable tag ("The signed channel workflow"); no rolling alpha cuts while the promotion or its rehearsal runs ("An alpha with nothing new to build").
 A stable rehearsal (`release.yml -f channel=stable -f dry_run=true`) promotes an alpha the same way, or builds the dispatched commit as the next stable when it names none, and publishes nothing.
 It may leave `highlights` empty to keep the alpha reviews' ranks.
 

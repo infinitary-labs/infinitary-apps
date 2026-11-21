@@ -25,6 +25,15 @@ Tab and ⇧Tab move among the dialog's own controls and wrap at either end; noth
 Escape and Not now close it and change nothing: no switch moves, no pick is made, no key is kept.
 Closing gives focus back to what opened it: the switch, the menu's button, or the picked model's row.
 
+**On a card.**
+A consent the app raises as a card, adding a runbook or a panel someone else made, takes the same rows inside the card's body (`dl.inf-grants`), not the dialog.
+The card's title says the act ("Add Studio workflows?", "Add the PR checks panel by Acme?"); its body never repeats it.
+A runbook's description leads, then the rows: From (the author, then the whole source in mono on its own line at `--text-sm` / `--fg-3`, a folder's own name lit in `--fg-1`), Reaches, Turns off (only when it replaces a built-in) and Shows a panel or Shows panels, one value for each panel: its name, then one `--text-sm` line for each thing it may do.
+A panel's own card has From, Reads, Uses and Moves.
+Labels sit in a column of their own at `--text-sm` / `--fg-3`, values at `--fg-2` with names at weight 500 in `--fg-1`, baseline aligned, `--space-2` between rows and `--space-4` between the columns.
+Under the rows one quiet line at `--text-sm` / `--fg-3` says what holds for every panel once: it runs no code of its own and sends nothing off this computer.
+Every permission stays in the open in plain words; the exact names, each integration's rule and reason, the moves fine print and what a panel keeps fold under a borderless Full details, with a `h6` per panel on a runbook's card.
+
 ```jsx
 <ConsentDialog title="Turn on Jev" facts={[["Shared", "…"], ["Your choice", "…"], ["Cost", "…"]]}
   act="Turn on" actDisabled={!key} onAct={turnOn} onClose={close}>

@@ -2,13 +2,9 @@ import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { panelAddedLine, panelRemovedLine } from "../../src/core/personal/panelLines";
-import {
-  CAN_READ_WORDS,
-  panelByWords,
-  panelConsentTitle,
-  SENDS_NOTHING_WORDS,
-} from "../../src/core/plugins/consentWords";
+import { panelConsentTitle } from "../../src/core/plugins/consentWords";
 import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { viewWords } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -97,11 +93,14 @@ test.describe
         await say(page, `${ADD_PANEL_PROMPT_MARKER}${source}`);
         await expect(shownCard(page, CARD_TITLE)).toBeVisible({ timeout: 30_000 });
         const body = cardBody(page, CARD_TITLE);
-        await expect(body.locator("body")).toContainText(panelByWords(MAKER, VERSION));
+        await expect(shownCard(page, CARD_TITLE)).toContainText(`${MAKER} ${VERSION}`);
+        const rows = body.locator("dl").first();
+        await expect(rows.locator("dd > b").first()).toHaveText(MAKER);
+        await expect(rows.locator("dt", { hasText: m.cardConsentReads() })).toBeVisible();
+        await expect(rows).toContainText(viewWords("v_usage_v1"), { ignoreCase: true });
         await expect(body.locator("body")).toContainText(
-          `${CAN_READ_WORDS} ${viewWords("v_usage_v1")}`,
+          m.cardConsentPanelNote({ here: m.placeThisComputer() }),
         );
-        await expect(body.locator("body")).toContainText(SENDS_NOTHING_WORDS);
         await page.screenshot({ path: test.info().outputPath("installed-panels-consent.png") });
 
         // The host's card is the only one about it: the Firstmate authored none.

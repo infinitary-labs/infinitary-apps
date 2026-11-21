@@ -314,6 +314,26 @@ export const FRAME_BASE_STYLE = `
   dl.inf-ask-input { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); }
   .inf-ask-input dt { color: var(--fg-3); }
   .inf-ask-input dd { margin: 0; overflow-wrap: anywhere; }
+  /* A consent card's rows (ConsentDialog.prompt.md, "On a card"): what is added, a label beside
+     each value; a panel's permission lines under its name; one quiet line under the rows and
+     Full details folded below it, borderless. */
+  dl.inf-grants { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-3); }
+  .inf-grants dt { margin: 0; font-size: var(--text-sm); color: var(--fg-3); white-space: nowrap; }
+  .inf-grants dd { grid-column: 2; margin: 0; min-width: 0; color: var(--fg-2); overflow-wrap: anywhere; }
+  .inf-grants dd b { font-weight: 500; color: var(--fg-1); }
+  .inf-grants-source { display: block; font-size: var(--text-sm); color: var(--fg-3); background: none; padding: 0; }
+  .inf-grants dd .inf-grants-source b { font-weight: 400; }
+  .inf-grants-quiet { font-size: var(--text-sm); color: var(--fg-3); }
+  .inf-grants-lines { display: block; font-size: var(--text-sm); }
+  .inf-grants-lines > span { display: block; }
+  .inf-grants-note { margin: 0; font-size: var(--text-sm); color: var(--fg-3); }
+  .inf-grants-more { border: 0; padding: 0; margin: var(--space-2) 0 0; font-size: var(--text-sm); }
+  .inf-grants-more[open] > summary { margin-bottom: var(--space-2); }
+  .inf-grants-more h6 { margin: var(--space-2) 0 var(--space-1); }
+  .inf-grants-more dl.inf-grants { gap: var(--space-1) var(--space-4); margin: 0 0 var(--space-2); }
+  .inf-grants-more dl.inf-grants:last-child { margin-bottom: 0; }
+  .inf-grants-more dt { font-size: inherit; }
+  .inf-grants-more code { color: var(--fg-1); }
   .inf-ask-why { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--fg-2); }
   .inf-ask:has(input:not(:checked)) :is(.inf-ask-name, .inf-ask-input, .inf-ask-why) { opacity: 0.45; text-decoration: line-through; text-decoration-color: var(--fg-3); }
   .inf-asks-tally { margin: 0; padding: 0 var(--space-1); font-size: var(--text-sm); color: var(--fg-2); }

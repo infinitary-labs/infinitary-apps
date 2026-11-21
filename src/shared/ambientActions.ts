@@ -74,7 +74,7 @@ export const ambientLines = {
     current: "inf:settings:appearance:get",
     value: z.strictObject({ pause: z.boolean() }),
     // i18n-exempt: served to the first mate, a model, never shown
-    line: "Pause when you're away, when asked: with pause true the ambient music pauses while nobody is at the computer and plays again once someone is back (the default); pause false keeps it playing.",
+    line: "Pause when you're away, when asked: with pause true the ambient music pauses while nobody is at the computer and plays again once someone is back (the default); pause false keeps it playing. Only a Mac or a Windows PC notices nobody is there: on Linux the music never pauses for this, whatever the switch says, so never tell a Linux user it does.",
     toRequest: (v, current) => [{ ...(current as Appearance), ambientPlaysWhenAway: !v.pause }],
     readValue: (current) => ({ pause: (current as Appearance).ambientPlaysWhenAway !== true }),
     done: (v) => `ambient music ${v.pause ? "pauses" : "plays"} while you're away`,

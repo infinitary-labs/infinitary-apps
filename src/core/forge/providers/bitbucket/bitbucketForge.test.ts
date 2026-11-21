@@ -775,6 +775,15 @@ describe("a Bitbucket Cloud contribution from a fork", () => {
     expect(sent.some((request) => request.method === "POST")).toBe(false);
   });
 
+  it("says nothing was sent when the workspace read fails before the fork request", async () => {
+    const { forge, sent } = standIn({
+      "GET /user?fields=uuid": () => Response.json({ uuid: ME }),
+      [WORKSPACES]: () => new Response("unavailable", { status: 503 }),
+    });
+    await expect(forge.contributions?.createFork()).rejects.toMatchObject({ beforeSend: true });
+    expect(sent.some((request) => request.method === "POST")).toBe(false);
+  });
+
   it("opens the pull request here from the fork, and reads its branch and checks in the fork", async () => {
     const source = { id: forkNumber, fullName: "jo-field/field-notes" };
     const forkHead = { ...pullRequest({}) };

@@ -470,3 +470,11 @@ function failureOf(status: number): ForgeFailure {
   if (status === 429 || status >= 500) return "transient";
   return "refused";
 }
+
+/** A failure before a write left: nothing was sent, which a caller may retry. */
+export function sentNothing(caught: unknown): unknown {
+  if (caught instanceof ForgeError && (caught.beforeSend || caught instanceof ForgeAllowanceSpent))
+    return caught;
+  const message = caught instanceof Error ? caught.message : String(caught);
+  return new ForgeError(caught instanceof ForgeError ? caught.failure : "transient", message, true);
+}

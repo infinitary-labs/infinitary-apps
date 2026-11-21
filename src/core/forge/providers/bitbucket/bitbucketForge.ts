@@ -31,7 +31,7 @@ import {
   nextBitbucketPagePath,
   parseBitbucketApiRequest,
 } from "./api";
-import { BitbucketClient, type BitbucketOptions, BitbucketRefusal } from "./client";
+import { BitbucketClient, type BitbucketOptions, BitbucketRefusal, sentNothing } from "./client";
 import { readBitbucketPullComments } from "./comments";
 import { BitbucketContributions, bitbucketRepositoryNumber } from "./contributions";
 import { BitbucketProjects } from "./projects";
@@ -959,14 +959,6 @@ function numbered(change: ForgeChange, place: string): number {
   if (change.number === undefined)
     throw new ForgeError("unsupported", `${change.branch} has no pull request on ${place}`);
   return change.number;
-}
-
-/** A failure before the merge request left: nothing was sent, which a caller may retry. */
-function sentNothing(caught: unknown): unknown {
-  if (caught instanceof ForgeError && (caught.beforeSend || caught instanceof ForgeAllowanceSpent))
-    return caught;
-  const message = caught instanceof Error ? caught.message : String(caught);
-  return new ForgeError(caught instanceof ForgeError ? caught.failure : "transient", message, true);
 }
 
 function unreadableError(place: string, what: string): ForgeError {

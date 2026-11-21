@@ -1,7 +1,7 @@
 import type { ContributionProject } from "@shared/contributions";
 import type { ContributionFacts, ForgeContributions } from "../../contributions";
 import { ForgeError } from "../../forge";
-import type { BitbucketClient } from "./client";
+import { type BitbucketClient, sentNothing } from "./client";
 
 type Repository = {
   uuid?: string;
@@ -129,7 +129,10 @@ export class BitbucketContributions implements ForgeContributions {
   }
 
   async createFork(): Promise<ContributionProject> {
-    const workspace = await this.ownWorkspace();
+    // The reads that choose the workspace run before the fork request: their failure sent nothing.
+    const workspace = await this.ownWorkspace().catch((caught: unknown) => {
+      throw sentNothing(caught);
+    });
     const made = await this.client.write(
       "POST",
       `${this.path()}/forks`,

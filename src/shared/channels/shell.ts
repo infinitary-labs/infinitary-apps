@@ -26,6 +26,15 @@ export type WindowControl = z.infer<typeof windowControlSchema>;
 export const windowStateSchema = z.strictObject({ maximized: z.boolean() });
 export type WindowState = z.infer<typeof windowStateSchema>;
 
+/**
+ * Whether someone is at this computer (docs/ambient-music.md, "When nobody is
+ * at the computer"): `away` while its screen is off or locked, its screen
+ * saver runs or another person's session is in front; `watched` when this
+ * computer can tell at all, which a Linux desktop cannot.
+ */
+export const presenceSchema = z.strictObject({ away: z.boolean(), watched: z.boolean() });
+export type Presence = z.infer<typeof presenceSchema>;
+
 /** The window's fence, asked and pushed back with the same token (`inf:window:fence`). */
 export const windowFenceSchema = z.strictObject({ token: z.number().int().nonnegative() });
 
@@ -175,6 +184,14 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([]),
     response: windowStateSchema,
+  },
+  // Whether someone is at this computer, as its main process hears it
+  // (src/main/presence.ts); the window pauses its ambient music while nobody is.
+  "inf:window:presence": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([]),
+    response: presenceSchema,
   },
   // Chromium can hand the window an answer before a push sent ahead of it,
   // since the two arrive on separate queues. The fence comes back as the

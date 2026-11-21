@@ -18,6 +18,7 @@ The top bar drags the window, and on a Mac a pointer over a drag point leaves th
 Play or pause ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, Ctrl+Alt+P on Linux and Windows, which the button's label shows; command search lists it too.
 It turns the switch on if it was off, and otherwise pauses or resumes without turning the switch off.
 The separate `ambient-paused` row leaves the enable and volume row readable by older builds.
+On a Mac or a Windows PC the group's last row is a Pause when you're away switch, on until turned off ("When nobody is at the computer" below).
 The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/actions.ts`), with no tool of its own.
 
 ## The styles
@@ -52,7 +53,7 @@ Its piano is three voices per note: a bright strike that fades first, and a pair
 A style may tilt its whole mix darker or brighter above 1.4 kHz (`tilt`); Cold sleep is 6 dB darker, the tone the captain set.
 The window plays it at 24 kHz, half the usual rate, which halves what it costs; the mix is cut at 11 kHz, so nothing it plays is lost.
 A bar whose start already passed, after a stalled window or slowed timers, is skipped, leaving a short gap rather than starting its notes all at once.
-`src/renderer/src/ambient/ambient.ts` follows the switch, the style and the volume and runs the player in the window, marking where it stands on the document as `data-ambient-music`: `off`, `paused`, `playing` or `hushed`, and `playing` or `hushed` only once its audio context runs; while its player runs, `data-ambient-style` names the style.
+`src/renderer/src/ambient/ambient.ts` follows the switch, the style and the volume and runs the player in the window, marking where it stands on the document as `data-ambient-music`: `off`, `paused`, `away`, `playing` or `hushed`, and `playing` or `hushed` only once its audio context runs; while its player runs, `data-ambient-style` names the style.
 
 The mark reads four frequency bands from the music before the volume gain and measures each against its own quietest and loudest level of about the last 3.3 seconds, so every bar uses its full height.
 It is the captain's Calm look from INF-5053: on the 24-unit icon a bar rests at 4 units and peaks at 16, rising slowly and falling more slowly, at the same height at any volume above zero, and still at zero.
@@ -82,3 +83,20 @@ Every note's nodes are disconnected when it ends, so memory stays flat however l
 It fades to silence over 20 ms, so it is silent within 150 ms even with the audio's own delay through the window, while voice input listens, since the microphone would hear it, and while a card's sound clip or a demo recording with sound plays (`useCardSound`'s `playing` and `demo`), and comes back over about a second after.
 It keeps playing while the window is hidden, and stops when the window closes or the app quits.
 It does not take the keyboard's media keys or show in the system's Now Playing.
+
+## When nobody is at the computer
+
+It is INF-5528's answer and the captain's choice: by default the music stops while nobody is at the computer and starts again once someone is back, and turning off the Pause when you're away switch in Settings → Appearance keeps it playing instead.
+Nobody is there while the screen is off or locked, the screen saver runs, or another person's session is in front; someone is back only once every one of those ended, so on a computer that asks for a password the music comes back at the unlock, not when the screen wakes.
+`src/main/presence.ts` hears it in the main process and tells the window over `inf:window:presence`, `{ away, watched }`; `src/main/presenceWatch.ts` combines the reasons.
+
+| Computer | What the app hears |
+| --- | --- |
+| Mac | the screens sleeping and waking (`NSWorkspaceScreensDidSleepNotification`, `NSWorkspaceScreensDidWakeNotification`), the lock and unlock, the screen saver starting and stopping (`com.apple.screensaver.didstart`, `didstop`, not in Apple's documents) and another session taking the screen (`user-did-resign-active`, `user-did-become-active`) |
+| Windows | the lock and unlock, and the display's own state, which Windows tells only a window that asked: `RegisterPowerSettingNotification` with `GUID_SESSION_DISPLAY_STATUS` through koffi, read in `WM_POWERBROADCAST` (`src/main/windowsDisplay.ts`); a dimmed display still counts as on, and the screen saver has no event of its own |
+| Linux | nothing: Electron hears no lock or screen there, so `watched` is false, the music never stops for this and Settings does not offer the switch |
+
+While nobody is there it ends its player as the pause button does, closing its audio context, and starts a new one on the way back, from a new seed.
+A hush would not do: a silent player still keeps the computer from sleeping on its own, and a closed audio context lets it go, so a computer set to sleep when idle sleeps by its own setting once nobody is there.
+This pause is never saved: the `ambient-paused` row stays the pause button's alone.
+Keep playing is `ambientPlaysWhenAway` in the look, in a row of its own, `ambient-away-plays`, kept only while on, and a view from before the change is never sent it (`src/shared/contract-changes/ambient-away.md`).

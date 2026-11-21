@@ -3057,6 +3057,8 @@
 "settingsSoundAmbientMusic" = "Música ambiente";
 "settingsSoundAmbientMusicDescription" = "Música tranquila, gerada proceduralmente no seu computador enquanto toca, então nunca se repete. A música acompanha a tripulação e toca um sino quando algo espera por você.";
 "settingsSoundHeading" = "Som";
+"settingsSoundPauseWhenAway" = "Pausar quando você sair";
+"settingsSoundPauseWhenAwayDescription" = "Pausa enquanto sua tela está desligada ou bloqueada, para que a música não mantenha seu computador acordado, e volta a tocar quando você retorna.";
 "settingsSoundStyle" = "Estilo";
 "settingsSoundStyleColdSleep" = "Sono criogênico";
 "settingsSoundStyleColdSleepDescription" = "Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave e um batimento lento.";

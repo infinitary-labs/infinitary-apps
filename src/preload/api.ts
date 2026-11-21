@@ -150,6 +150,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       controlWindow: (control) => invoke("inf:window:control", control),
       windowState: () => invoke("inf:window:state"),
       onWindowState: (listener) => subscribe("inf:window:state", listener),
+      presence: () => invoke("inf:window:presence"),
+      onPresence: (listener) => subscribe("inf:window:presence", listener),
       // Main pushes the fence's token back behind every push it sent this
       // window before, so it resolves once they have all arrived. A fence that
       // cannot be asked holds nothing: what waits on it goes on as before.

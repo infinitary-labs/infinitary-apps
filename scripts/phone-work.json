@@ -27,6 +27,12 @@
       "launches": 1
     }
   },
+  "cards-reads": {
+    "iphone": {
+      "reads": 300,
+      "launches": 1
+    }
+  },
   "cards-form": {
     "iphone": {
       "reads": 614,

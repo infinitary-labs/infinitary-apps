@@ -1317,9 +1317,10 @@ export async function startApp(
         else await showDataRefusal(hideWindow, refusal);
         return;
       }
-      // Before a run from source first opens the person's own record, which
-      // it may migrate past what the installed app opens, it keeps a copy
-      // to go back to (src/core/storage/sourceRunCopy.ts); beside a command,
+      // Before a run from source first opens the person's own record, and
+      // before any run whose build would migrate it past what the installed
+      // app opens, it keeps a copy to go back to
+      // (src/core/storage/sourceRunCopy.ts); beside a command,
       // the command's first mate holds the record and this window opens none.
       if (sourceOnOwnData && !besideRun) {
         try {

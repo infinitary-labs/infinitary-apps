@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { openDatabase } from "./db";
+import { DATABASE_VERSION, openDatabase, readDatabaseSnapshot } from "./db";
 import { KnowledgeStore } from "./knowledgeStore";
 import { recordPersistedFormat } from "./savedDataCompatibility";
-import { keepRecordBeforeSourceRun, SOURCE_RUN_COPY_DIR } from "./sourceRunCopy";
+import { formatChangeDue, keepRecordBeforeSourceRun, SOURCE_RUN_COPY_DIR } from "./sourceRunCopy";
 
 /** A data folder the installed app left: its record with one task in it. */
 function installedFolder(): string {
@@ -25,7 +25,7 @@ function installedFolder(): string {
 describe("the copy a run from source keeps before it opens the person's record", () => {
   // INF-5635's plan, piece 1: before pnpm dev first opens the installed app's
   // folder, it keeps a copy of the saved record to go back to.
-  it("keeps the record as it stood, once", () => {
+  it("keeps the record as it stood, and no new copy while this build changes nothing in how it is saved", () => {
     const dir = installedFolder();
     const kept = keepRecordBeforeSourceRun(dir, copyFileSync);
     expect(kept).toBe(join(dir, SOURCE_RUN_COPY_DIR));
@@ -85,5 +85,33 @@ describe("the copy a run from source keeps before it opens the person's record",
     db.close();
     const kept = keepRecordBeforeSourceRun(dir, copyFileSync);
     expect(kept && readdirSync(kept)).toContain("firstmate.db");
+  });
+
+  // The captain's answer on the review of piece 1 (F2, before-format-change):
+  // copy again before a newer version changes how the data is saved.
+  it("keeps a fresh copy, replacing the older one, before a build that would migrate the record", () => {
+    const dir = scratchDir("infinitary-source-copy-older-");
+    // A record an installed build one migration behind this one left.
+    openDatabase(dir, DATABASE_VERSION - 1).close();
+    expect(formatChangeDue(dir)).toBe(true);
+    const appliedIn = (folder: string) =>
+      readDatabaseSnapshot(
+        join(folder, "firstmate.db"),
+        (db) =>
+          (db.prepare("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number }).v,
+      );
+    const first = keepRecordBeforeSourceRun(dir, copyFileSync);
+    expect(first && appliedIn(first)).toBe(DATABASE_VERSION - 1);
+    // A start that quit before opening the record copies again over the first.
+    expect(keepRecordBeforeSourceRun(dir, copyFileSync)).toBe(first);
+    expect(readdirSync(dir).filter((name) => name.startsWith(SOURCE_RUN_COPY_DIR))).toEqual([
+      SOURCE_RUN_COPY_DIR,
+    ]);
+    // Once this build opened and migrated it, the next start keeps no new copy,
+    // and the kept one is still the record from just before the migration.
+    openDatabase(dir).close();
+    expect(formatChangeDue(dir)).toBe(false);
+    expect(keepRecordBeforeSourceRun(dir, copyFileSync)).toBeNull();
+    expect(appliedIn(join(dir, SOURCE_RUN_COPY_DIR))).toBe(DATABASE_VERSION - 1);
   });
 });

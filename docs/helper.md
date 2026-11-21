@@ -292,6 +292,7 @@ A development run may stand in its own service manager with `INFINITARY_LAUNCHCT
 
 Infinitary's app keeps its work under its own label, `com.getinfinitary.infinitary.work` (`.dev.work` for the development flavor), its bundle id and then `.work` as this app's is (`workLabelOf`, `src/shared/codeNames.ts`).
 The label follows the folder: `pnpm dev` on the person's own folder takes the installed app's `.work`, so one background runs on a work folder, and an isolated run from source keeps `.dev.work`, so it never takes the installed app's.
+When `pnpm dev` sets the work up, as a view of another home does when its work is not running, it writes that one agent with its own launcher, Electron and the checkout, so the work runs from the checkout, on whatever the checkout holds, until the installed app writes the agent again.
 An agent `installed.json` records under the other app's label moves to this app's own in one step (`moveInBackground`, the Infinitary rename's FI3-1780 step 2): the new one is set up and started first, it is recorded only once the service manager took it, and the old one's files go and the service manager lets it go last.
 The two never run work at once, because each works only while it holds the folder (`running.lock`).
 A new one the service manager refuses is taken away again and the old one started again as it was, so a move that fails changes nothing.

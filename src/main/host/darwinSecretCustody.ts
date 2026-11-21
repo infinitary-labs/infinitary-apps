@@ -37,7 +37,7 @@ export type DarwinCustodyApi = {
 };
 
 export type DarwinCustodyOptions = {
-  /** One service per app flavor, so a development run never reads the release root. */
+  /** One service per app flavor (`SECRETS_CUSTODY_NAMES`): the dev bundle never reads the release root. */
   service: string;
   interactive?: boolean;
 };

@@ -38,8 +38,10 @@ The snapshot includes committed WAL state after an unclean shutdown; checking on
 
 `pnpm dev` opens the person's own folder, `<appData>/infinitary`, as the installed app does (`runFlavor`, `src/main/userDataDir.ts`).
 A newer source may migrate the record past what the installed app opens, and the guard above then refuses that app.
-So before a run from source first opens the record, it keeps a copy to go back to in `before-source-run/` inside the folder (`keepRecordBeforeSourceRun`, `src/core/storage/sourceRunCopy.ts`): the database and its write-ahead log, the knowledge collection's, and the format marker, made while the run holds the single-instance lock and before services start.
-The copy is made beside its place and moved there whole, so a start that ends partway keeps nothing and the next start copies again; once it is there, no later run from source copies again.
+So before a run from source first opens the record, and again before any run whose build would change how the record is saved, it keeps a copy to go back to in `before-source-run/` inside the folder (`keepRecordBeforeSourceRun`, `src/core/storage/sourceRunCopy.ts`): the database and its write-ahead log, the knowledge collection's, and the format marker, made while the run holds the single-instance lock and before services start.
+A build changes how the record is saved when it has a database migration the record or the knowledge collection has not had, or the record has no format marker yet (`formatChangeDue`); a newer copy replaces the older one, so the copy is the record as it stood just before the newest such change.
+A folder with no record yet keeps no copy.
+The copy is made beside its place and moved there whole, so a start that ends partway keeps the older copy and the next start copies again; while a build changes nothing in how the record is saved, no later run from source copies again.
 The run says in its terminal where the copy is and that going back means quitting Infinitary and copying those files back into the folder.
 A run that cannot keep the copy quits without opening the record.
 A window beside a command's run opens no record of its own and keeps no copy.

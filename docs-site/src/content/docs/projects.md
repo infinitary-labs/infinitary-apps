@@ -50,6 +50,7 @@ The key form names the scopes to tick on Atlassian's page.
 Your Bitbucket projects are listed from the workspaces you belong to; with many, some may not be checked, and the list says so.
 A Bitbucket project's changes are offered as pull requests, as on GitHub and GitLab; a project you added before this works the same way from its next task.
 A Bitbucket pull request's description carries the story as text, and its pictures stay on the card.
+On a Bitbucket project your crew can also read the project's pipelines and a step's log, put a release file in its Downloads, and wake on new comments on its pull request, as on GitHub and GitLab; Bitbucket offers no download of a pipeline's artifacts.
 Your sign-in stays on this computer.
 
 If a sign-in stops working, a card asks you to sign in again.

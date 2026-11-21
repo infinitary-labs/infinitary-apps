@@ -180,6 +180,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     KEPT_ANSWER_MAX_BYTES: physical("not kept; that read is answered in full each time, nothing refused"),
     KEPT_ANSWERS_MAX_BYTES: physical("the oldest kept answer is forgotten; its next read is answered in full"),
   },
+  "src/core/forge/providers/bitbucket/client.ts": {
+    MAX_DOWNLOAD_REDIRECTS: physical("refused in words: redirected too many times; nothing further"),
+  },
   "src/core/forge/providers/bitbucket/projects.ts": {
     MAX_PAGES: physical("listing says some were not read; a pasted link or workspace/name is looked up"),
   },

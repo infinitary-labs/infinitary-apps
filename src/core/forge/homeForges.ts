@@ -30,6 +30,7 @@ import {
   remoteProjectsText,
 } from "./index";
 import { BitbucketForge } from "./providers/bitbucket/bitbucketForge";
+import { readBitbucketOpenChanges } from "./providers/bitbucket/changes";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
 import { readOpenChanges } from "./providers/github/changes";
 import { GitHubForge, githubApiBaseFor } from "./providers/github/githubForge";
@@ -224,19 +225,19 @@ export function startHomeForges(options: {
       }),
     signInOn: (forgeHost: string) => forgeSignIns.signInOn(forgeHost),
   };
-  // The `forge.changes` panel read: every GitHub and GitLab host with a
-  // sign-in, read with it - github.com, each GitHub Enterprise host,
-  // gitlab.com and each GitLab server - newest first across them. A host
+  // The `forge.changes` panel read: every host with a sign-in, read with it
+  // - github.com, each GitHub Enterprise host, gitlab.com, each GitLab
+  // server and Bitbucket Cloud - newest first across them. A host
   // that cannot be read this time answers nothing, never a guess.
   const changes = async (): Promise<ForgeChangesView> => {
     const hosts = forgeSignIns.view().signIns.flatMap((row) => {
       const kind = changeRequestKind(kindOfHost(row.host, forgeSignIns.knownHosts()));
       return kind ? [{ host: row.host, kind }] : [];
     });
-    // Each kind's own reading of a host's open changes; Bitbucket's comes
-    // with the crew's reach there, so its hosts are read for none yet.
-    const openChanges: Partial<
-      Record<ChangeRequestKind, (forgeHost: string, token: string) => Promise<ForgeChangeRow[]>>
+    // Each kind's own reading of a host's open changes.
+    const openChanges: Record<
+      ChangeRequestKind,
+      (forgeHost: string, token: string) => Promise<ForgeChangeRow[]>
     > = {
       github: async (forgeHost, token) => {
         try {
@@ -257,13 +258,19 @@ export function startHomeForges(options: {
           apiBaseUrl: gitlabApiBaseFor(forgeHost, forgeEndpoints),
           onSignInRejected: () => forgeSignIns.rejected(forgeHost),
         }),
+      bitbucket: (forgeHost, token) =>
+        readBitbucketOpenChanges({
+          host: forgeHost,
+          token: async () => token,
+          apiBaseUrl: bitbucketApiBaseFor(forgeHost, forgeEndpoints),
+          onSignInRejected: () => forgeSignIns.rejected(forgeHost),
+        }),
     };
     if (hosts.length === 0) return { signedIn: false, reachable: true, changes: [] };
     let reachable = true;
     const rows: ForgeChangeRow[] = [];
     for (const { host: forgeHost, kind } of hosts) {
       const read = openChanges[kind];
-      if (!read) continue;
       const token = await forgeSignIns.token(forgeHost);
       if (!token) continue;
       try {

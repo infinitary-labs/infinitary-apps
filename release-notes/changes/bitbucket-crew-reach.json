@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "bitbucket-crew-reach",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Your crew reaches Bitbucket the way it reaches GitHub and GitLab",
+      "body": "On a Bitbucket project, your crew can now read and change things on bitbucket.org within the project's own repository, read its pipelines and a step's log, and put a release file in its Downloads. A change anywhere else still waits for your click, and merging still goes through the merge card. New comments on a crewmate's pull request wake it. Your open Bitbucket pull requests show in the open pull requests panel. Bitbucket offers no download of a pipeline's artifacts, so the crew reads the step's log instead.",
+      "noPicture": "This changes what the crew can reach on Bitbucket; the one view it touches, the Bitbucket row in Integrations, gains the same two action switches GitLab's row already has.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

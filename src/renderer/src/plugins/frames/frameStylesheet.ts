@@ -397,6 +397,15 @@ export const FRAME_BASE_STYLE = `
      more of a heading. The recommended option's mark takes the accent, and
      the picked one its ring filled and an accent border. */
   [data-inf-tradeoff-chart] { margin: var(--space-2) 0; }
+  /* A charted option shows once, on the chart: its label and control leave
+     view but stay in the form, so the keyboard still reaches and picks it,
+     and the chart draws the focus. */
+  :is(label, input)[data-inf-tradeoff-charted] {
+    position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+  label[data-inf-tradeoff-charted] + br { display: none; }
+  [data-inf-tradeoff-pick][data-inf-tradeoff-focused] { box-shadow: var(--focus-ring); }
   [data-inf-tradeoff-pick] {
     cursor: pointer; border: 1px solid var(--line-1); border-radius: var(--radius-m);
     background: var(--bg-1); color: var(--fg-2);

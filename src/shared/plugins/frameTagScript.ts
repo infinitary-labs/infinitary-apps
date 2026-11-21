@@ -101,6 +101,8 @@ export const FRAME_TAG_SCRIPT = `  // A question the captain may skip (INF-4425)
       if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
       var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
       if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+      var focused = Boolean(control && control === document.activeElement && control.matches(":focus-visible"));
+      if (focused !== mark.hasAttribute("data-inf-tradeoff-focused")) mark.toggleAttribute("data-inf-tradeoff-focused", focused);
     });
   }
   // A press on an option's mark picks the option, as a press on its row

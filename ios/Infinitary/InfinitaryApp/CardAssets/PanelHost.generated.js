@@ -96996,6 +96996,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
       var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
       if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+      var focused = Boolean(control && control === document.activeElement && control.matches(":focus-visible"));
+      if (focused !== mark.hasAttribute("data-inf-tradeoff-focused")) mark.toggleAttribute("data-inf-tradeoff-focused", focused);
     });
   }
   // A press on an option's mark picks the option, as a press on its row
@@ -97562,6 +97564,9 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
       document.addEventListener("click", pickTradeoff);
+      // A charted option's control is out of view; its mark shows the focus.
+      document.addEventListener("focusin", tagTradeoffs);
+      document.addEventListener("focusout", function () { setTimeout(tagTradeoffs, 0); });
       // Focus leaves on the next turn, once the next element holds it.
       document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
       window.addEventListener("blur", settleWaiting);
@@ -99076,7 +99081,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-7iWiw5ZxOGaTz9L3ZQsP0esyx54FnjxB2084XW8cET0=";
+  const FRAME_BRIDGE_SHA256 = "sha256-9Svlpmc0LO+7AgpXxlwuEeXRWXXHuEvWD/mORlGo8IU=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

@@ -829,4 +829,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-7iWiw5ZxOGaTz9L3ZQsP0esyx54FnjxB2084XW8cET0=";
+export const FRAME_BRIDGE_SHA256 = "sha256-9Svlpmc0LO+7AgpXxlwuEeXRWXXHuEvWD/mORlGo8IU=";

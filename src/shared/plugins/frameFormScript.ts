@@ -571,6 +571,9 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
       document.addEventListener("click", pickTradeoff);
+      // A charted option's control is out of view; its mark shows the focus.
+      document.addEventListener("focusin", tagTradeoffs);
+      document.addEventListener("focusout", function () { setTimeout(tagTradeoffs, 0); });
       // Focus leaves on the next turn, once the next element holds it.
       document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
       window.addEventListener("blur", settleWaiting);

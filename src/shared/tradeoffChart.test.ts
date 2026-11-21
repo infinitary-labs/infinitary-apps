@@ -83,6 +83,33 @@ describe("a review question's tradeoff table", () => {
     );
   });
 
+  it("shows each option once: the chart stands in the options' place in their own words, their rows out of view but still in the form", () => {
+    // The captain, on the first take: "rendering the text version of the
+    // selection and then radar version of the same choices feel odd?"
+    const html = withTradeoffCharts(question(THREE));
+    const charted = [
+      ...html.matchAll(
+        /<label data-inf-tradeoff-charted><input data-inf-tradeoff-charted type="radio" name="via" value="([^"]+)"/g,
+      ),
+    ].map((match) => match[1]);
+    expect(charted).toEqual(["as-built", "redirects-only", "site-only"]);
+    // The write-in is not on the chart and keeps its row, after the chart.
+    expect(html).toContain(
+      '<label><input type="radio" name="via" value="something-else" data-inf-write-in> Something else</label>',
+    );
+    expect(html.indexOf("data-inf-tradeoff-chart")).toBeLessThan(
+      html.indexOf("<label data-inf-tradeoff-charted>"),
+    );
+    // The table as written stays where it was, folded, after the write-in.
+    expect(html.indexOf('value="something-else"')).toBeLessThan(
+      html.indexOf("<details data-inf-tradeoff-table>"),
+    );
+    // Each mark carries its label's words as written, the rough size included.
+    expect(html).toContain(
+      '<span data-inf-tradeoff-words>Keep only pages the site sent you through, not ones you opened <span class="inf-muted">medium</span></span>',
+    );
+  });
+
   it("reaches High at the outer ring, so a shape grows outward with more of a heading", () => {
     const html = withTradeoffCharts(question(THREE));
     const shapes = [...html.matchAll(/data-inf-tradeoff-shape points="([^"]+)"/g)].map((match) =>

@@ -564,9 +564,11 @@ High is always the most of what the heading names, so a heading is named for wha
 
 Every reader - the window, a view of another computer and the phone - draws the table when it builds the body's markup (`withTradeoffCharts`, `src/shared/tradeoffChart.ts`, from `cardBodyMarkup`), so a revision's refresh keeps the drawing and the core measures the drawn size.
 Two headings draw one plane, the first heading up and the second across, with each option a mark in the cell its two levels name; three or more draw a small radar on each option, its outer ring high.
-Each option appears once on the chart, beside its words, the As built pill on the option marked `data-inf-current` and the Recommended pill, or Default on a question the captain may skip, on the one marked `data-inf-recommended`, whose shape takes the accent.
-A press on an option's mark picks the question's own option, and the mark shows it picked (`FRAME_TAG_SCRIPT`); the option's own row stays the keyboard's way to reach and pick it, so the chart adds no stop to the Tab order and is hidden from screen readers, which read the table.
-The table as written follows the chart in a fold, The tradeoff as a table.
+Each option shows once, on the chart: when every row's option has a label, the chart stands where the first of those labels stood, each mark in its label's own words, and the labels and their controls leave view (`data-inf-tradeoff-charted`) while staying in the form.
+A write-in or any option without a row keeps its own row, after the chart.
+The As built pill sits on the option marked `data-inf-current` and the Recommended pill, or Default on a question the captain may skip, on the one marked `data-inf-recommended`, whose shape takes the accent.
+A press on an option's mark picks the question's own option, and the mark shows it picked (`FRAME_TAG_SCRIPT`); the option's own control stays the keyboard's way to reach and pick it, its mark drawing the focus, so the chart adds no stop to the Tab order and is hidden from screen readers, which read the controls and the table.
+The table as written stays where the author put it, folded as The tradeoff as a table.
 The radar tiles wrap to one column and the plane's words wrap in a narrow card, so neither scrolls sideways.
 In a plane too narrow for a pill, the As built and Recommended tags become small words beside the option's, broken only between words.
 There the ring is left out and a picked option shows by its accent border.

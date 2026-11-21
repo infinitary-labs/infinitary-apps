@@ -94934,6 +94934,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
       var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
       if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+      var focused = Boolean(control && control === document.activeElement && control.matches(":focus-visible"));
+      if (focused !== mark.hasAttribute("data-inf-tradeoff-focused")) mark.toggleAttribute("data-inf-tradeoff-focused", focused);
     });
   }
   // A press on an option's mark picks the option, as a press on its row
@@ -95500,6 +95502,9 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
       document.addEventListener("click", pickTradeoff);
+      // A charted option's control is out of view; its mark shows the focus.
+      document.addEventListener("focusin", tagTradeoffs);
+      document.addEventListener("focusout", function () { setTimeout(tagTradeoffs, 0); });
       // Focus leaves on the next turn, once the next element holds it.
       document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
       window.addEventListener("blur", settleWaiting);
@@ -96982,7 +96987,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-7iWiw5ZxOGaTz9L3ZQsP0esyx54FnjxB2084XW8cET0=";
+  const FRAME_BRIDGE_SHA256 = "sha256-9Svlpmc0LO+7AgpXxlwuEeXRWXXHuEvWD/mORlGo8IU=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -101707,7 +101712,16 @@ ${FRAME_KEYBOARD_SCRIPT}
       return type === "radio" || type === "checkbox";
     });
   }
-  function readTable(table, root) {
+  function labelOf(choice, root) {
+    for (let at = choice.parent; at; at = at.parent) if (tagOf(at) === "label") return at;
+    const id = choice.attribs?.id;
+    if (!id) return void 0;
+    return descendants(root, (each) => tagOf(each) === "label" && each.attribs?.for === id)[0];
+  }
+  function labelWords(label, html) {
+    return (label.children ?? []).filter((child) => tagOf(child) !== "input").map((child) => html.slice(child.startIndex ?? 0, (child.endIndex ?? -1) + 1)).join("").trim();
+  }
+  function readTable(table, root, html) {
     const [header, ...body] = rowsOf(table);
     const headings = header ? cellsOf(header).slice(1).map(words$1) : [];
     if (headings.length < 2) {
@@ -101754,12 +101768,21 @@ ${FRAME_KEYBOARD_SCRIPT}
         }
         levels.push(level);
       }
+      const label = labelOf(choice, root);
+      const written = label ? labelWords(label, html) : "";
       rows.push({
         option,
         words: shown,
         levels,
         current: hasHook(choice.attribs, "current"),
-        recommended: hasHook(choice.attribs, "recommended")
+        recommended: hasHook(choice.attribs, "recommended"),
+        ...label && written ? {
+          placed: {
+            label: label.startIndex ?? 0,
+            control: choice.startIndex ?? 0,
+            words: written
+          }
+        } : {}
       });
     }
     if (!rows.some((row) => row.current)) {
@@ -101794,7 +101817,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       root,
       (each) => tagOf(each) === "table" && hasHook(each.attribs, "tradeoff")
     );
-    return tables.map((table) => readTable(table, root));
+    return tables.map((table) => readTable(table, root, html));
   }
   function tradeoffTables(html) {
     return readAll(html).flatMap((read) => read.table ? [read.table] : []);
@@ -101805,8 +101828,9 @@ ${FRAME_KEYBOARD_SCRIPT}
   function pickAttributes(row) {
     return ` data-inf-tradeoff-pick="${escapeHtml$1(row.option)}"${row.current ? " data-inf-tradeoff-current" : ""}${row.recommended ? " data-inf-tradeoff-recommended" : ""}`;
   }
-  function optionWords(row) {
-    return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${escapeHtml$1(row.words)}</span>`;
+  function optionWords(row, own) {
+    const shown = own && row.placed ? row.placed.words : escapeHtml$1(row.words);
+    return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${shown}</span>`;
   }
   const RADAR_RADIUS = 46;
   const LABEL_GAP = 8;
@@ -101853,13 +101877,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     const height = maxY - minY + 4;
     return `<svg viewBox="${round$1(minX - 2)} ${round$1(minY - 2)} ${round$1(width)} ${round$1(height)}" width="${round$1(width)}" height="${round$1(height)}" aria-hidden="true">${rings}${spokes}<polygon data-inf-tradeoff-shape points="${polygon(reach)}"/>${dots}${labels2.join("")}</svg>`;
   }
-  function radarChart(table) {
+  function radarChart(table, own) {
     const tiles = table.rows.map(
-      (row) => `<div${pickAttributes(row)}>${radarSvg(table.headings, row.levels)}<p>${optionWords(row)}</p></div>`
+      (row) => `<div${pickAttributes(row)}>${radarSvg(table.headings, row.levels)}<p>${optionWords(row, own)}</p></div>`
     ).join("");
     return `<div data-inf-tradeoff-chart="radar" aria-hidden="true">${tiles}</div>`;
   }
-  function scatterChart(table) {
+  function scatterChart(table, own) {
     const [up = "", across = ""] = table.headings;
     const cells = [];
     for (const y of [3, 2, 1]) {
@@ -101867,7 +101891,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         const here = table.rows.filter(
           (row) => rank(row.levels[0] ?? "low") === y && rank(row.levels[1] ?? "low") === x
         );
-        const marks = here.map((row) => `<div${pickAttributes(row)}>${optionWords(row)}</div>`).join("");
+        const marks = here.map((row) => `<div${pickAttributes(row)}>${optionWords(row, own)}</div>`).join("");
         cells.push(
           `<div data-inf-tradeoff-cell data-inf-tradeoff-x="${x}" data-inf-tradeoff-y="${y}">${marks}</div>`
         );
@@ -101875,16 +101899,42 @@ ${FRAME_KEYBOARD_SCRIPT}
     }
     return `<div data-inf-tradeoff-chart="scatter" aria-hidden="true"><div data-inf-tradeoff-axis="up">${escapeHtml$1(up)}</div><div data-inf-tradeoff-plane>${cells.join("")}</div><div data-inf-tradeoff-axis="across">${escapeHtml$1(across)}</div></div>`;
   }
+  const CHARTED = " data-inf-tradeoff-charted";
   function withTradeoffCharts(html) {
     const tables = tradeoffTables(html);
     if (tables.length === 0) return html;
-    let drawn = html;
-    for (const table of [...tables].reverse()) {
-      const chart = table.headings.length === 2 ? scatterChart(table) : radarChart(table);
-      const written = drawn.slice(table.start, table.end);
-      drawn = `${drawn.slice(0, table.start)}${chart}<details data-inf-tradeoff-table><summary>${escapeHtml$1(cardTradeoffTable())}</summary>${written}</details>${drawn.slice(table.end)}`;
+    const edits = [];
+    for (const table of tables) {
+      const own = table.rows.every((row) => row.placed);
+      const chart = table.headings.length === 2 ? scatterChart(table, own) : radarChart(table, own);
+      const written = html.slice(table.start, table.end);
+      const fold = `<details data-inf-tradeoff-table><summary>${escapeHtml$1(cardTradeoffTable())}</summary>${written}</details>`;
+      if (!own) {
+        edits.push({ at: table.start, end: table.end, put: `${chart}${fold}` });
+        continue;
+      }
+      edits.push({ at: table.start, end: table.end, put: fold });
+      const first = Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
+      edits.push({ at: first, end: first, put: chart });
+      for (const row of table.rows) {
+        const marks = row.placed;
+        if (!marks) continue;
+        edits.push({
+          at: marks.label + "<label".length,
+          end: marks.label + "<label".length,
+          put: CHARTED
+        });
+        edits.push({
+          at: marks.control + "<input".length,
+          end: marks.control + "<input".length,
+          put: CHARTED
+        });
+      }
     }
-    return drawn;
+    edits.sort((a, b) => b.at - a.at || b.end - b.at - (a.end - a.at));
+    let out = html;
+    for (const edit of edits) out = `${out.slice(0, edit.at)}${edit.put}${out.slice(edit.end)}`;
+    return out;
   }
   function cardBodyHtml(body) {
     return /<[a-z][\s\S]*>/i.test(body) ? body : plainTextBody(body);
@@ -102521,6 +102571,15 @@ a:hover {
      more of a heading. The recommended option's mark takes the accent, and
      the picked one its ring filled and an accent border. */
   [data-inf-tradeoff-chart] { margin: var(--space-2) 0; }
+  /* A charted option shows once, on the chart: its label and control leave
+     view but stay in the form, so the keyboard still reaches and picks it,
+     and the chart draws the focus. */
+  :is(label, input)[data-inf-tradeoff-charted] {
+    position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+  label[data-inf-tradeoff-charted] + br { display: none; }
+  [data-inf-tradeoff-pick][data-inf-tradeoff-focused] { box-shadow: var(--focus-ring); }
   [data-inf-tradeoff-pick] {
     cursor: pointer; border: 1px solid var(--line-1); border-radius: var(--radius-m);
     background: var(--bg-1); color: var(--fg-2);

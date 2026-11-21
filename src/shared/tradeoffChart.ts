@@ -41,6 +41,12 @@ export type TradeoffRow = {
   levels: TradeoffLevel[];
   current: boolean;
   recommended: boolean;
+  /**
+   * Where the option's own label and control stand, and the label's words as
+   * the author wrote them: the chart shows each option once, in those words,
+   * and the label leaves view while its control stays the keyboard's way in.
+   */
+  placed?: { label: number; control: number; words: string };
 };
 
 export type TradeoffTable = {
@@ -121,7 +127,24 @@ function choicesIn(question: Node): Node[] {
 
 type Read = { table?: TradeoffTable; problem?: string };
 
-function readTable(table: Node, root: Node): Read {
+/** The label naming a control: the one around it, or one naming its id. */
+function labelOf(choice: Node, root: Node): Node | undefined {
+  for (let at = choice.parent; at; at = at.parent) if (tagOf(at) === "label") return at;
+  const id = choice.attribs?.id;
+  if (!id) return undefined;
+  return descendants(root, (each) => tagOf(each) === "label" && each.attribs?.for === id)[0];
+}
+
+/** A label's own markup, its control left out: the option's words as written. */
+function labelWords(label: Node, html: string): string {
+  return (label.children ?? [])
+    .filter((child) => tagOf(child) !== "input")
+    .map((child) => html.slice(child.startIndex ?? 0, (child.endIndex ?? -1) + 1))
+    .join("")
+    .trim();
+}
+
+function readTable(table: Node, root: Node, html: string): Read {
   const [header, ...body] = rowsOf(table);
   const headings = header ? cellsOf(header).slice(1).map(words) : [];
   if (headings.length < 2) {
@@ -169,12 +192,23 @@ function readTable(table: Node, root: Node): Read {
       }
       levels.push(level as TradeoffLevel);
     }
+    const label = labelOf(choice, root);
+    const written = label ? labelWords(label, html) : "";
     rows.push({
       option,
       words: shown,
       levels,
       current: hasHook(choice.attribs, "current"),
       recommended: hasHook(choice.attribs, "recommended"),
+      ...(label && written
+        ? {
+            placed: {
+              label: label.startIndex ?? 0,
+              control: choice.startIndex ?? 0,
+              words: written,
+            },
+          }
+        : {}),
     });
   }
   if (!rows.some((row) => row.current)) {
@@ -212,7 +246,7 @@ function readAll(html: string): Read[] {
     root,
     (each) => tagOf(each) === "table" && hasHook(each.attribs, "tradeoff"),
   );
-  return tables.map((table) => readTable(table, root));
+  return tables.map((table) => readTable(table, root, html));
 }
 
 /** Every tradeoff table in a body that the app can draw, in order. */
@@ -240,8 +274,9 @@ function pickAttributes(row: TradeoffRow): string {
   return ` data-inf-tradeoff-pick="${escapeHtml(row.option)}"${row.current ? " data-inf-tradeoff-current" : ""}${row.recommended ? " data-inf-tradeoff-recommended" : ""}`;
 }
 
-function optionWords(row: TradeoffRow): string {
-  return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${escapeHtml(row.words)}</span>`;
+function optionWords(row: TradeoffRow, own: boolean): string {
+  const shown = own && row.placed ? row.placed.words : escapeHtml(row.words);
+  return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${shown}</span>`;
 }
 
 /** The radar's outer ring, in drawing units. */
@@ -302,11 +337,11 @@ function radarSvg(headings: string[], levels: TradeoffLevel[]): string {
   return `<svg viewBox="${round(minX - 2)} ${round(minY - 2)} ${round(width)} ${round(height)}" width="${round(width)}" height="${round(height)}" aria-hidden="true">${rings}${spokes}<polygon data-inf-tradeoff-shape points="${polygon(reach)}"/>${dots}${labels.join("")}</svg>`;
 }
 
-function radarChart(table: TradeoffTable): string {
+function radarChart(table: TradeoffTable, own: boolean): string {
   const tiles = table.rows
     .map(
       (row) =>
-        `<div${pickAttributes(row)}>${radarSvg(table.headings, row.levels)}<p>${optionWords(row)}</p></div>`,
+        `<div${pickAttributes(row)}>${radarSvg(table.headings, row.levels)}<p>${optionWords(row, own)}</p></div>`,
     )
     .join("");
   return `<div data-inf-tradeoff-chart="radar" aria-hidden="true">${tiles}</div>`;
@@ -317,7 +352,7 @@ function radarChart(table: TradeoffTable): string {
  * option a mark in the cell its two levels name - a scatter on the three
  * levels the author gives. Cells are HTML so an option's words wrap.
  */
-function scatterChart(table: TradeoffTable): string {
+function scatterChart(table: TradeoffTable, own: boolean): string {
   const [up = "", across = ""] = table.headings;
   const cells: string[] = [];
   for (const y of [3, 2, 1]) {
@@ -326,7 +361,7 @@ function scatterChart(table: TradeoffTable): string {
         (row) => rank(row.levels[0] ?? "low") === y && rank(row.levels[1] ?? "low") === x,
       );
       const marks = here
-        .map((row) => `<div${pickAttributes(row)}>${optionWords(row)}</div>`)
+        .map((row) => `<div${pickAttributes(row)}>${optionWords(row, own)}</div>`)
         .join("");
       cells.push(
         `<div data-inf-tradeoff-cell data-inf-tradeoff-x="${x}" data-inf-tradeoff-y="${y}">${marks}</div>`,
@@ -336,20 +371,53 @@ function scatterChart(table: TradeoffTable): string {
   return `<div data-inf-tradeoff-chart="scatter" aria-hidden="true"><div data-inf-tradeoff-axis="up">${escapeHtml(up)}</div><div data-inf-tradeoff-plane>${cells.join("")}</div><div data-inf-tradeoff-axis="across">${escapeHtml(across)}</div></div>`;
 }
 
+/** The mark that takes a charted option's label and control out of view. */
+const CHARTED = " data-inf-tradeoff-charted";
+
 /**
- * The markup with each sound tradeoff table drawn: the chart in its place,
- * then the table as written in a fold under it. A table the card checks
- * would refuse stays as written, so an older card still reads.
+ * The markup with each sound tradeoff table drawn. When every option has a
+ * label, each shows once: the chart stands where the first charted option's
+ * label stood, in the labels' own words, and the labels and controls leave
+ * view but stay in the form, the keyboard's way to each option. The table as
+ * written stays in its place, in a fold. A table the card checks would refuse stays as
+ * written, so an older card still reads.
  */
 export function withTradeoffCharts(html: string): string {
   const tables = tradeoffTables(html);
   if (tables.length === 0) return html;
-  let drawn = html;
-  for (const table of [...tables].reverse()) {
-    const chart = table.headings.length === 2 ? scatterChart(table) : radarChart(table);
-    const written = drawn.slice(table.start, table.end);
+  const edits: { at: number; end: number; put: string }[] = [];
+  for (const table of tables) {
+    const own = table.rows.every((row) => row.placed);
+    const chart = table.headings.length === 2 ? scatterChart(table, own) : radarChart(table, own);
+    const written = html.slice(table.start, table.end);
     // i18n-exempt: markup around the catalog's words, not shown as typed
-    drawn = `${drawn.slice(0, table.start)}${chart}<details data-inf-tradeoff-table><summary>${escapeHtml(m.cardTradeoffTable())}</summary>${written}</details>${drawn.slice(table.end)}`;
+    const fold = `<details data-inf-tradeoff-table><summary>${escapeHtml(m.cardTradeoffTable())}</summary>${written}</details>`;
+    if (!own) {
+      edits.push({ at: table.start, end: table.end, put: `${chart}${fold}` });
+      continue;
+    }
+    edits.push({ at: table.start, end: table.end, put: fold });
+    const first = Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
+    edits.push({ at: first, end: first, put: chart });
+    for (const row of table.rows) {
+      const marks = row.placed;
+      if (!marks) continue;
+      edits.push({
+        at: marks.label + "<label".length,
+        end: marks.label + "<label".length,
+        put: CHARTED,
+      });
+      edits.push({
+        at: marks.control + "<input".length,
+        end: marks.control + "<input".length,
+        put: CHARTED,
+      });
+    }
   }
-  return drawn;
+  // From the end, so each edit's place still holds; a removal starting at a
+  // place is made before an insertion there, which then stays.
+  edits.sort((a, b) => b.at - a.at || b.end - b.at - (a.end - a.at));
+  let out = html;
+  for (const edit of edits) out = `${out.slice(0, edit.at)}${edit.put}${out.slice(edit.end)}`;
+  return out;
 }

@@ -220,7 +220,7 @@ test("a multi-line value pasted in an ask's field reaches the command with its l
       },
       { task, asked },
     );
-    const title = SECRET_ASK_CARD_WORDS.title(secretsNamed([asked.key, asked.token]), task.title);
+    const title = SECRET_ASK_CARD_WORDS.title([asked.key, asked.token], false);
     const card = shownCard(page, title);
     await expect(card).toBeVisible();
     const [keyField, tokenField] = [

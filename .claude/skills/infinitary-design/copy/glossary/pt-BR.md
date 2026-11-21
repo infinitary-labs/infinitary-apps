@@ -67,6 +67,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | header (a request's) | cabeçalho | |
 | held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
 | hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
+| How to get it (an ask for a secret) | Como obter | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
 | Intelligence | Inteligência | |
 | issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
@@ -123,6 +124,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | run (an automation's) | execução, executar | "Próxima execução", "Última execução"; an automation that is on is "em execução". |
 | Runbooks | Manuais | |
 | Runs on | Roda em | |
+| Save secret / Don't save (an ask for a secret) | Salvar segredo / Não salvar | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | redefinição salva | ChatGPT's saved resets for Codex; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets | Segredos | The Settings section's name. |
 | send back (a change out of a batch) | devolver | "Devolver com um motivo"; the change "volta" to its crewmate. |

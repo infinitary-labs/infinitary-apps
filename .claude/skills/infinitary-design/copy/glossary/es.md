@@ -65,6 +65,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | header (a request's) | encabezado | |
 | held (a batch that stopped) | retenido | "Lote retenido", "Retenido desde las {since}"; the same verb as "lo retiene" on a merge a rule holds. |
 | hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
+| How to get it (an ask for a secret) | Cómo conseguirlo | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | Integrations, an integration | Integraciones, una integración | A Settings tab and each connection in it. |
 | Intelligence | Inteligencia | |
@@ -123,6 +124,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rigor levels: Quick, Default, Careful | Rápido, Predeterminado, Cuidadoso | Masculine, agreeing with "cuidado": "Cuidado: Rápido". |
 | run (an automation's) | ejecución, ejecutarse | "Próxima ejecución", "Se ejecuta"; the verb is "ejecutar" everywhere. |
 | Runbooks | Manuales | A Settings tab and the folder of guidance it opens. |
+| Save secret / Don't save (an ask for a secret) | Guardar secreto / No guardar | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | restablecimiento guardado | ChatGPT's saved resets for Codex; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets | Secretos | |
 | send back (a change out of a batch) | devolver | "Devolver con un motivo". |

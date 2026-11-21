@@ -7,7 +7,7 @@ const SECRETS_USE_START = `Your task can request protected secret access: run \`
 const SECRETS_USE_END = `A waiting request releases your shell: end the turn, and its result resumes this task through its inbox. After an app restart, read its status before continuing; never repeat an unknown outcome. Listing or naming a reference grants no access, and approval to use a secret does not authorize an external action.`;
 
 /** Served only with the closed command facade, never because a task names a project or secret. */
-export const CREWMATE_SECRETS_LINE = `${SECRETS_USE_START}When the work needs a secret the captain has not kept, run \`ask\` with its name, an optional place and your reason, or \`--replace\` with the reference of one that stopped working: Infinitary draws its own field for the captain, and you hear once which reference was kept, never the value. ${SECRETS_USE_END}`;
+export const CREWMATE_SECRETS_LINE = `${SECRETS_USE_START}When the work needs a secret the captain has not kept, run \`ask\` with a short name and your reason, or \`--replace\` with the reference of one that stopped working: Infinitary draws its own field for the captain, and you hear once which reference was kept, never the value. A place is only a short label such as staging that tells two secrets of one name apart. When the captain must make or find the secret themselves, give \`--how\`: the clearest layout of how to get it, which its help describes. ${SECRETS_USE_END}`;
 
 /**
  * Served instead to a task on a computer that runs work whose app takes uses
@@ -70,6 +70,10 @@ export function checkWords(check: UseCheck): string {
 export const SECRET_ASK_WORDS = {
   waiting:
     "Infinitary's own card asks the captain to type it. End the turn: whether it was kept, and its reference, reach this task once through its inbox.",
+  /** The home is on an older version that takes no how-to (no `secret-ask-how`): the card went up without it. */
+  // i18n-exempt: served to the asking agent, which reads English
+  waitingWithoutHow:
+    "Infinitary's own card asks the captain to type it, without your how-to: the computer that keeps Secrets is on an older version that does not draw one. If the captain must make or find the secret, say how in your report. End the turn: whether it was kept, and its reference, reach this task once through its inbox.",
   kept: "Already kept under that name and place: use its reference. Nothing was asked.",
   notOffered:
     "Secrets is not offered on this computer, so nothing was asked. Say so in your report.",

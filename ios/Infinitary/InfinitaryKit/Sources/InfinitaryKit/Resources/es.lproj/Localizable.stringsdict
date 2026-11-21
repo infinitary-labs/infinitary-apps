@@ -1713,6 +1713,42 @@
       <string>En tu computadora, repite solo esta lectura exacta, hasta %1$ld veces. Puedes detenerla en Configuración → Secretos.</string>
     </dict>
   </dict>
+  <key>secretsAskReplaceMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>¿Reemplazar %1$ld secreto?</string>
+      <key>many</key>
+      <string>¿Reemplazar %1$ld secretos?</string>
+      <key>other</key>
+      <string>¿Reemplazar %1$ld secretos?</string>
+    </dict>
+  </dict>
+  <key>secretsAskTitleMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>¿Añadir %1$ld secreto?</string>
+      <key>many</key>
+      <string>¿Añadir %1$ld secretos?</string>
+      <key>other</key>
+      <string>¿Añadir %1$ld secretos?</string>
+    </dict>
+  </dict>
   <key>settingsAccountsCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

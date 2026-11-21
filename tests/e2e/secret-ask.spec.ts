@@ -8,7 +8,7 @@ import { decode } from "@toon-format/toon";
 import { hostEnv } from "../../src/core/hostEnv";
 import { SECRET_ASK_WORDS } from "../../src/core/secrets/commandWords";
 import { SECRETS_COMMAND } from "../../src/core/secrets/requests";
-import { SECRET_ASK_CARD_WORDS, secretKeepFields, secretsNamed } from "../../src/shared/secrets";
+import { SECRET_ASK_CARD_WORDS, secretKeepFields } from "../../src/shared/secrets";
 import { connectClient } from "../helpers/connectionClient";
 import { cardBody } from "./frames";
 import { heroShot, regionShot } from "./pictures";
@@ -21,12 +21,17 @@ const TASK = { id: "secret-ask-proof-task", title: "Wire up the checkout" };
 const KEY = { name: "Stripe test key", place: "Test", value: "sk_test_invented_ask_4239_key" };
 const HOOK = { name: "Webhook secret", value: "whsec_invented_ask_4239_hook" };
 const REASON = "Charge the test card in the checkout tests";
+const DASHBOARD = "https://dashboard.stripe.com/test/apikeys";
+const HOW = `<ol><li>Open <a href="${DASHBOARD}">dashboard.stripe.com/test/apikeys</a>.</li><li>Reveal the <strong>Secret key</strong> and copy it.</li><li>Under <em>Webhooks</em>, copy the signing secret of <code>checkout-tests</code>.</li></ol>`;
 
 // Intent: INF-4239, the captain's direction A and "all macs windows and phone
 // app in one build piece", here on the first mate's computer: a crewmate asks
 // by name, place and reason; Infinitary raises its own card with one masked
 // field per secret; the captain reaches the fields with Tab and keeps both
-// with Enter in the last; the values go straight into Secrets.
+// with Enter in the last; the values go straight into Secrets. INF-5516 with
+// the captain's write-in: the asker's own "How to get it" layout is drawn,
+// each link showing its address and the part saying who wrote it, and a
+// how-to holding a script asks nothing.
 // Data: invented keys and the real app, renderer, IPC, task command and sealed
 // files, over the disposable custody and confirmation stand-ins of
 // `launchSecrets`. Completion: the ask's card goes, Secrets lists both under
@@ -49,32 +54,44 @@ test("a crewmate's ask is kept from Infinitary's own card by keys alone", async 
     }, TASK);
     const [bin] = shell.path;
     if (!bin) throw new Error("The task channel supplied no command folder.");
-    const asked = await promisify(execFile)(
-      join(bin, SECRETS_COMMAND),
-      [
-        "ask",
-        "--secrets",
-        JSON.stringify([{ name: KEY.name, place: KEY.place }, { name: HOOK.name }]),
-        "--reason",
-        REASON,
-        "--id",
-        "checkout-keys",
-      ],
-      {
-        env: { ...hostEnv(), ...shell.env, PATH: [...shell.path, hostEnv().PATH].join(":") },
-        encoding: "utf8",
-      },
-    );
+    const secrets = JSON.stringify([{ name: KEY.name, place: KEY.place }, { name: HOOK.name }]);
+    const ask = (how: string, id: string) =>
+      promisify(execFile)(
+        join(bin, SECRETS_COMMAND),
+        ["ask", "--secrets", secrets, "--how", how, "--reason", REASON, "--id", id],
+        {
+          env: { ...hostEnv(), ...shell.env, PATH: [...shell.path, hostEnv().PATH].join(":") },
+          encoding: "utf8",
+        },
+      );
+    // A how-to holding a script is refused before anything is asked.
+    await expect(
+      ask(`${HOW}<script>parent.postMessage("x", "*")</script>`, "refused"),
+    ).rejects.toThrow();
+    const asked = await ask(HOW, "checkout-keys");
     expect(decode(asked.stdout)).toEqual({
       ask: { ask: "checkout-keys", state: "waiting" },
       help: SECRET_ASK_WORDS.waiting,
     });
 
-    const title = SECRET_ASK_CARD_WORDS.title(secretsNamed([KEY.name, HOOK.name]), TASK.title);
+    const title = SECRET_ASK_CARD_WORDS.title([KEY.name, HOOK.name], false);
     const card = shownCard(page, title);
     await expect(card).toBeVisible();
     const body = cardBody(page, title).locator("body");
     await expect(body).toContainText(REASON);
+    await expect(body).toContainText(SECRET_ASK_CARD_WORDS.asked(TASK.title));
+    // The asker's layout, its link showing its own address, and who wrote it.
+    await expect(
+      body.getByRole("heading", { name: SECRET_ASK_CARD_WORDS.how(true) }),
+    ).toBeVisible();
+    await expect(body.locator("ol > li")).toHaveCount(3);
+    await expect(body.locator(`a[href="${DASHBOARD}"]`)).toHaveText(
+      DASHBOARD.replace("https://", ""),
+    );
+    await expect(body).toContainText(SECRET_ASK_CARD_WORDS.by(TASK.id));
+    await expect(body.locator("script")).toHaveCount(0);
+    // The place is said once, beside its field.
+    await expect(card.getByText(SECRET_ASK_CARD_WORDS.place(KEY.place))).toHaveCount(1);
     // The card's own page holds no field, and its line for older windows is hidden here.
     await expect(cardBody(page, title).locator("input")).toHaveCount(0);
     await expect(cardBody(page, title).locator("[data-inf-secret-elsewhere]")).toBeHidden();
@@ -87,10 +104,10 @@ test("a crewmate's ask is kept from Infinitary's own card by keys alone", async 
     await expect(card.getByLabel(new RegExp(`^${KEY.name}`))).toHaveCount(1);
 
     // Tab order: the fields sit between the body and the buttons, so Shift-Tab
-    // from Don't keep reaches the last field, then the first.
-    const dontKeep = card.getByRole("button", { name: SECRET_ASK_CARD_WORDS.dontKeep });
-    await focusOn(dontKeep);
-    await pressKey(dontKeep, "Shift+Tab");
+    // from Don't save reaches the last field, then the first.
+    const dontSave = card.getByRole("button", { name: SECRET_ASK_CARD_WORDS.dontSave });
+    await focusOn(dontSave);
+    await pressKey(dontSave, "Shift+Tab");
     await expect(hookField).toBeFocused();
     await pressKey(hookField, "Shift+Tab");
     await expect(keyField).toBeFocused();
@@ -102,7 +119,7 @@ test("a crewmate's ask is kept from Infinitary's own card by keys alone", async 
     const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
     if (evidence && test.info().repeatEachIndex === 0) {
       await regionShot(card, join(evidence, "secret-ask-card-typed.png"));
-      await heroShot(app, page, { region: card, name: "secrets-ask-to-keep" });
+      await heroShot(app, page, { region: card, name: "secrets-ask-how" });
       await focusOn(hookField);
     }
     await pressKey(hookField, "Enter");
@@ -161,7 +178,7 @@ test("another Mac's window keeps the first mate's ask over the connection", asyn
       });
     }, KEY);
     expect(answer).toEqual({ ask: "deploy-key", state: "waiting" });
-    const title = SECRET_ASK_CARD_WORDS.title(secretsNamed([KEY.name]), null);
+    const title = SECRET_ASK_CARD_WORDS.title([KEY.name], false);
     await expect(shownCard(page, title)).toBeVisible();
 
     const pair = async (changes: string[]) => {

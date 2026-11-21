@@ -72524,6 +72524,9 @@
                           },
                           "additionalProperties": false
                         }
+                      },
+                      "how": {
+                        "type": "string"
                       }
                     },
                     "required": [

@@ -478,7 +478,13 @@ export function cardNotifiers(options: {
   facts?: CardNotifierOptions["facts"];
   /** Runs `run` every `ms` until the answer is called: the pass that reads boxes due. */
   every?: (run: () => void, ms: number) => () => void;
-}): { observe: (cards: Card[]) => void; switched: () => void; stop: () => void } {
+}): {
+  observe: (cards: Card[]) => void;
+  switched: () => void;
+  /** Starts reading each phone's box: once now, then from the hourly pass. */
+  start: () => void;
+  stop: () => void;
+} {
   const { notifications, switchedOn, phones, facts } = options;
   const mac = new CardNotifier({
     enabled: () => notifications.supported() && switchedOn(),
@@ -498,8 +504,7 @@ export function cardNotifiers(options: {
       return () => clearInterval(timer);
     });
   const readLetters = () => void letters.readDue();
-  const stopReading = every(readLetters, LETTER_PASS_MS);
-  readLetters();
+  let stopReading: (() => void) | undefined;
   const pushes = new PhonePushes({
     targets: () => phones.pushTargets(),
     forget: (deviceId, grant) => phones.forgetPush(deviceId, grant),
@@ -527,7 +532,16 @@ export function cardNotifiers(options: {
     switched: () => {
       if (switchedOn()) pushes.switched();
     },
-    stop: stopReading,
+    // A home paused mid-move starts no pass, so nothing writes the record it hands on.
+    start: () => {
+      if (stopReading) return;
+      stopReading = every(readLetters, LETTER_PASS_MS);
+      readLetters();
+    },
+    stop: () => {
+      stopReading?.();
+      stopReading = undefined;
+    },
   };
 }
 

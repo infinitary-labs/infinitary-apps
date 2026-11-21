@@ -21,7 +21,7 @@ The phone gets its grant by asking the relay's `POST /v1/register` with its toke
 Each registration costs the phone one of Apple's background pushes, which Apple keeps to a few an hour, so the phone registers only when it holds no unexpired grant for its current push address and environment, when its grant nears its 30-day expiry, or when its computer answers that it did not keep the grant.
 It hands the registration it holds on each welcome, which costs nothing.
 A phone that keeps several computers hands each the same token and grant but a key of its own, so no computer opens another's pushes; the phone tries each key it keeps and names the computer whose key opened a push (`docs/ios.md`, "Card pushes").
-It hands them only at each computer's own welcome, so a computer the phone does not show keeps the grant it was last handed until it expires.
+It hands them directly only at each computer's own welcome; a computer the phone does not show learns a new grant or push address from the letter the phone leaves it at the relay ("Letters" below).
 Nothing changes on the computer: each one holds one registration for the phone, as before.
 
 The computer answers `{ "kept": true }` when it keeps the registration, and `{ "kept": false }` for null or for a grant the relay already refused this run (a 410 or a 403 below): then the phone registers anew and hands the new grant.
@@ -140,7 +140,7 @@ The phone writes a renew letter to every computer it keeps once a new grant arri
 It writes a stop letter to a computer it forgets, the last one included, before it lets go of that computer's key, and keeps it until the relay answers it.
 The phone posts `{ "token", "environment", "grant", "box", "sealed" }` to the relay's letter request beside `PHONE_PUSH_RELAY` (`https://push.getinfinitary.com/v1/letter`), which keeps the newest letter in each box; the phone's half is `docs/ios.md`, "Card pushes".
 
-The computer posts `{ "box" }` to the relay's read request (`https://push.getinfinitary.com/v1/letter/read`, `phoneLetterReadRelay`) for each phone it keeps a registration or a kept key for, at most once a day (`LETTER_READ_EVERY_MS`), at start and from an hourly pass, and once more right after the relay refuses that phone's grant with a 410 or a 403.
+The computer posts `{ "box" }` to the relay's read request (`https://push.getinfinitary.com/v1/letter/read`, `phoneLetterReadRelay`) for each phone it keeps a registration or a kept key for, at most once a day (`LETTER_READ_EVERY_MS`), at start and from an hourly pass, neither of which runs while the home is paused for a move, and once more right after the relay refuses that phone's grant with a 410 or a 403.
 The relay answers 200 with `{ "sealed" }`, or 204 for an empty box; a relay without letters answers 404, which means the same.
 Any other answer is one log line, and the box is read again at the next hourly pass.
 A letter that does not open with that phone's key, or names nothing the computer knows, is one log line and changes nothing.

@@ -8,7 +8,7 @@ import {
 } from "@shared/phonePush";
 import { describe, expect, it } from "vitest";
 import { NOTICE_BODY_LIMIT } from "./notifications";
-import { APPLE_PAYLOAD_LIMIT, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
+import { APPLE_PAYLOAD_LIMIT, cardNotifiers, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
 
 /**
  * The phone sender on its own (docs/phone-push.md; INF-4774's plan, approved
@@ -892,5 +892,47 @@ describe("PhonePushes withdrawals", () => {
       "the push relay refused a withdrawal with 404",
       "the push relay refused a withdrawal with 404",
     ]);
+  });
+});
+
+// The review of INF-5275's piece 2: a home paused mid-move writes nothing to the record it hands on, so the letter
+// reads that may write push-letters.json and pushes.json start only when the core starts its timers.
+describe("each phone's box of letters", () => {
+  it("is read only once started, then from the pass, until stopped", () => {
+    const reads: string[] = [];
+    const passes: Array<() => void> = [];
+    let stopped = 0;
+    const notifier = cardNotifiers({
+      notifications: { supported: () => false, focused: () => false, show: () => {} },
+      windowsInFront: () => false,
+      switchedOn: () => true,
+      phones: {
+        pushTargets: () => [],
+        forgetPush: () => {},
+        letterBoxes: () => {
+          reads.push("read");
+          return [];
+        },
+        noteLetterRead: () => {},
+        takeLetter: () => "ignored",
+      },
+      relay: "https://push.getinfinitary.com/v1/push",
+      every: (run) => {
+        passes.push(run);
+        return () => {
+          stopped += 1;
+        };
+      },
+    });
+    expect(reads).toEqual([]);
+    expect(passes).toHaveLength(0);
+    notifier.start();
+    notifier.start();
+    expect(reads).toHaveLength(1);
+    expect(passes).toHaveLength(1);
+    passes[0]?.();
+    expect(reads).toHaveLength(2);
+    notifier.stop();
+    expect(stopped).toBe(1);
   });
 });

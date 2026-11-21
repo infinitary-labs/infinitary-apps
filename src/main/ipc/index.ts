@@ -27,6 +27,7 @@ import type { FrameMountRegistry } from "../frames/frameMounts";
 import { offerWindowKey, pressMoveKey, recordWindowKeys } from "../keyboard";
 import type { KeyReminderStore } from "../keyReminders";
 import { takeNotifiedCard } from "../notifiedCard";
+import { presenceWatch } from "../presence";
 import type { RendererSourceOptions } from "../security/rendererSource";
 import type { Shell } from "../shell";
 import { micAccess, micSettingsUrl } from "../voice/micAccess";
@@ -209,6 +210,8 @@ export function registerIpc(options: IpcOptions): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win ? windowState(win) : { maximized: false };
   });
+  // Whether someone is at this computer, for the ambient music (../presence.ts).
+  handleInvoke("inf:window:presence", rendererSource, () => presenceWatch().presence());
   // The window's fence: it comes back on the push queue, after the pending
   // announcements and every push sent to this window before it, which an
   // answer on the invoke queue can overtake (docs/architecture.md section 17).

@@ -340,6 +340,7 @@ export class SettingsStore {
         ? { fonts: fonts.data.fonts }
         : {}),
       ...(ambient.data?.on && this.get("ambient-paused") === true ? { ambientPaused: true } : {}),
+      ...(this.get("ambient-away-plays") === true ? { ambientPlaysWhenAway: true } : {}),
       ...(ambient.success
         ? { ambientMusic: ambient.data.on, ambientVolume: ambient.data.volume }
         : {}),
@@ -358,7 +359,8 @@ export class SettingsStore {
    * (`fonts`) the same way, and a look without them takes Infinitary's own.
    * The ambient music's switch and volume go to their own row
    * (`ambient-music`), and a look without them keeps the saved ones; its
-   * style goes to `ambient-style` the same way.
+   * style goes to `ambient-style` the same way. Keep playing while away is
+   * `ambient-away-plays`, kept only while on.
    */
   setAppearance(appearance: Appearance): void {
     const { language: _saved, fonts: _savedFonts, ...was } = this.getAppearance();
@@ -369,6 +371,7 @@ export class SettingsStore {
       fonts,
       ambientMusic,
       ambientPaused,
+      ambientPlaysWhenAway,
       ambientVolume,
       ambientStyle,
       ...look
@@ -384,6 +387,8 @@ export class SettingsStore {
     if (ambientStyle !== undefined) this.set("ambient-style", { style: ambientStyle });
     if (ambientMusic && ambientPaused) this.set("ambient-paused", true);
     else this.remove("ambient-paused");
+    if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);
+    else this.remove("ambient-away-plays");
     if (language === undefined) this.remove("language");
     else this.set("language", { language });
     if (fonts === undefined || Object.keys(fonts).length === 0) this.remove("fonts");

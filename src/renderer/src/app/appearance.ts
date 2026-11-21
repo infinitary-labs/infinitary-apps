@@ -38,6 +38,8 @@ export type AppearanceSlice = {
   /** Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md). */
   ambientMusic: boolean;
   ambientPaused: boolean;
+  /** Whether it keeps playing while nobody is at the computer, rather than pausing. */
+  ambientPlaysWhenAway: boolean;
   ambientVolume: number;
   /**
    * The style it plays, as saved: a name this build lacks stays saved and
@@ -72,6 +74,7 @@ export type AppearanceSlice = {
   setWashStrength: (strength: number) => void;
   setShowCrewModelNames: (shown: boolean) => void;
   setAmbientMusic: (on: boolean) => void;
+  setAmbientPlaysWhenAway: (plays: boolean) => void;
   toggleAmbientPlayback: () => void;
   setAmbientVolume: (volume: number) => void;
   setAmbientStyle: (style: AmbientStyle) => void;
@@ -90,6 +93,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     showCrewModelNames: appearance.showCrewModelNames ?? true,
     ambientMusic: appearance.ambientMusic ?? false,
     ambientPaused: appearance.ambientPaused ?? false,
+    ambientPlaysWhenAway: appearance.ambientPlaysWhenAway ?? false,
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
     ambientStyle: appearance.ambientStyle ?? DEFAULT_AMBIENT_STYLE,
     usageUnit: appearance.usageUnit ?? "tokens",
@@ -159,6 +163,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         showCrewModelNames: s.showCrewModelNames,
         ambientMusic: s.ambientMusic,
         ambientPaused: s.ambientPaused,
+        ambientPlaysWhenAway: s.ambientPlaysWhenAway,
         ambientVolume: s.ambientVolume,
         ambientStyle: s.ambientStyle,
         usageUnit: s.usageUnit,
@@ -181,6 +186,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
     ambientMusic: false,
     ambientPaused: false,
+    ambientPlaysWhenAway: false,
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
     ambientStyle: DEFAULT_AMBIENT_STYLE,
     usageUnit: "tokens",
@@ -226,6 +232,10 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setAmbientMusic: (ambientMusic) => {
       set({ ambientMusic, ambientPaused: false });
       saveAppearance("ambientMusic", { ambientMusic, ambientPaused: false });
+    },
+    setAmbientPlaysWhenAway: (ambientPlaysWhenAway) => {
+      set({ ambientPlaysWhenAway });
+      saveAppearance("ambientPlaysWhenAway", { ambientPlaysWhenAway });
     },
     toggleAmbientPlayback: () => {
       const s = get();

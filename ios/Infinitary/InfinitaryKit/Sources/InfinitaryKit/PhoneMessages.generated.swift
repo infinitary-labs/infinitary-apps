@@ -3180,6 +3180,8 @@ public enum PhoneMessages {
     public static func `settingsSoundAmbientMusic`() -> String { PhoneWords.format("settingsSoundAmbientMusic", []) }
     public static func `settingsSoundAmbientMusicDescription`() -> String { PhoneWords.format("settingsSoundAmbientMusicDescription", []) }
     public static func `settingsSoundHeading`() -> String { PhoneWords.format("settingsSoundHeading", []) }
+    public static func `settingsSoundPauseWhenAway`() -> String { PhoneWords.format("settingsSoundPauseWhenAway", []) }
+    public static func `settingsSoundPauseWhenAwayDescription`() -> String { PhoneWords.format("settingsSoundPauseWhenAwayDescription", []) }
     public static func `settingsSoundStyle`() -> String { PhoneWords.format("settingsSoundStyle", []) }
     public static func `settingsSoundStyleColdSleep`() -> String { PhoneWords.format("settingsSoundStyleColdSleep", []) }
     public static func `settingsSoundStyleColdSleepDescription`() -> String { PhoneWords.format("settingsSoundStyleColdSleepDescription", []) }
@@ -6965,6 +6967,8 @@ extension PhoneWords {
         "settingsSoundAmbientMusic": [],
         "settingsSoundAmbientMusicDescription": [],
         "settingsSoundHeading": [],
+        "settingsSoundPauseWhenAway": [],
+        "settingsSoundPauseWhenAwayDescription": [],
         "settingsSoundStyle": [],
         "settingsSoundStyleColdSleep": [],
         "settingsSoundStyleColdSleepDescription": [],

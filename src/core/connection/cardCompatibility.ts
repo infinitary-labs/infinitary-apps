@@ -10,6 +10,7 @@ import { type ActionReads, frameWithoutUnreadActions } from "./taskAllow";
 export const AMBIENT_MUSIC = contractChange("ambient-music");
 export const AMBIENT_PAUSE = contractChange("ambient-pause");
 export const AMBIENT_STYLE = contractChange("ambient-style");
+export const AMBIENT_AWAY = contractChange("ambient-away");
 
 /** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
 export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");

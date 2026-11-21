@@ -191,3 +191,45 @@ it("leaves the ambient style out of the look a view without ambient-style is pus
   await older.close();
   await current.close();
 });
+
+// Keep playing while away (INF-5528's answer, `ambient-away`): a view whose
+// hello does not list the change is never pushed or answered the choice,
+// which its stricter reading of the look would refuse.
+it("leaves keep playing while away out of the look a view without ambient-away is pushed or answered", async () => {
+  const look = {
+    ...DEFAULT_SHELL_PREFERENCES,
+    appearance: {
+      ...DEFAULT_SHELL_PREFERENCES.appearance,
+      ambientMusic: true,
+      ambientVolume: 55,
+      ambientPlaysWhenAway: true,
+    },
+  };
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:shell:preferences") return look;
+      if (channel === "inf:settings:appearance:get") return look.appearance;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const older = await connectClient(grant, {
+    changes: ["ambient-music", "ambient-pause", "ambient-style"],
+  });
+  const current = await connectClient(grant, {
+    changes: ["ambient-music", "ambient-pause", "ambient-style", "ambient-away"],
+  });
+  const { ambientPlaysWhenAway: _plays, ...withoutAway } = look.appearance;
+  expect(await older.invoke("inf:settings:appearance:get", [])).toEqual(withoutAway);
+  expect(await current.invoke("inf:settings:appearance:get", [])).toEqual(look.appearance);
+  at.events.emit("inf:shell:preferences", look);
+  expect((await older.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual({
+    ...look,
+    appearance: withoutAway,
+  });
+  expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
+    look,
+  );
+  await older.close();
+  await current.close();
+});

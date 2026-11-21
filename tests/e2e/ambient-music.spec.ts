@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { DEFAULT_AMBIENT_STYLE, DEFAULT_AMBIENT_VOLUME } from "../../src/shared/preferences";
 import { pointsAlong, windowDragAt } from "./dragRegions";
@@ -6,7 +6,12 @@ import { launchApp } from "./launch";
 import { atRest } from "./layout";
 import { readSavedData } from "./savedData";
 import { settingRow } from "./settings";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
+
+function playingStyle(page: Page) {
+  return page.evaluate(() => document.documentElement.dataset.ambientStyle);
+}
 
 function player(page: Page) {
   return page.evaluate(() => document.documentElement.dataset.ambientMusic);
@@ -143,10 +148,6 @@ test("the toolbar volume track shares its value with Settings", async () => {
   }
 });
 
-function playingStyle(page: Page) {
-  return page.evaluate(() => document.documentElement.dataset.ambientStyle);
-}
-
 function savedStyle(userDataDir: string) {
   return readSavedData(userDataDir, (db) => {
     const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("ambient-style") as
@@ -194,5 +195,55 @@ test("the ambient music plays Star cruise first and keeps the style picked in Se
     await expect.poll(() => playingStyle(launched.page)).toBe("harbor-dawn");
   } finally {
     await launched.close();
+  }
+});
+
+/** The Mac telling the app its screen locked or unlocked, as the system's own event does. */
+function lockScreen(app: ElectronApplication, locked: boolean) {
+  return app.evaluate(
+    ({ powerMonitor }, event) => powerMonitor.emit(event),
+    locked ? "lock-screen" : "unlock-screen",
+  );
+}
+
+// INF-5528's answer and the captain's choice ("As the default, with a switch
+// to keep playing"): the music stops while nobody is at the computer,
+// closing its player as the pause button does, never saving a pause, and
+// plays again once they are back; Keep playing in Settings keeps it going.
+test("ambient music pauses while the screen is locked and plays again at the unlock", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
+  // A Linux desktop tells the app nothing of a lock, so it never pauses there.
+  test.skip(process.platform !== "darwin", "only a Mac and a Windows PC say a lock");
+  const { app, page, close, userDataDir } = await launchApp({ withMockProvider: true });
+  try {
+    await settings(page).click();
+    await appearance(page).click();
+    await settingRow(page, "ambient-music").getByRole("switch").click();
+    await expect.poll(() => player(page)).toBe("playing");
+    const away = settingRow(page, "ambient-away").getByRole("switch", {
+      name: m.settingsSoundPauseWhenAway(),
+    });
+    await expect(away).toHaveAttribute("aria-checked", "true");
+
+    await lockScreen(app, true);
+    await expect.poll(() => player(page)).toBe("away");
+    expect(await playingStyle(page)).toBeUndefined();
+    expect(await savedSound(userDataDir)).toMatchObject({ on: true, paused: false });
+    await lockScreen(app, false);
+    await expect.poll(() => player(page)).toBe("playing");
+    await expect.poll(() => playingStyle(page)).toBe(DEFAULT_AMBIENT_STYLE);
+
+    await focusOn(away, { focusVisible: true });
+    await pressKey(away, "Space");
+    await expect(away).toHaveAttribute("aria-checked", "false");
+    await lockScreen(app, true);
+    // Every push the lock sent this window has arrived once the fence resolves.
+    await page.evaluate(() => window.infinitary.app.fence());
+    expect(await player(page)).toBe("playing");
+    expect(await playingStyle(page)).toBe(DEFAULT_AMBIENT_STYLE);
+    await lockScreen(app, false);
+  } finally {
+    await close();
   }
 });

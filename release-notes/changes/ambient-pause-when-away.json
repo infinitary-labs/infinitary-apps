@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-pause-when-away",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Ambient music pauses while you’re away",
+      "body": "When your screen turns off or locks, the ambient music pauses, so it no longer plays to an empty room or keeps your computer awake. It plays again when you’re back, at the unlock if your computer asks for a password. To keep it playing, turn off Pause when you’re away in Settings → Appearance. On a Mac or a Windows PC.",
+      "picture": {
+        "dark": "ambient-pause-when-away-dark.webp",
+        "light": "ambient-pause-when-away-light.webp",
+        "alt": "The Sound group in Settings → Appearance, with Ambient music on and a new Pause when you’re away switch turned on below Volume"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

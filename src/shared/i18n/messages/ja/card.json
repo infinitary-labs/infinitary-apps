@@ -192,6 +192,8 @@
   "cardRevisionLinksUnavailable": "変更箇所へのリンクは利用できません",
   "cardRevisionMore": "ほか{count}件",
   "cardRevisionShowFewer": "表示を減らす",
+  "cardSavedResetCrewWaits": "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
+  "cardSavedResetCrewWaitsThere": "保存済みのリセットを使わない限り、{where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
   "cardSavedResetsNow": {
     "plural": "count",
     "other": "{account} には今すぐ使える保存済みのリセットが {count} 回分あり、利用枠を回復できます。"
@@ -244,5 +246,6 @@
   "cardThreadWorking": "作業中",
   "cardThreadWrittenAfterClose": "カードを閉じた後に作成",
   "cardThreadWrittenBy": "{label} が作成",
-  "cardThreadWrittenByAfterClose": "{label} が作成（カードを閉じた後）"
+  "cardThreadWrittenByAfterClose": "{label} が作成（カードを閉じた後）",
+  "cardUseSavedReset": "保存済みのリセットを使う"
 }

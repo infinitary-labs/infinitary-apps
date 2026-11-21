@@ -11,7 +11,9 @@ import {
   type ForgeKeySignInResult,
   isForgeHostName,
 } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import { catalogEntry } from "@shared/providers";
+import type { SavedResetResult } from "@shared/savedResets";
 import {
   type ComputerSignIns,
   computerSignInsSchema,
@@ -24,6 +26,7 @@ import {
   signInOrders,
   signInPlace,
 } from "@shared/signIns";
+import { accountWords } from "../codex/savedResets";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import type { CoreEventSink } from "../events";
@@ -52,6 +55,8 @@ import type { WorkDevices } from "../placed/workDevices";
 
 /** A computer that takes Keep going on credits for its own accounts (`computer-keep-going.md`). */
 const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
+/** Using a computer's own account's saved Codex reset there (`use-saved-reset.md`). */
+const USE_SAVED_RESET = contractChange("use-saved-reset");
 /** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
 const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
 
@@ -106,6 +111,8 @@ export class DeviceSignIns {
 
   private readonly said = new Map<string, Said>();
   private readonly running = new Map<string, Running>();
+  /** Each saved-reset use waiting for its end, by its flow's id. */
+  private readonly uses = new Map<string, (step: Extract<SignInStep, { kind: "ended" }>) => void>();
   private readonly reading = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
@@ -129,6 +136,7 @@ export class DeviceSignIns {
         ...this.setupStatus.get(device.id),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         keepGoing: this.takesKeepGoing(device.id),
+        ...(this.takesSavedReset(device.id) ? { savedReset: true } : {}),
         accountSettings: this.takesAccountSettings(device.id),
         signIns: this.narrowed(said?.signIns ?? null),
         flows: [...this.running.values()]
@@ -427,6 +435,116 @@ export class DeviceSignIns {
     return { ok: true };
   }
 
+  /**
+   * Uses one saved Codex reset of that computer's own account there
+   * (docs/codex-client.md), and resolves with what it came to. With
+   * `signIn`, Codex there may sign in, its link and paste-back prompt shown
+   * under the account's row as a sign-in's are; a failure stays on the row.
+   */
+  async redeemSavedReset(
+    deviceId: string,
+    accountId: string,
+    signIn: boolean,
+  ): Promise<SavedResetResult> {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    const account = this.said
+      .get(deviceId)
+      ?.signIns?.accounts.find((entry) => entry.id === accountId);
+    if (!account)
+      throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    // One use of an account at a time: a second could spend a second reset.
+    for (const [id, running] of this.running)
+      if (
+        this.uses.has(id) &&
+        running.deviceId === deviceId &&
+        running.accountId === accountId &&
+        running.phase === "running"
+      )
+        throw new Error(m.accountsSavedResetBusy({ account: accountWords(account) }));
+    // A use that cannot start ends under the account's row, saying why.
+    if (!this.takesSavedReset(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`Update Infinitary on ${who} to use a saved reset there.`),
+      );
+    if (!this.options.work.inReach(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`${who} is out of reach, so nothing was sent.`),
+      );
+    const signInId = randomBytes(16).toString("base64url");
+    const ended = new Promise<Extract<SignInStep, { kind: "ended" }>>((resolve) =>
+      this.uses.set(signInId, resolve),
+    );
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: account.providerId,
+      accountId,
+      target: "account",
+      phase: "running",
+    });
+    try {
+      await this.options.work.ask(deviceId, "inf:sign-ins:use-saved-reset", [
+        { signInId, accountId, signIn },
+      ]);
+    } catch (error) {
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, who).message,
+      });
+    }
+    const step = await ended;
+    if (step.savedReset) return step.savedReset;
+    throw new Error(step.error ?? `The saved reset on ${who} stopped before it ended.`);
+  }
+
+  /** A flow's account as words name it ("Codex · Work"), from that computer's rows. */
+  private accountWordsOf(running: {
+    deviceId: string;
+    providerId: string;
+    accountId?: string;
+  }): string {
+    const account = this.said
+      .get(running.deviceId)
+      ?.signIns?.accounts.find((entry) => entry.id === running.accountId);
+    return accountWords(account ?? { providerId: running.providerId, label: "" });
+  }
+
+  /** A use refused before it was sent, its reason left under the account's row as its end. */
+  private refusedUse(
+    deviceId: string,
+    account: { id: string; providerId: string },
+    error: Error,
+  ): Error {
+    const signInId = randomBytes(16).toString("base64url");
+    this.uses.set(signInId, () => {});
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: account.providerId,
+      accountId: account.id,
+      target: "account",
+      phase: "running",
+    });
+    this.end(signInId, { kind: "ended", outcome: "failed", error: error.message });
+    return error;
+  }
+
+  /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
+  canUseSavedReset(deviceId: string): boolean {
+    return this.takesSavedReset(deviceId) && this.options.work.inReach(deviceId);
+  }
+
+  /** Whether that computer takes `inf:sign-ins:use-saved-reset` (`use-saved-reset.md`). */
+  takesSavedReset(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, USE_SAVED_RESET);
+  }
+
   /** Whether that computer takes `inf:sign-ins:keep-going` (`computer-keep-going.md`). */
   takesKeepGoing(deviceId: string): boolean {
     return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_KEEP_GOING);
@@ -555,7 +673,8 @@ export class DeviceSignIns {
       this.push();
       return { ok: true };
     }
-    this.end(signInId, { kind: "ended", outcome: "cancelled" });
+    // A saved reset's use may be spending the reset there: it stays until that computer says how it ended.
+    if (!this.uses.has(signInId)) this.end(signInId, { kind: "ended", outcome: "cancelled" });
     try {
       await this.options.work.ask(running.deviceId, "inf:sign-ins:cancel", [{ signInId }]);
     } catch {
@@ -651,8 +770,10 @@ export class DeviceSignIns {
         this.end(signInId, {
           kind: "ended",
           outcome: "failed",
-          error:
-            contact.contact === "gone"
+          // A saved reset's use there may have spent the reset: its outcome is unknown, and trying again asks about the same one.
+          error: this.uses.has(signInId)
+            ? m.accountsSavedResetUnclear({ account: this.accountWordsOf(running) })
+            : contact.contact === "gone"
               ? `${this.who(contact.deviceId)} went out of reach, so the sign-in stopped.`
               : `${this.who(contact.deviceId)} reconnected, so the earlier sign-in stopped. Try signing in again.`,
         });
@@ -704,9 +825,19 @@ export class DeviceSignIns {
   }
 
   private begin(flow: Running): void {
-    for (const [id, previous] of this.running)
-      if (previous.deviceId === flow.deviceId && previous.target === flow.target)
+    // A saved reset's use keeps its own place beside a sign-in: Codex may be
+    // spending the reset, so no sign-in cancels it, and it cancels none.
+    // A use replaces only its own account's ended one.
+    const use = this.uses.has(flow.signInId);
+    for (const [id, previous] of this.running) {
+      if (previous.deviceId !== flow.deviceId || previous.target !== flow.target) continue;
+      if (
+        use
+          ? previous.accountId === flow.accountId && previous.phase === "ended"
+          : !this.uses.has(id)
+      )
         void this.cancel(id);
+    }
     this.running.set(flow.signInId, flow);
     this.push();
   }
@@ -718,7 +849,11 @@ export class DeviceSignIns {
     if (step.outcome === "signed-in" || step.outcome === "cancelled") this.running.delete(signInId);
     else this.running.set(signInId, { ...identity, phase: "ended", ended: step });
     this.tell(signInId, running, step);
-    if (step.outcome === "signed-in")
+    const use = this.uses.get(signInId);
+    this.uses.delete(signInId);
+    use?.(step);
+    // A saved reset used there signed nothing new in; its own line says what it came to.
+    if (step.outcome === "signed-in" && !use)
       this.options.broadcastEvent({
         type: "device_signed_in",
         deviceId: running.deviceId,

@@ -11,6 +11,8 @@ import {
   signInOrders,
 } from "@shared/signIns";
 import { claudeReasoningCapabilities } from "../claude/reasoning";
+import type { SavedResetReach } from "../codex/savedReset";
+import { redeemOwnSavedReset, savedResetReach, signOutCodexHome } from "../codex/savedResets";
 import type { HostKeychain } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import {
@@ -54,6 +56,8 @@ export type SignInHostOptions = {
   /** Asks the home once, while it is in reach (`HomeLink.invoke`). */
   tell: Tell;
   log: (line: string) => void;
+  /** This computer's reach for using an account's saved Codex reset (`savedResetReach`). */
+  savedResets?: SavedResetReach;
 };
 
 export class SignInHost {
@@ -293,6 +297,34 @@ export class SignInHost {
         void this.report();
         return { ok: true };
       }
+      case "inf:sign-ins:use-saved-reset": {
+        const [use] = request as SignInOrderRequest<"inf:sign-ins:use-saved-reset">;
+        this.ownAccount(use.accountId);
+        const reach = this.options.savedResets;
+        if (!reach) throw new Error("This computer cannot use a saved reset.");
+        const { vault } = this.options.accounts;
+        // Asked again: it is already running.
+        if (this.running.has(use.signInId)) return { ok: true };
+        this.run(
+          use.signInId,
+          async (bridge) => ({
+            kind: "ended",
+            outcome: "signed-in",
+            accountId: use.accountId,
+            savedReset: await redeemOwnSavedReset(
+              vault,
+              reach,
+              use.accountId,
+              use.signIn ? bridge : undefined,
+            ),
+          }),
+          // The allowance it refilled reaches the home as this computer's sign-ins.
+          async () => {
+            await this.options.accounts.readAllowance("demand");
+          },
+        );
+        return { ok: true };
+      }
       case "inf:sign-ins:read-allowance":
         // The reading reaches the home as this computer's sign-ins, whole.
         await this.options.accounts.readAllowance("demand");
@@ -309,7 +341,36 @@ export class SignInHost {
   }
 
   private start(start: SignInOrderRequest<"inf:sign-ins:start">[0]): void {
-    const { signInId } = start;
+    const { vault } = this.options.accounts;
+    this.run(
+      start.signInId,
+      async (bridge) => {
+        let accountId = start.accountId;
+        if (accountId) {
+          if (!vault.get(accountId)) throw new Error("This computer has no account with that id.");
+          await vault.signIn(accountId, bridge);
+        } else accountId = (await vault.add(start.providerId, start.type, bridge)).id;
+        return { kind: "ended", outcome: "signed-in", accountId };
+      },
+      async (ended) => {
+        // The new row at once; its own model list and allowance once each lands.
+        await this.report();
+        if (ended.accountId) void this.options.accounts.readModels?.(ended.accountId);
+        await this.options.accounts.readAllowance("sign-in");
+      },
+    );
+  }
+
+  /**
+   * Runs one flow that may ask the captain here: its prompts and notices go
+   * to the home as steps, and its end as the last step; `after` follows a
+   * flow that ended as it meant to.
+   */
+  private run(
+    signInId: string,
+    work: (bridge: AuthInteractionBridge) => Promise<Extract<SignInStep, { kind: "ended" }>>,
+    after: (ended: Extract<SignInStep, { kind: "ended" }>) => Promise<void>,
+  ): void {
     const running: Running = { abort: new AbortController(), prompts: new Map() };
     this.running.set(signInId, running);
     const stop = () => {
@@ -333,33 +394,26 @@ export class SignInHost {
       openExternal: async () => {},
       signal: running.abort.signal,
     };
-    const { vault } = this.options.accounts;
-    const run = (async () => {
-      let ended: SignInStep;
+    const flow = (async () => {
+      let ended: Extract<SignInStep, { kind: "ended" }>;
       try {
-        let accountId = start.accountId;
-        if (accountId) {
-          if (!vault.get(accountId)) throw new Error("This computer has no account with that id.");
-          await vault.signIn(accountId, bridge);
-        } else accountId = (await vault.add(start.providerId, start.type, bridge)).id;
-        ended = { kind: "ended", outcome: "signed-in", accountId };
+        ended = await work(bridge);
       } catch (error) {
         ended = running.abort.signal.aborted
           ? { kind: "ended", outcome: "cancelled" }
           : { kind: "ended", outcome: "failed", error: messageOf(error) };
       } finally {
         running.abort.signal.removeEventListener("abort", stop);
+        // A prompt still open when the flow ended has nobody left to answer it.
+        stop();
         this.running.delete(signInId);
       }
       await this.step(signInId, ended);
-      if (ended.outcome !== "signed-in") return;
-      // The new row at once; its own model list and allowance once each lands.
-      await this.report();
-      if (ended.accountId) void this.options.accounts.readModels?.(ended.accountId);
-      await this.options.accounts.readAllowance("sign-in");
+      if (ended.outcome === "failed" || ended.outcome === "cancelled") return;
+      await after(ended);
     })();
-    this.ending.add(run);
-    void run.finally(() => this.ending.delete(run));
+    this.ending.add(flow);
+    void flow.finally(() => this.ending.delete(flow));
   }
 
   /**
@@ -438,10 +492,15 @@ export async function startSignIns(options: {
   log: (line: string) => void;
   /** This Mac's saved passwords, read only without asking (`ComputerAccountsOptions.keychain`). */
   keychain?: HostKeychain;
+  /** The version of Infinitary it runs, as it greets the Codex CLI. */
+  appVersion?: string;
+  /** The Codex CLI it finds and starts (`savedResetReach`); a test hands in a stand-in. */
+  codex?: Parameters<typeof savedResetReach>[2];
   accounts?: (options: ComputerAccountsOptions) => Promise<ComputerAccounts>;
   forges?: (options: ComputerForgesOptions) => HeldForges;
 }): Promise<HeldSignIns> {
   let host: SignInHost | undefined;
+  const version = options.appVersion ?? "0.0.0";
   const accounts = await (options.accounts ?? startComputerAccounts)({
     dataDir: options.dataDir,
     packaged: options.packaged,
@@ -451,6 +510,7 @@ export async function startSignIns(options: {
     onModels: () => void host?.report(),
     log: options.log,
     ...(options.keychain ? { keychain: options.keychain } : {}),
+    signOutCodex: (home) => signOutCodexHome(home, version, options.codex),
   });
   const forges = (options.forges ?? startComputerForges)({
     dataDir: options.dataDir,
@@ -459,7 +519,13 @@ export async function startSignIns(options: {
     onChange: () => void host?.report(),
     log: options.log,
   });
-  host = new SignInHost({ accounts, forges, tell: options.tell, log: options.log });
+  host = new SignInHost({
+    accounts,
+    forges,
+    tell: options.tell,
+    log: options.log,
+    savedResets: savedResetReach(accounts.vault, version, options.codex),
+  });
   const held = host;
   // A cut-off a turn here met, or its end, is news to the home: a task it
   // runs here waits on it there (docs/helper.md, "Its own sign-ins").

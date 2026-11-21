@@ -118,7 +118,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | run (an automation's) | execução, executar | "Próxima execução", "Última execução"; an automation that is on is "em execução". |
 | Runbooks | Manuais | |
 | Runs on | Roda em | |
-| saved reset (a provider's, refills the allowance) | redefinição salva | ChatGPT's saved resets for Codex; Infinitary never uses one. |
+| saved reset (a provider's, refills the allowance) | redefinição salva | ChatGPT's saved resets for Codex; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets | Segredos | The Settings section's name. |
 | send back (a change out of a batch) | devolver | "Devolver com um motivo"; the change "volta" to its crewmate. |
 | server, address (a custom API's) | servidor, endereço | Said only where English names the person's own server and its address. |

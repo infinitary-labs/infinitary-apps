@@ -125,7 +125,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | rigor levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |
 | Runbooks | 操作手册 | |
 | Runs on | 运行于 | |
-| saved reset (a provider's, refills the allowance) | 已保存的重置 | ChatGPT's saved resets for Codex, counted with 次; Infinitary never uses one. |
+| saved reset (a provider's, refills the allowance) | 已保存的重置 | ChatGPT's saved resets for Codex, counted with 次; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets (the Settings section) | 机密 | |
 | send back (a change out of a batch) | 退回 | |
 | server (a custom API's) | 服务器 | Only for the custom API's server, never for a computer of the person's. |

@@ -764,6 +764,9 @@ export class FirstmateSeat {
       ...(other ? { move: other } : {}),
       ...(this.rechecking ? { checking: true } : {}),
       ...(credits ? { credits } : {}),
+      ...(pause.class === "no_headroom" && flagship?.savedResetsNow(accountId)
+        ? { savedResets: true }
+        : {}),
     };
   }
 

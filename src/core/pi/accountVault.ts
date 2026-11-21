@@ -1,5 +1,13 @@
 import { randomBytes } from "node:crypto";
-import { chmodSync, mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AccountView, CredentialKind } from "@shared/accounts";
@@ -116,6 +124,12 @@ export type AccountRecord = {
    * row written before it existed.
    */
   keepGoingOnCredits?: boolean;
+  /**
+   * The attempt to use one of the account's saved Codex resets that Codex
+   * has not answered clearly yet (docs/codex-client.md): its key is sent
+   * again on the next try, so a lost answer never uses a second reset.
+   */
+  savedResetAttempt?: { key: string; creditId?: string };
 };
 
 /**
@@ -193,6 +207,12 @@ export type AccountVaultOptions = {
    * holds its store, until the returned release (W1 S9).
    */
   holdSeat?: (accountId: string) => Promise<() => void>;
+  /**
+   * Signs the Codex CLI out of an account's Codex home before the account
+   * is removed (docs/codex-client.md); best effort, since removing the
+   * folder is the guarantee.
+   */
+  signOutCodex?: (home: string) => Promise<void>;
 };
 
 export class AccountVault {
@@ -623,6 +643,9 @@ export class AccountVault {
     } finally {
       release?.();
     }
+    const codexHome = this.codexHomeDir(account.providerId, accountId);
+    if (this.options.signOutCodex && existsSync(codexHome))
+      await this.options.signOutCodex(codexHome).catch(() => undefined);
     backend.forget?.(accountId);
     this.lastStatus.delete(accountId);
     this.statusReadAt.delete(accountId);
@@ -1216,6 +1239,44 @@ export class AccountVault {
     this.saveRegistry();
   }
 
+  /**
+   * The account's own Codex home (docs/codex-client.md): a folder in its
+   * store, created private on first use, where the Codex CLI keeps its own
+   * sign-in for this account. Removing the account removes it.
+   */
+  codexHome(accountId: string): string {
+    const account = this.requireRegistryAccount(accountId);
+    const dir = this.codexHomeDir(account.providerId, accountId);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    chmodSync(dir, 0o700);
+    return dir;
+  }
+
+  /** Whether the Codex CLI keeps a sign-in in the account's Codex home. */
+  codexSignedIn(accountId: string): boolean {
+    const account = this.get(accountId);
+    return account
+      ? existsSync(join(this.codexHomeDir(account.providerId, accountId), "auth.json"))
+      : false;
+  }
+
+  /** The saved-reset attempt Codex has not answered clearly yet, if any. */
+  savedResetAttempt(accountId: string): { key: string; creditId?: string } | undefined {
+    const attempt = this.get(accountId)?.savedResetAttempt;
+    return attempt ? { ...attempt } : undefined;
+  }
+
+  /** Keeps (or, with undefined, clears) the account's saved-reset attempt. */
+  setSavedResetAttempt(
+    accountId: string,
+    attempt: { key: string; creditId?: string } | undefined,
+  ): void {
+    const account = this.requireRegistryAccount(accountId);
+    if (attempt) account.savedResetAttempt = { ...attempt };
+    else delete account.savedResetAttempt;
+    this.saveRegistry();
+  }
+
   /** Whether the account's Keep going on credits switch is on. */
   keepsGoingOnCredits(accountId: string): boolean {
     return this.get(accountId)?.keepGoingOnCredits === true;
@@ -1395,6 +1456,10 @@ export class AccountVault {
       accountId: account.id,
       dir: this.storeDir(account.providerId, account.id),
     };
+  }
+
+  private codexHomeDir(providerId: string, accountId: string): string {
+    return join(this.storeDir(providerId, accountId), "codex");
   }
 
   private storeDir(providerId: string, accountId: string): string {

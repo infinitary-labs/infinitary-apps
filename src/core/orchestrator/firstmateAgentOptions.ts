@@ -73,6 +73,12 @@ export type FirstmateAgentOptions = {
    */
   keepGoingOnCredits?: (accountId: string) => void;
   /**
+   * A card's Use a saved reset (docs/codex-client.md), by the account's key:
+   * `ran` when it started at once, `sign-in` when the account's row is where
+   * it goes on, since Codex has to sign in first.
+   */
+  redeemSavedReset?: (accountKey: string) => "ran" | "sign-in";
+  /**
    * The dev-only local seat (roadmap 1.7) as the boot found it: when set it
    * is the Firstmate's model and runtime outright - no pin, no account, no
    * ladder - and the persisted model pin is left exactly as it was. A later

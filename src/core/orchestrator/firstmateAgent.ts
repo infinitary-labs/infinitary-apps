@@ -465,6 +465,7 @@ export class FirstmateAgent {
       },
       tryAgain: (accountId) => this.seat.tryAgain(accountId),
       keepGoingOnCredits: (accountId) => this.seat.keepGoingOnCredits(accountId),
+      redeemSavedReset: (accountKey) => this.options.redeemSavedReset?.(accountKey) ?? "sign-in",
       checkQuiet: (now) => this.checkQuiet(now),
       pokeInbox: () => this.pokeInbox(),
     });

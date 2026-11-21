@@ -6,6 +6,8 @@
  * try a refused account again (`arg` = account id; the only way a refusal
  * clears on the captain's word, W1 S9), turn an account's Keep going on
  * credits switch on from a run-out card (`arg` = account id; docs/quota.md),
+ * use one of a Codex account's saved resets from a run-out card or the
+ * spent-allowance card (`arg` = the account's key; docs/codex-client.md),
  * add or turn down a plugin waiting on the captain's consent (`arg` =
  * plugin id; one plugin vehicle, Phase A, A2a), add or turn down a project
  * Firstmate proposed on the setup card (`arg` = the card's offer as JSON,
@@ -42,6 +44,7 @@ export const HOST_OPS = [
   "retry-firstmate",
   "try-again",
   "keep-going-on-credits",
+  "use-saved-reset",
   "add-plugin",
   "decline-plugin",
   "apply-project-change",

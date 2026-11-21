@@ -197,5 +197,28 @@
   "accountsCustomApiUnreachable": "Impossible de joindre {host}. Vérifiez qu’il fonctionne et que vous êtes sur son réseau.",
   "accountsCustomApiUseFix": "Utiliser {address}",
   "accountsCustomApiUseForFirstMate": "Utiliser {model} pour votre second",
-  "accountsCustomApiUseModel": "Utiliser {model}"
+  "accountsCustomApiUseModel": "Utiliser {model}",
+  "accountsSavedResetBusy": "Infinitary utilise déjà une réinitialisation enregistrée sur {account}. Attendez qu’elle se termine.",
+  "accountsSavedResetCodexStopped": "Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.",
+  "accountsSavedResetNoCodex": "Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex {floor} ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur {site}.",
+  "accountsSavedResetNoneLeft": "{account} n’a plus de réinitialisation enregistrée à utiliser.",
+  "accountsSavedResetNothing": "{account} n’a aucune allocation épuisée que couvre une réinitialisation enregistrée, donc aucune n’a été utilisée.",
+  "accountsSavedResetOldCodex": "Cet ordinateur a Codex {version}, et utiliser une réinitialisation enregistrée demande {floor} ou plus récent. Mettez Codex à jour, ou utilisez la réinitialisation sur {site}.",
+  "accountsSavedResetOtherAccount": "Codex s’est connecté à un autre compte ChatGPT que {account}, donc Infinitary n’a utilisé aucune réinitialisation et a déconnecté Codex. Réessayez en vous connectant au même compte.",
+  "accountsSavedResetPasteAgain": "Cette adresse ne contient pas de code de connexion. Collez l’adresse complète où la page s’est arrêtée.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "Si votre navigateur est sur un autre ordinateur, collez l’adresse où sa page s’est arrêtée après la connexion.",
+  "accountsSavedResetSignInAgain": "Codex n’a pas pu lire l’allocation de {account}, donc aucune réinitialisation n’a été utilisée. Si cela se reproduit, choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.",
+  "accountsSavedResetSignInFailed": "Codex n’a pas pu se connecter.",
+  "accountsSavedResetSignInFirst": "Codex n’est pas encore connecté à {account}, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour connecter Codex.",
+  "accountsSavedResetSignInNotice": "Connectez-vous au compte ChatGPT de {account} dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.",
+  "accountsSavedResetUnclear": "Codex n’a pas dit si une réinitialisation de {account} a été utilisée. Réessayer porte sur la même réinitialisation et n’en utilise jamais une deuxième.",
+  "accountsSavedResetUnverified": "Infinitary n’a pas pu confirmer que Codex est connecté au même compte ChatGPT que {account}, donc aucune réinitialisation n’a été utilisée.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "one": "Une réinitialisation enregistrée de {account} a été utilisée. Il en reste {count}.",
+    "many": "Une réinitialisation enregistrée de {account} a été utilisée. Il en reste {count}.",
+    "other": "Une réinitialisation enregistrée de {account} a été utilisée. Il en reste {count}."
+  },
+  "accountsSavedResetUsedChecking": "Une réinitialisation enregistrée de {account} a été utilisée. Infinitary revérifie son allocation."
 }

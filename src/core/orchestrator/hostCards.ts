@@ -15,7 +15,7 @@ import {
   forgeSignInTitle,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "@shared/forges";
-import { said, saidMark } from "@shared/i18n/said";
+import { cardWordsMark, englishOf, said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { SAVED_RESETS_PAGE } from "@shared/quota";
 import type { SeatPauseClass } from "./seat";
@@ -69,6 +69,11 @@ export type FirstmatePauseCard = {
    */
   credits?: { usedPercent?: number; balance?: string };
   /**
+   * The paused account has saved Codex resets that would apply now
+   * (docs/codex-client.md): the card offers to use one.
+   */
+  savedResets?: boolean;
+  /**
    * Where the paused account's Claude access comes from when it is not a
    * subscription: a lost sign-in is then renewed where Claude Code's is.
    */
@@ -98,6 +103,24 @@ export function keepGoingAction(accountId: string, primary: boolean): CardAction
     variant: primary ? "primary" : "secondary",
     ...(primary ? { default: true } : {}),
     effect: { kind: "host", op: "keep-going-on-credits", arg: accountId },
+  };
+}
+
+/** A card's offer to use one of the account's saved Codex resets (docs/codex-client.md). */
+const USE_SAVED_RESET_SAID = said("cardUseSavedReset");
+
+/**
+ * The action that uses one of an account's saved resets, by its key
+ * (`accountKey`): at once when Codex keeps a sign-in for it, else on the
+ * account's row, where Codex signs in first (`use-saved-reset`).
+ */
+export function redeemSavedResetAction(accountKey: string, primary: boolean): CardAction {
+  return {
+    id: "use-saved-reset",
+    label: englishOf(USE_SAVED_RESET_SAID),
+    variant: primary ? "primary" : "secondary",
+    ...(primary ? { default: true } : {}),
+    effect: { kind: "host", op: "use-saved-reset", arg: accountKey },
   };
 }
 
@@ -196,6 +219,7 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
     const credits = input.credits !== undefined;
     return [
       ...(credits ? [keepGoingAction(input.accountId, true)] : []),
+      ...(input.savedResets ? [redeemSavedResetAction(input.accountId, false)] : []),
       {
         id: "recheck-allowance",
         label: RECHECK_ALLOWANCE_LABEL,
@@ -282,8 +306,9 @@ export function creditsOfferCardId(accountId: string, deviceId?: string): string
 /**
  * A spent account's saved resets on its run-out card (docs/quota.md, "Saved
  * resets"): how many would refill its allowance now, and a link to the
- * provider's usage page, where the captain uses one. Infinitary never uses
- * a reset itself. Empty for a provider with no such page.
+ * provider's usage page, where the captain can use one without Infinitary;
+ * the card's Use a saved reset uses one through Codex (docs/codex-client.md),
+ * and these words carry its label's fact. Empty for a provider with no such page.
  */
 export function savedResetsWords(input: { account: string; provider: string; count: number }) {
   const page = SAVED_RESETS_PAGE[input.provider];
@@ -294,7 +319,7 @@ export function savedResetsWords(input: { account: string; provider: string; cou
     "a",
     `href="${page}"`,
   );
-  return `${now} ${link}`;
+  return `${now} ${link}${cardWordsMark([USE_SAVED_RESET_SAID])}`;
 }
 
 /**
@@ -310,7 +335,8 @@ export function creditsOfferCard(input: {
   name: string;
   /** When its allowance resets, in clock time, when known. */
   resetsAt?: string;
-  credits: { usedPercent?: number; balance?: string };
+  /** Its credits past the allowance, when its provider says it has some and the switch is off. */
+  credits?: { usedPercent?: number; balance?: string };
   /** Saved resets that would apply now, by its provider and count (`savedResetsWords`). */
   savedResets?: { provider: string; count: number };
   /**
@@ -325,17 +351,28 @@ export function creditsOfferCard(input: {
   const resets = input.savedResets
     ? ` ${savedResetsWords({ account: input.name, ...input.savedResets })}`
     : "";
+  const key = computer ? `${input.accountId}@${computer.deviceId}` : input.accountId;
+  const { credits } = input;
+  // Without credits the card offers only the reset.
+  const waits = computer
+    ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.where }))
+    : saidMark(said("cardSavedResetCrewWaits"));
   return {
     id: creditsOfferCardId(input.accountId, computer?.deviceId),
     title: computer
       ? `${input.name} ${computer.where} has used up its allowance${until}`
       : `${input.name} has used up its allowance${until}`,
     meta: "Crew work",
-    body: computer
-      ? `${creditsOfferSentence(input.credits)} Crew work ${computer.where} drops to a weaker model or waits until then unless you keep going on credits. Crew work there would then spend them only after every included allowance.${resets}`
-      : `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.${resets}`,
+    body: !credits
+      ? `${waits}${resets}`
+      : computer
+        ? `${creditsOfferSentence(credits)} Crew work ${computer.where} drops to a weaker model or waits until then unless you keep going on credits. Crew work there would then spend them only after every included allowance.${resets}`
+        : `${creditsOfferSentence(credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.${resets}`,
     actions: [
-      keepGoingAction(computer ? `${input.accountId}@${computer.deviceId}` : input.accountId, true),
+      ...(credits ? [keepGoingAction(key, true)] : []),
+      ...(input.savedResets && SAVED_RESETS_PAGE[input.savedResets.provider]
+        ? [redeemSavedResetAction(key, !credits)]
+        : []),
     ],
   };
 }

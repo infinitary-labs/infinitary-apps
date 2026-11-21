@@ -81,9 +81,10 @@ export type RunAgentContext = {
   processes?: {
     /**
      * Whether a program runs under `pid`; with `birth`, the run's recorded
-     * Windows birth, whether that same program still does.
+     * Windows birth, whether that same program still does, null where that
+     * cannot be told (`runIdentity`).
      */
-    alive: (pid: number, birth?: string) => boolean;
+    alive: (pid: number, birth?: string) => boolean | null;
     forceWaitMs?: number;
     /** Lets a suspended run go on to read its force stop (`wakeRun`). */
     wake?: (run: RunInstance, birth?: string) => void;
@@ -457,7 +458,9 @@ function recordedRun(
     return null;
   }
   if (record?.pid !== run.pid || record.startedAt !== run.startedAt) return null;
-  if (!holderAlive(path, run.pid, context.processes?.alive ?? processAlive)) return null;
+  const alive = context.processes?.alive;
+  if (!holderAlive(path, run.pid, alive ? (pid) => alive(pid) !== false : processAlive))
+    return null;
   return {
     agent: record.agent === true,
     recovers: record.recovers === true,
@@ -487,13 +490,15 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
   if (!recorded?.agent || !recorded.recovers) return "untouched";
   const wake =
     context.processes?.wake ?? ((named, birth) => wakeRun(context.dataDir, named, birth));
-  const alive = context.processes?.alive ?? runAlive;
+  const alive = context.processes?.alive ?? runIdentity;
+  // Asked only of a run its number is seen to be: one whose birth cannot be read is asked nothing.
+  if (alive(run.pid, recorded.birth) !== true) return "untouched";
   // A run already gone at the press, as a program under its number that is not it, is asked
   // nothing (`unasked`), so the stop's own wait tells only the named run's end as an exit.
   const ended = await endRunByForce(
     context.dataDir,
     run,
-    (pid) => alive(pid, recorded.birth),
+    (pid) => alive(pid, recorded.birth) !== false,
     context.processes?.forceWaitMs,
     () => wake(run, recorded.birth),
     piped,
@@ -503,14 +508,18 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
 }
 
 /**
- * Whether the run under `pid` still runs: on Windows, with the birth its
- * record keeps, only while that same program holds the number, so a program
- * that took the number after the run ended is not waited for. Where Windows
- * cannot say, the run is taken to run.
+ * Whether the run under `pid` is the one its record names: false once no
+ * program holds the number or, on Windows with the birth its record keeps,
+ * another program does; null where Windows cannot open it or read its birth.
+ * A record without a birth, from an earlier version, and a Mac or Linux run
+ * are read by their number alone. Only true lets a reader treat the run as
+ * its own - to join beside it, stop it or ask it to end - while a wait for its
+ * end reads null as still running.
  */
-export function runAlive(pid: number, birth?: string): boolean {
+export function runIdentity(pid: number, birth?: string): boolean | null {
   if (!processAlive(pid)) return false;
-  return !birth || !hostPlatformProfile().windows || windowsRunHolds(pid, birth) !== false;
+  if (!birth || !hostPlatformProfile().windows) return true;
+  return windowsRunHolds(pid, birth);
 }
 
 /**

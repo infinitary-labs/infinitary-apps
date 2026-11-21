@@ -59,8 +59,10 @@ function signalRun(label, signal, gen) {
 }
 const recordOf = (label, kind) => existsSync(join(STATE, label + "." + kind)) ? readFileSync(join(STATE, label + "." + kind), "utf8").split("\n").filter(Boolean) : [];
 const runsOf = (label) => recordOf(label, "runs");
-// A run its supervisor started and never saw exit: with that supervisor gone, nothing can stop it.
-const outstanding = (label) => !running(label) && runsOf(label).length > recordOf(label, "exits").length;
+// A run its supervisor started and never saw exit: read only once that supervisor is gone, whose
+// records are then final, so nothing can stop that run.
+const unmatched = (label) => runsOf(label).length > recordOf(label, "exits").length;
+const outstanding = (label) => !running(label) && unmatched(label);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const xml = (text) => text.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 function plistJob(file) {
@@ -99,9 +101,11 @@ function refused() {
 }
 function begin(job) {
   if (refused()) return 5;
+  // Read once: a job already running is left as it is, and one whose supervisor died before a run
+  // it started was seen to exit, which shows as active, is refused, so no second run starts beside it.
+  if (running(job.label)) return 0;
+  if (unmatched(job.label)) return 1;
   rmSync(goneFile(job.label), { force: true });
-  const running = existsSync(pidFile(job.label)) && alive(Number(readFileSync(pidFile(job.label), "utf8")));
-  if (running) return 0;
   writeFileSync(jobFile(job.label), JSON.stringify(job));
   const log = openSync(join(STATE, job.label + ".log"), "a");
   const supervisor = spawn(process.execPath, [__filename, "__supervise", job.label], { detached: true, stdio: ["ignore", log, log], env: process.env });
@@ -111,9 +115,14 @@ function begin(job) {
   return 0;
 }
 const jobFile = (label) => join(STATE, label + ".job.json");
+// Its supervisor's process number, or null once it took its file away as it exited.
+function supervisorOf(label) {
+  try { return Number(readFileSync(pidFile(label), "utf8")); } catch { return null; }
+}
 // Running: its supervisor is there, as systemd shows an active unit.
 function running(label) {
-  return existsSync(pidFile(label)) && alive(Number(readFileSync(pidFile(label), "utf8")));
+  const supervisor = supervisorOf(label);
+  return supervisor !== null && alive(supervisor);
 }
 // Stopping a job takes it away, as launchd's bootout unloads it, until it is started again.
 const goneFile = (label) => join(STATE, label + ".gone");
@@ -132,14 +141,19 @@ function restartFirst(label) {
 // one whose supervisor died before a run it started was seen to exit.
 function end(label) {
   restartFirst(label);
-  if (outstanding(label)) return 1;
-  if (!running(label)) { writeFileSync(goneFile(label), ""); return 3; }
-  const supervisor = Number(readFileSync(pidFile(label), "utf8"));
+  // Its supervisor read once: one gone by then is gone for good and its records are final, so a run
+  // it never saw exit leaves the job as it was, and only a job with none is called stopped.
+  const supervisor = supervisorOf(label);
+  if (supervisor === null || !alive(supervisor)) {
+    if (unmatched(label)) return 1;
+    writeFileSync(goneFile(label), "");
+    return 3;
+  }
   const said = signalRun(label, "stop", null);
   for (let i = 0; i < 600 && said !== "timeout" && alive(supervisor); i++) spawnSync("sleep", ["0.05"]);
   // Unloaded only once its supervisor exited having seen its run exit: one that died first, its run
   // never seen to exit, leaves the job as it was.
-  if (alive(supervisor) || outstanding(label)) return 1;
+  if (alive(supervisor) || unmatched(label)) return 1;
   writeFileSync(goneFile(label), "");
   return 0;
 }

@@ -1,6 +1,6 @@
 import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { runAlive } from "@core/helper/runAgent";
+import { runIdentity } from "@core/helper/runAgent";
 import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
 import { captureLoginPath } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
@@ -265,7 +265,7 @@ function writeRunRecord(path: string, value: RunMarker | RunStop): void {
  */
 export function runningByCommand(
   dataDir: string,
-  alive: (pid: number, birth?: string) => boolean = runAlive,
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
 ): boolean {
   return commandHolding(dataDir, alive).running;
 }
@@ -275,36 +275,37 @@ export function runningByCommand(
  * reading of its note, whether this app's own agent started it
  * (`ownedRun`): one reading, so the two never describe different runs. On
  * Windows, whose lock names no holder, a note that keeps the run's birth is
- * read by it (`runAlive`), so a program that took the number of a run that
+ * read by it (`runIdentity`), so a program that took the number of a run that
  * ended without taking its note away is no command; a note from an earlier
- * run keeps no birth and is read by its number alone, as before.
+ * run keeps no birth and is read by its number alone, as before. Where the
+ * birth cannot be read while the lock is held, a command holds the folder
+ * but is not known to be the noted run (`known` false): it is nobody's own,
+ * so no window stops it, joins beside it as its owner or asks it to end.
  */
 export function commandHolding(
   dataDir: string,
-  alive: (pid: number, birth?: string) => boolean = runAlive,
-): { running: boolean; owned: OwnedRun | null } {
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
+): { running: boolean; owned: OwnedRun | null; known: boolean } {
+  const none = { running: false, owned: null, known: false };
   let marker: unknown;
   try {
     marker = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
   } catch {
-    return { running: false, owned: null };
+    return none;
   }
   const pid = (marker as Partial<RunMarker> | null)?.pid;
   const birth = (marker as Partial<RunMarker> | null)?.birth;
-  if (
-    typeof pid !== "number" ||
-    pid <= 0 ||
-    !alive(pid, typeof birth === "string" ? birth : undefined)
-  )
-    return { running: false, owned: null };
+  if (typeof pid !== "number" || pid <= 0) return none;
+  const holds = alive(pid, typeof birth === "string" ? birth : undefined);
+  if (holds === false) return none;
   const holder = lockHolder(dataDir);
-  if (holder !== undefined && holder !== pid) return { running: false, owned: null };
+  if (holder !== undefined && holder !== pid) return none;
   const parsed = RunMarkerSchema.safeParse(marker);
   const owned =
-    parsed.success && parsed.data.agent === true
+    holds === true && parsed.success && parsed.data.agent === true
       ? { pid: parsed.data.pid, startedAt: parsed.data.startedAt }
       : null;
-  return { running: true, owned };
+  return { running: true, owned, known: holds === true };
 }
 
 /**
@@ -450,7 +451,7 @@ export function ownedRunOf(status: {
  */
 export function ownedRun(
   dataDir: string,
-  alive: (pid: number, birth?: string) => boolean = runAlive,
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
 ): OwnedRun | null {
   return commandHolding(dataDir, alive).owned;
 }
@@ -463,7 +464,7 @@ export function ownedRun(
  */
 export function stopRunningCommand(
   dataDir: string,
-  alive: (pid: number, birth?: string) => boolean = runAlive,
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
   signal: (pid: number, only?: OwnedRun) => void = (pid, only) => {
     // A stop for one run alone is asked through its folder, by its process
     // and start, and only that run reads it as its own: a signal goes to a
@@ -480,7 +481,10 @@ export function stopRunningCommand(
   /** Stops only this run: another the folder's note names now is left running. */
   only?: OwnedRun,
 ): boolean {
-  if (!runningByCommand(dataDir, alive)) return false;
+  const holding = commandHolding(dataDir, alive);
+  if (!holding.running) return false;
+  // A stop for one run alone goes only to a run seen to be it.
+  if (only !== undefined && !holding.known) return false;
   let marker: RunMarker;
   try {
     marker = RunMarkerSchema.parse(JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")));

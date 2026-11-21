@@ -102,6 +102,9 @@ const REPLACEMENT: Run = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
  * that took a run's number included, knows no start and reads none. Each
  * end is written down beside the service manager's asks.
  */
+/** The birth of a program Windows would not read, as `programTable` stands it in. */
+const UNREAD = "unread";
+
 function programTable(asked: string[][], dataDir: () => string) {
   const table = new Map<number, { startedAt: string | null; birth?: string }>();
   // Each run makes its own pipe in the folder of force stops, as `watchRunForce` does on a Mac or
@@ -128,10 +131,12 @@ function programTable(asked: string[][], dataDir: () => string) {
     /** Each run a force stop let go on, by its number and recorded birth: no real process is woken. */
     woken: [] as [number, string | undefined][],
     processes: {
-      // With a birth, only while the program born then holds the number, as Windows says.
-      alive: (pid: number, birth?: string) => {
+      // With a birth, only while the program born then holds the number, as Windows says; null
+      // where Windows would not read the birth of the program there (born `UNREAD`).
+      alive: (pid: number, birth?: string): boolean | null => {
         deliver();
         const program = table.get(pid);
+        if (program && birth && program.birth === UNREAD) return null;
         return Boolean(
           program && (!birth || program.birth === undefined || program.birth === birth),
         );
@@ -865,6 +870,23 @@ describe("the command the window starts, on Windows", () => {
     await startRunAgent(context);
     recordRun(context, NAMED, true, "133800000000000000");
     programs.run(NAMED.pid, NAMED.startedAt, "133800000000500000");
+    asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("untouched");
+    expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("untouched");
+    expect(asked).toEqual([]);
+    expect(programs.woken).toEqual([]);
+    expect(programs.processes.alive(NAMED.pid)).toBe(true);
+    expect(forceStopsLeft(context.dataDir)).toEqual([]);
+  });
+
+  // The review of INF-5409: a program under the named run's number whose birth Windows will not
+  // read is not known to be that run. A force stop goes only to a run seen to be it, so nothing is
+  // asked, woken or started, and the program keeps running.
+  it("asks nothing where the named run's birth cannot be read", async () => {
+    const { context, asked, programs } = windows();
+    await startRunAgent(context);
+    recordRun(context, NAMED, true, "133800000000000000");
+    programs.run(NAMED.pid, NAMED.startedAt, UNREAD);
     asked.length = 0;
     expect(await restartRunAgent(context, NAMED)).toBe("untouched");
     expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("untouched");

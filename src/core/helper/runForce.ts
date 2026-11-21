@@ -179,8 +179,10 @@ export function runForceWakeFile(pid: number, startedAt: string): string {
  * start, or fails or ends before the run does, ends only itself: `ready` is
  * never called with true, or is called with false once it was, so the run
  * no longer says so; a reading that fails to read the folder calls it with
- * false too, and with true again once it reads it again. The run goes on, and a force stop asked of it is
- * withdrawn when its wait is over.
+ * false too, and with true again once it reads it again, and so does a
+ * helper no longer reached at its own pipe, looked at as often as the folder
+ * is read. The run goes on, and a force stop asked of it is withdrawn when
+ * its wait is over.
  */
 export function watchRunForce(
   dataDir: string,
@@ -212,6 +214,19 @@ export function watchRunForce(
     console.warn(`[run] ${why}`);
     if (said) ready(false);
   };
+  // The helper's pipe is looked at as often as the folder is read, whether or not a reading failed:
+  // a folder made again between two readings, or the pipe alone taken away, says nothing to the
+  // reading, and the run says no more that a force stop can end it until the helper is reached
+  // at its own pipe again.
+  const look = setInterval(() => {
+    if (!said) return settled();
+    if (reachable()) return;
+    said = false;
+    // i18n-exempt: the run's own log, never shown to a person.
+    console.warn("[run] cannot reach the force helper at its pipe");
+    ready(false);
+  }, every);
+  look.unref();
   try {
     // The folder is there before the reading starts, on every platform, so a first reading finds it.
     mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -300,6 +315,7 @@ export function watchRunForce(
   }
   return () => {
     ended = true;
+    clearInterval(look);
     void worker?.terminate();
     helper?.kill();
     if (held !== null) {
@@ -414,9 +430,12 @@ const WAKE_EVERY_MS = 1_000;
  * says a force stop can end it holds its pipe, so on a Mac or Linux a run
  * whose pipe was not found, or that no program is seen holding (one that
  * cannot be told included), is asked nothing either, whatever holds its
- * number now; once asked, only a pipe nobody holds is the run gone. A stop
- * none of whose files is there any more past its time, as where the folder
- * was made again, is withdrawn too. `held`, for a test, stands in for
+ * number now; once asked, only a pipe nobody holds, or one gone from the
+ * folder it was seen held in, is the run gone, while one gone with its
+ * folder, made again since, tells nothing. A stop none of whose files is
+ * there any more past its time, as where the folder was made again, is
+ * withdrawn, and nothing is woken for it; one the run was seen to commit is
+ * waited for until the run is gone, its file there or not. `held`, for a test, stands in for
  * whether a program holds it.
  * The attempt's files go once its end is known, and one that cannot be
  * removed changes nothing of what it answers.
@@ -439,10 +458,21 @@ export async function endRunByForce(
   const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
   const posix = !hostPlatformProfile().windows;
   if (posix && !piped) return "unasked";
-  const state = () => (held ? (held() ? "held" : "unheld") : pipeState(pipe));
+  // The folder the pipe was seen held in, as the stop is asked: a pipe gone from that same folder was
+  // taken away by the run as it ended or by a run that took the folder since, so the run is gone;
+  // one gone with its folder, made again since, may still be held where nobody reaches it, which
+  // tells nothing either way.
+  let folder: { ino: number; dev: number } | null = null;
+  const state = () => {
+    if (held) return held() ? "held" : "unheld";
+    const now = pipeState(pipe);
+    if (now !== "absent") return now;
+    return folder !== null && sameFolder(dir, folder) ? "unheld" : "unknown";
+  };
   // Asked only once a program is seen holding the pipe; once asked, a pipe that cannot be told is
   // no proof the run ended, and only one nobody holds is.
   if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
+  if (posix) folder = folderOf(dir);
   const runs = (pid: number) => alive(pid) && (!posix || state() !== "unheld");
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;
@@ -487,19 +517,36 @@ function isPipe(path: string): boolean {
 
 /**
  * Whether a program holds the pipe at `path` open to read it: `held` once
- * opening it to write finds a reader, `unheld` once the pipe is gone or
- * opening it finds nobody reading (`ENXIO`), and `unknown` while it cannot be
- * told, as a pipe this account may not open. Opening and closing it writes
+ * opening it to write finds a reader, `unheld` once opening it finds nobody
+ * reading (`ENXIO`), `absent` where no pipe is at that path, and `unknown`
+ * while it cannot be told, as a pipe this account may not open. Opening and closing it writes
  * nothing, so its helper lets nothing go on.
  */
-function pipeState(path: string): "held" | "unheld" | "unknown" {
+function pipeState(path: string): "held" | "unheld" | "absent" | "unknown" {
   try {
     closeSync(openSync(path, constants.O_WRONLY | constants.O_NONBLOCK));
     return "held";
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    return code === "ENXIO" || code === "ENOENT" ? "unheld" : "unknown";
+    if (code === "ENXIO") return "unheld";
+    return code === "ENOENT" || code === "ENOTDIR" ? "absent" : "unknown";
   }
+}
+
+/** Which folder is at `path` now, by its file number, or null where it cannot be read. */
+function folderOf(path: string): { ino: number; dev: number } | null {
+  try {
+    const { ino, dev } = lstatSync(path);
+    return { ino, dev };
+  } catch {
+    return null;
+  }
+}
+
+/** Whether the folder at `path` now is `folder`, the one read before. */
+function sameFolder(path: string, folder: { ino: number; dev: number }): boolean {
+  const now = folderOf(path);
+  return now !== null && now.ino === folder.ino && now.dev === folder.dev;
 }
 
 /** Whether `path` is positively not there: its folder or itself gone, or its folder no folder at all. */
@@ -521,10 +568,13 @@ async function settle(
   wake: () => void,
 ): Promise<Exclude<ForceEnd, "unasked">> {
   let woke = 0;
+  // A commitment once seen stays seen: its file going with its folder takes nothing back of it, so
+  // the run is waited for until it is gone, and called ended.
+  let committed = false;
   for (;;) {
     // Only a stop the run committed, which it acts on at once, ended it: read once the run is gone.
-    if (!alive(run.pid)) return existsSync(`${attempt}.ended`) ? "ended" : "gone";
-    const committed = existsSync(`${attempt}.ended`);
+    if (!alive(run.pid)) return committed || existsSync(`${attempt}.ended`) ? "ended" : "gone";
+    committed ||= existsSync(`${attempt}.ended`);
     if (existsSync(`${attempt}.declined`)) return "withdrawn";
     if (!committed && Date.now() >= until) {
       // Pending or claimed and not yet committed: whichever move comes first, this one or the run's
@@ -540,11 +590,14 @@ async function settle(
       if (ATTEMPT_ENDS.every((end) => absent(`${attempt}${end}`))) return "withdrawn";
       // Committed meanwhile, or declined: read again.
     } else if (
-      (committed || Date.now() + WAKE_EVERY_MS <= until) &&
+      (committed ||
+        (Date.now() + WAKE_EVERY_MS <= until &&
+          (existsSync(`${attempt}.json`) || existsSync(`${attempt}.taken`)))) &&
       Date.now() >= woke + WAKE_EVERY_MS
     ) {
       // A stop that can still act lets a suspended run go on to read it, as the helper does: while
-      // a whole second of its time is left, or once committed; one about to pass its time never.
+      // it is there to read, pending or claimed, with a whole second of its time left, or once
+      // committed; one about to pass its time, or whose file went with its folder, never.
       woke = Date.now();
       wake();
     }

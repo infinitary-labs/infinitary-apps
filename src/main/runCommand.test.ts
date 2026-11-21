@@ -186,10 +186,11 @@ describe("a window opened beside a run", () => {
     markRunning(stale, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, "win:1");
     symlinkSync(`${hostname()}-4242`, join(stale, "SingletonLock"));
     const reused = (pid: number, birth?: string) => pid === 4242 && (!birth || birth === "win:2");
-    expect(commandHolding(stale, reused)).toEqual({ running: false, owned: null });
+    expect(commandHolding(stale, reused)).toEqual({ running: false, owned: null, known: false });
     expect(commandHolding(stale, (pid, birth) => pid === 4242 && birth === "win:1")).toEqual({
       running: true,
       owned: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+      known: true,
     });
     const earlier = scratchDir("infinitary-run-earlier-");
     markRunning(earlier, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
@@ -227,6 +228,21 @@ describe("a window opened beside a run", () => {
     markRunning(earlier, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
     writeFileSync(join(earlier, "SingletonLock"), "held, naming no holder");
     expect(ownedRunOf(readRunStatus(earlier, reused))).toEqual(owned);
+    // The review of INF-5409: a birth Windows cannot read is not a match. Beside the held lock the
+    // status is unknown, the command holds the folder as nobody's own, and a stop for that run
+    // alone asks nothing; the person's own Stop still reaches whoever holds it.
+    const unread = (pid: number, birth?: string) => (pid !== 4242 ? false : birth ? null : true);
+    const unknown = readRunStatus(stale, unread);
+    expect(unknown.running).toBeNull();
+    expect(ownedRunOf(unknown)).toBeNull();
+    expect(runEnd(unknown, null)).toBeNull();
+    expect(commandHolding(stale, unread)).toEqual({ running: true, owned: null, known: false });
+    signalled.length = 0;
+    expect(stopRunningCommand(stale, unread, (pid) => void signalled.push(pid), owned)).toBe(false);
+    expect(signalled).toEqual([]);
+    expect(stopRunningCommand(stale, unread, (pid) => void signalled.push(pid))).toBe(true);
+    expect(signalled).toEqual([4242]);
+    expect(ownedRunOf(readRunStatus(earlier, unread))).toEqual(owned);
   });
 
   // The review of INF-5409: Start it here refused the lock reads who holds it from what the holder

@@ -1,6 +1,5 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import {
-  chmodSync,
   closeSync,
   constants,
   mkdirSync,
@@ -191,6 +190,14 @@ function writeStop(dataDir: string, name: string, stop: object): void {
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Makes `run`'s own pipe and holds it open as the run does, answering what holds it. */
+function holdPipe(dataDir: string, run: { pid: number; startedAt: string }): number {
+  const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+  mkdirSync(join(dataDir, RUN_FORCE_DIR), { recursive: true });
+  expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+  return openSync(pipe, constants.O_RDWR);
+}
+
 /** What a POSIX run ended by its own force stop ends with: its own SIGKILL, never an ordinary exit. */
 async function endedByForce(gone: Promise<NodeJS.Signals | null>, pid: number): Promise<void> {
   const signal = await gone;
@@ -232,19 +239,31 @@ describe("a run's reading of force stops", () => {
  * process group as a service manager starts one, and says each word of its
  * readiness on a line of its own: `started` once `watchRunForce` returned,
  * `ready` or `unready` as its `ready` is called, and `stopped` once what
- * ends them returned at a SIGTERM, which it then exits 0 after.
+ * ends them returned at a SIGTERM, which it then exits 0 after. With
+ * `removeFails`, removing a file fails at that SIGTERM, for this account or
+ * any other, as where the folder may be read but nothing in it removed; what
+ * the run logs is kept in `logged`.
  */
 async function watchingRun(
   dataDir: string,
   startedAt: string,
-): Promise<{ run: ChildProcess; pid: number; words: string[] }> {
+  options: { removeFails?: boolean } = {},
+): Promise<{ run: ChildProcess; pid: number; words: string[]; logged: () => string }> {
   const program = `
     const { pathToFileURL } = await import("node:url");
+    const fs = await import("node:fs");
+    const { syncBuiltinESMExports } = await import("node:module");
     const { watchRunForce } = await import(pathToFileURL(process.env.SOURCE).href);
     const say = (word) => process.stdout.write(word + "\\n");
     const stop = watchRunForce(process.env.DATA, process.env.STARTED, 50, (can) => say(can ? "ready" : "unready"));
     say("started");
     process.on("SIGTERM", () => {
+      if (process.env.REMOVE_FAILS) {
+        fs.default.rmSync = (path) => {
+          throw Object.assign(new Error("EACCES: permission denied, unlink " + path), { code: "EACCES" });
+        };
+        syncBuiltinESMExports();
+      }
       stop();
       process.stdout.write("stopped\\n", () => process.exit(0));
     });
@@ -268,12 +287,17 @@ async function watchingRun(
         SOURCE: join(__dirname, "runForce.ts"),
         DATA: dataDir,
         STARTED: startedAt,
+        ...(options.removeFails ? { REMOVE_FAILS: "1" } : {}),
       },
-      stdio: ["ignore", "pipe", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"],
       detached: POSIX,
     },
   );
   await started(run);
+  let log = "";
+  run.stderr?.on("data", (data: Buffer) => {
+    log += String(data);
+  });
   const words: string[] = [];
   let partial = "";
   run.stdout?.on("data", (data: Buffer) => {
@@ -282,7 +306,7 @@ async function watchingRun(
     words.push(...lines);
   });
   await expect.poll(() => words, { timeout: 10_000 }).toContain("started");
-  return { run, pid: ownedPid(run), words };
+  return { run, pid: ownedPid(run), words, logged: () => log };
 }
 
 // The review of INF-5409: what starts and ends a run's reading and helper never holds up the run
@@ -304,20 +328,20 @@ describe.skipIf(!POSIX)("a run's reading and helper, as a command starts them", 
     expect(words).toEqual(["started", "stopped"]);
   });
 
+  // Its pipe is found as its own at the end, and removing it fails: the run says so in its log and
+  // stops as it would, and the pipe stays.
   it("stops the run when its pipe cannot be cleared at the end", async () => {
     const dataDir = scratchDir("run-force-");
-    const dir = join(dataDir, RUN_FORCE_DIR);
-    const { run, words } = await watchingRun(dataDir, STARTED);
+    const { run, pid, words, logged } = await watchingRun(dataDir, STARTED, { removeFails: true });
     await expect.poll(() => words, { timeout: 10_000 }).toContain("ready");
+    const own = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(pid, STARTED));
+    expect(runPipeThere(dataDir, { pid, startedAt: STARTED })).toBe(true);
     const gone = new Promise<number | null>((resolve) => run.once("exit", (code) => resolve(code)));
-    chmodSync(dir, 0o000);
-    try {
-      process.kill(ownedPid(run), "SIGTERM");
-      expect(await gone).toBe(0);
-      expect(words).toContain("stopped");
-    } finally {
-      chmodSync(dir, 0o700);
-    }
+    process.kill(pid, "SIGTERM");
+    expect(await gone).toBe(0);
+    expect(words).toContain("stopped");
+    expect(logged()).toContain(`could not remove ${own}`);
+    expect(runPipeThere(dataDir, { pid, startedAt: STARTED })).toBe(true);
   });
 
   it("says it can be ended by force again after a failed reading, never after its folder was made again", async () => {
@@ -325,20 +349,18 @@ describe.skipIf(!POSIX)("a run's reading and helper, as a command starts them", 
     const dir = join(dataDir, RUN_FORCE_DIR);
     const { run, pid, words } = await watchingRun(dataDir, STARTED);
     await expect.poll(() => words, { timeout: 10_000 }).toEqual(["started", "ready"]);
-    // The same folder, unreadable a moment.
-    chmodSync(dir, 0o000);
-    try {
-      await expect.poll(() => words).toEqual(["started", "ready", "unready"]);
-    } finally {
-      chmodSync(dir, 0o700);
-    }
-    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready"]);
-    // The folder made again: unreadable while something else is in its place, then a new folder.
-    renameSync(dir, `${dir}-old`);
+    // The same folder, out of its place a moment with a file there instead, so reading it fails for
+    // any account, then back.
+    renameSync(dir, `${dir}-aside`);
     writeFileSync(dir, "");
-    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready", "unready"]);
+    await expect.poll(() => words).toEqual(["started", "ready", "unready"]);
     rmSync(dir);
+    renameSync(`${dir}-aside`, dir);
+    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready"]);
+    // The folder made again at once, between two of its readings, so none of them fails.
+    renameSync(dir, `${dir}-old`);
     mkdirSync(dir);
+    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready", "unready"]);
     // Its reading reads the new folder (many times over at every 50 ms), and it says nothing more.
     await pause(1_000);
     expect(words).toEqual(["started", "ready", "unready", "ready", "unready"]);
@@ -349,6 +371,16 @@ describe.skipIf(!POSIX)("a run's reading and helper, as a command starts them", 
     expect(left(dataDir)).toEqual([]);
     expect(run.exitCode).toBeNull();
     expect(processAlive(pid)).toBe(true);
+  });
+
+  it("says it can be ended by force no more once its pipe alone is taken away", async () => {
+    const dataDir = scratchDir("run-force-");
+    const { pid, words } = await watchingRun(dataDir, STARTED);
+    await expect.poll(() => words, { timeout: 10_000 }).toEqual(["started", "ready"]);
+    rmSync(join(dataDir, RUN_FORCE_DIR, runForceWakeFile(pid, STARTED)));
+    await expect.poll(() => words).toEqual(["started", "ready", "unready"]);
+    await pause(500);
+    expect(words).toEqual(["started", "ready", "unready"]);
   });
 });
 
@@ -616,26 +648,69 @@ describe("a run that does not answer, ended by force", () => {
 
   // The review of INF-5409: a stop whose files went with its folder, made again since it was
   // written, can no longer be claimed or committed by the run, which still runs (stood in by a
-  // reading that says it does): once its time is over it is withdrawn, never waited on for good,
-  // and never told as the stop's end.
+  // reading that says its number does): once its time is over it is withdrawn, never waited on for
+  // good, and never told as the stop's end, and nothing is woken for it meanwhile. On a Mac or
+  // Linux the run's pipe, held open here as the run holds it, went with that folder too: a pipe
+  // gone with its folder is no proof the run ended, so it is not called gone.
   it("withdraws a stop whose files went with its folder, once its time is over", async () => {
     const dataDir = scratchDir("run-force-");
     const dir = join(dataDir, RUN_FORCE_DIR);
     const run = { pid: 4242, startedAt: STARTED };
+    const holding = POSIX ? holdPipe(dataDir, run) : null;
+    let woken = 0;
+    try {
+      const asked = endRunByForce(
+        dataDir,
+        run,
+        () => true,
+        2_500,
+        () => void woken++,
+        POSIX,
+      );
+      await expect.poll(() => left(dataDir).length).toBe(1);
+      await expect.poll(() => woken).toBe(1);
+      rmSync(dir, { recursive: true });
+      mkdirSync(dir);
+      expect(await asked).toBe("withdrawn");
+      expect(woken).toBe(1);
+      expect(left(dataDir)).toEqual([]);
+    } finally {
+      if (holding !== null) closeSync(holding);
+    }
+  });
+
+  // The review of INF-5409: a stop the run was seen to commit is waited for until the run is gone,
+  // even once its file went with its folder, and then called ended, never withdrawn: the run acts
+  // on it, and on Windows its task is started again only once it is gone.
+  it("waits on a stop seen committed whose file went with its folder, then calls it ended", async () => {
+    const dataDir = scratchDir("run-force-");
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    const run = { pid: 4242, startedAt: STARTED };
+    let running = true;
+    let answer: string | null = null;
     const asked = endRunByForce(
       dataDir,
       run,
-      () => true,
-      600,
+      () => running,
+      300,
       () => {},
       true,
       () => true,
-    );
-    await expect.poll(() => left(dataDir).length).toBe(1);
+    ).then((end) => {
+      answer = end;
+      return end;
+    });
+    await expect.poll(() => left(dataDir)).toHaveLength(1);
+    const [pending] = left(dataDir);
+    renameSync(join(dir, pending ?? ""), join(dir, (pending ?? "").replace(/\.json$/, ".ended")));
+    // Read as committed (at every 100 ms), then gone with its folder, past its time.
+    await pause(300);
     rmSync(dir, { recursive: true });
     mkdirSync(dir);
-    expect(await asked).toBe("withdrawn");
-    expect(left(dataDir)).toEqual([]);
+    await pause(800);
+    expect(answer).toBeNull();
+    running = false;
+    expect(await asked).toBe("ended");
   });
 
   // A run that ends on its own after its stop was written and before it claimed it was not ended

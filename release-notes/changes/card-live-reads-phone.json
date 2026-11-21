@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-live-reads-phone",
+      "kind": "feature",
+      "area": "cards",
+      "title": "A crewmate's live card stays current on your iPhone and iPad",
+      "body": "A crewmate's card that shows live information, such as the task board, now redraws on your iPhone and iPad as it changes, as it does in your computer's window. It reads only what its crewmate named, and only while the card is open; a closed card keeps what it last showed.",
+      "noPicture": "What such a card draws is its crewmate's own; the change is that its drawing stays current on the phone, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

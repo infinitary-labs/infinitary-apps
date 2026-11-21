@@ -50,6 +50,7 @@
   "InfinitaryUITests/PhoneJourney/testCardDiagramCover",
   "InfinitaryUITests/PhoneJourney/testCardDrafts",
   "InfinitaryUITests/PhoneJourney/testCardForm",
+  "InfinitaryUITests/PhoneJourney/testCardLiveReads",
   "InfinitaryUITests/PhoneJourney/testCardMediaAndBody",
   "InfinitaryUITests/PhoneJourney/testCardNotes",
   "InfinitaryUITests/PhoneJourney/testCardPushes",

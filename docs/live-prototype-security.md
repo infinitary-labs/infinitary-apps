@@ -89,9 +89,10 @@ Such an action runs no effect and authorizes nothing (script-triggered actions a
 - How long it lasts.
   Only while the card is open, the captain's answer: an ended card and a past card mount with no reads, and a mounted frame whose card closes or whose revision drops a read loses that subscription at once, its script hearing `read_not_declared`.
 - What it costs.
-  Each subscription counts against the mount's `FRAME_MAX_SUBSCRIPTIONS` and the executor's coalescing, as a panel's does; a card held until shown runs no script, so it subscribes to nothing before the captain sees it.
+  Each subscription counts against the mount's `FRAME_MAX_SUBSCRIPTIONS` and the executor's coalescing, as a panel's does; on the desktop a card held until shown runs no script, so it subscribes to nothing before the captain sees it.
+  The phone keeps the bodies beside the shown card loaded and running, so an open card there may subscribe before it is shown, within the same limits.
 - Other surfaces.
-  An older desktop view reads the card with both lists removed; a phone shows the body without live reads until its own change.
+  An older desktop view reads the card with both lists removed; the phone grants them under the same rules ("Phone cards", below).
 
 ## Project fonts in previews (INF-128)
 
@@ -192,7 +193,7 @@ Navigation delegates refuse every destination except the initial parent and its 
 
 WebKit exposes registered message handlers to child frames too, so `frameInfo.isMainFrame` is a mandatory native admission check.
 The parent accepts only its iframe’s window, binds its first bridge document and parses the existing shared message and request schemas.
-Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a data file the body names, a part's place of at most 4,096 bytes, a link, a draft and a task key, never an IPC channel or a caller-chosen action source.
+Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions, read-only presentation requests, a data file the body names, a part's place of at most 4,096 bytes, a link, a draft, a task key and a live read's ask, never a caller-chosen action source; the only IPC channel it carries is a read's, inside that ask.
 A link, a draft and a picture leave only on the captain's own press in the body; a link must pass `isSafeCardHref` in the parent and a web scheme in native code, and then opens in the device's default browser, never inside the card.
 A finger held on the body is still the captain's own press (INF-1337): the bridge clicks what the finger went down on as its trusted touch ends, and a body's script cannot start that click, since it can make no trusted touch.
 A picture still opens only inside a press's user activation, so the bridge leaves a picture press whose release holds none to WebKit's own click, which brings one; the phone's frames keep a picture from being dragged or selected so that click comes.
@@ -200,6 +201,10 @@ A phone's host tells the frame `press-moved` when its own scroller or swipe take
 The sandbox and the policy are unchanged, the message vocabulary gains only that host-to-frame word, and `FRAME_BRIDGE_SHA256` moved with the bridge.
 A draft only fills the message box, which sends nothing until the captain does, and a task key opens a record only when it names a task the phone was given.
 A settle card's fact strip is drawn by a second host of the same kind, read-only and with no actions.
+A crewmate's open card's live reads (INF-5531 piece 2) cross the same boundary as a panel's on the phone: the sandboxed body still asks only its parent, through bridge v2's `subscribe` and `unsubscribe`, and the parent answers with the Mac's own subscription owner (`FrameSubscriptions`), catalog and `ReadExecutor`, held to the reads and views the card declared.
+The parent's one new native word is `ask`, which native code passes only while the card grants a read and only on a read's channel (`PhonePanelRequest.cardReads`: the panels' reads, the record's `sql` read and the card list its board read is presented against), never a change, a panel's store, files, background work or integrations.
+Native code decides the grant from the card itself (`CardWebHost.liveReads`): the card's crewmate's declaration while the card is neither past nor ended, and none for a fact strip or a cover; when a card ends, its body loses each subscription at once, whether it is shown or kept loaded beside the shown card (`PhoneCardBodies.declare`).
+The body's network, sandbox tokens, CSP and bridge are unchanged, and a value it reads can leave it only as the Mac's can, through one of its declared effect-free actions.
 A part opened live in its cover, such as the map, is drawn by another host of the same kind with no actions, so it answers nothing while its own controls still work; the only thing it hands back to the card is the part's place, which the card's part reads as its own data.
 Native code checks an action against the mounted card again and stamps it `frame`; it cannot become a footer click even if the body writes `chrome` in its message.
 The core’s dispatch-time effect check remains independent.

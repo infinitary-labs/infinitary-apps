@@ -122,6 +122,9 @@ struct PhoneCards<Content: View>: View {
         .onChange(of: selected) { _, _ in
             if !moving && swipedFrom == nil && !stack.isEmpty { bodies.keep(only: rowCards.map(\.card)); bodies.setAside(except: card) }
         }
+        // INF-5531 piece 2: each kept body's live reads follow its card, so one its author ended stops updating at once,
+        // shown or loaded beside the shown one.
+        .onChange(of: stack.map { CardWebHost.liveReads($0, part: .body) }) { _, _ in bodies.declare(stack) }
         // INF-3460: a revision draws a new body, so the row lets the old one go once it is still.
         .onChange(of: stack.map(PhoneCardBodies.key)) { _, _ in
             if !moving && swipedFrom == nil && !stack.isEmpty { bodies.keep(only: rowCards.map(\.card)) }

@@ -67,6 +67,7 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { WorkspaceService } from "../workspace/workspaceService";
+import { PlacedAccounts } from "./placedAccounts";
 import { PlacedSessions } from "./placedSessions";
 import { WorkDevices } from "./workDevices";
 
@@ -682,5 +683,33 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     expect(at.home.recordUsage).not.toHaveBeenCalledWith(
       expect.objectContaining({ accountId: THIS_MAC }),
     );
+  });
+});
+
+// INF-5438 round 6 finding 9: a wait for a model on a computer that runs work
+// compares what that computer's sign-ins serve now; a cut-off for spent
+// allowance stops holding once its reset passes, with no new report.
+describe("what a computer's sign-ins serve now", () => {
+  it("changes once a sign-in's cut-off for spent allowance resets, with no new report", () => {
+    const clock = { now: 1_000_000 };
+    const said = {
+      providers: [],
+      accounts: [
+        { id: "there-codex", cutOff: { class: "no_headroom", resetsAt: clock.now + 60_000 } },
+      ],
+      quota: null,
+    } as unknown as ComputerSignIns;
+    const accounts = new PlacedAccounts({
+      saidSignIns: () => said,
+      placeOf: () => {
+        throw new Error("a place is not read here");
+      },
+      now: () => clock.now,
+    });
+    const cut = accounts.servedState("mini");
+    clock.now += 30_000;
+    expect(accounts.servedState("mini")).toBe(cut);
+    clock.now += 60_000;
+    expect(accounts.servedState("mini")).not.toBe(cut);
   });
 });

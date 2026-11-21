@@ -40,6 +40,7 @@
   "crewmateProgress": "Fortschritt",
   "crewmateQueued": "eingereiht",
   "crewmateReport": "Bericht",
+  "crewmateRoutedAgain": "{left} ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt {model}",
   "crewmateRunning": "läuft …",
   "crewmateSendsTo": "an das Crewmitglied",
   "crewmateShowCard": "Karte anzeigen",
@@ -50,5 +51,7 @@
   "crewmateStopping": "Wird gestoppt …",
   "crewmateUnreadable": "Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.",
   "crewmateWaiting": "Wartet auf dich",
+  "crewmateWaitsForModel": "{left} ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann",
+  "crewmateWaitsForUpdate": "{left} ist in den Einstellungen auf keiner Stufe mehr, und {computer} braucht ein Update, bevor diese Aufgabe dort zu einem anderen Modell wechseln kann, deshalb wartet sie bis dahin",
   "crewmateWorking": "Arbeitet …"
 }

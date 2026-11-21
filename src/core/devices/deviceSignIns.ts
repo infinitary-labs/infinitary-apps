@@ -113,7 +113,7 @@ export class DeviceSignIns {
   private readonly running = new Map<string, Running>();
   /** Each saved-reset use waiting for its end, by its flow's id. */
   private readonly uses = new Map<string, (step: Extract<SignInStep, { kind: "ended" }>) => void>();
-  private readonly reading = new Map<string, Promise<void>>();
+  private readonly reading = new Map<string, Promise<boolean>>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
 
@@ -188,11 +188,13 @@ export class DeviceSignIns {
    * Asks one computer its sign-ins again, after any ask already on its way,
    * and resolves once it answered or could not: what it says then was
    * written after everything the home heard from it before this call, such
-   * as a turn there that met a cut-off.
+   * as a turn there that met a cut-off. True only when it answered this
+   * ask with its sign-ins; false when it was out of reach or refused, and
+   * what it said before is all there is.
    */
-  async refresh(deviceId: string): Promise<void> {
+  async refresh(deviceId: string): Promise<boolean> {
     await this.reading.get(deviceId);
-    if (this.options.work.inReach(deviceId)) await this.ask(deviceId);
+    return this.options.work.inReach(deviceId) ? this.ask(deviceId) : false;
   }
 
   /** Starts a sign-in on that computer; its steps arrive as `inf:devices:sign-in`. */
@@ -787,7 +789,7 @@ export class DeviceSignIns {
     this.push();
   }
 
-  private ask(deviceId: string): Promise<void> {
+  private ask(deviceId: string): Promise<boolean> {
     let pending = this.reading.get(deviceId);
     if (pending) return pending;
     pending = this.options.work
@@ -807,6 +809,7 @@ export class DeviceSignIns {
           } else {
             this.options.unanswered?.(deviceId);
           }
+          return parsed.success;
         },
         (error: unknown) => {
           // Out of reach is a state, not an answer; anything else is a refusal.
@@ -814,6 +817,7 @@ export class DeviceSignIns {
             this.said.set(deviceId, { signIns: null, unanswered: true });
             this.options.unanswered?.(deviceId);
           }
+          return false;
         },
       )
       .finally(() => {

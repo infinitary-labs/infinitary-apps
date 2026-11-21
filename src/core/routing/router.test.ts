@@ -487,6 +487,100 @@ describe("Router", () => {
 
   // INF-1389: Automatic places a task the captain named a model for only on
   // a computer whose routing serves it, so each preview says whether it does.
+  // INF-5438 finding 5: once every account here said what it serves - the
+  // last sign-in removed - an empty pool holds no model but a pin or level;
+  // a pool not read yet still holds every model.
+  it("holds a model on no level once this Mac's pool is read and empty, and cannot say while it is unread", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const slots = new ModelSlots({ settings, accounts: () => [], quotaModels: () => undefined });
+    let read = false;
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings,
+      quota: fakeQuota(undefined),
+      availableModels: () => [],
+      slots,
+      poolRead: () => read,
+    });
+    const sol = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    // An unread pool is not membership: the answer is unknown, so a caller defers.
+    expect(router.holdsAtALevel(sol)).toBeUndefined();
+    read = true;
+    expect(router.holdsAtALevel(sol)).toBe(false);
+  });
+
+  // INF-5438 round 7 finding 10: with no placements of the person's own, the
+  // defaults standing in leave a model out only once every account here said
+  // what it serves: one account answering first is no exclusion of the rest.
+  it("cannot say a model is off the defaults while an account here has not said what it serves", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const slots = new ModelSlots({ settings, accounts: () => [], quotaModels: () => undefined });
+    const sol = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    const terra = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    const available = [terra];
+    let read = false;
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings,
+      quota: fakeQuota(undefined),
+      availableModels: () => available,
+      slots,
+      poolRead: () => read,
+    });
+    // Terra's account answered; Sol's has not.
+    expect(router.holdsAtALevel(sol)).toBeUndefined();
+    available.push(sol);
+    read = true;
+    expect(router.holdsAtALevel(sol)).toBe(true);
+    // Every account answered, and none serves Sol.
+    available.splice(available.indexOf(sol), 1);
+    expect(router.holdsAtALevel(sol)).toBe(false);
+  });
+
+  // INF-5438 finding 11: a routing row an older app wrote before `facts.named`
+  // still says whether its model was named - by its selection, then its rule.
+  it("reads whether an older routing row named its model, by its selection and then its rule", () => {
+    const db = openInMemoryDatabase();
+    const decisions = new DecisionStore(db);
+    const router = new Router({
+      decisions,
+      settings: new SettingsStore(db),
+      quota: fakeQuota(undefined),
+      availableModels: () => [],
+    });
+    const row = (taskId: string, rule: string, decidedBy?: "named" | "runway-order") =>
+      decisions.recordRouting({
+        taskId,
+        provider: "openai-codex",
+        model: "gpt-6.1-sol",
+        bucket: "high",
+        served: "high",
+        rule,
+        reasons: ["Use the available model for the work."],
+        // As an older app wrote it: the selection, with no named flag.
+        ...(decidedBy
+          ? {
+              facts: {
+                kind: "routing-candidates" as const,
+                candidates: [],
+                selection: { version: 1 as const, decidedBy, floorPercent: 0, computer: "home" },
+              },
+            }
+          : {}),
+      });
+    // A move to a model the captain named recorded its selection, not its rule.
+    row("moved-named", "R8", "named");
+    // A routed start recorded its order.
+    row("routed", "R8", "runway-order");
+    // A start that named its model before selections were recorded.
+    row("named-start", "R0");
+    expect(router.servedChoice("moved-named")?.named).toBe(true);
+    expect(router.servedChoice("routed")?.named).toBe(false);
+    expect(router.servedChoice("named-start")?.named).toBe(true);
+  });
+
   it("says whether a preview serves the model the captain named", () => {
     const db = openInMemoryDatabase();
     const router = new Router({

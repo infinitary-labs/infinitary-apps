@@ -4,6 +4,7 @@ import { formatDurationShort } from "@shared/quotaSignals";
 import { cutText } from "@shared/textCut";
 import { capWithOverflow } from "../overflow";
 import { errorText } from "../personal/errorText";
+import { NotOpenThere } from "../placed/crewMachines";
 import type { AnsweredRead } from "../session/openReads";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import {
@@ -22,6 +23,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { retireLeftoverBranches } from "./leftoverBranches";
 import { MainCheckWatcher } from "./mainCheckWake";
 import { RunWatcher } from "./runWatch";
+import { ModelWaitError, NotAcceptedError } from "./taskMoves";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
 import { laneText, laneTurnText, renderWake, type WakeBody } from "./wakes";
@@ -417,7 +419,9 @@ export class CrewWatch {
           ? "its computer is out of reach or still catching up"
           : this.core.updates.waitsForUpdateThere(taskId)
             ? "its computer must be updated first"
-            : "its subscription is waiting for its sign-in or allowance",
+            : this.core.moves.waitsForModel(taskId)
+              ? this.core.moves.modelWaitWords(taskId)
+              : "its subscription is waiting for its sign-in or allowance",
       );
     const due = this.core.facts.deliverableRows(taskId, now);
     if (due.length === 0) return;
@@ -444,8 +448,10 @@ export class CrewWatch {
           ids,
           pictures.images,
         );
-      } catch {
-        this.core.options.inbox.release(ids);
+      } catch (caught) {
+        // A conversation that did not open there again: they go back unspent.
+        if (caught instanceof NotOpenThere) this.core.options.inbox.reparkUndelivered(ids);
+        else this.core.options.inbox.release(ids);
       }
       return;
     }
@@ -489,6 +495,20 @@ export class CrewWatch {
       const resumed = await this.core.sessions.resumeTask(taskId);
       void this.core.turns.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
+      // Waiting for a model is no refused delivery: the rows go back
+      // unspent, and the lane holds until a model can take it.
+      if (caught instanceof ModelWaitError) {
+        this.core.options.inbox.reparkUndelivered(ids);
+        this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
+        return;
+      }
+      // A conversation that opened but was not accepted took no words: the
+      // rows go back unspent, and the next pass opens again.
+      if (caught instanceof NotAcceptedError) {
+        this.core.options.inbox.reparkUndelivered(ids);
+        this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
+        return;
+      }
       this.core.restarts.recordRestartOutcome(
         taskId,
         "stopped",

@@ -246,9 +246,12 @@ export function startHomeCrew({
     ...auth.accountless(),
     accounts: {
       selectForSpawn: (taskId, provider, crew) => accounts.selectForSpawn(taskId, provider, crew),
+      pickForSpawn: (taskId, provider, crew) => accounts.pickForSpawn(taskId, provider, crew),
       reselectForResume: (taskId, accountId) => accounts.reselectForResume(taskId, accountId),
       labelOf: (accountId) => accounts.labelOf(accountId),
       accessOf: (accountId) => vault.accessSync(accountId),
+      servingState: () => accounts.servingState(),
+      serves: (accountId, model) => accounts.servesNow(accountId, model),
     },
     taskSelection: host.recordProcess ? (input) => recordReader.tasks(input) : undefined,
     // Whoever observes a typed cut-off records it on the account.

@@ -656,6 +656,7 @@ public enum PhoneMessages {
     public static func `crewmateProgress`() -> String { PhoneWords.format("crewmateProgress", []) }
     public static func `crewmateQueued`() -> String { PhoneWords.format("crewmateQueued", []) }
     public static func `crewmateReport`() -> String { PhoneWords.format("crewmateReport", []) }
+    public static func `crewmateRoutedAgain`(`left`: String, `model`: String) -> String { PhoneWords.format("crewmateRoutedAgain", [`left`, `model`]) }
     public static func `crewmateRunning`() -> String { PhoneWords.format("crewmateRunning", []) }
     public static func `crewmateSendsTo`() -> String { PhoneWords.format("crewmateSendsTo", []) }
     public static func `crewmateShowCard`() -> String { PhoneWords.format("crewmateShowCard", []) }
@@ -666,6 +667,8 @@ public enum PhoneMessages {
     public static func `crewmateStopping`() -> String { PhoneWords.format("crewmateStopping", []) }
     public static func `crewmateUnreadable`() -> String { PhoneWords.format("crewmateUnreadable", []) }
     public static func `crewmateWaiting`() -> String { PhoneWords.format("crewmateWaiting", []) }
+    public static func `crewmateWaitsForModel`(`left`: String) -> String { PhoneWords.format("crewmateWaitsForModel", [`left`]) }
+    public static func `crewmateWaitsForUpdate`(`computer`: String, `left`: String) -> String { PhoneWords.format("crewmateWaitsForUpdate", [`computer`, `left`]) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
     public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
@@ -4479,6 +4482,7 @@ extension PhoneWords {
         "crewmateProgress": [],
         "crewmateQueued": [],
         "crewmateReport": [],
+        "crewmateRoutedAgain": ["left", "model"],
         "crewmateRunning": [],
         "crewmateSendsTo": [],
         "crewmateShowCard": [],
@@ -4489,6 +4493,8 @@ extension PhoneWords {
         "crewmateStopping": [],
         "crewmateUnreadable": [],
         "crewmateWaiting": [],
+        "crewmateWaitsForModel": ["left"],
+        "crewmateWaitsForUpdate": ["computer", "left"],
         "crewmateWorking": [],
         "devicesCarriedOn": ["to"],
         "devicesCarryNotRemoved": ["from", "why"],

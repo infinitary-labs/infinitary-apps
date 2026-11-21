@@ -626,6 +626,7 @@
 "crewmateProgress" = "Progress";
 "crewmateQueued" = "queued";
 "crewmateReport" = "Report";
+"crewmateRoutedAgain" = "%1$@ is on no level in Settings any more, so this task now uses %2$@";
 "crewmateRunning" = "running…";
 "crewmateSendsTo" = "to the crewmate";
 "crewmateShowCard" = "Show the card";
@@ -636,6 +637,8 @@
 "crewmateStopping" = "Stopping…";
 "crewmateUnreadable" = "This crewmate's session could not be read.";
 "crewmateWaiting" = "Waiting on you";
+"crewmateWaitsForModel" = "%1$@ is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can";
+"crewmateWaitsForUpdate" = "%2$@ is on no level in Settings any more, and %1$@ needs an update before this task can move to another model there, so it waits until then";
 "crewmateWorking" = "Working…";
 "devicesCarriedOn" = "The tasks of a computer out of reach continue on %1$@, and that entry is off your list.";
 "devicesCarryNotRemoved" = "The tasks of %1$@ moved, but it could not come off your list: %2$@";

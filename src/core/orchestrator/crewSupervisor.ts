@@ -30,6 +30,7 @@ import {
 import { RIGOR_WORDS } from "@shared/vocabulary";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import type { PlacedHost } from "../placed/crewMachines";
 import { CrewPrograms, ProgramRunner } from "../program/programRunner";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { bindTools, type EmittedCardInput } from "../session/tools";
@@ -1331,6 +1332,8 @@ export class CrewSupervisor {
    * conversation as an open carries it, before its lane goes on.
    */
   placedReopened(taskId: string): void {
+    // What it holds there now took words: nothing there is refused any more.
+    this.moves.openedThere(taskId);
     const task = this.tasks.get(taskId);
     if (task?.session) {
       // The conversation there may have started over, or folded while that
@@ -1351,6 +1354,59 @@ export class CrewSupervisor {
       }
       this.sessions.carryRestart(task, this.facts.machineOf(taskId), task.session);
     }
+  }
+
+  /**
+   * The model a conversation opening again on `machine` - after that
+   * computer restarted, or a turn ended that an open found running there -
+   * asks for, when the one it had left every level: routed again among
+   * that computer's models, with the move recorded only once a
+   * conversation opened on it (`TaskMoves.routeAgainIfLeft`), "wait" when
+   * none can take it and "stale" when the task is no longer that
+   * computer's. Undefined keeps the one it opened with.
+   */
+  reopenModel(
+    taskId: string,
+    machine: string,
+    attach: boolean,
+  ): ReturnType<NonNullable<PlacedHost["reopenModel"]>> {
+    // Answered at once when nothing can have left, so a reopen that keeps
+    // its model sends its open as soon as it would have without routing.
+    if (!this.moves.mayRouteAgain(taskId)) return undefined;
+    return this.moves.routeAgainIfLeft(taskId, { machine, attach }).then((routed) => {
+      if (!routed || routed === "wait" || routed === "stale") return routed;
+      return {
+        model: routed.model,
+        ...(routed.binding ? { accountId: routed.binding } : {}),
+        thinking: { level: routed.thinkingLevel, ...(routed.quick ? { quick: true } : {}) },
+        commit: routed.commit,
+        passOver: routed.passOver,
+      };
+    });
+  }
+
+  /**
+   * A task's conversation did not open again on its computer in the
+   * session this crewmate holds (`PlacedHost.letGo`): the crewmate lets it
+   * go, so its next turn opens a new one by the ordinary resume, once a
+   * turn it was in has ended.
+   */
+  placedLetGo(taskId: string, held?: TaskRuntime, now?: boolean): void {
+    const task = this.tasks.get(taskId);
+    if (!task || task.turn.closing || (held && task !== held)) return;
+    // A turn still out ends first through its own end - taken, failed or
+    // given back to the lane - so none of its rows is lost with the session;
+    // it goes as that turn ends, before words given back start another on it.
+    // Asked to go only now, it stays held instead.
+    if (task.turn.busy) {
+      if (!now) this.turns.atTurnOver(task, () => this.placedLetGo(taskId, task));
+      return;
+    }
+    this.sessions.releaseSession(task);
+    this.tasks.delete(taskId);
+    this.facts.broadcastCrewCounts();
+    // Words its turn gave back unspent go to the conversation the task opens next.
+    void this.watch.sweepTaskLane(taskId, this.now());
   }
 
   /**

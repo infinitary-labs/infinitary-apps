@@ -626,6 +626,7 @@
 "crewmateProgress" = "Fortschritt";
 "crewmateQueued" = "eingereiht";
 "crewmateReport" = "Bericht";
+"crewmateRoutedAgain" = "%1$@ ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt %2$@";
 "crewmateRunning" = "läuft …";
 "crewmateSendsTo" = "an das Crewmitglied";
 "crewmateShowCard" = "Karte anzeigen";
@@ -636,6 +637,8 @@
 "crewmateStopping" = "Wird gestoppt …";
 "crewmateUnreadable" = "Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.";
 "crewmateWaiting" = "Wartet auf dich";
+"crewmateWaitsForModel" = "%1$@ ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann";
+"crewmateWaitsForUpdate" = "%2$@ ist in den Einstellungen auf keiner Stufe mehr, und %1$@ braucht ein Update, bevor diese Aufgabe dort zu einem anderen Modell wechseln kann, deshalb wartet sie bis dahin";
 "crewmateWorking" = "Arbeitet …";
 "devicesCarriedOn" = "Die Aufgaben eines Computers außer Reichweite laufen auf %1$@ weiter, und dieser Eintrag ist von deiner Liste verschwunden.";
 "devicesCarryNotRemoved" = "Die Aufgaben von %1$@ wurden verschoben, aber der Eintrag konnte nicht von deiner Liste entfernt werden: %2$@";

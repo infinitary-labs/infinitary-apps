@@ -36,6 +36,7 @@ import {
   reportHeadline,
 } from "./recordActivity";
 import { type ReportEntry, reportEntryOf } from "./reportEntry";
+import { savedSaid } from "./taskFeed";
 import type { TaskService } from "./taskService";
 
 /**
@@ -613,7 +614,8 @@ function eventEntry(taskId: string, event: TaskEvent, words?: string): Placed {
       taskId,
       at: event.at,
       actor: { kind: event.actor },
-      summary: oneLine(summary),
+      // A note saved as a fact reads whole, so the window can word it in its own language.
+      summary: savedSaid(event.data?.said) ? summary.trim() : oneLine(summary),
       content: {
         kind: EVENT_CONTENT[event.kind],
         version: 1,

@@ -43,6 +43,7 @@
   "crewmateProgress": "Progresso",
   "crewmateQueued": "na fila",
   "crewmateReport": "Relatório",
+  "crewmateRoutedAgain": "{left} não está mais em nenhum nível dos Ajustes, então esta tarefa agora usa {model}",
   "crewmateRunning": "executando…",
   "crewmateSendsTo": "ao tripulante",
   "crewmateShowCard": "Mostrar o cartão",
@@ -53,5 +54,7 @@
   "crewmateStopping": "Parando…",
   "crewmateUnreadable": "Não foi possível ler a sessão deste tripulante.",
   "crewmateWaiting": "Aguardando você",
+  "crewmateWaitsForModel": "{left} não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa",
+  "crewmateWaitsForUpdate": "{left} não está mais em nenhum nível dos Ajustes e {computer} precisa de uma atualização antes que esta tarefa possa passar para outro modelo lá, então ela espera até lá",
   "crewmateWorking": "Trabalhando…"
 }

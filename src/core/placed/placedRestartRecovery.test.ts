@@ -1,16 +1,33 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fenced } from "@shared/outsideData";
+import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
+import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
+import type { PlacedHome } from "../../../tests/helpers/placedHome";
+import { row, snapshot } from "../../../tests/helpers/placedWorkRecord";
 import {
   api,
+  CODEX_MEDIUM_STARTER,
+  computerAccount,
   gate,
+  MODEL,
   model,
+  OTHER_MODEL,
+  PROVIDER,
   placedWorldHooks,
   type Step,
   said,
+  THIS_MAC_ON_NEWER_CODEX,
   world,
 } from "../../../tests/helpers/placedWorld";
+import { DeviceOutOfReachError } from "../connection/connection";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
-import { crewmatePlacedDir } from "../paths";
+import { renderWake } from "../orchestrator/wakes";
+import { crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { PlacedLedger } from "./placedLedger";
+import { PlacedSession } from "./placedSession";
 
 // Captain's lost-turn regression: after a work computer quits mid-turn,
 // steers, interrupts and a backlog restart must reach its crewmate again.
@@ -24,6 +41,43 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 placedWorldHooks({ now: Date.now, reset: () => {} });
+
+/** That computer signed in to two Codex accounts, one serving the starter and one GPT-6 Sol. */
+const SOL = { provider: "openai-codex", id: "gpt-6-sol" };
+const STARTER = { provider: "openai-codex", id: CODEX_MEDIUM_STARTER };
+async function codexThere(changes?: string[], allowance?: () => QuotaSnapshotView | null) {
+  const runs = await piStubRuntime(api.url, STARTER, [SOL.id]);
+  return world(undefined, {
+    ...(changes ? { changes } : {}),
+    ...(allowance ? { allowance } : {}),
+    routing: THIS_MAC_ON_NEWER_CODEX,
+    signedInTo: [
+      computerAccount("acct_codex_other", "openai-codex"),
+      computerAccount("acct_codex_sol", "openai-codex"),
+    ],
+    served: [
+      { accountId: "acct_codex_other", models: [{ ...STARTER, name: STARTER.id }] },
+      { accountId: "acct_codex_sol", models: [{ ...SOL, name: "GPT-6 Sol" }] },
+    ],
+    runtime: runs,
+  });
+}
+
+/** The captain takes the starter off its level and puts GPT-6 Sol there. */
+function starterLeft(home: PlacedHome): void {
+  const slots = home.slots;
+  if (!slots) throw new Error("no levels");
+  slots.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", false);
+  slots.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", true);
+}
+
+/** The task's notes that it routed again because its model left every level. */
+function rerouted(home: PlacedHome, taskId: string): string[] {
+  return home.tasks
+    .timeline(taskId)
+    .filter((entry) => entry.kind === "note" && entry.data && "rerouted" in entry.data)
+    .map((entry) => entry.text);
+}
 
 describe("recovery after a work computer quits mid-turn", () => {
   it.each(["steer", "interrupt", "backlog restart"] as const)(
@@ -110,3 +164,1473 @@ describe("recovery after a work computer quits mid-turn", () => {
     },
   );
 });
+
+// A model that left every level (docs/helper.md, "A model that left every
+// level"): the conversation a computer's restart opens again opens on the
+// model the task routed to, and the move is recorded only once that
+// computer answers it open on that model; a wait opens nothing there.
+describe("reopening after a work computer restarts, when the task's model left every level", () => {
+  it("records the move only once that computer answers the conversation open on the new model", async () => {
+    const at = await world();
+    const taskId = "t-rerouted";
+    model([{ text: "Started on it." }, { text: "On the other model." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const commit = vi.fn(async () => "committed" as const);
+    const asked = vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit,
+      passOver: vi.fn(),
+    });
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => commit.mock.calls.length).toBe(1);
+    // A conversation opened anew, not one reattached to.
+    expect(asked).toHaveBeenCalledWith(taskId, expect.any(String), false);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => api.requests.length).toBeGreaterThan(requests);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  // INF-5438 round 11 finding 4: the reopen after that computer restarts asks
+  // it to say when an open left nothing new there; a routed pick it could not
+  // open there is passed over - never committed - before the session is let
+  // go, so the task's next open routes among the rest.
+  it("passes a routed pick over when that computer answers its reopen opened nothing", async () => {
+    const at = await world();
+    const taskId = "t-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const commit = vi.fn(async () => "committed" as const);
+    const passOver = vi.fn();
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit,
+      passOver,
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    at.refuseOpens(true);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => passOver.mock.calls.length).toBe(1);
+    await expect.poll(() => letGo.mock.calls.length).toBeGreaterThan(0);
+    expect(commit).not.toHaveBeenCalled();
+    expect(at.bound.at(-1)?.provider).toBe(PROVIDER);
+  });
+
+  // INF-5438 round 12 finding 4: a notOpened answer that arrives after this
+  // Mac let the session go changes nothing in the next selection.
+  it("passes nothing over for a reopen's notOpened answer that arrives after its session went", async () => {
+    const at = await world();
+    const taskId = "t-late-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const passOver = vi.fn();
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit: vi.fn(async () => "committed" as const),
+      passOver,
+    });
+    const ask = home.devices.ask.bind(home.devices);
+    const answered = vi.fn();
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (
+        channel === "inf:session:open" &&
+        (args as [{ spec: { reattach?: boolean } }])[0].spec.reattach !== true
+      ) {
+        // This Mac let the session go while that computer answered.
+        home.supervisor.placedLetGo(taskId);
+        answered();
+      }
+      return answer;
+    });
+    at.refuseOpens(true);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => answered.mock.calls.length).toBeGreaterThan(0);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(passOver).not.toHaveBeenCalled();
+  });
+
+  // INF-5438 round 11 finding 1: a context restart asks that computer for a
+  // fresh conversation, and it replaces the idle one it holds - opened with
+  // the same model and contract - instead of answering it.
+  it("opens a context restart's new conversation there in place of the one it holds", async () => {
+    const at = await world();
+    const taskId = "t-fresh";
+    model([{ text: "Started on it." }, { text: "In the new conversation." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile as string;
+    home.supervisor.placedLetGo(taskId);
+
+    await home.supervisor.sessions.resumeTask(taskId, undefined, { from, changed: "context" });
+    const now = home.tasks.get(taskId)?.sessionFile;
+    expect(now).toBeTruthy();
+    expect(now).not.toBe(from);
+  });
+
+  // INF-5438 round 11 finding 2: an older computer, which does not know a
+  // fresh open, answers a context restart with the conversation it still
+  // holds; the home confirms the conversation is another before any branch
+  // accepts it, so that one takes no words and the restart stays on its lane.
+  it("takes no words from a context restart an older computer answers on the conversation it replaces", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "fresh-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-fresh-older";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile;
+    expect(from).toBeTruthy();
+    home.supervisor.placedLetGo(taskId);
+    const requests = api.requests.length;
+
+    await expect(
+      home.supervisor.sessions.resumeTask(taskId, undefined, {
+        from: from as string,
+        changed: "context",
+      }),
+    ).rejects.toThrow("opened on another model or conversation");
+    expect(api.requests.length).toBe(requests);
+    // The restart is still on its lane, so the next open starts fresh.
+    expect(
+      home.inbox.allFor(taskId).some((row) => row.facts?.kind === "conversation-restart"),
+    ).toBe(true);
+    // A rerouted one is confirmed the same way, before its move commits.
+    const commit = vi.fn(async () => "committed" as const);
+    vi.spyOn(home.supervisor.moves, "routeAgainIfLeft").mockResolvedValueOnce({
+      model: { provider: PROVIDER, id: MODEL },
+      thinkingLevel: "low",
+      providerName: "Stub",
+      commit,
+      passOver: vi.fn(),
+    });
+    await expect(
+      home.supervisor.sessions.resumeTask(taskId, undefined, {
+        from: from as string,
+        changed: "context",
+      }),
+    ).rejects.toThrow("opened on another model or conversation");
+    expect(commit).not.toHaveBeenCalled();
+    expect(api.requests.length).toBe(requests);
+  });
+
+  // INF-5438 round 7 finding 12: the real router, the home's read of that
+  // computer's subscriptions and the computer's own sign-ins, joined. The
+  // task's model leaves every level while it idles; after that computer
+  // restarts, the next words reach the model a level holds, on an account
+  // there that serves it, and the move records that account.
+  it("sends the next words to the model a level holds, on an account there that serves it", async () => {
+    const at = await codexThere();
+    const taskId = "t-left";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+    expect(at.bound.map((binding) => binding.accountId)).toEqual(["acct_codex_other"]);
+    starterLeft(home);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => home.decisions.latestRouting(taskId)?.model).toBe(SOL.id);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain("Carry on.");
+    // Bound there to the one account that serves it, and recorded with it.
+    expect(at.bound.map((binding) => binding.accountId)).toEqual([
+      "acct_codex_other",
+      "acct_codex_sol",
+    ]);
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed).toMatchObject({ provider: SOL.provider, model: SOL.id });
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    // Said once, on the task's record.
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 11 finding 5, joined: that computer reads the starter's
+  // account as spent and has no reading yet for the account bound to serve
+  // GPT-6 Sol. The real router ranks GPT-6 Sol on its bound account alone, so
+  // its allowance stays unknown and the next words reach it, never dropped on
+  // the spent sibling's reading.
+  it("sends the next words to a model whose bound account there has no reading while a sibling's is spent", async () => {
+    let reading: QuotaSnapshotView | null = null;
+    const at = await codexThere(undefined, () => reading);
+    const taskId = "t-unread";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+    starterLeft(home);
+    // Only the starter's account has a reading there, and it is spent.
+    reading = snapshot(Date.now(), [row("codex", "acct_codex_other", 0)]);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain("Carry on.");
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed).toMatchObject({ provider: SOL.provider, model: SOL.id });
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 12 findings 2 and 5, joined: a turn there ends at the
+  // context limit and the restart's fresh open there fails on the model it
+  // keeps. The failure is said once; after this Mac restarts, a lane sweep
+  // that meets the same failure gives the restart back with its attempt
+  // unspent; the next sweep opens a new conversation and delivers it once.
+  it("keeps a context-limit restart whose fresh open there fails, and opens it fresh on a later sweep", async () => {
+    const at = await world();
+    const taskId = "t-fresh-fails";
+    model([
+      { text: "Started on it." },
+      { refuse: "prompt is too long: 250000 tokens > 200000 maximum" },
+      { text: "In the new conversation." },
+    ]);
+    await at.start(taskId);
+    let home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile;
+    let failing = true;
+    let refused = 0;
+    const failFresh = (target: PlacedHome) => {
+      const ask = target.devices.ask.bind(target.devices);
+      vi.spyOn(target.devices, "ask").mockImplementation(async (device, channel, args) => {
+        const [open] = args as [{ spec?: { fresh?: boolean; notOpened?: boolean } }];
+        // That computer answers that its open left nothing new there.
+        if (channel === "inf:session:open" && open.spec?.fresh === true && failing) {
+          expect(open.spec.notOpened).toBe(true);
+          refused += 1;
+          return { notOpened: "This model is not served here right now." };
+        }
+        return ask(device, channel, args);
+      });
+    };
+    failFresh(home);
+    await home.supervisor.steer.steerCrewmate(taskId, "Read the next part.", "captain");
+    await expect.poll(() => refused).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const couldNotOpen = () =>
+      home.tasks
+        .timeline(taskId)
+        .filter((entry) => entry.text?.includes("could not open") === true);
+    await expect.poll(() => couldNotOpen().length).toBe(1);
+    const restart = () =>
+      home.inbox.allFor(taskId).filter((row) => row.facts?.kind === "conversation-restart");
+    expect(restart()).toHaveLength(1);
+
+    await at.restartHome();
+    home = at.home();
+    failFresh(home);
+    await at.inReach(taskId);
+    const requests = api.requests.length;
+    const before = refused;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(refused).toBeGreaterThan(before);
+    expect(restart()).toMatchObject([{ deliveredAt: null, attempts: 0 }]);
+    expect(api.requests.length).toBe(requests);
+
+    // The saved restart row itself, followed by its id through claim and acknowledgement.
+    const [saved] = restart();
+    if (!saved) throw new Error("The restart is not on the lane.");
+    const claimed: number[] = [];
+    const handled: number[] = [];
+    const markDelivered = home.inbox.markDelivered.bind(home.inbox);
+    vi.spyOn(home.inbox, "markDelivered").mockImplementation((ids) => {
+      claimed.push(...ids);
+      markDelivered(ids);
+    });
+    const ack = home.inbox.ack.bind(home.inbox);
+    vi.spyOn(home.inbox, "ack").mockImplementation((ids) => {
+      handled.push(...ids);
+      ack(ids);
+    });
+
+    failing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("In the new conversation.");
+    // Claimed once, then acknowledged once its turn ended: the row is gone.
+    await expect.poll(() => handled.filter((id) => id === saved.id)).toHaveLength(1);
+    expect(claimed.filter((id) => id === saved.id)).toHaveLength(1);
+    expect(home.inbox.get(saved.id)).toBeUndefined();
+    const sent = api.requests.slice(requests);
+    expect(sent).toHaveLength(1);
+    // The new conversation carries the saved restart guidance exactly once.
+    const guidance = JSON.stringify(renderWake(saved)).slice(1, -1);
+    expect(guidance.length).toBeGreaterThan(0);
+    expect(said(sent[0]).split(guidance)).toHaveLength(2);
+    // A new conversation: the filled one's words are not carried.
+    expect(said(sent[0])).not.toContain("Started on it.");
+    expect(home.tasks.get(taskId)?.sessionFile).not.toBe(from);
+    expect(couldNotOpen()).toHaveLength(1);
+  });
+
+  // INF-5438 round 7 findings 6 and 12: this Mac reattaches to the live
+  // conversation its computer holds on another model than its newest routing
+  // names, so no open is confirmed; when that computer restarts, nothing
+  // reopens on the model it held, and the next words open a conversation on
+  // the model a level holds.
+  it("reopens nothing on a model it adopted live once that computer restarts", async () => {
+    const at = await codexThere();
+    const taskId = "t-adopted";
+    model([{ text: "Started on it." }, { text: "Still live." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // Only this Mac restarts; meanwhile the newest routing names GPT-6 Sol.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    home.decisions.recordRouting({
+      taskId,
+      provider: SOL.provider,
+      model: SOL.id,
+      bucket: "medium",
+      rule: "R1",
+      served: "medium",
+      reasons: ["routed again"],
+      facts: { kind: "routing-candidates", candidates: [], accountId: "acct_codex_sol" },
+    });
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still live.");
+    // The live conversation kept its model.
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And the header.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([SOL.id]);
+  });
+
+  // INF-5438 round 7 findings 2, 4, 5 and 12: GPT-6 Sol leaves its level
+  // while that computer opens the conversation on it, and the starter is put
+  // back. The open is refused: no move, routing row or note is written for
+  // it, and the next words reach the starter, which a level holds again.
+  it("writes nothing for an open refused because its model left the level meanwhile", async () => {
+    const at = await codexThere();
+    const taskId = "t-refused";
+    model([{ text: "Started on it." }, { text: "Back on the starter." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(home);
+    const rows = home.decisions.routing({ taskIds: [taskId] }).length;
+    const opened: string[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:open" && open.spec?.reattach !== true && open.spec?.model) {
+        opened.push(open.spec.model.id);
+        // The captain puts the starter back while GPT-6 Sol was opening.
+        if (open.spec.model.id === SOL.id) {
+          const slots = home.slots;
+          slots?.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", false);
+          slots?.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", true);
+        }
+      }
+      return answer;
+    });
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => opened).toContain(SOL.id);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Back on the starter.");
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([STARTER.id]);
+    // Nothing durable says it moved to GPT-6 Sol.
+    expect(rerouted(home, taskId)).toEqual([]);
+    expect(home.decisions.routing({ taskIds: [taskId] }).slice(rows)).toEqual([]);
+    expect(home.tasks.get(taskId)?.model ?? null).not.toBe(`${SOL.provider}/${SOL.id}`);
+  });
+
+  // INF-5438 round 8 findings 1 and 13: the real router routes a resumed
+  // task off the starter after both computers restart; while the move to
+  // GPT-6 Sol waits to commit, a second order arrives. Neither reaches any
+  // model until the move commits, both then reach GPT-6 Sol, bound to the
+  // account that serves it, and the move is recorded and said once.
+  it("sends no order to a reopened conversation before its move commits", async () => {
+    const at = await codexThere();
+    const taskId = "t-before-commit";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }, { text: "Header done." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const committing = vi.fn();
+    const moves = home.supervisor.moves;
+    const route = moves.routeAgainIfLeft.bind(moves);
+    vi.spyOn(moves, "routeAgainIfLeft").mockImplementation(async (...asked) => {
+      const routed = await route(...asked);
+      if (typeof routed !== "object") return routed;
+      return {
+        ...routed,
+        commit: async (opened) => {
+          committing();
+          await gate;
+          return routed.commit(opened);
+        },
+      };
+    });
+    const requests = api.requests.length;
+
+    const first = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => committing.mock.calls.length).toBe(1);
+    // Neither waits on the move: each order takes its place behind it.
+    const second = home.supervisor.steer.steerCrewmate(taskId, "And the header.", "captain");
+    const swept = home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    try {
+      await expect
+        .poll(() =>
+          home.inbox
+            .allFor(taskId)
+            .some((order) => order.text === "And the header." && order.deliveredAt === null),
+        )
+        .toBe(true);
+      // The conversation opened there, but nothing reached a model yet.
+      expect(api.requests.length).toBe(requests);
+    } finally {
+      release();
+    }
+    await Promise.all([first, second, swept]);
+    await expect.poll(() => said(api.requests.at(-1))).toContain("And the header.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual(sent.map(() => SOL.id));
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(at.bound.at(-1)?.accountId).toBe("acct_codex_sol");
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 8 finding 5: a conversation that computer opened and this
+  // Mac refused stays refused after this Mac restarts: the next open there
+  // asks for a new conversation, never reattaching to the refused one, and
+  // the next words reach the model a level holds.
+  it("never reattaches to a refused conversation after this Mac restarts", async () => {
+    const at = await codexThere();
+    const taskId = "t-refused-restart";
+    model([{ text: "Started on it." }, { text: "Back on the starter." }]);
+    await at.start(taskId);
+    const first = at.home();
+    await expect.poll(() => first.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(first);
+    const ask = first.devices.ask.bind(first.devices);
+    let solOpened = false;
+    vi.spyOn(first.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      const answer = await ask(device, channel, args);
+      // The captain puts the starter back while GPT-6 Sol was opening.
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id) {
+        first.slots?.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", false);
+        first.slots?.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", true);
+        solOpened = true;
+      }
+      return answer;
+    });
+    // The check of the conversation opened on GPT-6 Sol refuses it: a
+    // refusal after that open, not the mark set before it was asked.
+    let refusedAfterOpen = 0;
+    const refuseOpened = first.supervisor.moves.refuseOpened.bind(first.supervisor.moves);
+    vi.spyOn(first.supervisor.moves, "refuseOpened").mockImplementation((task, machine) => {
+      if (solOpened) refusedAfterOpen += 1;
+      refuseOpened(task, machine);
+    });
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => refusedAfterOpen).toBeGreaterThan(0);
+    expect(first.supervisor.moves.refusedThere(taskId)).toBe(true);
+
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(true);
+    const opens: boolean[] = [];
+    const again = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
+      if (channel === "inf:session:open") {
+        const [open] = args as [{ spec: { reattach?: boolean } }];
+        opens.push(open.spec.reattach === true);
+      }
+      return again(device, channel, args);
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Back on the starter.");
+    expect(opens).not.toContain(true);
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([STARTER.id]);
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(false);
+  });
+
+  // INF-5438 round 9 findings 1 and 9: this Mac quits while the move to
+  // GPT-6 Sol waits to commit, after that computer opened the conversation.
+  // The open was marked refused before it was asked, so the next open there
+  // never reattaches to it unchecked: it opens anew, is accepted, and only
+  // then takes words.
+  it("never reattaches to a conversation opened before this Mac quit, until an open there is accepted", async () => {
+    const at = await codexThere();
+    const taskId = "t-quit-before-accept";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const first = at.home();
+    starterLeft(first);
+    const committing = vi.fn();
+    const moves = first.supervisor.moves;
+    const route = moves.routeAgainIfLeft.bind(moves);
+    // The first move's check never finishes before this Mac quits.
+    vi.spyOn(moves, "routeAgainIfLeft").mockImplementation(async (...asked) => {
+      const routed = await route(...asked);
+      if (typeof routed !== "object") return routed;
+      return {
+        ...routed,
+        commit: async () => {
+          committing();
+          return new Promise<never>(() => {});
+        },
+      };
+    });
+    const requests = api.requests.length;
+    void first.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => committing.mock.calls.length).toBe(1);
+    expect(first.supervisor.moves.refusedThere(taskId)).toBe(true);
+
+    // Every open the next start of this Mac asks there, from before it listens.
+    const opens: boolean[] = [];
+    let refusedAtStart: boolean | undefined;
+    await at.restartHome(undefined, (next) => {
+      refusedAtStart = next.supervisor.moves.refusedThere(taskId);
+      const ask = next.devices.ask.bind(next.devices);
+      vi.spyOn(next.devices, "ask").mockImplementation((device, channel, args) => {
+        if (channel === "inf:session:open") {
+          const [open] = args as [{ spec: { reattach?: boolean } }];
+          opens.push(open.spec.reattach === true);
+        }
+        return ask(device, channel, args);
+      });
+    });
+    expect(refusedAtStart).toBe(true);
+    await at.inReach(taskId);
+    const home = at.home();
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(opens.length).toBeGreaterThan(0);
+    expect(opens).not.toContain(true);
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(false);
+  });
+
+  // INF-5438 round 9 findings 4, 7 and 9: the move's check cannot read what
+  // that computer serves now, because it goes out of reach as it is asked.
+  // The conversation takes no words, the order goes back with no attempt
+  // spent, and the next pass opens again and delivers it once.
+  it("gives an order back unspent when the check of a reopened conversation cannot finish", async () => {
+    const at = await codexThere();
+    const taskId = "t-unchecked";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let failing = true;
+    let unread = 0;
+    let armed = false;
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      // Asked what it serves once the conversation opened, it does not answer.
+      if (channel === "inf:sign-ins:list" && armed) {
+        armed = false;
+        unread += 1;
+        throw new DeviceOutOfReachError();
+      }
+      const answer = await ask(device, channel, args);
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id && failing)
+        armed = open.spec.reattach !== true;
+      return answer;
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => unread).toBeGreaterThanOrEqual(1);
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(unread).toBeGreaterThanOrEqual(2);
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(api.requests.length).toBe(requests);
+
+    failing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 10 finding 3: that computer opens the conversation, but
+  // its answer is lost on the way. Nothing was sent: the order goes back
+  // with no attempt spent, what it may hold there stays refused, and the
+  // next pass opens it, accepted, and delivers the words once.
+  it("gives an order back unspent when the answer to its open is lost", async () => {
+    const at = await codexThere();
+    const taskId = "t-lost-answer";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let losing = true;
+    let lost = 0;
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id && losing) {
+        if (open.spec.reattach !== true) {
+          lost += 1;
+          throw new DeviceOutOfReachError();
+        }
+      }
+      return answer;
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => lost).toBeGreaterThanOrEqual(1);
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(lost).toBeGreaterThanOrEqual(2);
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(true);
+    expect(home.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(api.requests.length).toBe(requests);
+
+    losing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 10 finding 4: only that computer's typed answer that the
+  // open left nothing there passes GPT-6 Sol on its one account over, so the
+  // task waits, said once; nothing reached the model.
+  it("passes a model over only on that computer's answer that its open left nothing there", async () => {
+    const at = await codexThere();
+    const taskId = "t-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    const notOpened: boolean[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [
+        { spec?: { reattach?: boolean; notOpened?: boolean; model?: { id: string } } },
+      ];
+      if (
+        channel === "inf:session:open" &&
+        open.spec?.model?.id === SOL.id &&
+        !open.spec.reattach
+      ) {
+        notOpened.push(open.spec.notOpened === true);
+        // That computer's answer: no sign-in there could open it.
+        return { notOpened: "No sign-in here could open GPT-6 Sol." };
+      }
+      return ask(device, channel, args);
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.supervisor.moves.waitsForModel(taskId)).toBe(true);
+    // It asked for that answer, once, and waits rather than open GPT-6 Sol again.
+    expect(notOpened).toEqual([true]);
+    expect(api.requests.length).toBe(requests);
+    expect(rerouted(home, taskId)).toEqual([]);
+  });
+
+  // INF-5438 round 7 findings 8 and 12: a reopen whose open is not accepted
+  // keeps orders from the conversation it opened; the next order after it
+  // waits for the conversation the next turn opens, and reaches the model once.
+  it("sends an order after a reopen that did not open only to the conversation opened next", async () => {
+    const at = await world();
+    const taskId = "t-after";
+    model([{ text: "Started." }, { text: "Carrying on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValueOnce({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "low" },
+      commit: async () => "again" as const,
+      passOver: vi.fn(),
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+
+    await at.restartComputer();
+    await expect.poll(() => letGo.mock.calls.length).toBe(1);
+    expect(api.requests.length).toBe(requests);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carrying on.");
+    expect(
+      api.requests.slice(requests).map((request) => said(request).includes("Carry on.")),
+    ).toEqual([true]);
+    expect(home.inbox.allFor(taskId)).toEqual([]);
+  });
+
+  it("opens nothing there and lets the task go when no model can take it", async () => {
+    const at = await world();
+    const taskId = "t-waiting";
+    model([{ text: "Started." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue("wait");
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+
+    await at.restartComputer();
+    await expect.poll(() => letGo.mock.calls.length).toBe(1);
+    expect(letGo).toHaveBeenCalledWith(taskId);
+    expect(api.requests.length).toBe(requests);
+  });
+
+  // INF-5438 finding 7: a conversation let go of while its turn is still out
+  // there lets that turn end through its own end first, so its words are
+  // answered once and none is lost with the session.
+  it("lets a task go only once the turn it is in has ended", async () => {
+    const at = await world();
+    const taskId = "t-cut";
+    const answer = gate();
+    model([{ held: answer.held, text: "The footer is fixed." }]);
+    try {
+      await at.start(taskId);
+      await expect.poll(() => api.openRequests()).toBe(1);
+      const home = at.home();
+      const released = vi.spyOn(home.supervisor.sessions, "releaseSession");
+
+      home.supervisor.placedLetGo(taskId);
+      expect(released).not.toHaveBeenCalled();
+      answer.open();
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("The footer is fixed.");
+      await expect.poll(() => released.mock.calls.length).toBe(1);
+      // The brief its turn served is answered, not left on the lane.
+      expect(home.inbox.allFor(taskId)).toEqual([]);
+    } finally {
+      answer.open();
+    }
+  });
+
+  // INF-5438 finding 1: a resume asks the computer only to reattach first,
+  // and routes only once it answers that no conversation is held there, so
+  // nothing new opens on a model that left every level.
+  it("routes a resumed task only after its computer answers that it holds no conversation", async () => {
+    const at = await world();
+    const taskId = "t-resumed";
+    model([{ text: "Started on it." }, { text: "On the other model." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    const opens: { reattach: boolean; model?: string }[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
+      if (channel === "inf:session:open") {
+        const [open] = args as [{ spec: { reattach?: boolean; model?: { id: string } } }];
+        opens.push({
+          reattach: open.spec.reattach === true,
+          ...(open.spec.model ? { model: open.spec.model.id } : {}),
+        });
+      }
+      return ask(device, channel, args);
+    });
+    const commit = vi.fn(async () => "committed" as const);
+    const routed = vi
+      .spyOn(home.supervisor.moves, "routeAgainIfLeft")
+      .mockImplementation(async () => {
+        // Asked only once the computer said it holds nothing to reattach to.
+        expect(opens).toEqual([{ reattach: true }]);
+        return {
+          model: { provider: PROVIDER, id: OTHER_MODEL },
+          thinkingLevel: "low",
+          providerName: "Stub",
+          commit,
+          passOver: () => {},
+        };
+      });
+
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On the other model.");
+    expect(routed).toHaveBeenCalledTimes(1);
+    // The one conversation opened anew opened on the model routing chose.
+    expect(opens).toEqual([{ reattach: true }, { reattach: false, model: OTHER_MODEL }]);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  it("reattaches a resumed task to the conversation its computer holds, routing nothing", async () => {
+    const at = await world();
+    const taskId = "t-held";
+    model([{ text: "Started on it." }, { text: "Still on the first model." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // Only this Mac restarts: the computer still holds the idle conversation.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    const routed = vi.spyOn(home.supervisor.moves, "routeAgainIfLeft").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinkingLevel: "low",
+      providerName: "Stub",
+      commit: async () => "committed" as const,
+      passOver: () => {},
+    });
+
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still on the first model.");
+    expect(routed).not.toHaveBeenCalled();
+    expect(api.requests.at(-1)?.body.model).toBe(MODEL);
+  });
+
+  // INF-5438 round 6 finding 6: words sent while a reopen routes wait for
+  // that open; one that does not open sends them nowhere, and they reach the
+  // model once, in the conversation the next turn opens after the let-go.
+  it("holds words sent while a reopen routes, and sends them only once a conversation opens", async () => {
+    const at = await world();
+    const taskId = "t-unready";
+    model([{ text: "Started." }, { text: "Carrying on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const routing = gate();
+    const asked = vi.spyOn(home.supervisor, "reopenModel").mockImplementation(async () => {
+      await routing.held;
+      // It opened, but routing changed meanwhile and picks again.
+      return {
+        model: { provider: PROVIDER, id: OTHER_MODEL },
+        thinking: { level: "low" },
+        commit: async () => "again" as const,
+        passOver: vi.fn(),
+      };
+    });
+    const requests = api.requests.length;
+    const atLetGo: number[] = [];
+    const letGo = home.supervisor.placedLetGo.bind(home.supervisor);
+    vi.spyOn(home.supervisor, "placedLetGo").mockImplementation((id) => {
+      atLetGo.push(api.requests.length);
+      return letGo(id);
+    });
+    try {
+      await at.restartComputer();
+      await expect.poll(() => asked.mock.calls.length).toBe(1);
+      await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+      routing.open();
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carrying on.");
+      // Nothing reached the model before the conversation that did not open was let go.
+      expect(atLetGo[0]).toBe(requests);
+      // One request carried the words: the one the new conversation answered.
+      expect(
+        api.requests.slice(requests).map((request) => said(request).includes("Carry on.")),
+      ).toEqual([true]);
+      expect(home.inbox.allFor(taskId)).toEqual([]);
+    } finally {
+      routing.open();
+    }
+  });
+
+  // INF-5438 round 6 finding 4: the move records the account that computer
+  // says it bound, never the one the home guessed.
+  it("hands the move what that computer answers it opened on, never the account the home guessed", async () => {
+    const at = await world();
+    const taskId = "t-bound";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const opened: { model?: unknown; accountId?: unknown }[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:open") {
+        const state = (answer as { state?: { model?: unknown; accountId?: unknown } }).state;
+        if (state) opened.push({ model: state.model, accountId: state.accountId });
+      }
+      return answer;
+    });
+    const commit = vi.fn(async () => "committed" as const);
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      accountId: "a-guess-the-home-made",
+      thinking: { level: "low" },
+      commit,
+      passOver: vi.fn(),
+    });
+
+    await at.restartComputer();
+    await expect.poll(() => commit.mock.calls.length).toBe(1);
+    const there = opened.at(-1);
+    expect(there?.accountId).not.toBe("a-guess-the-home-made");
+    expect(commit).toHaveBeenCalledWith({
+      model: there?.model,
+      ...(there?.accountId ? { account: there.accountId } : {}),
+    });
+  });
+
+  // INF-5438 round 14 findings 1, 2 and 4: an older computer opens a
+  // conversation again by itself after it removes words from outside, so
+  // this Mac lets its own go first and the next words open one that is
+  // checked as new; its record and this Mac's copy both lose the words.
+  it("lets its conversation go before an older computer's cleanup, so both copies lose the words and the next ones open it checked", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "It was answered." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    const asked = recordAsks(home);
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    // This Mac let its conversation go before it asked, and asked no hold it cannot read.
+    expect(letGo).toHaveBeenCalledWith(taskId, undefined, true);
+    const cleanup = asked.find((ask) => ask.channel === "inf:session:delete-outside");
+    expect(cleanup?.args).not.toHaveProperty("0.holdReopen");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    expect(filesHolding(here, DUE_NOTE)).not.toEqual([]);
+
+    // The next words open a conversation there, checked as new, which reads the note.
+    await home.supervisor.steer.steerCrewmate(taskId, "What did it say?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("It was answered.");
+    expect(said(api.requests.at(-1))).toContain(DUE_NOTE);
+    expect(said(api.requests.at(-1))).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 14 findings 2 and 4: an open there still unanswered when a
+  // cleanup comes due could give this Mac a conversation the cleanup lets go,
+  // so the cleanup waits for it; the next pass lets go of the conversation
+  // this Mac then holds and opens it again routed, so after the captain took
+  // the starter off its level the next words reach GPT-6 Sol, without the words.
+  it("waits for an open there before a cleanup, then opens the conversation it let go routed", async () => {
+    const at = await codexThere();
+    const taskId = "t-clean";
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { text: "Carried on." },
+      { text: "On GPT-6 Sol." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    // The task's next open there waits for its answer.
+    const answer = gate();
+    let opens = 0;
+    const asked = recordAsks(home, async (channel) => {
+      if (channel === "inf:session:open" && opens++ === 0) await answer.held;
+    });
+    home.supervisor.placedLetGo(taskId);
+    // The steer opens the conversation there again, and waits for it.
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => opens).toBe(1);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    expect(asked.map((entry) => entry.channel)).not.toContain("inf:session:delete-outside");
+    answer.open();
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+
+    starterLeft(home);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    await expect.poll(() => home.decisions.latestRouting(taskId)?.model).toBe(SOL.id);
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain(DUE_NOTE);
+    expect(said(api.requests.at(-1))).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 15 findings 1 and 3: words sent while a cleanup's answer
+  // is out wait for it, so none reaches the conversation it lets go; it opens
+  // again routed, and the words reach GPT-6 Sol once, without the words removed.
+  it("holds words sent during a cleanup until the conversation it lets go opens again routed", async () => {
+    const at = await codexThere();
+    const taskId = "t-during";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    const answer = gate();
+    const asked = recordAsks(home, async (channel) => {
+      if (channel === "inf:session:delete-outside") await answer.held;
+    });
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    const cleaning = home.placed.deleteOutside(record, DUE);
+    await expect
+      .poll(() => asked.map((ask) => ask.channel))
+      .toContain("inf:session:delete-outside");
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    // Its turn starts here, and its words wait for the cleanup's answer.
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("running");
+    // While the cleanup's answer is out, nothing opens there and no words go.
+    expect(asked.map((ask) => ask.channel)).not.toContain("inf:session:open");
+    expect(api.requests.length).toBe(requests);
+
+    answer.open();
+    expect(await cleaning).toBe("changed");
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).toContain(DUE_NOTE);
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 15 findings 1 and 3: a cleanup whose answer is lost after
+  // that computer acted may have let the conversation go there, so this Mac
+  // opens it again routed before any words go; the next pass finishes this
+  // Mac's copy.
+  it("opens the conversation again routed when a cleanup's answer is lost", async () => {
+    const at = await codexThere();
+    const taskId = "t-lost";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    let lose = true;
+    recordAsks(home, async (channel) => {
+      if (channel !== "inf:session:delete-outside" || !lose) return;
+      lose = false;
+      throw new Error("The connection dropped.");
+    });
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    await expect(home.placed.deleteOutside(record, DUE)).rejects.toThrow("The connection dropped.");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    // Words sent while it opens again go only once it opened, once.
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).toContain(DUE_NOTE);
+    expect(said(sent[0])).not.toContain(SECRET);
+
+    await expect.poll(() => home.placed.deleteOutside(record, DUE)).not.toBe("waiting");
+    expect(filesHolding(here, SECRET)).toEqual([]);
+  });
+
+  // INF-5438 round 15 findings 2 and 3: the conversation an older computer
+  // opens again by itself after a cleanup is never reattached to, so once the
+  // starter left its level the next words route to GPT-6 Sol, which that
+  // computer serves, rather than wait for its update.
+  it("routes the next words to a model that can take them after an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-left";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    starterLeft(home);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    // This Mac restarts, so its roster names the conversation that computer opened again.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const after = at.home();
+    await after.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => after.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(after.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(after.supervisor.moves.refusedThere(taskId)).toBe(false);
+    expect(rerouted(after, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 16 findings 1 and 3: that computer restarts while a
+  // cleanup's answer is out, so this Mac asks to open the conversation again
+  // then; the cleanup's answer lets that open go, it is the one reopen, routed
+  // to GPT-6 Sol, and the words sent meanwhile reach GPT-6 Sol once.
+  it("lets a reopen asked during a cleanup open the conversation once the cleanup answers", async () => {
+    const at = await codexThere();
+    const taskId = "t-reconnect";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(home);
+    const answer = gate();
+    let answeredThere = false;
+    const asked = recordAsks(home, async (channel) => {
+      if (channel !== "inf:session:delete-outside") return;
+      answeredThere = true;
+      await answer.held;
+    });
+    const reopens = vi.spyOn(home.supervisor, "toolsNow");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    // Nothing in the conversation is due, so that computer answers unchanged.
+    const cleaning = home.placed.deleteOutside(record, DUE);
+    await expect.poll(() => answeredThere).toBe(true);
+    await at.restartComputer();
+    await expect.poll(() => reopens.mock.calls.some(([id]) => id === taskId)).toBe(true);
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    expect(asked.map((ask) => ask.channel)).not.toContain("inf:session:open");
+
+    answer.open();
+    expect(await cleaning).toBe("unchanged");
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(rerouted(home, taskId)).toHaveLength(1);
+    await at.inReach(taskId);
+  });
+
+  // INF-5438 round 16 findings 2 and 3: words already held because an older
+  // computer holds the conversation open, waiting for its update, go once its
+  // cleanup marks what it holds refused: they route to GPT-6 Sol, which that
+  // computer serves, unspent before and delivered once.
+  it("routes words held for an older computer's update once its cleanup runs", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-held";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // This Mac restarts, so the conversation that computer holds open is all it knows of it.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "And now?");
+    await expect.poll(() => home.supervisor.moves.modelWaitCause(taskId)).toBe("update");
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(api.requests.length).toBe(requests);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(home.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 17 findings 1 and 2: the conversation there stopped but
+  // this Mac's turn has not ended, so an older computer's cleanup waits
+  // without marking that conversation refused or leaving a release for the
+  // turn's end; words queued meanwhile go once to the conversation still
+  // open, as with no cleanup, and the next pass removes the words from both
+  // copies before the next words route to GPT-6 Sol.
+  it("leaves an older computer's conversation alone when its cleanup comes while this Mac's turn is still ending", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-ending";
+    const first = api.requests.length;
+    const ended = gate();
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { held: ended.held, text: "Done." },
+      { text: "On GPT-6 Sol." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    void home.supervisor.steer.steerCrewmate(taskId, "Go on.", "captain");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    starterLeft(home);
+    const queued = home.inbox.enqueue(taskId, "And now?");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const streaming = vi.spyOn(PlacedSession.prototype, "isStreaming").mockReturnValue(false);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    streaming.mockRestore();
+    expect(home.placed.refusedHeld(taskId)).toBe(false);
+    const requests = api.requests.length;
+
+    ended.open();
+    const row = () => home.inbox.allFor(taskId).find((entry) => entry.id === queued);
+    await expect.poll(() => row()).toBeUndefined();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const started = api.requests[first]?.body.model;
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([started]);
+    expect(said(sent[0])).toContain("And now?");
+    // The cleanup left no release for its turn's end: it lets go only as it runs.
+    expect(letGo.mock.calls).toEqual([[taskId, undefined, true]]);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    await home.supervisor.steer.steerCrewmate(taskId, "Anything else?", "captain");
+    await expect.poll(() => api.requests.length).toBe(requests + 2);
+    const next = api.requests[requests + 1];
+    expect(next?.body.model).toBe(SOL.id);
+    expect(said(next)).toContain("Anything else?");
+    expect(said(next)).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 18 findings 1 and 3: an older computer's cleanup that
+  // comes while the task's next open is still being prepared here, before it
+  // asks that computer, leaves that open alone: it opens once the cleanup has
+  // answered, and its words reach the model once without the removed words.
+  it("leaves an open still being prepared alone during an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older-preparing";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "Carried on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    home.supervisor.placedLetGo(taskId);
+    // The next open is held here, before it asks that computer anything.
+    const prepared = gate();
+    const placed = home.placed as unknown as { open: (...args: unknown[]) => Promise<unknown> };
+    const open = placed.open.bind(home.placed);
+    const preparing = vi.spyOn(placed, "open").mockImplementation(async (...args) => {
+      await prepared.held;
+      return open(...args);
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => preparing.mock.calls.length).toBe(1);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    // Nothing this Mac held was let go: the open being prepared keeps its task.
+    expect(letGo).not.toHaveBeenCalled();
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    prepared.open();
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => said(request).includes("Carry on."))).toEqual([true]);
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+  });
+
+  // INF-5438 round 19 and 20 findings: that computer answered the open of a
+  // conversation the lane sweep resumed for an order it claimed, but this
+  // Mac has not yet accepted it when the cleanup comes. The cleanup waits
+  // and lets nothing go; the claimed order spends its one attempt only on
+  // the accepted conversation, which takes it once, and the next pass
+  // removes the old words from both copies before the next ones go.
+  it("leaves an open this Mac has not yet accepted alone during an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older-accepting";
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { text: "Carried on." },
+      { text: "Still here." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    home.supervisor.placedLetGo(taskId);
+    // The open is answered there; its check here waits.
+    const checked = gate();
+    const moves = home.supervisor.moves;
+    const keeps = moves.keepsModel.bind(moves);
+    const checking = vi.spyOn(moves, "keepsModel").mockImplementation(async (...args) => {
+      await checked.held;
+      return keeps(...args);
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const claims = vi.spyOn(home.inbox, "markDelivered");
+    const released = vi.spyOn(home.inbox, "release");
+    const requests = api.requests.length;
+    const queued = home.inbox.enqueue(taskId, "Carry on.");
+    const swept = home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => checking.mock.calls.length).toBe(1);
+    const claimed = () => home.inbox.inFlight(taskId).find((row) => row.id === queued);
+    expect(claimed()).toMatchObject({ attempts: 1 });
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    expect(letGo).not.toHaveBeenCalled();
+    expect(api.requests.length).toBe(requests);
+    checked.open();
+    await swept;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => said(request).includes("Carry on."))).toEqual([true]);
+    // Claimed once, never given back: its one attempt was the delivery.
+    expect(claims.mock.calls.filter(([ids]) => ids.includes(queued))).toHaveLength(1);
+    expect(released.mock.calls.filter(([ids]) => ids.includes(queued))).toEqual([]);
+    await expect.poll(() => claimed()).toBeUndefined();
+    expect(home.inbox.allFor(taskId).some((row) => row.id === queued)).toBe(false);
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    const next = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still here.");
+    expect(said(api.requests[next])).toContain("And now?");
+    expect(said(api.requests[next])).not.toContain(SECRET);
+  });
+});
+
+/** Words read from Gmail long ago, fenced as an integration answers them, and the pass that removes them. */
+const SECRET = "Lena's invoice number is 2214";
+const OLD_READ = {
+  label: "google-data",
+  value: "0123456789abcdef",
+  at: Date.now() - 40 * 86_400_000,
+};
+const DUE_NOTE = "[removed after 30 days]";
+const DUE = {
+  kinds: [{ label: "google-data", until: Date.now() - 30 * 86_400_000, note: DUE_NOTE }],
+  legacy: [],
+};
+
+/** Each order this Mac asks of that computer from now on. */
+function recordAsks(
+  home: PlacedHome,
+  answered: (channel: string) => Promise<void> = async () => {},
+): { channel: string; args: unknown }[] {
+  const asked: { channel: string; args: unknown }[] = [];
+  const ask = home.devices.ask.bind(home.devices);
+  vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+    asked.push({ channel, args });
+    const result = await ask(device, channel, args);
+    await answered(channel);
+    return result;
+  });
+  return asked;
+}
+
+/** The files under `root` that hold `text`. */
+function filesHolding(root: string, text: string): string[] {
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.isFile() && readFileSync(path, "utf8").includes(text)) found.push(path);
+    }
+  };
+  if (existsSync(root)) walk(root);
+  return found;
+}

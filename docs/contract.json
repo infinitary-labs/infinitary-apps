@@ -43575,6 +43575,86 @@
                   "type": "boolean",
                   "const": true
                 },
+                "said": {
+                  "type": "object",
+                  "properties": {
+                    "m": {
+                      "type": "string"
+                    },
+                    "a": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "time": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "time"
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "m": {
+                                "type": "string"
+                              },
+                              "a": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "time": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "time"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "m"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "m"
+                  ]
+                },
                 "folded": {
                   "type": "array",
                   "items": {
@@ -43659,6 +43739,86 @@
                       "saidHere": {
                         "type": "boolean",
                         "const": true
+                      },
+                      "said": {
+                        "type": "object",
+                        "properties": {
+                          "m": {
+                            "type": "string"
+                          },
+                          "a": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "time": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "time"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "m": {
+                                      "type": "string"
+                                    },
+                                    "a": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "time": {
+                                                "type": "number"
+                                              }
+                                            },
+                                            "required": [
+                                              "time"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "m"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "m"
+                        ]
                       }
                     },
                     "required": [
@@ -91781,6 +91941,15 @@
                     },
                     "secretAsks": {
                       "type": "boolean"
+                    },
+                    "reattach": {
+                      "type": "boolean"
+                    },
+                    "notOpened": {
+                      "type": "boolean"
+                    },
+                    "fresh": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -91974,11 +92143,15 @@
                 "controlProfile",
                 "streaming"
               ]
+            },
+            "needsOpen": {
+              "type": "boolean",
+              "const": true
+            },
+            "notOpened": {
+              "type": "string"
             }
-          },
-          "required": [
-            "state"
-          ]
+          }
         }
       },
       "inf:session:prompt": {
@@ -92681,6 +92854,9 @@
                     "type": "string",
                     "pattern": "^[0-9a-f]{16}-[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,16}$"
                   }
+                },
+                "holdReopen": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -92884,6 +93060,10 @@
                 "controlProfile",
                 "streaming"
               ]
+            },
+            "reopen": {
+              "type": "boolean",
+              "const": true
             }
           },
           "required": [

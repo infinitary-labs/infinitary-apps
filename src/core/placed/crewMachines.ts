@@ -2,7 +2,7 @@ import type { CutOffClass } from "@shared/authFailure";
 import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import type { placedTaskFolders, WorkingCopyBase, WorkOrderResponse } from "@shared/work";
-import type { ContractChangeName } from "../connection/contractChanges";
+import { type ContractChangeName, contractChange } from "../connection/contractChanges";
 import type { JobExit } from "../jobs/jobManager";
 import type { ComputerPool } from "../routing/computerPool";
 import type { PersonalVersion } from "../session/personalSet";
@@ -17,6 +17,57 @@ import type { PlacedCopy } from "./placedCopies";
  * view of placed work, what it does for a placed task, and where a task's
  * browser there is heard.
  */
+
+/**
+ * A computer that keeps only the conversation it holds when asked to
+ * reattach, and otherwise opens nothing until the home routes a new one
+ * (`reattach-only-open.md`).
+ */
+export const REATTACH_ONLY_OPEN = contractChange("reattach-only-open");
+
+/** A computer that answers an open which left nothing new there (`open-not-opened.md`). */
+export const OPEN_NOT_OPENED = contractChange("open-not-opened");
+
+/** A computer that opens a new conversation when asked fresh, replacing one it holds (`fresh-open.md`). */
+export const FRESH_OPEN = contractChange("fresh-open");
+
+/**
+ * A prompt or steer waited for its conversation to open there again, and it
+ * did not: it is sent back to its lane unspent, and the task's next turn
+ * opens its conversation through the ordinary resume.
+ */
+export class NotOpenThere extends Error {
+  constructor(taskId: string) {
+    // i18n-exempt: an internal signal the turn catches; no person reads it.
+    super(`Task ${taskId}'s conversation did not open there again, so its words wait.`);
+    this.name = "NotOpenThere";
+  }
+}
+
+/**
+ * A reattach-only open found no conversation to keep there: nothing opened,
+ * and the home routes the new conversation and asks for it
+ * (`reattach-only-open.md`).
+ */
+export class NeedsNewConversation extends Error {
+  constructor(taskId: string) {
+    // i18n-exempt: an internal signal the home catches; no person reads it.
+    super(`Task ${taskId} holds no conversation to reattach to there, so a new one opens.`);
+    this.name = "NeedsNewConversation";
+  }
+}
+
+/**
+ * A computer answered that an open failed leaving no new conversation there
+ * (`open-not-opened.md`): the only failure there that passes its model and
+ * account over. Any other may have left one, and stays refused there.
+ */
+export class NothingOpenedThere extends Error {
+  constructor(why: string) {
+    super(why);
+    this.name = "NothingOpenedThere";
+  }
+}
 
 /** What the supervisor does for the placed tasks (`CrewSupervisor`). */
 export type PlacedHost = {
@@ -44,6 +95,57 @@ export type PlacedHost = {
    */
   toolsNow?(taskId: string): readonly string[] | undefined;
   /**
+   * The model a conversation that opens on `machine` again - after that
+   * computer restarted, or a turn ended that an open found running there -
+   * asks for, when the one it had left every level (docs/routing.md, "A
+   * model that left every level"): another that computer serves, with its
+   * own account there and the effort it opens at, and `commit`, which
+   * records the move once that computer answers a conversation opened on
+   * it, with the model and account it opened on, read against what that
+   * computer serves now, and answers "committed" only then (`RoutedAgain.commit`). "wait" when none can take it, so it
+   * does not open on the one that left; "stale" when a stop, a close or a
+   * move took the task meanwhile, so nothing is sent. Undefined, answered
+   * at once when nothing can have left, keeps the model it opened with.
+   * With `attach`, an older computer's open may bring back the model there,
+   * so a model that left every level waits instead.
+   */
+  reopenModel?(
+    taskId: string,
+    machine: string,
+    attach: boolean,
+  ):
+    | Promise<
+        | {
+            model: { provider: string; id: string };
+            accountId?: string;
+            thinking: { level: "low" | "medium" | "high" | "xhigh" | "off"; quick?: boolean };
+            commit(opened: {
+              model?: { provider: string; id: string };
+              account?: string;
+            }): Promise<"committed" | "stale" | "again">;
+            /** That computer answered that nothing opened on this pick (`open-not-opened.md`). */
+            passOver(): void;
+          }
+        | "wait"
+        | "stale"
+        | undefined
+      >
+    | undefined;
+  /**
+   * Whether a conversation that opened anew on `machine` on the model it
+   * had, routing nothing, keeps it (`TaskMoves.keepsModel`): false when
+   * that model left every level there while it opened, so it takes no words.
+   */
+  modelKept?(taskId: string, machine: string): Promise<boolean>;
+  /**
+   * The conversation this crewmate holds did not open there again - no
+   * model there can take it, or the one that can runs on the other backend
+   * - so the crewmate here lets go of it: the task's next turn opens a new
+   * one through the ordinary resume, which routes it again. With `now`, a
+   * turn still out keeps it instead of releasing it at that turn's end.
+   */
+  letGo?(taskId: string, now?: boolean): void;
+  /**
    * A computer the task moved off while it was out of reach is back and its
    * copy is kept (docs/helper.md, "Moving a task off a computer that is out
    * of reach"): the task's crewmate is told where, once.
@@ -67,6 +169,24 @@ export type CrewMachines = {
   keepsBrowsers?(machine: string): boolean;
   /** The task's computer is in reach and caught up, so its lane may go on. */
   ready(machine: string, taskId: string): boolean;
+  /**
+   * Whether the task's conversation is open there, as that computer's
+   * roster says: an open reattaches to it rather than starting a new one.
+   * True while the roster is unread, since nothing new can open then.
+   */
+  conversationOpen?(machine: string, taskId: string): boolean;
+  /**
+   * Whether that computer opens only the conversation it holds when asked to
+   * reattach, and answers that a new one is needed otherwise
+   * (`reattach-only-open.md`), so the home routes before anything new opens.
+   */
+  reattachOnly?(machine: string): boolean;
+  /**
+   * What that computer last said it serves, for a wait for a model to
+   * compare (`TaskMoves.waitsForModel`); a sign-in it adds or an allowance
+   * it reads again changes it.
+   */
+  servedState?(machine: string): string;
   /**
    * Since when the task's computer, in reach, has been catching up with it:
    * from the contact that brought the computer back, or from when its
@@ -284,9 +404,19 @@ export type CrewMachines = {
    * What the computer's own sign-ins serve, as it last said of them: the
    * models a task that runs there is routed among, and the account there
    * for each model and each provider (docs/helper.md, "Its own sign-ins").
-   * Never this Mac's sign-ins.
+   * Never this Mac's sign-ins. `fresh` asks the computer again first, so an
+   * open is accepted on what it serves now, not a report a change outran,
+   * and throws when it did not answer.
    */
-  served(machine: string): Promise<ComputerPool>;
+  served(machine: string, fresh?: boolean): Promise<ComputerPool>;
+  /**
+   * Marks, or clears, that the conversation the task's computer holds was
+   * refused words here (`TaskMoves.refuseOpened`), kept across a restart of
+   * this Mac, so the next open there opens anew instead of reattaching to it.
+   */
+  refuseHeld?(taskId: string, refused: boolean): void;
+  /** Whether the conversation the task's computer holds was refused words here (`refuseHeld`). */
+  refusedHeld?(taskId: string): boolean;
   /**
    * What the computer last said of its own sign-ins, asked now when it has
    * said nothing yet and is in reach; null when it cannot say. A task about

@@ -16,6 +16,7 @@ import { ComputerBehindError } from "../connection/contractChanges";
 import { renderDirections } from "../knowledge/directions";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir } from "../paths";
+import { NotOpenThere } from "../placed/crewMachines";
 import { startedProgramBranches } from "../program/programRunner";
 import {
   type ControlProfile,
@@ -47,7 +48,7 @@ import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
 import { reviewCoversHead } from "./reviewCarry";
-import { installText } from "./taskMoves";
+import { installText, ModelWaitError, NotAcceptedError, OpenedNothingError } from "./taskMoves";
 import { keptReportNote, laneTurnText, renderWake, type TypedWake } from "./wakes";
 
 /**
@@ -348,6 +349,10 @@ export class CrewTurns {
       // waits for that, open, and is never closed failed for it.
       if (caught instanceof ComputerBehindError && !task.turn.pause && !task.turn.closing)
         this.core.updates.waitForUpdateThere(task, caught);
+      // Its conversation did not open there again before its model took the
+      // turn: its words go back unspent, as for a turn an update stopped first.
+      if (caught instanceof NotOpenThere && !task.turn.pause && !task.turn.closing)
+        task.turn.hold({ unstarted: true, notOpen: true });
       if (!task.turn.pause) this.core.restarts.recordRestartOutcome(task.id, "stopped", message);
       if (task.turn.closing) {
         this.core.sessions.finish(task, "cancelled");
@@ -1019,6 +1024,9 @@ export class CrewTurns {
     } else if (paused?.cost && !report) {
       // Its cost limit stopped it: the hold's card already asks the
       // captain, and the lane carries it on once they answer.
+    } else if (paused?.notOpen && !report) {
+      // Its conversation did not open there again: the let-go or the wait
+      // for a model says why, and no update is announced for it.
     } else if (paused && !report) {
       // Nobody has anything to act on: the lane carries it on once the
       // computer is back, and the feed says so once.
@@ -1183,6 +1191,21 @@ export class CrewTurns {
       };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
+      // The restart stays on its lane and opens once a model can take it.
+      if (caught instanceof ModelWaitError)
+        return {
+          ok: true,
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
+          text: `${handle} opens its new conversation once a model can take it: ${message}`,
+        };
+      // One that opened but was not accepted stays on the lane, and the
+      // lane's next pass opens it fresh again.
+      if (caught instanceof NotAcceptedError && !(caught instanceof OpenedNothingError))
+        return {
+          ok: true,
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
+          text: `${handle} opens its new conversation on its next try: ${message}`,
+        };
       this.core.options.tasks.note(taskId, `its new conversation could not open: ${message}`, {
         news: true,
       });
@@ -1555,6 +1578,14 @@ export class CrewTurns {
       else if (!resumed.turn.busy && !resumed.turn.closing)
         void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
     } catch (caught) {
+      // The restart stays on its lane, said once, and opens fresh once a
+      // model can take it, or on the lane's next pass when the one that
+      // opened was not accepted (`CrewSessions.waitingRestart`).
+      if (
+        caught instanceof ModelWaitError ||
+        (caught instanceof NotAcceptedError && !(caught instanceof OpenedNothingError))
+      )
+        return;
       const message = caught instanceof Error ? caught.message : String(caught);
       this.core.options.tasks.note(task.id, `its new conversation could not open: ${message}`, {
         news: true,
@@ -1669,6 +1700,8 @@ export class CrewTurns {
     task: TaskRuntime,
     options: { announce?: boolean; sent?: boolean } = {},
   ): void {
+    // A runtime let go as its turn ended takes no more turns.
+    if (this.core.tasks.get(task.id) !== task) return;
     if (task.turn.closing || !task.session || task.turn.busy) return;
     if (task.turn.stage === "stopped" && !options.sent) return;
     if (this.core.facts.laneHeld(task.id)) return;
@@ -1841,6 +1874,20 @@ export class CrewTurns {
     task.steersAtCheck = undefined;
     task.waitNamed = undefined;
     task.readsAnsweredAt = undefined;
+  }
+
+  /**
+   * Runs `then` as the task's running turn here ends, before anything
+   * waiting starts the next one (`turnOver`); at once when none runs.
+   */
+  atTurnOver(task: TaskRuntime, then: () => void): void {
+    if (this.core.tasks.get(task.id) !== task || !task.turn.busy) {
+      then();
+      return;
+    }
+    const waiters = this.turnWaiters.get(task.id) ?? new Set<() => void>();
+    waiters.add(then);
+    this.turnWaiters.set(task.id, waiters);
   }
 
   /** Resolves once the task's running turn here has ended, at once when none runs. */

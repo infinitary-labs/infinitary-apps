@@ -290,6 +290,14 @@ export class ModelSlots {
     return notices;
   }
 
+  /**
+   * The slot record as one comparable string: every offering's slots, a
+   * model only another computer serves included, for a wait to compare.
+   */
+  state(): string {
+    return JSON.stringify(this.read());
+  }
+
   /** The slots one offering sits in, empty when it is off. */
   slotsOf(ref: PiModelRef): Slot[] {
     return this.read().assignments[offeringKey(ref)] ?? [];

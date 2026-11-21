@@ -1,8 +1,8 @@
 import type { QuotaSnapshotView } from "@shared/quota";
 import { quotaEntryForPiProvider } from "../quota/auth";
-import { effectiveFromProvider } from "../quota/catalog";
+import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
-import { type AccountCandidate, selectAccount } from "./accountPolicy";
+import { type AccountCandidate, isExhausted, selectAccount } from "./accountPolicy";
 import type { PlacedWorkData, PlacedWorkScores } from "./placedWork";
 
 /**
@@ -43,10 +43,51 @@ export type AccountSelectorOptions = {
   flagshipAccountId: () => string | null;
   /** The decision ledger every selection is recorded in. */
   decisions: DecisionStore;
+  /**
+   * The models each account lists (`AccountVault.availableModelsByAccount`):
+   * a crewmate's pick leaves out an account whose list names other models
+   * but not this one, so the account bound serves the model routing chose.
+   * An account with no list, or an empty one, stands in only when no
+   * sibling's list names the model.
+   */
+  accountModels?: () => { accountId: string; models: { provider: string; id: string }[] }[];
 };
 
 export class AccountSelector {
+  private readonly listsByEvaluation = new WeakMap<
+    PlacedWorkData,
+    ReturnType<NonNullable<AccountSelectorOptions["accountModels"]>> | undefined
+  >();
+
   constructor(private readonly options: AccountSelectorOptions) {}
+
+  /**
+   * What a pick reads of the accounts, as one comparable string
+   * (`AccountAttachment.servingState`): each account's state and the models
+   * it lists, and whether each of its own allowance scopes is spent and
+   * whether it answers on credits as read now (`spentScopes`), so a reset
+   * that passes changes it with no new reading.
+   */
+  servingState(): string {
+    const pool = this.options.pool;
+    const rows = this.options.quota.latest()?.providers ?? [];
+    const now = Date.now();
+    return JSON.stringify([
+      pool
+        .list()
+        .map((account) => [
+          account.id,
+          account.providerId,
+          account.enabled,
+          pool.connectedSync(account.id) ?? null,
+          pool.withheldReason(account.id) ?? null,
+          rows
+            .filter((row) => row.accountId === account.id)
+            .map((row) => [row.provider, spentScopes(row, now)]),
+        ]),
+      this.options.accountModels?.() ?? null,
+    ]);
+  }
 
   /**
    * Pick the account of `piProviderId` serving a task spawn, and record why.
@@ -54,47 +95,63 @@ export class AccountSelector {
    * model's scope and ranked by the crew allowance bands, as routing ranked
    * the model (INF-1714); a decision model's call names none.
    */
-  private recordSpawn(
-    taskId: string,
-    piProviderId: string,
-    crew: { model: string } | undefined,
-    placed: PlacedWorkData | undefined,
-  ): string | undefined {
-    const decision = this.decide(piProviderId, crew, placed);
-    if (!decision) return undefined;
-    this.options.decisions.recordAccount({
-      taskId,
-      provider: piProviderId,
-      accountId: decision.accountId ?? null,
-      reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
-      facts: {
-        kind: "account-candidates",
-        candidates: decision.candidates,
-        ...(decision.pinned ? { pinned: true as const } : {}),
-      },
-    });
-    if (decision.accountId) {
-      this.options.pool.markSelected(decision.accountId);
-    }
-    return decision.accountId;
-  }
-
   async selectForSpawn(
     taskId: string,
     provider: string,
     crew?: { model: string },
   ): Promise<string | undefined> {
+    const pick = await this.pickForSpawn(taskId, provider, crew);
+    pick.record();
+    pick.selected();
+    return pick.accountId;
+  }
+
+  /**
+   * The account `selectForSpawn` would pick, with its writes kept apart: a
+   * move that may still be abandoned after the pick - a stop, a quit or
+   * another move meanwhile - writes the decision row (`record`) in the
+   * move's own transaction, and marks the account selected (`selected`, a
+   * file write no transaction rolls back) only once that transaction
+   * committed, so an abandoned move leaves neither.
+   */
+  async pickForSpawn(
+    taskId: string,
+    piProviderId: string,
+    crew?: { model: string; passing?: readonly string[] },
+  ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const placed = await this.options.placedWork?.prepare(
       this.options.quota.latest()?.providers ?? [],
     );
-    return this.recordSpawn(taskId, provider, crew, placed);
+    const decision = this.decide(piProviderId, crew, placed);
+    if (!decision) return { record: () => {}, selected: () => {} };
+    const record = () => {
+      this.options.decisions.recordAccount({
+        taskId,
+        provider: piProviderId,
+        accountId: decision.accountId ?? null,
+        reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
+        facts: {
+          kind: "account-candidates",
+          candidates: decision.candidates,
+          ...(decision.pinned ? { pinned: true as const } : {}),
+        },
+      });
+    };
+    const selected = () => {
+      if (decision.accountId) this.options.pool.markSelected(decision.accountId);
+    };
+    return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record, selected };
   }
 
-  /** A resume keeps a healthy account; otherwise prepare and bind a serving sibling. */
+  /**
+   * A resume keeps a healthy account; otherwise it prepares a serving
+   * sibling, whose decision (`record`) and selection mark (`selected`) are
+   * written only once the resumed conversation is accepted.
+   */
   async reselectForResume(
     taskId: string,
     accountId: string | null,
-  ): Promise<{ accountId?: string; changed: boolean }> {
+  ): Promise<{ accountId?: string; changed: boolean; record?(): void; selected?(): void }> {
     if (accountId) {
       const account = this.options.pool.list().find((row) => row.id === accountId);
       if (account?.enabled && this.options.pool.connectedSync(accountId) !== false)
@@ -102,14 +159,16 @@ export class AccountSelector {
     }
     const routed = this.options.decisions.latestRouting(taskId);
     if (!routed?.provider) return { changed: Boolean(accountId) };
-    const selected = await this.selectForSpawn(
+    const pick = await this.pickForSpawn(
       taskId,
       routed.provider,
       routed.model ? { model: routed.model } : undefined,
     );
     return {
-      ...(selected ? { accountId: selected } : {}),
-      changed: selected !== (accountId ?? undefined),
+      ...(pick.accountId ? { accountId: pick.accountId } : {}),
+      changed: pick.accountId !== (accountId ?? undefined),
+      record: pick.record,
+      selected: pick.selected,
     };
   }
 
@@ -125,10 +184,13 @@ export class AccountSelector {
 
   private decide(
     piProviderId: string,
-    crew: { model: string } | undefined,
+    crew: { model: string; passing?: readonly string[] } | undefined,
     placed: PlacedWorkData | undefined,
   ) {
-    const candidates = this.candidatesFor(piProviderId, crew?.model, placed);
+    // An account that already failed to open the model is passed over.
+    const candidates = this.candidatesFor(piProviderId, crew?.model, placed).filter(
+      (row) => !crew?.passing?.includes(row.accountId),
+    );
     if (candidates.length === 0) return undefined;
     const pinned = this.options.pool.pinnedAccount(piProviderId);
     const flagship = this.options.flagshipAccountId();
@@ -141,6 +203,24 @@ export class AccountSelector {
         : {}),
       ...(crew ? { bands: true } : {}),
     });
+  }
+
+  /**
+   * Whether the account serves `model` now, as a pick reads it: on,
+   * connected, withheld by nothing, with allowance left, and listing the
+   * model - or listing nothing while no sibling's list names it.
+   */
+  servesNow(accountId: string, model: { provider: string; id: string }): boolean {
+    const candidate = this.candidatesFor(model.provider, model.id, undefined).find(
+      (row) => row.accountId === accountId,
+    );
+    return (
+      candidate !== undefined &&
+      candidate.enabled &&
+      candidate.connected !== false &&
+      candidate.withheld === undefined &&
+      !isExhausted(candidate)
+    );
   }
 
   /** The user label of an account, for user-facing copy. */
@@ -163,6 +243,18 @@ export class AccountSelector {
     });
   }
 
+  /**
+   * Which models each account's sign-in lists, read once per routing
+   * evaluation: every model it ranks shares that evaluation's `placed`
+   * read, and an actual pick prepares its own.
+   */
+  private modelLists(placed: PlacedWorkData | undefined) {
+    if (!placed) return this.options.accountModels?.();
+    if (!this.listsByEvaluation.has(placed))
+      this.listsByEvaluation.set(placed, this.options.accountModels?.());
+    return this.listsByEvaluation.get(placed);
+  }
+
   private candidatesFor(
     piProviderId: string,
     model: string | undefined,
@@ -175,7 +267,21 @@ export class AccountSelector {
     // Every account is scored against one read of the placed work.
     const placedWork = this.options.placedWork;
     const data = placed;
-    return this.options.pool.list(piProviderId).map((account) => {
+    const lists = model ? this.modelLists(placed) : undefined;
+    // An account whose sign-in lists the model serves it; one with no list
+    // yet stands in only when no sibling's list confirms the model.
+    const serving = (accountId: string): boolean | undefined => {
+      const listed = lists?.find((row) => row.accountId === accountId)?.models;
+      if (!listed || listed.length === 0) return undefined;
+      return listed.some((entry) => entry.provider === piProviderId && entry.id === model);
+    };
+    const accounts = this.options.pool.list(piProviderId);
+    const confirmed = accounts.filter((account) => serving(account.id) === true);
+    const pool =
+      confirmed.length > 0
+        ? confirmed
+        : accounts.filter((account) => serving(account.id) === undefined);
+    return pool.map((account) => {
       const row = rows?.find(
         (provider) => provider.accountId === account.id && provider.provider === quotaId,
       );

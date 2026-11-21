@@ -162,6 +162,8 @@ export type CandidateFacts =
       candidates: RoutingCandidateFact[];
       accountId?: string;
       selection?: SelectionFacts;
+      /** The task named a model (rule R0): whether this choice serves it. */
+      named?: boolean;
     }
   | {
       kind: "account-candidates";
@@ -194,6 +196,8 @@ export type RoutingDecision = {
   rule: string | null;
   served: string | null;
   at: number;
+  /** Whether the model the task named was served; absent on rows from before that was recorded. */
+  named?: boolean;
 };
 
 export type AccountDecisionInput = {
@@ -233,6 +237,12 @@ type RoutingRow = {
   rule: string | null;
   served: string | null;
   at: number;
+  /**
+   * `latestChosenSlots` only: the facts' named flag, as SQLite reads a JSON
+   * boolean; a row from before it was written reads its selection's
+   * `named`, and one with neither is null.
+   */
+  named?: number | null;
 };
 
 /** What flag_missed_escalation asks the store to label. */
@@ -307,6 +317,7 @@ function fromRoutingRow(row: RoutingRow): RoutingDecision {
     rule: row.rule,
     served: row.served,
     at: row.at,
+    ...(row.named === 0 || row.named === 1 ? { named: row.named === 1 } : {}),
   };
 }
 
@@ -534,20 +545,26 @@ export class DecisionStore {
     return rows.map(fromRoutingRow);
   }
 
-  /** The board's latest chosen slot facts, seeking once per task rather than reading its history. */
-  latestChosenSlots(
-    taskIds: readonly string[],
-  ): Pick<RoutingDecision, "taskId" | "bucket" | "served">[] {
+  /**
+   * Each task's newest routing decision that chose a model (by `at`, then
+   * id) - the board's slot facts and a reopen's choice - seeking once per
+   * task rather than reading its history. A task none chose for is absent.
+   */
+  latestChosenSlots(taskIds: readonly string[]): RoutingDecision[] {
     if (taskIds.length === 0) return [];
-    return prepared(
+    const rows = prepared(
       this.db,
-      `SELECT latest.task_id AS taskId, latest.bucket, latest.served
+      `SELECT latest.id, latest.task_id, latest.provider, latest.model, latest.bucket,
+         latest.rule, latest.served, latest.at,
+         COALESCE(json_extract(latest.facts_json, '$.named'),
+           json_extract(latest.facts_json, '$.selection.decidedBy') = 'named') AS named
        FROM json_each(?) AS asked CROSS JOIN decisions AS latest
        WHERE latest.id = (
          SELECT id FROM decisions WHERE kind = 'routing' AND task_id = asked.value
            AND provider IS NOT NULL ORDER BY at DESC, id DESC LIMIT 1
        )`,
-    ).all(JSON.stringify(taskIds)) as Pick<RoutingDecision, "taskId" | "bucket" | "served">[];
+    ).all(JSON.stringify(taskIds)) as RoutingRow[];
+    return rows.map(fromRoutingRow);
   }
 
   /**

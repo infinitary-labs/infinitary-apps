@@ -56,9 +56,18 @@ export class CrewFacts {
     // A renewed conversation's reason rides the next full turn (`runTurn`),
     // never a turn of its own and never a mid-turn steer; why the app
     // stopped a turn part way is a turn of its own, never a mid-turn steer.
+    // A context or refusal restart that waited for a model, with no crewmate
+    // here, is the turn of its own that opens its new conversation, its
+    // brief and guidance served (`CrewSessions.waitingRestart`).
+    const sessionFile = task ? undefined : this.core.options.tasks.get(taskId)?.sessionFile;
+    const waited = (row: InboxRow) =>
+      row.facts?.kind === "conversation-restart" &&
+      (row.facts.restart.changed === "context" || row.facts.restart.changed === "refused") &&
+      sessionFile !== undefined &&
+      row.facts.restart.from === sessionFile;
     const rest = rows.filter(
       (row) =>
-        row.facts?.kind !== "conversation-restart" &&
+        (row.facts?.kind !== "conversation-restart" || waited(row)) &&
         !(running && row.facts?.kind === "turn-resumed"),
     );
     // A policy, override or kept-copy notice alone is guidance, not permission to resume or start.
@@ -163,6 +172,9 @@ export class CrewFacts {
       return { kind: "move" };
     // A hand-over of files still crossing: what is behind it waits for it (INF-3060).
     if (this.core.steer.handingOver(taskId)) return { kind: "hand-over" };
+    // Its model left every level and no other can take it yet (docs/routing.md).
+    const cause = this.core.moves.modelWaitCause(taskId);
+    if (cause) return { kind: "model", cause };
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;
     if (
       this.core.ladder.cutOffHolds({

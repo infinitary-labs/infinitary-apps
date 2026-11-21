@@ -626,6 +626,7 @@
 "crewmateProgress" = "Progreso";
 "crewmateQueued" = "en cola";
 "crewmateReport" = "Informe";
+"crewmateRoutedAgain" = "%1$@ ya no está en ningún nivel de Configuración, así que esta tarea ahora usa %2$@";
 "crewmateRunning" = "en curso…";
 "crewmateSendsTo" = "para el tripulante";
 "crewmateShowCard" = "Mostrar la tarjeta";
@@ -636,6 +637,8 @@
 "crewmateStopping" = "Deteniendo…";
 "crewmateUnreadable" = "No se pudieron leer las notas de este tripulante.";
 "crewmateWaiting" = "Esperándote";
+"crewmateWaitsForModel" = "%1$@ ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda";
+"crewmateWaitsForUpdate" = "%2$@ ya no está en ningún nivel de Configuración y %1$@ necesita una actualización antes de que esta tarea pueda pasar a otro modelo allí, así que espera hasta entonces";
 "crewmateWorking" = "Trabajando…";
 "devicesCarriedOn" = "Las tareas de una computadora fuera de alcance continúan en %1$@, y esa entrada salió de tu lista.";
 "devicesCarryNotRemoved" = "Las tareas de %1$@ se movieron, pero no pudo salir de tu lista: %2$@";

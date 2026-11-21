@@ -58,6 +58,50 @@ function pool(
 }
 
 describe("AccountSelector", () => {
+  // INF-5438 round 6 finding 9: a wait for a model compares what a pick reads
+  // of each account - here one account's window for one model, spent and
+  // then recovered - so the wait ends when that account can serve again.
+  it("reads one account's window for one model recovering as a change, as the pick does", async () => {
+    const reading = (percent: number): QuotaSnapshotView => {
+      const view = snapshot([{ accountId: "acct_a", percent: 80 }]);
+      const row = view.providers[0];
+      if (!row) throw new Error("no row");
+      row.windows = [
+        ...row.windows,
+        { id: "model:gpt-6.1-terra:7d", label: "Terra weekly", percentRemaining: percent },
+      ];
+      return view;
+    };
+    let latest = reading(0);
+    const selector = new AccountSelector({
+      pool: pool([{ id: "acct_a" }]),
+      quota: { latest: () => latest },
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(openInMemoryDatabase()),
+    });
+    const spent = selector.servingState();
+    latest = reading(0);
+    expect(selector.servingState()).toBe(spent);
+    latest = reading(40);
+    expect(selector.servingState()).not.toBe(spent);
+  });
+
+  // INF-5438 round 8 finding 9: an account whose allowance is spent does not
+  // serve a model now, as a pick reads it, and serves it again once it recovers.
+  it("reads an account with spent allowance as serving nothing now", () => {
+    let percent = 0;
+    const selector = new AccountSelector({
+      pool: pool([{ id: "acct_a" }]),
+      quota: { latest: () => snapshot([{ accountId: "acct_a", percent }]) },
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(openInMemoryDatabase()),
+    });
+    const terra = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    expect(selector.servesNow("acct_a", terra)).toBe(false);
+    percent = 40;
+    expect(selector.servesNow("acct_a", terra)).toBe(true);
+  });
+
   it("selects the best-headroom account at spawn and records the decision", async () => {
     const db = openInMemoryDatabase();
     const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
@@ -82,6 +126,66 @@ describe("AccountSelector", () => {
     expect(row.provider).toBe("openai-codex");
     expect(row.account_id).toBe("acct_b");
     expect(JSON.parse(row.reasons_json).join(" ")).toContain("most headroom");
+  });
+
+  it("binds only an account of the provider whose sign-in lists the routed model", async () => {
+    const db = openInMemoryDatabase();
+    const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
+    const selector = new AccountSelector({
+      pool: accounts,
+      // The roomier account's plan does not list Terra; the other's does.
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 20 },
+            { accountId: "acct_b", percent: 70 },
+          ]),
+      },
+      accountModels: () => [
+        { accountId: "acct_a", models: [{ provider: "openai-codex", id: "gpt-6.1-terra" }] },
+        { accountId: "acct_b", models: [{ provider: "openai-codex", id: "gpt-6.1-sol" }] },
+      ],
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(db),
+    });
+    const pick = await selector.pickForSpawn("task-1", "openai-codex", { model: "gpt-6.1-terra" });
+    expect(pick.accountId).toBe("acct_a");
+    // Nothing is written until the move that uses it commits.
+    expect(accounts.marked).toEqual([]);
+    pick.record();
+    pick.selected();
+    expect(accounts.marked).toEqual(["acct_a"]);
+    expect(await selector.selectForSpawn("task-2", "openai-codex", { model: "gpt-6.1-sol" })).toBe(
+      "acct_b",
+    );
+  });
+
+  it("prefers an account whose list confirms the routed model over one with no list", async () => {
+    const db = openInMemoryDatabase();
+    const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
+    const selector = new AccountSelector({
+      pool: accounts,
+      // The roomier account has read no list yet; the other's lists Terra.
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 70 },
+            { accountId: "acct_b", percent: 20 },
+          ]),
+      },
+      accountModels: () => [
+        { accountId: "acct_b", models: [{ provider: "openai-codex", id: "gpt-6.1-terra" }] },
+      ],
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(db),
+    });
+    expect(
+      await selector.selectForSpawn("task-1", "openai-codex", { model: "gpt-6.1-terra" }),
+    ).toBe("acct_b");
+    // With no account confirming the model, the one with no list still serves.
+    expect(await selector.selectForSpawn("task-2", "openai-codex", { model: "gpt-6.1-luna" })).toBe(
+      "acct_a",
+    );
   });
 
   // INF-443 piece 2: the record shows each account's reading and fate.
@@ -164,7 +268,18 @@ describe("AccountSelector", () => {
       decisions: new DecisionStore(db),
     });
     const result = await selector.reselectForResume("task-1", "acct_removed");
-    expect(result).toEqual({ accountId: "acct_b", changed: true });
+    expect({ accountId: result.accountId, changed: result.changed }).toEqual({
+      accountId: "acct_b",
+      changed: true,
+    });
+    // The pick is written only once the resumed conversation is accepted.
+    const picks = () =>
+      db.prepare("SELECT account_id FROM decisions WHERE kind = 'account'").all() as {
+        account_id: string;
+      }[];
+    expect(picks()).toEqual([]);
+    result.record?.();
+    expect(picks()).toEqual([{ account_id: "acct_b" }]);
   });
 
   it("reports a change with no replacement when nothing can serve the resume", async () => {

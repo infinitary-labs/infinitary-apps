@@ -277,6 +277,8 @@ type Held = {
   account: string | undefined;
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
   renewal: SessionRenewal | undefined;
+  /** The renewal a conversation let go of for the home to open again carries into that open (`holdReopen`). */
+  heldRenewal?: SessionRenewal;
   opening: Promise<void> | null;
   unsubscribe: (() => Promise<void>) | null;
   readonly orders: Map<string, unknown>;
@@ -313,6 +315,17 @@ type Held = {
   /** What the home opened the open conversation with, so a pass that rewrites its files opens it again. */
   spec: PlacedSpec | undefined;
 };
+
+/**
+ * An open that failed leaving no new conversation here, once any it began
+ * was let go (`open-not-opened.md`); `cause` is why it failed.
+ */
+class NothingOpened extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "NothingOpened";
+  }
+}
 
 export class SessionHost {
   private readonly held = new Map<string, Held>();
@@ -584,7 +597,16 @@ export class SessionHost {
     switch (channel) {
       case "inf:session:open": {
         const [open] = request as WorkOrderRequest<"inf:session:open">;
-        return { state: await this.open(held, open.spec) };
+        try {
+          const state = await this.open(held, open.spec);
+          return state ? { state } : { needsOpen: true };
+        } catch (caught) {
+          // One that left no new conversation here says so, when asked, so
+          // the home may pass its model over (`open-not-opened.md`).
+          if (open.spec.notOpened && caught instanceof NothingOpened)
+            return { notOpened: caught.message };
+          throw caught instanceof NothingOpened ? caught.cause : caught;
+        }
       }
       case "inf:session:prompt": {
         const [prompt] = request as WorkOrderRequest<"inf:session:prompt">;
@@ -866,7 +888,23 @@ export class SessionHost {
     }
   }
 
-  private async open(held: Held, spec: PlacedSpec): Promise<PlacedState> {
+  /**
+   * Opens the task's conversation from `spec`. A `reattach` open keeps only
+   * the conversation held, running or idle with the same contract, and
+   * otherwise opens nothing and answers undefined, so the home routes the
+   * new conversation first (`reattach-only-open.md`).
+   */
+  private async open(held: Held, spec: PlacedSpec): Promise<PlacedState>;
+  private async open(
+    held: Held,
+    spec: PlacedSpec,
+    reattach: boolean,
+  ): Promise<PlacedState | undefined>;
+  private async open(
+    held: Held,
+    spec: PlacedSpec,
+    reattach = spec.reattach === true,
+  ): Promise<PlacedState | undefined> {
     if (held.state.closed)
       throw new Error("This task's conversation was closed here, so it opens no more.");
     const sourceFacts = sourceContext(await this.options.source?.(), spec.homeSource);
@@ -874,20 +912,33 @@ export class SessionHost {
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {
-      // An idle conversation whose named tools or instructions changed,
-      // because the home reopened it for a contract this computer now
-      // speaks, lets go and opens again, so a version-gated tool arrives
-      // without a restart here. A turn in progress keeps the tools it
+      // An idle conversation whose named tools, instructions or model
+      // changed, because the home reopened it for a contract this computer
+      // now speaks or routed it off a model that left, lets go and opens
+      // again, so a version-gated tool arrives without a restart here. A turn in progress keeps the tools it
       // started with, and so does one its crewmate carries on by itself:
       // closing it would cut that turn and lose what it still sends, such
       // as a report waiting for the home. Its answer says it still streams,
-      // and the home asks again once the turn ends (INF-2332).
-      if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts)) {
+      // and the home asks again once the turn ends (INF-2332). A reattach
+      // keeps a held conversation on whatever model it runs, and answers it.
+      // A fresh open never answers the one held: an idle one is let go of
+      // and a new one opens, and one still in a turn opens nothing yet, so
+      // the home asks again (`fresh-open.md`).
+      if (spec.fresh && !reattach) {
+        if (this.busy(held))
+          throw new Error(
+            "This task's conversation is still in a turn here, so its new one opens once that ends.",
+          );
+      } else if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts, !reattach)) {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
+      if (reattach) return undefined;
       await this.releaseConversation(held);
-    }
+    } else if (reattach) return undefined;
+    // Set while a conversation that began may still be held here.
+    let lingering = false;
+    let state: PlacedState | undefined;
     const opening = (async () => {
       const binding = await this.options.bind(spec.binding);
       const factory = this.options.factories[binding.backend];
@@ -991,77 +1042,106 @@ export class SessionHost {
         bounds: { request: { retries: spec.retries ?? RETRIES } },
       };
       const session = await factory.open(sessionSpec);
-      if (this.stopped) {
-        session.dispose();
-        throw new Error("This computer is stopping.");
+      // An open that fails once its conversation began lets it go, and says
+      // it left nothing new here only once that let-go is over.
+      try {
+        if (this.stopped) throw new Error("This computer is stopping.");
+        held.session = session;
+        held.opened = {
+          tools: spec.tools,
+          instructions: spec.instructions,
+          sourceContext: sourceFacts,
+          browser: spec.browser === true,
+          integrations: spec.integrations === true,
+          load: spec.load === true,
+          stops: spec.stops === true,
+          files: spec.files === true,
+          secrets: spec.secrets === true,
+        };
+        held.spec = spec;
+        held.personal = personal?.held;
+        held.backend = binding.backend;
+        held.account = this.options.accounts?.of(binding);
+        held.renewal = session.takeRenewal() ?? held.heldRenewal;
+        held.heldRenewal = undefined;
+        held.unsubscribe = await followCompletions(
+          session,
+          (event) => {
+            // Work was admitted on this home's major, which includes folds:
+            // its crewmate's directions go again.
+            if (event.type === "context_compacted") {
+              this.record(held, { type: "context_compacted" });
+              return;
+            }
+            // A cut-off is a fact about the account that served the turn: this
+            // computer's own, kept in its own store and never the home's.
+            if (event.type === "turn_failed" && event.cutOff && held.account)
+              this.options.accounts?.noteCutOff(held.account, event.cutOff);
+            if (event.type === "background_work_changed") {
+              // The home hears the count, as before; the tasks stay here.
+              this.record(held, { type: "background_work_changed", count: event.count });
+              // A client that ended (`count` unknown) took what it ran with it.
+              if (event.count === undefined) this.clientEnded(held);
+              else this.keepClientTasks(held, event.tasks ?? []);
+              return;
+            }
+            this.record(held, event);
+          },
+          this.now,
+          // The work major includes owner-only completed-operation observations.
+          true,
+          join(folders.root, "completions.sqlite"),
+        );
+        if (this.stopped) throw new Error("This computer is stopping.");
+        this.recordJobs(held, true);
+        state = this.stateOf(held);
+      } catch (caught) {
+        lingering = true;
+        if (held.session === session) await this.releaseConversation(held);
+        else session.dispose();
+        lingering = false;
+        throw caught;
       }
-      held.session = session;
-      held.opened = {
-        tools: spec.tools,
-        instructions: spec.instructions,
-        sourceContext: sourceFacts,
-        browser: spec.browser === true,
-        integrations: spec.integrations === true,
-        load: spec.load === true,
-        stops: spec.stops === true,
-        files: spec.files === true,
-        secrets: spec.secrets === true,
-      };
-      held.spec = spec;
-      held.personal = personal?.held;
-      held.backend = binding.backend;
-      held.account = this.options.accounts?.of(binding);
-      held.renewal = session.takeRenewal();
-      held.unsubscribe = await followCompletions(
-        session,
-        (event) => {
-          // Work was admitted on this home's major, which includes folds:
-          // its crewmate's directions go again.
-          if (event.type === "context_compacted") {
-            this.record(held, { type: "context_compacted" });
-            return;
-          }
-          // A cut-off is a fact about the account that served the turn: this
-          // computer's own, kept in its own store and never the home's.
-          if (event.type === "turn_failed" && event.cutOff && held.account)
-            this.options.accounts?.noteCutOff(held.account, event.cutOff);
-          if (event.type === "background_work_changed") {
-            // The home hears the count, as before; the tasks stay here.
-            this.record(held, { type: "background_work_changed", count: event.count });
-            // A client that ended (`count` unknown) took what it ran with it.
-            if (event.count === undefined) this.clientEnded(held);
-            else this.keepClientTasks(held, event.tasks ?? []);
-            return;
-          }
-          this.record(held, event);
-        },
-        this.now,
-        // The work major includes owner-only completed-operation observations.
-        true,
-        join(folders.root, "completions.sqlite"),
-      );
-      if (this.stopped) {
-        await held.unsubscribe();
-        held.unsubscribe = null;
-        session.dispose();
-        throw new Error("This computer is stopping.");
-      }
-      this.recordJobs(held, true);
     })();
     held.opening = opening;
     try {
       await opening;
+    } catch (caught) {
+      throw lingering ? caught : new NothingOpened(caught);
     } finally {
       held.opening = null;
     }
-    return this.stateOf(held);
+    return state as PlacedState;
   }
 
-  /** Whether this open names tools or instructions the held conversation was not opened with. */
-  private contractMoved(held: Held, spec: PlacedSpec, sourceFacts: string): boolean {
+  /**
+   * Whether this open names tools or instructions the held conversation was
+   * not opened with, a model it does not run, or an account of this computer's other
+   * than the one it is bound to: the home routed it again off a model that
+   * left every level, or off an account that does not serve it (docs/routing.md),
+   * and an idle conversation opens again on the new one. Without
+   * `withModel`, only the rest is compared.
+   */
+  private contractMoved(
+    held: Held,
+    spec: PlacedSpec,
+    sourceFacts: string,
+    withModel = true,
+  ): boolean {
     const opened = held.opened;
     if (!opened) return false;
+    const key = (model: { provider: string; id: string } | undefined) =>
+      model ? `${model.provider}/${model.id}` : "";
+    // The model the held conversation runs, as it says - one that says none
+    // runs no model asked - when a model is asked; and the account it is
+    // bound to, or none.
+    const running = spec.model ? held.session?.modelRef() : held.spec?.model;
     return (
+      (withModel &&
+        (key(running) !== key(spec.model) ||
+          (this.options.accounts !== undefined &&
+            spec.binding.accountId !== undefined &&
+            spec.binding.accountId !== held.account))) ||
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
       opened.sourceContext !== sourceFacts ||
@@ -1122,6 +1202,11 @@ export class SessionHost {
         changed.push(name.split(sep).join("/"));
     }
     let state: PlacedState | undefined;
+    // The home opens it again itself, after routing it (`reattach-only-open.md`).
+    if (reopen && asked.holdReopen) {
+      held.heldRenewal = reopen.renewal;
+      return { status: replaced > 0 ? "changed" : "unchanged", files: changed, reopen: true };
+    }
     if (reopen) {
       try {
         state = await this.open(held, {

@@ -696,4 +696,21 @@ describe("INF-443 learned placed-work ranking", () => {
     });
     w.db.close();
   });
+
+  // INF-5438 round 11 finding 5: a model is ranked only by the account bound
+  // to serve it; when that account has no reading, its allowance stays
+  // unknown and never borrows a spent sibling's, which would drop the model.
+  it("leaves a model unranked when the account bound to serve it has no reading of its own", () => {
+    const w = world();
+    const rows = [row("grok", "home-grok", 0)];
+    w.scores.observe("home", snapshot(AT, rows));
+    const [model] = buildModelsCatalog([GROK], rows, new Date(AT).toISOString(), AT).models;
+    if (!model) throw new Error("The catalog lists Grok.");
+    expect(model.effectivePercentRemaining).toBe(0);
+    const [unread] = w.scores.catalog([model], rows, AT, () => "mini-grok", w.scores.data(AT));
+    expect(unread).toEqual({ provider: "grok", id: GROK.id, label: GROK.name });
+    const [spent] = w.scores.catalog([model], rows, AT, () => "home-grok", w.scores.data(AT));
+    expect(spent).toMatchObject({ accountId: "home-grok", effectivePercentRemaining: 0 });
+    w.db.close();
+  });
 });

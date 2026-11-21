@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "reopen-routes-off-removed-model",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A running task stops using a model you took off every level",
+      "body": "When you take a model off every level in Settings, a task running on it picks another model from your levels the next time it starts a new conversation, such as after you reopen the app, when its conversation grows too long, or when it moves to another computer. It picks among models that computer is signed in to, and stays on its custom connection. Its activity says once which model it moved to. A task keeps the model you last named for it. If no other model can take it, the task waits, says so once, and goes on when your levels or sign-ins change.",
+      "picture": {
+        "dark": "reopen-routes-off-removed-model-dark.webp",
+        "light": "reopen-routes-off-removed-model-light.webp",
+        "alt": "A task record's Activity tab with the line saying Claude Fable 5.2 is on no level in Settings any more, so the task now uses Claude Opus 5.5"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

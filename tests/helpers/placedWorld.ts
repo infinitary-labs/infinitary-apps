@@ -6,6 +6,7 @@ import { placesAs } from "@shared/deviceNames";
 import { englishOf } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
+import type { QuotaSnapshotView } from "@shared/quota";
 import type { ComputerForges } from "@shared/signIns";
 import { type PlacedSpec, placedTaskFolders } from "@shared/work";
 import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
@@ -65,6 +66,8 @@ export const PROVIDER = "fm-placed";
 /** The task commands' launcher (`resources/axi-bin`), which a granted shell finds on its path. */
 const AXI_BIN_DIR = resolve(__dirname, "../../resources/axi-bin");
 export const MODEL = "stub-1";
+/** A second model the same stub connection serves, for a task routed again there. */
+export const OTHER_MODEL = "stub-2";
 const BUILDER = { name: "builder", uid: 502 };
 
 /** The model's stub API and the runtime over it, started once for each test file. */
@@ -89,7 +92,7 @@ export function placedWorldHooks(file: { now: () => number; reset: () => void })
   clock = file.now;
   beforeAll(async () => {
     api = await startStubApi(() => true);
-    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL }, [OTHER_MODEL]);
   });
   afterAll(async () => {
     await api.close();
@@ -105,6 +108,8 @@ export function placedWorldHooks(file: { now: () => number; reset: () => void })
 export type Step = (
   | { tools: { name: string; args: Record<string, unknown> }[] }
   | { text: string }
+  /** The provider refuses the request with this message, as its API answers a bad request. */
+  | { refuse: string }
 ) & {
   held?: Promise<void>;
 };
@@ -120,6 +125,16 @@ export function model(steps: Step[] | ((request: StubRequest, index: number) => 
     const index = request.n - first - 1;
     const step =
       typeof steps === "function" ? steps(request, index) : (steps[index] ?? { text: "Done." });
+    if ("refuse" in step) {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          type: "error",
+          error: { type: "invalid_request_error", message: step.refuse },
+        }),
+      );
+      return;
+    }
     beginAnthropicStream(res, 100, request.n);
     const answer = () => {
       if ("text" in step) {
@@ -228,6 +243,7 @@ export function signedInTo(
   accounts: AccountView[],
   forgesView?: () => ComputerForges,
   served: ServedThere[] = [],
+  allowance: () => QuotaSnapshotView | null = () => null,
 ) {
   const held = {
     vault: {
@@ -245,8 +261,9 @@ export function signedInTo(
         }),
     } as unknown as AccountVault,
     providers: () => [],
-    allowance: () => null,
-    readAllowance: async () => null,
+    // What its accounts' allowance reads there; absent, nothing is read yet.
+    allowance,
+    readAllowance: async () => allowance(),
     close: () => {},
   } satisfies ComputerAccounts;
   const forges = {
@@ -276,6 +293,8 @@ export async function world(
     signedInTo?: AccountView[];
     /** The models each of those accounts serves there, as that computer reads them. */
     served?: ServedThere[];
+    /** Those accounts' allowance as that computer reads it now; absent, none is read. */
+    allowance?: () => QuotaSnapshotView | null;
     /** The computer's own sign-ins where projects live, as it lists them. */
     forges?: () => ComputerForges;
     /** Whether the computer's clone is refused by GitHub for want of its own sign-in there. */
@@ -407,7 +426,14 @@ export async function world(
       ...(version ? { protocolVersion: version } : {}),
       ...(changes ? { changes } : {}),
       ...(options.signedInTo
-        ? { signIns: signedInTo(options.signedInTo, options.forges, options.served) }
+        ? {
+            signIns: signedInTo(
+              options.signedInTo,
+              options.forges,
+              options.served,
+              options.allowance,
+            ),
+          }
         : {}),
       // Removed, it removes what Firstmate set up here; no agent was set up.
       cleanUp: () => cleanUp({ dataDir, background: null }),
@@ -500,8 +526,18 @@ export async function world(
             bound.push(binding);
             if (refusing) throw new Error(`This computer has no sign-in for ${PROVIDER} here.`);
             if (binding.backend === "claude" && options.claude) return options.claude.binding;
-            return { backend: "pi", runtime: options.runtime ?? runtime };
+            // Signed in there, it binds the account of its own the home named.
+            const own = options.signedInTo?.find((account) => account.id === binding.accountId);
+            return {
+              backend: "pi",
+              runtime: options.runtime ?? runtime,
+              ...(own ? { accountId: own.id } : {}),
+            };
           },
+          // A conversation bound to an account of its own says so, as a computer's does.
+          ...(options.signedInTo
+            ? { accounts: { of: (binding) => binding.accountId, noteCutOff: () => {} } }
+            : {}),
           ...(tools ? { tools } : {}),
           ...(options.leftovers ? { leftovers: placedLeftovers(tasks) } : {}),
           ...(channel

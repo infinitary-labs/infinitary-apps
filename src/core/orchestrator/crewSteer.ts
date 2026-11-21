@@ -7,6 +7,7 @@ import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { keepImages } from "../attachments";
 import { capWithOverflow } from "../overflow";
+import { NotOpenThere } from "../placed/crewMachines";
 import type { SecretAskEnded } from "../secrets/asks";
 import type { SecretBringEnded } from "../secrets/bring";
 import type { EndedUseReceipt } from "../secrets/requests";
@@ -551,8 +552,10 @@ export class CrewSteer {
             this.recordSteer(taskId, message, source, "mid-turn", id);
             return "mid-turn";
           })
-          .catch((): SteerDelivery => {
-            this.core.options.inbox.release([id]);
+          .catch((caught: unknown): SteerDelivery => {
+            // A conversation that did not open there again: it goes back unspent.
+            if (caught instanceof NotOpenThere) this.core.options.inbox.reparkUndelivered([id]);
+            else this.core.options.inbox.release([id]);
             this.recordSteer(taskId, message, source, "recorded-retrying", id);
             return "recorded-retrying";
           });

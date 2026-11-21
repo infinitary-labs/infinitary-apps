@@ -345,6 +345,24 @@ describe("a Bitbucket Cloud pull request", () => {
     await expect(forge.pull(9)).rejects.toMatchObject({ failure: "transient" });
   });
 
+  // The live check on bitbucket.org (this task's review): a new comment
+  // leaves a pull request's `updated_on` where it was, so a last-changed time
+  // read from it would keep the comment wake from ever reading the comment.
+  it("names no last-changed time for a pull request, since Bitbucket's leaves out comments", async () => {
+    const { forge } = standIn({
+      [`GET ${REPO}/pullrequests/7`]: () =>
+        Response.json({ ...pullRequest({}), updated_on: "2026-11-21T03:14:31.633308+00:00" }),
+      [`GET ${REPO}/pullrequests/7/mergeability/checks`]: () =>
+        Response.json({
+          values: [{ type: "git_mergeability_check", status: "PASSED", reason: "clean" }],
+        }),
+      ...commits(HEAD),
+    });
+    const pull = await forge.pull(7);
+    expect(pull.readiness).toBe("clean");
+    expect(pull).not.toHaveProperty("updatedAt");
+  });
+
   // INF-5193 (the review of Bitbucket's merge): an answer about another pull
   // request is no reading of this one, so it confirms no merge and settles
   // no merge whose outcome is unknown.

@@ -84,7 +84,6 @@ type PullRequestJson = {
   source?: Endpoint;
   destination?: Endpoint;
   merge_commit?: { hash?: string } | null;
-  updated_on?: string;
   links?: { html?: { href?: string } };
 };
 
@@ -551,7 +550,10 @@ export class BitbucketForge implements Forge {
       state: open ? "open" : "closed",
       merged,
       ...(mergedSha ? { mergedSha } : {}),
-      ...(request.updated_on ? { updatedAt: request.updated_on } : {}),
+      // No updatedAt: Bitbucket's `updated_on` stays put when someone
+      // comments (measured on bitbucket.org), and the comment wake skips its
+      // reading while a pull request's last-changed time is unchanged
+      // (`docs/forge.md`, "Comments on a pull request").
       headSha: await this.headOf(request),
       base: request.destination?.branch?.name ?? "",
       ...(request.source?.branch?.name ? { branch: request.source.branch.name } : {}),

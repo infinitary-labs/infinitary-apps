@@ -143,6 +143,76 @@
       <string>· 经由 %1$ld 个任务</string>
     </dict>
   </dict>
+  <key>cardConsentRunbookPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，也不会把任何内容发出%2$@。</string>
+    </dict>
+  </dict>
+  <key>cardConsentRunbookPanelsThrough</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出%2$@。</string>
+    </dict>
+  </dict>
+  <key>cardConsentShowsPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>显示面板</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesActions</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@，操作 %3$@，遵循“设置” → “集成”中的规则。</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesEvents</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@，事件 %3$@。</string>
+    </dict>
+  </dict>
   <key>cardFilesAll</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

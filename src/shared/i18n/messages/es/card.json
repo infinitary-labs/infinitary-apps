@@ -71,6 +71,60 @@
   "cardBrowserUnansweredAsked": "Nada responde en {site}, así que se pidió al tripulante que lo vuelva a iniciar. La página aparecerá aquí en cuanto responda.",
   "cardBrowserUnansweredWorking": "Nada responde en {site} y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.",
   "cardBrowserWord": "Navegador",
+  "cardConsentFrom": "De",
+  "cardConsentFullDetails": "Todos los detalles",
+  "cardConsentGuidanceOnly": "Aporta guías, partes HTML e imágenes, y no ejecuta nada.",
+  "cardConsentKeeps": "Guarda",
+  "cardConsentKeepsLittle": "Algunos datos propios",
+  "cardConsentKeepsUpTo": "Hasta {size} de datos propios",
+  "cardConsentMoves": "Mueve",
+  "cardConsentMovesDetail": "Tus tareas, cada una solo cuando haces clic o pulsas una tecla en el panel. Nunca puede fusionar ni descartar.",
+  "cardConsentMovesLine": "Puede poner en cola, iniciar y abandonar tus tareas cuando haces clic",
+  "cardConsentMovesValue": "Tus tareas cuando haces clic: poner en cola, iniciar y abandonar",
+  "cardConsentNothingOfYours": "Nada tuyo",
+  "cardConsentPanelNote": "No ejecuta código propio en la app y no envía nada fuera de {here}.",
+  "cardConsentPanelNoteThrough": "No ejecuta código propio en la app y no envía nada fuera de {here}, salvo a través de esas integraciones.",
+  "cardConsentReaches": "Alcance",
+  "cardConsentReachesAll": "Todos los proyectos y tu espacio de trabajo personal",
+  "cardConsentReachesNamed": "Los proyectos que nombra",
+  "cardConsentReads": "Lee",
+  "cardConsentReadsList": "Lee {list}",
+  "cardConsentReadsNothing": "No lee nada tuyo",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "one": "Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de {here}.",
+    "many": "Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de {here}.",
+    "other": "Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de {here}."
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "one": "Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de {here}, salvo a través de esas integraciones.",
+    "many": "Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de {here}, salvo a través de esas integraciones.",
+    "other": "Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de {here}, salvo a través de esas integraciones."
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "one": "Muestra un panel",
+    "many": "Muestra paneles",
+    "other": "Muestra paneles"
+  },
+  "cardConsentTurnBackOn": "Puedes volver a activarlo.",
+  "cardConsentTurnsOff": "Desactiva",
+  "cardConsentUses": "Usa",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "one": "{integration}, acción {names}, según su regla en Configuración → Integraciones.",
+    "many": "{integration}, acciones {names}, según su regla en Configuración → Integraciones.",
+    "other": "{integration}, acciones {names}, según su regla en Configuración → Integraciones."
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "one": "{integration}, evento {names}.",
+    "many": "{integration}, eventos {names}.",
+    "other": "{integration}, eventos {names}."
+  },
+  "cardConsentUsesLine": "Usa {integration}: {names}",
+  "cardConsentUsesWhy": "Por qué, en sus palabras: “{why}”",
   "cardCrewmateLog": "Las notas del tripulante",
   "cardCrewmateSendFailed": "No se pudo enviar esta línea en este momento.",
   "cardCrewmateSurface": "Tripulante",
@@ -214,7 +268,6 @@
   "cardRevisionLinksUnavailable": "Enlaces de cambios no disponibles",
   "cardRevisionMore": "{count} más",
   "cardRevisionShowFewer": "Mostrar menos",
-  "cardRunbookAddPanels": "Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.",
   "cardSavedResetCrewWaits": "El trabajo de la tripulación pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
   "cardSavedResetCrewWaitsThere": "El trabajo de la tripulación {where} pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
   "cardSavedResetsNow": {

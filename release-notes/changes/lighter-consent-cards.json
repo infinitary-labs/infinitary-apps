@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "lighter-consent-cards",
+      "kind": "improvement",
+      "title": "Shorter cards for adding a runbook or a panel",
+      "body": "The card that asks before adding a runbook or a panel from elsewhere now shows a few labeled rows instead of paragraphs: where it comes from, what it reaches, and what each panel reads, uses and can do with your tasks. The exact names, each connection's reason and what a panel keeps are one click away under Full details.",
+      "area": "cards",
+      "picture": {
+        "dark": "lighter-consent-cards-dark.webp",
+        "light": "lighter-consent-cards-light.webp",
+        "alt": "The card asking to add the Studio workflows runbook, with rows for From, Reaches, Turns off and Shows panels, and two panels with one line for each permission"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

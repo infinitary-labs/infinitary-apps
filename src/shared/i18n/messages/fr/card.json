@@ -71,6 +71,60 @@
   "cardBrowserUnansweredAsked": "Rien ne répond sur {site}, donc l’équipier a été invité à le relancer. La page s’affiche ici dès qu’il répond.",
   "cardBrowserUnansweredWorking": "Rien ne répond sur {site}, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.",
   "cardBrowserWord": "Navigateur",
+  "cardConsentFrom": "De",
+  "cardConsentFullDetails": "Tous les détails",
+  "cardConsentGuidanceOnly": "Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.",
+  "cardConsentKeeps": "Conserve",
+  "cardConsentKeepsLittle": "Un peu de données à lui",
+  "cardConsentKeepsUpTo": "Jusqu’à {size} de données à lui",
+  "cardConsentMoves": "Déplace",
+  "cardConsentMovesDetail": "Vos tâches, chacune seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne peut jamais fusionner ni abandonner.",
+  "cardConsentMovesLine": "Peut mettre en file, démarrer et écarter vos tâches quand vous cliquez",
+  "cardConsentMovesValue": "Vos tâches, quand vous cliquez : mettre en file, démarrer et écarter",
+  "cardConsentNothingOfYours": "Rien de vos données",
+  "cardConsentPanelNote": "Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de {here}.",
+  "cardConsentPanelNoteThrough": "Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de {here}, sauf par ces intégrations.",
+  "cardConsentReaches": "Portée",
+  "cardConsentReachesAll": "Tous les projets et votre espace de travail personnel",
+  "cardConsentReachesNamed": "Les projets qu’elle nomme",
+  "cardConsentReads": "Lit",
+  "cardConsentReadsList": "Lit {list}",
+  "cardConsentReadsNothing": "Ne lit rien de vos données",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "one": "L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de {here}.",
+    "many": "L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de {here}.",
+    "other": "L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de {here}."
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "one": "L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de {here}, sauf par ces intégrations.",
+    "many": "L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de {here}, sauf par ces intégrations.",
+    "other": "L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de {here}, sauf par ces intégrations."
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "one": "Affiche un panneau",
+    "many": "Affiche des panneaux",
+    "other": "Affiche des panneaux"
+  },
+  "cardConsentTurnBackOn": "Vous pouvez la réactiver.",
+  "cardConsentTurnsOff": "Désactive",
+  "cardConsentUses": "Utilise",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "one": "{integration}, action {names}, selon sa règle dans Réglages → Intégrations.",
+    "many": "{integration}, actions {names}, selon sa règle dans Réglages → Intégrations.",
+    "other": "{integration}, actions {names}, selon sa règle dans Réglages → Intégrations."
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "one": "{integration}, événement {names}.",
+    "many": "{integration}, événements {names}.",
+    "other": "{integration}, événements {names}."
+  },
+  "cardConsentUsesLine": "Utilise {integration} : {names}",
+  "cardConsentUsesWhy": "Pourquoi, selon lui : « {why} »",
   "cardCrewmateLog": "La conversation de l’équipier",
   "cardCrewmateSendFailed": "Cette ligne n’a pas pu être envoyée pour l’instant.",
   "cardCrewmateSurface": "Équipier",
@@ -214,7 +268,6 @@
   "cardRevisionLinksUnavailable": "Liens de modification indisponibles",
   "cardRevisionMore": "{count} de plus",
   "cardRevisionShowFewer": "Afficher moins",
-  "cardRunbookAddPanels": "Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.",
   "cardSavedResetCrewWaits": "Le travail de l’équipage passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.",
   "cardSavedResetCrewWaitsThere": "Le travail de l’équipage {where} passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.",
   "cardSavedResetsNow": {

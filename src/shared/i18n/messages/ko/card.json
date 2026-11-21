@@ -63,6 +63,50 @@
   "cardBrowserUnansweredAsked": "{site}에서 응답이 없어 선원에게 다시 시작해 달라고 요청했어요. 응답하면 페이지가 여기에 표시돼요.",
   "cardBrowserUnansweredWorking": "{site}에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.",
   "cardBrowserWord": "브라우저",
+  "cardConsentFrom": "제공",
+  "cardConsentFullDetails": "자세히",
+  "cardConsentGuidanceOnly": "안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.",
+  "cardConsentKeeps": "보관",
+  "cardConsentKeepsLittle": "자체 데이터 약간",
+  "cardConsentKeepsUpTo": "자체 데이터 최대 {size}",
+  "cardConsentMoves": "이동",
+  "cardConsentMovesDetail": "내 작업은 패널 안에서 클릭하거나 키를 누를 때만 하나씩 다뤄요. 병합하거나 폐기할 수는 없어요.",
+  "cardConsentMovesLine": "클릭할 때 작업을 대기열에 넣고, 시작하고, 중단할 수 있어요",
+  "cardConsentMovesValue": "클릭할 때 내 작업: 대기열에 넣기, 시작, 중단",
+  "cardConsentNothingOfYours": "내 데이터 없음",
+  "cardConsentPanelNote": "앱에서 자체 코드를 실행하지 않고 {here} 밖으로 아무것도 보내지 않아요.",
+  "cardConsentPanelNoteThrough": "앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 {here} 밖으로 아무것도 보내지 않아요.",
+  "cardConsentReaches": "적용 범위",
+  "cardConsentReachesAll": "모든 프로젝트와 개인 작업 공간",
+  "cardConsentReachesNamed": "지정한 프로젝트",
+  "cardConsentReads": "읽기",
+  "cardConsentReadsList": "읽기: {list}",
+  "cardConsentReadsNothing": "내 데이터를 읽지 않아요",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "other": "추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고 {here} 밖으로 아무것도 보내지 않아요."
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "other": "추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 {here} 밖으로 아무것도 보내지 않아요."
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "other": "표시하는 패널"
+  },
+  "cardConsentTurnBackOn": "다시 켤 수 있어요.",
+  "cardConsentTurnsOff": "끄는 항목",
+  "cardConsentUses": "사용",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "other": "{integration}, 액션 {names}, 설정 → 연동의 규칙을 따라요."
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "other": "{integration}, 이벤트 {names}."
+  },
+  "cardConsentUsesLine": "{integration} 사용: {names}",
+  "cardConsentUsesWhy": "이유(패널의 말): “{why}”",
   "cardCrewmateLog": "선원의 대화",
   "cardCrewmateSendFailed": "지금은 이 줄을 보낼 수 없어요.",
   "cardCrewmateSurface": "선원",
@@ -192,7 +236,6 @@
   "cardRevisionLinksUnavailable": "변경 링크를 쓸 수 없음",
   "cardRevisionMore": "{count}개 더",
   "cardRevisionShowFewer": "적게 보기",
-  "cardRunbookAddPanels": "켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.",
   "cardSavedResetCrewWaits": "저장된 재설정을 사용하지 않으면 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
   "cardSavedResetCrewWaitsThere": "저장된 재설정을 사용하지 않으면 {where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
   "cardSavedResetsNow": {

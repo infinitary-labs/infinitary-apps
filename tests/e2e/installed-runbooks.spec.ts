@@ -71,9 +71,16 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     await promptInput(at.page).fill(ADD_RUNBOOK_PROMPT_MARKER + source);
     await promptInput(at.page).press("Enter");
     await expect(shownCard(at.page, title)).toBeVisible();
-    await expect(cardBody(at.page, title).locator("body")).toContainText(`${workflows.name} off`);
-    await expect(cardBody(at.page, title).locator("body")).toContainText(m.cardRunbookAddPanels());
-    await expect(cardBody(at.page, title).locator("li b")).toHaveText("Reading list");
+    const rows = cardBody(at.page, title).locator("dl").first();
+    await expect(rows.locator("dt", { hasText: m.cardConsentTurnsOff() })).toBeVisible();
+    await expect(rows.locator("dd b").nth(1)).toHaveText(workflows.name);
+    await expect(cardBody(at.page, title).locator("body")).toContainText(
+      m.cardConsentRunbookPanels({ count: 1, here: m.placeThisComputer() }),
+    );
+    await expect(
+      rows.locator("dt", { hasText: m.cardConsentShowsPanels({ count: 1 }) }),
+    ).toBeVisible();
+    await expect(rows.locator("dd b").nth(2)).toHaveText("Reading list");
     expect(
       (await at.page.evaluate(() => window.infinitary.settings.getRunbooks())).some(
         (book) => book.id === manifest.id,

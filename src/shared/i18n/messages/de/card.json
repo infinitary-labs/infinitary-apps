@@ -67,6 +67,55 @@
   "cardBrowserUnansweredAsked": "Unter {site} antwortet nichts, deshalb wurde das Crewmitglied gebeten, es neu zu starten. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserUnansweredWorking": "Unter {site} antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserWord": "Browser",
+  "cardConsentFrom": "Von",
+  "cardConsentFullDetails": "Alle Details",
+  "cardConsentGuidanceOnly": "Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.",
+  "cardConsentKeeps": "Speichert",
+  "cardConsentKeepsLittle": "Ein wenig eigene Daten",
+  "cardConsentKeepsUpTo": "Bis zu {size} eigene Daten",
+  "cardConsentMoves": "Bewegt",
+  "cardConsentMovesDetail": "Deine Aufgaben, jede nur, wenn du darin klickst oder eine Taste drückst. Es kann nie zusammenführen oder verwerfen.",
+  "cardConsentMovesLine": "Kann deine Aufgaben auf deinen Klick einreihen, starten und aufgeben",
+  "cardConsentMovesValue": "Deine Aufgaben auf deinen Klick: einreihen, starten und aufgeben",
+  "cardConsentNothingOfYours": "Nichts von dir",
+  "cardConsentPanelNote": "Es führt keinen eigenen Code in der App aus und sendet nichts von {here} weg.",
+  "cardConsentPanelNoteThrough": "Es führt keinen eigenen Code in der App aus und sendet nichts von {here} weg, außer über diese Integrationen.",
+  "cardConsentReaches": "Gilt für",
+  "cardConsentReachesAll": "Jedes Projekt und deinen persönlichen Arbeitsbereich",
+  "cardConsentReachesNamed": "Die Projekte, die er nennt",
+  "cardConsentReads": "Liest",
+  "cardConsentReadsList": "Liest {list}",
+  "cardConsentReadsNothing": "Liest nichts von dir",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "one": "Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von {here} weg.",
+    "other": "Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von {here} weg."
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "one": "Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von {here} weg, außer über diese Integrationen.",
+    "other": "Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von {here} weg, außer über diese Integrationen."
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "one": "Zeigt ein Panel",
+    "other": "Zeigt Panels"
+  },
+  "cardConsentTurnBackOn": "Du kannst ihn wieder einschalten.",
+  "cardConsentTurnsOff": "Schaltet aus",
+  "cardConsentUses": "Nutzt",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "one": "{integration}, Aktion {names}, nach ihrer Regel unter Einstellungen → Integrationen.",
+    "other": "{integration}, Aktionen {names}, nach ihrer Regel unter Einstellungen → Integrationen."
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "one": "{integration}, Ereignis {names}.",
+    "other": "{integration}, Ereignisse {names}."
+  },
+  "cardConsentUsesLine": "Nutzt {integration}: {names}",
+  "cardConsentUsesWhy": "Warum, in seinen Worten: „{why}“",
   "cardCrewmateLog": "Die Notizen des Crewmitglieds",
   "cardCrewmateSendFailed": "Diese Zeile konnte gerade nicht gesendet werden.",
   "cardCrewmateSurface": "Crewmitglied",
@@ -203,7 +252,6 @@
   "cardRevisionLinksUnavailable": "Änderungslinks nicht verfügbar",
   "cardRevisionMore": "{count} weitere",
   "cardRevisionShowFewer": "Weniger anzeigen",
-  "cardRunbookAddPanels": "Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.",
   "cardSavedResetCrewWaits": "Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
   "cardSavedResetCrewWaitsThere": "Crew-Arbeit {where} wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
   "cardSavedResetsNow": {

@@ -43,7 +43,9 @@ Existing saved records remain panels.
 Nothing is served until the captain chooses Add it on the host's card; Don't add declines and removes the staged files.
 Putting the card aside keeps the staged offer pending without serving or declining it.
 Every runbook update asks again, because new guidance or a different replacement changes what the agents follow even when no panel grant changes.
-The card names the source, author, guidance reach, any built-in it turns off and the panels it shows ("Panels" below).
+The card leads with the runbook's description, then labeled rows: From (its author and the whole source), Reaches, Turns off for a built-in it replaces, and Shows a panel or Shows panels ("Panels" below).
+One quiet line under the rows says it runs nothing, or, with panels, that adding it agrees to them and that they run no code of their own and send nothing off this computer.
+The rows are `runbookConsentBody` in `src/core/plugins/consentWords.ts`, each label and line a catalog message.
 Adding leaves one feed line, including that replacement; the built-in stays available to turn back on.
 An update cannot take a name from a different source or change a panel into a runbook.
 Ask the first mate to remove an added runbook by name; the installer's remove action uses its id and removes its files and record.
@@ -67,7 +69,8 @@ A panel of your own or an added one keeps its id; a runbook's panel with a taken
 A runbook's panel the core will not serve, such as one with background code or one nobody agreed to, is answered refused with that reason too.
 The first mate's surfaces name each runbook's panel by its runbook and list the ones left off, a view of another Mac lists them among its refused panels too, and a list past its bound (`PERSONAL_REFUSED_MAX`, `PANEL_MOUNTS_MAX`) leaves out refused runbook panels, never a drawn one.
 A personal runbook's panel is served what its manifest asks, as your own panels are.
-An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
+An added runbook's panels are agreed on its own add card: under Shows panels the card names each panel with one line for what it reads, each integration it uses and whether it moves tasks, and Add it records those grants on the runbook's record (`plugins.panels_json`).
+The exact names it reads, each integration's rule and reason, the moves fine print and what each panel keeps sit under the card's Full details, as on a panel's own card.
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.
 Settings → Runbooks names a runbook's panels under its switch.
 An added runbook is read only under its record's id: files changed to name another runbook are listed as not available, never served under that one's agreement.

@@ -46,6 +46,7 @@ import type { QuotaCatalogModel } from "../../src/core/quota/auth";
 import type { QuotaService } from "../../src/core/quota/quotaService";
 import { computerBoardModels } from "../../src/core/routing/computerPool";
 import { type AccountModels, ModelSlots } from "../../src/core/routing/modelSlots";
+import { PlacedWorkScores } from "../../src/core/routing/placedWork";
 import { Router } from "../../src/core/routing/router";
 import type { PiModelRef } from "../../src/core/routing/routingEngine";
 import type { Runbooks } from "../../src/core/runbooks/runbooks";
@@ -116,6 +117,8 @@ export type PlacedHome = {
   setup: DeviceSetup;
   /** The routing ledger; empty unless the home routes. */
   decisions: DecisionStore;
+  /** The Models board's slot record, given `routing`: a level change is its `setSlotMembership`. */
+  slots?: ModelSlots;
   /** The database beneath, for reading what the ledger keeps to itself (a decision's reasons). */
   db: AppDatabase;
   /** Every event the home broadcast, oldest first. */
@@ -308,6 +311,8 @@ export function startPlacedHome(options: {
         decisions,
         availableModels: () => routing.available,
         slots,
+        // Each model is ranked on the account bound to serve it, as `createServices` routes.
+        placedWork: new PlacedWorkScores(db, settings),
       })
     : undefined;
   // A task that moves home keeps its working copy here, in the real workspace.
@@ -644,6 +649,10 @@ export function startPlacedHome(options: {
       supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
+    reopenModel: (taskId, machine, attach) => supervisor.reopenModel(taskId, machine, attach),
+    modelKept: (taskId, machine) => supervisor.moves.keepsModel(taskId, machine),
+    letGo: (taskId, now) =>
+      now ? supervisor.placedLetGo(taskId, undefined, now) : supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
   });
   const dispatch = (async (channel, rawArgs, actor) => {
@@ -703,6 +712,7 @@ export function startPlacedHome(options: {
     signIns,
     setup,
     decisions,
+    ...(slots ? { slots } : {}),
     db,
     events,
     wakes,

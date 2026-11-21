@@ -503,6 +503,8 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
             );
           },
           servedChoice: (taskId: string) => routedChoices.get(taskId),
+          // A stand-in router has no levels: every model it routed stays held.
+          holdsAtALevel: () => true,
           // A move's evaluation, never recorded until it is committed.
           preview: (
             _prompt: string,

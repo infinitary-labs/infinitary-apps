@@ -1,6 +1,7 @@
 import { computerPresenceOf } from "@shared/devices";
 import type { FeedLine } from "@shared/feed";
 import { wordedLine } from "@shared/i18n/said";
+import { wordedActivity } from "@shared/i18n/wordedActivity";
 import type { CorePushChannel } from "@shared/ipc";
 import type { PanelFeedLine } from "@shared/personal/contracts";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
@@ -213,7 +214,7 @@ export function firstmateReadApi(): ReadApi {
         );
         return presentedFeed;
       }
-      if (name === "tasks.detail") return presentTask(value as TaskDetail, cards);
+      if (name === "tasks.detail") return presentTask(wordedActivity(value as TaskDetail), cards);
       if (name === "tasks.search") rememberFound(value as TaskView[]);
       if (name === "projects.list" && board) {
         return presentProjects(value as ProjectView[], projectBoard(board).tasks);

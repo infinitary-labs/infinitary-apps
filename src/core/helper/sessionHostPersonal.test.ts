@@ -112,7 +112,7 @@ describe("the home's personal instructions on a computer that runs work", () => 
     const { state } = await at.order("inf:session:open", [
       { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, personalResources: true } },
     ]);
-    expect(state.personal).toEqual(after);
+    expect(state?.personal).toEqual(after);
     const system = await servedOn(at, 1);
     expect(system).toContain("The home's edited rule.");
     expect(system).toContain("<name>home-rivets</name>");
@@ -131,7 +131,7 @@ describe("the home's personal instructions on a computer that runs work", () => 
     const { state } = await at.order("inf:session:open", [
       { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, personalResources: true } },
     ]);
-    expect(state.personal).toBeUndefined();
+    expect(state?.personal).toBeUndefined();
     const system = await servedOn(at, 1);
     expect(system).toContain("The computer's own rule.");
     expect(system).toContain("<name>computer-rivets</name>");

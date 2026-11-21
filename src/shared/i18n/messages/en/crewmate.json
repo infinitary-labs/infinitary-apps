@@ -40,6 +40,7 @@
   "crewmateProgress": "Progress",
   "crewmateQueued": "queued",
   "crewmateReport": "Report",
+  "crewmateRoutedAgain": "{left} is on no level in Settings any more, so this task now uses {model}",
   "crewmateRunning": "running…",
   "crewmateSendsTo": "to the crewmate",
   "crewmateShowCard": "Show the card",
@@ -50,5 +51,7 @@
   "crewmateStopping": "Stopping…",
   "crewmateUnreadable": "This crewmate's session could not be read.",
   "crewmateWaiting": "Waiting on you",
+  "crewmateWaitsForModel": "{left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can",
+  "crewmateWaitsForUpdate": "{left} is on no level in Settings any more, and {computer} needs an update before this task can move to another model there, so it waits until then",
   "crewmateWorking": "Working…"
 }

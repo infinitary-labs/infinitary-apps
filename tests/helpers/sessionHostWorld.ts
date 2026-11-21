@@ -55,6 +55,8 @@ import { moveWorkFolder, olderWorkFolder } from "./workFolderMove";
 
 export const PROVIDER = "fm-placed";
 export const MODEL = "stub-1";
+/** A second model the same stub connection serves, for a conversation that changes model. */
+export const OTHER_MODEL = "stub-2";
 export const TASK = "task-placed";
 const BUILDER = { name: "builder", uid: 502 };
 
@@ -259,7 +261,7 @@ const runs: HelperRun[] = [];
 export function sessionHostHooks(): void {
   beforeAll(async () => {
     api = await startStubApi(() => true);
-    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+    runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL }, [OTHER_MODEL]);
   });
   afterAll(async () => {
     await api.close();
@@ -447,7 +449,14 @@ export async function placed(
     },
     /** Whether the run had its conversations keep a crewmate's builds and tests below the UI. */
     belowUi: () => belowUi,
-    open: () => order("inf:session:open", [{ orderId: `open:${TASK}:1`, task: TASK, spec }]),
+    /** The home opens the conversation: one it holds, or a new one on `spec`. */
+    open: async () => {
+      const answer = await order("inf:session:open", [
+        { orderId: `open:${TASK}:1`, task: TASK, spec },
+      ]);
+      if (!answer.state) throw new Error("The computer opened no conversation.");
+      return { state: answer.state };
+    },
     /** The home's turn ends: the computer said `turn_ended` for this turn. */
     ended: (turn: number) =>
       expect

@@ -4,6 +4,7 @@ import { checkSnapshotSchema } from "./checkSnapshot";
 import { taskCostViewSchema } from "./costLimit";
 import { recordDeliveryFactSchema } from "./deliveryFacts";
 import { computerReachSchema } from "./devices";
+import { saidSchema } from "./i18n/said";
 import { liveValidationSummarySchema } from "./liveValidationSummary";
 import { modelChoiceSchema } from "./modelChoice";
 import { modelReasonSchema } from "./modelReason";
@@ -646,6 +647,13 @@ export const taskActivityLineSchema = z.object({
    * words, and from an older home.
    */
   saidHere: z.literal(true).optional(),
+  /**
+   * The app's own words of `text` saved as a fact (docs/i18n.md, "Saved
+   * facts"), so the window and the phone (`PhoneWords.line`) word the line
+   * in their own language; `text` keeps the English for a reader that words
+   * nothing itself. Absent on every other line, and from an older home.
+   */
+  said: saidSchema.optional(),
 });
 export type TaskActivityLine = z.infer<typeof taskActivityLineSchema>;
 

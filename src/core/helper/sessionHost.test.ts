@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PROTOCOL_VERSION } from "@shared/ipc";
+import { fenceClosing, fenceOpening } from "@shared/outsideData";
 import {
   type PlacedSpec,
   placedTaskFolders,
@@ -14,6 +15,7 @@ import {
   api,
   MODEL,
   model,
+  OTHER_MODEL,
   PROVIDER,
   placed,
   sessionHostHooks,
@@ -402,10 +404,228 @@ describe("a conversation held on a computer that runs work", () => {
         },
       },
     ]);
-    expect(again.state.resume).toBe(held.state.resume);
+    expect(again.state?.resume).toBe(held.state.resume);
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);
     expect(api.requests.at(-1)?.body.tools?.map((tool) => tool.name)).toContain("prepare_change");
+  });
+
+  // Intent: a task routed again re-opens its idle conversation there on the new model (docs/helper.md).
+  it("re-opens an idle conversation on the model a later open names", async () => {
+    const at = await placed();
+    const opened = await at.open();
+    expect(opened.state.model).toEqual({ provider: PROVIDER, id: MODEL });
+    model([{ text: "Started." }, { text: "On the other model." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+
+    const again = await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:2`,
+        task: TASK,
+        spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL } },
+      },
+    ]);
+    expect(again.state?.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
+    await at.ended(2);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  // INF-5438 round 9 finding 6: a held conversation asked for one model that
+  // runs another is not what the same open gets back: it opens again.
+  it("opens again when the held conversation runs another model than the same open asks", async () => {
+    const at = await placed();
+    await at.open();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: never) => Promise<{ modelRef(): unknown }> } } };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    let drifts = true;
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      if (drifts) {
+        drifts = false;
+        // The runtime could not serve the model asked and runs the first one.
+        session.modelRef = () => ({ provider: PROVIDER, id: MODEL });
+      }
+      return session;
+    });
+    const other = { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL } };
+    const drifted = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: other },
+    ]);
+    expect(drifted.state?.model).toEqual({ provider: PROVIDER, id: MODEL });
+    const again = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:3`, task: TASK, spec: other },
+    ]);
+    expect(again.state?.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
+  });
+
+  // INF-5438 round 10 finding 5: an idle held conversation that says no
+  // model is not what an open asking one gets back: it opens again.
+  it("opens again when an idle held conversation says no model and the same open asks one", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: never) => Promise<{ modelRef(): unknown }> } } };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    let silent = true;
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      if (silent) {
+        silent = false;
+        session.modelRef = () => undefined;
+      }
+      return session;
+    });
+    const first = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: at.spec },
+    ]);
+    expect(first.state?.model).toBeUndefined();
+    const again = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: at.spec },
+    ]);
+    expect(again.state?.model).toEqual(at.spec.model);
+  });
+
+  // INF-5438 round 11 finding 1: a fresh open asks for a new conversation
+  // and never gets back the one held - even one opened with no resume
+  // token, whose contract is the same - while one still in a turn opens
+  // nothing yet, so the home asks again (`fresh-open.md`).
+  it("opens a new conversation for a fresh open, replacing the idle one held and never a busy one", async () => {
+    const at = await placed();
+    const first = await at.open();
+    model([{ text: "Started." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+    // The same open with no resume, not asked fresh, keeps what is held.
+    const same = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: at.spec },
+    ]);
+    expect(same.state?.resume).toBe(first.state.resume);
+    const host = at.host() as unknown as { busy(held: unknown): boolean };
+    const busy = vi.spyOn(host, "busy").mockReturnValue(true);
+    await expect(
+      at.order("inf:session:open", [
+        { orderId: `open:${TASK}:3`, task: TASK, spec: { ...at.spec, fresh: true } },
+      ]),
+    ).rejects.toThrow("still in a turn");
+    busy.mockRestore();
+    const kept = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:4`, task: TASK, spec: at.spec },
+    ]);
+    expect(kept.state?.resume).toBe(first.state.resume);
+    const restarted = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:5`, task: TASK, spec: { ...at.spec, fresh: true } },
+    ]);
+    expect(restarted.state?.resume).toBeTruthy();
+    expect(restarted.state?.resume).not.toBe(first.state.resume);
+  });
+
+  // INF-5438 round 10 finding 4: an open that fails once its conversation
+  // began says it left nothing here only after letting that conversation go,
+  // and only to a home that asks; to any other it fails as before.
+  it("answers that an open left nothing here once the conversation it began is let go", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: {
+          factories: { pi: { open: (spec: never) => Promise<{ takeRenewal(): unknown }> } };
+        };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      session.takeRenewal = () => {
+        throw new Error("The renewal could not be read.");
+      };
+      return session;
+    });
+    const answer = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, notOpened: true } },
+    ]);
+    expect(answer).toEqual({ notOpened: "The renewal could not be read." });
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
+    await expect(
+      at.order("inf:session:open", [{ orderId: `open:${TASK}:2`, task: TASK, spec: at.spec }]),
+    ).rejects.toThrow("The renewal could not be read.");
+  });
+
+  // INF-5438 finding 1: an open asked only to reattach never creates or
+  // replaces a conversation there; it answers that a new one is needed, so
+  // the home routes first (`reattach-only-open.md`).
+  it("answers that a new conversation is needed when asked only to reattach and nothing is held", async () => {
+    const at = await placed();
+    const answer = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, reattach: true } },
+    ]);
+    expect(answer).toEqual({ needsOpen: true });
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
+  });
+
+  // INF-5438 round 7 finding 7: a reattach adopts the held conversation as it
+  // runs, answering its own model, rather than asking the home to open anew.
+  it("keeps an idle conversation's model when asked only to reattach on another", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Started." }, { text: "Still on the first model." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+
+    const asked = await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:2`,
+        task: TASK,
+        spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL }, reattach: true },
+      },
+    ]);
+    expect(asked).toMatchObject({ state: { model: { provider: PROVIDER, id: MODEL } } });
+    // The conversation it held is the one that answers the next turn.
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
+    await at.ended(2);
+    expect(api.requests.at(-1)?.body.model).toBe(MODEL);
+  });
+
+  // INF-5438 finding 2: a cleanup that lets the conversation go leaves it
+  // closed for the home to open again after routing it, rather than opening
+  // it there again on the model it had.
+  it("opens nothing again after a cleanup the home asked to hold the reopen of", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Read the mail." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Read it." }]);
+    await at.ended(1);
+    const read = Date.parse("2026-11-01T00:00:00.000Z");
+    const sessions = placedTaskFolders(join(at.dataDir, "tasks"), TASK).sessions;
+    const [file] = readdirSync(sessions).filter((name) => name.endsWith(".jsonl"));
+    if (!file) throw new Error("The conversation saved no record.");
+    const fence = { label: "gmail", value: "0123456789abcdef", at: read };
+    writeFileSync(
+      join(sessions, file),
+      `${readFileSync(join(sessions, file), "utf8")}${JSON.stringify({ type: "note", text: `${fenceOpening(fence)} a message ${fenceClosing(fence.label, fence.value)}` })}\n`,
+    );
+
+    const answer = await at.order("inf:session:delete-outside", [
+      {
+        orderId: "outside:1",
+        task: TASK,
+        kinds: [{ label: fence.label, until: read + 1, note: "A message was removed." }],
+        legacy: [],
+        holdReopen: true,
+      },
+    ]);
+    expect(answer).toMatchObject({ status: "changed", reopen: true });
+    expect(answer).not.toHaveProperty("state");
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
   });
 
   // Intent: INF-311's accepted whole-call deadline includes waiting for prior events.

@@ -28,6 +28,12 @@ export type PlacedAccountsOptions = {
    */
   signIns?: (deviceId: string) => Promise<ComputerSignIns | null>;
   /**
+   * Asks a computer its sign-ins again (`DeviceSignIns.refresh`), so what it
+   * says next was written after everything heard from it before: true only
+   * when it answered.
+   */
+  refreshSignIns?: (deviceId: string) => Promise<boolean>;
+  /**
    * The same, read now without asking (`DeviceSignIns.lastSaid`): a cut-off
    * it names on the account a task there is bound to holds that task.
    * Absent, nothing there ever holds one.
@@ -59,7 +65,17 @@ export class PlacedAccounts
     return (await this.options.signIns?.(machine)) ?? null;
   }
 
-  async served(machine: string): Promise<ComputerPool> {
+  async served(machine: string, fresh = false): Promise<ComputerPool> {
+    // A fresh read is what that computer answers now, never what it said
+    // before: one that did not answer confirms nothing.
+    if (
+      fresh &&
+      this.options.refreshSignIns &&
+      (await this.options.refreshSignIns(machine).catch(() => false)) !== true
+    )
+      throw new Error(
+        `${this.options.placeOf(machine).who} did not say what it serves now, so nothing opened there is taken yet.`,
+      );
     const signIns = (await this.options.signIns?.(machine)) ?? null;
     const who = this.options.placeOf(machine).who;
     const models = this.options.catalogModels?.() ?? [];
@@ -70,7 +86,37 @@ export class PlacedAccounts
     const pool =
       actualComputerPool(who, catalogWhereUnlisted(signIns, models), models, now) ??
       computerPool(who, signIns, models, now);
-    return { ...pool, deviceId: machine };
+    // A model binds an account whose list names it before one that lists
+    // nothing and only stands in with the catalog.
+    const actual = actualComputerPool(who, signIns, models, now);
+    const listed = actual?.modelAccounts;
+    const modelAccounts: ReadonlyMap<string, string> | undefined =
+      pool.modelAccounts && listed
+        ? new Map([...pool.modelAccounts, ...listed])
+        : pool.modelAccounts;
+    // An account that lists nothing serves a model only while none lists it.
+    const servedBy: ReadonlyMap<string, ReadonlySet<string>> | undefined =
+      pool.servedBy && actual ? new Map([...pool.servedBy, ...actual.servedBy]) : pool.servedBy;
+    return {
+      ...pool,
+      ...(modelAccounts ? { modelAccounts } : {}),
+      ...(servedBy ? { servedBy } : {}),
+      deviceId: machine,
+    };
+  }
+
+  /**
+   * What that computer last said of its sign-ins, and each account's
+   * cut-off as it stands now, as one comparable string: a cut-off whose
+   * reset passed changes it with no new report.
+   */
+  servedState(machine: string): string {
+    const said = this.options.saidSignIns?.(machine) ?? null;
+    const now = this.options.now();
+    return JSON.stringify([
+      said,
+      said?.accounts.map((row) => [row.id, standingCutOff(row, now)?.class ?? null]) ?? null,
+    ]);
   }
 
   servingAccount(session: ModelSession): string | undefined {

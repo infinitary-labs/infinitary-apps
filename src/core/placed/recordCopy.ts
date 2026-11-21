@@ -10,9 +10,10 @@ import {
   statSync,
   writeSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { speaksRecordRefresh } from "@shared/contractFeatures";
 import { SESSION_COPY_FROM_MAX, type WorkOrderResponse } from "@shared/work";
+import { dueIn, rewriteOutsideData, textFilesUnder } from "../integrations";
 import { errorText } from "../personal/errorText";
 import { SHARED_STAGING, STAGED_FOLDER } from "../session/stagingFolders";
 import { claudeCallsBetween } from "../storage/sessionReader";
@@ -205,6 +206,30 @@ export class RecordCopy {
       this.options.log(`could not copy ${task}'s record home: ${errorText(caught)}`),
     );
     return run;
+  }
+
+  /**
+   * Replaces the words from outside due under `rule` in this copy: each file
+   * that computer replaced (`changed`), and any file of this copy that still
+   * holds some, from a pass a drop cut short, is copied whole; one that
+   * computer no longer holds is replaced here. Answers whether any file was
+   * due here, and whether a drop cut the copy short.
+   */
+  async replaceDue(
+    changed: readonly string[],
+    rule: Parameters<typeof dueIn>[1],
+    legacy: Parameters<typeof dueIn>[2],
+  ): Promise<{ any: boolean; short: boolean }> {
+    const names = new Set(changed);
+    const recordDir = this.dir;
+    for (const file of textFilesUnder(recordDir))
+      if (await dueIn(file, rule, legacy, undefined))
+        names.add(relative(recordDir, file).split(sep).join("/"));
+    if (names.size === 0) return { any: false, short: false };
+    const copied = await this.copyWhole([...names]);
+    for (const name of copied.absent)
+      rewriteOutsideData(join(recordDir, ...name.split("/")), rule, legacy);
+    return { any: true, short: copied.short.length > 0 };
   }
 
   /**

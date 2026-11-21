@@ -52,6 +52,7 @@
   "crewmateProgress": "التقدّم",
   "crewmateQueued": "في قائمة الانتظار",
   "crewmateReport": "التقرير",
+  "crewmateRoutedAgain": "لم يعد {left} في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن {model}",
   "crewmateRunning": "قيد التشغيل…",
   "crewmateSendsTo": "إلى فرد الطاقم",
   "crewmateShowCard": "عرض البطاقة",
@@ -62,5 +63,7 @@
   "crewmateStopping": "جارٍ الإيقاف…",
   "crewmateUnreadable": "تعذّرت قراءة محادثة فرد الطاقم هذا.",
   "crewmateWaiting": "بانتظارك",
+  "crewmateWaitsForModel": "لم يعد {left} في أي مستوى في الإعدادات، ولا يستطيع أي نموذج آخر في مستوياتك تولي هذه المهمة، لذا تنتظر حتى يستطيع أحدها",
+  "crewmateWaitsForUpdate": "لم يعد {left} في أي مستوى في الإعدادات، ويحتاج {computer} إلى تحديث قبل أن تنتقل هذه المهمة إلى نموذج آخر هناك، لذا تنتظر حتى ذلك الحين",
   "crewmateWorking": "جارٍ العمل…"
 }

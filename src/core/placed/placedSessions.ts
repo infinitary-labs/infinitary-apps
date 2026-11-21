@@ -1,5 +1,4 @@
 import { existsSync, renameSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
 import {
   speaksChangePresentations,
   speaksKnowledge,
@@ -17,6 +16,7 @@ import {
   type PlacedEventRecord,
   type PlacedRosterTask,
   type PlacedSpec,
+  type PlacedState,
   placedSpecSchema,
   placedTaskFolders,
   type WorkingCopyBase,
@@ -31,12 +31,10 @@ import {
   listsChange,
 } from "../connection/contractChanges";
 import {
-  dueIn,
   dueRule,
   type OutsideDue,
   type PlacedOutsideVisit,
   rewriteOutsideData,
-  textFilesUnder,
 } from "../integrations";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
 import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
@@ -52,19 +50,39 @@ import type {
   SessionSpec,
 } from "../session/session";
 import type { SecretUsesElsewhere } from "../session/tools";
-import { sameNames } from "../session/workRecovery";
 import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
 import { type KeptJobs, keptJobsAt } from "../tasks/keptJobs";
 import { noteLeftovers, openSuccessor } from "../tasks/leftoverPrograms";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
-import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";
+import {
+  type AnsweredWait,
+  type CrewMachines,
+  FRESH_OPEN,
+  NeedsNewConversation,
+  NothingOpenedThere,
+  NotOpenThere,
+  OPEN_NOT_OPENED,
+  type PlacedBrowserSink,
+  type PlacedHost,
+  REATTACH_ONLY_OPEN,
+} from "./crewMachines";
 import { type HomePersonal, PersonalSync } from "./personalSync";
 import { accountKey, PlacedAccounts, type PlacedAccountsOptions } from "./placedAccounts";
 import { answerCall, type CallbackReach, NotHeldHere, replayReport } from "./placedCallbacks";
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
 import { type CallLine, PlacedLedger, reportOf } from "./placedLedger";
-import { PlacedSession } from "./placedSession";
+import { metCutOff, PlacedSession, working } from "./placedSession";
+import {
+  askReopen,
+  confirmedSpec,
+  type OpenOutcome,
+  openOutcome,
+  type ReopenProgress,
+  reopenedSpec,
+  sameModel,
+  withToolsNow,
+} from "./placedSpecs";
 import { NO_PLACED_TASK, type PlacedWork } from "./placedWork";
 import { RecordCopy } from "./recordCopy";
 import { sendSourceFile } from "./sourceFiles";
@@ -158,7 +176,7 @@ export type PlacedSessionsOptions = {
    * could not (`DeviceSignIns.refresh`): before a turn there that met a
    * cut-off ends here, so the turn ends held.
    */
-  refreshSignIns?: (deviceId: string) => Promise<void>;
+  refreshSignIns?: (deviceId: string) => Promise<boolean>;
   /**
    * Whether Firstmate on a computer runs work for another Firstmate now, as
    * this Mac's own SSH connection to it found (`runsForAnotherFirstmate`):
@@ -236,6 +254,15 @@ type Placed = {
   adopting: Promise<void> | undefined;
   /** When that opening began. */
   adoptingSince: number | undefined;
+  /** Opens asked there and not yet answered. */
+  asking: number;
+  /** A cleanup of words from outside under way there, which an open waits for. */
+  cleaning: Promise<void> | undefined;
+  /**
+   * An open there again (`reopen`) under way, which a prompt or steer waits
+   * for: true once that computer confirmed the conversation open.
+   */
+  reopening: Promise<boolean> | undefined;
   /** What the home keeps of it: each callback's answer, each change begun, its place. */
   readonly ledger: PlacedLedger;
   calling: Map<string, Promise<unknown>>;
@@ -343,9 +370,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       takesCheckDeclarations: (deviceId) => this.takesCheckDeclarations(deviceId),
     };
     this.stopContacts = options.devices.onWorkDevice((contact) => this.contact(contact));
-    // A record that closes closes its conversation there; one that goes -
-    // a start that failed, a purge - leaves what it had there to the
-    // leftover rule (`PlacedCopies.retireLeftover`).
+    // A record that closes closes its conversation there; one that goes - a start that failed,
+    // a purge - leaves what it had there to the leftover rule (`PlacedCopies.retireLeftover`).
     this.stopTaskChanges = options.tasks.onChange((change) => {
       for (const taskId of change.taskIds) {
         this.closeIfClosed(taskId);
@@ -637,8 +663,25 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.accounts.signInsOf(machine);
   }
 
-  served(machine: string): Promise<ComputerPool> {
-    return this.accounts.served(machine);
+  served(machine: string, fresh = false): Promise<ComputerPool> {
+    return this.accounts.served(machine, fresh);
+  }
+
+  refuseHeld(taskId: string, refused: boolean): void {
+    this.ledgerOf(taskId).keepRefused(refused);
+  }
+
+  refusedHeld(taskId: string): boolean {
+    return this.ledgerOf(taskId).refused();
+  }
+
+  private ledgerOf(taskId: string): PlacedLedger {
+    const dir = crewmatePlacedDir(this.options.paths, taskId);
+    return this.placed.get(taskId)?.ledger ?? new PlacedLedger(dir);
+  }
+
+  servedState(machine: string): string {
+    return this.accounts.servedState(machine);
   }
 
   servingAccount(session: ModelSession): string | undefined {
@@ -688,6 +731,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const left = record?.shape?.away_copies?.findLast((entry) => entry.from === machine);
     if (record?.deviceId !== machine && left?.kept && left.kept.removed === undefined) return true;
     return (placed ?? this.load(taskId, machine)).through >= there.seq;
+  }
+
+  conversationOpen(machine: string, taskId: string): boolean {
+    const roster = this.devices.get(machine)?.roster;
+    if (!roster || this.placed.get(taskId)?.adopting) return true;
+    const there = roster.tasks.get(taskId);
+    return there?.open === true || there?.running !== undefined;
+  }
+
+  reattachOnly(machine: string): boolean {
+    return this.listsChange(machine, REATTACH_ONLY_OPEN);
   }
 
   catchingUpSince(machine: string, taskId: string): number | undefined {
@@ -948,34 +1002,58 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ? { secretAsks: true }
         : {}),
       ...(resume ? { resume } : {}),
+      // Only the conversation held there, so a new one routes first (`reattach-only-open.md`).
+      ...(spec.shape.record.reattach && this.listsChange(deviceId, REATTACH_ONLY_OPEN)
+        ? { reattach: true }
+        : {}),
+      ...(this.listsChange(deviceId, OPEN_NOT_OPENED) ? { notOpened: true } : {}),
+      // A restart asks for a new conversation there, never the one it replaces (`fresh-open.md`).
+      ...(spec.shape.record.fresh && this.listsChange(deviceId, FRESH_OPEN) ? { fresh: true } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }
         : {}),
     });
-    // The home's set reaches it before a conversation that reads it opens; a
-    // send that fails leaves it the version it had.
+    // The home's set reaches it before a conversation that reads it opens (a failed send keeps it).
     if (spec.personalResources) await this.personal?.bring(deviceId);
     const task = spec.owner;
     const placed = this.load(task, deviceId);
-    const { state } = openAnswerSchema.parse(
-      await this.options.devices.ask(deviceId, "inf:session:open", [
-        { orderId: `open:${task}:${this.options.now()}`, task, spec: placedSpec },
-      ]),
-    );
+    const outcome = await this.askOpen(deviceId, task, placedSpec);
+    if ("notOpened" in outcome) throw new NothingOpenedThere(outcome.notOpened);
+    if (!("state" in outcome)) throw new NeedsNewConversation(task);
+    const { state } = outcome;
+    placed.reopening = undefined;
     const recordDir = spec.shape.record.dir;
     placed.record.dir = recordDir;
-    placed.spec = placedSpec;
+    // The spec open there; one adopted on another model than asked has none until a reopen confirms one.
+    const { reattach: _reattach, notOpened: _notOpened, fresh: _fresh, ...opened } = placedSpec;
+    if (sameModel(state.model, opened.model)) placed.spec = confirmedSpec(opened, state);
     placed.reopenOwed = state.streaming;
+    // The conversation as it lives there: a live one kept on another backend
+    // than this asked for resumes and is followed as that backend's.
+    const live =
+      state.backend === backend
+        ? controlProfile
+        : {
+            ...(this.options.profiles[state.backend] ?? state.controlProfile),
+            backgroundWork: "client" as const,
+          };
     let turnOrigin: string | undefined;
     const session: PlacedSession = new PlacedSession(
       {
         task,
-        backend,
+        backend: state.backend,
         recordDir,
         callbacks: spec.callbacks,
         order: async <C extends WorkOrderChannel>(channel: C, args: unknown) => {
-          if (channel === "inf:session:prompt")
+          // A reopen asks first and routes before it opens: words wait for
+          // that open, and go back to their lane unspent if it did not open.
+          const words = channel === "inf:session:prompt" || channel === "inf:session:steer";
+          if (words && (await placed.reopening) === false) throw new NotOpenThere(task);
+          if (channel === "inf:session:prompt") {
             turnOrigin = await this.copies.followProject(deviceId, task, turnOrigin);
+            // A reopen that began while the project was followed is waited for too.
+            if ((await placed.reopening) === false) throw new NotOpenThere(task);
+          }
           return this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
         },
         inReach: () => this.options.devices.inReach(deviceId),
@@ -987,21 +1065,22 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         released: (released) => {
           if (placed.session === released) {
             placed.session = undefined;
+            placed.reopening = undefined;
             placed.openCalls.clear();
             placed.endedCalls.clear();
             placed.record.cancelLive();
           }
         },
       },
-      controlProfile,
+      live,
       state,
     );
     placed.session = session;
-    // Follow a turn from the roster only if it belongs to the conversation
-    // the computer just opened. A move may have replaced that conversation.
+    // Follow a turn from the roster only if it belongs to the conversation the computer just
+    // opened, with the open's state: a replacement resuming the same record keeps its id.
     const there = device.roster?.tasks.get(task);
     if (there?.state?.sessionId === state.sessionId)
-      session.adopt(there, there.seq >= placed.through);
+      session.adopt({ ...there, state }, there.seq >= placed.through);
     // A report its turn already gave before this Mac restarted, once its owner listens.
     const replays = placed.replays.filter((replay) => replay.after <= placed.through);
     placed.replays = placed.replays.filter((replay) => replay.after > placed.through);
@@ -1131,11 +1210,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * Opens the conversation there again, from where its record ends, for the
    * session this Mac still holds; the lane waits until it is open, and until
-   * the supervisor took a conversation that started over there.
-   *
-   * The tool names are the ones that
-   * computer allows now, not the ones it allowed when the conversation
-   * opened, so a version-gated tool arrives without this Mac restarting.
+   * the supervisor took a conversation that started over there. Tool names
+   * are what that computer allows now, so a version-gated tool arrives
+   * without this Mac restarting.
    */
   private reopen(
     placed: Placed,
@@ -1143,50 +1220,92 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     deviceId: string,
     owed = false,
   ): Promise<void> {
-    const spec = this.specForReopen(placed);
-    if (!spec) return Promise.resolve();
+    // Still this computer's, in the session this Mac holds, after each wait.
+    const ours = () => heldSession(placed) === session && placed.deviceId === deviceId;
+    const letGo = () => {
+      if (ours()) this.host?.letGo?.(placed.task);
+      return false;
+    };
+    const opened = placed.spec && withToolsNow(placed.spec, this.host?.toolsNow?.(placed.task));
+    if (opened) placed.spec = opened;
+    // Adopted on another model than it asked, it takes no words: the next turn resumes anew.
+    if (!opened) {
+      placed.reopening = Promise.resolve(false);
+      letGo();
+      return Promise.resolve();
+    }
     const resume = session.resumeToken();
-    const reopening = this.options.devices
-      .ask(deviceId, "inf:session:open", [
-        {
-          orderId: `open:${placed.task}:${this.options.now()}`,
-          task: placed.task,
-          spec: { ...spec, ...(resume ? { resume } : {}) },
-        },
-      ])
-      .then((raw) => {
-        const { state } = openAnswerSchema.parse(raw);
+    // One that failed leaving nothing new there says so, when it can (`open-not-opened.md`).
+    const notOpened = this.listsChange(deviceId, OPEN_NOT_OPENED) ? { notOpened: true } : {};
+    const ask = (spec: PlacedSpec) =>
+      this.askOpen(deviceId, placed.task, { ...spec, ...(resume ? { resume } : {}), ...notOpened });
+    // One that keeps only what it holds opens nothing before the home routed it (`reattach-only-open.md`).
+    const reattachOnly = this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    const progress: ReopenProgress = { asked: opened, anew: false };
+    const asking = askReopen(progress, {
+      reattachOnly,
+      held: owed,
+      refused: placed.ledger.refused(),
+      ours,
+      ask,
+      route: (attach) => this.host?.reopenModel?.(placed.task, deviceId, attach),
+      letGo,
+      creating: () => this.refuseHeld(placed.task, true),
+    });
+    // True once the conversation is open there for this session's words.
+    const reopening: Promise<boolean> = asking
+      .then(async (answer) => {
+        if (!answer) return false;
+        // Nothing opened on the routed pick there: the next open routes among the rest.
+        if ("notOpened" in answer && ours()) progress.routed?.passOver();
+        if (!("state" in answer)) return letGo();
+        const { state } = answer;
         placed.reopenOwed = state.streaming;
+        const spec = await reopenedSpec(progress, state, {
+          ours,
+          letGo,
+          refuse: () => this.refuseHeld(placed.task, true),
+          kept: () => this.host?.modelKept?.(placed.task, deviceId),
+        });
+        if (spec === false || !ours()) return false;
+        if (spec) placed.spec = spec;
         session.reopened(state);
         if (!session.letGo) this.host?.reopened(placed.task);
+        return true;
       })
       .catch((caught: unknown) => {
-        // An owed open that failed stays owed, asked again at the next end.
-        if (owed) placed.reopenOwed = true;
         this.log(`could not open ${placed.task} there again: ${errorText(caught)}`);
+        return letGo();
       });
     placed.adoptingSince = this.options.now();
-    placed.adopting = reopening.finally(() => {
-      placed.adopting = undefined;
-      placed.adoptingSince = undefined;
-    });
+    // Words wait for that computer to confirm it open, else take none (`NotOpenThere`).
+    const settled: Promise<boolean> = reopening
+      .then((open) => {
+        if (open && placed.reopening === settled) placed.reopening = undefined;
+        return open;
+      })
+      .finally(() => {
+        placed.adopting = undefined;
+        placed.adoptingSince = undefined;
+      });
+    placed.reopening = settled;
+    placed.adopting = settled.then(() => undefined);
     return placed.adopting;
   }
 
-  /**
-   * The spec to open there again. Tool names are what the supervisor binds
-   * now; instructions stay exactly as the home opened the conversation
-   * with them, so a restart does not start it over.
-   */
-  private specForReopen(placed: Placed): PlacedSpec | undefined {
-    const spec = placed.spec;
-    if (!spec) return undefined;
-    const names = this.host?.toolsNow?.(placed.task);
-    const tools = names && !sameNames(names, spec.tools) ? [...names] : spec.tools;
-    if (tools === spec.tools) return spec;
-    const next = { ...spec, tools };
-    placed.spec = next;
-    return next;
+  /** Asks that computer to open `spec`, its answer read as one outcome (`openOutcome`). */
+  private async askOpen(deviceId: string, task: string, spec: PlacedSpec) {
+    const placed = this.load(task, deviceId);
+    placed.asking += 1;
+    try {
+      while (placed.cleaning) await placed.cleaning;
+      const answer = await this.options.devices.ask(deviceId, "inf:session:open", [
+        { orderId: `open:${task}:${this.options.now()}`, task, spec },
+      ]);
+      return openOutcome(openAnswerSchema.parse(answer), spec);
+    } finally {
+      placed.asking -= 1;
+    }
   }
 
   /** Lets each of the computer's caught-up tasks go on, and says its work caught up. */
@@ -1505,14 +1624,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * The words from outside a task's conversation there holds, once due
    * (`inf:session:delete-outside`; docs/task-retention.md, "Words from
-   * outside"). This Mac's own copy of the answers it gave that
-   * conversation's callbacks goes first, whatever that computer can do;
-   * then that computer replaces them in its files, and this Mac copies each
-   * file of the record it changed whole, with any of this Mac's copy that
-   * still holds some. `files` are files from outside due in its hand-over
-   * folder there, which that computer removes first. A computer out of
-   * reach, or without the change, follows on a later pass; one no longer on
-   * the list leaves this Mac's copy to the caller (`gone`).
+   * outside"): this Mac's copy of its callbacks' answers first, then that
+   * computer's files, and this Mac's copy of each it changed, whole. `files`
+   * are files from outside due in its hand-over folder there. A computer out
+   * of reach or without the change, or an open there unanswered, waits for
+   * a later pass; one no longer on the list leaves this Mac's copy to the
+   * caller (`gone`). This Mac opens the conversation again, routed, or, on
+   * an older computer that opens it by itself, lets its own go first.
    */
   async deleteOutside(
     record: TaskRecord,
@@ -1529,7 +1647,26 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
     if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
-    let answer: WorkOrderResponse<"inf:session:delete-outside">;
+    // An open there unanswered, or one here not yet accepted (still refused), is not to let go.
+    const [live, refused] = [heldSession(placed), this.refusedHeld(placed.task)];
+    if (placed.asking > 0 || placed.adopting || placed.cleaning || (live && refused))
+      return "waiting";
+    // An older computer reopens it unchecked: never reattached to (`refusedThere`), let go first.
+    const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    if (older) this.refuseHeld(placed.task, true);
+    // Only a session held, only at once: one left for a turn's end would wake its words first.
+    if (older && live && !live.isStreaming()) this.host?.letGo?.(placed.task, true);
+    if (older && heldSession(placed)) return this.refuseHeld(placed.task, refused), "waiting";
+    // Opens there wait for its answer, and words to it for the reopen it asks too.
+    let cleaned: (open: boolean | Promise<boolean>) => void = () => {};
+    const gate = new Promise<boolean>((done) => (cleaned = done));
+    let answered = () => {};
+    placed.cleaning = new Promise<void>((done) => (answered = done));
+    const before = placed.reopening;
+    const held = gate.then(async (open) => open && (await before) !== false);
+    placed.reopening = held;
+    let answer: WorkOrderResponse<"inf:session:delete-outside"> | undefined;
+    let lost: unknown;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
         await this.options.devices.ask(deviceId, "inf:session:delete-outside", [
@@ -1539,37 +1676,33 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             kinds: due.kinds,
             legacy: due.legacy,
             ...(files.length > 0 ? { files: [...files] } : {}),
+            // The home opens it again after routing it (`reattach-only-open.md`).
+            ...(older ? {} : { holdReopen: true }),
           },
         ]),
       );
     } catch (caught) {
-      if (caught instanceof DeviceOutOfReachError) return { computer, until: "reach" };
-      throw caught;
+      lost = caught;
+    }
+    placed.cleaning = undefined;
+    answered();
+    // A reopen asked meanwhile, which waited for this answer, is the one that opens it again.
+    const session = older || placed.adopting ? undefined : heldSession(placed);
+    // Let go of there or not known: this Mac opens it again, routed; words given back then go.
+    if (session && (!answer || answer.reopen || answer.status === "changed"))
+      void this.reopen(placed, session, deviceId).then(() => this.host?.caughtUp([placed.task]));
+    if (placed.reopening === held) placed.reopening = before;
+    cleaned(placed.reopening ?? true);
+    // A wait for that computer's update ends: what it holds is refused now.
+    if (older) this.host?.caughtUp([placed.task]);
+    if (!answer) {
+      if (lost instanceof DeviceOutOfReachError) return { computer, until: "reach" };
+      throw lost;
     }
     if (answer.status === "waiting") return "waiting";
-    const session = heldSession(placed);
-    if (answer.state && session) {
-      // Opened there again from its files: a conversation that started over is carried on as at a restart.
-      session.reopened(answer.state);
-      if (answer.state.renewal) this.host?.reopened(placed.task);
-    } else if (answer.status === "changed" && session) {
-      // It did not open there again by itself.
-      void this.reopen(placed, session, deviceId);
-    }
-    // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
-    const names = new Set(answer.files);
-    const recordDir = placed.record.dir;
-    for (const file of textFilesUnder(recordDir))
-      if (await dueIn(file, rule, due.legacy, undefined))
-        names.add(relative(recordDir, file).split(sep).join("/"));
-    if (names.size > 0) {
-      const copied = await placed.record.copyWhole([...names]);
-      // A file it no longer holds is copied no more, so this Mac's copy is replaced here.
-      for (const name of copied.absent)
-        rewriteOutsideData(join(recordDir, ...name.split("/")), rule, due.legacy);
-      if (copied.short.length > 0) return "waiting";
-    }
-    return answer.status === "changed" || answers > 0 || names.size > 0 ? "changed" : "unchanged";
+    const copied = await placed.record.replaceDue(answer.files, rule, due.legacy);
+    if (copied.short) return "waiting";
+    return answer.status === "changed" || answers > 0 || copied.any ? "changed" : "unchanged";
   }
 
   /**
@@ -1773,6 +1906,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       session: undefined,
       adopting: undefined,
       adoptingSince: undefined,
+      asking: 0,
+      cleaning: undefined,
+      reopening: undefined,
       said: undefined,
       reopenOwed: false,
       ledger,
@@ -1861,18 +1997,4 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 /** The conversation, while this Mac holds it and has not let it go. */
 function heldSession(placed: Placed): PlacedSession | undefined {
   return placed.session && !placed.session.letGo ? placed.session : undefined;
-}
-
-/** Whether a roster row says its conversation works there: a prompt's turn, or a session that streams. */
-function working(entry: PlacedRosterTask): boolean {
-  return entry.running !== undefined || entry.state?.streaming === true;
-}
-
-/** An event that carries a typed cut-off its turn met there. */
-function metCutOff(event: PlacedEventRecord["event"]): boolean {
-  return (
-    (event.type === "turn_failed" || event.type === "continuation_ended") &&
-    "cutOff" in event &&
-    event.cutOff !== undefined
-  );
 }

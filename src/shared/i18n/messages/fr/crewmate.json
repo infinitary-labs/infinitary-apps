@@ -43,6 +43,7 @@
   "crewmateProgress": "Avancement",
   "crewmateQueued": "en attente",
   "crewmateReport": "Rapport",
+  "crewmateRoutedAgain": "{left} n’est plus dans aucun niveau des Réglages, donc cette tâche utilise désormais {model}",
   "crewmateRunning": "en cours…",
   "crewmateSendsTo": "à l’équipier",
   "crewmateShowCard": "Afficher la carte",
@@ -53,5 +54,7 @@
   "crewmateStopping": "Arrêt en cours…",
   "crewmateUnreadable": "La conversation de cet équipier n’a pas pu être lue.",
   "crewmateWaiting": "En attente de vous",
+  "crewmateWaitsForModel": "{left} n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse",
+  "crewmateWaitsForUpdate": "{left} n’est plus dans aucun niveau des Réglages, et {computer} doit être mis à jour avant que cette tâche puisse passer à un autre modèle là-bas, donc elle attend jusque-là",
   "crewmateWorking": "En cours…"
 }

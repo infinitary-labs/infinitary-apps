@@ -382,7 +382,7 @@ describe("a conversation held on a computer that runs work", () => {
       return ended?.event.type === "turn_ended" ? ended.event.state?.resume : undefined;
     };
     claude.answer({ text: "On it." });
-    expect((await open()).state.backend).toBe("claude");
+    expect((await open()).state?.backend).toBe("claude");
     await prompt(1, "Fix the footer.");
     const original = resumeToken();
     expect(original).toBeTruthy();

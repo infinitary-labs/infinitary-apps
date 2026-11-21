@@ -143,7 +143,10 @@ describe("record reader failure boundaries", () => {
         expect(data.charges).toEqual({});
         expect(scores.score(reading, AT, CODEX.id, data).charge).toBeUndefined();
         expect(account).toBe("home-codex");
-        expect(resumed).toEqual({ accountId: "home-codex", changed: true });
+        expect({ accountId: resumed.accountId, changed: resumed.changed }).toEqual({
+          accountId: "home-codex",
+          changed: true,
+        });
         expect(
           router.preview(
             "Audit",

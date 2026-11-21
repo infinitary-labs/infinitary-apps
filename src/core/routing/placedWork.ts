@@ -412,9 +412,10 @@ export class PlacedWorkScores {
 
   /**
    * Each model's crew ranking facts from one account's reading: the account
-   * `bound` names for it when that account has a reading - the one that will
-   * serve it, so the model is ranked by the account it runs on - else the
-   * best account by the crew bands. `bound` is handed the work read for
+   * `bound` names for it - the one that will serve it, so the model is
+   * ranked by the account it runs on, and left unranked when that account
+   * has no reading - else, when it names none, the best account by the crew
+   * bands. `bound` is handed the work read for
    * this evaluation, so naming the account reads it no second time.
    */
   catalog(
@@ -441,12 +442,16 @@ export class PlacedWorkScores {
         if (order !== 0) return order;
         return (b.raw.effectivePercentRemaining ?? -1) - (a.raw.effectivePercentRemaining ?? -1);
       });
-      // Only a choice among accounts asks which one would serve.
-      const boundId = candidates.length > 1 ? bound?.(model, data) : undefined;
-      const best =
-        (boundId ? candidates.find((c) => c.row.accountId === boundId) : undefined) ??
-        candidates[0];
-      if (!best) return model;
+      // The account that would serve it ranks it; one with no reading of its
+      // own leaves its allowance unknown, never borrowing a sibling's.
+      // Readings that name no account are read as before.
+      const named = candidates.some((c) => c.row.accountId !== undefined);
+      const boundId = named ? bound?.(model, data) : undefined;
+      const best = boundId ? candidates.find((c) => c.row.accountId === boundId) : candidates[0];
+      // A named account with no reading clears what the catalog carried,
+      // which is the provider's whole reading, a spent sibling's included.
+      if (!best)
+        return boundId ? { provider: model.provider, id: model.id, label: model.label } : model;
       const resetsAtMs = limitingResetOf(best.row, now, model.id);
       // When the reading was taken: the observed reading's time, else the row's own.
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;

@@ -37,6 +37,7 @@
   "crewmateProgress": "进度",
   "crewmateQueued": "排队中",
   "crewmateReport": "汇报",
+  "crewmateRoutedAgain": "{left} 已不在设置中的任何级别里，所以这个任务现在改用 {model}",
   "crewmateRunning": "运行中…",
   "crewmateSendsTo": "发给船员",
   "crewmateShowCard": "显示卡片",
@@ -47,5 +48,7 @@
   "crewmateStopping": "正在停止…",
   "crewmateUnreadable": "无法读取这名船员的对话。",
   "crewmateWaiting": "等你处理",
+  "crewmateWaitsForModel": "{left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手",
+  "crewmateWaitsForUpdate": "{left} 已不在设置中的任何级别里，而 {computer} 需要更新后这个任务才能在那里改用其他模型，所以它会等到那时",
   "crewmateWorking": "处理中…"
 }

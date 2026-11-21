@@ -361,8 +361,8 @@ describe("a conversation held on a computer that runs work", () => {
         const kept = await at.order("inf:session:open", [
           { orderId: "open:2", task: TASK, spec: moved },
         ]);
-        expect(kept.state.streaming).toBe(true);
-        expect(kept.state.renewal).toBeUndefined();
+        expect(kept.state?.streaming).toBe(true);
+        expect(kept.state?.renewal).toBeUndefined();
         await at.order("inf:session:detach", [{ orderId: "detach:1", task: TASK }]);
         expect(claude.released()).toBe(false);
 
@@ -380,11 +380,11 @@ describe("a conversation held on a computer that runs work", () => {
         // Ended, the home's open asked again starts over for the moved
         // instructions, and its answer says so.
         const again = await at.order("inf:session:open", [
-          { orderId: "open:3", task: TASK, spec: { ...moved, resume: kept.state.resume } },
+          { orderId: "open:3", task: TASK, spec: { ...moved, resume: kept.state?.resume } },
         ]);
         expect(claude.released()).toBe(true);
-        expect(again.state.streaming).toBe(false);
-        expect(again.state.renewal).toMatchObject({ from: kept.state.sessionId });
+        expect(again.state?.streaming).toBe(false);
+        expect(again.state?.renewal).toMatchObject({ from: kept.state?.sessionId });
         claude.answer({ text: "Under the new instructions." });
         await at.order("inf:session:prompt", [
           { orderId: "prompt:2", task: TASK, text: "Carry on." },

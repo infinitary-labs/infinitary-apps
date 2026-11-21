@@ -128,6 +128,12 @@ export type RouteOptions = {
    */
   withoutProvider?: string;
   /**
+   * The only models routed among, with no fallback to others: a task routed
+   * again off a model that left every level stays on its custom connection,
+   * or on the backend its open conversation there speaks.
+   */
+  only?: (model: { provider: string; id: string }) => boolean;
+  /**
    * The models to route among instead of this Mac's own: a task that
    * runs on a computer that runs work takes only what that computer's
    * own sign-ins serve (docs/helper.md, "Its own sign-ins").
@@ -166,6 +172,8 @@ export class Router {
       /** The decision ledger every routing decision is recorded in. */
       decisions: DecisionStore;
       availableModels: () => PiModelRef[];
+      /** Whether this Mac's pool is read, so an empty one is known empty. */
+      poolRead?: () => boolean;
       /** The slot record; omitted means every available model routes at medium. */
       slots?: ModelSlots;
       /** Resolves a candidate's def so it is checked before it is chosen. */
@@ -233,7 +241,8 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId, selection, spentAt, spentOn } = evaluation;
+    const { result, reasons, candidates, accountId, selection, spentAt, spentOn, named } =
+      evaluation;
     if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt, spentOn);
     this.options.decisions.recordRouting({
       taskId,
@@ -243,13 +252,14 @@ export class Router {
       rule: result.rule,
       served: result.choice ? (result.servedBucket ?? result.bucket) : null,
       reasons,
-      ...((candidates && candidates.length > 0) || accountId || selection
+      ...((candidates && candidates.length > 0) || accountId || selection || named
         ? {
             facts: {
               kind: "routing-candidates" as const,
               candidates: candidates ?? [],
               ...(accountId ? { accountId } : {}),
               ...(selection ? { selection } : {}),
+              ...(named ? { named: named.served } : {}),
             },
           }
         : {}),
@@ -300,8 +310,9 @@ export class Router {
     // What the router may pick: the catalog only describes, so leaving a
     // provider out of what serves leaves it out of the pick.
     const without = options.withoutProvider;
-    const kept = <T extends { provider: string }>(models: T[]): T[] =>
-      without ? models.filter((model) => model.provider !== without) : models;
+    const only = options.only;
+    const kept = <T extends { provider: string; id: string }>(models: T[]): T[] =>
+      models.filter((model) => (!without || model.provider !== without) && (!only || only(model)));
     const rawCatalog = options.pool
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
@@ -326,8 +337,15 @@ export class Router {
         bound,
         options.placed,
       ) ?? rawCatalog;
-    const available = kept(options.pool?.available ?? this.options.availableModels());
-    const routable = this.options.slots?.routable(available);
+    const pooled = (options.pool?.available ?? this.options.availableModels()).filter(
+      (model) => !without || model.provider !== without,
+    );
+    const available = kept(pooled);
+    // The levels are read from the whole pool, so a model `only` passes over
+    // never lets the starter map stand in; `only` then narrows what they hold.
+    const levels = this.options.slots?.routable(pooled);
+    const routable =
+      levels && only ? { ...levels, models: levels.models.filter((model) => only(model)) } : levels;
     const tier = tierFor(shape);
     const modelId = tier.pin;
     const askPin = modelId
@@ -512,10 +530,7 @@ export class Router {
    * Undefined when the task never routed or nothing was chosen.
    */
   servedProvider(taskId: string): string | undefined {
-    return (
-      this.options.decisions.routing({ taskIds: [taskId], chosen: true }).at(-1)?.provider ??
-      undefined
-    );
+    return this.options.decisions.latestChosenSlots([taskId])[0]?.provider ?? undefined;
   }
 
   /**
@@ -525,11 +540,70 @@ export class Router {
    * the one served, as `servedSlots` reads it. Undefined when the task never
    * routed or the row's slot is not one.
    */
-  servedChoice(taskId: string): { model: PiModelRef; slot: Slot } | undefined {
-    const row = this.options.decisions.routing({ taskIds: [taskId], chosen: true }).at(-1);
+  servedChoice(taskId: string): { model: PiModelRef; slot: Slot; named: boolean } | undefined {
+    const row = this.options.decisions.latestChosenSlots([taskId])[0];
     const slot = slotSchema.safeParse(row?.served ?? row?.bucket);
     if (!row?.provider || !row.model || !slot.success) return undefined;
-    return { model: { provider: row.provider, id: row.model }, slot: slot.data };
+    return {
+      model: { provider: row.provider, id: row.model },
+      slot: slot.data,
+      // A model named - at the start or by a move - and served; a row from
+      // before that was recorded reads its rule.
+      named: row.named ?? row.rule === "R0",
+    };
+  }
+
+  /**
+   * Whether routing would still place `ref` at all (docs/routing.md, "A
+   * model that left every level"): a Settings pin names it, a level in
+   * Settings → Intelligence → Models holds it, or, while the starter map or
+   * the listed models stand in for placements of the person's own
+   * (`ModelSlots.routable`), those defaults include it among `available` -
+   * this Mac's models, or a computer's own pool. With no slot record every
+   * model counts as held; a pool known to be empty - a computer's, or this
+   * Mac's once every account said what it serves - holds none but a pin or
+   * level. Undefined: this Mac's pool is not read yet - empty, or with the
+   * defaults leaving the model out while an account has not said what it
+   * serves - so whether the defaults hold it is not known until it is.
+   */
+  holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean | undefined {
+    const key = servedModelKey(ref);
+    if (this.options.settings.getRoutingSettings().pins.some((pin) => servedModelKey(pin) === key))
+      return true;
+    const slots = this.options.slots;
+    if (!slots || slots.slotsOf(ref).length > 0) return true;
+    const models = [...(available ?? this.options.availableModels())];
+    // Nothing read here yet: not known; a pool known to be empty holds it not.
+    if (models.length === 0)
+      return available === undefined && this.options.poolRead?.() !== true ? undefined : false;
+    const routable = slots.routable(models);
+    if (routable.placed === true) return false;
+    if (routable.models.some((model) => servedModelKey(model) === key)) return true;
+    // Left out while an account here has not said what it serves: not known.
+    return available === undefined && this.options.poolRead?.() === false ? undefined : false;
+  }
+
+  /**
+   * What routing reads here of Settings and the models, for a wait to compare
+   * (`TaskMoves.waitsForModel`): the pins and levels, the slot record - a
+   * model only another computer serves included - what each level holds
+   * here, the models this Mac's accounts serve, and which models' allowance
+   * is spent.
+   */
+  routingState(): string {
+    const available = this.options.availableModels();
+    return JSON.stringify([
+      this.options.settings.getRoutingSettings(),
+      this.options.poolRead?.() ?? null,
+      this.options.slots?.state() ?? null,
+      (this.options.quota.latestModels()?.models ?? []).map(
+        (model) => `${model.provider}/${model.id}:${model.effectivePercentRemaining === 0}`,
+      ),
+      (this.options.slots?.routable(available).models ?? []).map(
+        (model) => `${servedModelKey(model)}@${model.slot}`,
+      ),
+      available.map((model) => servedModelKey(model)),
+    ]);
   }
 
   /**

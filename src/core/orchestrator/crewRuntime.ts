@@ -10,6 +10,7 @@ import type { HeldDirections } from "./crewDirections";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewTurn } from "./crewTurn";
 import type { WakeWithdrawn } from "./reportWakes";
+import type { ModelWaitCause } from "./taskMoves";
 
 /**
  * How a steer actually reached the crewmate. A backend whose ControlProfile
@@ -57,6 +58,7 @@ export type LaneHold =
   | { kind: "cost-limit"; holder: string; holderKey: string; limitUsd: number; cardId: string }
   | { kind: "move" }
   | { kind: "hand-over" }
+  | { kind: "model"; cause: ModelWaitCause }
   | { kind: "account" }
   | { kind: "update" }
   | { kind: "out-of-reach" };

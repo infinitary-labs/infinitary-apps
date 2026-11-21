@@ -142,6 +142,7 @@ it("holds a placed Claude crewmate at the next model boundary without losing its
       inbox: new InboxStore(db),
       router: {
         servedChoice: () => ({ model, slot: "high" }),
+        holdsAtALevel: () => true,
         reasoningChoice: () => "medium",
         servedProvider: () => model.provider,
         modelLabel: (ref: { id: string }) => ref.id,

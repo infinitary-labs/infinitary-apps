@@ -257,7 +257,8 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
   return { accountId: chosen.accountId, reasons };
 }
 
-function isExhausted(candidate: AccountCandidate): boolean {
+/** Whether a candidate's allowance is spent, so a pick skips it. */
+export function isExhausted(candidate: AccountCandidate): boolean {
   return allowanceSpent(candidate);
 }
 

@@ -71,6 +71,17 @@ export type CrewmateSpec = CrewmateToolDelegate & {
    * file, or the Claude session id. Read by the binding's backend.
    */
   resumeToken?: string;
+  /**
+   * On a computer that runs work, only reattach to the conversation held
+   * there: one it would open anew is refused (`NeedsNewConversation`), so
+   * the new conversation routes first (`reattach-only-open.md`).
+   */
+  reattach?: boolean;
+  /**
+   * A context or refusal restart: on a computer that runs work, a new
+   * conversation opens there, never the one it holds (`fresh-open.md`).
+   */
+  fresh?: boolean;
   /** Routed model choice; absent defers to the backend (a resumed session keeps its own). */
   model?: { provider: string; id: string };
   /** Requested effort associated with the model's actually served tier. */
@@ -325,6 +336,8 @@ export function crewmateSessionSpec(
       record: {
         dir: crewmateSessionsDir(paths, spec.taskId),
         ...(resume ? { resume } : {}),
+        ...(spec.reattach ? { reattach: true } : {}),
+        ...(spec.fresh ? { fresh: true } : {}),
         stamp: crewmateContractStamp(instructions, tools),
       },
     },

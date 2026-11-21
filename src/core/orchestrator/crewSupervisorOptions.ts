@@ -61,12 +61,21 @@ import type { IdleRule, ReportSortRule } from "./reportSort";
 import type { RunReading } from "./runWatch";
 import type { TypedWake, WakeFacts } from "./wakes";
 
+/** The account a resume binds (`reselectForResume`), with its writes kept apart. */
+export type ResumeAccount = {
+  accountId?: string;
+  changed: boolean;
+  record?(): void;
+  selected?(): void;
+};
+
 /**
  * The consent card's two answers (one plugin vehicle, Phase A, A2a): the
  * captain's click on "Add it" adds the staged plugin, and only "Don't add"
  * turns it down. The minus keeps the staged offer pending. The installer is the only
  * implementation; the supervisor only routes the click it already owns.
  */
+
 export type PluginConsentHandler = {
   add: (pluginId: string) => void;
   decline: (pluginId: string) => void;
@@ -150,13 +159,41 @@ export type AccountAttachment = {
     piProviderId: string,
     crew?: { model: string },
   ): string | undefined | Promise<string | undefined>;
+  /**
+   * `selectForSpawn` with its writes kept apart (`AccountSelector.pickForSpawn`):
+   * a move writes the decision in its own transaction and marks the account
+   * selected once that committed. Absent on a stand-in, which a move then
+   * asks `selectForSpawn`.
+   */
+  pickForSpawn?(
+    taskId: string,
+    piProviderId: string,
+    crew?: { model: string; passing?: readonly string[] },
+  ): Promise<{ accountId?: string; record(): void; selected(): void }>;
+  /**
+   * The account a resume binds: the recorded one while healthy, else a
+   * serving sibling, its decision written by `record` and the account marked
+   * selected by `selected` only once the resumed conversation is accepted.
+   */
   reselectForResume(
     taskId: string,
     accountId: string | null,
-  ): { accountId?: string; changed: boolean } | Promise<{ accountId?: string; changed: boolean }>;
+  ): ResumeAccount | Promise<ResumeAccount>;
   labelOf(accountId: string): string | undefined;
   /** Where a Claude account's access comes from when it is not a subscription. */
   accessOf?(accountId: string): ClaudeAccessSource | undefined;
+  /**
+   * What a pick reads of this Mac's accounts, as one comparable string - each
+   * account, whether it is on, connected or withheld, and the models it
+   * lists - so a wait for a model tries again once one could serve.
+   */
+  servingState?(): string;
+  /**
+   * Whether the account serves the model now - on, connected, withheld by
+   * nothing, and listing it, or listing nothing while no sibling's list
+   * names it - so a conversation bound to it opens on that model.
+   */
+  serves?(accountId: string, model: { provider: string; id: string }): boolean;
 };
 
 export type CrewSupervisorOptions = {

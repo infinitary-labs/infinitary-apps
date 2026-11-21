@@ -1,11 +1,13 @@
 import {
   appendFileSync,
   closeSync,
+  existsSync,
   fsyncSync,
   mkdirSync,
   openSync,
   readFileSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -89,6 +91,26 @@ export class PlacedLedger {
     const next = join(this.dir, "state.json.next");
     writeFileSync(next, `${JSON.stringify({ kept, ended })}\n`);
     renameSync(next, join(this.dir, "state.json"));
+  }
+
+  /**
+   * Marks, or clears, that the conversation held there was refused words
+   * here (`PlacedSessions.refuseHeld`): kept across this Mac's restarts, so
+   * the next open there opens anew instead of reattaching to it.
+   */
+  keepRefused(refused: boolean): void {
+    const file = join(this.dir, "refused");
+    if (!refused) {
+      rmSync(file, { force: true });
+      return;
+    }
+    mkdirSync(this.dir, { recursive: true });
+    writeFileSync(file, "");
+  }
+
+  /** Whether the conversation held there was refused words here (`keepRefused`). */
+  refused(): boolean {
+    return existsSync(join(this.dir, "refused"));
   }
 
   /** The answer kept for this call, if it was answered. */

@@ -37,6 +37,7 @@
   "crewmateProgress": "進捗",
   "crewmateQueued": "待機中",
   "crewmateReport": "報告",
+  "crewmateRoutedAgain": "{left} は設定のどのレベルにもなくなったため、このタスクは今後 {model} を使います",
   "crewmateRunning": "実行中…",
   "crewmateSendsTo": "乗組員へ",
   "crewmateShowCard": "カードを表示",
@@ -47,5 +48,7 @@
   "crewmateStopping": "停止中…",
   "crewmateUnreadable": "この乗組員の会話を読み込めませんでした。",
   "crewmateWaiting": "あなた待ち",
+  "crewmateWaitsForModel": "{left} は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます",
+  "crewmateWaitsForUpdate": "{left} は設定のどのレベルにもなくなりました。{computer} を更新するまで、このタスクはそこで別のモデルに移れないため、それまで待ちます",
   "crewmateWorking": "作業中…"
 }

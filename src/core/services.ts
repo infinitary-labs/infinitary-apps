@@ -1218,6 +1218,10 @@ export async function createServices(
       supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
+    reopenModel: (taskId, machine, attach) => supervisor.reopenModel(taskId, machine, attach),
+    modelKept: (taskId, machine) => supervisor.moves.keepsModel(taskId, machine),
+    letGo: (taskId, now) =>
+      now ? supervisor.placedLetGo(taskId, undefined, now) : supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
   });
   // A computer with work out of reach for a minute is said once in the feed.

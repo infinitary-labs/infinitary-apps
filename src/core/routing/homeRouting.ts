@@ -198,6 +198,7 @@ export function startHomeRouting(options: {
     quota,
     flagshipAccountId: () => settings.getFirstmateAccount(),
     decisions: ledger,
+    accountModels: () => vault.availableModelsByAccount(),
   });
   const router = new Router({
     quota,
@@ -205,6 +206,7 @@ export function startHomeRouting(options: {
     settings,
     decisions: ledger,
     availableModels,
+    poolRead: () => vault.poolRead(),
     slots,
     capabilityFor,
     withheldModels: () => vault.withheldModels(),

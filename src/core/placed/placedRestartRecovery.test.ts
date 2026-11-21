@@ -1396,6 +1396,65 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(said(sent[0])).not.toContain(SECRET);
     expect(filesHolding(here, SECRET)).toEqual([]);
   });
+
+  // INF-5438 round 19 findings 1 and 2: that computer answered the open, but
+  // this Mac has not yet accepted the conversation when the cleanup comes.
+  // The cleanup waits and lets nothing go; the queued words reach the
+  // accepted conversation once, unspent before, and the next pass removes
+  // the old words from both copies before the next ones go.
+  it("leaves an open this Mac has not yet accepted alone during an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older-accepting";
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { text: "Carried on." },
+      { text: "Still here." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    home.supervisor.placedLetGo(taskId);
+    // The open is answered there; its check here waits.
+    const checked = gate();
+    const moves = home.supervisor.moves;
+    const keeps = moves.keepsModel.bind(moves);
+    const checking = vi.spyOn(moves, "keepsModel").mockImplementation(async (...args) => {
+      await checked.held;
+      return keeps(...args);
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => checking.mock.calls.length).toBe(1);
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    expect(letGo).not.toHaveBeenCalled();
+    expect(order()).toMatchObject({ attempts: 0 });
+    expect(api.requests.length).toBe(requests);
+    checked.open();
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => said(request).includes("Carry on."))).toEqual([true]);
+    expect(order()?.deliveredAt).not.toBeNull();
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    const next = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still here.");
+    expect(said(api.requests[next])).toContain("And now?");
+    expect(said(api.requests[next])).not.toContain(SECRET);
+  });
 });
 
 /** Words read from Gmail long ago, fenced as an integration answers them, and the pass that removes them. */

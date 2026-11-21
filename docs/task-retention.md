@@ -203,7 +203,7 @@ A crewmate's conversation on a computer that runs work is replaced there, by tha
 That computer reads its record under `tasks/<taskId>/sessions/` and its own Claude client's files for it, only between turns and with nothing of its client's own running, and answers `waiting` otherwise.
 A conversation open there is let go of before its files are written, so none of the words stays in its memory either.
 This Mac then opens it again, routed first, on a computer that can be asked to hold that open (`reattach-only-open.md`); an older one opens it again by itself from its files, so this Mac lets go of its own session for it before asking, and the next words open it through an ordinary open, checked as new.
-While an open of that conversation there is still unanswered, this Mac asks nothing and the conversation is cleaned on a later sweep.
+While an open of that conversation there is still unanswered, or answered but not yet accepted here, this Mac asks nothing and lets nothing go, and the conversation is cleaned on a later sweep.
 From its ask until the reopen it asks settles, this Mac sends that computer no open and no words for the conversation; if the answer is lost, this Mac opens it again routed, as if it had been let go.
 An open this Mac asks meanwhile, after that computer restarted, waits for the answer and is then the one reopen.
 This Mac never reattaches to what an older computer opened again by itself, so the next words route as for a new conversation.

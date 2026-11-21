@@ -6,6 +6,7 @@ import { BATCHED_PULL_REQUESTS_OFFER } from "../../src/shared/runbooks";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
+import { leaveSettings } from "./handoverCards";
 import { launchApp } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { projectLine, projectSettings } from "./projects";
@@ -91,25 +92,34 @@ test("batched pull requests appear in a project's settings only once their runbo
       row.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"], exact: true }),
     ).toHaveCount(0);
 
-    // Settings → Runbooks: Batched pull requests starts off, and the captain turns it on by keys.
-    await page.getByRole("tab", { name: "Runbooks", exact: true }).click();
-    const batches = settingRow(page, "runbook-batches").getByRole("switch");
-    await expect(batches).toHaveAttribute("aria-checked", "false");
-    await focusOn(batches);
-    await pressKey(batches, "Space");
-    await expect(batches).toHaveAttribute("aria-checked", "true");
-
-    // The runbook's Batches panel follows its switch with no restart: it arrives
-    // when the runbook is turned on and, with no project batching yet, leaves when
-    // it is turned off (docs/runbooks.md, "Built-in panels").
+    // The rails draw only at home: the runbook's Batches panel follows its switch
+    // there with no restart, arriving when the runbook is turned on and, with no
+    // project batching yet, leaving when it is turned off (docs/runbooks.md,
+    // "Built-in panels"). Activity, which every build draws, shows the rails are up.
     const panel = page.locator('[data-side-panel="batches-panel"]');
-    await expect(panel).toHaveCount(1);
-    await pressKey(batches, "Space");
+    const batches = settingRow(page, "runbook-batches").getByRole("switch");
+    const onTheRail = async (count: number) => {
+      await leaveSettings(page);
+      await expect(page.locator('[data-side-panel="activity"]')).toHaveCount(1);
+      await expect(panel).toHaveCount(count);
+      await page.getByRole("button", { name: "Settings", exact: true }).click();
+      await page.getByRole("tab", { name: "Runbooks", exact: true }).click();
+      await focusOn(batches);
+    };
+    const turn = async (on: boolean) => {
+      await pressKey(batches, "Space");
+      await expect(batches).toHaveAttribute("aria-checked", String(on));
+    };
+
+    // Settings → Runbooks: Batched pull requests starts off, and the captain turns it on by keys.
+    await onTheRail(0);
     await expect(batches).toHaveAttribute("aria-checked", "false");
-    await expect(panel).toHaveCount(0);
-    await pressKey(batches, "Space");
-    await expect(batches).toHaveAttribute("aria-checked", "true");
-    await expect(panel).toHaveCount(1);
+    await turn(true);
+    await onTheRail(1);
+    await turn(false);
+    await onTheRail(0);
+    await turn(true);
+    await onTheRail(1);
 
     // Back on the project page, batched pull requests are the third choice, picked by keys.
     await openProject();

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panel-settings-change",
+      "kind": "feature",
+      "area": "settings",
+      "title": "A panel can change the settings you allow it",
+      "body": "A panel can now change settings such as the theme, the text size, your crew's models, a project's settings or an automation, the same way your first mate does. It changes one only when you click or press a key in it, one change at a time, and Activity names the panel. A panel added from elsewhere lists each setting it may change on its approval card before you add it. Signing in, sharing, consent and deleting things stay out of reach.",
+      "noPicture": "What a person sees comes from each panel's own controls, which this change does not draw; the approval card only gains a list of the settings a panel names.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

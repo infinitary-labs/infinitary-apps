@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PANEL_CHANGE_NAMES } from "../panelChanges";
 import { SQL_VIEWS, sqlViewNameSchema } from "../sql";
 import {
   PANEL_CARD_VIEWS_MAX,
@@ -239,6 +240,13 @@ const readNameSchema = z
   .max(64)
   .regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/, "dotted read-catalog name");
 
+/** An action catalog line's name, as a panel's `actions` grant spells it. */
+export const actionNameSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/);
+
 export const capabilitiesSchema = z.strictObject({
   /** Retired: refused with `retiredGrantWords`. */
   net: z.never({ message: retiredGrantWords("net") }).optional(),
@@ -267,10 +275,24 @@ export const capabilitiesSchema = z.strictObject({
    * panel's cards"). Never merge or discard.
    */
   moves: z.literal(true).optional(),
+  /**
+   * The app settings it may change, by the action catalog's line names,
+   * each only on the captain's own press in it (docs/ui-plugins.md,
+   * "Changing settings"); the host serves only the lines on its allowlist
+   * (`PANEL_CHANGES`, src/shared/panelChanges.ts).
+   */
+  actions: z.array(actionNameSchema).max(PANEL_CHANGE_NAMES.length).optional(),
 });
 export type PluginCapabilities = z.infer<typeof capabilitiesSchema>;
 
-export const GRANT_NAMES = ["integrations", "storage.kv", "reads", "sql", "moves"] as const;
+export const GRANT_NAMES = [
+  "integrations",
+  "storage.kv",
+  "reads",
+  "sql",
+  "moves",
+  "actions",
+] as const;
 export type GrantName = (typeof GRANT_NAMES)[number];
 
 /** Which grants a manifest actually asks for, by name. */
@@ -281,6 +303,7 @@ export function requestedGrants(capabilities: PluginCapabilities): GrantName[] {
   if (capabilities.reads && capabilities.reads.length > 0) names.push("reads");
   if (capabilities.sql && capabilities.sql.length > 0) names.push("sql");
   if (capabilities.moves) names.push("moves");
+  if (capabilities.actions && capabilities.actions.length > 0) names.push("actions");
   return names;
 }
 
@@ -295,6 +318,8 @@ export type HostCapabilitySupport = {
   readonly sql?: ReadonlySet<string>;
   /** It serves a plugin's moves on the captain's tasks. */
   readonly moves?: boolean;
+  /** The settings a plugin may change, by catalog line. Absent or empty means none. */
+  readonly actions?: ReadonlySet<string>;
 };
 
 /**
@@ -323,6 +348,11 @@ export function unservableGrants(
         if (!support.sql?.has(view)) refused.push(`sql:${view}`);
       }
     }
+    if (grant === "actions") {
+      for (const name of capabilities.actions ?? []) {
+        if (!support.actions?.has(name)) refused.push(`actions:${name}`);
+      }
+    }
   }
   return refused;
 }
@@ -340,6 +370,8 @@ export type ConsentSummary = {
   storageBytes: number | null;
   /** It may move the captain's tasks, each move on his click or key. */
   moves: boolean;
+  /** The settings it may change, each on his click or key. */
+  actions: string[];
 };
 
 export function consentSummary(capabilities: PluginCapabilities): ConsentSummary {
@@ -349,6 +381,7 @@ export function consentSummary(capabilities: PluginCapabilities): ConsentSummary
     integrations: (capabilities.integrations ?? []).map((use) => ({ ...use })),
     storageBytes: capabilities.storage?.kv.maxBytes ?? null,
     moves: capabilities.moves === true,
+    actions: [...new Set(capabilities.actions ?? [])],
   };
 }
 
@@ -402,6 +435,7 @@ export function canonicalCapabilities(capabilities: PluginCapabilities): string 
   if (parsed.sql?.length) block.sql = [...new Set(parsed.sql)].sort();
   if (parsed.storage) block.storage = parsed.storage;
   if (parsed.moves) block.moves = true;
+  if (parsed.actions?.length) block.actions = [...new Set(parsed.actions)].sort();
   if (parsed.integrations?.length)
     block.integrations = [...parsed.integrations]
       .map((use) => ({

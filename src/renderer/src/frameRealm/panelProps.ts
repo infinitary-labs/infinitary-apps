@@ -12,6 +12,7 @@ import type {
   PanelProps,
   PanelRail,
   PanelReads,
+  PanelSettingChanges,
   PanelStore,
   PanelTasks,
   PanelView,
@@ -90,6 +91,7 @@ export function framePanelProps(
     point: framePoint(config, bridge, warn),
     integrations: frameIntegrations(bridge, warn),
     ...(config.moves ? { tasks: frameTasks(bridge) } : {}),
+    ...(config.settings ? { settings: frameSettings(bridge) } : {}),
   };
 }
 
@@ -205,6 +207,15 @@ function frameTasks(bridge: FrameBridgeApi): PanelTasks {
         .then((result) => result as PanelMoveResult),
     pin: (taskId, pinned) =>
       bridge.action("tasks.pin", { taskId, pinned }).then((result) => result as PanelMoveResult),
+  };
+}
+
+function frameSettings(bridge: FrameBridgeApi): PanelSettingChanges {
+  return {
+    change: (action, value) =>
+      bridge
+        .action("settings.change", { action, value })
+        .then((result) => result as PanelMoveResult),
   };
 }
 

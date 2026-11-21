@@ -287,6 +287,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "crew-only",
     "A panel's own call on the captain's integrations; each action keeps its Settings rule, and the first mate reaches them through its own integration tools",
   ],
+  "inf:plugins:settings:change": [
+    "crew-only",
+    "A panel's change of a setting it was granted, on the captain's press in it; it runs that setting's own catalog line as the captain",
+  ],
   "inf:plugins:personal:mounts": [
     "window",
     "The window's own answer about which panels it drew, sent whenever it changes; nothing is set",

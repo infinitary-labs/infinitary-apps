@@ -78,7 +78,7 @@ That verb is the integrations (INF-2334; the captain's principle of 2026-11-02, 
 
 What stands:
 
-- The grant model as schema (`capabilitiesSchema`): `integrations` (each connection a panel uses, with its actions, events and why), `storage.kv` (a byte cap, at most `STORAGE_KV_MAX_BYTES`), `reads` (dotted read-catalog names), `sql` (published views) and `moves`.
+- The grant model as schema (`capabilitiesSchema`): `integrations` (each connection a panel uses, with its actions, events and why), `storage.kv` (a byte cap, at most `STORAGE_KV_MAX_BYTES`), `reads` (dotted read-catalog names), `sql` (published views), `moves` and `actions` (settings it may change, by action catalog line).
 - The retired `net.origins` and `secrets` keys are refused wherever they are declared, saying to name an integration instead (`retiredGrantWords`).
 - Refusal of anything a host cannot serve: `unservableGrants` lists them read by read; `PluginHost.registerPlugin` throws on a non-empty list.
   A plugin never runs believing it has a grant it does not.
@@ -465,7 +465,7 @@ The security review is `docs/live-prototype-security.md`, "Live reads on a crewm
 | chrome | no attribution | "yours" | the plugin's name |
 | control | `personalize` moves or hides it | the switch, safe mode, `personalize remove` | consent, the switch, safe mode, `personalize remove` |
 
-**One manifest** (items 1 and 5; PR 326): the personal `manifest.json` is the plugin manifest (`personalManifestSchema`); its capability keys `reads`, `sql`, `integrations`, `storage` and `moves` are the grant block `manifestCapabilities` reads, and the retired `net` and `secrets` are refused for every source.
+**One manifest** (items 1 and 5; PR 326): the personal `manifest.json` is the plugin manifest (`personalManifestSchema`); its capability keys `reads`, `sql`, `integrations`, `storage`, `moves` and `actions` are the grant block `manifestCapabilities` reads, and the retired `net` and `secrets` are refused for every source.
 The host stamps `source` (`yours` | `installed`) from the root it found the plugin in.
 `personalPlugins.ts` registers both sources from one snapshot through `registerPlugin`, attributed "yours" or by the plugin's name, with the grants it is served.
 
@@ -620,6 +620,22 @@ The same grant gives `PanelProps.tasks.pin(taskId, pinned)` (INF-3127): it pins 
 `tasks.detail` joins the panel reads with its `{ id }` argument (`reads.subscribe("tasks.detail", { id }, listener)`), so a never-started Drop task can send the `review` its `dropEffects` list.
 `tasks.search` joins them too, with its `{ query }` argument: the app's own search over every task, closed ones included, so a panel's Find lists done and dropped work the board no longer carries.
 Each live or dropped work row of the board says which lifecycle moves it allows now, and why not (`TaskView.moves`, `taskMovesOf` in `src/shared/taskMoves.ts`, from `recordBarOf` and the task service's queue guard), and whether its waiting card settles with a merge (`waitingCardMerges`); `presentTask` recomputes both when the stack shows another card for the task, or none.
+
+### Changing settings
+
+A panel can change the captain's settings through the same lines the first mate uses: the action catalog (`ACTIONS`, `src/shared/actions.ts`; primitives/app-actions.md).
+`manifest.json` `"actions": ["theme", "window-size"]` names the catalog lines a panel may change, a grant like `moves` (`capabilitiesSchema.actions`, `PLUGIN_HOST_SUPPORT.actions`).
+The host serves only lines on its allowlist, `PANEL_CHANGES` (`src/shared/panelChanges.ts`), where every catalog line answers yes or gives an excuse from the catalog's closed set of grounds.
+The allowlist covers how the app looks and sounds and how work runs: projects, models, accounts and automations.
+It never covers a sign-in or key, an answer that widens the captain's consent, a deletion, or a move of the first mate's record; a manifest naming such a line is refused as an unservable grant (`actions:<name>`).
+The consent card of a panel from elsewhere lists each setting on a line of its own, worded in the captain's language (`panelChangesWords`), and an update that adds one asks again, because the canonical block differs.
+A panel with the grant gets `PanelProps.settings.change(action, value)` (`panelSettings.ts`), whose value is the line's own value, as the first mate's `app_change` takes it.
+A change counts only from the captain's click or key in the page, gated as a task move is, and one press makes one change: a change with no press since the panel's last one answers "Only your own click or key press in this panel changes a setting, one change each time.
+Nothing was changed.", and nothing is written.
+The core reads the grant again on every change (`inf:plugins:settings:change`, `src/core/personal/panelChange.ts`), builds the request with the first mate's own builder (`actionRequest`), and runs the line's channel as the captain, so Settings, the first mate and a panel change a setting the same way.
+A project's origin never changes from a panel; it stays on the app's exact-change card.
+The feed names the panel: "Captain, in the Look panel · Theme set to light" (`feedCaptainSetInPanel`), and a settled run from a panel never merges with one from Settings.
+The request reaches only this computer's own window (`reach: "home"`), so a panel drawn in a view of another computer, or on the phone, gets no `settings`.
 
 ### A collapsed panel speaks for itself (piece 5)
 

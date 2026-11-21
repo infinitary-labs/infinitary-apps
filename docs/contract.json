@@ -71105,6 +71105,71 @@
                 "moves": {
                   "type": "boolean"
                 },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project-settings",
+                      "project-move",
+                      "project-name",
+                      "project-runs-on",
+                      "theme",
+                      "font",
+                      "panel",
+                      "voice-model",
+                      "show-whats-new",
+                      "start-at-login",
+                      "show-in-dock",
+                      "release-page",
+                      "integration-settings",
+                      "integration-check",
+                      "dictation",
+                      "firstmate-model",
+                      "firstmate-account",
+                      "crew-slots",
+                      "crew-speed",
+                      "crew-reasoning",
+                      "crew-slots-reset",
+                      "model-pins",
+                      "decision-model",
+                      "refresh-usage",
+                      "account-rename",
+                      "account-pause",
+                      "account-prefer",
+                      "projects-folder",
+                      "project-batch-answer",
+                      "cost-limit",
+                      "notifications",
+                      "runbook",
+                      "runbook-copy",
+                      "personal-resources",
+                      "window-wash",
+                      "window-size",
+                      "crew-model-names",
+                      "ambient-music",
+                      "ambient-away",
+                      "card-size",
+                      "language",
+                      "usage-unit",
+                      "panel-collapse",
+                      "automation-edit",
+                      "automation-state",
+                      "automation-pause-all",
+                      "update-channel",
+                      "update-check",
+                      "inbox-link",
+                      "decision-use-off",
+                      "private-site-remove",
+                      "device-keep",
+                      "home-move-cancel",
+                      "copy-stop",
+                      "device-fix-work",
+                      "device-try-again",
+                      "kept-job-check"
+                    ]
+                  }
+                },
                 "running": {
                   "type": "boolean"
                 },
@@ -71613,6 +71678,71 @@
                 },
                 "moves": {
                   "type": "boolean"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project-settings",
+                      "project-move",
+                      "project-name",
+                      "project-runs-on",
+                      "theme",
+                      "font",
+                      "panel",
+                      "voice-model",
+                      "show-whats-new",
+                      "start-at-login",
+                      "show-in-dock",
+                      "release-page",
+                      "integration-settings",
+                      "integration-check",
+                      "dictation",
+                      "firstmate-model",
+                      "firstmate-account",
+                      "crew-slots",
+                      "crew-speed",
+                      "crew-reasoning",
+                      "crew-slots-reset",
+                      "model-pins",
+                      "decision-model",
+                      "refresh-usage",
+                      "account-rename",
+                      "account-pause",
+                      "account-prefer",
+                      "projects-folder",
+                      "project-batch-answer",
+                      "cost-limit",
+                      "notifications",
+                      "runbook",
+                      "runbook-copy",
+                      "personal-resources",
+                      "window-wash",
+                      "window-size",
+                      "crew-model-names",
+                      "ambient-music",
+                      "ambient-away",
+                      "card-size",
+                      "language",
+                      "usage-unit",
+                      "panel-collapse",
+                      "automation-edit",
+                      "automation-state",
+                      "automation-pause-all",
+                      "update-channel",
+                      "update-check",
+                      "inbox-link",
+                      "decision-use-off",
+                      "private-site-remove",
+                      "device-keep",
+                      "home-move-cancel",
+                      "copy-stop",
+                      "device-fix-work",
+                      "device-try-again",
+                      "kept-job-check"
+                    ]
+                  }
                 },
                 "running": {
                   "type": "boolean"
@@ -72844,6 +72974,69 @@
               "type": "string"
             },
             "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    "inf:plugins:settings:change": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        ],
+        "minItems": 3,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
           }
         ]
       }
@@ -82094,6 +82287,9 @@
                                     "firstmate"
                                   ]
                                 },
+                                "panel": {
+                                  "type": "string"
+                                },
                                 "repoId": {
                                   "type": "string"
                                 },
@@ -82902,6 +83098,9 @@
                                     "captain",
                                     "firstmate"
                                   ]
+                                },
+                                "panel": {
+                                  "type": "string"
                                 },
                                 "run": {
                                   "type": "object",
@@ -86518,6 +86717,9 @@
                   "firstmate"
                 ]
               },
+              "panel": {
+                "type": "string"
+              },
               "repoId": {
                 "type": "string"
               },
@@ -87317,6 +87519,9 @@
                   "captain",
                   "firstmate"
                 ]
+              },
+              "panel": {
+                "type": "string"
               },
               "run": {
                 "type": "object",
@@ -94007,6 +94212,71 @@
                 "moves": {
                   "type": "boolean"
                 },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project-settings",
+                      "project-move",
+                      "project-name",
+                      "project-runs-on",
+                      "theme",
+                      "font",
+                      "panel",
+                      "voice-model",
+                      "show-whats-new",
+                      "start-at-login",
+                      "show-in-dock",
+                      "release-page",
+                      "integration-settings",
+                      "integration-check",
+                      "dictation",
+                      "firstmate-model",
+                      "firstmate-account",
+                      "crew-slots",
+                      "crew-speed",
+                      "crew-reasoning",
+                      "crew-slots-reset",
+                      "model-pins",
+                      "decision-model",
+                      "refresh-usage",
+                      "account-rename",
+                      "account-pause",
+                      "account-prefer",
+                      "projects-folder",
+                      "project-batch-answer",
+                      "cost-limit",
+                      "notifications",
+                      "runbook",
+                      "runbook-copy",
+                      "personal-resources",
+                      "window-wash",
+                      "window-size",
+                      "crew-model-names",
+                      "ambient-music",
+                      "ambient-away",
+                      "card-size",
+                      "language",
+                      "usage-unit",
+                      "panel-collapse",
+                      "automation-edit",
+                      "automation-state",
+                      "automation-pause-all",
+                      "update-channel",
+                      "update-check",
+                      "inbox-link",
+                      "decision-use-off",
+                      "private-site-remove",
+                      "device-keep",
+                      "home-move-cancel",
+                      "copy-stop",
+                      "device-fix-work",
+                      "device-try-again",
+                      "kept-job-check"
+                    ]
+                  }
+                },
                 "running": {
                   "type": "boolean"
                 },
@@ -94515,6 +94785,71 @@
                 },
                 "moves": {
                   "type": "boolean"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project-settings",
+                      "project-move",
+                      "project-name",
+                      "project-runs-on",
+                      "theme",
+                      "font",
+                      "panel",
+                      "voice-model",
+                      "show-whats-new",
+                      "start-at-login",
+                      "show-in-dock",
+                      "release-page",
+                      "integration-settings",
+                      "integration-check",
+                      "dictation",
+                      "firstmate-model",
+                      "firstmate-account",
+                      "crew-slots",
+                      "crew-speed",
+                      "crew-reasoning",
+                      "crew-slots-reset",
+                      "model-pins",
+                      "decision-model",
+                      "refresh-usage",
+                      "account-rename",
+                      "account-pause",
+                      "account-prefer",
+                      "projects-folder",
+                      "project-batch-answer",
+                      "cost-limit",
+                      "notifications",
+                      "runbook",
+                      "runbook-copy",
+                      "personal-resources",
+                      "window-wash",
+                      "window-size",
+                      "crew-model-names",
+                      "ambient-music",
+                      "ambient-away",
+                      "card-size",
+                      "language",
+                      "usage-unit",
+                      "panel-collapse",
+                      "automation-edit",
+                      "automation-state",
+                      "automation-pause-all",
+                      "update-channel",
+                      "update-check",
+                      "inbox-link",
+                      "decision-use-off",
+                      "private-site-remove",
+                      "device-keep",
+                      "home-move-cancel",
+                      "copy-stop",
+                      "device-fix-work",
+                      "device-try-again",
+                      "kept-job-check"
+                    ]
+                  }
                 },
                 "running": {
                   "type": "boolean"

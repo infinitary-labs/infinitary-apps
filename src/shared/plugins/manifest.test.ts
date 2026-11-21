@@ -231,6 +231,7 @@ describe("grants", () => {
       storageBytes: 65_536,
       views: [],
       moves: false,
+      actions: [],
     });
     expect(consentSummary(parsePluginManifest(minimal).capabilities)).toEqual({
       reads: [],
@@ -238,6 +239,7 @@ describe("grants", () => {
       integrations: [],
       storageBytes: null,
       moves: false,
+      actions: [],
     });
   });
 

@@ -89,6 +89,8 @@ export type FramedPanelContent = {
   sql: string[];
   /** It may move the captain's tasks (`moves`): its manifest asks, and for an added one he agreed. */
   moves: boolean;
+  /** The settings it may change (`actions`): its manifest names them, and for an added one he agreed. */
+  actions?: string[];
   /** Its own code decides whether it shows (`presence` `{ "code": true }`). */
   decides: boolean;
   /** It has background work of its own (`server.ts`), which its `invoke` reaches. */
@@ -172,6 +174,7 @@ function usePage(
   const server = content.server === true;
   const version = versionOf(content);
   const reads = content.reads.join(",");
+  const changes = (content.actions ?? []).join(",");
   return useMemo(() => {
     // Only the captain's own panel on its rail answers how its body fared.
     const onBody =
@@ -184,13 +187,28 @@ function usePage(
       ...(card === undefined ? {} : { card }),
       reads: reads ? reads.split(",") : [],
       moves,
+      ...(changes ? { settings: changes.split(",") } : {}),
       decides,
       ...(server ? { server: serverCall(id, draft) } : {}),
       ...(own ? {} : { integrations: integrationsCall(id, draft) }),
       ...(onBody ? { onBody } : {}),
       ...(draft ? { draft: { id: personalDraftPanelId(id) } } : {}),
     });
-  }, [id, title, own, personal, draft, server, version, frame, card, reads, moves, decides]);
+  }, [
+    id,
+    title,
+    own,
+    personal,
+    draft,
+    server,
+    version,
+    frame,
+    card,
+    reads,
+    moves,
+    changes,
+    decides,
+  ]);
 }
 
 /** The frame config's reads and views, and the controller's, from a content's lists. */
@@ -218,6 +236,7 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
   const version = versionOf(content);
   const grants = useGrants(content);
   const moves = content.moves;
+  const settings = (content.actions?.length ?? 0) > 0;
   const server = content.server === true;
   const source = content.code.source;
   const draft = content.draft === true;
@@ -230,10 +249,11 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
         id,
         ...grants.config,
         ...(moves ? { moves } : {}),
+        ...(settings ? { settings } : {}),
         ...(server ? { server } : {}),
       },
     }),
-    [id, version, source, draft, grants, moves, server],
+    [id, version, source, draft, grants, moves, settings, server],
   );
   const store = useMemo(
     () => ({ extensionId: id, ...(draft ? { draft: true as const } : {}) }),
@@ -364,6 +384,7 @@ function FramedCard({
   const cardId = card.id;
   const cardView = card.view;
   const moves = content.moves;
+  const settings = (content.actions?.length ?? 0) > 0;
   const server = content.server === true;
   const panel = useMemo(
     () => ({
@@ -373,10 +394,11 @@ function FramedCard({
         ...grants.config,
         card: { id: cardId },
         ...(moves ? { moves } : {}),
+        ...(settings ? { settings } : {}),
         ...(server ? { server } : {}),
       },
     }),
-    [id, version, source, cardView, cardId, grants, moves, server],
+    [id, version, source, cardView, cardId, grants, moves, settings, server],
   );
   const holder = useRef<HTMLDivElement>(null);
   const frame = useFrameOf(holder);

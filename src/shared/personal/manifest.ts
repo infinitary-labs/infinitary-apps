@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PANEL_CHANGE_NAMES, type PanelChangeName } from "../panelChanges";
 import {
   capabilitiesSchema,
   type HostCapabilitySupport,
@@ -15,7 +16,13 @@ import {
   panelHeaderSchema,
 } from "../plugins/panelCards";
 import { SQL_VIEWS, sqlViewNameSchema } from "../sql";
-import type { PanelReadName, PersonalManifest, PersonalPresence, StoreValue } from "./contracts";
+import type {
+  PanelChangeSetting,
+  PanelReadName,
+  PersonalManifest,
+  PersonalPresence,
+  StoreValue,
+} from "./contracts";
 
 /**
  * The runtime side of the personal-extension contracts (src/shared/personal/
@@ -175,6 +182,11 @@ export function undeclaredMovesMessage(): string {
   return `tasks.run moves the captain's tasks: say "moves": true in manifest.json.`;
 }
 
+/** A setting a panel may name in `actions`: the host's allowlist (src/shared/panelChanges.ts). */
+export const panelSettingNameSchema: z.ZodType<PanelChangeSetting> = z.enum(
+  PANEL_CHANGE_NAMES as readonly [PanelChangeName, ...PanelChangeName[]],
+);
+
 /** Why `reads.subscribe("sql", ...)` threw: the manifest declared no view. */
 export function undeclaredViewsMessage(): string {
   return `"sql" reads the views this panel declared: name them in manifest.json "sql" (from ${SQL_VIEWS.join(", ")}).`;
@@ -250,6 +262,7 @@ export const personalManifestSchema: z.ZodType<PersonalManifest> = z.strictObjec
   commands: panelCommandsSchema.optional(),
   reads: z.array(panelReadNameSchema).max(PANEL_READ_NAMES.length).optional(),
   moves: z.literal(true).optional(),
+  actions: z.array(panelSettingNameSchema).max(PANEL_CHANGE_NAMES.length).optional(),
   sql: z.array(sqlViewNameSchema).max(64).optional(),
   integrations: panelIntegrationsSchema.optional(),
   /** Retired: a panel reaches a service through an integration (`retiredGrantWords`). */
@@ -274,6 +287,7 @@ export const personalManifestSchema: z.ZodType<PersonalManifest> = z.strictObjec
 export function manifestCapabilities(manifest: PersonalManifest): PluginCapabilities {
   return capabilitiesSchema.parse({
     ...(manifest.moves ? { moves: true } : {}),
+    ...(manifest.actions?.length ? { actions: [...manifest.actions] } : {}),
     ...(manifest.reads?.length ? { reads: [...manifest.reads] } : {}),
     ...(manifest.sql?.length ? { sql: [...manifest.sql] } : {}),
     ...(manifest.integrations?.length ? { integrations: manifest.integrations } : {}),
@@ -292,6 +306,7 @@ export const PLUGIN_HOST_SUPPORT: HostCapabilitySupport = {
   sql: new Set(SQL_VIEWS),
   storage: true,
   moves: true,
+  actions: new Set(PANEL_CHANGE_NAMES),
 };
 
 /**
@@ -357,6 +372,12 @@ export const personalExtensionViewSchema = z.object({
   ownPresence: z.boolean(),
   /** It may move the captain's tasks: its manifest asks, and for an added one he agreed. */
   moves: z.boolean(),
+  /**
+   * The settings it may change on the captain's press: its manifest names
+   * them, and for an added one they agreed. Absent from a home before panels
+   * changed settings, which serves none.
+   */
+  actions: z.array(panelSettingNameSchema).optional(),
   /** A task on this extension is active: the header shows the running dot. */
   running: z.boolean(),
   /** The app's own reads the manifest declared; the panel is served these and no other. */

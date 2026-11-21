@@ -195,6 +195,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
      */
     said: saidSchema.optional(),
     actor: z.enum(["captain", "firstmate"]).optional(),
+    /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+    panel: z.string().optional(),
     repoId: z.string(),
     name: z.string(),
     delivery: repoDeliverySchema,
@@ -422,6 +424,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     type: z.literal("personalized"),
     text: z.string(),
     actor: z.enum(["captain", "firstmate"]).optional(),
+    /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+    panel: z.string().optional(),
     /**
      * The captain's settled run this line belongs to (docs/orchestrator-contract.md,
      * "Settled runs"): a later step of the same run rewrites the run's line

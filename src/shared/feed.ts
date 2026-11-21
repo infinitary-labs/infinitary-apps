@@ -109,9 +109,11 @@ function isFeedEvent(event: FmEvent): event is FeedEvent {
 }
 
 /** Who set a project's fact, as a line's lead ("Captain · "); none when the app did. */
-function byWho(actor: string | undefined): string | SaidPart {
+function byWho(actor: string | undefined, panel?: string): string | SaidPart {
   return actor === "captain"
-    ? saidPart("feedByCaptain")
+    ? panel
+      ? saidPart("feedByCaptainInPanel", { panel })
+      : saidPart("feedByCaptain")
     : actor === "firstmate"
       ? saidPart("feedByFirstMate")
       : "";
@@ -168,7 +170,9 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       return line(
         "info",
         event.actor === "captain"
-          ? said("feedCaptainSet", { text: event.text })
+          ? event.panel
+            ? said("feedCaptainSetInPanel", { text: event.text, panel: event.panel })
+            : said("feedCaptainSet", { text: event.text })
           : event.actor
             ? said("feedFirstMateSet", { text: event.text })
             : said("feedPersonalized", { text: event.text }),
@@ -201,7 +205,7 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
         return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
       if (event.description) return { kind: "info", text: event.description };
       const fills = {
-        who: byWho(event.actor),
+        who: byWho(event.actor, event.panel),
         name: event.name,
         delivery: DELIVERY_SAID[event.delivery] ?? event.delivery,
         merging: event.autonomy ? saidPart("feedMergesOnItsOwn") : saidPart("feedAsksFirst"),

@@ -1,0 +1,7 @@
+{
+  "api": 2,
+  "title": "Look",
+  "placement": { "x": "left", "y": "top" },
+  "presence": { "always": true },
+  "actions": ["theme", "window-size"]
+}

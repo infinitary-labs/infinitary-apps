@@ -12,7 +12,7 @@ import {
 import { PANEL_KEY_CLICK_ACTION } from "@shared/plugins/panelActionIds";
 import { z } from "zod";
 import { remindOfPanelClick } from "../app/keyReminderState";
-import { frameHoldsFocus } from "./frames/frameFocus";
+import { controllerOf, frameHoldsFocus } from "./frames/frameFocus";
 import { framePanelCardAction, PANEL_CARD_ACTIONS, PANEL_CARD_VIEW_ACTIONS } from "./panelCards";
 import {
   framePointAction,
@@ -23,6 +23,7 @@ import {
   panelPoint,
 } from "./panelPoint";
 import { frameRailAction, PANEL_RAIL_ACTIONS } from "./panelRail";
+import { frameSettingsAction, PANEL_SETTINGS_ACTION, panelSettings } from "./panelSettings";
 import { frameTasksAction, PANEL_TASKS_ACTIONS, panelTasks } from "./panelTasks";
 
 /**
@@ -30,7 +31,8 @@ import { frameTasksAction, PANEL_TASKS_ACTIONS, panelTasks } from "./panelTasks"
  * panel asked for (docs/ui-plugins.md, "A panel's cards"): the card actions
  * every panel has, `card.keep` on a card's own page, the pointing a panel
  * that reads `tasks.board` gets, the draft and the Settings opening every
- * panel has, `tasks.run` for one the captain agreed may move his tasks, the
+ * panel has, `tasks.run` for one the captain agreed may move his tasks,
+ * `settings.change` for one he agreed may change named settings, the
  * rail actions and `panel.body` on the panel's own page, and
  * `server.invoke` for one with background work of its own,
  * `integrations` for a panel the captain added or made, whose calls the core
@@ -56,6 +58,8 @@ export type FramePanelPage = {
   reads: readonly string[];
   /** It was granted moves. */
   moves: boolean;
+  /** The settings it was granted to change (`actions`); empty for none. */
+  settings?: readonly string[];
   /** Its own code decides whether it shows (`presence` `{ "code": true }`). */
   decides: boolean;
   /** Its background work, which `invoke` reaches; absent for a panel with none. */
@@ -122,6 +126,13 @@ export function framePanelActions(page: FramePanelPage): {
     }),
   );
   const tasks = frameTasksAction(panelTasks(panel, gate));
+  // Every press begun in the page reaches the window before a change counts it.
+  const heard = () => {
+    const element = frame();
+    return (element ? controllerOf(element)?.heard() : undefined) ?? Promise.resolve();
+  };
+  const changes = (page.settings?.length ?? 0) > 0;
+  const settings = frameSettingsAction(panelSettings(panel, gate, heard));
   const rail = frameRailAction(drawn, page.decides);
   const { server, onBody, integrations } = page;
   const onPage = card === undefined;
@@ -132,6 +143,7 @@ export function framePanelActions(page: FramePanelPage): {
     PANEL_DRAFT_ACTION,
     PANEL_OPEN_SETTINGS_ACTION,
     ...(page.moves ? PANEL_TASKS_ACTIONS : []),
+    ...(changes ? [PANEL_SETTINGS_ACTION] : []),
     ...(onPage ? PANEL_RAIL_ACTIONS : []),
     ...(onPage && onBody ? [PANEL_BODY_ACTION] : []),
     ...(server ? [PANEL_SERVER_ACTION] : []),
@@ -161,6 +173,7 @@ export function framePanelActions(page: FramePanelPage): {
       }
       if (id.startsWith("point.")) return point(id, value);
       if (id.startsWith("tasks.")) return tasks(id, value);
+      if (id === PANEL_SETTINGS_ACTION && changes) return settings(value);
       if (id.startsWith("rail.")) return rail(id, value);
       return cardActions(id, value);
     },

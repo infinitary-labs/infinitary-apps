@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { isPanelChange } from "@shared/panelChanges";
 import type {
   PanelReadName,
   PanelTheme,
@@ -37,13 +38,7 @@ import { mountKindOf, type PanelMount, type PanelMountKind } from "@shared/perso
 import { type PluginCapabilities, unservableGrants } from "@shared/plugins/manifest";
 import { panelCardsProblem, withoutPanelCards } from "@shared/plugins/panelCards";
 import type { NamingRule } from "@shared/runbooks";
-import {
-  isPublishedView,
-  SQL_VIEWS,
-  type SqlRequest,
-  sqlQuerySchema,
-  sqlRefusal,
-} from "@shared/sql";
+import { isPublishedView, type SqlRequest, sqlQuerySchema, sqlRefusal } from "@shared/sql";
 import type { CoreEventSink } from "../events";
 import type { HostPanelCapture } from "../host";
 import type { PanelAskLine, PanelCaller, PanelIntegrationsReach } from "../integrations";
@@ -87,6 +82,7 @@ import {
 import { PanelEvents, type PanelListening } from "./panelEvents";
 import { mountLine, mountOf, type PanelMountsHolder } from "./panelMounts";
 import type { PersonalStore } from "./personalStore";
+import { retiredViewsLine } from "./retiredViews";
 import { seedPersonalWorkspace } from "./workspace";
 
 /**
@@ -886,6 +882,17 @@ export class PersonalExtensions {
         : { text: `Not run: "${extensionId}" is not on a rail right now.`, refused: "refused" };
     }
     return this.answerIntegrations(entry, request);
+  }
+
+  /**
+   * The title of panel `extensionId` while its grant names setting `action`,
+   * read again at each change (docs/ui-plugins.md, "Changing settings"), or
+   * null for a panel not on a rail now or not granted it.
+   */
+  changeGrant(extensionId: string, action: string): string | null {
+    const entry = this.enabled && !this.disposed ? this.loaded.get(extensionId) : undefined;
+    if (!entry || !(entry.granted.actions ?? []).includes(action)) return null;
+    return entry.manifest.title ?? entry.id;
   }
 
   /** The captain's Ask again on a panel's turned-down or waiting integration call. */
@@ -1850,6 +1857,7 @@ export class PersonalExtensions {
         drawable && presenceSatisfied(presence, (key) => this.options.store.get(entry.slice, key)),
       ownPresence: "code" in presence,
       moves: entry.granted.moves === true,
+      actions: (entry.granted.actions ?? []).filter(isPanelChange),
       running: task?.status === "active",
       reads: (entry.granted.reads ?? []).filter(isPanelRead),
       sql: [...(entry.granted.sql ?? [])],
@@ -1972,29 +1980,4 @@ async function isFile(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * The line for a manifest naming views this version does not publish: the
- * app's data moved on (the panel reads a `_vN` past its two releases), the
- * panel is newer than the app, or the name was never one. Plain words,
- * naming what it asked for and what there is.
- */
-function retiredViewsLine(id: string, names: readonly string[]): string {
-  const parts = (name: string) => {
-    const match = /^(.*)_v([0-9]+)$/.exec(name);
-    return { stem: match?.[1] ?? name, version: Number(match?.[2] ?? 0) };
-  };
-  const published = SQL_VIEWS.map(parts);
-  const compared = names.map((name) => {
-    const asked = parts(name);
-    const current = published.find((view) => view.stem === asked.stem);
-    return current ? Math.sign(asked.version - current.version) : null;
-  });
-  const why = compared.some((sign) => sign !== null && sign < 0)
-    ? "this panel was written for an older version of the app's data"
-    : compared.some((sign) => sign !== null && sign > 0)
-      ? "this panel was written for a newer version of the app than this one"
-      : "this panel asks for data the app does not publish";
-  return `${id}/manifest.json sql: ${why} (${names.join(", ")}; this version publishes ${SQL_VIEWS.join(", ")})`;
 }

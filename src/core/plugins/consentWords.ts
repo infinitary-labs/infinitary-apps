@@ -3,6 +3,7 @@ import { inLanguage } from "@shared/i18n/current";
 import { formatList } from "@shared/i18n/format";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { said, saidMark } from "@shared/i18n/said";
+import { isPanelChange, type PanelChangeName } from "@shared/panelChanges";
 import {
   type ConsentSummary,
   consentSummary,
@@ -66,7 +67,7 @@ export function runbookConsentBody(input: {
           `${saidMark(said("cardConsentShowsPanels", { count }), "dt")}${panels
             .map(
               (panel) =>
-                `<dd><b>${escapeHtml(panel.title)}</b><span class="inf-grants-lines">${permissionLines(panel.summary).join("")}</span></dd>`,
+                `<dd><b>${escapeHtml(panel.title)}</b><span class="inf-grants-lines">${permissionLines(panel.summary).join("")}</span>${panelChangesWords(panel.summary.actions)}</dd>`,
             )
             .join("")}`,
         ]
@@ -132,6 +133,8 @@ export function panelConsentBody(input: {
       ? `<p>A new version of <b>${escapeHtml(input.update.title)}</b>, a panel by ${escapeHtml(input.source.author)}, asks for something different from what you agreed to. Version ${escapeHtml(input.update.version)}.</p>`
       : "") +
     `<dl class="inf-grants">${rows.join("")}</dl>` +
+    // Each setting it may change, one line each, named in the captain's language.
+    panelChangesWords(summary.actions) +
     saidMark(note, "p", 'class="inf-grants-note"') +
     fullDetails(detailRows(summary))
   );
@@ -261,4 +264,26 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * The settings a panel may change, one line each, as facts the window words
+ * in the captain's language (docs/ui-plugins.md, "Changing settings").
+ */
+export function panelChangesWords(actions: readonly string[]): string {
+  const names = actions.filter(isPanelChange);
+  if (names.length === 0) return "";
+  return `<p>${saidMark(said("panelChangesIntro"))}</p><ul>${names
+    .map((name) => `<li>${saidMark(said(panelChangeLabel(name)))}</li>`)
+    .join("")}</ul>`;
+}
+
+/**
+ * A setting's label message, `panelChange` and its catalog name in
+ * PascalCase: `theme` is `panelChangeTheme`. Each is a message with no
+ * blanks, like the one its type names; `consentWords.test.ts` holds every
+ * allowed name to its message.
+ */
+export function panelChangeLabel(name: PanelChangeName): "panelChangeTheme" {
+  return `panelChange${name.replace(/(^|-)([a-z])/g, (_, __, letter: string) => letter.toUpperCase())}` as "panelChangeTheme";
 }

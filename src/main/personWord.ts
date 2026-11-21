@@ -11,6 +11,7 @@ import {
   readdirSync,
   readSync,
   rmSync,
+  type Stats,
 } from "node:fs";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
@@ -239,7 +240,7 @@ function reclaimWordProfiles(root: string): void {
 }
 
 /** What a path names, not following a link; null where nothing can be read there. */
-function entryOf(path: string): ReturnType<typeof lstatSync> | null {
+function entryOf(path: string): Stats | null {
   try {
     return lstatSync(path);
   } catch {

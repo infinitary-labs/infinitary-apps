@@ -4,6 +4,10 @@
     {
       "id": "docs-site-languages-catch-up",
       "reason": "Brings the translated documentation pages up to date with the English pages on Secrets, Integrations, Projects and iPhone and iPad; nothing in the app changes."
+    },
+    {
+      "id": "phone-card-reads-batches-regenerated",
+      "reason": "Regenerates the phone's bundled card script and contract so a crewmate card's live reads on iPhone and iPad include the Batches read and the batch record fields that panels already have; the generated files were left out of step when the changes were combined."
     }
   ]
 }

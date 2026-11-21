@@ -3,7 +3,11 @@ import * as m from "@shared/i18n/messages.generated";
 import type { AccountView } from "../../../shared/accounts";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 import { API_KEY_LABEL } from "../../../shared/providers";
-import type { QuotaCreditsView } from "../../../shared/quota";
+import {
+  type QuotaCreditsView,
+  type QuotaSavedResetsView,
+  SAVED_RESETS_PAGE,
+} from "../../../shared/quota";
 
 /** Settings → Intelligence's account-row words (`SubscriptionsTab.tsx`). */
 export const SUBSCRIPTIONS_WORDS = {
@@ -115,6 +119,19 @@ export function creditsLine(
     ? m.settingsSubscriptionsCreditsKeepsGoing()
     : m.settingsSubscriptionsCreditsWhere({ site });
   return `${fact} · ${after}`;
+}
+
+/**
+ * The row's one line about saved resets (docs/quota.md, "Saved resets"):
+ * how many the account holds and where they are used, since Infinitary
+ * uses none. An unknown count, or none, says nothing.
+ */
+export function savedResetsLine(provider: string, savedResets: QuotaSavedResetsView | undefined) {
+  const site = CREDITS_SITE[provider];
+  if (!SAVED_RESETS_PAGE[provider] || !site || !savedResets || savedResets.available < 1) {
+    return undefined;
+  }
+  return m.settingsSubscriptionsSavedResets({ count: savedResets.available, site });
 }
 
 function creditsFact(provider: string, credits: QuotaCreditsView): string | undefined {

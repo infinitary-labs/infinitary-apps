@@ -135,6 +135,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | risk | 위험도 | low / medium / high are 낮음 / 중간 / 높음 |
 | Runbooks | 런북 | |
 | Runs on | 실행 위치 | |
+| saved reset (a provider's, refills the allowance) | 저장된 재설정 | ChatGPT's saved resets for Codex, counted with 개; Infinitary never uses one. |
 | Secrets | 비밀 정보 | |
 | send back (a change out of a batch) | 돌려보내다 | 이유와 함께 돌려보내기 |
 | session, transcript | (not used) | 대화 instead |

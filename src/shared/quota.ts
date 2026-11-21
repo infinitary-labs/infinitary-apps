@@ -107,6 +107,42 @@ export const quotaCreditsViewSchema = z.object({
 export type QuotaCreditsView = z.infer<typeof quotaCreditsViewSchema>;
 
 /**
+ * Saved resets (docs/quota.md "Saved resets"): one-time resets of a plan's
+ * allowance the provider keeps on the account until they are used or
+ * expire, read from ChatGPT's Codex usage reading
+ * (`rate_limit_reset_credits`). A fact beside the windows, never a window:
+ * Infinitary never uses one, and routing reads nothing from it.
+ * - `available` how many the account holds,
+ * - `applicable` how many would take effect right now; absent is unknown.
+ * No `savedResets` at all is unknown too, never zero.
+ */
+export const quotaSavedResetsViewSchema = z.object({
+  available: z.number().int().nonnegative(),
+  applicable: z.number().int().nonnegative().optional(),
+});
+export type QuotaSavedResetsView = z.infer<typeof quotaSavedResetsViewSchema>;
+
+/**
+ * Where a person uses a saved reset, for each provider whose reading says
+ * them: the provider's own usage page, the address its own client points to.
+ */
+export const SAVED_RESETS_PAGE: Readonly<Record<string, string>> = {
+  codex: "https://chatgpt.com/settings/usage",
+};
+
+/**
+ * How many saved resets an account could use right now, where the provider
+ * has a page to use them on; undefined when none applies or nobody knows.
+ */
+export function savedResetsNow(
+  row: Pick<QuotaProviderView, "provider" | "savedResets"> | undefined,
+): number | undefined {
+  if (!row || !SAVED_RESETS_PAGE[row.provider]) return undefined;
+  const applicable = row.savedResets?.applicable;
+  return applicable !== undefined && applicable > 0 ? applicable : undefined;
+}
+
+/**
  * The quota providers whose accounts offer the Keep going on credits switch
  * (INF-4104 piece 2, docs/quota.md "Keep going on credits"): Claude's extra
  * usage and ChatGPT's Codex credits. Copilot waits until its refusal can be
@@ -200,6 +236,8 @@ export const quotaProviderViewSchema = z.object({
   windows: z.array(quotaWindowViewSchema),
   /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
   credits: quotaCreditsViewSchema.optional(),
+  /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
+  savedResets: quotaSavedResetsViewSchema.optional(),
   /**
    * The account's Keep going on credits switch is on, as the vault holds it
    * (`answersOnCredits`). Absent is off.

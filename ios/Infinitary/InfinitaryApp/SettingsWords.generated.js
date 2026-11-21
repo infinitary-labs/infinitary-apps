@@ -10597,6 +10597,101 @@ ${events}` : prompt;
     }
     return `This sign-in is being refused.`;
   }
+  function settingsSubscriptionsSavedResets(input) {
+    const count = formatNumber(input.count);
+    const site = input.site;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          case "one":
+            return `إعادة تعيين محفوظة واحدة · استخدمها على ${site}`;
+          case "two":
+            return `إعادتا تعيين محفوظتان · استخدم واحدة على ${site}`;
+          case "few":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          case "many":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          default:
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} gespeicherter Reset · einlösbar auf ${site}`;
+          default:
+            return `${count} gespeicherte Resets · einlösbar auf ${site}`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} restablecimiento guardado · úsalo en ${site}`;
+          case "many":
+            return `${count} restablecimientos guardados · usa uno en ${site}`;
+          default:
+            return `${count} restablecimientos guardados · usa uno en ${site}`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} réinitialisation enregistrée · à utiliser sur ${site}`;
+          case "many":
+            return `${count} réinitialisations enregistrées · à utiliser sur ${site}`;
+          default:
+            return `${count} réinitialisations enregistrées · à utiliser sur ${site}`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `保存済みのリセット ${count} 回分 · ${site} で使用`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `저장된 재설정 ${count}개 · ${site}에서 사용`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} redefinição salva · use em ${site}`;
+          case "many":
+            return `${count} redefinições salvas · use uma em ${site}`;
+          default:
+            return `${count} redefinições salvas · use uma em ${site}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 次已保存的重置 · 在 ${site} 使用`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 次已儲存的重設 · 在 ${site} 使用`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} šáṽéð ŕéšéţ · ûšé îţ öñ ${site} ~~~~~~~~~]`;
+          default:
+            return `[${count} šáṽéð ŕéšéţš · ûšé öñé öñ ${site} ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ saved reset · use it on ‬${site}`;
+          default:
+            return `${count}‮ saved resets · use one on ‬${site}`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} saved reset · use it on ${site}`;
+      default:
+        return `${count} saved resets · use one on ${site}`;
+    }
+  }
   function settingsSubscriptionsSignInAgainState() {
     switch (currentLanguage()) {
       case "ar":
@@ -13986,6 +14081,13 @@ ${events}` : prompt;
     /** The provider says this account is answering on credits right now. */
     inUse: boolean().optional()
   });
+  const quotaSavedResetsViewSchema = object({
+    available: number().int().nonnegative(),
+    applicable: number().int().nonnegative().optional()
+  });
+  const SAVED_RESETS_PAGE = {
+    codex: "https://chatgpt.com/settings/usage"
+  };
   const quotaProviderViewSchema = object({
     /** Quota provider id: codex, grok, claude, copilot. */
     provider: string(),
@@ -14044,6 +14146,8 @@ ${events}` : prompt;
     windows: array(quotaWindowViewSchema),
     /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
     credits: quotaCreditsViewSchema.optional(),
+    /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
+    savedResets: quotaSavedResetsViewSchema.optional(),
     /**
      * The account's Keep going on credits switch is on, as the vault holds it
      * (`answersOnCredits`). Absent is off.
@@ -16040,6 +16144,13 @@ ${events}` : prompt;
     const after = keepsGoing ? settingsSubscriptionsCreditsKeepsGoing() : settingsSubscriptionsCreditsWhere({ site });
     return `${fact} · ${after}`;
   }
+  function savedResetsLine(provider, savedResets) {
+    const site = CREDITS_SITE[provider];
+    if (!SAVED_RESETS_PAGE[provider] || !site || !savedResets || savedResets.available < 1) {
+      return void 0;
+    }
+    return settingsSubscriptionsSavedResets({ count: savedResets.available, site });
+  }
   function creditsFact(provider, credits) {
     const { state } = credits;
     if (provider === "claude") {
@@ -16218,6 +16329,8 @@ ${events}` : prompt;
     if (verdict) view.verdict = verdict;
     const credits = row ? creditsLine(row.provider, row.credits, account.keepGoingOnCredits === true) : void 0;
     if (credits) view.credits = credits;
+    const savedResets = row ? savedResetsLine(row.provider, row.savedResets) : void 0;
+    if (savedResets) view.savedResets = savedResets;
     return withHold(view, account, now);
   }
   function withHold(view, account, now) {

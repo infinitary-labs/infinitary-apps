@@ -10,7 +10,7 @@ import {
   PROVIDER_CATALOG,
   providerServesRole,
 } from "@shared/providers";
-import { creditsOfferOf, type QuotaSnapshotView } from "@shared/quota";
+import { creditsOfferOf, type QuotaSnapshotView, savedResetsNow } from "@shared/quota";
 import { allowanceSpent } from "@shared/quotaSignals";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import type { ModelRuntime } from "../pi/types";
@@ -335,6 +335,17 @@ export class Flagship {
     // leaves the row unmarked, and the switch is not offered again.
     if (!row || this.options.vault.keepsGoingOnCredits?.(accountId)) return undefined;
     return creditsOfferOf(row);
+  }
+
+  /**
+   * The spent-allowance card's saved resets (docs/quota.md, "Saved resets"):
+   * how many the account's provider says would apply now, by provider.
+   * Undefined when none would, or the count is unknown.
+   */
+  savedResetsNow(accountId: string): { provider: string; count: number } | undefined {
+    const row = this.snapshotRow(accountId);
+    const count = savedResetsNow(row);
+    return row && count !== undefined ? { provider: row.provider, count } : undefined;
   }
 
   /**

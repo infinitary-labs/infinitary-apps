@@ -1159,6 +1159,10 @@
   "settingsSubscriptionsRetry": "다시 시도",
   "settingsSubscriptionsRetrying": "다시 시도 중...",
   "settingsSubscriptionsRowActions": "{account} 동작",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "other": "저장된 재설정 {count}개 · {site}에서 사용"
+  },
   "settingsSubscriptionsSignIn": "로그인",
   "settingsSubscriptionsSignInAgainState": "다시 로그인하세요.",
   "settingsSubscriptionsSignedIn": "로그인됨",

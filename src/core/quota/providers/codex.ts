@@ -1,4 +1,4 @@
-import type { QuotaCreditsView, QuotaWindowView } from "@shared/quota";
+import type { QuotaCreditsView, QuotaSavedResetsView, QuotaWindowView } from "@shared/quota";
 import type { ManagedAuth } from "../auth";
 import { type QuotaHttp, requestHeaders } from "../http";
 import { asNumber, asRecord, asString, remainingFromUsedPercent } from "../json";
@@ -36,6 +36,7 @@ export function parseCodexUsage(
 ): {
   windows: QuotaWindowView[];
   credits?: QuotaCreditsView;
+  savedResets?: QuotaSavedResetsView;
   plan?: string;
 } {
   const root = asRecord(body);
@@ -71,7 +72,33 @@ export function parseCodexUsage(
 
   const plan = asString(root.plan_type) ?? asString(root.plan);
   const credits = codexCredits(root, rate);
-  return { windows, ...(credits ? { credits } : {}), ...(plan ? { plan } : {}) };
+  const savedResets = codexSavedResets(root);
+  return {
+    windows,
+    ...(credits ? { credits } : {}),
+    ...(savedResets ? { savedResets } : {}),
+    ...(plan ? { plan } : {}),
+  };
+}
+
+/**
+ * ChatGPT's saved resets (docs/quota.md, "Saved resets"), from the usage
+ * reading's `rate_limit_reset_credits`: `available_count` is how many the
+ * account holds, `applicable_available_count` how many would take effect
+ * now. A reading without a count says nothing, which is unknown, never zero.
+ */
+function codexSavedResets(root: Record<string, unknown>): QuotaSavedResetsView | undefined {
+  const node = asRecord(root.rate_limit_reset_credits) ?? asRecord(root.rateLimitResetCredits);
+  const available = countOf(node?.available_count ?? node?.availableCount);
+  if (available === undefined) return undefined;
+  const applicable = countOf(node?.applicable_available_count ?? node?.applicableAvailableCount);
+  return { available, ...(applicable !== undefined ? { applicable } : {}) };
+}
+
+/** A count as the reading sends it: a whole number, never below zero. */
+function countOf(value: unknown): number | undefined {
+  const count = asNumber(value);
+  return count !== undefined && Number.isInteger(count) && count >= 0 ? count : undefined;
 }
 
 /**

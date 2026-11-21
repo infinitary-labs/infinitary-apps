@@ -259,6 +259,22 @@
       <string>%1$ld Teile entfernt</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ hat einen gespeicherten Reset, mit dem du sein Kontingent jetzt wieder auffüllen kannst.</string>
+      <key>other</key>
+      <string>%1$@ hat %2$ld gespeicherte Resets, mit denen du sein Kontingent jetzt wieder auffüllen kannst.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1825,6 +1841,22 @@
       <string>%1$ld Repository</string>
       <key>other</key>
       <string>%1$ld Repositorys</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld gespeicherter Reset · einlösbar auf %2$@</string>
+      <key>other</key>
+      <string>%1$ld gespeicherte Resets · einlösbar auf %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

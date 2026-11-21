@@ -179,6 +179,11 @@
   "cardRevisionLinksUnavailable": "변경 링크를 쓸 수 없음",
   "cardRevisionMore": "{count}개 더",
   "cardRevisionShowFewer": "적게 보기",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "other": "{account}에 지금 사용할 수 있는 저장된 재설정이 {count}개 있어 한도를 다시 채울 수 있어요."
+  },
+  "cardSavedResetsOpenPage": "{site}에서 사용량 페이지 열기",
   "cardSinceSeenApproved": "이전 버전을 승인함 · {when}",
   "cardSinceSeenChose": "“{button}”을(를) 고름 · {when}",
   "cardSinceSeenSaw": "확인한 카드 이후 · {when}",

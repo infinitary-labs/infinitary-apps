@@ -15337,6 +15337,129 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardSavedResetsNow(input2) {
+    const account = input2.account;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لدى ${account} إعادات تعيين محفوظة (${count}) يمكنك استخدام إحداها الآن لتجديد رصيده.`;
+          case "one":
+            return `لدى ${account} إعادة تعيين محفوظة يمكنك استخدامها الآن لتجديد رصيده.`;
+          case "two":
+            return `لدى ${account} إعادتا تعيين محفوظتان يمكنك استخدام إحداهما الآن لتجديد رصيده.`;
+          case "few":
+            return `لدى ${account} إعادات تعيين محفوظة (${count}) يمكنك استخدام إحداها الآن لتجديد رصيده.`;
+          case "many":
+            return `لدى ${account} إعادات تعيين محفوظة (${count}) يمكنك استخدام إحداها الآن لتجديد رصيده.`;
+          default:
+            return `لدى ${account} إعادات تعيين محفوظة (${count}) يمكنك استخدام إحداها الآن لتجديد رصيده.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${account} hat einen gespeicherten Reset, mit dem du sein Kontingent jetzt wieder auffüllen kannst.`;
+          default:
+            return `${account} hat ${count} gespeicherte Resets, mit denen du sein Kontingent jetzt wieder auffüllen kannst.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${account} tiene un restablecimiento guardado que puedes usar ahora para renovar su asignación.`;
+          case "many":
+            return `${account} tiene ${count} restablecimientos guardados que puedes usar ahora para renovar su asignación.`;
+          default:
+            return `${account} tiene ${count} restablecimientos guardados que puedes usar ahora para renovar su asignación.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${account} a une réinitialisation enregistrée que vous pouvez utiliser maintenant pour renouveler son allocation.`;
+          case "many":
+            return `${account} a ${count} réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation.`;
+          default:
+            return `${account} a ${count} réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account} には今すぐ使える保存済みのリセットが ${count} 回分あり、利用枠を回復できます。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account}에 지금 사용할 수 있는 저장된 재설정이 ${count}개 있어 한도를 다시 채울 수 있어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${account} tem uma redefinição salva que você pode usar agora para renovar a franquia.`;
+          case "many":
+            return `${account} tem ${count} redefinições salvas que você pode usar agora para renovar a franquia.`;
+          default:
+            return `${account} tem ${count} redefinições salvas que você pode usar agora para renovar a franquia.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account} 有 ${count} 次已保存的重置可以立即使用，用来恢复额度。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account} 有 ${count} 次已儲存的重設可以立即使用，用來恢復額度。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${account} ĥáš á šáṽéð ŕéšéţ ýöû çáñ ûšé ñöŵ ţö ŕéƒîļļ îţš áļļöŵáñçé. ~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${account} ĥáš ${count} šáṽéð ŕéšéţš ýöû çáñ ûšé ñöŵ ţö ŕéƒîļļ îţš áļļöŵáñçé. ~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${account}‮ has a saved reset you can use now to refill its allowance.‬`;
+          default:
+            return `${account}‮ has ‬${count}‮ saved resets you can use now to refill its allowance.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${account} has a saved reset you can use now to refill its allowance.`;
+      default:
+        return `${account} has ${count} saved resets you can use now to refill its allowance.`;
+    }
+  }
+  function cardSavedResetsOpenPage(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح صفحة الاستخدام على ${site}`;
+      case "de":
+        return `Nutzungsseite auf ${site} öffnen`;
+      case "es":
+        return `Abrir la página de uso en ${site}`;
+      case "fr":
+        return `Ouvrir la page d’utilisation sur ${site}`;
+      case "ja":
+        return `${site} の使用量ページを開く`;
+      case "ko":
+        return `${site}에서 사용량 페이지 열기`;
+      case "pt-BR":
+        return `Abrir a página de uso em ${site}`;
+      case "zh-Hans":
+        return `在 ${site} 打开用量页面`;
+      case "zh-Hant":
+        return `在 ${site} 開啟用量頁面`;
+      case "en-XA":
+        return `[Öþéñ ţĥé ûšáĝé þáĝé öñ ${site} ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open the usage page on ‬${site}`;
+    }
+    return `Open the usage page on ${site}`;
+  }
   function cardSinceSeenApproved(input2) {
     const when = input2.when;
     switch (currentLanguage()) {
@@ -69648,6 +69771,101 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${account} actions`;
   }
+  function settingsSubscriptionsSavedResets(input2) {
+    const count = formatNumber(input2.count);
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          case "one":
+            return `إعادة تعيين محفوظة واحدة · استخدمها على ${site}`;
+          case "two":
+            return `إعادتا تعيين محفوظتان · استخدم واحدة على ${site}`;
+          case "few":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          case "many":
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+          default:
+            return `إعادات تعيين محفوظة: ${count} · استخدم واحدة على ${site}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} gespeicherter Reset · einlösbar auf ${site}`;
+          default:
+            return `${count} gespeicherte Resets · einlösbar auf ${site}`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} restablecimiento guardado · úsalo en ${site}`;
+          case "many":
+            return `${count} restablecimientos guardados · usa uno en ${site}`;
+          default:
+            return `${count} restablecimientos guardados · usa uno en ${site}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} réinitialisation enregistrée · à utiliser sur ${site}`;
+          case "many":
+            return `${count} réinitialisations enregistrées · à utiliser sur ${site}`;
+          default:
+            return `${count} réinitialisations enregistrées · à utiliser sur ${site}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `保存済みのリセット ${count} 回分 · ${site} で使用`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `저장된 재설정 ${count}개 · ${site}에서 사용`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} redefinição salva · use em ${site}`;
+          case "many":
+            return `${count} redefinições salvas · use uma em ${site}`;
+          default:
+            return `${count} redefinições salvas · use uma em ${site}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 次已保存的重置 · 在 ${site} 使用`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 次已儲存的重設 · 在 ${site} 使用`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šáṽéð ŕéšéţ · ûšé îţ öñ ${site} ~~~~~~~~~]`;
+          default:
+            return `[${count} šáṽéð ŕéšéţš · ûšé öñé öñ ${site} ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ saved reset · use it on ‬${site}`;
+          default:
+            return `${count}‮ saved resets · use one on ‬${site}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} saved reset · use it on ${site}`;
+      default:
+        return `${count} saved resets · use one on ${site}`;
+    }
+  }
   function settingsSubscriptionsSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -83558,6 +83776,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
+    cardSavedResetsNow,
+    cardSavedResetsOpenPage,
     cardSinceSeenApproved,
     cardSinceSeenChose,
     cardSinceSeenSaw,
@@ -85423,6 +85643,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsRetry,
     settingsSubscriptionsRetrying,
     settingsSubscriptionsRowActions,
+    settingsSubscriptionsSavedResets,
     settingsSubscriptionsSignIn,
     settingsSubscriptionsSignInAgainState,
     settingsSubscriptionsSignedIn,
@@ -86258,6 +86479,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
+    "cardSavedResetsNow": ["account", "count"],
+    "cardSavedResetsOpenPage": ["site"],
     "cardSinceSeenApproved": ["when"],
     "cardSinceSeenChose": ["button", "when"],
     "cardSinceSeenSaw": ["when"],
@@ -88123,6 +88346,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsRetry": [],
     "settingsSubscriptionsRetrying": [],
     "settingsSubscriptionsRowActions": ["account"],
+    "settingsSubscriptionsSavedResets": ["count", "site"],
     "settingsSubscriptionsSignIn": [],
     "settingsSubscriptionsSignInAgainState": [],
     "settingsSubscriptionsSignedIn": [],

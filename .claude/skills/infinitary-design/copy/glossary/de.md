@@ -128,6 +128,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | run (of an automation) | Lauf, laufen | "Nächster Lauf", "Zuletzt gelaufen", "Läuft". |
 | Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
 | Runs on | Läuft auf | |
+| saved reset (a provider's, refills the allowance) | gespeicherter Reset | ChatGPT's saved resets for Codex; one is „eingelöst“, never by Infinitary. |
 | Secrets | Geheimnisse | As GitHub's German docs name secrets. |
 | send back (a change out of a batch) | zurückschicken | "Mit Begründung zurückschicken"; the change "geht zurück" to its crewmate. |
 | Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |

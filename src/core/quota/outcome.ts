@@ -3,6 +3,7 @@ import {
   KEYCHAIN_VALUE_FAILURE_DETAIL,
   type KeychainValueFailure,
   type QuotaCreditsView,
+  type QuotaSavedResetsView,
   type QuotaWindowView,
 } from "@shared/quota";
 import { isAuthFailure, isRateLimited, isSuccess, type QuotaResponse } from "./http";
@@ -17,6 +18,8 @@ export type ProviderOutcome = {
   windows: QuotaWindowView[];
   /** Paying past the allowance, when the reading says it. */
   credits?: QuotaCreditsView;
+  /** Saved resets the account holds, when the reading says it. */
+  savedResets?: QuotaSavedResetsView;
   plan?: string;
   account?: string;
   /** User-facing disclosure for a row with no window. */

@@ -291,6 +291,24 @@
       <string>%1$ld partes removidas</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ tem uma redefinição salva que você pode usar agora para renovar a franquia.</string>
+      <key>many</key>
+      <string>%1$@ tem %2$ld redefinições salvas que você pode usar agora para renovar a franquia.</string>
+      <key>other</key>
+      <string>%1$@ tem %2$ld redefinições salvas que você pode usar agora para renovar a franquia.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2053,6 +2071,24 @@
       <string>%1$ld repositórios</string>
       <key>other</key>
       <string>%1$ld repositórios</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld redefinição salva · use em %2$@</string>
+      <key>many</key>
+      <string>%1$ld redefinições salvas · use uma em %2$@</string>
+      <key>other</key>
+      <string>%1$ld redefinições salvas · use uma em %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

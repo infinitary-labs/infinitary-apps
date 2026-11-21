@@ -1,11 +1,19 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
+import * as m from "@shared/i18n/messages.generated";
+import { type QuotaProviderView, type QuotaSnapshotView, SAVED_RESETS_PAGE } from "@shared/quota";
 import { describe, expect, it } from "vitest";
+import { creditsOfferCard } from "../orchestrator/hostCards";
 import { selectAccount } from "../routing/accountPolicy";
 import { route } from "../routing/routingEngine";
 import { buildModelsCatalog, limitingResetOf, markCredits } from "./catalog";
-import { CreditsWatch, creditsOffers, forgetAnsweredOffers, stampSnapshot } from "./creditsSwitch";
+import {
+  type CreditsOffer,
+  CreditsWatch,
+  creditsOffers,
+  forgetAnsweredOffers,
+  stampSnapshot,
+} from "./creditsSwitch";
 import { parseCodexUsage } from "./providers/codex";
 
 /**
@@ -26,12 +34,16 @@ const body = JSON.parse(
   ),
 ) as Record<string, Record<string, unknown>>;
 
-/** The live Codex reading with its weekly window at `used` percent and its credits as given. */
+/**
+ * The live Codex reading with its weekly window at `used` percent, and its
+ * credits and saved resets (`rate_limit_reset_credits`) as given.
+ */
 function codexRow(
   accountId: string,
   used: number,
   credits: Record<string, unknown> = {},
   at = NOW,
+  resets: Record<string, unknown> = {},
 ): QuotaProviderView {
   const rateLimit = body.rate_limit as Record<string, Record<string, unknown>>;
   const parsed = parseCodexUsage(
@@ -42,6 +54,7 @@ function codexRow(
         primary_window: { ...rateLimit.primary_window, used_percent: used },
       },
       credits: { ...body.credits, ...credits },
+      rate_limit_reset_credits: { ...body.rate_limit_reset_credits, ...resets },
     },
     at,
   );
@@ -54,6 +67,7 @@ function codexRow(
     stale: false,
     windows: parsed.windows,
     ...(parsed.credits ? { credits: parsed.credits } : {}),
+    ...(parsed.savedResets ? { savedResets: parsed.savedResets } : {}),
   };
 }
 
@@ -262,6 +276,41 @@ describe("the crew's run-out card", () => {
     expect(none([codexRow("Work", 100)], true)).toEqual([]);
     expect(none([codexRow("Work", 40)], false)).toEqual([]);
     expect(none([codexRow("Work", 100, { has_credits: false })], false)).toEqual([]);
+  });
+
+  // INF-5369 piece 6 (docs/quota.md, "Saved resets"): shown, never used.
+  it("says a saved reset that would refill the account now, with a link to its usage page, and none that would not yet", () => {
+    const resets = body.rate_limit_reset_credits as Record<string, number>;
+    const applies = codexRow("Work", 100, {}, NOW, {
+      applicable_available_count: resets.available_count,
+    });
+    const [offer] = creditsOffers(
+      snapshotOf([applies], false),
+      ["openai-codex"],
+      new Set(),
+      off,
+      NOW,
+    );
+    expect(offer?.savedResets).toEqual({ provider: "codex", count: resets.available_count });
+    const card = creditsOfferCard(offer as CreditsOffer);
+    expect(card.body).toContain(
+      m.cardSavedResetsNow({ account: "Codex · Work", count: resets.available_count as number }),
+    );
+    expect(card.body).toContain(`<a href="${SAVED_RESETS_PAGE.codex}"`);
+    // Shown only: the card's one choice stays Keep going on credits.
+    const { savedResets: _shown, ...plain } = offer as CreditsOffer;
+    expect(card.actions).toEqual(creditsOfferCard(plain).actions);
+
+    // The live reading's saved reset does not apply yet: the card says nothing of it.
+    const [notYet] = creditsOffers(
+      snapshotOf([codexRow("Work", 100)], false),
+      ["openai-codex"],
+      new Set(),
+      off,
+      NOW,
+    );
+    expect(notYet?.savedResets).toBeUndefined();
+    expect(creditsOfferCard(notYet as CreditsOffer).body).not.toContain(SAVED_RESETS_PAGE.codex);
   });
 
   it("is not offered for an account whose switch is on while a refusal leaves its row unmarked", () => {

@@ -110420,6 +110420,12 @@ ${startersHtml()}`;
        * stays until that address answers again.
        */
       unanswered: literal(true).optional(),
+      /**
+       * While nothing answers there, Infinitary runs the start command its
+       * crewmate saved for the page and waits for it to answer
+       * (docs/task-browser.md, "Starting a page again").
+       */
+      starting: literal(true).optional(),
       ...browserIdentity
     }),
     object({

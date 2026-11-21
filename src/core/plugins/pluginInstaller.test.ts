@@ -20,6 +20,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { wordSaidMarks } from "@shared/i18n/said";
 import { retiredGrantWords } from "@shared/plugins/manifest";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
+import { READ_WORDS, viewWords } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { fakeBinding, fakeSessionFactory } from "../../../tests/helpers/fakeSession";
@@ -37,7 +38,6 @@ import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
-import { CAN_USE_WORDS, SENDS_ONLY_THROUGH_WORDS } from "./consentWords";
 import { consentCardId, PluginInstaller } from "./pluginInstaller";
 import { PluginRecords } from "./pluginRecords";
 
@@ -226,9 +226,12 @@ describe("PluginInstaller", () => {
           { id: "decline", label: "Don't add", effect: { kind: "host", op: "decline-plugin" } },
         ],
       });
-      expect(card?.body).toContain("your tasks (<code>tasks.board</code>)");
-      expect(card?.body).toContain("the tokens each task used (<code>v_usage_v1</code>)");
-      expect(card?.body).toContain("sends nothing off this computer");
+      // What it reads in the captain's words in the open, the exact names under Full details.
+      expect(card?.body).toContain(
+        `${m.cardConsentReads()}</dt><dd>Your tasks and ${viewWords("v_usage_v1")}</dd>`,
+      );
+      expect(card?.body).toContain("<code>tasks.board</code>, <code>v_usage_v1</code>");
+      expect(card?.body).toContain(m.cardConsentPanelNote({ here: m.placeThisComputer() }));
 
       // Staged, not added: no directory, no record, no panel, no feed line.
       expect(existsSync(join(h.paths.pluginsDir, "token-watch"))).toBe(false);
@@ -437,7 +440,7 @@ describe("PluginInstaller", () => {
       const ask = h.cards().find((entry) => entry.id === consentCardId("token-watch"));
       expect(ask?.title).toBe("Update the Token watch panel?");
       expect(ask?.actions.map((action) => action.label)).toEqual(["Update it", "Keep the old one"]);
-      expect(ask?.body).toContain("your tasks (<code>v_tasks_v1</code>)");
+      expect(ask?.body).toContain("<code>v_usage_v1</code>, <code>v_tasks_v1</code>");
       h.supervisor.cardActions.act(consentCardId("token-watch"), "decline");
       await h.settled();
       expect(h.records.get("token-watch")).toMatchObject({
@@ -602,7 +605,7 @@ describe("PluginInstaller", () => {
     });
     try {
       await h.installer.install({ source: "path", spec: source });
-      expect(h.cards()[0]?.body).toContain("keeps up to 64 bytes of data of its own");
+      expect(h.cards()[0]?.body).toContain(m.cardConsentKeepsUpTo({ size: "64 bytes" }));
       h.supervisor.cardActions.act(consentCardId("tiny"), "add");
       await h.settled();
       h.store.set("tiny", "small", "ok");
@@ -818,8 +821,8 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
     try {
       await h.installer.install({ source: "path", spec: source });
       const card = h.cards().find((entry) => entry.id === consentCardId("task-desk"));
-      expect(card?.body).toContain("It can queue, start and drop your tasks");
-      expect(card?.body).toContain("It can never merge or discard.");
+      expect(card?.body).toContain(m.cardConsentMovesValue());
+      expect(card?.body).toContain(m.cardConsentMovesDetail());
       expect(h.installed()).toEqual([]);
       h.supervisor.cardActions.act(consentCardId("task-desk"), "add");
       await h.settled();
@@ -850,10 +853,14 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
     try {
       await h.installer.install({ source: "path", spec: source });
       const card = h.cards().find((entry) => entry.id === consentCardId("pr-checks"));
-      expect(card?.body).toContain(CAN_USE_WORDS);
-      expect(card?.body).toContain("<b>github</b>: action <code>read</code>.");
+      // In the open, the Uses row names the connection and its action; under
+      // Full details, its rule and its reason in its own words.
+      expect(card?.body).toContain(`${m.cardConsentUses()}</dt><dd>github: read</dd>`);
+      expect(card?.body).toContain(
+        m.cardConsentUsesActions({ count: 1, integration: "github", names: "read" }),
+      );
       expect(card?.body).toContain(github.why);
-      expect(card?.body).toContain(SENDS_ONLY_THROUGH_WORDS);
+      expect(card?.body).toContain(m.cardConsentPanelNoteThrough({ here: m.placeThisComputer() }));
       h.supervisor.cardActions.act(consentCardId("pr-checks"), "add");
       await h.settled();
       expect(h.records.get("pr-checks")?.capabilities).toMatchObject({ integrations: [github] });
@@ -867,7 +874,9 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
       await h.installer.install({ source: "path", spec: source });
       const ask = h.cards().find((entry) => entry.id === consentCardId("pr-checks"));
       expect(ask?.title).toBe("Update the PR checks panel?");
-      expect(ask?.body).toContain("<b>github</b>: actions <code>read</code>, <code>write</code>.");
+      expect(ask?.body).toContain(
+        m.cardConsentUsesActions({ count: 2, integration: "github", names: "read, write" }),
+      );
       h.supervisor.cardActions.act(consentCardId("pr-checks"), "decline");
       await h.settled();
       expect(h.records.get("pr-checks")).toMatchObject({
@@ -965,19 +974,26 @@ describe("adding runbooks through the panel installer's consent", () => {
         );
         expect(h.books.list().some((book) => book.id === id)).toBe(false);
         const card = h.cards().find((card) => card.id === consentCardId(id));
-        expect(card?.body).toContain("Common workflows off");
-        expect(card?.body).toContain("runs nothing");
+        expect(card?.body).toContain(`${m.cardConsentTurnsOff()}</dt><dd><b>Common workflows</b>`);
         // The add card names the panel the runbook shows while it is on, and what it reads.
-        expect(card?.body).toContain(m.cardRunbookAddPanels());
+        const agrees = () => m.cardConsentRunbookPanels({ count: 1, here: m.placeThisComputer() });
+        expect(card?.body).toContain(agrees());
+        expect(card?.body).toContain(
+          `${m.cardConsentShowsPanels({ count: 1 })}</dt><dd><b>Token watch</b>`,
+        );
+        expect(card?.body).toContain(
+          m.cardConsentReadsList({
+            list: `${READ_WORDS["tasks.board"]} and ${viewWords("v_usage_v1")}`,
+          }),
+        );
         // The line is saved as its catalog fact, so each reader words it in
         // their own language, whatever the home spoke when it raised the card.
-        const french = inLanguage("fr", () => m.cardRunbookAddPanels());
-        expect(french).not.toBe(m.cardRunbookAddPanels());
+        const french = inLanguage("fr", agrees);
+        expect(french).not.toBe(agrees());
         expect(inLanguage("fr", () => wordSaidMarks(card?.body ?? ""))).toContain(
           escapeHtml(french),
         );
-        expect(wordSaidMarks(card?.body ?? "")).toContain(m.cardRunbookAddPanels());
-        expect(card?.body).toContain("<b>Token watch</b>");
+        expect(wordSaidMarks(card?.body ?? "")).toContain(agrees());
         expect(h.installed()).toEqual([]);
         expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(
           "only from the card controls",

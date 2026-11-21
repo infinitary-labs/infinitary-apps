@@ -13319,6 +13319,1137 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Browser`;
   }
+  function cardConsentFrom() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `من`;
+      case "de":
+        return `Von`;
+      case "es":
+        return `De`;
+      case "fr":
+        return `De`;
+      case "ja":
+        return `提供元`;
+      case "ko":
+        return `제공`;
+      case "pt-BR":
+        return `De`;
+      case "zh-Hans":
+        return `来自`;
+      case "zh-Hant":
+        return `來自`;
+      case "en-XA":
+        return `[Ƒŕöɱ ~~]`;
+      case "ar-XB":
+        return `‮From‬`;
+    }
+    return `From`;
+  }
+  function cardConsentFullDetails() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل التفاصيل`;
+      case "de":
+        return `Alle Details`;
+      case "es":
+        return `Todos los detalles`;
+      case "fr":
+        return `Tous les détails`;
+      case "ja":
+        return `詳細`;
+      case "ko":
+        return `자세히`;
+      case "pt-BR":
+        return `Todos os detalhes`;
+      case "zh-Hans":
+        return `完整详情`;
+      case "zh-Hant":
+        return `完整詳情`;
+      case "en-XA":
+        return `[Ƒûļļ ðéţáîļš ~~~~]`;
+      case "ar-XB":
+        return `‮Full details‬`;
+    }
+    return `Full details`;
+  }
+  function cardConsentGuidanceOnly() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.`;
+      case "de":
+        return `Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.`;
+      case "es":
+        return `Aporta guías, partes HTML e imágenes, y no ejecuta nada.`;
+      case "fr":
+        return `Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.`;
+      case "ja":
+        return `ガイダンス、HTML パーツ、画像を提供し、何も実行しません。`;
+      case "ko":
+        return `안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.`;
+      case "pt-BR":
+        return `Fornece orientações, partes HTML e imagens, e não executa nada.`;
+      case "zh-Hans":
+        return `它提供指导、HTML 部件和图片，不运行任何东西。`;
+      case "zh-Hant":
+        return `它提供指引、HTML 元件和圖片，不執行任何東西。`;
+      case "en-XA":
+        return `[Îţ šûþþļîéš ĝûîðáñçé, ĤŢṀĻ þáŕţš áñð þîçţûŕéš, áñð ŕûñš ñöţĥîñĝ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It supplies guidance, HTML parts and pictures, and runs nothing.‬`;
+    }
+    return `It supplies guidance, HTML parts and pictures, and runs nothing.`;
+  }
+  function cardConsentKeeps() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحفظ`;
+      case "de":
+        return `Speichert`;
+      case "es":
+        return `Guarda`;
+      case "fr":
+        return `Conserve`;
+      case "ja":
+        return `保存`;
+      case "ko":
+        return `보관`;
+      case "pt-BR":
+        return `Guarda`;
+      case "zh-Hans":
+        return `保存`;
+      case "zh-Hant":
+        return `保存`;
+      case "en-XA":
+        return `[Ķééþš ~~]`;
+      case "ar-XB":
+        return `‮Keeps‬`;
+    }
+    return `Keeps`;
+  }
+  function cardConsentKeepsLittle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قليلًا من البيانات الخاصة بها`;
+      case "de":
+        return `Ein wenig eigene Daten`;
+      case "es":
+        return `Algunos datos propios`;
+      case "fr":
+        return `Un peu de données à lui`;
+      case "ja":
+        return `独自のデータを少し`;
+      case "ko":
+        return `자체 데이터 약간`;
+      case "pt-BR":
+        return `Alguns dados próprios`;
+      case "zh-Hans":
+        return `少量自己的数据`;
+      case "zh-Hant":
+        return `少量自己的資料`;
+      case "en-XA":
+        return `[Å ļîţţļé ðáţá öƒ îţš öŵñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A little data of its own‬`;
+    }
+    return `A little data of its own`;
+  }
+  function cardConsentKeepsUpTo(input2) {
+    const size = input2.size;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حتى ${size} من البيانات الخاصة بها`;
+      case "de":
+        return `Bis zu ${size} eigene Daten`;
+      case "es":
+        return `Hasta ${size} de datos propios`;
+      case "fr":
+        return `Jusqu’à ${size} de données à lui`;
+      case "ja":
+        return `最大 ${size} の独自データ`;
+      case "ko":
+        return `자체 데이터 최대 ${size}`;
+      case "pt-BR":
+        return `Até ${size} de dados próprios`;
+      case "zh-Hans":
+        return `最多 ${size} 自己的数据`;
+      case "zh-Hant":
+        return `最多 ${size} 自己的資料`;
+      case "en-XA":
+        return `[Ûþ ţö ${size} öƒ ðáţá öƒ îţš öŵñ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Up to ‬${size}‮ of data of its own‬`;
+    }
+    return `Up to ${size} of data of its own`;
+  }
+  function cardConsentMoves() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينقل`;
+      case "de":
+        return `Bewegt`;
+      case "es":
+        return `Mueve`;
+      case "fr":
+        return `Déplace`;
+      case "ja":
+        return `操作`;
+      case "ko":
+        return `이동`;
+      case "pt-BR":
+        return `Move`;
+      case "zh-Hans":
+        return `操作`;
+      case "zh-Hant":
+        return `操作`;
+      case "en-XA":
+        return `[Ṁöṽéš ~~]`;
+      case "ar-XB":
+        return `‮Moves‬`;
+    }
+    return `Moves`;
+  }
+  function cardConsentMovesDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهامك، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يمكنها أبدًا الدمج أو التجاهل.`;
+      case "de":
+        return `Deine Aufgaben, jede nur, wenn du darin klickst oder eine Taste drückst. Es kann nie zusammenführen oder verwerfen.`;
+      case "es":
+        return `Tus tareas, cada una solo cuando haces clic o pulsas una tecla en el panel. Nunca puede fusionar ni descartar.`;
+      case "fr":
+        return `Vos tâches, chacune seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne peut jamais fusionner ni abandonner.`;
+      case "ja":
+        return `タスクは、パネル内でクリックかキーを押したときだけ1件ずつ扱います。マージや破棄は決してできません。`;
+      case "ko":
+        return `내 작업은 패널 안에서 클릭하거나 키를 누를 때만 하나씩 다뤄요. 병합하거나 폐기할 수는 없어요.`;
+      case "pt-BR":
+        return `Suas tarefas, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca pode mesclar nem descartar.`;
+      case "zh-Hans":
+        return `你的任务，每次仅在你于面板中点击或按键时。它永远不能合并或丢弃。`;
+      case "zh-Hant":
+        return `你的任務，每次僅在你於面板中點按或按鍵時。它永遠不能合併或捨棄。`;
+      case "en-XA":
+        return `[Ýöûŕ ţášķš, éáçĥ öñļý ŵĥéñ ýöû çļîçķ öŕ þŕéšš á ķéý îñ îţ. Îţ çáñ ñéṽéŕ ɱéŕĝé öŕ ðîšçáŕð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your tasks, each only when you click or press a key in it. It can never merge or discard.‬`;
+    }
+    return `Your tasks, each only when you click or press a key in it. It can never merge or discard.`;
+  }
+  function cardConsentMovesLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنه وضع مهامك في قائمة الانتظار وبدؤها وإسقاطها عند نقرك`;
+      case "de":
+        return `Kann deine Aufgaben auf deinen Klick einreihen, starten und aufgeben`;
+      case "es":
+        return `Puede poner en cola, iniciar y abandonar tus tareas cuando haces clic`;
+      case "fr":
+        return `Peut mettre en file, démarrer et écarter vos tâches quand vous cliquez`;
+      case "ja":
+        return `クリックしたときにタスクをキューに入れ、開始し、取りやめにできます`;
+      case "ko":
+        return `클릭할 때 작업을 대기열에 넣고, 시작하고, 중단할 수 있어요`;
+      case "pt-BR":
+        return `Pode enfileirar, iniciar e abandonar suas tarefas quando você clica`;
+      case "zh-Hans":
+        return `在你点击时可将你的任务排队、开始和放弃`;
+      case "zh-Hant":
+        return `在你點按時可將你的任務排入佇列、開始和放棄`;
+      case "en-XA":
+        return `[Çáñ ǫûéûé, šţáŕţ áñð ðŕöþ ýöûŕ ţášķš ŵĥéñ ýöû çļîçķ ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Can queue, start and drop your tasks when you click‬`;
+    }
+    return `Can queue, start and drop your tasks when you click`;
+  }
+  function cardConsentMovesValue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهامك عند نقرك: وضعها في قائمة الانتظار وبدؤها وإسقاطها`;
+      case "de":
+        return `Deine Aufgaben auf deinen Klick: einreihen, starten und aufgeben`;
+      case "es":
+        return `Tus tareas cuando haces clic: poner en cola, iniciar y abandonar`;
+      case "fr":
+        return `Vos tâches, quand vous cliquez : mettre en file, démarrer et écarter`;
+      case "ja":
+        return `クリックしたときのタスク: キューに入れる、開始、取りやめ`;
+      case "ko":
+        return `클릭할 때 내 작업: 대기열에 넣기, 시작, 중단`;
+      case "pt-BR":
+        return `Suas tarefas quando você clica: enfileirar, iniciar e abandonar`;
+      case "zh-Hans":
+        return `你点击时的任务：排队、开始和放弃`;
+      case "zh-Hant":
+        return `你點按時的任務：排入佇列、開始和放棄`;
+      case "en-XA":
+        return `[Ýöûŕ ţášķš ŵĥéñ ýöû çļîçķ: ǫûéûé, šţáŕţ áñð ðŕöþ ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your tasks when you click: queue, start and drop‬`;
+    }
+    return `Your tasks when you click: queue, start and drop`;
+  }
+  function cardConsentNothingOfYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء من بياناتك`;
+      case "de":
+        return `Nichts von dir`;
+      case "es":
+        return `Nada tuyo`;
+      case "fr":
+        return `Rien de vos données`;
+      case "ja":
+        return `あなたのデータはなし`;
+      case "ko":
+        return `내 데이터 없음`;
+      case "pt-BR":
+        return `Nada seu`;
+      case "zh-Hans":
+        return `不读取你的内容`;
+      case "zh-Hant":
+        return `不讀取你的內容`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ öƒ ýöûŕš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing of yours‬`;
+    }
+    return `Nothing of yours`;
+  }
+  function cardConsentPanelNote(input2) {
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+      case "de":
+        return `Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg.`;
+      case "es":
+        return `No ejecuta código propio en la app y no envía nada fuera de ${here}.`;
+      case "fr":
+        return `Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}.`;
+      case "ja":
+        return `アプリ内で独自のコードを実行せず、${here}の外には何も送りません。`;
+      case "ko":
+        return `앱에서 자체 코드를 실행하지 않고 ${here} 밖으로 아무것도 보내지 않아요.`;
+      case "pt-BR":
+        return `Ele não executa código próprio no app e não envia nada para fora de ${here}.`;
+      case "zh-Hans":
+        return `它不在应用中运行自己的代码，也不会把任何内容发出${here}。`;
+      case "zh-Hant":
+        return `它不在應用程式中執行自己的程式碼，也不會把任何內容送出${here}。`;
+      case "en-XA":
+        return `[Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It runs no code of its own in the app and sends nothing off ‬${here}‮.‬`;
+    }
+    return `It runs no code of its own in the app and sends nothing off ${here}.`;
+  }
+  function cardConsentPanelNoteThrough(input2) {
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+      case "de":
+        return `Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg, außer über diese Integrationen.`;
+      case "es":
+        return `No ejecuta código propio en la app y no envía nada fuera de ${here}, salvo a través de esas integraciones.`;
+      case "fr":
+        return `Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}, sauf par ces intégrations.`;
+      case "ja":
+        return `アプリ内で独自のコードを実行せず、これらの連携を通す場合を除き、${here}の外には何も送りません。`;
+      case "ko":
+        return `앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 ${here} 밖으로 아무것도 보내지 않아요.`;
+      case "pt-BR":
+        return `Ele não executa código próprio no app e não envia nada para fora de ${here}, exceto por essas integrações.`;
+      case "zh-Hans":
+        return `它不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出${here}。`;
+      case "zh-Hant":
+        return `它不在應用程式中執行自己的程式碼，除透過這些整合外，也不會把任何內容送出${here}。`;
+      case "en-XA":
+        return `[Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It runs no code of its own in the app and sends nothing off ‬${here}‮ except through those integrations.‬`;
+    }
+    return `It runs no code of its own in the app and sends nothing off ${here} except through those integrations.`;
+  }
+  function cardConsentReaches() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النطاق`;
+      case "de":
+        return `Gilt für`;
+      case "es":
+        return `Alcance`;
+      case "fr":
+        return `Portée`;
+      case "ja":
+        return `適用範囲`;
+      case "ko":
+        return `적용 범위`;
+      case "pt-BR":
+        return `Alcance`;
+      case "zh-Hans":
+        return `适用范围`;
+      case "zh-Hant":
+        return `適用範圍`;
+      case "en-XA":
+        return `[Ŕéáçĥéš ~~~]`;
+      case "ar-XB":
+        return `‮Reaches‬`;
+    }
+    return `Reaches`;
+  }
+  function cardConsentReachesAll() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل مشروع ومساحة عملك الشخصية`;
+      case "de":
+        return `Jedes Projekt und deinen persönlichen Arbeitsbereich`;
+      case "es":
+        return `Todos los proyectos y tu espacio de trabajo personal`;
+      case "fr":
+        return `Tous les projets et votre espace de travail personnel`;
+      case "ja":
+        return `すべてのプロジェクトと個人ワークスペース`;
+      case "ko":
+        return `모든 프로젝트와 개인 작업 공간`;
+      case "pt-BR":
+        return `Todos os projetos e seu espaço de trabalho pessoal`;
+      case "zh-Hans":
+        return `所有项目和你的个人工作区`;
+      case "zh-Hant":
+        return `所有專案和你的個人工作區`;
+      case "en-XA":
+        return `[Éṽéŕý þŕöĵéçţ áñð ýöûŕ þéŕšöñáļ ŵöŕķšþáçé ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every project and your personal workspace‬`;
+    }
+    return `Every project and your personal workspace`;
+  }
+  function cardConsentReachesNamed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشاريع التي يسمّيها`;
+      case "de":
+        return `Die Projekte, die er nennt`;
+      case "es":
+        return `Los proyectos que nombra`;
+      case "fr":
+        return `Les projets qu’elle nomme`;
+      case "ja":
+        return `指定されたプロジェクト`;
+      case "ko":
+        return `지정한 프로젝트`;
+      case "pt-BR":
+        return `Os projetos que ele nomeia`;
+      case "zh-Hans":
+        return `它指定的项目`;
+      case "zh-Hant":
+        return `它指定的專案`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţš îţ ñáɱéš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The projects it names‬`;
+    }
+    return `The projects it names`;
+  }
+  function cardConsentReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ`;
+      case "de":
+        return `Liest`;
+      case "es":
+        return `Lee`;
+      case "fr":
+        return `Lit`;
+      case "ja":
+        return `読み取り`;
+      case "ko":
+        return `읽기`;
+      case "pt-BR":
+        return `Lê`;
+      case "zh-Hans":
+        return `读取`;
+      case "zh-Hant":
+        return `讀取`;
+      case "en-XA":
+        return `[Ŕéáðš ~~]`;
+      case "ar-XB":
+        return `‮Reads‬`;
+    }
+    return `Reads`;
+  }
+  function cardConsentReadsList(input2) {
+    const list = input2.list;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ ${list}`;
+      case "de":
+        return `Liest ${list}`;
+      case "es":
+        return `Lee ${list}`;
+      case "fr":
+        return `Lit ${list}`;
+      case "ja":
+        return `読み取り: ${list}`;
+      case "ko":
+        return `읽기: ${list}`;
+      case "pt-BR":
+        return `Lê ${list}`;
+      case "zh-Hans":
+        return `读取${list}`;
+      case "zh-Hant":
+        return `讀取${list}`;
+      case "en-XA":
+        return `[Ŕéáðš ${list} ~~]`;
+      case "ar-XB":
+        return `‮Reads ‬${list}`;
+    }
+    return `Reads ${list}`;
+  }
+  function cardConsentReadsNothing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقرأ شيئًا من بياناتك`;
+      case "de":
+        return `Liest nichts von dir`;
+      case "es":
+        return `No lee nada tuyo`;
+      case "fr":
+        return `Ne lit rien de vos données`;
+      case "ja":
+        return `あなたのデータは読み取りません`;
+      case "ko":
+        return `내 데이터를 읽지 않아요`;
+      case "pt-BR":
+        return `Não lê nada seu`;
+      case "zh-Hans":
+        return `不读取你的任何内容`;
+      case "zh-Hant":
+        return `不讀取你的任何內容`;
+      case "en-XA":
+        return `[Ŕéáðš ñöţĥîñĝ öƒ ýöûŕš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reads nothing of yours‬`;
+    }
+    return `Reads nothing of yours`;
+  }
+  function cardConsentRunbookPanels(input2) {
+    formatNumber(input2.count);
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "one":
+            return `إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "two":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "few":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "many":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          default:
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg.`;
+          default:
+            return `Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von ${here} weg.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de ${here}.`;
+          case "many":
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}.`;
+          default:
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}.`;
+          case "many":
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}.`;
+          default:
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `追加すると、そのパネルにも同意したことになります。パネルはアプリ内で独自のコードを実行せず、${here}の外には何も送りません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고 ${here} 밖으로 아무것도 보내지 않아요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ao adicioná-lo, você também concorda com o painel dele. Ele não executa código próprio no app e não envia nada para fora de ${here}.`;
+          case "many":
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}.`;
+          default:
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，也不会把任何内容发出${here}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增它即表示你也同意它的面板。面板不在應用程式中執行自己的程式碼，也不會把任何內容送出${here}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļ ţöö. Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļš ţöö. Ţĥéý ŕûñ ñö çöðé öƒ ţĥéîŕ öŵñ îñ ţĥé áþþ áñð šéñð ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ‬${here}‮.‬`;
+          default:
+            return `‮Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ‬${here}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ${here}.`;
+      default:
+        return `Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ${here}.`;
+    }
+  }
+  function cardConsentRunbookPanelsThrough(input2) {
+    formatNumber(input2.count);
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "one":
+            return `إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "two":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "few":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "many":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          default:
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg, außer über diese Integrationen.`;
+          default:
+            return `Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von ${here} weg, außer über diese Integrationen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de ${here}, salvo a través de esas integraciones.`;
+          case "many":
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}, salvo a través de esas integraciones.`;
+          default:
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}, salvo a través de esas integraciones.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}, sauf par ces intégrations.`;
+          case "many":
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}, sauf par ces intégrations.`;
+          default:
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}, sauf par ces intégrations.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `追加すると、そのパネルにも同意したことになります。パネルはアプリ内で独自のコードを実行せず、これらの連携を通す場合を除き、${here}の外には何も送りません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 ${here} 밖으로 아무것도 보내지 않아요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ao adicioná-lo, você também concorda com o painel dele. Ele não executa código próprio no app e não envia nada para fora de ${here}, exceto por essas integrações.`;
+          case "many":
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}, exceto por essas integrações.`;
+          default:
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}, exceto por essas integrações.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出${here}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增它即表示你也同意它的面板。面板不在應用程式中執行自己的程式碼，除透過這些整合外，也不會把任何內容送出${here}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļ ţöö. Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļš ţöö. Ţĥéý ŕûñ ñö çöðé öƒ ţĥéîŕ öŵñ îñ ţĥé áþþ áñð šéñð ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ‬${here}‮ except through those integrations.‬`;
+          default:
+            return `‮Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ‬${here}‮ except through those integrations.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ${here} except through those integrations.`;
+      default:
+        return `Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ${here} except through those integrations.`;
+    }
+  }
+  function cardConsentShowsPanels(input2) {
+    formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `يعرض لوحات`;
+          case "one":
+            return `يعرض لوحة`;
+          case "two":
+            return `يعرض لوحات`;
+          case "few":
+            return `يعرض لوحات`;
+          case "many":
+            return `يعرض لوحات`;
+          default:
+            return `يعرض لوحات`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Zeigt ein Panel`;
+          default:
+            return `Zeigt Panels`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Muestra un panel`;
+          case "many":
+            return `Muestra paneles`;
+          default:
+            return `Muestra paneles`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Affiche un panneau`;
+          case "many":
+            return `Affiche des panneaux`;
+          default:
+            return `Affiche des panneaux`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `表示するパネル`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `표시하는 패널`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Mostra um painel`;
+          case "many":
+            return `Mostra painéis`;
+          default:
+            return `Mostra painéis`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `显示面板`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `顯示面板`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Šĥöŵš á þáñéļ ~~~~~]`;
+          default:
+            return `[Šĥöŵš þáñéļš ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Shows a panel‬`;
+          default:
+            return `‮Shows panels‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Shows a panel`;
+      default:
+        return `Shows panels`;
+    }
+  }
+  function cardConsentTurnBackOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنك تشغيله مجددًا.`;
+      case "de":
+        return `Du kannst ihn wieder einschalten.`;
+      case "es":
+        return `Puedes volver a activarlo.`;
+      case "fr":
+        return `Vous pouvez la réactiver.`;
+      case "ja":
+        return `あとでオンに戻せます。`;
+      case "ko":
+        return `다시 켤 수 있어요.`;
+      case "pt-BR":
+        return `Você pode ativá-lo de novo.`;
+      case "zh-Hans":
+        return `你可以重新开启它。`;
+      case "zh-Hant":
+        return `你可以重新開啟它。`;
+      case "en-XA":
+        return `[Ýöû çáñ ţûŕñ îţ ƀáçķ öñ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You can turn it back on.‬`;
+    }
+    return `You can turn it back on.`;
+  }
+  function cardConsentTurnsOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يوقف`;
+      case "de":
+        return `Schaltet aus`;
+      case "es":
+        return `Desactiva`;
+      case "fr":
+        return `Désactive`;
+      case "ja":
+        return `オフにする`;
+      case "ko":
+        return `끄는 항목`;
+      case "pt-BR":
+        return `Desativa`;
+      case "zh-Hans":
+        return `关闭`;
+      case "zh-Hant":
+        return `關閉`;
+      case "en-XA":
+        return `[Ţûŕñš öƒƒ ~~~]`;
+      case "ar-XB":
+        return `‮Turns off‬`;
+    }
+    return `Turns off`;
+  }
+  function cardConsentUses() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم`;
+      case "de":
+        return `Nutzt`;
+      case "es":
+        return `Usa`;
+      case "fr":
+        return `Utilise`;
+      case "ja":
+        return `使用`;
+      case "ko":
+        return `사용`;
+      case "pt-BR":
+        return `Usa`;
+      case "zh-Hans":
+        return `使用`;
+      case "zh-Hant":
+        return `使用`;
+      case "en-XA":
+        return `[Ûšéš ~~]`;
+      case "ar-XB":
+        return `‮Uses‬`;
+    }
+    return `Uses`;
+  }
+  function cardConsentUsesActions(input2) {
+    formatNumber(input2.count);
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "one":
+            return `${integration}، الإجراء ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "two":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "few":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "many":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          default:
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, Aktion ${names}, nach ihrer Regel unter Einstellungen → Integrationen.`;
+          default:
+            return `${integration}, Aktionen ${names}, nach ihrer Regel unter Einstellungen → Integrationen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, acción ${names}, según su regla en Configuración → Integraciones.`;
+          case "many":
+            return `${integration}, acciones ${names}, según su regla en Configuración → Integraciones.`;
+          default:
+            return `${integration}, acciones ${names}, según su regla en Configuración → Integraciones.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, action ${names}, selon sa règle dans Réglages → Intégrations.`;
+          case "many":
+            return `${integration}, actions ${names}, selon sa règle dans Réglages → Intégrations.`;
+          default:
+            return `${integration}, actions ${names}, selon sa règle dans Réglages → Intégrations.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}、アクション ${names}。設定 → 連携のルールに従います。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}, 액션 ${names}, 설정 → 연동의 규칙을 따라요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, ação ${names}, sob a regra dela em Ajustes → Integrações.`;
+          case "many":
+            return `${integration}, ações ${names}, sob a regra dela em Ajustes → Integrações.`;
+          default:
+            return `${integration}, ações ${names}, sob a regra dela em Ajustes → Integrações.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，操作 ${names}，遵循“设置” → “集成”中的规则。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，動作 ${names}，遵循「設定 → 整合」中的規則。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${integration}, áçţîöñ ${names}, ûñðéŕ îţš ŕûļé îñ Šéţţîñĝš → Îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${integration}, áçţîöñš ${names}, ûñðéŕ îţš ŕûļé îñ Šéţţîñĝš → Îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${integration}‮, action ‬${names}‮, under its rule in Settings → Integrations.‬`;
+          default:
+            return `${integration}‮, actions ‬${names}‮, under its rule in Settings → Integrations.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${integration}, action ${names}, under its rule in Settings → Integrations.`;
+      default:
+        return `${integration}, actions ${names}, under its rule in Settings → Integrations.`;
+    }
+  }
+  function cardConsentUsesEvents(input2) {
+    formatNumber(input2.count);
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${integration}، الأحداث ${names}.`;
+          case "one":
+            return `${integration}، الحدث ${names}.`;
+          case "two":
+            return `${integration}، الأحداث ${names}.`;
+          case "few":
+            return `${integration}، الأحداث ${names}.`;
+          case "many":
+            return `${integration}، الأحداث ${names}.`;
+          default:
+            return `${integration}، الأحداث ${names}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, Ereignis ${names}.`;
+          default:
+            return `${integration}, Ereignisse ${names}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, evento ${names}.`;
+          case "many":
+            return `${integration}, eventos ${names}.`;
+          default:
+            return `${integration}, eventos ${names}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, événement ${names}.`;
+          case "many":
+            return `${integration}, événements ${names}.`;
+          default:
+            return `${integration}, événements ${names}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}、イベント ${names}。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}, 이벤트 ${names}.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, evento ${names}.`;
+          case "many":
+            return `${integration}, eventos ${names}.`;
+          default:
+            return `${integration}, eventos ${names}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，事件 ${names}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，事件 ${names}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${integration}, éṽéñţ ${names}. ~~~]`;
+          default:
+            return `[${integration}, éṽéñţš ${names}. ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${integration}‮, event ‬${names}‮.‬`;
+          default:
+            return `${integration}‮, events ‬${names}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${integration}, event ${names}.`;
+      default:
+        return `${integration}, events ${names}.`;
+    }
+  }
+  function cardConsentUsesLine(input2) {
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم ${integration}: ${names}`;
+      case "de":
+        return `Nutzt ${integration}: ${names}`;
+      case "es":
+        return `Usa ${integration}: ${names}`;
+      case "fr":
+        return `Utilise ${integration} : ${names}`;
+      case "ja":
+        return `${integration} を使用: ${names}`;
+      case "ko":
+        return `${integration} 사용: ${names}`;
+      case "pt-BR":
+        return `Usa ${integration}: ${names}`;
+      case "zh-Hans":
+        return `使用 ${integration}：${names}`;
+      case "zh-Hant":
+        return `使用 ${integration}：${names}`;
+      case "en-XA":
+        return `[Ûšéš ${integration}: ${names} ~~~]`;
+      case "ar-XB":
+        return `‮Uses ‬${integration}‮: ‬${names}`;
+    }
+    return `Uses ${integration}: ${names}`;
+  }
+  function cardConsentUsesWhy(input2) {
+    const why = input2.why;
+    switch (currentLanguage()) {
+      case "ar":
+        return `السبب، بكلماتها: «${why}»`;
+      case "de":
+        return `Warum, in seinen Worten: „${why}“`;
+      case "es":
+        return `Por qué, en sus palabras: “${why}”`;
+      case "fr":
+        return `Pourquoi, selon lui : « ${why} »`;
+      case "ja":
+        return `理由（パネル自身の言葉）:「${why}」`;
+      case "ko":
+        return `이유(패널의 말): “${why}”`;
+      case "pt-BR":
+        return `Por quê, nas palavras dele: “${why}”`;
+      case "zh-Hans":
+        return `原因，用它自己的话说：“${why}”`;
+      case "zh-Hant":
+        return `原因，用它自己的話說：「${why}」`;
+      case "en-XA":
+        return `[Ŵĥý, îñ îţš ŵöŕðš: “${why}” ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Why, in its words: “‬${why}‮”‬`;
+    }
+    return `Why, in its words: “${why}”`;
+  }
   function cardCrewmateLog() {
     switch (currentLanguage()) {
       case "ar":
@@ -16734,33 +17865,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Show fewer‬`;
     }
     return `Show fewer`;
-  }
-  function cardRunbookAddPanels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
-      case "de":
-        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
-      case "es":
-        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
-      case "fr":
-        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
-      case "ja":
-        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
-      case "ko":
-        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
-      case "pt-BR":
-        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
-      case "zh-Hans":
-        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
-      case "zh-Hant":
-        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
-      case "en-XA":
-        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
-    }
-    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
   }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
@@ -89262,6 +90366,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserUnansweredStarting,
     cardBrowserUnansweredWorking,
     cardBrowserWord,
+    cardConsentFrom,
+    cardConsentFullDetails,
+    cardConsentGuidanceOnly,
+    cardConsentKeeps,
+    cardConsentKeepsLittle,
+    cardConsentKeepsUpTo,
+    cardConsentMoves,
+    cardConsentMovesDetail,
+    cardConsentMovesLine,
+    cardConsentMovesValue,
+    cardConsentNothingOfYours,
+    cardConsentPanelNote,
+    cardConsentPanelNoteThrough,
+    cardConsentReaches,
+    cardConsentReachesAll,
+    cardConsentReachesNamed,
+    cardConsentReads,
+    cardConsentReadsList,
+    cardConsentReadsNothing,
+    cardConsentRunbookPanels,
+    cardConsentRunbookPanelsThrough,
+    cardConsentShowsPanels,
+    cardConsentTurnBackOn,
+    cardConsentTurnsOff,
+    cardConsentUses,
+    cardConsentUsesActions,
+    cardConsentUsesEvents,
+    cardConsentUsesLine,
+    cardConsentUsesWhy,
     cardCrewmateLog,
     cardCrewmateSendFailed,
     cardCrewmateSurface,
@@ -89370,7 +90503,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
-    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -92137,6 +93269,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserUnansweredStarting": ["site"],
     "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
+    "cardConsentFrom": [],
+    "cardConsentFullDetails": [],
+    "cardConsentGuidanceOnly": [],
+    "cardConsentKeeps": [],
+    "cardConsentKeepsLittle": [],
+    "cardConsentKeepsUpTo": ["size"],
+    "cardConsentMoves": [],
+    "cardConsentMovesDetail": [],
+    "cardConsentMovesLine": [],
+    "cardConsentMovesValue": [],
+    "cardConsentNothingOfYours": [],
+    "cardConsentPanelNote": ["here"],
+    "cardConsentPanelNoteThrough": ["here"],
+    "cardConsentReaches": [],
+    "cardConsentReachesAll": [],
+    "cardConsentReachesNamed": [],
+    "cardConsentReads": [],
+    "cardConsentReadsList": ["list"],
+    "cardConsentReadsNothing": [],
+    "cardConsentRunbookPanels": ["count", "here"],
+    "cardConsentRunbookPanelsThrough": ["count", "here"],
+    "cardConsentShowsPanels": ["count"],
+    "cardConsentTurnBackOn": [],
+    "cardConsentTurnsOff": [],
+    "cardConsentUses": [],
+    "cardConsentUsesActions": ["count", "integration", "names"],
+    "cardConsentUsesEvents": ["count", "integration", "names"],
+    "cardConsentUsesLine": ["integration", "names"],
+    "cardConsentUsesWhy": ["why"],
     "cardCrewmateLog": [],
     "cardCrewmateSendFailed": [],
     "cardCrewmateSurface": [],
@@ -92245,7 +93406,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
-    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],

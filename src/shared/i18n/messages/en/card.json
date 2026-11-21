@@ -68,6 +68,55 @@
   "cardBrowserUnansweredStarting": "Nothing answers at {site}, so Infinitary is starting it again. The page shows here once it answers.",
   "cardBrowserUnansweredWorking": "Nothing answers at {site}, and its crewmate is working now. The page shows here once it answers.",
   "cardBrowserWord": "Browser",
+  "cardConsentFrom": "From",
+  "cardConsentFullDetails": "Full details",
+  "cardConsentGuidanceOnly": "It supplies guidance, HTML parts and pictures, and runs nothing.",
+  "cardConsentKeeps": "Keeps",
+  "cardConsentKeepsLittle": "A little data of its own",
+  "cardConsentKeepsUpTo": "Up to {size} of data of its own",
+  "cardConsentMoves": "Moves",
+  "cardConsentMovesDetail": "Your tasks, each only when you click or press a key in it. It can never merge or discard.",
+  "cardConsentMovesLine": "Can queue, start and drop your tasks when you click",
+  "cardConsentMovesValue": "Your tasks when you click: queue, start and drop",
+  "cardConsentNothingOfYours": "Nothing of yours",
+  "cardConsentPanelNote": "It runs no code of its own in the app and sends nothing off {here}.",
+  "cardConsentPanelNoteThrough": "It runs no code of its own in the app and sends nothing off {here} except through those integrations.",
+  "cardConsentReaches": "Reaches",
+  "cardConsentReachesAll": "Every project and your personal workspace",
+  "cardConsentReachesNamed": "The projects it names",
+  "cardConsentReads": "Reads",
+  "cardConsentReadsList": "Reads {list}",
+  "cardConsentReadsNothing": "Reads nothing of yours",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "one": "Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off {here}.",
+    "other": "Adding it agrees to its panels too. They run no code of their own in the app and send nothing off {here}."
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "one": "Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off {here} except through those integrations.",
+    "other": "Adding it agrees to its panels too. They run no code of their own in the app and send nothing off {here} except through those integrations."
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "one": "Shows a panel",
+    "other": "Shows panels"
+  },
+  "cardConsentTurnBackOn": "You can turn it back on.",
+  "cardConsentTurnsOff": "Turns off",
+  "cardConsentUses": "Uses",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "one": "{integration}, action {names}, under its rule in Settings → Integrations.",
+    "other": "{integration}, actions {names}, under its rule in Settings → Integrations."
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "one": "{integration}, event {names}.",
+    "other": "{integration}, events {names}."
+  },
+  "cardConsentUsesLine": "Uses {integration}: {names}",
+  "cardConsentUsesWhy": "Why, in its words: “{why}”",
   "cardCrewmateLog": "The crewmate's session",
   "cardCrewmateSendFailed": "This line could not be sent right now.",
   "cardCrewmateSurface": "Crewmate",
@@ -204,7 +253,6 @@
   "cardRevisionLinksUnavailable": "Change links unavailable",
   "cardRevisionMore": "{count} more",
   "cardRevisionShowFewer": "Show fewer",
-  "cardRunbookAddPanels": "While it is on, it also shows these panels on your rail. Adding it agrees to them too.",
   "cardSavedResetCrewWaits": "Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
   "cardSavedResetCrewWaitsThere": "Crew work {where} drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
   "cardSavedResetsNow": {

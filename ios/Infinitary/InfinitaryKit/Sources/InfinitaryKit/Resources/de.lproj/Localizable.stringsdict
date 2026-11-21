@@ -307,6 +307,86 @@
       <string>· über %1$ld Aufgaben</string>
     </dict>
   </dict>
+  <key>cardConsentRunbookPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von %2$@ weg.</string>
+      <key>other</key>
+      <string>Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von %2$@ weg.</string>
+    </dict>
+  </dict>
+  <key>cardConsentRunbookPanelsThrough</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von %2$@ weg, außer über diese Integrationen.</string>
+      <key>other</key>
+      <string>Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von %2$@ weg, außer über diese Integrationen.</string>
+    </dict>
+  </dict>
+  <key>cardConsentShowsPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Zeigt ein Panel</string>
+      <key>other</key>
+      <string>Zeigt Panels</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesActions</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@, Aktion %3$@, nach ihrer Regel unter Einstellungen → Integrationen.</string>
+      <key>other</key>
+      <string>%2$@, Aktionen %3$@, nach ihrer Regel unter Einstellungen → Integrationen.</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesEvents</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@, Ereignis %3$@.</string>
+      <key>other</key>
+      <string>%2$@, Ereignisse %3$@.</string>
+    </dict>
+  </dict>
   <key>cardFilesAll</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

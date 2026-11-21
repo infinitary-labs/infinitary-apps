@@ -64,6 +64,50 @@
   "cardBrowserUnansweredStarting": "{site} 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。",
   "cardBrowserUnansweredWorking": "{site} 没有响应，船员正在工作。它一响应，页面就会显示在这里。",
   "cardBrowserWord": "浏览器",
+  "cardConsentFrom": "来自",
+  "cardConsentFullDetails": "完整详情",
+  "cardConsentGuidanceOnly": "它提供指导、HTML 部件和图片，不运行任何东西。",
+  "cardConsentKeeps": "保存",
+  "cardConsentKeepsLittle": "少量自己的数据",
+  "cardConsentKeepsUpTo": "最多 {size} 自己的数据",
+  "cardConsentMoves": "操作",
+  "cardConsentMovesDetail": "你的任务，每次仅在你于面板中点击或按键时。它永远不能合并或丢弃。",
+  "cardConsentMovesLine": "在你点击时可将你的任务排队、开始和放弃",
+  "cardConsentMovesValue": "你点击时的任务：排队、开始和放弃",
+  "cardConsentNothingOfYours": "不读取你的内容",
+  "cardConsentPanelNote": "它不在应用中运行自己的代码，也不会把任何内容发出{here}。",
+  "cardConsentPanelNoteThrough": "它不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出{here}。",
+  "cardConsentReaches": "适用范围",
+  "cardConsentReachesAll": "所有项目和你的个人工作区",
+  "cardConsentReachesNamed": "它指定的项目",
+  "cardConsentReads": "读取",
+  "cardConsentReadsList": "读取{list}",
+  "cardConsentReadsNothing": "不读取你的任何内容",
+  "cardConsentRunbookPanels": {
+    "plural": "count",
+    "other": "添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，也不会把任何内容发出{here}。"
+  },
+  "cardConsentRunbookPanelsThrough": {
+    "plural": "count",
+    "other": "添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出{here}。"
+  },
+  "cardConsentShowsPanels": {
+    "plural": "count",
+    "other": "显示面板"
+  },
+  "cardConsentTurnBackOn": "你可以重新开启它。",
+  "cardConsentTurnsOff": "关闭",
+  "cardConsentUses": "使用",
+  "cardConsentUsesActions": {
+    "plural": "count",
+    "other": "{integration}，操作 {names}，遵循“设置” → “集成”中的规则。"
+  },
+  "cardConsentUsesEvents": {
+    "plural": "count",
+    "other": "{integration}，事件 {names}。"
+  },
+  "cardConsentUsesLine": "使用 {integration}：{names}",
+  "cardConsentUsesWhy": "原因，用它自己的话说：“{why}”",
   "cardCrewmateLog": "船员的笔记",
   "cardCrewmateSendFailed": "这条消息暂时无法发送。",
   "cardCrewmateSurface": "船员",
@@ -193,7 +237,6 @@
   "cardRevisionLinksUnavailable": "改动链接不可用",
   "cardRevisionMore": "还有 {count} 个",
   "cardRevisionShowFewer": "收起",
-  "cardRunbookAddPanels": "开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。",
   "cardSavedResetCrewWaits": "除非你使用一次已保存的重置，否则船员的工作会改用较弱的模型，或等到额度重置。",
   "cardSavedResetCrewWaitsThere": "除非你使用一次已保存的重置，否则{where}的船员工作会改用较弱的模型，或等到额度重置。",
   "cardSavedResetsNow": {

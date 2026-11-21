@@ -25409,6 +25409,65 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${project}: ${label} is held because the merge was refused where the project lives: the project's host removed the pull request from its merge queue without merging it; its page there says why.`;
   }
+  function feedBatchHeldUnanswered(input2) {
+    const label = input2.label;
+    const place = input2.place;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: الدفعة ${label} معلّقة لأن ${place} لم يؤكد الدمج وطلب السحب ما زال مفتوحًا هناك. لم يُرسل شيء مرة أخرى: إعادة المحاولة ترسل دمجًا جديدًا.`;
+      case "de":
+        return `${project}: ${label} ist angehalten, weil ${place} das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.`;
+      case "es":
+        return `${project}: ${label} está retenido porque ${place} no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.`;
+      case "fr":
+        return `${project} : ${label} est retenu, car ${place} n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.`;
+      case "ja":
+        return `${project}：${place} がマージを確認せず、プルリクエストはそこでまだ開いているため、${label} は保留中です。何も再送信していません。再試行すると新しいマージを送ります。`;
+      case "ko":
+        return `${project}: ${place}이(가) 병합을 확인하지 않았고 끌어오기 요청이 그곳에서 아직 열려 있어서 ${label}이(가) 보류됐어요. 아무것도 다시 보내지 않았어요. 다시 시도하면 새 병합을 보내요.`;
+      case "pt-BR":
+        return `${project}: ${label} está retido porque o ${place} não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.`;
+      case "zh-Hans":
+        return `${project}：${place} 没有确认合并，拉取请求在那里仍然开着，${label} 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。`;
+      case "zh-Hant":
+        return `${project}：${place} 沒有確認合併，pull request 在那裡仍然開著，${label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。`;
+      case "en-XA":
+        return `[${project}: ${label} îš ĥéļð ƀéçáûšé ${place} ðîð ñöţ çöñƒîŕɱ ţĥé ɱéŕĝé áñð ţĥé þûļļ ŕéǫûéšţ îš šţîļļ öþéñ ţĥéŕé. Ñöţĥîñĝ ŵáš šéñţ áĝáîñ: Ţŕý áĝáîñ šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ is held because ‬${place}‮ did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.‬`;
+    }
+    return `${project}: ${label} is held because ${place} did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.`;
+  }
+  function feedBatchHeldUnansweredHost(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: الدفعة ${label} معلّقة لأن مستضيف المشروع لم يؤكد الدمج وطلب السحب ما زال مفتوحًا هناك. لم يُرسل شيء مرة أخرى: إعادة المحاولة ترسل دمجًا جديدًا.`;
+      case "de":
+        return `${project}: ${label} ist angehalten, weil der Host des Projekts das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.`;
+      case "es":
+        return `${project}: ${label} está retenido porque el sitio que aloja el proyecto no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.`;
+      case "fr":
+        return `${project} : ${label} est retenu, car l’hébergeur du projet n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.`;
+      case "ja":
+        return `${project}：プロジェクトのホストがマージを確認せず、プルリクエストはそこでまだ開いているため、${label} は保留中です。何も再送信していません。再試行すると新しいマージを送ります。`;
+      case "ko":
+        return `${project}: 프로젝트 호스트가 병합을 확인하지 않았고 끌어오기 요청이 그곳에서 아직 열려 있어서 ${label}이(가) 보류됐어요. 아무것도 다시 보내지 않았어요. 다시 시도하면 새 병합을 보내요.`;
+      case "pt-BR":
+        return `${project}: ${label} está retido porque o host do projeto não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.`;
+      case "zh-Hans":
+        return `${project}：项目的托管平台没有确认合并，拉取请求在那里仍然开着，${label} 已暂缓。没有再次发送任何内容：重试会发送一次新的合并。`;
+      case "zh-Hant":
+        return `${project}：專案的主機沒有確認合併，pull request 在那裡仍然開著，${label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。`;
+      case "en-XA":
+        return `[${project}: ${label} îš ĥéļð ƀéçáûšé ţĥé þŕöĵéçţ'š ĥöšţ ðîð ñöţ çöñƒîŕɱ ţĥé ɱéŕĝé áñð ţĥé þûļļ ŕéǫûéšţ îš šţîļļ öþéñ ţĥéŕé. Ñöţĥîñĝ ŵáš šéñţ áĝáîñ: Ţŕý áĝáîñ šéñðš á ñéŵ ɱéŕĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ is held because the project's host did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.‬`;
+    }
+    return `${project}: ${label} is held because the project's host did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.`;
+  }
   function feedBatchHeldUnnamed(input2) {
     const label = input2.label;
     const project = input2.project;
@@ -86591,6 +86650,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchHeldRefused,
     feedBatchHeldRemoved,
     feedBatchHeldRemovedHost,
+    feedBatchHeldUnanswered,
+    feedBatchHeldUnansweredHost,
     feedBatchHeldUnnamed,
     feedBatchMergedMany,
     feedBatchMergedOne,
@@ -89369,6 +89430,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchHeldRefused": ["detail", "label", "project"],
     "feedBatchHeldRemoved": ["label", "place", "project"],
     "feedBatchHeldRemovedHost": ["label", "project"],
+    "feedBatchHeldUnanswered": ["label", "place", "project"],
+    "feedBatchHeldUnansweredHost": ["label", "project"],
     "feedBatchHeldUnnamed": ["label", "project"],
     "feedBatchMergedMany": ["count", "label", "project"],
     "feedBatchMergedOne": ["label", "project"],

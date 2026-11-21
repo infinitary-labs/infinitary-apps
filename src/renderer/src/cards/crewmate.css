@@ -413,6 +413,19 @@
 .fm-crew-browser .fm-crew-log {
   flex-basis: 0;
 }
+/* The column is as tall as the page beside it. Notes that wait give up their room, down to one
+   note's first lines, before the box they leave from is cut off; they scroll in what is left. */
+.fm-crew-browser .fm-crew-foot:has(> .fm-crew-notes:not(:empty)) {
+  flex-shrink: 1;
+  min-height: 0;
+}
+.fm-crew-browser .fm-crew-foot > :not(.fm-crew-notes) {
+  flex-shrink: 0;
+}
+.fm-crew-browser .fm-crew-notes {
+  flex: 0 1 auto;
+  min-height: 3.5rem;
+}
 .fm-crew-browser .fm-crew-compose {
   flex-wrap: wrap;
 }

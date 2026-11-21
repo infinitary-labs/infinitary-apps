@@ -166,6 +166,27 @@ vi.mock("node:fs", async (original) => {
 });
 
 /**
+ * A deadline of its own for an open that could wait on a pipe in this very test: a separate
+ * process that, once its time is up, notes that it fired and then opens the pipe to write, which
+ * ends any open still waiting to read it, so the test goes on and fails on that note rather than
+ * hanging past its own timeout. `end` stops it and waits for it to go.
+ */
+function pipeDeadline(pipe: string) {
+  const fired = join(scratchDir("person-word-deadline-"), "fired");
+  const watch = spawn("sh", ["-c", 'sleep 5; : > "$1"; exec 3>"$2"', "sh", fired, pipe], {
+    stdio: "ignore",
+  });
+  const gone = new Promise<void>((resolve) => watch.once("exit", () => resolve()));
+  return {
+    fired: () => existsSync(fired),
+    end: async () => {
+      if (watch.exitCode === null && watch.signalCode === null) watch.kill("SIGKILL");
+      await gone;
+    },
+  };
+}
+
+/**
  * The profiles' folder a name reserves: the folder beside it its mark names, whose own mark is the
  * very file at the name, by device and number read whole.
  */
@@ -565,6 +586,7 @@ describe("a refused launch's copy that shows a word", () => {
       await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
       const folder = keptAt(profiles);
       let pipe: string | null = null;
+      const deadlines: ReturnType<typeof pipeDeadline>[] = [];
       swap.opening = (path) => {
         if (
           pipe !== null ||
@@ -575,6 +597,7 @@ describe("a refused launch's copy that shows a word", () => {
         pipe = path;
         renameSync(path, join(folder, "made-aside"));
         execFileSync("mkfifo", [path]);
+        deadlines.push(pipeDeadline(path));
       };
       try {
         expect(
@@ -585,8 +608,10 @@ describe("a refused launch's copy that shows a word", () => {
         ).toBe("unshown");
       } finally {
         swap.opening = null;
+        for (const deadline of deadlines) await deadline.end();
       }
       expect(pipe).not.toBeNull();
+      expect(deadlines.map((deadline) => deadline.fired())).toEqual([false]);
       expect(lstatSync(pipe ?? "").isFIFO()).toBe(true);
     },
   );
@@ -596,18 +621,22 @@ describe("a refused launch's copy that shows a word", () => {
     async () => {
       const profiles = profilesFolder();
       let pipe: string | null = null;
+      const deadlines: ReturnType<typeof pipeDeadline>[] = [];
       swap.opening = (path) => {
         if (pipe !== null || !path.startsWith(`${profiles}.`)) return;
         pipe = path;
         renameSync(path, `${profiles}-made`);
         execFileSync("mkfifo", [path]);
+        deadlines.push(pipeDeadline(path));
       };
       try {
         expect(await ownProfilesFolder(profiles, hostPlatform())).toBeNull();
       } finally {
         swap.opening = null;
+        for (const deadline of deadlines) await deadline.end();
       }
       expect(pipe).not.toBeNull();
+      expect(deadlines.map((deadline) => deadline.fired())).toEqual([false]);
       expect(lstatSync(pipe ?? "").isFIFO()).toBe(true);
       expect(existsSync(profiles)).toBe(false);
     },

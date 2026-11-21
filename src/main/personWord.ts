@@ -443,7 +443,11 @@ type Held = { fd: number; folder: Entry; markFd?: number };
  * Node offers makes a folder and opens it at once; what binds the folder held to the one made is
  * the folder it is made in, which only this account can change (`trustedParent`, and a profiles'
  * folder this account's alone, `aloneNow`), so no other account can put anything at the new name
- * between the two. A folder holding anything is never held, used or removed.
+ * between the two. A program running as this same account could still put an empty folder there in
+ * that moment, or at a name between a check and the move after it, as it can change anything else
+ * this account holds; no call Node offers closes those gaps, so what is kept is against other
+ * accounts and against anything at the name before it is held. A folder holding anything is never
+ * held, used or removed.
  */
 function holdMade(path: string): Held | null {
   let fd: number | undefined;
@@ -489,17 +493,27 @@ function letGo(held: Held): void {
  * (`held`): it first moves that folder to a name of its own (`setAside`), so what it then removes
  * is the folder it checked there and not whatever comes to the old name, then removes its own mark
  * in it, only while still the file it holds open (none where it made none), and the folder only
- * while empty. A folder holding anything but its own mark is left at its own name, untouched, and
- * a folder put in its place is never moved or removed. It closes nothing; the caller
- * lets go of what it held (`letGo`) once this is done.
+ * while empty. Nothing at the name is read until it is shown to be the folder held; a folder
+ * holding anything but its own mark is left at its own name, untouched, and a folder put in its
+ * place is never read, moved or removed. Anything put in it after it was read is not removed: the
+ * folder then stays at the name it was moved to. It closes nothing; the caller lets go of what it
+ * held (`letGo`) once this is done.
  */
 function dropMade(made: MadeFolder): void {
+  // Nothing at the name is looked into until it is shown to be the folder held, so a link or
+  // another folder there is left unread as well as untouched.
+  const isHeld = () => {
+    const here = entryOf(made.folder.path);
+    return here?.isDirectory() === true && sameEntry(here, made.held.folder);
+  };
+  if (!isHeld()) return;
   // A folder holding anything but its own mark is left as it is, at its own name.
   try {
     const markHere = entryOf(join(made.folder.path, WORD_PROFILES_RESERVED));
     const ownMark =
       made.mark !== null && markHere?.isFile() === true && sameEntry(markHere, made.mark);
     const names = readdirSync(made.folder.path);
+    if (!isHeld()) return;
     if (names.some((name) => name !== WORD_PROFILES_RESERVED || !ownMark)) {
       console.warn("[app] left a word's profiles' folder something else put things in");
       return;

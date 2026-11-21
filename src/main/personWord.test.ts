@@ -62,6 +62,7 @@ const noBirth = vi.hoisted(() => ({
   held: new Map<number, bigint>(),
   fresh: null as string | null,
   opening: null as ((path: string) => void) | null,
+  listed: null as ((path: string) => void) | null,
 }));
 vi.mock("node:fs", async (original) => {
   const fs = await original<typeof import("node:fs")>();
@@ -95,7 +96,12 @@ vi.mock("node:fs", async (original) => {
     noBirth.held.delete(fd);
     fs.closeSync(fd);
   }) as typeof fs.closeSync;
-  const own = { lstatSync, openSync, closeSync };
+  const readdirSync = ((...args: Parameters<typeof fs.readdirSync>) => {
+    const names = fs.readdirSync(...args);
+    noBirth.listed?.(String(args[0]));
+    return names;
+  }) as typeof fs.readdirSync;
+  const own = { lstatSync, openSync, closeSync, readdirSync };
   return { ...fs, default: { ...fs, ...own }, ...own };
 });
 
@@ -460,6 +466,81 @@ describe("a refused launch's word to the person", () => {
           "not this launch's\n",
         );
     }
+    // A link put at the made folder's name before it is removed is never read into, moved or
+    // removed, and what it leads to stays as it was.
+    const linked = root();
+    const elsewhere = realpathSync(scratchDir("person-word-elsewhere-"));
+    writeFileSync(join(elsewhere, "theirs"), "kept");
+    const readInside: string[] = [];
+    let linkedAt = "";
+    const linking: AccessRun = async (ask) => {
+      const folder = ask.read.find((path) => path.startsWith(`${linked}.`));
+      if (folder && linkedAt === "") {
+        linkedAt = folder;
+        renameSync(folder, `${linked}-moved`);
+        symlinkSync(elsewhere, folder);
+        noBirth.reading = (path) => {
+          if (path === join(folder, WORD_PROFILES_RESERVED)) readInside.push(path);
+        };
+      }
+      return {
+        user,
+        set: ask.set.map((each) => ({ path: each.path, error: "refused" })),
+        read: ask.read.map((path) => ({ path, sddl: ownList, error: null })),
+      };
+    };
+    try {
+      expect(await ownProfilesFolder(linked, "win32", linking)).toBeNull();
+    } finally {
+      noBirth.reading = null;
+    }
+    expect(linkedAt).not.toBe("");
+    expect(readInside).toEqual([]);
+    expect(lstatSync(linkedAt).isSymbolicLink()).toBe(true);
+    expect(readdirSync(elsewhere)).toEqual(["theirs"]);
+    expect(existsSync(`${linked}-moved`)).toBe(true);
+    expect(existsSync(linked)).toBe(false);
+    // Something put in the made folder after it was read empty is never removed: the folder stays,
+    // with it, at the name it was moved to for its removal.
+    const late = root();
+    let lateFolder = "";
+    // Removal reads for its own mark first, then lists the folder: what arrives is put in just
+    // after that listing.
+    let removing = false;
+    noBirth.reading = (path) => {
+      if (path.startsWith(`${late}.`) && basename(path) === WORD_PROFILES_RESERVED) removing = true;
+    };
+    noBirth.listed = (path) => {
+      if (lateFolder !== "" || !path.startsWith(`${late}.`) || !removing) return;
+      lateFolder = path;
+      writeFileSync(join(path, "late"), "kept");
+    };
+    try {
+      // Made private, then read back as no longer private, so it is removed while still empty.
+      let readsOfMade = 0;
+      const refusing: AccessRun = async (ask) => ({
+        user,
+        set: ask.set.map((each) => ({ path: each.path, error: null })),
+        read: ask.read.map((path) => ({
+          path,
+          sddl:
+            path.startsWith(`${late}.`) && ++readsOfMade > 1
+              ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
+              : ownList,
+          error: null,
+        })),
+      });
+      expect(await ownProfilesFolder(late, "win32", refusing)).toBeNull();
+    } finally {
+      noBirth.listed = null;
+      noBirth.reading = null;
+    }
+    expect(lateFolder).not.toBe("");
+    const asideLate = readdirSync(join(late, "..")).filter((name) =>
+      name.startsWith(WORD_REMOVING_PREFIX),
+    );
+    expect(asideLate).toHaveLength(1);
+    expect(readFileSync(join(late, "..", asideLate[0] ?? "", "late"), "utf8")).toBe("kept");
     // Where the system gives no birth time, a reservation naming none is never used - its folder
     // is not read, set or changed - and no new one is made, since device and number alone can name
     // another folder later.

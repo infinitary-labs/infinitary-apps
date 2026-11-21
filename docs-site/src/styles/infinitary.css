@@ -144,3 +144,12 @@ kbd {
 [dir="rtl"] #starlight__search .pagefind-ui__form::before {
   left: calc(var(--sl-search-cancel-space) + 20px * var(--pagefind-ui-scale));
 }
+
+/*
+ * Starlight sizes the language menu for seven letters, which fits every
+ * language's own name but Brazilian Portuguese's, "Português (Brasil)". Its
+ * pages, where the menu shows that name, give the menu room for it.
+ */
+:root[lang="pt-BR"] starlight-lang-select label {
+  --sl-select-width: 12em !important;
+}

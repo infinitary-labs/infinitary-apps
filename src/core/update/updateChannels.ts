@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isAlphaVersion, isStableVersion } from "@shared/semver";
-import { type UpdateChannel, updateChannelSchema } from "@shared/update";
+import { type UpdateChannel, updateChannelSchema } from "@shared/updateChannel";
 import { z } from "zod";
 
 /**

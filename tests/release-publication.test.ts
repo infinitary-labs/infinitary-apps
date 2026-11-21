@@ -842,7 +842,12 @@ const releaseWorkflow = () =>
  * the release scripts, and the workflow's own copies sit where that job's
  * tooling checkout puts them, with only the files it names. A manual or
  * recovery alpha builds such an older commit, and its Windows installer must
- * still reach Cloudflare and the builds file (INF-5230's piece 1).
+ * still reach Cloudflare and the builds file (INF-5230's piece 1). A stable
+ * builds its alpha's older commit the same way.
+ *
+ * The checkout holds only committed files: nothing installs or builds in it,
+ * so a file the project generates and never commits, such as the compiled
+ * message catalog, is absent there however this computer's copy has it.
  */
 function olderSourceWorkspace(
   dir: string,
@@ -855,8 +860,16 @@ function olderSourceWorkspace(
     (step) => step.with?.path === ".release-tooling",
   );
   expect(checkout?.with?.["sparse-checkout-cone-mode"], job).toBe(false);
-  for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))
-    cpSync(join(root, pattern), join(tooling, pattern), { recursive: true });
+  for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n")) {
+    const committed = execFileSync("git", ["ls-files", "-z", "--", pattern], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\0")
+      .filter(Boolean);
+    expect(committed, `${job}'s tooling checkout names ${pattern}`).not.toEqual([]);
+    for (const file of committed) cpSync(join(root, file), join(tooling, file));
+  }
   mkdirSync(join(workspace, "packaging"), { recursive: true });
   const configuration = JSON.parse(
     readFileSync(join(root, "packaging/release-source.json"), "utf8"),

@@ -1,6 +1,6 @@
 import { APP_IDENTITIES, OWN_IDENTITY } from "@shared/codeNames";
 import { compareSemver, isAlphaVersion, isStableVersion } from "@shared/semver";
-import type { UpdateChannel } from "@shared/update";
+import type { UpdateChannel } from "@shared/updateChannel";
 import { RELEASE_USER_DATA_FOLDER } from "@shared/userDataFolders";
 import {
   homebrewInstallationReceipt,

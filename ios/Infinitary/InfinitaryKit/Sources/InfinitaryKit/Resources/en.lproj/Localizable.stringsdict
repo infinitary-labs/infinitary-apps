@@ -387,6 +387,22 @@
       <string>+%1$ld lines</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task stayed on %2$@, out of reach, so it stays on your list.</string>
+      <key>other</key>
+      <string>%1$ld tasks stayed on %2$@, out of reach, so it stays on your list.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1585,6 +1601,38 @@
       <string>Each time new events arrive. Infinitary looks every minute.</string>
       <key>other</key>
       <string>Each time new events arrive. Infinitary looks every %1$ld minutes.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task continues on %2$@, from the last commit this computer brought home.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks continue on %2$@, each from the last commit this computer brought home.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>An earlier entry with this name and user is out of reach, with %1$ld task waiting.</string>
+      <key>other</key>
+      <string>An earlier entry with this name and user is out of reach, with %1$ld tasks waiting.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

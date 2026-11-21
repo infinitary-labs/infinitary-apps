@@ -5209,6 +5209,25 @@
                 "cleaning-up"
               ]
             },
+            "earlier": {
+              "maxItems": 16,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "carriesOn": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "carrying": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
             "workSetup": {
               "type": "object",
               "properties": {
@@ -5609,6 +5628,25 @@
                   "bringing-work",
                   "cleaning-up"
                 ]
+              },
+              "earlier": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "carriesOn": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "carrying": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               "workSetup": {
                 "type": "object",
@@ -6073,6 +6111,25 @@
                   "bringing-work",
                   "cleaning-up"
                 ]
+              },
+              "earlier": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "carriesOn": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "carrying": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               "workSetup": {
                 "type": "object",
@@ -7098,6 +7155,25 @@
               "cleaning-up"
             ]
           },
+          "earlier": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "carriesOn": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "carrying": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
           "workSetup": {
             "type": "object",
             "properties": {
@@ -7464,6 +7540,25 @@
               "cleaning-up"
             ]
           },
+          "earlier": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "carriesOn": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "carrying": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
           "workSetup": {
             "type": "object",
             "properties": {
@@ -7499,6 +7594,50 @@
           "kind",
           "name",
           "pairedAt"
+        ]
+      }
+    },
+    "inf:devices:carry-on": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "moving": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "stayed": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          }
+        },
+        "required": [
+          "moving",
+          "stayed"
         ]
       }
     },
@@ -7744,6 +7883,25 @@
               "bringing-work",
               "cleaning-up"
             ]
+          },
+          "earlier": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "carriesOn": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "carrying": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
           "workSetup": {
             "type": "object",
@@ -8146,6 +8304,25 @@
                   "bringing-work",
                   "cleaning-up"
                 ]
+              },
+              "earlier": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "carriesOn": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "carrying": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               "workSetup": {
                 "type": "object",
@@ -85475,6 +85652,25 @@
                 "bringing-work",
                 "cleaning-up"
               ]
+            },
+            "earlier": {
+              "maxItems": 16,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "carriesOn": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "carrying": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
             },
             "workSetup": {
               "type": "object",

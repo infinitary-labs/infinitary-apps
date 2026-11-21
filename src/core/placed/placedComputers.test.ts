@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DeviceView } from "@shared/devices";
+import { englishOf } from "@shared/i18n/said";
 import { describe, expect, it, vi } from "vitest";
 import {
   adoptHere,
@@ -220,7 +221,7 @@ describe("removing a computer that runs work", () => {
       bringHome: (deviceId) => home.placed.bringHome(deviceId),
       ...(removeThere ? { removeThere } : {}),
       emit: (list) => pushed.push(list),
-      onProblem: (text) => problems.push(text),
+      onProblem: (line) => problems.push(typeof line === "string" ? line : englishOf(line)),
       now,
       bootedAt: () => 0,
     });

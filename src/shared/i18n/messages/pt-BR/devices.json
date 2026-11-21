@@ -1,4 +1,13 @@
 {
+  "devicesCarriedOn": "As tarefas de um computador fora de alcance continuam em {to}, e essa entrada saiu da sua lista.",
+  "devicesCarryNotRemoved": "As tarefas de {from} foram movidas, mas ele não pôde sair da sua lista: {why}",
+  "devicesCarryRunsOn": "Roda em: {to}, onde as tarefas de {from}, fora de alcance, continuam agora",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "one": "{count} tarefa ficou em {from}, fora de alcance, então ele continua na sua lista.",
+    "many": "{count} tarefas ficaram em {from}, fora de alcance, então ele continua na sua lista.",
+    "other": "{count} tarefas ficaram em {from}, fora de alcance, então ele continua na sua lista."
+  },
   "devicesJoinAddressChip": "Entrar pelo endereço",
   "devicesJoinAddressSub": "A conta e o {computer}, do jeito que você faz login nele com SSH. {mustBeOn}",
   "devicesJoinCancel": "Cancelar",

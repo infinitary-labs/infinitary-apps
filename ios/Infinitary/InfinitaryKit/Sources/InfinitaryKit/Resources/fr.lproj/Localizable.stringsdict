@@ -435,6 +435,24 @@
       <string>+%1$ld lignes</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld tâche est restée sur %2$@, hors de portée, donc il reste sur votre liste.</string>
+      <key>many</key>
+      <string>%1$ld tâches sont restées sur %2$@, hors de portée, donc il reste sur votre liste.</string>
+      <key>other</key>
+      <string>%1$ld tâches sont restées sur %2$@, hors de portée, donc il reste sur votre liste.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1783,6 +1801,42 @@
       <string>Chaque fois que de nouveaux événements arrivent. Infinitary vérifie toutes les %1$ld minutes.</string>
       <key>other</key>
       <string>Chaque fois que de nouveaux événements arrivent. Infinitary vérifie toutes les %1$ld minutes.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Sa tâche continue sur %2$@, à partir du dernier commit que cet ordinateur a rapporté.</string>
+      <key>many</key>
+      <string>Ses %1$ld tâches continuent sur %2$@, chacune à partir du dernier commit que cet ordinateur a rapporté.</string>
+      <key>other</key>
+      <string>Ses %1$ld tâches continuent sur %2$@, chacune à partir du dernier commit que cet ordinateur a rapporté.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec %1$ld tâche en attente.</string>
+      <key>many</key>
+      <string>Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec %1$ld tâches en attente.</string>
+      <key>other</key>
+      <string>Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec %1$ld tâches en attente.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

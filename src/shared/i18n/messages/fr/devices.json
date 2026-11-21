@@ -1,4 +1,13 @@
 {
+  "devicesCarriedOn": "Les tâches d'un ordinateur hors de portée continuent sur {to}, et cette entrée a quitté votre liste.",
+  "devicesCarryNotRemoved": "Les tâches de {from} ont été déplacées, mais il n'a pas pu quitter votre liste : {why}",
+  "devicesCarryRunsOn": "Tourne sur : {to}, où les tâches de {from}, hors de portée, continuent maintenant",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "one": "{count} tâche est restée sur {from}, hors de portée, donc il reste sur votre liste.",
+    "many": "{count} tâches sont restées sur {from}, hors de portée, donc il reste sur votre liste.",
+    "other": "{count} tâches sont restées sur {from}, hors de portée, donc il reste sur votre liste."
+  },
   "devicesJoinAddressChip": "Rejoindre par son adresse",
   "devicesJoinAddressSub": "Le compte et l’{computer}, tels que vous vous y connectez en SSH. {mustBeOn}",
   "devicesJoinCancel": "Annuler",

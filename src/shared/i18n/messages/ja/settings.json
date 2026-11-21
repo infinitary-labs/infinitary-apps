@@ -318,6 +318,26 @@
   "settingsDevicesBringingWork": "マージされていない作業をこのコンピューターに移しています…",
   "settingsDevicesBringingWorkOf": "{projects} のマージされていない作業をこのコンピューターに移しています…",
   "settingsDevicesCancel": "キャンセル",
+  "settingsDevicesCarryAsk": {
+    "plural": "count",
+    "other": "{count}件のタスクが{to}で続きます。それぞれ、このコンピューターが持ち帰った最後のコミットから続きます。"
+  },
+  "settingsDevicesCarryAskNone": "いまこのコンピューターで動いているタスクはありません。",
+  "settingsDevicesCarryConfirm": "続ける",
+  "settingsDevicesCarryEarlier": {
+    "plural": "count",
+    "other": "同じ名前とユーザーの以前の項目が連絡がつきません。{count}件のタスクが待っています。"
+  },
+  "settingsDevicesCarryEarlierProjects": "同じ名前とユーザーの以前の項目が連絡がつきません。まだプロジェクトがそこで動きます。",
+  "settingsDevicesCarryFailed": "タスクを続けられませんでした。もう一度お試しください。",
+  "settingsDevicesCarryHere": "タスクをここで続ける",
+  "settingsDevicesCarryHereNamed": "以前の項目のタスクを{device}で続ける",
+  "settingsDevicesCarryLeft": "{from}だけが持っているものはそこに残ります：それ以降のコミット、コミットしていない編集、gitが追跡していないファイル、そしてそこのタスクフォルダーのファイルです。",
+  "settingsDevicesCarryPick": "{device}のタスクをどこで続けますか？",
+  "settingsDevicesCarryThen": "そのあと、連絡がつかない{from}はリストから外れ、そのプロジェクトは{to}で動きます。",
+  "settingsDevicesCarryTo": "タスクの移動先…",
+  "settingsDevicesCarryToNamed": "{device}のタスクを別のコンピューターに移す",
+  "settingsDevicesCarrying": "タスクを{to}に移しています…",
   "settingsDevicesChangeAddress": "アドレスを変更",
   "settingsDevicesChangeAddressFailed": "このコンピューターへの接続先を変更できませんでした。",
   "settingsDevicesChangeAddressNamed": "{device} のアドレスを変更",

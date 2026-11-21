@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "carry-tasks-on-after-joining-again",
+      "kind": "feature",
+      "title": "A computer that joins again can carry its earlier tasks on",
+      "body": "When a computer that runs work joins again after its saved work was deleted or Infinitary was installed fresh there, Settings → Devices lists it twice: the new entry, and the earlier one out of reach with its tasks. The new entry now says so and offers Carry its tasks on here. One question says what continues and what stays behind; then each task continues on the new entry from the last commit your first mate's computer brought home, its projects follow, and the earlier entry leaves your list. Any entry out of reach that still holds tasks offers Move its tasks to… for another computer.",
+      "area": "devices",
+      "picture": {
+        "dark": "carry-tasks-on-after-joining-again-dark.webp",
+        "light": "carry-tasks-on-after-joining-again-light.webp",
+        "alt": "Settings → Devices with a computer listed twice: the earlier entry out of reach offering Move its tasks to…, and the new entry saying an earlier entry has one task waiting, with Carry its tasks on here"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1224,6 +1224,35 @@ export class TaskStore {
     return counts;
   }
 
+  /**
+   * How many active independent reviews each computer holds, by its id,
+   * counted without composing task records: a review follows its builder
+   * and never moves on its own (docs/devices.md, "Joined again").
+   */
+  countActiveReviewsByDevice(): Map<string, number> {
+    // The shape's routing fields, kind among them, live in their own table once it exists.
+    const kind = this.specifications.exists()
+      ? // i18n-exempt: a SQL fragment, read by the database and never by a person
+        "(SELECT r.value_json FROM task_routing_requests r WHERE r.task_id = t.id)"
+      : "t.shape_json";
+    const devices = this.execution.exists()
+      ? (prepared(
+          this.db,
+          // i18n-exempt: a SQL statement, read by the database and never by a person
+          `SELECT x.device_id FROM tasks t CROSS JOIN task_execution x ON x.task_id = t.id
+           WHERE t.status = 'active' AND x.device_id IS NOT NULL
+             AND json_extract(${kind}, '$.kind') = 'review'`,
+        )
+          .pluck()
+          .all() as string[])
+      : this.listByStatus("active").flatMap((record) =>
+          record.shape?.kind === "review" ? (record.deviceId ?? []) : [],
+        );
+    const counts = new Map<string, number>();
+    for (const device of devices) counts.set(device, (counts.get(device) ?? 0) + 1);
+    return counts;
+  }
+
   /** Whether any row holds this status, answered without reading or composing one. */
   hasStatus(status: TaskStatus): boolean {
     return (

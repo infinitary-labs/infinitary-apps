@@ -435,6 +435,24 @@
       <string>+%1$ld líneas</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld tarea se quedó en %2$@, fuera de alcance, así que sigue en tu lista.</string>
+      <key>many</key>
+      <string>%1$ld de tareas se quedaron en %2$@, fuera de alcance, así que sigue en tu lista.</string>
+      <key>other</key>
+      <string>%1$ld tareas se quedaron en %2$@, fuera de alcance, así que sigue en tu lista.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1783,6 +1801,42 @@
       <string>Cada vez que llegan eventos nuevos. Infinitary revisa cada %1$ld de minutos.</string>
       <key>other</key>
       <string>Cada vez que llegan eventos nuevos. Infinitary revisa cada %1$ld minutos.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Su tarea continúa en %2$@, desde la última confirmación que esta computadora trajo.</string>
+      <key>many</key>
+      <string>Sus %1$ld de tareas continúan en %2$@, cada una desde la última confirmación que esta computadora trajo.</string>
+      <key>other</key>
+      <string>Sus %1$ld tareas continúan en %2$@, cada una desde la última confirmación que esta computadora trajo.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Una entrada anterior con este nombre y usuario está fuera de alcance, con %1$ld tarea esperando.</string>
+      <key>many</key>
+      <string>Una entrada anterior con este nombre y usuario está fuera de alcance, con %1$ld de tareas esperando.</string>
+      <key>other</key>
+      <string>Una entrada anterior con este nombre y usuario está fuera de alcance, con %1$ld tareas esperando.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

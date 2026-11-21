@@ -632,6 +632,10 @@ public enum PhoneMessages {
     public static func `crewmateUnreadable`() -> String { PhoneWords.format("crewmateUnreadable", []) }
     public static func `crewmateWaiting`() -> String { PhoneWords.format("crewmateWaiting", []) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
+    public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
+    public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
+    public static func `devicesCarryRunsOn`(`from`: String, `to`: String) -> String { PhoneWords.format("devicesCarryRunsOn", [`from`, `to`]) }
+    public static func `devicesCarryStayed`(`count`: Int, `from`: String) -> String { PhoneWords.format("devicesCarryStayed", [`count`, `from`]) }
     public static func `devicesJoinAddressChip`() -> String { PhoneWords.format("devicesJoinAddressChip", []) }
     public static func `devicesJoinAddressSub`(`computer`: String, `mustBeOn`: String) -> String { PhoneWords.format("devicesJoinAddressSub", [`computer`, `mustBeOn`]) }
     public static func `devicesJoinCancel`() -> String { PhoneWords.format("devicesJoinCancel", []) }
@@ -2428,6 +2432,20 @@ public enum PhoneMessages {
     public static func `settingsDevicesBringingWork`() -> String { PhoneWords.format("settingsDevicesBringingWork", []) }
     public static func `settingsDevicesBringingWorkOf`(`projects`: String) -> String { PhoneWords.format("settingsDevicesBringingWorkOf", [`projects`]) }
     public static func `settingsDevicesCancel`() -> String { PhoneWords.format("settingsDevicesCancel", []) }
+    public static func `settingsDevicesCarryAsk`(`count`: Int, `to`: String) -> String { PhoneWords.format("settingsDevicesCarryAsk", [`count`, `to`]) }
+    public static func `settingsDevicesCarryAskNone`() -> String { PhoneWords.format("settingsDevicesCarryAskNone", []) }
+    public static func `settingsDevicesCarryConfirm`() -> String { PhoneWords.format("settingsDevicesCarryConfirm", []) }
+    public static func `settingsDevicesCarryEarlier`(`count`: Int) -> String { PhoneWords.format("settingsDevicesCarryEarlier", [`count`]) }
+    public static func `settingsDevicesCarryEarlierProjects`() -> String { PhoneWords.format("settingsDevicesCarryEarlierProjects", []) }
+    public static func `settingsDevicesCarryFailed`() -> String { PhoneWords.format("settingsDevicesCarryFailed", []) }
+    public static func `settingsDevicesCarryHere`() -> String { PhoneWords.format("settingsDevicesCarryHere", []) }
+    public static func `settingsDevicesCarryHereNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesCarryHereNamed", [`device`]) }
+    public static func `settingsDevicesCarryLeft`(`from`: String) -> String { PhoneWords.format("settingsDevicesCarryLeft", [`from`]) }
+    public static func `settingsDevicesCarryPick`(`device`: String) -> String { PhoneWords.format("settingsDevicesCarryPick", [`device`]) }
+    public static func `settingsDevicesCarryThen`(`from`: String, `to`: String) -> String { PhoneWords.format("settingsDevicesCarryThen", [`from`, `to`]) }
+    public static func `settingsDevicesCarryTo`() -> String { PhoneWords.format("settingsDevicesCarryTo", []) }
+    public static func `settingsDevicesCarryToNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesCarryToNamed", [`device`]) }
+    public static func `settingsDevicesCarrying`(`to`: String) -> String { PhoneWords.format("settingsDevicesCarrying", [`to`]) }
     public static func `settingsDevicesChangeAddress`() -> String { PhoneWords.format("settingsDevicesChangeAddress", []) }
     public static func `settingsDevicesChangeAddressFailed`() -> String { PhoneWords.format("settingsDevicesChangeAddressFailed", []) }
     public static func `settingsDevicesChangeAddressNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesChangeAddressNamed", [`device`]) }
@@ -4350,6 +4368,10 @@ extension PhoneWords {
         "crewmateUnreadable": [],
         "crewmateWaiting": [],
         "crewmateWorking": [],
+        "devicesCarriedOn": ["to"],
+        "devicesCarryNotRemoved": ["from", "why"],
+        "devicesCarryRunsOn": ["from", "to"],
+        "devicesCarryStayed": ["count", "from"],
         "devicesJoinAddressChip": [],
         "devicesJoinAddressSub": ["computer", "mustBeOn"],
         "devicesJoinCancel": [],
@@ -6146,6 +6168,20 @@ extension PhoneWords {
         "settingsDevicesBringingWork": [],
         "settingsDevicesBringingWorkOf": ["projects"],
         "settingsDevicesCancel": [],
+        "settingsDevicesCarryAsk": ["count", "to"],
+        "settingsDevicesCarryAskNone": [],
+        "settingsDevicesCarryConfirm": [],
+        "settingsDevicesCarryEarlier": ["count"],
+        "settingsDevicesCarryEarlierProjects": [],
+        "settingsDevicesCarryFailed": [],
+        "settingsDevicesCarryHere": [],
+        "settingsDevicesCarryHereNamed": ["device"],
+        "settingsDevicesCarryLeft": ["from"],
+        "settingsDevicesCarryPick": ["device"],
+        "settingsDevicesCarryThen": ["from", "to"],
+        "settingsDevicesCarryTo": [],
+        "settingsDevicesCarryToNamed": ["device"],
+        "settingsDevicesCarrying": ["to"],
         "settingsDevicesChangeAddress": [],
         "settingsDevicesChangeAddressFailed": [],
         "settingsDevicesChangeAddressNamed": ["device"],
@@ -7463,6 +7499,7 @@ extension PhoneWords {
         "crewmateCut": "count",
         "crewmateEarlier": "count",
         "crewmateMoreLines": "count",
+        "devicesCarryStayed": "count",
         "feedBatchFormedMany": "count",
         "feedBatchMergedMany": "count",
         "feedRepairsCapped": "rounds",
@@ -7538,6 +7575,8 @@ extension PhoneWords {
         "settingsAutomationRunCatchingUpMissed": "count",
         "settingsAutomationRunEvents": "count",
         "settingsAutomationRunsEachTimeLooks": "count",
+        "settingsDevicesCarryAsk": "count",
+        "settingsDevicesCarryEarlier": "count",
         "settingsDevicesRemoveRunsAfter": "count",
         "settingsDevicesRemoveTasksStop": "count",
         "settingsDevicesRemoveTasksStopOn": "count",

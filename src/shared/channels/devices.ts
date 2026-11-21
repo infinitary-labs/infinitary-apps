@@ -12,6 +12,7 @@ import {
 import {
   computerPresenceSchema,
   deviceAddressesSchema,
+  deviceCarryOnSchema,
   deviceFoldSchema,
   deviceInviteRequestSchema,
   deviceInviteSchema,
@@ -269,6 +270,17 @@ export const deviceChannels = {
     reach: "views",
     request: z.tuple([deviceFoldSchema]),
     response: deviceViewSchema,
+  },
+  // Carry its tasks on (docs/devices.md, "Joined again"): each started task
+  // on a computer out of reach moves to another computer without what only
+  // the first holds, Runs on follows, and once every one has moved the first
+  // is removed now. A task that cannot move stays, and so does the entry.
+  "inf:devices:carry-on": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(64)]),
+    response: deviceCarryOnSchema,
   },
   "inf:devices:keep": {
     effect: "change",

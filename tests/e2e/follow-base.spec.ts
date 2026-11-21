@@ -129,9 +129,9 @@ test("a chained part follows the newer approved version of the part under it", a
       const written = JSON.stringify(words).slice(1, -1);
       return Math.max(0, ...bodies().map((body) => body.split(written).length - 1));
     };
-    /** The base-moved steer a part hears when the part under it moved from `from` to `to`. */
-    const moved = (id: string, under: ChainPart, from: string, to: string) => {
-      const base = saved(saved(id)?.shape?.built_on?.task ?? "");
+    /** The base-moved steer a part hears when the part under it, `underId`, moved from `from` to `to`. */
+    const moved = (underId: string, under: ChainPart, from: string, to: string) => {
+      const base = saved(underId);
       return movedSteer(
         {
           key: base?.key || (base?.id ?? ""),
@@ -182,7 +182,7 @@ test("a chained part follows the newer approved version of the part under it", a
 
     // told-newer and repair-accepts: the second part hears once, replays, and its repair is accepted.
     await expect
-      .poll(() => heard(moved(second, "first", firstApproved, firstRepaired)), {
+      .poll(() => heard(moved(first, "first", firstApproved, firstRepaired)), {
         timeout: 120_000,
       })
       .toBe(1);
@@ -196,7 +196,7 @@ test("a chained part follows the newer approved version of the part under it", a
 
     // told-newer and stale-card-refused: the third part hears once; its card at the old version is refused.
     await expect
-      .poll(() => heard(moved(third, "second", secondApproved, secondRepaired)), {
+      .poll(() => heard(moved(second, "second", secondApproved, secondRepaired)), {
         timeout: 120_000,
       })
       .toBe(1);
@@ -211,8 +211,8 @@ test("a chained part follows the newer approved version of the part under it", a
     expect(await cardTitles()).toContain(chainTitle("third"));
     await approve("third");
     // Each part heard each move exactly once, after every sweep so far.
-    expect(heard(moved(second, "first", firstApproved, firstRepaired))).toBe(1);
-    expect(heard(moved(third, "second", secondApproved, secondRepaired))).toBe(1);
+    expect(heard(moved(first, "first", firstApproved, firstRepaired))).toBe(1);
+    expect(heard(moved(second, "second", secondApproved, secondRepaired))).toBe(1);
 
     // The batches pass and merge the parts in order, each as one commit of its own difference.
     github.setOpenedChecks(PASSED);

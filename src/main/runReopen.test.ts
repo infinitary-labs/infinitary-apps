@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
 import { holderIsWindow, lockHolderKind } from "./runCommand";
-import { endRefusedLaunch, openWindowOnReopen, tellThePerson } from "./runReopen";
+import { endRefusedLaunch, openWindowOnReopen } from "./runReopen";
 
 /**
  * The captain's words on INF-4113: "The real fix: the background program
@@ -193,84 +193,5 @@ describe("a launch beside an older Mac window", () => {
     expect(await end("run", false, true)).toEqual({ kind: "run", ended: ["quit"] });
     expect(await end("free", false, true)).toEqual({ kind: "free", ended: ["quit"] });
     expect(await end("free", false)).toEqual({ kind: "free", ended: ["started again", "quit"] });
-  });
-});
-
-// The review of INF-5409: a word the launch takes away before it is shown, as the question once
-// the holder was told apart, takes no window, no focus and shows nothing.
-describe("a word to the person", () => {
-  type Box = { message: string; signal?: AbortSignal; cancelId?: number };
-  const person = (options: { hidden?: boolean; fails?: boolean; whileMade?: () => void } = {}) => {
-    const done: string[] = [];
-    return {
-      done,
-      words: {
-        ready: async () => {
-          done.push("ready");
-        },
-        hidden: options.hidden ?? false,
-        say: (box: Box) => done.push(`said ${box.message}`),
-        parent: (box: Box) => {
-          if (!box.signal) return null;
-          done.push("window made");
-          options.whileMade?.();
-          return { destroy: () => done.push("window gone") };
-        },
-        focus: () => done.push("focused"),
-        show: async (box: Box) => {
-          if (options.fails) throw new Error("no box");
-          done.push(`shown ${box.message}`);
-          return 1;
-        },
-      },
-    };
-  };
-
-  it("makes nothing for a word taken away before it is shown, and shows one still wanted", async () => {
-    const taken = new AbortController();
-    const before = person();
-    // Taken away while Electron was getting ready.
-    const late = tellThePerson(() => ({ message: "Leave it?", signal: taken.signal }), {
-      ...before.words,
-      ready: async () => {
-        taken.abort();
-      },
-    });
-    expect(await late).toBeNull();
-    expect(before.done).toEqual([]);
-    expect(await tellThePerson(() => null, before.words)).toBeNull();
-    expect(before.done).toEqual(["ready"]);
-
-    // Taken away while its window was made: that window goes, and nothing is focused or shown.
-    const meanwhile = new AbortController();
-    const making = person({ whileMade: () => meanwhile.abort() });
-    expect(
-      await tellThePerson(() => ({ message: "Leave it?", signal: meanwhile.signal }), making.words),
-    ).toBeNull();
-    expect(making.done).toEqual(["ready", "window made", "window gone"]);
-
-    const wanted = person();
-    const open = new AbortController();
-    expect(
-      await tellThePerson(() => ({ message: "Leave it?", signal: open.signal }), wanted.words),
-    ).toBe(1);
-    expect(wanted.done).toEqual([
-      "ready",
-      "window made",
-      "focused",
-      "shown Leave it?",
-      "window gone",
-    ]);
-  });
-
-  it("says a hidden launch's word in its output and answers a failed one as dismissed", async () => {
-    const hidden = person({ hidden: true });
-    expect(await tellThePerson(() => ({ message: "In the Dock" }), hidden.words)).toBeNull();
-    expect(hidden.done).toEqual(["ready", "said In the Dock"]);
-    const failing = person({ fails: true });
-    expect(await tellThePerson(() => ({ message: "Leave it?", cancelId: 0 }), failing.words)).toBe(
-      0,
-    );
-    expect(failing.done).toEqual(["ready", "focused"]);
   });
 });

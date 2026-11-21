@@ -8,6 +8,7 @@ import { compileCacheBuild, startCompileCache } from "./compileCache";
 import { keepFaultSignalsFatal } from "./faultSignals";
 import { linkCommand, runLinkCommand } from "./linkCommand";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
+import { personWordArg } from "./personWordArg";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { askLoginShellEarly, runCommand } from "./runCommand";
 import { takeRunAgentMark } from "./runEnvironment";
@@ -46,8 +47,11 @@ keepFaultSignalsFatal();
 // privileged schemes, userData, hardware acceleration - and Electron is
 // ready once this module has finished, so each load is awaited here, at
 // the top level, rather than left to resolve after it.
-const work = workCommand(process.argv, Boolean(process.defaultApp));
-const run = work ? null : runCommand(process.argv, Boolean(process.defaultApp));
+// A copy that shows one word for a window launch refused the folder's lock (./personWord.ts): it
+// asks for no lock and opens nothing else.
+const word = personWordArg(process.argv);
+const work = word ? null : workCommand(process.argv, Boolean(process.defaultApp));
+const run = word || work ? null : runCommand(process.argv, Boolean(process.defaultApp));
 const status = work || run ? null : statusCommand(process.argv, Boolean(process.defaultApp));
 const link = work || run || status ? null : linkCommand(process.argv, Boolean(process.defaultApp));
 const boot =
@@ -103,7 +107,10 @@ async function cacheCompiledCode(): Promise<(() => void) | null> {
   }
 }
 
-if (work) {
+if (word) {
+  const { showPersonWord } = await import("./personWord");
+  void showPersonWord(word);
+} else if (work) {
   const { prepareWorkMode, runWorkMode } = await import("./work");
   // On Linux with no display, the work mode's own starts here, before
   // Chromium opens one (./ownDisplay.ts).

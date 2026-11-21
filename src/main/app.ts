@@ -46,7 +46,6 @@ import {
   readableLocale,
   SOURCE_LANGUAGE,
 } from "@shared/i18n/languages";
-import * as m from "@shared/i18n/messages.generated";
 import {
   chosenLanguage,
   defaultLanguage,
@@ -59,16 +58,7 @@ import type { ReleaseNotesView } from "@shared/releaseTracking";
 import { SMALLEST_WINDOW } from "@shared/smallestWindow";
 import { checksUpdates } from "@shared/update";
 import { spellingOfUserDataFolder } from "@shared/userDataFolders";
-import {
-  app,
-  BrowserWindow,
-  dialog,
-  Menu,
-  type MessageBoxOptions,
-  nativeTheme,
-  powerMonitor,
-  session,
-} from "electron";
+import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
 import { installAppMenu, nameAppMenu, resetAllKeysAfterAsking } from "./appMenu";
 import {
@@ -102,6 +92,7 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
+import { askPersonWord, type PersonWord, personWordBox } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
@@ -147,7 +138,6 @@ import {
   openNewCopy,
   openWindowOnReopen,
   TOLD_THE_PERSON,
-  tellThePerson,
 } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
@@ -810,51 +800,27 @@ export async function startApp(
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
-      // The handoff owns this launch's lifetime until it ends it: a window of its own closing, as
-      // the question's on a Mac, never quits the launch before it acts on the person's choice.
-      app.on("window-all-closed", () => {});
-      // A word to the person (`tellThePerson`). Electron is ready only once this start returned to
-      // ./index.ts, so the handoff below runs after it and is never awaited here. On a Mac a word
-      // that the launch may take away (`signal`) gets a window of its own, since macOS closes a
-      // message box on its signal only then.
-      const tellPerson = (words: () => MessageBoxOptions | null): Promise<number | null> =>
-        tellThePerson(words, {
-          ready: async () => {
-            await app.whenReady();
-            startLanguage(
-              app.getPreferredSystemLanguages(),
-              languageOverride(process.env, app.isPackaged),
-            );
-          },
-          hidden: hideWindow,
-          say: (box) =>
-            console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd()),
-          parent: (box) => {
-            if (!box.signal || hostPlatform() !== "darwin") return null;
-            const parent = new BrowserWindow({
-              show: false,
-              width: 520,
-              height: 260,
-              frame: false,
-              transparent: true,
-              hasShadow: false,
-              resizable: false,
-            });
-            parent.center();
-            return {
-              window: parent,
-              destroy: () => {
-                if (!parent.isDestroyed()) parent.destroy();
-              },
-            };
-          },
-          focus: () => app.focus({ steal: true }),
-          show: async (box, parent) =>
-            (parent
-              ? await dialog.showMessageBox(parent.window, box)
-              : await dialog.showMessageBox(box)
-            ).response,
+      // A word to the person (`askPersonWord`): Electron never becomes ready in this launch, refused
+      // the lock before it was, so a copy of this program shows the word, and is ended when the word
+      // is taken away. A word taken away or no longer wanted (`wanted`) is never shown. A check's
+      // hidden launch shows none and says its words in its output instead: null.
+      const tellPerson = (
+        word: PersonWord,
+        signal?: AbortSignal,
+        wanted: () => boolean = () => true,
+      ): Promise<number | null> => {
+        if (signal?.aborted || !wanted()) return Promise.resolve(null);
+        if (hideWindow) {
+          const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
+          console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
+          return Promise.resolve(null);
+        }
+        return askPersonWord(word, {
+          execPath: process.execPath,
+          args: app.isPackaged ? [] : [app.getAppPath()],
+          signal,
         });
+      };
       void (async () => {
         // A holder never shown to be a command that let the lock go, or one that still shows
         // nothing on a second read, as an older window on a Windows PC that answers nothing and
@@ -869,24 +835,15 @@ export async function startApp(
         });
         const askOnceClosed = async () => {
           const why = shownWhy;
-          const response = await tellPerson(() => ({
-            type: "info",
-            title: "Infinitary",
-            message: m.dialogOpenInDock(),
-            detail: m.dialogOnceClosedDetail(),
-            buttons: [m.dialogLeaveIt(), m.dialogOpenOnceClosed()],
-            defaultId: 0,
-            cancelId: 0,
-            signal: why.signal,
-          }));
+          const response = await tellPerson("once-closed", why.signal);
           if (response === 0 && !why.signal.aborted) leftIt();
           return response !== 0;
         };
-        // The window a launch told by what it runs as, the one it asks to reopen.
+        // The window a launch told by what it runs as, the one the person is told of.
         let classified: number | null | undefined;
         // One watch of the folder from the refusal to the launch's end: each holder seen is asked
         // once and told apart by what it shows (`lockHolderKind`), through the question and after
-        // the window asked to reopen quit, so a window that takes over is always one asked.
+        // the window the person was told of quit, so a window that takes over is always one asked.
         let asked = askedHolder;
         let found: "run" | "free" | "window" | "left";
         for (;;) {
@@ -974,17 +931,7 @@ export async function startApp(
                 if (stale()) withdrawn.abort();
               }, 250);
               try {
-                await tellPerson(() =>
-                  stale()
-                    ? null
-                    : {
-                        type: "info",
-                        title: "Infinitary",
-                        message: m.dialogOpenInDock(),
-                        detail: m.dialogOpenInDockDetail(),
-                        signal: withdrawn.signal,
-                      },
-                );
+                await tellPerson("dock", withdrawn.signal, () => !stale());
               } finally {
                 clearInterval(watch);
               }

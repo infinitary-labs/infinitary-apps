@@ -73,54 +73,6 @@ export function openWindowOnReopen(options: {
  */
 export const TOLD_THE_PERSON = "[app] told the person:";
 
-/** What a word to the person needs of Electron and the launch (`tellThePerson`). */
-export type PersonWords<
-  Box extends { signal?: AbortSignal; cancelId?: number },
-  Parent extends { destroy: () => void } = { destroy: () => void },
-> = {
-  /** Electron ready and the launch's start language set. */
-  ready: () => Promise<void>;
-  /** A check's hidden launch, which says its words in its output instead. */
-  hidden: boolean;
-  say: (box: Box) => void;
-  /** A window of the word's own for a word the launch may take away, where the platform needs one. */
-  parent: (box: Box) => Parent | null;
-  focus: () => void;
-  show: (box: Box, parent: Parent | null) => Promise<number>;
-};
-
-/**
- * A word to the person, in the language a launch speaks at its start, in front of whatever they use
- * now; its words are made once that language is set (`words`). One no longer wanted by then, null or
- * already taken away (`signal`), is never made: no window, focus or word, and null. A check's hidden
- * launch says it in its output instead: null. A word that cannot be shown, or its window made, is
- * answered as dismissed (`cancelId`).
- */
-export async function tellThePerson<
-  Box extends { signal?: AbortSignal; cancelId?: number },
-  Parent extends { destroy: () => void },
->(words: () => Box | null, person: PersonWords<Box, Parent>): Promise<number | null> {
-  await person.ready();
-  const box = words();
-  if (box === null || box.signal?.aborted) return null;
-  if (person.hidden) {
-    person.say(box);
-    return null;
-  }
-  let parent: Parent | null = null;
-  try {
-    parent = person.parent(box);
-    if (box.signal?.aborted) return null;
-    person.focus();
-    return await person.show(box, parent);
-  } catch (error) {
-    console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
-    return box.cancelId ?? 0;
-  } finally {
-    parent?.destroy();
-  }
-}
-
 /**
  * How a window launch refused the folder's lock ends, once it read who holds
  * it (`lockHolderKind`): a window's answer wins, even one that came after the

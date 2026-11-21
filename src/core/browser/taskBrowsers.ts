@@ -75,7 +75,8 @@ import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
 import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
-import { type PageStart, type PageStarts, startBeforeOpen, withNext } from "./pageStarts";
+import type { PageStart, PageStarts } from "./pageStarts";
+import { startAfterOpen, startBeforeOpen, startMissing } from "./pageStarts";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
@@ -233,7 +234,10 @@ export type TaskBrowsersOptions = {
    * runs when nothing answers there (docs/task-browser.md, "Starting a page
    * again"); with none, `--start` is refused and only the crewmate is woken.
    */
-  starts?: Pick<PageStarts, "keep" | "kept" | "starting" | "run" | "stop" | "forget" | "stopAll">;
+  starts?: Pick<
+    PageStarts,
+    "keep" | "kept" | "starting" | "run" | "stopWithBrowser" | "turn" | "forget" | "stopAll"
+  >;
 };
 
 /** Nothing answers at a task's page: what its crewmate's one wake for that outage says. */
@@ -600,9 +604,8 @@ export class TaskBrowsers {
         return this.queues
           .run(taskId, async () => {
             const answer = this.held(taskId) ?? (await commands.navigate(taskId, input));
-            // A build the host started stops with its browser: with no browser, nothing keeps it.
-            if (before?.started && !this.browsers.has(taskId)) this.options.starts?.stop(taskId);
-            return before && !answer.refused ? withNext(answer, before.next) : answer;
+            const open = this.browsers.has(taskId);
+            return startAfterOpen(taskId, answer, before, open, this.options.starts);
           })
           .finally(() => this.answeredAgain(taskId));
       },
@@ -1185,6 +1188,17 @@ export class TaskBrowsers {
     this.options.onReturned?.(taskId, back.returned);
   }
 
+  /** A page this computer serves with no saved start for it: emit_card says so in one line. */
+  unstarted(taskId: string): boolean {
+    const served = this.browsers.get(taskId)?.server ?? this.endedServers.get(taskId);
+    return !served && startMissing(this.options.starts, taskId, this.fact(taskId)?.url);
+  }
+
+  /** A turn of the task's crewmate began or ended: a build the host started lives through it. */
+  turn(taskId: string, running: boolean): void {
+    this.options.starts?.turn(taskId, running, this.browsers.has(taskId));
+  }
+
   /** The task closed: its browser goes, with nothing kept and nothing to tell. */
   closeTask(taskId: string, options: { gone?: boolean } = {}): void {
     // A closed task's build is never started again, and one the host started stops.
@@ -1657,8 +1671,8 @@ export class TaskBrowsers {
     if (!browser) return;
     const fact = why ? this.fact(taskId) : undefined;
     this.browsers.delete(taskId);
-    // A build the host started stops with its browser; a crewmate's own never does.
-    this.options.starts?.stop(taskId);
+    // A build the host started stops with its browser, after a running turn; a crewmate's own never does.
+    this.options.starts?.stopWithBrowser(taskId);
     browser.cancelIdle?.();
     browser.stopWatching?.();
     browser.stopWatching = undefined;

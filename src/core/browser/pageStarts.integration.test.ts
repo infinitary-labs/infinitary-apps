@@ -88,6 +88,45 @@ describe("a page's saved start", () => {
     await expect.poll(() => probeLoopback("127.0.0.1", port), { timeout: 5_000 }).toBe("refused");
   });
 
+  it("lives through its crewmate's turn when its browser stops, and stops at the turn's end", async () => {
+    const folders = scratchDir("infinitary-page-starts-");
+    const starts = startsIn(folders);
+    const port = await freePort();
+    const target = answerTarget(`http://127.0.0.1:${port}/`);
+    if (!target) throw new Error("no target");
+    const start = startFor(port, serverCommand(port), 20_000, folders);
+    expect((await starts.run("t1", start, target)).kind).toBe("answered");
+    // The browser stops while a turn runs: the build is left alone.
+    starts.turn("t1", true, true);
+    starts.stopWithBrowser("t1");
+    expect(await probeLoopback("127.0.0.1", port)).toBe("answered");
+    // The browser opened again before the turn ended: the build keeps running.
+    starts.turn("t1", false, true);
+    expect(await probeLoopback("127.0.0.1", port)).toBe("answered");
+    // Stopped again during the next turn, and still stopped at its end: it stops then.
+    starts.turn("t1", true, true);
+    starts.stopWithBrowser("t1");
+    expect(await probeLoopback("127.0.0.1", port)).toBe("answered");
+    starts.turn("t1", false, false);
+    await expect.poll(() => probeLoopback("127.0.0.1", port), { timeout: 5_000 }).toBe("refused");
+  });
+
+  it("stops at once when its browser stops with no turn running, or when its task closes mid-turn", async () => {
+    const folders = scratchDir("infinitary-page-starts-");
+    const starts = startsIn(folders);
+    const port = await freePort();
+    const target = answerTarget(`http://127.0.0.1:${port}/`);
+    if (!target) throw new Error("no target");
+    const start = startFor(port, serverCommand(port), 20_000, folders);
+    expect((await starts.run("t1", start, target)).kind).toBe("answered");
+    starts.stopWithBrowser("t1");
+    await expect.poll(() => probeLoopback("127.0.0.1", port), { timeout: 5_000 }).toBe("refused");
+    expect((await starts.run("t1", start, target)).kind).toBe("answered");
+    starts.turn("t1", true, true);
+    starts.forget("t1");
+    await expect.poll(() => probeLoopback("127.0.0.1", port), { timeout: 5_000 }).toBe("refused");
+  });
+
   it("fails with the exit code when the program ends before anything answers", async () => {
     const folders = scratchDir("infinitary-page-starts-");
     const starts = startsIn(folders);

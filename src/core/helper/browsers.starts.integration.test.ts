@@ -59,14 +59,18 @@ describe("a page's saved start on a computer that runs work", () => {
     mkdirSync(project);
     const told: { task: string; unanswered: PageUnanswered }[] = [];
     let computer: ComputerBrowsers | undefined;
+    let turnHeard = 0;
     const home = new PlacedBrowsers({
       devices: {
-        ask: async (_device, channel, args) => computer?.answer(channel, args),
+        ask: async (_device, channel, args) => {
+          if (channel === "inf:task-browser:turn") turnHeard += 1;
+          return computer?.answer(channel, args);
+        },
         onWorkDevice: () => () => {},
         version: () => ({
           contract: PROTOCOL_VERSION,
           takesWork: true,
-          changes: ["page-unanswered"],
+          changes: ["page-unanswered", "page-start"],
         }),
       },
       deviceOf: () => "work",
@@ -145,7 +149,17 @@ describe("a page's saved start on a computer that runs work", () => {
     expect(home.fact("t1")).not.toHaveProperty("starting");
     expect(told).toEqual([]);
 
+    // A stop during the crewmate's turn leaves the build until that turn ends at the home.
+    home.turn("t1", true);
+    await expect.poll(() => turnHeard, { timeout: 5_000 }).toBe(1);
+    expect(await home.stopByCaptain("t1")).toEqual({ ok: true });
+    expect(await answers()).toBe("answered");
+    home.turn("t1", false);
+    await expect.poll(answers, { timeout: 5_000 }).toBe("refused");
+
     // The build breaks: the next press's start fails, and the crewmate hears how, at the home.
+    expect(await home.reopen("t1")).toEqual({ ok: true });
+    await expect.poll(() => home.fact("t1")?.state, { timeout: 5_000 }).toBe("open");
     expect(await home.stopByCaptain("t1")).toEqual({ ok: true });
     await expect.poll(answers, { timeout: 5_000 }).toBe("refused");
     writeFileSync(join(project, "fail"), "");

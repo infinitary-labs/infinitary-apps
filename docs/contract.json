@@ -98478,6 +98478,44 @@
           ]
         }
       },
+      "inf:task-browser:turn": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "running": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "task",
+                "running"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
       "inf:task-browser:request": {
         "effect": "change",
         "request": {

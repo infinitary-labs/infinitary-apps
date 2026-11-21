@@ -59,9 +59,14 @@ function startsStandIn(): StartsStandIn {
       });
       return outcome.promise;
     },
-    stop: (taskId) => {
+    stopWithBrowser: (taskId) => {
       waiting.delete(taskId);
       calls.push(`stop ${taskId}`);
+    },
+    turn: (taskId, running, browserOpen) => {
+      calls.push(
+        `turn ${taskId} ${running ? "running" : "ended"}, browser ${browserOpen ? "open" : "stopped"}`,
+      );
     },
     forget: (taskId) => {
       saved.delete(taskId);
@@ -163,6 +168,28 @@ describe("a crewmate's open with --start", () => {
   });
 });
 
+describe("emit_card's line for a served page with no saved start", () => {
+  it("is said for a page this computer serves until a start is saved for it, and never for another site", async () => {
+    const starts = startsStandIn();
+    const { browsers } = harness({ starts, probe: async () => "answered" });
+    expect(browsers.unstarted("t1")).toBe(false);
+    await browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
+    expect(browsers.unstarted("t1")).toBe(true);
+    await browsers.forTask("t1").navigate({ url: "http://localhost:5173/", start: START });
+    expect(browsers.unstarted("t1")).toBe(false);
+    await browsers.forTask("t1").navigate({ url: "http://localhost:4000/" });
+    expect(browsers.unstarted("t1")).toBe(true);
+    await browsers.forTask("t1").navigate({ url: "https://example.com/" });
+    expect(browsers.unstarted("t1")).toBe(false);
+  });
+
+  it("is never said on a computer that keeps no starts", async () => {
+    const { browsers } = harness();
+    await browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
+    expect(browsers.unstarted("t1")).toBe(false);
+  });
+});
+
 describe("the captain's press on a page with a saved start", () => {
   async function stoppedBuild() {
     let reading: AnswerReading = "answered";
@@ -245,6 +272,19 @@ describe("the captain's press on a page with a saved start", () => {
     expect(unanswered.map((told) => told.unanswered.once)).toEqual([
       "page-unanswered:run-1:t1:1",
       "page-unanswered:run-1:t1:1",
+    ]);
+  });
+
+  it("tells the start owner of each turn, and whether the browser is open again at its end", async () => {
+    const { browsers, starts } = await stoppedBuild();
+    browsers.turn("t1", true);
+    browsers.turn("t1", false);
+    await browsers.reopen("t1");
+    browsers.turn("t1", false);
+    expect(starts.calls.filter((call) => call.startsWith("turn"))).toEqual([
+      "turn t1 running, browser stopped",
+      "turn t1 ended, browser stopped",
+      "turn t1 ended, browser open",
     ]);
   });
 

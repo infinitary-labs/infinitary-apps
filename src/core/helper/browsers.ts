@@ -305,6 +305,11 @@ export class ComputerBrowsers {
         const [{ task }] = request as BrowserOrderRequest<"inf:task-browser:reopen">;
         return browsers.reopen(task);
       }
+      case "inf:task-browser:turn": {
+        const [{ task, running }] = request as BrowserOrderRequest<"inf:task-browser:turn">;
+        browsers.turn(task, running);
+        return { ok: true };
+      }
       case "inf:task-browser:request": {
         const [{ task, request: asked }] =
           request as BrowserOrderRequest<"inf:task-browser:request">;

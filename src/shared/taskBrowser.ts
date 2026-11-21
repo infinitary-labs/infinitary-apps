@@ -642,7 +642,8 @@ export function stopViewWords(fact: Extract<TaskBrowserFact, { state: "stopped" 
 /**
  * The view's line while nothing answers at its page's address
  * (docs/task-browser.md, "When nothing answers"): its crewmate was asked to
- * start it again, or is working now and was not asked.
+ * start it again, or is working now and was not asked; or, with `starting`,
+ * Infinitary runs the start its crewmate saved ("Starting a page again").
  */
 export function unansweredWords(
   site: string,

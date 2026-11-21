@@ -63,6 +63,8 @@ type Running = {
   windows: boolean;
   origin: string;
   outcome: Promise<StartOutcome>;
+  /** Ends its wait now, with this outcome, and clears its timers. */
+  settle: (outcome: StartOutcome) => void;
   stopped: boolean;
   /** Its address answered: the program runs on, and no one waits for it. */
   answered: boolean;
@@ -82,6 +84,10 @@ export type PageStartsOptions = {
 
 export class PageStarts {
   private readonly running = new Map<string, Running>();
+  /** Tasks whose crewmate's turn runs now: a build started for them is left alone. */
+  private readonly turns = new Set<string>();
+  /** Tasks whose browser stopped during that turn: the build stops at its end. */
+  private readonly afterTurn = new Set<string>();
 
   constructor(private readonly options: PageStartsOptions) {}
 
@@ -172,6 +178,7 @@ export class PageStarts {
       stopped: false,
       answered: false,
       outcome: Promise.resolve({ kind: "stopped" }),
+      settle: () => undefined,
     };
     run.outcome = new Promise<StartOutcome>((resolve) => {
       let settled = false;
@@ -182,6 +189,7 @@ export class PageStarts {
         clearTimeout(limit);
         resolve(outcome);
       };
+      run.settle = settle;
       // A shell that never started (its folder gone) ends the run as an exit does, saying why.
       const ended = (code: number | null, error?: Error) => {
         release();
@@ -200,8 +208,8 @@ export class PageStarts {
       }, ANSWER_POLL_MS);
       const limit = setTimeout(() => {
         if (run.stopped) return;
-        this.stop(taskId);
         settle({ kind: "failed", ranOut: true, log });
+        this.stop(taskId);
       }, start.withinMs);
     });
     this.running.set(taskId, run);
@@ -209,17 +217,43 @@ export class PageStarts {
   }
 
   /** Stop the program the host started for this task, if one runs; never anything else. */
-  stop(taskId: string): void {
+  stop(taskId: string, signal: NodeJS.Signals = "SIGTERM"): void {
+    this.afterTurn.delete(taskId);
     const run = this.running.get(taskId);
     if (!run) return;
     run.stopped = true;
     this.running.delete(taskId);
-    killGroup(run, "SIGTERM");
+    run.settle({ kind: "stopped" });
+    killGroup(run, signal);
+  }
+
+  /**
+   * The task's browser stopped: the build stops with it, unless its
+   * crewmate's turn runs now, when it stops at that turn's end instead.
+   */
+  stopWithBrowser(taskId: string): void {
+    if (this.turns.has(taskId) && this.running.has(taskId)) this.afterTurn.add(taskId);
+    else this.stop(taskId);
+  }
+
+  /**
+   * A turn of the task's crewmate began or ended. At its end, a build whose
+   * browser stopped during it stops, unless the browser is open again.
+   */
+  turn(taskId: string, running: boolean, browserOpen: boolean): void {
+    if (running) {
+      this.turns.add(taskId);
+      return;
+    }
+    this.turns.delete(taskId);
+    if (!this.afterTurn.delete(taskId)) return;
+    if (!browserOpen) this.stop(taskId);
   }
 
   /** The task closed: its program stops and its kept start goes. */
   forget(taskId: string): void {
     this.stop(taskId);
+    this.turns.delete(taskId);
     const folder = this.options.folderOf(taskId);
     if (!folder) return;
     try {
@@ -229,9 +263,9 @@ export class PageStarts {
     }
   }
 
-  /** Infinitary quits: every program the host started stops. */
+  /** Infinitary quits: every program the host started stops, at once, since the app is going. */
   stopAll(): void {
-    for (const taskId of [...this.running.keys()]) this.stop(taskId);
+    for (const taskId of [...this.running.keys()]) this.stop(taskId, "SIGKILL");
   }
 }
 
@@ -280,7 +314,34 @@ export const startWords = {
     outcome.kind === "failed"
       ? `Nothing answered at ${start.origin}, so Infinitary ran your --start command in ${start.folder}, but ${outcome.ranOut ? `nothing answered within ${start.withinMs / 1000} seconds, so it stopped it` : `it exited (code ${outcome.exit ?? "none"}) before anything answered`}. Its output is in ${outcome.log}. The command is still saved; fix it and run ${browserCommand(OPEN_WITH_START)} again.`
       : "The start was stopped before its page answered, because this task's browser stopped.",
+  missing: (): string =>
+    ` This card's page is served on this computer and you saved no start for it: if its server stops, the captain's press wakes you to start it again. To have Infinitary start it instead, run ${browserCommand(OPEN_WITH_START)}.`,
 };
+
+/**
+ * A crewmate's open is answered: a build the host started for it stops when
+ * no browser was left to keep it, and the answer says what the start did.
+ */
+export function startAfterOpen(
+  taskId: string,
+  answer: BrowserAnswer,
+  before: { next: string; started: boolean } | undefined,
+  browserOpen: boolean,
+  starts: Pick<PageStarts, "stopWithBrowser"> | undefined,
+): BrowserAnswer {
+  if (before?.started && !browserOpen) starts?.stopWithBrowser(taskId);
+  return before && !answer.refused ? withNext(answer, before.next) : answer;
+}
+
+/** Whether a page on an address this computer serves has no saved start (emit_card's one line). */
+export function startMissing(
+  starts: Pick<PageStarts, "kept"> | undefined,
+  taskId: string,
+  url: string | undefined,
+): boolean {
+  const target = url ? answerTarget(url) : undefined;
+  return starts !== undefined && target !== undefined && !starts.kept(taskId, target.origin);
+}
 
 /**
  * A crewmate's open with `--start`, before its page is opened: the start

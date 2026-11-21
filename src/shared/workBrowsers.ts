@@ -130,6 +130,16 @@ export const browserOrders = {
     request: aboutBrowser({}),
     response: taskBrowserCommandResultSchema,
   },
+  /**
+   * A turn of the task's crewmate began or ended at the home (`page-start`):
+   * a build Infinitary started there lives through the turn, and stops at its
+   * end if the browser is still stopped.
+   */
+  "inf:task-browser:turn": {
+    effect: "change",
+    request: aboutBrowser({ running: z.boolean() }),
+    response: doneSchema,
+  },
   /** A crewmate's card asks the captain to take over: the browser pauses before the card goes up. */
   "inf:task-browser:request": {
     effect: "change",

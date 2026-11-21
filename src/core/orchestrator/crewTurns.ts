@@ -406,6 +406,8 @@ export class CrewTurns {
     }
     this.core.facts.broadcastCrewCounts();
     this.core.options.tasks.turns.setActivity(task.id, "running");
+    // A build the host started for its page is left alone while the turn runs.
+    this.core.options.browsers?.turn?.(task.id, true);
   }
 
   /**
@@ -1050,6 +1052,8 @@ export class CrewTurns {
 
   /** Every idle boundary hands off its deferred work through this one exit. */
   private afterTurn(task: TaskRuntime, move?: MoveAsk, recoverContext = false): void {
+    // A build whose browser stopped during the turn stops now (docs/task-browser.md).
+    this.core.options.browsers?.turn?.(task.id, false);
     // A captured settle owns this idle boundary: the one waiting goes on now,
     // and no other queued guidance turn starts before its close/CI gates run.
     const settleWaited = this.core.settling.locks.turnEnded(task.id);

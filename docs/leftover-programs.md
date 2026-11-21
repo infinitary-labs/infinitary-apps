@@ -121,7 +121,7 @@ A computer without the change gets neither, and its tasks keep today's close.
 
 ## A page's saved start
 
-A program the host started from a page's saved start (`docs/task-browser.md`, "Starting a page again") is the host's own, not the crewmate's: it needs no registered stop, and the host stops it when the task's browser stops, at the task's close before the sweep, and when Infinitary quits.
+A program the host started from a page's saved start (`docs/task-browser.md`, "Starting a page again") is the host's own, not the crewmate's: it needs no registered stop, and the host stops it when the task's browser stops (at the end of a crewmate's turn, if the browser stopped during one), at the task's close before the sweep, and when Infinitary quits.
 
 ## What it leaves alone
 

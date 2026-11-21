@@ -949,6 +949,11 @@
     "other": "{count} alterações devolvidas. O resto do lote é combinado de novo."
   },
   "settingsProjectsBatchTryAgain": "Tentar de novo",
+  "settingsProjectsBatchWaiting": "Lote esperando sua mesclagem",
+  "settingsProjectsBatchWaitingSince": "Esperando desde as {since}: o {place} aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.",
+  "settingsProjectsBatchWaitingSinceHost": "Esperando desde as {since}: o host do projeto aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.",
+  "settingsProjectsBatchWaitingStillOpen": "O {place} não fechou {label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.",
+  "settingsProjectsBatchWaitingStillOpenHost": "O host do projeto não fechou {label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.",
   "settingsProjectsCare": "Cuidado",
   "settingsProjectsCareNone": "nenhum",
   "settingsProjectsCarePersonal": "Nada aqui passa por uma etapa de controle.",

@@ -1397,11 +1397,12 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(filesHolding(here, SECRET)).toEqual([]);
   });
 
-  // INF-5438 round 19 findings 1 and 2: that computer answered the open, but
-  // this Mac has not yet accepted the conversation when the cleanup comes.
-  // The cleanup waits and lets nothing go; the queued words reach the
-  // accepted conversation once, unspent before, and the next pass removes
-  // the old words from both copies before the next ones go.
+  // INF-5438 round 19 and 20 findings: that computer answered the open of a
+  // conversation the lane sweep resumed for an order it claimed, but this
+  // Mac has not yet accepted it when the cleanup comes. The cleanup waits
+  // and lets nothing go; the claimed order spends its one attempt only on
+  // the accepted conversation, which takes it once, and the next pass
+  // removes the old words from both copies before the next ones go.
   it("leaves an open this Mac has not yet accepted alone during an older computer's cleanup", async () => {
     const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
     const at = await world(undefined, { changes: older });
@@ -1427,24 +1428,31 @@ describe("reopening after a work computer restarts, when the task's model left e
       return keeps(...args);
     });
     const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const claims = vi.spyOn(home.inbox, "markDelivered");
+    const released = vi.spyOn(home.inbox, "release");
     const requests = api.requests.length;
-    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    const queued = home.inbox.enqueue(taskId, "Carry on.");
+    const swept = home.supervisor.watch.sweepTaskLane(taskId, Date.now());
     await expect.poll(() => checking.mock.calls.length).toBe(1);
-    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    const claimed = () => home.inbox.inFlight(taskId).find((row) => row.id === queued);
+    expect(claimed()).toMatchObject({ attempts: 1 });
     const record = home.tasks.get(taskId);
     if (!record) throw new Error("no task record");
 
     expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
     expect(letGo).not.toHaveBeenCalled();
-    expect(order()).toMatchObject({ attempts: 0 });
     expect(api.requests.length).toBe(requests);
     checked.open();
-    await steered;
+    await swept;
     await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
     await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
     const sent = api.requests.slice(requests);
     expect(sent.map((request) => said(request).includes("Carry on."))).toEqual([true]);
-    expect(order()?.deliveredAt).not.toBeNull();
+    // Claimed once, never given back: its one attempt was the delivery.
+    expect(claims.mock.calls.filter(([ids]) => ids.includes(queued))).toHaveLength(1);
+    expect(released.mock.calls.filter(([ids]) => ids.includes(queued))).toEqual([]);
+    await expect.poll(() => claimed()).toBeUndefined();
+    expect(home.inbox.allFor(taskId).some((row) => row.id === queued)).toBe(false);
 
     expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
     expect(filesHolding(there, SECRET)).toEqual([]);

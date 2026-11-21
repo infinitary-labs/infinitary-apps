@@ -1,0 +1,81 @@
+{
+  "batchesPanelAfter": "排在 #{number} 之後",
+  "batchesPanelAnswer": "在設定中回答",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "other": "批次 #{number} · {count} 項變更"
+  },
+  "batchesPanelChecking": "檢查中 {duration}",
+  "batchesPanelChecksFull": "檢查：{passed} 項已通過，{failed} 項未通過，{running} 項執行中，讀取於 {time}",
+  "batchesPanelChecksPassed": "{total} 項檢查中已通過 {passed} 項",
+  "batchesPanelChecksUnread": "尚未讀取檢查",
+  "batchesPanelClosed": "已關閉",
+  "batchesPanelClosedNumber": "#{number} 已關閉",
+  "batchesPanelColumnBatch": "批次",
+  "batchesPanelColumnChanges": "變更",
+  "batchesPanelColumnEnded": "結束",
+  "batchesPanelColumnFormed": "組成",
+  "batchesPanelColumnHeld": "暫緩次數",
+  "batchesPanelColumnTook": "耗時",
+  "batchesPanelCombining": "合成中",
+  "batchesPanelEmpty": "這個專案沒有批次",
+  "batchesPanelEndedTook": "{time} · 耗時 {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "other": "{count} 項未通過，第一項：{first}"
+  },
+  "batchesPanelFailedNames": "未通過的檢查：{names}",
+  "batchesPanelFix": "修正：{keys}",
+  "batchesPanelHeld": "已暫緩 {duration}",
+  "batchesPanelHoldChecks": "從 {time} 起暫緩：檢查未通過",
+  "batchesPanelHoldMergeWay": "從 {time} 起暫緩：專案的合併設定不允許這種合併方式",
+  "batchesPanelHoldRefused": "從 {time} 起暫緩：合併遭到拒絕（{detail}）",
+  "batchesPanelHoldRules": "從 {time} 起暫緩：專案的分支規則拒絕合併",
+  "batchesPanelHours": "{hours} 小時 {minutes} 分",
+  "batchesPanelInQueue": "在合併佇列中",
+  "batchesPanelLastDay": "最近一天",
+  "batchesPanelLeftOut": "未納入",
+  "batchesPanelLeftOutAhead": "{reason}（在 {key} 之後）",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "other": "{count} 項未納入"
+  },
+  "batchesPanelListLabel": "等待中和未納入的變更",
+  "batchesPanelMembersLabel": "這個批次的變更",
+  "batchesPanelMerged": "已合併",
+  "batchesPanelMergedNumber": "#{number} 已合併",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "other": "{count} 分鐘"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "other": "+{count} 項"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "other": "新批次 · {count} 項變更"
+  },
+  "batchesPanelNext": "下一批次 {time}",
+  "batchesPanelOpening": "開啟中",
+  "batchesPanelStateChecking": "從 {time} 起檢查中",
+  "batchesPanelStateCombining": "正在最新的主分支上重新合成這些變更",
+  "batchesPanelStateOpening": "正在開啟這個批次的 pull request",
+  "batchesPanelStateQueue": "檢查已通過，正在專案的合併佇列中等待",
+  "batchesPanelTitle": "批次",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "other": "{count} 項變更等待中"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "other": "{count} 項等待中"
+  },
+  "batchesPanelWaitingHeading": "等待中",
+  "batchesPanelWaitsAfter": "等 {key} 先合併",
+  "batchesPanelWaitsBatch": "加入 #{number} 之後的批次",
+  "batchesPanelWaitsFix": "作為修正加入暫緩的批次",
+  "batchesPanelWaitsGap": "{time} 加入下一個批次",
+  "batchesPanelWaitsNow": "加入下一個批次",
+  "batchesReadWords": "你已核准變更的批次"
+}

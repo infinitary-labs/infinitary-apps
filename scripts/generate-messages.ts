@@ -104,11 +104,21 @@ export const APP_PANEL_PREFIXES: Readonly<Record<string, string>> = {
   automation: "automationPanel",
   knowledge: "knowledgePanel",
   now: "nowPanel",
+  "batches-panel": "batchesPanel",
 };
 
-/** Where an app panel's messages compile to. */
+/**
+ * The app panels a built-in runbook shows, by the folder they are in
+ * (`builtinPanelSource` in src/shared/plugins/frameLib.ts, which
+ * `appPanels.test.ts` holds this to); every other is `src/panels/<id>/`.
+ */
+export const RUNBOOK_PANEL_DIRS: Readonly<Record<string, string>> = {
+  "batches-panel": "resources/runbooks/batches/panel",
+};
+
+/** Where an app panel's messages compile to: beside its panel, in its folder. */
 export function panelMessagesPath(panel: string): string {
-  return `src/panels/${panel}/messages.generated.ts`;
+  return `${RUNBOOK_PANEL_DIRS[panel] ?? `src/panels/${panel}`}/messages.generated.ts`;
 }
 
 /** The app panel a message belongs to, by its name's prefix; none for a shared message. */

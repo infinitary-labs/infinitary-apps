@@ -102,6 +102,7 @@ export const PANEL_READ_NAMES = [
   "forge.changes",
   "automation.list",
   "automation.kept",
+  "batches.list",
   "knowledge.collections",
   "knowledge.graph",
   "knowledge.concepts",

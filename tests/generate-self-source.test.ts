@@ -5,6 +5,7 @@ import { CARD_PRESENTATIONS } from "@shared/cards";
 import { fmEventSchema } from "@shared/events";
 import { invokeContract, pushContract } from "@shared/ipc";
 import { afterEach, describe, expect, it } from "vitest";
+import { panelMessagesPath, RUNBOOK_PANEL_DIRS } from "../scripts/generate-messages";
 import { claudeCrewmateTools, claudeToolsOf } from "../src/core/claude/claudeTaskTools";
 import { createCrewmateTools } from "../src/core/pi/crewmateTools";
 import { EMOTE_TOOL_NAME } from "../src/core/pi/emoteTool";
@@ -55,6 +56,12 @@ describe("generate-self-source", () => {
     expect(existsSync(join(selfSource, ".github/workflows/release.yml"))).toBe(true);
     expect(existsSync(join(selfSource, ".claude/skills/infinitary-design/SKILL.md"))).toBe(true);
     expect(existsSync(join(selfSource, "node_modules"))).toBe(false);
+    // docs/runbooks.md, "Built-in panels": a copy of a built-in runbook carries its
+    // panel's compiled words, which the repository never commits.
+    for (const panel of Object.keys(RUNBOOK_PANEL_DIRS))
+      expect(readFileSync(join(selfSource, panelMessagesPath(panel)), "utf8")).toMatch(
+        /export function \w+\(/,
+      );
 
     const map = JSON.parse(readFileSync(join(outDir, "self-map.json"), "utf8")) as {
       version: string;

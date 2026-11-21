@@ -1,0 +1,89 @@
+{
+  "batchesPanelAfter": "nach #{number}",
+  "batchesPanelAnswer": "In den Einstellungen antworten",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "one": "Bündel #{number} · {count} Änderung",
+    "other": "Bündel #{number} · {count} Änderungen"
+  },
+  "batchesPanelChecking": "prüft seit {duration}",
+  "batchesPanelChecksFull": "Überprüfungen: {passed} erfolgreich, {failed} fehlgeschlagen, {running} laufen, Stand {time}",
+  "batchesPanelChecksPassed": "{passed} von {total} Überprüfungen erfolgreich",
+  "batchesPanelChecksUnread": "Überprüfungen noch nicht gelesen",
+  "batchesPanelClosed": "geschlossen",
+  "batchesPanelClosedNumber": "#{number} geschlossen",
+  "batchesPanelColumnBatch": "Bündel",
+  "batchesPanelColumnChanges": "Änderungen",
+  "batchesPanelColumnEnded": "Beendet",
+  "batchesPanelColumnFormed": "Gebildet",
+  "batchesPanelColumnHeld": "Mal angehalten",
+  "batchesPanelColumnTook": "Dauer",
+  "batchesPanelCombining": "wird zusammengestellt",
+  "batchesPanelEmpty": "Keine Bündel in diesem Projekt",
+  "batchesPanelEndedTook": "{time} · Dauer {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "one": "{count} fehlgeschlagen: {first}",
+    "other": "{count} fehlgeschlagen, zuerst {first}"
+  },
+  "batchesPanelFailedNames": "Fehlgeschlagene Überprüfungen: {names}",
+  "batchesPanelFix": "Korrektur {keys}",
+  "batchesPanelHeld": "seit {duration} angehalten",
+  "batchesPanelHoldChecks": "Seit {time} angehalten: Die Überprüfungen sind fehlgeschlagen",
+  "batchesPanelHoldMergeWay": "Seit {time} angehalten: Die Einstellungen deines Projekts erlauben diese Art des Zusammenführens nicht",
+  "batchesPanelHoldRefused": "Seit {time} angehalten: Das Zusammenführen wurde abgelehnt ({detail})",
+  "batchesPanelHoldRules": "Seit {time} angehalten: Die Branch-Regeln deines Projekts lehnen das Zusammenführen ab",
+  "batchesPanelHours": "{hours} Std. {minutes} Min.",
+  "batchesPanelInQueue": "in der Merge-Warteschlange",
+  "batchesPanelLastDay": "Letzter Tag",
+  "batchesPanelLeftOut": "ausgelassen",
+  "batchesPanelLeftOutAhead": "{reason} (nach {key})",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "one": "{count} ausgelassen",
+    "other": "{count} ausgelassen"
+  },
+  "batchesPanelListLabel": "Wartende und ausgelassene Änderungen",
+  "batchesPanelMembersLabel": "Änderungen in diesem Bündel",
+  "batchesPanelMerged": "zusammengeführt",
+  "batchesPanelMergedNumber": "#{number} zusammengeführt",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "one": "{count} Min.",
+    "other": "{count} Min."
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "one": "+{count} weitere",
+    "other": "+{count} weitere"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "one": "Neues Bündel · {count} Änderung",
+    "other": "Neues Bündel · {count} Änderungen"
+  },
+  "batchesPanelNext": "nächstes {time}",
+  "batchesPanelOpening": "wird geöffnet",
+  "batchesPanelStateChecking": "Wird seit {time} überprüft",
+  "batchesPanelStateCombining": "Die Änderungen werden auf dem neuesten Hauptbranch neu zusammengestellt",
+  "batchesPanelStateOpening": "Der Pull Request des Bündels wird geöffnet",
+  "batchesPanelStateQueue": "Überprüfungen erfolgreich, wartet in der Merge-Warteschlange deines Projekts",
+  "batchesPanelTitle": "Bündel",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "one": "{count} Änderung wartet",
+    "other": "{count} Änderungen warten"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "one": "{count} wartet",
+    "other": "{count} warten"
+  },
+  "batchesPanelWaitingHeading": "wartend",
+  "batchesPanelWaitsAfter": "Wartet, bis {key} zuerst zusammengeführt ist",
+  "batchesPanelWaitsBatch": "Kommt ins Bündel nach #{number}",
+  "batchesPanelWaitsFix": "Kommt als Korrektur ins angehaltene Bündel",
+  "batchesPanelWaitsGap": "Kommt um {time} ins nächste Bündel",
+  "batchesPanelWaitsNow": "Kommt ins nächste Bündel",
+  "batchesReadWords": "deine Bündel freigegebener Änderungen"
+}

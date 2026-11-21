@@ -78,6 +78,7 @@ declare module "@infinitary/contracts" {
     | "forge.changes"
     | "automation.list"
     | "automation.kept"
+    | "batches.list"
     | "knowledge.collections"
     | "knowledge.graph"
     | "knowledge.concepts"
@@ -496,6 +497,77 @@ declare module "@infinitary/contracts" {
   /** \`automation.kept\`'s answer: every kept job, oldest first. */
   export type PanelKeptJobs = { jobs: PanelKeptJob[] };
 
+  /** A task in a project's batch: its key (null for a task no longer recorded) and title. */
+  export type PanelBatchTask = { taskId: string; key: string | null; title: string };
+
+  /**
+   * The open batch's checks as the app's last pass read them, at its
+   * version: counted by state, with the failed ones' names. Kept in memory,
+   * so it is null after a restart until the next pass reads it.
+   */
+  export type PanelBatchChecks = {
+    head: string;
+    at: number;
+    passed: number;
+    failed: number;
+    /** Queued or running. */
+    running: number;
+    failedNames: string[];
+  };
+
+  /**
+   * One project on batched pull requests, as \`batches.list\` gives it
+   * (docs/forge.md, "The Batches panel"). Times are epoch milliseconds.
+   */
+  export type PanelBatchRepo = {
+    repoId: string;
+    name: string;
+    /** The project it belongs to, as \`view.focusedProjectId\` names it. */
+    projectId: string | null;
+    /** Where the project lives, in the host's own name (GitHub), or null. */
+    place: string | null;
+    /** The batch gap in minutes, or null for none. */
+    gap: number | null;
+    /** When the next batch may form under the gap, or null for at once. */
+    nextBatchAt: number | null;
+    /** The approved changes waiting, in approval order. */
+    line: (PanelBatchTask & { at: number; afterKey: string | null; fix: boolean })[];
+    open: {
+      number: number | null;
+      url: string | null;
+      since: number;
+      members: PanelBatchTask[];
+      hold: {
+        reason: "checks" | "merge-way" | "rules";
+        at: number;
+        checks: string[];
+        detail: string | null;
+      } | null;
+      /** In the host's own merge queue. */
+      queued: boolean;
+      /** Its members changed: it is combined again. */
+      stale: boolean;
+      /** The declared fixes for its hold, by key. */
+      fixKeys: string[];
+      checks: PanelBatchChecks | null;
+    } | null;
+    leftOut: (PanelBatchTask & { reason: string; aheadKey: string | null })[];
+    /** The batches that ended in the last day, oldest first. */
+    finished: {
+      number: number;
+      url: string | null;
+      formed: number;
+      ended: number;
+      outcome: "merged" | "closed";
+      /** How many times it was held. */
+      holds: number;
+      members: PanelBatchTask[];
+    }[];
+  };
+
+  /** \`batches.list\`'s answer: each project on batched pull requests, or whose record still holds a batch. */
+  export type PanelBatches = { repos: PanelBatchRepo[] };
+
   /**
    * \`tasks.search\` (\`reads.subscribe("tasks.search", { query }, listener)\`):
    * closed work the board no longer lists - done before its seven days, or
@@ -866,23 +938,25 @@ declare module "@infinitary/contracts" {
                 ? PanelAutomationRules
                 : N extends "automation.kept"
                   ? PanelKeptJobs
-                  : N extends "knowledge.collections"
-                    ? PanelKnowledgeCollections
-                    : N extends "knowledge.graph"
-                      ? PanelKnowledgeGraph
-                      : N extends "knowledge.concepts"
-                        ? PanelKnowledgeConcepts
-                        : N extends "knowledge.findings"
-                          ? PanelKnowledgeFindings
-                          : N extends "knowledge.entry"
-                            ? PanelKnowledgeEntryRead
-                            : N extends "knowledge.directions"
-                              ? PanelKnowledgeDirections
-                              : N extends "knowledge.direction"
-                                ? PanelKnowledgeDirectionRead
-                                : N extends "settings.current"
-                                  ? PanelSettings
-                                  : PanelFeedLine[];
+                  : N extends "batches.list"
+                    ? PanelBatches
+                    : N extends "knowledge.collections"
+                      ? PanelKnowledgeCollections
+                      : N extends "knowledge.graph"
+                        ? PanelKnowledgeGraph
+                        : N extends "knowledge.concepts"
+                          ? PanelKnowledgeConcepts
+                          : N extends "knowledge.findings"
+                            ? PanelKnowledgeFindings
+                            : N extends "knowledge.entry"
+                              ? PanelKnowledgeEntryRead
+                              : N extends "knowledge.directions"
+                                ? PanelKnowledgeDirections
+                                : N extends "knowledge.direction"
+                                  ? PanelKnowledgeDirectionRead
+                                  : N extends "settings.current"
+                                    ? PanelSettings
+                                    : PanelFeedLine[];
 
   // --- the app's own record, through SQL -------------------------------------
 

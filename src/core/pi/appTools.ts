@@ -15,6 +15,7 @@ import {
 } from "@shared/actions";
 import type { KeymapSnapshot } from "@shared/keymap";
 import type { Layout } from "@shared/preferences";
+import { runbookGatesOf } from "@shared/surfaces";
 import { Type } from "typebox";
 import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
@@ -82,7 +83,12 @@ export async function actionRequest(
     const { held: knowledge } = await dispatch("inf:knowledge:enabled", []);
     const rules = await dispatch("inf:automation:list", []);
     const automation = rules.state === "ready" && rules.rules.length > 0;
-    const surfaces = listSurfaces(current as Layout, personal, { knowledge, automation });
+    const runbooks = await dispatch("inf:settings:runbooks:get", []);
+    const surfaces = listSurfaces(current as Layout, personal, {
+      knowledge,
+      automation,
+      ...runbookGatesOf(runbooks),
+    });
     const find = (name: string) => {
       const found =
         surfaces.find((s) => s.id === name) ??

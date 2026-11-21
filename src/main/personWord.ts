@@ -31,11 +31,13 @@ import {
   claimWordProfile,
   endWithRequester,
   endWithRequesterOffMain,
+  HELD_LINE,
   PERSON_WORD_ARG,
   type PersonReply,
   type PersonWord,
   readReply,
   replyLine,
+  saidHeld,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -133,7 +135,7 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
   if (hostPlatform() === "darwin") app.setActivationPolicy("accessory");
   // Its profile's one user before anything else it does, or it shows nothing.
   if (!claimWordProfile(process.argv, () => app.requestSingleInstanceLock())) {
-    process.stdout.write(replyLine("unshown"), () => app.exit(0));
+    process.stdout.write(HELD_LINE, () => app.exit(0));
     return;
   }
   endWithRequester(process.stdin, () => app.exit(0));
@@ -160,11 +162,17 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
  * name the app did not write is left as it is and the next name is tried; null where none is left.
  * Nothing is ever moved or removed, and only a folder the app made is ever written in, so the app
  * changes nothing but what it made in its own folder. Whether the folders let anyone else in by an
- * access list, which modes do not show, is judged as the copy starts (`keptToOwner`).
+ * access list, which modes do not show, is judged as the copy starts (`keptToOwner`). `from` is the
+ * first record to read, past one whose profile another word's copy holds; the answer names the
+ * record used, so the next ask can pass it.
  */
-export function wordProfileIn(dataDir: string, platform: NodeJS.Platform): string | null {
-  for (const name of WORD_RECORDS) {
-    const record = join(dataDir, name);
+export function wordProfileIn(
+  dataDir: string,
+  platform: NodeJS.Platform,
+  from = 0,
+): { profile: string; record: number } | null {
+  for (let index = from; index < WORD_RECORDS.length; index++) {
+    const record = join(dataDir, WORD_RECORDS[index] as string);
     const found = readRecord(record);
     if (found.kind === "else") {
       console.warn("[app] a word's profile's record holds something else; it is left alone");
@@ -173,14 +181,15 @@ export function wordProfileIn(dataDir: string, platform: NodeJS.Platform): strin
     if (found.kind === "ours") {
       const profile = join(dataDir, found.profile);
       if (ownFolder(profile, platform) && ownFolder(join(profile, WORD_TEMP_DIR), platform, true))
-        return profile;
+        return { profile, record: index };
       console.warn(
         "[app] the profile a word's record names is gone or not private; it is left alone",
       );
     }
     const made = makeProfile(dataDir, platform);
-    if (made !== null) writeRecord(record, basename(made));
-    return made;
+    if (made === null) return null;
+    writeRecord(record, basename(made));
+    return { profile: made, record: index };
   }
   return null;
 }
@@ -335,9 +344,12 @@ export function oneWordAtATime(): <T>(ask: () => Promise<T>) => Promise<T> {
  * word shown next can take it; and unshown where the copy could not be started or show its box, or
  * where its profile has no private place (`dataDir` null, as `wordProfilePrivate` decides, no
  * profile the app can call its own, `wordProfileIn`, or folders an access list opens to someone
- * else, `keptToOwner`), which then starts none. The copy's input stays open while this launch
- * lives, so the copy ends with it too. The copy uses the profile kept in the data folder, with its
- * temporary files in it from its start, and takes it for itself alone as it starts
+ * else, `keptToOwner`), which then starts none. A question whose copy finds its profile held by
+ * another launch's word (`HELD_LINE`) is asked again through the profile the next record names, so
+ * two launches refused at once each show the person their own Leave it or Open here; the Dock word
+ * says nothing a word already up does not, and counts as not shown. The copy's input stays open
+ * while this launch lives, so the copy ends with it too. The copy uses the profile kept in the data
+ * folder, with its temporary files in it from its start, and takes it for itself alone as it starts
  * (`claimWordProfile`). `launcher` starts this app as it was started (`wordLauncher`); `access`
  * reads Windows' access lists.
  */
@@ -351,20 +363,37 @@ export async function askPersonWord(
   },
 ): Promise<PersonReply | null> {
   const { signal, dataDir } = options;
-  if (signal?.aborted) return null;
   const platform = hostPlatform();
-  const profile = dataDir === null ? null : wordProfileIn(dataDir, platform);
-  if (profile === null) return "unshown";
-  const temp = join(profile, WORD_TEMP_DIR);
-  if (!(await keptToOwner([profile, temp], platform, options.access))) {
-    console.warn("[app] a word's profile lets someone else in; it is left alone and not used");
-    return "unshown";
+  let from = 0;
+  for (;;) {
+    if (signal?.aborted) return null;
+    const found = dataDir === null ? null : wordProfileIn(dataDir, platform, from);
+    if (found === null) return "unshown";
+    const temp = join(found.profile, WORD_TEMP_DIR);
+    if (!(await keptToOwner([found.profile, temp], platform, options.access))) {
+      console.warn("[app] a word's profile lets someone else in; it is left alone and not used");
+      return "unshown";
+    }
+    if (signal?.aborted) return null;
+    const reply = await showThrough(word, found.profile, temp, options.launcher, signal);
+    if (reply !== "held") return reply;
+    if (word !== "once-closed") return "unshown";
+    from = found.record + 1;
   }
-  if (signal?.aborted) return null;
+}
+
+/** One copy started on `profile` and its reply, or that its profile was held (`askPersonWord`). */
+function showThrough(
+  word: PersonWord,
+  profile: string,
+  temp: string,
+  launcher: { execPath: string; args: readonly string[] },
+  signal: AbortSignal | undefined,
+): Promise<PersonReply | "held" | null> {
   return new Promise((done) => {
     let settled = false;
     let takeAway = () => {};
-    const settle = (reply: PersonReply | null) => {
+    const settle = (reply: PersonReply | "held" | null) => {
       if (settled) return;
       settled = true;
       signal?.removeEventListener("abort", takeAway);
@@ -373,8 +402,8 @@ export async function askPersonWord(
     let copy: ChildProcess;
     try {
       copy = spawn(
-        options.launcher.execPath,
-        [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
+        launcher.execPath,
+        [...launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
         // Temporary files of its own, apart from the folder a later holder clears at its start:
         // named by every setting that chooses it, as a Mac or Linux takes `TMPDIR` first.
         {
@@ -414,7 +443,8 @@ export async function askPersonWord(
     });
     // Close, not exit: only once the copy's output is all read, or after a start that failed.
     copy.once("close", (code, ended) => {
-      settle(signal?.aborted ? null : readReply(word, said, code, ended));
+      if (signal?.aborted) settle(null);
+      else settle(saidHeld(said, code, ended) ? "held" : readReply(word, said, code, ended));
     });
   });
 }

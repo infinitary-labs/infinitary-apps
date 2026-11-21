@@ -6,7 +6,10 @@
  * deletes them (src/core/folderMove/due.ts).
  */
 
-/** The records naming the profile, the first, or the next where something else is at a name. */
+/**
+ * The records naming a profile: the first, or the next where something else is at a name or where
+ * another launch's question holds the profile the one before names.
+ */
 export const WORD_RECORDS = [
   "word-profile.json",
   "word-profile-2.json",

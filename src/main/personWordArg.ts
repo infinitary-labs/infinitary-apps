@@ -32,6 +32,17 @@ export function replyLine(reply: PersonReply): string {
 }
 
 /**
+ * What the copy says where another word's copy already holds the profile it was started with
+ * (`claimWordProfile`): its launch may then show a question through another profile.
+ */
+export const HELD_LINE = "held\n";
+
+/** Whether a copy that ended on its own with success said only that its profile was held. */
+export function saidHeld(said: string, code: number | null, signal: string | null): boolean {
+  return code === 0 && signal === null && said === HELD_LINE;
+}
+
+/**
  * The copy's reply from all it wrote and how it ended: a button only from a copy that ended on its
  * own with success and wrote exactly the line for one of its word's buttons (`replyLine`), and
  * unshown for anything else - a box it could not show, a copy that crashed or was ended, or words
@@ -122,7 +133,8 @@ const PROFILE_SWITCH = "--user-data-dir=";
  * its launch keeps in the data folder (`isWordProfileName`), for itself alone (`hold`, Electron's own
  * lock on a profile, the one a window takes on its data folder), so two words shown at once never
  * share one. False where it was started with no profile of a word, or another copy holds it; the
- * copy then shows nothing and says so, and its launch says the word in its own output.
+ * copy then shows nothing and says its profile is held (`HELD_LINE`), and its launch shows a question
+ * through the next recorded profile, or says the word in its own output.
  */
 export function claimWordProfile(argv: readonly string[], hold: () => boolean): boolean {
   const profile = argv.find((arg) => arg.startsWith(PROFILE_SWITCH))?.slice(PROFILE_SWITCH.length);

@@ -826,8 +826,8 @@ export async function startApp(
       // One word at a time (`oneWordAtATime`): a word taken away answers only once its copy has
       // ended and let the profile go (`askPersonWord`), so the next word waits for that, then asks
       // again whether it is still wanted, and takes the profile itself rather than finding it held
-      // and showing nothing. Two launches refused at once still share it: the second's copy says it
-      // was not shown, and that launch says its word in its output.
+      // and showing nothing. Two launches refused at once each ask their own question, the second
+      // through the next recorded profile; a second Dock word is said in that launch's output.
       const inTurn = oneWordAtATime();
       const tellPerson = (
         word: PersonWord,

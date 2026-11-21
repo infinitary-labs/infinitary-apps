@@ -48,12 +48,13 @@ function copyProgram(): string {
   writeFileSync(
     file,
     `
-    import { existsSync, writeFileSync } from "node:fs";
+    import { existsSync, rmSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
     import {
       claimWordProfile,
       endWithRequester,
       endWithRequesterOffMain,
+      HELD_LINE,
       replyLine,
     } from ${sourceUrl("personWordArg.ts")};
     const [mode, marks] = process.argv.slice(2);
@@ -61,7 +62,20 @@ function copyProgram(): string {
     const say = (text, code = 0) => process.stdout.write(text, () => process.exit(code));
     // Whether the temporary folder it was given was there before it ran anything.
     const tempAtStart = existsSync(process.env.TEMP ?? "");
-    if (!claimWordProfile(process.argv, () => true)) say(replyLine("unshown"));
+    // With "hold-profile" among its words it takes its profile for itself alone, as Electron's lock
+    // on a profile does, and lets it go as it ends; a copy that finds it held says so.
+    const holder = join(profile, "holder");
+    const hold = () => {
+      if (!process.argv.includes("hold-profile")) return true;
+      try {
+        writeFileSync(holder, "", { flag: "wx" });
+      } catch {
+        return false;
+      }
+      process.on("exit", () => rmSync(holder, { force: true }));
+      return true;
+    };
+    if (!claimWordProfile(process.argv, hold)) say(HELD_LINE);
     else if (mode === "late") {
       // The reply in two pieces, the last just before the copy ends.
       process.stdout.write("pressed:");
@@ -372,6 +386,62 @@ describe("a refused launch's copy that shows a word", () => {
     } finally {
       taken.abort();
       await release(marks);
+    }
+  });
+
+  it("shows a second launch's question through the next recorded profile while the first is held", async () => {
+    // The review of INF-4930: two launches refused at once each ask the person their own Leave it
+    // or Open here, rather than the second counting as Leave it unshown; a second Dock word says
+    // nothing the first does not, and its launch says it in output.
+    const dataDir = dataFolder();
+    const program = copyProgram();
+    const first = scratchDir("person-word-marks-");
+    const taken = new AbortController();
+    const asked = askPersonWord("once-closed", {
+      launcher: launcher(program, "wait", first, "hold-profile"),
+      dataDir,
+      signal: taken.signal,
+    });
+    try {
+      await until(() => existsSync(join(first, "pid")), "the first copy's start");
+      const second = scratchDir("person-word-marks-");
+      expect(
+        await askPersonWord("once-closed", {
+          launcher: launcher(program, "zero", second, "hold-profile"),
+          dataDir,
+        }),
+      ).toBe(0);
+      expect(existsSync(join(second, "started"))).toBe(true);
+      const firstProfile = recorded(dataDir);
+      const secondProfile = recorded(dataDir, WORD_RECORDS[1]);
+      expect(secondProfile).not.toBeNull();
+      expect(secondProfile).not.toBe(firstProfile);
+      const dock = scratchDir("person-word-marks-");
+      expect(
+        await askPersonWord("dock", {
+          launcher: launcher(program, "zero", dock, "hold-profile"),
+          dataDir,
+        }),
+      ).toBe("unshown");
+      expect(existsSync(join(dock, "started"))).toBe(false);
+      expect(kept(dataDir)).toEqual(
+        [WORD_RECORDS[0], WORD_RECORDS[1], ...profiles(dataDir)].sort(),
+      );
+      expect(profiles(dataDir)).toHaveLength(2);
+      taken.abort();
+      writeFileSync(join(first, "release"), "");
+      expect(await asked).toBeNull();
+      // Once the first has let its profile go, a later question uses a recorded profile again.
+      expect(
+        await askPersonWord("once-closed", {
+          launcher: launcher(program, "zero", scratchDir("person-word-marks-"), "hold-profile"),
+          dataDir,
+        }),
+      ).toBe(0);
+      expect(profiles(dataDir)).toHaveLength(2);
+    } finally {
+      taken.abort();
+      await release(first);
     }
   });
 

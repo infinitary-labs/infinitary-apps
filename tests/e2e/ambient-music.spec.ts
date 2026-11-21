@@ -39,7 +39,8 @@ function savedSound(userDataDir: string) {
 
 const settings = (page: Page) =>
   page.getByRole("button", { name: m.shellTopBarSettings(), exact: true });
-const sound = (page: Page) => page.locator("[data-ambient-control] button");
+// The sound button itself, never the style name in its rest pill.
+const sound = (page: Page) => page.locator("[data-ambient-control] > button");
 const appearance = (page: Page) =>
   page.getByRole("tab", { name: m.panelSettingsAppearance(), exact: true });
 
@@ -119,6 +120,8 @@ test("the toolbar volume track shares its value with Settings", async () => {
     await pressKey(sound(page), "ArrowRight");
     await expect(slider).toHaveValue(String(DEFAULT_AMBIENT_VOLUME + 5));
     await pressKey(sound(page), "Tab");
+    await expect(page.locator("[data-ambient-style-name]")).toBeFocused();
+    await pressKey(page.locator("[data-ambient-style-name]"), "Tab");
     await expect(slider).toBeFocused();
     await pressKey(slider, "Escape");
     await expect(sound(page)).toBeFocused();

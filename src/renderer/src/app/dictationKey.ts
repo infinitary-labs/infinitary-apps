@@ -16,6 +16,16 @@ type Press = {
   untilHold: ReturnType<typeof setTimeout> | null;
 };
 
+/**
+ * The saved dictation key while dictation is on: the one key a field that
+ * keeps its keys from the window lets on to `followDictationKey`, so it
+ * records into that field (docs/composer.md, "Voice").
+ */
+export function isDictationKey(event: Pick<KeyboardEvent, "code">): boolean {
+  const dictation = useShellStore.getState().dictation;
+  return dictation?.enabled === true && event.code === dictation.key;
+}
+
 /** The press the dictation key is in, dropped when a click takes the key (`dictationKeyTakenByPointer`). */
 let takenByPointer: (() => void) | null = null;
 

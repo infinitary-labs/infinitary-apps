@@ -4,5 +4,6 @@
     "one": "{count} line",
     "other": "{count} lines"
   },
+  "composerTooLongShorten": "Too long to send. Shorten it first.",
   "composerWordsOnly": "Only words can go until Infinitary is updated. Remove the pictures and files to send this."
 }

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { offerDictationField } from "../voice/dictationFields";
 import { voiceController } from "../voice/voiceController";
 import { TRANSCRIBE_FAILED } from "./composer";
 import { useShellStore } from "./store";
@@ -221,6 +222,74 @@ describe('a recording that ends (docs/composer.md, "Voice")', () => {
       transcribing: false,
       inputText: "Look at",
       voiceNotice: { kind: "error", message: TRANSCRIBE_FAILED },
+    });
+  });
+});
+
+// INF-5369's approved plan, piece 2: the dictation key writes into whichever
+// field has focus, and the main message when none does (docs/composer.md,
+// "Where the words go"). A card's reply stands for every such field here.
+describe("a recording into the field that has focus", () => {
+  let transcribed: { resolve: (text: string | null) => void };
+  const reply = { tagName: "TEXTAREA" };
+  const insert = vi.fn();
+  let withdraw: () => void;
+
+  beforeEach(() => {
+    vi.stubGlobal("window", {
+      infinitary: { voice: { micAccess: async () => ({ access: "granted" }) } },
+    });
+    vi.stubGlobal("document", { activeElement: reply });
+    vi.spyOn(voiceController, "start").mockResolvedValue(undefined);
+    vi.spyOn(voiceController, "finish").mockImplementation(
+      () =>
+        new Promise<string | null>((resolve) => {
+          transcribed = { resolve };
+        }),
+    );
+    insert.mockReset();
+    withdraw = offerDictationField({ element: () => reply as unknown as HTMLElement, insert });
+    useShellStore.setState({
+      ...READY,
+      inputText: "Fix the build",
+      inputCaret: 13,
+      focusRequest: 2,
+    });
+  });
+
+  afterEach(() => withdraw());
+
+  it("puts the words in the field that had focus as the press began, and leaves the main message alone", async () => {
+    state().startRecording();
+    await settle();
+    // Focus moving on mid-recording leaves the words where the press began.
+    vi.stubGlobal("document", { activeElement: null });
+    state().acceptRecording(true);
+    transcribed.resolve("ship it once checks pass");
+    await settle();
+
+    expect(insert).toHaveBeenCalledWith("ship it once checks pass");
+    expect(state()).toMatchObject({
+      transcribing: false,
+      inputText: "Fix the build",
+      focusRequest: 2,
+    });
+  });
+
+  it("hands the words to the main message when the field leaves before they come back", async () => {
+    state().startRecording();
+    await settle();
+    state().acceptRecording(true);
+    const field = state().voiceField;
+    if (field) state().dropVoiceField(field);
+    transcribed.resolve("and the docs");
+    await settle();
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(state()).toMatchObject({
+      voiceField: null,
+      inputText: "Fix the build and the docs ",
+      focusRequest: 3,
     });
   });
 });

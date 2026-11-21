@@ -106,7 +106,9 @@ A refused line keeps its draft and says why under the prompt; a draft also survi
 
 ⌃C with the prompt focused, or Stop in the status line, is the captain's interrupt of the running turn (`inf:task:interrupt`, `CrewSteer.interruptFromCrewmateTab`), on the path the first mate's `interrupt_crewmate` takes: the task stays active and steerable, the interrupt is an `interrupted` event with `via: "crewmate-tab"`, and the turn's end writes the feed line every interrupt does.
 With no turn running it refuses.
-Esc still hides the card; every other key in the prompt is the prompt's own.
+Esc still hides the card; every other key in the prompt but the dictation key is the prompt's own.
+The dictation key records into the prompt while it has focus, at its caret, with the mark row and microphone lines under it, and Esc while it records abandons the recording before it hides anything (`docs/composer.md`, "Where the words go").
+The prompt's limit is a card reply's 4,000 characters: from 80% the count shows under it, and past it the too-long words show and Enter sends nothing.
 There are no slash commands, no shell and no file editing.
 
 ## Keys

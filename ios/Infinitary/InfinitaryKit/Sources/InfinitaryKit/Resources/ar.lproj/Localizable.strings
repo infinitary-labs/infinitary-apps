@@ -543,6 +543,7 @@
 "commandUsageUnitWords" = "رموز, تكلفة, دولارات, تقدير";
 "commandWhatsNewShow" = "عرض ما الجديد";
 "commandWhatsNewShowWords" = "إصدار, ملاحظات, تغييرات, نسخة";
+"composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
 "crewFirstmateLabel" = "نائب القبطان - %1$@";

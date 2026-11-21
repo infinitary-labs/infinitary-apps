@@ -543,6 +543,7 @@
 "commandUsageUnitWords" = "토큰, 비용, 달러, 추정";
 "commandWhatsNewShow" = "새로운 기능 보기";
 "commandWhatsNewShowWords" = "릴리스, 노트, 변경, 버전";
+"composerTooLongShorten" = "너무 길어서 보낼 수 없어요. 먼저 줄여 주세요.";
 "composerWordsOnly" = "Infinitary가 업데이트될 때까지는 글만 보낼 수 있어요. 보내려면 사진과 파일을 빼 주세요.";
 "crewAPart" = "부분";
 "crewFirstmateLabel" = "일등항해사 - %1$@";

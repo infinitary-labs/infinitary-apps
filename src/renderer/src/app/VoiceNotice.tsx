@@ -2,6 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { useEffect } from "react";
 import { Button } from "../design";
 import { thisDesktop } from "../design/core/desktop";
+import type { DictationField } from "../voice/dictationFields";
 import { NoticeStrip } from "./NoticeStrip";
 import { useShellStore } from "./store";
 
@@ -14,9 +15,18 @@ const SIZE_MARK = "\u0000";
  * The quiet voice status strip under the input: first-use download consent
  * with progress (section 8), microphone access (docs/composer.md, "Voice"),
  * and capture/transcription errors. Hidden when there is nothing to say.
+ * It draws under the field the latest press of the dictation key writes
+ * into (`voiceField`): under the main input without `field`, under that
+ * field with it.
  */
-export function VoiceNotice({ width }: { width: string }) {
-  const notice = useShellStore((s) => s.voiceNotice);
+export function VoiceNotice({
+  width,
+  field = null,
+}: {
+  width: string;
+  field?: DictationField | null;
+}) {
+  const notice = useShellStore((s) => (s.voiceField === field ? s.voiceNotice : null));
   const startVoiceDownload = useShellStore((s) => s.startVoiceDownload);
   const dismissVoiceNotice = useShellStore((s) => s.dismissVoiceNotice);
   const recheckMicAccess = useShellStore((s) => s.recheckMicAccess);

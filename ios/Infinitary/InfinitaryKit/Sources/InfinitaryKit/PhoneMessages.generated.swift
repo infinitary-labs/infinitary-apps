@@ -569,6 +569,7 @@ public enum PhoneMessages {
     public static func `commandWhatsNewShow`() -> String { PhoneWords.format("commandWhatsNewShow", []) }
     public static func `commandWhatsNewShowWords`() -> String { PhoneWords.format("commandWhatsNewShowWords", []) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
+    public static func `composerTooLongShorten`() -> String { PhoneWords.format("composerTooLongShorten", []) }
     public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
     public static func `crewAPart`() -> String { PhoneWords.format("crewAPart", []) }
     public static func `crewFirstmateLabel`(`state`: String) -> String { PhoneWords.format("crewFirstmateLabel", [`state`]) }
@@ -4275,6 +4276,7 @@ extension PhoneWords {
         "commandWhatsNewShow": [],
         "commandWhatsNewShowWords": [],
         "composerLines": ["count"],
+        "composerTooLongShorten": [],
         "composerWordsOnly": [],
         "crewAPart": [],
         "crewFirstmateLabel": ["state"],

@@ -543,6 +543,7 @@
 "commandUsageUnitWords" = "Token, Kosten, Dollar, Schätzung";
 "commandWhatsNewShow" = "Neuigkeiten anzeigen";
 "commandWhatsNewShowWords" = "Versionshinweise, Neuigkeiten, Änderungen, Version";
+"composerTooLongShorten" = "Zu lang zum Senden. Kürze es zuerst.";
 "composerWordsOnly" = "Bis Infinitary aktualisiert ist, können nur Worte gesendet werden. Entferne die Bilder und Dateien, um dies zu senden.";
 "crewAPart" = "Ein Teil";
 "crewFirstmateLabel" = "Erster Offizier – %1$@";

@@ -3,55 +3,11 @@ import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { DICTATION_KEY, hintOnThisComputer, holdPastTheHold } from "./dictation";
 import { launchApp } from "./launch";
 import { latestServedTurn } from "./providerRequest";
+import { provideSpeech, waitForSpeechCapture } from "./speech";
 
-// The offscreen audio device has no speech: supply PCM frames at the worklet
-// boundary, and the voice helper's model is a stand-in that answers these
-// words (launchApp's `voiceTranscript`). Real key handling, recording
-// lifecycle, the trip to the helper process, transcript delivery, prompt
-// and conversation remain in play.
+// The stand-in voice helper answers these words (launchApp's `voiceTranscript`),
+// and `provideSpeech` supplies the PCM it hears.
 const TRANSCRIPT = "an ocean of stars";
-
-async function provideSpeech(page: import("@playwright/test").Page) {
-  await page.evaluate(() => {
-    const capture = window as unknown as { speechCaptureReady: boolean };
-    capture.speechCaptureReady = false;
-    const RealWorklet = window.AudioWorkletNode;
-    window.AudioWorkletNode = class extends RealWorklet {
-      private readonly fakeAudioTimer: ReturnType<typeof setInterval>;
-      constructor(context: BaseAudioContext, name: string, options?: AudioWorkletNodeOptions) {
-        super(context, name, options);
-        capture.speechCaptureReady = false;
-        let suppliedSamples = 0;
-        this.fakeAudioTimer = setInterval(() => {
-          if (!this.port.onmessage) return;
-          this.port.onmessage(
-            new MessageEvent("message", { data: new Float32Array(1024).fill(0.25) }),
-          );
-          suppliedSamples += 1024;
-          // Half a second of supplied PCM, not a wall-clock wait or model-init count.
-          capture.speechCaptureReady = suppliedSamples >= context.sampleRate / 2;
-        }, 10);
-      }
-      override disconnect() {
-        capture.speechCaptureReady = false;
-        clearInterval(this.fakeAudioTimer);
-        super.disconnect();
-      }
-    };
-  });
-}
-
-// Optimistic controls do not prove the mic is open. Own the supplied-audio prerequisite:
-// half a second of PCM since the recording opened, past the shortest clip the window keeps.
-async function waitForSpeechCapture(page: import("@playwright/test").Page) {
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => (window as unknown as { speechCaptureReady: boolean }).speechCaptureReady,
-      ),
-    )
-    .toBe(true);
-}
 
 test("a transcribed hold and a toggled recording both return focus to the end of the prompt", async () => {
   const app = await launchApp({ withMockProvider: true, voiceTranscript: TRANSCRIPT });

@@ -32,9 +32,11 @@ import {
   useState,
 } from "react";
 import { ComposerNoticeView } from "../app/ComposerNotice";
+import { useDictationField } from "../app/dictationField";
 import { useCommandKeys } from "../app/keyHints";
 import { pressInputOf } from "../app/pressInput";
 import { useShellStore } from "../app/store";
+import { VoiceNotice } from "../app/VoiceNotice";
 import { replyDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
 import { prefersReducedMotion } from "../character/reducedMotion";
@@ -48,7 +50,7 @@ import {
   useFileDrop,
 } from "../design/core/FileControls";
 import { installedBindings } from "../design/core/installedKeys";
-import { PastedTextChip } from "../design/voice/VoiceInput";
+import { DictationMark, PastedTextChip } from "../design/voice/VoiceInput";
 import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
 import type { CollectAnswers } from "./PrototypeBody";
@@ -302,6 +304,12 @@ export function ReplyRow({
   const [focus, setFocus] = useState(false);
   const replyKeys = useCommandKeys("focus.card-reply");
   const field = useRef<HTMLTextAreaElement | null>(null);
+  // The dictation key writes here while the field has focus (docs/composer.md, "Voice").
+  const dictation = useDictationField(
+    field,
+    () => useShellStore.getState().replyDrafts[cardId] ?? "",
+    (text) => useShellStore.getState().setReplyDraft(cardId, text),
+  );
   const destination = useMemo(() => replyDestination(cardId, () => field.current), [cardId]);
   const files = useFileIntake(destination);
   const drop = useFileDrop(files);
@@ -486,6 +494,7 @@ export function ReplyRow({
             // Held, not disabled, while the reply sends: a disabled field
             // drops the focus to the page.
             readOnly={sending}
+            recording={dictation.recording}
             lineCap={REPLY_LINE_CAP}
             canSend={canSend}
             onSend={send}
@@ -494,8 +503,11 @@ export function ReplyRow({
             onAttach={(items) => attachReplyImages(cardId, items)}
             onPictureTooBig={() => showReplyNotice(cardId, "picture-too-big")}
             onKeyDown={(event) => {
+              // The dictation key goes on to record here, and Escape while
+              // this field records abandons it (docs/composer.md, "Voice").
+              if (dictation.keyDown(event)) return;
               // Only the opted-in layer lends an unused Escape to the window's
-              // existing chain. Every other key stays isolated from hold-to-talk.
+              // existing chain. Every other key stays the field's own.
               if (
                 event.key === "Escape" &&
                 !event.defaultPrevented &&
@@ -511,6 +523,9 @@ export function ReplyRow({
               width: "100%",
               fontSize: "var(--text-sm)",
               lineHeight: "var(--leading-body)",
+              // Its draft stays on screen while it records, dimmed as the main input's is.
+              opacity: dictation.recording ? 0.55 : 1,
+              transition: "opacity var(--dur-med) var(--ease-out)",
             }}
           />
         </div>
@@ -533,6 +548,15 @@ export function ReplyRow({
           )}
         </span>
       </div>
+      <DictationMark
+        recording={dictation.recording}
+        transcribing={dictation.transcribing}
+        onAbandon={() => {
+          useShellStore.getState().abandonRecording();
+          field.current?.focus();
+        }}
+        onAccept={() => useShellStore.getState().acceptRecording()}
+      />
       {limitBand(length, CARD_REPLY_MAX_CHARS) !== "none" && (
         <div
           data-card-reply-limit=""
@@ -553,6 +577,7 @@ export function ReplyRow({
           onDismiss={() => dismissReplyNotice(cardId)}
         />
       )}
+      <VoiceNotice width="100%" field={dictation.field} />
       {error && (
         <p role="alert" style={{ margin: 0, color: "var(--danger)", fontSize: "var(--text-xs)" }}>
           {error}

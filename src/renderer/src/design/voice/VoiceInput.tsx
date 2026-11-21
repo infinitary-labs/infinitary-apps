@@ -116,6 +116,60 @@ function Waveform({ level = 0.6, height = 28 }: { level?: number; height?: numbe
   );
 }
 
+/** The dictation mark's one row: its buttons, and its line while the words come back. */
+const MARK_HEIGHT = 28;
+
+/**
+ * The dictation mark under a field other than the main input while the
+ * dictation key records into it (design skill `components/voice/
+ * VoiceInput.prompt.md`, "Dictating into another field"): abandon, the
+ * waveform and accept while it records, then the transcribing line in the
+ * same row until its words land; nothing otherwise.
+ */
+export function DictationMark({
+  recording,
+  transcribing,
+  onAbandon,
+  onAccept,
+}: {
+  recording: boolean;
+  transcribing: boolean;
+  onAbandon: () => void;
+  onAccept: () => void;
+}) {
+  if (!recording && !transcribing) return null;
+  return (
+    <div
+      data-dictation-mark={recording ? "recording" : "transcribing"}
+      style={{ display: "flex", alignItems: "center", gap: ROW_GAP, height: MARK_HEIGHT }}
+    >
+      {recording ? (
+        <>
+          <IconButton
+            label={m.uiVoiceAbandon()}
+            tone="danger"
+            size={MARK_HEIGHT}
+            {...fixedKeys("Escape")}
+            onClick={onAbandon}
+          >
+            {VIco.x}
+          </IconButton>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Waveform height={24} />
+          </div>
+          <IconButton label={m.uiVoiceAccept()} tone="ok" size={MARK_HEIGHT} onClick={onAccept}>
+            {VIco.check}
+          </IconButton>
+        </>
+      ) : (
+        <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+          {m.shellPromptTranscribing()}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export type VoiceInputMode = "idle" | "recording";
 
 export type VoiceInputProps = {

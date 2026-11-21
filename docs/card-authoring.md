@@ -1345,7 +1345,7 @@ A declaration grants no execution permission; a successful merge creates durable
 ## Review finding attribution
 
 An independent reviewer puts its ask-user findings to the captain on its own decision card (INF-4338, direction D); the host labels any decision card from an independent review Review finding.
-It asks only a real tradeoff, and each question carries a plain table of it: one row per option, as built included, one column per product-level heading where the options differ, and a High, Medium or Low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
+It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a plain table of it: one row per option, as built included, one column per product-level heading where the options differ, and a High, Medium or Low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
 Findings it settled itself are listed in a fold, and again on the builder's merge card.
 Its head names the review task, as every crewmate card's does, and the card draws the builder's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
 The captain's choice goes to the builder the review reads, and a reply under the card goes to the reviewer.

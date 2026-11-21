@@ -20,9 +20,9 @@ import { cardReply, expectCardSeen, expectEndedCard, showCard } from "./stack";
  * keep what the author wrote, but a closed card stops updating."
  *
  * Promised result: the card's own script draws the record's task count
- * through the `sql` read and redraws when a task is added; a read it did
- * not declare is refused; once its author ends it, it stops updating and
- * keeps what it drew. Data: the app's own record, its tasks made by
+ * through the `sql` read and redraws when a task is added; a read or a
+ * view it did not declare is refused; once its author ends it, it stops
+ * updating and keeps what it drew. Data: the app's own record, its tasks made by
  * commissioning crewmates through the stand-in. Completion signals: the
  * lines the card's script fills, and the task board's own count. Platform
  * prerequisites: none beyond the hermetic launch. Shared resources: none.
@@ -39,6 +39,7 @@ async function liveLines(page: Page) {
     updates: Number(await line("updates")),
     board: await line("board"),
     undeclared: await line("undeclared"),
+    otherView: await line("other-view"),
     stopped: await line("stopped"),
   };
 }
@@ -73,7 +74,12 @@ test("a crewmate's card reads the record live while it is open, and stops once i
     await expect.poll(async () => (await liveLines(page)).count).toBeGreaterThan(0);
     await expect
       .poll(async () => liveLines(page))
-      .toMatchObject({ board: "live", undeclared: "read_not_declared", stopped: "open" });
+      .toMatchObject({
+        board: "live",
+        undeclared: "read_not_declared",
+        otherView: "sql_view_not_declared",
+        stopped: "open",
+      });
   });
 
   await test.step("a new task redraws the count", async () => {

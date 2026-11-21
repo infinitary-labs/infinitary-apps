@@ -22,11 +22,15 @@ export const LIVE_READS_DECLARED = { reads: ["tasks.board"], sql: ["v_tasks_v1"]
 /** A read a custom panel may name that this card did not declare. */
 export const LIVE_READS_UNDECLARED = "quota.snapshot";
 
+/** A published view this card did not declare. */
+export const LIVE_READS_OTHER_VIEW = "v_usage_v1";
+
 /**
  * The body: four lines its script fills. `data-count` is the record's task
  * count, `data-updates` how many answers the count read has delivered,
  * `data-board` turns `live` on the board's first value, `data-undeclared`
- * the undeclared read's refusal code, and `data-stopped` the code that ends
+ * the undeclared read's refusal code, `data-other-view` the `sql` read's
+ * answer for a view it did not declare, and `data-stopped` the code that ends
  * the count's subscription, if one does.
  */
 function liveReadsBody(): string {
@@ -37,6 +41,7 @@ function liveReadsBody(): string {
     "<p>Answers: <span data-updates>0</span></p>" +
     "<p>Board: <span data-board>waiting</span></p>" +
     "<p>Undeclared read: <span data-undeclared>pending</span></p>" +
+    "<p>Undeclared view: <span data-other-view>pending</span></p>" +
     "<p>Count read: <span data-stopped>open</span></p>" +
     "<script>(function () {" +
     "function put(name, text) { document.querySelector('[data-' + name + ']').textContent = String(text); }" +
@@ -47,6 +52,8 @@ function liveReadsBody(): string {
     `inf.subscribe("${LIVE_READS_DECLARED.reads[0]}", {}, function () { put('board', 'live'); });` +
     `inf.subscribe("${LIVE_READS_UNDECLARED}", {}, function () { put('undeclared', 'answered'); })` +
     ".ready.catch(function (error) { put('undeclared', error.code); });" +
+    `inf.subscribe("sql", { sql: "SELECT COUNT(*) AS n FROM ${LIVE_READS_OTHER_VIEW}" }, function (value) {` +
+    "put('other-view', value.refused || 'answered'); });" +
     "})();</script></figure>"
   );
 }

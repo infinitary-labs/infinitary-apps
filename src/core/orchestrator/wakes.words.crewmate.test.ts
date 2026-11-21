@@ -1055,7 +1055,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        '[fm-op] your merge card merged PR #1061. The task stays open. Continue from that result. Dropping this task does not close that pull request. With this merge the app put up its own card asking the captain for each required action: INF-5309 "Install the new build", INF-5310 "Rebuild the setup". Put up no card of your own for them and do not ask the captain for them again. Carry on.',
+        '[fm-op] your merge card merged PR #1061. The task stays open. Continue from that result. Dropping this task does not close that pull request. The app asks the captain for each of these required actions on its own card: INF-5309 "Install the new build", INF-5310 "Rebuild the setup". Put up no card of your own for them and do not ask the captain for them again. Carry on.',
     },
     {
       name: "merged bare",

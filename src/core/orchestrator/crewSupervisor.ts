@@ -449,13 +449,18 @@ export class CrewSupervisor {
         if (outcome.ok) void this.watch.sweepGates(this.now());
         const still = this.options.tasks.get(taskId);
         if (!still || TaskService.isClosed(still)) return;
-        // The required actions this merge put up on the app's own cards
-        // (finishContinued), named so the crewmate asks none again (INF-5396).
+        // The required actions the app now asks the captain for on its own
+        // cards (finishContinued), named by the words this task declared so
+        // the crewmate asks none again (INF-5396).
         const asked = outcome.ok
           ? this.options.tasks
               .listWithRequirementFrom(taskId, [])
-              .filter((row) => row.status === "open" && row.delivery?.captainAction)
-              .map((row) => ({ key: row.key, title: row.title }))
+              .filter((row) => row.status === "open")
+              .flatMap((row) =>
+                (row.delivery?.captainAction?.requirements ?? [])
+                  .filter((entry) => entry.source === taskId)
+                  .map((entry) => ({ key: row.key, title: entry.action.title })),
+              )
           : [];
         // A host result is not new captain guidance about the kept approval.
         void this.steer

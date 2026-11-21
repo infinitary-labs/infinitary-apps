@@ -663,7 +663,7 @@ function askedWords(asked: readonly { key: string; title: string }[] | undefined
   if (!asked?.length) return "";
   const named = asked.map((one) => `${one.key} "${one.title}"`).join(", ");
   // i18n-exempt: served only to the crewmate's model, which reads English
-  return ` With this merge the app put up its own card asking the captain for each required action: ${named}. Put up no card of your own for them and do not ask the captain for them again.`;
+  return ` The app asks the captain for each of these required actions on its own card: ${named}. Put up no card of your own for them and do not ask the captain for them again.`;
 }
 
 /** How a confirmed `merge-continued` steer opens, after its `[fm-op]` mark. */

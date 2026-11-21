@@ -3,6 +3,7 @@ import {
   THREAD_BROWSER_HELD,
 } from "../../../src/core/orchestrator/captainWakes";
 import { BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
+import { PAGE_UNANSWERED_OPENING } from "../../../src/core/prompts/pageUnanswered";
 import { HERE } from "../../../src/shared/deviceNames";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import {
@@ -352,6 +353,12 @@ export const MOCK_BROWSER_RAISE_CARD = "Please put that choice on a new card.";
 export const MOCK_BROWSER_RAISED_TITLE = "The thanks line can name the page";
 export const MOCK_BROWSER_RAISED_STEP = "Press Send again and read the thanks line.";
 export const MOCK_BROWSER_RAISED_DEFAULT = "Name the page";
+/**
+ * What it reports when woken because nothing answers at its page
+ * (docs/task-browser.md, "When nothing answers"): the journey brings the
+ * site back itself, standing in for the crewmate starting its build.
+ */
+export const MOCK_UNANSWERED_REPORT = "Nothing answered at the sign-up page, so I start it again.";
 
 /** Separate captain messages put the answer and replacement in a deliberate order. */
 function browserCardExchange(
@@ -715,6 +722,15 @@ function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
   if (!ask) return undefined;
   const [, url, name] = ask as unknown as [string, string, string];
   const messages = providerMessages(body);
+  // Woken because nothing answers at its page: it reports once.
+  const woken = messages.findLastIndex(
+    (message) => message.role === "user" && message.text.includes(PAGE_UNANSWERED_OPENING),
+  );
+  if (woken !== -1) {
+    return toolAnswers(messages, woken).length === 0
+      ? [{ name: "report", args: { text: MOCK_UNANSWERED_REPORT } }]
+      : undefined;
+  }
   const exchange = browserCardExchange(body, messages, 1);
   if (exchange) return exchange.length ? exchange : undefined;
   const answers = toolAnswers(messages);

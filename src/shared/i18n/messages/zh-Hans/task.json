@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "船员已关闭它",
   "taskBrowserStoppedGone": "它的页面已停止工作",
   "taskBrowserStoppedIdle": "闲置 30 分钟后已停止",
+  "taskBrowserStoppedQuit": "Infinitary 退出时已停止",
   "taskBrowserStoppedTaskClosed": "任务关闭时已停止",
   "taskGroupBacklog": "待办",
   "taskGroupLanded": "完成 · 7 天",

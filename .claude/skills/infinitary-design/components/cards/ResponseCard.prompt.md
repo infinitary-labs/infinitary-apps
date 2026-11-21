@@ -188,6 +188,7 @@ It reads the micro label `BROWSER`, then the line - the site in mono `--fg-1` (`
 The line is one line and gives way with an ellipsis; the button never does.
 When the browser the card was emitted with has stopped and a newer one took its place, or Infinitary has quit since, the line reads `this card's browser has stopped` with no site, and the button still opens the view, which says the same.
 A click opens the task's browser view at the front of the stack; the card stays behind it, unanswered, with its buttons, its answers and its merge as they were, and its author is told nothing.
+When the task's browser has stopped and may be opened again, the click also opens it again, as the view's Open again would (`TaskBrowser.prompt.md`, "From a card"); when nothing answers at its page, its author is woken once ("When nothing answers").
 It is navigation, never a card action: it runs no effect, the body's script can neither see nor press it, it stays enabled while the card's buttons wait on a request, and a past card does not draw it.
 A browser button may instead open a page from the task's project, such as a finished game's `Play`: the same strip, the micro label `BROWSER`, then the file's path in mono `--fg-1` (`index.html`) and in `--fg-3` `· opens in this task's browser`, then the author's label as the small `secondary` Button.
 It needs no browser open when the card goes up, and it stays on a note whose task has closed.

@@ -774,6 +774,20 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "The captain returned control of this task's browser, on store.example.com. Your earlier refs are gone: run `infinitary-browser-axi` for a fresh look at the page as it is now, including anything the captain signed in to, and check what changed before you carry on. You said that next you would: Add the order to the basket. If you asked the captain to pay or submit something, read what the page says happened and keep only the result, such as a reference. If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain on a card to check in the browser. Until the seller or its payment service shows the result, say plainly you do not know whether it went through: a missing booking or charge proves nothing, so never guess either way or suggest trying again. Returning control gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.\nAs they returned control, the captain left you these words in your request card's reply field. Do what they need first, and answer them in your next card or report. Their words, verbatim:\nI chose Individual, but should this use my company?",
     },
   ],
+  "page-unanswered": [
+    {
+      name: "the captain waits at a page nothing answers at",
+      wake: {
+        facts: {
+          kind: "page-unanswered",
+          site: "localhost:5173",
+          url: "http://localhost:5173/settings",
+        },
+      },
+      words:
+        "The captain opened your task's page in its browser at http://localhost:5173/settings and is waiting there, but nothing answers at localhost:5173: a connection to it was refused on the computer that runs this task, so the program that served it has stopped. If the captain should still see it, start it again, running it in the background so it outlives your command, and open http://localhost:5173/settings again with `infinitary-browser-axi open <url>`; the captain's view shows the page once it loads. You are told this once for this outage.",
+    },
+  ],
   "repair-assessed": [
     {
       name: "changed work with its report",

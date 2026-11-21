@@ -54,7 +54,7 @@ import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { askedFromAView } from "../askedFromAView";
 import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import { keepImages } from "../attachments";
-import type { BrowserReturned } from "../browser/taskBrowsers";
+import type { BrowserReturned, PageUnanswered } from "../browser/taskBrowsers";
 import type { IntegrationAskTaken } from "../integrations";
 import { type MessageFile, withPastedFiles } from "../overflow";
 import { currentChange } from "../storage/changeProjection";
@@ -1312,6 +1312,29 @@ export class CardActions {
     void this.core.steer.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
       // No conversation to resume: the ladder reads the task on its own clock.
       console.warn("[crew] browser return's steer not delivered:", caught);
+    });
+  }
+
+  /**
+   * Nothing answers at the page the captain opened in a task's browser
+   * (docs/task-browser.md, "When nothing answers"): its crewmate's one
+   * steer for that outage, through the task's durable lane. While a turn of
+   * its crewmate runs the steer still goes, and the lane hands it to the
+   * crewmate at its next chance, so a view that says it was asked is true.
+   */
+  pageUnanswered(taskId: string, unanswered: PageUnanswered): void {
+    const tasks = this.core.options.tasks;
+    const record = tasks.get(taskId);
+    if (!record || record.status === "done" || record.status === "dropped") return;
+    if (this.core.options.inbox.woken(taskId, unanswered.once)) return;
+    tasks.turns.endIdle(taskId);
+    const wake: TypedWake = {
+      facts: { kind: "page-unanswered", site: unanswered.site, url: unanswered.url },
+      once: unanswered.once,
+    };
+    void this.core.steer.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
+      // No conversation to resume: the ladder reads the task on its own clock.
+      console.warn("[crew] page-unanswered steer not delivered:", caught);
     });
   }
 

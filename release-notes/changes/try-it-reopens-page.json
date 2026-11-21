@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "try-it-reopens-page",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Try it brings a card's page back, even after a restart",
+      "body": "Pressing a card's Try it button now opens its task's stopped browser again at the page the crewmate left, also after Infinitary restarts. When nothing answers at that page because the program behind it stopped, the browser says so and its crewmate is asked once to start it again.",
+      "picture": {
+        "dark": "try-it-reopens-page-dark.webp",
+        "light": "try-it-reopens-page-light.webp",
+        "alt": "A task's browser opened from a card's Try it button, with a line under its row saying nothing answers at the page and its crewmate was asked to start it again"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

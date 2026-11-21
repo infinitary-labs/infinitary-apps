@@ -26,6 +26,7 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
+import { pageUnansweredWords } from "../prompts/pageUnanswered";
 import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 
 /** The facts of the captain's own moves. */
@@ -142,6 +143,18 @@ export type CaptainFacts =
       captainText?: string;
       /** The notes on the task's running page that left with the line (docs/task-browser.md, "Pointing at a page"). */
       notes?: CardNote[];
+    }
+  | {
+      /**
+       * The captain opened a card's page in the task's browser and nothing
+       * answers at its loopback address (docs/task-browser.md, "When
+       * nothing answers"): its crewmate's one steer for that outage.
+       */
+      kind: "page-unanswered";
+      /** The page's host and port. */
+      site: string;
+      /** The page's address, bare of its query and fragment. */
+      url: string;
     }
   | {
       /**
@@ -486,5 +499,6 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
       ...(facts.answers?.length ? [REPLY_SETTINGS_HEAD, ...cardAnswerLines(facts.answers)] : []),
     ].join("\n"),
   "browser-returned": (facts) => renderBrowserReturned(facts),
+  "page-unanswered": (facts) => pageUnansweredWords(facts),
   "answer-missing": (facts) => renderAnswerMissing(facts),
 };

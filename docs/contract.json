@@ -44359,6 +44359,10 @@
                       "where"
                     ]
                   },
+                  "unanswered": {
+                    "type": "boolean",
+                    "const": true
+                  },
                   "session": {
                     "type": "string"
                   },
@@ -44400,6 +44404,10 @@
                   },
                   "at": {
                     "type": "number"
+                  },
+                  "quit": {
+                    "type": "boolean",
+                    "const": true
                   },
                   "session": {
                     "type": "string"
@@ -75265,6 +75273,10 @@
                               "where"
                             ]
                           },
+                          "unanswered": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -75306,6 +75318,10 @@
                           },
                           "at": {
                             "type": "number"
+                          },
+                          "quit": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "session": {
                             "type": "string"
@@ -75692,6 +75708,32 @@
                     "required": [
                       "kind",
                       "site",
+                      "once"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "unanswered"
+                      },
+                      "site": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "once": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "site",
+                      "url",
                       "once"
                     ]
                   },
@@ -97034,6 +97076,10 @@
                               "where"
                             ]
                           },
+                          "unanswered": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -97075,6 +97121,10 @@
                           },
                           "at": {
                             "type": "number"
+                          },
+                          "quit": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "session": {
                             "type": "string"

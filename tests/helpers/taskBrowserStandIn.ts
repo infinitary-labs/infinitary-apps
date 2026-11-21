@@ -3,6 +3,7 @@ import type { ConnectionGuardOptions } from "../../src/core/browser/connectionGu
 import type { BrowserNode } from "../../src/core/browser/outline";
 import {
   type BrowserReturned,
+  type PageUnanswered,
   TaskBrowsers,
   type TaskBrowsersOptions,
 } from "../../src/core/browser/taskBrowsers";
@@ -341,12 +342,19 @@ export function harness(
     privateSites?: TaskBrowsersOptions["privateSites"];
     /** Set when the host should open no page, as one that cannot start a browser. */
     refuseOpen?: () => boolean;
+    /** Where stopped pages are kept across a restart; none when absent. */
+    keptPages?: TaskBrowsersOptions["kept"];
+    /** What a loopback port answers; unknown, and so nothing, when absent. */
+    probe?: TaskBrowsersOptions["probe"];
+    /** This run's name, so a test can start the browsers again after a restart. */
+    session?: string;
   } = {},
 ) {
   const pages: FakePage[] = [];
   const notes: string[] = [];
   const changes: string[] = [];
   const returned: { taskId: string; returned: BrowserReturned }[] = [];
+  const unanswered: { taskId: string; unanswered: PageUnanswered }[] = [];
   const pending: { ms: number; fn: () => void; cancelled: boolean }[] = [];
   const evidence = scratchDir("infinitary-browser-");
   /** Each browser's connection guard, as the stand-in for the real one on loopback. */
@@ -385,6 +393,11 @@ export function harness(
     note: (taskId, text) => notes.push(`${taskId}: ${text}`),
     onChange: (taskId) => changes.push(taskId),
     onReturned: (taskId, wake) => returned.push({ taskId, returned: wake }),
+    onUnanswered: (taskId, wake) => unanswered.push({ taskId, unanswered: wake }),
+    // A unit test never reaches a real port: unknown changes nothing.
+    probe: options.probe ?? (async () => "unknown"),
+    ...(options.keptPages ? { kept: options.keptPages } : {}),
+    ...(options.session ? { session: options.session } : {}),
     ...(options.max !== undefined ? { max: options.max } : {}),
     ...(options.signIns ? { signIns: options.signIns } : {}),
     ...(options.now ? { now: options.now } : {}),
@@ -425,7 +438,7 @@ export function harness(
       else pending.push(entry);
     }
   };
-  return { browsers, pages, notes, changes, evidence, fire, returned, guards, kept };
+  return { browsers, pages, notes, changes, evidence, fire, returned, unanswered, guards, kept };
 }
 
 /**

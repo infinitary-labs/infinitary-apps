@@ -259,12 +259,15 @@ public enum PhoneMessages {
     public static func `cardBrowserPageWatching`(`site`: String) -> String { PhoneWords.format("cardBrowserPageWatching", [`site`]) }
     public static func `cardBrowserPageYours`(`site`: String) -> String { PhoneWords.format("cardBrowserPageYours", [`site`]) }
     public static func `cardBrowserPageYoursOff`(`off`: String, `site`: String) -> String { PhoneWords.format("cardBrowserPageYoursOff", [`off`, `site`]) }
+    public static func `cardBrowserQuitLead`() -> String { PhoneWords.format("cardBrowserQuitLead", []) }
     public static func `cardBrowserRecord`() -> String { PhoneWords.format("cardBrowserRecord", []) }
     public static func `cardBrowserReload`() -> String { PhoneWords.format("cardBrowserReload", []) }
     public static func `cardBrowserReport`() -> String { PhoneWords.format("cardBrowserReport", []) }
     public static func `cardBrowserReturnWordsTooLong`() -> String { PhoneWords.format("cardBrowserReturnWordsTooLong", []) }
     public static func `cardBrowserStop`() -> String { PhoneWords.format("cardBrowserStop", []) }
     public static func `cardBrowserSurface`() -> String { PhoneWords.format("cardBrowserSurface", []) }
+    public static func `cardBrowserUnansweredAsked`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredAsked", [`site`]) }
+    public static func `cardBrowserUnansweredWorking`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredWorking", [`site`]) }
     public static func `cardBrowserWord`() -> String { PhoneWords.format("cardBrowserWord", []) }
     public static func `cardCrewmateLog`() -> String { PhoneWords.format("cardCrewmateLog", []) }
     public static func `cardCrewmateSendFailed`() -> String { PhoneWords.format("cardCrewmateSendFailed", []) }
@@ -3585,6 +3588,7 @@ public enum PhoneMessages {
     public static func `taskBrowserStoppedCrewmate`() -> String { PhoneWords.format("taskBrowserStoppedCrewmate", []) }
     public static func `taskBrowserStoppedGone`() -> String { PhoneWords.format("taskBrowserStoppedGone", []) }
     public static func `taskBrowserStoppedIdle`() -> String { PhoneWords.format("taskBrowserStoppedIdle", []) }
+    public static func `taskBrowserStoppedQuit`() -> String { PhoneWords.format("taskBrowserStoppedQuit", []) }
     public static func `taskBrowserStoppedTaskClosed`() -> String { PhoneWords.format("taskBrowserStoppedTaskClosed", []) }
     public static func `taskGroupBacklog`() -> String { PhoneWords.format("taskGroupBacklog", []) }
     public static func `taskGroupLanded`() -> String { PhoneWords.format("taskGroupLanded", []) }
@@ -4040,12 +4044,15 @@ extension PhoneWords {
         "cardBrowserPageWatching": ["site"],
         "cardBrowserPageYours": ["site"],
         "cardBrowserPageYoursOff": ["off", "site"],
+        "cardBrowserQuitLead": [],
         "cardBrowserRecord": [],
         "cardBrowserReload": [],
         "cardBrowserReport": [],
         "cardBrowserReturnWordsTooLong": [],
         "cardBrowserStop": [],
         "cardBrowserSurface": [],
+        "cardBrowserUnansweredAsked": ["site"],
+        "cardBrowserUnansweredWorking": ["site"],
         "cardBrowserWord": [],
         "cardCrewmateLog": [],
         "cardCrewmateSendFailed": [],
@@ -7366,6 +7373,7 @@ extension PhoneWords {
         "taskBrowserStoppedCrewmate": [],
         "taskBrowserStoppedGone": [],
         "taskBrowserStoppedIdle": [],
+        "taskBrowserStoppedQuit": [],
         "taskBrowserStoppedTaskClosed": [],
         "taskGroupBacklog": [],
         "taskGroupLanded": [],

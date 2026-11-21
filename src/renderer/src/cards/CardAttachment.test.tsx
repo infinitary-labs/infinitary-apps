@@ -4,7 +4,7 @@ import type { TaskDetail } from "@shared/tasks";
 import { ElementType, parseDocument } from "htmlparser2";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { attachmentReading, CardAttachmentStrip } from "./CardAttachment";
+import { attachmentReading, CardAttachmentStrip, pressReopens } from "./CardAttachment";
 
 type Node = {
   type: string;
@@ -168,6 +168,34 @@ describe('a card\'s live attachment (docs/task-browser.md, "From a card")', () =
     const plain = strip(attachmentReading(ATTACHMENT, detail({ ...OPEN, control: "waiting" })));
     expect(marked(plain, "data-card-attachment")?.attribs?.style ?? "").not.toContain("-dim");
     expect(buttons(plain).map(textOf)).toEqual(["Try it"]);
+  });
+
+  it('says a browser open at Infinitary\'s quit stopped when it quit (docs/task-browser.md, "After a restart")', () => {
+    const quit = {
+      ...OPEN,
+      state: "stopped" as const,
+      stopped: "gone" as const,
+      quit: true as const,
+      at: 1,
+    };
+    expect(
+      textOf(marked(strip(attachmentReading(ATTACHMENT, detail(quit))), "data-attachment-line")),
+    ).toBe("localhost:5173 · stopped when Infinitary quit");
+  });
+
+  it("opens a stopped browser again on the press only while it may be opened again", () => {
+    const stopped = { ...OPEN, state: "stopped" as const, stopped: "idle" as const, at: 1 };
+    const record = (browser: TaskDetail["browser"], status = "open") =>
+      ({ ...detail(browser), status }) as TaskDetail;
+    expect(pressReopens(record(stopped), false)).toBe(true);
+    // Open: the press only opens the view.
+    expect(pressReopens(record(OPEN), false)).toBe(false);
+    // Stopped by the task's close, or the task done: nothing is started again.
+    expect(pressReopens(record({ ...stopped, stopped: "task-closed" }), false)).toBe(false);
+    expect(pressReopens(record(stopped, "done"), false)).toBe(false);
+    // Changes on the first mate's computer are off, or the record has not answered.
+    expect(pressReopens(record(stopped), true)).toBe(false);
+    expect(pressReopens(null, false)).toBe(false);
   });
 
   it("draws no line until the task's record answers", () => {

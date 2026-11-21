@@ -257,12 +257,14 @@ export async function startConversations(options: {
           ...(options.leftBehind ? { leftBehind: options.leftBehind } : {}),
           evidenceDir: (task) => tasks.folders(task).evidence,
           taskFolder: (task) => tasks.folders(task).root,
+          heldTasks: () => tasks.list().filter((task) => !tasks.state(task).closed),
           workingCopy: (task) => tasks.folders(task).work,
           // A command that reached this computer keeps its shell waiting for its answer.
           answering: (shell) => jobs.answering(shell),
           tell,
           ask: options.ask,
           log: (line) => log(`browser: ${line}`),
+          ...(options.homeChanges ? { homeChanges: options.homeChanges } : {}),
         }).catch((error: unknown) => {
           log(`no task channel, so no crewmate here has a browser: ${messageOf(error)}`);
           return undefined;

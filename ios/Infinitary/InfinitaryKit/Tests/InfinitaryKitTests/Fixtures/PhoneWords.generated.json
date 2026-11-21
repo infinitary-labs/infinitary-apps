@@ -1090,7 +1090,7 @@
   {"said":{"m":"panelChangeKeptJobCheck"},"words":"Check a kept job"},
   {"said":{"m":"panelChangeLanguage"},"words":"Language"},
   {"said":{"m":"panelChangeModelPins"},"words":"Which model each kind of task uses"},
-  {"said":{"m":"panelChangeNotAsked"},"words":"Only your own click or key press in this panel changes a setting, one change each time. Nothing was changed."},
+  {"said":{"m":"panelChangeNotAsked"},"words":"Only your own click or key press in this panel changes a setting. Nothing was changed."},
   {"said":{"m":"panelChangeNotGranted","a":{"setting":"‹setting›"}},"words":"This panel may not change ‹setting›. Nothing was changed."},
   {"said":{"m":"panelChangeNotifications"},"words":"Notifications"},
   {"said":{"m":"panelChangeOrigin"},"words":"A panel never changes where a project's code lives or where it is pushed. Nothing was changed."},

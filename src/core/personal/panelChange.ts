@@ -13,7 +13,7 @@ export type PanelChangeAnswer = { ok: true } | { ok: false; text: string };
 
 /**
  * A panel's change of one setting (docs/ui-plugins.md, "Changing settings"):
- * the window already held it to one change per press in the panel, so here
+ * the window already held it to the captain's focus in the panel, so here
  * the core reads the panel's grant again, builds the request the first mate's
  * own would be built from, and runs it as the captain, the panel named on the
  * feed. A refusal is an answer, never a thrown error, so the panel shows it.

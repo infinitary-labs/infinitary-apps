@@ -36,7 +36,7 @@
   "panelChangeKeptJobCheck": "检查保留的作业",
   "panelChangeLanguage": "语言",
   "panelChangeModelPins": "每类任务使用的模型",
-  "panelChangeNotAsked": "只有你在此面板中亲自点按或按键才会更改设置，每次一项。没有任何更改。",
+  "panelChangeNotAsked": "只有你在此面板中亲自点按或按键才会更改设置。没有任何更改。",
   "panelChangeNotGranted": "此面板不能更改 {setting}。没有任何更改。",
   "panelChangeNotifications": "通知",
   "panelChangeOrigin": "面板从不更改项目代码所在的位置或推送到的位置。没有任何更改。",

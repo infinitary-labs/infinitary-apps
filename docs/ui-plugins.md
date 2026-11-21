@@ -627,11 +627,15 @@ A panel can change the captain's settings through the same lines the first mate 
 `manifest.json` `"actions": ["theme", "window-size"]` names the catalog lines a panel may change, a grant like `moves` (`capabilitiesSchema.actions`, `PLUGIN_HOST_SUPPORT.actions`).
 The host serves only lines on its allowlist, `PANEL_CHANGES` (`src/shared/panelChanges.ts`), where every catalog line answers yes or gives an excuse from the catalog's closed set of grounds.
 The allowlist covers how the app looks and sounds and how work runs: projects, models, accounts and automations.
-It never covers a sign-in or key, an answer that widens the captain's consent, a deletion, or a move of the first mate's record; a manifest naming such a line is refused as an unservable grant (`actions:<name>`).
+It never covers a sign-in or key, an answer on a consent card, a deletion, or a move of the first mate's record; a manifest naming such a line is refused as an unservable grant (`actions:<name>`).
+Some lines it covers widen how far the app goes on its own, and a panel granted them may change them on the captain's click: a project's `autonomy` (merging without asking) and `requireChecks`, the cost limit (including lifting it), and an automation's prompt, which runs as the captain's scheduled words.
+The approval card names each such setting, as it names every other.
 The consent card of a panel from elsewhere lists each setting on a line of its own, worded in the captain's language (`panelChangesWords`), and an update that adds one asks again, because the canonical block differs.
 A panel with the grant gets `PanelProps.settings.change(action, value)` (`panelSettings.ts`), whose value is the line's own value, as the first mate's `app_change` takes it.
-A change counts only from the captain's click or key in the page, gated as a task move is, and one press makes one change: a change with no press since the panel's last one answers "Only your own click or key press in this panel changes a setting, one change each time.
+A change counts only while the captain's click or key is in the page: the panel's frame holds the window's focus, the same gate as a task move.
+A change asked without it answers "Only your own click or key press in this panel changes a setting.
 Nothing was changed.", and nothing is written.
+Focus is the gate rather than a count of presses, because a frame's own script can send `pressed` itself, so while the captain's focus stays in the panel it may make more than one granted change.
 The core reads the grant again on every change (`inf:plugins:settings:change`, `src/core/personal/panelChange.ts`), builds the request with the first mate's own builder (`actionRequest`), and runs the line's channel as the captain, so Settings, the first mate and a panel change a setting the same way.
 Where a project's code lives and where it is pushed never change from a panel: its folder (`path`), its git address (`origin`) and whether new work goes to the original project or a fork (`contributionDestination`) stay on the app's exact-change card.
 The feed names the panel: "Captain, in the Look panel · Theme set to light" (`feedCaptainSetInPanel`), and a settled run from a panel never merges with one from Settings.

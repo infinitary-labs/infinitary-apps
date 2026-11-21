@@ -1328,7 +1328,7 @@
 "panelChangeKeptJobCheck" = "保持中のジョブを確認";
 "panelChangeLanguage" = "言語";
 "panelChangeModelPins" = "タスクの種類ごとのモデル";
-"panelChangeNotAsked" = "設定を変更できるのは、このパネル内でのあなた自身のクリックやキー操作だけで、1回につき1つです。何も変更していません。";
+"panelChangeNotAsked" = "設定を変更できるのは、このパネル内でのあなた自身のクリックやキー操作だけです。何も変更していません。";
 "panelChangeNotGranted" = "このパネルは %1$@ を変更できません。何も変更していません。";
 "panelChangeNotifications" = "通知";
 "panelChangeOrigin" = "パネルはプロジェクトのコードの場所やプッシュ先を変更しません。何も変更していません。";

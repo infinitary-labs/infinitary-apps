@@ -36,7 +36,7 @@
   "panelChangeKeptJobCheck": "Behaltenen Auftrag prüfen",
   "panelChangeLanguage": "Sprache",
   "panelChangeModelPins": "Welches Modell jede Art von Aufgabe nutzt",
-  "panelChangeNotAsked": "Nur dein eigener Klick oder Tastendruck in diesem Panel ändert eine Einstellung, jeweils eine Änderung. Nichts wurde geändert.",
+  "panelChangeNotAsked": "Nur dein eigener Klick oder Tastendruck in diesem Panel ändert eine Einstellung. Nichts wurde geändert.",
   "panelChangeNotGranted": "Dieses Panel darf {setting} nicht ändern. Nichts wurde geändert.",
   "panelChangeNotifications": "Mitteilungen",
   "panelChangeOrigin": "Ein Panel ändert nie, wo der Code eines Projekts liegt oder wohin er gepusht wird. Nichts wurde geändert.",

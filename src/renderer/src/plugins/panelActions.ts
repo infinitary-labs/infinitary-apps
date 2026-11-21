@@ -12,7 +12,7 @@ import {
 import { PANEL_KEY_CLICK_ACTION } from "@shared/plugins/panelActionIds";
 import { z } from "zod";
 import { remindOfPanelClick } from "../app/keyReminderState";
-import { controllerOf, frameHoldsFocus } from "./frames/frameFocus";
+import { frameHoldsFocus } from "./frames/frameFocus";
 import { framePanelCardAction, PANEL_CARD_ACTIONS, PANEL_CARD_VIEW_ACTIONS } from "./panelCards";
 import {
   framePointAction,
@@ -126,13 +126,8 @@ export function framePanelActions(page: FramePanelPage): {
     }),
   );
   const tasks = frameTasksAction(panelTasks(panel, gate));
-  // Every press begun in the page reaches the window before a change counts it.
-  const heard = () => {
-    const element = frame();
-    return (element ? controllerOf(element)?.heard() : undefined) ?? Promise.resolve();
-  };
   const changes = (page.settings?.length ?? 0) > 0;
-  const settings = frameSettingsAction(panelSettings(panel, gate, heard));
+  const settings = frameSettingsAction(panelSettings(panel, gate));
   const rail = frameRailAction(drawn, page.decides);
   const { server, onBody, integrations } = page;
   const onPage = card === undefined;

@@ -162,8 +162,8 @@ and answer `false` (a move answers why). Merge and discard are never moves.
 With `"actions": ["theme", "window-size"]` in `manifest.json` it gets
 `settings.change(action, value)`, which changes one of those settings the way the first
 mate's `app_change` does, with the same value (`PanelChangeSetting` lists the settings a panel
-may name). It counts only from the captain's own click or key in the panel, one change per
-press, and answers `{ ok: true }` or `{ ok: false, text }` in the app's words; the feed names
+may name). It counts only while the captain's own click or key is in the panel, as a move
+does, and answers `{ ok: true }` or `{ ok: false, text }` in the app's words; the feed names
 the panel. A panel drawn on another computer's window or the phone gets no `settings`.
 Any panel, whatever it reads, may start the captain's next message: `point.draft(words)`
 puts one line at the head of the message field for him to finish, from his own click or key,

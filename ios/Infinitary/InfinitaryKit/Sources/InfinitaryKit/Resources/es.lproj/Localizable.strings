@@ -1328,7 +1328,7 @@
 "panelChangeKeptJobCheck" = "Comprobar un trabajo conservado";
 "panelChangeLanguage" = "Idioma";
 "panelChangeModelPins" = "Qué modelo usa cada tipo de tarea";
-"panelChangeNotAsked" = "Solo tu propio clic o pulsación de tecla en este panel cambia un ajuste, un cambio cada vez. No se cambió nada.";
+"panelChangeNotAsked" = "Solo tu propio clic o pulsación de tecla en este panel cambia un ajuste. No se cambió nada.";
 "panelChangeNotGranted" = "Este panel no puede cambiar %1$@. No se cambió nada.";
 "panelChangeNotifications" = "Notificaciones";
 "panelChangeOrigin" = "Un panel nunca cambia dónde está el código de un proyecto ni adónde se envía. No se cambió nada.";

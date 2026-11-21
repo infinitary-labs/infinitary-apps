@@ -73,7 +73,7 @@ The captain's click alone is no ground: a control with none of these is a catalo
 - Settings writes through the same action-catalog dispatcher as `app_change project-settings`, and a refused configure is a feed line, not a silent revert.
 - A project change from a click applies only on the app's exact-change card (Apply change), which refuses if the saved project changed since the offer ([projects-and-working-copies.md](projects-and-working-copies.md), `docs/fleet.md` "Changing a project").
 - Sharing switches and purge, panels consent, recovery and ask-first merge stay the captain's.
-- A panel the captain agreed may change named settings runs those lines as the captain, on the captain's own press in it, one change per press; the host allowlist `PANEL_CHANGES` (`src/shared/panelChanges.ts`) gives every line a yes or a grounded excuse, and the feed names the panel (`docs/ui-plugins.md`, "Changing settings").
+- A panel the captain agreed may change named settings runs those lines as the captain, while the captain's own click or key is in it, the same focus gate as a task move; the host allowlist `PANEL_CHANGES` (`src/shared/panelChanges.ts`) gives every line a yes or a grounded excuse, and the feed names the panel (`docs/ui-plugins.md`, "Changing settings").
 
 ## Compositions
 

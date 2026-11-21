@@ -15,11 +15,10 @@ import { shownCardFrame } from "./stack";
  * A panel changes the settings it was granted the way the first mate does
  * (docs/ui-plugins.md, "Changing settings"), driven through the look fixture
  * under tests/fixtures/panel-settings/: its change on the captain's click
- * lands and Activity names the panel, its change as it opens and a second
- * change on one click write nothing, and a setting its manifest does not
- * name is refused. Once as a panel of his own, once added from elsewhere
- * after its approval card lists each setting.
- * plugins/panelSettings.test.ts holds the one-change-per-press refusal.
+ * lands and Activity names the panel, its change as it opens with no click
+ * of his writes nothing, and a setting its manifest does not name is
+ * refused. Once as a panel of his own, once added from elsewhere after its
+ * approval card lists each setting.
  */
 
 const PANEL = "look";
@@ -55,15 +54,13 @@ async function changesOnlyOnHisClick(page: Page): Promise<void> {
       .toBe(true);
   });
 
-  await test.step("one click makes one change: the second on the same click writes nothing", async () => {
-    // e2e-frame-actions: native -- This journey proves one real press allows one change.
+  await test.step("each later click in it changes the setting it names", async () => {
+    // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
     await look.locator("[data-look-dark]").click();
     await expect.poll(async () => (await appearance(page)).theme).toBe("dark");
     const before = await appearance(page);
-    // e2e-frame-actions: native -- This journey proves one real press allows one change.
-    await look.locator("[data-look-twice]").click();
-    await expect(look.locator("[data-look-said]")).toHaveText(`changed / ${CHANGE_NOT_ASKED}`);
-    // The first change landed, at the default size before; the theme stayed dark.
+    // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
+    await look.locator("[data-look-larger]").click();
     await expect.poll(() => appearance(page)).toEqual({ ...before, size: 110 });
   });
 
@@ -90,7 +87,7 @@ test.describe("a panel of the captain's own changes the settings it names", () =
     await launched.close();
   });
 
-  test("changes a setting on his click only, one per click, and Activity names it", async () => {
+  test("changes a setting on his click only, and Activity names it", async () => {
     test.setTimeout(120_000);
     await changesOnlyOnHisClick(launched.page);
   });

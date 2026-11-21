@@ -2,15 +2,15 @@ import * as m from "@shared/i18n/messages.generated";
 import type { PanelMoveResult, PanelSettingChanges } from "@shared/personal/contracts";
 import { actionNameSchema } from "@shared/plugins/manifest";
 import { z } from "zod";
-import { pressesSoFar } from "../app/presses";
 
 /**
  * Changing a setting from a panel, the window's side (docs/ui-plugins.md,
  * "Changing settings"): `PanelProps.settings`, for a panel whose manifest
  * names settings in its `actions` grant and that the captain agreed to when
- * he added it. A change counts only from his own click or key in that page
- * (`gate`, as a task move does), and one press makes one change: a second
- * change before his next press writes nothing and says so. The core reads
+ * he added it. A change counts only while his own click or key is in that
+ * page (`gate`, as a task move does): the panel's frame holds the window's
+ * focus. Focus is the gate, not a count of presses, because a panel's own
+ * script can post the window's press notice itself. The core reads
  * the grant again and runs the setting's own catalog line as the captain,
  * naming the panel on the feed.
  */
@@ -33,20 +33,14 @@ const changeSchema = z.strictObject({
   value: z.record(z.string(), z.unknown()),
 });
 
-/** The press each panel last spent on a change, by its id: one press, one change. */
-const spent = new Map<string, number>();
-
 /**
  * `PanelProps.settings` for one page of `panel`. `gate` says the captain's
- * own click or key is on this page now; `heard` resolves once every press
- * begun in the page has reached the window, so the count it reads is whole.
+ * own click or key is on this page now.
  */
 export function panelSettings(
   panel: { id: string },
   gate: () => Promise<boolean>,
-  heard: () => Promise<void>,
   change: SettingChanger = changeForReal,
-  presses: () => number = pressesSoFar,
 ): PanelSettingChanges {
   return {
     change: async (action, value) => {
@@ -56,10 +50,6 @@ export function panelSettings(
         throw new Error(`settings.change: ${issue?.path.join(".") || "change"}: ${issue?.message}`);
       }
       if (!(await gate())) return { ok: false, text: m.panelChangeNotAsked() };
-      await heard();
-      const press = presses();
-      if (press <= (spent.get(panel.id) ?? 0)) return { ok: false, text: m.panelChangeNotAsked() };
-      spent.set(panel.id, press);
       try {
         return await change(panel.id, parsed.data.action, parsed.data.value);
       } catch (caught) {

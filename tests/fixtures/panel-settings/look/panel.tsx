@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 /**
  * The look fixture (tests/e2e/panel-settings-change.spec.ts): a panel granted two
  * settings, the theme and the window's size, that changes them on the
- * captain's press - and tries to on its own as it opens, twice on one press,
- * and once for a setting its manifest does not name.
+ * captain's press - and tries to on its own as it opens, and once for a
+ * setting its manifest does not name.
  */
 const say = (result: { ok: true } | { ok: false; text: string }) =>
   result.ok ? "changed" : result.text;
@@ -39,14 +39,12 @@ export default function Panel({ settings }: PanelProps) {
         Dark
       </Button>
       <Button
-        data-look-twice=""
-        onClick={async () => {
-          const first = await settings.change("window-size", { size: 110 });
-          const second = await settings.change("theme", { theme: "light" });
-          setSaid(`${say(first)} / ${say(second)}`);
-        }}
+        data-look-larger=""
+        onClick={() =>
+          void settings.change("window-size", { size: 110 }).then((r) => setSaid(say(r)))
+        }
       >
-        Larger and light
+        Larger
       </Button>
       <Button
         data-look-unlisted=""

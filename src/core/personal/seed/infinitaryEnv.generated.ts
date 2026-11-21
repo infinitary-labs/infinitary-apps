@@ -1448,8 +1448,8 @@ declare module "@infinitary/contracts" {
   /**
    * The settings a panel that names them (\`manifest.json\` \`"actions"\`) changes,
    * and for one from elsewhere that the captain agreed to. A change counts only
-   * from their own click or key in this panel or card, one change for each
-   * press; it runs as theirs, through the same checks as Settings, and
+   * while their own click or key is in this panel or card, as a task move does;
+   * it runs as theirs, through the same checks as Settings, and
    * Activity names the panel it came from. \`value\` is what the setting's
    * catalog line takes, such as \`{ theme: "light" }\` for \`theme\`; a refusal
    * comes back as the app's words, with nothing changed.
@@ -1804,7 +1804,7 @@ declare module "@infinitary/contracts" {
     moves?: true;
     /**
      * The app settings it changes (\`PanelProps.settings\`), each only on their
-     * click or key in it, one change for each press. A panel from elsewhere
+     * click or key in it, as a move is. A panel from elsewhere
      * asks them once, when they add it, and its approval card names each one.
      */
     actions?: PanelChangeSetting[];

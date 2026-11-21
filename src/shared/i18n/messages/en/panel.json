@@ -36,7 +36,7 @@
   "panelChangeKeptJobCheck": "Check a kept job",
   "panelChangeLanguage": "Language",
   "panelChangeModelPins": "Which model each kind of task uses",
-  "panelChangeNotAsked": "Only your own click or key press in this panel changes a setting, one change each time. Nothing was changed.",
+  "panelChangeNotAsked": "Only your own click or key press in this panel changes a setting. Nothing was changed.",
   "panelChangeNotGranted": "This panel may not change {setting}. Nothing was changed.",
   "panelChangeNotifications": "Notifications",
   "panelChangeOrigin": "A panel never changes where a project's code lives or where it is pushed. Nothing was changed.",

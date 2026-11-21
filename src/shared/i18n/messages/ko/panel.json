@@ -36,7 +36,7 @@
   "panelChangeKeptJobCheck": "유지 중인 작업 확인",
   "panelChangeLanguage": "언어",
   "panelChangeModelPins": "작업 종류별 모델",
-  "panelChangeNotAsked": "이 패널 안에서 직접 클릭하거나 키를 누를 때만 설정이 바뀌며, 한 번에 하나씩입니다. 아무것도 바뀌지 않았습니다.",
+  "panelChangeNotAsked": "이 패널 안에서 직접 클릭하거나 키를 누를 때만 설정이 바뀝니다. 아무것도 바뀌지 않았습니다.",
   "panelChangeNotGranted": "이 패널은 {setting}을(를) 바꿀 수 없습니다. 아무것도 바뀌지 않았습니다.",
   "panelChangeNotifications": "알림",
   "panelChangeOrigin": "패널은 프로젝트 코드가 있는 곳이나 푸시하는 곳을 바꾸지 않습니다. 아무것도 바뀌지 않았습니다.",

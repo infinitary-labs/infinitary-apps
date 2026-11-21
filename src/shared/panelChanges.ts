@@ -6,14 +6,20 @@ import type { ActionName } from "./actions";
  * (primitives/app-actions.md, "A panel's changes"; docs/ui-plugins.md,
  * "Changing settings"): the host allowlist a panel's manifest `actions`
  * grant is read against. Every line answers: `true`, a panel granted it may
- * change it on the captain's own press in the panel, or an excuse whose
+ * change it while the captain's own click or key is in the panel, or an excuse whose
  * ground comes from the catalog's closed set, as the first mate's do. A new
  * line answers here too, or the catalog does not compile.
  *
  * The grant covers how the app looks and sounds, and how work runs
  * (projects, models, accounts, automations), each named on the panel's
- * approval card. Nothing a panel may change uses a credential, widens the
- * captain's consent, deletes, or moves the first mate's record.
+ * approval card. Nothing a panel may change uses a credential, answers a
+ * consent card, deletes, or moves the first mate's record. Some of what it
+ * may change does widen how far the app goes on its own, each by the
+ * captain's choice of the setting on that card: a project's merging without
+ * asking (`autonomy`) or with no checks required (`requireChecks`), a lifted
+ * cost limit, and an automation's prompt, which runs as the captain's
+ * scheduled words. Where a project's code lives or is pushed never changes
+ * from a panel (`personal/panelChange.ts`).
  *
  * This file imports only types, so a panel's frame and the phone read the
  * names without the catalog itself.

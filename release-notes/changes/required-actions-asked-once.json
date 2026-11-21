@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "required-actions-asked-once",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Something you need to do after a merge is asked once",
+      "body": "When a merge leaves its task open, the crewmate now hears which of your after-merge steps the app already asked you about. Before, it could put up a second card asking for the same step.",
+      "noPicture": "This removes duplicate cards; the remaining required-action card looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

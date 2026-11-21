@@ -149,6 +149,11 @@ export type DeliveryFacts =
       head?: string;
       /** What else on the task is still open, as a clause, which kept it open past the merge (INF-2525). */
       open?: string;
+      /**
+       * The required actions this merge put up as the app's own tasks and
+       * cards (INF-5396 finding 1), so the crewmate asks the captain none again.
+       */
+      asked?: { key: string; title: string }[];
       text: string;
     }
   | {
@@ -748,6 +753,18 @@ function because(words: string | undefined): string {
   return `: ${/[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`}`;
 }
 
+/**
+ * The required actions a continuing merge put up on the app's own cards
+ * (INF-5396 finding 1), as the sentences that keep its crewmate from asking
+ * the captain for them a second time.
+ */
+function askedWords(asked: readonly { key: string; title: string }[] | undefined): string {
+  if (!asked?.length) return "";
+  const named = asked.map((one) => `${one.key} "${one.title}"`).join(", ");
+  // i18n-exempt: served only to the crewmate's model, which reads English
+  return ` The app asks the captain for each of these required actions on its own card: ${named}. Put up no card of your own for them and do not ask the captain for them again.`;
+}
+
 /** How a confirmed `merge-continued` steer opens, after its `[fm-op]` mark. */
 export const MERGE_CONTINUED_LEAD = "your merge card merged";
 
@@ -870,7 +887,7 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
           : `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "no merge card declared that this merge closes it, or work still remains"}. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.`,
   "merge-continued": (facts) =>
     facts.ok
-      ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open${facts.open ? ` because ${facts.open}; judge what comes next from it and your remaining work` : ""}. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`
+      ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open${facts.open ? ` because ${facts.open}; judge what comes next from it and your remaining work` : ""}. Continue from that result. Dropping this task does not close that pull request.${askedWords(facts.asked)} ${facts.text}`
       : facts.unknown
         ? `[fm-op] the outcome of your merge card's merge of ${facts.change} is unknown. Do not resend it; the host reads its result before continuing. ${facts.text}`
         : `[fm-op] your merge card's merge of ${facts.change} did not happen. Nothing was merged. ${facts.text}`,

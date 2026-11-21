@@ -284,7 +284,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "what a spawn's intent carries",
     home: { tool: "spawn_crewmate" },
-    says: "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
+    says: "Pass a goal, the user's verbatim words, typed constraints and an optional delivery note;",
   },
   {
     rule: "the waits that queue a spawn",
@@ -299,7 +299,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a spawn under a larger task names its parent",
     home: { tool: "spawn_crewmate", parameter: "parent" },
-    says: "The task this work belongs under",
+    says: "Parent task id or key; this work inherits its project",
   },
   {
     rule: "a personal_ui spawn passes no repo_id and names the surface it changes",
@@ -325,7 +325,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a planned task carries the user's words verbatim",
     home: { tool: "spawn_crewmate", parameter: "user_words" },
-    says: "The captain's words for this task or the ask it is a step of, verbatim; outranks every elaboration downstream",
+    says: "The captain's verbatim words for this task or the ask it is a step of; outrank every elaboration downstream; else omit",
   },
   {
     rule: "a created task waits on request until it is started",
@@ -335,7 +335,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "update_task edits, moves and drops a task",
     home: { tool: "update_task" },
-    says: "To drop a task pass drop true with reason",
+    says: "Drop with drop true and reason",
   },
   {
     rule: "link_tasks records typed edges and refuses a cycle as text",
@@ -386,7 +386,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a model named for a task, filed or started, keeps that task (INF-849)",
     home: { tool: "update_task" },
-    says: "When the user names a model, pass override_model_id (start_now starts it now): it keeps its key and links; never drop it to spawn a replacement.",
+    says: "When the user names a model, pass override_model_id (start_now starts it): it keeps its key and links; never drop it to spawn a replacement.",
   },
   {
     rule: "work the captain did not ask for is declared internal, the captain's own ask never is",
@@ -654,7 +654,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a step's crewmate gets the captain's words verbatim, outranking its line",
     home: { tool: "spawn_crewmate", parameter: "user_words" },
-    says: "The captain's words for this task or the ask it is a step of, verbatim; outranks every elaboration downstream",
+    says: "The captain's verbatim words for this task or the ask it is a step of; outrank every elaboration downstream; else omit",
   },
   {
     rule: "the project line reaches its crewmate word for word",
@@ -679,7 +679,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a skipped plan is declared on the direct build",
     home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "skipped_plan_because: For a direct build with no chosen basis",
+    says: "skipped_plan_because: For a direct build without a chosen basis",
   },
   // INF-1272 makes room for the quit rule by saying two rules once.
   {
@@ -751,7 +751,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a drop names its reason",
     home: { tool: "update_task" },
-    says: "To drop a task pass drop true with reason",
+    says: "Drop with drop true and reason",
   },
   {
     rule: "a duplicate's flag names both cards",

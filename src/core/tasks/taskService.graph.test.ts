@@ -138,6 +138,7 @@ describe("the task graph (task-system P2)", () => {
       tasks: TaskService,
       id: string,
       status: "standing" | "revoked" | "consumed" = "standing",
+      repaired?: { toHead: string },
     ) =>
       seedDelivery(tasks, id, {
         mergeAuthorization: {
@@ -159,7 +160,22 @@ describe("the task graph (task-system P2)", () => {
           approvedHead: APPROVED,
           proceedWithOpen: false,
           status,
-          lineage: [],
+          // A kept approval's accepted repair, as check_change conflictRepair records it.
+          lineage: repaired
+            ? [
+                {
+                  fromHead: APPROVED,
+                  toHead: repaired.toHead,
+                  newBase: "5d2e8f1a3c7b9d4e6f0a2c8b1d3e5f7a9c0b2d4e",
+                  impact: "none" as const,
+                  changedPaths: [],
+                  evidence: "brought up to date with the default branch",
+                  validation: "the unit tests",
+                  generation: 1,
+                  at: 2,
+                },
+              ]
+            : [],
         },
       });
 
@@ -237,6 +253,24 @@ describe("the task graph (task-system P2)", () => {
       approve(tasks, second.id, "revoked");
       expect(TaskGraph.mergedAt(tasks.get(first.id)!)).toBe(APPROVED);
       expect(TaskGraph.mergedAt(tasks.get(second.id)!)).toBeUndefined();
+    });
+
+    // INF-5297's review: a part follows the newest version its base's approval covers, so it
+    // starts on that version and the base counts as merged at the version that merged.
+    it("starts on the version a kept repair moved the approval to, and counts the merge at the version that merged", () => {
+      const { tasks, work } = setup();
+      const REPAIRED = "7b1e4d9c2a6f8e3b5d0c7a9f1e2b4d6c8a0f3e5b";
+      const first = work("first", { startPolicy: "on-request" });
+      const later = work("later", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      approve(tasks, first.id, "standing", { toHead: REPAIRED });
+      expect(tasks.graph.approvedBase(later)).toMatchObject({ head: REPAIRED });
+
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      approve(tasks, first.id, "consumed", { toHead: REPAIRED });
+      expect(TaskGraph.mergedAt(tasks.get(first.id)!)).toBe(REPAIRED);
     });
 
     /** The ready sweep's start, as the host takes it: claimed, then built on the approved base. */

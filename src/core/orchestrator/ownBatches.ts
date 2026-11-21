@@ -138,7 +138,12 @@ export function createOwnBatches(owners: {
     },
     unmergedBase: (change) => {
       const builtOn = tasks.graph.unmergedBuiltOn(tasks.get(change.taskId));
-      return builtOn && TaskService.isClosed(builtOn.task) ? builtOn.head : undefined;
+      if (!builtOn || !TaskService.isClosed(builtOn.task)) return undefined;
+      // The change may have been brought onto a newer version its base's approval covered.
+      const approval = builtOn.task.delivery?.mergeAuthorization;
+      return [
+        ...new Set([builtOn.head, ...(approval ? [TaskGraph.newestApproved(approval)] : [])]),
+      ];
     },
     story: async (member, forge) => {
       const { story, region } = await owners.presentations.batchRegion(

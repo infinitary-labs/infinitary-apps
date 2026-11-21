@@ -25,6 +25,9 @@ import { escapeCardText } from "./cardText";
 import type { CrewTurn } from "./crewTurn";
 import {
   baseApprovalEndedWake,
+  baseClosedUnmergedOnce,
+  baseClosedUnmergedWake,
+  baseMovedWake,
   dependencyClosedOnce,
   dependencyClosedWake,
   mergeLineOnce,
@@ -1721,8 +1724,10 @@ export class IdleLadder {
       if (gate?.kind === "at-time" && gate.until !== undefined && gate.until <= now) {
         this.endTimedWait(record.id, gate, now);
       }
-      for (const ended of this.endedWaits(record)) this.endDependencyWait(record.id, ended);
-      this.tellBaseApprovalEnded(record);
+      // The part under a part built on it says more than its wait's close does.
+      const told = this.followBase(record);
+      for (const ended of this.endedWaits(record))
+        if (ended.task.id !== told) this.endDependencyWait(record.id, ended);
       for (const moved of this.movedWaits(record)) this.tellMovedWait(record.id, moved);
     }
     // A wait that can never end (a dropped blocker) is one wake to the
@@ -1822,30 +1827,62 @@ export class IdleLadder {
 
   /**
    * A part that started on an earlier part's approved version (`built_on`)
-   * hears once when that part is no longer approved to merge and has not
-   * merged (docs/task-graph.md, "A part that starts at approval"): its own
-   * merge waits until the part is approved again. One steer per approval
-   * that ends, named so the inbox queues it once, even across a restart.
+   * follows that part (docs/task-graph.md, "A part that starts at approval"
+   * and "Following the part under it"), hearing once for each fact: the
+   * part's approval ended while it is live, so its own merge waits; the
+   * part is approved at a newer version than the recorded base, so it
+   * replays its own commits onto that version; or the part closed without
+   * merging, so it reports to the first mate. Each steer is named so the
+   * inbox queues it once, even across a restart. Returns the earlier part
+   * when its close was told here, so its wait's own close steer is not sent.
    */
-  private tellBaseApprovalEnded(record: TaskRecord): void {
+  private followBase(record: TaskRecord): string | undefined {
     const builtOn = this.host.tasks.graph.unmergedBuiltOn(record);
-    if (!builtOn) return;
+    if (!builtOn) return undefined;
     const base = builtOn.task;
-    // A closed earlier part is never approved again: the batch tells the part what to do.
-    if (TaskService.isClosed(base) || TaskGraph.approvedToMerge(base)) return;
-    const wake = baseApprovalEndedWake({
-      ...base,
-      head: builtOn.head,
-      approval: base.delivery?.mergeAuthorization,
-    });
+    if (TaskService.isClosed(base)) {
+      const ended = base.delivery?.mergeAuthorization;
+      this.steerOnce(
+        record.id,
+        baseClosedUnmergedWake({
+          ...base,
+          head: builtOn.head,
+          ...(ended ? { newest: TaskGraph.newestApproved(ended) } : {}),
+          closed: base.status === "done" ? "done" : "dropped",
+        }),
+      );
+      return base.id;
+    }
+    const approval = base.delivery?.mergeAuthorization;
+    if (!approval || !TaskGraph.approvedToMerge(base)) {
+      this.steerOnce(record.id, baseApprovalEndedWake({ ...base, head: builtOn.head, approval }));
+      return undefined;
+    }
+    // The newest version the earlier part's approval covers: a kept approval's repair moves it.
+    const newest = candidateHead(approval);
+    if (newest !== builtOn.head)
+      this.steerOnce(
+        record.id,
+        baseMovedWake({
+          ...base,
+          branch: approval.target.branch,
+          from: builtOn.head,
+          to: newest,
+        }),
+      );
+    return undefined;
+  }
+
+  /** One of `followBase`'s steers, sent once by its name. */
+  private steerOnce(taskId: string, wake: TypedWake): void {
     const once = wake.once ?? "";
-    const tried = `${record.id}\n${once}`;
-    if (this.resumesTried.has(tried) || this.host.inbox.woken(record.id, once)) return;
+    const tried = `${taskId}\n${once}`;
+    if (this.resumesTried.has(tried) || this.host.inbox.woken(taskId, once)) return;
     this.resumesTried.add(tried);
-    this.host.tasks.turns.endIdle(record.id);
-    void this.host.steer(record.id, wake).catch((caught: unknown) => {
+    this.host.tasks.turns.endIdle(taskId);
+    void this.host.steer(taskId, wake).catch((caught: unknown) => {
       // No conversation to resume: the ladder reads the task on its own clock.
-      console.warn("[crew] an ended approval's steer not delivered:", caught);
+      console.warn("[crew] a steer about the part under a task not delivered:", caught);
     });
   }
 
@@ -1876,14 +1913,14 @@ export class IdleLadder {
     const tasks = this.host.tasks;
     return this.liveWaits(record).flatMap(({ task, kind }) => {
       if (kind !== "blocks") return [];
-      const told = tasks.graph
-        .replacedPredecessors(task.id)
-        .filter(
-          (old) =>
-            old.status === "dropped" &&
-            this.host.inbox.woken(record.id, dependencyClosedOnce(old)) &&
-            !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
-        );
+      const told = tasks.graph.replacedPredecessors(task.id).filter(
+        (old) =>
+          old.status === "dropped" &&
+          // A part built on the dropped task heard of its close in its own steer.
+          (this.host.inbox.woken(record.id, dependencyClosedOnce(old)) ||
+            this.host.inbox.woken(record.id, baseClosedUnmergedOnce(old))) &&
+          !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
+      );
       if (told.length === 0) return [];
       const moved = new Set(this.movedFrom(record.id, task.id).map((old) => old.id));
       return told

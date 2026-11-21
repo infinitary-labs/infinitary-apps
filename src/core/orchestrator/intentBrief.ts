@@ -1169,6 +1169,13 @@ export type RepairAssessmentFacts = {
   fromHead: string;
   toHead: string;
   newBase: string;
+  /**
+   * For a change built on another task's approved version, repaired onto
+   * that task's newest approved version: the version the approved change
+   * was built on (docs/task-graph.md, "Following the part under it").
+   * Absent, the approved change is read from where it meets `newBase`.
+   */
+  approvedBase?: string;
   /** Paths the approved change touches against its own base, and the repaired one against the base it sits on. */
   paths: { approved: string[]; repaired: string[] };
   evidence: string;
@@ -1199,14 +1206,19 @@ function checklist(paths: RepairAssessmentFacts["paths"]): string[] {
  * captain approved, answered with the one line the host reads.
  */
 export function renderRepairAssessmentBrief(facts: RepairAssessmentFacts): string {
-  const approvedBase = `$(git merge-base ${facts.approvedHead} ${facts.newBase})`;
+  const approvedBase =
+    facts.approvedBase ?? `$(git merge-base ${facts.approvedHead} ${facts.newBase})`;
+  // i18n-exempt: served to the assessor in its brief, stays English
+  const sitsOn = facts.approvedBase
+    ? `onto ${facts.newBase}, the newest approved version of the change it was built on (the approved change was built on its version ${facts.approvedBase})`
+    : `on the default branch at ${facts.newBase}`;
   const words = facts.userWords?.trim();
   return [
     `Goal: assess whether a repair of "${facts.builderTitle}" kept the change the captain approved, and report one impact line.`,
     "The impact report is the whole deliverable of this internal assessment; emit no card.",
     ...(words ? ["", "The captain's words the change was built for, verbatim:", words] : []),
     "",
-    `${REPAIR_ASSESSMENT_BRIEF_OPENING}: change nothing, commit nothing, push nothing, run no tests. The captain approved merging ${facts.change} at ${facts.approvedHead}. Its crewmate then repaired it, from ${facts.fromHead} to ${facts.toHead}, on the default branch at ${facts.newBase}. The crewmate could not tell whether that kept the approved work as it was, so you decide, independently of it. This repository's working copies share commits: the approved change is git diff ${approvedBase} ${facts.approvedHead}, the repaired one is git diff ${facts.newBase} ${facts.toHead}, and git range-diff ${approvedBase}..${facts.approvedHead} ${facts.newBase}..${facts.toHead} lines them up commit by commit.`,
+    `${REPAIR_ASSESSMENT_BRIEF_OPENING}: change nothing, commit nothing, push nothing, run no tests. The captain approved merging ${facts.change} at ${facts.approvedHead}. Its crewmate then repaired it, from ${facts.fromHead} to ${facts.toHead}, ${sitsOn}. The crewmate could not tell whether that kept the approved work as it was, so you decide, independently of it. This repository's working copies share commits: the approved change is git diff ${approvedBase} ${facts.approvedHead}, the repaired one is git diff ${facts.newBase} ${facts.toHead}, and git range-diff ${approvedBase}..${facts.approvedHead} ${facts.newBase}..${facts.toHead} lines them up commit by commit.`,
     "",
     "none: the repaired change does what the approved one did, whatever the repair was - such as resolved conflicts, an interface newer work renamed adapted without changing behavior, or a reworded commit message - with the tests and documents it directly needs. changed-work: anything else - new or removed behavior, unrelated fixes, weakened tests or protections, or edits the repair did not need. Who wrote a commit, how few lines changed, or edits only in conflicted files prove nothing. If you cannot settle it within this one look, answer unknown: unknown never merges.",
     "",
@@ -1425,7 +1437,8 @@ export function renderReviewBrief(
     : passed
       ? [
           "",
-          `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit - what bringing it up to date, or later work, changed - not the whole change again: after an unavoidable update, the re-review checks only the update's difference (the captain's rule). git range-diff ${from}..${passed} ${from}..${facts.headSha} lines the two versions up commit by commit; for one path, compare git diff ${from}...${passed} -- <path> with git diff ${from}...${facts.headSha} -- <path>. Read the rest of the change only where you need it to judge the difference. If ${passed} is not in this working copy, say so and review the whole change instead.`,
+          // i18n-exempt: served to the reviewer crewmate in its brief, stays English
+          `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit - what bringing it up to date, or later work, changed - not the whole change again: after an unavoidable update, the re-review checks only the update's difference (the captain's rule). ${facts.builtOn ? `git range-diff ${from}..${passed} ${facts.builtOn.head}..${facts.headSha} lines the two versions up commit by commit; a commit of ${facts.builtOn.task} it shows as removed is the part under this change, which moved to ${facts.builtOn.head}, and is out of scope` : `git range-diff ${from}..${passed} ${from}..${facts.headSha} lines the two versions up commit by commit`}; for one path, compare git diff ${from}...${passed} -- <path> with git diff ${from}...${facts.headSha} -- <path>. Read the rest of the change only where you need it to judge the difference. If ${passed} is not in this working copy, say so and review the whole change instead.`,
         ]
       : [];
   const coverage = proofRead

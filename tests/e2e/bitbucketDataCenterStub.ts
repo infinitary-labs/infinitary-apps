@@ -24,7 +24,10 @@ import { join } from "node:path";
  * request names its head by the full commit id and carries a version that
  * goes up whenever its branch moves; a merge names the version it was read
  * at, and the server refuses an older one with a 409 naming
- * `PullRequestOutOfDateException`, merging nothing.
+ * `PullRequestOutOfDateException`, merging nothing. A comment carries a
+ * version too, which an edit or a delete names, and the pull request's
+ * activity lists each comment, newest first. A build status belongs to a
+ * commit; a journey may post one on a pull request's head.
  */
 export const DATA_CENTER_HOST = "bitbucket.example.com";
 export const DATA_CENTER_KEY = "BBDC-NzE2MDk4ODQ0NTQ0OkxqZm1vY2tfdG9rZW5fZm9yX3Rlc3Q";
@@ -69,6 +72,9 @@ export type DataCenterMerge = {
   message: string;
 };
 
+/** A comment on a pull request, as the server keeps it. */
+type StubComment = { id: number; version: number; text: string; createdDate: number };
+
 type StubPullRequest = {
   id: number;
   version: number;
@@ -81,6 +87,7 @@ type StubPullRequest = {
   seenHead?: string;
   mergedHead?: string;
   mergeCommit?: string;
+  comments: StubComment[];
 };
 
 /** The commit the server writes for a squash of `head`: distinct per head. */
@@ -97,6 +104,14 @@ export async function startDataCenterStub() {
   let gitOf: { head: (branch: string) => string; commit: (rev: string) => string } | null = null;
   let statuses: DataCenterStatus[] = [{ key: "build", name: "Build", state: "SUCCESSFUL" }];
   let onMergeRequest: () => void = () => {};
+  // Without a journey's own writer, a merge writes nothing where the project lives.
+  let onMerged: (merge: DataCenterMerge) => string | undefined = () => undefined;
+  let onBranchDelete: (branch: string) => void = () => {};
+  const deletedBranches: string[] = [];
+  /** Build statuses a journey posted on one commit, or on whatever head a pull request has. */
+  const statusesAt = new Map<string, DataCenterStatus[]>();
+  const statusesOf = new Map<number, DataCenterStatus[]>();
+  let nextCommentId = 1;
   const started = Date.now();
   const repositoryPath = `/rest/api/latest/projects/${DATA_CENTER_PROJECT.key}/repos/${DATA_CENTER_PROJECT.slug}`;
   const repository = {
@@ -189,12 +204,19 @@ export async function startDataCenterStub() {
       response.end(body === undefined ? undefined : JSON.stringify(body));
     };
     if (method === "GET" && path === "/rest/api/latest/application-properties") {
-      send(200, {
-        version,
-        buildNumber: version.replaceAll(".", "0"),
-        buildDate: String(started),
-        displayName: "Bitbucket",
-      });
+      // Anyone may read it; the server names the user of a token it accepts, as on every answer.
+      send(
+        200,
+        {
+          version,
+          buildNumber: version.replaceAll(".", "0"),
+          buildDate: String(started),
+          displayName: "Bitbucket",
+        },
+        request.headers.authorization === `Bearer ${DATA_CENTER_KEY}`
+          ? { "X-AUSERNAME": DATA_CENTER_LOGIN }
+          : {},
+      );
       return;
     }
     if (request.headers.authorization !== `Bearer ${DATA_CENTER_KEY}`) {
@@ -222,10 +244,16 @@ export async function startDataCenterStub() {
     }
     const build = /^\/rest\/build-status\/latest\/commits\/([0-9a-f]{40})$/.exec(path);
     if (method === "GET" && build) {
+      const sha = build[1] ?? "";
+      const pulled = [...pullRequests.values()].find(
+        (entry) =>
+          entry.state === "OPEN" && statusesOf.has(entry.id) && branchHead(entry.branch) === sha,
+      );
+      const posted = statusesAt.get(sha) ?? (pulled ? statusesOf.get(pulled.id) : undefined);
       send(
         200,
         page(
-          statuses.map((status, index) => ({
+          (posted ?? statuses).map((status, index) => ({
             ...status,
             url: `https://ci.example.com/${status.key}`,
             dateAdded: started + index,
@@ -238,6 +266,10 @@ export async function startDataCenterStub() {
       path === "/rest/branch-utils/latest/projects/FLD/repos/field-notes/branches" &&
       method === "DELETE"
     ) {
+      const body = await readBody(request);
+      const branch = String(body.name ?? "").replace(/^refs\/heads\//, "");
+      deletedBranches.push(branch);
+      onBranchDelete(branch);
       send(204, undefined);
       return;
     }
@@ -312,11 +344,13 @@ export async function startDataCenterStub() {
         description: String(body.description ?? ""),
         state: "OPEN",
         draft: body.draft === true,
+        comments: [],
       };
       pullRequests.set(created.id, created);
       return send(201, pullRequestJson(created));
     }
-    const one = /^\/pull-requests\/(\d+)(\/merge|\/decline|\/comments)?$/.exec(rest);
+    const one =
+      /^\/pull-requests\/(\d+)(\/merge|\/decline|\/activities|\/comments(?:\/\d+)?)?$/.exec(rest);
     const found = one ? pullRequests.get(Number(one[1])) : undefined;
     if (!one || !found)
       return send(
@@ -358,17 +392,18 @@ export async function startDataCenterStub() {
           ),
         );
       const head = branchHead(found.branch) ?? "";
-      found.state = "MERGED";
-      found.mergedHead = head;
-      found.mergeCommit = dataCenterMergeCommit(head);
-      found.version++;
-      merges.push({
+      const merge = {
         id: found.id,
         version: asked,
         head,
         strategy: String(body.strategyId ?? ""),
         message: String(body.message ?? ""),
-      });
+      };
+      found.state = "MERGED";
+      found.mergedHead = head;
+      found.mergeCommit = onMerged(merge) ?? dataCenterMergeCommit(head);
+      found.version++;
+      merges.push(merge);
       return send(200, pullRequestJson(found));
     }
     if (method === "POST" && action === "/decline") {
@@ -376,7 +411,66 @@ export async function startDataCenterStub() {
       found.version++;
       return send(200, pullRequestJson(found));
     }
-    if (method === "POST" && action === "/comments") return send(201, { id: 1, version: 0 });
+    const author = { name: DATA_CENTER_LOGIN, slug: DATA_CENTER_LOGIN, type: "NORMAL" };
+    const commentJson = (comment: StubComment) => ({
+      id: comment.id,
+      version: comment.version,
+      text: comment.text,
+      author,
+      createdDate: comment.createdDate,
+      updatedDate: comment.createdDate,
+      comments: [],
+    });
+    if (method === "GET" && action === "/activities")
+      return send(
+        200,
+        page(
+          [...found.comments].reverse().map((comment) => ({
+            id: comment.id,
+            action: "COMMENTED",
+            commentAction: "ADDED",
+            comment: commentJson(comment),
+          })),
+        ),
+      );
+    if (method === "POST" && action === "/comments") {
+      const body = await readBody(request);
+      const comment = {
+        id: nextCommentId++,
+        version: 0,
+        text: String(body.text ?? ""),
+        createdDate: Date.now(),
+      };
+      found.comments.push(comment);
+      return send(201, commentJson(comment));
+    }
+    const commentId = action?.startsWith("/comments/") ? Number(action.slice(10)) : undefined;
+    const comment = found.comments.find((entry) => entry.id === commentId);
+    if (commentId !== undefined && !comment)
+      return send(
+        404,
+        error("No such comment.", "com.atlassian.bitbucket.comment.NoSuchCommentException"),
+      );
+    if (comment && method === "GET") return send(200, commentJson(comment));
+    if (comment && (method === "PUT" || method === "DELETE")) {
+      const body = method === "PUT" ? await readBody(request) : {};
+      const asked = method === "PUT" ? body.version : Number(url.searchParams.get("version"));
+      if (asked !== comment.version)
+        return send(
+          409,
+          error(
+            "You are attempting to modify a comment based on out-of-date information.",
+            "com.atlassian.bitbucket.comment.CommentOutOfDateException",
+          ),
+        );
+      if (method === "DELETE") {
+        found.comments = found.comments.filter((entry) => entry !== comment);
+        return send(204, undefined);
+      }
+      comment.text = String(body.text ?? comment.text);
+      comment.version++;
+      return send(200, commentJson(comment));
+    }
     send(404, error("No such resource.", "com.atlassian.bitbucket.NoSuchEntityException"));
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -413,11 +507,36 @@ export async function startDataCenterStub() {
         description: input.description ?? "",
         state: "OPEN",
         draft: false,
+        comments: [],
       };
       pullRequests.set(created.id, created);
       rescope(created);
       return created.id;
     },
+    /** Every pull request opened, in order, as the server keeps it. */
+    pullRequests: () =>
+      [...pullRequests.values()].map((entry) => ({
+        id: entry.id,
+        branch: entry.branch,
+        title: entry.title,
+        description: entry.description,
+        state: entry.state,
+        comments: entry.comments.map((comment) => comment.text),
+      })),
+    /** Post build statuses on a pull request's head, or on the one commit `at` names. */
+    setPullRequestStatuses: (id: number, next: DataCenterStatus[], at?: string) => {
+      if (at) statusesAt.set(at, next);
+      else statusesOf.set(id, next);
+    },
+    /** Write each merge where the project lives, answering the merge commit's id. */
+    onMerged: (write: (merge: DataCenterMerge) => string | undefined) => {
+      onMerged = write;
+    },
+    onBranchDelete: (apply: (branch: string) => void) => {
+      onBranchDelete = apply;
+    },
+    /** Every branch the app deleted, in order. */
+    deletedBranches: () => [...deletedBranches],
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

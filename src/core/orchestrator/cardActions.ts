@@ -1319,14 +1319,13 @@ export class CardActions {
    * Nothing answers at the page the captain opened in a task's browser
    * (docs/task-browser.md, "When nothing answers"): its crewmate's one
    * steer for that outage, through the task's durable lane. While a turn of
-   * its crewmate runs there is none: it is working, and a later check may
-   * still wake it under the same name.
+   * its crewmate runs the steer still goes, and the lane hands it to the
+   * crewmate at its next chance, so a view that says it was asked is true.
    */
   pageUnanswered(taskId: string, unanswered: PageUnanswered): void {
     const tasks = this.core.options.tasks;
     const record = tasks.get(taskId);
     if (!record || record.status === "done" || record.status === "dropped") return;
-    if (record.activity === "running" || record.activity === "starting") return;
     if (this.core.options.inbox.woken(taskId, unanswered.once)) return;
     tasks.turns.endIdle(taskId);
     const wake: TypedWake = {

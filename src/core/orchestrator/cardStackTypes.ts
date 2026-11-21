@@ -128,4 +128,5 @@ export type CardStack = {
   topPriority(floor: number): number;
   othersOpen(taskId: string, except: string | undefined): boolean;
   resolve: CardService["resolve"];
+  ended: Pick<CardService["ended"], "has">;
 };

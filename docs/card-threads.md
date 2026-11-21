@@ -143,7 +143,8 @@ Putting a card aside never asks to discard an unanswered reply; its hold and dra
 
 **Signing off** (INF-2845, the captain's direction A): a reply resolves nothing, except a crewmate's line marked `signs_off`.
 When the captain's line under its answer says they need nothing more from it, in whatever words, the crewmate answers it naming the message in `answers_message` with `signs_off` true.
-The card leaves the stack as read, the message takes it as its answer, and the answer task closes as answered (`docs/task-capture.md`, "How a message ends").
+The card resolves as read, the message takes it as its answer, and the answer task closes as answered (`docs/task-capture.md`, "How a message ends").
+When the captain had seen the card, it stays in front of them marked ended, with the crewmate's line in its thread and one Close, as a card its author closed does (`docs/card-authoring.md`, "A card its author ended while the captain had seen it"); the captain's words on INF-5561: "even if it's considered a sign-off, the card should not just disappear in front of me".
 The crewmate judges the words; the rule's one home is the thread steer's preamble (`THREAD_STEER_PREAMBLE`), which reaches a Claude crewmate with the captain's line, and the tool's top-level `signs_off` parameter says only what the mark does.
 No code, test or instruction keeps a list of phrases.
 The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.

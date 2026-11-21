@@ -120,6 +120,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | Reasoning | 推理 | Used instead of thinking level or effort. |
 | rebase merges, merge commits (the host's settings) | 变基合并、合并提交 | Named only as the settings where the project lives, in GitHub's own Simplified Chinese wording; the app's own action stays 更新到最新. |
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
+| relay (Infinitary's push relay) | Infinitary 的中转服务 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
 | Remove (a device) | 移除 | |
 | report | 汇报 | |
 | repository (one of a project's) | 仓库 | GitHub's own Simplified Chinese word; 「添加仓库」「2 个仓库」. Names one of a project's repositories; what work belongs to stays 项目. |

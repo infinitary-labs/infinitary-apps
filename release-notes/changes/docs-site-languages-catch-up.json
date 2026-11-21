@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-languages-catch-up",
+      "reason": "Brings the translated documentation pages up to date with the English pages on Secrets, Integrations, Projects and iPhone and iPad; nothing in the app changes."
+    }
+  ]
+}

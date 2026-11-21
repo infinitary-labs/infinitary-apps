@@ -121,6 +121,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | recording, demo | 錄製內容, 示範 | Never 影片 or 動畫 for the file. |
 | recovery key | 復原金鑰 | Taiwan writes 復原, not 恢復. |
 | redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |
+| relay (Infinitary's push relay) | Infinitary 的中繼服務 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
 | Remove (a device) | 移除 | Standard. |
 | repo (never said) | 專案 | The app's noun for what work belongs to stays 專案. |
 | report | 回報 | Taiwan's everyday word for reporting back. |

@@ -1,5 +1,5 @@
 ---
-source: 4b256578ba14e5e2
+source: a8120adef7569dc8
 title: iPhone y iPad
 description: Pide una invitación privada de TestFlight para Infinitary en iPhone y iPad, y luego únete a tu computadora para leer tarjetas y enviar mensajes.
 ---
@@ -30,6 +30,17 @@ Si la cámara no está permitida, pega el enlace.
 
 Tu teléfono y tu computadora necesitan compartir una red: la misma Wi-Fi, o la misma red privada cuando estás fuera.
 Únete solo a tu propia computadora.
+
+## Más de una computadora {#more-than-one-computer}
+
+Tu teléfono puede conservar más de una computadora, como una en casa y otra en el trabajo, y muestra una a la vez.
+Para agregar otra, toca el botón de la computadora a la derecha de la barra superior del teléfono y elige **Agregar otra computadora**, luego escanea su código, pega su enlace o únete por su dirección.
+La computadora que estabas mostrando se conserva.
+
+Con más de una conservada, el botón de la computadora nombra la computadora que se muestra.
+Su hoja enumera tus otras computadoras y marca cada una que responde desde donde estás ahora, como cuando tu teléfono está en la red o la red privada de esa computadora.
+Toca una, o presiona Return sobre ella con un teclado, para mostrarla.
+El teléfono nunca cambia por sí solo: se queda en tu elección hasta que eliges otra.
 
 ## Lo que muestra {#what-it-shows}
 
@@ -74,12 +85,16 @@ Consulta [Actualizar y quitar Infinitary](/es/update-and-remove/#your-other-comp
 El teléfono necesita tu computadora despierta, con Infinitary abierto.
 Si no puede alcanzarla, dice «Tu computadora está fuera de alcance. Comprueba que Infinitary esté abierto y que ambos dispositivos compartan una red».
 
-El teléfono te avisa de una tarjeta nueva solo mientras la app está abierta.
+Con las notificaciones activadas, tu teléfono muestra una notificación por cada tarjeta nueva, incluso mientras Infinitary está cerrado ahí.
+Con más de una computadora conservada, cada una envía las suyas, y la notificación nombra la computadora de la que viene; al tocarla, se muestra esa computadora y se abre la tarjeta.
+Cada computadora sigue enviándolas mientras muestras otra: tu teléfono le deja una nota sellada a través del relé de Infinitary cada vez que se renueva su permiso de notificaciones, y solo esa computadora puede leerla.
 
 ## Salir o quitar {#leave-or-remove}
 
 Para dejar de mostrar tu computadora, toca el botón de la computadora a la derecha de la barra superior del teléfono y elige **Salir** con el nombre de tu computadora.
-El teléfono olvida la computadora.
+El teléfono olvida esa computadora y sus notificaciones, y le deja una nota sellada para que deje de enviarlas en un día, incluso mientras está fuera de alcance.
+Cuando está fuera de alcance, **Olvidar** hace lo mismo solo en el teléfono.
+Tus otras computadoras conservadas se quedan: la que mostraste más recientemente se muestra después, y si no queda ninguna, el teléfono te da la bienvenida como al principio.
 En tu computadora, **Quitar** en el menú del teléfono, en Configuración → **Dispositivos**, los tres puntos de su fila, lo desconecta enseguida.
 Para volver a unirte, crea un enlace nuevo.
 

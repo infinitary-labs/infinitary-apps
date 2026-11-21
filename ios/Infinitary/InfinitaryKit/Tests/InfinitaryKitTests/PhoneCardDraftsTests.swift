@@ -164,6 +164,28 @@ import Testing
         #expect(home.drafts.words["card-1"] == "From the Mac")
     }
 
+    /// The phone's own kept words replace another screen's words waiting on the field, as on the Mac, so a captain who
+    /// types over them and returns to the words they arrived over keeps their own words when the keyboard closes.
+    @Test func ownKeptWordsReplaceAnotherScreensWaitingWords() async {
+        let home = await joined()
+        var revision = 1
+        home.answer = { card, change in
+            revision += 1
+            return .object(["draft": Self.draft(card, revision: revision, words: change["words"].text ?? "").json])
+        }
+        home.drafts.type("card-1", words: "ab")
+        await home.pause()
+        home.drafts.typing("card-1", true)
+        home.drafts.heard(Self.draft("card-1", revision: 10, words: "xyz"))
+        revision = 10
+        home.drafts.type("card-1", words: "abc")
+        await home.pause()
+        home.drafts.type("card-1", words: "ab")
+        await home.pause()
+        home.drafts.typing("card-1", false)
+        #expect(home.drafts.words["card-1"] == "ab")
+    }
+
     @Test func aNoteQueuedOnThePhoneGoesAndAnotherScreensNoteShowsHere() async {
         let home = await joined()
         let mine = Self.note("Ask the harbour office first")

@@ -288,8 +288,6 @@ public struct PhoneDraftLocal: Equatable, Sendable {
             let refusedHere = sent?[part] != nil && sent?[part] != value
             if !elsewhere && !refusedHere { continue }
             if marked?[part] != nil || flown?[part] != nil { continue }
-            // The computer kept what the phone sent and the phone still shows it: taking it again would only redraw.
-            if sent?[part] == value && local[part] == value { continue }
             // A value the phone already shows goes nowhere at the first take; after it, it still goes, so it replaces an
             // older change that waits on a question being typed in.
             if was == nil && local[part] == value { continue }

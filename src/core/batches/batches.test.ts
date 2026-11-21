@@ -1673,6 +1673,8 @@ describe("an approval withdrawn", () => {
     expect((home.host.pulls.get(31) as StandInPull).state).toBe("closed");
     expect(home.host.branches.has("infinitary-batch/3fa9c1d2")).toBe(false);
     expect(home.host.merges).toEqual([]);
+    // The Batches panel's Last day keeps the batch as closed.
+    expect(home.record().finished).toMatchObject([{ number: 31, outcome: "closed" }]);
   });
 
   it("takes a waiting change out of the line", async () => {

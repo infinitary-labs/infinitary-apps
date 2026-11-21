@@ -56,6 +56,7 @@ import {
 } from "./combine";
 import { type BatchLimits, batchDescription, batchList } from "./description";
 import {
+  abandoned,
   awaitedJoins,
   batchStatus,
   carried,
@@ -1057,8 +1058,7 @@ export class Batches {
         url: open.url ?? null,
       });
     await forge.deleteBranch?.(open.branch).catch(() => {});
-    const { open: _open, ...rest } = unfixed(record, []);
-    return this.save(repo.id, rest);
+    return this.save(repo.id, abandoned(unfixed(record, []), this.options.now()));
   }
 
   /**

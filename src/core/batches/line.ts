@@ -452,6 +452,8 @@ export function combined(
         base: result.base,
         ...(previous?.number !== undefined ? { number: previous.number } : {}),
         ...(previous?.url !== undefined ? { url: previous.url } : {}),
+        // The holds it had before its repair combined it again stay counted.
+        ...(previous?.holds !== undefined ? { holds: previous.holds } : {}),
         members: result.members,
         since: previous?.since ?? batch.at,
       }
@@ -571,6 +573,16 @@ export function reopened(record: BatchRecord, at?: number): BatchRecord {
     ...(at !== undefined ? finishedWith(record, open, "closed", at) : finished ? { finished } : {}),
     line: [...open.members.map(asChange), ...record.line],
   };
+}
+
+/**
+ * The record after every member of its open batch was withdrawn and its
+ * pull request closed: no open batch, and the batch kept as closed.
+ */
+export function abandoned(record: BatchRecord, at: number): BatchRecord {
+  const { open, finished: _finished, ...rest } = record;
+  if (!open) return record;
+  return { ...rest, ...finishedWith(record, open, "closed", at) };
 }
 
 /**

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { BATCH_WAITING_WORDS } from "../forge";
 import { type Combined, LEFT_OUT_WORDS } from "./combine";
 import {
+  abandoned,
   batchStatus,
   carried,
   clashesEnded,
@@ -642,6 +643,23 @@ describe("a batch that ended", () => {
 
   it("is kept as closed when its pull request was closed unmerged", () => {
     const record = reopened(openBatch(), 9_000);
+    expect(record.finished).toMatchObject([
+      { number: 31, outcome: "closed", ended: 9_000, holds: 0 },
+    ]);
+  });
+
+  it("keeps the times it was held when its repair combines it again", () => {
+    const held = hold(openBatch(), failed).record;
+    const again = combined(held, combineOf([member(PARSER, PARSER_COMMIT)]), {
+      branch: "infinitary-batch/3fa9c1d2",
+      at: 7_000,
+    });
+    expect(merged(again, new Map(), 9_000).finished).toMatchObject([{ number: 31, holds: 1 }]);
+  });
+
+  it("is kept as closed when every change in it was withdrawn", () => {
+    const record = abandoned(openBatch(), 9_000);
+    expect(record.open).toBeUndefined();
     expect(record.finished).toMatchObject([
       { number: 31, outcome: "closed", ended: 9_000, holds: 0 },
     ]);

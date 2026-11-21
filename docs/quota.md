@@ -158,7 +158,7 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   One fact stands at a time, and a cut-off with a looser way back never replaces a stricter one that stands (refused, then signed_out, then no_headroom): a turn already in flight that settles after a refusal cannot hand it to a clock or a routine rewrite.
   Before the first read after a restart, `servesSync` and `withheldReason` answer from the standing fact.
   - `no_headroom` clears at its reset, or when the store names another login: the spent allowance belonged to the old login, so a swapped-in login is not held by it (and held crew lanes resume within the idle ladder's next tick).
-    It also clears on the captain's "Try <provider> again" on the first mate's spent-allowance card, offered once the captain's recheck read the allowance unchanged (`AccountVault.tryPastSpent`).
+    It also clears on the captain's "Try <provider> again" on the first mate's spent-allowance card, offered once the captain's recheck from the card leaves the seat paused, whether or not its reading was taken (`AccountVault.tryPastSpent`).
     The client can answer on a login the store does not name, such as a token a launcher passes it, and only the provider sees that one, so the account then goes by the provider's answers rather than its allowance reading (`AccountRecord.goesByAnswers`, which `Flagship.pause` reads) until the provider refuses it again or the store names another login.
     The next turn is the attempt: served, the seat stays on the account; refused, the hold, its refused reading and the pause come back, at the cost of that one refused request.
   - `signed_out` clears when the store is written again, names another login, or the provider accepts that same login again.

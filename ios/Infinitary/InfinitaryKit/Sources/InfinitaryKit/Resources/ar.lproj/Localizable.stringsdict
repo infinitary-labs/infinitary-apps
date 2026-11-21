@@ -507,6 +507,30 @@
       <string>%1$ld صورة</string>
     </dict>
   </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$@ تُرسل مع اختيارك</string>
+      <key>one</key>
+      <string>%2$@ تُرسل مع اختيارك</string>
+      <key>two</key>
+      <string>%2$@ تُرسلان مع اختيارك</string>
+      <key>few</key>
+      <string>%2$@ تُرسل مع اختيارك</string>
+      <key>many</key>
+      <string>%2$@ تُرسل مع اختيارك</string>
+      <key>other</key>
+      <string>%2$@ تُرسل مع اختيارك</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -721,6 +745,30 @@
       <string>إرسال %1$ld ملاحظةً</string>
       <key>other</key>
       <string>إرسال %1$ld ملاحظة</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>الصور: %2$@</string>
+      <key>one</key>
+      <string>الصورة: %2$@</string>
+      <key>two</key>
+      <string>الصورتان: %2$@</string>
+      <key>few</key>
+      <string>الصور: %2$@</string>
+      <key>many</key>
+      <string>الصور: %2$@</string>
+      <key>other</key>
+      <string>الصور: %2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

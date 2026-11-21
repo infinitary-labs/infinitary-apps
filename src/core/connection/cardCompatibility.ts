@@ -1,8 +1,9 @@
 import { withoutSkipped } from "@shared/cardAnswerLines";
 import { CARD_DRAFTS } from "@shared/cardDrafts";
 import { type CardNote, markNumbers, noteText, noteTexts } from "@shared/cardNotes";
+import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import type { Spelling } from "@shared/codeNames";
-import { contractChange } from "./contractChanges";
+import { contractChange, listsChange } from "./contractChanges";
 import { type JournalEntry, pushFrameIn } from "./journal";
 import { type ActionReads, frameWithoutUnreadActions } from "./taskAllow";
 
@@ -45,6 +46,29 @@ function withoutPlaces(text: unknown, notes: readonly CardNote[]): Record<string
     ...(plain.length > 0 ? { notes: plain } : {}),
     text: [text, ...folded].filter(Boolean).join("\n"),
   };
+}
+
+/** A card button that carries the field's notes, files and pictures (`choice-attachments.md`). */
+const CHOICE_ATTACHMENTS_CHANGE = contractChange(CHOICE_ATTACHMENTS);
+
+/** The replies that may hold a past card. */
+const PAST_CARD_CHANNELS = new Set(["inf:cards:show", "inf:cards:past", "inf:cards:show-past"]);
+
+/**
+ * A past card for its reader: one whose hello does not list `choice-attachments` reads a past
+ * card strictly, so what its closing choice carried is left out and the rest reads as before.
+ */
+export function pastCardFor(
+  channel: string,
+  value: unknown,
+  changes: readonly string[] | null | undefined,
+): unknown {
+  if (listsChange(changes, CHOICE_ATTACHMENTS_CHANGE) || !PAST_CARD_CHANNELS.has(channel)) {
+    return value;
+  }
+  if (!value || typeof value !== "object" || !("carried" in value)) return value;
+  const { carried: _carried, ...rest } = value as Record<string, unknown>;
+  return rest;
 }
 
 /** A crewmate card's declared live reads and views (`card-live-reads.md`). */

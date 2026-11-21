@@ -297,6 +297,20 @@
       <string>画像%1$ld枚</string>
     </dict>
   </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>選択と一緒に送るもの：%2$@</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -421,6 +435,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%1$ld件のメモを送信</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>画像：%2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

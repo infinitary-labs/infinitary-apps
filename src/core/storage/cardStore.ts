@@ -1074,6 +1074,7 @@ export class CardStore {
     let label: string | undefined;
     let by: PastCard["ending"]["by"];
     let answers: CardAnswer[] = [];
+    let carried: PastCard["carried"];
     const parsedAnswers = row.answers_json
       ? cardAnswersSchema.safeParse(JSON.parse(row.answers_json))
       : undefined;
@@ -1090,6 +1091,12 @@ export class CardStore {
       label = closing.payload.label ?? actions.find((action) => action.id === actionId)?.label;
       by = closing.actor;
       if (closing.payload.answers?.length) answers = closing.payload.answers;
+      const sent = closing.payload.carried;
+      if (sent?.notes?.length || sent?.pictures?.length)
+        carried = {
+          ...(sent.notes?.length ? { notes: sent.notes } : {}),
+          ...(sent.pictures?.length ? { pictures: sent.pictures.map((ref) => ref.name) } : {}),
+        };
     } else if (closing?.kind === "exit") {
       how = closing.payload.reason;
       by = closing.actor;
@@ -1126,6 +1133,7 @@ export class CardStore {
         ...(by ? { by } : {}),
       },
       answers,
+      ...(carried ? { carried } : {}),
       messages: this.messages(cardId),
     };
   }

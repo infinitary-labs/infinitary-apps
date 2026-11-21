@@ -5,11 +5,11 @@
       "kind": "feature",
       "area": "cards",
       "title": "Pictures, files and notes go with a card's buttons",
-      "body": "A picture, a file or a note you queued in a card's field no longer has to go as a reply first. Every button stays ready, a line says what goes with it, and one press sends your choice with your words, pictures, files and notes together.",
+      "body": "A picture, a file or a note you queued in a card's field no longer has to go as a reply first. Every button stays ready, a line says what goes with it, and one press sends your choice with your words, pictures, files and notes together. A past card names what went with its choice.",
       "picture": {
         "dark": "choice-attachments-dark.webp",
         "light": "choice-attachments-light.webp",
-        "alt": "A card with a picture and a note waiting in its field, its buttons lit and a line reading Sent with your choice: 1 picture and 1 note"
+        "alt": "A card with a picture and a note waiting in its field, its buttons lit and a line reading 1 picture and 1 note go with your choice"
       },
       "provenance": { "origin": "change" }
     }

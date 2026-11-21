@@ -947,7 +947,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the field writes more.
 - **Files, pictures and notes go with the press.**
   The captain asked that attachments and queued notes in a card's field go along with a button's click, not only as a reply (INF-5608).
-  While a file, picture or queued note waits, every button stays lit and takes ⌘1 to ⌘4, and one line at the row's left names what goes with it ("Sent with your choice: 1 picture and 2 notes", `carriedWithChoiceWords`).
+  While a file, picture or queued note waits, every button stays lit and takes ⌘1 to ⌘4, and one line at the row's left names what goes with it ("1 picture and 2 notes go with your choice", `carriedWithChoiceWords`).
   The press sends the choice, the words, the notes, the files and the pictures in one request: `inf:cards:act`'s chrome value, or `inf:cards:note-done`'s third argument, carries optional `notes`, `files` and `images` beside `answers` (`cardChromeValueSchema`, `src/shared/choiceCarried.ts`), each marked picture drawn at the press, at most four pictures in all and a reply's 4,000 characters of words.
   On acceptance the field, its chips and its notes empty; on a refusal they all come back as they were.
   The home keeps what went on the choice's `action` observation as `carried`: the notes, the files as an author reads them and its own copies of the pictures (`choiceCarriedRecordSchema`).
@@ -966,7 +966,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
 - **Closing, revisions and past cards.**
   Putting a decision away retains its unsent field and picks without asking a question.
   A revision keeps the words, because they belong to the card's id; a restart keeps them where the first mate's computer keeps drafts ("Unsent picks follow you").
-  A past card shows the words that went with its choice as one quiet line under its dimmed buttons ("Sent with your choice:", `PAST_CARD_WORDS_LEAD`), and nothing when none went.
+  A past card shows what went with its choice under its dimmed buttons: the words as one quiet line ("Sent with your choice:", `PAST_CARD_WORDS_LEAD`), the notes as a sent reply draws them and the pictures by name (`PastCard.carried`, left out for a reader whose hello does not list `choice-attachments`), and nothing when none went.
 
 ### Unsent picks follow you
 

@@ -322,7 +322,6 @@
 "cardBrowserUnansweredStarting" = "%1$@에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserUnansweredWorking" = "%1$@에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserWord" = "브라우저";
-"cardCarriedWithChoice" = "선택과 함께 보내요: %1$@";
 "cardConsentFrom" = "제공";
 "cardConsentFullDetails" = "자세히";
 "cardConsentGuidanceOnly" = "안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.";

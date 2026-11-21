@@ -297,6 +297,20 @@
       <string>%1$ld 張圖片</string>
     </dict>
   </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>將隨你的選擇一起送出：%2$@</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -421,6 +435,20 @@
       <string>ld</string>
       <key>other</key>
       <string>送出 %1$ld 則筆記</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>圖片：%2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

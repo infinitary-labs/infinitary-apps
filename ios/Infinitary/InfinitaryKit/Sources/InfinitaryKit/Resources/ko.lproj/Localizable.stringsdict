@@ -297,6 +297,20 @@
       <string>사진 %1$ld장</string>
     </dict>
   </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>선택과 함께 보낼 항목: %2$@</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -421,6 +435,20 @@
       <string>ld</string>
       <key>other</key>
       <string>메모 %1$ld개 보내기</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>사진: %2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

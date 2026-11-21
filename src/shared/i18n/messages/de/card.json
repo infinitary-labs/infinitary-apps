@@ -78,7 +78,11 @@
     "one": "{count} Bild",
     "other": "{count} Bilder"
   },
-  "cardCarriedWithChoice": "Wird mit Ihrer Auswahl gesendet: {items}",
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "one": "{items} wird mit deiner Wahl gesendet",
+    "other": "{items} werden mit deiner Wahl gesendet"
+  },
   "cardConsentFrom": "Von",
   "cardConsentFullDetails": "Alle Details",
   "cardConsentGuidanceOnly": "Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.",
@@ -208,6 +212,11 @@
   "cardNoteUnavailable": "Dieser Teil kann in dieser Ansicht nicht angezeigt werden",
   "cardPastMark": "Früher",
   "cardPastMeta": "frühere Karte",
+  "cardPastPictures": {
+    "plural": "count",
+    "one": "Bild: {names}",
+    "other": "Bilder: {names}"
+  },
   "cardPastSentLead": "Mit deiner Wahl gesendet:",
   "cardPastUnreadable": "Diese Karte konnte nicht gelesen werden",
   "cardQuickAnswer": "Schnelle Antwort",

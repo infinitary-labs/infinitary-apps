@@ -322,7 +322,6 @@
 "cardBrowserUnansweredStarting" = "%1$@ 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。";
 "cardBrowserUnansweredWorking" = "%1$@ 没有响应，船员正在工作。它一响应，页面就会显示在这里。";
 "cardBrowserWord" = "浏览器";
-"cardCarriedWithChoice" = "随你的选择一起发送：%1$@";
 "cardConsentFrom" = "来自";
 "cardConsentFullDetails" = "完整详情";
 "cardConsentGuidanceOnly" = "它提供指导、HTML 部件和图片，不运行任何东西。";

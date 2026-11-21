@@ -322,7 +322,6 @@
 "cardBrowserUnansweredStarting" = "لا شيء يستجيب على %1$@، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserUnansweredWorking" = "لا شيء يستجيب على %1$@، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserWord" = "المتصفح";
-"cardCarriedWithChoice" = "يُرسل مع اختيارك: %1$@";
 "cardConsentFrom" = "من";
 "cardConsentFullDetails" = "كل التفاصيل";
 "cardConsentGuidanceOnly" = "يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.";

@@ -72,7 +72,10 @@
     "plural": "count",
     "other": "{count} 張圖片"
   },
-  "cardCarriedWithChoice": "隨你的選擇一起送出：{items}",
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "other": "將隨你的選擇一起送出：{items}"
+  },
   "cardConsentFrom": "來自",
   "cardConsentFullDetails": "完整詳情",
   "cardConsentGuidanceOnly": "它提供指引、HTML 元件和圖片，不執行任何東西。",
@@ -193,6 +196,10 @@
   "cardNoteUnavailable": "這個檢視無法顯示這個部分",
   "cardPastMark": "過去",
   "cardPastMeta": "過去的卡片",
+  "cardPastPictures": {
+    "plural": "count",
+    "other": "圖片：{names}"
+  },
   "cardPastSentLead": "隨你的選擇送出：",
   "cardPastUnreadable": "無法讀取這張卡片",
   "cardQuickAnswer": "快速回答",

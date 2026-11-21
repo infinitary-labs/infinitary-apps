@@ -381,6 +381,24 @@
       <string>%1$ld imagens</string>
     </dict>
   </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ vai com sua escolha</string>
+      <key>many</key>
+      <string>%2$@ vão com sua escolha</string>
+      <key>other</key>
+      <string>%2$@ vão com sua escolha</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -541,6 +559,24 @@
       <string>Enviar %1$ld notas</string>
       <key>other</key>
       <string>Enviar %1$ld notas</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Imagem: %2$@</string>
+      <key>many</key>
+      <string>Imagens: %2$@</string>
+      <key>other</key>
+      <string>Imagens: %2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

@@ -72,7 +72,10 @@
     "plural": "count",
     "other": "画像{count}枚"
   },
-  "cardCarriedWithChoice": "選択と一緒に送信：{items}",
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "other": "選択と一緒に送るもの：{items}"
+  },
   "cardConsentFrom": "提供元",
   "cardConsentFullDetails": "詳細",
   "cardConsentGuidanceOnly": "ガイダンス、HTML パーツ、画像を提供し、何も実行しません。",
@@ -193,6 +196,10 @@
   "cardNoteUnavailable": "この部分はこのビューでは表示できません",
   "cardPastMark": "過去",
   "cardPastMeta": "過去のカード",
+  "cardPastPictures": {
+    "plural": "count",
+    "other": "画像：{names}"
+  },
   "cardPastSentLead": "選択と一緒に送信：",
   "cardPastUnreadable": "このカードを読み取れませんでした",
   "cardQuickAnswer": "クイック回答",

@@ -13508,32 +13508,99 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   }
   function cardCarriedWithChoice(input2) {
+    formatNumber(input2.count);
     const items = input2.items;
     switch (currentLanguage()) {
       case "ar":
-        return `يُرسل مع اختيارك: ${items}`;
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${items} تُرسل مع اختيارك`;
+          case "one":
+            return `${items} تُرسل مع اختيارك`;
+          case "two":
+            return `${items} تُرسلان مع اختيارك`;
+          case "few":
+            return `${items} تُرسل مع اختيارك`;
+          case "many":
+            return `${items} تُرسل مع اختيارك`;
+          default:
+            return `${items} تُرسل مع اختيارك`;
+        }
       case "de":
-        return `Wird mit Ihrer Auswahl gesendet: ${items}`;
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} wird mit deiner Wahl gesendet`;
+          default:
+            return `${items} werden mit deiner Wahl gesendet`;
+        }
       case "es":
-        return `Se envía con tu elección: ${items}`;
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} va con tu elección`;
+          case "many":
+            return `${items} van con tu elección`;
+          default:
+            return `${items} van con tu elección`;
+        }
       case "fr":
-        return `Envoyé avec votre choix : ${items}`;
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} part avec votre choix`;
+          case "many":
+            return `${items} partent avec votre choix`;
+          default:
+            return `${items} partent avec votre choix`;
+        }
       case "ja":
-        return `選択と一緒に送信：${items}`;
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `選択と一緒に送るもの：${items}`;
+        }
       case "ko":
-        return `선택과 함께 보내요: ${items}`;
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `선택과 함께 보낼 항목: ${items}`;
+        }
       case "pt-BR":
-        return `Enviado com sua escolha: ${items}`;
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} vai com sua escolha`;
+          case "many":
+            return `${items} vão com sua escolha`;
+          default:
+            return `${items} vão com sua escolha`;
+        }
       case "zh-Hans":
-        return `随你的选择一起发送：${items}`;
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `将随你的选择一起发送：${items}`;
+        }
       case "zh-Hant":
-        return `隨你的選擇一起送出：${items}`;
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `將隨你的選擇一起送出：${items}`;
+        }
       case "en-XA":
-        return `[Šéñţ ŵîţĥ ýöûŕ çĥöîçé: ${items} ~~~~~~~~]`;
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${items} ĝöéš ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~~]`;
+          default:
+            return `[${items} ĝö ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~]`;
+        }
       case "ar-XB":
-        return `‮Sent with your choice: ‬${items}`;
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${items}‮ goes with your choice‬`;
+          default:
+            return `${items}‮ go with your choice‬`;
+        }
     }
-    return `Sent with your choice: ${items}`;
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${items} goes with your choice`;
+      default:
+        return `${items} go with your choice`;
+    }
   }
   function cardConsentFrom() {
     switch (currentLanguage()) {
@@ -16682,6 +16749,101 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮past card‬`;
     }
     return `past card`;
+  }
+  function cardPastPictures(input2) {
+    formatNumber(input2.count);
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `الصور: ${names}`;
+          case "one":
+            return `الصورة: ${names}`;
+          case "two":
+            return `الصورتان: ${names}`;
+          case "few":
+            return `الصور: ${names}`;
+          case "many":
+            return `الصور: ${names}`;
+          default:
+            return `الصور: ${names}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Bild: ${names}`;
+          default:
+            return `Bilder: ${names}`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagen: ${names}`;
+          case "many":
+            return `Imágenes: ${names}`;
+          default:
+            return `Imágenes: ${names}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Image : ${names}`;
+          case "many":
+            return `Images : ${names}`;
+          default:
+            return `Images : ${names}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `画像：${names}`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `사진: ${names}`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagem: ${names}`;
+          case "many":
+            return `Imagens: ${names}`;
+          default:
+            return `Imagens: ${names}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `图片：${names}`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `圖片：${names}`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Þîçţûŕé: ${names} ~~~]`;
+          default:
+            return `[Þîçţûŕéš: ${names} ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Picture: ‬${names}`;
+          default:
+            return `‮Pictures: ‬${names}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Picture: ${names}`;
+      default:
+        return `Pictures: ${names}`;
+    }
   }
   function cardPastSentLead() {
     switch (currentLanguage()) {
@@ -90678,6 +90840,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteUnavailable,
     cardPastMark,
     cardPastMeta,
+    cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
@@ -93490,7 +93653,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserWord": [],
     "cardCarriedNotes": ["count"],
     "cardCarriedPictures": ["count"],
-    "cardCarriedWithChoice": ["items"],
+    "cardCarriedWithChoice": ["count", "items"],
     "cardConsentFrom": [],
     "cardConsentFullDetails": [],
     "cardConsentGuidanceOnly": [],
@@ -93584,6 +93747,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteUnavailable": [],
     "cardPastMark": [],
     "cardPastMeta": [],
+    "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
@@ -98924,6 +99088,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       by: _enum(["captain", "firstmate", "crewmate", "host", "frame"]).optional()
     }),
     answers: cardAnswersSchema,
+    /**
+     * What the card's field sent with the closing choice besides its words
+     * (`choice-attachments`): the notes as a sent reply draws them, and the
+     * pictures by name. Absent when it sent nothing else.
+     */
+    carried: strictObject({
+      notes: cardNotesSchema.optional(),
+      pictures: array(string().max(120)).optional()
+    }).optional(),
     messages: array(cardMessageSchema)
   });
   strictObject({

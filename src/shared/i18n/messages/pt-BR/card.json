@@ -84,7 +84,12 @@
     "many": "{count} imagens",
     "other": "{count} imagens"
   },
-  "cardCarriedWithChoice": "Enviado com sua escolha: {items}",
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "one": "{items} vai com sua escolha",
+    "many": "{items} vão com sua escolha",
+    "other": "{items} vão com sua escolha"
+  },
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Todos os detalhes",
   "cardConsentGuidanceOnly": "Fornece orientações, partes HTML e imagens, e não executa nada.",
@@ -223,6 +228,12 @@
   "cardNoteUnavailable": "Esta parte não pode ser mostrada nesta visualização",
   "cardPastMark": "Anterior",
   "cardPastMeta": "cartão anterior",
+  "cardPastPictures": {
+    "plural": "count",
+    "one": "Imagem: {names}",
+    "many": "Imagens: {names}",
+    "other": "Imagens: {names}"
+  },
   "cardPastSentLead": "Enviado com a sua escolha:",
   "cardPastUnreadable": "Não foi possível ler este cartão",
   "cardQuickAnswer": "Resposta rápida",

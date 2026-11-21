@@ -342,8 +342,8 @@ It is host chrome, never the author's: a `--line-1` hairline above it, `--space-
 The action row ends with **Chat** at its right edge, after the default: the design rule is that the default is the right-most closing choice, and Chat, which closes nothing, sits after the choices.
 In a card too short for the body and the field, the field gives way first: the middle keeps `--space-4` of room, so the body stays in sight, and the field's row shrinks and scrolls.
 Enter or Chat sends its words as a reply; any other button carries them with the captain's choice, and the footer's picked count never counts them.
-While a file, picture or queued note waits, every choice and a note's own Done, Got it or Close stay lit, and one line at the row's left in `--text-xs` `--fg-3` names what goes with the press, `Sent with your choice: 1 picture and 2 notes`; the press sends them all with the choice (INF-5608), and the press that closes an open note editor only queues that note.
-The app's own cards, the welcome, a task's record and a panel card draw no field; a past card draws the words that went with its choice as one quiet `--text-sm` `--fg-3` line under its dimmed buttons, "Sent with your choice: …", and nothing when none went.
+While a file, picture or queued note waits, every choice and a note's own Done, Got it or Close stay lit, and one line at the row's left in `--text-xs` `--fg-3` names what goes with the press, `1 picture and 2 notes go with your choice`; the press sends them all with the choice (INF-5608), and the press that closes an open note editor only queues that note.
+The app's own cards, the welcome, a task's record and a panel card draw no field; a past card draws what went with its choice under its dimmed buttons: the words as one quiet `--text-sm` `--fg-3` line, "Sent with your choice: …", then the notes as a sent reply draws them and the pictures by name in the same tone, and nothing when none went.
 
 ## Past card (FI3-579, direction A)
 

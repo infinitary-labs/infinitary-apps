@@ -72,7 +72,10 @@
     "plural": "count",
     "other": "{count} 张图片"
   },
-  "cardCarriedWithChoice": "随你的选择一起发送：{items}",
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "other": "将随你的选择一起发送：{items}"
+  },
   "cardConsentFrom": "来自",
   "cardConsentFullDetails": "完整详情",
   "cardConsentGuidanceOnly": "它提供指导、HTML 部件和图片，不运行任何东西。",
@@ -193,6 +196,10 @@
   "cardNoteUnavailable": "此视图无法显示这个部分",
   "cardPastMark": "过往",
   "cardPastMeta": "过往卡片",
+  "cardPastPictures": {
+    "plural": "count",
+    "other": "图片：{names}"
+  },
   "cardPastSentLead": "已随你的选择发送：",
   "cardPastUnreadable": "无法读取这张卡片",
   "cardQuickAnswer": "快速回答",

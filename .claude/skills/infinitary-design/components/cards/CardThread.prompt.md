@@ -8,7 +8,7 @@ While notes from Point at or Annotate wait, the same button reads **Send 1 note*
 The empty field's key gives way before it would run into "anything to add?" in a narrow column.
 Enter or Chat sends the field as a reply; any other button carries its words with the choice (`ResponseCard.prompt.md`, "The card's one field").
 A card with no buttons ends with the field and a lone Chat.
-While a file, picture or queued note waits, the choices and a note's own Done, Got it or Close stay lit, and one line at the row's left names what goes with the press ("Sent with your choice: 1 picture and 2 notes"); the press that closes an open note editor only queues that note.
+While a file, picture or queued note waits, the choices and a note's own Done, Got it or Close stay lit, and one line at the row's left names what goes with the press ("1 picture and 2 notes go with your choice"); the press that closes an open note editor only queues that note.
 The empty field shows Go to the card's reply (⇧⌘L) at its far end on the placeholder's line, as quiet mono text in the placeholder's color, not a keycap; it goes once the field has focus or words, it is hidden from assistive technology, and the field names that key in `aria-keyshortcuts`.
 A picture pasted into the field rides with the send the same way the main input does; a chip above the pill previews it.
 A refused picture shows the composer's shared notice under the reply field.

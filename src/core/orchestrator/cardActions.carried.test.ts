@@ -119,6 +119,11 @@ describe("a card button carries what waits in the card's field", () => {
     expect(kept.notes).toEqual([note]);
     expect(kept.files).toContain("panic: the window closed before it drew");
     expect(kept.pictures).toHaveLength(1);
+    // The past card names what went: the note as sent, and the picture by name.
+    expect(h.supervisor.cards.past(h.card.id)?.carried).toEqual({
+      notes: [note],
+      pictures: ["screen.png"],
+    });
   });
 
   it("brings a first mate card's choice turn the same, its picture by reference on the row", () => {

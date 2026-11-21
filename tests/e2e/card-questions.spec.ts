@@ -1418,12 +1418,16 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
       ]),
     });
 
-    // The past card shows what went with the choice as one quiet line.
+    // The past card shows what went with the choice: the words as one quiet line, and the
+    // picture by name (INF-5608's plan, item 11).
     await page.evaluate((id) => window.infinitary.cards.showPast(id), card?.id as string);
     const past = page.locator(`[data-past-card="${card?.id}"]`);
     await expect(past).toBeVisible();
     await expect(shownEntry(page).locator("[data-past-card-words]")).toHaveText(
       `${PAST_CARD_WORDS_LEAD} ${COMMENT}`,
+    );
+    await expect(shownEntry(page).locator("[data-past-card-pictures]")).toHaveText(
+      m.cardPastPictures({ count: 1, names: "theme.png" }),
     );
     await expect(shownEntry(page).getByRole("textbox")).toHaveCount(0);
   } finally {

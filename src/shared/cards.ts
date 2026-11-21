@@ -1241,6 +1241,17 @@ export const pastCardSchema = z.strictObject({
     by: z.enum(["captain", "firstmate", "crewmate", "host", "frame"]).optional(),
   }),
   answers: cardAnswersSchema,
+  /**
+   * What the card's field sent with the closing choice besides its words
+   * (`choice-attachments`): the notes as a sent reply draws them, and the
+   * pictures by name. Absent when it sent nothing else.
+   */
+  carried: z
+    .strictObject({
+      notes: cardNotesSchema.optional(),
+      pictures: z.array(z.string().max(120)).optional(),
+    })
+    .optional(),
   messages: z.array(cardMessageSchema),
 });
 export type PastCard = z.infer<typeof pastCardSchema>;

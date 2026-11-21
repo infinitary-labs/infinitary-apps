@@ -51,5 +51,6 @@ export function carriedWithChoiceWords(waiting: {
     ...(waiting.files > 0 ? [m.cardFilesAll({ count: waiting.files })] : []),
     ...(waiting.notes > 0 ? [m.cardCarriedNotes({ count: waiting.notes })] : []),
   ];
-  return items.length > 0 ? m.cardCarriedWithChoice({ items: formatList(items) }) : null;
+  const count = waiting.pictures + waiting.files + waiting.notes;
+  return items.length > 0 ? m.cardCarriedWithChoice({ count, items: formatList(items) }) : null;
 }

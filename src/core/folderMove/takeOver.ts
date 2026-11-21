@@ -52,6 +52,8 @@ export type TakeOverDeps = {
   runsUnder?: (label: string) => boolean;
   /** How long the older copy has to let the folder go. */
   waitMs?: number;
+  /** Ends the wait early, as a run's Ctrl-C does: the older copy, asked already, reads as still running. */
+  signal?: AbortSignal;
 };
 
 export type TakeOver =
@@ -218,7 +220,7 @@ async function letGo(from: string, pid: number, deps: TakeOverDeps, waitMs: numb
   const until = Date.now() + waitMs;
   for (;;) {
     if (olderHolder(from, deps.hostname, alive) !== pid) return true;
-    if (Date.now() >= until) return false;
+    if (Date.now() >= until || deps.signal?.aborted) return false;
     await new Promise((resolve) => setTimeout(resolve, READ_EVERY_MS));
   }
 }

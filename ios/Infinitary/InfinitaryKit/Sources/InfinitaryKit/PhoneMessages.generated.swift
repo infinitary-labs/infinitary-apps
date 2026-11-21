@@ -792,6 +792,24 @@ public enum PhoneMessages {
     public static func `fileReady`() -> String { PhoneWords.format("fileReady", []) }
     public static func `fileReadyAnnounce`(`name`: String) -> String { PhoneWords.format("fileReadyAnnounce", [`name`]) }
     public static func `handoverQuit`() -> String { PhoneWords.format("handoverQuit", []) }
+    public static func `handoverRunBothFolders`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverRunBothFolders", [`from`, `to`]) }
+    public static func `handoverRunBusy`(`to`: String) -> String { PhoneWords.format("handoverRunBusy", [`to`]) }
+    public static func `handoverRunChecking`() -> String { PhoneWords.format("handoverRunChecking", []) }
+    public static func `handoverRunContinueLater`(`to`: String) -> String { PhoneWords.format("handoverRunContinueLater", [`to`]) }
+    public static func `handoverRunCopying`(`size`: String) -> String { PhoneWords.format("handoverRunCopying", [`size`]) }
+    public static func `handoverRunFailed`(`detail`: String, `from`: String, `to`: String) -> String { PhoneWords.format("handoverRunFailed", [`detail`, `from`, `to`]) }
+    public static func `handoverRunLeftRunning`(`from`: String) -> String { PhoneWords.format("handoverRunLeftRunning", [`from`]) }
+    public static func `handoverRunMoved`(`to`: String) -> String { PhoneWords.format("handoverRunMoved", [`to`]) }
+    public static func `handoverRunMoving`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverRunMoving", [`from`, `to`]) }
+    public static func `handoverRunNoSpace`(`free`: String, `needed`: String) -> String { PhoneWords.format("handoverRunNoSpace", [`free`, `needed`]) }
+    public static func `handoverRunNoTerminal`(`to`: String) -> String { PhoneWords.format("handoverRunNoTerminal", [`to`]) }
+    public static func `handoverRunProgress`(`percent`: String) -> String { PhoneWords.format("handoverRunProgress", [`percent`]) }
+    public static func `handoverRunStillOpen`(`from`: String) -> String { PhoneWords.format("handoverRunStillOpen", [`from`]) }
+    public static func `handoverRunStillWorking`(`from`: String) -> String { PhoneWords.format("handoverRunStillWorking", [`from`]) }
+    public static func `handoverRunStopPrompt`() -> String { PhoneWords.format("handoverRunStopPrompt", []) }
+    public static func `handoverRunUnfinished`(`detail`: String, `from`: String, `to`: String) -> String { PhoneWords.format("handoverRunUnfinished", [`detail`, `from`, `to`]) }
+    public static func `handoverRunUnsupported`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverRunUnsupported", [`from`, `to`]) }
+    public static func `handoverRunWontStop`(`to`: String) -> String { PhoneWords.format("handoverRunWontStop", [`to`]) }
     public static func `handoverStopNow`() -> String { PhoneWords.format("handoverStopNow", []) }
     public static func `handoverStoppingText`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverStoppingText", [`from`, `to`]) }
     public static func `handoverStoppingTitle`(`from`: String) -> String { PhoneWords.format("handoverStoppingTitle", [`from`]) }
@@ -4545,6 +4563,24 @@ extension PhoneWords {
         "fileReady": [],
         "fileReadyAnnounce": ["name"],
         "handoverQuit": [],
+        "handoverRunBothFolders": ["from", "to"],
+        "handoverRunBusy": ["to"],
+        "handoverRunChecking": [],
+        "handoverRunContinueLater": ["to"],
+        "handoverRunCopying": ["size"],
+        "handoverRunFailed": ["detail", "from", "to"],
+        "handoverRunLeftRunning": ["from"],
+        "handoverRunMoved": ["to"],
+        "handoverRunMoving": ["from", "to"],
+        "handoverRunNoSpace": ["free", "needed"],
+        "handoverRunNoTerminal": ["to"],
+        "handoverRunProgress": ["percent"],
+        "handoverRunStillOpen": ["from"],
+        "handoverRunStillWorking": ["from"],
+        "handoverRunStopPrompt": [],
+        "handoverRunUnfinished": ["detail", "from", "to"],
+        "handoverRunUnsupported": ["from", "to"],
+        "handoverRunWontStop": ["to"],
         "handoverStopNow": [],
         "handoverStoppingText": ["from", "to"],
         "handoverStoppingTitle": ["from"],

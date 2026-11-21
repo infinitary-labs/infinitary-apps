@@ -39,6 +39,31 @@ On Linux, and on an isolated or switched data folder, the reading is written wit
 Before removing the marker it writes `run-last-stop.json` with the reason, lines, exit code and stop time; both files are private to the account and replaced atomically.
 A refused second start owns neither file, so it cannot replace the running command's reading.
 
+## Before it starts
+
+When the one-time move from Firstmate 3000 is due (`docs/saved-data-compatibility.md`, "The one-time move"), the run makes it in its terminal before Chromium opens either folder, then goes on from Infinitary's own folder (`runHandOverInTerminal`, `src/main/runHandOver.ts`).
+The entry awaits the app's start before Electron is ready, so the move runs while no browser profile is open, and the run needs no second start.
+Its lines go to its output and are the window's hand-over in words a terminal shows:
+
+- **An older copy with no window.**
+  When an older copy's background work or a run a command started holds the older folder, the run takes over from it as the window's hand-over does (`docs/saved-data-compatibility.md`, "An older copy still running"): it says "Stopping Firstmate 3000's background work" with the window's words, lets go of its background agent, asks it to save and stop, and waits up to fifteen seconds.
+- **Asking before forcing.**
+  A copy that has not let go by then is ended only when the person types yes at the run's terminal: Infinitary says "Firstmate 3000 has not stopped", that stopping it now ends it without waiting for it to save, and asks "Type yes to stop it now:".
+  Any other answer leaves it running and ends the run.
+  A run with no terminal to answer, as a service manager starts one, never ends it: it says to run this again in a terminal to stop it now, and ends.
+  Either way nothing is changed, and the agents the take-over let go start again.
+- **The move, step by step.**
+  It says where the move starts and that Firstmate 3000's folder stays as a recovery copy, how much it copies, when it checks the copy, how far it is at most every fifteen seconds, and when the work is in.
+  Once the work is in, it turns start at login on as the older app had it and hands the older background to Infinitary's label, as the window's move does.
+- **A stop meanwhile.**
+  Ctrl-C, SIGTERM or SIGHUP while it hands over stops the move before its copy is checked, with nothing changed, starts again the agents the take-over let go, says "Infinitary stopped." and exits 0; the move starts again the next time Infinitary runs.
+  At the question, Ctrl-C answers it the same way.
+- **What only the window asks.**
+  When both folders hold work, the run says to open Infinitary with its window once to choose the work it opens, then run this again.
+  An older copy with its window open keeps the person's own Quit: the run says to quit it, then run this again.
+
+Any other reason the move cannot go on now - another launch moving the same folders, newer saved work, too little room, or a failed copy - ends the run with 1, saying what happened and what to do on its error output.
+
 ## Opened while it runs
 
 On a Mac, a click on Infinitary in the Dock, Spotlight or Finder, or `open -a`, starts the app's window while a command runs, even one too busy or stuck to answer anything.
@@ -72,7 +97,7 @@ When it cannot start, it says why on its error output and exits 1, where the app
 | Why | What it says |
 | --- | --- |
 | The app is already open in this account, or another command runs it | "Infinitary is already open here, as this user." and "Quit it, then run this again." |
-| The one-time move from Firstmate 3000 is due (`docs/saved-data-compatibility.md`, "The one-time move") | "Infinitary has work from Firstmate 3000 to bring over first." and "Open Infinitary with its window once to bring it over, then run this again." |
+| Infinitary's one-time move from Firstmate 3000 cannot go on now ("Before it starts" above) | what stopped it and what to do, such as "Firstmate 3000 is still open here, and it holds your saved work. Quit Firstmate 3000, then run this again." |
 | The folder moved, a move holds it, or newer saved work is in it | the refusal page's title and reason, as two lines |
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer, so there is nothing for a command to run here." and "Leave it from Infinitary's window here first, then run this again." |
 | Anything else stopped its start | "Infinitary could not start: " and the reason |
@@ -372,6 +397,7 @@ Moving an existing record to another account is planned separately (question 7).
 `tests/e2e/run-command.spec.ts` starts the built app as `<app> run` in the hermetic environment `launchApp` uses (`hermeticEnv`, `tests/e2e/launch.ts`), with no display on Linux: it runs and stops cleanly, a second run refuses, a replaced program ends it with 75, and a word after `run` exits 2.
 Every journey starts a command through `tests/e2e/commandRun.ts`, and `hermeticEnv` names a start entry that is not there, so no journey reads this computer's own.
 With a settings file and the system folders as its path, a run never asks a stand-in login shell that the same run without one asks, and notes the file's folders; a misspelled setting ends it with 78 and keeps why as its last stop.
+`tests/e2e/run-hand-over.spec.ts`, on Linux only, starts the built app as `<app> run` with no isolated folder while a stand-in older run holds Firstmate 3000's folder: the older run saves and ends on the ordinary stop, the run brings the saved work over and starts fully from its own folder, and the moved record holds the older task; a full start that is not isolated would read a Mac's own Keychain, so the Mac's take-over is `src/main/runHandOver.integration.test.ts`.
 `tests/e2e/run-window.spec.ts` opens the built app's window beside such a command: it shows the command's card as this computer's own window, and once the command is stopped it offers Start it here beside Quit by keys, with Escape closing nothing.
 A command killed over an earlier stop's record is told as stopped without saying why; under a stand-in start entry the window waits for a command that ended for its update and follows the new program, offers Start it here once the entry's time passed and takes the notice down for a late command, and a window opened between two starts waits unless Start it here answered that end.
 Its last journey changes the theme at the first mate from a second client of the local door, which the window draws, and changes it back in the window, which the first mate keeps.

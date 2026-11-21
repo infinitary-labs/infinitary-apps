@@ -620,7 +620,7 @@ The shell has no line when the command is not on its PATH, the shell has no task
 ## A main repair's priority label
 
 Our own runners queue a main repair's checks ahead of other work when its pull request carries the `fixes-main` label.
-The label is a project rule for infinitary-labs/infinitary only, not app behavior and not a setting (INF-1423, direction A).
+The label is a project rule for infinitary-labs/infinitary-apps only, not app behavior and not a setting (INF-1423, direction A).
 A crewmate that repairs a failing main follows these steps:
 
 1. It records the evidence that main fails, then confirms its own open pull request targets main from the same repository and its exact task branch.

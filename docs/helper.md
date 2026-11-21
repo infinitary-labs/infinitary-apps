@@ -371,7 +371,7 @@ The home reads where the device dialed from off its socket, never from what it s
 `startHelper` (`src/core/helper/run.ts`) is the whole composition: the data folder, the grant, and `HomeLink`, the device's side of the connection the app as a view also uses (`docs/view.md`, "Reaching the other Mac").
 Unlike `createServices` it has no first mate, task record, scheduler or sharing: the home keeps all of those.
 Beside the link it holds the crewmate conversations its home opens here (below); it is sent no push (`docs/connection.md`).
-Every child it starts - git, a crewmate's shell, Claude's client - carries the app's own git helper pointed at this computer's `forges/` (`configureComputerGit`, `src/core/helper/forges.ts`; `docs/forge.md`, "Git that never prompts"), so its git answers GitHub, GitHub Enterprise and GitLab only with this computer's own sign-in, and Bitbucket Cloud with it once this computer signs in there, and never prompts.
+Every child it starts - git, a crewmate's shell, Claude's client - carries the app's own git helper pointed at this computer's `forges/` (`configureComputerGit`, `src/core/helper/forges.ts`; `docs/forge.md`, "Git that never prompts"), so its git answers GitHub, GitHub Enterprise and GitLab only with this computer's own sign-in, and Bitbucket Cloud and Data Center with it once this computer signs in there, and never prompts.
 Every git it starts - a clone, a crewmate's shell, a removal's look at a working copy - is the app's own, as the home's is: every command takes it before anything looks for git or runs it (`adoptBundledGit`, `src/core/workspace/bundledGit.ts`, from `runCli`; `docs/forge.md`, "The app's own git").
 So a Mac with no developer tools clones, commits and pushes, and its join tells the home it has git.
 
@@ -1247,7 +1247,7 @@ Nothing moves on its own, and a move between two computers in reach is unchanged
 ## Its own sign-ins
 
 A computer that runs work signs in to its own subscriptions, and a task it runs uses only those (design skill `components/devices/SignInOnAMac`).
-A computer also signs in to GitHub for its own clones and pushes, with a code or through its own GitHub CLI's sign-in, to GitHub Enterprise and GitLab with a key or GitLab's browser code, and to Bitbucket Cloud with an API token (`docs/forge.md`, "A computer's own sign-in").
+A computer also signs in to GitHub for its own clones and pushes, with a code or through its own GitHub CLI's sign-in, to GitHub Enterprise and GitLab with a key or GitLab's browser code, and to Bitbucket Cloud with an API token and Bitbucket Data Center with an HTTP access token (`docs/forge.md`, "A computer's own sign-in").
 Nothing of the home's sign-ins is sent here, and nothing of these goes to the home but the account rows, the allowance read here, and who GitHub says it is.
 
 - **The stores.**
@@ -1300,7 +1300,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   `inf:sign-ins:cancel` stops it, and so does a newer one, since only one code is on screen at a time.
   The code running out ends it as "The code expired.", GitHub out of reach as "Could not reach GitHub - try again.", and a no on GitHub's page quietly.
   Its health and a short-lived sign-in's renewal run on this computer's own minute tick, as the home's own do on its; the home holds no store for it, so it can neither read nor renew it.
-  GitHub Enterprise, GitLab and Bitbucket Cloud sign in here too, with a key the home sends once (`inf:sign-ins:forge-key`) or GitLab's browser code (`inf:sign-ins:forge-browser`), each kept in `forges/`.
+  GitHub Enterprise, GitLab, Bitbucket Cloud and Bitbucket Data Center sign in here too, with a key the home sends once (`inf:sign-ins:forge-key`) or GitLab's browser code (`inf:sign-ins:forge-browser`), each kept in `forges/`.
   This computer's sign-ins whole carry the host it is signed in to, who the host says it is and its health, every host it offers and the kinds of server it signs in to (`forges`), never the sign-in itself.
 - **Allowance and renewal, here alone.**
   This computer reads each account's allowance with its own store every five minutes and after a sign-in, and tells the home its sign-ins whole as `inf:work:sign-ins` after any change.

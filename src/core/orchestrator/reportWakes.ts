@@ -405,6 +405,7 @@ function withdrawnText(withdrawn: WakeWithdrawn[] | undefined): string {
  * the captain (INF-5510's plan, piece 1): the captain sees each on the merge
  * card and may overturn it there.
  */
+// i18n-exempt: served to the builder crewmate in its handoff, stays English
 export const SETTLED_FINDINGS_RULES =
   "A finding the review settled without asking the captain - its text, or the reviewer's report, says Settled without asking - is listed on your merge card, in a saved story one checked fact each: what was found, what you did and why the captain was not asked. If you judge a settled finding wrong, leave it unmade and say why in your report: it becomes a question for the captain. A reply under your merge card that overturns a settled finding is the captain's decision: make that change.";
 

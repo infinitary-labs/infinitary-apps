@@ -1,5 +1,5 @@
 ---
-source: 86ec7e76bee97816
+source: ba3356bfe003be79
 title: Projets
 description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -49,7 +49,8 @@ Pour GitLab, vous pouvez vous connecter dans votre navigateur ou coller une clé
 Pour Bitbucket, vous créez un jeton d’API sur votre compte Atlassian et vous le collez, pour les projets sur bitbucket.org.
 Le formulaire de clé nomme les autorisations à cocher sur la page d’Atlassian.
 Vos projets Bitbucket sont listés à partir des espaces de travail dont vous faites partie ; s’il y en a beaucoup, certains peuvent ne pas avoir été vérifiés, et la liste le signale.
-Pour l’instant, les changements d’un projet Bitbucket sont proposés sous forme de branche, pas de demande de tirage.
+Les changements d’un projet Bitbucket sont proposés en demandes de tirage, comme sur GitHub et GitLab ; un projet ajouté avant cela fonctionne de la même façon dès sa prochaine tâche.
+La description d’une demande de tirage Bitbucket porte le récit sous forme de texte, et ses images restent sur la carte.
 Votre connexion reste sur cet ordinateur.
 
 Si une connexion cesse de fonctionner, une carte vous demande de vous reconnecter.
@@ -85,7 +86,7 @@ Infinitary se souvient de votre focus quand vous le redémarrez.
 Ouvrez un projet dans **Réglages → Projets** pour choisir comment son travail terminé est fusionné.
 **Où vont les modifications** propose :
 
-- **demandes de tirage** : chaque changement est proposé en demande de tirage sur GitHub ou GitLab.
+- **demandes de tirage** : chaque changement est proposé en demande de tirage sur GitHub, GitLab ou Bitbucket.
 - **demandes de tirage groupées** : vos changements approuvés sont réunis en une seule demande de tirage groupée, un commit pour chaque changement, et fusionnés une fois ses vérifications réussies.
 - **fusion locale** : le changement est fusionné dans le projet sur cet ordinateur, sans demande de tirage.
 

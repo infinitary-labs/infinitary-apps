@@ -1,5 +1,5 @@
 ---
-source: 3e64699c942fc0e5
+source: 554ab0e4646c3cc7
 title: Dépannage
 description: Les problèmes courants dans Infinitary, les mots que l’app affiche pour chacun et ce qu’il faut faire.
 ---
@@ -73,6 +73,21 @@ Si un ordinateur que vous avez ajouté par son adresse a une nouvelle adresse, a
 Sur un Mac, macOS peut tenir Infinitary à l’écart du réseau local jusqu’à ce que quelqu’un devant ce Mac l’autorise.
 Sa ligne propose alors plutôt **L’ajouter par son adresse**.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/).
+
+## Un ordinateur apparaît deux fois {#a-computer-is-listed-twice}
+
+Réglages → **Appareils** affiche le même nom deux fois : une ligne à portée, et une hors de portée qui porte encore des tâches.
+Cela arrive quand un ordinateur qui exécute le travail rejoint de nouveau après la suppression de son travail enregistré, ou après une nouvelle installation d’Infinitary sur cet ordinateur.
+La ligne à portée indique « Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée ».
+
+1. Sur la ligne à portée, appuyez sur **Poursuivre ses tâches ici**.
+2. Lisez ce qui continue et ce qui reste en arrière, puis appuyez sur **Les poursuivre**.
+3. Chaque tâche reprend à partir du dernier commit que l’ordinateur où vit votre second a rapporté.
+   L’ancienne ligne disparaît de votre liste une fois que toutes les tâches ont été déplacées.
+
+Les commits postérieurs, les modifications non validées et les fichiers des anciens dossiers de tâches restent avec l’ancienne entrée.
+Pour une ligne hors de portée sans correspondance, appuyez sur **Déplacer ses tâches vers…** et choisissez un ordinateur.
+Voir [Ce qui supprime votre travail enregistré](/fr/update-and-remove/#what-deletes-your-saved-work).
 
 ## La fenêtre ne répond plus {#the-window-stops-answering}
 

@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Mettre à jour et supprimer Infinitary
 description: Comment chaque type d’installation reçoit une nouvelle version stable, et comment supprimer Infinitary en gardant votre travail enregistré.
 ---
@@ -87,3 +87,15 @@ Si cet ordinateur exécute le travail d’un autre, appuyez d’abord sur **Quit
   Pour une AppImage, supprimez le fichier.
 
 Votre travail enregistré reste dans `~/Library/Application Support/infinitary` sur un Mac, et dans `~/.config/infinitary` sous Linux.
+
+### Ce qui supprime votre travail enregistré {#what-deletes-your-saved-work}
+
+Ces actions suppriment ce dossier, et ce qu’Infinitary y gardait disparaît avec lui :
+
+- `brew uninstall --zap`.
+- Une app de désinstallation qui supprime aussi les fichiers de support d’une app.
+- Placer le dossier lui-même dans la Corbeille, ou le supprimer.
+
+Sur un ordinateur qui exécute le travail d’un autre, ce dossier contient la clé propre à l’ordinateur, ses copies de travail et les fichiers de ses tâches.
+Sans lui, l’ordinateur rejoint de nouveau comme une nouvelle entrée, et le travail qu’il n’avait pas rapporté reste perdu.
+Voir [Un ordinateur apparaît deux fois](/fr/troubleshooting/#a-computer-is-listed-twice).

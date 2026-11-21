@@ -1,5 +1,5 @@
 ---
-source: 9ced91a9d5bca6c2
+source: 67e6220319b54d48
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -20,7 +20,7 @@ Vos connexions restent sur votre ordinateur.
 ## Vos projets vont là où ils sont hébergés {#your-projects-go-where-they-live}
 
 Un équipier travaille dans une copie de travail de votre projet sur votre ordinateur.
-Quand une tâche est proposée sous forme de demande de tirage, sa branche est envoyée là où votre projet est hébergé, comme GitHub ou GitLab, et la demande de tirage y est ouverte.
+Quand une tâche est proposée sous forme de demande de tirage, sa branche est envoyée là où votre projet est hébergé, comme GitHub, GitLab ou Bitbucket, et la demande de tirage y est ouverte.
 Un projet gardé uniquement sur cet ordinateur reste sur cet ordinateur.
 
 Quand un équipier prépare une copie de travail ou fait sa tâche, il peut récupérer ce dont votre projet a besoin, comme vous le feriez à la main.

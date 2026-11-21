@@ -1,5 +1,7 @@
 import { EMPTY_FIRST_RUN, type FirstRunView } from "@shared/firstRun";
+import * as m from "@shared/i18n/messages.generated";
 import { keyHint } from "@shared/keyboard";
+import { keymapSnapshot, presetKeymap } from "@shared/keymap";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { voiceController } from "../voice/voiceController";
 import { inputPlaceholder } from "./HomePrompt";
@@ -94,6 +96,22 @@ describe("dictation off", () => {
     expect(inputPlaceholder({ ...input, returnToMessageKey })).toEqual(inputPlaceholder(input));
     expect(inputPlaceholder({ ...input, returnToMessageKey, transcribing: false })).toEqual([
       `press ${returnToMessageKey} to write a message`,
+    ]);
+  });
+
+  // The captain's ask: Vim's key is the plain i, so a capital I misleads.
+  it("writes a plain letter in the return hint as it is typed", () => {
+    const input = { firstRun: null, voiceSupported: true, transcribing: false };
+    const keysOf = (preset: "vim" | "emacs") =>
+      keyHint(
+        "focus.main-message",
+        keymapSnapshot({ saved: presetKeymap(preset), unreadable: false }, 1).bindings,
+      );
+    expect(inputPlaceholder({ ...input, returnToMessageKey: keysOf("vim") })).toEqual([
+      m.shellPromptReturnToMessage({ key: "i" }),
+    ]);
+    expect(inputPlaceholder({ ...input, returnToMessageKey: keysOf("emacs") })).toEqual([
+      m.shellPromptReturnToMessage({ key: "⌃X m" }),
     ]);
   });
 

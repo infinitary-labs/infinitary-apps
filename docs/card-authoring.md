@@ -568,7 +568,7 @@ Each option appears once on the chart, beside its words, the As built pill on th
 A press on an option's mark picks the question's own option, and the mark shows it picked (`FRAME_TAG_SCRIPT`); the option's own row stays the keyboard's way to reach and pick it, so the chart adds no stop to the Tab order and is hidden from screen readers, which read the table.
 The table as written follows the chart in a fold, The tradeoff as a table.
 The radar tiles wrap to one column and the plane's words wrap in a narrow card, so neither scrolls sideways.
-In a plane too narrow for a pill, the As built and Recommended tags become a line of small words beside the option's, broken only between words.
+In a plane too narrow for a pill, the As built and Recommended tags become small words beside the option's, broken only between words.
 The app reads no heading's or option's words: at the `emit_card` boundary the card checks refuse only a table it could not draw (`tradeoffProblem`): fewer than two headings, a row naming no option of its question, a row without a level in every heading's cell, or no row for the option marked `data-inf-current`.
 A view or phone too old to know the chart shows the table as written.
 

@@ -465,8 +465,10 @@ export const FRAME_BASE_STYLE = `
   @container (max-width: 480px) {
     [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] { padding: var(--space-1); }
     [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
-      display: block; margin: 0; padding: 0; border: 0; background: none; font-size: 10px;
+      padding: 0; border: 0; background: none; font-size: 10px;
     }
+    [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before { display: inline; white-space: nowrap; }
+    [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after { display: block; margin: 0; }
   }
   [data-inf-tradeoff-recommended][data-inf-tradeoff-pick], [data-inf-tradeoff-default][data-inf-tradeoff-pick] { border-color: var(--accent-dim); }
   [data-inf-tradeoff-pick][data-inf-tradeoff-picked] { border-color: var(--accent); color: var(--fg-1); }

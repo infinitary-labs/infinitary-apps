@@ -20,7 +20,7 @@ import {
   crewmateTempDir,
 } from "../paths";
 import { errorText } from "../personal/errorText";
-import { type ComputerPool, servesOnComputer } from "../routing/computerPool";
+import { type ComputerPool, servesOnComputer, servingNow } from "../routing/computerPool";
 import type { RoutePreview } from "../routing/router";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -126,12 +126,10 @@ function bindingThere(
   failed: ReadonlySet<string> | undefined,
 ): string | undefined {
   const key = offeringKey(model);
-  const usable = (account: string | undefined) =>
-    account !== undefined && failed?.has(`${key}@${account}`) !== true ? account : undefined;
-  const first = usable(pool.modelAccounts?.get(key));
-  if (first) return first;
-  for (const account of pool.servedBy?.get(key) ?? []) if (usable(account)) return account;
-  return pool.servedBy ? undefined : usable(pool.accounts.get(model.provider));
+  // A computer that lists what it serves names it in the ranked pool
+  // (`servingNow`); an older one, the account there for its provider.
+  const account = pool.servedBy ? pool.modelAccounts?.get(key) : pool.accounts.get(model.provider);
+  return account !== undefined && failed?.has(`${key}@${account}`) !== true ? account : undefined;
 }
 
 /** Why a task waits for a model (`TaskMoves.modelWaitCause`). */
@@ -686,9 +684,18 @@ export class TaskMoves {
       const avoidProvider = builder ? router.servedProvider(builder) : undefined;
       const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
       const custom = isCustomApiProvider(from.provider);
+      // Each model there is ranked on the account that would serve it now,
+      // passing over one whose allowance there is spent or that failed to
+      // open it, so a preview and its binding name the same account.
+      const ranked = (serving: ComputerPool) =>
+        servingNow(
+          serving,
+          this.host.now(),
+          (key, account) => this.failedOpens.get(taskId)?.has(`${key}@${account}`) === true,
+        );
       const prepare = (serving: ComputerPool | undefined) =>
         router.prepare({
-          ...(serving ? { pool: serving } : {}),
+          ...(serving ? { pool: ranked(serving) } : {}),
           ...(avoidProvider ? { avoidProvider } : {}),
           images,
         });
@@ -726,7 +733,7 @@ export class TaskMoves {
         const accountId = custom ? (record.accountId ?? undefined) : pick?.accountId;
         // There, the account that serves it, passing over one that already
         // failed to open it: its pin, else another that lists it.
-        const binding = pool ? bindingThere(pool, to, failed) : undefined;
+        const binding = pool ? bindingThere(ranked(pool), to, failed) : undefined;
         // The model and account an open that failed passes over.
         const pair = (account: string | undefined) =>
           account !== undefined ? `${offeringKey(to)}@${account}` : offeringKey(to);
@@ -783,10 +790,11 @@ export class TaskMoves {
                 servesOnComputer(serving, opened.account, to, this.host.now())
               : servesHere();
             if (!onModel || !eligible) {
-              // The pair is passed over - the whole model when it opened on
-              // another - and the rest routing would pick are tried before
+              // The pair is passed over - the whole model only when no
+              // account was asked for it - and the rest routing would pick,
+              // a sibling account on the same model first, are tried before
               // the task waits.
-              passOver(!onModel || (!pool && accountId === undefined));
+              passOver(pool ? binding === undefined : accountId === undefined);
               return refuse();
             }
             const { accountId: _guessed, ...evaluated } = current.preview;

@@ -464,6 +464,92 @@ describe("a conversation held on a computer that runs work", () => {
     expect(again.state?.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
   });
 
+  // INF-5438 round 10 finding 5: an idle held conversation that says no
+  // model is not what an open asking one gets back: it opens again.
+  it("opens again when an idle held conversation says no model and the same open asks one", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: never) => Promise<{ modelRef(): unknown }> } } };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    let silent = true;
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      if (silent) {
+        silent = false;
+        session.modelRef = () => undefined;
+      }
+      return session;
+    });
+    const first = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: at.spec },
+    ]);
+    expect(first.state?.model).toBeUndefined();
+    const again = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: at.spec },
+    ]);
+    expect(again.state?.model).toEqual(at.spec.model);
+  });
+
+  // INF-5438 round 10 finding 7: a fresh restart names no conversation to
+  // carry on; where the held one carries on another, a new one opens.
+  it("opens a new conversation for a fresh restart where the held one carries on another", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Started." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+    const held = await at.open();
+    const carrying = {
+      ...at.spec,
+      tools: [...at.spec.tools, "prepare_change"],
+      resume: held.state.resume,
+    };
+    const carried = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: carrying },
+    ]);
+    expect(carried.state?.resume).toBe(held.state.resume);
+    const { resume: _carried, ...fresh } = carrying;
+    const restarted = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:3`, task: TASK, spec: fresh },
+    ]);
+    expect(restarted.state?.resume).toBeTruthy();
+    expect(restarted.state?.resume).not.toBe(held.state.resume);
+  });
+
+  // INF-5438 round 10 finding 4: an open that fails once its conversation
+  // began says it left nothing here only after letting that conversation go,
+  // and only to a home that asks; to any other it fails as before.
+  it("answers that an open left nothing here once the conversation it began is let go", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: {
+          factories: { pi: { open: (spec: never) => Promise<{ takeRenewal(): unknown }> } };
+        };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      session.takeRenewal = () => {
+        throw new Error("The renewal could not be read.");
+      };
+      return session;
+    });
+    const answer = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, notOpened: true } },
+    ]);
+    expect(answer).toEqual({ notOpened: "The renewal could not be read." });
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
+    await expect(
+      at.order("inf:session:open", [{ orderId: `open:${TASK}:2`, task: TASK, spec: at.spec }]),
+    ).rejects.toThrow("The renewal could not be read.");
+  });
+
   // INF-5438 finding 1: an open asked only to reattach never creates or
   // replaces a conversation there; it answers that a new one is needed, so
   // the home routes first (`reattach-only-open.md`).

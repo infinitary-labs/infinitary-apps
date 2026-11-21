@@ -1550,3 +1550,118 @@ it("says why an order waits for a model, for each reason it waits", () => {
   expect(none).toContain("no other model there can take it");
   expect(none).not.toContain("updated");
 });
+
+// INF-5438 round 10 finding 2: a context restart whose new conversation is
+// not accepted (it came back on another model) keeps the restart on the
+// lane, so the next open starts fresh instead of resuming the conversation
+// the context limit filled.
+it("keeps a context-limit restart whose new conversation was not accepted, and opens it fresh next", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  // Sol is still held, but the restart's conversation comes back on Luna.
+  const drifted = fakeCrewmate({ model: luna, sessionId: "s2" });
+  const h = setup(crewmate, { realRouter: routing.make, crewmates: [drifted] });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the big logs",
+    intent: intentOf("read every log part and report"),
+  });
+  await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+  crewmate.emit({
+    type: "turn_failed",
+    taskId,
+    error: "This request exceeds the context window. Shorten it before trying again.",
+    contextOverflow: true,
+  });
+  crewmate.emit({ type: "turn_end", taskId });
+  crewmate.finishPrompt();
+  await tick();
+  await tick();
+  expect(h.sessionSpecs).toHaveLength(2);
+  expect(drifted.promptCalls).toEqual([]);
+  expect(
+    h.tasks.timeline(taskId).some((entry) => entry.text?.includes("could not open") === true),
+  ).toBe(false);
+  await h.supervisor.disposeAll();
+
+  const opened = await relaunchAndSteer(h, taskId, sol);
+  expect(opened?.model).toEqual(sol);
+  // A new conversation, not the one the context limit filled.
+  expect(opened?.resumeToken).toBeUndefined();
+});
+
+// INF-5438 round 10 finding 6: a move the captain named opens on its model
+// or takes no words; the next words go to a conversation on that model.
+it("sends no words to a moved task's conversation that opened on another model than the move named", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const drifted = fakeCrewmate({ model: luna, sessionId: "s2" });
+  const moved = fakeCrewmate({ model: terra, sessionId: "s3" });
+  const h = setup(crewmate, { realRouter: routing.make, crewmates: [drifted, moved] });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project and report"),
+  });
+  await tick();
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.moves.runMove(taskId, { by: "captain", model: offeringKey(terra) });
+  await tick();
+  await h.supervisor.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(drifted.promptCalls).toEqual([]);
+  expect(moved.promptCalls).toEqual(["carry on"]);
+  expect(h.specs.slice(1).map((spec) => spec.model)).toEqual([terra, terra]);
+  await h.supervisor.disposeAll();
+});
+
+// INF-5438 round 10 findings 1 and 9: on a computer that runs work, a model
+// two accounts there list is bound to the one with allowance left, never its
+// pinned account whose allowance is spent; and an account that opened it on
+// another model is passed over for its sibling on the same model.
+it("binds a replacement there to an account with allowance left, and tries its sibling after a wrong open", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel(luna);
+  const reading = (accountId: string, percentRemaining: number) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId,
+    status: "ok" as const,
+    stale: false,
+    windows: [{ id: "five_hour", label: "5h", percentRemaining }],
+  });
+  let pinnedLeft = 0;
+  const machines = {
+    served: async () => ({
+      available: [luna],
+      catalog: [{ provider: "codex", id: luna.id, label: luna.id, effectivePercentRemaining: 80 }],
+      note: "the computer's own sign-ins",
+      readings: [reading("there-pinned", pinnedLeft), reading("there-funded", 60)],
+      accounts: new Map([["openai-codex", "there-pinned"]]),
+      modelAccounts: new Map([[offeringKey(luna), "there-pinned"]]),
+      servedBy: new Map([[offeringKey(luna), new Set(["there-pinned", "there-funded"])]]),
+    }),
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+  const route = async () => {
+    const routed = await relaunched.reopenModel(taskId, "mini", false);
+    if (typeof routed !== "object") throw new Error(`no route: ${routed}`);
+    return routed;
+  };
+  // The pinned account's allowance there is spent: the funded sibling.
+  expect((await route()).accountId).toBe("there-funded");
+
+  // Both have allowance; the pinned one opens it on Sol: its sibling next.
+  pinnedLeft = 70;
+  const first = await route();
+  expect(first.accountId).toBe("there-pinned");
+  expect(await first.commit({ model: sol, account: "there-pinned" })).toBe("again");
+  const next = await route();
+  expect(next.accountId).toBe("there-funded");
+  expect(await next.commit({ model: luna, account: "there-funded" })).toBe("committed");
+  expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
+  await relaunched.disposeAll();
+});

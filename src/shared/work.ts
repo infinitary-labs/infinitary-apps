@@ -294,6 +294,8 @@ export const placedSpecSchema = z.object({
    * home routes the new conversation before it asks for one.
    */
   reattach: z.boolean().optional(),
+  /** An open that failed leaving no new conversation there answers `notOpened` (`open-not-opened.md`). */
+  notOpened: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -1339,10 +1341,14 @@ export const workOrders = {
   "inf:session:open": {
     effect: "change",
     request: ordered({ spec: placedSpecSchema }),
-    /** `state` always, but for a `reattach` open that found none to keep: `needsOpen` (`reattach-only-open.md`). */
+    /**
+     * `state` always, but for a `reattach` open that found none to keep: `needsOpen` (`reattach-only-open.md`);
+     * and for a `notOpened` open that failed leaving no new conversation there: `notOpened`, why (`open-not-opened.md`).
+     */
     response: z.object({
       state: placedStateSchema.optional(),
       needsOpen: z.literal(true).optional(),
+      notOpened: z.string().optional(),
     }),
   },
   /** Starts a turn; answers once it has started, and its end is an event. */

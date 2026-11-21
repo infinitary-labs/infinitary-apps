@@ -54,6 +54,34 @@ export function servesOnComputer(
 }
 
 /**
+ * The pool with each model it lists ranked on the account there that would
+ * serve it now: its pin, else the first that lists it, passing over one
+ * whose own allowance there is spent (`servesOnComputer`) or that `passing`
+ * names for that model. A model no account there serves now keeps no
+ * account of its own, so its provider's account ranks it. A computer too
+ * old to list what it serves is read as it is.
+ */
+export function servingNow(
+  pool: ComputerPool,
+  nowMs: number,
+  passing: (key: string, account: string) => boolean,
+): ComputerPool {
+  const { servedBy, modelAccounts } = pool;
+  if (!servedBy || !modelAccounts) return pool;
+  const ranked = new Map<string, string>();
+  for (const [key, accounts] of servedBy) {
+    const slash = key.indexOf("/");
+    const model = { provider: key.slice(0, slash), id: key.slice(slash + 1) };
+    const pinned = modelAccounts.get(key);
+    const account = [...(pinned !== undefined ? [pinned] : []), ...accounts].find(
+      (each) => !passing(key, each) && servesOnComputer(pool, each, model, nowMs),
+    );
+    if (account !== undefined) ranked.set(key, account);
+  }
+  return { ...pool, modelAccounts: ranked };
+}
+
+/**
  * Whether an account a computer listed can serve a task there: enabled,
  * signed in, needing no new sign-in, and withheld by nothing there (no
  * Claude Code, one too old, or a typed cut-off standing on it - a lost

@@ -387,6 +387,7 @@ describe("reopening after a work computer restarts, when the task's model left e
     await expect.poll(() => first.tasks.get(taskId)?.activity).toBe("idle");
     starterLeft(first);
     const ask = first.devices.ask.bind(first.devices);
+    let solOpened = false;
     vi.spyOn(first.devices, "ask").mockImplementation(async (device, channel, args) => {
       const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
       const answer = await ask(device, channel, args);
@@ -394,12 +395,22 @@ describe("reopening after a work computer restarts, when the task's model left e
       if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id) {
         first.slots?.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", false);
         first.slots?.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", true);
+        solOpened = true;
       }
       return answer;
     });
+    // The check of the conversation opened on GPT-6 Sol refuses it: a
+    // refusal after that open, not the mark set before it was asked.
+    let refusedAfterOpen = 0;
+    const refuseOpened = first.supervisor.moves.refuseOpened.bind(first.supervisor.moves);
+    vi.spyOn(first.supervisor.moves, "refuseOpened").mockImplementation((task, machine) => {
+      if (solOpened) refusedAfterOpen += 1;
+      refuseOpened(task, machine);
+    });
     await at.restartComputer();
     await at.inReach(taskId);
-    await expect.poll(() => first.supervisor.moves.refusedThere(taskId)).toBe(true);
+    await expect.poll(() => refusedAfterOpen).toBeGreaterThan(0);
+    expect(first.supervisor.moves.refusedThere(taskId)).toBe(true);
 
     await at.restartHome();
     await at.inReach(taskId);
@@ -535,6 +546,97 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
     expect(said(sent[0])).toContain("Carry on.");
     expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 10 finding 3: that computer opens the conversation, but
+  // its answer is lost on the way. Nothing was sent: the order goes back
+  // with no attempt spent, what it may hold there stays refused, and the
+  // next pass opens it, accepted, and delivers the words once.
+  it("gives an order back unspent when the answer to its open is lost", async () => {
+    const at = await codexThere();
+    const taskId = "t-lost-answer";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let losing = true;
+    let lost = 0;
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id && losing) {
+        if (open.spec.reattach !== true) {
+          lost += 1;
+          throw new DeviceOutOfReachError();
+        }
+      }
+      return answer;
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => lost).toBeGreaterThanOrEqual(1);
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(lost).toBeGreaterThanOrEqual(2);
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(true);
+    expect(home.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(api.requests.length).toBe(requests);
+
+    losing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 10 finding 4: only that computer's typed answer that the
+  // open left nothing there passes GPT-6 Sol on its one account over, so the
+  // task waits, said once; nothing reached the model.
+  it("passes a model over only on that computer's answer that its open left nothing there", async () => {
+    const at = await codexThere();
+    const taskId = "t-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    const notOpened: boolean[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [
+        { spec?: { reattach?: boolean; notOpened?: boolean; model?: { id: string } } },
+      ];
+      if (
+        channel === "inf:session:open" &&
+        open.spec?.model?.id === SOL.id &&
+        !open.spec.reattach
+      ) {
+        notOpened.push(open.spec.notOpened === true);
+        // That computer's answer: no sign-in there could open it.
+        return { notOpened: "No sign-in here could open GPT-6 Sol." };
+      }
+      return ask(device, channel, args);
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.supervisor.moves.waitsForModel(taskId)).toBe(true);
+    // It asked for that answer, once, and waits rather than open GPT-6 Sol again.
+    expect(notOpened).toEqual([true]);
+    expect(api.requests.length).toBe(requests);
+    expect(rerouted(home, taskId)).toEqual([]);
   });
 
   // INF-5438 round 7 findings 8 and 12: a reopen whose open is not accepted

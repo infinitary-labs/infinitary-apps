@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
@@ -11,10 +11,9 @@ import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
 import { isFolderRepair, levelDefaultReasoning } from "@shared/routingPolicy";
-import { ComputerRefusedError } from "../connection/connection";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
-import { NeedsNewConversation } from "../placed/crewMachines";
+import { NeedsNewConversation, NothingOpenedThere } from "../placed/crewMachines";
 import { sameModel } from "../placed/placedSpecs";
 import { crewRunbookText } from "../runbooks/runbooks";
 import { OpenReads } from "../session/openReads";
@@ -52,6 +51,14 @@ import { conversationRestartWake } from "./turnWakes";
  * hand-over doors that put files in its folder. Shares the crew's state
  * through `CrewCore`.
  */
+/**
+ * Whether a conversation's resume token names the conversation `from` names:
+ * the same token, or the same record file.
+ */
+function sameConversation(token: string | undefined, from: string): boolean {
+  return token !== undefined && (token === from || basename(token) === basename(from));
+}
+
 export class CrewSessions {
   /** Each task's conversation opening here now (`resumeTask`), which a plain resume joins. */
   private readonly resuming = new Map<string, Promise<TaskRuntime>>();
@@ -804,12 +811,20 @@ export class CrewSessions {
             ...(rerouted.quick ? { quick: true } : {}),
           }
         : this.reopenedOn(record);
-    // A conversation opened anew, not reattached to live where it runs.
-    const creation = !move && !reattaching && !attach;
+    // An open that may have opened a new conversation: all but one that
+    // only reattaches to what is held there. A move's, and an older
+    // computer's, which may reattach or open anew, are checked as new.
+    const creation = !reattaching;
     // One opened anew on a computer that runs work is marked refused there
     // before it is asked, so a quit or a failure before it is accepted
     // leaves nothing the next open reattaches to (`refusedThere`).
     if (creation) this.core.moves.refuseOpened(record.id, machine);
+    // A context or refusal restart is kept on the lane while its new
+    // conversation is not accepted, so the next open starts fresh too.
+    const keepRestart = () => {
+      if (fresh && fresh.changed !== "computer")
+        this.recordRestart(record.id, record.key || record.id, machine, fresh);
+    };
     // Register before opening the session: a resumed provider can carry on
     // with work of its own the moment it is back.
     this.core.tasks.set(record.id, task);
@@ -837,20 +852,21 @@ export class CrewSessions {
       if (reattaching && caught instanceof NeedsNewConversation)
         return this.openResumed(taskId, move, restart, true);
       // A routed open that surely opened nothing - it failed here, or its
-      // computer answered that it could not - passes that model and account
-      // over, and routes among the rest with no delivery spent. Any other
-      // may have opened there - its computer went before it answered, or its
-      // answer could not be read - so it fails, and what it may hold stays
-      // refused until an open there is accepted.
-      if (
-        rerouted &&
-        !superseded() &&
-        (machine === LOCAL_MACHINE_ID || caught instanceof ComputerRefusedError)
-      ) {
+      // computer answered that it left nothing new there - passes that model
+      // and account over, and routes among the rest with no delivery spent.
+      const nothing = machine === LOCAL_MACHINE_ID || caught instanceof NothingOpenedThere;
+      if (rerouted && !superseded() && nothing) {
         rerouted.passOver();
         return this.openResumed(taskId, move, restart, known);
       }
-      throw caught;
+      if (nothing || superseded()) throw caught;
+      // Any other may have opened there - its computer went before it
+      // answered, or its answer could not be read: what it may hold stays
+      // refused until an open there is accepted, and no words went.
+      keepRestart();
+      throw new NotAcceptedError(caught instanceof Error ? caught.message : String(caught), {
+        cause: caught,
+      });
     }
     // The conversation takes no words until it is accepted: no steer, lane
     // sweep or turn reaches it before (`task.session` is unset). One that is
@@ -872,11 +888,20 @@ export class CrewSessions {
           ...(model ? { model } : {}),
           ...(account ? { account } : {}),
         });
-      } else if (creation && !sameModel(session.modelRef(), asked.model)) {
-        // One opened anew on another model than it asked takes no words.
+      } else if (
+        creation &&
+        (!sameModel(session.modelRef(), asked.model) ||
+          (machine !== LOCAL_MACHINE_ID &&
+            fresh !== undefined &&
+            fresh.changed !== "computer" &&
+            sameConversation(crewmateResumeToken(session.resume()), fresh.from)))
+      ) {
+        // One opened anew on another model than it asked takes no words, and
+        // neither does a fresh restart that a computer that runs work, which
+        // may hold the conversation it replaces, answered on that one.
         this.core.moves.refuseOpened(record.id, machine);
         verdict = "elsewhere";
-      } else if (creation && !(await this.core.moves.keepsModel(record.id, machine))) {
+      } else if (creation && !move && !(await this.core.moves.keepsModel(record.id, machine))) {
         // One opened anew on the model it had takes work only while a level
         // where it opened still holds that model, or the task names it: one
         // that left every level while it opened is let go, and the task
@@ -886,6 +911,7 @@ export class CrewSessions {
     } catch (caught) {
       // A check that could not finish accepted nothing: no words went.
       refuse();
+      keepRestart();
       if (caught instanceof ModelWaitError || caught instanceof NotAcceptedError) throw caught;
       throw new NotAcceptedError(caught instanceof Error ? caught.message : String(caught), {
         cause: caught,
@@ -894,10 +920,12 @@ export class CrewSessions {
     if (verdict !== "committed") {
       refuse();
       if (verdict === "again") return this.openResumed(taskId, move, restart, known);
-      if (verdict === "elsewhere")
+      if (verdict === "elsewhere") {
+        keepRestart();
         throw new NotAcceptedError(
-          "This task's conversation opened on another model than it asked, so it takes no words.",
+          "This task's conversation opened on another model or conversation than it asked, so it takes no words.",
         );
+      }
       throw new Error("This task's crewmate was let go while its conversation opened.");
     }
     task.session = session;

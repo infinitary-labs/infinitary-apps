@@ -62,7 +62,9 @@ import {
   type AnsweredWait,
   type CrewMachines,
   NeedsNewConversation,
+  NothingOpenedThere,
   NotOpenThere,
+  OPEN_NOT_OPENED,
   type PlacedBrowserSink,
   type PlacedHost,
   REATTACH_ONLY_OPEN,
@@ -363,9 +365,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       takesCheckDeclarations: (deviceId) => this.takesCheckDeclarations(deviceId),
     };
     this.stopContacts = options.devices.onWorkDevice((contact) => this.contact(contact));
-    // A record that closes closes its conversation there; one that goes -
-    // a start that failed, a purge - leaves what it had there to the
-    // leftover rule (`PlacedCopies.retireLeftover`).
+    // A record that closes closes its conversation there; one that goes - a start that failed,
+    // a purge - leaves what it had there to the leftover rule (`PlacedCopies.retireLeftover`).
     this.stopTaskChanges = options.tasks.onChange((change) => {
       for (const taskId of change.taskIds) {
         this.closeIfClosed(taskId);
@@ -1000,28 +1001,28 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ...(spec.shape.record.reattach && this.listsChange(deviceId, REATTACH_ONLY_OPEN)
         ? { reattach: true }
         : {}),
+      ...(this.listsChange(deviceId, OPEN_NOT_OPENED) ? { notOpened: true } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }
         : {}),
     });
-    // The home's set reaches it before a conversation that reads it opens; a
-    // send that fails leaves it the version it had.
+    // The home's set reaches it before a conversation that reads it opens (a failed send keeps it).
     if (spec.personalResources) await this.personal?.bring(deviceId);
     const task = spec.owner;
     const placed = this.load(task, deviceId);
-    const { state } = openAnswerSchema.parse(
+    const { state, notOpened } = openAnswerSchema.parse(
       await this.options.devices.ask(deviceId, "inf:session:open", [
         { orderId: `open:${task}:${this.options.now()}`, task, spec: placedSpec },
       ]),
     );
+    if (notOpened !== undefined) throw new NothingOpenedThere(notOpened);
     if (!state) throw new NeedsNewConversation(task);
     placed.reopening = undefined;
     const recordDir = spec.shape.record.dir;
     placed.record.dir = recordDir;
-    // The spec of the conversation open there: one that kept another model
-    // than this asked for keeps the spec it opened with, and one adopted
-    // after this Mac restarted has none until a reopen confirms one.
-    const { reattach: _reattach, ...opened } = placedSpec;
+    // The spec open there: one that kept another model than asked keeps its own, and one
+    // adopted after this Mac restarted has none until a reopen confirms one.
+    const { reattach: _reattach, notOpened: _notOpened, ...opened } = placedSpec;
     if (sameModel(state.model, opened.model)) placed.spec = confirmedSpec(opened, state);
     placed.reopenOwed = state.streaming;
     // The conversation as it lives there: a live one kept on another backend
@@ -1681,9 +1682,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       // Let go of there for this Mac to open again, routed first.
       void this.reopen(placed, session, deviceId);
     } else if (answer.state && session) {
-      // An older computer opened it again from its files: a conversation
-      // that started over is carried on as at a restart, and one whose
-      // model left every level opens on another now.
+      // An older computer opened it again from its files: a conversation that started over is
+      // carried on as at a restart, and one whose model left every level opens on another now.
       session.reopened(answer.state);
       if (answer.state.renewal) this.host?.reopened(placed.task);
       void this.reopen(placed, session, deviceId, false, true);

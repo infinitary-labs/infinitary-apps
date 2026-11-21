@@ -25,6 +25,9 @@ import type { PlacedCopy } from "./placedCopies";
  */
 export const REATTACH_ONLY_OPEN = contractChange("reattach-only-open");
 
+/** A computer that answers an open which left nothing new there (`open-not-opened.md`). */
+export const OPEN_NOT_OPENED = contractChange("open-not-opened");
+
 /**
  * A prompt or steer waited for its conversation to open there again, and it
  * did not: it is sent back to its lane unspent, and the task's next turn
@@ -48,6 +51,18 @@ export class NeedsNewConversation extends Error {
     // i18n-exempt: an internal signal the home catches; no person reads it.
     super(`Task ${taskId} holds no conversation to reattach to there, so a new one opens.`);
     this.name = "NeedsNewConversation";
+  }
+}
+
+/**
+ * A computer answered that an open failed leaving no new conversation there
+ * (`open-not-opened.md`): the only failure there that passes its model and
+ * account over. Any other may have left one, and stays refused there.
+ */
+export class NothingOpenedThere extends Error {
+  constructor(why: string) {
+    super(why);
+    this.name = "NothingOpenedThere";
   }
 }
 

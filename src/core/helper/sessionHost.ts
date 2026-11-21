@@ -316,6 +316,17 @@ type Held = {
   spec: PlacedSpec | undefined;
 };
 
+/**
+ * An open that failed leaving no new conversation here, once any it began
+ * was let go (`open-not-opened.md`); `cause` is why it failed.
+ */
+class NothingOpened extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "NothingOpened";
+  }
+}
+
 export class SessionHost {
   private readonly held = new Map<string, Held>();
   /** Each task's Secrets uses here, kept across its grants so an intent answers its first use. */
@@ -586,8 +597,16 @@ export class SessionHost {
     switch (channel) {
       case "inf:session:open": {
         const [open] = request as WorkOrderRequest<"inf:session:open">;
-        const state = await this.open(held, open.spec);
-        return state ? { state } : { needsOpen: true };
+        try {
+          const state = await this.open(held, open.spec);
+          return state ? { state } : { needsOpen: true };
+        } catch (caught) {
+          // One that left no new conversation here says so, when asked, so
+          // the home may pass its model over (`open-not-opened.md`).
+          if (open.spec.notOpened && caught instanceof NothingOpened)
+            return { notOpened: caught.message };
+          throw caught instanceof NothingOpened ? caught.cause : caught;
+        }
       }
       case "inf:session:prompt": {
         const [prompt] = request as WorkOrderRequest<"inf:session:prompt">;
@@ -909,6 +928,9 @@ export class SessionHost {
       if (reattach) return undefined;
       await this.releaseConversation(held);
     } else if (reattach) return undefined;
+    // Set while a conversation that began may still be held here.
+    let lingering = false;
+    let state: PlacedState | undefined;
     const opening = (async () => {
       const binding = await this.options.bind(spec.binding);
       const factory = this.options.factories[binding.backend];
@@ -1012,8 +1034,8 @@ export class SessionHost {
         bounds: { request: { retries: spec.retries ?? RETRIES } },
       };
       const session = await factory.open(sessionSpec);
-      // An open that fails once its conversation began holds nothing: the
-      // home hears a refusal only for an open that left nothing new here.
+      // An open that fails once its conversation began lets it go, and says
+      // it left nothing new here only once that let-go is over.
       try {
         if (this.stopped) throw new Error("This computer is stopping.");
         held.session = session;
@@ -1063,20 +1085,25 @@ export class SessionHost {
           join(folders.root, "completions.sqlite"),
         );
         if (this.stopped) throw new Error("This computer is stopping.");
+        this.recordJobs(held, true);
+        state = this.stateOf(held);
       } catch (caught) {
+        lingering = true;
         if (held.session === session) await this.releaseConversation(held);
         else session.dispose();
+        lingering = false;
         throw caught;
       }
-      this.recordJobs(held, true);
     })();
     held.opening = opening;
     try {
       await opening;
+    } catch (caught) {
+      throw lingering ? caught : new NothingOpened(caught);
     } finally {
       held.opening = null;
     }
-    return this.stateOf(held);
+    return state as PlacedState;
   }
 
   /**
@@ -1097,13 +1124,15 @@ export class SessionHost {
     if (!opened) return false;
     const key = (model: { provider: string; id: string } | undefined) =>
       model ? `${model.provider}/${model.id}` : "";
-    // The model the held conversation runs, as it says, never only the one
-    // it was asked for, when a model is asked; and the account it is bound
-    // to, or none.
-    const running = spec.model ? (held.session?.modelRef() ?? held.spec?.model) : held.spec?.model;
+    // The model the held conversation runs, as it says - one that says none
+    // runs no model asked - when a model is asked; the account it is bound
+    // to, or none; and whether it carries on a conversation, as a fresh
+    // restart, which names none, asks for a new one.
+    const running = spec.model ? held.session?.modelRef() : held.spec?.model;
     return (
       (withModel &&
         (key(running) !== key(spec.model) ||
+          (spec.resume === undefined && held.spec?.resume !== undefined) ||
           (this.options.accounts !== undefined &&
             spec.binding.accountId !== undefined &&
             spec.binding.accountId !== held.account))) ||

@@ -109,8 +109,8 @@ export type ReopenProgress = { asked: PlacedSpec; routed?: ReopenRoute; anew: bo
  * on another that computer serves, or not at all until one can take it
  * (docs/routing.md, "A model that left every level"). `route(attach)` says
  * whether an older computer, holding a conversation of the task (`held`),
- * may bring the old model back; one that holds none opens anew. An open
- * anew is marked first (`creating`), so a quit or failure before it is
+ * may bring the old model back; whatever an older computer answers is
+ * checked as opened anew, as it may be. An open anew is marked first (`creating`), so a quit or failure before it is
  * accepted leaves nothing the next reopen reattaches to. Undefined
  * opens nothing; "open" says an older computer opened it again by itself
  * on a model still held.
@@ -140,7 +140,7 @@ export async function askReopen<A extends { state?: unknown }>(
       if (kept.state || !o.ours()) return kept;
     }
     progress.anew = true;
-  } else if (!o.reattachOnly && !o.held) progress.anew = true;
+  } else if (!o.reattachOnly) progress.anew = true; // An older computer may open anew anywhere.
   if (!o.ours()) return undefined;
   const routed = await o.route(!o.reattachOnly && o.held);
   if (routed === "stale" || !o.ours()) return undefined;

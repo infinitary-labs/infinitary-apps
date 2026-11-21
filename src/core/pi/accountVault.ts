@@ -737,16 +737,17 @@ export class AccountVault {
     const account = this.registry.accounts.find((entry) => entry.id === accountId);
     if (!account || !this.get(accountId)) return;
     const now = this.now();
+    // The provider refused the allowance again, with or without a reset:
+    // what the captain tried is answered.
+    if (cutOff.class === "no_headroom" && account.goesByAnswers) {
+      delete account.goesByAnswers;
+      this.saveRegistry();
+    }
     if (
       cutOff.class === "no_headroom" &&
       (cutOff.resetsAt === undefined || cutOff.resetsAt <= now)
     ) {
       return;
-    }
-    // The provider refused the allowance again: what the captain tried is answered.
-    if (cutOff.class === "no_headroom" && account.goesByAnswers) {
-      delete account.goesByAnswers;
-      this.saveRegistry();
     }
     // A cut-off with a looser way back never replaces a stricter one that
     // stands: a refusal outlives a later lost sign-in or spent allowance

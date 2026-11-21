@@ -220,20 +220,21 @@ type Run = Awaited<ReturnType<typeof boot>>;
  * The store's login has spent its week, and the client says so: its pushed
  * refusal, then the seat's turn fails typed.
  */
-async function refusedTurn(run: Run) {
+async function refusedTurn(run: Run, refusal: { resetsAt?: number } = { resetsAt: WEEKLY_RESET }) {
+  const { resetsAt } = refusal;
   week.used = 100;
   const seat = run.sessions.at(-1) as FakeSession;
   run.homeQuota.recordClaudeRateLimit(ACCOUNT, {
     status: "rejected",
     windowId: "seven_day",
     utilization: 1,
-    resetsAt: WEEKLY_RESET,
+    ...(resetsAt === undefined ? {} : { resetsAt }),
   });
   seat.emit({
     type: "turn_failed",
     taskId: "firstmate",
     error: "You've hit your weekly limit",
-    cutOff: { class: "no_headroom", resetsAt: WEEKLY_RESET },
+    cutOff: { class: "no_headroom", ...(resetsAt === undefined ? {} : { resetsAt }) },
   });
   seat.emit({ type: "turn_end", taskId: "firstmate" });
   seat.emit({ type: "turn_closed" });
@@ -341,6 +342,25 @@ describe("a spent allowance on a login Infinitary does not read", () => {
     expect(refusals(run)).toHaveLength(1);
     expect(run.settings.getFirstmatePaused()).toMatchObject({ class: "no_headroom" });
     expect(actionsOf(run)).toEqual([`${RECHECK_ALLOWANCE_LABEL} (default)`, "Open settings"]);
+    await run.agent.converse("anyone?");
+    run.agent.pokeInbox();
+    await tick();
+    expect(prompts(run)).toHaveLength(2);
+    run.agent.dispose();
+  });
+
+  it("an attempt refused with no reset named pauses again too, on the store login's spent reading", async () => {
+    const { run } = await pausedSeat();
+    run.supervisor.cardActions.act(FIRSTMATE_BENCH_CARD_ID, "try-again");
+    await tick();
+    expect(prompts(run)).toHaveLength(2);
+
+    expect(run.vault.goesByAnswers(ACCOUNT)).toBe(true);
+    // Claude's refusal can name no reset: the vault holds nothing then, but
+    // the attempt is still answered, so the spent reading pauses the seat.
+    await refusedTurn(run, {});
+    expect(run.vault.goesByAnswers(ACCOUNT)).toBe(false);
+    expect(run.settings.getFirstmatePaused()).toMatchObject({ class: "no_headroom" });
     await run.agent.converse("anyone?");
     run.agent.pokeInbox();
     await tick();

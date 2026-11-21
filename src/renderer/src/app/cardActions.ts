@@ -407,6 +407,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
               ? { pendingRestoreAccountId: effect.restoreAccountId }
               : {}),
             ...(effect.useSavedReset ? { pendingUseSavedReset: effect.useSavedReset } : {}),
+            ...(effect.useSavedResets ? { pendingUseSavedResets: effect.useSavedResets } : {}),
             ...(effect.signIn ? { pendingForgeSignIn: effect.signIn } : {}),
             ...(effect.target === "devices" ? deviceArrival(effect) : {}),
             ...(effect.target === "settings" && effect.privateSite

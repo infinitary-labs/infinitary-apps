@@ -39,6 +39,24 @@
       <string>Se usó un restablecimiento guardado de %1$@. Quedan %2$ld.</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Infinitary usó un restablecimiento guardado de %1$@ para que el trabajo en espera continúe. Queda %2$ld.</string>
+      <key>many</key>
+      <string>Infinitary usó un restablecimiento guardado de %1$@ para que el trabajo en espera continúe. Quedan %2$ld.</string>
+      <key>other</key>
+      <string>Infinitary usó un restablecimiento guardado de %1$@ para que el trabajo en espera continúe. Quedan %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

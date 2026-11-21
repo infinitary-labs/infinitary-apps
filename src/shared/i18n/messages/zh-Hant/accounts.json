@@ -216,5 +216,11 @@
     "plural": "count",
     "other": "已使用 {account} 的一次已儲存的重設，還剩 {count} 次。"
   },
-  "accountsSavedResetUsedChecking": "已使用 {account} 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。"
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "other": "為讓等待中的工作繼續，Infinitary 使用了 {account} 的一次已儲存的重設，還剩 {count} 次。"
+  },
+  "accountsSavedResetUsedAutoChecking": "為讓等待中的工作繼續，Infinitary 使用了 {account} 的一次已儲存的重設。它正在重新檢查額度。",
+  "accountsSavedResetUsedChecking": "已使用 {account} 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。",
+  "accountsUseSavedResetsSignInFirst": "Codex 尚未登入 {account}，因此「自動使用已儲存的重設」保持關閉。請在設定中該帳號那一列開啟它，讓 Codex 登入。"
 }

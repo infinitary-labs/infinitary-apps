@@ -135,6 +135,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "account-keep-going": { unreadable: "names" },
   "account-disconnect": { unreadable: "names" },
   "account-use-reset": { unreadable: "names" },
+  "account-use-saved-resets": { unreadable: "names" },
   "projects-folder": { unreadable: "names" },
   "project-batch-answer": { unreadable: "names" },
   runbook: { unreadable: "names" },

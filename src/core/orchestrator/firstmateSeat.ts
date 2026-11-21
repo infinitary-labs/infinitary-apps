@@ -652,6 +652,8 @@ export class FirstmateSeat {
           `Your first mate moved to ${sibling.label} - ${label} has used up its allowance, and ${sibling.label} still has some.`,
         );
       }
+      // A saved reset is weighed now, when its switch is on; credits serve this turn until it lands.
+      if (flagship.onCredits(accountId)) this.options.savedResetsSpent?.(accountId);
       this.servesAgain();
       return session;
     }
@@ -691,6 +693,9 @@ export class FirstmateSeat {
           : "its previous account is no longer available.";
       return this.rebind(sibling.id, `Your first mate moved to ${sibling.label} - ${why}`);
     }
+    // No sibling has room: a saved reset may end the pause, when the account's
+    // switch is on and it beats waiting; a higher reading then resumes the seat.
+    if (pause.class === "no_headroom") this.options.savedResetsSpent?.(accountId);
     this.pauseSeat(accountId, pause);
     return undefined;
   }

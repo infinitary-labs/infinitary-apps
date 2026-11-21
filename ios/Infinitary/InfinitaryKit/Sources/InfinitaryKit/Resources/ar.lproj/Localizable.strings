@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "سجّل الدخول إلى حساب ChatGPT الخاص بـ %1$@ في متصفحك، ليتمكن Codex من استخدام إعادة التعيين المحفوظة.";
 "accountsSavedResetUnclear" = "لم يوضّح Codex ما إذا استُخدمت إعادة تعيين لـ %1$@. المحاولة مرة أخرى تسأل عن إعادة التعيين نفسها ولا تستخدم ثانية أبدًا.";
 "accountsSavedResetUnverified" = "تعذّر على Infinitary التأكد من أن Codex سجّل الدخول إلى حساب ChatGPT نفسه الخاص بـ %1$@، لذا لم تُستخدم أي إعادة تعيين.";
+"accountsSavedResetUsedAutoChecking" = "استخدم Infinitary إعادة تعيين محفوظة لـ %1$@ كي يستمر العمل المنتظر. يعيد التحقق من الرصيد.";
 "accountsSavedResetUsedChecking" = "استُخدمت إعادة تعيين محفوظة لـ %1$@. يعيد Infinitary التحقق من رصيده.";
+"accountsUseSavedResetsSignInFirst" = "لم يسجّل Codex الدخول إلى %1$@ بعد، لذا يبقى «استخدام إعادات التعيين المحفوظة تلقائيًا» متوقفًا. شغّله من صف الحساب في الإعدادات ليسجّل Codex الدخول.";
 "activityPanelLinesLabel" = "أسطر النشاط";
 "attachCancelled" = "أُلغي %1$@";
 "automationEventsSkipped" = "أحداث متخطاة";
@@ -463,6 +465,7 @@
 "cardThreadWrittenByAfterClose" = "كتبها %1$@ بعد إغلاق البطاقة";
 "cardTradeoffTable" = "الموازنة في جدول";
 "cardUseSavedReset" = "استخدم إعادة تعيين محفوظة";
+"cardUseSavedResets" = "استخدام إعادات التعيين المحفوظة تلقائيًا";
 "closeYourFirstMate" = "نائب القبطان: «%1$@»";
 "closedDropped" = "أُسقطت %1$@";
 "closedFinished" = "انتهت %1$@";
@@ -2429,6 +2432,8 @@
 "settingsCostLimitSwitchLabel" = "السؤال قبل أن تنفق المهمة أكثر";
 "settingsCostLimitTitle" = "السؤال قبل أن تنفق المهمة أكثر من";
 "settingsDecisionUseKindReads" = "تعمل كل مهمة جديدة على نموذج يناسب العمل، فتستهلك المهام السهلة قدرًا أقل من رصيد باقتك. ويقرأ لذلك عنوان المهمة وهدفها وكلماتك ومشروعها والأعمال المرتبطة بها.";
+"settingsDecisionUseSavedResetName" = "استخدام إعادة تعيين محفوظة أو الانتظار";
+"settingsDecisionUseSavedResetReads" = "عندما ينتظر العمل حسابًا في Codex شُغّل له «استخدام إعادات التعيين المحفوظة تلقائيًا»، يوازن بين استخدام إحدى إعادات التعيين المحفوظة وانتظار تجدد الرصيد. يقرأ خطة الحساب، وما تبقّى من كل رصيد وموعد تجدده، وعدد إعادات التعيين المحفوظة لديه، وأي عمل ينتظر.";
 "settingsDecisionsActions" = "إجراءات نموذج القرارات";
 "settingsDecisionsAnswerWith" = "الإجابة عن القرارات بـ %1$@";
 "settingsDecisionsAuto" = "تلقائي · أرخص نموذج وضعته في مستوى";
@@ -3285,8 +3290,11 @@
 "settingsSubscriptionsMenuResume" = "استئناف";
 "settingsSubscriptionsMenuStopKeepingGoing" = "إيقاف إنفاق الاعتمادات";
 "settingsSubscriptionsMenuStopPreferring" = "إيقاف التفضيل لعمل الطاقم";
+"settingsSubscriptionsMenuStopUsingResets" = "إيقاف استخدام إعادات التعيين المحفوظة تلقائيًا";
 "settingsSubscriptionsMenuUseReset" = "استخدم إعادة تعيين محفوظة";
 "settingsSubscriptionsMenuUseResetDetail" = "يسجّل Codex الدخول ويستخدم الأقرب انتهاءً";
+"settingsSubscriptionsMenuUseResets" = "استخدام إعادات التعيين المحفوظة تلقائيًا";
+"settingsSubscriptionsMenuUseResetsDetail" = "فقط عندما ينتظر العمل ولا يبقى رصيد في أي حساب";
 "settingsSubscriptionsNoReader" = "لا يقرأ Infinitary الرصيد لدى هذا المزوّد.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ مضبوط · لا يقرأ Infinitary الرصيد لدى هذا المزوّد.";
 "settingsSubscriptionsNotChosenYet" = "لم يُختر بعد";

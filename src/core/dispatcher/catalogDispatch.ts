@@ -118,10 +118,10 @@ export function createCatalogDispatch({
     // A change to a computer that runs work's own account or project sign-in
     // is read from what that computer says, not this Mac's.
     const thereAt = CHANGES_THERE[channel];
-    const there =
-      thereAt !== undefined && typeof args[thereAt] === "string"
-        ? (args[thereAt] as string)
-        : undefined;
+    const at = thereAt !== undefined ? args[thereAt] : undefined;
+    // The computer, as the request names it: by id, or as its options' `deviceId`.
+    const named = typeof at === "string" ? at : (at as { deviceId?: unknown } | null)?.deviceId;
+    const there = typeof named === "string" ? named : undefined;
     const stateThere = (name: ActionName) => {
       const said = there ? services.deviceSignIns.lastSaid(there) : null;
       return name === "forge-sign-out"

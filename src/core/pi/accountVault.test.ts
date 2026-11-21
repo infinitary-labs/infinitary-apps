@@ -975,6 +975,25 @@ describe("a typed cut-off on the account", () => {
     expect(vault.keepsGoingOnCredits(account.id)).toBe(false);
   });
 
+  // INF-5478's plan, piece 2: Use saved resets on their own is a Codex account's switch, off unless turned on.
+  it("saves Use saved resets on their own on a Codex account only, off by default", async () => {
+    const vault = AccountVault.create(freshPaths());
+    const codex = await vault.add("openai-codex", "oauth", bridge());
+    expect(vault.usesSavedResets(codex.id)).toBe(false);
+    vault.setUseSavedResets(codex.id, true);
+    expect((await vault.views()).find((view) => view.id === codex.id)?.useSavedResets).toBe(true);
+    vault.setUseSavedResets(codex.id, false);
+    expect(
+      (await vault.views()).find((view) => view.id === codex.id)?.useSavedResets,
+    ).toBeUndefined();
+
+    const grok = await vault.add("xai", "oauth", bridge());
+    expect(() => vault.setUseSavedResets(grok.id, true)).toThrow(
+      "Only a Codex account can use saved resets on its own.",
+    );
+    expect(vault.usesSavedResets(grok.id)).toBe(false);
+  });
+
   it("keeps a lower reading than the one it saw, and ends on a reading above that", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);

@@ -280,5 +280,6 @@
   "cardThreadWrittenBy": "Écrite par {label}",
   "cardThreadWrittenByAfterClose": "Écrite par {label}, après la fermeture de la carte",
   "cardTradeoffTable": "Le compromis sous forme de tableau",
-  "cardUseSavedReset": "Utiliser une réinitialisation enregistrée"
+  "cardUseSavedReset": "Utiliser une réinitialisation enregistrée",
+  "cardUseSavedResets": "Utiliser les réinitialisations enregistrées d’office"
 }

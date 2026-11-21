@@ -13,6 +13,7 @@ import {
 } from "./claudeSeat";
 import { cardBody } from "./frames";
 import { leaveSettings } from "./handoverCards";
+import { answerDecisionsWithJev, type JevStandIn, startJevStandIn } from "./jevStandIn";
 import type { LaunchedApp } from "./launch";
 import { signInCodexHome, writeMockCodexClient } from "./mockCodexClient";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
@@ -32,7 +33,11 @@ import { focusOn, pressKey } from "./windowKeys";
  * Use a saved reset (INF-5478's plan, piece 1; docs/codex-client.md) uses one
  * through the Codex CLI, here a stand-in (`mockCodexClient.ts`), signing it
  * in on the account's row first, or at once when Codex already keeps the
- * account's sign-in. The system browser is a recorder here.
+ * account's sign-in. The system browser is a recorder here. With the
+ * account's Use saved resets on their own turned on from its row by keys
+ * (piece 2, docs/quota.md "Saved resets on their own"), the spent first mate
+ * has a reset used with no click once the decision model, here a Jev
+ * stand-in (`jevStandIn.ts`), answers use.
  */
 
 /** The live Codex reading's saved resets (`tests/fixtures/quota-credits`), here applying now. */
@@ -305,5 +310,105 @@ test("Use a saved reset on a spent Codex seat's card, with Codex already signed 
   } finally {
     await launched?.close();
     await mock?.close();
+  }
+});
+
+test("Use saved resets on their own, turned on from a Codex row by keys, uses the reset that expires first when the first mate's allowance runs out", async () => {
+  test.setTimeout(3 * 60_000);
+  const now = Date.now();
+  const second = Math.floor(now / 1000);
+  const codex = writeMockCodexClient(scratchDir("infinitary-saved-reset-codex-"), {
+    accountId: CODEX_SEAT_CHATGPT_ID,
+    available: 2,
+    credits: [
+      { id: "reset-later", status: "available", expiresAt: second + 20 * 86_400 },
+      { id: "reset-sooner", status: "available", expiresAt: second + 3 * 86_400 },
+    ],
+  });
+  let mock: MockProviderServer | undefined;
+  let launched: LaunchedApp | undefined;
+  let jev: JevStandIn | undefined;
+  try {
+    // The decision model answers use for the saved-reset question.
+    jev = await startJevStandIn((id) => (id === "reset" ? "use" : undefined));
+    mock = await startMockProvider();
+    launched = await launchClaudeSeat({
+      mockProvider: mock,
+      withCodex: true,
+      env: {
+        INFINITARY_QUOTA_FIXTURE_DIR: spentReadings(now, 2),
+        INFINITARY_CODEX_CLI: codex.path,
+        INFINITARY_JEV_URL: jev.url,
+      },
+    });
+    const { page } = launched;
+    await answerDecisionsWithJev(page);
+    await recordOpens(launched);
+    signInCodexHome(
+      launched.userDataDir,
+      "openai-codex",
+      CODEX_SEAT_ACCOUNT,
+      CODEX_SEAT_CHATGPT_ID,
+    );
+    const label = (await page.evaluate(() => window.infinitary.accounts.list())).find(
+      (account) => account.id === CODEX_SEAT_ACCOUNT,
+    )?.label;
+
+    // The captain turns the switch on from the account's row menu, by keys.
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Intelligence", exact: true }).click();
+    const row = page.locator(`[data-account-row="${CODEX_SEAT_ACCOUNT}"]`);
+    await pressKey(row.getByRole("button", { name: /actions$/ }), "Enter");
+    const item = page.locator('[data-menu-item="use-saved-resets"]');
+    await expect(item).toContainText(m.settingsSubscriptionsMenuUseResets());
+    await expect(item).toContainText(m.settingsSubscriptionsMenuUseResetsDetail());
+    for (let press = 0; press < 12; press++) {
+      if (await item.evaluate((node) => node === document.activeElement)) break;
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(item).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => window.infinitary.accounts.list())).find(
+            (account) => account.id === CODEX_SEAT_ACCOUNT,
+          )?.useSavedResets,
+      )
+      .toBe(true);
+    // Turning it on uses nothing.
+    expect(codex.requests().map((request) => request.method)).not.toContain(
+      "account/rateLimitResetCredit/consume",
+    );
+    await leaveSettings(page);
+
+    // The first mate on Codex runs out; its decision answers use, and the reset is used with no click.
+    await page.evaluate(
+      (id) => window.infinitary.settings.setFirstmateModel({ provider: "openai-codex", id }),
+      starterFor("openai-codex", "high"),
+    );
+    await say(page, "sound the channel");
+    await expect(
+      feedLineOf(page, {
+        type: "firstmate_note",
+        text: m.accountsSavedResetUsedAuto({ account: `Codex · ${label}`, count: 1 }),
+      }),
+    ).toBeVisible({ timeout: 45_000 });
+    expect(
+      codex
+        .requests()
+        .filter((request) => request.method === "account/rateLimitResetCredit/consume")
+        .map((request) => request.params?.creditId),
+    ).toEqual(["reset-sooner"]);
+    expect(await opened(launched)).toEqual([]);
+    // It was asked once, with the waiting work and the resets that apply now.
+    const asked = jev.asked.filter((question) => question.id === "reset");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.state.waiting_work).toBe("first mate");
+    expect(String(asked[0]?.state.saved_resets_that_apply_now)).toBe("2");
+  } finally {
+    await launched?.close();
+    await mock?.close();
+    await jev?.close();
   }
 });

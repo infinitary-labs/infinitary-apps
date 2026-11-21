@@ -113,6 +113,11 @@ type ShellCore = {
    */
   pendingUseSavedReset: string | null;
   /**
+   * A run-out card's Use saved resets on their own that needs Codex to sign
+   * in first: the account's row turns it on on arrival, by the account's key.
+   */
+  pendingUseSavedResets: string | null;
+  /**
    * A sign-in where projects live to start on arrival (git integration PR
    * 1.2): Projects starts the host's sign-in, so the code is on screen.
    */
@@ -191,6 +196,7 @@ type ShellCore = {
   clearSettingsItem: () => void;
   clearPendingRestore: () => void;
   clearPendingUseSavedReset: () => void;
+  clearPendingUseSavedResets: () => void;
   clearPendingForgeSignIn: () => void;
   clearPendingDeviceArrival: () => void;
   clearPendingDeviceSignIn: () => void;
@@ -293,6 +299,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   settingsItem: null,
   pendingRestoreAccountId: null,
   pendingUseSavedReset: null,
+  pendingUseSavedResets: null,
   pendingForgeSignIn: null,
   pendingDeviceArrival: null,
   pendingPrivateSite: null,
@@ -513,6 +520,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   clearSettingsItem: () => set({ settingsItem: null }),
   clearPendingRestore: () => set({ pendingRestoreAccountId: null }),
   clearPendingUseSavedReset: () => set({ pendingUseSavedReset: null }),
+  clearPendingUseSavedResets: () => set({ pendingUseSavedResets: null }),
   clearPendingForgeSignIn: () => set({ pendingForgeSignIn: null }),
   clearPendingDeviceArrival: () => set({ pendingDeviceArrival: null }),
   clearPendingDeviceSignIn: () => set({ pendingDeviceSignIn: null }),

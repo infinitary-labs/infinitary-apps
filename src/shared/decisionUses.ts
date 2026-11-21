@@ -1,6 +1,7 @@
 import { z } from "zod";
 // Types only: decisions.ts reads this module's values for its view.
 import type { DecisionConsentText, DecisionsSettings } from "./decisions";
+import { englishOf, said } from "./i18n/said";
 
 /**
  * The approval screen a Jev or OpenRouter approval saw, kept as its
@@ -43,6 +44,7 @@ export const DECISION_USE_IDS = [
   "reviewer",
   "event-screen",
   "card-reader",
+  "saved-reset",
 ] as const;
 export type DecisionUseId = (typeof DECISION_USE_IDS)[number];
 
@@ -134,6 +136,16 @@ export const DECISION_USES: readonly DecisionUse[] = [
         "Four short questions per card. With your own models answering, that takes a few seconds and a little of your plan's allowance each time.",
       ],
     },
+  },
+  {
+    id: "saved-reset",
+    // The window shows the catalog's words in the person's language (DecisionsGroup).
+    name: englishOf(said("settingsDecisionUseSavedResetName")),
+    reads: englishOf(said("settingsDecisionUseSavedResetReads")),
+    // On like the reviewer use: only allowance numbers, and it asks only for
+    // an account whose own switch the person turned on (INF-5478, piece 2).
+    kind: "default-on",
+    approval: DECISION_APPROVAL_VERSION,
   },
 ];
 

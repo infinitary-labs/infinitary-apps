@@ -10986,6 +10986,129 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `Used a saved reset on ${account}. It has ${count} left.`;
     }
   }
+  function accountsSavedResetUsedAuto(input2) {
+    const account = input2.account;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. لم يتبقَّ أي منها.`;
+          case "one":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت واحدة.`;
+          case "two":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت اثنتان.`;
+          case "few":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          case "many":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          default:
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleibt ${count}.`;
+          default:
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleiben ${count}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Queda ${count}.`;
+          case "many":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+          default:
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          case "many":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          default:
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。残りは ${count} 回分です。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. ${count}개 남았어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Resta ${count}.`;
+          case "many":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+          default:
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置，还剩 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設，還剩 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+          default:
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+      default:
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+    }
+  }
+  function accountsSavedResetUsedAutoChecking(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. يعيد التحقق من الرصيد.`;
+      case "de":
+        return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es prüft das Kontingent erneut.`;
+      case "es":
+        return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Vuelve a consultar la asignación.`;
+      case "fr":
+        return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il revérifie l’allocation.`;
+      case "ja":
+        return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。利用枠を読み取り直しています。`;
+      case "ko":
+        return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. 사용량을 다시 확인하고 있어요.`;
+      case "pt-BR":
+        return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Ele está lendo a franquia de novo.`;
+      case "zh-Hans":
+        return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置。它正在重新检查额度。`;
+      case "zh-Hant":
+        return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設。它正在重新檢查額度。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ îš çĥéçķîñĝ ţĥé áļļöŵáñçé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It is checking the allowance again.‬`;
+    }
+    return `Infinitary used a saved reset on ${account} so waiting work could continue. It is checking the allowance again.`;
+  }
   function accountsSavedResetUsedChecking(input2) {
     const account = input2.account;
     switch (currentLanguage()) {
@@ -11013,6 +11136,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Used a saved reset on ‬${account}‮. Infinitary is checking its allowance again.‬`;
     }
     return `Used a saved reset on ${account}. Infinitary is checking its allowance again.`;
+  }
+  function accountsUseSavedResetsSignInFirst(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يسجّل Codex الدخول إلى ${account} بعد، لذا يبقى «استخدام إعادات التعيين المحفوظة تلقائيًا» متوقفًا. شغّله من صف الحساب في الإعدادات ليسجّل Codex الدخول.`;
+      case "de":
+        return `Codex ist noch nicht bei ${account} angemeldet, daher bleibt „Gespeicherte Resets selbst einlösen“ aus. Schalte es in den Einstellungen bei der Zeile des Kontos ein, um Codex anzumelden.`;
+      case "es":
+        return `Codex todavía no inició sesión en ${account}, así que «Usar restablecimientos guardados por sí solo» sigue desactivado. Actívalo en la fila de la cuenta en Ajustes para iniciar sesión en Codex.`;
+      case "fr":
+        return `Codex n’est pas encore connecté à ${account}, donc « Utiliser les réinitialisations enregistrées d’office » reste désactivé. Activez-le sur la ligne du compte dans les réglages pour connecter Codex.`;
+      case "ja":
+        return `Codex はまだ ${account} にサインインしていないため、「保存済みのリセットを自動で使う」はオフのままです。設定でこのアカウントの行からオンにすると、Codex がサインインします。`;
+      case "ko":
+        return `Codex가 아직 ${account}에 로그인하지 않아 ‘저장된 재설정 자동 사용’은 꺼져 있어요. 설정에서 계정 행에서 켜면 Codex에 로그인해요.`;
+      case "pt-BR":
+        return `O Codex ainda não fez login em ${account}, então “Usar redefinições salvas por conta própria” continua desligado. Ligue na linha da conta nas configurações para fazer login no Codex.`;
+      case "zh-Hans":
+        return `Codex 尚未登录 ${account}，因此“自动使用已保存的重置”保持关闭。请在设置中该账户那一行打开它，让 Codex 登录。`;
+      case "zh-Hant":
+        return `Codex 尚未登入 ${account}，因此「自動使用已儲存的重設」保持關閉。請在設定中該帳號那一列開啟它，讓 Codex 登入。`;
+      case "en-XA":
+        return `[Çöðéẋ îš ñöţ šîĝñéð îñ ţö ${account} ýéţ, šö Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ šţáýš öƒƒ. Ţûŕñ îţ öñ ƒŕöɱ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex is not signed in to ‬${account}‮ yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.‬`;
+    }
+    return `Codex is not signed in to ${account} yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.`;
   }
   function attachCancelled(input2) {
     const name = input2.name;
@@ -18047,6 +18198,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Use a saved reset‬`;
     }
     return `Use a saved reset`;
+  }
+  function cardUseSavedResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
   }
   function closeYourFirstMate(input2) {
     const sentence = input2.sentence;
@@ -48946,6 +49124,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.`;
   }
+  function settingsDecisionUseSavedResetName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادة تعيين محفوظة أو الانتظار`;
+      case "de":
+        return `Gespeicherten Reset einlösen oder warten`;
+      case "es":
+        return `Usar un restablecimiento guardado o esperar`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée ou attendre`;
+      case "ja":
+        return `保存済みのリセットを使うか待つか`;
+      case "ko":
+        return `저장된 재설정 사용 또는 대기`;
+      case "pt-BR":
+        return `Usar uma redefinição salva ou esperar`;
+      case "zh-Hans":
+        return `使用已保存的重置还是等待`;
+      case "zh-Hant":
+        return `使用已儲存的重設還是等待`;
+      case "en-XA":
+        return `[Ûšé á šáṽéð ŕéšéţ öŕ ŵáîţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use a saved reset or wait‬`;
+    }
+    return `Use a saved reset or wait`;
+  }
+  function settingsDecisionUseSavedResetReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما ينتظر العمل حسابًا في Codex شُغّل له «استخدام إعادات التعيين المحفوظة تلقائيًا»، يوازن بين استخدام إحدى إعادات التعيين المحفوظة وانتظار تجدد الرصيد. يقرأ خطة الحساب، وما تبقّى من كل رصيد وموعد تجدده، وعدد إعادات التعيين المحفوظة لديه، وأي عمل ينتظر.`;
+      case "de":
+        return `Wenn Arbeit auf ein Codex-Konto wartet, bei dem „Gespeicherte Resets selbst einlösen“ an ist, wägt es ab, ob ein gespeicherter Reset eingelöst oder auf das Auffüllen des Kontingents gewartet wird. Es liest den Plan des Kontos, wie viel von jedem Kontingent übrig ist und wann es sich auffüllt, wie viele gespeicherte Resets es hat und welche Arbeit wartet.`;
+      case "es":
+        return `Cuando hay trabajo esperando una cuenta de Codex con «Usar restablecimientos guardados por sí solo» activado, sopesa usar uno de sus restablecimientos guardados frente a esperar a que se renueve la asignación. Lee el plan de la cuenta, cuánto queda de cada asignación y cuándo se renueva, cuántos restablecimientos guardados tiene y qué trabajo espera.`;
+      case "fr":
+        return `Quand du travail attend un compte Codex dont « Utiliser les réinitialisations enregistrées d’office » est activé, il compare l’utilisation d’une de ses réinitialisations enregistrées avec l’attente du renouvellement de l’allocation. Il lit le forfait du compte, ce qui reste de chaque allocation et quand elle se renouvelle, combien de réinitialisations enregistrées il détient et quel travail attend.`;
+      case "ja":
+        return `「保存済みのリセットを自動で使う」がオンの Codex アカウントで作業が待っているとき、保存済みのリセットを使うか、利用枠の回復を待つかを判断します。アカウントのプラン、各利用枠の残りと回復までの時間、保存済みのリセットの数、待っている作業を読み取ります。`;
+      case "ko":
+        return `‘저장된 재설정 자동 사용’이 켜진 Codex 계정에서 작업이 기다릴 때, 저장된 재설정을 쓸지 사용 한도가 다시 채워지길 기다릴지 판단해요. 계정의 요금제, 각 사용 한도의 남은 양과 다시 채워지는 시점, 저장된 재설정 수, 기다리는 작업을 읽어요.`;
+      case "pt-BR":
+        return `Quando há trabalho esperando uma conta do Codex com “Usar redefinições salvas por conta própria” ligado, ele pesa usar uma das redefinições salvas contra esperar a franquia se renovar. Ele lê o plano da conta, quanto resta de cada franquia e quando ela se renova, quantas redefinições salvas a conta tem e qual trabalho espera.`;
+      case "zh-Hans":
+        return `当工作在等待一个开启了“自动使用已保存的重置”的 Codex 账户时，它权衡是使用一次已保存的重置，还是等待额度恢复。它读取该账户的套餐、每项额度的剩余量和恢复时间、持有的已保存的重置次数，以及等待中的工作。`;
+      case "zh-Hant":
+        return `當工作在等待一個開啟了「自動使用已儲存的重設」的 Codex 帳號時，它權衡是使用一次已儲存的重設，還是等待額度恢復。它讀取該帳號的方案、每項額度的剩餘量和恢復時間、持有的已儲存的重設次數，以及等待中的工作。`;
+      case "en-XA":
+        return `[Ŵĥéñ ŵöŕķ ŵáîţš öñ á Çöðéẋ áççöûñţ ŵĥöšé Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ îš öñ, îţ ŵéîĝĥš ûšîñĝ öñé öƒ îţš šáṽéð ŕéšéţš áĝáîñšţ ŵáîţîñĝ ƒöŕ ţĥé áļļöŵáñçé ţö ŕéƒîļļ. Îţ ŕéáðš ţĥé áççöûñţ'š þļáñ, ĥöŵ ɱûçĥ öƒ éáçĥ áļļöŵáñçé îš ļéƒţ áñð ŵĥéñ îţ ŕéƒîļļš, ĥöŵ ɱáñý šáṽéð ŕéšéţš îţ ĥöļðš, áñð ŵĥîçĥ ŵöŕķ ŵáîţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.‬`;
+    }
+    return `When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.`;
+  }
   function settingsDecisionsActions() {
     switch (currentLanguage()) {
       case "ar":
@@ -74135,6 +74367,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Stop preferring for crew work`;
   }
+  function settingsSubscriptionsMenuStopUsingResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets nicht mehr selbst einlösen`;
+      case "es":
+        return `Dejar de usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Ne plus utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットの自動使用をやめる`;
+      case "ko":
+        return `저장된 재설정 자동 사용 그만하기`;
+      case "pt-BR":
+        return `Parar de usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `停止自动使用已保存的重置`;
+      case "zh-Hant":
+        return `停止自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Šţöþ ûšîñĝ šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stop using saved resets on their own‬`;
+    }
+    return `Stop using saved resets on their own`;
+  }
   function settingsSubscriptionsMenuUseReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -74188,6 +74447,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Codex signs in and uses the one that expires first‬`;
     }
     return `Codex signs in and uses the one that expires first`;
+  }
+  function settingsSubscriptionsMenuUseResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
+  }
+  function settingsSubscriptionsMenuUseResetsDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فقط عندما ينتظر العمل ولا يبقى رصيد في أي حساب`;
+      case "de":
+        return `Nur wenn Arbeit wartet und kein Konto Kontingent hat`;
+      case "es":
+        return `Solo cuando hay trabajo en espera y ninguna cuenta tiene asignación`;
+      case "fr":
+        return `Seulement quand du travail attend et qu’aucun compte n’a d’allocation`;
+      case "ja":
+        return `作業が待っていて、どのアカウントにも利用枠がないときだけ`;
+      case "ko":
+        return `작업이 기다리고 남은 사용 한도가 있는 계정이 없을 때만`;
+      case "pt-BR":
+        return `Só quando há trabalho esperando e nenhuma conta tem franquia`;
+      case "zh-Hans":
+        return `仅在有工作等待且没有账户还有额度时`;
+      case "zh-Hant":
+        return `僅在有工作等待且沒有帳號還有額度時`;
+      case "en-XA":
+        return `[Öñļý ŵĥéñ ŵöŕķ ŵáîţš áñð ñö áççöûñţ ĥáš ŕööɱ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only when work waits and no account has room‬`;
+    }
+    return `Only when work waits and no account has room`;
   }
   function settingsSubscriptionsNoReader() {
     switch (currentLanguage()) {
@@ -88818,7 +89131,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsSavedResetUnclear,
     accountsSavedResetUnverified,
     accountsSavedResetUsed,
+    accountsSavedResetUsedAuto,
+    accountsSavedResetUsedAutoChecking,
     accountsSavedResetUsedChecking,
+    accountsUseSavedResetsSignInFirst,
     attachCancelled,
     automationEventsSkipped,
     automationRunAlsoSkipped,
@@ -89037,6 +89353,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenByAfterClose,
     cardTradeoffTable,
     cardUseSavedReset,
+    cardUseSavedResets,
     closeYourFirstMate,
     closedDropped,
     closedFinished,
@@ -90083,6 +90400,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsCostLimitSwitchLabel,
     settingsCostLimitTitle,
     settingsDecisionUseKindReads,
+    settingsDecisionUseSavedResetName,
+    settingsDecisionUseSavedResetReads,
     settingsDecisionsActions,
     settingsDecisionsAnswerWith,
     settingsDecisionsAuto,
@@ -90958,8 +91277,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsMenuResume,
     settingsSubscriptionsMenuStopKeepingGoing,
     settingsSubscriptionsMenuStopPreferring,
+    settingsSubscriptionsMenuStopUsingResets,
     settingsSubscriptionsMenuUseReset,
     settingsSubscriptionsMenuUseResetDetail,
+    settingsSubscriptionsMenuUseResets,
+    settingsSubscriptionsMenuUseResetsDetail,
     settingsSubscriptionsNoReader,
     settingsSubscriptionsNoReaderKey,
     settingsSubscriptionsNotChosenYet,
@@ -91684,7 +92006,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsSavedResetUnclear": ["account"],
     "accountsSavedResetUnverified": ["account"],
     "accountsSavedResetUsed": ["account", "count"],
+    "accountsSavedResetUsedAuto": ["account", "count"],
+    "accountsSavedResetUsedAutoChecking": ["account"],
     "accountsSavedResetUsedChecking": ["account"],
+    "accountsUseSavedResetsSignInFirst": ["account"],
     "attachCancelled": ["name"],
     "automationEventsSkipped": [],
     "automationRunAlsoSkipped": ["count"],
@@ -91903,6 +92228,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenByAfterClose": ["label"],
     "cardTradeoffTable": [],
     "cardUseSavedReset": [],
+    "cardUseSavedResets": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
     "closedFinished": ["key"],
@@ -92949,6 +93275,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsCostLimitSwitchLabel": [],
     "settingsCostLimitTitle": [],
     "settingsDecisionUseKindReads": [],
+    "settingsDecisionUseSavedResetName": [],
+    "settingsDecisionUseSavedResetReads": [],
     "settingsDecisionsActions": [],
     "settingsDecisionsAnswerWith": ["model"],
     "settingsDecisionsAuto": [],
@@ -93824,8 +94152,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsMenuResume": [],
     "settingsSubscriptionsMenuStopKeepingGoing": [],
     "settingsSubscriptionsMenuStopPreferring": [],
+    "settingsSubscriptionsMenuStopUsingResets": [],
     "settingsSubscriptionsMenuUseReset": [],
     "settingsSubscriptionsMenuUseResetDetail": [],
+    "settingsSubscriptionsMenuUseResets": [],
+    "settingsSubscriptionsMenuUseResetsDetail": [],
     "settingsSubscriptionsNoReader": [],
     "settingsSubscriptionsNoReaderKey": ["apiKey"],
     "settingsSubscriptionsNotChosenYet": [],
@@ -94391,6 +94722,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "try-again",
     "keep-going-on-credits",
     "use-saved-reset",
+    "use-saved-resets",
     "add-plugin",
     "decline-plugin",
     "apply-project-change",
@@ -95401,6 +95733,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * first (docs/codex-client.md; the contract change `use-saved-reset`).
      */
     useSavedReset: string().optional(),
+    /**
+     * Settings -> Intelligence turns this account's Use saved resets on their
+     * own on on arrival, by its key (`accountKey`), with Codex signing in on
+     * its row first (docs/quota.md; the contract change `auto-saved-resets`).
+     */
+    useSavedResets: string().optional(),
     /** The host whose sign-in Settings -> Projects starts on arrival. */
     signIn: string().optional(),
     /** Settings -> Devices makes a link, or a command, on arrival. */

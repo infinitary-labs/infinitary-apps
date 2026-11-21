@@ -1332,6 +1332,8 @@ export class CrewSupervisor {
    * conversation as an open carries it, before its lane goes on.
    */
   placedReopened(taskId: string): void {
+    // What it holds there now took words: nothing there is refused any more.
+    this.moves.openedThere(taskId);
     const task = this.tasks.get(taskId);
     if (task?.session) {
       // The conversation there may have started over, or folded while that

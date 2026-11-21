@@ -6,11 +6,13 @@ import { isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import { parseOfferingKey } from "@shared/modelSlots";
+import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/personalSet";
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
 import { isFolderRepair, levelDefaultReasoning } from "@shared/routingPolicy";
+import { DeviceOutOfReachError } from "../connection/connection";
+import { ComputerBehindError } from "../connection/contractChanges";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { NeedsNewConversation } from "../placed/crewMachines";
@@ -37,6 +39,7 @@ import {
   crewmateResumeToken,
   crewmateSessionSpec,
 } from "./crewSession";
+import type { ResumeAccount } from "./crewSupervisorOptions";
 import { CrewTurn } from "./crewTurn";
 import { describeStatus } from "./settleService";
 import { ModelWaitError } from "./taskMoves";
@@ -741,20 +744,9 @@ export class CrewSessions {
               ...(record.accountId ? { accountId: record.accountId } : {}),
               changed: false,
             });
-    const attachment = selecting instanceof Promise ? await selecting : selecting;
+    const attachment: ResumeAccount = selecting instanceof Promise ? await selecting : selecting;
     if (superseded())
       throw new Error("This task's crewmate was let go while its conversation opened.");
-    if (attachment.changed) {
-      this.core.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
-      const moved = attachment.accountId
-        ? `moved to ${this.core.options.accounts?.labelOf(attachment.accountId) ?? "another account"}`
-        : "continuing without a bound account";
-      this.core.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task "${record.title}" ${moved} - its previous account is no longer available.`,
-        taskId: record.id,
-      });
-    }
     // On a computer that runs work, its working copy is there; this Mac holds none.
     // A folder repair that started above its missing folder resumes there (INF-572).
     const startedIn = isFolderRepair(record.shape?.in_place)
@@ -801,6 +793,17 @@ export class CrewSessions {
     const livePersonal = this.core.facts.isPersonalTask(record.id)
       ? this.core.options.personal
       : undefined;
+    // The model the open asks for: a move's, the one routing picked, or the
+    // task's routed model as it had it.
+    const asked: Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> = move
+      ? { model: move.model, thinkingLevel: move.thinkingLevel }
+      : rerouted
+        ? {
+            model: rerouted.model,
+            thinkingLevel: rerouted.thinkingLevel,
+            ...(rerouted.quick ? { quick: true } : {}),
+          }
+        : this.reopenedOn(record);
     // Register before opening the session: a resumed provider can carry on
     // with work of its own the moment it is back.
     this.core.tasks.set(record.id, task);
@@ -814,15 +817,7 @@ export class CrewSessions {
           cwd,
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
           ...(reattaching ? { reattach: true } : {}),
-          ...(move
-            ? { model: move.model, thinkingLevel: move.thinkingLevel }
-            : rerouted
-              ? {
-                  model: rerouted.model,
-                  thinkingLevel: rerouted.thinkingLevel,
-                  ...(rerouted.quick ? { quick: true } : {}),
-                }
-              : this.reopenedOn(record)),
+          ...asked,
           ...this.core.toolHooks.crewmateHooks(task, livePersonal),
         },
         // A computer that runs work binds the account there routing chose.
@@ -835,42 +830,90 @@ export class CrewSessions {
       // Nothing is held there: a new conversation opens, routed first.
       if (reattaching && caught instanceof NeedsNewConversation)
         return this.openResumed(taskId, move, restart, true);
+      // A routed open that surely opened nothing - it failed here, or its
+      // computer answered that it could not - passes that model and account
+      // over, and routes among the rest with no delivery spent; one whose
+      // computer went before it answered may have opened, so it fails.
+      if (
+        rerouted &&
+        !superseded() &&
+        !(caught instanceof DeviceOutOfReachError) &&
+        !(caught instanceof ComputerBehindError)
+      ) {
+        rerouted.passOver();
+        return this.openResumed(taskId, move, restart, known);
+      }
       throw caught;
     }
-    task.session = session;
-    // The move is recorded once the conversation opened on its model and an
-    // account that serves it; any other open takes no work: it is let go,
-    // and the task routes again or waits.
-    if (rerouted) {
-      const model = session.modelRef();
-      const account = this.core.options.machines?.servingAccount(session);
-      const outcome = await rerouted.commit({
-        ...(model ? { model } : {}),
-        ...(account ? { account } : {}),
-      });
-      if (outcome !== "committed") {
-        if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
-        this.disposeSession(task);
-        if (outcome === "again") return this.openResumed(taskId, move, restart, known);
-        throw new Error("This task's crewmate was let go while its conversation opened.");
-      }
-    } else if (
-      !move &&
-      !reattaching &&
-      !attach &&
-      !(await this.core.moves.keepsModel(record.id, machine))
-    ) {
-      // A conversation opened anew on the model it had takes work only while
-      // a level where it opened still holds that model, or the task names
-      // it: one that left every level while it opened is let go, and the
-      // task routes again. One reattached to, live there, is kept as it is.
+    // The conversation takes no words until it is accepted: no steer, lane
+    // sweep or turn reaches it before (`task.session` is unset). One that is
+    // not accepted, or whose check failed, is let go with its runtime.
+    const refuse = () => {
       if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
+      task.session = session;
       this.disposeSession(task);
-      return this.openResumed(taskId, move, restart, known);
+    };
+    // A conversation opened anew, not reattached to live where it runs.
+    const creation = !move && !reattaching && !attach;
+    let verdict: "committed" | "stale" | "again" | "elsewhere";
+    try {
+      if (rerouted) {
+        // The move is recorded once the conversation opened on its model
+        // and an account that serves it; any other open is let go, and the
+        // task routes again or waits.
+        const model = session.modelRef();
+        const account = this.core.options.machines?.servingAccount(session);
+        verdict = await rerouted.commit({
+          ...(model ? { model } : {}),
+          ...(account ? { account } : {}),
+        });
+      } else if (creation && !onModelAsked(session.modelRef(), asked.model)) {
+        // One opened anew on another model than it asked takes no words.
+        this.core.moves.refuseOpened(record.id, machine);
+        verdict = "elsewhere";
+      } else if (creation && !(await this.core.moves.keepsModel(record.id, machine))) {
+        // One opened anew on the model it had takes work only while a level
+        // where it opened still holds that model, or the task names it: one
+        // that left every level while it opened is let go, and the task
+        // routes again. One reattached to, live there, is kept as it is.
+        verdict = "again";
+      } else verdict = "committed";
+    } catch (caught) {
+      refuse();
+      throw caught;
     }
+    if (verdict !== "committed") {
+      refuse();
+      if (verdict === "again") return this.openResumed(taskId, move, restart, known);
+      throw new Error(
+        verdict === "elsewhere"
+          ? "This task's conversation opened on another model than it asked, so it takes no words."
+          : "This task's crewmate was let go while its conversation opened.",
+      );
+    }
+    task.session = session;
     this.endIfLetGo(task);
     this.acceptOpened(session);
     this.core.moves.openedThere(record.id);
+    // A sibling account the resume moved to is written, and said, only
+    // once the conversation on it was accepted.
+    if (attachment.changed) {
+      this.core.options.tasks.atomic(
+        () => {
+          attachment.record?.();
+          this.core.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
+        },
+        () => attachment.selected?.(),
+      );
+      const moved = attachment.accountId
+        ? `moved to ${this.core.options.accounts?.labelOf(attachment.accountId) ?? "another account"}`
+        : "continuing without a bound account";
+      this.core.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `Task "${record.title}" ${moved} - its previous account is no longer available.`,
+        taskId: record.id,
+      });
+    }
     task.unsubscribe = await this.core.toolHooks.follow(task, session);
     this.endIfLetGo(task);
     // A moved task's record names the conversation it opened now, so a quit
@@ -1393,4 +1436,15 @@ export class CrewSessions {
 /** Why a task on a subscription this build no longer offers cannot be resumed. */
 export function retiredResumeText(taskId: string): string {
   return `Task ${taskId} ran on a subscription Infinitary no longer offers, so its session cannot be resumed. Spawn a follow-up crewmate instead.`;
+}
+
+/**
+ * Whether a conversation opened on the model asked: one that says no model,
+ * or an open that asked for none, is taken as asked.
+ */
+function onModelAsked(
+  model: { provider: string; id: string } | undefined,
+  asked: { provider: string; id: string } | undefined,
+): boolean {
+  return !model || !asked || offeringKey(model) === offeringKey(asked);
 }

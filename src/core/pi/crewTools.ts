@@ -539,7 +539,14 @@ export function heldSteerText(taskId: string, hold?: LaneHold): string {
     case "hand-over":
       return `Task ${taskId} is still receiving files handed over to it, ${kept} right after them. ${tail}`;
     case "model":
-      return `Task ${taskId}'s model is on no level in Settings any more and no other model there can take it, ${kept} once one can. ${softHoldWords("model-levels", "firstmate")} ${tail}`;
+      switch (hold.cause) {
+        case "update":
+          return `Task ${taskId}'s model is on no level in Settings any more, and the computer it runs on must be updated before its conversation can leave that model, ${kept} once it is. ${softHoldWords("model-levels", "firstmate")} ${tail}`;
+        case "unread":
+          return `Task ${taskId}'s subscriptions have not said yet which models they serve, ${kept} once they have. ${tail}`;
+        default:
+          return `Task ${taskId}'s model is on no level in Settings any more and no other model there can take it, ${kept} once one can. ${softHoldWords("model-levels", "firstmate")} ${tail}`;
+      }
     case "account":
       return `Task ${taskId}'s account is not answering right now, ${kept} when it answers again; you will hear when it does. ${tail}`;
     case "update":

@@ -86,6 +86,22 @@ describe("AccountSelector", () => {
     expect(selector.servingState()).not.toBe(spent);
   });
 
+  // INF-5438 round 8 finding 9: an account whose allowance is spent does not
+  // serve a model now, as a pick reads it, and serves it again once it recovers.
+  it("reads an account with spent allowance as serving nothing now", () => {
+    let percent = 0;
+    const selector = new AccountSelector({
+      pool: pool([{ id: "acct_a" }]),
+      quota: { latest: () => snapshot([{ accountId: "acct_a", percent }]) },
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(openInMemoryDatabase()),
+    });
+    const terra = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    expect(selector.servesNow("acct_a", terra)).toBe(false);
+    percent = 40;
+    expect(selector.servesNow("acct_a", terra)).toBe(true);
+  });
+
   it("selects the best-headroom account at spawn and records the decision", async () => {
     const db = openInMemoryDatabase();
     const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
@@ -252,7 +268,18 @@ describe("AccountSelector", () => {
       decisions: new DecisionStore(db),
     });
     const result = await selector.reselectForResume("task-1", "acct_removed");
-    expect(result).toEqual({ accountId: "acct_b", changed: true });
+    expect({ accountId: result.accountId, changed: result.changed }).toEqual({
+      accountId: "acct_b",
+      changed: true,
+    });
+    // The pick is written only once the resumed conversation is accepted.
+    const picks = () =>
+      db.prepare("SELECT account_id FROM decisions WHERE kind = 'account'").all() as {
+        account_id: string;
+      }[];
+    expect(picks()).toEqual([]);
+    result.record?.();
+    expect(picks()).toEqual([{ account_id: "acct_b" }]);
   });
 
   it("reports a change with no replacement when nothing can serve the resume", async () => {

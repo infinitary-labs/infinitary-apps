@@ -173,7 +173,8 @@ export class CrewFacts {
     // A hand-over of files still crossing: what is behind it waits for it (INF-3060).
     if (this.core.steer.handingOver(taskId)) return { kind: "hand-over" };
     // Its model left every level and no other can take it yet (docs/routing.md).
-    if (this.core.moves.waitsForModel(taskId)) return { kind: "model" };
+    const cause = this.core.moves.modelWaitCause(taskId);
+    if (cause) return { kind: "model", cause };
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;
     if (
       this.core.ladder.cutOffHolds({

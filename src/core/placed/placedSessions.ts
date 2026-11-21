@@ -72,7 +72,7 @@ import { accountKey, PlacedAccounts, type PlacedAccountsOptions } from "./placed
 import { answerCall, type CallbackReach, NotHeldHere, replayReport } from "./placedCallbacks";
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
 import { type CallLine, PlacedLedger, reportOf } from "./placedLedger";
-import { PlacedSession } from "./placedSession";
+import { metCutOff, PlacedSession, working } from "./placedSession";
 import {
   askReopen,
   confirmedSpec,
@@ -657,8 +657,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.accounts.signInsOf(machine);
   }
 
-  served(machine: string): Promise<ComputerPool> {
-    return this.accounts.served(machine);
+  served(machine: string, fresh = false): Promise<ComputerPool> {
+    return this.accounts.served(machine, fresh);
+  }
+
+  refuseHeld(taskId: string, refused: boolean): void {
+    this.ledgerOf(taskId).keepRefused(refused);
+  }
+
+  refusedHeld(taskId: string): boolean {
+    return this.ledgerOf(taskId).refused();
+  }
+
+  private ledgerOf(taskId: string): PlacedLedger {
+    const dir = crewmatePlacedDir(this.options.paths, taskId);
+    return this.placed.get(taskId)?.ledger ?? new PlacedLedger(dir);
   }
 
   servedState(machine: string): string {
@@ -1059,11 +1072,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       state,
     );
     placed.session = session;
-    // Follow a turn from the roster only if it belongs to the conversation
-    // the computer just opened. A move may have replaced that conversation.
+    // Follow a turn from the roster only if it belongs to the conversation the computer just
+    // opened, with the open's state: a replacement resuming the same record keeps its id.
     const there = device.roster?.tasks.get(task);
     if (there?.state?.sessionId === state.sessionId)
-      session.adopt(there, there.seq >= placed.through);
+      session.adopt({ ...there, state }, there.seq >= placed.through);
     // A report its turn already gave before this Mac restarted, once its owner listens.
     const replays = placed.replays.filter((replay) => replay.after <= placed.through);
     placed.replays = placed.replays.filter((replay) => replay.after > placed.through);
@@ -1234,10 +1247,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const asking = askReopen(progress, {
       reattachOnly,
       openedThere,
+      held: owed || openedThere,
+      refused: placed.ledger.refused(),
       ours,
       ask: async (spec) => openAnswerSchema.parse(await ask(spec)),
-      route: (attach) =>
-        this.host?.reopenModel?.(placed.task, deviceId, attach && (owed || openedThere)),
+      route: (attach) => this.host?.reopenModel?.(placed.task, deviceId, attach),
       letGo,
     });
     // True once the conversation is open there for this session's words.
@@ -1250,6 +1264,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         const spec = await reopenedSpec(progress, state, {
           ours,
           letGo,
+          refuse: () => this.refuseHeld(placed.task, true),
           kept: () => this.host?.modelKept?.(placed.task, deviceId),
         });
         if (spec === false || !ours()) return false;
@@ -1982,18 +1997,4 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 /** The conversation, while this Mac holds it and has not let it go. */
 function heldSession(placed: Placed): PlacedSession | undefined {
   return placed.session && !placed.session.letGo ? placed.session : undefined;
-}
-
-/** Whether a roster row says its conversation works there: a prompt's turn, or a session that streams. */
-function working(entry: PlacedRosterTask): boolean {
-  return entry.running !== undefined || entry.state?.streaming === true;
-}
-
-/** An event that carries a typed cut-off its turn met there. */
-function metCutOff(event: PlacedEventRecord["event"]): boolean {
-  return (
-    (event.type === "turn_failed" || event.type === "continuation_ended") &&
-    "cutOff" in event &&
-    event.cutOff !== undefined
-  );
 }

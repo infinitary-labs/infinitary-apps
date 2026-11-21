@@ -7,6 +7,11 @@ export type TurnPause = {
   cost?: true;
   /** The computer must be updated before it takes the turn (`waitForUpdateThere`). */
   behind?: true;
+  /**
+   * Its conversation did not open there again (`NotOpenThere`): no update
+   * paused it, and the let-go or the wait for a model says why.
+   */
+  notOpen?: true;
 };
 type End =
   | { kind: "stop"; pause?: TurnPause }

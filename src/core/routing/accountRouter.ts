@@ -2,7 +2,7 @@ import type { QuotaSnapshotView } from "@shared/quota";
 import { quotaEntryForPiProvider } from "../quota/auth";
 import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
-import { type AccountCandidate, selectAccount } from "./accountPolicy";
+import { type AccountCandidate, isExhausted, selectAccount } from "./accountPolicy";
 import type { PlacedWorkData, PlacedWorkScores } from "./placedWork";
 
 /**
@@ -143,11 +143,15 @@ export class AccountSelector {
     return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record, selected };
   }
 
-  /** A resume keeps a healthy account; otherwise prepare and bind a serving sibling. */
+  /**
+   * A resume keeps a healthy account; otherwise it prepares a serving
+   * sibling, whose decision (`record`) and selection mark (`selected`) are
+   * written only once the resumed conversation is accepted.
+   */
   async reselectForResume(
     taskId: string,
     accountId: string | null,
-  ): Promise<{ accountId?: string; changed: boolean }> {
+  ): Promise<{ accountId?: string; changed: boolean; record?(): void; selected?(): void }> {
     if (accountId) {
       const account = this.options.pool.list().find((row) => row.id === accountId);
       if (account?.enabled && this.options.pool.connectedSync(accountId) !== false)
@@ -155,14 +159,16 @@ export class AccountSelector {
     }
     const routed = this.options.decisions.latestRouting(taskId);
     if (!routed?.provider) return { changed: Boolean(accountId) };
-    const selected = await this.selectForSpawn(
+    const pick = await this.pickForSpawn(
       taskId,
       routed.provider,
       routed.model ? { model: routed.model } : undefined,
     );
     return {
-      ...(selected ? { accountId: selected } : {}),
-      changed: selected !== (accountId ?? undefined),
+      ...(pick.accountId ? { accountId: pick.accountId } : {}),
+      changed: pick.accountId !== (accountId ?? undefined),
+      record: pick.record,
+      selected: pick.selected,
     };
   }
 
@@ -198,8 +204,8 @@ export class AccountSelector {
 
   /**
    * Whether the account serves `model` now, as a pick reads it: on,
-   * connected, withheld by nothing, and listing the model - or listing
-   * nothing while no sibling's list names it.
+   * connected, withheld by nothing, with allowance left, and listing the
+   * model - or listing nothing while no sibling's list names it.
    */
   servesNow(accountId: string, model: { provider: string; id: string }): boolean {
     const candidate = this.candidatesFor(model.provider, model.id, undefined).find(
@@ -209,7 +215,8 @@ export class AccountSelector {
       candidate !== undefined &&
       candidate.enabled &&
       candidate.connected !== false &&
-      candidate.withheld === undefined
+      candidate.withheld === undefined &&
+      !isExhausted(candidate)
     );
   }
 

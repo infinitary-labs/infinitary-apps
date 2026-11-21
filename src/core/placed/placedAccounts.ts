@@ -28,6 +28,11 @@ export type PlacedAccountsOptions = {
    */
   signIns?: (deviceId: string) => Promise<ComputerSignIns | null>;
   /**
+   * Asks a computer its sign-ins again (`DeviceSignIns.refresh`), so what it
+   * says next was written after everything heard from it before.
+   */
+  refreshSignIns?: (deviceId: string) => Promise<void>;
+  /**
    * The same, read now without asking (`DeviceSignIns.lastSaid`): a cut-off
    * it names on the account a task there is bound to holds that task.
    * Absent, nothing there ever holds one.
@@ -59,7 +64,8 @@ export class PlacedAccounts
     return (await this.options.signIns?.(machine)) ?? null;
   }
 
-  async served(machine: string): Promise<ComputerPool> {
+  async served(machine: string, fresh = false): Promise<ComputerPool> {
+    if (fresh) await this.options.refreshSignIns?.(machine).catch(() => undefined);
     const signIns = (await this.options.signIns?.(machine)) ?? null;
     const who = this.options.placeOf(machine).who;
     const models = this.options.catalogModels?.() ?? [];

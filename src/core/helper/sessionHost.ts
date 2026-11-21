@@ -1081,9 +1081,11 @@ export class SessionHost {
 
   /**
    * Whether this open names tools, instructions or a model the held
-   * conversation was not opened with: the home routed it again off a model
-   * that left every level (docs/routing.md), and an idle conversation opens
-   * again on the new one. Without `withModel`, only the rest is compared.
+   * conversation was not opened with, or an account of this computer's other
+   * than the one it is bound to: the home routed it again off a model that
+   * left every level, or off an account that does not serve it (docs/routing.md),
+   * and an idle conversation opens again on the new one. Without
+   * `withModel`, only the rest is compared.
    */
   private contractMoved(
     held: Held,
@@ -1096,7 +1098,11 @@ export class SessionHost {
     const model = (asked: PlacedSpec | undefined) =>
       asked?.model ? `${asked.model.provider}/${asked.model.id}` : "";
     return (
-      (withModel && model(held.spec) !== model(spec)) ||
+      (withModel &&
+        (model(held.spec) !== model(spec) ||
+          (spec.binding.accountId !== undefined &&
+            held.account !== undefined &&
+            spec.binding.accountId !== held.account))) ||
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
       opened.sourceContext !== sourceFacts ||

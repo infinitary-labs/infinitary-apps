@@ -50,23 +50,32 @@ export function routedSpec(
  * The spec a reopen confirmed open there keeps, or false when it takes no
  * words. A routed one commits its move only for the model routing still
  * picks and an account there that serves it; one opened anew on the model
- * it had, routing nothing, only while that model is still held there
- * (`kept`). Any other is let go unless a stop or another move already took
- * it, and the next turn opens one through the ordinary resume. One kept on
- * the old model keeps the spec it had.
+ * it had, routing nothing, only on that model and while it is still held
+ * there (`kept`): one on another is refused (`refuse`), so nothing
+ * reattaches to it. Any other is let go unless a stop or another move
+ * already took it, and the next turn opens one through the ordinary resume.
+ * A live conversation reattached to keeps the spec it had, on whatever
+ * model it runs.
  */
 export async function reopenedSpec(
   progress: ReopenProgress,
   state: { model?: { provider: string; id: string } | undefined; accountId?: string | undefined },
-  o: { ours(): boolean; letGo(): void; kept(): Promise<boolean> | undefined },
+  o: { ours(): boolean; letGo(): void; refuse(): void; kept(): Promise<boolean> | undefined },
 ): Promise<PlacedSpec | undefined | false> {
   const { asked, routed } = progress;
   if (!routed) {
-    if (progress.anew && (await o.kept()) === false) {
+    if (!progress.anew)
+      return sameModel(state.model, asked.model) ? confirmedSpec(asked, state) : undefined;
+    if (!sameModel(state.model, asked.model)) {
+      if (o.ours()) o.refuse();
       o.letGo();
       return false;
     }
-    return sameModel(state.model, asked.model) ? confirmedSpec(asked, state) : undefined;
+    if ((await o.kept()) === false) {
+      o.letGo();
+      return false;
+    }
+    return confirmedSpec(asked, state);
   }
   const outcome = o.ours()
     ? await routed.commit({
@@ -94,19 +103,23 @@ export type ReopenProgress = { asked: PlacedSpec; routed?: ReopenRoute; anew: bo
 
 /**
  * Asks a computer that runs work to open a conversation again. One that
- * keeps only what it holds (`reattachOnly`) is asked to reattach first; a new
+ * keeps only what it holds (`reattachOnly`) is asked to reattach first,
+ * unless what it holds was refused words here (`refused`); a new
  * conversation routes before it opens: a model that left every level opens
  * on another that computer serves, or not at all until one can take it
  * (docs/routing.md, "A model that left every level"). `route(attach)` says
- * whether an older computer may bring the old model back. Undefined opens
- * nothing; "open" says an older computer opened it again by itself on a
- * model still held.
+ * whether an older computer, holding a conversation of the task (`held`),
+ * may bring the old model back; one that holds none opens anew. Undefined
+ * opens nothing; "open" says an older computer opened it again by itself
+ * on a model still held.
  */
 export async function askReopen<A extends { state?: unknown }>(
   progress: ReopenProgress,
   o: {
     reattachOnly: boolean;
     openedThere: boolean;
+    held: boolean;
+    refused: boolean;
     ours(): boolean;
     ask(spec: PlacedSpec): Promise<A>;
     route(attach: boolean): Promise<ReopenRoute | "wait" | "stale" | undefined> | undefined;
@@ -115,12 +128,14 @@ export async function askReopen<A extends { state?: unknown }>(
 ): Promise<A | "open" | undefined> {
   const opened = progress.asked;
   if (o.reattachOnly && !o.openedThere) {
-    const kept = await o.ask({ ...opened, reattach: true });
-    if (kept.state || !o.ours()) return kept;
+    if (!o.refused) {
+      const kept = await o.ask({ ...opened, reattach: true });
+      if (kept.state || !o.ours()) return kept;
+    }
     progress.anew = true;
-  }
+  } else if (!o.reattachOnly && !o.held) progress.anew = true;
   if (!o.ours()) return undefined;
-  const routed = await o.route(!o.reattachOnly);
+  const routed = await o.route(!o.reattachOnly && o.held);
   if (routed === "stale" || !o.ours()) return undefined;
   if (
     routed === "wait" ||

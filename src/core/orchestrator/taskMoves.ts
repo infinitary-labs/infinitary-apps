@@ -79,6 +79,12 @@ export type RoutedAgain = {
    * let go.
    */
   commit: (opened: OpenedOn) => Promise<RerouteOutcome>;
+  /**
+   * The open failed before any conversation took words: that model and
+   * account are passed over, and routing again tries the rest, waiting once
+   * none is left.
+   */
+  passOver: () => void;
 };
 
 /** What a rerouted conversation opened on: its model, and the account a computer that runs work says it bound. */
@@ -94,6 +100,35 @@ export type RerouteOutcome = "committed" | "stale" | "again";
  * meets this is no failure and is tried again when that changes.
  */
 export class ModelWaitError extends Error {}
+
+/** Why a reopen waits while this Mac's accounts have not said what they serve. */
+const UNREAD_ACCOUNTS_WAIT =
+  // i18n-exempt: an internal outcome and error; no person reads it.
+  "This Mac's accounts have not said yet which models they serve, so its conversation waits.";
+
+/**
+ * The account of a computer that runs work that serves `model` there,
+ * passing over one that already failed to open it (`failed`, as
+ * provider/id@account): the pin or first that lists it, else another that
+ * lists it, else - from a computer too old to list what it serves - the one
+ * that serves its provider.
+ */
+function bindingThere(
+  pool: ComputerPool,
+  model: { provider: string; id: string },
+  failed: ReadonlySet<string> | undefined,
+): string | undefined {
+  const key = offeringKey(model);
+  const usable = (account: string | undefined) =>
+    account !== undefined && failed?.has(`${key}@${account}`) !== true ? account : undefined;
+  const first = usable(pool.modelAccounts?.get(key));
+  if (first) return first;
+  for (const account of pool.servedBy?.get(key) ?? []) if (usable(account)) return account;
+  return pool.servedBy ? undefined : usable(pool.accounts.get(model.provider));
+}
+
+/** Why a task waits for a model (`TaskMoves.modelWaitCause`). */
+export type ModelWaitCause = "none" | "update" | "unread";
 
 /** What the task moves reach of the supervisor beyond its options. */
 
@@ -158,6 +193,12 @@ export class TaskMoves {
   private readonly refused = new Set<string>();
   /** What each task's newest wait for a model said (`modelWaitWords`). */
   private readonly waitWords = new Map<string, ReturnType<typeof said>>();
+  /**
+   * Why each task waits for a model (`modelWaitCause`): no other model can
+   * take it, its computer must be updated first, or this Mac's accounts have
+   * not said yet what they serve.
+   */
+  private readonly waitCauses = new Map<string, ModelWaitCause>();
   /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
   private readonly computerMoving = new Set<string>();
   /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
@@ -526,8 +567,19 @@ export class TaskMoves {
     const routed = router.servedChoice(taskId);
     if (!routed || routed.named) return true;
     const kept = router.holdsAtALevel(routed.model, pool?.available) === true;
-    if (!kept && !local) this.refused.add(taskId);
+    if (!kept) this.refuseOpened(taskId, machine);
     return kept;
+  }
+
+  /**
+   * A conversation opened on `machine` takes no words: on a computer that
+   * runs work it is still held there, so nothing reattaches to it, even
+   * after this Mac restarts (`refusedThere`).
+   */
+  refuseOpened(taskId: string, machine: string): void {
+    if (machine === LOCAL_MACHINE_ID) return;
+    this.refused.add(taskId);
+    this.options.machines?.refuseHeld?.(taskId, true);
   }
 
   /**
@@ -536,12 +588,14 @@ export class TaskMoves {
    * to, so a removed model is not adopted as if it were live work.
    */
   refusedThere(taskId: string): boolean {
-    return this.refused.has(taskId);
+    return this.refused.has(taskId) || this.options.machines?.refusedHeld?.(taskId) === true;
   }
 
   /** An open there took words: nothing it holds is refused any more. */
   openedThere(taskId: string): void {
+    if (!this.refusedThere(taskId)) return;
     this.refused.delete(taskId);
+    this.options.machines?.refuseHeld?.(taskId, false);
   }
 
   async routeAgainIfLeft(
@@ -566,15 +620,15 @@ export class TaskMoves {
     // A computer that runs work routes among its own sign-ins.
     const pool = local ? undefined : await this.options.machines?.served(machine);
     if (!local && !pool) return undefined;
-    const left = (record: TaskRecord | undefined) => {
+    // Read against what serves where it opens: the pool read first, or one
+    // read again since.
+    const left = (record: TaskRecord | undefined, on = pool) => {
       const routed = router.servedChoice(taskId);
       if (!record || record.status !== "active" || !routed) return undefined;
       // The newest model named and served - at the start or by a move - is kept.
       if (routed.named) return undefined;
       // Undefined: what this Mac's accounts serve is not read yet.
-      return router.holdsAtALevel(routed.model, pool?.available) === false
-        ? routed.model
-        : undefined;
+      return router.holdsAtALevel(routed.model, on?.available) === false ? routed.model : undefined;
     };
     const asked = left(this.options.tasks.get(taskId));
     if (!asked) {
@@ -584,6 +638,7 @@ export class TaskMoves {
       const routed = router.servedChoice(taskId);
       if (routed && router.holdsAtALevel(routed.model, pool?.available) === undefined) {
         this.modelWaits.set(taskId, this.modelsNow(taskId, machine));
+        this.waitCauses.set(taskId, "unread");
         return "wait";
       }
       this.modelWaits.delete(taskId);
@@ -661,9 +716,17 @@ export class TaskMoves {
           continue;
         }
         const accountId = custom ? (record.accountId ?? undefined) : pick?.accountId;
-        const binding = pool
-          ? (pool.modelAccounts?.get(offeringKey(to)) ?? pool.accounts.get(to.provider))
-          : undefined;
+        // There, the account that serves it, passing over one that already
+        // failed to open it: its pin, else another that lists it.
+        const binding = pool ? bindingThere(pool, to, failed) : undefined;
+        // The model and account an open that failed passes over.
+        const pair = (account: string | undefined) =>
+          account !== undefined ? `${offeringKey(to)}@${account}` : offeringKey(to);
+        const passOver = (whole: boolean) => {
+          const passing = this.failedOpens.get(taskId) ?? new Set<string>();
+          passing.add(whole ? offeringKey(to) : pair(pool ? binding : accountId));
+          this.failedOpens.set(taskId, passing);
+        };
         // Here, the account picked must serve the model now, or it would open on another.
         const servesHere = () =>
           accountId !== undefined
@@ -671,7 +734,7 @@ export class TaskMoves {
             : custom || !this.options.accounts || this.options.accountlessServes?.(to) === true;
         const serves = pool
           ? binding !== undefined
-          : servesHere() && failed?.has(`${offeringKey(to)}@${accountId}`) !== true;
+          : servesHere() && (accountId === undefined || failed?.has(pair(accountId)) !== true);
         if (!serves) {
           passed.add(offeringKey(to));
           found = look();
@@ -683,8 +746,8 @@ export class TaskMoves {
         });
         const commit = (opened: OpenedOn): Promise<RerouteOutcome> =>
           router.inOrder(async () => {
-            // What serves there now, read again after the open.
-            const serving = pool ? await this.options.machines?.served(machine) : undefined;
+            // What serves there now, asked again after the open.
+            const serving = pool ? await this.options.machines?.served(machine, true) : undefined;
             const preparedNow = await prepare(serving);
             if (stale()) {
               this.failedOpens.delete(taskId);
@@ -695,10 +758,10 @@ export class TaskMoves {
             // meanwhile gives way to the one routing picks now.
             // What it opened there takes no words, so nothing reattaches to it.
             const refuse = () => {
-              if (pool) this.refused.add(taskId);
+              this.refuseOpened(taskId, machine);
               return "again" as const;
             };
-            if (!left(this.options.tasks.get(taskId))) return refuse();
+            if (!left(this.options.tasks.get(taskId), serving)) return refuse();
             const current = look(preparedNow);
             if (!current || offeringKey(current.to) !== offeringKey(to)) return refuse();
             // That computer's own account, as it says it bound it, which must
@@ -711,15 +774,10 @@ export class TaskMoves {
               ? serving !== undefined && servesOnComputer(serving, opened.account, to)
               : servesHere();
             if (!onModel || !eligible) {
-              // The pair is passed over, and the rest routing would pick are
-              // tried before the task waits.
-              const passing = this.failedOpens.get(taskId) ?? new Set<string>();
-              passing.add(
-                onModel && !pool && accountId !== undefined
-                  ? `${offeringKey(to)}@${accountId}`
-                  : offeringKey(to),
-              );
-              this.failedOpens.set(taskId, passing);
+              // The pair is passed over - the whole model when it opened on
+              // another - and the rest routing would pick are tried before
+              // the task waits.
+              passOver(!onModel || (!pool && accountId === undefined));
               return refuse();
             }
             const { accountId: _guessed, ...evaluated } = current.preview;
@@ -757,6 +815,7 @@ export class TaskMoves {
           ...(record.shape?.rigor === "quick" && !chosen ? { quick: true as const } : {}),
           providerName: this.providerName(to.provider),
           commit,
+          passOver: () => passOver(pool ? binding === undefined : accountId === undefined),
         };
       }
       if (stale()) return "stale";
@@ -784,8 +843,15 @@ export class TaskMoves {
     return false;
   }
 
+  /** Why the task waits for a model, while it does (`waitsForModel`). */
+  modelWaitCause(taskId: string): ModelWaitCause | undefined {
+    return this.waitsForModel(taskId) ? (this.waitCauses.get(taskId) ?? "none") : undefined;
+  }
+
   /** Why a reopen waiting for a model opens nothing, in the words it said once. */
   modelWaitWords(taskId: string): string {
+    // i18n-exempt: an internal outcome; the wait for accounts says nothing to a person.
+    if (this.modelWaitCause(taskId) === "unread") return UNREAD_ACCOUNTS_WAIT;
     const routed = this.options.router?.servedChoice(taskId);
     return englishOf(
       this.waitWords.get(taskId) ??
@@ -807,6 +873,7 @@ export class TaskMoves {
     update = false,
   ) {
     this.modelWaits.set(taskId, this.modelsNow(taskId, machine));
+    this.waitCauses.set(taskId, update ? "update" : "none");
     this.failedOpens.delete(taskId);
     const key = update ? `${offeringKey(from)}#update` : offeringKey(from);
     const fact = update

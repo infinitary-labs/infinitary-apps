@@ -352,7 +352,7 @@ export class CrewTurns {
       // Its conversation did not open there again before its model took the
       // turn: its words go back unspent, as for a turn an update stopped first.
       if (caught instanceof NotOpenThere && !task.turn.pause && !task.turn.closing)
-        task.turn.hold({ unstarted: true });
+        task.turn.hold({ unstarted: true, notOpen: true });
       if (!task.turn.pause) this.core.restarts.recordRestartOutcome(task.id, "stopped", message);
       if (task.turn.closing) {
         this.core.sessions.finish(task, "cancelled");
@@ -1024,6 +1024,9 @@ export class CrewTurns {
     } else if (paused?.cost && !report) {
       // Its cost limit stopped it: the hold's card already asks the
       // captain, and the lane carries it on once they answer.
+    } else if (paused?.notOpen && !report) {
+      // Its conversation did not open there again: the let-go or the wait
+      // for a model says why, and no update is announced for it.
     } else if (paused && !report) {
       // Nobody has anything to act on: the lane carries it on once the
       // computer is back, and the feed says so once.

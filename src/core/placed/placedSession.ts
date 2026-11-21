@@ -532,3 +532,17 @@ export class PlacedSession implements ModelSession {
       );
   }
 }
+
+/** Whether a roster row says its conversation works there: a prompt's turn, or a session that streams. */
+export function working(entry: PlacedRosterTask): boolean {
+  return entry.running !== undefined || entry.state?.streaming === true;
+}
+
+/** An event that carries a typed cut-off its turn met there. */
+export function metCutOff(event: PlacedEvent): boolean {
+  return (
+    (event.type === "turn_failed" || event.type === "continuation_ended") &&
+    "cutOff" in event &&
+    event.cutOff !== undefined
+  );
+}

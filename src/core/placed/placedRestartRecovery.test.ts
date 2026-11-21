@@ -304,6 +304,123 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(home.tasks.get(taskId)?.model ?? null).not.toBe(`${SOL.provider}/${SOL.id}`);
   });
 
+  // INF-5438 round 8 findings 1 and 13: the real router routes a resumed
+  // task off the starter after both computers restart; while the move to
+  // GPT-6 Sol waits to commit, a second order arrives. Neither reaches any
+  // model until the move commits, both then reach GPT-6 Sol, bound to the
+  // account that serves it, and the move is recorded and said once.
+  it("sends no order to a reopened conversation before its move commits", async () => {
+    const at = await codexThere();
+    const taskId = "t-before-commit";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }, { text: "Header done." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const committing = vi.fn();
+    const moves = home.supervisor.moves;
+    const route = moves.routeAgainIfLeft.bind(moves);
+    vi.spyOn(moves, "routeAgainIfLeft").mockImplementation(async (...asked) => {
+      const routed = await route(...asked);
+      if (typeof routed !== "object") return routed;
+      return {
+        ...routed,
+        commit: async (opened) => {
+          committing();
+          await gate;
+          return routed.commit(opened);
+        },
+      };
+    });
+    const requests = api.requests.length;
+
+    const first = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => committing.mock.calls.length).toBe(1);
+    // Neither waits on the move: each order takes its place behind it.
+    const second = home.supervisor.steer.steerCrewmate(taskId, "And the header.", "captain");
+    const swept = home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    try {
+      await expect
+        .poll(() =>
+          home.inbox
+            .allFor(taskId)
+            .some((order) => order.text === "And the header." && order.deliveredAt === null),
+        )
+        .toBe(true);
+      // The conversation opened there, but nothing reached a model yet.
+      expect(api.requests.length).toBe(requests);
+    } finally {
+      release();
+    }
+    await Promise.all([first, second, swept]);
+    await expect.poll(() => said(api.requests.at(-1))).toContain("And the header.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual(sent.map(() => SOL.id));
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(at.bound.at(-1)?.accountId).toBe("acct_codex_sol");
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 8 finding 5: a conversation that computer opened and this
+  // Mac refused stays refused after this Mac restarts: the next open there
+  // asks for a new conversation, never reattaching to the refused one, and
+  // the next words reach the model a level holds.
+  it("never reattaches to a refused conversation after this Mac restarts", async () => {
+    const at = await codexThere();
+    const taskId = "t-refused-restart";
+    model([{ text: "Started on it." }, { text: "Back on the starter." }]);
+    await at.start(taskId);
+    const first = at.home();
+    await expect.poll(() => first.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(first);
+    const ask = first.devices.ask.bind(first.devices);
+    vi.spyOn(first.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      const answer = await ask(device, channel, args);
+      // The captain puts the starter back while GPT-6 Sol was opening.
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id) {
+        first.slots?.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", false);
+        first.slots?.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", true);
+      }
+      return answer;
+    });
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => first.supervisor.moves.refusedThere(taskId)).toBe(true);
+
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(true);
+    const opens: boolean[] = [];
+    const again = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
+      if (channel === "inf:session:open") {
+        const [open] = args as [{ spec: { reattach?: boolean } }];
+        opens.push(open.spec.reattach === true);
+      }
+      return again(device, channel, args);
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Back on the starter.");
+    expect(opens).not.toContain(true);
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([STARTER.id]);
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(false);
+  });
+
   // INF-5438 round 7 findings 8 and 12: a reopen whose open is not accepted
   // keeps orders from the conversation it opened; the next order after it
   // waits for the conversation the next turn opens, and reaches the model once.
@@ -413,6 +530,7 @@ describe("reopening after a work computer restarts, when the task's model left e
           thinkingLevel: "low",
           providerName: "Stub",
           commit,
+          passOver: () => {},
         };
       });
 
@@ -440,6 +558,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       thinkingLevel: "low",
       providerName: "Stub",
       commit: async () => "committed" as const,
+      passOver: () => {},
     });
 
     await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");

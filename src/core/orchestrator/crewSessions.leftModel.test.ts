@@ -1330,3 +1330,136 @@ it("tells why an older computer holding the conversation open waits, and stops w
   expect(await relaunched.reopenModel(taskId, "mini", false)).toMatchObject({ model: luna });
   await relaunched.disposeAll();
 });
+
+// INF-5438 round 8 finding 3: a conversation created anew for a model the
+// task names, which comes back on another model, takes no words and moves
+// nothing.
+it("sends no words to a conversation created for a named model that opens on another", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project on sol"),
+    shape: { override_model_id: offeringKey(sol) },
+  });
+  await tick();
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.disposeAll();
+  routing.takeSolOffEveryLevel();
+  const specs: CrewmateSpec[] = [];
+  // The runtime could not resolve Sol and created the conversation on Terra.
+  const wrong = fakeCrewmate({ model: terra });
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => wrong),
+    { specs, router: h.router as unknown as Router },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(specs[0]?.model).toEqual(sol);
+  expect(wrong.promptCalls).toEqual([]);
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(reroutedNotes(h, taskId)).toEqual([]);
+  expect(h.tasks.get(taskId)?.model).toBe(offeringKey(sol));
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 8 finding 6: a replacement whose conversation could not be
+// created there passes that model over, unspent, and the next model routing
+// picks takes the words once.
+it("opens the next model routing picks when a replacement's conversation cannot be created", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  const specs: CrewmateSpec[] = [];
+  const opened: ReturnType<typeof fakeCrewmate>[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => {
+      const model = specs.at(-1)?.model ?? sol;
+      if (specs.length === 1) throw new Error(`Unknown model ${model.provider}/${model.id}`);
+      const session = fakeCrewmate({ model });
+      opened.push(session);
+      return session;
+    }),
+    { specs, router: h.router as unknown as Router },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  const [first, second] = specs.map((spec) => spec.model?.id);
+  expect(specs).toHaveLength(2);
+  expect([first, second].sort()).toEqual([luna.id, terra.id].sort());
+  expect(opened.map((session) => session.promptCalls)).toEqual([["carry on"]]);
+  expect(routedModels(h, taskId)).toEqual([sol.id, second]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 8 finding 11: the sibling account a resume would move to is
+// written and said only once its conversation is accepted.
+it("writes and says no account change for a reopen whose conversation is refused", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  const before = h.tasks.get(taskId)?.accountId ?? null;
+  const record = vi.fn();
+  const selected = vi.fn();
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async () => "acct-codex"),
+    pickForSpawn: vi.fn(async () => ({
+      accountId: "acct-codex",
+      record: () => {},
+      selected: () => {},
+    })),
+    reselectForResume: vi.fn(async () => ({
+      accountId: "acct-codex-sibling",
+      changed: true,
+      record,
+      selected,
+    })),
+    labelOf: () => "work",
+  };
+  const specs: CrewmateSpec[] = [];
+  // Sol is still on its level and kept; the conversation came back on Terra.
+  const wrong = fakeCrewmate({ model: terra });
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => wrong),
+    {
+      specs,
+      router: h.router as unknown as Router,
+      accounts,
+      broadcastEvent: (event) => h.events.push(event),
+    },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  const notes = h.events.flatMap((event) =>
+    event.type === "firstmate_note" && event.taskId === taskId ? [event.text] : [],
+  );
+  expect(specs[0]?.model).toEqual(sol);
+  expect(wrong.promptCalls).toEqual([]);
+  expect(accounts.reselectForResume).toHaveBeenCalled();
+  expect(record).not.toHaveBeenCalled();
+  expect(selected).not.toHaveBeenCalled();
+  expect(h.tasks.get(taskId)?.accountId ?? null).toBe(before);
+  expect(notes.filter((note) => note.includes("previous account"))).toEqual([]);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 8 finding 12: an order held for a model says why it waits.
+it("says why an order waits for a model, for each reason it waits", () => {
+  expect(heldSteerText("INF-1", { kind: "model", cause: "unread" })).toContain(
+    "have not said yet which models they serve",
+  );
+  expect(heldSteerText("INF-1", { kind: "model", cause: "update" })).toContain("must be updated");
+  const none = heldSteerText("INF-1", { kind: "model", cause: "none" });
+  expect(none).toContain("no other model there can take it");
+  expect(none).not.toContain("updated");
+});

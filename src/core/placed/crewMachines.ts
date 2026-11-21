@@ -389,9 +389,18 @@ export type CrewMachines = {
    * What the computer's own sign-ins serve, as it last said of them: the
    * models a task that runs there is routed among, and the account there
    * for each model and each provider (docs/helper.md, "Its own sign-ins").
-   * Never this Mac's sign-ins.
+   * Never this Mac's sign-ins. `fresh` asks the computer again first, so an
+   * open is accepted on what it serves now, not a report a change outran.
    */
-  served(machine: string): Promise<ComputerPool>;
+  served(machine: string, fresh?: boolean): Promise<ComputerPool>;
+  /**
+   * Marks, or clears, that the conversation the task's computer holds was
+   * refused words here (`TaskMoves.refuseOpened`), kept across a restart of
+   * this Mac, so the next open there opens anew instead of reattaching to it.
+   */
+  refuseHeld?(taskId: string, refused: boolean): void;
+  /** Whether the conversation the task's computer holds was refused words here (`refuseHeld`). */
+  refusedHeld?(taskId: string): boolean;
   /**
    * What the computer last said of its own sign-ins, asked now when it has
    * said nothing yet and is in reach; null when it cannot say. A task about

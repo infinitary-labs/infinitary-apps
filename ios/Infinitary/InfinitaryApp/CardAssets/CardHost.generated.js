@@ -111350,6 +111350,20 @@ ${startersHtml()}`;
       request: tuple([privateSiteSchema])
     }
   });
+  const PANEL_SETTING_NAMES = [
+    "theme",
+    "font",
+    "window-wash",
+    "window-size",
+    "crew-model-names",
+    "ambient-music",
+    "notifications",
+    "cost-limit",
+    "personal-resources",
+    "panels-switch"
+  ];
+  const panelSettingNameSchema = _enum(PANEL_SETTING_NAMES);
+  const panelSettingNamesSchema = array(panelSettingNameSchema).min(1).max(PANEL_SETTING_NAMES.length);
   const USAGE_PERIODS = ["7d", "30d", "all"];
   const usagePeriodSchema = _enum(USAGE_PERIODS);
   const USAGE_SCOPES = ["all", "task", "firstmate", "other"];
@@ -111891,6 +111905,22 @@ ${startersHtml()}`;
       toRequest: () => [],
       invalidate: { valueFromPush: "inf:shell:preferences" },
       description: "The theme, the rail layout, and the panels switch the host applies for the captain."
+    }),
+    // The app settings a panel may read (primitives/live-reads.md,
+    // "settings.current"): each named action catalog line's panel value, and
+    // never a line without one. A look change pushes the whole preferences;
+    // every other catalog change leaves a `personalized` line.
+    "settings.current": entry({
+      channel: "inf:settings:current",
+      args: strictObject({ names: panelSettingNamesSchema }),
+      toRequest: (args) => [args.names],
+      invalidate: {
+        pushes: ["inf:shell:preferences"],
+        events: (event) => event.type === "personalized",
+        sameValue: (current, next2) => JSON.stringify(current) === JSON.stringify(next2)
+      },
+      // i18n-exempt: told to a panel's author and the crew, never shown in the window
+      description: "The current value of each named app setting a panel may read: look, sound and a few switches."
     }),
     // The record, through SQL (plugin data surface, Phase B; src/shared/sql.ts):
     // a read-only query over the published views the plugin's grant names -

@@ -407,15 +407,33 @@ test("the Windows installer installs for this person, offers Git, starts the com
     await expectRunning("on");
     keepTask("task-from-start-at-boot.json");
 
-    // Restart it and Start it here end a run that does not answer by force (the review of
+    // Restart it and Start it here's force stop, on a running installed command (the review of
     // INF-5409): the installed run reads a force stop naming it by its process and start on a
-    // thread of its own and ends itself, a stop naming another start ends nothing, and the stop
-    // is called ended only once no program runs under the run's number. A bystander program the
-    // stop does not name keeps running.
-    const marked = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")) as {
-      pid: number;
-      startedAt: string;
+    // thread of its own and ends itself, a stop naming another start ends nothing and is
+    // withdrawn, and the stop is called ended only once no program runs under the run's number.
+    // A bystander program the stop does not name keeps running. The run is named only once its
+    // own note names the one command Task Scheduler started.
+    const readMarker = (): { pid: number; startedAt: string } | null => {
+      try {
+        const marker = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
+        return typeof marker?.pid === "number" && typeof marker.startedAt === "string"
+          ? { pid: marker.pid, startedAt: marker.startedAt }
+          : null;
+      } catch {
+        return null;
+      }
     };
+    await expect
+      .poll(
+        () => {
+          const marker = readMarker();
+          const [only] = runProcesses();
+          return marker !== null && only !== undefined && marker.pid === only.pid;
+        },
+        { timeout: 60_000 },
+      )
+      .toBe(true);
+    const marked = readMarker() as { pid: number; startedAt: string };
     const bystander = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
       stdio: "ignore",
     });
@@ -427,7 +445,7 @@ test("the Windows installer installs for this person, offers Git, starts the com
           undefined,
           3_000,
         ),
-      ).toBe("lasts");
+      ).toBe("withdrawn");
       expect(runProcesses().length).toBe(1);
       expect(await endRunByForce(dataDir, marked)).toBe("ended");
       expect(stillRunning([marked.pid])).toEqual([]);

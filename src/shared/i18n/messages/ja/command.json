@@ -104,6 +104,7 @@
   "commandMoveUp": "上へ移動",
   "commandMoveUpWords": "矢印, 上, 前",
   "commandNoticeNotAnsweringRetry": "一等航海士は動いていますが応答しません。応答を待つか、ここで開始してもう一度つなぎ直します。",
+  "commandNoticeStopping": "一等航海士を停止しています。停止したら、このウインドウでここで開始します。",
   "commandNoticeWindowCrashed": "一等航海士が理由を告げずに停止し、まだ開始していません。ここで開始すると、もう一度開始します。",
   "commandNoticeWindowNotAnswering": "一等航海士は動いていますが応答しません。もう一度開始すると、停止してから開始し直します。または応答を待ちます。",
   "commandNoticeWindowRestarting": "一等航海士が停止し、もう一度開始しています。このウインドウは開始を待っています。",

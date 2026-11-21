@@ -603,6 +603,7 @@
 "commandMoveUp" = "Nach oben";
 "commandMoveUpWords" = "Pfeil, oben, hoch, vorherige";
 "commandNoticeNotAnsweringRetry" = "Dein erster Offizier läuft, antwortet aber nicht. Warte auf ihn, oder starte ihn hier, um dich erneut mit ihm zu verbinden.";
+"commandNoticeStopping" = "Dein erster Offizier wird angehalten. Dieses Fenster startet ihn hier, sobald er angehalten hat.";
 "commandNoticeWindowCrashed" = "Dein erster Offizier hat ohne Angabe von Gründen angehalten und ist nicht wieder gestartet. Starte ihn hier, um ihn wieder zu starten.";
 "commandNoticeWindowNotAnswering" = "Dein erster Offizier läuft, antwortet aber nicht. Starte ihn neu, um ihn anzuhalten und wieder zu starten, oder warte auf ihn.";
 "commandNoticeWindowRestarting" = "Dein erster Offizier hat angehalten und startet neu. Dieses Fenster wartet auf ihn.";

@@ -571,7 +571,10 @@ describe("the window beside a command's first mate", () => {
       at.command.records = { running: false, run: null, lastStop: null };
     });
     expect(at.shell.startHere()).toBe(true);
-    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    // Ended by force through its own agent's starter: the window starting here lets the job go.
+    await expect
+      .poll(() => at.relaunch.mock.calls)
+      .toEqual([[{ startHere: true, letGoJob: true }]]);
     // By the run's process and start, so its starter ends that run alone.
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: false, force: JOINED }]]);
   });
@@ -597,8 +600,11 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
     expect(at.shell.startHere()).toBe(true);
-    // While the window waits for the run to let the folder go, the notice offers nothing.
-    expect(at.shell.thisMac()).toMatchObject({ command: { state: "waiting" } });
+    // While the window waits for the run to let the folder go, the notice says so and offers
+    // nothing but Quit.
+    const waiting = { state: "waiting", ending: "not-answering" } as const;
+    expect(at.shell.thisMac()).toHaveProperty("command", waiting);
+    expect(COMMAND_NOTICE_WORDS.line(waiting)).toBe(m.commandNoticeStopping());
     expect(at.shell.startHere()).toBe(false);
     expect(at.shell.restartCommand()).toBe(false);
     await expect
@@ -1527,11 +1533,25 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
     const byHand = { pid: 50, startedAt: new Date(Date.now() + 1).toISOString() };
+    // The run started by hand holds the folder by the press, while the window's connection is
+    // still open to the run that did not answer, and the starter answers only past a reading of
+    // the records and the answer wait: the run there, which nothing contacted, is never counted.
+    let answer: () => void = () => {};
     at.starter.restart.mockImplementation(async () => {
-      at.command.records = { running: true, run: byHand, lastStop: null };
+      await new Promise<void>((resolve) => {
+        answer = resolve;
+      });
       return "untouched" as const;
     });
+    at.command.records = { running: true, run: byHand, lastStop: null };
     expect(at.shell.restartCommand()).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    expect(at.shell.thisMac()).toHaveProperty("command", {
+      state: "waiting",
+      ending: "restart",
+      byWindow: true,
+    });
+    answer();
     await at.starter.restart.mock.results.at(-1)?.value;
     expect(at.shell.followsAdded()).toMatchObject({ joins: false, outside: true });
     const retry = { state: "stopped", ending: "not-answering", retries: true } as const;

@@ -663,6 +663,7 @@
   {"said":{"m":"commandMoveUp"},"words":"Move up"},
   {"said":{"m":"commandMoveUpWords"},"words":"arrow, up, previous"},
   {"said":{"m":"commandNoticeNotAnsweringRetry"},"words":"Your first mate is running but not answering. Wait for it, or start it here to connect to it again."},
+  {"said":{"m":"commandNoticeStopping"},"words":"Your first mate is being stopped. This window starts it here once it has stopped."},
   {"said":{"m":"commandNoticeWindowCrashed"},"words":"Your first mate stopped without saying why and has not started again. Start it here to start it again."},
   {"said":{"m":"commandNoticeWindowNotAnswering"},"words":"Your first mate is running but not answering. Restart it to stop it and start it again, or wait for it."},
   {"said":{"m":"commandNoticeWindowRestarting"},"words":"Your first mate stopped and is starting again. This window waits for it."},

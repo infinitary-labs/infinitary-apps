@@ -104,6 +104,7 @@
   "commandMoveUp": "向上移动",
   "commandMoveUpWords": "方向键, 上, 上一个",
   "commandNoticeNotAnsweringRetry": "你的大副正在运行，但没有响应。等它，或者在这里开始以重新连接它。",
+  "commandNoticeStopping": "正在停止你的大副。它停止后，这个窗口会在这里开始它。",
   "commandNoticeWindowCrashed": "你的大副没有说明原因就停止了，尚未重新开始。在这里开始它，即可让它重新开始。",
   "commandNoticeWindowNotAnswering": "你的大副正在运行，但没有响应。重新开始它可以停止它并再次开始，或者等它。",
   "commandNoticeWindowRestarting": "你的大副停止了，正在重新开始。这个窗口在等它。",

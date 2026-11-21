@@ -155,7 +155,7 @@ export type ShellOptions = {
    * started the command the window stood beside (docs/run.md, "When the
    * command stops").
    */
-  relaunch: (how?: { startHere?: boolean }) => void;
+  relaunch: (how?: { startHere?: boolean; letGoJob?: boolean }) => void;
   /** This Mac's own installed app's update checker, which a view answers its update notice from. */
   updates: UpdateChecker;
   /**

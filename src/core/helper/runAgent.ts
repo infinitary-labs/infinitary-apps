@@ -15,7 +15,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunByForce } from "./runForce";
+import { endRunByForce, wakeRun } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -324,6 +324,10 @@ export async function stopRunAgent(
       });
     return;
   }
+  // A stop that forgets the agent, or one that names no run and only lets the job go, is a job the
+  // caller needs stopped: a refusal is reported to it. An ordinary stop of a run leaves the job to
+  // its own rules.
+  const checked = options.forget || options.run === null;
   if ("launchctl" in context) {
     if (options.forget) {
       rmSync(loginAgentFile(context), { force: true });
@@ -335,7 +339,7 @@ export async function stopRunAgent(
     // Only a job launchd says it does not hold is let go quietly; one it still
     // holds may start its run again, and one it cannot say about may too.
     if (
-      options.forget &&
+      checked &&
       !out.ok &&
       (await launchctl(["print", service])).code !== LAUNCHD_NO_SUCH_SERVICE
     )
@@ -349,7 +353,7 @@ export async function stopRunAgent(
     await systemctl(["daemon-reload"]);
   }
   const out = await systemctl(["stop", context.label]);
-  if (options.forget && !out.ok) {
+  if (checked && !out.ok) {
     // As background.ts reads a service's state: by its ActiveState, which says
     // a unit waiting to start again is activating, never by is-active's status.
     const state = await systemctl(["show", "--property=ActiveState", "--value", context.label]);
@@ -393,7 +397,8 @@ export async function restartRunAgent(
   if (!run) return "untouched";
   const ended = await endAgentRun(context, run);
   if (ended === "untouched") return "untouched";
-  if (ended === "lasts") return "failed";
+  // Withdrawn, the run named still runs; uncertain, it may yet end: neither started a run again.
+  if (ended === "withdrawn" || ended === "uncertain") return "failed";
   if ("schtasks" in context) {
     if (await startRunTask(context.schtasks, context.label)) return "restarted";
     return (await startRunAgent(context)) === "running" ? "restarted" : "failed";
@@ -412,12 +417,15 @@ export async function restartRunAgent(
  * Whether the run on this data folder is still `run`, by its own record: the
  * same process and start, a process that still runs, and a record written
  * since this computer last started; with whether this app's own agent
- * started it, as the run wrote. Null for any other run, a process number
+ * started it, and on Windows its process's own birth, as the run wrote. Null for any other run, a process number
  * reused included, and while none is recorded or its record cannot be read.
  */
-function recordedRun(context: RunAgentContext, run: RunInstance): { agent: boolean } | null {
+function recordedRun(
+  context: RunAgentContext,
+  run: RunInstance,
+): { agent: boolean; birth?: string } | null {
   const path = join(context.dataDir, RUN_RECORD_FILE);
-  let record: { pid?: unknown; startedAt?: unknown; agent?: unknown } | null;
+  let record: { pid?: unknown; startedAt?: unknown; agent?: unknown; birth?: unknown } | null;
   try {
     record = JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -425,7 +433,10 @@ function recordedRun(context: RunAgentContext, run: RunInstance): { agent: boole
   }
   if (record?.pid !== run.pid || record.startedAt !== run.startedAt) return null;
   if (!holderAlive(path, run.pid, context.processes?.alive ?? processAlive)) return null;
-  return { agent: record.agent === true };
+  return {
+    agent: record.agent === true,
+    ...(typeof record.birth === "string" ? { birth: record.birth } : {}),
+  };
 }
 
 /**
@@ -434,19 +445,21 @@ function recordedRun(context: RunAgentContext, run: RunInstance): { agent: boole
  * its process and start (`endRunByForce`), which no other program reads, so
  * a program that took its number and a run its job started again both keep
  * going, and nothing is asked of the service manager. Untouched for any
- * other run, and where the stop could not be asked; `lasts` where a program
- * still runs under its number once the wait is over.
+ * other run, and where the stop could not be asked; otherwise as
+ * `endRunByForce` answers.
  */
 async function endAgentRun(
   context: RunAgentContext,
   run: RunInstance,
-): Promise<"ended" | "untouched" | "lasts"> {
-  if (!recordedRun(context, run)?.agent) return "untouched";
+): Promise<"ended" | "untouched" | "withdrawn" | "uncertain"> {
+  const recorded = recordedRun(context, run);
+  if (!recorded?.agent) return "untouched";
   const ended = await endRunByForce(
     context.dataDir,
     run,
     context.processes?.alive ?? processAlive,
     context.processes?.forceWaitMs,
+    () => wakeRun(run.pid, recorded.birth),
   );
   return ended === "unasked" ? "untouched" : ended;
 }

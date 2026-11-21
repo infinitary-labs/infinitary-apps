@@ -46,6 +46,7 @@ const TCP_ROW_BYTES = 24;
 const PROCESS_TERMINATE = 0x0001;
 const PROCESS_VM_READ = 0x0010;
 const PROCESS_SET_QUOTA = 0x0100;
+const PROCESS_SUSPEND_RESUME = 0x0800;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 /** `JOB_OBJECT_QUERY | JOB_OBJECT_ASSIGN_PROCESS | JOB_OBJECT_SET_ATTRIBUTES`. */
 const JOB_ACCESS = 0x0004 | 0x0001 | 0x0010;
@@ -213,6 +214,8 @@ type Native = {
     user: Buffer,
   ) => number;
   closeHandle: (handle: Handle) => number;
+  currentProcess: () => Handle;
+  resumeProcess: (process: Handle) => number;
   createJob: (attributes: null, name: string) => Handle;
   openJob: (access: number, inherit: number, name: string) => Handle;
   assign: (job: Handle, process: Handle) => number;
@@ -250,6 +253,10 @@ function system(): Native {
       "int32_t __stdcall GetProcessTimes(void *process, _Out_ void *created, _Out_ void *exited, _Out_ void *kernel, _Out_ void *user)",
     ),
     closeHandle: kernel32.func("int32_t __stdcall CloseHandle(void *handle)"),
+    // i18n-exempt: a native function signature, never shown to a person.
+    currentProcess: kernel32.func("void * __stdcall GetCurrentProcess()"),
+    // i18n-exempt: a native function signature, never shown to a person.
+    resumeProcess: ntdll.func("int32_t __stdcall NtResumeProcess(void *process)"),
     createJob: kernel32.func(
       "void * __stdcall CreateJobObjectW(void *attributes, const char16_t *name)",
     ),
@@ -409,6 +416,44 @@ function birthOf(process: Handle): string | undefined {
   if (!system().processTimes(process, created, Buffer.alloc(8), ignored, Buffer.alloc(8)))
     return undefined;
   return windowsBirth(created.readBigInt64LE(0));
+}
+
+/** This program's own birth, as Windows keeps it, or null where it cannot be read. */
+export function ownWindowsBirth(): string | null {
+  try {
+    return birthOf(system().currentProcess()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lets a suspended program go on, through a handle to the program whose
+ * birth is `birth` (docs/run.md, "When the command does not answer"): the
+ * handle holds that one program, so a later one that took its number is
+ * never touched. `other` where the number names another program now, or
+ * none; `unknown` where Windows would not open it or let it go on.
+ */
+export function resumeWindowsRun(pid: number, birth: string): "resumed" | "other" | "unknown" {
+  try {
+    const native = system();
+    const process = native.openProcess(
+      PROCESS_SUSPEND_RESUME | PROCESS_QUERY_LIMITED_INFORMATION,
+      0,
+      pid,
+    );
+    if (!process) return "unknown";
+    try {
+      const born = birthOf(process);
+      if (born === undefined) return "unknown";
+      if (born !== birth) return "other";
+      return native.resumeProcess(process) === 0 ? "resumed" : "unknown";
+    } finally {
+      native.closeHandle(process);
+    }
+  } catch {
+    return "unknown";
+  }
 }
 
 /**

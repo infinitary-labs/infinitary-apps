@@ -129,7 +129,7 @@ export type BesideWindowOptions = {
   keyReminders?: () => WindowKeyReminders | null;
   openPage?: (url: string) => Promise<void>;
   /** Starts the app again; `startHere` as this computer's own first mate, whatever start entry is in place. */
-  relaunch: (how?: { startHere?: boolean }) => void;
+  relaunch: (how?: { startHere?: boolean; letGoJob?: boolean }) => void;
   /** The window reads everything again, as a view does after a gap. */
   readAgain: () => void;
   /** The link came back after a drop, replayed or not: the window asks its one-time reads again. */
@@ -464,9 +464,15 @@ export class BesideWindow {
     this.restart = restart;
     this.restarting = true;
     this.startedAt = this.options.now();
-    // The wait counts from the press, even while the command ending still runs.
+    // The wait counts from the press, even while the command ending still runs. While a connection
+    // is still open, it counts for the run behind that connection, never for a folder holder
+    // nothing has contacted.
     this.unansweredSince = null;
-    this.countUnanswered();
+    const open = this.window.connection();
+    if (open) {
+      this.unansweredSince = this.options.now();
+      this.unansweredRun = open.run;
+    } else this.countUnanswered();
     this.show(this.restartingNotice());
     // The window hears the stopped command go, and dials the one started again.
     this.away();
@@ -872,6 +878,9 @@ export class BesideWindow {
   private async stopUnanswered(byWindow: boolean): Promise<void> {
     const { starter, stopCommand } = this.options.beside;
     const target = this.unansweredRun;
+    // Ended by force through its own agent's starter, whose job may start the run again: the window
+    // starting here lets that job go once it holds the folder.
+    const forced = Boolean(target && starter && byWindow);
     if (target && starter && byWindow)
       await starter.stop({ forget: false, force: target }).catch((error: unknown) => {
         console.warn(
@@ -889,7 +898,7 @@ export class BesideWindow {
       this.show(this.wanted);
       return;
     }
-    this.options.relaunch({ startHere: true });
+    this.options.relaunch({ startHere: true, ...(forced ? { letGoJob: true } : {}) });
   }
 
   /** Whether `run` let the folder go, by a reading of the records that says so: another, or none, holds it. */
@@ -1128,7 +1137,8 @@ export class BesideWindow {
       this.stoppedAt = null;
       // A command that runs and has stayed out of reach past its wait is not answering. While a
       // connection to a run is still open, a reading of the records times no other run there,
-      // which nothing has dialed: only that connection's own wait counts (`firstAnswers`).
+      // which nothing has dialed: only the run behind that connection is counted, and only while
+      // it still holds the folder; a holder it has not contacted gets its own wait once it does.
       const open = this.window.connection();
       if (status.running === true) {
         if (!open) this.countUnanswered(status);
@@ -1138,7 +1148,7 @@ export class BesideWindow {
         status.running === true &&
         since !== null &&
         now() - since >= this.answerWaitMs() &&
-        (!open || sameRun(this.unansweredRun, joinedRun(status)));
+        (!open || (sameRun(this.unansweredRun, open.run) && sameRun(open.run, joinedRun(status))));
       if (silent) this.restarting = false;
       this.show(
         silent ? this.notAnswering(status) : this.restarting ? this.restartingNotice() : null,

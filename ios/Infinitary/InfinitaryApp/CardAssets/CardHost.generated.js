@@ -22793,6 +22793,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your first mate is running but not answering. Wait for it, or start it here to connect to it again.`;
   }
+  function commandNoticeStopping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجري إيقاف نائب القبطان. تبدأه هذه النافذة هنا بعد أن يتوقف.`;
+      case "de":
+        return `Dein erster Offizier wird angehalten. Dieses Fenster startet ihn hier, sobald er angehalten hat.`;
+      case "es":
+        return `Tu primer oficial se está deteniendo. Esta ventana lo inicia aquí cuando se haya detenido.`;
+      case "fr":
+        return `Votre second est en cours d’arrêt. Cette fenêtre le démarre ici une fois qu’il s’est arrêté.`;
+      case "ja":
+        return `一等航海士を停止しています。停止したら、このウインドウでここで開始します。`;
+      case "ko":
+        return `일등항해사를 멈추고 있어요. 멈추면 이 창에서 여기서 시작해요.`;
+      case "pt-BR":
+        return `Seu imediato está sendo parado. Esta janela o inicia aqui assim que ele parar.`;
+      case "zh-Hans":
+        return `正在停止你的大副。它停止后，这个窗口会在这里开始它。`;
+      case "zh-Hant":
+        return `正在停止你的大副。它停止後，這個視窗會在這裡開始它。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé îš ƀéîñĝ šţöþþéð. Ţĥîš ŵîñðöŵ šţáŕţš îţ ĥéŕé öñçé îţ ĥáš šţöþþéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate is being stopped. This window starts it here once it has stopped.‬`;
+    }
+    return `Your first mate is being stopped. This window starts it here once it has stopped.`;
+  }
   function commandNoticeWindowCrashed() {
     switch (currentLanguage()) {
       case "ar":
@@ -94798,6 +94825,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMoveUp,
     commandMoveUpWords,
     commandNoticeNotAnsweringRetry,
+    commandNoticeStopping,
     commandNoticeWindowCrashed,
     commandNoticeWindowNotAnswering,
     commandNoticeWindowRestarting,
@@ -97845,6 +97873,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMoveUp": [],
     "commandMoveUpWords": [],
     "commandNoticeNotAnsweringRetry": [],
+    "commandNoticeStopping": [],
     "commandNoticeWindowCrashed": [],
     "commandNoticeWindowNotAnswering": [],
     "commandNoticeWindowRestarting": [],

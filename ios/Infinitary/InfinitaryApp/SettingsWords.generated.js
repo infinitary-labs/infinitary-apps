@@ -13046,7 +13046,11 @@ ${events}` : prompt;
     "not-answering"
   ]);
   const commandNoticeSchema = strictObject({
-    /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+    /**
+     * `waiting` while its start entry is expected to start it again, or, on
+     * `not-answering`, while Start it here waits for that run to stop;
+     * `stopped` once Start it here is offered.
+     */
     state: _enum(["waiting", "stopped"]),
     ending: commandEndingSchema,
     /**

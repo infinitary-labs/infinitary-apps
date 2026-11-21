@@ -32,7 +32,11 @@ export const commandEndingSchema = z.enum([
 export type CommandEnding = z.infer<typeof commandEndingSchema>;
 
 export const commandNoticeSchema = z.strictObject({
-  /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+  /**
+   * `waiting` while its start entry is expected to start it again, or, on
+   * `not-answering`, while Start it here waits for that run to stop;
+   * `stopped` once Start it here is offered.
+   */
   state: z.enum(["waiting", "stopped"]),
   ending: commandEndingSchema,
   /**
@@ -86,6 +90,9 @@ export const COMMAND_NOTICE_WORDS = {
           : "Infinitary was updated"
         : "Infinitary stopped",
   line: (notice: CommandNotice): string => {
+    // Start it here waiting for a run that does not answer to stop: it still runs until then.
+    if (notice.ending === "not-answering" && notice.state === "waiting")
+      return m.commandNoticeStopping();
     if (notice.ending === "not-answering" && notice.retries)
       return m.commandNoticeNotAnsweringRetry();
     if (notice.byWindow) return byWindowLine(notice);

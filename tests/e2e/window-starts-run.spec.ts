@@ -245,14 +245,13 @@ test("the window starts the command in the background, quits alone, and stops it
  * The captain, on INF-4622's fix: "can we not give an option that's force
  * restart the background process?" Promised result: a window opened beside
  * the command it started, which runs and does not answer, offers Restart it
- * on its notice; pressing it ends that command by force through the service
- * manager, which starts it again, and the window joins the new one and shows
- * its card. Data: the throwaway data folder above, its command's main thread
- * held for ever by the development stall file (the stand-in for one stuck on
- * its way to answering, which a frozen process cannot stand in for: the run
- * ends itself, on a thread of its own that a stuck first mate does not hold
- * up), and a one-second answer wait. Completion: the service manager's
- * record of a second run, the stuck run gone, and the card with no notice.
+ * on its notice; pressing it ends that command by force (the window lets the
+ * frozen command go on, and the command ends itself by its process and
+ * start), the service manager starts it again, and the window joins the new
+ * one and shows its card. Data: the throwaway data folder above, its command frozen with
+ * SIGSTOP (the stand-in for one stuck on its way to answering), and a
+ * one-second answer wait. Completion: the service manager's record of a
+ * second run, the frozen run gone, and the card with no notice.
  */
 test("Restart it ends a command that does not answer and the window joins the one started again", async () => {
   test.setTimeout(240_000);
@@ -261,16 +260,14 @@ test("Restart it ends a command that does not answer and the window joins the on
     const userDataDir = seededDataDir(provider.port);
     const homeDir = scratchDir("infinitary-window-starts-run-home-");
     standIn = serviceManagerStandIn(homeDir);
-    const stall = join(scratchDir("infinitary-window-starts-run-stall-"), "stall");
     const env = {
       ...standIn.env,
       INFINITARY_WINDOW_STARTS_RUN: "1",
       INFINITARY_RUN_ANSWER_WAIT_MS: "1000",
-      INFINITARY_RUN_STALL_FILE: stall,
     };
     const open = () => launchApp({ userDataDir, homeDir, env });
 
-    // Section: the window starts the command, then quits; the command's main thread is held.
+    // Section: the window starts the command, then quits; the command is frozen.
     let opened = await open();
     let first: number;
     try {
@@ -279,9 +276,7 @@ test("Restart it ends a command that does not answer and the window joins the on
     } finally {
       await opened.close();
     }
-    writeFileSync(stall, "");
-    // The run takes the file away as its main thread stops.
-    await expect.poll(() => existsSync(stall)).toBe(false);
+    process.kill(first, "SIGSTOP");
 
     // Section: the window opened again says its first mate is not answering, and Restart it restarts it.
     opened = await open();
@@ -302,7 +297,7 @@ test("Restart it ends a command that does not answer and the window joins the on
       expect(commandPid(userDataDir)).toBe(standIn.runs(LABEL)[1]);
     } finally {
       await opened.close();
-      // A stuck command acts on no polite stop: one Restart it did not end goes by force.
+      // A frozen command acts on no polite stop: one Restart it did not end goes by force.
       if (alive(first)) process.kill(first, "SIGKILL");
     }
   } finally {

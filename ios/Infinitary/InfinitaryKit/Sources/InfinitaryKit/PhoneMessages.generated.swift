@@ -647,6 +647,7 @@ public enum PhoneMessages {
     public static func `commandMoveUp`() -> String { PhoneWords.format("commandMoveUp", []) }
     public static func `commandMoveUpWords`() -> String { PhoneWords.format("commandMoveUpWords", []) }
     public static func `commandNoticeNotAnsweringRetry`() -> String { PhoneWords.format("commandNoticeNotAnsweringRetry", []) }
+    public static func `commandNoticeStopping`() -> String { PhoneWords.format("commandNoticeStopping", []) }
     public static func `commandNoticeWindowCrashed`() -> String { PhoneWords.format("commandNoticeWindowCrashed", []) }
     public static func `commandNoticeWindowNotAnswering`() -> String { PhoneWords.format("commandNoticeWindowNotAnswering", []) }
     public static func `commandNoticeWindowRestarting`() -> String { PhoneWords.format("commandNoticeWindowRestarting", []) }
@@ -4762,6 +4763,7 @@ extension PhoneWords {
         "commandMoveUp": [],
         "commandMoveUpWords": [],
         "commandNoticeNotAnsweringRetry": [],
+        "commandNoticeStopping": [],
         "commandNoticeWindowCrashed": [],
         "commandNoticeWindowNotAnswering": [],
         "commandNoticeWindowRestarting": [],

@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -72,16 +72,71 @@ describe("a run that does not answer, ended by force", () => {
   });
 
   // A program that took the named run's process number knows another start: it reads the stop as
-  // another's and keeps going, and the stop is reported as lasting, never as ended, then taken away.
-  it("leaves a program under the named number that knows another start, and calls it lasting", async () => {
+  // another's and keeps going, and the stop is reported as withdrawn, never as ended, then taken away.
+  it("leaves a program under the named number that knows another start, and withdraws the stop", async () => {
     const dataDir = scratchDir("run-force-");
     const holder = await stuckRun(dataDir, OTHER_START);
     const pid = holder.pid ?? -1;
     expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 1_000)).toBe(
-      "lasts",
+      "withdrawn",
     );
     expect(processAlive(pid)).toBe(true);
     expect(holder.exitCode).toBeNull();
     expect(existsSync(join(dataDir, RUN_FORCE_FILE))).toBe(false);
+  });
+
+  // A run whose whole process is stopped, as a fully frozen first mate's: the stop lets it go on,
+  // which ends nothing, and its own reading then ends it.
+  it.skipIf(process.platform === "win32")(
+    "lets a stopped run go on and ends it by its own reading",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const run = await stuckRun(dataDir, STARTED);
+      const pid = run.pid ?? -1;
+      const gone = exited(run);
+      process.kill(pid, "SIGSTOP");
+      expect(await endRunByForce(dataDir, { pid, startedAt: STARTED })).toBe("ended");
+      expect(await gone).toBe("SIGKILL");
+      expect(readdirSync(dataDir).filter((name) => name.startsWith(RUN_FORCE_FILE))).toEqual([]);
+    },
+  );
+
+  // A run whose reading cannot run in time, as one whose stopped process is not let go on: the
+  // stop is withdrawn when its wait is over, and the run, going on again, never acts on it later.
+  it.skipIf(process.platform === "win32")(
+    "withdraws a stop the run could not read in time, so the run never ends on it later",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const run = await stuckRun(dataDir, STARTED);
+      const pid = run.pid ?? -1;
+      process.kill(pid, "SIGSTOP");
+      try {
+        expect(
+          await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 500, () => {}),
+        ).toBe("withdrawn");
+      } finally {
+        process.kill(pid, "SIGCONT");
+      }
+      // Several of its readings later, it still runs, and no stop is left for it.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(run.exitCode).toBeNull();
+      expect(run.signalCode).toBeNull();
+      expect(readdirSync(dataDir).filter((name) => name.startsWith(RUN_FORCE_FILE))).toEqual([]);
+    },
+  );
+
+  // A stop its asker left behind, as one whose window quit during the wait, is over once its
+  // time is: the run reads it as another's and goes on.
+  it("leaves a run going on a stop whose time is over", async () => {
+    const dataDir = scratchDir("run-force-");
+    const run = await stuckRun(dataDir, STARTED);
+    const pid = run.pid ?? -1;
+    writeFileSync(
+      join(dataDir, RUN_FORCE_FILE),
+      `${JSON.stringify({ pid, startedAt: STARTED, until: Date.now() - 1 })}\n`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(run.exitCode).toBeNull();
+    expect(run.signalCode).toBeNull();
   });
 });

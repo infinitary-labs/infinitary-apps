@@ -301,6 +301,12 @@ describe("the command the window starts, on a Mac", () => {
     await expect(stopRunAgent(unreadable.context, { forget: true })).rejects.toThrow(
       "Boot-out failed",
     );
+    // Letting the job go after Start it here's force stop keeps the agent but names no run: a job
+    // launchd keeps may start its run beside the recovered window, so it says so too.
+    await expect(stopRunAgent(refused.context, { forget: false, run: null })).rejects.toThrow(
+      "Boot-out failed",
+    );
+    await expect(stopRunAgent(gone.context, { forget: false, run: null })).resolves.toBeUndefined();
     // Any other stop, as before an update replaces the copy, answers as it always has.
     await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();
   });
@@ -509,6 +515,9 @@ describe("the command the window starts, on Linux", () => {
     );
     const unreadable = linux({ stop: "unreadable" });
     await expect(stopRunAgent(unreadable.context, { forget: true })).rejects.toThrow(
+      "Access denied",
+    );
+    await expect(stopRunAgent(refused.context, { forget: false, run: null })).rejects.toThrow(
       "Access denied",
     );
     await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();

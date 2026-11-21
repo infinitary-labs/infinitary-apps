@@ -1,4 +1,3 @@
-import { existsSync, rmSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -23,6 +22,7 @@ import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { appPathsFor } from "@core/paths";
+import { ownWindowsBirth } from "@core/placed/windowsProcesses";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import { clearPrivateTemp, keepDataFolderPrivate } from "@core/storage/ownerOnly";
 import {
@@ -61,6 +61,7 @@ import { installAppMenu, nameAppMenu, resetAllKeysAfterAsking } from "./appMenu"
 import {
   betweenStops,
   entryWaitMs,
+  LET_GO_JOB_ARG,
   noteStartedHere,
   START_HERE_ARG,
   startedHere,
@@ -95,6 +96,7 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
+  ownedRun,
   ownedRunOf,
   processAlive,
   programIdentity,
@@ -664,10 +666,14 @@ export async function startApp(
     switched: userDataChoice.kind === "switch",
     packaged: app.isPackaged,
   };
+  // Start it here over a run that its own agent started again since (the job's own start after a
+  // force stop, or one that came in its place): the window opens beside that run as its own, with its
+  // starter, and neither starts nor stops it; over a run started by hand, or none, it has no starter.
+  const ownRunHere = startsHere && ownedRun(dataDir) !== null;
   const starter =
     windowless ||
     move ||
-    startsHere ||
+    (startsHere && !ownRunHere) ||
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
@@ -714,14 +720,13 @@ export async function startApp(
   // A second run says so and exits.
   if (!app.requestSingleInstanceLock()) {
     if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
-    else {
-      // One app writes a data folder: pnpm dev says in its terminal why it ended.
-      if (sourceOnOwnData)
-        console.warn(
-          `[data folder] Infinitary is already open on ${dataDir}; quit it to run this copy on your saved data.`,
-        );
+    // A run took the folder after this window read it, as the agent's job starting its run again
+    // after Start it here's force stop: a run ignores a second launch, so this window starts again
+    // and opens beside it, never quitting with no window and never starting or stopping that run.
+    else if (startsHere && !besideRun && runningByCommand(dataDir)) {
+      if (!isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
       app.quit();
-    }
+    } else app.quit();
   } else {
     // The launch that holds the folder clears what earlier ones left in its
     // own temporary folder; a window beside a run leaves it to the run.
@@ -730,10 +735,23 @@ export async function startApp(
     // manager nothing, so its job may start the run again (`stopRunAgent`'s force). Now that this
     // window holds the folder, whatever that job runs is a start the folder refuses, so the job is
     // let go and stops starting one; the agent stays in place for the next login.
-    if (startsHere && !besideRun)
-      void commandStarter(starterOptions)
+    // Only after a force stop of the agent's own run, and only on the folder's own lock: never during
+    // a folder move, whose lock is a throwaway profile's. A job that refuses to let go is reported;
+    // the window goes on as this computer's first mate either way.
+    if (
+      startsHere &&
+      process.argv.includes(LET_GO_JOB_ARG) &&
+      !besideRun &&
+      !move &&
+      app.getPath("userData") === dataDir
+    )
+      commandStarter(starterOptions)
         ?.stop({ forget: false, run: null })
-        .catch(() => {});
+        .catch((error: unknown) => {
+          console.warn(
+            `[app] the background job did not stop starting its run: ${(error as Error).message}`,
+          );
+        });
     // A run notes that it holds the folder, for a window opened beside it,
     // and stops cleanly on a signal (below).
     let stopRun: () => void = () => {};
@@ -772,6 +790,11 @@ export async function startApp(
       // reading goes in at once, so a run that ends right away keeps it.
       const runStartedAt = new Date();
       ownRun = { pid: process.pid, startedAt: runStartedAt.toISOString() };
+      const byAgent = startedByAgent({
+        mark: run?.agentMark,
+        word: options.agent,
+        label: runLabelOf(work.place.flavor),
+      });
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -784,11 +807,8 @@ export async function startApp(
                 await app.whenReady();
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
-        startedByAgent({
-          mark: run?.agentMark,
-          word: options.agent,
-          label: runLabelOf(work.place.flavor),
-        }),
+        byAgent,
+        byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null,
       );
       leaveRun = (end) => {
         try {
@@ -847,17 +867,10 @@ export async function startApp(
       );
       // Restart it and Start it here end a run that does not answer by asking it to end itself, by
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
-      const stopForceWatch = watchRunForce(app.getPath("userData"), runStartedAt.toISOString());
-      // A development run may stand in a first mate stuck on its way to answering: once this file
-      // is there, the run takes it away and its main thread waits for ever, while its own reading
-      // of force stops goes on beside it (tests/e2e/window-starts-run.spec.ts).
-      const stallFile = isDev ? settingFrom(process.env, "RUN_STALL_FILE")?.trim() : undefined;
-      if (stallFile)
-        setInterval(() => {
-          if (!existsSync(stallFile)) return;
-          rmSync(stallFile, { force: true });
-          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
-        }, 200).unref();
+      // Only a run this app's own agent started is ever asked so; one started by hand reads nothing.
+      const stopForceWatch = byAgent
+        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString())
+        : () => {};
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
@@ -1318,8 +1331,11 @@ export async function startApp(
           // only a person's app starts itself again.
           if (!isolatedUserDataDir) {
             // Start it here is asked for one start: no later one carries it on.
-            const args = process.argv.slice(1).filter((arg) => arg !== START_HERE_ARG);
+            const args = process.argv
+              .slice(1)
+              .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
             if (how?.startHere) args.push(START_HERE_ARG);
+            if (how?.startHere && how.letGoJob) args.push(LET_GO_JOB_ARG);
             app.relaunch({
               args,
               // A window following a replaced AppImage starts from the new file.

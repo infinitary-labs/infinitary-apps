@@ -158,6 +158,12 @@ export const RunMarkerSchema = z.object({
   environment: RunEnvironmentSchema.optional(),
   /** The run saw it was started by this app's own agent (`startedByAgent`); absent from earlier runs. */
   agent: z.literal(true).optional(),
+  /**
+   * Windows' own birth of the run's process (`windowsBirth`), which no later
+   * program under its number shares: a force stop lets only that process go
+   * on where it was suspended. Absent elsewhere and from earlier runs.
+   */
+  birth: z.string().optional(),
 });
 export type RunMarker = z.infer<typeof RunMarkerSchema>;
 export const RunStopSchema = RunMarkerSchema.extend({
@@ -186,9 +192,15 @@ export function markRunning(
   now: Date,
   environment?: RunEnvironment | Promise<RunEnvironment>,
   agent = false,
+  birth?: string | null,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
-  let marker: RunMarker = { pid, startedAt: now.toISOString(), ...(agent ? { agent } : {}) };
+  let marker: RunMarker = {
+    pid,
+    startedAt: now.toISOString(),
+    ...(agent ? { agent } : {}),
+    ...(birth ? { birth } : {}),
+  };
   let ended = false;
   if (environment instanceof Promise)
     void environment.then(

@@ -298,7 +298,8 @@ A task reaches bitbucket.org through the gateway's account route with no project
 Bitbucket's runs are not events an Automation rule looks at.
 The app's own pull requests, checks and merges on Bitbucket use the same sign-in (`docs/forge.md`, "Bitbucket pull requests").
 A typed `bitbucket:bitbucket.org` arrival opens its form like GitLab's.
-A Bitbucket Data Center server is a `bitbucket` row named by its host, signed in with an HTTP access token through the same form's address field (`docs/forge.md`, "Bitbucket Data Center"); it offers no actions until the gateway reaches Data Center's own REST API, so a call on it says Bitbucket offers no actions yet.
+A Bitbucket Data Center server is a `bitbucket` row named by its host, signed in with an HTTP access token through the same form's address field (`docs/forge.md`, "Bitbucket Data Center").
+Its `read` and `write` take the server's own REST paths, starting with `/rest/`, its page size is `limit`, and Allow for the rest of this task covers one kind of request to one repository (`projects/{KEY}/repos/{slug}`, or a person's own `~name`, without case), whichever of the server's APIs a path names (`docs/forge.md`, "On Bitbucket Data Center").
 
 ## The inbox
 

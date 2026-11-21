@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -40,9 +40,8 @@ Infinitary 如何用它來複製專案、提出變更，請看 [專案](/zh-hant
 - **GitLab**：在瀏覽器裡登入，或貼上一把金鑰，gitlab.com 或你自己的 GitLab 伺服器都可以。
 - **GitHub Enterprise**：在你自己的伺服器上產生一把金鑰，貼到這裡。
 - **Bitbucket**：在你的 Atlassian 帳號產生一個 API token，貼到這裡，用於 bitbucket.org。
-  它那一列會顯示你以誰的身分登入；目前還沒有提供給大副和船員使用的動作。
 
-每個 GitHub、GitLab 和 GitHub Enterprise 列都有兩個動作：一個用來讀取，一個用來變更內容，例如 **在 GitHub 上變更內容**。
+每一列都有兩個動作：一個用來讀取，一個用來變更內容，例如 **在 GitHub 上變更內容**。
 大副和船員在任務本身的工作之外，要在那裡查資料或採取行動時，用的就是這兩個動作。
 任務的分支、pull request、檢查和合併，則依照你專案的設定進行。
 

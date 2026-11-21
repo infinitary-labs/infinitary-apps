@@ -1,5 +1,5 @@
 ---
-source: ba3356bfe003be79
+source: 7c4d9925493d8861
 title: 專案
 description: 如何把專案加入 Infinitary、讓視窗聚焦在一個專案、選擇變更的合併方式，以及移除專案。
 ---
@@ -51,6 +51,8 @@ Bitbucket 的話，你要在 Atlassian 帳號上建立一個 API token 並貼上
 你的 Bitbucket 專案會從你所屬的工作區列出；工作區很多時，可能有些沒有被讀到，清單會註明這一點。
 Bitbucket 專案的變更會以 pull request 提出，和 GitHub、GitLab 一樣；在這之前加入的專案，從它的下一項任務起也會這樣運作。
 Bitbucket pull request 的說明會以文字承載變更故事，圖片則留在卡片上。
+Bitbucket 專案也可以選擇批次 pull request，它的合併會遵循它在 bitbucket.org 上主要分支的合併策略和合併佇列。
+在 Bitbucket 專案上，船員也能讀取專案的 pipeline 和某個步驟的記錄、把發布檔案放進它的 Downloads，並在它的 pull request 有新留言時醒來，和 GitHub、GitLab 一樣；Bitbucket 不提供下載 pipeline 的成品。
 你的登入只留在這台電腦上。
 
 如果某個登入失效了，會有一張卡片請你重新登入。

@@ -40,13 +40,24 @@ function difference(served, built) {
 /** The pages checked, each with the file in dist/ it must arrive as. */
 export const BUILT_FILES = Object.freeze({ home: "index.html", inner: "install/index.html", notFound: "404.html" });
 
+/** The pages checked in a shipped language other than English, by its address segment, each with its built file. */
+export function languageFiles(segment) {
+  return { [`${segment}:home`]: `${segment}/index.html`, [`${segment}:inner`]: `${segment}/install/index.html` };
+}
+
 /**
  * Checks the site at origin and answers one result per check, never throwing
  * for a failed one. built holds each of BUILT_FILES' pages as the build wrote
  * it, keyed like BUILT_FILES, so a page changed on its way to a browser fails.
  * fetchImpl is the global fetch, or a stand-in in tests.
+ *
+ * languages names each shipped language's address segment other than
+ * English's, whose home and inner pages are checked the same way, keyed in
+ * built as languageFiles names them; unshipped names each catalog language
+ * that has not shipped, whose home and inner addresses must move to the same
+ * English page on the same site (docs/docs-site.md, "Languages").
  */
-export async function checkLive(origin, { built, fetchImpl = fetch }) {
+export async function checkLive(origin, { built, fetchImpl = fetch, languages = [], unshipped = [] }) {
   const base = new URL(origin).origin;
   // Browsers name text/html, and Cloudflare's edge changes a page only for a request that does.
   const get = (url) => fetchImpl(url, { redirect: "manual", headers: { accept: "text/html" } });
@@ -57,6 +68,10 @@ export async function checkLive(origin, { built, fetchImpl = fetch }) {
   for (const [label, path, key] of [
     ["home page", "/", "home"],
     ["inner page", "/install/", "inner"],
+    ...languages.flatMap((segment) => [
+      [`${segment} home page`, `/${segment}/`, `${segment}:home`],
+      [`${segment} inner page`, `/${segment}/install/`, `${segment}:inner`],
+    ]),
   ]) {
     const response = await get(`${base}${path}`);
     const html = await response.text();
@@ -73,6 +88,23 @@ export async function checkLive(origin, { built, fetchImpl = fetch }) {
   results.push(check("unknown address: the site's own not-found page", /<title>404 \| Infinitary<\/title>/.test(missingHtml)));
   results.push(asBuilt("unknown address", missingHtml, "notFound"));
   results.push(...headerChecks("unknown address", missing));
+
+  for (const segment of unshipped) {
+    for (const [from, to] of [
+      [`/${segment}/`, "/"],
+      [`/${segment}/install/`, "/install/"],
+    ]) {
+      const moved = await get(`${base}${from}`);
+      const location = new URL(moved.headers.get("location") ?? "/nowhere", `${base}${from}`);
+      results.push(
+        check(
+          `${from}, not shipped yet: moves to the English page`,
+          moved.status === 302 && location.origin === base && location.pathname === to,
+          `${moved.status} -> ${location.href}`,
+        ),
+      );
+    }
+  }
 
   // Cloudflare moves the zone's plain http addresses to https; a local copy serves plain http itself.
   if (base.startsWith("https://")) {

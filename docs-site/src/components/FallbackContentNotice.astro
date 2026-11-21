@@ -1,0 +1,10 @@
+---
+// Starlight's notice that a page is not translated yet, marked in the reader's
+// language and direction, since it sits inside the English page it stands
+// above (docs/docs-site.md, "Languages").
+import Notice from "@astrojs/starlight/components/FallbackContentNotice.astro";
+
+const { lang, dir } = Astro.locals.starlightRoute;
+---
+
+<div class="fallback-notice" lang={lang} dir={dir}><Notice /></div>

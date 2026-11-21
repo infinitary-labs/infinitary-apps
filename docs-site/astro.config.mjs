@@ -6,6 +6,14 @@ import starlight from "@astrojs/starlight";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
+import {
+  catalogRedirects,
+  SITE_ORIGIN,
+  SOURCE_LANGUAGE,
+  starlightLocales,
+  translationsOf,
+  wordsOf,
+} from "./languages.ts";
 
 // The app's own icon, read from the design system rather than copied into this folder.
 const APP_ICON = new URL("../.claude/skills/infinitary-design/assets/app-icon.svg", import.meta.url);
@@ -100,24 +108,94 @@ function securityHeaders() {
   };
 }
 
+/**
+ * Writes dist/_redirects (docs/docs-site.md, "Languages"): each catalog
+ * language that has not shipped sends its addresses to the same English page.
+ */
+function languageRedirects() {
+  return {
+    name: "infinitary-language-redirects",
+    hooks: {
+      "astro:build:done": async ({ dir }) => {
+        await writeFile(new URL("_redirects", dir), `${catalogRedirects().join("\n")}\n`);
+      },
+    },
+  };
+}
+
+/**
+ * Names the English page as each sitemap entry's x-default alternate, as
+ * every page's head does (docs/docs-site.md, "Languages"): Starlight's
+ * sitemap names only the languages themselves. Starlight adds its sitemap
+ * while setting up, so this adds itself after it to run once it is written.
+ */
+function sitemapDefault() {
+  const after = {
+    name: "infinitary-sitemap-default",
+    hooks: {
+      "astro:build:done": async ({ dir }) => {
+        const english = `hreflang="${SOURCE_LANGUAGE}" href="`;
+        for (const name of await readdir(dir)) {
+          if (!/^sitemap-\d+\.xml$/.test(name)) continue;
+          const file = new URL(name, dir);
+          const xml = (await readFile(file, "utf8")).replace(/<url>[\s\S]*?<\/url>/g, (entry) => {
+            const at = entry.indexOf(english);
+            if (at === -1 || entry.includes('hreflang="x-default"')) return entry;
+            const href = entry.slice(at + english.length, entry.indexOf('"', at + english.length));
+            return entry.replace("</url>", `<xhtml:link rel="alternate" hreflang="x-default" href="${href}"/></url>`);
+          });
+          await writeFile(file, xml);
+        }
+      },
+    },
+  };
+  return {
+    name: "infinitary-sitemap-default-setup",
+    hooks: { "astro:config:setup": ({ updateConfig }) => updateConfig({ integrations: [after] }) },
+  };
+}
+
+/**
+ * Lets a heading name its own id (`## المتطلبات {#requirements}`), so a
+ * translated page keeps the English page's heading ids and every link to a
+ * heading works the same in every language (docs/docs-site.md, "Languages").
+ */
+function headingIds() {
+  return {
+    name: "infinitary-heading-ids",
+    hooks: {
+      "astro:config:setup": ({ config }) => {
+        config.markdown.processor.options.features.headingAttributes = true;
+      },
+    },
+  };
+}
+
+/** A sidebar group's or link's label in English and in each language whose words file has it. */
+const label = (key) => ({ label: wordsOf(SOURCE_LANGUAGE)[key], translations: translationsOf(key) });
+
 export default defineConfig({
-  site: "https://docs.getinfinitary.com",
+  site: SITE_ORIGIN,
   integrations: [
     starlight({
       title: "Infinitary",
+      // English at the root, each shipped language under its tag in lowercase.
+      defaultLocale: "root",
+      locales: starlightLocales(),
       description: "How to use Infinitary, your own AI studio.",
       favicon: "/favicon.svg",
       customCss: ["./src/styles/infinitary.css"],
       components: {
         SiteTitle: "./src/components/SiteTitle.astro",
+        FallbackContentNotice: "./src/components/FallbackContentNotice.astro",
       },
       social: [{ icon: "discord", label: "Discord", href: "https://discord.gg/Wsy2NpnZDu" }],
       // The sidebar lists only pages that exist.
       sidebar: [
         {
-          label: "Start",
+          ...label("sidebar.start"),
           items: [
-            { label: "What Infinitary is", link: "/" },
+            { ...label("sidebar.home"), link: "/" },
             { slug: "install" },
             { slug: "first-launch" },
             { slug: "your-first-task" },
@@ -125,7 +203,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "Using Infinitary",
+          ...label("sidebar.using"),
           items: [
             { slug: "the-first-mate" },
             { slug: "knowledge" },
@@ -145,7 +223,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "Reference",
+          ...label("sidebar.reference"),
           items: [
             { slug: "settings" },
             { slug: "update-and-remove" },
@@ -158,7 +236,10 @@ export default defineConfig({
         },
       ],
     }),
+    headingIds(),
     appIcon(),
     securityHeaders(),
+    languageRedirects(),
+    sitemapDefault(),
   ],
 });

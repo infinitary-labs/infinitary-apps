@@ -60,10 +60,13 @@ A step that renames an identity or words removes its rules once nothing matches 
 
 ## The repository
 
-The code lives in `infinitary-labs/infinitary`, whose history starts at one parentless commit of the tree Firstmate 3000's main held once every check had passed on it (step 11).
+The code lives in `infinitary-labs/infinitary-apps`, whose history starts at one parentless commit of the tree Infinitary's earlier project held once every check had passed on it.
+That earlier project is `infinitary-labs/infinitary-archive`, where Infinitary's own history from step 11 until the move stays: its commits, tags, releases and pull requests.
+Its history in turn started at one parentless commit of the tree Firstmate 3000's main held once every check had passed on it (step 11).
 Firstmate 3000's repository is `infinitary-labs/firstmate-3000-archive`: its commits, tags, releases and pull requests stay there, and GitHub forwards `kunchenguid/firstmate-3000` to it.
 The archive stays open to pull requests, so a Firstmate 3000 task (key FI3) still delivers there; new work starts in the Infinitary project (key INF).
-A pull request, issue or commit number from before step 11 belongs to the archive, not to `infinitary-labs/infinitary`.
+A pull request, issue or commit number from before step 11 belongs to Firstmate 3000's archive, and one from before the move to `infinitary-labs/infinitary-apps` belongs to `infinitary-labs/infinitary-archive`.
+The release records (`release-notes/archive.json`, `packaging/phone-release-archive.json`) name that history `infinitary-labs/infinitary`, the name it published its tags and phone builds under.
 
 ## A fresh history
 

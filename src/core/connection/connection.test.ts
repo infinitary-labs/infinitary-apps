@@ -38,7 +38,6 @@ import { createKeyIdentity } from "../devices/identity";
 import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
 import {
-  ComputerRefusedError,
   DeviceOutOfReachError,
   type PairedDevices,
   startConnection,
@@ -1634,10 +1633,10 @@ describe("the home's connection", () => {
       tasksDir: "/w/tasks",
       tasks: [],
     });
-    // The device's refusal is the answer, typed apart from a connection that went.
-    const refused = at.connection.ask(grant.deviceId, "inf:session:launch", []);
-    await expect(refused).rejects.toThrow("not a request this computer answers");
-    await expect(refused).rejects.toBeInstanceOf(ComputerRefusedError);
+    // The device's refusal is the answer.
+    await expect(at.connection.ask(grant.deviceId, "inf:session:launch", [])).rejects.toThrow(
+      "not a request this computer answers",
+    );
     expect(answering.asked.map((ask) => ask.channel)).toEqual([
       "inf:session:roster",
       "inf:session:launch",

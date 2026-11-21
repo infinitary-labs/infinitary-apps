@@ -154,6 +154,8 @@ export type SessionShape =
         stamp?: ContractStamp;
         /** Only reattach to the conversation held on a computer that runs work (`CrewmateSpec.reattach`). */
         reattach?: boolean;
+        /** A new conversation, never the one held on a computer that runs work (`CrewmateSpec.fresh`). */
+        fresh?: boolean;
       };
     }
   | { turns: "one" };

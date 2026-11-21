@@ -28,6 +28,9 @@ export const REATTACH_ONLY_OPEN = contractChange("reattach-only-open");
 /** A computer that answers an open which left nothing new there (`open-not-opened.md`). */
 export const OPEN_NOT_OPENED = contractChange("open-not-opened");
 
+/** A computer that opens a new conversation when asked fresh, replacing one it holds (`fresh-open.md`). */
+export const FRESH_OPEN = contractChange("fresh-open");
+
 /**
  * A prompt or steer waited for its conversation to open there again, and it
  * did not: it is sent back to its lane unspent, and the task's next turn
@@ -120,6 +123,8 @@ export type PlacedHost = {
               model?: { provider: string; id: string };
               account?: string;
             }): Promise<"committed" | "stale" | "again">;
+            /** That computer answered that nothing opened on this pick (`open-not-opened.md`). */
+            passOver(): void;
           }
         | "wait"
         | "stale"

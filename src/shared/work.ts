@@ -296,6 +296,12 @@ export const placedSpecSchema = z.object({
   reattach: z.boolean().optional(),
   /** An open that failed leaving no new conversation there answers `notOpened` (`open-not-opened.md`). */
   notOpened: z.boolean().optional(),
+  /**
+   * A new conversation, never the one held there (`fresh-open.md`): an idle
+   * one held is let go of and a new one opens; a turn still running there
+   * fails the open, which opens nothing, and the home asks again.
+   */
+  fresh: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 

@@ -331,19 +331,6 @@ export class DeviceOutOfReachError extends Error {
   }
 }
 
-/**
- * A computer answered a request with why it could not do it: what it says,
- * as its own answer, and never a connection that went before it answered.
- * An open it refused this way holds nothing new there
- * (`SessionHost.open`), so the home may route the next pick.
- */
-export class ComputerRefusedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ComputerRefusedError";
-  }
-}
-
 /** A computer that runs work came into reach of this home, or went. */
 export type WorkDeviceContact = { deviceId: string; contact: "in-reach" | "gone" };
 
@@ -1480,7 +1467,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           if (!waiting) return;
           client.asked.delete(Number(frame.id));
           if (frame.ok) waiting.resolve(frame.value);
-          else waiting.reject(new ComputerRefusedError(frame.error));
+          else waiting.reject(new Error(frame.error));
         } else void answer(client, frame);
       });
     };

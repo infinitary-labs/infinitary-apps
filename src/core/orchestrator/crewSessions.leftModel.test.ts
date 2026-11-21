@@ -1589,6 +1589,44 @@ it("keeps a context-limit restart whose new conversation was not accepted, and o
   expect(opened?.resumeToken).toBeUndefined();
 });
 
+// INF-5438 round 11 finding 3: a context restart is kept on its lane before
+// its new conversation is asked for, so one whose open fails outright on the
+// model it keeps still opens fresh next, never resuming the conversation the
+// context limit filled.
+it("keeps a context-limit restart whose new conversation failed to open, and opens it fresh next", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the big logs",
+    intent: intentOf("read every log part and report"),
+  });
+  await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+  const open = h.sessions.open as unknown as ReturnType<typeof vi.fn>;
+  open.mockImplementationOnce(async () => {
+    throw new Error("This model is not served here right now.");
+  });
+  crewmate.emit({
+    type: "turn_failed",
+    taskId,
+    error: "This request exceeds the context window. Shorten it before trying again.",
+    contextOverflow: true,
+  });
+  crewmate.emit({ type: "turn_end", taskId });
+  crewmate.finishPrompt();
+  await tick();
+  await tick();
+  expect(
+    h.tasks.timeline(taskId).some((entry) => entry.text?.includes("could not open") === true),
+  ).toBe(true);
+  await h.supervisor.disposeAll();
+
+  const opened = await relaunchAndSteer(h, taskId, sol);
+  expect(opened?.model).toEqual(sol);
+  // A new conversation, not the one the context limit filled.
+  expect(opened?.resumeToken).toBeUndefined();
+});
+
 // INF-5438 round 10 finding 6: a move the captain named opens on its model
 // or takes no words; the next words go to a conversation on that model.
 it("sends no words to a moved task's conversation that opened on another model than the move named", async () => {

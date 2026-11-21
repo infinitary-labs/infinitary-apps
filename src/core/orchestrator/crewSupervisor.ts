@@ -1380,6 +1380,7 @@ export class CrewSupervisor {
         ...(routed.binding ? { accountId: routed.binding } : {}),
         thinking: { level: routed.thinkingLevel, ...(routed.quick ? { quick: true } : {}) },
         commit: routed.commit,
+        passOver: routed.passOver,
       };
     });
   }

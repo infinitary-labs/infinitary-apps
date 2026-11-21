@@ -2,6 +2,16 @@
 import { offeringKey } from "@shared/modelSlots";
 import { backendForProvider } from "@shared/providers";
 import { type PlacedSpec, placedSpecSchema } from "@shared/work";
+import { sameNames } from "../session/workRecovery";
+
+/**
+ * The spec to open there again. Tool names are what the supervisor binds
+ * now (`names`); instructions stay exactly as the home opened the
+ * conversation with them, so a restart does not start it over.
+ */
+export function withToolsNow(spec: PlacedSpec, names: readonly string[] | undefined): PlacedSpec {
+  return names && !sameNames(names, spec.tools) ? { ...spec, tools: [...names] } : spec;
+}
 
 /**
  * The spec of the conversation a computer confirmed it opened: the one asked,
@@ -23,6 +33,31 @@ export function sameModel(
   asked: { provider: string; id: string } | undefined,
 ): boolean {
   return !asked || (model !== undefined && offeringKey(model) === offeringKey(asked));
+}
+
+/** What an open there answered, read whole: one of the three answers it may give. */
+export type OpenOutcome<S> = { state: S } | { needsOpen: true } | { notOpened: string };
+
+/**
+ * Reads an open's answer as exactly one outcome: its state; `needsOpen`, only
+ * for a `reattach` open; or `notOpened`, only for an open that asked for it
+ * (`open-not-opened.md`). Any other answer, an empty one included, says
+ * nothing sure about what opened there and throws, so the home treats it
+ * as an open whose outcome is unknown, never as leave to open anew.
+ */
+export function openOutcome<S>(
+  answer: { state?: S | undefined; needsOpen?: true | undefined; notOpened?: string | undefined },
+  asked: Pick<PlacedSpec, "reattach" | "notOpened">,
+): OpenOutcome<S> {
+  const { state, needsOpen, notOpened } = answer;
+  const given = [state !== undefined, needsOpen === true, notOpened !== undefined];
+  if (given.filter(Boolean).length === 1) {
+    if (state !== undefined) return { state };
+    if (needsOpen && asked.reattach) return { needsOpen: true };
+    if (notOpened !== undefined && asked.notOpened) return { notOpened };
+  }
+  // i18n-exempt: an internal failure the home catches; no person reads it.
+  throw new Error("The computer's answer to an open said nothing sure about what opened there.");
 }
 
 /** A conversation's spec reopened on the model and account routing picked. */
@@ -96,6 +131,8 @@ type ReopenRoute = {
   accountId?: string;
   thinking: PlacedSpec["thinking"];
   commit(opened: OpenedThere): Promise<"committed" | "stale" | "again">;
+  /** Passes this model and account over, once that computer answered that nothing opened on it. */
+  passOver(): void;
 };
 
 /** What a reopen asked so far: the spec, the routing pick, and whether it opens anew. */
@@ -110,25 +147,26 @@ export type ReopenProgress = { asked: PlacedSpec; routed?: ReopenRoute; anew: bo
  * (docs/routing.md, "A model that left every level"). `route(attach)` says
  * whether an older computer, holding a conversation of the task (`held`),
  * may bring the old model back; whatever an older computer answers is
- * checked as opened anew, as it may be. An open anew is marked first (`creating`), so a quit or failure before it is
+ * checked as opened anew, as it may be, including a conversation it already
+ * opened again by itself (`openedThere`), which is answered as its outcome
+ * when routing keeps its model. An open anew is marked first (`creating`), so a quit or failure before it is
  * accepted leaves nothing the next reopen reattaches to. Undefined
- * opens nothing; "open" says an older computer opened it again by itself
- * on a model still held.
+ * opens nothing.
  */
-export async function askReopen<A extends { state?: unknown }>(
+export async function askReopen<S>(
   progress: ReopenProgress,
   o: {
     reattachOnly: boolean;
-    openedThere: boolean;
+    openedThere?: OpenOutcome<S> | undefined;
     held: boolean;
     refused: boolean;
     ours(): boolean;
-    ask(spec: PlacedSpec): Promise<A>;
+    ask(spec: PlacedSpec): Promise<OpenOutcome<S>>;
     route(attach: boolean): Promise<ReopenRoute | "wait" | "stale" | undefined> | undefined;
     letGo(): void;
     creating(): void;
   },
-): Promise<A | "open" | undefined> {
+): Promise<OpenOutcome<S> | undefined> {
   const opened = progress.asked;
   const anew = (spec: PlacedSpec) => {
     if (progress.anew) o.creating();
@@ -137,10 +175,10 @@ export async function askReopen<A extends { state?: unknown }>(
   if (o.reattachOnly && !o.openedThere) {
     if (!o.refused) {
       const kept = await o.ask({ ...opened, reattach: true });
-      if (kept.state || !o.ours()) return kept;
+      if (!("needsOpen" in kept) || !o.ours()) return kept;
     }
     progress.anew = true;
-  } else if (!o.reattachOnly) progress.anew = true; // An older computer may open anew anywhere.
+  } else progress.anew = true; // An older computer may open anew anywhere.
   if (!o.ours()) return undefined;
   const routed = await o.route(!o.reattachOnly && o.held);
   if (routed === "stale" || !o.ours()) return undefined;
@@ -153,7 +191,12 @@ export async function askReopen<A extends { state?: unknown }>(
     o.letGo();
     return undefined;
   }
-  if (!routed) return o.openedThere ? "open" : anew(opened);
+  if (!routed) {
+    if (!o.openedThere) return anew(opened);
+    // What an older computer opened by itself is checked as opened anew.
+    o.creating();
+    return o.openedThere;
+  }
   progress.routed = routed;
   progress.anew = true;
   progress.asked = routedSpec(opened, routed);

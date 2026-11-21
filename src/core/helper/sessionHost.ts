@@ -921,7 +921,15 @@ export class SessionHost {
       // as a report waiting for the home. Its answer says it still streams,
       // and the home asks again once the turn ends (INF-2332). A reattach
       // keeps a held conversation on whatever model it runs, and answers it.
-      if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts, !reattach)) {
+      // A fresh open never answers the one held: an idle one is let go of
+      // and a new one opens, and one still in a turn opens nothing yet, so
+      // the home asks again (`fresh-open.md`).
+      if (spec.fresh && !reattach) {
+        if (this.busy(held))
+          throw new Error(
+            "This task's conversation is still in a turn here, so its new one opens once that ends.",
+          );
+      } else if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts, !reattach)) {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
@@ -1125,14 +1133,12 @@ export class SessionHost {
     const key = (model: { provider: string; id: string } | undefined) =>
       model ? `${model.provider}/${model.id}` : "";
     // The model the held conversation runs, as it says - one that says none
-    // runs no model asked - when a model is asked; the account it is bound
-    // to, or none; and whether it carries on a conversation, as a fresh
-    // restart, which names none, asks for a new one.
+    // runs no model asked - when a model is asked; and the account it is
+    // bound to, or none.
     const running = spec.model ? held.session?.modelRef() : held.spec?.model;
     return (
       (withModel &&
         (key(running) !== key(spec.model) ||
-          (spec.resume === undefined && held.spec?.resume !== undefined) ||
           (this.options.accounts !== undefined &&
             spec.binding.accountId !== undefined &&
             spec.binding.accountId !== held.account))) ||

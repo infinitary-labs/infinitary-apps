@@ -91875,6 +91875,9 @@
                     },
                     "notOpened": {
                       "type": "boolean"
+                    },
+                    "fresh": {
+                      "type": "boolean"
                     }
                   },
                   "required": [

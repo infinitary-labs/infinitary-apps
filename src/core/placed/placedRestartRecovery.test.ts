@@ -173,6 +173,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinking: { level: "off" },
       commit,
+      passOver: vi.fn(),
     });
 
     await at.restartComputer();
@@ -184,6 +185,102 @@ describe("reopening after a work computer restarts, when the task's model left e
     await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
     await expect.poll(() => api.requests.length).toBeGreaterThan(requests);
     expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  // INF-5438 round 11 finding 4: the reopen after that computer restarts asks
+  // it to say when an open left nothing new there; a routed pick it could not
+  // open there is passed over - never committed - before the session is let
+  // go, so the task's next open routes among the rest.
+  it("passes a routed pick over when that computer answers its reopen opened nothing", async () => {
+    const at = await world();
+    const taskId = "t-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const commit = vi.fn(async () => "committed" as const);
+    const passOver = vi.fn();
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit,
+      passOver,
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    at.refuseOpens(true);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => passOver.mock.calls.length).toBe(1);
+    await expect.poll(() => letGo.mock.calls.length).toBeGreaterThan(0);
+    expect(commit).not.toHaveBeenCalled();
+    expect(at.bound.at(-1)?.provider).toBe(PROVIDER);
+  });
+
+  // INF-5438 round 11 finding 1: a context restart asks that computer for a
+  // fresh conversation, and it replaces the idle one it holds - opened with
+  // the same model and contract - instead of answering it.
+  it("opens a context restart's new conversation there in place of the one it holds", async () => {
+    const at = await world();
+    const taskId = "t-fresh";
+    model([{ text: "Started on it." }, { text: "In the new conversation." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile as string;
+    home.supervisor.placedLetGo(taskId);
+
+    await home.supervisor.sessions.resumeTask(taskId, undefined, { from, changed: "context" });
+    const now = home.tasks.get(taskId)?.sessionFile;
+    expect(now).toBeTruthy();
+    expect(now).not.toBe(from);
+  });
+
+  // INF-5438 round 11 finding 2: an older computer, which does not know a
+  // fresh open, answers a context restart with the conversation it still
+  // holds; the home confirms the conversation is another before any branch
+  // accepts it, so that one takes no words and the restart stays on its lane.
+  it("takes no words from a context restart an older computer answers on the conversation it replaces", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "fresh-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-fresh-older";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile;
+    expect(from).toBeTruthy();
+    home.supervisor.placedLetGo(taskId);
+    const requests = api.requests.length;
+
+    await expect(
+      home.supervisor.sessions.resumeTask(taskId, undefined, {
+        from: from as string,
+        changed: "context",
+      }),
+    ).rejects.toThrow("opened on another model or conversation");
+    expect(api.requests.length).toBe(requests);
+    // The restart is still on its lane, so the next open starts fresh.
+    expect(
+      home.inbox.allFor(taskId).some((row) => row.facts?.kind === "conversation-restart"),
+    ).toBe(true);
+    // A rerouted one is confirmed the same way, before its move commits.
+    const commit = vi.fn(async () => "committed" as const);
+    vi.spyOn(home.supervisor.moves, "routeAgainIfLeft").mockResolvedValueOnce({
+      model: { provider: PROVIDER, id: MODEL },
+      thinkingLevel: "low",
+      providerName: "Stub",
+      commit,
+      passOver: vi.fn(),
+    });
+    await expect(
+      home.supervisor.sessions.resumeTask(taskId, undefined, {
+        from: from as string,
+        changed: "context",
+      }),
+    ).rejects.toThrow("opened on another model or conversation");
+    expect(commit).not.toHaveBeenCalled();
+    expect(api.requests.length).toBe(requests);
   });
 
   // INF-5438 round 7 finding 12: the real router, the home's read of that
@@ -653,6 +750,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinking: { level: "low" },
       commit: async () => "again" as const,
+      passOver: vi.fn(),
     });
     const letGo = vi.spyOn(home.supervisor, "placedLetGo");
     const requests = api.requests.length;
@@ -803,6 +901,7 @@ describe("reopening after a work computer restarts, when the task's model left e
         model: { provider: PROVIDER, id: OTHER_MODEL },
         thinking: { level: "low" },
         commit: async () => "again" as const,
+        passOver: vi.fn(),
       };
     });
     const requests = api.requests.length;
@@ -855,6 +954,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       accountId: "a-guess-the-home-made",
       thinking: { level: "low" },
       commit,
+      passOver: vi.fn(),
     });
 
     await at.restartComputer();

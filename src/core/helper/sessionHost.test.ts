@@ -493,30 +493,38 @@ describe("a conversation held on a computer that runs work", () => {
     expect(again.state?.model).toEqual(at.spec.model);
   });
 
-  // INF-5438 round 10 finding 7: a fresh restart names no conversation to
-  // carry on; where the held one carries on another, a new one opens.
-  it("opens a new conversation for a fresh restart where the held one carries on another", async () => {
+  // INF-5438 round 11 finding 1: a fresh open asks for a new conversation
+  // and never gets back the one held - even one opened with no resume
+  // token, whose contract is the same - while one still in a turn opens
+  // nothing yet, so the home asks again (`fresh-open.md`).
+  it("opens a new conversation for a fresh open, replacing the idle one held and never a busy one", async () => {
     const at = await placed();
-    await at.open();
+    const first = await at.open();
     model([{ text: "Started." }]);
     await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
     await at.ended(1);
-    const held = await at.open();
-    const carrying = {
-      ...at.spec,
-      tools: [...at.spec.tools, "prepare_change"],
-      resume: held.state.resume,
-    };
-    const carried = await at.order("inf:session:open", [
-      { orderId: `open:${TASK}:2`, task: TASK, spec: carrying },
+    // The same open with no resume, not asked fresh, keeps what is held.
+    const same = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: at.spec },
     ]);
-    expect(carried.state?.resume).toBe(held.state.resume);
-    const { resume: _carried, ...fresh } = carrying;
+    expect(same.state?.resume).toBe(first.state.resume);
+    const host = at.host() as unknown as { busy(held: unknown): boolean };
+    const busy = vi.spyOn(host, "busy").mockReturnValue(true);
+    await expect(
+      at.order("inf:session:open", [
+        { orderId: `open:${TASK}:3`, task: TASK, spec: { ...at.spec, fresh: true } },
+      ]),
+    ).rejects.toThrow("still in a turn");
+    busy.mockRestore();
+    const kept = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:4`, task: TASK, spec: at.spec },
+    ]);
+    expect(kept.state?.resume).toBe(first.state.resume);
     const restarted = await at.order("inf:session:open", [
-      { orderId: `open:${TASK}:3`, task: TASK, spec: fresh },
+      { orderId: `open:${TASK}:5`, task: TASK, spec: { ...at.spec, fresh: true } },
     ]);
     expect(restarted.state?.resume).toBeTruthy();
-    expect(restarted.state?.resume).not.toBe(held.state.resume);
+    expect(restarted.state?.resume).not.toBe(first.state.resume);
   });
 
   // INF-5438 round 10 finding 4: an open that fails once its conversation

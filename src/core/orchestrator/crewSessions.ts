@@ -52,11 +52,12 @@ import { conversationRestartWake } from "./turnWakes";
  * through `CrewCore`.
  */
 /**
- * Whether a conversation's resume token names the conversation `from` names:
- * the same token, or the same record file.
+ * Whether a conversation's resume token names a conversation other than the
+ * one `from` names: neither the same token nor the same record file. One
+ * that names none is not shown to be another.
  */
-function sameConversation(token: string | undefined, from: string): boolean {
-  return token !== undefined && (token === from || basename(token) === basename(from));
+function distinctFrom(token: string | undefined, from: string): boolean {
+  return token !== undefined && token !== from && basename(token) !== basename(from);
 }
 
 export class CrewSessions {
@@ -665,6 +666,18 @@ export class CrewSessions {
     if (!record.sessionFile) {
       throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
     }
+    // A context or refusal restart is kept on its lane before anything can
+    // fail, so a failure, a wait, a refusal or a quit before its new
+    // conversation is accepted leaves the next open starting fresh too
+    // (`waitingRestart`); one already there is not queued again.
+    const restarting = fresh !== undefined && fresh.changed !== "computer";
+    if (restarting && this.waitingRestart(record) === undefined)
+      this.recordRestart(
+        record.id,
+        record.key || record.id,
+        this.core.facts.machineOf(record.id),
+        fresh,
+      );
     if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
     // A resume is an attachment point: re-check the recorded account and
     // move to a sibling (transcript intact) if it died or was removed.
@@ -711,10 +724,8 @@ export class CrewSessions {
         ? undefined
         : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving, attach });
     if (routedAgain === "wait") {
-      // A restart that waits for a model is kept on the lane, so it opens
+      // A restart that waits for a model stays on the lane, so it opens
       // fresh once one can take it (`waitingRestart`).
-      if (fresh && fresh.changed !== "computer")
-        this.recordRestart(record.id, record.key || record.id, machine, fresh);
       throw new ModelWaitError(this.core.moves.modelWaitWords(record.id));
     }
     // A stop, a quit, a close or another move - to another computer, or to
@@ -819,12 +830,6 @@ export class CrewSessions {
     // before it is asked, so a quit or a failure before it is accepted
     // leaves nothing the next open reattaches to (`refusedThere`).
     if (creation) this.core.moves.refuseOpened(record.id, machine);
-    // A context or refusal restart is kept on the lane while its new
-    // conversation is not accepted, so the next open starts fresh too.
-    const keepRestart = () => {
-      if (fresh && fresh.changed !== "computer")
-        this.recordRestart(record.id, record.key || record.id, machine, fresh);
-    };
     // Register before opening the session: a resumed provider can carry on
     // with work of its own the moment it is back.
     this.core.tasks.set(record.id, task);
@@ -837,6 +842,7 @@ export class CrewSessions {
           machineId: machine,
           cwd,
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
+          ...(restarting ? { fresh: true } : {}),
           ...(reattaching ? { reattach: true } : {}),
           ...asked,
           ...this.core.toolHooks.crewmateHooks(task, livePersonal),
@@ -863,7 +869,6 @@ export class CrewSessions {
       // Any other may have opened there - its computer went before it
       // answered, or its answer could not be read: what it may hold stays
       // refused until an open there is accepted, and no words went.
-      keepRestart();
       throw new NotAcceptedError(caught instanceof Error ? caught.message : String(caught), {
         cause: caught,
       });
@@ -878,7 +883,19 @@ export class CrewSessions {
     };
     let verdict: "committed" | "stale" | "again" | "elsewhere";
     try {
-      if (rerouted) {
+      if (
+        creation &&
+        machine !== LOCAL_MACHINE_ID &&
+        fresh !== undefined &&
+        fresh.changed !== "computer" &&
+        !distinctFrom(crewmateResumeToken(session.resume()), fresh.from)
+      ) {
+        // A fresh restart that a computer that runs work, which may hold the
+        // conversation it replaces, answered on that one - or on one it does
+        // not name - takes no words, rerouted or not.
+        this.core.moves.refuseOpened(record.id, machine);
+        verdict = "elsewhere";
+      } else if (rerouted) {
         // The move is recorded once the conversation opened on its model
         // and an account that serves it; any other open is let go, and the
         // task routes again or waits.
@@ -888,17 +905,8 @@ export class CrewSessions {
           ...(model ? { model } : {}),
           ...(account ? { account } : {}),
         });
-      } else if (
-        creation &&
-        (!sameModel(session.modelRef(), asked.model) ||
-          (machine !== LOCAL_MACHINE_ID &&
-            fresh !== undefined &&
-            fresh.changed !== "computer" &&
-            sameConversation(crewmateResumeToken(session.resume()), fresh.from)))
-      ) {
-        // One opened anew on another model than it asked takes no words, and
-        // neither does a fresh restart that a computer that runs work, which
-        // may hold the conversation it replaces, answered on that one.
+      } else if (creation && !sameModel(session.modelRef(), asked.model)) {
+        // One opened anew on another model than it asked takes no words.
         this.core.moves.refuseOpened(record.id, machine);
         verdict = "elsewhere";
       } else if (creation && !move && !(await this.core.moves.keepsModel(record.id, machine))) {
@@ -911,7 +919,6 @@ export class CrewSessions {
     } catch (caught) {
       // A check that could not finish accepted nothing: no words went.
       refuse();
-      keepRestart();
       if (caught instanceof ModelWaitError || caught instanceof NotAcceptedError) throw caught;
       throw new NotAcceptedError(caught instanceof Error ? caught.message : String(caught), {
         cause: caught,
@@ -921,7 +928,6 @@ export class CrewSessions {
       refuse();
       if (verdict === "again") return this.openResumed(taskId, move, restart, known);
       if (verdict === "elsewhere") {
-        keepRestart();
         throw new NotAcceptedError(
           "This task's conversation opened on another model or conversation than it asked, so it takes no words.",
         );
@@ -961,7 +967,8 @@ export class CrewSessions {
       task.conversationBegan ?? (target || fresh ? "move" : "resume"),
     );
     if (fresh) {
-      this.recordRestart(task.id, task.key, machine, fresh);
+      // A context or refusal restart is already on its lane (`restarting`).
+      if (!restarting) this.recordRestart(task.id, task.key, machine, fresh);
       if (fresh.changed === "context") task.contextRecovered = true;
     }
     const movedThere = this.core.options.tasks.get(record.id)?.shape?.computer_move;

@@ -770,9 +770,11 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
   A new conversation there is marked so before it is asked, so one opened when this Mac quit, or whose open or check failed, before it was accepted is never reattached to unchecked.
   The check asks that computer its sign-ins again and takes the conversation only when it answers, on an account there that lists the model with its own allowance there not spent.
   An open that fails after its conversation began lets that conversation go, and a home that asks (`notOpened`, `open-not-opened.md`) hears that it left nothing there only once that let-go is over, or when it failed before anything began; any other failure fails as before, and the home reads it as one that may have left a conversation there (`SessionHost.open`).
-  A held conversation that runs another model than the open asks, or says no model, opens again, and so does one that carries on a conversation when a fresh restart, which names none, asks.
+  A held conversation that runs another model than the open asks, or says no model, opens again.
+  An open asked `fresh` (`fresh-open.md`), as a context or refusal restart's is, never gets back the conversation held: an idle one is let go of and a new one opens, and one still in a turn fails the open, which opens nothing, so the home asks again once it ends.
+  The home reads an open's answer as exactly one of its state, a `needsOpen` it asked for or a `notOpened` it asked for; any other answer, an empty one included, is an open whose outcome is unknown.
   An open that adopts a conversation kept there on another model or backend follows it as it lives there, and keeps no spec this Mac asked for.
-  A conversation that computer opens again by itself from its files, after words from outside were replaced, is asked to open on the routed model the same way.
+  A conversation an older computer opens again by itself from its files, after words from outside were replaced, takes no words until it is checked as opened anew, as any new conversation is, or opens on the routed model the same way.
   A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words, adds or removes a tool, or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
   The task's timeline notes the move, and its record names the new conversation at once.
   Why, the brief and where the earlier transcript is saved on that computer are a once-named wake on the task's lane, served first on the next prompt, so a quit before that turn ends clean still delivers it (`docs/claude-client.md`).

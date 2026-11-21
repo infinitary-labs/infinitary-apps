@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batches-panel",
+      "kind": "feature",
+      "area": "projects",
+      "title": "A Batches panel shows your batched changes while Batched pull requests is on",
+      "body": "With the Batched pull requests runbook on, a Batches panel on the right shows the open batch and its checks, the changes waiting and any left out, and the batches that ended in the last day. Press a change to open its task, or Answer in Settings when a batch is held. Show your batches in command search puts up every detail on one card.",
+      "picture": {
+        "dark": "batches-panel-dark.webp",
+        "light": "batches-panel-light.webp",
+        "alt": "The Batches panel on the right rail showing a batch held on a failed check, its two changes, one change waiting, one left out and a closed Last day"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

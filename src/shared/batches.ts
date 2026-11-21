@@ -130,6 +130,8 @@ export const openBatchSchema = z.object({
    * the next batch. A combine at a new version drops it.
    */
   passed: z.object({ head: z.string(), checks: z.array(z.string()) }).optional(),
+  /** How many times it was held, counted at each fresh hold; absent before its first. */
+  holds: z.number().int().positive().optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
 
@@ -215,6 +217,30 @@ export const mergeWaysSchema = z.object({
 export type MergeWays = z.infer<typeof mergeWaysSchema>;
 export type MergeWay = keyof MergeWays;
 
+/**
+ * How long a batch that ended stays on the record (`BatchRecord.finished`):
+ * one day, the window the Batches panel's Last day shows. It rests on that
+ * panel's ask alone, and it bounds a list the app rewrites on every pass.
+ */
+export const FINISHED_BATCH_KEPT_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * A batch that ended, as the Batches panel's Last day lists it: merged, or
+ * closed without a merge where the project lives, with its members by task.
+ */
+export const finishedBatchSchema = z.object({
+  number: z.number().int().positive(),
+  url: z.string().nullable().optional(),
+  /** When it was first opened (epoch ms). */
+  formed: z.number(),
+  ended: z.number(),
+  outcome: z.enum(["merged", "closed"]),
+  members: z.array(z.object({ taskId: z.string(), title: z.string() })),
+  /** How many times it was held while it was open. */
+  holds: z.number().int().nonnegative(),
+});
+export type FinishedBatch = z.infer<typeof finishedBatchSchema>;
+
 export const batchRecordSchema = z.object({
   line: z.array(batchChangeSchema),
   open: openBatchSchema.optional(),
@@ -248,6 +274,8 @@ export const batchRecordSchema = z.object({
    * batch combined again by its repair forms no new batch, so it moves nothing.
    */
   formed: z.number().optional(),
+  /** The batches that ended within `FINISHED_BATCH_KEPT_MS`, oldest first. */
+  finished: z.array(finishedBatchSchema).optional(),
 });
 export type BatchRecord = z.infer<typeof batchRecordSchema>;
 
@@ -414,3 +442,101 @@ export const BATCH_GAP_WORDS = {
         ? m.settingsProjectsBatchGapHours({ count: gap / 60 })
         : m.settingsProjectsBatchGapMinutes({ count: gap }),
 } as const;
+
+/**
+ * The open batch's checks as the app's last pass read them (docs/forge.md,
+ * "The Batches panel"): counted by state at the batch's version, with the
+ * failed ones' names. It is kept in memory alone, so after a restart it is
+ * not read until the next pass.
+ */
+export const batchChecksReadingSchema = z.object({
+  /** The batch's version the reading is of. */
+  head: z.string(),
+  /** When the pass read it (epoch ms). */
+  at: z.number(),
+  passed: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  /** Checks that are queued or running. */
+  running: z.number().int().nonnegative(),
+  /** The failed checks' names, as the host reads them. */
+  failedNames: z.array(z.string()),
+});
+export type BatchChecksReading = z.infer<typeof batchChecksReadingSchema>;
+
+/** A task in a project's batch, by its key and title; a key is null for a task no longer recorded. */
+const batchTaskSchema = z.object({
+  taskId: z.string(),
+  key: z.string().nullable(),
+  title: z.string(),
+});
+
+/**
+ * `batches.list`'s answer (docs/forge.md, "The Batches panel"): each
+ * project on batched pull requests, or with a batch still in its record,
+ * as its record stands: the line, the open batch with its checks reading,
+ * the changes left out and the batches that ended in the last day.
+ */
+export const batchesViewSchema = z.object({
+  repos: z.array(
+    z.object({
+      repoId: z.string(),
+      name: z.string(),
+      /** The project the repository belongs to, which the window's project focus names. */
+      projectId: z.string().nullable(),
+      /** Where the project lives, in the host's own name (GitHub), or null when unknown. */
+      place: z.string().nullable(),
+      /** The project's batch gap in minutes, or null for none. */
+      gap: z.number().nullable(),
+      /** When the next batch may form under the gap (epoch ms), or null for at once. */
+      nextBatchAt: z.number().nullable(),
+      line: z.array(
+        batchTaskSchema.extend({
+          at: z.number(),
+          /** The task whose approved change it waits on, by key. */
+          afterKey: z.string().nullable(),
+          /** Declared the held batch's fix. */
+          fix: z.boolean(),
+        }),
+      ),
+      open: z
+        .object({
+          number: z.number().int().positive().nullable(),
+          url: z.string().nullable(),
+          since: z.number(),
+          members: z.array(batchTaskSchema),
+          hold: z
+            .object({
+              reason: z.enum(["checks", "merge-way", "rules"]),
+              at: z.number(),
+              checks: z.array(z.string()),
+              detail: z.string().nullable(),
+            })
+            .nullable(),
+          /** In the host's own merge queue at its version. */
+          queued: z.boolean(),
+          /** Its members changed: the next pass combines it again. */
+          stale: z.boolean(),
+          /** The declared fixes for its hold, by key. */
+          fixKeys: z.array(z.string()),
+          /** Its checks as last read at its version; null before the first reading. */
+          checks: batchChecksReadingSchema.nullable(),
+        })
+        .nullable(),
+      leftOut: z.array(
+        batchTaskSchema.extend({
+          reason: z.string(),
+          /** The change ahead it clashes with, by key. */
+          aheadKey: z.string().nullable(),
+        }),
+      ),
+      finished: z.array(
+        finishedBatchSchema.omit({ members: true, url: true }).extend({
+          url: z.string().nullable(),
+          members: z.array(batchTaskSchema),
+        }),
+      ),
+    }),
+  ),
+});
+export type BatchesView = z.infer<typeof batchesViewSchema>;
+export type BatchesRepoView = BatchesView["repos"][number];

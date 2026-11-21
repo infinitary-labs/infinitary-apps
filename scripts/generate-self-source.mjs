@@ -7,6 +7,12 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  compileCatalogs,
+  panelMessagesPath,
+  RUNBOOK_PANEL_DIRS,
+  readCatalogs,
+} from "./generate-messages.ts";
 import { openModuleRunner } from "./moduleRunner.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -136,6 +142,18 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
     execFileSync("tar", ["-xf", join("..", "self-source.tar")], { cwd: selfSourceDir });
   } finally {
     rmSync(archivePath, { force: true });
+  }
+
+  // A built-in runbook's panel words compile from the catalogs and are never
+  // committed, so the archive leaves them out: write them beside each panel,
+  // so a copy of the runbook carries them (docs/runbooks.md, "Panels").
+  const { panels } = compileCatalogs(readCatalogs(selfSourceDir));
+  for (const panel of Object.keys(RUNBOOK_PANEL_DIRS)) {
+    const path = panelMessagesPath(panel);
+    const text = panels[path];
+    // A panel with no words would build a copy that cannot import them.
+    if (!text) throw new Error(`generate-self-source: no compiled words for ${panel} (${path})`);
+    writeFileSync(join(selfSourceDir, path), text);
   }
 
   mkdirSync(dest, { recursive: true });

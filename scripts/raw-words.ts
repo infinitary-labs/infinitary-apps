@@ -36,13 +36,15 @@ import ts from "typescript";
 import { baseRef } from "./check-changed.ts";
 
 /**
- * Where the check reads: the window, the app's own panels, and the shared,
+ * Where the check reads: the window, the app's own panels and the built-in
+ * runbooks' panels, and the shared,
  * core, main-process and preload code whose words reach a person, so new
  * English there is refused as in the window.
  */
 export const RAW_WORDS_ROOTS: readonly string[] = [
   "src/renderer/src/",
   "src/panels/",
+  "resources/runbooks/",
   "src/shared/",
   "src/core/",
   "src/main/",

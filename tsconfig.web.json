@@ -40,6 +40,10 @@
     // real panel library, and compiled by the panel compiler into the lib.
     "src/panels/**/*.ts",
     "src/panels/**/*.tsx",
+    // A built-in runbook's panel folders (docs/runbooks.md, "Panels"), compiled
+    // with the app like the folders above.
+    "resources/runbooks/*/panel/**/*.ts",
+    "resources/runbooks/*/panel/**/*.tsx",
     "src/shared/**/*.ts",
     "tests/fixtures/cardAnnotations.ts",
     "tests/fixtures/oversized-card/**/*.ts",

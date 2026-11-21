@@ -4,16 +4,19 @@ import {
   type BatchMember,
   type BatchRecord,
   EMPTY_BATCH_RECORD,
+  FINISHED_BATCH_KEPT_MS,
 } from "@shared/batches";
 import { describe, expect, it } from "vitest";
 import { BATCH_WAITING_WORDS } from "../forge";
 import { type Combined, LEFT_OUT_WORDS } from "./combine";
 import {
+  abandoned,
   batchStatus,
   carried,
   clashesEnded,
   combined,
   enqueue,
+  finishedWithin,
   fixWaits,
   forms,
   hold,
@@ -606,5 +609,78 @@ describe("a batch's place on its changes", () => {
       "t-legend",
     ]);
     expect(record.line[0]).not.toHaveProperty("commit");
+  });
+});
+
+// Intent: the captain's approved plan for the Batches panel: its Last day disclosure lists
+// the batches that merged or closed in the last day, with when each formed and ended and
+// how many times it was held.
+describe("a batch that ended", () => {
+  const failed = {
+    reason: "checks" as const,
+    head: EXPORT_COMMIT,
+    checks: ["unit-tests"],
+    at: 6_000,
+  };
+
+  it("is kept on the record when it merged, with its members, its times and its holds", () => {
+    const record = merged(hold(openBatch(), failed).record, new Map(), 9_000);
+    expect(record.finished).toEqual([
+      {
+        number: 31,
+        url: "https://github.com/acme/meter/pull/31",
+        formed: 5_000,
+        ended: 9_000,
+        outcome: "merged",
+        members: [
+          { taskId: PARSER.taskId, title: PARSER.title },
+          { taskId: EXPORT.taskId, title: EXPORT.title },
+        ],
+        holds: 1,
+      },
+    ]);
+  });
+
+  it("is kept as closed when its pull request was closed unmerged", () => {
+    const record = reopened(openBatch(), 9_000);
+    expect(record.finished).toMatchObject([
+      { number: 31, outcome: "closed", ended: 9_000, holds: 0 },
+    ]);
+  });
+
+  it("keeps the times it was held when its repair combines it again", () => {
+    const held = hold(openBatch(), failed).record;
+    const again = combined(held, combineOf([member(PARSER, PARSER_COMMIT)]), {
+      branch: "infinitary-batch/3fa9c1d2",
+      at: 7_000,
+    });
+    expect(merged(again, new Map(), 9_000).finished).toMatchObject([{ number: 31, holds: 1 }]);
+  });
+
+  it("is kept as closed when every change in it was withdrawn", () => {
+    const record = abandoned(openBatch(), 9_000);
+    expect(record.open).toBeUndefined();
+    expect(record.finished).toMatchObject([
+      { number: 31, outcome: "closed", ended: 9_000, holds: 0 },
+    ]);
+  });
+
+  it("is dropped a day after it ended", () => {
+    const first = merged(openBatch(), new Map(), 9_000);
+    expect(finishedWithin(first.finished ?? [], 9_000 + FINISHED_BATCH_KEPT_MS - 1)).toHaveLength(
+      1,
+    );
+    expect(finishedWithin(first.finished ?? [], 9_000 + FINISHED_BATCH_KEPT_MS)).toEqual([]);
+    // The next batch to end a day later carries only itself.
+    const later = 9_000 + FINISHED_BATCH_KEPT_MS;
+    const second = combined(enqueue(first, LEGEND), combineOf([member(LEGEND, LEGEND_COMMIT)]), {
+      branch: "infinitary-batch/8d52",
+      at: later - 1_000,
+    });
+    const numbered: BatchRecord = {
+      ...second,
+      open: { ...(second.open as NonNullable<BatchRecord["open"]>), number: 32 },
+    };
+    expect(merged(numbered, new Map(), later).finished?.map((batch) => batch.number)).toEqual([32]);
   });
 });

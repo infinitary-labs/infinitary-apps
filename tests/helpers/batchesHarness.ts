@@ -421,6 +421,8 @@ export function setup(ways: MergeWays = EVERY_WAY) {
     /** The held versions each combine was given (`CombineInput.held`). */
     combinedOn: [] as (readonly string[] | undefined)[],
     landedReads: 0,
+    /** Each time the open batch's checks reading changed (`BatchesOptions.checksRead`). */
+    checksRead: [] as string[],
   };
   const names = ["infinitary-batch/3fa9c1d2", "infinitary-batch/8be04a67"];
   let clock = 10_000;
@@ -466,6 +468,7 @@ export function setup(ways: MergeWays = EVERY_WAY) {
       addressMoved: (change, reason) => heard.addressMoved.push({ taskId: change.taskId, reason }),
       held: (held) => heard.held.push(held),
       note: (fact) => heard.notes.push(fact),
+      checksRead: (repoId) => heard.checksRead.push(repoId),
       taskNote: (taskId, text) => heard.taskNotes.push({ taskId, text }),
       combine: async (input: CombineInput): Promise<Combined> => {
         duringCombine?.();

@@ -24,6 +24,7 @@ A presentation refresh borrows current records from the board cache, overlays pe
 Owner-derived posture, place, ask and dependency facts share the same projection through `TaskService.projectedFact`; each task's fact is derived once for that snapshot.
 The crew counts read every active row's posture in one such projection, as the presentation pass does (INF-2342).
 A tasks listing composes its page in one such projection, and each idle ladder pass reads its witnesses in one, so a row's neighbours and a task's witnesses decode a record once (INF-3412).
+The ready sweep (`CrewWatch.sweepGates`, after every close and every minute) reads its synchronous stretch in one too, which is the whole sweep unless it starts a task or drives a move; what runs after such an await reads afresh.
 A posture's blocker reads (`liveBlocks`, `waitingOn`, `blockersHoldingClose`) select the blockers in the statuses they need before composing records, leaving finished blockers' retained payloads unread (`TaskStore.getAmong`).
 The unanswered-request witness seeks the first real first-mate action and child activity times instead of decoding the task's timeline or its children's records.
 Task writes suspend the task and relationship reads and clear them, including derived facts, on success or rollback.

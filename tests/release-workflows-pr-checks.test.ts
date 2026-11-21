@@ -133,6 +133,20 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       desktop,
     ];
     gated.push(criticalPath, skips);
+    // The setup and code checks a branch built on a batch's version skips
+    // (the case after next), which every other change runs.
+    const setup = gate.filter(
+      (step) =>
+        [
+          "./.github/actions/pnpm",
+          "./.github/actions/node-headers",
+          "./.github/actions/electron-download",
+        ].includes(step.uses ?? "") ||
+        step.uses?.startsWith("actions/setup-node@") ||
+        ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm check"].includes(step.run ?? ""),
+    );
+    expect(setup).toHaveLength(7);
+    gated.push(...setup);
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
@@ -154,8 +168,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(eligible.evaluate().coerceString(), id).toBe(fullSweep && change ? "false" : "true");
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
-      // gate's pull request and changed-path steps and the critical path's
-      // failure evidence.
+      // gate's pull request and changed-path steps, the critical path's
+      // failure evidence and the steps a branch built on a batch's version
+      // skips.
       // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
       // placement service's shell-pc-linux places, and back on GitHub's
       // hosted Linux when the variable is unset.
@@ -227,6 +242,45 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         workflow_dispatch: "Manual request · Code and build (Linux)",
       }[eventName],
     );
+  });
+
+  // The captain's ask on a held batch's repair: "cut whatever is redundant
+  // in the repair's path back to the batch ... and we simply rely on them
+  // being covered by the batch's checks run". A pushed branch built on a
+  // batch's version runs its checkout and its base step, nothing else, so it
+  // passes in about a minute; every check it skips runs in the batch's own
+  // run (batch-checks.yml), the release notes included. A pull request and a
+  // request never name a batch version, so they run as before.
+  it("runs only the base step on a branch built on a batch's version", () => {
+    const held = "c".repeat(40);
+    const steps = loadCi().jobs["typecheck-lint-build"]?.steps ?? [];
+    const ran = steps.filter(
+      (step) =>
+        step.if === undefined ||
+        workflowValue(step.if, {
+          github: { event_name: "push" },
+          steps: {
+            base: { outputs: { batch: held } },
+            paths: { outputs: {} },
+            "critical-path": { outcome: "skipped" },
+          },
+        }) === true,
+    );
+    expect(ran.map((step) => step.name ?? step.uses?.replace(/@.*/, ""))).toEqual([
+      "actions/checkout",
+      "Find the change's base",
+    ]);
+    const [gate] = ciJobs("push", false, undefined, held);
+    expect(gate?.runs).toEqual([ran[1]?.run?.trim().replace('"$FROM"', "origin/main")]);
+    // The batch's own run reads the notes and the phone contract flag from
+    // the main version the batch left, which the check skips here.
+    const notes = loadYamlFile(".github/workflows/batch-checks.yml") as {
+      jobs: Record<string, { steps?: Step[] }>;
+    };
+    expect(notes.jobs.notes?.steps?.flatMap((step) => (step.run ? [step.run] : []))).toEqual([
+      'node scripts/release-notes.ts batch --base "$BASE"',
+      'node scripts/phone-contract-flag.ts --base "$BASE"',
+    ]);
   });
 
   // INF-2915's plan, the captain's direction B with the light profile: the
@@ -505,10 +559,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 /**
  * INF-5379's plan, piece 2 (the captain chose to file it: "each round saves 30
  * to 40 minutes, and a bad repair is caught one rerun later"): a held batch's
- * repair is built on the batch's version, so its own check measures only the
- * repair from that version, never the whole batch from main. The real step's
- * script runs against a scratch clone whose origin holds main and two batch
- * branches, as a pushed branch's full checkout fetches them.
+ * repair is built on the batch's version, so its own check measures it from
+ * that version, never the whole batch from main. The captain's later ask
+ * ("we simply rely on them being covered by the batch's checks run") has the
+ * step name that version as its `batch` output, which every later step skips
+ * on. The real step's script runs against a scratch clone whose origin holds
+ * main and two batch branches, as a pushed branch's full checkout fetches
+ * them.
  */
 describe("the change's base (ci.yml)", () => {
   const step = loadCi().jobs["typecheck-lint-build"]?.steps.find(
@@ -539,17 +596,27 @@ describe("the change's base (ci.yml)", () => {
     execFileSync("git", ["init", "-q", "--bare", "-b", "main", join(dir, "origin.git")], { env });
     execFileSync("git", ["clone", "-q", join(dir, "origin.git"), work], { env });
     git("checkout", "-q", "-b", "main");
-    /** Pushes and fetches as the checkout does, then runs the step at HEAD. */
+    /**
+     * Pushes and fetches as the checkout does, then runs the step at HEAD:
+     * the base it hands later steps, and the batch version it names, if any.
+     */
     const changeBase = () => {
       git("push", "-q", "--force", "--all", "origin");
       git("fetch", "-q", "--prune", "origin");
-      const out = join(dir, "github-env");
-      writeFileSync(out, "");
+      const files = {
+        GITHUB_ENV: join(dir, "github-env"),
+        GITHUB_OUTPUT: join(dir, "github-output"),
+      };
+      for (const file of Object.values(files)) writeFileSync(file, "");
       execFileSync("bash", ["-e", "-c", step?.run ?? "false"], {
         cwd: work,
-        env: { ...env, FROM: "origin/main", GITHUB_ENV: out },
+        env: { ...env, FROM: "origin/main", ...files },
+        stdio: ["ignore", "ignore", "inherit"],
       });
-      return readFileSync(out, "utf8").trim();
+      return {
+        env: readFileSync(files.GITHUB_ENV, "utf8").trim(),
+        output: readFileSync(files.GITHUB_OUTPUT, "utf8").trim(),
+      };
     };
     return { git, commit, changeBase };
   }
@@ -564,9 +631,10 @@ describe("the change's base (ci.yml)", () => {
     commit("main-later.txt");
     git("checkout", "-q", "-b", "inf/repair-held", held);
     commit("repair.txt");
-    expect(changeBase()).toBe(`CHANGE_BASE=${held}`);
+    const repair = { env: `CHANGE_BASE=${held}`, output: `batch=${held}` };
+    expect(changeBase()).toEqual(repair);
     commit("repair-again.txt");
-    expect(changeBase()).toBe(`CHANGE_BASE=${held}`);
+    expect(changeBase()).toEqual(repair);
   });
 
   it("starts at the newest batch version the branch is built on", () => {
@@ -578,7 +646,7 @@ describe("the change's base (ci.yml)", () => {
     const newer = commit("change-2.txt");
     git("checkout", "-q", "-b", "inf/repair-newer");
     commit("repair.txt");
-    expect(changeBase()).toBe(`CHANGE_BASE=${newer}`);
+    expect(changeBase()).toEqual({ env: `CHANGE_BASE=${newer}`, output: `batch=${newer}` });
   });
 
   it("starts an ordinary branch where it left main, beside a batch it is not built on", () => {
@@ -592,7 +660,8 @@ describe("the change's base (ci.yml)", () => {
     git("checkout", "-q", "main");
     commit("main-later.txt");
     git("checkout", "-q", "inf/ordinary");
-    expect(changeBase()).toBe(`CHANGE_BASE=${left}`);
+    // It names no batch version, so its check runs every step.
+    expect(changeBase()).toEqual({ env: `CHANGE_BASE=${left}`, output: "" });
   });
 });
 

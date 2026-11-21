@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-repair-skips-branch-check",
+      "reason": "A held batch's repair now passes its branch check in about a minute and leaves every check to the batch's own run, which also reads each change's release note; this changes only how the project checks its own changes."
+    }
+  ]
+}

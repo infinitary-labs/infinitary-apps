@@ -3,9 +3,10 @@ name: Batch checks
 # The swept batch on a batch pull request's version (docs/testing.md, "The
 # swept batch"), called by batch-pull-request.yml: the alpha's full check -
 # every Linux journey on GitHub's hosted machines and every journey on the
-# mini's release check line, without the phone check - and the critical path
-# and the Linux startup fixtures in jobs of their own. The batch's branch
-# holds its changes, one commit each, so every job checks out that version.
+# mini's release check line, without the phone check - and the critical path,
+# the Linux startup fixtures and the release notes check in jobs of their own.
+# The batch's branch holds its changes, one commit each, so every job checks
+# out that version.
 #
 # When a Linux test group fails, its own confirm in the sweep reads that
 # failed job's log for the test files it names (scripts/batch-failures.mjs)
@@ -28,8 +29,8 @@ name: Batch checks
 # ends failed minutes after it did with one red line of its own that points
 # at the real failure (scripts/batch-stop.mjs). A confirm that failed before
 # it ran a test file, its failed job's log naming none, never stops it. The
-# critical path, the startup fixtures and the confirms end in a few minutes
-# and run on.
+# critical path, the startup fixtures, the release notes check and the
+# confirms end in a few minutes and run on.
 #
 # Its jobs lead with the trigger its caller names, Merge batch
 # (scripts/ci-job-names.mjs).
@@ -128,6 +129,36 @@ jobs:
     with:
       trigger: ${{ inputs.trigger }}
       ref: ${{ inputs.head }}
+
+  # The release notes check and the phone contract flag, measured from the
+  # main version the batch left (docs/testing.md, "The swept batch"): each
+  # change's commit adds its note or exclusion, as the alpha counts it
+  # (docs/release-notes.md, "The release check"), and the ledger stays
+  # consistent; the flag warns when the batch moves the contract's major or
+  # view floor and never fails. A branch built on a batch's version, as a
+  # held batch's repair is, skips both in its own check (ci.yml), so this is
+  # where they read it. Plain Node, no install, under a minute.
+  notes:
+    needs: batch
+    name: ${{ format('{0} · Release notes and phone contract flag', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Release notes
+        env:
+          BASE: ${{ needs.batch.outputs.base }}
+        run: node scripts/release-notes.ts batch --base "$BASE"
+      - name: Phone contract flag
+        env:
+          BASE: ${{ needs.batch.outputs.base }}
+        run: node scripts/phone-contract-flag.ts --base "$BASE"
 
   # Whether the batch touches Windows-relevant files (scripts/windows-paths.ts),
   # since the main version it left: the captain's pick on INF-4243, "On each
@@ -335,11 +366,11 @@ jobs:
   # test group's own confirm that ran, and the later one unless those took
   # every failed job. It names the tree they built and the main version the
   # batch left main at, which main's sort and the alpha's proof read. The
-  # Windows installer check must pass whenever it ran: the confirm reruns
-  # test files, never an installer.
+  # Windows installer check and the release notes check must pass whenever
+  # they ran: the confirm reruns test files, never an installer or a note.
   passed:
-    needs: [batch, sweep, critical-path, startup, failures, confirm-later, windows-paths, windows]
-    if: ${{ !cancelled() && needs.windows-paths.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.failures.outputs.grouped == 'passed' && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
+    needs: [batch, sweep, critical-path, startup, notes, failures, confirm-later, windows-paths, windows]
+    if: ${{ !cancelled() && needs.notes.result == 'success' && needs.windows-paths.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.failures.outputs.grouped == 'passed' && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
     name: ${{ format('{0} · Batch passed (tree {1}; base {2})', inputs.trigger, needs.batch.outputs.tree, needs.batch.outputs.base) }}
     runs-on: ubuntu-24.04
     steps:

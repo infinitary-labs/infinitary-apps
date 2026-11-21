@@ -695,6 +695,9 @@ export function StackedCard({
             // never declared to the body's frame (`bridgeActionIds`): a card
             // script must not be able to merge its own PR at mount.
             declaredActionIds={bridgeActionIds(card.actions)}
+            // Live only while the card is open: one its author ended stays
+            // drawn as it last was and stops updating.
+            {...(card.ended ? {} : { reads: card.reads, sql: card.sql })}
             width={size}
             marks={marks}
             revisionStart={(start) =>

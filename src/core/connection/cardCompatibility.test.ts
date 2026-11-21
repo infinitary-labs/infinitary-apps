@@ -4,8 +4,10 @@ import {
   type CardAnswer,
   cardAnswerSchema,
   cardMessageSchema,
+  cardSchema,
   cardThreadSchema,
 } from "@shared/cards";
+import { OWN_SPELLING } from "@shared/codeNames";
 import { THROUGH_THE_COMMAND } from "@shared/through";
 import { describe, expect, it } from "vitest";
 import {
@@ -15,7 +17,7 @@ import {
   ANNOTATION_DRAWING_CAPTION,
   ANNOTATION_WORDS,
 } from "../../../tests/fixtures/cardAnnotations";
-import { threadLinesFor } from "./cardCompatibility";
+import { cardPushFor, legacyCardSnapshot, threadLinesFor } from "./cardCompatibility";
 
 /** Intent: the approved desktop annotation must not break strict older desktop readers or leave phone replies blank. */
 function thread() {
@@ -135,5 +137,54 @@ describe("annotation compatibility", () => {
     expect(oldest.messages[0]?.text).toContain(
       "(mark 1, box 450,25 280×70 in the 750×120 picture)",
     );
+  });
+});
+
+// INF-5531 piece 1 (`card-live-reads.md`): an older desktop view reads a card
+// strictly, so it is sent the card without the reads its crewmate declared,
+// and draws it without live data; a view that lists the change keeps them.
+describe("live reads compatibility", () => {
+  const card = cardSchema.parse({
+    id: "card-t1-allowance",
+    taskId: "t1",
+    author: "crewmate",
+    priority: 30,
+    title: "Allowance this week",
+    meta: "now",
+    body: "<p>Reading the meter.</p>",
+    actions: [],
+    status: "ready",
+    createdAt: 1,
+    reads: ["quota.snapshot"],
+    sql: ["v_usage_v1"],
+  });
+  const reads = {
+    updates: true,
+    ended: true,
+    annotations: true,
+    files: true,
+    through: true,
+    skipped: true,
+    places: true,
+  };
+
+  it("leaves a card's reads and views out of a snapshot for a view without the change", () => {
+    const older = legacyCardSnapshot([card], { ...reads, liveReads: false }) as unknown[];
+    const { reads: _reads, sql: _sql, ...rest } = card;
+    expect(cardSchema.omit({ reads: true, sql: true }).parse(older[0])).toEqual(rest);
+    expect(legacyCardSnapshot([card], { ...reads, liveReads: true })).toEqual([card]);
+  });
+
+  it("does the same to a pushed card list", () => {
+    const entry = {
+      seq: 1,
+      channel: "inf:cards",
+      frame: JSON.stringify({ t: "push", seq: 1, channel: "inf:cards", payload: [card] }),
+    };
+    const sent = (liveReads: boolean) =>
+      JSON.parse(cardPushFor(entry, OWN_SPELLING, { ...reads, liveReads })).payload;
+    expect(sent(false)[0]).not.toHaveProperty("reads");
+    expect(sent(false)[0]).not.toHaveProperty("sql");
+    expect(sent(true)).toEqual([card]);
   });
 });

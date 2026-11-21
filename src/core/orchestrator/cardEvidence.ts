@@ -173,6 +173,8 @@ export class CardEvidence {
         ...(card.files?.length ? { files: card.files } : {}),
         ...(card.width ? { width: card.width } : {}),
         ...(card.attachment ? { attachment: card.attachment } : {}),
+        ...(card.reads?.length ? { reads: card.reads } : {}),
+        ...(card.sql?.length ? { sql: card.sql } : {}),
         ...(card.risk ? { risk: card.risk } : {}),
         ...(card.requiredActions !== undefined ? { requiredActions: card.requiredActions } : {}),
         ...(card.afterMerge?.length ? { afterMerge: card.afterMerge } : {}),
@@ -499,8 +501,8 @@ export class CardEvidence {
  * What an offer shows, fingerprinted: the words, the body with every fact
  * the host appended, the actions in footer order, the pictures, the width,
  * the live attachment, where its task runs and its risk. Status, stage and
- * position are not what a card offers. A card with no attachment, no place
- * and no risk fingerprints as it always did.
+ * position are not what a card offers. A card with no attachment, no place,
+ * no risk and no live reads fingerprints as it always did.
  */
 function offerFingerprint(card: Card): string {
   return createHash("sha256")
@@ -526,6 +528,8 @@ function offerFingerprint(card: Card): string {
         ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
         ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
         ...(card.files?.length ? [{ files: card.files }] : []),
+        ...(card.reads?.length ? [{ reads: card.reads }] : []),
+        ...(card.sql?.length ? [{ sql: card.sql }] : []),
       ]),
     )
     .digest("hex");

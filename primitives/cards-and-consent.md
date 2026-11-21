@@ -90,6 +90,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - A crewmate's consent ask marks its yes with `emit_card.allows` (`docs/delivery-rigor.md`, "What the captain already allowed"): only the captain's own click on that ordinary action keeps the yes, and the yes is served as already allowed to the task, its reviewer, a stronger-model retry and a takeover of its work until the captain's words take it back through the first mate.
 - Card bodies render verbatim with no sanitizer; never reintroduce a tag/attribute/CSS allowlist.
 - Containment is the frame's sandbox, its CSP and the host's bridge validation (`docs/live-prototype-security.md`).
+- A crewmate's card reads live app data only through the reads and views its `emit_card` declared (`reads`, `sql`), names a custom panel may use, checked when it is emitted; the window grants them only while the card is open, and the first mate's and the host's cards declare none ([live-reads.md](live-reads.md)).
 - The card lint asks for shape, never a banned-phrase list: it refuses only a typed fact, consent for an effect, a physical limit or a product fact the captain ruled.
 
 ## Compositions
@@ -97,6 +98,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - A finished change's merge card carries the saved change story and the host's settle facts strip; the merge itself is the delivery path in [projects-and-working-copies.md](projects-and-working-copies.md) and `docs/forge.md`.
 - A plan or answer task's card is its deliverable ([tasks.md](tasks.md)); its closing choice and answers are carried into the builder's brief (`docs/sequences.md`).
 - Required captain actions become on-request `operation` tasks with a captain gate, owned by `TaskService`, at the merged close.
+- A card body's live data comes from the read catalog over the bridge, as a framed panel's does ([live-reads.md](live-reads.md); `docs/ui-plugins.md`, "A card's reads").
 - App-action handover and proposal cards are host-written cards whose one button runs or opens the catalog line ([app-actions.md](app-actions.md)).
 - A task browser handoff is an ordinary decision with one `open browser` action ([task-browsers.md](task-browsers.md)).
 - The whose-turn sort and idle ladder read the gate a card places (`docs/report-sort.md`); thread steers ride the durable inbox (`docs/inbox.md`).

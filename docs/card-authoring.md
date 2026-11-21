@@ -601,6 +601,7 @@ A script is for behavior - drawing a `<canvas>`, toggling a view, wiring a contr
   The app may load a card's page before it is shown and holds its scripts and its CSS and SVG animations until then, so nothing of the card's own plays unseen.
   A `DOMContentLoaded` or `load` listener a script adds still runs once; `document.write` does not work.
 - The bridge is `window.inf`: `inf.action(id, value?)` raises a declared action (the same ids as the card's `actions`; anything else is refused, and a value may be 4KB); `inf.theme` is the current theme and `inf.onTheme(listener)` fires when it changes - read token colors from `getComputedStyle(document.body)` again then; `inf.data(src)` answers the text of a data file the body names (Data by reference, above).
+  A crewmate's card may also read live app data while it is open: `inf.subscribe(read, args, onValue, onError?)` answers the reads its `emit_card` names in `reads` (a custom panel's list) and the `sql` read over the views it names in `sql`, and nothing else; a closed card stops updating and keeps what it last drew (`docs/ui-plugins.md`, "A card's reads").
   A button that starts the captain's message needs no script: `data-inf-draft` (above) is the bridge's own.
   Height follows the document on its own; there is nothing to call to resize.
   There is no drawing helper: a script that wants a figure writes the SVG itself.

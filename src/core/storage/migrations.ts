@@ -5,6 +5,7 @@ import {
   addCardAnswerer,
   addCardContributions,
   addCardFiles,
+  addCardLiveReads,
   clearInterimAnswers,
   migrateCardEffects,
   migrateOneMergeEffect,
@@ -1494,6 +1495,8 @@ export const MIGRATIONS: readonly Migration[] = [
   CREATE TRIGGER IF NOT EXISTS card_drafts_removed AFTER DELETE ON cards
     BEGIN DELETE FROM card_drafts WHERE card_id = OLD.id; END;
   `,
+  // A crewmate card's declared live reads and views (`addCardLiveReads`).
+  addCardLiveReads,
 ];
 
 /**

@@ -251,7 +251,11 @@ export class CardThreads {
     const replied = `Replied in the thread on "${card.title}" (${id}).`;
     if (signsOff && mutation.answered === input.answersMessage) {
       const closed = this.signOff(id);
-      const signed = `${replied} It answers the captain's message ${mutation.answered} and signs the answer off: the card left the stack as read`;
+      // i18n-exempt: the crewmate's tool answer, served only to a model
+      const left = this.stack.ended.has(id)
+        ? "the card is read, and since the captain had seen it, it stays on their screen marked ended until they close it,"
+        : "the card left the stack as read";
+      const signed = `${replied} It answers the captain's message ${mutation.answered} and signs the answer off: ${left}`;
       return closed
         ? `${signed} and your task closes as answered, so nothing more is owed. End your turn.`
         : `${signed}, but your task stays open; report when your work is done.`;
@@ -289,6 +293,7 @@ export class CardThreads {
       "crewmate",
       undefined,
       () => this.host.captainResponded?.(card, "signed-off"),
+      { by: "crewmate" },
     );
   }
 

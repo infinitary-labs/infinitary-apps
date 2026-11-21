@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "signed-off-card-stays",
+      "kind": "fix",
+      "area": "cards",
+      "title": "An answer you were reading stays until you close it",
+      "body": "When you tell a crewmate under its answer that you need nothing more, the card no longer vanishes while you read it. It stays marked ended, with the crewmate's last reply in its thread, until you press Close.",
+      "picture": {
+        "dark": "signed-off-card-stays-dark.webp",
+        "light": "signed-off-card-stays-light.webp",
+        "alt": "An answer card marked Ended, its thread showing the captain's line, the crewmate's reply and a Close card button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

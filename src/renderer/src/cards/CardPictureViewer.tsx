@@ -141,12 +141,8 @@ export function CardPictureViewer({
           // A note still open is kept as a press beside it keeps it, then this one opens; one
           // whose words are past their limit stays open to trim, and this mark is not made.
           const open = useShellStore.getState().annotationPick;
-          if (
-            open &&
-            !(open.cardId === noteCardId && sameNote(open.note, note)) &&
-            !settleAnnotation()
-          )
-            return;
+          const same = open?.cardId === noteCardId && sameNote(open.note, note);
+          if (open && !same && !settleAnnotation()) return;
           rememberMarked(noteCardId, note, {
             src: picture.src,
             alt: picture.alt,
@@ -154,7 +150,12 @@ export function CardPictureViewer({
             height: place.height,
           });
           useShellStore.setState({
-            annotationPick: { cardId: noteCardId, note, box: at },
+            annotationPick: {
+              cardId: noteCardId,
+              // The place being written, marked again, keeps the words written so far.
+              note: open && same ? { ...note, comment: open.note.comment } : note,
+              box: at,
+            },
             annotationOffer: null,
           });
           // Point at turns off once it has marked, as it does in the card.

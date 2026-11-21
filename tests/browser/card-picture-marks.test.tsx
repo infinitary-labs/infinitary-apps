@@ -9,6 +9,7 @@ import {
   noteLabel,
   STALE_NOTE,
 } from "../../src/shared/cardNotes";
+import { CARD_REPLY_MAX_CHARS } from "../../src/shared/cards";
 import {
   ANNOTATION_BODY,
   ANNOTATION_DRAWING_CAPTION,
@@ -22,7 +23,8 @@ import { openSize, openWindow } from "./window";
 /**
  * Intent: the accepted Point at plan's place in a picture, in the viewer. The
  * arrows move a box, Shift with them sizes it and Enter opens the note; a
- * queued mark shows numbered on its picture; a press on its note opens the
+ * note being written keeps its words when a mark is made over it; a queued
+ * mark shows numbered on its picture; a press on its note opens the
  * viewer at the mark; and a picture a revision replaced reads "This part is no
  * longer in the card". The card is the approved annotation example with its
  * real drawing, 750 by 120.
@@ -71,6 +73,41 @@ test("the viewer marks a drawing by keys, keeps the queued mark on it and opens 
   });
   // Point at turned off once it marked.
   expect(pressed()).toBe("false");
+
+  // A mark never costs the words of the note being written (docs/card-threads.md, "Pointing at
+  // a place"). Dictation may write words past a comment's limit, and that note then stays open
+  // to trim: a mark on another place is not made meanwhile.
+  const written = useShellStore.getState().annotationPick;
+  if (!written) throw new Error("the mark opened no note");
+  const long = "w".repeat(CARD_REPLY_MAX_CHARS + 1);
+  useShellStore.setState({
+    annotationPick: { ...written, note: { ...written.note, comment: long } },
+  });
+  expect(runWindowCommand("cards.point-at", "key")).toBe(true);
+  await expect.poll(pressed).toBe("true");
+  // The box the keys show is drawn beside the mark being written, each with the number 1.
+  await userEvent.keyboard("{ArrowRight}");
+  await expect.poll(drawnMarks).toBe("1 1");
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(drawnMarks).toBe("1");
+  expect(useShellStore.getState().annotationPick?.note).toMatchObject({
+    place: written.note.place,
+    comment: long,
+  });
+  expect(useShellStore.getState().replyNotes[card.id]).toBeUndefined();
+  // The same place marked again is that note, with the words written so far.
+  useShellStore.setState({
+    annotationPick: { ...written, note: { ...written.note, comment: SAID } },
+  });
+  await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}{Shift>}{ArrowRight}{/Shift}");
+  await expect.poll(drawnMarks).toBe("1 1");
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(pressed).toBe("false");
+  expect(useShellStore.getState().annotationPick?.note).toMatchObject({
+    place: written.note.place,
+    comment: SAID,
+  });
+
   await userEvent.fill(comment, SAID);
   await userEvent.keyboard("{Enter}");
   await expect.poll(() => useShellStore.getState().replyNotes[card.id]?.length).toBe(1);

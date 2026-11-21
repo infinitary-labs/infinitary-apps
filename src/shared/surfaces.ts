@@ -1,3 +1,6 @@
+import batchesManifest from "../../resources/runbooks/batches/panel/manifest.json" with {
+  type: "json",
+};
 import activityManifest from "../panels/activity/manifest.json" with { type: "json" };
 import automationManifest from "../panels/automation/manifest.json" with { type: "json" };
 import knowledgeManifest from "../panels/knowledge/manifest.json" with { type: "json" };
@@ -8,8 +11,9 @@ import {
   DEFAULT_PERSONAL_PLACEMENT,
   personalManifestSchema,
 } from "./personal/manifest";
-import type { BuiltinFramePanel } from "./plugins/frameLib";
+import { type BuiltinFramePanel, RUNBOOK_FRAME_PANELS } from "./plugins/frameLib";
 import type { SidePanelEntry } from "./plugins/manifest";
+import type { RunbookView } from "./runbooks";
 
 /**
  * The app's own side panels, as the Firstmate and the renderer both know
@@ -43,9 +47,40 @@ export type AppPanelFolder = {
  * A gate an app panel can wait on: `knowledge` is open while there is some
  * to show, in every build (docs/knowledge.md, "Who has it"); `automation`
  * while a saved automation rule exists (docs/automation.md, "The Automation
- * panel").
+ * panel"); `runbook-<id>` while that built-in runbook is on, for the panels
+ * it shows (docs/runbooks.md, "Panels").
  */
-export type AppPanelGate = "knowledge" | "automation";
+export type AppPanelGate = "knowledge" | "automation" | RunbookPanelGate;
+
+/** The gate a built-in runbook's panels wait on: the runbook being on. */
+export type RunbookPanelGate = `runbook-${string}`;
+
+/** The gate of a built-in runbook's panels. */
+export function runbookGate(runbook: string): RunbookPanelGate {
+  return `runbook-${runbook}`;
+}
+
+/**
+ * Each built-in runbook's panel gate, open while that built-in is on, from
+ * the runbooks as Settings lists them. A copy that replaces it turns the
+ * built-in off, so its own copy of the panel shows instead, as a runbook
+ * of yours (`Runbooks.panels`).
+ */
+export function runbookGatesOf(
+  runbooks: readonly Pick<RunbookView, "id" | "source" | "enabled">[],
+): AppPanelGates {
+  const on = new Set(
+    runbooks
+      .filter((book) => book.enabled && (book.source ?? "builtin") === "builtin")
+      .map((book) => book.id),
+  );
+  return Object.fromEntries(
+    Object.values(RUNBOOK_FRAME_PANELS).map(({ runbook }) => [
+      runbookGate(runbook),
+      on.has(runbook),
+    ]),
+  );
+}
 
 /** Which gates are open now: the core knows, and tells the window. An absent gate is shut. */
 export type AppPanelGates = Readonly<Partial<Record<AppPanelGate, boolean>>>;
@@ -55,7 +90,8 @@ export type AppPanelGates = Readonly<Partial<Record<AppPanelGate, boolean>>>;
  * start, and Tasks on the right, which shows only while the board has a row
  * to list. Both are bottom-docked, on opposite rails. Knowledge sits under
  * Tasks while there is some to show, and Automation under them while a rule
- * is saved. A manifest the panel schema
+ * is saved. Batches sits between Tasks and Knowledge while the Batched pull
+ * requests runbook is on. A manifest the panel schema
  * refuses fails at load, so a broken folder never reaches a session.
  */
 export const APP_PANEL_FOLDERS: readonly AppPanelFolder[] = [
@@ -72,6 +108,12 @@ export const APP_PANEL_FOLDERS: readonly AppPanelFolder[] = [
     manifest: personalManifestSchema.parse(automationManifest),
     views: [],
     gate: "automation",
+  },
+  {
+    id: "batches-panel",
+    manifest: personalManifestSchema.parse(batchesManifest),
+    views: ["details"],
+    gate: runbookGate("batches"),
   },
 ];
 

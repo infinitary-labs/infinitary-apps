@@ -218,6 +218,24 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     repoId: z.string(),
   }),
   /**
+   * A project's open batch's checks read differently, or went with the
+   * batch (docs/forge.md, "The Batches panel"): the Batches panel reads it
+   * again; no feed line. The reading is kept in memory, never on the record.
+   */
+  z.object({
+    type: z.literal("batch_checks"),
+    repoId: z.string(),
+  }),
+  /**
+   * Which runbooks are on may have changed: a switch, a copy, an added or
+   * removed runbook, or a built-in turned back on for an offer in use
+   * (docs/runbooks.md, "Panels"). A window reads the runbooks again for the
+   * panels a built-in runbook shows; no feed line.
+   */
+  z.object({
+    type: z.literal("runbooks_changed"),
+  }),
+  /**
    * A project's Runs on changed (docs/helper.md, "Runs on"): where its next
    * task starts, a computer that runs work by its id or null for this Mac.
    * `text` is the whole feed line, in the design skill's words.

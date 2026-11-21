@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { build, type Plugin, type Rollup, runnerImport } from "vite";
-import { BUILTIN_FRAME_PANELS, builtinPanelDir } from "../src/shared/plugins/frameLib";
+import {
+  BUILTIN_FRAME_PANELS,
+  builtinPanelDir,
+  builtinPanelSource,
+} from "../src/shared/plugins/frameLib";
 
 /**
  * The frame realm's library, built with the app (one plugin vehicle, Phase A
@@ -29,7 +33,8 @@ import { BUILTIN_FRAME_PANELS, builtinPanelDir } from "../src/shared/plugins/fra
  *
  * The app's own panels are not entries of that build: each is an ordinary
  * panel folder (`src/panels/<id>/`, docs/ui-plugins.md "The app's own
- * panels are ordinary folders") that the PANEL COMPILER builds for the
+ * panels are ordinary folders", or a built-in runbook's panel folder,
+ * `builtinPanelSource`) that the PANEL COMPILER builds for the
  * frame realm, exactly as it builds a panel added from elsewhere - the same
  * allowlist, so the folder reaches nothing but React, `@infinitary/ui` and
  * its own files - and its output is copied into the lib under
@@ -47,9 +52,6 @@ const ENTRIES: Record<string, string> = {
   "jsx-dev-runtime": "src/renderer/src/frameRealm/entries/jsx-dev-runtime.ts",
   ui: "src/renderer/src/frameRealm/entries/ui.ts",
 };
-
-/** Where the app's own panel folders live, each named by its panel's id. */
-export const APP_PANELS_DIR = "src/panels";
 
 function sha256(text: string | Uint8Array): string {
   return `sha256-${createHash("sha256").update(text).digest("base64")}`;
@@ -145,7 +147,7 @@ export async function compileAppPanels(root: string): Promise<Map<string, Uint8A
     for (const id of BUILTIN_FRAME_PANELS) {
       const compiled = await compiler.compilePersonalModule({
         extensionId: id,
-        extensionDir: resolve(root, APP_PANELS_DIR, id),
+        extensionDir: resolve(root, builtinPanelSource(id)),
         kind: "panel",
         cacheRoot,
       });

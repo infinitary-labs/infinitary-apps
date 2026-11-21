@@ -7,6 +7,8 @@ import {
   type AppPanelGate,
   type AppPanelGates,
   builtinSurface,
+  type RunbookPanelGate,
+  runbookGatesOf,
 } from "@shared/surfaces";
 import { useShellStore } from "../../app/store";
 import { isView } from "../../devices/viewWords";
@@ -292,6 +294,10 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
  * was - an unreadable list is not an empty one. A Mac that controls another
  * reads the rules of the Mac it controls, so it shows the panel the same way.
  *
+ * A built-in runbook's panels (docs/runbooks.md, "Panels") while that
+ * runbook is on, as Settings → Runbooks lists them, asked again on every
+ * `runbooks_changed`.
+ *
  * Returns the stop function.
  */
 export function startGatedPanels(host: PluginHost): () => void {
@@ -383,13 +389,49 @@ export function startGatedPanels(host: PluginHost): () => void {
     },
   );
 
+  // A built-in runbook's panels while it is on (docs/runbooks.md, "Panels"):
+  // asked at start, after every change to which runbooks are on, and each
+  // time a view's first mate comes back in reach. A refused or unanswered
+  // ask leaves each panel as it was.
+  const runbookGates = new Map(
+    (Object.keys(runbookGatesOf([])) as RunbookPanelGate[]).map((gate) => [
+      gate,
+      gateHolder(host, gate, gate),
+    ]),
+  );
+  const askRunbooks = () => {
+    void window.infinitary.settings
+      .getRunbooks()
+      .then((runbooks) => {
+        if (stopped) return;
+        const gates = runbookGatesOf(runbooks);
+        for (const [gate, holder] of runbookGates) holder.set(gates[gate] === true);
+      })
+      .catch(() => {});
+  };
+  askRunbooks();
+  const offRunbooks = window.infinitary.events.on((event) => {
+    if (event.type === "runbooks_changed") askRunbooks();
+  });
+  const offRunbooksReach = useShellStore.subscribe((state, before) => {
+    if (
+      isView(state.thisMac) &&
+      state.thisMac.contact === "in-reach" &&
+      !(isView(before.thisMac) && before.thisMac.contact === "in-reach")
+    )
+      askRunbooks();
+  });
+
   return () => {
     stopped = true;
     off?.();
     offReach();
     offRules();
     offKept();
+    offRunbooks();
+    offRunbooksReach();
     knowledgeGate.stop();
     automationGate.stop();
+    for (const holder of runbookGates.values()) holder.stop();
   };
 }

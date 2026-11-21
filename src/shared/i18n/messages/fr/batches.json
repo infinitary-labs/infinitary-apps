@@ -1,0 +1,97 @@
+{
+  "batchesPanelAfter": "après #{number}",
+  "batchesPanelAnswer": "Répondre dans Réglages",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "one": "Lot #{number} · {count} modification",
+    "many": "Lot #{number} · {count} modifications",
+    "other": "Lot #{number} · {count} modifications"
+  },
+  "batchesPanelChecking": "vérification depuis {duration}",
+  "batchesPanelChecksFull": "Vérifications : {passed} réussies, {failed} échouées, {running} en cours, lues à {time}",
+  "batchesPanelChecksPassed": "{passed} vérifications réussies sur {total}",
+  "batchesPanelChecksUnread": "vérifications pas encore lues",
+  "batchesPanelClosed": "fermé",
+  "batchesPanelClosedNumber": "#{number} fermé",
+  "batchesPanelColumnBatch": "Lot",
+  "batchesPanelColumnChanges": "Modifications",
+  "batchesPanelColumnEnded": "Fin",
+  "batchesPanelColumnFormed": "Formé",
+  "batchesPanelColumnHeld": "Fois retenu",
+  "batchesPanelColumnTook": "Durée",
+  "batchesPanelCombining": "regroupement",
+  "batchesPanelEmpty": "Aucun lot dans ce projet",
+  "batchesPanelEndedTook": "{time} · a duré {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "one": "{count} échouée : {first}",
+    "many": "{count} échouées, la première : {first}",
+    "other": "{count} échouées, la première : {first}"
+  },
+  "batchesPanelFailedNames": "Vérifications échouées : {names}",
+  "batchesPanelFix": "correctif {keys}",
+  "batchesPanelHeld": "retenu depuis {duration}",
+  "batchesPanelHoldChecks": "Retenu depuis {time} : les vérifications ont échoué",
+  "batchesPanelHoldMergeWay": "Retenu depuis {time} : les réglages de fusion de votre projet refusent ce mode de fusion",
+  "batchesPanelHoldRefused": "Retenu depuis {time} : la fusion a été refusée ({detail})",
+  "batchesPanelHoldRules": "Retenu depuis {time} : les règles de branche de votre projet refusent la fusion",
+  "batchesPanelHours": "{hours} h {minutes} min",
+  "batchesPanelInQueue": "dans la file de fusion",
+  "batchesPanelLastDay": "Dernier jour",
+  "batchesPanelLeftOut": "écartée",
+  "batchesPanelLeftOutAhead": "{reason} (après {key})",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "one": "{count} écartée",
+    "many": "{count} écartées",
+    "other": "{count} écartées"
+  },
+  "batchesPanelListLabel": "Modifications en attente et écartées",
+  "batchesPanelMembersLabel": "Modifications de ce lot",
+  "batchesPanelMerged": "fusionné",
+  "batchesPanelMergedNumber": "#{number} fusionné",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "one": "{count} min",
+    "many": "{count} min",
+    "other": "{count} min"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "one": "+{count} de plus",
+    "many": "+{count} de plus",
+    "other": "+{count} de plus"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "one": "Nouveau lot · {count} modification",
+    "many": "Nouveau lot · {count} modifications",
+    "other": "Nouveau lot · {count} modifications"
+  },
+  "batchesPanelNext": "prochain à {time}",
+  "batchesPanelOpening": "ouverture",
+  "batchesPanelStateChecking": "En vérification depuis {time}",
+  "batchesPanelStateCombining": "Nouveau regroupement des modifications sur la branche principale la plus récente",
+  "batchesPanelStateOpening": "Ouverture de la demande de tirage du lot",
+  "batchesPanelStateQueue": "Vérifications réussies, en attente dans la file de fusion de votre projet",
+  "batchesPanelTitle": "Lots",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "one": "{count} modification en attente",
+    "many": "{count} modifications en attente",
+    "other": "{count} modifications en attente"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "one": "{count} en attente",
+    "many": "{count} en attente",
+    "other": "{count} en attente"
+  },
+  "batchesPanelWaitingHeading": "en attente",
+  "batchesPanelWaitsAfter": "Attend d’abord la fusion de {key}",
+  "batchesPanelWaitsBatch": "Rejoint le lot après #{number}",
+  "batchesPanelWaitsFix": "Rejoint le lot retenu comme correctif",
+  "batchesPanelWaitsGap": "Rejoint le prochain lot à {time}",
+  "batchesPanelWaitsNow": "Rejoint le prochain lot",
+  "batchesReadWords": "vos lots de modifications approuvées"
+}

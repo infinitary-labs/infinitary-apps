@@ -1,0 +1,97 @@
+{
+  "batchesPanelAfter": "tras el #{number}",
+  "batchesPanelAnswer": "Responder en Configuración",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "one": "Lote #{number} · {count} cambio",
+    "many": "Lote #{number} · {count} cambios",
+    "other": "Lote #{number} · {count} cambios"
+  },
+  "batchesPanelChecking": "comprobando {duration}",
+  "batchesPanelChecksFull": "Comprobaciones: {passed} superadas, {failed} fallidas, {running} en curso, leídas a las {time}",
+  "batchesPanelChecksPassed": "{passed} de {total} comprobaciones superadas",
+  "batchesPanelChecksUnread": "comprobaciones aún sin leer",
+  "batchesPanelClosed": "cerrado",
+  "batchesPanelClosedNumber": "#{number} cerrado",
+  "batchesPanelColumnBatch": "Lote",
+  "batchesPanelColumnChanges": "Cambios",
+  "batchesPanelColumnEnded": "Terminó",
+  "batchesPanelColumnFormed": "Formado",
+  "batchesPanelColumnHeld": "Veces retenido",
+  "batchesPanelColumnTook": "Duración",
+  "batchesPanelCombining": "combinando",
+  "batchesPanelEmpty": "No hay lotes en este proyecto",
+  "batchesPanelEndedTook": "{time} · duró {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "one": "{count} fallida: {first}",
+    "many": "{count} fallidas, la primera {first}",
+    "other": "{count} fallidas, la primera {first}"
+  },
+  "batchesPanelFailedNames": "Comprobaciones fallidas: {names}",
+  "batchesPanelFix": "corrección {keys}",
+  "batchesPanelHeld": "retenido {duration}",
+  "batchesPanelHoldChecks": "Retenido desde las {time}: las comprobaciones fallaron",
+  "batchesPanelHoldMergeWay": "Retenido desde las {time}: los ajustes de fusión de tu proyecto rechazan esta forma de fusionar",
+  "batchesPanelHoldRefused": "Retenido desde las {time}: se rechazó la fusión ({detail})",
+  "batchesPanelHoldRules": "Retenido desde las {time}: las reglas de rama de tu proyecto rechazan la fusión",
+  "batchesPanelHours": "{hours} h {minutes} min",
+  "batchesPanelInQueue": "en la cola de fusión",
+  "batchesPanelLastDay": "Último día",
+  "batchesPanelLeftOut": "excluido",
+  "batchesPanelLeftOutAhead": "{reason} (tras {key})",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "one": "{count} excluido",
+    "many": "{count} excluidos",
+    "other": "{count} excluidos"
+  },
+  "batchesPanelListLabel": "Cambios en espera y excluidos",
+  "batchesPanelMembersLabel": "Cambios en este lote",
+  "batchesPanelMerged": "fusionado",
+  "batchesPanelMergedNumber": "#{number} fusionado",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "one": "{count} min",
+    "many": "{count} min",
+    "other": "{count} min"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "one": "+{count} más",
+    "many": "+{count} más",
+    "other": "+{count} más"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "one": "Lote nuevo · {count} cambio",
+    "many": "Lote nuevo · {count} cambios",
+    "other": "Lote nuevo · {count} cambios"
+  },
+  "batchesPanelNext": "próximo: {time}",
+  "batchesPanelOpening": "abriendo",
+  "batchesPanelStateChecking": "Comprobando desde las {time}",
+  "batchesPanelStateCombining": "Combinando los cambios de nuevo sobre la rama principal más reciente",
+  "batchesPanelStateOpening": "Abriendo la solicitud de incorporación de cambios del lote",
+  "batchesPanelStateQueue": "Superó sus comprobaciones y espera en la cola de fusión de tu proyecto",
+  "batchesPanelTitle": "Lotes",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "one": "{count} cambio en espera",
+    "many": "{count} cambios en espera",
+    "other": "{count} cambios en espera"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "one": "{count} en espera",
+    "many": "{count} en espera",
+    "other": "{count} en espera"
+  },
+  "batchesPanelWaitingHeading": "en espera",
+  "batchesPanelWaitsAfter": "Espera a que {key} se fusione primero",
+  "batchesPanelWaitsBatch": "Entra en el lote después del #{number}",
+  "batchesPanelWaitsFix": "Entra en el lote retenido como su corrección",
+  "batchesPanelWaitsGap": "Entra en el próximo lote a las {time}",
+  "batchesPanelWaitsNow": "Entra en el próximo lote",
+  "batchesReadWords": "tus lotes de cambios aprobados"
+}

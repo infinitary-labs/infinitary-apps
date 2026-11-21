@@ -278,7 +278,7 @@ export class Runbooks {
         enabled: states[manifest.id] ?? !manifest.startsOff,
         source,
         ...(source === "personal" ? { path: dir } : {}),
-        ...(source !== "builtin" && manifest.panels?.length
+        ...(manifest.panels?.length
           ? {
               panels: manifest.panels.map((folder) => ({
                 id: runbookPanelId(manifest, folder),

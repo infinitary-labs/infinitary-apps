@@ -4,5 +4,6 @@
   "description": "Merge your approved changes together as one batch pull request, so their checks run once. Turn it on to choose it for a project.",
   "skills": "skills",
   "offers": ["batched-pull-requests"],
+  "panels": ["panel"],
   "startsOff": true
 }

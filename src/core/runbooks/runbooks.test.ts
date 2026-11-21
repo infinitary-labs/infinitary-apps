@@ -16,6 +16,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type RunbookFacts, runbookMatches } from "../../shared/runbooks";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
+import { compilePersonalModule } from "../personal/compiler";
 import { createCrewmateResourceLoader } from "../pi/piResourceLoader";
 import { CREWMATE_LOAD_LINE } from "../pi/piResources";
 import { ASK_SECRET_TOOL_DESCRIPTION } from "../pi/secretTools";
@@ -326,14 +327,38 @@ describe("runbooks over existing prompt and skill doors", () => {
         runbook: { id: "my-workflows", name: "My workflows", source: "personal" },
       },
     ]);
-    // A built-in runbook's own panels never come through this door.
-    expect(books.list().find((book) => book.id === "sequences")?.panels).toBeUndefined();
     books.set("my-workflows", false);
     expect(books.panels()).toEqual([]);
     expect(heard).toEqual(["changed", "changed", "changed"]);
     stop();
     books.set("my-workflows", true);
     expect(heard).toHaveLength(3);
+    // A built-in runbook's own panels never come through this door: the app
+    // compiles them and shows them behind the runbook's gate instead.
+    books.set("batches", true);
+    expect(books.panels().map((panel) => panel.runbook.id)).toEqual(["my-workflows"]);
+  });
+  it("copies the Batches panel with its compiled words, so the copy's panel compiles in place of the built-in's", async () => {
+    // Intent: the captain's approved plan for the Batches panel: Copy writes the panel's
+    // compiled messages into the copy, and the copy shows the panel under the built-in's id.
+    const { settings } = fixture();
+    const personal = join(scratchDir("inf-batches-copy-"), "runbooks");
+    const books = new Runbooks(root, settings, () => [], personal);
+    expect(books.list().find((book) => book.id === "batches")?.panels).toEqual([
+      { id: "batches-panel", title: "Batches" },
+    ]);
+    books.copy("batches", "my-batches", "My batches");
+    books.set("my-batches", true);
+    const [panel] = books.panels();
+    expect(panel).toMatchObject({ id: "batches-panel", folder: "panel" });
+    expect(existsSync(join(panel?.dir ?? "", "messages.generated.ts"))).toBe(true);
+    const compiled = await compilePersonalModule({
+      extensionId: "batches-panel",
+      extensionDir: panel?.dir ?? "",
+      kind: "panel",
+      cacheRoot: scratchDir("inf-batches-copy-compiled-"),
+    });
+    expect(compiled.views).toEqual(["details"]);
   });
   it("copies the bundled lesson skills and tested parts into an editable runbook", () => {
     // Intent: INF-1177 piece 4 and the captain's repair request: the real Lessons copy passes unchanged admission.

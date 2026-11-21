@@ -1,0 +1,61 @@
+name: contributor-agreement
+
+# The contributor agreement check (CLA.md; docs/public-ci.md, "Outside
+# contributors"): it sets the commit status "Contributor License Agreement"
+# on each pull request's newest commit, which main's branch rule requires.
+# A pull request from this project's own branches passes at once; an outside
+# one passes once its author accepted the agreement's current version, by
+# ticking the template's box or replying with its sentence, and the check
+# writes each acceptance to the project's locked record issue
+# (scripts/contributor-agreement.mjs).
+#
+# It is the one job an outside pull request starts that writes, so it runs
+# from this project's default branch (pull_request_target and issue_comment)
+# rather than from the pull request's own files, checks out only its script
+# and CLA.md from that branch, never the pull request's code, reads the
+# contributor's words as data, uses no secret beyond its own token, and runs
+# on GitHub's own machines.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+  issue_comment:
+    types: [created, edited]
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+# One run at a time for each pull request, so two acceptances never write
+# two entries; none is cancelled, since each may carry an acceptance.
+concurrency:
+  group: contributor-agreement-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # A comment on an issue that is not a pull request starts no job.
+    if: ${{ github.event_name == 'pull_request_target' || github.event.issue.pull_request }}
+    name: ${{ github.event_name == 'issue_comment' && 'Pull request comment' || 'Pull request' }} · Contributor agreement
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/contributor-agreement.mjs
+            CLA.md
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {readFileSync} = require('node:fs');
+            const {pathToFileURL} = require('node:url');
+            const root = process.env.GITHUB_WORKSPACE;
+            const {check} = await import(pathToFileURL(`${root}/scripts/contributor-agreement.mjs`).href);
+            core.info(await check({github, context, core, agreement: readFileSync(`${root}/CLA.md`, 'utf8')}));

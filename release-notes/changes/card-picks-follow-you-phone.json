@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-picks-follow-you-phone",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Answers you start on a card follow you to your iPhone and iPad",
+      "body": "Picks, the words in a card's field and notes you add on your iPhone or iPad now show in your computers' windows a moment later, and theirs show on your phone. A pick made while your computer is out of reach goes once it is back, unless you changed the same question somewhere else meanwhile. Nothing is sent until you press a button or send a reply.",
+      "noPicture": "The card looks the same on the phone; what changes is that a pick made on one screen appears on the others.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

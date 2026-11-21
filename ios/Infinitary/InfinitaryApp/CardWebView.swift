@@ -39,7 +39,11 @@ import SwiftUI
     var aside = false { didSet { if aside != oldValue { applyReach() } } }
     /// The height the page last reported its body drew at; `height` is the frame native code asks the view for.
     private var bodyHeight: CGFloat = 48
-    private let fill: PhoneJSON
+    /// The answers the body starts with, which another screen's draft adds to until the body is born.
+    @ObservationIgnored private var fill: PhoneJSON
+    /// The page was handed the body, and the body was born and can take answers (INF-5445 piece 2).
+    @ObservationIgnored private var mounted = false
+    @ObservationIgnored private var bodyReady = false
     private let heightLag: TimeInterval
     /// INF-1524: a settle card draws its fact strip in a second, read-only host pinned above its choices, as the Mac does.
     /// INF-3881: a cover draws one part of the same body live and read-only, filling the screen (`covering`).
@@ -182,6 +186,20 @@ import SwiftUI
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardFocus.handler, contentWorld: CardFocus.world)
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
+        detachDraft?(); detachDraft = nil
+    }
+
+    /// INF-5445 piece 2: lets go of the card's draft when the body closes.
+    @ObservationIgnored var detachDraft: (@MainActor () -> Void)?
+    /// Another screen changed the card's draft: a born body takes the answers by name and reads them back, and true says
+    /// so. A body not yet born starts with them, and false asks the draft to keep them for the next body too.
+    func fill(_ answers: PhoneJSON) -> Bool {
+        guard part == .body, !card.isPast, failure == nil else { return false }
+        if !bodyReady { fill = .array(PhoneDraftSync.withDraftAnswers(fill.list, answers.list)) }
+        // Before its birth the page takes the whole fill, the mount's answers with every one that arrived since.
+        guard mounted, let view, let argument = try? (bodyReady ? answers : fill).foundation else { return false }
+        view.callAsyncJavaScript("window.phoneCard?.fill(answers)", arguments: ["answers": argument], in: nil, in: .page, completionHandler: nil)
+        return bodyReady
     }
     private func fail() { failure = PhoneMessages.phoneCardWebStopped(); close() }
 
@@ -358,6 +376,7 @@ import SwiftUI
             input = .object(fields)
         }
         do {
+            mounted = true
             webView.callAsyncJavaScript("await window.phoneCard.mount(input)", arguments: ["input": try input.foundation], in: nil, in: .page) { [weak self] result in
                 if case .failure = result { self?.fail() }
             }
@@ -391,7 +410,7 @@ import SwiftUI
             if part == .body { PhoneCardRowProbe.shared?.reported(card.id) }
             revealIfShown()
             replyHandler(true, nil)
-        case "ready": watch.bodyReady(); replyHandler(true, nil)
+        case "ready": watch.bodyReady(); bodyReady = true; replyHandler(true, nil)
         case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
         case "mac-only": notice = PhoneMessages.phoneCardWebMacOnly(computer: session.mac.name); replyHandler(true, nil)
         case "mounted":

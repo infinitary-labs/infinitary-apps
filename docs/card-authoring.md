@@ -958,6 +958,7 @@ Nothing in a draft is sent to anyone until the captain presses a button or sends
   A preview that staged a setting with no `apply`, or whose `apply` refuses or fails on it, keeps what it shows and sends (`src/shared/plugins/frameFormScript.ts`).
   Another window's words wait the same way while this window's field holds focus in a focused window, and whatever waits goes when the card leaves the window.
 - A window whose home lacks the `card-drafts` change keeps its picks and words to itself, as before.
+- The phone follows the same rules, keeping what it changed out of reach in memory only (`docs/ios.md`, "Unsent picks on the phone").
 
 ## An answer task's card is its deliverable
 

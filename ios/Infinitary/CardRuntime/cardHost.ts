@@ -25,6 +25,7 @@ declare global {
       annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
       question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
       expanded(index: number, state: string): void; textScale(value: number): void; pressMoved(): void;
+      fill(answers: unknown): boolean;
     };
   }
 }
@@ -316,6 +317,15 @@ window.phoneCard = {
   questionKey(key, shift) {
     if (!documentID || !frame || !/^([1-9]|Enter)$/.test(key)) return;
     send({ type: "question-key", key, shift: shift === true });
+  },
+  // INF-5445 piece 2: another screen changed the card's draft. The bridge applies the answers by name to the body on
+  // screen, leaving the question being typed in as it is; a body not yet born takes them at its birth.
+  fill(value) {
+    const answers = cardAnswersSchema.safeParse(value);
+    if (!answers.success || input.readOnly || input.expanded) return false;
+    if (!documentID) { input = { ...input, fill: answers.data }; return false; }
+    send({ type: "fill", answers: answers.data });
+    return true;
   },
   expanded(index, state) {
     if (documentID && !input.expanded && typeof state === "string") send({ type: "expanded", document: documentID, index, state });

@@ -51,6 +51,7 @@ With the box tool a drag draws a box and a press with no drag marks a spot; with
 With Point at on the pointer only marks: it does not zoom, drag or close, and the wheel still moves a picture at 1:1.
 A mark is drawn in the picture's own pixels, so it keeps its place fitted and at 1:1: `--accent` ink two units wide over a `--bg-0` halo that keeps it legible on any picture, a unit being the picture's longer side over 500.
 Each mark carries its number in a filled `--accent` badge with the number in `--bg-0`, beside the box's top left corner or where a line starts, up and to the left so it covers none of what is marked, and kept inside the picture; the mark being written is lit, its box filled with the accent at 14%.
+A mark takes both tokens from the theme the window shows, and is drawn again when the theme changes.
 Marks are numbered in the order queued across the whole reply, and the viewer shows a picture's queued marks whenever it shows that picture.
 Letting go opens the note popover (`docs/card-threads.md`) just under the mark, over the viewer, with the picture's caption as its excerpt; Point at turns off once it has marked, as it does in a card.
 While a note is being written, a press beside it keeps its words and leaves the viewer open.

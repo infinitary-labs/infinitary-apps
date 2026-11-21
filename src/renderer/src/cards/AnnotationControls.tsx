@@ -11,7 +11,7 @@ import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { VoiceNotice } from "../app/VoiceNotice";
 import { Button, IconButton } from "../design";
-import { markLook } from "../design/cards/PictureMarks";
+import { useMarkLook } from "../design/cards/PictureMarks";
 import { ComposerCount } from "../design/core/ComposerField";
 import { thisDesktop } from "../design/core/desktop";
 import { DictationMark } from "../design/voice/VoiceInput";
@@ -169,6 +169,7 @@ const MARKED_COPY = { width: 220, height: 160 };
  * "Pointing at a place"): the picture as this window marked it, never one read again.
  */
 function MarkedCopy({ cardId, note, mark }: { cardId: string; note: CardNote; mark?: number }) {
+  const look = useMarkLook();
   const source = markedSource(cardId, note);
   if (!source || !note.place || mark === undefined) return null;
   const size = { width: source.width, height: source.height };
@@ -183,7 +184,7 @@ function MarkedCopy({ cardId, note, mark }: { cardId: string; note: CardNote; ma
     >
       <img src={source.src} alt="" draggable={false} />
       <img
-        src={marksSource(size, [{ number: mark, place: note.place }], markLook(), copy.unit)}
+        src={marksSource(size, [{ number: mark, place: note.place }], look, copy.unit)}
         alt=""
         draggable={false}
       />

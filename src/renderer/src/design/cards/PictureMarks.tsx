@@ -9,7 +9,7 @@ import {
 } from "@shared/cardNoteMarks";
 import { type NotePlace, type PlacePoint, placeBounds } from "@shared/cardNotes";
 import type React from "react";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 /**
  * The marks on a picture, and the surface that makes one (the design skill's
@@ -31,15 +31,32 @@ export type ClientBox = { top: number; bottom: number; left: number; right: numb
 /** A pointer that moved further than this drew a box, not a spot. */
 const DRAG_SLOP = 3;
 
-/** The tokens a mark is drawn in, as the window reads them now: the accent over the page's own ground. */
+/**
+ * The tokens a mark is drawn in, as the window reads them now: the accent over the page's own
+ * ground. They are read where the theme is set, on the body (src/renderer/src/app/preferences.ts).
+ */
 export function markLook(): MarkLook {
-  const tokens = getComputedStyle(document.documentElement);
+  const tokens = getComputedStyle(document.body);
   return {
     // i18n-exempt: a system color's name
     ink: tokens.getPropertyValue("--accent").trim() || "Highlight",
     // i18n-exempt: a system color's name
     ground: tokens.getPropertyValue("--bg-0").trim() || "Canvas",
   };
+}
+
+function onTheme(changed: () => void): () => void {
+  const observer = new MutationObserver(changed);
+  observer.observe(document.body, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+
+const shownTheme = () => document.body.dataset.theme ?? "";
+
+/** The marks' look in a view: a mark's colors are part of its drawing, so a change of theme draws it again. */
+export function useMarkLook(): MarkLook {
+  useSyncExternalStore(onTheme, shownTheme);
+  return markLook();
 }
 
 /** Where a place is drawn in the window, given where its picture is drawn. */
@@ -97,6 +114,7 @@ export function PictureMarks({
     points: PlacePoint[];
   } | null>(null);
   const [draft, setDraft] = useState<NotePlace | null>(null);
+  const look = useMarkLook();
 
   const at = (event: React.PointerEvent) => {
     const drawn = (layer.current as HTMLDivElement).getBoundingClientRect();
@@ -183,7 +201,7 @@ export function PictureMarks({
         {shown.length > 0 && (
           <img
             data-picture-marks-drawn=""
-            src={marksSource(size, shown, markLook())}
+            src={marksSource(size, shown, look)}
             alt=""
             draggable={false}
             style={{

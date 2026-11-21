@@ -334,6 +334,37 @@ describe("a run that does not answer, ended by force", () => {
     },
   );
 
+  // The review of INF-5409: a run already gone at the press is asked nothing, though another
+  // program holds its number by then, as Windows tells by the run's birth: its pipe nobody holds,
+  // or, where its record said its helper was up, its pipe already gone. Only an exit after the ask
+  // is told as the stop's end (above).
+  it.skipIf(!POSIX)(
+    "asks nothing of a run already gone at the press, though its number is taken",
+    async () => {
+      const run = { pid: 4242, startedAt: STARTED };
+      const left = scratchDir("run-force-");
+      const dir = join(left, RUN_FORCE_DIR);
+      mkdirSync(dir, { recursive: true });
+      const pipe = runForceWakeFile(run.pid, run.startedAt);
+      expect(spawnSync("mkfifo", ["-m", "600", join(dir, pipe)]).status).toBe(0);
+      expect(await endRunByForce(left, run, () => true, 2_000)).toBe("unasked");
+      expect(readdirSync(dir)).toEqual([pipe]);
+      // Its pipe gone too, as a later run clears an earlier one's: its record said it had one.
+      const pruned = scratchDir("run-force-");
+      expect(
+        await endRunByForce(
+          pruned,
+          run,
+          () => true,
+          2_000,
+          () => {},
+          true,
+        ),
+      ).toBe("unasked");
+      expect(readdirSync(pruned)).toEqual([]);
+    },
+  );
+
   // A helper held up between finding a stop and letting its run go on, past the stop's time (stood
   // in by a search path whose reading of a file takes longer than the stop has left): it reads the
   // time again just before the signal, so a run stopped on purpose stays stopped.

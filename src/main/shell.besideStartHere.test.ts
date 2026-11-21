@@ -13,6 +13,18 @@ import { ownedRunOf } from "./runCommand";
 
 stopEachTest();
 
+/** Says the command came back on a replaced program from now on, counting each time the window reads it. */
+function replacedProgram(command: { programReplaced: boolean }): { reads: number } {
+  const seen = { reads: 0 };
+  Object.defineProperty(command, "programReplaced", {
+    get: () => {
+      seen.reads += 1;
+      return true;
+    },
+  });
+  return seen;
+}
+
 describe("Start it here over a silent command", () => {
   // The review of INF-5409: only a force stop that ended the run lets the window starting here
   // retire the job. A run gone before the press, or one that ended on its own after its stop was
@@ -186,12 +198,13 @@ describe("Start it here over a silent command", () => {
     at.starter.restart.mockImplementation(() => new Promise((resolve) => (restarted = resolve)));
     expect(at.shell.restartCommand()).toBe(true);
     await expect.poll(() => at.starter.restart.mock.calls.length).toBe(1);
-    // The command comes back on a new program while the stop is still waited for.
-    at.command.programReplaced = true;
+    // The command comes back on a new program while the stop is still waited for, and the window
+    // reads that on its welcome.
+    const replaced = replacedProgram(at.command);
     await command.stop();
     command.run.dispatch.mockImplementation(command.answer as never);
     await command.open().settled();
-    await new Promise((resolve) => setTimeout(resolve, 1_300));
+    await expect.poll(() => replaced.reads, { timeout: 5_000 }).toBeGreaterThan(0);
     expect(at.relaunch).not.toHaveBeenCalled();
     restarted("restarted");
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[undefined]]);
@@ -214,16 +227,37 @@ describe("Start it here over a silent command", () => {
     at.starter.stop.mockImplementation(() => new Promise((resolve) => (stopped = resolve)));
     expect(at.shell.startHere()).toBe(true);
     await expect.poll(() => at.starter.stop.mock.calls.length).toBe(1);
-    at.command.programReplaced = true;
+    const replaced = replacedProgram(at.command);
     await command.stop();
     command.run.dispatch.mockImplementation(command.answer as never);
     await command.open().settled();
-    await new Promise((resolve) => setTimeout(resolve, 1_300));
+    await expect.poll(() => replaced.reads, { timeout: 5_000 }).toBeGreaterThan(0);
     expect(at.relaunch).not.toHaveBeenCalled();
     at.command.records = { running: false, run: null, lastStop: null };
     stopped("ended");
     await expect
       .poll(() => at.relaunch.mock.calls)
       .toEqual([[{ startHere: true, letGoJob: true }]]);
+  });
+  // The review of INF-5409: the notice offers Restart it only while the run's note says a force
+  // stop can end it. Once the run's reading or helper stopped and its note took that back, the
+  // notice standing over it is drawn anew without Restart it, and the button is refused.
+  it("takes Restart it away once the run's note no longer says a force stop can end it", async () => {
+    const command = silentRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    const { recovers: _was, ...run } = at.command.records.run as NonNullable<
+      typeof at.command.records.run
+    >;
+    at.command.records = { running: true, run, lastStop: null };
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 3_000 })
+      .toHaveProperty("command", { state: "stopped", ending: "not-answering" });
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.starter.restart).not.toHaveBeenCalled();
   });
 });

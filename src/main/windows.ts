@@ -23,11 +23,16 @@ export function markMainWindow(win: BrowserWindow): void {
 }
 
 /**
- * Whether a main window is open now: one that installs the keys Keyboard
- * settings shows, never a hidden helper such as a panel's capture.
+ * The main windows open now, the ones a person uses: never a hidden helper
+ * such as a panel's capture, a task browser's page or the media probe.
  */
+export function openMainWindows(): BrowserWindow[] {
+  return BrowserWindow.getAllWindows().filter((win) => mainWindows.has(win) && !win.isDestroyed());
+}
+
+/** Whether a main window is open now: one that installs the keys Keyboard settings shows. */
 export function mainWindowOpen(): boolean {
-  return BrowserWindow.getAllWindows().some((win) => mainWindows.has(win) && !win.isDestroyed());
+  return openMainWindows().length > 0;
 }
 
 /**

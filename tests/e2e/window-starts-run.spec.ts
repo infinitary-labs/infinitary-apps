@@ -95,6 +95,27 @@ function commandPid(userDataDir: string): number {
   return RunMarkerSchema.parse(JSON.parse(readFileSync(join(userDataDir, RUN_MARKER), "utf8"))).pid;
 }
 
+/**
+ * Freezes the command numbered `pid` once its note says a force stop can end it (`recovers`), so
+ * the window's recovery is armed before it, and confirms through the supervisor that started it
+ * that the run is suspended.
+ */
+async function freeze(userDataDir: string, standIn: ServiceManagerStandIn, pid: number) {
+  await expect
+    .poll(
+      () => {
+        const marker = RunMarkerSchema.parse(
+          JSON.parse(readFileSync(join(userDataDir, RUN_MARKER), "utf8")),
+        );
+        return marker.pid === pid && marker.recovers === true;
+      },
+      { timeout: 60_000 },
+    )
+    .toBe(true);
+  expect(await standIn.signal(LABEL, "SIGSTOP", pid)).toBe("sent");
+  await expect.poll(() => standIn.state(LABEL, pid), { timeout: 30_000 }).toBe("stopped");
+}
+
 const alive = (pid: number) => {
   try {
     process.kill(pid, 0);
@@ -296,7 +317,7 @@ test("Restart it ends a command that does not answer and the window joins the on
     } finally {
       await opened.close();
     }
-    expect(await standIn.signal(LABEL, "SIGSTOP", first)).toBe("sent");
+    await freeze(userDataDir, standIn, first);
 
     // Section: the window opened again says its first mate is not answering, and Restart it restarts it.
     opened = await open();
@@ -320,7 +341,7 @@ test("Restart it ends a command that does not answer and the window joins the on
       await opened.close();
       // A frozen command acts on no polite stop: one Restart it did not end goes by force, through
       // its supervisor, only while it is still that run.
-      await standIn.signal(LABEL, "SIGKILL", first);
+      expect(await standIn.signal(LABEL, "SIGKILL", first)).not.toBe("timeout");
     }
   } finally {
     await provider.close();
@@ -374,13 +395,14 @@ test("Start it here ends a command that does not answer and opens beside the one
     // Section: the window starts the command, then quits; the command is frozen.
     let opened = await open();
     let first: number;
+    let managerAsks: string[] = [];
     try {
       await showCard(opened.page, CARD_TITLE);
       first = commandPid(userDataDir);
     } finally {
       await opened.close();
     }
-    expect(await standIn.signal(LABEL, "SIGSTOP", first)).toBe("sent");
+    await freeze(userDataDir, standIn, first);
 
     // Section: Start it here ends the frozen command by force; the window starts again, which an
     // isolated window does by ending, and the job starts the command again.
@@ -397,19 +419,21 @@ test("Start it here ends a command that does not answer and opens beside the one
       const startHere = noticeOver(page).getByRole("button", {
         name: COMMAND_NOTICE_WORDS.startHere,
       });
+      // Every start or stop asked of the service manager from the press on is compared with this.
+      managerAsks = standIn.asks();
       await pressKey(startHere, "Enter");
       await windowEnded;
       // The frozen run ended before any cleanup, by its supervisor's own record of its exit.
       await expect.poll(() => standIn?.exits(LABEL), { timeout: 60_000 }).toEqual([null]);
     } finally {
       await opened.close();
-      await standIn.signal(LABEL, "SIGKILL", first);
+      expect(await standIn.signal(LABEL, "SIGKILL", first)).not.toBe("timeout");
     }
     await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
     const [, second] = standIn.runs(LABEL) as [number, number];
     // Ended by force, the run asked its service manager for nothing, and the window asked to
     // start again here, letting the job go.
-    const managerAsks = standIn.asks();
+    expect(standIn.asks()).toEqual(managerAsks);
     const restartedWith = askedStart();
     expect(restartedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
 

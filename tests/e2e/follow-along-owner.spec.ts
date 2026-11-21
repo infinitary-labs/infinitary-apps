@@ -172,7 +172,7 @@ test("a window follows along beside the command its agent started, and never sto
       const owned = commandPid(userDataDir);
       expect(standIn.runs(LABEL)).toEqual([owned]);
       // The command the window started ends cleanly, as Stop ends it, so its agent starts no other.
-      process.kill(owned, "SIGTERM");
+      expect(await standIn.signal(LABEL, "SIGTERM", owned)).toBe("sent");
       await expect.poll(() => alive(owned), { timeout: 30_000 }).toBe(false);
       const byHand = run(await runEnv(userDataDir));
       await byHand.started();

@@ -56,11 +56,26 @@ type StopAnswer = "refused" | "gone" | "unreadable" | "restarting";
 /** One run, by its process and the start its own record keeps. */
 type Run = { pid: number; startedAt: string };
 
-/** The run's own record in the data folder, as `<app> run` writes it, its agent's mark and Windows birth included. */
-function recordRun(context: RunAgentContext, run: Run, agent: boolean, birth?: string): void {
+/**
+ * The run's own record in the data folder, as `<app> run` writes it, its agent's mark and Windows
+ * birth included; an agent's run says a force stop can end it (`recovers`) unless `recovers` is
+ * false, as before its reading and helper are up.
+ */
+function recordRun(
+  context: RunAgentContext,
+  run: Run,
+  agent: boolean,
+  birth?: string,
+  recovers = agent,
+): void {
   writeFileSync(
     join(context.dataDir, RUN_RECORD_FILE),
-    `${JSON.stringify({ ...run, ...(agent ? { agent } : {}), ...(birth ? { birth } : {}) })}\n`,
+    `${JSON.stringify({
+      ...run,
+      ...(agent ? { agent } : {}),
+      ...(recovers ? { recovers } : {}),
+      ...(birth ? { birth } : {}),
+    })}\n`,
   );
 }
 
@@ -833,6 +848,21 @@ describe("the command the window starts, on Windows", () => {
     recordRun(context, NAMED, true, "133800000000000000");
     programs.run(NAMED.pid, NAMED.startedAt, "133800000000500000");
     asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("untouched");
+    expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("untouched");
+    expect(asked).toEqual([]);
+    expect(programs.woken).toEqual([]);
+    expect(programs.processes.alive(NAMED.pid)).toBe(true);
+    expect(forceStopsLeft(context.dataDir)).toEqual([]);
+  });
+
+  // The review of INF-5409: a notice drawn while the run could be ended by force can still be
+  // pressed after its reading or helper stopped and its note took that back. The starter reads
+  // the note as it asks, so such a run is asked nothing and nothing is started.
+  it("asks nothing of the named run once its note no longer says a force stop can end it", async () => {
+    const { context, asked, programs } = mac();
+    recordRun(context, NAMED, true, undefined, false);
+    programs.run(NAMED.pid, NAMED.startedAt);
     expect(await restartRunAgent(context, NAMED)).toBe("untouched");
     expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("untouched");
     expect(asked).toEqual([]);

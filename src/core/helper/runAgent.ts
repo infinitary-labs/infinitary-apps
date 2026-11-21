@@ -17,7 +17,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunByForce, wakeRun } from "./runForce";
+import { endRunByForce, runPipeThere, wakeRun } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -430,15 +430,22 @@ export async function restartRunAgent(
  * Whether the run on this data folder is still `run`, by its own record: the
  * same process and start, a process that still runs, and a record written
  * since this computer last started; with whether this app's own agent
- * started it, and on Windows its process's own birth, as the run wrote. Null for any other run, a process number
+ * started it, whether its helper was up to be ended by force (`recovers`), and on Windows its
+ * process's own birth, as the run wrote. Null for any other run, a process number
  * reused included, and while none is recorded or its record cannot be read.
  */
 function recordedRun(
   context: RunAgentContext,
   run: RunInstance,
-): { agent: boolean; birth?: string } | null {
+): { agent: boolean; recovers: boolean; birth?: string } | null {
   const path = join(context.dataDir, RUN_RECORD_FILE);
-  let record: { pid?: unknown; startedAt?: unknown; agent?: unknown; birth?: unknown } | null;
+  let record: {
+    pid?: unknown;
+    startedAt?: unknown;
+    agent?: unknown;
+    recovers?: unknown;
+    birth?: unknown;
+  } | null;
   try {
     record = JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -448,36 +455,43 @@ function recordedRun(
   if (!holderAlive(path, run.pid, context.processes?.alive ?? processAlive)) return null;
   return {
     agent: record.agent === true,
+    recovers: record.recovers === true,
     ...(typeof record.birth === "string" ? { birth: record.birth } : {}),
   };
 }
 
 /**
- * Ends `run` by force where it is the run this app's own agent started, as
- * its own record says (`recordedRun`): the run is asked to end itself, by
+ * Ends `run` by force where it is the run this app's own agent started and
+ * its record says a force stop can end it, read as the stop is asked
+ * (`recordedRun`): the run is asked to end itself, by
  * its process and start (`endRunByForce`), which no other program reads, so
  * a program that took its number and a run its job started again both keep
  * going, and nothing is asked of the service manager. Untouched for any
- * other run, a number another program already holds at the press included,
- * and where the stop could not be asked; otherwise as
+ * other run, a run already gone at the press included - a number another
+ * program holds by then, as its birth shows on Windows and its pipe on a Mac
+ * or Linux - and where the stop could not be asked; otherwise as
  * `endRunByForce` answers (`AgentRunEnd`).
  */
 async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
+  // Its pipe is found before its record is read: a run that took the folder since clears it only
+  // once it noted itself, so a pipe found while the record still names this run is its own.
+  const piped = runPipeThere(context.dataDir, run);
   const recorded = recordedRun(context, run);
-  if (!recorded?.agent) return "untouched";
+  // Read as the stop is asked, never from the notice the window drew: a run whose reading or helper
+  // stopped since says no longer that a force stop can end it, and is asked nothing.
+  if (!recorded?.agent || !recorded.recovers) return "untouched";
   const wake =
     context.processes?.wake ?? ((named, birth) => wakeRun(context.dataDir, named, birth));
   const alive = context.processes?.alive ?? runAlive;
-  // A program already under the number that is not the run, as its birth shows on Windows, is no
-  // run of this stop: nothing is asked or started, so the stop's own wait later tells only the
-  // named run's end, never that mismatch, as an exit.
-  if (!alive(run.pid, recorded.birth)) return "untouched";
+  // A run already gone at the press, as a program under its number that is not it, is asked
+  // nothing (`unasked`), so the stop's own wait tells only the named run's end as an exit.
   const ended = await endRunByForce(
     context.dataDir,
     run,
     (pid) => alive(pid, recorded.birth),
     context.processes?.forceWaitMs,
     () => wake(run, recorded.birth),
+    piped,
   );
   return ended === "unasked" ? "untouched" : ended;
 }

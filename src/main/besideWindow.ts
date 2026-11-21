@@ -827,15 +827,10 @@ export class BesideWindow {
   ): CommandNotice {
     const { starter } = this.options.beside;
     const own = starter !== undefined && this.recoverable(status, this.unansweredRun);
-    // Records that cannot be read say nothing of whose run it is, and an owned run whose reading of
-    // force stops is not running yet cannot be ended so: they are read again until they say.
-    if (
-      starter &&
-      this.unansweredRun !== null &&
-      !own &&
-      this.ownerUnsettled(status, this.unansweredRun)
-    )
-      this.ownerLater();
+    // Records that cannot be read say nothing of whose run it is, an owned run whose reading of
+    // force stops is not running yet cannot be ended so, and one whose reading or helper stopped
+    // since no longer can: they are read again while the notice stands.
+    if (starter && this.unansweredRun !== null) this.ownerLater();
     return {
       state: "stopped",
       ending: "not-answering",
@@ -858,41 +853,26 @@ export class BesideWindow {
   }
 
   /**
-   * Whether this reading cannot yet say whether `run` can be ended by force:
-   * the records cannot be read, or name it as the agent's own with its
-   * reading of force stops not yet running.
-   */
-  private ownerUnsettled(
-    status: Pick<RunStatus, "running" | "run" | "lastStop">,
-    run: OwnedRun | null,
-  ): boolean {
-    return (
-      status.running === null ||
-      (run !== null &&
-        sameRun(this.options.beside.ownedRun?.(status) ?? null, run) &&
-        status.run?.recovers !== true)
-    );
-  }
-
-  /**
-   * The notice that a run does not answer went up while its records could
-   * not be read, so it could not say whether the starter's own agent started
-   * that run, or while that run could not yet be ended by force. Once they
-   * say, the notice for that same run is drawn anew, with Restart it where
-   * it can; never for another run, which gets a wait of its own.
+   * While the notice that a run does not answer stands, the records are
+   * read again once a second, so it says what they say of that same run:
+   * Restart it once they say the starter's own agent started it and a force
+   * stop can end it, and no longer once its reading or helper stopped, as
+   * after records that could not be read or a reading not yet running. Never
+   * for another run, which gets a wait of its own.
    */
   private ownerLater(): void {
     if (this.ownerTimer || this.closed) return;
     const target = this.unansweredRun;
     this.ownerTimer = setInterval(() => {
-      const status = this.options.beside.status();
       const still =
         !this.closed &&
         this.wanted?.ending === "not-answering" &&
         sameRun(this.unansweredRun, target);
-      if (still && this.ownerUnsettled(status, target)) return;
-      this.stopOwnerLater();
-      if (still) this.show(this.notAnswering(status));
+      if (!still) {
+        this.stopOwnerLater();
+        return;
+      }
+      this.show(this.notAnswering(this.options.beside.status()));
     }, BESIDE_RUN_READ_MS);
     this.ownerTimer.unref?.();
   }

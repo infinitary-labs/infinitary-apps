@@ -150,7 +150,13 @@ import { handleVoiceModelProtocol } from "./voice/voiceProtocol";
 import { followWindowState } from "./windowControls";
 import { mainWindowMaterial, windowMaterialOptions } from "./windowMaterial";
 import { followWindowSize } from "./windowSize";
-import { appWindows, confirmationWindow, mainWindowOpen, markMainWindow } from "./windows";
+import {
+  appWindows,
+  confirmationWindow,
+  mainWindowOpen,
+  markMainWindow,
+  openMainWindows,
+} from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
 import { windowsStdin } from "./windowsStdin";
@@ -738,6 +744,14 @@ export async function startApp(
   // (`lockHolderKind`), so a refused launch knows a window is there before it quits.
   const answerAsk = startsHere && !besideRun ? randomBytes(8).toString("hex") : null;
   const lockAsk = answerAsk ? { windowAnswers: answerAsk } : undefined;
+  /** The live program the folder's lock names, by its link: null for none, undefined unnamed. */
+  const lockHolderNow = () => {
+    const pid = lockHolder(dataDir);
+    return typeof pid === "number" && !processAlive(pid) ? null : pid;
+  };
+  // The holder this launch's own ask reaches, read just before it, so a holder that takes the
+  // lock after is asked too (`lockHolderKind`).
+  const askedHolder = answerAsk ? lockHolderNow() : undefined;
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -755,10 +769,8 @@ export async function startApp(
       const kind = await lockHolderKind({
         running: () => runningByCommand(dataDir),
         answered: () => existsSync(answer),
-        holder: () => {
-          const pid = lockHolder(dataDir);
-          return typeof pid === "number" && !processAlive(pid) ? null : pid;
-        },
+        holder: lockHolderNow,
+        asked: askedHolder,
         lockFree: () => app.requestSingleInstanceLock(lockAsk),
         askEveryMs: STOPPED_RUN_WAIT_MS,
       });
@@ -951,7 +963,8 @@ export async function startApp(
       answerLaunch(windowAnswerAsked(additionalData), {
         asked,
         bringForward: () => {
-          const win = appWindows()[0];
+          // A window the person uses, never a hidden helper such as a panel's capture.
+          const win = openMainWindows()[0];
           if (win) {
             if (win.isMinimized()) win.restore();
             win.focus();
@@ -960,17 +973,20 @@ export async function startApp(
             reopen();
           }
         },
-        shown: () => appWindows().length > 0,
+        shown: () => openMainWindows().length > 0,
         whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
         answer: (word) => {
           try {
             writeFileSync(join(app.getPath("userData"), windowAnswerFile(word)), "", {
               mode: 0o600,
             });
+            return true;
           } catch (error) {
             console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
+            return false;
           }
         },
+        later: (then) => setTimeout(then, 1_000),
       });
     });
 
@@ -1659,7 +1675,8 @@ export async function startApp(
       followFront(win);
       if (win.isFocused()) shell.windowFront(true);
       app.on("activate", () => {
-        if (appWindows().length === 0) {
+        // A panel's hidden capture is no window the person can use.
+        if (openMainWindows().length === 0) {
           followFront(createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow));
         }
       });
@@ -1667,7 +1684,7 @@ export async function startApp(
       // closing it kept Firstmate working (design skill readme, "Linux
       // desktop conventions"). A development run quits instead, as on a Mac.
       reopen = () => {
-        const shown = appWindows()[0];
+        const shown = openMainWindows()[0];
         if (shown) {
           if (shown.isMinimized()) shown.restore();
           shown.show();

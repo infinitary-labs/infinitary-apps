@@ -53,10 +53,11 @@ export const RUN_FORCE_DIR = "run-force";
  * the stop is committed by moving it on to `.ended`, which again only one
  * of this reading and a withdrawal past its time can do, and this process
  * ends by force at once; past it, the stop is declined and nothing acts. A
- * stop naming another run is never moved.
+ * stop naming another run is never moved. It says "reading" to the run once
+ * its reading is in place and has read the folder once.
  */
 const FORCE_WATCH = `
-const { workerData } = require("node:worker_threads");
+const { parentPort, workerData } = require("node:worker_threads");
 const { readdirSync, readFileSync, renameSync } = require("node:fs");
 const { join } = require("node:path");
 const { dir, startedAt, every } = workerData;
@@ -68,7 +69,7 @@ const read = (path) => {
     return null;
   }
 };
-setInterval(() => {
+const scan = () => {
   let names;
   try {
     names = readdirSync(dir);
@@ -101,7 +102,10 @@ setInterval(() => {
       renameSync(taken, taken.slice(0, -".taken".length) + ".declined");
     } catch {}
   }
-}, every);
+};
+setInterval(scan, every);
+scan();
+parentPort.postMessage("reading");
 `;
 
 /**
@@ -158,8 +162,8 @@ export function runForceWakeFile(pid: number, startedAt: string): string {
  * Starts the run's own reading of force stops for `startedAt`, the start it
  * wrote of itself in its record, and on a Mac or Linux its helper that lets
  * a stopped run go on (`FORCE_WAKE`), on a pipe the run holds open. Answers
- * what ends them. `ready(true)` is called once both work, the reading's
- * thread online and, on a Mac or Linux, the helper saying it holds the pipe
+ * what ends them. `ready(true)` is called once both work, the reading
+ * saying it is in place and, on a Mac or Linux, the helper saying it holds the pipe
  * and leads nothing but the run's own group: only then can a force stop end
  * this run however stuck it is, so only then does the run say it can be
  * ended so (`markRunning`'s `recovers`). A reading or helper that cannot
@@ -200,7 +204,9 @@ export function watchRunForce(
     worker.on("error", (error) => lost(`stopped reading force stops: ${(error as Error).message}`));
     // i18n-exempt: the run's own log, never shown to a person.
     worker.on("exit", () => lost("stopped reading force stops"));
-    worker.once("online", () => {
+    // Ready once the reading itself says it is in place, never only once its thread came online.
+    worker.on("message", (said: unknown) => {
+      if (said !== "reading") return;
       online = true;
       settled();
     });
@@ -291,9 +297,10 @@ export const runForceNeedle = forceNeedle;
  * never committed it, pending, claimed and still reading its time, or
  * declined, so nothing shows the stop ended it; `withdrawn` where the run
  * still runs and the stop never acts, taken back pending or claimed once
- * its time was over, or declined by the run; `unasked` where the stop could
- * not be written. A stop the run committed is waited for until the run is
- * gone.
+ * its time was over, or declined by the run; `unasked` where nothing was
+ * asked: the run already gone before its stop was written, or a stop that
+ * could not be written. A stop the run committed is waited for until the
+ * run is gone.
  */
 export type ForceEnd = "ended" | "gone" | "withdrawn" | "unasked";
 
@@ -345,8 +352,14 @@ const WAKE_EVERY_MS = 1_000;
  * time, or committed, `wake` lets a suspended run go on to read it
  * (`wakeRun`); past its time nothing is woken. A stop the run did not commit
  * in time is withdrawn, pending or claimed; one it committed is waited for
- * until the run is gone. The attempt's files go once its end is known, and
- * one that cannot be removed changes nothing of what it answers.
+ * until the run is gone. The run is read before its stop is written: one
+ * already gone then is asked nothing (`unasked`), so only an exit after the
+ * ask is told as the stop's end. Its pipe is found before then (`piped`,
+ * `runPipeThere`), by an asker before it reads the run's record, since a run
+ * that took the folder since clears an earlier run's pipe only once it
+ * noted itself: a pipe found and gone since is the run gone too.
+ * The attempt's files go once its end is known, and one that cannot be
+ * removed changes nothing of what it answers.
  */
 export async function endRunByForce(
   dataDir: string,
@@ -354,8 +367,16 @@ export async function endRunByForce(
   alive: (pid: number) => boolean = processAlive,
   waitMs: number = STOPPED_RUN_WAIT_MS,
   wake: () => void = () => {},
+  piped: boolean = runPipeThere(dataDir, run),
 ): Promise<ForceEnd> {
   const dir = join(dataDir, RUN_FORCE_DIR);
+  // On a Mac or Linux the run and its helper hold the run's own pipe open while either runs, and no
+  // other program ever holds it: a pipe nobody holds, or gone since it was found, is the run gone,
+  // whoever has its number now.
+  const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
+  const watched = !hostPlatformProfile().windows && piped;
+  const runs = (pid: number) => alive(pid) && (!watched || pipeHeld(pipe));
+  if (!runs(run.pid)) return "unasked";
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;
   try {
@@ -367,11 +388,6 @@ export async function endRunByForce(
   } catch {
     return "unasked";
   }
-  // On a Mac or Linux the run and its helper hold the run's own pipe open while either runs, and no
-  // other program ever holds it: a pipe nobody holds is the run gone, whoever has its number now.
-  const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
-  const piped = !hostPlatformProfile().windows && isPipe(pipe);
-  const runs = (pid: number) => alive(pid) && (!piped || pipeHeld(pipe));
   const outcome = await settle(attempt, run, runs, until, wake);
   for (const end of [".json", ".taken", ".ended", ".declined", ".withdrawn"])
     try {
@@ -380,6 +396,14 @@ export async function endRunByForce(
       // Left behind, it names a run that is gone or is past its time: it never acts.
     }
   return outcome;
+}
+
+/** Whether `run`'s own pipe is there, on a Mac or Linux: false on Windows, which keeps none. */
+export function runPipeThere(dataDir: string, run: RunInstance): boolean {
+  return (
+    !hostPlatformProfile().windows &&
+    isPipe(join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)))
+  );
 }
 
 /** Whether `path` is a pipe. */

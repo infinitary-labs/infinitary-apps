@@ -20,8 +20,10 @@ import { scratchDir } from "../helpers/scratchDirs";
  * unit the window writes ask (`bootPlist`, `bootUnit`). It writes down
  * each run it started, by its process number, and each start or stop it
  * was asked for, and ends its supervisors when the journey ends. A run is
- * signalled only by the supervisor that started it, while that run has not
- * ended, so no signal reaches a process that took an ended run's number.
+ * signalled only by the supervisor that started it, named by its run number
+ * (its place in that record) and only while that run has not ended, so no
+ * signal reaches a process that took an ended run's number; a stop goes
+ * through the supervisor too, and is said done only once it exited.
  */
 
 /** The supervisor and its job, in the stand-in's own program; `__STATE__` is its folder. */
@@ -35,17 +37,26 @@ const pidFile = (label) => join(STATE, label + ".pid");
 // Every start or stop it is asked for, as the journey reads it; a reading is not written down.
 if (args[0] !== "__supervise" && args[0] !== "print" && !(args[0] === "--user" && args[1] === "show"))
   appendFileSync(join(STATE, "asks"), args.join(" ") + "\n");
-// Asks the job's supervisor to signal its run: the one numbered pid, or the one now for null. It
-// signals that run only while it has not ended, and says whether it did ("sent") or not ("gone").
-function signalRun(label, signal, pid) {
+// Asks the job's supervisor to signal its run: the one it started as its run number gen (its
+// line in the runs record, from 1), or the one now for null. It signals that run only while it has
+// not ended, and answers "sent", "gone" when it ended or another run is the job's now, or
+// "timeout" when no answer came: the ask is then taken back unless the supervisor already took it,
+// whose answer is then read.
+function signalRun(label, signal, gen) {
   if (!running(label)) return "gone";
-  const id = process.pid + "-" + Date.now();
-  const ask = join(STATE, label + ".signal-" + id);
-  writeFileSync(ask + ".tmp", JSON.stringify({ signal, pid }));
+  const ask = join(STATE, label + ".signal-" + process.pid + "-" + Date.now());
+  writeFileSync(ask + ".tmp", JSON.stringify({ signal, gen }));
   renameSync(ask + ".tmp", ask + ".ask");
-  for (let i = 0; i < 200 && !existsSync(ask + ".said"); i++) spawnSync("sleep", ["0.05"]);
-  return existsSync(ask + ".said") ? readFileSync(ask + ".said", "utf8") : "gone";
+  const answer = (tries) => {
+    for (let i = 0; i < tries && !existsSync(ask + ".said") && running(label); i++) spawnSync("sleep", ["0.05"]);
+    return existsSync(ask + ".said") ? readFileSync(ask + ".said", "utf8") : null;
+  };
+  const said = answer(200);
+  if (said !== null) return said;
+  try { renameSync(ask + ".ask", ask + ".withdrawn"); return running(label) ? "timeout" : "gone"; } catch {}
+  return answer(200) ?? "timeout";
 }
+const runsOf = (label) => existsSync(join(STATE, label + ".runs")) ? readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean) : [];
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const xml = (text) => text.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 function plistJob(file) {
@@ -108,18 +119,20 @@ function restartFirst(label) {
   const file = join(STATE, label + ".restart-on-stop");
   if (!existsSync(file) || !running(label)) return;
   rmSync(file, { force: true });
-  const runs = () => readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean);
-  const before = runs();
-  signalRun(label, "SIGKILL", Number(before[before.length - 1]));
-  for (let i = 0; i < 600 && !(runs().length > before.length && alive(Number(runs()[before.length]))); i++) spawnSync("sleep", ["0.05"]);
+  const before = runsOf(label);
+  signalRun(label, "SIGKILL", before.length);
+  for (let i = 0; i < 600 && !(runsOf(label).length > before.length && alive(Number(runsOf(label)[before.length]))); i++) spawnSync("sleep", ["0.05"]);
 }
+// Stops the job through its supervisor, as bootout and systemctl stop do, and says it is unloaded
+// only once that supervisor has exited: a stop that did not end it in time fails (code 1).
 function end(label) {
   restartFirst(label);
+  if (!running(label)) { writeFileSync(goneFile(label), ""); return 3; }
+  const supervisor = Number(readFileSync(pidFile(label), "utf8"));
+  const said = signalRun(label, "stop", null);
+  for (let i = 0; i < 600 && said !== "timeout" && alive(supervisor); i++) spawnSync("sleep", ["0.05"]);
+  if (alive(supervisor)) return 1;
   writeFileSync(goneFile(label), "");
-  if (!existsSync(pidFile(label))) return 3;
-  const pid = Number(readFileSync(pidFile(label), "utf8"));
-  try { process.kill(pid, "SIGTERM"); } catch {}
-  for (let i = 0; i < 600 && alive(pid); i++) spawnSync("sleep", ["0.05"]);
   return 0;
 }
 // Ends the job's current run by force, as launchd's kickstart -k and systemd's kill with SIGKILL
@@ -132,8 +145,8 @@ function kill(label) {
 // The job's run now, by its process number, as launchd's print shows its pid and systemd its
 // MainPID: none while its supervisor waits to start it again, or once it is stopped.
 function current(label) {
-  if (!running(label) || !existsSync(join(STATE, label + ".runs"))) return null;
-  const runs = readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean);
+  const runs = runsOf(label);
+  if (!running(label) || runs.length === 0) return null;
   const pid = Number(runs[runs.length - 1]);
   return alive(pid) ? pid : null;
 }
@@ -148,11 +161,14 @@ function supervise(label) {
   const job = JSON.parse(readFileSync(join(STATE, label + ".job.json"), "utf8"));
   writeFileSync(pidFile(label), String(process.pid));
   let child = null;
+  // The run number of the child now: its line in the runs record, from 1.
+  let gen = runsOf(label).length;
   let stopping = false;
   const start = () => {
     // Its own process group, as launchd and systemd start a job's program in a session of its own.
     child = spawn(job.words[0], job.words.slice(1), { stdio: "inherit", detached: true, env: { ...process.env, ...job.env } });
     appendFileSync(join(STATE, label + ".runs"), child.pid + "\n");
+    gen += 1;
     child.on("exit", (code) => {
       appendFileSync(join(STATE, label + ".exits"), String(code) + "\n");
       if (stopping || code === 0) { rmSync(pidFile(label), { force: true }); process.exit(0); }
@@ -160,32 +176,35 @@ function supervise(label) {
     });
   };
   const live = () => child !== null && child.exitCode === null && child.signalCode === null;
-  process.on("SIGTERM", () => {
+  const ending = (signal) => {
     stopping = true;
-    if (live()) child.kill("SIGTERM");
-    else { rmSync(pidFile(label), { force: true }); process.exit(0); }
-  });
-  // Signals asked of this run (signalRun, and the journey's own): only the child it started, by
-  // its number, while that child has not ended. "teardown" ends the job for good, by force.
+    if (live()) child.kill(signal);
+    else setImmediate(() => { rmSync(pidFile(label), { force: true }); process.exit(0); });
+  };
+  // Asks of this job (signalRun, and the journey's own), each taken by renaming it so an ask taken
+  // back is never acted on: a signal reaches only the child it started as that run number, while
+  // that child has not ended; "state" says whether that child is "stopped" (suspended) or
+  // "running"; "stop" ends the job as bootout and systemctl stop do, and "teardown" by force.
   setInterval(() => {
     for (const name of readdirSync(STATE)) {
       if (!name.startsWith(label + ".signal-") || !name.endsWith(".ask")) continue;
-      const ask = join(STATE, name);
-      const { signal, pid } = JSON.parse(readFileSync(ask, "utf8"));
-      rmSync(ask, { force: true });
+      const base = join(STATE, name.slice(0, -".ask".length));
+      try { renameSync(base + ".ask", base + ".taken"); } catch { continue; }
+      const { signal, gen: asked } = JSON.parse(readFileSync(base + ".taken", "utf8"));
+      const ours = live() && (asked === null || asked === gen);
       let said = "gone";
-      if (signal === "teardown") {
-        stopping = true;
+      if (signal === "stop" || signal === "teardown") {
+        ending(signal === "stop" ? "SIGTERM" : "SIGKILL");
         said = "sent";
-        if (live()) child.kill("SIGKILL");
-        else setImmediate(() => { rmSync(pidFile(label), { force: true }); process.exit(0); });
-      } else if (live() && (pid === null || child.pid === pid)) {
+      } else if (signal === "state") {
+        if (ours) said = spawnSync("ps", ["-o", "stat=", "-p", String(child.pid)], { encoding: "utf8" }).stdout.trim().startsWith("T") ? "stopped" : "running";
+      } else if (ours) {
         child.kill(signal);
         said = "sent";
       }
-      const answer = ask.slice(0, -".ask".length);
-      writeFileSync(answer + ".tmp", said);
-      renameSync(answer + ".tmp", answer + ".said");
+      writeFileSync(base + ".tmp", said);
+      renameSync(base + ".tmp", base + ".said");
+      rmSync(base + ".taken", { force: true });
     }
   }, 50);
   start();
@@ -207,8 +226,7 @@ else if (args[0] === "--user" && args[1] === "kill" && args[2] === "--signal=SIG
 else if (args[0] === "--user" && args[1] === "start") code = begin(unitJob(join(__UNITS__, args[2] + ".service"), args[2]));
 else if (args[0] === "--user" && args[1] === "stop") code = end(args[2]);
 else if (args[0] === "--user" && args[1] === "restart") {
-  end(args[2]);
-  code = begin(unitJob(join(__UNITS__, args[2]), args[2]));
+  code = end(args[2]) === 1 ? 1 : begin(unitJob(join(__UNITS__, args[2]), args[2]));
 }
 // A job's ActiveState, as systemd shows it: active while its supervisor runs, inactive once stopped.
 else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=MainPID") {
@@ -238,15 +256,21 @@ export type ServiceManagerStandIn = {
   /** At the job's next stop, its run fails first and the job starts it again as another process before the stop takes effect. */
   restartOnStop: (label: string) => void;
   /**
-   * Signals the job's run numbered `pid` through the supervisor that started it, only while that
-   * run has not ended: "sent", or "gone" when it ended (or another run is the job's now).
+   * Signals the job's run with process number `pid` through the supervisor that started it, named
+   * by its run number (its first place in `runs`), only while that run has not ended: "sent";
+   * "gone" when it ended, another run is the job's now, or its supervisor is not there; "timeout"
+   * when the supervisor did not answer, the ask then taken back unless it was already taken.
    */
-  signal: (label: string, signal: NodeJS.Signals, pid: number) => Promise<"sent" | "gone">;
+  signal: (label: string, signal: NodeJS.Signals, pid: number) => Promise<SupervisorAnswer>;
+  /** Whether that run is "stopped" (suspended) or "running", as its supervisor reads it, or "gone". */
+  state: (label: string, pid: number) => Promise<SupervisorAnswer>;
   /** Every start or stop it was asked for, by its words, in order; readings are left out. */
   asks: () => string[];
-  /** Ends every supervisor and its job, through each supervisor. */
+  /** Ends every supervisor and its job, through each supervisor; throws naming any still running. */
   stopAll: () => void;
 };
+
+export type SupervisorAnswer = "sent" | "gone" | "timeout" | "stopped" | "running";
 
 /** The stand-in, for a window whose HOME is `homeDir` (its systemd units sit under its `.config`). */
 export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
@@ -279,19 +303,41 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
     }
   };
   let asked = 0;
-  /** Leaves a signal for the job's supervisor, and where its answer comes. */
-  const ask = (label: string, signal: string, pid: number | null) => {
+  /** Leaves an ask for the job's supervisor, naming the run by its run number; its file's base. */
+  const ask = (label: string, signal: string, gen: number | null) => {
     asked += 1;
     const file = join(state, `${label}.signal-journey-${process.pid}-${asked}`);
-    writeFileSync(`${file}.tmp`, JSON.stringify({ signal, pid }));
+    writeFileSync(`${file}.tmp`, JSON.stringify({ signal, gen }));
     renameSync(`${file}.tmp`, `${file}.ask`);
-    return `${file}.said`;
+    return file;
   };
   const running = (label: string) => {
     const pid = supervisor(label);
     return pid !== null && alive(pid);
   };
   const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  const said = (file: string) =>
+    existsSync(`${file}.said`) ? (readFileSync(`${file}.said`, "utf8") as SupervisorAnswer) : null;
+  /** Asks the supervisor of the run with process number `pid`, and waits for its answer. */
+  const request = async (label: string, signal: string, pid: number): Promise<SupervisorAnswer> => {
+    const gen = lines(label, "runs").map(Number).indexOf(pid) + 1;
+    if (gen === 0 || !running(label)) return "gone";
+    const file = ask(label, signal, gen);
+    const answer = async () => {
+      for (let i = 0; i < 200 && said(file) === null && running(label); i++)
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      return said(file);
+    };
+    const first = await answer();
+    if (first !== null) return first;
+    try {
+      // Taken back before the supervisor took it, so it is never acted on.
+      renameSync(`${file}.ask`, `${file}.withdrawn`);
+      return running(label) ? "timeout" : "gone";
+    } catch {
+      return (await answer()) ?? "timeout";
+    }
+  };
   return {
     dir,
     env: {
@@ -302,13 +348,8 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
     running,
     refuseStarts: (count) => writeFileSync(join(state, "refuse"), String(count)),
     restartOnStop: (label) => writeFileSync(join(state, `${label}.restart-on-stop`), ""),
-    signal: async (label, signal, pid) => {
-      if (!running(label)) return "gone";
-      const said = ask(label, signal, pid);
-      for (let i = 0; i < 200 && !existsSync(said) && running(label); i++)
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      return existsSync(said) && readFileSync(said, "utf8") === "sent" ? "sent" : "gone";
-    },
+    signal: (label, signal, pid) => request(label, signal, pid),
+    state: (label, pid) => request(label, "state", pid),
     asks: () => {
       const file = join(state, "asks");
       return existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean) : [];
@@ -318,8 +359,18 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
         .filter((name) => name.endsWith(".pid"))
         .map((name) => name.slice(0, -".pid".length))
         .filter(running);
-      for (const label of labels) ask(label, "teardown", null);
+      const asks = labels.map((label) => ask(label, "teardown", null));
       for (let i = 0; i < 200 && labels.some(running); i++) pause(50);
+      const left = labels.filter(running);
+      // An ask no supervisor took is taken back, so nothing acts on it after the journey.
+      for (const file of asks)
+        try {
+          renameSync(`${file}.ask`, `${file}.withdrawn`);
+        } catch {}
+      if (left.length > 0)
+        throw new Error(
+          `the stand-in service manager did not stop ${left.map((label) => `${label} (supervisor ${supervisor(label)})`).join(", ")}`,
+        );
     },
   };
 }

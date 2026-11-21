@@ -186,11 +186,14 @@ describe("a window opened beside a run", () => {
   // a holder no link names, as Windows' own lock, is asked again after a while, with the same word.
   // The review of INF-5409: a window answers a Start it here launch's ask only once one of its
   // windows is there to take over. A Mac app kept working after its last window closed opens it
-  // again and answers once it is made; an ask it already took brings nothing forward again.
+  // again and answers once it is made; an ask it already took brings nothing forward again, and an
+  // answer that could not be written is written again later, with no window brought forward.
   it("answers a launch's ask only once a window is there, opening one again on a Mac", () => {
     const word = "0123456789abcdef";
     const made: (() => void)[] = [];
+    const retries: (() => void)[] = [];
     let windows = 0;
+    let writable = false;
     const seen = { forward: 0, answers: [] as string[] };
     const window = {
       asked: new Set<string>(),
@@ -199,7 +202,8 @@ describe("a window opened beside a run", () => {
       },
       shown: () => windows > 0,
       whenMade: (then: () => void) => void made.push(then),
-      answer: (asked: string) => void seen.answers.push(asked),
+      answer: (asked: string) => writable && seen.answers.push(asked) > 0,
+      later: (then: () => void) => void retries.push(then),
     };
     // Its last window closed: the launch's ask opens one again and waits for it.
     answerLaunch(word, window);
@@ -207,26 +211,40 @@ describe("a window opened beside a run", () => {
     // A hidden page made first is no window of its own: it keeps waiting.
     made.shift()?.();
     expect(seen.answers).toEqual([]);
+    expect(made).toHaveLength(1);
+    // The window is made, and its answer cannot be written yet: it is written again later.
     windows = 1;
     made.shift()?.();
+    expect(seen).toEqual({ forward: 1, answers: [] });
+    expect(retries).toHaveLength(1);
+    // The launch asks again meanwhile: nothing comes forward, and nothing else is written.
+    answerLaunch(word, window);
+    expect(seen).toEqual({ forward: 1, answers: [] });
+    expect(retries).toHaveLength(1);
+    writable = true;
+    retries.shift()?.();
     expect(seen).toEqual({ forward: 1, answers: [word] });
-    // The launch asks again while the lock names no holder: nothing comes forward again.
+    expect(retries).toEqual([]);
     answerLaunch(word, window);
     expect(seen).toEqual({ forward: 1, answers: [word] });
-    expect(made).toEqual([]);
     // A launch with no ask still brings the window forward.
     answerLaunch(null, window);
     expect(seen).toEqual({ forward: 2, answers: [word] });
   });
 
   it("tells a run, a window and a lock let go apart from what each shows, and waits on a silent holder", async () => {
-    const look = (shown: { running?: () => boolean; answered?: () => boolean }, named = true) => {
+    const look = (
+      shown: { running?: () => boolean; answered?: () => boolean },
+      named = true,
+      reached: number | null | undefined = named ? 4242 : undefined,
+    ) => {
       const asks: number[] = [];
       let holder: number | null | undefined = named ? 4242 : undefined;
       const kind = lockHolderKind({
         running: shown.running ?? (() => false),
         answered: shown.answered ?? (() => false),
         holder: () => holder,
+        asked: reached,
         lockFree: () => {
           asks.push(Date.now());
           return holder === null;
@@ -270,6 +288,17 @@ describe("a window opened beside a run", () => {
     expect(unnamed.asks.length).toBeGreaterThanOrEqual(2);
     unnamed.leave();
     expect(await unnamed.kind).toBe("free");
+
+    // The holder took the lock after the launch's own ask reached none: it is asked once, then
+    // only watched.
+    const later = look({}, true, null);
+    let late: string | null = null;
+    void later.kind.then((kind) => (late = kind));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(late).toBeNull();
+    expect(later.asks).toHaveLength(1);
+    later.leave();
+    expect(await later.kind).toBe("free");
   });
 
   // The review of INF-5409: Restart it is offered over a run only while a force stop can end it.

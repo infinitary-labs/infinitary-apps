@@ -333,12 +333,15 @@ export function windowAnswerAsked(data: unknown): string | null {
  * brings a window forward - focusing one, or opening one again where the app
  * outlived its last, as on a Mac - and answers a launch's ask
  * (`windowAnswerAsked`) only once one of its windows is there, never from a
- * program showing none. An ask it already took brings nothing forward again.
+ * program showing none. An ask it already took brings nothing forward again;
+ * an answer that could not be written is written again a while later, with
+ * no window brought forward, so a launch that waits on a holder it does not
+ * ask again still hears it.
  */
 export function answerLaunch(
   word: string | null,
   window: {
-    /** The words this window was already asked. */
+    /** The words this window was already asked, answered or with their answer on its way. */
     asked: Set<string>;
     /** Brings a window forward, opening one again where the app keeps working closed. */
     bringForward: () => void;
@@ -346,15 +349,20 @@ export function answerLaunch(
     shown: () => boolean;
     /** Calls `then` once another window is made. */
     whenMade: (then: () => void) => void;
-    /** Writes the answer (`windowAnswerFile`). */
-    answer: (word: string) => void;
+    /** Writes the answer (`windowAnswerFile`); false when it could not. */
+    answer: (word: string) => boolean;
+    /** Calls `then` a while later, to write an answer that could not be written again. */
+    later: (then: () => void) => void;
   },
 ): void {
   if (word !== null && window.asked.has(word)) return;
-  if (word !== null) window.asked.add(word);
   window.bringForward();
   if (word === null) return;
-  const once = () => (window.shown() ? window.answer(word) : window.whenMade(once));
+  window.asked.add(word);
+  const once = () => {
+    if (!window.shown()) window.whenMade(once);
+    else if (!window.answer(word)) window.later(once);
+  };
   once();
 }
 
@@ -369,7 +377,8 @@ export function answerLaunch(
  * for as long as it takes, so the launch never quits with no window to take
  * over. Asking for the lock again is a second launch to its holder, which a
  * window shows itself on, so it is asked only once the holder its link names
- * changes, the lock let go of included, and never again of a holder it names
+ * changes from the one the launch's own ask reached, the lock let go of
+ * included, and never again of a holder it names
  * unchanged, which is only watched; only where no link names a holder (as
  * Windows' own lock) is it asked again after `askEveryMs`, with the same
  * word, which a window that was asked once answers without coming forward
@@ -379,11 +388,13 @@ export async function lockHolderKind(options: {
   running: () => boolean;
   answered: () => boolean;
   holder: () => number | null | undefined;
+  /** The holder read just before the launch's own refused ask, the one that ask reached. */
+  asked: number | null | undefined;
   lockFree: () => boolean;
   askEveryMs: number;
   everyMs?: number;
 }): Promise<"run" | "free" | "window"> {
-  let seen = options.holder();
+  let seen = options.asked;
   let next = Date.now() + options.askEveryMs;
   for (;;) {
     if (options.running()) return "run";

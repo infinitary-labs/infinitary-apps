@@ -21,7 +21,7 @@ import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
 import { secretBringRows } from "@shared/secretBring";
 import { secretKeepFields } from "@shared/secrets";
-import { wordedTitle } from "@shared/welcome";
+import { isWelcomeFolderStarter, wordedTitle } from "@shared/welcome";
 import {
   type CSSProperties,
   useCallback,
@@ -68,6 +68,13 @@ import type { CardMount } from "../cardActions";
 import { mainMessageRefusal } from "../composer";
 import { useCommandKeys } from "../keyHints";
 import { pressInputOf } from "../pressInput";
+import {
+  folderAddedWords,
+  pickProjectFolder,
+  sayFolderAdded,
+  useFolderPickStore,
+} from "../projectFolder";
+import { withoutKey } from "../stack";
 import { useShellStore } from "../store";
 import { factStripOf } from "./entryView";
 
@@ -184,6 +191,8 @@ export function StackedCard({
   // Its bring card draws one tick box per secret the source named (docs/secrets.md).
   const secretBring = useMemo(() => secretBringRows(card), [card]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
+  // What the welcome's folder starter added, named under its title (docs/first-launch.md).
+  const folderSaid = useFolderPickStore((s) => s.said[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is
   // out of reach (docs/view.md): still Tab stops, whose note says until when.
   const offWords = useShellStore((s) =>
@@ -650,6 +659,15 @@ export function StackedCard({
             <KeyedText text={error} />
           </p>
         )}
+        {folderSaid && (
+          <p
+            role="status"
+            data-card-status=""
+            style={{ color: "var(--fg-2)", fontSize: "var(--text-sm)" }}
+          >
+            {folderSaid}
+          </p>
+        )}
         {bodyPending ? (
           <div aria-busy="true" style={{ minHeight: "var(--space-7)" }} />
         ) : showThread ? (
@@ -688,10 +706,15 @@ export function StackedCard({
             onAction={(actionId, value) => onAction(actionId, "frame", value, undefined, card)}
             onPicture={onPicture}
             onSound={(clip) => playCardSound(card.id, clip)}
-            // A starter's words go to the main message box without sending.
+            // A starter's words go to the main message box without sending;
+            // the welcome's folder starter opens the system's folder picker
+            // instead on the first mate's own computer.
             onDraft={(text) => {
               const shell = useShellStore.getState();
-              if (mainMessageRefusal(shell) === null) shell.beginDraft(text);
+              if (mainMessageRefusal(shell) !== null) return;
+              if (isWelcomeFolderStarter(card.body, text) && !isView(shell.thisMac))
+                void addPickedFolder(card.id);
+              else shell.beginDraft(text);
             }}
             form={{
               fill: () => useShellStore.getState().cardAnswers[card.id]?.answers,
@@ -709,6 +732,27 @@ export function StackedCard({
       </ResponseCard>
     </>
   );
+}
+
+/**
+ * The welcome's folder starter (docs/first-launch.md, "The welcome"): the
+ * pick is added as a project and named under the card's title, with focus
+ * in the message box; a refusal takes the card's error line, and a cancel
+ * changes nothing.
+ */
+async function addPickedFolder(cardId: string): Promise<void> {
+  useShellStore.setState((s) => ({ cardActionErrors: withoutKey(s.cardActionErrors, cardId) }));
+  const pick = await pickProjectFolder();
+  if (pick.kind === "cancelled") return;
+  if (pick.kind === "refused") {
+    sayFolderAdded(cardId, null);
+    useShellStore.setState((s) => ({
+      cardActionErrors: { ...s.cardActionErrors, [cardId]: pick.text },
+    }));
+    return;
+  }
+  sayFolderAdded(cardId, folderAddedWords(pick.result));
+  useShellStore.getState().focusMainMessage();
 }
 
 function AnswerDone({ done }: { done: NonNullable<Card["answerDone"]> }) {

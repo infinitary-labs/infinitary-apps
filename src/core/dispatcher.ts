@@ -412,6 +412,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       }
     },
 
+    "inf:repos:offer-folder": (path) => services.projectSetups.offerFolder(path),
+
     // Where new projects go: refused folders throw their reason, which
     // Settings shows beside the control.
     "inf:repos:folder": () => services.repos.projectsFolder(),

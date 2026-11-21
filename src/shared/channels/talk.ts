@@ -11,6 +11,7 @@ import {
 import { crewSendResultSchema } from "../crewTranscript";
 import { lastTurnSchema } from "../lastTurn";
 import {
+  folderOfferSchema,
   projectsFolderViewSchema,
   repoMoveResultSchema,
   repoMoveTargetSchema,
@@ -212,6 +213,18 @@ export const talkChannels = {
     reach: "views",
     request: z.tuple([repoSetupSpecSchema]),
     response: repoSetupResultSchema,
+  },
+  // A folder the captain dropped on the main message box (docs/composer.md,
+  // "Files"): the setup card for it goes up with Add project, as the first
+  // mate's proposal puts one up, or the project it already is comes back.
+  // Nothing is added until the captain clicks Add project there. The path is
+  // on this computer, so only its own window asks.
+  "inf:repos:offer-folder": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1).max(4096)]),
+    response: folderOfferSchema,
   },
   // Tasks still on a project: the one guard behind removal, read up front.
   "inf:repos:removal": {

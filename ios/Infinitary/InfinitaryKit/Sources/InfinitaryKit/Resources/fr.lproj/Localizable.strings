@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "jetons, coût, dollars, estimation";
 "commandWhatsNewShow" = "Afficher les nouveautés";
 "commandWhatsNewShowWords" = "version, notes, nouveautés, modifications";
+"composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
+"composerFolderProject" = "Ce dossier fait déjà partie de vos projets.";
 "composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "Je vous rapporte réponses et choix sous forme de cartes comme celle-ci.";
 "welcomeEnd" = "C’est tout. Pour commencer, appuyez sur une amorce ci-dessous.";
 "welcomeFigure" = "Votre fenêtre, une partie à chaque appui : la zone de message, une carte, Activité et Tâches";
+"welcomeFolderAdded" = "%1$@ ajouté comme projet. Tapez dans la zone de message ce que vous voulez y faire faire.";
+"welcomeFolderAddedGit" = "%1$@ ajouté comme projet, et Git initialisé dans le dossier avec un premier commit vide. Tapez dans la zone de message ce que vous voulez y faire faire.";
+"welcomeFolderAlreadyAdded" = "%1$@ fait déjà partie de vos projets. Tapez dans la zone de message ce que vous voulez y faire faire.";
 "welcomeLabelActivity" = "Activité";
 "welcomeLabelBox" = "la zone de message";
 "welcomeLabelTasks" = "Tâches";

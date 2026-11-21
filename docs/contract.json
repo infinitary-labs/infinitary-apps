@@ -3264,6 +3264,60 @@
         ]
       }
     },
+    "inf:repos:offer-folder": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "card"
+              },
+              "cardId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "cardId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "already"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "name"
+            ]
+          }
+        ]
+      }
+    },
     "inf:repos:removal": {
       "effect": "read",
       "reach": "views",
@@ -12984,6 +13038,10 @@
                               "browser"
                             ]
                           },
+                          "folder": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "savedSignIn": {
                             "type": "boolean",
                             "const": true
@@ -14427,6 +14485,10 @@
                                 "devices",
                                 "browser"
                               ]
+                            },
+                            "folder": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "savedSignIn": {
                               "type": "boolean",
@@ -63203,6 +63265,10 @@
                                     "browser"
                                   ]
                                 },
+                                "folder": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
                                 "savedSignIn": {
                                   "type": "boolean",
                                   "const": true
@@ -77443,6 +77509,10 @@
                               "devices",
                               "browser"
                             ]
+                          },
+                          "folder": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "savedSignIn": {
                             "type": "boolean",

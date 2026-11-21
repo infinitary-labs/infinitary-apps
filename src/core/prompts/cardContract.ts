@@ -348,8 +348,11 @@ const RISK_PARAM = [
 /** The effects every role's actions may declare, up to the open effect. */
 const ACTIONS_EFFECTS =
   "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect, danger and declines. declines true marks your own way to say no to every choice, such as Not now or Abandon; without one the app adds Decline, reaching you as that no. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
-const ACTIONS_OPEN =
-  " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it.";
+const ACTIONS_OPEN_TARGETS =
+  " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it";
+const ACTIONS_OPEN = `${ACTIONS_OPEN_TARGETS}.`;
+/** The Firstmate's open effect also makes a Choose folder button (docs/fleet.md, "A folder that is not there"). */
+const ACTIONS_OPEN_FOLDER = `${ACTIONS_OPEN_TARGETS}; folder true with target projects makes a Choose folder button, adding the folder the captain picks as a project.`;
 
 /**
  * A put-off choice ("Not until…", INF-3846 piece 3): the app keeps the card
@@ -368,7 +371,7 @@ export const CARD_PARAMS = {
   interim: "True when reply is a progress note; the captain's reply still waits.",
   width:
     "Body: short text narrow; wide 800 px; full ≤1,040 px; pass it only to require more room; it only widens.",
-  actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN}${ACTIONS_UNTIL}`,
+  actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN_FOLDER}${ACTIONS_UNTIL}`,
   /** A crewmate's actions, which may also ask to send a write it kept (FI3-1571 piece 4). */
   crewActions: `${ACTIONS_EFFECTS} or kind request_write with ask naming the id github_write returned;${ACTIONS_OPEN}${ACTIONS_UNTIL}`,
   risk: RISK_PARAM,

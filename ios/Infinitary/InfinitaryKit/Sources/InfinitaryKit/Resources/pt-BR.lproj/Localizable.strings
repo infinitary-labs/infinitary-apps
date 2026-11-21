@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "tokens, custo, dólares, estimativa";
 "commandWhatsNewShow" = "Mostrar as novidades";
 "commandWhatsNewShowWords" = "lançamento, notas, novidades, alterações, versão";
+"composerFolderNotProject" = "Não foi possível adicionar essa pasta como projeto.";
+"composerFolderProject" = "Essa pasta já é um dos seus projetos.";
 "composerTooLongShorten" = "Longo demais para enviar. Encurte primeiro.";
 "composerWordsOnly" = "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto.";
 "crewAPart" = "Uma parte";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "Eu trago respostas e escolhas em cartões como este.";
 "welcomeEnd" = "É só isso. Para começar, pressione um ponto de partida abaixo.";
 "welcomeFigure" = "Sua janela, uma parte a cada toque: a caixa de mensagem, um cartão, Atividade e Tarefas";
+"welcomeFolderAdded" = "%1$@ adicionado como projeto. Digite na caixa de mensagem o que você quer que seja feito nele.";
+"welcomeFolderAddedGit" = "%1$@ adicionado como projeto, e o git foi iniciado na pasta com um primeiro commit vazio. Digite na caixa de mensagem o que você quer que seja feito nele.";
+"welcomeFolderAlreadyAdded" = "%1$@ já é um dos seus projetos. Digite na caixa de mensagem o que você quer que seja feito nele.";
 "welcomeLabelActivity" = "Atividade";
 "welcomeLabelBox" = "a caixa de mensagem";
 "welcomeLabelTasks" = "Tarefas";

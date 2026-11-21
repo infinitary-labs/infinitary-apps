@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "用量, 費用, 美元, 估計";
 "commandWhatsNewShow" = "顯示新功能";
 "commandWhatsNewShowWords" = "發布, 說明, 變更, 版本";
+"composerFolderNotProject" = "無法將該資料夾加入為專案。";
+"composerFolderProject" = "該資料夾已經是你的專案了。";
 "composerTooLongShorten" = "太長了，無法傳送。請先縮短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能傳送文字。請移除圖片和檔案後再傳送。";
 "crewAPart" = "一個部分";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "我會用像這張一樣的卡片，帶回答案和選項。";
 "welcomeEnd" = "就是這些。要開始的話，請按下方的一個開場句。";
 "welcomeFigure" = "你的視窗，每按一次介紹一個部分：訊息框、卡片、動態和任務";
+"welcomeFolderAdded" = "已將 %1$@ 加入為專案。在訊息框輸入你想在其中完成的事。";
+"welcomeFolderAddedGit" = "已將 %1$@ 加入為專案，並在這個資料夾中啟用 git，建立一個空的第一次提交。在訊息框輸入你想在其中完成的事。";
+"welcomeFolderAlreadyAdded" = "%1$@ 已經是你的專案了。在訊息框輸入你想在其中完成的事。";
 "welcomeLabelActivity" = "動態";
 "welcomeLabelBox" = "訊息框";
 "welcomeLabelTasks" = "任務";

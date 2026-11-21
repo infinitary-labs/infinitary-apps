@@ -149,7 +149,7 @@
     {
       "from": "attachments",
       "to": "app",
-      "why": "reads the window's store"
+      "why": "reads the window's store and offers a dropped folder as a project"
     },
     {
       "from": "attachments",

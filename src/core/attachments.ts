@@ -174,7 +174,7 @@ export async function inspectPath(path: string): Promise<DroppedPath> {
   try {
     const stat = await lstat(path);
     if (stat.isSymbolicLink()) return { kind: "shortcut" };
-    if (stat.isDirectory()) return { kind: "folder" };
+    if (stat.isDirectory()) return { kind: "folder", path };
     if (stat.isFile()) return { kind: "regular", path };
   } catch {
     // fall through

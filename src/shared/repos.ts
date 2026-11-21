@@ -514,6 +514,16 @@ export const repoSetupResultSchema = z.object({
 export type RepoSetupResult = z.infer<typeof repoSetupResultSchema>;
 
 /**
+ * A folder dropped on the main message box (docs/composer.md, "Files"): the
+ * setup card that went up for it, or the project it already is.
+ */
+export const folderOfferSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("card"), cardId: z.string().min(1) }),
+  z.object({ kind: z.literal("already"), name: z.string().min(1) }),
+]);
+export type FolderOffer = z.infer<typeof folderOfferSchema>;
+
+/**
  * What a setup would do, read without doing any of it (the setup card,
  * `./projectSetup.ts`): the project already on the list, or the name it
  * would get, where it lives, whether adding a plain folder starts a git

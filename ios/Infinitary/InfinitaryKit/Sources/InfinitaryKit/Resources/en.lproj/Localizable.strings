@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "tokens, cost, dollars, estimate";
 "commandWhatsNewShow" = "Show what's new";
 "commandWhatsNewShowWords" = "release, notes, changes, version";
+"composerFolderNotProject" = "That folder could not be added as a project.";
+"composerFolderProject" = "That folder is already one of your projects.";
 "composerTooLongShorten" = "Too long to send. Shorten it first.";
 "composerWordsOnly" = "Only words can go until Infinitary is updated. Remove the pictures and files to send this.";
 "crewAPart" = "A part";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "I bring back answers and choices as cards like this one.";
 "welcomeEnd" = "That is all of it. To begin, press a starter below.";
 "welcomeFigure" = "Your window, one part per press: the message box, a card, Activity and Tasks";
+"welcomeFolderAdded" = "Added %1$@ as a project. Type what you want done with it in the message box.";
+"welcomeFolderAddedGit" = "Added %1$@ as a project and started git in the folder with an empty first commit. Type what you want done with it in the message box.";
+"welcomeFolderAlreadyAdded" = "%1$@ is already one of your projects. Type what you want done with it in the message box.";
 "welcomeLabelActivity" = "Activity";
 "welcomeLabelBox" = "the message box";
 "welcomeLabelTasks" = "Tasks";

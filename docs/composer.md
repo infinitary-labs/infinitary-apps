@@ -235,6 +235,10 @@ The task prompt and a card's reply row (both layouts) take files through the sam
   Text keeps every byte and line ending; on send the core writes it to the overflow folder as before and the message carries `[attached file: name]`, the first 2,000 characters and the full-text pointer.
   While a file is read the chip says *Preparing* with a Cancel control; send waits until none is preparing (a voice send waits for it, `whenPrepared`), and a refused send keeps its draft and chips.
   An over-5 MB file, a full allowance, a folder, a shortcut (never followed) or a read failure each get their own notice and are never turned into a path.
+- **A folder dropped on the task prompt** offers itself as a project, in a window on the first mate's own computer.
+  The host answers its path (`inf:files:inspect`), and `inf:repos:offer-folder` puts up the project setup card for it with Add project (`docs/fleet.md`, "Asking the first mate to add a project"); nothing is added until that click.
+  A folder already on the list gets the notice `folder-project` ("That folder is already one of your projects"), and one the app refuses gets `folder-not-project` ("That folder could not be added as a project").
+  A folder given to a card's reply, to a view, or chosen through **Add files** keeps its notice (`FileDestination.addFolder`).
 - **An unsupported format becomes its path.**
   A PDF, office document, archive or any other format is typed into the input, at the caret, as its absolute local path - ordinary editable text, one path per line, set apart from the words around it (`pathInsertion`), through the field's normal edit so undo works.
   No chip, no copy, no preview, no long-paste chip, no send.

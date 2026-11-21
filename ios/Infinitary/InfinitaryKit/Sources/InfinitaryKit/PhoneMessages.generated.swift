@@ -568,6 +568,8 @@ public enum PhoneMessages {
     public static func `commandUsageUnitWords`() -> String { PhoneWords.format("commandUsageUnitWords", []) }
     public static func `commandWhatsNewShow`() -> String { PhoneWords.format("commandWhatsNewShow", []) }
     public static func `commandWhatsNewShowWords`() -> String { PhoneWords.format("commandWhatsNewShowWords", []) }
+    public static func `composerFolderNotProject`() -> String { PhoneWords.format("composerFolderNotProject", []) }
+    public static func `composerFolderProject`() -> String { PhoneWords.format("composerFolderProject", []) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
     public static func `composerTooLongShorten`() -> String { PhoneWords.format("composerTooLongShorten", []) }
     public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
@@ -3699,6 +3701,9 @@ public enum PhoneMessages {
     public static func `welcomeCard`() -> String { PhoneWords.format("welcomeCard", []) }
     public static func `welcomeEnd`() -> String { PhoneWords.format("welcomeEnd", []) }
     public static func `welcomeFigure`() -> String { PhoneWords.format("welcomeFigure", []) }
+    public static func `welcomeFolderAdded`(`name`: String) -> String { PhoneWords.format("welcomeFolderAdded", [`name`]) }
+    public static func `welcomeFolderAddedGit`(`name`: String) -> String { PhoneWords.format("welcomeFolderAddedGit", [`name`]) }
+    public static func `welcomeFolderAlreadyAdded`(`name`: String) -> String { PhoneWords.format("welcomeFolderAlreadyAdded", [`name`]) }
     public static func `welcomeLabelActivity`() -> String { PhoneWords.format("welcomeLabelActivity", []) }
     public static func `welcomeLabelBox`() -> String { PhoneWords.format("welcomeLabelBox", []) }
     public static func `welcomeLabelTasks`() -> String { PhoneWords.format("welcomeLabelTasks", []) }
@@ -4281,6 +4286,8 @@ extension PhoneWords {
         "commandUsageUnitWords": [],
         "commandWhatsNewShow": [],
         "commandWhatsNewShowWords": [],
+        "composerFolderNotProject": [],
+        "composerFolderProject": [],
         "composerLines": ["count"],
         "composerTooLongShorten": [],
         "composerWordsOnly": [],
@@ -7412,6 +7419,9 @@ extension PhoneWords {
         "welcomeCard": [],
         "welcomeEnd": [],
         "welcomeFigure": [],
+        "welcomeFolderAdded": ["name"],
+        "welcomeFolderAddedGit": ["name"],
+        "welcomeFolderAlreadyAdded": ["name"],
         "welcomeLabelActivity": [],
         "welcomeLabelBox": [],
         "welcomeLabelTasks": [],

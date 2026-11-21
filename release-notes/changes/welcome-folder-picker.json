@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "welcome-folder-picker",
+      "kind": "improvement",
+      "title": "Choose your first project folder from your computer's folder picker",
+      "body": "On the welcome card, Work in a folder on my computer now opens your computer's folder picker. The folder you choose becomes a project, the card names it, and the message box is ready for what you want done with it. A folder you drop on the message box offers to add it as a project. When the first mate cannot find a folder you named, it offers folders with a similar name and a Choose folder button.",
+      "area": "projects",
+      "picture": {
+        "dark": "welcome-folder-picker-dark.webp",
+        "light": "welcome-folder-picker-light.webp",
+        "alt": "The welcome card after choosing a folder named meter, saying it added meter as a project and started git in it, and pointing at the message box."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

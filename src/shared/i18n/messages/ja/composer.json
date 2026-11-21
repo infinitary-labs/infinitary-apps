@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "そのフォルダをプロジェクトとして追加できませんでした。",
+  "composerFolderProject": "そのフォルダはすでにプロジェクトに入っています。",
   "composerLines": {
     "plural": "count",
     "other": "{count}行"

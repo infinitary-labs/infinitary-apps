@@ -24,6 +24,9 @@ import { scratchDir } from "./helpers/scratchDirs";
 // Preserve the original release-contract budget; discovery keeps its explicit budget.
 vi.setConfig({ testTimeout: 10_000 });
 
+/** The branch check's three jobs, in ci.yml's order. */
+const BRANCH_CHECK = ["code-checks", "reached-tests", "build"];
+
 /** The pull request's checks and main's sweep jobs (ci.yml). */
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
@@ -38,7 +41,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // it asks for the sweep, so a lint before a pull request costs no sweep.
   it("starts no test sweep on a request that does not ask for it", () => {
     const names = ciJobs("workflow_dispatch", false).map((job) => job.id);
-    expect(names).toEqual(["typecheck-lint-build"]);
+    expect(names).toEqual(["code-checks", "build"]);
   });
 
   it.each([
@@ -65,7 +68,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       { key: "base_ref", value: new data.StringData(eventName === "pull_request" ? "main" : "") },
       { key: "ref", value: new data.StringData(ref) },
     );
-    const gate = ci.jobs["typecheck-lint-build"]?.steps ?? [];
+    // INF-5577's review, the captain's pick "Split the branch check into
+    // three jobs that run side by side": the branch check is three jobs,
+    // whose steps together are the one gate a change passes.
+    const gate = BRANCH_CHECK.flatMap((id) => ci.jobs[id]?.steps ?? []);
     // INF-2414 (captain: "why can't we catch release note problems before
     // merge?"): the pull request's notes step (docs/release-notes.md, "The
     // release check").
@@ -83,12 +89,22 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(phoneFlag?.["continue-on-error"]).toBeFalsy();
     // INF-2915's plan: the paths step decides the build, the browser tests
     // and the critical path (scripts/pr-paths.ts).
-    const paths = gate.find((step) => step.id === "paths");
-    expect(paths?.run).toBe('node scripts/pr-paths.ts --base "$CHANGE_BASE"');
+    // The tests job reads its browser verdict and the build job its build
+    // verdict, each from its own run of the step.
+    const pathSteps = gate.filter((step) => step.id === "paths");
+    expect(pathSteps.map((step) => step.run)).toEqual(
+      Array(2).fill('node scripts/pr-paths.ts --base "$CHANGE_BASE"'),
+    );
+    const [paths] = pathSteps;
     // INF-3759's plan, piece 2: the step that says where the change starts,
     // which the notes, paths, reader and critical-path steps all read.
-    const base = gate.find((step) => step.name === "Find the change's base");
+    // Each of the three jobs finds it alike, so each skips alike on a batch's
+    // version.
+    const bases = gate.filter((step) => step.name === "Find the change's base");
+    expect(bases).toHaveLength(BRANCH_CHECK.length);
+    const [base] = bases;
     expect(base?.run).toBeDefined();
+    for (const other of bases) expect(other.run).toBe(base?.run);
     // INF-2441 (captain's choice: "Run the tests that read each changed file
     // inside the pull request's build check"): the pull request's round of
     // the unit, integration and browser tests that read a changed file
@@ -120,10 +136,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const evidence = gate.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     for (const step of [build, desktop, criticalPath, skips, evidence]) expect(step).toBeDefined();
     const gated = [
-      base,
+      ...bases,
       notes,
       phoneFlag,
-      paths,
+      ...pathSteps,
       reach,
       testTools,
       chromium,
@@ -145,7 +161,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         step.uses?.startsWith("actions/setup-node@") ||
         ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm check"].includes(step.run ?? ""),
     );
-    expect(setup).toHaveLength(7);
+    // Each job sets up and installs on its own; the code checks job alone
+    // runs the typecheck and the lint.
+    expect(setup).toHaveLength(5 * BRANCH_CHECK.length + 2);
     gated.push(...setup);
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
@@ -165,7 +183,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         ),
       );
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
-      expect(eligible.evaluate().coerceString(), id).toBe(fullSweep && change ? "false" : "true");
+      // A request reaches no change's tests; its sweep runs them all.
+      const runs = fullSweep ? !change : id !== "reached-tests" || change;
+      expect(eligible.evaluate().coerceString(), id).toBe(String(runs));
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
       // gate's pull request and changed-path steps, the critical path's
@@ -205,17 +225,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
     const from = eventName === "pull_request" ? "HEAD^1" : "origin/main";
+    const found = base?.run?.trim().replace('"$FROM"', from);
     for (const { id, name, runs } of machines)
       expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
-        change && id === "typecheck-lint-build"
-          ? [
-              base?.run?.trim().replace('"$FROM"', from),
-              notes?.run,
-              phoneFlag?.run,
-              paths?.run,
-              install,
-            ]
-          : [install],
+        !change || !BRANCH_CHECK.includes(id)
+          ? [install]
+          : id === "code-checks"
+            ? [found, notes?.run, phoneFlag?.run, install]
+            : [found, paths?.run, install],
       );
     const checks = machines
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
@@ -233,14 +250,22 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const browserRuns = machines.flatMap(({ id, runs }) =>
       runs.filter((run) => /^pnpm test .*--project browser\b/.test(run)).map(() => id),
     );
-    expect(browserRuns).toEqual([change ? "typecheck-lint-build" : "unit-tests"]);
-    // The job says what started it (scripts/ci-job-names.mjs).
-    expect(machines.find(({ id }) => id === "typecheck-lint-build")?.name).toBe(
-      {
-        pull_request: "Pull request · Code, build, affected tests and critical path (Linux)",
-        push: "Branch push · Code, build, affected tests and critical path (Linux)",
-        workflow_dispatch: "Manual request · Code and build (Linux)",
-      }[eventName],
+    expect(browserRuns).toEqual([change ? "reached-tests" : "unit-tests"]);
+    // Each job says what started it and what it checks (scripts/ci-job-names.mjs).
+    const trigger = { pull_request: "Pull request", push: "Branch push" }[eventName];
+    expect(
+      machines.filter(({ id }) => BRANCH_CHECK.includes(id)).map(({ id, name }) => [id, name]),
+    ).toEqual(
+      trigger
+        ? [
+            ["code-checks", `${trigger} · Code checks (Linux)`],
+            ["reached-tests", `${trigger} · Tests a change reaches (Linux)`],
+            ["build", `${trigger} · Build and critical path (Linux)`],
+          ]
+        : [
+            ["code-checks", "Manual request · Code checks (Linux)"],
+            ["build", "Manual request · Build (Linux)"],
+          ],
     );
   });
 
@@ -253,25 +278,29 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // request never name a batch version, so they run as before.
   it("runs only the base step on a branch built on a batch's version", () => {
     const held = "c".repeat(40);
-    const steps = loadCi().jobs["typecheck-lint-build"]?.steps ?? [];
-    const ran = steps.filter(
-      (step) =>
-        step.if === undefined ||
-        workflowValue(step.if, {
-          github: { event_name: "push" },
-          steps: {
-            base: { outputs: { batch: held } },
-            paths: { outputs: {} },
-            "critical-path": { outcome: "skipped" },
-          },
-        }) === true,
+    for (const id of BRANCH_CHECK) {
+      const steps = loadCi().jobs[id]?.steps ?? [];
+      const ran = steps.filter(
+        (step) =>
+          step.if === undefined ||
+          workflowValue(step.if, {
+            github: { event_name: "push" },
+            steps: {
+              base: { outputs: { batch: held } },
+              paths: { outputs: {} },
+              "critical-path": { outcome: "skipped" },
+            },
+          }) === true,
+      );
+      expect(
+        ran.map((step) => step.name ?? step.uses?.replace(/@.*/, "")),
+        id,
+      ).toEqual(["actions/checkout", "Find the change's base"]);
+    }
+    const base = loadCi().jobs["code-checks"]?.steps.find((step) => step.id === "base");
+    expect(ciJobs("push", false, undefined, held).map(({ id, runs }) => [id, runs])).toEqual(
+      BRANCH_CHECK.map((id) => [id, [base?.run?.trim().replace('"$FROM"', "origin/main")]]),
     );
-    expect(ran.map((step) => step.name ?? step.uses?.replace(/@.*/, ""))).toEqual([
-      "actions/checkout",
-      "Find the change's base",
-    ]);
-    const [gate] = ciJobs("push", false, undefined, held);
-    expect(gate?.runs).toEqual([ran[1]?.run?.trim().replace('"$FROM"', "origin/main")]);
     // The batch's own run reads the notes and the phone contract flag from
     // the main version the batch left, which the check skips here.
     const notes = loadYamlFile(".github/workflows/batch-checks.yml") as {
@@ -293,8 +322,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     [{ build: false, browser: true }, ["browser"]],
     [{ build: false, browser: false }, []],
   ])("runs only what the paths step decided for %j", (paths, expected) => {
-    const [gate] = ciJobs("pull_request", false, paths);
-    const runs = gate?.runs ?? [];
+    const runs = ciJobs("pull_request", false, paths).flatMap((job) => job.runs);
     const ran = [
       runs.includes("pnpm build") && "build",
       runs.includes("pnpm test --project browser") && "browser",
@@ -334,7 +362,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * same way.
    */
   it("runs the critical-path journey inside the build check after the build", () => {
-    const job = loadCi().jobs["typecheck-lint-build"];
+    const job = loadCi().jobs.build;
     const steps = job?.steps ?? [];
     const at = (find: (step: Step) => boolean) => steps.findIndex(find);
     const build = at((step) => step.run === "pnpm build");
@@ -426,7 +454,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     }
     expect(installs).toEqual(
       expect.arrayContaining([
-        "ci.yml:typecheck-lint-build",
+        "ci.yml:code-checks",
+        "ci.yml:reached-tests",
+        "ci.yml:build",
         "ci.yml:unit-tests",
         "ci.yml:integration-tests",
         "ci.yml:probe-tests",
@@ -568,9 +598,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
  * them.
  */
 describe("the change's base (ci.yml)", () => {
-  const step = loadCi().jobs["typecheck-lint-build"]?.steps.find(
-    (s) => s.name === "Find the change's base",
-  );
+  const step = loadCi().jobs["code-checks"]?.steps.find((s) => s.name === "Find the change's base");
 
   function scratch() {
     const dir = scratchDir("infinitary-change-base-");
@@ -733,7 +761,7 @@ describe("public CI admission", () => {
   it("starts an outside pull request's checks, never the batch, even on a batch-like branch", () => {
     for (const branch of ["inf/ordinary", "infinitary-batch/reviewed"])
       expect(admitted(contributor, branch), branch).toEqual([
-        ["typecheck-lint-build"],
+        [...BRANCH_CHECK],
         ["build-and-check"],
         [],
         ["paths"],
@@ -757,7 +785,7 @@ describe("public CI admission", () => {
       expect(label, where).toMatch(hostedLabel);
     };
     const [ci = {}, docs = {}, , contributors = {}] = paths.map(jobsOf);
-    runner("ci.yml:typecheck-lint-build", ci["typecheck-lint-build"], { sweep: false });
+    for (const id of BRANCH_CHECK) runner(`ci.yml:${id}`, ci[id], { sweep: false });
     runner("docs-site.yml:build-and-check", docs["build-and-check"], {});
     runner("contributors.yml:paths", contributors.paths, {});
     // Each called workflow's jobs, with the inputs the contributor's call passes.
@@ -798,7 +826,7 @@ describe("public CI admission", () => {
 
   it("keeps the ordinary and swept internal PR routes, and starts no contributor job", () => {
     expect(admitted(repository, "inf/ordinary")).toEqual([
-      ["typecheck-lint-build"],
+      [...BRANCH_CHECK],
       ["build-and-check"],
       [],
       [],

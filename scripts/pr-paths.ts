@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
  * --reach, INF-2999). The swept batch runs all three on every approved change
  * before it reaches main (docs/testing.md, "What a pull request runs").
  *
- *   node scripts/pr-paths.ts --base <ref>   (ci.yml's typecheck-lint-build job)
+ *   node scripts/pr-paths.ts --base <ref>   (ci.yml's reached-tests and build jobs)
  *
  * Plain Node with no install, like the release notes step: it prints each
  * verdict and writes `build=` and `browser=true|false` to $GITHUB_OUTPUT when

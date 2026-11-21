@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "branch-check-split",
+      "reason": "Splits the project's branch check into three jobs that run side by side and sends the project's own branch checks to its own Linux machines. Only how the project's checks run changes; the app is unchanged."
+    }
+  ]
+}

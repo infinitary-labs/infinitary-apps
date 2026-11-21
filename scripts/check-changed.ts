@@ -17,9 +17,9 @@ import { jobCores, jobMemory } from "./job-cores.ts";
  * seconds, so they run side by side, as many at once as the job has cores and
  * the computer's memory holds (`quickCheckLanes`), and print in order. It is
  * not gated by CI mode, so the Mac mini can
- * run it; the full lint and the typecheck also stay in the pull request's
- * `typecheck-lint-build` check (INF-2074, docs/testing.md "Where the heavy
- * checks run").
+ * run it; the full lint and the typecheck also stay in the branch check's
+ * `code-checks` job (INF-2074, docs/testing.md "Where the heavy checks
+ * run").
  */
 // Its stderr rides a failure's message, so a probe that misses prints nothing.
 const git = (args: string[], cwd?: string) =>

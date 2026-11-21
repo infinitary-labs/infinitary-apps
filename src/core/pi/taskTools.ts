@@ -293,10 +293,10 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     label: "Update task",
     description: [
       "Edit tasks; only unstarted open work can change project.",
-      "Captain-requested start_again alone replaces dropped work, keeps saved work/waits and returns a new key. Routes afresh, not escalation.",
-      "To drop a task pass drop true with reason; confirm true also supersedes open children. Use replaced_by for replacement, settle_task for started work.",
+      "Only captain-requested start_again replaces dropped work, keeping saved work/waits and returning a new key. Routes afresh, not escalation.",
+      "Drop with drop true and reason; confirm true also supersedes open children. Use replaced_by for replacement, settle_task for started work.",
       "start_now applies edits first, stops on refusals, and starts queued work on an available model despite allowance waits.",
-      "When the user names a model, pass override_model_id (start_now starts it now): it keeps its key and links; never drop it to spawn a replacement.",
+      "When the user names a model, pass override_model_id (start_now starts it): it keeps its key and links; never drop it to spawn a replacement.",
       "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them. Policy edits never start/restart work.",
       "Local Careful = Default; keep request. No silent PR close or fallback without access. Ask only unclear task/scope/consent; refusals name blockers.",
     ].join(" "),
@@ -488,7 +488,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ],
           {
             description:
-              "Hold started idle work waiting on time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation. No reminders except unanswered captain replies; notify once at deadline if held. Any turn ends it sooner; on_event does too, via a one-shot automatic rule telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
+              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation. No reminders except unanswered captain replies; notify once at deadline if held. Any turn ends it sooner; on_event does too, via a one-shot automatic rule telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
           },
         ),
       ),

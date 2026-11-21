@@ -132,6 +132,14 @@ export type AccountRecord = {
    */
   useSavedResets?: boolean;
   /**
+   * The captain tried a spent allowance anyway (`tryPastSpent`): the
+   * account goes by its provider's answers, not its allowance reading,
+   * until the provider refuses it again or the store names another login.
+   * The client can answer on a login the store does not name, such as a
+   * token its launcher passes, and only the provider sees that one.
+   */
+  goesByAnswers?: boolean;
+  /**
    * The attempt to use one of the account's saved Codex resets that Codex
    * has not answered clearly yet (docs/codex-client.md): its key is sent
    * again on the next try, so a lost answer never uses a second reset.
@@ -735,6 +743,11 @@ export class AccountVault {
     ) {
       return;
     }
+    // The provider refused the allowance again: what the captain tried is answered.
+    if (cutOff.class === "no_headroom" && account.goesByAnswers) {
+      delete account.goesByAnswers;
+      this.saveRegistry();
+    }
     // A cut-off with a looser way back never replaces a stricter one that
     // stands: a refusal outlives a later lost sign-in or spent allowance
     // (a turn already in flight settling after it), or a clock or a routine
@@ -898,6 +911,27 @@ export class AccountVault {
     if (this.cutOff(accountId)?.class !== "refused") return false;
     this.clearCutOff(accountId);
     return true;
+  }
+
+  /**
+   * The captain's Try again on a spent allowance a recheck saw unchanged:
+   * the hold ends on their word, the account goes by its provider's
+   * answers rather than its reading (`goesByAnswers`), and the next turn is
+   * the attempt. A refusal of it is held again, as any other.
+   */
+  tryPastSpent(accountId: string): void {
+    const account = this.registry.accounts.find((entry) => entry.id === accountId);
+    if (!account || !this.get(accountId)) return;
+    if (!account.goesByAnswers) {
+      account.goesByAnswers = true;
+      this.saveRegistry();
+    }
+    if (this.cutOff(accountId)?.class === "no_headroom") this.clearCutOff(accountId);
+  }
+
+  /** Whether the account goes by its provider's answers past its reading (`tryPastSpent`). */
+  goesByAnswers(accountId: string): boolean {
+    return this.registry.accounts.find((entry) => entry.id === accountId)?.goesByAnswers === true;
   }
 
   /**
@@ -1429,6 +1463,8 @@ export class AccountVault {
     if (!account || login === undefined || account.login === login) return false;
     const changed = account.login !== undefined;
     account.login = login;
+    // The new login's reading is its own: nothing tried on the old one stands.
+    if (changed) delete account.goesByAnswers;
     this.saveRegistry();
     if (!changed) return false;
     this.clearCutOff(accountId);

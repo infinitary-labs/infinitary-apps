@@ -492,6 +492,7 @@ public enum PhoneMessages {
     public static func `cardSinceSeenSaw`(`when`: String) -> String { PhoneWords.format("cardSinceSeenSaw", [`when`]) }
     public static func `cardSoundUnplayable`() -> String { PhoneWords.format("cardSoundUnplayable", []) }
     public static func `cardSoundWord`() -> String { PhoneWords.format("cardSoundWord", []) }
+    public static func `cardSpentTryOnce`(`provider`: String) -> String { PhoneWords.format("cardSpentTryOnce", [`provider`]) }
     public static func `cardTabStripLabel`() -> String { PhoneWords.format("cardTabStripLabel", []) }
     public static func `cardThreadAddFiles`() -> String { PhoneWords.format("cardThreadAddFiles", []) }
     public static func `cardThreadCard`() -> String { PhoneWords.format("cardThreadCard", []) }
@@ -4463,6 +4464,7 @@ extension PhoneWords {
         "cardSinceSeenSaw": ["when"],
         "cardSoundUnplayable": [],
         "cardSoundWord": [],
+        "cardSpentTryOnce": ["provider"],
         "cardTabStripLabel": [],
         "cardThreadAddFiles": [],
         "cardThreadCard": [],

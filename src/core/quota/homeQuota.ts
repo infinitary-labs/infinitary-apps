@@ -329,6 +329,25 @@ export function startHomeQuota(options: {
     stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
     broadcast: options.broadcast,
   });
+  // One fact for a spent allowance: however the vault's hold ends - its
+  // reset, a reading with more left, credits, the captain's Try again - the
+  // refused readings laid over its meter end with it, so the seat, the crew
+  // and the meter never read two answers.
+  const spentHeld = new Set(
+    vault
+      .list()
+      .filter((account) => vault.cutOff(account.id)?.class === "no_headroom")
+      .map((account) => account.id),
+  );
+  vault.onCutOffChange((accountId) => {
+    if (vault.cutOff(accountId)?.class === "no_headroom") {
+      spentHeld.add(accountId);
+      return;
+    }
+    if (!spentHeld.delete(accountId)) return;
+    endRefusedReadings(accountId);
+    void quota.refresh("pushed");
+  });
   return {
     quota,
     pushed: pushedQuota,

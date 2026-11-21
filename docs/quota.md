@@ -149,6 +149,7 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
+  The hold and its refused readings are one fact: however the vault's hold ends - its reset, a reading with more left, credits, another login or the captain's Try again - the home's quota wiring ends the account's `rejected` readings with it (`AccountVault.onCutOffChange` in `src/core/quota/homeQuota.ts`), so the seat, the crew lanes and the meter never read two answers.
 - **Clearing, only when a fact changes** (owner Q1 a: never an automatic attempt).
   Each fact carries the stamp it was seen under (`CredentialStamp`): which login the store holds (a digest of the account and organisation the client's config names), when the credential was last written (the plain-file store's modification time, else the Keychain item's), and the client's version, projected from the shared store result by `claudeCredentialStamp` and never carrying a token.
   Its existing digest and file-first modification-date format stay compatible with saved refusals and records of pasted-code logins; neither needs a second reader.
@@ -156,6 +157,9 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   One fact stands at a time, and a cut-off with a looser way back never replaces a stricter one that stands (refused, then signed_out, then no_headroom): a turn already in flight that settles after a refusal cannot hand it to a clock or a routine rewrite.
   Before the first read after a restart, `servesSync` and `withheldReason` answer from the standing fact.
   - `no_headroom` clears at its reset, or when the store names another login: the spent allowance belonged to the old login, so a swapped-in login is not held by it (and held crew lanes resume within the idle ladder's next tick).
+    It also clears on the captain's "Try <provider> again" on the first mate's spent-allowance card, offered once the captain's recheck read the allowance unchanged (`AccountVault.tryPastSpent`).
+    The client can answer on a login the store does not name, such as a token a launcher passes it, and only the provider sees that one, so the account then goes by the provider's answers rather than its allowance reading (`AccountRecord.goesByAnswers`, which `Flagship.pause` reads) until the provider refuses it again or the store names another login.
+    The next turn is the attempt: served, the seat stays on the account; refused, the hold, its refused reading and the pause come back, at the cost of that one refused request.
   - `signed_out` clears when the store is written again, names another login, or the provider accepts that same login again.
     A dead login cannot renew itself, so a rewrite is a new sign-in (or a renewal that worked).
     A still-live login never rewrites itself, so a good allowance reading or a turn that succeeded on it clears the mark too (`AccountVault.noteAccepted`), and so does the row's Sign in once it ends, since a store the app cannot read shows no rewrite of the new login.

@@ -283,6 +283,7 @@
   "cardSinceSeenSaw": "Desde la tarjeta que viste · {when}",
   "cardSoundUnplayable": "No se pudo reproducir este sonido.",
   "cardSoundWord": "Sonido",
+  "cardSpentTryOnce": "La lectura no ha cambiado. Si tu primer oficial llega a {provider} con otro inicio de sesión, como un token que pasa tu propia configuración, volver a intentarlo envía tus mensajes una vez; si la asignación sigue agotada, vuelve a pausarse.",
   "cardTabStripLabel": "Tarjeta de la tarea",
   "cardThreadAddFiles": "Agregar archivos a esta respuesta",
   "cardThreadCard": "tarjeta",

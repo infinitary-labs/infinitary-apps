@@ -455,6 +455,7 @@
 "cardSinceSeenSaw" = "Seit der Karte, die du gesehen hast · %1$@";
 "cardSoundUnplayable" = "Dieser Ton konnte nicht abgespielt werden.";
 "cardSoundWord" = "Ton";
+"cardSpentTryOnce" = "Der Stand hat sich nicht geändert. Wenn dein erster Offizier %1$@ über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.";
 "cardTabStripLabel" = "Aufgabenkarte";
 "cardThreadAddFiles" = "Dateien zu dieser Antwort hinzufügen";
 "cardThreadCard" = "Karte";

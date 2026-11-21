@@ -3,6 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { isAuthFailureMessage } from "@shared/authFailure";
 import { CLAUDE_ACCESS_RENEW_WORDS, claudeAccessRefusedText } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
+import * as m from "@shared/i18n/messages.generated";
 import { isRunawayProviderError } from "@shared/plainProblem";
 import { backendForProvider, catalogEntry } from "@shared/providers";
 import { clockTime, type QuotaSnapshotView } from "@shared/quota";
@@ -28,6 +29,7 @@ import {
   FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS,
   type FirstmatePauseCard,
   savedResetsWords,
+  spentAttemptOf,
 } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import type { SeatMoveReason, WakeSeat } from "./noticeWakes";
@@ -719,6 +721,7 @@ export class FirstmateSeat {
       previous.class !== pause.class ||
       previous.move !== other?.providerId;
     if (fresh) {
+      this.attemptOffered = undefined;
       this.paused = {
         accountId,
         class: pause.class,
@@ -768,6 +771,7 @@ export class FirstmateSeat {
       providerName,
       ...(other ? { move: other } : {}),
       ...(this.rechecking ? { checking: true } : {}),
+      ...(this.offersAttempt(accountId, pause) ? { attempt: true } : {}),
       ...(credits ? { credits } : {}),
       ...(pause.class === "no_headroom" && flagship?.savedResetsNow(accountId)
         ? { savedResets: true }
@@ -792,7 +796,11 @@ export class FirstmateSeat {
         providerId && flagship.accountCount(providerId) > 1
           ? `Your first mate's ${providerName} accounts have used up their allowance (${summary}).`
           : flagship.pauseSentence(accountId, pause);
-      const checked = this.allowanceCheckWords(accountId);
+      const checked = `${this.allowanceCheckWords(accountId)}${
+        this.offersAttempt(accountId, pause)
+          ? ` ${m.cardSpentTryOnce({ provider: providerName })}`
+          : ""
+      }`;
       const resets = this.savedResetsWords(accountId, providerName);
       const offer = flagship.creditsOffer(accountId);
       if (offer)
@@ -868,6 +876,7 @@ export class FirstmateSeat {
     // Whatever pause card is up - one a previous run left, too - asks a
     // question that is gone. Taking one down is idempotent.
     this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("serves again");
+    this.attemptOffered = undefined;
     const paused = this.paused;
     if (!paused) return;
     this.paused = undefined;
@@ -948,17 +957,26 @@ export class FirstmateSeat {
    * The refused card's "Try again" (W1 S9): the captain's word clears the
    * refusal (S7's clearing), the pause cards go, and the lane drains once -
    * the waiting rows are due now, so that drain is the attempt. A turn that
-   * is refused again pauses again; nothing tries on its own.
+   * is refused again pauses again; nothing tries on its own. The spent
+   * allowance's card offers the same attempt once the captain's recheck
+   * read it unchanged.
    */
-  tryAgain(accountId: string): void {
+  tryAgain(arg: string): void {
     const flagship = this.options.flagship;
     if (!flagship) return;
-    // On a spent allowance, trying again is reading it again.
+    const attempt = spentAttemptOf(arg);
+    const accountId = attempt ?? arg;
+    // On a spent allowance, trying again is reading it again; the attempt
+    // the card offers once a reading saw no change goes by the provider's
+    // answer instead (`Flagship.tryPastSpent`).
     if (flagship.pause(accountId)?.class === "no_headroom") {
-      void this.recheckAllowance({ fromCard: true });
-      return;
-    }
-    flagship.tryAgain(accountId);
+      if (attempt === undefined) {
+        void this.recheckAllowance({ fromCard: true });
+        return;
+      }
+      this.attemptOffered = undefined;
+      flagship.tryPastSpent(accountId);
+    } else flagship.tryAgain(accountId);
     if (this.paused?.accountId === accountId) this.paused = undefined;
     this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("trying again");
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
@@ -1006,6 +1024,14 @@ export class FirstmateSeat {
   /** The running recheck came from the card, so its card comes back. */
   private recheckRaises = false;
 
+  /** The account whose card offers one attempt: the captain's recheck saw it still spent. */
+  private attemptOffered: string | undefined;
+
+  /** Whether the pause card offers the attempt in place of another recheck. */
+  private offersAttempt(accountId: string, pause: SeatPause): boolean {
+    return pause.class === "no_headroom" && !this.rechecking && this.attemptOffered === accountId;
+  }
+
   private async runRecheck(): Promise<QuotaSnapshotView | undefined> {
     this.rechecking = true;
     this.showSpentAllowanceCard();
@@ -1014,6 +1040,11 @@ export class FirstmateSeat {
     } finally {
       this.rechecking = false;
       this.checkSeat();
+      // The captain's own recheck read the allowance spent again: the card
+      // offers one attempt, for a sign-in the reading does not see.
+      const paused = this.paused;
+      if (this.recheckRaises && paused?.class === "no_headroom")
+        this.attemptOffered = paused.accountId;
       this.showSpentAllowanceCard();
       this.recheckRaises = false;
       void this.host.drain();

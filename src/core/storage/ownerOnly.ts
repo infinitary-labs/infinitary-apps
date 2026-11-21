@@ -68,18 +68,27 @@ function accountMayHold(account: string, user: string): boolean {
   return number.startsWith("S-1-15-");
 }
 
-/** Owners that keep a folder this account's: itself, Windows, or the administrators. */
+/**
+ * Owners that keep a folder this account's: itself, Windows, or the administrators. An owner that
+ * could not be read is none of them.
+ */
 function ownerKeeps(owner: string | null, user: string): boolean {
-  if (owner === null) return true;
+  if (owner === null) return false;
   const number = accountNumber(owner);
   return number === user || number === "S-1-5-18" || number === "S-1-5-32-544";
 }
 
-/** Reads a security descriptor string's owner (`O:`) and access list (`D:`). */
+/**
+ * Reads a security descriptor string's owner (`O:`) and access list (`D:`). A list not read to its
+ * end - one holding an entry this reading does not take apart, as a conditional entry with its own
+ * brackets - reads as no list, which every judgment refuses, never as the entries before it.
+ */
 export function readAccessList(sddl: string): AccessList {
   const owner = /O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
   const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
   if (!dacl || /D:NO_ACCESS_CONTROL/.test(sddl)) return { owner, entries: null, protected: false };
+  const rest = sddl.slice(dacl.index + dacl[0].length);
+  if (rest !== "" && !rest.startsWith("S:")) return { owner, entries: null, protected: false };
   const flags = dacl[1] ?? "";
   const entries = [...(dacl[2] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
     const fields = (match[1] ?? "").split(";");
@@ -134,6 +143,22 @@ export function othersCanChange(list: AccessList, user: string): boolean {
       !entry.flags.includes("IO") &&
       !accountMayHold(entry.account, user) &&
       letsChange(entry.rights),
+  );
+}
+
+/**
+ * Whether a folder hands another ordinary account any access to what is made in it: an entry that
+ * passes to new folders or files (`CI`, `OI`) allowing an account besides this one, Windows and the
+ * administrators, or no list, or one not read whole. A folder made where none is handed down is
+ * this account's from its making, before its own list is set.
+ */
+export function handsDownToOthers(list: AccessList, user: string): boolean {
+  if (list.entries === null || !ownerKeeps(list.owner, user)) return true;
+  return list.entries.some(
+    (entry) =>
+      allows(entry) &&
+      (entry.flags.includes("CI") || entry.flags.includes("OI")) &&
+      !accountMayHold(entry.account, user),
   );
 }
 

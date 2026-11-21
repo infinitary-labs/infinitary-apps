@@ -207,89 +207,101 @@ describe("a refused launch's word to the person", () => {
     };
     const sets = (run: { asks: AccessAsk[] }) =>
       run.asks.flatMap((ask) => ask.set.map((each) => each.path));
+    const touched = (run: { asks: AccessAsk[] }) =>
+      run.asks.flatMap((ask) => [...ask.read, ...ask.set.map((each) => each.path)]);
     const root = () => join(realpathSync(scratchDir("person-word-windows-")), "word-profiles");
     const own = answering(ownList);
     const ownRoot = root();
-    expect((await ownProfilesFolder(ownRoot, "win32", own))?.path).toBe(ownRoot);
-    expect(own.asks.some((ask) => ask.read.includes(ownRoot))).toBe(true);
-    // Found again by a later launch, which reads the folder and its mark and sets nothing.
+    const kept = (await ownProfilesFolder(ownRoot, "win32", own))?.path ?? "";
+    expect(kept.startsWith(`${ownRoot}.`)).toBe(true);
+    expect(touched(own)).toContain(kept);
+    // Reserved at the name by its own mark, linked there once the folder was private and marked.
+    expect(readFileSync(ownRoot, "utf8")).toBe(WORD_PROFILES_MARK);
+    expect(readdirSync(kept)).toEqual([WORD_PROFILES_RESERVED]);
+    // Found again by a later launch, which reads the reservation and its folder and sets nothing.
     const again = answering(ownList);
-    expect((await ownProfilesFolder(ownRoot, "win32", again))?.path).toBe(ownRoot);
+    expect((await ownProfilesFolder(ownRoot, "win32", again))?.path).toBe(kept);
     expect(sets(again)).toEqual([]);
-    const read = again.asks.flatMap((ask) => ask.read);
-    expect(read).toContain(ownRoot);
-    expect(read).toContain(join(ownRoot, WORD_PROFILES_RESERVED));
-    // One already there that is not owner-only, whose mark is not the app's, or whose mark another
-    // account could have written, is only read: no access list is set on it, and a folder at the
-    // next name is made instead.
-    const shared = root();
-    mkdirSync(shared, { recursive: true });
-    writeFileSync(join(shared, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+    expect(touched(again)).toContain(ownRoot);
+    expect(touched(again)).toContain(kept);
+    // A reservation whose folder is not owner-only, or whose mark another account could have
+    // written, is only read: no access list is set on it, and the next name is reserved instead.
+    const reserved = async () => {
+      const name = root();
+      const folder = (await ownProfilesFolder(name, "win32", answering(ownList)))?.path ?? "";
+      return { name, folder };
+    };
+    const shared = await reserved();
     const inherited = answering(ownList, (path) =>
-      path === shared ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})` : ownList,
+      path === shared.folder ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})` : ownList,
     );
-    expect((await ownProfilesFolder(shared, "win32", inherited))?.path).toBe(`${shared}-2`);
-    expect(sets(inherited)).not.toContain(shared);
-    const marked = root();
-    mkdirSync(marked, { recursive: true });
-    writeFileSync(join(marked, WORD_PROFILES_RESERVED), "someone else's\n");
-    const malformed = answering(ownList);
-    expect((await ownProfilesFolder(marked, "win32", malformed))?.path).toBe(`${marked}-2`);
-    expect(sets(malformed)).not.toContain(marked);
-    expect(readFileSync(join(marked, WORD_PROFILES_RESERVED), "utf8")).toBe("someone else's\n");
-    const planted = root();
-    mkdirSync(planted, { recursive: true });
-    writeFileSync(join(planted, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+    const instead = (await ownProfilesFolder(shared.name, "win32", inherited))?.path ?? "";
+    expect(instead.startsWith(`${shared.name}-2.`)).toBe(true);
+    expect(sets(inherited)).not.toContain(shared.folder);
+    const planted = await reserved();
     const foreignMark = answering(ownList, (path) =>
-      path === join(planted, WORD_PROFILES_RESERVED)
+      path === planted.name
         ? `O:${other}G:${group}D:AI(A;;FA;;;${other})(A;;FA;;;${user})`
         : ownList,
     );
-    expect((await ownProfilesFolder(planted, "win32", foreignMark))?.path).toBe(`${planted}-2`);
-    expect(sets(foreignMark)).not.toContain(planted);
-    // An empty folder of this account's at the name is one a launch made and ended before its
-    // mark went in: it is made owner-only and marked, and used; another account's is left alone.
-    const ended = root();
-    mkdirSync(ended, { recursive: true });
-    const finishing = answering(ownList, (path) =>
-      path === ended && !sets({ asks: finishing.asks }).includes(ended)
-        ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
-        : ownList,
-    );
-    expect((await ownProfilesFolder(ended, "win32", finishing))?.path).toBe(ended);
-    expect(readdirSync(ended)).toEqual([WORD_PROFILES_RESERVED]);
+    const next = (await ownProfilesFolder(planted.name, "win32", foreignMark))?.path ?? "";
+    expect(next.startsWith(`${planted.name}-2.`)).toBe(true);
+    expect(sets(foreignMark)).not.toContain(planted.folder);
+    // Anything else at the name - a file saying something else, a folder of this account's that is
+    // empty, or another account's - is never read into or changed, and the next name is reserved.
+    const marked = root();
+    writeFileSync(marked, "someone else's\n");
+    const empty = root();
+    mkdirSync(empty, { recursive: true });
     const theirs = root();
     mkdirSync(theirs, { recursive: true });
-    const theirsRun = answering(ownList, (path) =>
-      path === theirs ? `O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})` : ownList,
-    );
-    expect((await ownProfilesFolder(theirs, "win32", theirsRun))?.path).toBe(`${theirs}-2`);
-    expect(sets(theirsRun)).not.toContain(theirs);
-    // A folder above it another account could change: nothing is made or asked of it.
-    const exposed = root();
-    const changeable = answering(ownList, undefined, (path) =>
-      path === join(exposed, "..")
-        ? `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1301bf;;;${other})`
-        : ownList,
-    );
-    expect(await ownProfilesFolder(exposed, "win32", changeable)).toBeNull();
-    expect(existsSync(exposed)).toBe(false);
+    for (const [name, list] of [
+      [marked, ownList],
+      [empty, ownList],
+      [theirs, `O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})`],
+    ] as const) {
+      const run = answering(ownList, (path) => (path === name ? list : ownList));
+      const used = (await ownProfilesFolder(name, "win32", run))?.path ?? "";
+      expect(used.startsWith(`${name}-2.`)).toBe(true);
+      expect(touched(run)).not.toContain(name);
+    }
+    expect(readFileSync(marked, "utf8")).toBe("someone else's\n");
+    expect(readdirSync(empty)).toEqual([]);
+    // A folder above it another account could change, one whose list or owner could not be read
+    // whole, or a folder it goes in that hands another account access to what is made there:
+    // nothing is made or set.
+    const inParent = (list: string) => (name: string) =>
+      answering(ownList, undefined, (path) => (path === join(name, "..") ? list : ownList));
+    for (const parent of [
+      inParent(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1301bf;;;${other})`),
+      inParent(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1200a9;;;${other})`),
+      inParent(
+        `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(XA;;FA;;;${user};(x))(A;OICI;0x1301bf;;;${other})`,
+      ),
+      inParent(`G:${group}D:PAI(A;OICI;FA;;;${user})`),
+    ]) {
+      const exposed = root();
+      const run = parent(exposed);
+      expect(await ownProfilesFolder(exposed, "win32", run)).toBeNull();
+      expect(sets(run)).toEqual([]);
+      expect(readdirSync(join(exposed, ".."))).toEqual([]);
+    }
     // A folder made that cannot be made private, or whose mark cannot go in, is removed only
-    // while empty: what something else put in it meanwhile stays.
+    // while empty: what something else put in it meanwhile stays, and nothing is reserved.
     for (const failing of ["private", "mark"]) {
       const made = root();
       const fails: AccessRun = async (ask) => {
-        if (ask.read.includes(made) && failing === "private")
-          writeFileSync(join(made, "theirs"), "");
-        if (ask.read.includes(made) && failing === "mark")
-          mkdirSync(join(made, WORD_PROFILES_RESERVED), { recursive: true });
+        const folder = ask.read.find((path) => path.startsWith(`${made}.`));
+        if (folder && failing === "private") writeFileSync(join(folder, "theirs"), "");
+        if (folder && failing === "mark")
+          mkdirSync(join(folder, WORD_PROFILES_RESERVED), { recursive: true });
         return {
           user,
           set: ask.set.map((each) => ({ path: each.path, error: "refused" })),
           read: ask.read.map((path) => ({
             path,
             sddl:
-              path === made && failing === "private"
+              path.startsWith(`${made}.`) && failing === "private"
                 ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
                 : ownList,
             error: null,
@@ -297,18 +309,22 @@ describe("a refused launch's word to the person", () => {
         };
       };
       expect(await ownProfilesFolder(made, "win32", fails)).toBeNull();
-      expect(readdirSync(made)).toContain(
+      expect(existsSync(made)).toBe(false);
+      const [left] = readdirSync(join(made, "..")).filter((name) => name.startsWith("word-"));
+      expect(readdirSync(join(made, "..", left ?? ""))).toContain(
         failing === "private" ? "theirs" : WORD_PROFILES_RESERVED,
       );
     }
-    // A folder made that another account owns is never taken as private.
+    // A folder made that another account owns is never taken as private, nor reserved.
+    const owned = root();
     expect(
       await ownProfilesFolder(
-        root(),
+        owned,
         "win32",
         answering(`O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})`),
       ),
     ).toBeNull();
+    expect(existsSync(owned)).toBe(false);
     // Nor one Windows could not be asked about.
     const unread: AccessRun = async () => {
       throw new Error("no PowerShell");
@@ -320,10 +336,9 @@ describe("a refused launch's word to the person", () => {
       mkdirSync(join(linked, ".."), { recursive: true });
       symlinkSync(scratchDir("person-word-elsewhere-"), linked);
       const asked = answering(ownList);
-      expect((await ownProfilesFolder(linked, "win32", asked))?.path).toBe(`${linked}-2`);
-      const paths = asked.asks.flatMap((ask) => [...ask.read, ...ask.set.map((each) => each.path)]);
-      expect(paths).not.toContain(linked);
-      expect(paths).toContain(`${linked}-2`);
+      const used = (await ownProfilesFolder(linked, "win32", asked))?.path ?? "";
+      expect(used.startsWith(`${linked}-2.`)).toBe(true);
+      expect(touched(asked)).not.toContain(linked);
     }
   });
 });

@@ -29,11 +29,12 @@ export function stagedFolderFor(to: string, pid: number = process.pid): string {
 }
 
 /**
- * The folder beside a data folder that holds the throwaway profiles of the
- * copies a launch refused the folder's lock starts to show the person a word
- * (src/main/personWord.ts, docs/run.md): outside the data folder and every
- * folder a move stages, sets aside or brings, so a copy still using one keeps
- * its path through any move, and none of it is ever taken for saved work.
+ * The name beside a data folder that reserves the folder holding the throwaway
+ * profiles of the copies a launch refused the folder's lock starts to show the
+ * person a word, a folder beside it named for it (src/main/personWord.ts,
+ * docs/run.md): outside the data folder and every folder a move stages, sets
+ * aside or brings, so a copy still using one keeps its path through any move,
+ * and none of it is ever taken for saved work.
  */
 export function wordProfilesBeside(dataDir: string): string {
   return `${dataDir}-word-profiles`;

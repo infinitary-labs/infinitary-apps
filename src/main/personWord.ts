@@ -1,9 +1,10 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
   fstatSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -14,6 +15,7 @@ import {
   rmdirSync,
   rmSync,
   type Stats,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -21,6 +23,7 @@ import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import {
   type AccessRun,
+  handsDownToOthers,
   keepOwnerOnly,
   onlyOwnerReaches,
   othersCanChange,
@@ -166,13 +169,13 @@ export type ProfilesFolder = { path: string; made: Stats };
 
 /**
  * The profiles' folder this app keeps for this account, or null where it has none it can trust; it
- * then starts no copy. It goes in the folder `root` names once every folder on the way to it, links
- * resolved, is one no other account can change (`trustedParent`), so nothing can put another folder
- * in its place, and every later step uses that resolved place. Only a folder this app made, made
- * this account's alone, and marked (`WORD_PROFILES_RESERVED`) is used; an empty folder of this
- * account's at its name is one a launch made and never finished marking, and is finished. A folder
- * already there that is neither is left exactly as it is, never changed, read into or used, and the
- * next name beside it is tried (`-2`, `-3`).
+ * then starts no copy. It goes beside the name `root` gives once every folder on the way there,
+ * links resolved, is one no other account can change and the folder it goes in hands no other
+ * account access to what is made there (`trustedParent`), so nothing can put another folder in its
+ * place and what this app makes there is its own from its making; every later step uses that
+ * resolved place. The name holds the folder's reservation (`keepProfilesFolder`); an entry already
+ * at the name that is not this app's whole reservation is left exactly as it is, never changed,
+ * read into or used, and the next name beside it is tried (`-2`, `-3`).
  */
 export async function ownProfilesFolder(
   root: string,
@@ -186,10 +189,10 @@ export async function ownProfilesFolder(
       return null;
     }
     const at = join(parent, basename(root));
-    for (const path of [at, `${at}-2`, `${at}-3`]) {
-      const kept = await keepProfilesFolder(path, platform, access);
+    for (const name of [at, `${at}-2`, `${at}-3`]) {
+      const kept = await keepProfilesFolder(name, platform, access);
       if (kept !== "not-ours") return kept;
-      console.warn("[app] a word's profiles' folder is there but not this app's; it is left alone");
+      console.warn("[app] a word's profiles' name is taken but not by this app; it is left alone");
     }
     return null;
   } catch (error) {
@@ -200,11 +203,14 @@ export async function ownProfilesFolder(
 
 /**
  * The folder `parent` names, links resolved, where it and every folder above it is one no other
- * account can change, so no other account can move or replace what it holds; null otherwise. Away
- * from Windows the folder itself is this account's with no one else able to write it, and each
- * above it belongs to this account or the system with no one else able to write it, or is one where
- * only an entry's owner may move it (the sticky bit, as `/tmp`). On Windows each one's access list
- * lets no other ordinary account remove, rename or re-permit anything there (`othersCanChange`).
+ * account can change, so no other account can move or replace what it holds, and where the folder
+ * itself hands no other account access to what is made in it; null otherwise. Away from Windows the
+ * folder itself is this account's with no one else able to write it, and each above it belongs to
+ * this account or the system with no one else able to write it, or is one where only an entry's
+ * owner may move it (the sticky bit, as `/tmp`); on a Mac none of them carries an access list
+ * entry that allows anything (`macAllows`), which the modes do not show. On Windows each one's
+ * access list, read whole, lets no other ordinary account remove, rename or re-permit anything there
+ * (`othersCanChange`), and the folder itself hands down nothing to another (`handsDownToOthers`).
  */
 async function trustedParent(
   parent: string,
@@ -218,7 +224,10 @@ async function trustedParent(
     const answer = await access({ set: [], read: chain });
     const trusted = chain.every((path, index) => {
       const sddl = answer.read[index]?.path === path ? answer.read[index]?.sddl : null;
-      return !!sddl && !othersCanChange(readAccessList(sddl), answer.user);
+      if (!sddl) return false;
+      const list = readAccessList(sddl);
+      if (othersCanChange(list, answer.user)) return false;
+      return index > 0 || !handsDownToOthers(list, answer.user);
     });
     return trusted ? real : null;
   }
@@ -232,88 +241,138 @@ async function trustedParent(
       ((found.mode & 0o022) === 0 || (found.mode & 0o1000) !== 0)
     );
   });
-  return trusted ? real : null;
+  if (!trusted) return null;
+  return platform === "darwin" && (await macAllows(chain)) ? null : real;
 }
 
 /**
- * Makes the profiles' folder at one name, or finds this app's there. A folder it makes is this
- * account's alone before its mark goes in: made with no access for anyone else, or on Windows given
- * an owner-only access list of its own (`keepOwnerOnly`); one that cannot be is removed again only
- * while still the same, empty folder (`dropIfEmpty`). A folder already there is this app's only
- * where it is a real folder, not a link, already this account's alone - on Windows its access list
- * read as owner-only, with no list left half set - holding the mark whole from this account
- * (`markedHere`), and still the same folder once all of that is read; that one is only read. An
- * empty one of this account's (on Windows holding at most an unfinished list's note) is a launch's
- * folder ended before its mark went in, and is finished as one made now.
+ * Whether any of these folders carries a Mac access list entry that allows something, read whole by
+ * the system's own `ls`; true too where they cannot be read. Entries that only deny take nothing
+ * away from what the modes say.
+ */
+function macAllows(folders: readonly string[]): Promise<boolean> {
+  if (folders.some((path) => path.includes("\n"))) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    execFile("/bin/ls", ["-lde", ...folders], { encoding: "utf8" }, (error, listed) => {
+      if (error) resolve(true);
+      else resolve(listed.split("\n").some((line) => /^ *\d+: .* allow /.test(line)));
+    });
+  });
+}
+
+/**
+ * The profiles' folder whose reservation `name` holds, made and reserved there where nothing is.
+ * A reservation is the folder's mark (`WORD_PROFILES_MARK`, in `WORD_PROFILES_RESERVED`) linked
+ * at `name`: the folder is made first under a name of its own beside it (`name.<random>`), this
+ * account's alone and marked whole, and only then does one hard link put that same mark at `name`,
+ * which never replaces anything there. So `name` never shows a reservation half made: a launch
+ * ended before the link leaves only its own folder, under a name nothing ever looks for, and the
+ * next launch reserves `name` itself. Where two launches reserve at once, the one whose link lands
+ * keeps it and the other uses that folder.
  */
 async function keepProfilesFolder(
-  path: string,
+  name: string,
   platform: NodeJS.Platform,
   access: AccessRun,
 ): Promise<ProfilesFolder | "not-ours" | null> {
-  let made: Stats;
-  let fresh = true;
+  const found = await reservedAt(name, platform, access);
+  if (found !== "free") return found;
+  const made = await makeProfilesFolder(name, platform, access);
+  if (made === null) return null;
   try {
-    mkdirSync(path, { mode: 0o700 });
-    made = lstatSync(path);
+    linkSync(join(made.folder.path, WORD_PROFILES_RESERVED), name);
   } catch (error) {
+    dropMade(made);
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    const found = entryOf(path);
-    if (found === null || !found.isDirectory() || found.isSymbolicLink()) return "not-ours";
-    if (!(await unfinished(path, found, platform, access))) {
-      if (!(await aloneNow(path, found, platform, access))) return "not-ours";
-      if (!(await markedHere(path, platform, access))) return "not-ours";
-      const still = entryOf(path);
-      return still !== null && sameMade(still, found) ? { path, made: found } : "not-ours";
-    }
-    made = found;
-    fresh = false;
+    const theirs = await reservedAt(name, platform, access);
+    return theirs === "free" ? null : theirs;
   }
-  const alone =
-    platform === "win32"
-      ? (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only"
-      : made.uid === process.getuid?.() && (made.mode & 0o077) === 0;
-  const still = entryOf(path);
-  if (!alone || still === null || !sameMade(still, made)) {
-    if (fresh) dropIfEmpty(path, made);
-    return fresh ? null : "not-ours";
-  }
-  try {
-    writeFileSync(join(path, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK, {
-      flag: "wx",
-      mode: 0o600,
-    });
-  } catch (error) {
-    if (!fresh) return "not-ours";
-    dropIfEmpty(path, made);
-    throw error;
-  }
-  return { path, made };
+  const linked = entryOf(name);
+  return linked !== null && sameEntry(linked, made.mark) && stillReserved(made.folder)
+    ? made.folder
+    : null;
 }
 
 /**
- * Whether a folder already there is one a launch made and ended before marking: this account's,
- * holding nothing - on Windows, at most the note of an access list left half set - and, away from
- * Windows, already this account's alone, as a launch makes it.
+ * What `name` holds: nothing (`free`), this app's whole reservation, read without changing it, and
+ * the folder it reserves, or anything else (`not-ours`). A reservation is a plain file of this
+ * account's saying the mark whole (`markedHere`) that is the very file - by device and number -
+ * holding the mark in a folder beside it named for it (`name.<random>`), a real folder, not a link,
+ * this account's alone (`aloneNow`), and both still the same once all of that is read.
  */
-async function unfinished(
-  path: string,
-  found: Stats,
+async function reservedAt(
+  name: string,
   platform: NodeJS.Platform,
   access: AccessRun,
-): Promise<boolean> {
-  let names: string[];
-  try {
-    names = readdirSync(path);
-  } catch {
-    return false;
+): Promise<ProfilesFolder | "not-ours" | "free"> {
+  const named = entryOf(name);
+  if (named === null) return "free";
+  if (!named.isFile()) return "not-ours";
+  const mark = await markedHere(name, platform, access);
+  if (mark === null) return "not-ours";
+  const prefix = `${basename(name)}.`;
+  for (const each of readdirSync(dirname(name))) {
+    if (!each.startsWith(prefix)) continue;
+    const path = join(dirname(name), each);
+    const found = entryOf(path);
+    if (found === null || !found.isDirectory()) continue;
+    const inside = entryOf(join(path, WORD_PROFILES_RESERVED));
+    if (inside === null || !sameEntry(inside, mark)) continue;
+    if (!(await aloneNow(path, found, platform, access))) return "not-ours";
+    const still = entryOf(path);
+    const pointer = entryOf(name);
+    if (still === null || !sameMade(still, found) || pointer === null) return "not-ours";
+    return sameEntry(pointer, mark) ? { path, made: found } : "not-ours";
   }
-  if (platform !== "win32")
-    return names.length === 0 && found.uid === process.getuid?.() && (found.mode & 0o077) === 0;
-  if (names.some((name) => name !== UNFINISHED_MARK)) return false;
-  const answer = await access({ set: [], read: [path] });
-  const sddl = answer.read[0]?.sddl;
-  return !!sddl && readAccessList(sddl).owner === answer.user;
+  return "not-ours";
+}
+
+/**
+ * Makes a profiles' folder under a name of its own beside `name`, this account's alone - made with
+ * no access for anyone else, or on Windows given an owner-only access list of its own
+ * (`keepOwnerOnly`) - and only then marked whole; null where it cannot be, the folder then removed
+ * again only while still the same, empty folder (`dropIfEmpty`).
+ */
+async function makeProfilesFolder(
+  name: string,
+  platform: NodeJS.Platform,
+  access: AccessRun,
+): Promise<{ folder: ProfilesFolder; mark: Stats } | null> {
+  const path = `${name}.${randomUUID()}`;
+  mkdirSync(path, { mode: 0o700 });
+  const folder = { path, made: lstatSync(path) };
+  const alone =
+    platform === "win32"
+      ? (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only"
+      : folder.made.uid === process.getuid?.() && (folder.made.mode & 0o077) === 0;
+  if (!alone || !stillReserved(folder)) {
+    dropIfEmpty(path, folder.made);
+    return null;
+  }
+  const markPath = join(path, WORD_PROFILES_RESERVED);
+  try {
+    writeFileSync(markPath, WORD_PROFILES_MARK, { flag: "wx", mode: 0o600 });
+    return { folder, mark: lstatSync(markPath) };
+  } catch (error) {
+    dropMade({ folder, mark: null });
+    throw error;
+  }
+}
+
+/**
+ * Removes a profiles' folder this launch made and never reserved: its own mark, while still the
+ * file it wrote, then the folder while still the same and empty, never more.
+ */
+function dropMade(made: { folder: ProfilesFolder; mark: Stats | null }): void {
+  const markPath = join(made.folder.path, WORD_PROFILES_RESERVED);
+  const mark = entryOf(markPath);
+  if (mark?.isFile() && (made.mark === null || sameEntry(mark, made.mark)))
+    try {
+      unlinkSync(markPath);
+    } catch {
+      // Left with the folder, which is then not empty and stays.
+    }
+  dropIfEmpty(made.folder.path, made.folder.made);
 }
 
 /** Removes a folder this launch made while it is still that folder and still empty, never more. */
@@ -344,31 +403,22 @@ async function aloneNow(
 }
 
 /**
- * Whether a folder holds the mark whole (`isProfilesMark`) in a file only this account could have
- * written: away from Windows one it owns, on Windows one whose own access list, read without
- * changing it, lets no other ordinary account in (`onlyOwnerReaches`).
+ * The file at `path` where it holds the mark whole, read to its end (`readSmallFile`), and only this
+ * account could have written it: away from Windows one it owns, on Windows one whose own access
+ * list, read whole without changing it, lets no other ordinary account in (`onlyOwnerReaches`);
+ * null otherwise.
  */
 async function markedHere(
   path: string,
   platform: NodeJS.Platform,
   access: AccessRun,
-): Promise<boolean> {
-  const mark = join(path, WORD_PROFILES_RESERVED);
-  if (!isProfilesMark(mark, platform)) return false;
-  if (platform !== "win32") return true;
-  const answer = await access({ set: [], read: [mark] });
-  const sddl = answer.read[0]?.sddl;
-  return !!sddl && onlyOwnerReaches(readAccessList(sddl), answer.user);
-}
-
-/** The profiles' folder's mark: a plain file of this account's saying `WORD_PROFILES_MARK` whole. */
-function isProfilesMark(path: string, platform: NodeJS.Platform): boolean {
+): Promise<Stats | null> {
   const mark = readSmallFile(path, Buffer.byteLength(WORD_PROFILES_MARK));
-  return (
-    mark !== null &&
-    mark.text === WORD_PROFILES_MARK &&
-    (platform === "win32" || mark.file.uid === process.getuid?.())
-  );
+  if (mark === null || mark.text !== WORD_PROFILES_MARK) return null;
+  if (platform !== "win32") return mark.file.uid === process.getuid?.() ? mark.file : null;
+  const answer = await access({ set: [], read: [path] });
+  const sddl = answer.read[0]?.sddl;
+  return sddl && onlyOwnerReaches(readAccessList(sddl), answer.user) ? mark.file : null;
 }
 
 /** Whether the profiles' folder is still the one this launch reserved. */
@@ -516,7 +566,8 @@ function processGone(pid: number): boolean {
  * or where its profile has no private folder to go in (`profiles` null, as `wordProfilePrivate`
  * decides, or one not this account's alone), which then starts none. The copy's input stays open
  * while this launch lives, so the copy ends with it too. This launch makes the copy's throwaway
- * profile, in `profiles` (`wordProfilesBeside`), with the temporary folder the copy is given from
+ * profile, in the folder `profiles` reserves (`wordProfilesBeside`, `ownProfilesFolder`), with the
+ * temporary folder the copy is given from
  * its start inside it; the copy, the one process to use it, names itself there as it starts
  * (`claimWordProfile`). It goes once the copy has ended - by this launch, or by a later one's ask
  * where this launch died after the copy named itself; one never named stays - and a profile that
@@ -574,8 +625,12 @@ export async function askPersonWord(
       copy = spawn(
         options.launcher.execPath,
         [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
-        // Temporary files of its own, apart from the folder a later holder clears at its start.
-        { env: { ...hostEnv(), TEMP: temp, TMP: temp }, stdio: ["pipe", "pipe", "ignore"] },
+        // Temporary files of its own, apart from the folder a later holder clears at its start:
+        // named by every setting that chooses it, as a Mac or Linux takes `TMPDIR` first.
+        {
+          env: { ...hostEnv(), TEMP: temp, TMP: temp, TMPDIR: temp },
+          stdio: ["pipe", "pipe", "ignore"],
+        },
       );
     } catch (error) {
       console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);

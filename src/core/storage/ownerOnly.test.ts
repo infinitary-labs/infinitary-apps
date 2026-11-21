@@ -13,8 +13,10 @@ import {
   type AccessAsk,
   type AccessRun,
   clearPrivateTemp,
+  handsDownToOthers,
   keepDataFolderPrivate,
   keepOwnerOnly,
+  onlyOwnerReaches,
   othersCanChange,
   ownerOnlyAccessList,
   ownerOnlyVerdict,
@@ -123,6 +125,30 @@ describe("reading a folder's access list", () => {
     const readOnly = AT_DRIVE_TOP.replace("(A;ID;0x1301bf;;;AU)", "");
     expect(othersCanChange(readAccessList(readOnly), USER)).toBe(false);
     expect(othersCanChange(readAccessList(NO_LIST), USER)).toBe(true);
+  });
+
+  it("refuses a reading it could not take whole, never judging the entries before the rest", () => {
+    // A conditional entry carries brackets of its own; what follows it, here another account's
+    // right to change the folder, would otherwise go unread.
+    const conditional = IN_PROFILE.replace(
+      `(A;OICIID;FA;;;${USER})`,
+      `(A;OICIID;FA;;;${USER})(XA;;FA;;;${USER};(x))(A;;0x1301bf;;;${OTHER})`,
+    );
+    expect(readAccessList(conditional).entries).toBeNull();
+    expect(othersCanChange(readAccessList(conditional), USER)).toBe(true);
+    expect(onlyOwnerReaches(readAccessList(conditional), USER)).toBe(false);
+    // No owner read is no owner that keeps the folder this account's.
+    const ownerless = IN_PROFILE.replace(`O:${USER}`, "");
+    expect(othersCanChange(readAccessList(ownerless), USER)).toBe(true);
+    expect(onlyOwnerReaches(readAccessList(ownerless), USER)).toBe(false);
+    expect(ownerOnlyVerdict(readAccessList(ownerless), USER)).toBe("other-owner");
+  });
+
+  it("finds a folder that hands another account access to what is made in it", () => {
+    expect(handsDownToOthers(readAccessList(IN_PROFILE), USER)).toBe(false);
+    // At the top of the drive every signed-in account gets rights over what another makes there.
+    expect(handsDownToOthers(readAccessList(AT_DRIVE_TOP), USER)).toBe(true);
+    expect(handsDownToOthers(readAccessList(NO_LIST), USER)).toBe(true);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {

@@ -284,6 +284,8 @@ export async function startPhoneHome(
   const cardRequests: { channel: string; args: unknown }[] = [];
   /** INF-5445 piece 2: each change the phone sent to a card's draft, as it arrived. */
   const draftChanges: unknown[] = [];
+  /** The id the core gave the drafts journey's card. */
+  let draftCardId = "";
   let leaks = 0;
   const cardIDs = {
     choice: "",
@@ -1959,7 +1961,8 @@ export async function startPhoneHome(
             );
           const title = "Book the harbour survey";
           const part = "The harbour survey needs two answers before the crew books the boat.";
-          core.services.supervisor.addFirstmateCard({
+          // The core names the card itself (`card-fm-` before the id given), and every draft command reads it by that name.
+          draftCardId = core.services.supervisor.addFirstmateCard({
             id: "phone-draft-card",
             title,
             body: `<p>${part}</p>
@@ -1977,14 +1980,13 @@ export async function startPhoneHome(
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
           draftChanges.length = 0;
-          result = { title, part, cardId: "phone-draft-card" };
+          result = { title, part, cardId: draftCardId };
           break;
         }
         // The card's draft as the computer keeps it, and each change the phone sent to it.
         case "GET draft-state": {
           const draft =
-            core.services.cardDrafts.read().find((one) => one.cardId === "phone-draft-card") ??
-            null;
+            core.services.cardDrafts.read().find((one) => one.cardId === draftCardId) ?? null;
           result = { draft, changes: structuredClone(draftChanges) };
           break;
         }
@@ -2000,7 +2002,7 @@ export async function startPhoneHome(
             gone?: boolean;
           };
           const read = () =>
-            core.services.cardDrafts.read().find((one) => one.cardId === "phone-draft-card");
+            core.services.cardDrafts.read().find((one) => one.cardId === draftCardId);
           const holds = () => {
             const draft = read();
             if (want.gone) return !draft;
@@ -2032,7 +2034,7 @@ export async function startPhoneHome(
           };
           const card = core.services.supervisor.cards
             .snapshot()
-            .find((one) => one.id === "phone-draft-card")!;
+            .find((one) => one.id === draftCardId)!;
           const now = core.services.cardDrafts.read().find((one) => one.cardId === card.id);
           result = await core.dispatch("inf:cards:draft", [
             card.id,

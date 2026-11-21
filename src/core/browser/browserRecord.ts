@@ -280,7 +280,7 @@ export function signedIn(browser: Browser): boolean {
  * and fragment, and with a key in a known format hidden.
  *
  * `held` is for what is read for the crewmate while the captain holds the
- * browser, which its own reads never are: he may be signing in, and its
+ * browser, which its own reads never are: a sign-in may be under way, and its
  * next read comes after the return, so this one reads as that one will.
  */
 export function shown(browser: Browser, url: string, held = false): string {

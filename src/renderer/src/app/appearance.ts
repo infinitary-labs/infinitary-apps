@@ -1,6 +1,6 @@
+import type { SavedOwnStyle } from "@shared/ambientOwn";
 import type { FontChoices, FontSlot } from "@shared/fonts";
 import {
-  type AmbientStyle,
   type Appearance,
   DEFAULT_AMBIENT_STYLE,
   DEFAULT_AMBIENT_VOLUME,
@@ -46,6 +46,8 @@ export type AppearanceSlice = {
    * plays the default (`ambientStyleOf`).
    */
   ambientStyle: string;
+  /** The person's own styles, which the first mate writes (docs/ambient-music.md, "Your own styles"). */
+  ambientOwnStyles: SavedOwnStyle[];
   /** How Settings → Usage shows every amount, remembered by the core (docs/usage.md). */
   usageUnit: UsageUnit;
   /**
@@ -77,7 +79,9 @@ export type AppearanceSlice = {
   setAmbientPlaysWhenAway: (plays: boolean) => void;
   toggleAmbientPlayback: () => void;
   setAmbientVolume: (volume: number) => void;
-  setAmbientStyle: (style: AmbientStyle) => void;
+  setAmbientStyle: (style: string) => void;
+  /** Removes one of the person's own styles; the default plays if it was playing. */
+  removeAmbientOwnStyle: (id: string) => void;
   setUsageUnit: (unit: UsageUnit) => void;
 };
 
@@ -96,14 +100,15 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     ambientPlaysWhenAway: appearance.ambientPlaysWhenAway ?? false,
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
     ambientStyle: appearance.ambientStyle ?? DEFAULT_AMBIENT_STYLE,
+    ambientOwnStyles: appearance.ambientOwnStyles ?? NO_OWN_STYLES,
     usageUnit: appearance.usageUnit ?? "tokens",
     language: appearance.language ?? null,
     fonts: appearance.fonts ?? NO_FONTS,
   } satisfies Partial<ShellState>;
   return Object.fromEntries(
     Object.entries(look).filter(([key, value]) =>
-      key === "fonts"
-        ? JSON.stringify(s.fonts) !== JSON.stringify(value)
+      key === "fonts" || key === "ambientOwnStyles"
+        ? JSON.stringify(s[key]) !== JSON.stringify(value)
         : s[key as keyof typeof look] !== value,
     ),
   );
@@ -111,6 +116,8 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
 
 /** No font chosen: every slot is Infinitary's own. */
 const NO_FONTS: FontChoices = {};
+/** No own style saved. */
+const NO_OWN_STYLES: SavedOwnStyle[] = [];
 
 export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
   /** The choice whose write is running, so a refusal is told beside its own control. */
@@ -166,6 +173,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         ambientPlaysWhenAway: s.ambientPlaysWhenAway,
         ambientVolume: s.ambientVolume,
         ambientStyle: s.ambientStyle,
+        ambientOwnStyles: s.ambientOwnStyles,
         usageUnit: s.usageUnit,
         ...(s.language ? { language: s.language } : {}),
         ...(Object.keys(s.fonts).length > 0 ? { fonts: s.fonts } : {}),
@@ -189,6 +197,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     ambientPlaysWhenAway: false,
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
     ambientStyle: DEFAULT_AMBIENT_STYLE,
+    ambientOwnStyles: NO_OWN_STYLES,
     usageUnit: "tokens",
     language: null,
     fonts: NO_FONTS,
@@ -251,6 +260,13 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setAmbientStyle: (ambientStyle) => {
       set({ ambientStyle });
       saveAppearance("ambientStyle", { ambientStyle });
+    },
+    removeAmbientOwnStyle: (id) => {
+      const s = get();
+      const ambientOwnStyles = s.ambientOwnStyles.filter((style) => style.id !== id);
+      const ambientStyle = s.ambientStyle === id ? DEFAULT_AMBIENT_STYLE : s.ambientStyle;
+      set({ ambientOwnStyles, ambientStyle });
+      saveAppearance("ambientOwnStyles", { ambientOwnStyles, ambientStyle });
     },
     setUsageUnit: (usageUnit) => {
       set({ usageUnit });

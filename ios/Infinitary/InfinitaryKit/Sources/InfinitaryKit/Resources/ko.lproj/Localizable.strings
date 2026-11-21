@@ -3129,6 +3129,13 @@
 "settingsSoundAmbientMusic" = "앰비언트 음악";
 "settingsSoundAmbientMusicDescription" = "이 컴퓨터에서 재생하는 동안 절차적으로 생성하는 잔잔한 음악이라 반복되지 않아요. 선원들의 작업을 따라 바뀌고, 선장님을 기다리는 일이 있으면 차임이 울려요.";
 "settingsSoundHeading" = "사운드";
+"settingsSoundOwn" = "나만의 음악";
+"settingsSoundOwnDescribe" = "직접 설명하기";
+"settingsSoundOwnDescription" = "원하는 음악을 설명하면 일등항해사가 앱의 악기로 연주할 스타일로 만들어 내 스타일 아래에 둡니다.";
+"settingsSoundOwnDraft" = "나만의 앰비언트 음악을 만들어 주세요: ";
+"settingsSoundOwnNoWords" = "일등항해사가 당신을 위해 만든 스타일입니다.";
+"settingsSoundOwnRemove" = "삭제";
+"settingsSoundOwnRemoveNamed" = "%1$@ 삭제";
 "settingsSoundPauseWhenAway" = "자리를 비우면 일시 정지";
 "settingsSoundPauseWhenAwayDescription" = "화면이 꺼지거나 잠겨 있는 동안 일시 정지해, 음악 때문에 컴퓨터가 잠자기에 들지 못하는 일이 없어요. 돌아오면 다시 재생해요.";
 "settingsSoundStyle" = "스타일";
@@ -3142,6 +3149,7 @@
 "settingsSoundStyleGroupNautical" = "항해";
 "settingsSoundStyleGroupPirate" = "해적";
 "settingsSoundStyleGroupSpace" = "우주";
+"settingsSoundStyleGroupYours" = "내 스타일";
 "settingsSoundStyleHarborDawn" = "항구의 새벽";
 "settingsSoundStyleHarborDawnDescription" = "느리고 장엄하게: 부드러운 금관, 하프, 배의 종소리에 잔잔한 파도 소리가 흐릅니다.";
 "settingsSoundStyleIslandMorning" = "섬의 아침";

@@ -3127,6 +3127,13 @@
 "settingsSoundAmbientMusic" = "Música ambiental";
 "settingsSoundAmbientMusicDescription" = "Música tranquila, generada de forma procedural en tu computadora mientras suena, así que nunca se repite. Sigue a la tripulación y suena una campanilla cuando algo te espera.";
 "settingsSoundHeading" = "Sonido";
+"settingsSoundOwn" = "Tu propia música";
+"settingsSoundOwnDescribe" = "Describe la tuya";
+"settingsSoundOwnDescription" = "Describe la música que quieres y tu primer oficial la escribe como un estilo para los instrumentos propios de la app, en la lista Tuyos.";
+"settingsSoundOwnDraft" = "Escribe mi propia música ambiental: ";
+"settingsSoundOwnNoWords" = "Un estilo que tu primer oficial escribió para ti.";
+"settingsSoundOwnRemove" = "Quitar";
+"settingsSoundOwnRemoveNamed" = "Quitar %1$@";
 "settingsSoundPauseWhenAway" = "Pausar cuando no estés";
 "settingsSoundPauseWhenAwayDescription" = "Se pausa mientras tu pantalla está apagada o bloqueada, para que la música no mantenga despierta tu computadora, y vuelve a sonar cuando regresas.";
 "settingsSoundStyle" = "Estilo";
@@ -3140,6 +3147,7 @@
 "settingsSoundStyleGroupNautical" = "Náutico";
 "settingsSoundStyleGroupPirate" = "Piratas";
 "settingsSoundStyleGroupSpace" = "Espacio";
+"settingsSoundStyleGroupYours" = "Tuyos";
 "settingsSoundStyleHarborDawn" = "Amanecer en el puerto";
 "settingsSoundStyleHarborDawnDescription" = "Lento y solemne: metales suaves, un arpa y la campana del barco sobre olas suaves.";
 "settingsSoundStyleIslandMorning" = "Mañana en la isla";

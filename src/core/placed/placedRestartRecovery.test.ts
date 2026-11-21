@@ -24,6 +24,7 @@ import {
 import { DeviceOutOfReachError } from "../connection/connection";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
+import { renderWake } from "../orchestrator/wakes";
 import { crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { PlacedLedger } from "./placedLedger";
 import { PlacedSession } from "./placedSession";
@@ -455,15 +456,38 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(restart()).toMatchObject([{ deliveredAt: null, attempts: 0 }]);
     expect(api.requests.length).toBe(requests);
 
+    // The saved restart row itself, followed by its id through claim and acknowledgement.
+    const [saved] = restart();
+    if (!saved) throw new Error("The restart is not on the lane.");
+    const claimed: number[] = [];
+    const handled: number[] = [];
+    const markDelivered = home.inbox.markDelivered.bind(home.inbox);
+    vi.spyOn(home.inbox, "markDelivered").mockImplementation((ids) => {
+      claimed.push(...ids);
+      markDelivered(ids);
+    });
+    const ack = home.inbox.ack.bind(home.inbox);
+    vi.spyOn(home.inbox, "ack").mockImplementation((ids) => {
+      handled.push(...ids);
+      ack(ids);
+    });
+
     failing = false;
     await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
     await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("In the new conversation.");
+    // Claimed once, then acknowledged once its turn ended: the row is gone.
+    await expect.poll(() => handled.filter((id) => id === saved.id)).toHaveLength(1);
+    expect(claimed.filter((id) => id === saved.id)).toHaveLength(1);
+    expect(home.inbox.get(saved.id)).toBeUndefined();
     const sent = api.requests.slice(requests);
     expect(sent).toHaveLength(1);
+    // The new conversation carries the saved restart guidance exactly once.
+    const guidance = JSON.stringify(renderWake(saved)).slice(1, -1);
+    expect(guidance.length).toBeGreaterThan(0);
+    expect(said(sent[0]).split(guidance)).toHaveLength(2);
     // A new conversation: the filled one's words are not carried.
     expect(said(sent[0])).not.toContain("Started on it.");
     expect(home.tasks.get(taskId)?.sessionFile).not.toBe(from);
-    expect(restart()[0]?.deliveredAt).not.toBeNull();
     expect(couldNotOpen()).toHaveLength(1);
   });
 

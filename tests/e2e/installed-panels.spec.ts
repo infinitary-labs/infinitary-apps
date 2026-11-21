@@ -95,7 +95,7 @@ test.describe
         const body = cardBody(page, CARD_TITLE);
         await expect(shownCard(page, CARD_TITLE)).toContainText(`${MAKER} ${VERSION}`);
         const rows = body.locator("dl").first();
-        await expect(rows.locator("dd b").first()).toHaveText(MAKER);
+        await expect(rows.locator("dd > b").first()).toHaveText(MAKER);
         await expect(rows.locator("dt", { hasText: m.cardConsentReads() })).toBeVisible();
         await expect(rows).toContainText(viewWords("v_usage_v1"), { ignoreCase: true });
         await expect(body.locator("body")).toContainText(

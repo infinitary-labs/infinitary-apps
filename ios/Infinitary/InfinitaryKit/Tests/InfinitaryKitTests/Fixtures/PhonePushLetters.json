@@ -1,0 +1,32 @@
+{
+  "box": "712g0pERSnzSUVooODuiaaijka6dL6bNlJFJjWukXX0",
+  "key": "oNs7mZhA3wzAypQhUqwm_RMYpEqs-gI0LeIgqHMlzdA",
+  "otherBox": "Xs5R2mOAnMizeTGaVZ45dsq6v_4haSipzxoXm9xPxgc",
+  "otherKey": "Xq1v4y3m8t_0b-2Lw9ZcKe7RaJ5uHpDsGfN6oViTkYU",
+  "otherKeyRenew": {
+    "sealed": "aTJ6K9EpbT6KaJRd1sHLHNM74UklcsDeAdaRTqgQkXM79u5T_2AYf2NHOx2K395UcUO0LbmUM9RGkBhc0sg3Xa31tRlEuk75AOIs8bhfM4OHTHIlPAefSbtandaxNi6uwTRV8__XAy54hAr3tRZocCtWTk9SXx5vUjqbT4OaABAtQfo8Z4hqCZrvjH-rawUzm5z2aXwfNXihtg9C-xetiRZEw1keS-VmKCeI1L-YCa8F0a9LUN-flYhTxWkdFIYb42RSbluHonTsJ99mOlZQyAgHTmADugSLO2fQLKL4Ot9OsqHFbv7YT-ztL7E"
+  },
+  "renew": {
+    "opens": {
+      "at": 1795000000123,
+      "environment": "production",
+      "grant": "1797811200.Dy98c6Z0_-kag0UUqCPONV9N3A2aRCMVgIl-3H8xsb8",
+      "kind": "renew",
+      "token": "5f3c8e1a9b2d4c6e8f0a1b3c5d7e9f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e",
+      "v": 1
+    },
+    "sealed": "1A0imDTZej8SPSQq0ZgMOQ-i5QaRNS6khL7G6C_o_gMa-nVV_2LikOHgjciGjZatftTEI-8E03jK5zQWkmQN7wmIBnuTb4fhmF9MkKNAMapCjoEx8C6NQlpx2RnQnG2fNSjvTlAQF_CW7BxsmbEpffeGpqO_gbJFrJXVaJ_sypFL2KqhS7w4mYBxrRAEEA4y9Xbtb0Vq2u04xUW2ACaJjZtGFee0S8ffg9lCTVyqcREos6u5CYj9Vj4YgCtdfMPPliU8NJV3cvr_r5lPMIE3ZN6shvcwwj8bbSbpwCwD6MyXBQDs3osRpGZnZWA"
+  },
+  "source": "Sealed by PhonePush.sealLetter in InfinitaryKit, the phone's own sealing (INF-5275): renew and stop under `key`, otherKeyRenew under `otherKey`, with each key's box from PhonePush.letterBox. computerSealed is renew's letter sealed by sealLetter in src/core/phoneLetters.ts, so the phone opens the computer's sealing too.",
+  "stop": {
+    "opens": {
+      "at": 1795000060456,
+      "kind": "stop",
+      "v": 1
+    },
+    "sealed": "ZvW-q318Y-t6Ordx29aNiqVhhRc4bT5OJMVq8ph0cFjqCfkCTKGIRLv9d1E_8Q4RcAlBWnjIkn93w6MJ1rmqXm2oEHo"
+  },
+  "computerSealed": {
+    "sealed": "PL7KRQCCLwCpkPh5iHJe1Cbxtb9UcROgKkxfI9IKoUUOpfQTfuVjrd70oHYDece3Ibb3iIbECS1ZXW6Kf3ttV-1UuYkffPBD7x4DVF16hYpmhJ7bZejdzLiCM6MTLyjxUwWIDQEvb3jmWj3Wm59hBVR18p3RMsgLA3n5N4BesQ2EhF2vNbYlcJRxD39153wQVxOAZ4zCt4Kc0FfpekEZ0LgFjFfJP1-xHoW_kcCCE8-bPREdMz7rUirBNtm_UI5U4RRUKkgj8_FRb8jDuCSYTO7XuE9KA41MLWvF-rpxTJWMGhQWhlifge-dUZI"
+  }
+}

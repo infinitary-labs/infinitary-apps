@@ -1,4 +1,5 @@
 @_exported import InfinitaryPush
+import CryptoKit
 import Foundation
 import Observation
 
@@ -38,6 +39,24 @@ public struct PhonePushWithdrawal: Decodable, Equatable, Sendable {
     }
 }
 
+/// INF-5275: what one letter for one kept computer says once opened (`phonePushLetterSchema`): renew, with the push
+/// address, its service and the grant, or stop, once the phone forgot that computer. `at` is when the phone wrote it, in
+/// milliseconds by its clock; a computer takes only a letter newer than the last it took.
+public struct PhonePushLetter: Codable, Equatable, Sendable {
+    public var v = 1
+    public var kind: String
+    public var token: String?
+    public var environment: PhonePushEnvironment?
+    public var grant: String?
+    public var at: Int64
+
+    public static func renew(token: String, environment: PhonePushEnvironment, grant: String, at: Int64) -> PhonePushLetter {
+        PhonePushLetter(kind: "renew", token: token, environment: environment, grant: grant, at: at)
+    }
+
+    public static func stop(at: Int64) -> PhonePushLetter { PhonePushLetter(kind: "stop", at: at) }
+}
+
 /// The computer's answer to a registration (`phonePushAnswerSchema`).
 public struct PhonePushAnswer: Decodable, Sendable { public let kept: Bool }
 
@@ -47,6 +66,20 @@ public enum PhonePush {
         // i18n-exempt: a request path, never shown
         URL(string: PhoneContract.pushRelay)!.deletingLastPathComponent().appendingPathComponent("register")
     }()
+    /// INF-5275: where the phone leaves a letter for one kept computer, beside the register request.
+    public static let letter: URL = {
+        // i18n-exempt: a request path, never shown
+        URL(string: PhoneContract.pushRelay)!.deletingLastPathComponent().appendingPathComponent("letter")
+    }()
+    /// The HKDF-SHA256 info a letter's box and its sealing key derive with from a computer's key, with no salt
+    /// (`LETTER_BOX_INFO`, `LETTER_SEAL_INFO`).
+    static let letterBoxInfo = "infinitary-push letter box v1" // i18n-exempt: a derivation label, never shown
+    static let letterSealInfo = "infinitary-push letter seal v1" // i18n-exempt: a derivation label, never shown
+    /// The relay refuses a letter whose grant has less than a minute left, since its store keeps nothing shorter.
+    public static let letterGrantLeast: TimeInterval = 60
+    /// The relay takes one write a second to a box and answers a faster one 429 box-busy; the phone writes the newest
+    /// letter again a second later, at most this many times in all (the relay's contract, `POST /v1/letter`).
+    public static let letterTries = 3
     /// A grant lasts 30 days (the relay's `GRANT_DAYS`); the phone asks for the next one in its last three.
     public static let renewBefore: TimeInterval = 3 * 86_400
     /// Apple keeps background pushes to a few an hour, so the phone asks the relay for a grant at most once an hour.
@@ -106,6 +139,32 @@ public enum PhonePush {
         return withdrawal
     }
 
+    private static func derive(_ key: String, _ info: String) -> SymmetricKey? {
+        guard let bytes = PhonePushSeal.fromBase64url(key), bytes.count == 32 else { return nil }
+        return HKDF<SHA256>.deriveKey(inputKeyMaterial: SymmetricKey(data: bytes), salt: Data(), info: Data(info.utf8),
+                                      outputByteCount: 32)
+    }
+
+    /// INF-5275: the box a kept computer's letters wait in, derived from its key; the relay sees the box, never the key.
+    public static func letterBox(key: String) -> String? {
+        derive(key, letterBoxInfo).map { derived in PhonePushSeal.base64url(derived.withUnsafeBytes { Data($0) }) }
+    }
+
+    /// INF-5275: one letter sealed as a card push is (AES-256-GCM, base64url of nonce, ciphertext and tag), under the
+    /// key derived for letters from the computer's key.
+    public static func sealLetter(_ letter: PhonePushLetter, key: String) -> String? {
+        guard let sealing = derive(key, letterSealInfo), let plain = try? JSONEncoder().encode(letter),
+              let combined = try? AES.GCM.seal(plain, using: sealing).combined else { return nil }
+        return PhonePushSeal.base64url(combined)
+    }
+
+    /// Opens a letter sealed under `key`'s letter key; nil when it was not.
+    public static func openLetter(_ sealed: String, key: String) -> PhonePushLetter? {
+        guard let sealing = derive(key, letterSealInfo), let bytes = PhonePushSeal.fromBase64url(sealed),
+              let box = try? AES.GCM.SealedBox(combined: bytes), let plain = try? AES.GCM.open(box, using: sealing) else { return nil }
+        return try? JSONDecoder().decode(PhonePushLetter.self, from: plain)
+    }
+
     /// Which service a build's pushes go through, read from its embedded provisioning profile: a build signed for
     /// development names `development`; a TestFlight or App Store build carries no profile and is production.
     public static func environment(profile: Data?) -> PhonePushEnvironment {
@@ -163,6 +222,8 @@ public struct PhonePushEffects {
     public var delivered: @MainActor () async -> [(id: String, cardID: String?, push: String?, computer: String?)]
     public var remove: @MainActor ([String]) -> Void
     public var now: @MainActor () -> Date
+    /// Waits before a letter the relay found too soon after the last to its box is written again.
+    public var wait: @Sendable (TimeInterval) async -> Void
 
     public init(permission: @escaping @MainActor () async -> PhonePushPermission, askPermission: @escaping @MainActor () async -> Bool,
                 registerForPushes: @escaping @MainActor () -> Void, unregisterForPushes: @escaping @MainActor () -> Void, post: @escaping @Sendable (URL, Data) async -> Int?,
@@ -170,11 +231,13 @@ public struct PhonePushEffects {
                 askedPerson: @escaping @MainActor () -> Bool, noteAskedPerson: @escaping @MainActor () -> Void,
                 delivered: @escaping @MainActor () async -> [(id: String, cardID: String?, push: String?, computer: String?)],
                 remove: @escaping @MainActor ([String]) -> Void,
-                now: @escaping @MainActor () -> Date = { Date() }) {
+                now: @escaping @MainActor () -> Date = { Date() },
+                wait: @escaping @Sendable (TimeInterval) async -> Void = { try? await Task.sleep(for: .seconds($0)) }) {
         self.permission = permission; self.askPermission = askPermission; self.registerForPushes = registerForPushes
         self.unregisterForPushes = unregisterForPushes
         self.post = post; self.load = load; self.save = save; self.askedPerson = askedPerson
         self.noteAskedPerson = noteAskedPerson; self.delivered = delivered; self.remove = remove; self.now = now
+        self.wait = wait
     }
 }
 
@@ -201,6 +264,9 @@ public struct PhonePushEffects {
     @ObservationIgnored private var hand: ((PhonePushRegistration?) async throws -> Bool)?
     /// The pin of the computer `hand` reaches.
     @ObservationIgnored private var reaching: String?
+    /// INF-5275: a pass of letters is under way, and another is asked for after it.
+    @ObservationIgnored private var lettering = false
+    @ObservationIgnored private var letterAgain = false
 
     public init(effects: PhonePushEffects, environment: PhonePushEnvironment) {
         self.effects = effects
@@ -215,6 +281,7 @@ public struct PhonePushEffects {
         if permission == .on, keep()?.computers?.isEmpty == false { effects.registerForPushes() }
         update()
         await handOver()
+        await writeLetters()
     }
 
     /// INF-5265: the computers the phone keeps, by pin and name. Each gets its own key, named for the notification
@@ -235,8 +302,9 @@ public struct PhonePushEffects {
         guard var held = keep() else { return nil }
         let before = held
         if kept.isEmpty {
-            guard before.computers == [] || reset() else { return nil }
-            return Task { await removeUnkept() }
+            guard before.computers == [] || reset(from: stopping(held.computers?.map(\.key) ?? [held.key], in: held))
+            else { return nil }
+            return Task { await removeUnkept(); await writeLetters() }
         }
         var computers = held.computers ?? []
         if held.computers == nil {
@@ -246,6 +314,9 @@ public struct PhonePushEffects {
             }
             held.key = PhonePushSeal.newKey()
         }
+        // INF-5265's record kept before has its one computer's key as the record's own: it stays that computer's.
+        let dropped = computers.filter { computer in !kept.contains { $0.pin == computer.pin } }
+        if !dropped.isEmpty { held = stopping(dropped.map(\.key), in: held) }
         computers.removeAll { computer in !kept.contains { $0.pin == computer.pin } }
         if let untagged = held.untagged, !kept.contains(where: { $0.pin == untagged }) { held.untagged = nil }
         for computer in kept {
@@ -254,7 +325,7 @@ public struct PhonePushEffects {
         }
         held.computers = computers
         guard held == before || commit(held) else { return nil }
-        return Task { await removeUnkept() }
+        return Task { await removeUnkept(); await writeLetters() }
     }
 
     /// The computer's welcome reached In reach: `hand` asks `inf:devices:push` on this connection, and hands the key
@@ -289,27 +360,68 @@ public struct PhonePushEffects {
         // A record that cannot be read now changes nothing: the list, read again once it can be, lets go of the key.
         guard var held = keep() else { return }
         let rest = (held.computers ?? []).filter { $0.pin != computer }
+        // INF-5275: the forgotten computer's stop letter is made while its key is still kept, and kept until the relay
+        // answers it, so that computer stops sending within a day rather than when its grant ends.
+        let forgotten = held.computers.map { $0.filter { $0.pin == computer }.map(\.key) } ?? [held.key]
         if let computer, !rest.isEmpty {
             // Committed before the wait for iOS's list, so a later join or forget starts from this record.
+            held = stopping(forgotten, in: held)
             held.computers = rest
             if held.untagged == computer { held.untagged = nil }
             // A write that fails changes nothing; the list handed next lets go of the key and its notifications.
             guard commit(held) else { return }
             // `untagged` went with it, so a notification from before that was this computer's has no kept owner.
             await removeUnkept()
+            await writeLetters()
             return
         }
-        reset()
+        reset(from: stopping(held.computers?.map(\.key) ?? forgotten, in: held))
         await removeUnkept()
+        await writeLetters()
     }
 
     /// The last computer is forgotten: no handover, no push address, and a new key that belongs to no computer. False
     /// when the new record could not be written, which the next empty list tries again.
-    @discardableResult private func reset() -> Bool {
+    /// INF-5275: the stop letters waiting in `held`, one for each computer the phone forgets now among them, go with the
+    /// new record.
+    @discardableResult private func reset(from held: PhonePushHeld?) -> Bool {
         left()
         token = nil; askedFor = nil
         effects.unregisterForPushes()
-        return commit(PhonePushHeld(key: PhonePushSeal.newKey(), computers: []))
+        var next = PhonePushHeld(key: PhonePushSeal.newKey(), computers: [])
+        next.stops = held?.stops
+        next.letterAt = held?.letterAt
+        return commit(next)
+    }
+
+    /// INF-5275: the record with a stop letter for each of `keys` added to those waiting.
+    private func stopping(_ keys: [String], in held: PhonePushHeld) -> PhonePushHeld {
+        var next = held
+        let made = stops(for: keys, in: held, stamped: &next)
+        next.stops = (held.stops ?? []) + made
+        if next.stops?.isEmpty == true { next.stops = nil }
+        return next
+    }
+
+    /// One stop letter for each of `keys`, while the phone holds a grant the relay still takes a letter with; with
+    /// none, that computer's grant ends by itself and nothing is written. `stamped` keeps the newest letter's time.
+    private func stops(for keys: [String], in held: PhonePushHeld, stamped: inout PhonePushHeld) -> [PhonePushStop] {
+        guard let token = held.token, let environment = held.environment, let grant = held.grant,
+              let expiry = PhonePush.expiry(grant),
+              expiry.timeIntervalSince(effects.now()) > PhonePush.letterGrantLeast else { return [] }
+        return keys.compactMap { key in
+            let at = nextLetterAt(&stamped)
+            guard let box = PhonePush.letterBox(key: key),
+                  let sealed = PhonePush.sealLetter(.stop(at: at), key: key) else { return nil }
+            return PhonePushStop(box: box, sealed: sealed, token: token, environment: environment, grant: grant)
+        }
+    }
+
+    /// When the next letter is written: now in milliseconds, and always after the last, should the clock go back.
+    private func nextLetterAt(_ held: inout PhonePushHeld) -> Int64 {
+        let at = max(Int64((effects.now().timeIntervalSince1970 * 1000).rounded(.down)), (held.letterAt ?? 0) + 1)
+        held.letterAt = at
+        return at
     }
 
     /// Keeps `next` once the write is confirmed, so the app never hands a key the notification part cannot read, nor
@@ -366,6 +478,7 @@ public struct PhonePushEffects {
         guard commit(held) else { return false }
         askedFor = nil
         await handOver()
+        await writeLetters()
         return true
     }
 
@@ -427,6 +540,85 @@ public struct PhonePushEffects {
             if let found = try effects.load() { held = found; return found }
         } catch { return nil }
         return commit(PhonePushHeld(key: PhonePushSeal.newKey())) ? held : nil
+    }
+
+    /// INF-5275 (docs/phone-push.md, "Letters"): writes the stop letters waiting, then a renew letter for each kept
+    /// computer whose last letter carried another grant than the one held, the shown computer included, so a computer
+    /// the phone does not show still learns a new grant or push address. One pass at a time; a call during one runs
+    /// another after it.
+    private func writeLetters() async {
+        guard !lettering else { letterAgain = true; return }
+        lettering = true
+        defer { lettering = false }
+        repeat {
+            letterAgain = false
+            await writeStops()
+            await writeRenewals()
+        } while letterAgain
+    }
+
+    /// Each stop letter waiting goes until the relay answers it: stored, a grant it no longer takes (that computer's
+    /// grant ended too), or a relay without letters. With no answer it waits for the next open.
+    private func writeStops() async {
+        guard let waiting = keep()?.stops, !waiting.isEmpty else { return }
+        var answered: [PhonePushStop] = []
+        for stop in waiting {
+            let status = await postLetter(token: stop.token, environment: stop.environment, grant: stop.grant,
+                                          box: stop.box, sealed: stop.sealed)
+            if let status, (200..<300).contains(status) || status == 403 || status == 404 { answered.append(stop) }
+        }
+        guard !answered.isEmpty, var held = keep() else { return }
+        held.stops = held.stops?.filter { !answered.contains($0) }
+        if held.stops?.isEmpty == true { held.stops = nil }
+        _ = commit(held)
+    }
+
+    /// A renew letter for each kept computer not lettered with the grant held, while notifications are on and the
+    /// relay still takes a letter with that grant. A 403 means the relay refused the grant, so the phone asks for a new
+    /// one as when its computer did not keep it; a 404 means a relay without letters, and the pass ends.
+    private func writeRenewals() async {
+        guard permission == .on, let start = keep(), let token = start.token, let environment = start.environment,
+              let grant = start.grant, let expiry = PhonePush.expiry(grant),
+              expiry.timeIntervalSince(effects.now()) > PhonePush.letterGrantLeast else { return }
+        for computer in start.computers ?? [] where computer.lettered != grant {
+            guard var held = keep(), held.grant == grant,
+                  held.computers?.contains(where: { $0.pin == computer.pin && $0.key == computer.key }) == true,
+                  let box = PhonePush.letterBox(key: computer.key) else { continue }
+            let at = nextLetterAt(&held)
+            guard let sealed = PhonePush.sealLetter(.renew(token: token, environment: environment, grant: grant, at: at),
+                                                    key: computer.key), commit(held) else { return }
+            let status = await postLetter(token: token, environment: environment, grant: grant, box: box, sealed: sealed)
+            if status == 404 { return }
+            if status == 403 {
+                guard var refused = keep(), refused.grant == grant else { return }
+                refused.grant = nil
+                guard commit(refused) else { return }
+                await askRelay()
+                return
+            }
+            guard let status, (200..<300).contains(status), var done = keep(), done.grant == grant,
+                  let index = done.computers?.firstIndex(where: { $0.pin == computer.pin && $0.key == computer.key })
+            else { continue }
+            done.computers?[index].lettered = grant
+            _ = commit(done)
+        }
+    }
+
+    /// Posts one letter; a 429 is written again a second later, the same letter, which is the newest for its box, at
+    /// most `PhonePush.letterTries` times in all. The relay's answer, or nil when none came.
+    private func postLetter(token: String, environment: PhonePushEnvironment, grant: String, box: String,
+                            sealed: String) async -> Int? {
+        let body = (try? JSONSerialization.data(withJSONObject: [
+            "token": token, "environment": environment.rawValue, "grant": grant, "box": box, "sealed": sealed,
+        ])) ?? Data()
+        var status = await effects.post(PhonePush.letter, body)
+        var tries = 1
+        while status == 429, tries < PhonePush.letterTries {
+            await effects.wait(1)
+            status = await effects.post(PhonePush.letter, body)
+            tries += 1
+        }
+        return status
     }
 
     /// Hands the computer what the phone holds: the registration while notifications are on and a grant is held,

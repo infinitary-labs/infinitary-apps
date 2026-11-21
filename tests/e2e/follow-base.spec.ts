@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { LEFT_OUT_WORDS } from "../../src/core/batches/combine";
+import { DELIVERY_WORDS } from "../../src/core/orchestrator/deliveryWakes";
 import { candidateHead } from "../../src/core/orchestrator/mergeAuthorization";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
@@ -11,14 +12,7 @@ import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
-import {
-  expectRecordBody,
-  hideRecord,
-  pressRow,
-  recordBar,
-  recordBarButton,
-  recordCard,
-} from "./rails";
+import { hideRecord, openRecord, recordBar, recordBarButton, recordCard } from "./rails";
 import { readSavedData } from "./savedData";
 import {
   BRING_FIRST_UP_TO_DATE,
@@ -39,6 +33,20 @@ import { pressKey } from "./windowKeys";
 
 const PASSED = [{ name: "unit-tests", status: "completed", conclusion: "success" }];
 const RUNNING = [{ name: "unit-tests", status: "in_progress", conclusion: null }];
+
+/** Stands for the closed work's title in the closed dependency's steer. */
+const TITLE = "\u0000title\u0000";
+const DROPPED_SAMPLE = DELIVERY_WORDS["dependency-closed"](
+  {
+    kind: "dependency-closed",
+    dependency: { key: "", title: TITLE },
+    closed: "dropped",
+    wait: "blocks",
+  },
+  {},
+);
+/** The closed dependency's steer for dropped work it waited on, after its name, from their owner. */
+const DROPPED_WAIT = DROPPED_SAMPLE.slice(DROPPED_SAMPLE.indexOf(`${TITLE}"`) + TITLE.length + 1);
 
 /** The chain of three parts, started, and what a section reads of it. */
 type Chain = Awaited<ReturnType<typeof startChain>>;
@@ -306,14 +314,6 @@ test("a chained part follows the newer approved version of the part under it", a
   });
 });
 
-/** Chromium drops native clicks into a hidden window's sandboxed frames. */
-async function openRecord(page: Page, key: string, id: string): Promise<void> {
-  await pressRow(page, key);
-  await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
-  await expect(recordCard(page)).toHaveCSS("opacity", "1");
-  await expectRecordBody(page);
-}
-
 /**
  * INF-5269's plan, part 3: a part that started on the approved version of
  * the part under it is told once when that part closes without merging.
@@ -359,5 +359,8 @@ test("a chained part is told once when the part under it closes without merging"
       .toBeGreaterThan(0);
     expect(heard(told)).toBe(1);
     expect(heard(CLOSED_UNDER)).toBe(1);
+    // Instead of, never beside, the closed dependency's steer.
+    expect(DROPPED_WAIT).not.toBe("");
+    expect(heard(DROPPED_WAIT)).toBe(0);
   });
 });

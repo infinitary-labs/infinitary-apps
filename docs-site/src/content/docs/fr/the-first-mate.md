@@ -9,7 +9,7 @@ Il est dessiné au milieu de la fenêtre, et il dirige votre équipage.
 
 ## Ce que fait votre second {#what-your-first-mate-does}
 
-- Il lit votre message et décide de ce qu’il lui faut : une réponse, une question en retour, ou du travail.
+- Il lit votre message et décide de ce qu’il lui faut : une réponse, une question en retour, ou du travail.
 - Il répond sur une carte à une question à laquelle il peut répondre lui-même.
 - Il transforme le travail en tâches et démarre un équipier sur chacune.
 - Il suit chaque tâche, transmet à un équipier ce que vous avez dit et clôt le travail quand il est fini.
@@ -28,7 +28,7 @@ Tapez dans la zone de message en bas de la fenêtre et envoyez.
 Votre message et la courte réponse de votre second restent juste au-dessus de la zone.
 Cliquez sur la réponse pour la lire en entier.
 
-Quelques astuces aident :
+Quelques astuces aident :
 
 - **Aller à la zone de message depuis n’importe où.**
   Appuyez sur ⌘L (Ctrl+L sous Linux).
@@ -46,7 +46,7 @@ Pour les autres types de fichiers, comme un PDF, la zone ajoute l’emplacement 
 ### Parler au lieu de taper {#talk-instead-of-typing}
 
 Appuyez sur la touche de dictée, ou maintenez-la, pour parler.
-L’indication dans la zone de message la nomme : « tapez, ou appuyez/maintenez ⌥ droite pour parler ».
+L’indication dans la zone de message la nomme : « tapez, ou appuyez/maintenez ⌥ droite pour parler ».
 Sous Linux, la touche est Ctrl droite.
 Ce que vous dites est transformé en texte sur votre ordinateur, et vous pouvez le modifier avant de l’envoyer.
 Pour changer la touche, ou désactiver la dictée, utilisez **Dictée** dans [Réglages → Général](/fr/settings/#general).
@@ -65,7 +65,7 @@ Pour choisir le modèle, ouvrez Réglages → Intelligence et utilisez **Modèle
 Un changement s’applique la prochaine fois que votre second est inactif.
 
 Si vous avez deux comptes chez le même fournisseur, la ligne indique **Modèle et compte du second**, et vous pouvez aussi choisir le compte.
-Le travail de votre équipage peut privilégier un autre compte : utilisez **Privilégier pour le travail de l’équipage** dans le menu de ce compte.
+Le travail de votre équipage peut privilégier un autre compte : utilisez **Privilégier pour le travail de l’équipage** dans le menu de ce compte.
 Voir [Abonnements et allocation](/fr/subscriptions-and-quota/).
 
 Si l’abonnement qu’utilise votre second cesse de répondre, par exemple parce que l’allocation de votre forfait est épuisée, votre second affiche une seule carte qui dit pourquoi et ce que vous pouvez faire.

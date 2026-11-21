@@ -24,7 +24,7 @@ Voir [Abonnements et allocation](/fr/subscriptions-and-quota/#read-your-plans-al
 ### Demander avant de fusionner {#ask-before-merging}
 
 L’interrupteur d’un projet qui décide qui fusionne son travail terminé.
-Quand il est activé, le travail attend votre clic sur sa carte de fusion ; quand il est désactivé, le travail qui réussit les vérifications peut fusionner sans vous demander.
+Quand il est activé, le travail attend votre clic sur sa carte de fusion ; quand il est désactivé, le travail qui réussit les vérifications peut fusionner sans vous demander.
 Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#asking-before-merging).
 
 ### Automatisation {#automation}
@@ -42,7 +42,7 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#where-a-task-stands).
 ### Lot {#batch}
 
 Pour un projet dont les changements partent en **demandes de tirage groupées**, une demande de tirage qui réunit vos changements approuvés, un commit pour chacun, et qui fusionne une fois ses vérifications réussies.
-Un changement qui attend son lot affiche « groupe » dans Tâches.
+Un changement qui attend son lot affiche « groupe » dans Tâches.
 Voir [Projets](/fr/projects/#how-changes-reach-your-project).
 
 ### Branche {#branch}
@@ -85,8 +85,8 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/#the-computer-where-your-
 
 ### Contrôle {#controlling}
 
-Ce que fait un autre ordinateur que vous avez ajouté quand Infinitary y est ouvert : il affiche votre second depuis l’ordinateur où il vit.
-Le haut de sa fenêtre indique « Contrôle de votre second sur » suivi du nom de cet ordinateur.
+Ce que fait un autre ordinateur que vous avez ajouté quand Infinitary y est ouvert : il affiche votre second depuis l’ordinateur où il vit.
+Le haut de sa fenêtre indique « Contrôle de votre second sur » suivi du nom de cet ordinateur.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/#control-your-first-mate-from-another-computer).
 
 ### Copie de votre second {#copy-of-your-first-mate}
@@ -116,7 +116,7 @@ Voir [Cartes et décisions](/fr/cards-and-decisions/#notes-and-decisions).
 
 ### Diagnostics {#diagnostics}
 
-Le seul interrupteur qui nous envoie quoi que ce soit : des événements d’utilisation anonymes, sans aucun texte que vous avez écrit, sans noms et sans chemins.
+Le seul interrupteur qui nous envoie quoi que ce soit : des événements d’utilisation anonymes, sans aucun texte que vous avez écrit, sans noms et sans chemins.
 Il se trouve dans Réglages → **Général**, sous **Partage**.
 Voir [Ce qui quitte votre ordinateur](/fr/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 
@@ -146,7 +146,7 @@ Voir [Intégrations](/fr/integrations/).
 
 ### Connaissances {#knowledge}
 
-Ce que votre second et votre équipage gardent pour le travail à venir : consignes permanentes, contexte personnel et sources enregistrées.
+Ce que votre second et votre équipage gardent pour le travail à venir : consignes permanentes, contexte personnel et sources enregistrées.
 Voir [Connaissances](/fr/knowledge/).
 
 ## M {#m}
@@ -194,7 +194,7 @@ Voir [Panneaux](/fr/panels/).
 
 ### Contexte personnel {#personal-context}
 
-Ce que vous dites de vous à votre second, comme « Je débute en programmation », gardé pour que le travail à venir puisse s’en servir.
+Ce que vous dites de vous à votre second, comme « Je débute en programmation », gardé pour que le travail à venir puisse s’en servir.
 Voir [Connaissances](/fr/knowledge/#tell-your-first-mate-about-yourself).
 
 ### Plan {#plan}
@@ -206,7 +206,7 @@ Voir [Ce que vous pouvez demander](/fr/what-you-can-ask-for/#a-plan-before-build
 ### Sites privés {#private-sites}
 
 Des sites du réseau de votre bureau, de votre domicile ou de votre VPN que vous avez listés, pour que le navigateur d’une tâche puisse les ouvrir.
-Votre second n’en ajoute jamais un lui-même : il vous le demande sur une carte.
+Votre second n’en ajoute jamais un lui-même : il vous le demande sur une carte.
 Voir [Le navigateur de l’équipage](/fr/the-crews-browser/#private-sites).
 
 ### Projet {#project}
@@ -238,13 +238,13 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#where-a-task-stands).
 
 ### Fiche {#record}
 
-Ce que garde chaque tâche : ce que vous avez demandé, ce qui a changé, les éléments et ce que vous avez décidé.
+Ce que garde chaque tâche : ce que vous avez demandé, ce qui a changé, les éléments et ce que vous avez décidé.
 La fiche d’une tâche reste après la fermeture de la tâche.
 Voir [Tâches et équipiers](/fr/tasks-and-crewmates/).
 
 ### Soin {#rigor}
 
-Le degré de vérification du travail avant qu’il ne vous parvienne : **Rapide**, **Par défaut** ou **Minutieux**.
+Le degré de vérification du travail avant qu’il ne vous parvienne : **Rapide**, **Par défaut** ou **Minutieux**.
 Chaque projet a le sien, dans Réglages → **Projets**.
 Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#rigor).
 
@@ -296,7 +296,7 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/).
 
 ### Tableau des tâches {#task-board}
 
-Une vue plus complète de vos tâches : **En attente de vous** en haut, puis les colonnes Réserve, En attente et En cours.
+Une vue plus complète de vos tâches : **En attente de vous** en haut, puis les colonnes Réserve, En attente et En cours.
 Appuyez sur **Ouvrir le tableau des tâches** dans l’en-tête de Tâches.
 Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#the-task-board).
 

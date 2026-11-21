@@ -8,10 +8,10 @@ Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux), le bouton **Réglages** en h
 Les sections sont listées sur la gauche.
 Les flèches haut et bas passent de l’une à l’autre, et Escape ou **Retour** quitte les Réglages.
 
-Vous pouvez aussi demander à votre second de changer un réglage pour vous, par exemple « passe au thème clair » ou « active la musique d’ambiance ».
+Vous pouvez aussi demander à votre second de changer un réglage pour vous, par exemple « passe au thème clair » ou « active la musique d’ambiance ».
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
 
 ## Les sections {#the-sections}
 
@@ -50,13 +50,13 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/).
   En dessous, Infinitary indique si vous êtes à jour, avec un bouton comme **Rechercher les mises à jour**.
   Voir [Mettre à jour et supprimer Infinitary](/fr/update-and-remove/).
 
-Sur un ordinateur qui pilote votre second depuis ailleurs, Général liste aussi **Connexions aux sites web** : les sites auxquels vous vous êtes connecté dans le [navigateur d’une tâche](/fr/the-crews-browser/#signed-in-sites) sur cet ordinateur.
+Sur un ordinateur qui pilote votre second depuis ailleurs, Général liste aussi **Connexions aux sites web** : les sites auxquels vous vous êtes connecté dans le [navigateur d’une tâche](/fr/the-crews-browser/#signed-in-sites) sur cet ordinateur.
 Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés** dans **Secrets**.
 
 ## Apparence {#appearance}
 
 - **Taille** agrandit le texte et tout ce qui l’entoure, à 100, 110, 125 ou 150 %.
-- **Taille des cartes par défaut** choisit comment les cartes s’ouvrent : **Habituelle**, **Large**, **Pleine** ou **Agrandie**.
+- **Taille des cartes par défaut** choisit comment les cartes s’ouvrent : **Habituelle**, **Large**, **Pleine** ou **Agrandie**.
   Vous pouvez toujours redimensionner chaque carte.
 - **Garder les cartes agrandies** garde chaque carte agrandie après que vous en avez agrandi une, jusqu’à ce que vous en restauriez une.
 - **Thème** est **Sombre** ou **Clair**.
@@ -66,12 +66,12 @@ Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés
 
 ### Polices {#fonts}
 
-Infinitary propose trois polices au choix :
+Infinitary propose trois polices au choix :
 
-- **Police de l’app** : les mots de la fenêtre, de ses panneaux, de ses boutons et des Réglages.
-- **Police de lecture** : ce que l’équipage écrit sur les cartes.
+- **Police de l’app** : les mots de la fenêtre, de ses panneaux, de ses boutons et des Réglages.
+- **Police de lecture** : ce que l’équipage écrit sur les cartes.
   Elle reste **Comme la police de l’app** jusqu’à ce que vous en choisissiez une autre.
-- **Police du code** : le code, les touches et les clés de tâche.
+- **Police du code** : le code, les touches et les clés de tâche.
 
 Chacune propose la police d’Infinitary, **Police de cet ordinateur**, ou l’une de vos **Polices installées**.
 

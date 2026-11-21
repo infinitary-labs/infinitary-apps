@@ -29,7 +29,7 @@ Quand un équipier prépare une copie de travail ou fait sa tâche, il peut réc
 
 Les ordinateurs et téléphones que vous ajoutez communiquent avec l’ordinateur où vit votre second.
 Réglages → **Appareils** indique comment ils le trouvent.
-**Par Internet** indique « Jamais. Infinitary n’ouvre pas cet ordinateur à Internet. »
+**Par Internet** indique « Jamais. Infinitary n’ouvre pas cet ordinateur à Internet. »
 
 Une connexion que vous saisissez pour un autre ordinateur va une fois à cet ordinateur.
 L’ordinateur où vit votre second n’en garde aucune copie.
@@ -59,13 +59,13 @@ La première fois que vous l’utilisez, elle demande avant de télécharger une
 ## Diagnostics, le seul interrupteur qui nous envoie quelque chose {#diagnostics-the-one-switch-that-sends-to-us}
 
 Réglages → **Général** → **Partage** contient l’interrupteur **Diagnostics**.
-C’est le seul interrupteur qui nous envoie quoi que ce soit ; la seule chose qui nous parvient sans lui est la mention « première du jour » et « première du mois » de la recherche de mises à jour ci-dessus, que **Partage** décrit aussi.
+C’est le seul interrupteur qui nous envoie quoi que ce soit ; la seule chose qui nous parvient sans lui est la mention « première du jour » et « première du mois » de la recherche de mises à jour ci-dessus, que **Partage** décrit aussi.
 Il est activé sauf si vous le désactivez, et rien dans l’app n’en dépend.
 
 À votre premier lancement, un avis sous la zone de message indique ce qu’il envoie, avec **Désactiver** et **OK**.
 Rien n’est envoyé tant que vous n’avez pas répondu.
 
-Diagnostics envoie des événements d’utilisation anonymes :
+Diagnostics envoie des événements d’utilisation anonymes :
 
 - l’ouverture de l’app,
 - votre second qui termine ou échoue un tour, avec seulement le type d’échec,
@@ -74,7 +74,7 @@ Diagnostics envoie des événements d’utilisation anonymes :
 
 Chaque événement transporte la version de l’app et un identifiant d’installation aléatoire.
 L’identifiant n’est lié à rien qui vous concerne ni à votre ordinateur, et il est remplacé chaque fois que Diagnostics est désactivé puis réactivé.
-Aucun texte que vous avez écrit, aucun nom et aucun chemin ne sont envoyés : jamais une conversation, du code ou une carte.
+Aucun texte que vous avez écrit, aucun nom et aucun chemin ne sont envoyés : jamais une conversation, du code ou une carte.
 Votre téléphone n’envoie rien lui-même ; votre ordinateur envoie ses événements sous le même interrupteur.
 
 Pour voir exactement ce qui partirait, ouvrez **Ce qui quitterait cet ordinateur** sous **Partage**.
@@ -84,5 +84,5 @@ Désactivez **Diagnostics**, et plus rien n’est enregistré ni envoyé.
 ## Secrets {#secrets}
 
 Les valeurs que vous gardez dans Réglages → **Secrets** restent sur votre ordinateur.
-Chaque valeur va directement dans Secrets : Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.
+Chaque valeur va directement dans Secrets : Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.
 Voir [Secrets](/fr/secrets/).

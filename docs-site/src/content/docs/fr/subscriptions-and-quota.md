@@ -10,7 +10,7 @@ Vous les gérez dans les Réglages, sous **Intelligence**, dans la liste **Abonn
 ## Ajouter un abonnement {#add-a-subscription}
 
 1. Ouvrez les Réglages et choisissez **Intelligence**.
-2. Au bas de **Abonnements d’IA**, sous **Ajouter un compte**, choisissez votre fournisseur : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter ou Amazon Bedrock.
+2. Au bas de **Abonnements d’IA**, sous **Ajouter un compte**, choisissez votre fournisseur : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter ou Amazon Bedrock.
 3. Connectez-vous de la façon que demande le fournisseur.
    Certains ouvrent votre navigateur, d’autres affichent un code à saisir sur leur site, et d’autres demandent une clé que vous collez.
 4. Une fois la connexion terminée, le nouveau compte apparaît dans la liste.
@@ -37,9 +37,9 @@ Chaque compte affiche une petite jauge pour chaque allocation de son fournisseur
 Le nombre indique ce qui reste.
 Laissez le pointeur sur une jauge pour voir quand elle se réinitialise.
 
-- La barre devient orange quand vous êtes en avance sur l’horloge : vous dépensez plus vite qu’un rythme régulier qui durerait jusqu’à la réinitialisation.
+- La barre devient orange quand vous êtes en avance sur l’horloge : vous dépensez plus vite qu’un rythme régulier qui durerait jusqu’à la réinitialisation.
 - Le nombre devient orange sous la moitié, et rouge sous un cinquième.
-- À côté des jauges, un mot résume le compte : **dans le rythme**, **épuisée dans** suivi d’une durée, ou **épuisée**.
+- À côté des jauges, un mot résume le compte : **dans le rythme**, **épuisée dans** suivi d’une durée, ou **épuisée**.
 - **il y a 3 h** signifie que la dernière lecture est ancienne, donc ses nombres sont estompés.
 - Un tiret signifie que cette allocation n’a pas été lue.
 

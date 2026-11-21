@@ -8,22 +8,22 @@ Chaque problème ci-dessous commence par les mots qu’Infinitary vous affiche.
 
 ## Un abonnement vous demande de vous reconnecter {#a-subscription-needs-you-to-sign-in-again}
 
-Vous pouvez voir une carte intitulée « Votre second a besoin que vous vous reconnectiez », ou un abonnement dans Réglages → **Intelligence** qui indique « se reconnecter ».
-Le travail sur cet abonnement attend : « Le travail est en pause jusqu’à ce que vous vous reconnectiez. »
+Vous pouvez voir une carte intitulée « Votre second a besoin que vous vous reconnectiez », ou un abonnement dans Réglages → **Intelligence** qui indique « se reconnecter ».
+Le travail sur cet abonnement attend : « Le travail est en pause jusqu’à ce que vous vous reconnectiez. »
 
 1. Appuyez sur **Se connecter** sur la carte, ou ouvrez Réglages → **Intelligence**.
 2. Connectez-vous à cet abonnement de la façon que demande votre fournisseur.
 3. Le travail en attente reprend de lui-même.
 
-Une tâche qui s’exécute sur un autre ordinateur utilise la connexion propre à cet ordinateur ; reconnectez-vous donc pour cet ordinateur, sous son nom.
+Une tâche qui s’exécute sur un autre ordinateur utilise la connexion propre à cet ordinateur ; reconnectez-vous donc pour cet ordinateur, sous son nom.
 
 ## L’allocation de votre forfait est épuisée {#your-plans-allowance-ran-out}
 
-Votre second affiche une carte intitulée « Votre second a épuisé son allocation ».
-Une réponse à un équipier sur cet abonnement indique « Enregistrée, pas encore envoyée », avec le moment où l’allocation se renouvelle.
+Votre second affiche une carte intitulée « Votre second a épuisé son allocation ».
+Une réponse à un équipier sur cet abonnement indique « Enregistrée, pas encore envoyée », avec le moment où l’allocation se renouvelle.
 Le travail reprend de lui-même une fois l’allocation renouvelée.
 
-Pour reprendre plus tôt :
+Pour reprendre plus tôt :
 
 - Appuyez sur **Revérifier l’allocation** si vous avez changé quelque chose du côté de votre fournisseur.
 - Appuyez sur **Passer à** un autre fournisseur, quand la carte en propose un.
@@ -34,10 +34,10 @@ Pour Claude et Codex, **Continuer avec les crédits** permet à un compte de pou
 
 ## Votre second ne répond pas {#your-first-mate-is-not-answering}
 
-Si un message n’a rien donné, une carte indique « Votre second n’a pas répondu à votre message ».
+Si un message n’a rien donné, une carte indique « Votre second n’a pas répondu à votre message ».
 Appuyez sur **Redemander** pour l’envoyer une nouvelle fois, ou sur **Laisser**.
 
-Si c’est le fournisseur lui-même qui ne répond pas, une carte indique qu’il « ne répond pas à votre second pour le moment ».
+Si c’est le fournisseur lui-même qui ne répond pas, une carte indique qu’il « ne répond pas à votre second pour le moment ».
 Appuyez sur **Réessayer Claude**, ou sur le même bouton avec le nom de votre fournisseur, ou sur **Ouvrir les Réglages** pour choisir un autre abonnement.
 Quand un fournisseur a un bref problème, Activité le signale, et l’app réessaie d’elle-même.
 
@@ -46,24 +46,24 @@ Quand un fournisseur a un bref problème, Activité le signale, et l’app rées
 Une tâche qui indique **En attente de vous** a une carte pour vous.
 Ouvrez la tâche et appuyez sur **Afficher la carte**, puis tranchez.
 
-D’autres mots sur une tâche disent ce qui la retient :
+D’autres mots sur une tâche disent ce qui la retient :
 
-- « En attente des vérifications » : son équipier attend les vérifications de sa demande de tirage.
-- « Nouvel essai chez son fournisseur » : le fournisseur a échoué, et l’app réessaie d’elle-même.
-- « Bloquée chez son fournisseur » : le fournisseur a refusé trois fois la même demande, et votre second choisit quoi faire.
-- « Bloquée par une autre tâche » : elle démarre une fois cette tâche terminée.
+- « En attente des vérifications » : son équipier attend les vérifications de sa demande de tirage.
+- « Nouvel essai chez son fournisseur » : le fournisseur a échoué, et l’app réessaie d’elle-même.
+- « Bloquée chez son fournisseur » : le fournisseur a refusé trois fois la même demande, et votre second choisit quoi faire.
+- « Bloquée par une autre tâche » : elle démarre une fois cette tâche terminée.
 
 ## Les vérifications ont échoué sur une demande de tirage {#the-checks-failed-on-a-pull-request}
 
 Quand les vérifications échouent, l’équipier qui a fait la demande de tirage les corrige et apporte une nouvelle version.
 Une carte de fusion propose alors **Fusionner après correction des erreurs**.
-Si vous appuyez dessus, votre fusion est gardée : « Votre fusion attend une correction : ses vérifications ont échoué. »
+Si vous appuyez dessus, votre fusion est gardée : « Votre fusion attend une correction : ses vérifications ont échoué. »
 Elle a lieu une fois les vérifications de la correction réussies, ou l’équipier vous redemande sur une nouvelle carte si la correction a changé le travail.
 
 ## Un autre ordinateur est hors de portée {#another-computer-is-out-of-reach}
 
-Une fenêtre sur un autre ordinateur indique « Les modifications sont désactivées jusqu’au retour » de l’autre ordinateur, « Il est peut-être en veille, ou sur un autre réseau. »
-Ou encore : « Infinitary est fermé sur » cet ordinateur.
+Une fenêtre sur un autre ordinateur indique « Les modifications sont désactivées jusqu’au retour » de l’autre ordinateur, « Il est peut-être en veille, ou sur un autre réseau. »
+Ou encore : « Infinitary est fermé sur » cet ordinateur.
 
 1. Réveillez l’ordinateur où vit votre second, et ouvrez-y Infinitary.
 2. Placez les deux ordinateurs sur le même réseau, ou sur le même réseau privé.
@@ -82,17 +82,17 @@ Les messages que votre second ou un équipier n’avait pas fini de traiter sont
 
 ## macOS pose une question sur les données d’autres apps {#macos-asks-about-other-apps-data}
 
-macOS peut demander « Infinitary souhaite accéder aux données d’autres apps. »
+macOS peut demander « Infinitary souhaite accéder aux données d’autres apps. »
 Cela arrive quand la recherche d’un équipier atteint des fichiers qu’une autre app garde.
 Le travail d’Infinitary en a rarement besoin, si bien que **Ne pas autoriser** convient en général.
-La fiche de la tâche indique « En attente de macOS » jusqu’à votre réponse, puis la recherche continue.
+La fiche de la tâche indique « En attente de macOS » jusqu’à votre réponse, puis la recherche continue.
 
 ## Claude Code est absent {#claude-code-is-missing}
 
 Pour utiliser un abonnement Claude, installez d’abord Claude Code sur cet ordinateur.
-Sans lui, Infinitary indique « Claude Code n’est pas installé sur cet ordinateur. Installez-le pour utiliser Claude ici. »
+Sans lui, Infinitary indique « Claude Code n’est pas installé sur cet ordinateur. Installez-le pour utiliser Claude ici. »
 Si le vôtre est trop ancien, il nomme la version nécessaire et vous dit d’exécuter `claude update`.
-Sur un autre ordinateur, Claude Code s’y connecte lui-même : connectez-vous-y une fois sur place, et Infinitary utilise cette connexion.
+Sur un autre ordinateur, Claude Code s’y connecte lui-même : connectez-vous-y une fois sur place, et Infinitary utilise cette connexion.
 
 ## Toujours bloqué {#still-stuck}
 

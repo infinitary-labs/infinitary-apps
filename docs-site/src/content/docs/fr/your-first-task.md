@@ -11,8 +11,8 @@ Sinon, commencez par [Premier lancement](/fr/first-launch/).
 ## 1. Dites ce que vous voulez {#1-say-what-you-want}
 
 Tapez votre demande dans la zone de message en bas de la fenêtre, puis envoyez-la.
-Formulez-la comme vous le demanderiez à quelqu’un : ce que vous voulez, et tout ce qui compte pour vous.
-Par exemple : « Sur le site web, rendez le bouton d’inscription plus visible sur les téléphones. »
+Formulez-la comme vous le demanderiez à quelqu’un : ce que vous voulez, et tout ce qui compte pour vous.
+Par exemple : « Sur le site web, rendez le bouton d’inscription plus visible sur les téléphones. »
 [Ce que vous pouvez demander](/fr/what-you-can-ask-for/) montre d’autres types de demandes.
 
 Vous pouvez aussi parler au lieu de taper, ou ajouter des images et des fichiers.
@@ -21,7 +21,7 @@ Voir [Le second](/fr/the-first-mate/).
 ## 2. Votre second s’en charge {#2-your-first-mate-takes-it}
 
 Votre message apparaît juste au-dessus de la zone de message.
-En dessous, la marque de votre second tourne à côté de « En cours… » jusqu’à ce que sa réponse prenne cette place.
+En dessous, la marque de votre second tourne à côté de « En cours… » jusqu’à ce que sa réponse prenne cette place.
 La réponse est une courte phrase qui dit ce qu’il a fait, par exemple démarrer une tâche.
 
 Une question à laquelle il peut répondre lui-même revient sous forme de carte.
@@ -45,7 +45,7 @@ Répondez-y, et l’équipier poursuit.
 ## 4. La carte de fusion {#4-the-merge-card}
 
 Quand le travail est fait et vérifié, l’équipier apporte une carte de fusion.
-C’est le récit complet du changement :
+C’est le récit complet du changement :
 
 - **Pourquoi**, en une phrase.
 - **Ce qui a changé**, en quelques points courts.
@@ -59,7 +59,7 @@ Voir [Cartes et décisions](/fr/cards-and-decisions/) pour en savoir plus sur la
 
 ## 5. Fusionnez-le {#5-merge-it}
 
-Lisez la carte, puis choisissez :
+Lisez la carte, puis choisissez :
 
 - **Fusionner la demande de tirage** fusionne le changement là où votre projet est hébergé.
   Pour un projet conservé sur cet ordinateur, le bouton indique **Fusionner la branche**.
@@ -72,7 +72,7 @@ Cliquez dessus, et Infinitary fusionne dès qu’elles réussissent.
 Si les vérifications ont échoué, le bouton indique **Fusionner après correction des erreurs**.
 Cliquez dessus, et Infinitary fusionne une fois les erreurs corrigées et les vérifications réussies.
 
-Pour demander plutôt un changement, tapez dans le champ de la carte, qui indique « quelque chose à ajouter ? », et appuyez sur **Discuter**.
+Pour demander plutôt un changement, tapez dans le champ de la carte, qui indique « quelque chose à ajouter ? », et appuyez sur **Discuter**.
 L’équipier répond dans un fil à côté de la carte, et met la carte à jour quand il a terminé.
 
 ## 6. Après la fusion {#6-after-the-merge}
@@ -80,7 +80,7 @@ L’équipier répond dans un fil à côté de la carte, et met la carte à jour
 La tâche se ferme et passe dans Terminées, dans Tâches.
 Sa fiche garde ce que vous avez demandé, ce qui a changé, les éléments et ce que vous avez décidé.
 
-Si le changement demande, après sa fusion, quelque chose que vous seul pouvez faire, la carte de fusion le dit en haut, sous « Après la fusion, vous devez… ».
+Si le changement demande, après sa fusion, quelque chose que vous seul pouvez faire, la carte de fusion le dit en haut, sous « Après la fusion, vous devez… ».
 Voir [Cartes et décisions](/fr/cards-and-decisions/).
 
 ## Fusionner sans demander {#merging-without-asking}

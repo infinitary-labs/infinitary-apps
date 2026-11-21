@@ -10,16 +10,16 @@ Chaque tâche garde une fiche de ce que vous avez demandé, de ce qui a changé,
 
 ## Où en est une tâche {#where-a-task-stands}
 
-Tâches, à droite de la fenêtre, classe vos tâches selon leur état :
+Tâches, à droite de la fenêtre, classe vos tâches selon leur état :
 
-- **En attente de vous** : une carte de la tâche demande votre décision.
-- **En cours** : un équipier s’en occupe maintenant.
-- **En attente** : elle démarre d’elle-même une fois terminé ce qu’elle attend, comme une autre tâche.
-- **Réserve** : elle attend que vous la démarriez.
+- **En attente de vous** : une carte de la tâche demande votre décision.
+- **En cours** : un équipier s’en occupe maintenant.
+- **En attente** : elle démarre d’elle-même une fois terminé ce qu’elle attend, comme une autre tâche.
+- **Réserve** : elle attend que vous la démarriez.
   Appuyez sur **Démarrer** sur sa ligne quand vous voulez qu’elle commence.
-- **Terminées · 7 j** : finies cette semaine.
+- **Terminées · 7 j** : finies cette semaine.
 
-Une ligne peut ajouter un mot après son titre, comme « bloquée », « retenue », « vérifications » ou « n’a pas pu démarrer ».
+Une ligne peut ajouter un mot après son titre, comme « bloquée », « retenue », « vérifications » ou « n’a pas pu démarrer ».
 Une tâche qui n’a pas pu démarrer propose **Réessayer**.
 
 Cliquez sur une ligne pour ouvrir la tâche.
@@ -30,25 +30,25 @@ Si une carte de la tâche vous attend, cette carte passe d’abord au premier pl
 Chaque ligne de Tâches commence par une petite marque.
 Sa forme dit où en est la tâche, et sa couleur le confirme.
 
-- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg> **Réserve** : elle attend que vous appuyiez sur **Démarrer**.
-- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg> **En attente** : elle démarre d’elle-même dès qu’elle le peut.
-- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-track" cx="8" cy="8" r="5" fill="none" stroke-width="1.5"/><path class="task-mark-ring" d="M8 3a5 5 0 1 1-5 5" fill="none" stroke-width="1.5"/></svg> **Démarrage** : Infinitary prépare son équipier.
-- <svg class="task-mark task-mark-hot" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **En cours** : un équipier y travaille maintenant.
-- <svg class="task-mark task-mark-hot" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-ring" cx="8" cy="8" r="6" fill="none" stroke-width="1.2" stroke-dasharray="2.6 2.1"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, sur un travail de fond** : quelque chose que son équipier a lancé, comme une longue compilation ou une série de tests, tourne encore.
-- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-ring" cx="8" cy="8" r="6" fill="none" stroke-width="1.2" stroke-dasharray="2.6 2.1"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, en attente des vérifications** : son équipier attend la fin des vérifications sur son changement.
-  La ligne ajoute « vérifications ».
-- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.441 3.085 A6 6 0 0 1 11.441 12.915 M4.559 12.915 A6 6 0 0 1 4.559 3.085" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, en attente du lot** : son changement approuvé attend les vérifications du lot qu’il a rejoint.
-  La ligne ajoute « groupe ».
-- <svg class="task-mark task-mark-ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **Inactive** : elle a démarré, mais son équipier ne travaille pas pour le moment, et son travail est gardé.
-  Quand elle attend une autre tâche, la ligne ajoute « en attente ».
-- <svg class="task-mark task-mark-lava" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **Interrompue** : le tour de son équipier s’est arrêté avant la fin.
+- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg> **Réserve** : elle attend que vous appuyiez sur **Démarrer**.
+- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg> **En attente** : elle démarre d’elle-même dès qu’elle le peut.
+- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-track" cx="8" cy="8" r="5" fill="none" stroke-width="1.5"/><path class="task-mark-ring" d="M8 3a5 5 0 1 1-5 5" fill="none" stroke-width="1.5"/></svg> **Démarrage** : Infinitary prépare son équipier.
+- <svg class="task-mark task-mark-hot" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **En cours** : un équipier y travaille maintenant.
+- <svg class="task-mark task-mark-hot" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-ring" cx="8" cy="8" r="6" fill="none" stroke-width="1.2" stroke-dasharray="2.6 2.1"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, sur un travail de fond** : quelque chose que son équipier a lancé, comme une longue compilation ou une série de tests, tourne encore.
+- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><circle class="task-mark-ring" cx="8" cy="8" r="6" fill="none" stroke-width="1.2" stroke-dasharray="2.6 2.1"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, en attente des vérifications** : son équipier attend la fin des vérifications sur son changement.
+  La ligne ajoute « vérifications ».
+- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.441 3.085 A6 6 0 0 1 11.441 12.915 M4.559 12.915 A6 6 0 0 1 4.559 3.085" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En cours, en attente du lot** : son changement approuvé attend les vérifications du lot qu’il a rejoint.
+  La ligne ajoute « groupe ».
+- <svg class="task-mark task-mark-ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **Inactive** : elle a démarré, mais son équipier ne travaille pas pour le moment, et son travail est gardé.
+  Quand elle attend une autre tâche, la ligne ajoute « en attente ».
+- <svg class="task-mark task-mark-lava" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="currentColor" stroke="currentColor" stroke-width="1.2"/></svg> **Interrompue** : le tour de son équipier s’est arrêté avant la fin.
   Dites-lui quoi faire ensuite.
-- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En attente de vous** : une carte de la tâche demande votre décision.
-- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8 6 12 14 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> **Terminée** : elle est finie.
-- <svg class="task-mark task-mark-dim" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 13 13 M13 3 3 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> **Écartée** : elle a été écartée.
+- <svg class="task-mark task-mark-calm" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg> **En attente de vous** : une carte de la tâche demande votre décision.
+- <svg class="task-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8 6 12 14 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> **Terminée** : elle est finie.
+- <svg class="task-mark task-mark-dim" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 13 13 M13 3 3 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> **Écartée** : elle a été écartée.
   Le travail écarté s’affiche sur le tableau des tâches, pas dans Tâches.
 
-Quand l’ordinateur sur lequel s’exécute une tâche est hors de portée, sa marque garde sa forme et devient orange, et la ligne se termine par « hors de portée » ([Vos autres ordinateurs](/fr/your-other-computers/#a-computer-that-runs-work)).
+Quand l’ordinateur sur lequel s’exécute une tâche est hors de portée, sa marque garde sa forme et devient orange, et la ligne se termine par « hors de portée » ([Vos autres ordinateurs](/fr/your-other-computers/#a-computer-that-runs-work)).
 Par exemple, une tâche de la réserve sur cet ordinateur affiche <svg class="task-mark task-mark-hot" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>.
 
 Une tâche découpée en parties liste ses parties en dessous.
@@ -60,15 +60,15 @@ Pour lire en toutes lettres l’état d’une tâche et sa raison, laissez le po
 ## Le tableau des tâches {#the-task-board}
 
 Pour une vue plus complète, appuyez sur **Ouvrir le tableau des tâches** dans l’en-tête de Tâches.
-Le tableau affiche En attente de vous en haut, puis trois colonnes : Réserve, En attente et En cours.
+Le tableau affiche En attente de vous en haut, puis trois colonnes : Réserve, En attente et En cours.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
 
 Ses vues listent aussi toute la réserve, Terminées · 7 j et le travail écarté cette semaine.
 Tapez une clé ou un titre dans **Rechercher une tâche** pour restreindre chaque colonne, y compris le travail terminé plus ancien.
 
-Pour déplacer une tâche, faites glisser sa vignette vers une autre colonne, ou utilisez son menu ⋯ :
+Pour déplacer une tâche, faites glisser sa vignette vers une autre colonne, ou utilisez son menu ⋯ :
 
 - Vers **En attente**, elle démarre d’elle-même dès qu’elle le peut.
 - Vers **En cours**, elle démarre maintenant.
@@ -77,29 +77,29 @@ Pour déplacer une tâche, faites glisser sa vignette vers une autre colonne, ou
 - Vers le bac **Écarter la tâche**, elle est écartée.
 
 Un déplacement qui lancerait le travail ou l’écarterait demande d’abord une fois.
-Le tableau ne fusionne jamais rien : une fusion n’a lieu que sur la carte de fusion de la tâche.
+Le tableau ne fusionne jamais rien : une fusion n’a lieu que sur la carte de fusion de la tâche.
 
 ## La carte d’une tâche {#a-tasks-card}
 
 Ouvrez une tâche pour voir sa carte.
-Sous son titre se trouve une rangée d’onglets :
+Sous son titre se trouve une rangée d’onglets :
 
-- **Infos** : ce que vous avez demandé, où elle en est et comment elle est livrée.
-- **Cartes** : les cartes que la tâche vous a montrées, avec leur nombre.
-- **Activité** : chaque ligne qu’a écrite la tâche, dans l’ordre.
-- **Équipier** : la conversation de l’équipier lui-même, ligne par ligne, pendant qu’il travaille.
-- **Navigateur** : une page que l’équipier a ouverte dans son propre navigateur, quand il en a une.
+- **Infos** : ce que vous avez demandé, où elle en est et comment elle est livrée.
+- **Cartes** : les cartes que la tâche vous a montrées, avec leur nombre.
+- **Activité** : chaque ligne qu’a écrite la tâche, dans l’ordre.
+- **Équipier** : la conversation de l’équipier lui-même, ligne par ligne, pendant qu’il travaille.
+- **Navigateur** : une page que l’équipier a ouverte dans son propre navigateur, quand il en a une.
   Voir [Le navigateur de l’équipage](/fr/the-crews-browser/).
 
 Un onglet n’apparaît qu’une fois que la tâche a quelque chose à y montrer.
 
 ## Orienter un équipier {#steering-a-crewmate}
 
-Vous pouvez dire quelque chose à un équipier de trois façons :
+Vous pouvez dire quelque chose à un équipier de trois façons :
 
 1. Tapez sous l’une de ses cartes, et appuyez sur **Discuter**.
 2. Tapez dans la zone au pied de son onglet **Équipier**.
-   Un équipier en cours de travail prend en compte vos mots tout en travaillant ; un équipier inactif repart de ces mots.
+   Un équipier en cours de travail prend en compte vos mots tout en travaillant ; un équipier inactif repart de ces mots.
 3. Dites-le à votre second, dans la zone de message.
 
 Pour arrêter le tour d’un équipier, appuyez sur **Arrêter** dans son onglet Équipier.
@@ -108,14 +108,14 @@ La tâche reste ouverte, et vous pouvez lui dire quoi faire ensuite.
 ## Soin {#rigor}
 
 Le soin est le degré de vérification du travail avant qu’il ne vous parvienne.
-Il a trois niveaux :
+Il a trois niveaux :
 
-- **Rapide** : les vérifications réussissent, et guère plus.
-- **Par défaut** : l’équipier montre le changement en marche, avec des images, et exécute les tests qui comptent.
-- **Minutieux** : Par défaut, puis une revue indépendante et la preuve que le changement fonctionne, avant la carte de fusion.
+- **Rapide** : les vérifications réussissent, et guère plus.
+- **Par défaut** : l’équipier montre le changement en marche, avec des images, et exécute les tests qui comptent.
+- **Minutieux** : Par défaut, puis une revue indépendante et la preuve que le changement fonctionne, avant la carte de fusion.
 
 Chaque projet a son propre Soin, dans Réglages → Projets.
-Pour une seule tâche, dites avec quel soin travailler quand vous la demandez, par exemple « sois minutieux avec celle-ci ».
+Pour une seule tâche, dites avec quel soin travailler quand vous la demandez, par exemple « sois minutieux avec celle-ci ».
 Sur une carte de fusion, **Revoir minutieusement** fait passer cette tâche à Minutieux.
 
 ## Demander avant de fusionner {#asking-before-merging}
@@ -128,13 +128,13 @@ Pour le changer pour une seule tâche, dites-le à votre second.
 
 ## Fermer une tâche {#closing-a-task}
 
-La plupart des tâches se ferment d’elles-mêmes :
+La plupart des tâches se ferment d’elles-mêmes :
 
 - Fusionner son changement ferme la tâche.
 - **Abandonner** sur sa carte de fusion écarte le travail.
 - **Terminé** sur une note qui répond à votre question la ferme comme traitée.
 
-Vous pouvez aussi en fermer une depuis sa carte :
+Vous pouvez aussi en fermer une depuis sa carte :
 
 - **Écarter la tâche** y met fin.
   Un équipier en cours de travail s’arrête, et son travail inachevé est gardé.

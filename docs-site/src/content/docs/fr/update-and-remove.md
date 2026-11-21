@@ -11,10 +11,10 @@ Une mise à jour garde votre travail enregistré.
 ## Quand une nouvelle version est disponible {#when-a-new-version-is-out}
 
 Un bouton rond avec une flèche vers le bas apparaît en haut à droite de la fenêtre.
-Laissez le pointeur dessus pour lire « Mise à jour disponible » et le numéro de la nouvelle version, et appuyez dessus pour voir quoi faire ensuite.
+Laissez le pointeur dessus pour lire « Mise à jour disponible » et le numéro de la nouvelle version, et appuyez dessus pour voir quoi faire ensuite.
 Réglages → **Général** affiche la même chose, sous **Version**.
 
-Pour vérifier vous-même, utilisez l’un de ces moyens :
+Pour vérifier vous-même, utilisez l’un de ces moyens :
 
 - **Rechercher les mises à jour** sous **Version** dans Réglages → **Général**.
 - **Rechercher les mises à jour** dans la recherche de commandes.
@@ -42,7 +42,7 @@ S’il s’exécute depuis l’image disque, faites-le glisser dans Applications
 ## Une copie pour Mac depuis Homebrew {#a-mac-copy-from-homebrew}
 
 Une copie installée avec Homebrew se met à jour avec Homebrew.
-L’avis affiche la commande, avec **Copier la commande** :
+L’avis affiche la commande, avec **Copier la commande** :
 
 ```sh wrap
 brew update && brew upgrade --cask infinitary-labs/tap/infinitary
@@ -53,9 +53,9 @@ Homebrew quitte Infinitary pendant qu’il le remplace, alors rouvrez Infinitary
 
 ## Linux {#linux}
 
-- **Ubuntu, Debian et Fedora**, depuis le paquet .deb ou .rpm : appuyez sur **Installer**.
+- **Ubuntu, Debian et Fedora**, depuis le paquet .deb ou .rpm : appuyez sur **Installer**.
   Infinitary télécharge la nouvelle version, la vérifie, enregistre le travail de votre équipage et demande votre mot de passe, puis redémarre.
-- **Une AppImage** : appuyez sur **Installer**.
+- **Une AppImage** : appuyez sur **Installer**.
   Infinitary remplace le fichier AppImage par la nouvelle version et redémarre, sans mot de passe.
   Il doit pouvoir modifier le dossier où se trouve l’AppImage.
 - **Arch, Omarchy et NixOS** se mettent à jour avec leur propre gestionnaire de paquets.
@@ -80,10 +80,10 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/) et [iPhone et iPad](/fr
 Supprimer l’app laisse votre travail enregistré en place, donc réinstaller Infinitary reprend là où vous vous étiez arrêté.
 Si cet ordinateur exécute le travail d’un autre, appuyez d’abord sur **Quitter** dans Réglages → **Appareils**.
 
-- **Une copie pour Mac depuis la page de téléchargement** : quittez Infinitary et déplacez-le d’Applications vers la Corbeille.
-- **Une copie pour Mac depuis Homebrew** : exécutez `brew uninstall --cask infinitary` dans Terminal.
+- **Une copie pour Mac depuis la page de téléchargement** : quittez Infinitary et déplacez-le d’Applications vers la Corbeille.
+- **Une copie pour Mac depuis Homebrew** : exécutez `brew uninstall --cask infinitary` dans Terminal.
   N’ajoutez jamais `--zap` : cela supprime votre travail enregistré.
-- **Linux** : supprimez le paquet avec l’installateur de logiciels ou le gestionnaire de paquets qui a servi à l’installer.
+- **Linux** : supprimez le paquet avec l’installateur de logiciels ou le gestionnaire de paquets qui a servi à l’installer.
   Pour une AppImage, supprimez le fichier.
 
 Votre travail enregistré reste dans `~/Library/Application Support/infinitary` sur un Mac, et dans `~/.config/infinitary` sous Linux.

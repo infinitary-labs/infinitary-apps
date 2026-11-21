@@ -10,20 +10,20 @@ Vous n’avez jamais besoin de nommer le type.
 
 ## Un changement dans un projet {#a-change-to-a-project}
 
-« Sur le site web, rendez le bouton d’inscription plus visible sur les téléphones. »
+« Sur le site web, rendez le bouton d’inscription plus visible sur les téléphones. »
 
 Un équipier fait le changement dans sa propre copie de travail de votre projet.
 Une fois le changement vérifié, l’équipier apporte une carte de fusion avec le récit du changement.
 Voir [Votre première tâche](/fr/your-first-task/).
 
-Pour quelque chose de cassé, dites ce que vous avez vu, par exemple « Le bouton Enregistrer de la page des réglages ne fait rien. »
+Pour quelque chose de cassé, dites ce que vous avez vu, par exemple « Le bouton Enregistrer de la page des réglages ne fait rien. »
 Un équipier essaie d’abord de reproduire le problème.
 S’il n’y arrive pas, votre second vous demande avant que quiconque tente une correction.
 La correction s’accompagne d’une vérification qui échouait avant le changement et réussit après.
 
 ## Une réponse à une question {#a-question-answered}
 
-« Comment la page d’inscription décide-t-elle quelle offre afficher ? »
+« Comment la page d’inscription décide-t-elle quelle offre afficher ? »
 
 Votre second répond lui-même à une question rapide.
 Quand la réponse demande de parcourir votre projet, un équipier le lit et apporte la réponse sur une carte, en indiquant d’où vient chaque partie.
@@ -32,7 +32,7 @@ Voir [Cartes et décisions](/fr/cards-and-decisions/).
 
 ## Un plan avant de construire {#a-plan-before-building}
 
-« Prévois un mode sombre pour le site web, et montre-le-moi avant de le construire. »
+« Prévois un mode sombre pour le site web, et montre-le-moi avant de le construire. »
 
 Un équipier lit votre projet et apporte le plan sur une carte.
 Il ne pose que les questions qu’il vous revient de trancher, et dit ce qu’il a décidé lui-même.
@@ -43,28 +43,28 @@ Votre second planifie aussi d’abord de lui-même quand une demande n’est pas
 
 ## Une recherche {#research}
 
-« Compare trois façons d’ajouter une recherche au site web, avec ce que coûterait chacune. »
+« Compare trois façons d’ajouter une recherche au site web, avec ce que coûterait chacune. »
 
-Une recherche va au-delà de votre projet : sur le web, ou en exécutant et en mesurant quelque chose.
+Une recherche va au-delà de votre projet : sur le web, ou en exécutant et en mesurant quelque chose.
 La réponse arrive sur une carte avec ses sources, et sépare ce qui est établi de ce qui est supposé.
 
 ## Un horaire {#a-schedule}
 
-« Chaque jour de semaine à 9 h, dis-moi quelles demandes de tirage m’attendent. »
+« Chaque jour de semaine à 9 h, dis-moi quelles demandes de tirage m’attendent. »
 
-Votre second crée une automatisation : une consigne qu’il reçoit selon un horaire, ou chaque fois que quelque chose se produit.
+Votre second crée une automatisation : une consigne qu’il reçoit selon un horaire, ou chaque fois que quelque chose se produit.
 Voir [Automatisation](/fr/automation/).
 
 ## Un panneau {#a-panel}
 
-« Fais-moi un panneau qui affiche la météo à Tokyo. »
+« Fais-moi un panneau qui affiche la météo à Tokyo. »
 
 Un équipier construit un panneau pour le côté de la fenêtre, à partir des éléments de l’app elle-même.
 Voir [Panneaux](/fr/panels/#panels-your-first-mate-builds-for-you).
 
 ## Un sujet appris sur plusieurs jours {#a-subject-learned-across-days}
 
-« Apprends-moi les échecs, un peu chaque jour. »
+« Apprends-moi les échecs, un peu chaque jour. »
 
 Chaque sujet est une tâche qui reste ouverte sur plusieurs jours.
 Sa première carte demande ce que vous voulez savoir faire.
@@ -77,7 +77,7 @@ Après votre première série terminée, le sujet reçoit un panneau avec votre 
 
 ## Un petit projet pour le plaisir {#a-small-project-for-fun}
 
-« Fais-moi un petit jeu où un chat attrape des poissons qui tombent. »
+« Fais-moi un petit jeu où un chat attrape des poissons qui tombent. »
 
 Votre second le configure comme un projet à part, sur une carte où vous appuyez sur **Ajouter un projet**.
 Il propose de garder le projet sur cet ordinateur et de laisser le travail terminé fusionner sans demander.
@@ -86,7 +86,7 @@ Il joue d’abord au jeu, puis apporte une note avec une image et un bouton **Ou
 
 ## Un examen d’un ordinateur surchargé {#a-look-at-a-computer-under-strain}
 
-« Mon ordinateur est lent. Peux-tu vérifier ce que les tâches terminées ont laissé en marche ? »
+« Mon ordinateur est lent. Peux-tu vérifier ce que les tâches terminées ont laissé en marche ? »
 
 Quand un ordinateur signale qu’il est surchargé, votre second propose cet examen sur une carte.
 L’examen ne fait que lire.
@@ -95,7 +95,7 @@ Il n’arrête que ceux que vous choisissez, et il utilise l’allocation de vot
 
 ## Une tâche qui reste en marche {#a-job-kept-running}
 
-« Sauvegarde mon dossier Documents sur mon disque externe chaque nuit. »
+« Sauvegarde mon dossier Documents sur mon disque externe chaque nuit. »
 
 Un équipier configure la tâche avec le planificateur de votre ordinateur, pour qu’elle continue de tourner après la fermeture de la tâche.
 Sa carte nomme la tâche planifiée, l’ordinateur sur lequel elle tourne, quand elle s’exécute, comment la vérifier et comment la supprimer.
@@ -104,6 +104,6 @@ Voir [Automatisation](/fr/automation/#kept-running).
 
 ## Les consignes derrière tout cela {#the-guidance-behind-these}
 
-Votre second suit des consignes intégrées, appelées procédures, pour certains de ces types : **Flux de travail courants**, **Leçons**, **Projets de loisir** et **Nettoyage de l’ordinateur**.
+Votre second suit des consignes intégrées, appelées procédures, pour certains de ces types : **Flux de travail courants**, **Leçons**, **Projets de loisir** et **Nettoyage de l’ordinateur**.
 Vous pouvez lire chacune ou la désactiver dans Réglages → **Procédures**.
 Voir [Procédures](/fr/runbooks/).

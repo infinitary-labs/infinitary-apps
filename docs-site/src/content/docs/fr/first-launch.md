@@ -10,19 +10,19 @@ Cette page décrit la première ouverture d’Infinitary, et ce qui change ensui
 ## Ce qu’affiche la fenêtre {#what-the-window-shows}
 
 La première fois que vous ouvrez Infinitary, votre second vous accueille au milieu de la fenêtre.
-Au-dessus s’affiche **Bienvenue à bord d’Infinitary, capitaine**, avec quelques mots de votre second :
+Au-dessus s’affiche **Bienvenue à bord d’Infinitary, capitaine**, avec quelques mots de votre second :
 
 > Je suis votre second.
 > Je vous aide à diriger le reste de l’équipage.
 > Configurez-moi sur un ordinateur qui reste allumé le plus possible.
 > Vos autres appareils ont besoin que je sois éveillé.
 
-En dessous se trouve un bouton pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock et API personnalisée.
+En dessous se trouve un bouton pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock et API personnalisée.
 
-<img class="picture-dark" src="/pictures/first-launch-dark.webp" alt="Le premier lancement : le second au milieu de la fenêtre, les mots de bienvenue et un bouton pour chaque fournisseur." width="1280" height="652" />
-<img class="picture-light" src="/pictures/first-launch-light.webp" alt="Le premier lancement : le second au milieu de la fenêtre, les mots de bienvenue et un bouton pour chaque fournisseur." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/first-launch-dark.webp" alt="Le premier lancement : le second au milieu de la fenêtre, les mots de bienvenue et un bouton pour chaque fournisseur." width="1280" height="652" />
+<img class="picture-light" src="/pictures/first-launch-light.webp" alt="Le premier lancement : le second au milieu de la fenêtre, les mots de bienvenue et un bouton pour chaque fournisseur." width="1280" height="652" />
 
-La zone de message en bas est grisée et indique « Connectez d’abord un abonnement ».
+La zone de message en bas est grisée et indique « Connectez d’abord un abonnement ».
 Rien d’autre ne fonctionne tant qu’aucun abonnement ne peut répondre à votre second.
 
 ## Connecter un abonnement {#connect-a-subscription}
@@ -30,7 +30,7 @@ Rien d’autre ne fonctionne tant qu’aucun abonnement ne peut répondre à vot
 1. Choisissez le bouton de votre fournisseur.
 2. Connectez-vous de la façon que demande ce fournisseur.
    Certains ouvrent la page de connexion dans votre navigateur.
-   Copilot et Kimi Code affichent un code : appuyez sur **Copier le code**, puis saisissez-le sur le site du fournisseur.
+   Copilot et Kimi Code affichent un code : appuyez sur **Copier le code**, puis saisissez-le sur le site du fournisseur.
    OpenRouter demande une clé API que vous collez.
    Avec Amazon Bedrock, choisissez une région et utilisez un profil AWS de cet ordinateur, ou collez une clé API Bedrock.
    Un fournisseur qui propose les deux vous demande s’il faut **Se connecter avec votre navigateur** ou coller une **Clé API**.
@@ -44,7 +44,7 @@ Si un abonnement est connecté mais ne peut toujours pas répondre, la fenêtre 
 
 ## Si votre second se trouve déjà sur un autre ordinateur {#if-your-first-mate-already-lives-on-another-computer}
 
-Sous les boutons des fournisseurs, un second groupe indique « Votre second est sur un autre ordinateur ».
+Sous les boutons des fournisseurs, un second groupe indique « Votre second est sur un autre ordinateur ».
 Utilisez **Coller son lien** ou **Rejoindre par son adresse** pour piloter ce second d’ici au lieu d’en configurer un nouveau.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/).
 
@@ -61,17 +61,17 @@ Dès que votre second peut répondre, une carte intitulée **Notre façon de tra
 C’est une petite image de la fenêtre qui en montre une partie à la fois.
 Appuyez sur **Suivant** et **Retour** pour voir la zone de message, une carte, Activité à gauche et Tâches à droite.
 
-Sous l’image se trouvent trois amorces :
+Sous l’image se trouvent trois amorces :
 
 - **Cloner un projet**
 - **Démarrer un nouveau projet**
 - **Travailler dans un dossier de mon ordinateur**
 
-Appuyer sur l’une d’elles place le début d’une phrase dans la zone de message, comme « Cloner le projet à l’adresse ».
+Appuyer sur l’une d’elles place le début d’une phrase dans la zone de message, comme « Cloner le projet à l’adresse ».
 Terminez la phrase et envoyez-la.
 L’amorce n’envoie rien d’elle-même.
 
-La carte de bienvenue n’a pas de champ de réponse : c’est dans la zone de message en dessous que vous tapez.
+La carte de bienvenue n’a pas de champ de réponse : c’est dans la zone de message en dessous que vous tapez.
 Fermez-la quand vous voulez.
 
 ## Ajouter votre premier projet {#add-your-first-project}

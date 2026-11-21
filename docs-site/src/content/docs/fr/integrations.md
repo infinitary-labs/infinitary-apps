@@ -8,8 +8,8 @@ Une intégration est une connexion à quelque chose en dehors de vos projets, co
 Chacune est établie à votre nom.
 Votre second, votre équipage, vos automatisations et vos panneaux la joignent de la même façon, avec la même connexion et les mêmes règles.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
 
 ## Où se trouvent les intégrations {#where-integrations-live}
 
@@ -20,10 +20,10 @@ Chaque ligne est une connexion.
 Elle affiche le nom de la connexion, le compte auquel elle est connectée ou ce qu’elle exécute, et combien de ses actions sont activées.
 Ouvrez une ligne pour voir ses actions, et ce qu’elle peut signaler à vos automatisations.
 
-Le menu au bout d’une ligne propose :
+Le menu au bout d’une ligne propose :
 
 - **Vérifier maintenant**, qui vérifie que la connexion fonctionne toujours.
-- **Mettre en pause** : personne n’y accède tant que vous ne la reprenez pas avec **Reprendre**.
+- **Mettre en pause** : personne n’y accède tant que vous ne la reprenez pas avec **Reprendre**.
 - **Se déconnecter et retirer**, ou **Retirer** pour un serveur MCP.
 
 Les boutons sous la liste connectent quelque chose de nouveau, comme **GitHub**, **Google** ou **Serveur MCP**.
@@ -35,14 +35,14 @@ Une connexion reste toujours à faire par vous, donc votre second vous apporte u
 Votre connexion à l’endroit où vos projets sont hébergés est gardée ici.
 Voir [Projets](/fr/projects/#your-github-gitlab-or-bitbucket-sign-in) pour savoir comment Infinitary l’utilise pour cloner un projet et proposer ses changements.
 
-- **GitHub** : vous saisissez un code sur la page de GitHub dans votre navigateur.
+- **GitHub** : vous saisissez un code sur la page de GitHub dans votre navigateur.
   Si GitHub CLI est installé sur cet ordinateur et que votre organisation bloque les apps comme Infinitary, **Utiliser GitHub CLI** utilise la connexion que GitHub CLI détient déjà.
-- **GitLab** : vous vous connectez dans votre navigateur ou collez une clé, sur gitlab.com ou sur votre propre serveur GitLab.
-- **GitHub Enterprise** : vous créez une clé sur votre propre serveur et la collez ici.
-- **Bitbucket** : vous créez un jeton d’API sur votre compte Atlassian et le collez ici, pour bitbucket.org.
-  Sa ligne affiche le compte auquel vous êtes connecté ; elle n’a pas encore d’actions pour votre second et votre équipage.
+- **GitLab** : vous vous connectez dans votre navigateur ou collez une clé, sur gitlab.com ou sur votre propre serveur GitLab.
+- **GitHub Enterprise** : vous créez une clé sur votre propre serveur et la collez ici.
+- **Bitbucket** : vous créez un jeton d’API sur votre compte Atlassian et le collez ici, pour bitbucket.org.
+  Sa ligne affiche le compte auquel vous êtes connecté ; elle n’a pas encore d’actions pour votre second et votre équipage.
 
-Chaque ligne GitHub, GitLab et GitHub Enterprise a deux actions : l’une qui lit, et l’autre qui modifie quelque chose, comme **Modifier quelque chose sur GitHub**.
+Chaque ligne GitHub, GitLab et GitHub Enterprise a deux actions : l’une qui lit, et l’autre qui modifie quelque chose, comme **Modifier quelque chose sur GitHub**.
 Ce sont elles que votre second et votre équipage utilisent pour chercher des informations ou agir là-bas au-delà du travail propre à une tâche.
 La branche d’une tâche, sa demande de tirage, ses vérifications et sa fusion suivent plutôt les réglages de votre projet.
 
@@ -51,12 +51,12 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/).
 
 Se déconnecter de GitHub arrête les clonages privés et les demandes de tirage jusqu’à ce que vous vous reconnectiez.
 
-## Google : Gmail et Agenda {#google-gmail-and-calendar}
+## Google : Gmail et Agenda {#google-gmail-and-calendar}
 
 Google est une seule connexion pour Gmail et Agenda.
 
 1. Appuyez sur **Google**.
-2. Lisez **Avant de connecter Google** : ce qu’Infinitary utilise de votre compte, où cela va et combien de temps cela reste.
+2. Lisez **Avant de connecter Google** : ce qu’Infinitary utilise de votre compte, où cela va et combien de temps cela reste.
 3. Appuyez sur **Accepter et continuer vers Google**, ou sur **Annuler** pour ne rien demander à Google.
 4. Terminez la connexion sur la page de Google dans votre navigateur, et accordez chaque autorisation qu’elle liste.
 
@@ -101,7 +101,7 @@ Retirer le serveur oublie ses clés.
 
 ## Ce que chaque action peut faire sans vous demander {#what-each-action-may-do-without-asking-you}
 
-Une ligne ouverte liste chaque action avec ce qu’elle fait : **lit**, **modifie** ou **envoie**.
+Une ligne ouverte liste chaque action avec ce qu’elle fait : **lit**, **modifie** ou **envoie**.
 Chaque action commence sur **Vous demande**, y compris les lectures.
 Appuyez sur sa règle pour passer de **Vous demande** à **Toujours autorisée**, et inversement.
 Vous seul pouvez changer une règle.
@@ -132,10 +132,10 @@ Voir [Panneaux](/fr/panels/).
 Certaines connexions signalent quand quelque chose se produit, et une automatisation peut l’attendre.
 Une ligne ouverte les liste avec la mention **signale**.
 
-- GitHub : **Une exécution de workflow échoue** et **Une exécution de workflow se termine**, dans un dépôt que vous nommez.
-- Gmail : **Un message arrive**.
-- Agenda : **Un événement d’agenda change**.
-- Un serveur MCP qui le propose : **Une ressource a changé**.
+- GitHub : **Une exécution de workflow échoue** et **Une exécution de workflow se termine**, dans un dépôt que vous nommez.
+- Gmail : **Un message arrive**.
+- Agenda : **Un événement d’agenda change**.
+- Un serveur MCP qui le propose : **Une ressource a changé**.
 
 Choisissez-en un sous **Quand quelque chose se produit** dans Automatisation.
 Voir [Automatisation](/fr/automation/#when-it-runs).
@@ -159,7 +159,7 @@ Désactivez-la, et la commande répond par un refus tandis que les notes enregis
 Le cadre **Sites privés** liste les sites du réseau de votre bureau, de votre domicile ou de votre VPN que les navigateurs des tâches peuvent ouvrir.
 La liste s’applique sur tous vos ordinateurs.
 Appuyez sur **Site** pour en ajouter un, ou sur **Retirer** pour en enlever un.
-Votre second n’ajoute jamais un site lui-même : il vous le demande sur une carte, et seul votre **Autoriser** l’ajoute.
+Votre second n’ajoute jamais un site lui-même : il vous le demande sur une carte, et seul votre **Autoriser** l’ajoute.
 Voir [Le navigateur de l’équipage](/fr/the-crews-browser/#private-sites).
 
 ## Pour la suite {#next}

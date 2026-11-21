@@ -44,7 +44,7 @@ Vous pouvez déplacer n’importe quel panneau à un autre endroit de l’une ou
   Faites glisser une ligne pour déplacer son panneau, ou utilisez son interrupteur pour le masquer ou l’afficher.
   **Rétablir les valeurs par défaut** remet chaque panneau à sa place d’origine.
 - **En le demandant.**
-  Dites à votre second où vous voulez un panneau, par exemple « déplace Tâches dans la colonne de gauche ».
+  Dites à votre second où vous voulez un panneau, par exemple « déplace Tâches dans la colonne de gauche ».
 
 Un panneau que vous masquez reste dans la liste des **Réglages**, pour que vous puissiez l’afficher de nouveau.
 Quand une colonne manque de place, les panneaux les plus proches de son milieu se replient d’abord.
@@ -64,7 +64,7 @@ Voir [Clavier](/fr/keyboard/).
 ## Les panneaux que votre second construit pour vous {#panels-your-first-mate-builds-for-you}
 
 Vous pouvez demander un panneau à vous.
-Dites à votre second ce qu’il doit afficher, par exemple « Fais-moi un panneau qui affiche la météo à Tokyo ».
+Dites à votre second ce qu’il doit afficher, par exemple « Fais-moi un panneau qui affiche la météo à Tokyo ».
 Un équipier le construit à partir des éléments de l’app elle-même, si bien qu’il ressemble au reste d’Infinitary.
 
 Une fois que votre équipage a terminé trois tâches, un cadre vide **Créez votre propre panneau** apparaît en haut de la colonne de gauche.

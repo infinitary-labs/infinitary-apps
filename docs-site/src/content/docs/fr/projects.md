@@ -4,7 +4,7 @@ title: Projets
 description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
 ---
 
-Un projet est ce sur quoi travaille votre équipage : un dossier à vous, géré avec git.
+Un projet est ce sur quoi travaille votre équipage : un dossier à vous, géré avec git.
 Chaque tâche appartient à un projet, et chaque clé de tâche commence par la clé de son projet, comme `WEB-12`.
 Vos projets sont listés dans **Réglages → Projets**.
 
@@ -13,19 +13,19 @@ Vos projets sont listés dans **Réglages → Projets**.
 Vous pouvez ajouter un projet de deux façons.
 
 - **Demandez à votre second.**
-  Dites sur quel projet travailler, par exemple « Cloner le projet à l’adresse » suivi de son lien.
+  Dites sur quel projet travailler, par exemple « Cloner le projet à l’adresse » suivi de son lien.
   Votre second vous apporte une carte qui nomme le projet et ses réglages.
   Rien n’est ajouté tant que vous n’appuyez pas sur **Ajouter un projet** sur cette carte.
 - **Ajoutez-le vous-même.**
   Ouvrez **Réglages → Projets** et utilisez la ligne **Ajouter un projet** au pied de la liste.
 
-La ligne **Ajouter un projet** a trois boutons :
+La ligne **Ajouter un projet** a trois boutons :
 
 1. **Dossier sur cet ordinateur** ajoute un dossier que vous avez déjà.
    Si le dossier n’utilise pas encore git, Infinitary y initialise git avec un premier commit vide.
 2. **Dépôt GitHub**, **Dépôt GitLab** ou **Dépôt Bitbucket** clone un projet depuis l’endroit où il est hébergé.
    Choisissez-le dans **Vos dépôts GitHub**, utilisez **Trouver un dépôt** pour chercher, ou collez son lien.
-   Avec beaucoup de dépôts, certains peuvent ne pas avoir été vérifiés, et la liste le signale ; collez un lien pour en ajouter un qui manque.
+   Avec beaucoup de dépôts, certains peuvent ne pas avoir été vérifiés, et la liste le signale ; collez un lien pour en ajouter un qui manque.
 3. **Nouveau projet** démarre un projet vide avec le nom que vous tapez.
 
 Un projet cloné ou nouveau va dans votre dossier de projets.
@@ -43,12 +43,12 @@ Pour un projet chez un autre hébergeur, demandez à votre second.
 Pour cloner un projet et proposer ses changements, Infinitary utilise votre connexion à GitHub, GitLab ou Bitbucket.
 
 Si vous n’êtes pas connecté quand vous appuyez sur **Dépôt GitHub**, **Dépôt GitLab** ou **Dépôt Bitbucket**, la ligne affiche **Se connecter à GitHub**, **Se connecter à GitLab** ou **Se connecter à Bitbucket** au lieu de vos projets.
-Ce bouton ouvre **Réglages → Intégrations**, où se trouvent vos connexions ; voir [Intégrations](/fr/integrations/).
+Ce bouton ouvre **Réglages → Intégrations**, où se trouvent vos connexions ; voir [Intégrations](/fr/integrations/).
 Pour GitHub, vous saisissez un code sur la page de GitHub dans votre navigateur.
 Pour GitLab, vous pouvez vous connecter dans votre navigateur ou coller une clé, sur gitlab.com ou sur votre propre serveur GitLab.
 Pour Bitbucket, vous créez un jeton d’API sur votre compte Atlassian et vous le collez, pour les projets sur bitbucket.org.
 Le formulaire de clé nomme les autorisations à cocher sur la page d’Atlassian.
-Vos projets Bitbucket sont listés à partir des espaces de travail dont vous faites partie ; s’il y en a beaucoup, certains peuvent ne pas avoir été vérifiés, et la liste le signale.
+Vos projets Bitbucket sont listés à partir des espaces de travail dont vous faites partie ; s’il y en a beaucoup, certains peuvent ne pas avoir été vérifiés, et la liste le signale.
 Pour l’instant, les changements d’un projet Bitbucket sont proposés sous forme de branche, pas de demande de tirage.
 Votre connexion reste sur cet ordinateur.
 
@@ -68,13 +68,13 @@ Appuyez dessus, ou appuyez sur ⇧⌘P (Ctrl+Shift+P sous Linux), pour ouvrir un
 Chaque pastille compte les tâches qui vous attendent et les tâches en cours.
 Choisissez un projet pour y concentrer la fenêtre.
 
-Tant qu’un projet a le focus :
+Tant qu’un projet a le focus :
 
 - Le panneau Tâches et le tableau des tâches n’affichent que les tâches de ce projet.
 - Activité n’affiche que les lignes sur ce projet, et les lignes qui ne concernent aucune tâche.
 - Les cartes sur d’autres projets attendent que le focus change.
   Rien n’est fermé, et chaque projet envoie toujours des notifications.
-- Une courte ligne à côté de la pastille indique combien de tâches vous attendent ailleurs, comme « 2 en attente ailleurs ».
+- Une courte ligne à côté de la pastille indique combien de tâches vous attendent ailleurs, comme « 2 en attente ailleurs ».
 - Votre second place le nouveau travail que vous demandez dans ce projet, sauf si vous en nommez un autre.
 
 Appuyez sur le **×** à côté de la pastille (**Afficher tous les projets**), ou choisissez **Tous les projets** dans la rangée, pour tout revoir.
@@ -83,11 +83,11 @@ Infinitary se souvient de votre focus quand vous le redémarrez.
 ## Comment les changements arrivent dans votre projet {#how-changes-reach-your-project}
 
 Ouvrez un projet dans **Réglages → Projets** pour choisir comment son travail terminé est fusionné.
-**Où vont les modifications** propose :
+**Où vont les modifications** propose :
 
-- **demandes de tirage** : chaque changement est proposé en demande de tirage sur GitHub ou GitLab.
-- **demandes de tirage groupées** : vos changements approuvés sont réunis en une seule demande de tirage groupée, un commit pour chaque changement, et fusionnés une fois ses vérifications réussies.
-- **fusion locale** : le changement est fusionné dans le projet sur cet ordinateur, sans demande de tirage.
+- **demandes de tirage** : chaque changement est proposé en demande de tirage sur GitHub ou GitLab.
+- **demandes de tirage groupées** : vos changements approuvés sont réunis en une seule demande de tirage groupée, un commit pour chaque changement, et fusionnés une fois ses vérifications réussies.
+- **fusion locale** : le changement est fusionné dans le projet sur cet ordinateur, sans demande de tirage.
 
 Un projet qui n’existe que sur cet ordinateur ne propose que **fusion locale**.
 
@@ -99,7 +99,7 @@ Si les vérifications sont encore en cours, le bouton indique **Fusionner une fo
 Il est activé pour un nouveau projet, si bien que le travail terminé attend votre feu vert.
 Désactivez-le, et le travail qui réussit les vérifications peut fusionner sans vous demander.
 
-**Soin** règle le degré de vérification du travail : **Rapide**, **Par défaut** ou **Minutieux**.
+**Soin** règle le degré de vérification du travail : **Rapide**, **Par défaut** ou **Minutieux**.
 
 ## Retirer un projet {#remove-a-project}
 

@@ -20,7 +20,7 @@ Infinitary pour iPhone et iPad est disponible en TestFlight privé.
 1. Sur votre ordinateur, ouvrez Réglages → **Appareils** et appuyez sur **+ Un téléphone**.
    Un code à scanner apparaît, avec son lien à côté.
 2. Ouvrez Infinitary sur votre téléphone.
-   Il vous accueille avec trois façons d’entrer : **Scanner le code**, **Coller son lien** et **Rejoindre par son adresse**.
+   Il vous accueille avec trois façons d’entrer : **Scanner le code**, **Coller son lien** et **Rejoindre par son adresse**.
 3. Choisissez **Scanner le code** et pointez votre appareil photo vers le code sur votre ordinateur.
 4. Vérifiez le nom de l’ordinateur, puis appuyez sur **Rejoindre** suivi de ce nom.
 
@@ -28,7 +28,7 @@ Le code fonctionne une fois, pendant dix minutes.
 Si l’appareil photo n’est pas autorisé, collez plutôt le lien.
 **Rejoindre par son adresse** prend l’adresse que vous utilisez avec SSH pour votre ordinateur, comme `you@studio.local`, quand Session à distance y est activée.
 
-Votre téléphone et votre ordinateur doivent partager un réseau : le même Wi-Fi, ou le même réseau privé quand vous êtes ailleurs.
+Votre téléphone et votre ordinateur doivent partager un réseau : le même Wi-Fi, ou le même réseau privé quand vous êtes ailleurs.
 Ne rejoignez que votre propre ordinateur.
 
 ## Ce qu’il affiche {#what-it-shows}
@@ -72,7 +72,7 @@ Voir [Mettre à jour et supprimer Infinitary](/fr/update-and-remove/#your-other-
 ## Quand votre ordinateur est hors de portée {#when-your-computer-is-out-of-reach}
 
 Le téléphone a besoin que votre ordinateur soit éveillé, avec Infinitary ouvert.
-S’il ne peut pas le joindre, il indique « Votre ordinateur est hors de portée. Vérifiez qu’Infinitary est ouvert et que les deux appareils partagent un réseau. »
+S’il ne peut pas le joindre, il indique « Votre ordinateur est hors de portée. Vérifiez qu’Infinitary est ouvert et que les deux appareils partagent un réseau. »
 
 Le téléphone ne vous signale une nouvelle carte que pendant que l’app est ouverte.
 

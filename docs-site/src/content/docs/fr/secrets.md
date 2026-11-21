@@ -6,10 +6,10 @@ description: Gardez les mots de passe et les clés dont votre équipage a besoin
 
 Secrets garde les mots de passe et les clés dont votre équipage a besoin pour son travail, comme la clé qui publie votre site web.
 Un équipier utilise un secret par son nom, et seulement une fois que vous autorisez cette utilisation.
-Chaque valeur va directement dans Secrets sur votre ordinateur : Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.
+Chaque valeur va directement dans Secrets sur votre ordinateur : Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
 
 ## Où se trouvent vos secrets {#where-your-secrets-live}
 
@@ -18,7 +18,7 @@ Ouvrez **Réglages**, puis **Secrets**, ou cherchez **Ouvrir Secrets** dans la r
 **Secrets protégés** liste chaque secret par son nom et son emplacement, et indique quelle tâche l’a utilisé en dernier, et quand.
 **Rechercher des secrets** en trouve un par son nom, son emplacement ou la tâche qui l’a utilisé en dernier.
 
-Sur un Mac, la ligne sous la liste indique « Gardés sur cet ordinateur. Votre équipage les utilise mais ne les voit jamais. »
+Sur un Mac, la ligne sous la liste indique « Gardés sur cet ordinateur. Votre équipage les utilise mais ne les voit jamais. »
 Sous Linux, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
 
 Les secrets restent sur l’ordinateur où vit votre second.
@@ -27,7 +27,7 @@ Un ordinateur qui contrôle votre second depuis ailleurs n’a pas de section Se
 ## Garder un secret {#keep-a-secret}
 
 1. Choisissez **Ajouter un secret**.
-2. Donnez-lui un **Nom**, comme « Déploiement du site web ».
+2. Donnez-lui un **Nom**, comme « Déploiement du site web ».
 3. Collez la valeur dans **Valeur du secret**.
 4. Si vous gardez deux secrets du même nom, distinguez-les avec **Emplacement (facultatif)**, comme staging ou production.
 5. Choisissez **Enregistrer le secret**.
@@ -39,7 +39,7 @@ Oublier le retire de cet ordinateur, mais ne désactive pas la clé là où elle
 ### Quand un équipier en a besoin d’un que vous n’avez pas gardé {#when-a-crewmate-needs-one-you-have-not-kept}
 
 Un équipier qui a besoin d’un secret que vous n’avez pas gardé le demande par son nom, jamais par sa valeur.
-Infinitary affiche alors sa propre carte, comme « Garder le secret Déploiement du site web pour « Publier le site » ? », avec la raison de l’équipier.
+Infinitary affiche alors sa propre carte, comme « Garder le secret Déploiement du site web pour « Publier le site » ? », avec la raison de l’équipier.
 
 Tapez ou collez chaque valeur dans le champ masqué qu’Infinitary dessine sur la carte, puis choisissez **Garder dans Secrets**.
 **Ne pas garder** ne garde rien.
@@ -49,23 +49,23 @@ Ne tapez un secret que dans un champ dessiné par Infinitary, jamais dans le cha
 
 ## Autoriser une utilisation {#allow-a-use}
 
-Quand un équipier veut utiliser un secret, Infinitary affiche une carte, comme « Donner le secret Déploiement du site web à « Publier le site » ? ».
-La carte indique exactement ce qui le recevrait :
+Quand un équipier veut utiliser un secret, Infinitary affiche une carte, comme « Donner le secret Déploiement du site web à « Publier le site » ? ».
+La carte indique exactement ce qui le recevrait :
 
-- **Secret** : chaque secret, et le nom sous lequel le programme le reçoit.
-- **Exécute** : la commande exacte.
-- **Dans le dossier** : où elle s’exécute.
-- **Sa raison** : la raison de l’équipier, dans ses propres mots.
+- **Secret** : chaque secret, et le nom sous lequel le programme le reçoit.
+- **Exécute** : la commande exacte.
+- **Dans le dossier** : où elle s’exécute.
+- **Sa raison** : la raison de l’équipier, dans ses propres mots.
 
 **Tout ce qui a été vérifié** liste ce qu’Infinitary a vérifié sur le programme, et ce qu’il n’a pas pu vérifier.
-Choisissez ensuite :
+Choisissez ensuite :
 
 - **Autoriser une fois** donne le secret à cette exécution seulement.
-- **Toujours autoriser** le donne à cette exécution et enregistre cette exécution exacte : le même programme, les mêmes fichiers, arguments et dossier.
+- **Toujours autoriser** le donne à cette exécution et enregistre cette exécution exacte : le même programme, les mêmes fichiers, arguments et dossier.
   Tout ce qui diffère demande de nouveau.
 - **Ne pas autoriser** refuse, et la prochaine exécution demande de nouveau.
 
-Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
+Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
 Ce qui reçoit un secret peut le garder.
 Autoriser n’approuve jamais une action distincte, comme déployer ou envoyer quelque chose.
 L’équipier apprend seulement si l’exécution s’est terminée, pas ce qu’elle a affiché.
@@ -78,7 +78,7 @@ Ouvrez **Accès, historique et récupération** sous la liste des secrets, puis 
 Chaque décision que vous avez enregistrée avec **Toujours autoriser** est listée en une phrase.
 
 Vous n’enregistrez une décision que sur la carte d’une demande.
-Ici, vous pouvez en **Retirer** une : votre ordinateur vous demande de confirmer, et l’équipage vous redemande avant sa prochaine utilisation.
+Ici, vous pouvez en **Retirer** une : votre ordinateur vous demande de confirmer, et l’équipage vous redemande avant sa prochaine utilisation.
 
 ## Approuver depuis votre téléphone {#approve-from-your-phone}
 
@@ -101,8 +101,8 @@ Pour arrêter, désactivez l’interrupteur, ou choisissez **Arrêter les approb
 Si vous gardez des secrets dans un autre outil, comme Automic Vault, un fichier .env ou le Trousseau de votre Mac, un équipier peut les importer dans Secrets sans voir aucune valeur.
 
 1. Choisissez **Importer d’un autre outil** dans Réglages → Secrets, ou **Importer des secrets d’un autre outil** dans la recherche de commandes.
-2. Votre zone de message commence la demande à votre second ; nommez l’outil et envoyez.
-3. L’équipier affiche une carte, comme « Importer 3 secrets depuis Automic Vault ? », qui nomme la commande qu’il exécute ou le fichier qu’il lit, et pourquoi.
+2. Votre zone de message commence la demande à votre second ; nommez l’outil et envoyez.
+3. L’équipier affiche une carte, comme « Importer 3 secrets depuis Automic Vault ? », qui nomme la commande qu’il exécute ou le fichier qu’il lit, et pourquoi.
 4. Cochez chaque secret à garder, puis choisissez **Importer dans Secrets**, ou **Ne pas importer**.
 
 Infinitary exécute la commande ou lit le fichier lui-même, et ne garde que ce que vous cochez.
@@ -121,11 +121,11 @@ Voir [Intégrations](/fr/integrations/).
 
 ## Historique d’utilisation et sauvegardes {#use-history-and-backups}
 
-**Historique d’utilisation** liste chaque utilisation : quels secrets, la raison, le programme, comment elle a été autorisée et comment elle s’est terminée, jamais une valeur.
+**Historique d’utilisation** liste chaque utilisation : quels secrets, la raison, le programme, comment elle a été autorisée et comment elle s’est terminée, jamais une valeur.
 Il reste jusqu’à ce que vous le supprimiez, avec **Exporter l’historique** et **Supprimer l’historique**.
 
 **Sauvegarde et restauration** propose **Enregistrer une sauvegarde chiffrée**, qui enregistre une copie chiffrée et une clé de récupération séparée.
-Conservez-les à l’écart l’une de l’autre : quiconque a les deux peut lire les valeurs enregistrées, et il n’existe aucune réinitialisation de la clé.
+Conservez-les à l’écart l’une de l’autre : quiconque a les deux peut lire les valeurs enregistrées, et il n’existe aucune réinitialisation de la clé.
 **Restaurer depuis une sauvegarde** remplace vos valeurs stockées, et efface les décisions enregistrées, les approbations par téléphone et les accès temporaires.
 
 ## Quand Secrets ne peut pas s’ouvrir {#when-secrets-cannot-open}
@@ -139,7 +139,7 @@ Si Infinitary ne peut plus lire ce qu’il a gardé, Secrets affiche **Récupér
 
 ## Sites connectés {#signed-in-sites}
 
-Le pied de Secrets liste les **Sites connectés** : les sites auxquels vous vous êtes connecté dans le navigateur d’une tâche.
+Le pied de Secrets liste les **Sites connectés** : les sites auxquels vous vous êtes connecté dans le navigateur d’une tâche.
 Ils restent dans le profil de navigateur de cet ordinateur, pas dans le stockage protégé.
 Voir [Le navigateur de l’équipage](/fr/the-crews-browser/#signed-in-sites).
 

@@ -5,19 +5,19 @@ description: Les consignes permanentes que garde votre second, ce que vous lui d
 ---
 
 Les Connaissances sont ce que votre second et votre équipage gardent pour que le travail à venir puisse s’en servir.
-Elles contiennent trois sortes de choses :
+Elles contiennent trois sortes de choses :
 
-- Les consignes permanentes : la façon dont vous voulez que votre travail soit mené désormais, par exemple qui fusionne ou quels modèles utilise un projet.
-- Le contexte personnel : ce que vous dites de vous à votre second.
-- Les sources enregistrées : des articles et des pages que vous avez demandé à votre équipage de garder, avec ce qu’ils disent.
+- Les consignes permanentes : la façon dont vous voulez que votre travail soit mené désormais, par exemple qui fusionne ou quels modèles utilise un projet.
+- Le contexte personnel : ce que vous dites de vous à votre second.
+- Les sources enregistrées : des articles et des pages que vous avez demandé à votre équipage de garder, avec ce qu’ils disent.
 
-<img class="picture-dark" src="/pictures/knowledge-dark.webp" alt="La carte Connaissances sur son onglet Consignes : trois consignes dans vos propres mots, une pour partout et une pour chacun des projets harbor et website, avec la consigne de publication de Harbor ouverte à côté de la liste, montrant sa révision, sa mention Instruction, le projet auquel elle s’applique et son origine." width="896" height="504" />
-<img class="picture-light" src="/pictures/knowledge-light.webp" alt="La carte Connaissances sur son onglet Consignes : trois consignes dans vos propres mots, une pour partout et une pour chacun des projets harbor et website, avec la consigne de publication de Harbor ouverte à côté de la liste, montrant sa révision, sa mention Instruction, le projet auquel elle s’applique et son origine." width="896" height="504" />
+<img class="picture-dark" src="/pictures/knowledge-dark.webp" alt="La carte Connaissances sur son onglet Consignes : trois consignes dans vos propres mots, une pour partout et une pour chacun des projets harbor et website, avec la consigne de publication de Harbor ouverte à côté de la liste, montrant sa révision, sa mention Instruction, le projet auquel elle s’applique et son origine." width="896" height="504" />
+<img class="picture-light" src="/pictures/knowledge-light.webp" alt="La carte Connaissances sur son onglet Consignes : trois consignes dans vos propres mots, une pour partout et une pour chacun des projets harbor et website, avec la consigne de publication de Harbor ouverte à côté de la liste, montrant sa révision, sa mention Instruction, le projet auquel elle s’applique et son origine." width="896" height="504" />
 
 ## Donner une consigne permanente {#give-a-standing-direction}
 
 Dites à votre second, avec vos propres mots, comment vous voulez que quelque chose soit fait désormais.
-Par exemple, « désormais, demande-moi avant de fusionner quoi que ce soit dans website », ou « utilise Claude pour chaque tâche du projet docs ».
+Par exemple, « désormais, demande-moi avant de fusionner quoi que ce soit dans website », ou « utilise Claude pour chaque tâche du projet docs ».
 Votre second décide quand vos mots sont faits pour durer, et les garde comme consigne.
 Il peut aussi en garder une à partir d’un choix que vous faites sur une carte, quand ce choix doit valoir pour le travail à venir.
 
@@ -43,7 +43,7 @@ Le panneau **Connaissances** se trouve sous **Tâches** sur le côté droit de l
 Il liste jusqu’à quatre de vos consignes, les plus récentes en premier, avec le nom d’un projet à côté de chacune qui concerne un seul projet.
 Cliquez sur une consigne pour la lire, ou sur le lien qui les compte, comme **Toutes les consignes (6)**, pour les voir toutes.
 
-Pour changer ou retirer une consigne, dites-le à votre second, par exemple « arrête de me demander avant de fusionner dans website ».
+Pour changer ou retirer une consigne, dites-le à votre second, par exemple « arrête de me demander avant de fusionner dans website ».
 Connaissances n’a aucun bouton qui modifie lui-même une consigne.
 Quand votre second apprend qu’une consigne pourrait ne plus s’appliquer, il peut proposer de la retirer sur une carte, et c’est vous qui choisissez.
 
@@ -52,27 +52,27 @@ Sa formulation antérieure reste dans son historique.
 
 ## Parler de vous à votre second {#tell-your-first-mate-about-yourself}
 
-Dites à votre second quelque chose sur vous que le travail à venir devrait savoir, comme « Je débute en programmation » ou « J’habite à Lisbonne ».
+Dites à votre second quelque chose sur vous que le travail à venir devrait savoir, comme « Je débute en programmation » ou « J’habite à Lisbonne ».
 Il garde vos mots comme contexte personnel.
 Un équipier garde aussi du contexte personnel, mais seulement à partir de vos propres mots, jamais d’une supposition.
 
 Votre second et votre équipage ne lisent pas tout ce que vous avez enregistré à chaque fois.
 Ils consultent le contexte personnel et les sources enregistrées quand leur travail peut dépendre de votre situation ou de quelque chose que vous avez enregistré.
-Les consignes sont différentes : elles sont lues à chaque fois.
+Les consignes sont différentes : elles sont lues à chaque fois.
 
 ## Enregistrer une source {#save-a-source}
 
-Demandez à votre second d’enregistrer une page que vous voulez garder, par exemple « enregistre cet article pour plus tard », avec son lien.
+Demandez à votre second d’enregistrer une page que vous voulez garder, par exemple « enregistre cet article pour plus tard », avec son lien.
 Un équipier lit la page et garde son lien, son titre, son auteur et sa date de publication quand la page les donne, ainsi qu’un court extrait.
 Il note aussi les idées que nomme la page et ce qu’elle en dit, chacune rattachée à cette source.
 La page elle-même n’est pas copiée.
 
-Demander ce que dit une page n’enregistre rien ; seule la demande de l’enregistrer le fait.
+Demander ce que dit une page n’enregistre rien ; seule la demande de l’enregistrer le fait.
 Enregistrer une source ne veut pas dire que vous êtes d’accord avec elle.
 
 ## Concepts et constats {#concepts-and-findings}
 
-Les connaissances enregistrées se composent de deux sortes d’éléments :
+Les connaissances enregistrées se composent de deux sortes d’éléments :
 
 - Un concept nomme une idée, avec les autres noms qu’on lui donne.
 - Un constat dit quelque chose sur un ou plusieurs concepts, avec les sources qui l’appuient.
@@ -81,30 +81,30 @@ Les connaissances enregistrées se composent de deux sortes d’éléments :
 Un constat est un élément à peser, jamais une instruction ni une autorisation.
 Votre équipage lit un constat et ses sources avant de s’y fier.
 
-Chaque constat indique où il en est :
+Chaque constat indique où il en est :
 
-- **Pas encore vérifié** : personne ne l’a vérifié.
-- **Vérifié** : une vérification qui cite des éléments l’appuie.
-- **Éléments divergents** : une vérification ou un autre constat le contredit.
-- **À revérifier** : une source qu’il cite a changé, ou a disparu, depuis sa conservation.
-- **Remplacé** : un constat plus récent le remplace.
-- **Retiré** : il ne compte plus.
+- **Pas encore vérifié** : personne ne l’a vérifié.
+- **Vérifié** : une vérification qui cite des éléments l’appuie.
+- **Éléments divergents** : une vérification ou un autre constat le contredit.
+- **À revérifier** : une source qu’il cite a changé, ou a disparu, depuis sa conservation.
+- **Remplacé** : un constat plus récent le remplace.
+- **Retiré** : il ne compte plus.
 
-Une source modifiée ne rend pas un constat faux ; elle le rend digne d’une nouvelle vérification.
+Une source modifiée ne rend pas un constat faux ; elle le rend digne d’une nouvelle vérification.
 
 ## Ouvrir Connaissances {#open-knowledge}
 
 Appuyez sur **Ouvrir Connaissances** dans l’en-tête du panneau **Connaissances**, ou cherchez **Ouvrir Connaissances** dans la recherche de commandes.
-Connaissances s’ouvre sur sa propre carte, avec quatre onglets :
+Connaissances s’ouvre sur sa propre carte, avec quatre onglets :
 
-- **Consignes** : toutes les consignes.
+- **Consignes** : toutes les consignes.
   **Projet** restreint la liste à un projet, ou à **Partout, second uniquement**.
   **Tous les projets** les affiche de nouveau toutes.
-- **Graphe** : vos concepts, dessinés en trois dimensions.
+- **Graphe** : vos concepts, dessinés en trois dimensions.
   Une flèche pleine est une affirmation qu’un constat fait d’une idée vers une autre, et une ligne pointillée relie deux idées qui gagnent à être lues ensemble.
   Faites-le glisser pour le faire pivoter, ou utilisez les flèches pour choisir un concept et Entrée pour le lire.
-- **Concepts** : tous les concepts par nom, avec le nombre de constats de chacun.
-- **Constats** : tous les constats, les plus récents en premier.
+- **Concepts** : tous les concepts par nom, avec le nombre de constats de chacun.
+- **Constats** : tous les constats, les plus récents en premier.
   **Afficher** restreint la liste à **À revérifier** ou **Éléments divergents**.
 
 **Rechercher** cherche dans l’onglet où vous êtes.

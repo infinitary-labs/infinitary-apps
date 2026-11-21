@@ -15,7 +15,7 @@ Vous pouvez en créer une dans les Réglages, ou dire à votre second quoi lance
 Ouvrez **Réglages**, puis **Automatisation**.
 Vous pouvez aussi chercher **Ouvrir Automatisation** dans la recherche de commandes.
 
-La liste de gauche affiche chaque automatisation avec son état :
+La liste de gauche affiche chaque automatisation avec son état :
 
 - **Active** s’exécute à sa prochaine heure.
 - **Brouillon** est enregistrée mais ne s’exécute jamais tant que vous ne l’activez pas.
@@ -28,7 +28,7 @@ Choisissez une automatisation pour la lire ou la modifier.
 ## Créer une automatisation {#make-an-automation}
 
 1. Ouvrez **Réglages**, puis **Automatisation**, et choisissez **Nouvelle automatisation**.
-2. Donnez-lui un **Nom**, comme « Revue hebdomadaire ».
+2. Donnez-lui un **Nom**, comme « Revue hebdomadaire ».
 3. Sous **Quand**, choisissez à quelle fréquence elle s’exécute.
 4. Sous **Projet**, choisissez le projet qu’elle concerne, ou laissez **Aucun projet**.
 5. Sous **Dites à votre second**, écrivez la consigne.
@@ -55,12 +55,12 @@ Chaque détail est rempli au moment où la consigne est envoyée.
 Une nouvelle automatisation créée dans les Réglages commence comme brouillon.
 Un brouillon ne s’exécute jamais.
 
-Quand vous choisissez **Activer…**, la fiche montre ce qui va se passer avant que rien ne s’exécute :
+Quand vous choisissez **Activer…**, la fiche montre ce qui va se passer avant que rien ne s’exécute :
 
 - quand elle s’exécute et dans quel fuseau horaire,
 - le projet et la consigne exactement telle que votre second la reçoit,
 - ses prochaines exécutions,
-- ce qu’elle envoie : la consigne et les détails de sa planification vont à votre abonnement d’IA et restent dans la conversation de votre second, et rien d’autre n’obtient de nouvel accès,
+- ce qu’elle envoie : la consigne et les détails de sa planification vont à votre abonnement d’IA et restent dans la conversation de votre second, et rien d’autre n’obtient de nouvel accès,
 - ce qu’il advient d’une exécution manquée.
 
 Choisissez **Activer** pour la lancer, ou **Retour** pour revenir sans rien changer.
@@ -88,14 +88,14 @@ Si une heure passe pendant qu’il est fermé, l’automatisation s’exécute u
 ## Historique {#history}
 
 Sous la fiche d’une automatisation, **Historique** liste ses exécutions, les plus récentes en premier.
-Chaque exécution indique où elle en est :
+Chaque exécution indique où elle en est :
 
-- **En attente** : votre second ne l’a pas encore traitée.
-- **Nouvel essai** : votre second n’a pas encore pu la prendre, et un nouvel essai est en cours.
-- **Traitée** : votre second l’a traitée.
-- **Annulée** : elle a été retirée avant que votre second ne la lise, par exemple parce que vous avez mis l’automatisation en pause.
+- **En attente** : votre second ne l’a pas encore traitée.
+- **Nouvel essai** : votre second n’a pas encore pu la prendre, et un nouvel essai est en cours.
+- **Traitée** : votre second l’a traitée.
+- **Annulée** : elle a été retirée avant que votre second ne la lise, par exemple parce que vous avez mis l’automatisation en pause.
 
-Une exécution traitée montre ce qu’a trouvé votre second, après **Trouvé :**, et les tâches et cartes auxquelles elle **A mené**.
+Une exécution traitée montre ce qu’a trouvé votre second, après **Trouvé :**, et les tâches et cartes auxquelles elle **A mené**.
 L’historique garde les exécutions 30 jours.
 
 ## Notes {#notes}

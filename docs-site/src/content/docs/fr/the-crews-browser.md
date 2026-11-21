@@ -9,20 +9,20 @@ Il ouvre des sites web et des pages que sert votre projet, les lit, y clique et 
 Vous pouvez le regarder travailler, prendre le contrôle quand une page a besoin d’une personne, et le lui rendre.
 Un achat, une réservation ou toute autre chose qui vous engage reste toujours à faire par vous.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
 
 ## Le navigateur propre à une tâche {#a-tasks-own-browser}
 
 Le navigateur s’exécute sur l’ordinateur où s’exécute la tâche, et appartient à cette seule tâche.
 Il démarre vide et déconnecté de tout, séparé de votre propre navigateur, si bien qu’il n’utilise jamais les connexions, l’historique ni les mots de passe enregistrés de votre navigateur.
-Quand Google Chrome ou Microsoft Edge est installé sur cet ordinateur, le navigateur de la tâche s’exécute dedans, séparé de la même façon ; sinon, il utilise celui d’Infinitary.
+Quand Google Chrome ou Microsoft Edge est installé sur cet ordinateur, le navigateur de la tâche s’exécute dedans, séparé de la même façon ; sinon, il utilise celui d’Infinitary.
 Rien de ce que demande une page ne s’ouvre dans votre propre navigateur ni dans une autre app.
 
-Le navigateur d’un équipier peut ouvrir :
+Le navigateur d’un équipier peut ouvrir :
 
-- les sites web publics, en https ;
-- les pages du même ordinateur, comme un projet que l’équipier y fait tourner ;
+- les sites web publics, en https ;
+- les pages du même ordinateur, comme un projet que l’équipier y fait tourner ;
 - un site du réseau de votre bureau, de votre domicile ou de votre VPN, une fois que vous l’avez listé sous [Sites privés](#private-sites).
 
 Pendant que l’équipier pilote, le navigateur refuse une page qui demande votre caméra, votre micro, votre presse-papiers ou vos notifications.
@@ -36,7 +36,7 @@ Un ordinateur fait tourner au plus quatre navigateurs de tâche à la fois.
 
 Ouvrez la carte de la tâche et choisissez son onglet **Navigateur**, qui indique **Navigateur** et le titre de la page.
 Depuis une carte sur la tâche, **Afficher Navigateur** dans la recherche de commandes l’ouvre aussi.
-La carte d’un équipier peut aussi porter un bouton, comme « Essayer » ou « Voir la réservation », qui ouvre le navigateur à côté de cette carte.
+La carte d’un équipier peut aussi porter un bouton, comme « Essayer » ou « Voir la réservation », qui ouvre le navigateur à côté de cette carte.
 
 La rangée au-dessus de la page propose **Précédent**, **Suivant** et **Actualiser**, qui pilote, **Prendre le contrôle** et **Plus**.
 Pendant que vous regardez, la page est une image de ce que voit l’équipier, et vos clics ne l’atteignent pas.
@@ -47,35 +47,35 @@ Dépliez-la pour lire la conversation de l’équipier à côté de la page et l
 Masquer ou Échap range la vue, et le navigateur continue de tourner.
 
 Un navigateur arrêté dit pourquoi il s’est arrêté.
-**Rouvrir** démarre un navigateur neuf, sans aucune connexion, sur la page où il était ; ce n’est plus proposé une fois la tâche fermée.
+**Rouvrir** démarre un navigateur neuf, sans aucune connexion, sur la page où il était ; ce n’est plus proposé une fois la tâche fermée.
 
 ## Prendre le contrôle {#take-control}
 
 1. Appuyez sur **Prendre le contrôle** dans la rangée au-dessus de la page.
-   L’équipier termine d’abord son action en cours, et la rangée indique « fin de l’action en cours de l’équipier… ».
-2. La rangée indique « vous avez la main · l’équipier ne voit pas cette page ».
+   L’équipier termine d’abord son action en cours, et la rangée indique « fin de l’action en cours de l’équipier… ».
+2. La rangée indique « vous avez la main · l’équipier ne voit pas cette page ».
    Vos clics, défilements, saisies et collages atteignent désormais la page.
 3. Appuyez sur **Rendre le contrôle** pour le lui rendre.
-   Avant que vous n’appuyiez, la vue vous le rappelle : « Rendre le contrôle permet à l’équipier de lire et d’utiliser ce navigateur, y compris les pages connectées. »
+   Avant que vous n’appuyiez, la vue vous le rappelle : « Rendre le contrôle permet à l’équipier de lire et d’utiliser ce navigateur, y compris les pages connectées. »
 
-Rien d’autre ne fait changer le contrôle de main : ni un clic sur la page, ni une connexion, ni une redirection, ni Masquer, ni la fermeture d’une carte, ni un minuteur.
+Rien d’autre ne fait changer le contrôle de main : ni un clic sur la page, ni une connexion, ni une redirection, ni Masquer, ni la fermeture d’une carte, ni un minuteur.
 **Prendre ou rendre le contrôle du navigateur** dans la recherche de commandes fait de même pour le navigateur à l’écran.
 
-Pendant que vous avez le contrôle :
+Pendant que vous avez le contrôle :
 
-- rien de ce que vous faites sur la page n’est enregistré, et l’équipier n’apprend jamais ce que la page a dit pendant votre temps ;
-- une page qui demande votre caméra, votre micro, votre presse-papiers ou vos notifications vous le demande sur une ligne au-dessus de la page, avec **Autoriser une fois** et **Pas maintenant**, et Rendre le contrôle reprend ce que vous avez autorisé ;
+- rien de ce que vous faites sur la page n’est enregistré, et l’équipier n’apprend jamais ce que la page a dit pendant votre temps ;
+- une page qui demande votre caméra, votre micro, votre presse-papiers ou vos notifications vous le demande sur une ligne au-dessus de la page, avec **Autoriser une fois** et **Pas maintenant**, et Rendre le contrôle reprend ce que vous avez autorisé ;
 - une page qui demande un fichier ouvre pour vous le sélecteur de fichiers d’Infinitary.
 
 Une fois le contrôle rendu, l’équipier jette un œil neuf sur la page.
-Il ne lit pas ce que vous avez tapé dans les champs de la page : ils apparaissent remplis, avec leurs mots masqués.
+Il ne lit pas ce que vous avez tapé dans les champs de la page : ils apparaissent remplis, avec leurs mots masqués.
 Il ne prend une image de la page qu’avec une raison qu’il donne, qui va dans l’Activité de la tâche, et jamais d’une page qui contient ce que vous avez tapé.
 
 ## Quand une page a besoin de vous {#when-a-page-needs-you}
 
 Un équipier qui a besoin d’une personne sur la page, pour une connexion, un code ou un paiement, vous le demande sur une carte de décision.
-La carte nomme le site et la raison, avec un bouton pour votre part, comme « Ouvrir le navigateur et se connecter », à côté d’un bouton comme « Laisser en attente ».
-Pendant ce temps, le navigateur vous attend, et la ligne Navigateur de la tâche indique « en pause, il attend votre aide ».
+La carte nomme le site et la raison, avec un bouton pour votre part, comme « Ouvrir le navigateur et se connecter », à côté d’un bouton comme « Laisser en attente ».
+Pendant ce temps, le navigateur vous attend, et la ligne Navigateur de la tâche indique « en pause, il attend votre aide ».
 
 Appuyez sur le bouton de la carte, et la page s’ouvre sous votre contrôle avec la carte à côté.
 La carte garde ses instructions et les valeurs à copier en vue, et son champ vous permet d’écrire à l’équipier pendant que vous travaillez.
@@ -85,7 +85,7 @@ La carte disparaît, l’équipier poursuit, et les mots laissés dans le champ 
 ## Sites connectés {#signed-in-sites}
 
 Quand un équipier vous demande de vous connecter, ce à quoi vous vous connectez reste dans le profil de navigateur propre à cet ordinateur.
-Quand vous appuyez sur **Rendre le contrôle**, une question au-dessus de la page demande ce que les tâches suivantes peuvent faire, comme « Votre connexion à example.com reste sur cet ordinateur. Les tâches suivantes : » :
+Quand vous appuyez sur **Rendre le contrôle**, une question au-dessus de la page demande ce que les tâches suivantes peuvent faire, comme « Votre connexion à example.com reste sur cet ordinateur. Les tâches suivantes : » :
 
 - **Me demander à chaque fois** vient en premier.
   Une tâche suivante qui a besoin du site le demande sur sa carte, qui ajoute **Utiliser ma connexion à example.com** à côté de **Me connecter moi-même**.
@@ -94,9 +94,9 @@ Quand vous appuyez sur **Rendre le contrôle**, une question au-dessus de la pag
   Cela ne couvre jamais un paiement ni un envoi final.
 
 Une règle s’applique aux tâches de tous les projets sur cet ordinateur.
-Un navigateur qui utilise un site connecté n’ouvre que ce site et les pages de connexion par lesquelles il est passé ; tout autre site s’ouvre déconnecté.
+Un navigateur qui utilise un site connecté n’ouvre que ce site et les pages de connexion par lesquelles il est passé ; tout autre site s’ouvre déconnecté.
 Quand vous vous connectez pour une autre raison, par exemple après avoir appuyé vous-même sur **Prendre le contrôle**, la connexion ne dure en général que jusqu’à l’arrêt de ce navigateur.
-La ligne sous la page indique laquelle, comme « temporaire · garde ce à quoi vous vous êtes connecté jusqu’à son arrêt ».
+La ligne sous la page indique laquelle, comme « temporaire · garde ce à quoi vous vous êtes connecté jusqu’à son arrêt ».
 
 Chaque ordinateur garde ses propres connexions, et aucune n’est copiée vers un autre ordinateur ni dans un fichier.
 Elles restent dans le profil de navigateur de cet ordinateur, pas dans le stockage protégé, et sont donc aussi sûres que la session et le disque de cet ordinateur.
@@ -112,8 +112,8 @@ Si une connexion gardée n’a pas connecté la page, la carte suivante propose 
 ## Sites privés {#private-sites}
 
 Un site du réseau de votre bureau, de votre domicile ou de votre VPN n’est joint qu’une fois que vous l’avez listé.
-Quand un équipier en a besoin d’un, votre second vous le demande sur une carte, comme « Laisser les navigateurs des tâches joindre wiki.corp.example ? ».
-Appuyez sur **Autoriser** pour l’ajouter, ou sur **Pas maintenant** ; votre second n’en ajoute jamais un lui-même.
+Quand un équipier en a besoin d’un, votre second vous le demande sur une carte, comme « Laisser les navigateurs des tâches joindre wiki.corp.example ? ».
+Appuyez sur **Autoriser** pour l’ajouter, ou sur **Pas maintenant** ; votre second n’en ajoute jamais un lui-même.
 
 La liste se trouve sous **Sites privés** dans Réglages → **Intégrations**, et s’applique sur tous vos ordinateurs.
 
@@ -133,20 +133,20 @@ L’équipier remplit tout jusqu’au dernier bouton et s’arrête là.
 Il demande ensuite sur une carte de vérification qui nomme ce à quoi vous vous engagez, lu sur la page telle qu’elle est maintenant.
 Pour un voyage, ce sont l’itinéraire, les dates et heures, les passagers, le vendeur, le total et la devise, ainsi que les règles de bagages et de tarif.
 La carte nomme aussi ce qui reste incertain, et ce qui a changé depuis votre dernier choix.
-Son bouton nomme votre part, comme « Ouvrir le navigateur et payer », à côté d’un bouton comme « M’arrêter ici ».
+Son bouton nomme votre part, comme « Ouvrir le navigateur et payer », à côté d’un bouton comme « M’arrêter ici ».
 
 - Si le prix ou les conditions changent après la vérification, l’équipier s’arrête et redemande.
 - Après que vous avez payé et rendu le contrôle, l’équipier lit ce que la page dit qu’il s’est passé et ne garde que le résultat, comme une référence de réservation.
   Les données de carte que vous avez tapées lui restent masquées.
 - Si la page ne le confirme pas, l’équipier dit clairement qu’il ne sait pas si l’opération est passée.
   Il ne la renvoie jamais, et vérifie là où le site la liste, comme vos réservations, avant de vous demander.
-- Le navigateur n’envoie jamais un formulaire deux fois : actualiser une page qui a répondu à un formulaire ne le renvoie pas.
+- Le navigateur n’envoie jamais un formulaire deux fois : actualiser une page qui a répondu à un formulaire ne le renvoie pas.
 
 ## Fichiers et téléchargements {#files-and-downloads}
 
 Un fichier qu’une page télécharge, y compris un fichier que vous téléchargez pendant que vous avez le contrôle, est enregistré avec les éléments de la tâche, et l’Activité de la tâche note chacun.
 Quand une page demande un fichier, l’équipier ne peut lui donner qu’un fichier de la copie de travail de la tâche.
-Un fichier qu’il n’a pas est à vous de le donner : il vous le demande sur une carte qui vous confie le navigateur.
+Un fichier qu’il n’a pas est à vous de le donner : il vous le demande sur une carte qui vous confie le navigateur.
 
 ## Sur vos autres ordinateurs {#on-your-other-computers}
 

@@ -16,9 +16,9 @@ Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux).
 Choisissez un ordinateur qui reste allumé le plus possible.
 Vos autres ordinateurs et votre téléphone ont besoin qu’il soit éveillé, avec Infinitary ouvert.
 
-Pendant qu’il est en veille ou hors de portée :
+Pendant qu’il est en veille ou hors de portée :
 
-- Un autre ordinateur affiche ce qu’il a vu en dernier, et indique « Les modifications sont désactivées ».
+- Un autre ordinateur affiche ce qu’il a vu en dernier, et indique « Les modifications sont désactivées ».
   Un message que vous y tapez n’est pas envoyé, et vos mots restent dans la zone de message jusqu’au retour de cet ordinateur.
 - Automatisation ne s’exécute que lorsqu’Infinitary y est ouvert et que l’ordinateur est éveillé.
   Une exécution manquée entre-temps a lieu une fois à son retour.
@@ -33,7 +33,7 @@ Pendant qu’il est en veille ou hors de portée :
 **Coller un lien dans Infinitary, là-bas.**
 Copiez le lien, puis ouvrez Infinitary pour la première fois sur l’autre ordinateur.
 Sous **Votre second est sur un autre ordinateur**, choisissez **Coller son lien**, collez-le et appuyez sur **Continuer**.
-Infinitary demande une fois s’il faut piloter votre second depuis là ; appuyez sur **Le contrôler d’ici**.
+Infinitary demande une fois s’il faut piloter votre second depuis là ; appuyez sur **Le contrôler d’ici**.
 
 **Exécuter une commande là-bas.**
 Copiez la commande et exécutez-la une fois dans Terminal sur l’autre ordinateur, sous l’utilisateur qui doit exécuter son travail.
@@ -41,16 +41,16 @@ Elle récupère Infinitary depuis cet ordinateur, les deux doivent donc être su
 
 **Par son adresse.**
 Tapez l’adresse que vous utilisez avec SSH pour l’autre ordinateur, comme `you@mini.local`.
-Session à distance doit y être activée ; sous Linux, son serveur SSH.
+Session à distance doit y être activée ; sous Linux, son serveur SSH.
 Les ordinateurs du même réseau sont listés sous **Sur ce réseau**, pour que vous puissiez en choisir un.
 
 Un lien ou une commande fonctionne une fois, pendant dix minutes, et vous pouvez appuyer sur **L’arrêter** avant.
-Vous pouvez aussi rejoindre depuis l’autre ordinateur : à son premier lancement, choisissez **Rejoindre par son adresse** et tapez l’adresse de l’ordinateur où vit votre second.
+Vous pouvez aussi rejoindre depuis l’autre ordinateur : à son premier lancement, choisissez **Rejoindre par son adresse** et tapez l’adresse de l’ordinateur où vit votre second.
 
 ## Piloter votre second depuis un autre ordinateur {#control-your-first-mate-from-another-computer}
 
 Une fois qu’un ordinateur a rejoint, ouvrir Infinitary dessus affiche votre second.
-Le haut de la fenêtre indique « Contrôle de votre second sur » suivi du nom de cet ordinateur.
+Le haut de la fenêtre indique « Contrôle de votre second sur » suivi du nom de cet ordinateur.
 Vos cartes, vos tâches et votre conversation restent sur l’ordinateur où vit votre second.
 
 Chaque ordinateur garde ses propres Apparence, Clavier et Panneaux.
@@ -67,7 +67,7 @@ Il se connecte à ses propres abonnements, et une tâche qui s’y exécute n’
 Connectez-le à un abonnement dans Réglages → **Intelligence**, où les connexions de chaque ordinateur sont listées sous son nom.
 Confiez-lui ensuite un projet.
 
-Dans Réglages → **Projets**, ouvrez un projet et réglez **S’exécute sur** : **Automatiquement**, **Cet ordinateur** ou l’un de **Vos ordinateurs**.
+Dans Réglages → **Projets**, ouvrez un projet et réglez **S’exécute sur** : **Automatiquement**, **Cet ordinateur** ou l’un de **Vos ordinateurs**.
 Tant que cet ordinateur est hors de portée, les tâches du projet attendent, et ne s’exécutent jamais sur cet ordinateur-ci à la place.
 
 Un ordinateur peut aussi exécuter le travail sous un autre utilisateur de l’ordinateur où vit votre second.
@@ -80,12 +80,12 @@ Retirer un ordinateur qui exécute le travail ramène d’abord son travail non 
 Une tâche démarrée peut passer sur un autre ordinateur qui exécute le travail.
 Ouvrez sa fiche et appuyez sur **Déplacer vers un ordinateur**, puis choisissez sa destination.
 Elle garde sa clé, sa branche, ses fichiers et sa fiche.
-La tâche se déplace une fois que son équipier a fini ce qu’il fait ; d’ici là, vous pouvez appuyer sur **Annuler le déplacement**.
+La tâche se déplace une fois que son équipier a fini ce qu’il fait ; d’ici là, vous pouvez appuyer sur **Annuler le déplacement**.
 
 ## Les fichiers sur un autre ordinateur {#files-on-another-computer}
 
 Un équipier peut copier un fichier d’un autre de vos ordinateurs dans sa tâche, pour le lire.
-Il ne fait que lire : rien n’est écrit sur un autre ordinateur.
+Il ne fait que lire : rien n’est écrit sur un autre ordinateur.
 Chaque copie ajoute une ligne à l’Activité de la tâche, qui nomme le fichier et l’ordinateur d’où il vient.
 
 ## Déplacer votre second {#move-your-first-mate}
@@ -108,7 +108,7 @@ Vous pouvez garder une copie sur plusieurs ordinateurs.
 
 La copie contient les tâches, les cartes, la conversation, les connaissances et les automatisations de votre second.
 Cet ordinateur ne l’ouvre jamais tant qu’il ne prend pas le relais.
-À elle seule, la copie ne contient aucun de vos projets, aucune connexion ni aucun Secret :
+À elle seule, la copie ne contient aucun de vos projets, aucune connexion ni aucun Secret :
 
 - Quand il prend le relais, chaque projet est de nouveau cloné depuis l’endroit où il est hébergé.
   Un projet gardé uniquement sur l’ordinateur perdu y démarre vide.
@@ -124,8 +124,8 @@ Un ordinateur qui prend le relais sait alors ce qui a déjà été fait, et ne l
 
 ## Prendre le relais {#take-over}
 
-Pendant que l’ordinateur où vit votre second est hors de portée, un ordinateur qui garde une copie peut prendre le relais : votre second y démarre à partir de sa copie.
-Rien ne prend le relais de soi-même, et aucun minuteur n’en décide : seul votre clic le fait.
+Pendant que l’ordinateur où vit votre second est hors de portée, un ordinateur qui garde une copie peut prendre le relais : votre second y démarre à partir de sa copie.
+Rien ne prend le relais de soi-même, et aucun minuteur n’en décide : seul votre clic le fait.
 
 Ouvrez Infinitary sur un ordinateur qui garde une copie, et ouvrez Réglages → **Appareils**.
 Sous **Contrôle**, **Prendre le relais** indique de quand date cette copie, et si l’ordinateur de votre second a signalé qu’il allait se mettre en veille ou qu’Infinitary y avait quitté.
@@ -150,13 +150,13 @@ L’ordinateur perdu cesse d’être l’ordinateur de votre second quand il rev
 Sous **Relayé**, ses Réglages → **Appareils** listent ce qu’il a enregistré après la copie, qui n’a jamais atteint votre second.
 Il garde cette fiche de côté, et rien ne l’ouvre de nouveau.
 
-Si deux ordinateurs répondent tous deux comme votre second, Réglages → **Appareils** demande sous **Deux seconds** : **Garder celui-ci**, ou garder l’autre.
+Si deux ordinateurs répondent tous deux comme votre second, Réglages → **Appareils** demande sous **Deux seconds** : **Garder celui-ci**, ou garder l’autre.
 Les fusions, les envois et les utilisations de secret attendent votre choix, et celui que vous ne gardez pas s’arrête et garde une copie de l’autre.
 
 ## Comment les ordinateurs se trouvent {#how-computers-find-each-other}
 
-Réglages → **Appareils** affiche **Comment les autres appareils trouvent cet ordinateur** : **Sur ce réseau** et **Sur votre réseau privé**.
-**Par Internet** indique « Jamais. Infinitary n’ouvre pas cet ordinateur à Internet. »
+Réglages → **Appareils** affiche **Comment les autres appareils trouvent cet ordinateur** : **Sur ce réseau** et **Sur votre réseau privé**.
+**Par Internet** indique « Jamais. Infinitary n’ouvre pas cet ordinateur à Internet. »
 Pour piloter votre second depuis ailleurs, placez les deux ordinateurs sur le même réseau privé.
 
 Voir aussi [iPhone et iPad](/fr/iphone-and-ipad/) et [Dépannage](/fr/troubleshooting/).

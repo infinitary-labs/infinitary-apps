@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ownStylesSchema } from "./ambientOwn";
+import { AMBIENT_STYLES, type AmbientStyle, DEFAULT_AMBIENT_STYLE } from "./ambientStyles";
 import { fontChoicesSchema } from "./fonts";
 import { type SidePanelPlacement, sidePanelPlacementSchema } from "./plugins/manifest";
 import { usageUnitSchema } from "./usage";
@@ -60,22 +62,7 @@ export const languageChoiceSchema = z
 export const ambientVolumeSchema = z.number().int().min(0).max(100);
 /** The ambient music's volume before anyone moves it. */
 export const DEFAULT_AMBIENT_VOLUME = 40;
-/** The ambient music's styles, in the order Settings lists them (docs/ambient-music.md). */
-export const AMBIENT_STYLES = [
-  "deep-drift",
-  "star-cruise",
-  "cold-sleep",
-  "quiet-cove",
-  "tavern-embers",
-  "moonlit-deck",
-  "harbor-dawn",
-  "fair-winds",
-  "wayfinder-night",
-  "island-morning",
-] as const;
-export type AmbientStyle = (typeof AMBIENT_STYLES)[number];
-/** The style that plays until someone picks another. */
-export const DEFAULT_AMBIENT_STYLE: AmbientStyle = "star-cruise";
+export { AMBIENT_STYLES, type AmbientStyle, DEFAULT_AMBIENT_STYLE };
 /**
  * A saved style: any short name, so a style a newer build saved still reads
  * here, where it plays as the default (`ambientStyleOf`).
@@ -90,6 +77,17 @@ export function ambientStyleOf(saved: string | undefined): AmbientStyle {
   return (AMBIENT_STYLES as readonly string[]).includes(saved ?? "")
     ? (saved as AmbientStyle)
     : DEFAULT_AMBIENT_STYLE;
+}
+/**
+ * The style a saved name plays, among the shipped ones and the person's own
+ * (`ambientOwnStyles`): the default when it is missing, removed or one this
+ * build lacks.
+ */
+export function ambientStyleIn(
+  saved: string | undefined,
+  own: readonly { id: string }[] | undefined,
+): string {
+  return own?.some((style) => style.id === saved) ? (saved as string) : ambientStyleOf(saved);
 }
 
 /** How the app looks. The default handles records written before the wash control existed. */
@@ -130,6 +128,12 @@ export const appearanceSchema = z.strictObject({
    * this build lacks, means Star cruise. The core keeps it in a row of its own.
    */
   ambientStyle: ambientStyleSchema.optional(),
+  /**
+   * The person's own styles, written by the first mate from their words
+   * (src/shared/ambientOwn.ts); missing means none. The core keeps them in a
+   * row of their own, so an older build never meets them.
+   */
+  ambientOwnStyles: ownStylesSchema.optional(),
   /** How Settings → Usage shows every amount (docs/usage.md); missing means tokens. */
   usageUnit: usageUnitSchema.optional(),
   /**

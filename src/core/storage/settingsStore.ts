@@ -1,3 +1,4 @@
+import { ownStylesSchema } from "@shared/ambientOwn";
 import { type CostLimit, costLimitSchema, DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import {
   DEFAULT_DECISIONS,
@@ -114,6 +115,8 @@ const ambientMusicRowSchema = z.strictObject({ on: z.boolean(), volume: ambientV
 
 /** The `ambient-style` row: which style the ambient music plays (docs/ambient-music.md). */
 const ambientStyleRowSchema = z.strictObject({ style: ambientStyleSchema });
+/** The `ambient-own-styles` row: the person's own styles (docs/ambient-music.md, "Your own styles"). */
+const ambientOwnRowSchema = z.strictObject({ styles: ownStylesSchema });
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
@@ -329,6 +332,7 @@ export class SettingsStore {
     const fonts = fontsRowSchema.safeParse(this.get("fonts"));
     const ambient = ambientMusicRowSchema.safeParse(this.get("ambient-music"));
     const style = ambientStyleRowSchema.safeParse(this.get("ambient-style"));
+    const own = ambientOwnRowSchema.safeParse(this.get("ambient-own-styles"));
     return {
       ...DEFAULT_APPEARANCE,
       ...appearance,
@@ -345,6 +349,7 @@ export class SettingsStore {
         ? { ambientMusic: ambient.data.on, ambientVolume: ambient.data.volume }
         : {}),
       ...(style.success ? { ambientStyle: style.data.style } : {}),
+      ...(own.success && own.data.styles.length > 0 ? { ambientOwnStyles: own.data.styles } : {}),
     };
   }
 
@@ -360,7 +365,9 @@ export class SettingsStore {
    * The ambient music's switch and volume go to their own row
    * (`ambient-music`), and a look without them keeps the saved ones; its
    * style goes to `ambient-style` the same way. Keep playing while away is
-   * `ambient-away-plays`, kept only while on.
+   * `ambient-away-plays`, kept only while on. The person's own styles go to
+   * `ambient-own-styles`; a look without them keeps the saved ones, and an
+   * empty list removes the row.
    */
   setAppearance(appearance: Appearance): void {
     const { language: _saved, fonts: _savedFonts, ...was } = this.getAppearance();
@@ -374,6 +381,7 @@ export class SettingsStore {
       ambientPlaysWhenAway,
       ambientVolume,
       ambientStyle,
+      ambientOwnStyles,
       ...look
     } = {
       ...was,
@@ -385,6 +393,10 @@ export class SettingsStore {
         volume: ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
       });
     if (ambientStyle !== undefined) this.set("ambient-style", { style: ambientStyle });
+    if (ambientOwnStyles !== undefined) {
+      if (ambientOwnStyles.length === 0) this.remove("ambient-own-styles");
+      else this.set("ambient-own-styles", { styles: ambientOwnStyles });
+    }
     if (ambientMusic && ambientPaused) this.set("ambient-paused", true);
     else this.remove("ambient-paused");
     if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);

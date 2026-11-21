@@ -11,7 +11,7 @@ import type { Style } from "../player";
 import { AEOLIAN, DRUM, GLASS, HELD, layers, PADS, PENT_MINOR, pings, triads } from "./kit";
 
 /** The pianos: a soft felt upright, and a cold, brighter one for the answers and the cues. */
-const PIANO = {
+export const PIANO = {
   felt: {
     amp: 0.2,
     bright: 5.5,

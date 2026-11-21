@@ -3,14 +3,15 @@ import { currentLanguage } from "@shared/i18n/current";
 import { ownLanguageName, SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
 import { choosableLanguages, FOLLOWS_COMPUTER } from "@shared/i18n/start";
-import { type AmbientStyle, ambientStyleOf, UI_SIZES, type UiSize } from "@shared/preferences";
+import { type AmbientStyle, ambientStyleIn, UI_SIZES, type UiSize } from "@shared/preferences";
 import { useEffect, useRef, useState } from "react";
 import { usePresence } from "../ambient/presence";
 import type { AppearanceChoice } from "../app/appearance";
+import { mainMessageRefusal } from "../app/composer";
 import { useCommandKeys } from "../app/keyHints";
 import { notePickerChange, takePickerFocus, windowDefaultLanguage } from "../app/language";
 import { useShellStore } from "../app/store";
-import { GroupedPills, Switch } from "../design";
+import { Button, GroupedPills, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
 import { FontRows } from "./FontRows";
@@ -355,8 +356,22 @@ const STYLE_GROUPS: [() => string, AmbientStyle[]][] = [
 ];
 
 /**
+ * Describe your own (docs/ambient-music.md, "Your own styles"): home, with
+ * the message box starting the ask to the first mate and the caret after
+ * it, for the person to describe the music. Nothing is sent from here.
+ * Refused, as Go to the main message is, while the box is held.
+ */
+function describeOwnStyle(): void {
+  const shell = useShellStore.getState();
+  if (mainMessageRefusal(shell) !== null) return;
+  shell.focusMainMessage();
+  shell.beginDraft(m.settingsSoundOwnDraft());
+}
+
+/**
  * The Sound group (docs/ambient-music.md): the ambient music's switch, its
  * style and its volume, kept for this window like the rest of its look.
+ * The person's own styles are listed under Yours.
  */
 function SoundRows() {
   const ambientMusic = useShellStore((s) => s.ambientMusic);
@@ -364,8 +379,14 @@ function SoundRows() {
   const ambientVolume = useShellStore((s) => s.ambientVolume);
   const setAmbientVolume = useShellStore((s) => s.setAmbientVolume);
   // A style a newer Infinitary saved shows, and plays, as the default.
-  const style = ambientStyleOf(useShellStore((s) => s.ambientStyle));
+  const own = useShellStore((s) => s.ambientOwnStyles);
+  const style = ambientStyleIn(
+    useShellStore((s) => s.ambientStyle),
+    own,
+  );
+  const ownChosen = own.find((saved) => saved.id === style);
   const setAmbientStyle = useShellStore((s) => s.setAmbientStyle);
+  const removeOwnStyle = useShellStore((s) => s.removeAmbientOwnStyle);
   const playsWhenAway = useShellStore((s) => s.ambientPlaysWhenAway);
   const setPlaysWhenAway = useShellStore((s) => s.setAmbientPlaysWhenAway);
   // Offered only where this computer can tell nobody is at it.
@@ -394,12 +415,16 @@ function SoundRows() {
           id="ambient-style"
           error={errorFor("ambientStyle")}
           title={m.settingsSoundStyle()}
-          description={STYLE_WORDS[style].description()}
+          description={
+            ownChosen
+              ? ownChosen.words || m.settingsSoundOwnNoWords()
+              : STYLE_WORDS[style as AmbientStyle].description()
+          }
           control={
             <select
               aria-label={m.settingsSoundStyle()}
               value={style}
-              onChange={(event) => setAmbientStyle(event.target.value as AmbientStyle)}
+              onChange={(event) => setAmbientStyle(event.target.value)}
               style={{ ...FIRSTMATE_SELECT_STYLE, fontFamily: "var(--font-ui)" }}
             >
               {STYLE_GROUPS.map(([group, styles]) => (
@@ -411,7 +436,42 @@ function SoundRows() {
                   ))}
                 </optgroup>
               ))}
+              {own.length > 0 && (
+                <optgroup label={m.settingsSoundStyleGroupYours()}>
+                  {own.map((saved) => (
+                    <option key={saved.id} value={saved.id}>
+                      {saved.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+          }
+        />
+        <SettingRow
+          id="ambient-own"
+          error={errorFor("ambientOwnStyles")}
+          title={m.settingsSoundOwn()}
+          description={m.settingsSoundOwnDescription()}
+          control={
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              {ownChosen && (
+                <span data-ambient-own-remove="">
+                  <Button
+                    variant="secondary"
+                    aria-description={m.settingsSoundOwnRemoveNamed({ name: ownChosen.name })}
+                    onClick={() => removeOwnStyle(ownChosen.id)}
+                  >
+                    {m.settingsSoundOwnRemove()}
+                  </Button>
+                </span>
+              )}
+              <span data-ambient-own-describe="">
+                <Button variant="secondary" onClick={describeOwnStyle}>
+                  {m.settingsSoundOwnDescribe()}
+                </Button>
+              </span>
+            </div>
           }
         />
         <SettingRow

@@ -78,6 +78,7 @@ import { listenAddresses, listenOn } from "./addresses";
 import {
   AMBIENT_AWAY,
   AMBIENT_MUSIC,
+  AMBIENT_OWN_STYLES,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
   CARD_ANSWER_SKIPPED,
@@ -690,6 +691,7 @@ function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
     ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
+    ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) ? [] : ["ambientOwnStyles"]),
   ];
 }
 

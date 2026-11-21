@@ -1,0 +1,12 @@
+{
+  "name": "Warm sleep",
+  "words": "Like Cold sleep, but warmer and a little faster, in a major key, with no heartbeat",
+  "like": "cold-sleep",
+  "bpm": 60,
+  "key": "G",
+  "scale": "lydian",
+  "tone": 0,
+  "mix": {
+    "kick": -60
+  }
+}

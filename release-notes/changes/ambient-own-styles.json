@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-own-styles",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Describe your own ambient music",
+      "body": "Tell your first mate the music you want, such as “play lofi beats to code to”, and it writes a style of your own for the app’s instruments and plays it at once, as loud as the styles that come with the app. Ask for a change, such as “make it slower”, and the same style changes. Your styles are listed under Yours in Settings → Appearance → Style, where Remove takes one away. They can bring soft rain or wind under the music. The instruments cannot sing words or play recordings, so your first mate says when an ask needs those.",
+      "picture": {
+        "dark": "ambient-own-styles-dark.webp",
+        "light": "ambient-own-styles-light.webp",
+        "alt": "The Sound group in Settings → Appearance, with the style Late shift chosen and its description, Lofi beats to code to, and a new Your own music row with Remove and Describe your own buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

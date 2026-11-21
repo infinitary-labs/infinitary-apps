@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-french",
+      "reason": "Publishes the documentation site in French beside English and Arabic; nothing in the app changes."
+    }
+  ]
+}

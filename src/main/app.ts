@@ -284,8 +284,9 @@ async function handOverInRun(move: FolderMove, work: WorkContext): Promise<RunHa
       say: (lines) => process.stdout.write(`${lines.join("\n")}\n`),
       ...(isatty(0) ? { ask } : {}),
       signal: stop.signal,
-      // Login items are set once the app is ready.
-      startAtLogin: () => void app.whenReady().then(() => carryStartAtLogin(move)),
+      // At once, as the work comes in: a run that ends before Electron is
+      // ready never reaches the move again, so a later carry would be lost.
+      startAtLogin: () => carryStartAtLogin(move),
     });
   } finally {
     for (const signal of STOP_SIGNALS) process.off(signal, onStop);
@@ -518,7 +519,14 @@ export async function startApp(
   // taking over from an older copy with no window that still holds the
   // older one, and then goes on from its own (./runHandOver.ts).
   if (move && windowless) {
-    const handed = await handOverInRun(move, workContext());
+    let handed: RunHandOver;
+    try {
+      handed = await handOverInRun(move, workContext());
+    } catch (error) {
+      // A step that throws ends the run as a start that failed, with its reason.
+      endRun(1, RUN_WORDS.couldNotStart(error instanceof Error ? error.message : String(error)));
+      return;
+    }
     if (handed.kind === "ended") {
       const { end } = handed;
       // A stop ends cleanly, as a run's stop does; anything else ends as a start that failed.

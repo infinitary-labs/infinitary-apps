@@ -89,72 +89,74 @@ export async function runHandOverInTerminal(
   options: RunHandOverOptions,
 ): Promise<RunHandOver> {
   const { names, say, signal } = options;
-  // Agents the take-over let go: started again whenever the run ends without
-  // the work, so the older copy's work runs as it did.
+  // Agents the take-over let go: started again whenever the hand-over ends
+  // without the work, a step that throws included, so the older copy's work
+  // runs as it did.
   const paused: Service[] = [];
-  const end = async (end: RunEnd): Promise<RunHandOver> => {
-    // Once the move committed, the older folder is a frozen recovery copy: nothing starts on it again.
-    const retired = isProfileRetired(move.from);
-    for (const service of paused.splice(0))
-      if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
-    return { kind: "ended", end };
-  };
+  const end = (end: RunEnd): RunHandOver => ({ kind: "ended", end });
   const refused = (lines: string[]) => end({ reason: "start-failed", exitCode: 1, lines });
   // A stop leaves the work as the move left it and ends the run cleanly, as a stop does.
   const stopped = () => end({ reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopped] });
   const progress = stepLines(names, say, options.progressEveryMs ?? PROGRESS_EVERY_MS);
-  // One take-over: a copy that holds the folder again after it is the person's to see.
-  let tookOver = false;
-  for (;;) {
-    const outcome = await runMove(move, { ...options.deps, progress, signal });
-    if (outcome.kind === "moved") {
-      say([m.handoverRunMoved(names)]);
-      if (outcome.startAtLogin) options.startAtLogin();
-      // Once the work is in, the background goes to this app's label with it; a failure leaves it for the work check.
-      await options.handBackground?.().catch(() => undefined);
-      return signal.aborted ? stopped() : { kind: "here" };
-    }
-    if (signal.aborted) return stopped();
-    if (outcome.kind === "nothing" || outcome.kind === "kept") return { kind: "here" };
-    if (outcome.kind === "ask") return refused([m.handoverRunBothFolders(names)]);
-    const { refusal } = outcome;
-    const held = refusal.reason === "old-app-open" || refusal.reason === "old-work-running";
-    if (held && options.takeOver && !tookOver) {
-      tookOver = true;
-      // The stopping words show only once the holder is one of ours with no window.
-      const taken = await takeOverOlderCopy(move.from, {
-        ...options.takeOver,
-        signal,
-        stopping: () => {
-          say([m.handoverStoppingTitle({ from: names.from }), m.handoverStoppingText(names)]);
-          return undefined;
-        },
-      });
-      if ((taken.kind === "stopped" || taken.kind === "still-running") && taken.unloaded)
-        paused.push(taken.unloaded);
+  try {
+    // One take-over: a copy that holds the folder again after it is the person's to see.
+    let tookOver = false;
+    for (;;) {
+      const outcome = await runMove(move, { ...options.deps, progress, signal });
+      if (outcome.kind === "moved") {
+        say([m.handoverRunMoved(names)]);
+        if (outcome.startAtLogin) options.startAtLogin();
+        // Once the work is in, the background goes to this app's label with it; a failure leaves it for the work check.
+        await options.handBackground?.().catch(() => undefined);
+        return signal.aborted ? stopped() : { kind: "here" };
+      }
       if (signal.aborted) return stopped();
-      if (taken.kind === "free" || taken.kind === "stopped") continue;
-      if (taken.kind === "still-running") {
-        const title = m.handoverWontStopTitle({ from: names.from });
-        // Only a person at a terminal can say yes: anything else never ends it.
-        if (!options.ask) return refused([title, m.handoverRunNoTerminal({ to: names.to })]);
-        const answer = await options.ask(
-          [title, m.handoverRunWontStop({ to: names.to })],
-          `${m.handoverRunStopPrompt()} `,
-        );
-        if (signal.aborted) return stopped();
-        if (answer.trim().toLowerCase() !== "yes")
-          return refused([m.handoverRunLeftRunning({ from: names.from })]);
-        const forced = await stopOlderCopyNow(move.from, taken.pid, {
+      if (outcome.kind === "nothing" || outcome.kind === "kept") return { kind: "here" };
+      if (outcome.kind === "ask") return refused([m.handoverRunBothFolders(names)]);
+      const { refusal } = outcome;
+      const held = refusal.reason === "old-app-open" || refusal.reason === "old-work-running";
+      if (held && options.takeOver && !tookOver) {
+        tookOver = true;
+        // The stopping words show only once the holder is one of ours with no window.
+        const taken = await takeOverOlderCopy(move.from, {
           ...options.takeOver,
           signal,
+          stopping: () => {
+            say([m.handoverStoppingTitle({ from: names.from }), m.handoverStoppingText(names)]);
+            return undefined;
+          },
         });
-        if (forced.unloaded) paused.push(forced.unloaded);
+        if ((taken.kind === "stopped" || taken.kind === "still-running") && taken.unloaded)
+          paused.push(taken.unloaded);
         if (signal.aborted) return stopped();
-        continue;
+        if (taken.kind === "free" || taken.kind === "stopped") continue;
+        if (taken.kind === "still-running") {
+          const title = m.handoverWontStopTitle({ from: names.from });
+          // Only a person at a terminal can say yes: anything else never ends it.
+          if (!options.ask) return refused([title, m.handoverRunNoTerminal({ to: names.to })]);
+          const answer = await options.ask(
+            [title, m.handoverRunWontStop({ to: names.to })],
+            `${m.handoverRunStopPrompt()} `,
+          );
+          if (signal.aborted) return stopped();
+          if (answer.trim().toLowerCase() !== "yes")
+            return refused([m.handoverRunLeftRunning({ from: names.from })]);
+          const forced = await stopOlderCopyNow(move.from, taken.pid, {
+            ...options.takeOver,
+            signal,
+          });
+          if (forced.unloaded) paused.push(forced.unloaded);
+          if (signal.aborted) return stopped();
+          continue;
+        }
       }
+      return refused(runRefusalLines(refusal, names));
     }
-    return refused(runRefusalLines(refusal, names));
+  } finally {
+    // Once the move committed, the older folder is a frozen recovery copy: nothing starts on it again.
+    const retired = isProfileRetired(move.from);
+    for (const service of paused.splice(0))
+      if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
   }
 }
 

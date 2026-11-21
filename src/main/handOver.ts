@@ -93,16 +93,20 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
     );
   };
   // Agents the take-over let go: started again whenever the hand-over ends
-  // without moving, so the older copy's work runs as it did.
+  // without moving, a step that throws included, so the older copy's work
+  // runs as it did.
   const paused: Service[] = [];
-  let left = false;
-  const leave = async () => {
-    if (left) return;
-    left = true;
+  const resumePaused = async () => {
     // Once the move committed, the older folder is a frozen recovery copy: nothing starts on it again.
     const retired = isProfileRetired(move.from);
     for (const service of paused.splice(0))
       if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
+  };
+  let left = false;
+  const leave = async () => {
+    if (left) return;
+    left = true;
+    await resumePaused();
     options.quit();
   };
   // Once the work is in, the background goes to this app's label with it; a failure leaves it for the work check.
@@ -301,5 +305,6 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
     }
   } finally {
     clearInterval(ticking);
+    await resumePaused();
   }
 }

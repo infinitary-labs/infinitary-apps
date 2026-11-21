@@ -325,6 +325,28 @@ describe("a run hands over the one-time move in its terminal", { timeout: 10_000
     expect(isProfileRetired(at.from)).toBe(false);
   });
 
+  it("starts the older agent again when a step of the move throws, and passes the error on", async () => {
+    const at = olderFolder();
+    const holder = await started(at.from, ["work", "run"]);
+    // The move's lock, written once the older copy let go, fails as on a full disk.
+    at.options.deps = {
+      ...at.options.deps,
+      now: () => {
+        throw new Error("No space left on device");
+      },
+    };
+    await expect(runHandOverInTerminal(at.move, at.options)).rejects.toThrow(
+      "No space left on device",
+    );
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+    expect(at.asked).toEqual([
+      ["bootout", `gui/502/${OLDER_LABEL}`],
+      ["bootstrap", "gui/502", at.service.file],
+    ]);
+    expect(movedIn(at.move)).toBe(false);
+    expect(isProfileRetired(at.from)).toBe(false);
+  });
+
   it("moves at once when nothing holds the older folder", async () => {
     const at = olderFolder();
     expect(await runHandOverInTerminal(at.move, at.options)).toEqual({ kind: "here" });

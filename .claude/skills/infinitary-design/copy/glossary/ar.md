@@ -128,6 +128,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Reasoning | الاستدلال | As the task facts already say it. |
 | rebase merges, merge commits (the host's settings) | الدمج بإعادة التأسيس (rebase)، إيداعات الدمج | Named only as the settings where the project lives, with "rebase" beside it because that settings page is in English; the app's own action stays "تحديثه بآخر التغييرات". |
 | record (a Usage record) | سجل | Plural "سجلات". |
+| relay (Infinitary's push relay) | مرحّل Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "رسالة مختومة". |
 | release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
 | Remove (a device) | إزالة | |
 | repo (never said) | مشروع | The app's noun for what work belongs to stays مشروع. |

@@ -1,3 +1,4 @@
+import { existsSync, rmSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -16,6 +17,7 @@ import { pauseInBackground, resumeInBackground, startInBackground } from "@core/
 import { windowFromWork } from "@core/helper/fromWindow";
 import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
+import { watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
@@ -654,6 +656,14 @@ export async function startApp(
   // nothing was done here. A home that keeps its own first mate goes on
   // running it in the background. A command the person started by hand
   // keeps running, with no starter beside it (docs/view.md, "Following along").
+  const starterOptions = {
+    work,
+    flavor: work.place.flavor,
+    dataDir,
+    isolated: Boolean(isolatedUserDataDir),
+    switched: userDataChoice.kind === "switch",
+    packaged: app.isPackaged,
+  };
   const starter =
     windowless ||
     move ||
@@ -663,14 +673,7 @@ export async function startApp(
     joinedHere.read() ||
     !keepsStarterBesideGrant(dataDir, grantFollowed(work.place.dataDir, joinedHere))
       ? null
-      : commandStarter({
-          work,
-          flavor: work.place.flavor,
-          dataDir,
-          isolated: Boolean(isolatedUserDataDir),
-          switched: userDataChoice.kind === "switch",
-          packaged: app.isPackaged,
-        });
+      : commandStarter(starterOptions);
   let besideRun = !windowless && runningByCommand(dataDir);
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
@@ -723,6 +726,14 @@ export async function startApp(
     // The launch that holds the folder clears what earlier ones left in its
     // own temporary folder; a window beside a run leaves it to the run.
     if (privacy?.temp && !besideRun) await clearPrivateTemp(privacy.temp);
+    // Start it here over a run that did not answer ended that run alone and asked its service
+    // manager nothing, so its job may start the run again (`stopRunAgent`'s force). Now that this
+    // window holds the folder, whatever that job runs is a start the folder refuses, so the job is
+    // let go and stops starting one; the agent stays in place for the next login.
+    if (startsHere && !besideRun)
+      void commandStarter(starterOptions)
+        ?.stop({ forget: false, run: null })
+        .catch(() => {});
     // A run notes that it holds the folder, for a window opened beside it,
     // and stops cleanly on a signal (below).
     let stopRun: () => void = () => {};
@@ -832,13 +843,28 @@ export async function startApp(
         },
         undefined,
         { pid: process.pid, startedAt: runStartedAt.toISOString() },
+        hostPlatform() === "win32",
       );
+      // Restart it and Start it here end a run that does not answer by asking it to end itself, by
+      // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
+      const stopForceWatch = watchRunForce(app.getPath("userData"), runStartedAt.toISOString());
+      // A development run may stand in a first mate stuck on its way to answering: once this file
+      // is there, the run takes it away and its main thread waits for ever, while its own reading
+      // of force stops goes on beside it (tests/e2e/window-starts-run.spec.ts).
+      const stallFile = isDev ? settingFrom(process.env, "RUN_STALL_FILE")?.trim() : undefined;
+      if (stallFile)
+        setInterval(() => {
+          if (!existsSync(stallFile)) return;
+          rmSync(stallFile, { force: true });
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
+        }, 200).unref();
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
         if (ended) return;
         ended = true;
         event.preventDefault();
+        stopForceWatch();
         leaveRun(runEnd);
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });

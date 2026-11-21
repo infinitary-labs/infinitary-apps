@@ -15,7 +15,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunInstance, type Programs, systemPrograms } from "./runInstance";
+import { endRunByForce } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -72,11 +72,10 @@ export type RunAgentContext = {
   /** What the run carries of the window's environment: a development run's stand-ins alone. */
   env: Readonly<Record<string, string>>;
   /**
-   * Whether a process runs, and how the program under a process number is
-   * opened to be read and ended by force (`runInstance.ts`): the system's
-   * own unless a test stands in.
+   * Whether a process runs, the system's own unless a test stands in, and
+   * how long a force stop waits for its run to end (`endRunByForce`).
    */
-  processes?: { alive: (pid: number) => boolean } & Programs;
+  processes?: { alive: (pid: number) => boolean; forceWaitMs?: number };
 } & RunManager;
 
 /** Where this user's own systemd reads their services. */
@@ -296,9 +295,10 @@ export function forgetRunAgentFiles(
  * folder is for that run alone, so a run started by hand there stays. On a
  * Mac or Linux the agent's job is ended whichever run it holds. With
  * `force`, Start it here over a run that does not answer: only the run
- * named is ended, by its own program (`endAgentRun`), and the job is let go
- * only while it runs nothing else, so it does not start that run again; the
- * agent stays in place for the next login. Letting it
+ * named ends, by its own hand (`endAgentRun`), and the service manager is
+ * asked nothing, so a run its job starts again meanwhile keeps going; the
+ * window that starts here lets the job go once it holds the folder itself
+ * (`retireBesideOwnRun`). Letting it
  * go for good (`forget`), a job the service manager would not end, or a task
  * Task Scheduler would not take away, rejects, so the joining window says so,
  * unless the service manager or Task Scheduler says it holds no such job, or the job is stopped,
@@ -309,7 +309,7 @@ export async function stopRunAgent(
   options: { forget: boolean; force?: RunInstance; run?: RunInstance | null },
 ): Promise<void> {
   if (options.force) {
-    await endAgentRun(context, options.force, true);
+    await endAgentRun(context, options.force);
     return;
   }
   if ("schtasks" in context) {
@@ -379,9 +379,9 @@ export type RestartOutcome = "restarted" | "untouched" | "failed";
 /**
  * Restart it, on the notice over a window whose command runs and does not
  * answer (docs/run.md, "When the command does not answer"): the run named
- * is ended by force, by its own program (`endAgentRun`), since one that
- * does not answer may never act on a polite stop, and once that program is
- * gone the agent is asked to start its run, as it would at login: launchd's
+ * ends itself by force (`endAgentRun`), since one that does not answer may
+ * never act on a polite stop, and once no program runs under its number the
+ * agent is asked to start its run, as it would at login: launchd's
  * `kickstart` without `-k`, systemd's `start` or Task Scheduler's `/Run`,
  * each of which starts nothing where the job already runs, so a run started
  * again in the named one's place is never ended.
@@ -430,49 +430,23 @@ function recordedRun(context: RunAgentContext, run: RunInstance): { agent: boole
 
 /**
  * Ends `run` by force where it is the run this app's own agent started, as
- * its own record says (`recordedRun`): through its program alone, opened by
- * its number and shown to be that run by its birth (`endRunInstance`),
- * never through the service manager's job, which ends whichever run it
- * holds by then. With `retire`, Start it here's, the job is then let go so
- * it does not start that run again, but only while it runs no process: a
- * run it started again meanwhile keeps going, and the window joins it.
- * Untouched for any other run, a program that cannot be shown to be the run
- * included; `lasts` where its program did not end in time.
+ * its own record says (`recordedRun`): the run is asked to end itself, by
+ * its process and start (`endRunByForce`), which no other program reads, so
+ * a program that took its number and a run its job started again both keep
+ * going, and nothing is asked of the service manager. Untouched for any
+ * other run, and where the stop could not be asked; `lasts` where a program
+ * still runs under its number once the wait is over.
  */
 async function endAgentRun(
   context: RunAgentContext,
   run: RunInstance,
-  retire = false,
 ): Promise<"ended" | "untouched" | "lasts"> {
   if (!recordedRun(context, run)?.agent) return "untouched";
-  const ended = await endRunInstance(run, context.processes ?? systemPrograms());
-  if (ended === "declined") return "untouched";
-  if (ended === "lasts") return "lasts";
-  if (retire && (await jobProcess(context)) === null) {
-    if ("launchctl" in context)
-      await launchctlOf(context)(["bootout", `gui/${context.uid}/${context.label}`]);
-    else if (!("schtasks" in context)) await systemctlOf(context)(["stop", context.label]);
-  }
-  return "ended";
-}
-
-/**
- * The process the service manager's job runs now, by its own reading:
- * launchd's `pid` for the job, systemd's `MainPID` for the unit; null for
- * none, and undefined where it cannot say. Task Scheduler starts no run on
- * its own after one ends, so a Windows task has nothing to read here.
- */
-async function jobProcess(context: RunAgentContext): Promise<number | null | undefined> {
-  if ("schtasks" in context) return null;
-  if ("launchctl" in context) {
-    const job = await launchctlOf(context)(["print", `gui/${context.uid}/${context.label}`]);
-    if (job.code === LAUNCHD_NO_SUCH_SERVICE) return null;
-    if (!job.ok) return undefined;
-    const pid = /^\s*pid = (\d+)$/m.exec(job.output)?.[1];
-    return pid ? Number(pid) : null;
-  }
-  const unit = await systemctlOf(context)(["show", "--property=MainPID", "--value", context.label]);
-  if (!unit.ok || !/^\d+$/.test(unit.output.trim())) return undefined;
-  const pid = Number(unit.output.trim());
-  return pid > 0 ? pid : null;
+  const ended = await endRunByForce(
+    context.dataDir,
+    run,
+    context.processes?.alive ?? processAlive,
+    context.processes?.forceWaitMs,
+  );
+  return ended === "unasked" ? "untouched" : ended;
 }

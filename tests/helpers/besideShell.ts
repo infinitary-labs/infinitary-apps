@@ -160,6 +160,8 @@ export function besideShell(
     starts?: boolean;
     /** How long the window waits for a running command to answer before it says it does not. */
     answerWaitMs?: number;
+    /** How long Start it here waits for a run asked to stop to let the folder go. */
+    stopWaitMs?: number;
     /** Each dial of the command's door after this turns true never connects, as at a stuck command. */
     dialHangs?: () => boolean;
     /** Where each link the window dials the command's door with is kept, to read its connection. */
@@ -237,6 +239,7 @@ export function besideShell(
       ownedRun: options.ownedRun ?? (() => OWNED),
       ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
       ...(options.answerWaitMs === undefined ? {} : { answerWaitMs: options.answerWaitMs }),
+      ...(options.stopWaitMs === undefined ? {} : { stopWaitMs: options.stopWaitMs }),
       stopCommand: (only?: OwnedRun) => {
         starter.stops += 1;
         starter.stopped.push(only);

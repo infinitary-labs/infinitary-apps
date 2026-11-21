@@ -4,6 +4,7 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,6 +23,7 @@ import {
   startRunAgent,
   stopRunAgent,
 } from "./runAgent";
+import { RUN_FORCE_FILE } from "./runForce";
 import {
   RUN_RECORD_FILE,
   RUN_STOP_FILE,
@@ -67,45 +69,46 @@ const NAMED: Run = { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" };
 const REUSED: Run = { pid: 4242, startedAt: "2026-10-25T17:05:00.000Z" };
 /** A run started again in the named one's place, by the job or by hand. */
 const REPLACEMENT: Run = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
-/** The named run's program was born just before it wrote its start. */
-const BORN_NAMED = Date.parse(NAMED.startedAt) - 400;
-/** A program born after the named run wrote its start: one that took its process number since. */
-const BORN_LATER = Date.parse(REUSED.startedAt) - 400;
 
 /**
- * This computer's programs, as a restart opens them by process number: the
- * program under each number now, with its birth. One is ended through the
- * instance it was opened as, as a Windows handle ends it, so a program that
- * took the number since is never ended, and each end is written down beside
- * the service manager's asks.
+ * This computer's programs under each process number, and each run's own
+ * reading of force stops (`watchRunForce`, whose thread runs in a process
+ * of its own in ./runForce.test.ts): a run knows itself by its start and
+ * ends itself where a stop in its folder names it; any other program, one
+ * that took a run's number included, knows no start and reads none. Each
+ * end is written down beside the service manager's asks.
  */
-function programTable(asked: string[][]) {
-  const table = new Map<number, { bornMs: number | undefined }>();
+function programTable(asked: string[][], dataDir: () => string) {
+  const table = new Map<number, { startedAt: string | null }>();
   const programs = {
-    /** A program runs under `pid`, born at `bornMs` (undefined where its birth cannot be read). */
-    run: (pid: number, bornMs: number | undefined) => table.set(pid, { bornMs }),
-    /** What happens as a program is ended, before anything reads again. */
+    /** A program runs under `pid`: a run that knows itself by `startedAt`, or another program (null). */
+    run: (pid: number, startedAt: string | null) => table.set(pid, { startedAt }),
+    /** What happens as a run ends, before anything reads again. */
     onEnd: undefined as ((pid: number) => void) | undefined,
-    /** Whether ending a program is refused, as Windows refuses a program not this account's. */
-    refused: false,
+    /** Whether the runs read no force stop, as one stuck past its own thread or from before it. */
+    deaf: false,
     processes: {
-      alive: (pid: number) => table.has(pid),
-      open: async (pid: number) => {
-        const program = table.get(pid);
-        if (!program) return null;
-        return {
-          bornMs: program.bornMs,
-          end: () => {
-            asked.push(["end", String(pid)]);
-            if (programs.refused) throw new Error("Access is denied.");
-            if (table.get(pid) === program) table.delete(pid);
-            programs.onEnd?.(pid);
-          },
-          ended: async () => table.get(pid) !== program,
-          close: () => {},
-        };
+      alive: (pid: number) => {
+        deliver();
+        return table.has(pid);
       },
+      forceWaitMs: 300,
     },
+  };
+  const deliver = () => {
+    const file = join(dataDir(), RUN_FORCE_FILE);
+    let request: { pid?: number; startedAt?: string };
+    try {
+      request = JSON.parse(readFileSync(file, "utf8"));
+    } catch {
+      return;
+    }
+    const pid = request.pid ?? -1;
+    if (programs.deaf || table.get(pid)?.startedAt !== request.startedAt) return;
+    rmSync(file, { force: true });
+    table.delete(pid);
+    asked.push(["end", String(pid)]);
+    programs.onEnd?.(pid);
   };
   return programs;
 }
@@ -114,11 +117,12 @@ function mac(
   answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer; job?: number } = {},
 ) {
   const asked: string[][] = [];
-  const programs = programTable(asked);
+  const dataDir = scratchDir("infinitary-run-agent-data-");
+  const programs = programTable(asked, () => dataDir);
   const context: RunAgentContext = {
     processes: programs.processes,
     label: LABEL,
-    dataDir: scratchDir("infinitary-run-agent-data-"),
+    dataDir,
     homeDir: scratchDir("infinitary-run-agent-home-"),
     uid: 502,
     unitsDir: "/nowhere",
@@ -153,11 +157,12 @@ function mac(
 function linux(answers: { session?: boolean; stop?: StopAnswer; job?: number } = {}) {
   const asked: string[][] = [];
   const unitsDir = join(scratchDir("infinitary-run-agent-config-"), "systemd", "user");
-  const programs = programTable(asked);
+  const dataDir = scratchDir("infinitary-run-agent-data-");
+  const programs = programTable(asked, () => dataDir);
   const context: RunAgentContext = {
     processes: programs.processes,
     label: LABEL,
-    dataDir: scratchDir("infinitary-run-agent-data-"),
+    dataDir,
     homeDir: scratchDir("infinitary-run-agent-home-"),
     uid: 1000,
     unitsDir,
@@ -300,73 +305,66 @@ describe("the command the window starts, on a Mac", () => {
     await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();
   });
 
-  // The review of INF-5409: launchd's `kickstart -k` and bootout end whichever run the job holds by
-  // then, so Restart it ends the named run through its own program, and asks launchd only to start
-  // the job, which starts nothing where it already runs; Start it here lets the job go only while
-  // it runs nothing, so a run it started again meanwhile keeps going.
-  it("ends the named run its agent started by its program, then asks launchd only to start the job", async () => {
-    const job = ["print", `gui/502/${LABEL}`];
+  // The review of INF-5409: launchd's `kickstart -k`, bootout and kill end whichever run the job
+  // holds by then, and a signal goes to whichever program holds a process number by then. So the
+  // named run ends itself, read by its own process and start, and launchd is asked only to start
+  // the job on Restart it, which starts nothing where it already runs, and nothing on Start it here.
+  it("has the named run its agent started end itself, then asks launchd only to start the job", async () => {
     const restart = mac();
     recordRun(restart.context, NAMED, true);
-    restart.programs.run(NAMED.pid, BORN_NAMED);
+    restart.programs.run(NAMED.pid, NAMED.startedAt);
     expect(await restartRunAgent(restart.context, NAMED)).toBe("restarted");
     expect(restart.asked).toEqual([
       ["end", String(NAMED.pid)],
       ["kickstart", `gui/502/${LABEL}`],
     ]);
-    expect(restart.programs.processes.alive(NAMED.pid)).toBe(false);
 
     const startHere = mac();
     recordRun(startHere.context, NAMED, true);
-    startHere.programs.run(NAMED.pid, BORN_NAMED);
+    startHere.programs.run(NAMED.pid, NAMED.startedAt);
     await stopRunAgent(startHere.context, { forget: false, force: NAMED });
-    expect(startHere.asked).toEqual([
-      ["end", String(NAMED.pid)],
-      job,
-      ["bootout", `gui/502/${LABEL}`],
-    ]);
+    expect(startHere.asked).toEqual([["end", String(NAMED.pid)]]);
+    expect(startHere.programs.processes.alive(NAMED.pid)).toBe(false);
   });
 
-  it("keeps a run the job started again as the named one ended, on Start it here", async () => {
-    const { context, asked, programs, answers } = mac();
-    recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, BORN_NAMED);
-    // launchd starts the job's run again the moment the named one ends.
-    programs.onEnd = () => {
-      programs.run(REPLACEMENT.pid, Date.parse(REPLACEMENT.startedAt));
-      answers.job = REPLACEMENT.pid;
-    };
-    await stopRunAgent(context, { forget: false, force: NAMED });
-    expect(asked).toEqual([
-      ["end", String(NAMED.pid)],
-      ["print", `gui/502/${LABEL}`],
-    ]);
-    expect(programs.processes.alive(REPLACEMENT.pid)).toBe(true);
-    // A job launchd cannot say about is not let go either.
-    const unreadable = mac({ stop: "unreadable" });
-    recordRun(unreadable.context, NAMED, true);
-    unreadable.programs.run(NAMED.pid, BORN_NAMED);
-    await stopRunAgent(unreadable.context, { forget: false, force: NAMED });
-    expect(unreadable.asked.filter(([verb]) => verb === "bootout")).toEqual([]);
+  // The review of INF-5409: a run the job started again after the named one ended keeps going on
+  // either button; Start it here asks the job nothing, so it never ends that replacement.
+  it("keeps a run the job started again as the named one ended", async () => {
+    for (const press of ["restart", "start-here"] as const) {
+      const { context, asked, programs } = mac();
+      recordRun(context, NAMED, true);
+      programs.run(NAMED.pid, NAMED.startedAt);
+      // launchd starts the job's run again the moment the named one ends.
+      programs.onEnd = () => programs.run(REPLACEMENT.pid, REPLACEMENT.startedAt);
+      if (press === "restart") expect(await restartRunAgent(context, NAMED)).toBe("restarted");
+      else await stopRunAgent(context, { forget: false, force: NAMED });
+      expect(asked.filter(([verb]) => verb === "bootout" || verb === "kill")).toEqual([]);
+      expect(programs.processes.alive(REPLACEMENT.pid)).toBe(true);
+    }
   });
 
-  // The review of INF-5409: a program that is not the named run, or cannot be shown to be, is
-  // neither ended nor its job asked anything: one that took the named run's number since (born
-  // after its start), one whose birth cannot be read, one started by hand, and another run there.
-  it("ends nothing for a program that is not the named run its agent started", async () => {
-    for (const [record, agent, born] of [
-      [NAMED, true, BORN_LATER],
-      [NAMED, true, undefined],
-      [NAMED, false, BORN_NAMED],
-      [REUSED, true, BORN_LATER],
+  // The review of INF-5409: no program but the named run ends. A program that took its number
+  // knows another start and reads no stop for it; a run that does not act on the stop in time
+  // is reported as lasting, never as ended, and the job is not started beside it. A run started
+  // by hand, or another run there, is no run of the notice's, and nothing is asked at all.
+  it("ends nothing but the named run its agent started, and starts nothing beside one that lasts", async () => {
+    for (const [record, agent, holder, deaf, outcome] of [
+      [NAMED, true, null, false, "failed"],
+      [NAMED, true, REUSED.startedAt, false, "failed"],
+      [NAMED, true, NAMED.startedAt, true, "failed"],
+      [NAMED, false, NAMED.startedAt, false, "untouched"],
+      [REUSED, true, REUSED.startedAt, false, "untouched"],
     ] as const) {
       const other = mac();
       recordRun(other.context, record, agent);
-      other.programs.run(NAMED.pid, born);
-      expect(await restartRunAgent(other.context, NAMED)).toBe("untouched");
+      other.programs.run(NAMED.pid, holder);
+      other.programs.deaf = deaf;
+      expect(await restartRunAgent(other.context, NAMED)).toBe(outcome);
       await stopRunAgent(other.context, { forget: false, force: NAMED });
       expect(other.asked).toEqual([]);
       expect(other.programs.processes.alive(NAMED.pid)).toBe(true);
+      // A stop the run did not act on is taken away, so it never ends later.
+      expect(existsSync(join(other.context.dataDir, RUN_FORCE_FILE))).toBe(false);
     }
   });
 });
@@ -516,13 +514,12 @@ describe("the command the window starts, on Linux", () => {
     await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();
   });
 
-  // As on a Mac: systemd's kill and stop end whichever run the unit holds by then, so Restart it
-  // ends the named run through its own program and asks systemd only to start the unit, and Start
-  // it here stops the unit only while it runs nothing.
-  it("ends the named run its agent started by its program, then asks systemd only to start the unit", async () => {
+  // As on a Mac: the named run ends itself, and systemd is asked only to start the unit on
+  // Restart it, and nothing on Start it here.
+  it("has the named run its agent started end itself, then asks systemd only to start the unit", async () => {
     const restart = linux();
     recordRun(restart.context, NAMED, true);
-    restart.programs.run(NAMED.pid, BORN_NAMED);
+    restart.programs.run(NAMED.pid, NAMED.startedAt);
     expect(await restartRunAgent(restart.context, NAMED)).toBe("restarted");
     expect(restart.asked).toEqual([
       ["end", String(NAMED.pid)],
@@ -531,31 +528,24 @@ describe("the command the window starts, on Linux", () => {
 
     const startHere = linux();
     recordRun(startHere.context, NAMED, true);
-    startHere.programs.run(NAMED.pid, BORN_NAMED);
+    startHere.programs.run(NAMED.pid, NAMED.startedAt);
     await stopRunAgent(startHere.context, { forget: false, force: NAMED });
-    expect(startHere.asked).toEqual([
-      ["end", String(NAMED.pid)],
-      ["--user", "show", "--property=MainPID", "--value", LABEL],
-      ["--user", "stop", LABEL],
-    ]);
+    expect(startHere.asked).toEqual([["end", String(NAMED.pid)]]);
   });
 
   it("keeps a run the unit started again as the named one ended, and ends nothing for another program", async () => {
-    const { context, asked, programs, answers } = linux();
+    const { context, asked, programs } = linux();
     recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, BORN_NAMED);
-    programs.onEnd = () => {
-      programs.run(REPLACEMENT.pid, Date.parse(REPLACEMENT.startedAt));
-      answers.job = REPLACEMENT.pid;
-    };
+    programs.run(NAMED.pid, NAMED.startedAt);
+    programs.onEnd = () => programs.run(REPLACEMENT.pid, REPLACEMENT.startedAt);
     await stopRunAgent(context, { forget: false, force: NAMED });
-    expect(asked.filter((args) => args[1] === "stop")).toEqual([]);
+    expect(asked.filter((args) => args[1] === "stop" || args[1] === "kill")).toEqual([]);
     expect(programs.processes.alive(REPLACEMENT.pid)).toBe(true);
-    for (const born of [BORN_LATER, undefined]) {
+    for (const holder of [REUSED.startedAt, null]) {
       const other = linux();
       recordRun(other.context, NAMED, true);
-      other.programs.run(NAMED.pid, born);
-      expect(await restartRunAgent(other.context, NAMED)).toBe("untouched");
+      other.programs.run(NAMED.pid, holder);
+      expect(await restartRunAgent(other.context, NAMED)).toBe("failed");
       await stopRunAgent(other.context, { forget: false, force: NAMED });
       expect(other.asked).toEqual([]);
       expect(other.programs.processes.alive(NAMED.pid)).toBe(true);
@@ -565,10 +555,11 @@ describe("the command the window starts, on Linux", () => {
 
 function windows(answers: { create?: boolean; remove?: boolean } = {}) {
   const asked: string[][] = [];
-  const programs = programTable(asked);
+  const dataDir = scratchDir("infinitary-run-agent-data-");
+  const programs = programTable(asked, () => dataDir);
   const context: RunAgentContext = {
     label: LABEL,
-    dataDir: scratchDir("infinitary-run-agent-data-"),
+    dataDir,
     homeDir: scratchDir("infinitary-run-agent-home-"),
     uid: -1,
     unitsDir: "/nowhere",
@@ -694,15 +685,14 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // The captain, on INF-4622's fix: "can we not give an option that's force restart the
-  // background process?" The task runs no second copy beside one still going, so Restart it ends
-  // the run's own program by force, through the one handle it opened, and runs the task again
-  // once that program has ended; Task Scheduler's own end, which ends whichever run it holds, is
-  // never asked.
-  it("ends the run's program by force and runs the task again once it has ended, on Restart it", async () => {
+  // background process?" The task runs no second copy beside one still going, so Restart it has
+  // the run end itself by force and runs the task again once no program runs under its number;
+  // Task Scheduler's own end, which ends whichever run it holds, is never asked.
+  it("has the run end itself by force and runs the task again once it has ended, on Restart it", async () => {
     const { context, asked, programs } = windows();
     await startRunAgent(context);
     recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, BORN_NAMED);
+    programs.run(NAMED.pid, NAMED.startedAt);
     asked.length = 0;
     expect(await restartRunAgent(context, NAMED)).toBe("restarted");
     expect(asked).toEqual([
@@ -712,12 +702,12 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // INF-4624's review: a run that does not answer never reads the ask to stop itself, so Start it
-  // here over it ends it by force and waits for it to go, rather than joining it again.
-  it("ends a run that does not answer by force and waits for it to go, on Start it here", async () => {
+  // here over it has it end itself by force and waits for it to go, rather than joining it again.
+  it("has a run that does not answer end itself by force and waits for it to go, on Start it here", async () => {
     const { context, asked, programs } = windows();
     await startRunAgent(context);
     recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, BORN_NAMED);
+    programs.run(NAMED.pid, NAMED.startedAt);
     asked.length = 0;
     await stopRunAgent(context, { forget: false, force: NAMED });
     expect(asked).toEqual([["end", String(NAMED.pid)]]);
@@ -725,23 +715,24 @@ describe("the command the window starts, on Windows", () => {
     expect(runAgentInPlace(context)).toBe(true);
   });
 
-  // The review of INF-5409: Restart it and Start it here end only the run their notice names, by
-  // the program its number opens now: one born after the named run wrote its start took that
-  // number since, one whose birth cannot be read proves nothing, and a run started by hand or
-  // another run there is no run of the notice's. None is ended, and the task is asked nothing.
-  it("ends nothing on Restart it or Start it here for a program that is not the named run", async () => {
-    for (const [record, agent, born] of [
-      [NAMED, true, BORN_LATER],
-      [NAMED, true, undefined],
-      [NAMED, false, BORN_NAMED],
-      [REUSED, true, BORN_LATER],
+  // The review of INF-5409: Restart it and Start it here end only the run their notice names. A
+  // program under its number that knows another start reads no stop, and a run that does not
+  // act on it in time lasts: neither is ended, nor is the task run beside it. A run started by
+  // hand or another run there is no run of the notice's, and the task is asked nothing.
+  it("ends nothing on Restart it or Start it here but the named run", async () => {
+    for (const [record, agent, holder, deaf, outcome] of [
+      [NAMED, true, REUSED.startedAt, false, "failed"],
+      [NAMED, true, NAMED.startedAt, true, "failed"],
+      [NAMED, false, NAMED.startedAt, false, "untouched"],
+      [REUSED, true, REUSED.startedAt, false, "untouched"],
     ] as const) {
       const { context, asked, programs } = windows();
       await startRunAgent(context);
       recordRun(context, record, agent);
-      programs.run(NAMED.pid, born);
+      programs.run(NAMED.pid, holder);
+      programs.deaf = deaf;
       asked.length = 0;
-      expect(await restartRunAgent(context, NAMED)).toBe("untouched");
+      expect(await restartRunAgent(context, NAMED)).toBe(outcome);
       await stopRunAgent(context, { forget: false, force: NAMED });
       expect(asked).toEqual([]);
       expect(programs.processes.alive(NAMED.pid)).toBe(true);
@@ -749,20 +740,17 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // The review of INF-5409: the named run ended, and another program took its number as it went.
-  // The handle the named run was opened with says it ended, so the task runs again, and the
-  // program under its number now is never ended.
-  it("ends no program that took the named run's process number as it ended", async () => {
+  // A program still runs under that number, so the run is never called ended: the task is not run
+  // again, and the program there now is never ended.
+  it("calls nothing ended while a program that took the named run's number runs under it", async () => {
     const { context, asked, programs } = windows();
     await startRunAgent(context);
     recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, BORN_NAMED);
-    programs.onEnd = (pid) => programs.run(pid, BORN_LATER);
+    programs.run(NAMED.pid, NAMED.startedAt);
+    programs.onEnd = (pid) => programs.run(pid, null);
     asked.length = 0;
-    expect(await restartRunAgent(context, NAMED)).toBe("restarted");
-    expect(asked).toEqual([
-      ["end", String(NAMED.pid)],
-      ["/Run", "/TN", LABEL],
-    ]);
+    expect(await restartRunAgent(context, NAMED)).toBe("failed");
+    expect(asked).toEqual([["end", String(NAMED.pid)]]);
     expect(programs.processes.alive(NAMED.pid)).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import type { BrowserViewer } from "@core/browser/browserViews";
 import { contractChange, listsChange } from "@core/connection/contractChanges";
 import { type HomeLinkConnection, HomeOutOfReachError } from "@core/devices/homeLink";
 import type { JoinedHome } from "@core/devices/joinedHome";
+import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
 import type { HostNotifications, HostPresence } from "@core/host";
 import { AskedInstall } from "@core/update/homeUpdate";
 import type { UpdateChecker } from "@core/update/updateChecker";
@@ -113,6 +114,8 @@ export type BesideOptions = {
   stopCommand?: (only?: OwnedRun) => boolean;
   /** How long a running command gets to answer before the window says it does not; a test stands in a shorter one. */
   answerWaitMs?: number;
+  /** How long Start it here waits for a run it asked to stop to let the folder go; a test stands in a shorter one. */
+  stopWaitMs?: number;
 };
 
 export type BesideWindowOptions = {
@@ -404,8 +407,10 @@ export class BesideWindow {
     // A command that runs and does not answer is stopped first, never run beside, and nothing else
     // - a second press, Restart it or a join - is sent while it is being stopped.
     if (this.shown.ending === "not-answering") {
+      const byWindow = this.shown.byWindow === true;
       this.recovering = true;
-      void this.stopUnanswered(this.shown.byWindow === true);
+      this.show(this.wanted);
+      void this.stopUnanswered(byWindow);
       return true;
     }
     if (this.options.beside.status().running !== false) return false;
@@ -487,8 +492,11 @@ export class BesideWindow {
           return;
         }
         // Still the one that has not answered: its notice again, naming that run while it holds the
-        // folder. A run there since is named by nobody's silence, so that notice ends nothing.
-        this.unansweredRun = sameRun(outgoing, joinedRun(status)) ? outgoing : null;
+        // folder, or while records that cannot be read say nothing of who does; the notice offers
+        // Restart it again only once they read again and name that same run (`ownerLater`). A run
+        // there since is named by nobody's silence, so that notice ends nothing.
+        this.unansweredRun =
+          status.running === null || sameRun(outgoing, joinedRun(status)) ? outgoing : null;
         this.unansweredSince = since;
         this.show(this.notAnswering(status));
         return;
@@ -606,13 +614,14 @@ export class BesideWindow {
    * The window joins a first mate on another computer: it closes, and the
    * command's first mate stops with nothing set to start it again; with
    * `only`, the window stops just that run, the one it joined or followed
-   * along from, and a stop asked through the folder or a signal names its
-   * process and start, so a run started by hand in its place keeps going. On
-   * a Mac or Linux the agent's launchd job or user service is let go too,
-   * which ends whichever run that job holds, one it started again during the
-   * join included: it only ever runs the agent's own runs. With `only` null,
-   * no run ran when the window joined: the agent is let go and no stop is
-   * asked or signalled, so a run started by hand meanwhile keeps going.
+   * along from, by a stop asked through the folder that names its process
+   * and start, never a signal, so a run started by hand in its place keeps
+   * going. Separately, the agent is let go for good: on a Mac or Linux its
+   * launchd job or user service ends whichever run it holds, one it started
+   * again during the join included, since it only ever runs the agent's own
+   * runs. With `only` null, no run ran when the window joined: the agent is
+   * let go and no stop is asked, so a run started by hand meanwhile keeps
+   * going.
    */
   async leave(only?: OwnedRun | null): Promise<void> {
     this.close();
@@ -849,14 +858,16 @@ export class BesideWindow {
 
   /**
    * Start it here over a command that does not answer: the command is
-   * stopped first, ended by force through the starter this window started
-   * it with where the notice is the window's own (it never acts on a polite
-   * stop), otherwise as Stop stops one, and the
-   * app starts again as this computer's own first
-   * mate. The agent stays in place, so a later launch starts the command
-   * again as before; a command that cannot be stopped is joined again. Only
-   * the run its notice names is stopped, by its process and start: another
-   * that holds the folder since, started by hand or again, keeps going.
+   * stopped first, asked to end itself by force through the starter this
+   * window started it with where the notice is the window's own (it never
+   * acts on a polite stop), otherwise asked to stop as Stop asks one, and
+   * once it let the folder go the app starts again as this computer's own
+   * first mate. The agent stays in place, so a later launch starts the
+   * command again as before. A command that did not let the folder go in
+   * time is never joined in its own place: the notice offers Start it here
+   * again. Only the run its notice names is stopped, by its process and
+   * start: another that holds the folder since, started by hand or again,
+   * keeps going, and the app starting again joins it.
    */
   private async stopUnanswered(byWindow: boolean): Promise<void> {
     const { starter, stopCommand } = this.options.beside;
@@ -867,8 +878,36 @@ export class BesideWindow {
           `[shell] could not stop the command that does not answer: ${(error as Error).message}`,
         );
       });
-    else if (target) stopCommand?.(target);
-    if (!this.closed) this.options.relaunch({ startHere: true });
+    // A stop asked through the folder is read by its run within a second: the app starts again
+    // only once that run let the folder go, so it is never joined again in its own place.
+    else if (target && stopCommand?.(target)) await this.released(target);
+    if (this.closed) return;
+    // The run named still holds the folder, or the records cannot say it let it go: the window
+    // never joins it again in place of starting here, and its notice offers Start it here again.
+    if (target && !this.letGo(this.options.beside.status(), target)) {
+      this.recovering = false;
+      this.show(this.wanted);
+      return;
+    }
+    this.options.relaunch({ startHere: true });
+  }
+
+  /** Whether `run` let the folder go, by a reading of the records that says so: another, or none, holds it. */
+  private letGo(status: Pick<RunStatus, "running" | "run">, run: OwnedRun): boolean {
+    return (
+      status.running === false || (status.running === true && !sameRun(joinedRun(status), run))
+    );
+  }
+
+  /** Waits, as long as a command waits for a stopped run, until `run` let the folder go. */
+  private async released(run: OwnedRun): Promise<void> {
+    const readings = Math.ceil(
+      (this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS) / BESIDE_RUN_READ_MS,
+    );
+    for (let read = 0; read < readings && !this.closed; read++) {
+      if (this.letGo(this.options.beside.status(), run)) return;
+      await new Promise((resolve) => setTimeout(resolve, BESIDE_RUN_READ_MS));
+    }
   }
 
   /** The first mate welcomes the window: the notice goes, and the window takes what is the first mate's. */
@@ -1087,12 +1126,19 @@ export class BesideWindow {
           : { ending: "crashed", exitCode: null, of: null, at: started };
     if (!end) {
       this.stoppedAt = null;
-      // A command that runs and has stayed out of reach past its wait is not answering.
-      if (status.running === true) this.countUnanswered(status);
-      else this.unansweredSince = null;
+      // A command that runs and has stayed out of reach past its wait is not answering. While a
+      // connection to a run is still open, a reading of the records times no other run there,
+      // which nothing has dialed: only that connection's own wait counts (`firstAnswers`).
+      const open = this.window.connection();
+      if (status.running === true) {
+        if (!open) this.countUnanswered(status);
+      } else this.unansweredSince = null;
       const since = this.unansweredSince;
       const silent =
-        status.running === true && since !== null && now() - since >= this.answerWaitMs();
+        status.running === true &&
+        since !== null &&
+        now() - since >= this.answerWaitMs() &&
+        (!open || sameRun(this.unansweredRun, joinedRun(status)));
       if (silent) this.restarting = false;
       this.show(
         silent ? this.notAnswering(status) : this.restarting ? this.restartingNotice() : null,
@@ -1114,12 +1160,18 @@ export class BesideWindow {
   }
 
   private show(shown: CommandNotice | null): void {
-    // While Restart it's starter has not answered, no notice offers what it would refuse: Restart
-    // it again, or Start it here.
+    // While Restart it's starter has not answered, or Start it here is stopping a silent run, no
+    // notice offers what it would refuse: Restart it again, or Start it here.
     const notice =
       shown?.state === "stopped" && this.restart?.settled === false
         ? this.restartingNotice()
-        : shown;
+        : shown?.state === "stopped" && this.recovering
+          ? {
+              state: "waiting" as const,
+              ending: shown.ending,
+              ...(shown.byWindow ? { byWindow: true as const } : {}),
+            }
+          : shown;
     this.wanted = shown;
     const was = this.shown;
     if (

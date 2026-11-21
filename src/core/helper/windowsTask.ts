@@ -490,10 +490,12 @@ export const RUN_STOP_READ_MS = 1_000;
 
 /**
  * A run reads whether a stop was asked of it through its folder once a
- * second and stops once one written after its own start is there: on
- * Windows, where no signal asks it, one for whichever
- * runs here (`RUN_STOP_FILE`), or one naming this run, `run`, by its process
- * and start (`RUN_STOP_FOR_FILE`). A request left from before it started, one
+ * second and stops once one written after its own start is there: with
+ * `anyRun`, on Windows, where no signal asks it, one for whichever
+ * runs here (`RUN_STOP_FILE`), and everywhere one naming this run, `run`, by
+ * its process and start (`RUN_STOP_FOR_FILE`). On a Mac or Linux a signal
+ * asks a stop of whichever runs, so the file for any run is never read
+ * there. A request left from before it started, one
  * naming another run, one naming a run when this one knows no identity, and
  * a file that holds no request are taken away. Answers what ends the reading.
  */
@@ -503,6 +505,7 @@ export function watchRunStop(
   stop: () => void,
   every: number = RUN_STOP_READ_MS,
   run?: RunInstance,
+  anyRun = true,
 ): () => void {
   /** The request in `name`, taken away once read; null where there is none. */
   const take = (name: string): Record<string, unknown> | null => {
@@ -526,7 +529,7 @@ export function watchRunStop(
     return Number.isFinite(when) && when >= startedAt.getTime();
   };
   const asked = (): boolean => {
-    const anyRun = take(RUN_STOP_FILE);
+    const forAny = anyRun ? take(RUN_STOP_FILE) : null;
     const named = take(RUN_STOP_FOR_FILE);
     const forThis =
       named !== null &&
@@ -534,7 +537,7 @@ export function watchRunStop(
       named.pid === run.pid &&
       named.startedAt === run.startedAt &&
       after(named);
-    return forThis || (anyRun !== null && after(anyRun));
+    return forThis || (forAny !== null && after(forAny));
   };
   if (asked()) {
     stop();

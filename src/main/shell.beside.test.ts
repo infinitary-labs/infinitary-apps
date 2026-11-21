@@ -566,10 +566,53 @@ describe("the window beside a command's first mate", () => {
       });
     // The window reads its own copy of the look rather than waiting on the command.
     expect(await at.shell.dispatch("inf:shell:preferences", [])).toBeDefined();
+    // The run named ends, and its records say it let the folder go.
+    at.starter.stop.mockImplementation(async () => {
+      at.command.records = { running: false, run: null, lastStop: null };
+    });
     expect(at.shell.startHere()).toBe(true);
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
     // By the run's process and start, so its starter ends that run alone.
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: false, force: JOINED }]]);
+  });
+
+  // The review of INF-5409: Start it here starts this window again only once the run its notice
+  // names let the folder go. Asked to stop through the folder, a run that still holds it when the
+  // wait is over is never joined again in place of starting here: the notice offers Start it here
+  // again, and nothing else is sent meanwhile.
+  it("starts here only once the run asked to stop let the folder go, and offers Start it here again where it did not", async () => {
+    const command = silentRun();
+    const byHand = { pid: 41, startedAt: new Date().toISOString() };
+    await command.open(byHand).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      stopWaitMs: 600,
+      records: { running: true, run: byHand, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    expect(at.shell.startHere()).toBe(true);
+    // While the window waits for the run to let the folder go, the notice offers nothing.
+    expect(at.shell.thisMac()).toMatchObject({ command: { state: "waiting" } });
+    expect(at.shell.startHere()).toBe(false);
+    expect(at.shell.restartCommand()).toBe(false);
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    expect(at.relaunch).not.toHaveBeenCalled();
+    expect(at.starter.stopped).toEqual([byHand]);
+    // Pressed again, the run lets the folder go while the window waits: it starts here then.
+    expect(at.shell.startHere()).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(at.relaunch).not.toHaveBeenCalled();
+    at.command.records = { running: false, run: null, lastStop: null };
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    expect(at.starter.stopped).toEqual([byHand, byHand]);
   });
 
   // The captain, on the fix's card: "can we not give an option that's force restart the
@@ -1454,6 +1497,8 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.thisMac()).not.toHaveProperty("command.byWindow");
     expect(at.shell.restartCommand()).toBe(false);
     expect(at.shell.startHere()).toBe(true);
+    // The run asked to stop through the folder lets it go.
+    at.command.records = { running: false, run: null, lastStop: null };
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
     expect(at.starter.stopped).toEqual([byHand]);
     expect(at.starter.stop).not.toHaveBeenCalled();
@@ -1500,6 +1545,41 @@ describe("the window beside a command's first mate", () => {
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
     expect(at.starter.stop).not.toHaveBeenCalled();
     expect(at.starter.stopped).toEqual([]);
+  });
+
+  // The review of INF-5409: a Restart it that ended and started nothing while the records cannot
+  // be read keeps naming the run that does not answer, since nothing says another holds the folder.
+  // Its notice offers Restart it again only once the records read again and name that same run.
+  it("keeps naming the silent run when Restart it started nothing and the records cannot be read", async () => {
+    const command = silentRun();
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    at.starter.restart.mockImplementation(async () => {
+      at.command.records = { running: null, run: null, lastStop: null };
+      return "untouched" as const;
+    });
+    expect(at.shell.restartCommand()).toBe(true);
+    await at.starter.restart.mock.results.at(-1)?.value;
+    const named = { state: "stopped", ending: "not-answering" } as const;
+    expect(at.shell.thisMac()).toHaveProperty("command", named);
+    expect(at.shell.restartCommand()).toBe(false);
+    // The records read again, naming that same run: Restart it is offered again.
+    at.command.records = { running: true, run: first, lastStop: null };
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toHaveProperty("command", { ...named, byWindow: true });
+    expect(at.shell.restartCommand()).toBe(true);
   });
 
   // The review of INF-5409: Start it here over a silent run is one recovery. Until the app starts

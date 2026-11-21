@@ -240,6 +240,32 @@ describe("a stop asked of the run on Windows", () => {
     }
   });
 
+  // The review of INF-5409: on a Mac or Linux a signal asks a stop of whichever run is there, so a
+  // run there reads only the stop naming it, and leaves the file for any run unread.
+  it("reads only the stop naming it where the file for any run is not its platform's", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    const end = watchRunStop(
+      dataDir,
+      new Date(Date.now() - 1_000),
+      () => (stops += 1),
+      10,
+      own,
+      false,
+    );
+    try {
+      requestRunStop(dataDir);
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(stops).toBe(0);
+      expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(true);
+      requestRunStop(dataDir, new Date(), own);
+      await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
   // The review of INF-5409: a stop file that holds no request, such as JSON null, is no stop, and
   // reading it as a run starts throws nothing.
   it("reads a stop file that holds no request as no stop", async () => {

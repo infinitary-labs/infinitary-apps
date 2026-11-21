@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { connect } from "node:net";
@@ -23,6 +23,7 @@ import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { serviceLabel } from "../../src/core/helper/background";
+import { endRunByForce } from "../../src/core/helper/runForce";
 import {
   powerShellTaskLookup,
   requestRunStop,
@@ -405,7 +406,37 @@ test("the Windows installer installs for this person, offers Git, starts the com
     expect(set).toContain(BOOT_WORDS.windowsSet(user)[0]);
     await expectRunning("on");
     keepTask("task-from-start-at-boot.json");
-    await stopRun();
+
+    // Restart it and Start it here end a run that does not answer by force (the review of
+    // INF-5409): the installed run reads a force stop naming it by its process and start on a
+    // thread of its own and ends itself, a stop naming another start ends nothing, and the stop
+    // is called ended only once no program runs under the run's number. A bystander program the
+    // stop does not name keeps running.
+    const marked = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")) as {
+      pid: number;
+      startedAt: string;
+    };
+    const bystander = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      stdio: "ignore",
+    });
+    try {
+      expect(
+        await endRunByForce(
+          dataDir,
+          { pid: marked.pid, startedAt: new Date(0).toISOString() },
+          undefined,
+          3_000,
+        ),
+      ).toBe("lasts");
+      expect(runProcesses().length).toBe(1);
+      expect(await endRunByForce(dataDir, marked)).toBe("ended");
+      expect(stillRunning([marked.pid])).toEqual([]);
+      expect(stillRunning([bystander.pid ?? -1])).toEqual([bystander.pid]);
+    } finally {
+      bystander.kill();
+    }
+    await expect.poll(() => runProcesses().length, { timeout: 120_000 }).toBe(0);
+    await expect.poll(() => runTask(label)?.state, { timeout: 60_000 }).toBe("Ready");
 
     // Task Scheduler's own answer for this task, which a refused removal reads before it lets
     // the task's file go (the review of INF-5409): there while it is registered.

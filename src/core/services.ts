@@ -1610,7 +1610,11 @@ export async function createServices(
     cardThreads: (sessionId) => supervisor.cards.observeThreads(sessionId),
   });
   eventSeam.attachObserve((event) => observe.onEvent(event));
-  if (!options.paused) quota.start();
+  if (!options.paused) {
+    quota.start();
+    // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
+    notifier.start();
+  }
   const updateChecker = createInstalledUpdateChecker({
     app: host.app,
     ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
@@ -1662,7 +1666,11 @@ export async function createServices(
     decisions,
     eventScreenOffer,
     corrections,
-    stopLivenessSweep: () => clearInterval(livenessInterval),
+    stopLivenessSweep: () => {
+      clearInterval(livenessInterval);
+      // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
+      notifier.stop();
+    },
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,
     tasks,

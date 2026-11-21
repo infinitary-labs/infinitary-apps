@@ -12,6 +12,7 @@ import { cutText } from "@shared/textCut";
 import type { DevicePairing } from "./devices/pairing";
 import type { HostNotifications } from "./host";
 import { type CardNotice, CardNotifier, type CardNotifierOptions } from "./notifications";
+import { PhoneLetters } from "./phoneLetters";
 
 /**
  * The phone sender (docs/phone-push.md): beside the Mac's own notifications,
@@ -32,6 +33,12 @@ export type PhonePushesOptions = {
    * gone, or its grant expired (`DevicePairing.forgetPush`).
    */
   forget: (deviceId: string, grant: string) => void;
+  /**
+   * Reads the phone's box of letters right after the relay refused its grant
+   * (`PhoneLetters.readNow`); true when a newer letter renewed the
+   * registration, so the refused card goes once more.
+   */
+  refused?: (deviceId: string) => Promise<boolean>;
   /** Where to post: Infinitary's relay, or a development run's stand-in. */
   relay: string;
   /** The Notifications switch (Settings -> General); no withdrawal goes while it is off. */
@@ -170,20 +177,10 @@ export class PhonePushes {
     };
     const posts: Promise<void>[] = [];
     for (const target of this.options.targets()) {
-      const { deviceId, registration } = target;
+      const { deviceId } = target;
       if (now < (this.waiting.get(deviceId) ?? 0)) continue;
       this.waiting.delete(deviceId);
-      posts.push(
-        this.post(
-          deviceId,
-          registration,
-          this.options.relay,
-          sealCardPush(registration.key, card),
-          "a card push",
-        ).then((sent) => {
-          if (sent && registration.withdrawals) this.pushedTo(target, card.cardId, push);
-        }),
-      );
+      posts.push(this.pushCard(target, card, true));
     }
     if (posts.length === 0) return;
     this.unanswered.set(push, { cardId: notice.cardId, due: false });
@@ -192,6 +189,36 @@ export class PhonePushes {
         .finally(() => this.unanswered.delete(push))
         .then(() => undefined),
     );
+  }
+
+  /**
+   * Posts one card to one phone, and when the relay takes it from a phone
+   * that takes withdrawals, notes it for them. On a refused grant, a newer
+   * letter in the phone's box sends it once more (`again`), under the
+   * registration the letter renewed.
+   */
+  private async pushCard(
+    target: PhonePushTarget,
+    card: PhonePushCard,
+    again: boolean,
+  ): Promise<void> {
+    const { deviceId, registration } = target;
+    const sent = await this.post(
+      deviceId,
+      registration,
+      this.options.relay,
+      sealCardPush(registration.key, card),
+      "a card push",
+      again ? () => this.pushAgain(deviceId, card) : undefined,
+    );
+    if (sent && registration.withdrawals) this.pushedTo(target, card.cardId, card.push ?? "");
+  }
+
+  /** The card the relay refused goes once more, to the registration a letter renewed. */
+  private pushAgain(deviceId: string, card: PhonePushCard): void {
+    const target = this.options.targets().find((entry) => entry.deviceId === deviceId);
+    if (!target || this.now() < this.relayWaitsUntil) return;
+    this.track(this.pushCard(target, card, false));
   }
 
   /**
@@ -375,13 +402,17 @@ export class PhonePushes {
     this.sendWithdrawal(deviceId);
   }
 
-  /** Posts one sealed push; true when the relay took it. */
+  /**
+   * Posts one sealed push; true when the relay took it. `again` runs when the
+   * relay refused the grant and the phone's box held a newer letter.
+   */
   private async post(
     deviceId: string,
     registration: PhonePushRegistration,
     url: string,
     sealed: string,
     what: string,
+    again?: () => void,
   ): Promise<boolean> {
     const request: PhonePushRelayRequest = {
       token: registration.token,
@@ -403,6 +434,15 @@ export class PhonePushes {
       // new one when it next connects, so this one is forgotten.
       if (response.status === 410 || response.status === 403) {
         this.options.forget(deviceId, registration.grant);
+        // The phone may have left a newer grant or push address in a letter
+        // (docs/phone-push.md, "Letters"): read its box once more now.
+        const { refused } = this.options;
+        if (refused)
+          this.track(
+            refused(deviceId).then((renewed) => {
+              if (renewed) again?.();
+            }),
+          );
         return false;
       }
       if (response.status === 429) this.waiting.set(deviceId, this.now() + RELAY_WAIT_MS);
@@ -429,11 +469,22 @@ export function cardNotifiers(options: {
   windowsInFront: () => boolean;
   /** The Notifications switch (Settings -> General). */
   switchedOn: () => boolean;
-  phones: Pick<DevicePairing, "pushTargets" | "forgetPush">;
+  phones: Pick<
+    DevicePairing,
+    "pushTargets" | "forgetPush" | "letterBoxes" | "noteLetterRead" | "takeLetter"
+  >;
   relay: string;
   /** What the record knows about a card, for both notifiers' words. */
   facts?: CardNotifierOptions["facts"];
-}): { observe: (cards: Card[]) => void; switched: () => void } {
+  /** Runs `run` every `ms` until the answer is called: the pass that reads boxes due. */
+  every?: (run: () => void, ms: number) => () => void;
+}): {
+  observe: (cards: Card[]) => void;
+  switched: () => void;
+  /** Starts reading each phone's box: once now, then from the hourly pass. */
+  start: () => void;
+  stop: () => void;
+} {
   const { notifications, switchedOn, phones, facts } = options;
   const mac = new CardNotifier({
     enabled: () => notifications.supported() && switchedOn(),
@@ -441,12 +492,26 @@ export function cardNotifiers(options: {
     show: (notice) => notifications.show(notice),
     ...(facts ? { facts } : {}),
   });
+  const onProblem = (line: string) => console.warn(`[phone-push] ${line}`);
+  // Each phone's box of letters is read once a day, checked each hour so a
+  // computer that restarts often still reads it, and right after a refusal.
+  const letters = new PhoneLetters({ phones, relay: options.relay, onProblem });
+  const every =
+    options.every ??
+    ((run, ms) => {
+      const timer = setInterval(run, ms);
+      timer.unref?.();
+      return () => clearInterval(timer);
+    });
+  const readLetters = () => void letters.readDue();
+  let stopReading: (() => void) | undefined;
   const pushes = new PhonePushes({
     targets: () => phones.pushTargets(),
     forget: (deviceId, grant) => phones.forgetPush(deviceId, grant),
+    refused: (deviceId) => letters.readNow(deviceId),
     relay: options.relay,
     switchedOn,
-    onProblem: (line) => console.warn(`[phone-push] ${line}`),
+    onProblem,
   });
   // The window may run in a program of its own, beside a first mate a
   // command started or on another Mac: it says when it is in front.
@@ -467,8 +532,21 @@ export function cardNotifiers(options: {
     switched: () => {
       if (switchedOn()) pushes.switched();
     },
+    // A home paused mid-move starts no pass, so nothing writes the record it hands on.
+    start: () => {
+      if (stopReading) return;
+      stopReading = every(readLetters, LETTER_PASS_MS);
+      readLetters();
+    },
+    stop: () => {
+      stopReading?.();
+      stopReading = undefined;
+    },
   };
 }
+
+/** How often the computer looks for boxes not read in the last day (`LETTER_READ_EVERY_MS`). */
+const LETTER_PASS_MS = 3_600_000;
 
 /**
  * Seals one card for one phone: AES-256-GCM under the phone's key, with a

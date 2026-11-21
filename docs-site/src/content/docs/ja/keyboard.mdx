@@ -1,0 +1,603 @@
+---
+title: キーボード
+description: Infinitary でキーボードから実行できるすべてのコマンドと、Mac と Linux の各プリセットでのキーです。
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Infinitary のすべての操作はキーボードで行えます。
+Tab キーでコントロール間を移動し、リストの中は矢印キーで移動します。
+
+## コマンド検索 {#command-search}
+
+Mac では <kbd>⌘K</kbd>、Linux では <kbd>Ctrl+K</kbd> を押すと、コマンド検索が開きます。
+言葉をいくつか入力し、矢印キーでコマンドを選んで Enter を押します。
+このページのすべてのコマンドがそこにあり、キーのないものも含めて、それぞれのキーが横に表示されます。
+
+## プリセット {#presets}
+
+Infinitary には、プリセットと呼ばれるキーのセットが用意されています：Vim、Emacs、VS Code、Tmux、Legacy。
+新しくインストールすると Vim から始まります。
+Legacy は、プリセットができる前から Infinitary を使っていた場合にだけ表示されます。
+プリセットは **設定** の **キーボード** で選びます。
+
+## キーを変更する {#change-a-key}
+
+**設定** の **キーボード** では、どのコマンドにも **記録**、**削除**、**リセット** があります。
+**記録** を押し、使いたいキーを押してから、Enter を押して保存します。
+そのキーを別のコマンドがすでに使っている場合は、何かが変わる前に、Infinitary がどのコマンドかを伝えます。
+
+## すべてのコマンドとキー {#every-command-and-its-keys}
+
+ダッシュは、そのコマンドにまだキーがないことを示します。コマンド検索から実行するか、好きなキーを割り当ててください。
+間にスペースがある 2 つのキーは、順番に押します。
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**ウインドウ内のどこでも**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| コマンドを検索 | <kbd>&#58;</kbd> 入力中以外, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 入力中以外, <kbd>Ctrl+K</kbd> |
+| メインのメッセージ欄へ移動 | <kbd>I</kbd> 入力中以外, <kbd>⌘L</kbd> | <kbd>I</kbd> 入力中以外, <kbd>Ctrl+L</kbd> |
+| カードの返信欄へ移動 | <kbd>R</kbd> 入力中以外, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 入力中以外, <kbd>Ctrl+Shift+L</kbd> |
+| カードの本文へ移動 | <kbd>G C</kbd> 入力中以外 | <kbd>G C</kbd> 入力中以外 |
+| カードのボタンへ移動 | <kbd>G A</kbd> 入力中以外 | <kbd>G A</kbd> 入力中以外 |
+| 推奨の選択肢を押す | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 2番目の選択肢を押す | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 3番目の選択肢を押す | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 4番目の選択肢を押す | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| ウインドウの次の部分へ移動 | <kbd>⌃W W</kbd> 入力中以外, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| ウインドウの前の部分へ移動 | <kbd>⌃W P</kbd> 入力中以外, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| ウインドウの左の部分へ移動 | <kbd>⌃W H</kbd> 入力中以外, <kbd>⌃H</kbd> 入力中以外 | — |
+| ウインドウの下の部分へ移動 | <kbd>⌃W J</kbd> 入力中以外, <kbd>⌃J</kbd> 入力中以外 | — |
+| ウインドウの上の部分へ移動 | <kbd>⌃W K</kbd> 入力中以外, <kbd>⌃K</kbd> 入力中以外 | — |
+| ウインドウの右の部分へ移動 | <kbd>⌃W L</kbd> 入力中以外, <kbd>⌃L</kbd> 入力中以外 | — |
+| 左へ移動 | <kbd>H</kbd> 入力中以外 | <kbd>H</kbd> 入力中以外 |
+| 下へ移動 | <kbd>J</kbd> 入力中以外, <kbd>⌃N</kbd> | <kbd>J</kbd> 入力中以外 |
+| 上へ移動 | <kbd>K</kbd> 入力中以外, <kbd>⌃P</kbd> | <kbd>K</kbd> 入力中以外 |
+| 右へ移動 | <kbd>L</kbd> 入力中以外 | <kbd>L</kbd> 入力中以外 |
+| 先頭へ移動 | <kbd>G G</kbd> 入力中以外 | <kbd>G G</kbd> 入力中以外 |
+| 末尾へ移動 | <kbd>⇧G</kbd> 入力中以外 | <kbd>Shift+G</kbd> 入力中以外 |
+| 1ページ上へ移動 | <kbd>⌃U</kbd> 入力中以外, <kbd>⌃B</kbd> 入力中以外 | — |
+| 1ページ下へ移動 | <kbd>⌃D</kbd> 入力中以外, <kbd>⌃F</kbd> 入力中以外 | — |
+| キャンセル | <kbd>⌃&#91;</kbd> | — |
+| 前の作業コンピューター | — | — |
+| 次の作業コンピューター | — | — |
+| プロジェクトに絞り込む | <kbd>G P</kbd> 入力中以外, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 入力中以外, <kbd>Ctrl+Shift+P</kbd> |
+| すべてのプロジェクトを表示 | — | — |
+| 前のカードを表示 | <kbd>⇧H</kbd> 入力中以外, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 入力中以外, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 次のカードを表示 | <kbd>⇧L</kbd> 入力中以外, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 入力中以外, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 次の新着カードを表示 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| カードを脇に置く | <kbd>Q</kbd> 入力中以外, <kbd>⌃W C</kbd> 入力中以外, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 入力中以外, <kbd>Ctrl+Shift+M</kbd> |
+| すべてのカードを脇に置く&#12289;または戻す | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| お知らせの&#12300;完了&#12301;または&#12300;了解&#12301;を押す | — | — |
+| カードのすべての選択肢を断る | — | — |
+| カードを最大化または元に戻す | <kbd>⌃W O</kbd> 入力中以外 | — |
+| このカード内を検索 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 次の一致を検索 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 前の一致を検索 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 次の改訂箇所へ移動 | <kbd>&#93; C</kbd> 入力中以外 | <kbd>&#93; C</kbd> 入力中以外 |
+| 次の質問へ移動 | <kbd>&#125;</kbd> 入力中以外, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 入力中以外, <kbd>Ctrl+J</kbd> |
+| 前の質問へ移動 | <kbd>&#123;</kbd> 入力中以外, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 入力中以外, <kbd>Ctrl+Shift+J</kbd> |
+| 次の未回答の質問へ移動 | — | — |
+| カードの一部を指し示す | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| カードのスレッドを表示&#47;非表示 | <kbd>Z A</kbd> 入力中以外, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 入力中以外, <kbd>Ctrl+&#92;</kbd> |
+| スレッドの新着メッセージへ移動 | — | — |
+| カードのサウンドを再生または一時停止 | — | — |
+| 情報を表示 | — | — |
+| カードを表示 | — | — |
+| アクティビティを表示 | — | — |
+| 乗組員を表示 | — | — |
+| ブラウザの操作を引き継ぐ&#47;戻す | — | — |
+| ブラウザのページへ移動 | — | — |
+| カードに戻る | — | — |
+| タスクを別のコンピューターへ移す | — | — |
+| タスクを完了として閉じる | — | — |
+| ブラウザを表示 | — | — |
+| 次のタブ | <kbd>G T</kbd> 入力中以外, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 入力中以外 |
+| 前のタブ | <kbd>G ⇧T</kbd> 入力中以外, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 入力中以外 |
+| Find a task | <kbd>&#47;</kbd> 入力中以外, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> 入力中以外, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> 入力中以外, <kbd>⌘B</kbd> | <kbd>G B</kbd> 入力中以外, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 設定を開く | <kbd>G S</kbd> 入力中以外, <kbd>⌘,</kbd> | <kbd>G S</kbd> 入力中以外, <kbd>Ctrl+,</kbd> |
+| キーボード設定を開く | <kbd>&#63;</kbd> 入力中以外 | <kbd>&#63;</kbd> 入力中以外 |
+| パネルを並べ替える | — | — |
+| 利用可能なアップデートを表示 | — | — |
+| 後でアップデート | — | — |
+| アップデートを確認 | — | — |
+| 一等航海士のコンピューターをアップデート | — | — |
+| 新機能を表示 | — | — |
+| 一等航海士の返信を開く | — | — |
+| ランブックを開く | — | — |
+| ランブックのフォルダを開く | — | — |
+| 使用量を開く | — | — |
+| 自動化を開く | — | — |
+| 連携を開く | — | — |
+| すべての自動化を一時停止 | — | — |
+| アンビエント音楽を再生または一時停止 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 使用量の単位を切り替える | — | — |
+| 利用枠を再確認 | — | — |
+| すべてを大きく表示 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| すべてを小さく表示 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 通常のサイズに戻す | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**メインのメッセージ欄とカードの返信欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 行頭まで削除 | <kbd>⌃U</kbd> | — |
+| 行末まで削除 | <kbd>⌃K</kbd> | — |
+| カーソルの前の単語を削除 | <kbd>⌃W</kbd> | — |
+| 最後に削除したものを元に戻す | <kbd>⌃Y</kbd> | — |
+
+**メインのメッセージ欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 最後に送ったメッセージを呼び戻す | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**ウインドウ内のどこでも**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| コマンドを検索 | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| メインのメッセージ欄へ移動 | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> 入力中以外, <kbd>Ctrl+L</kbd> |
+| カードの返信欄へ移動 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| カードの本文へ移動 | — | — |
+| カードのボタンへ移動 | — | — |
+| 推奨の選択肢を押す | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 2番目の選択肢を押す | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 3番目の選択肢を押す | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 4番目の選択肢を押す | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| ウインドウの次の部分へ移動 | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> 入力中以外, <kbd>F6</kbd> |
+| ウインドウの前の部分へ移動 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| ウインドウの左の部分へ移動 | — | — |
+| ウインドウの下の部分へ移動 | — | — |
+| ウインドウの上の部分へ移動 | — | — |
+| ウインドウの右の部分へ移動 | — | — |
+| 左へ移動 | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| 下へ移動 | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| 上へ移動 | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| 右へ移動 | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| 先頭へ移動 | <kbd>&#60;</kbd> 入力中以外 | <kbd>&#60;</kbd> 入力中以外 |
+| 末尾へ移動 | <kbd>&#62;</kbd> 入力中以外 | <kbd>&#62;</kbd> 入力中以外 |
+| 1ページ上へ移動 | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| 1ページ下へ移動 | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> 入力中以外 |
+| キャンセル | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| 前の作業コンピューター | — | — |
+| 次の作業コンピューター | — | — |
+| プロジェクトに絞り込む | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> 入力中以外, <kbd>Ctrl+Shift+P</kbd> |
+| すべてのプロジェクトを表示 | — | — |
+| 前のカードを表示 | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> 入力中以外, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 次のカードを表示 | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> 入力中以外, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 次の新着カードを表示 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| カードを脇に置く | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> 入力中以外, <kbd>Ctrl+X K</kbd> 入力中以外, <kbd>Ctrl+Shift+M</kbd> |
+| すべてのカードを脇に置く&#12289;または戻す | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| お知らせの&#12300;完了&#12301;または&#12300;了解&#12301;を押す | — | — |
+| カードのすべての選択肢を断る | — | — |
+| カードを最大化または元に戻す | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> 入力中以外 |
+| このカード内を検索 | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| 次の一致を検索 | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| 前の一致を検索 | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| 次の改訂箇所へ移動 | — | — |
+| 次の質問へ移動 | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> 入力中以外, <kbd>Ctrl+J</kbd> |
+| 前の質問へ移動 | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> 入力中以外, <kbd>Ctrl+Shift+J</kbd> |
+| 次の未回答の質問へ移動 | — | — |
+| カードの一部を指し示す | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| カードのスレッドを表示&#47;非表示 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| スレッドの新着メッセージへ移動 | — | — |
+| カードのサウンドを再生または一時停止 | — | — |
+| 情報を表示 | — | — |
+| カードを表示 | — | — |
+| アクティビティを表示 | — | — |
+| 乗組員を表示 | — | — |
+| ブラウザの操作を引き継ぐ&#47;戻す | — | — |
+| ブラウザのページへ移動 | — | — |
+| カードに戻る | — | — |
+| タスクを別のコンピューターへ移す | — | — |
+| タスクを完了として閉じる | — | — |
+| ブラウザを表示 | — | — |
+| 次のタブ | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| 前のタブ | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> 入力中以外, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> 入力中以外 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 設定を開く | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| キーボード設定を開く | <kbd>⌃H B</kbd> 入力中以外 | <kbd>Ctrl+H B</kbd> 入力中以外 |
+| パネルを並べ替える | — | — |
+| 利用可能なアップデートを表示 | — | — |
+| 後でアップデート | — | — |
+| アップデートを確認 | — | — |
+| 一等航海士のコンピューターをアップデート | — | — |
+| 新機能を表示 | <kbd>⌃H N</kbd> 入力中以外 | <kbd>Ctrl+H N</kbd> 入力中以外 |
+| 一等航海士の返信を開く | — | — |
+| ランブックを開く | — | — |
+| ランブックのフォルダを開く | — | — |
+| 使用量を開く | — | — |
+| 自動化を開く | — | — |
+| 連携を開く | — | — |
+| すべての自動化を一時停止 | — | — |
+| アンビエント音楽を再生または一時停止 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 使用量の単位を切り替える | — | — |
+| 利用枠を再確認 | — | — |
+| すべてを大きく表示 | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> 入力中以外, <kbd>Ctrl+X Ctrl+=</kbd> 入力中以外, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| すべてを小さく表示 | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> 入力中以外, <kbd>Ctrl+Minus</kbd> |
+| 通常のサイズに戻す | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> 入力中以外, <kbd>Ctrl+0</kbd> |
+
+**メインのメッセージ欄とカードの返信欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 行頭まで削除 | <kbd>⌃U</kbd> | — |
+| 行末まで削除 | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| カーソルの前の単語を削除 | <kbd>⌃W</kbd> | — |
+| 最後に削除したものを元に戻す | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**メインのメッセージ欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 最後に送ったメッセージを呼び戻す | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**ウインドウ内のどこでも**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| コマンドを検索 | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| メインのメッセージ欄へ移動 | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| カードの返信欄へ移動 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| カードの本文へ移動 | — | — |
+| カードのボタンへ移動 | — | — |
+| 推奨の選択肢を押す | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 2番目の選択肢を押す | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 3番目の選択肢を押す | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 4番目の選択肢を押す | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| ウインドウの次の部分へ移動 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| ウインドウの前の部分へ移動 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| ウインドウの左の部分へ移動 | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| ウインドウの下の部分へ移動 | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| ウインドウの上の部分へ移動 | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| ウインドウの右の部分へ移動 | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| 左へ移動 | — | — |
+| 下へ移動 | — | — |
+| 上へ移動 | — | — |
+| 右へ移動 | — | — |
+| 先頭へ移動 | — | — |
+| 末尾へ移動 | — | — |
+| 1ページ上へ移動 | — | — |
+| 1ページ下へ移動 | — | — |
+| キャンセル | — | — |
+| 前の作業コンピューター | — | — |
+| 次の作業コンピューター | — | — |
+| プロジェクトに絞り込む | <kbd>⌃R</kbd> | — |
+| すべてのプロジェクトを表示 | — | — |
+| 前のカードを表示 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 次のカードを表示 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 次の新着カードを表示 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| カードを脇に置く | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| すべてのカードを脇に置く&#12289;または戻す | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| お知らせの&#12300;完了&#12301;または&#12300;了解&#12301;を押す | — | — |
+| カードのすべての選択肢を断る | — | — |
+| カードを最大化または元に戻す | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| このカード内を検索 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 次の一致を検索 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 前の一致を検索 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 次の改訂箇所へ移動 | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| 次の質問へ移動 | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| 前の質問へ移動 | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| 次の未回答の質問へ移動 | — | — |
+| カードの一部を指し示す | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| カードのスレッドを表示&#47;非表示 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| スレッドの新着メッセージへ移動 | — | — |
+| カードのサウンドを再生または一時停止 | — | — |
+| 情報を表示 | — | — |
+| カードを表示 | — | — |
+| アクティビティを表示 | — | — |
+| 乗組員を表示 | <kbd>⌃&#96;</kbd> | — |
+| ブラウザの操作を引き継ぐ&#47;戻す | — | — |
+| ブラウザのページへ移動 | — | — |
+| カードに戻る | — | — |
+| タスクを別のコンピューターへ移す | — | — |
+| タスクを完了として閉じる | — | — |
+| ブラウザを表示 | — | — |
+| 次のタブ | <kbd>⌃⇥</kbd> | — |
+| 前のタブ | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 設定を開く | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| キーボード設定を開く | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| パネルを並べ替える | — | — |
+| 利用可能なアップデートを表示 | — | — |
+| 後でアップデート | — | — |
+| アップデートを確認 | — | — |
+| 一等航海士のコンピューターをアップデート | — | — |
+| 新機能を表示 | — | — |
+| 一等航海士の返信を開く | — | — |
+| ランブックを開く | — | — |
+| ランブックのフォルダを開く | — | — |
+| 使用量を開く | — | — |
+| 自動化を開く | — | — |
+| 連携を開く | — | — |
+| すべての自動化を一時停止 | — | — |
+| アンビエント音楽を再生または一時停止 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 使用量の単位を切り替える | — | — |
+| 利用枠を再確認 | — | — |
+| すべてを大きく表示 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| すべてを小さく表示 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 通常のサイズに戻す | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**メインのメッセージ欄とカードの返信欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 行頭まで削除 | <kbd>⌃U</kbd> | — |
+| 行末まで削除 | <kbd>⌃K</kbd> | — |
+| カーソルの前の単語を削除 | <kbd>⌃W</kbd> | — |
+| 最後に削除したものを元に戻す | <kbd>⌃Y</kbd> | — |
+
+**メインのメッセージ欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 最後に送ったメッセージを呼び戻す | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**ウインドウ内のどこでも**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| コマンドを検索 | <kbd>&#58;</kbd> 入力中以外, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 入力中以外, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| メインのメッセージ欄へ移動 | <kbd>I</kbd> 入力中以外, <kbd>⌘L</kbd> | <kbd>I</kbd> 入力中以外, <kbd>Ctrl+L</kbd> |
+| カードの返信欄へ移動 | <kbd>R</kbd> 入力中以外, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 入力中以外, <kbd>Ctrl+Shift+L</kbd> |
+| カードの本文へ移動 | <kbd>G C</kbd> 入力中以外, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> 入力中以外, <kbd>Ctrl+B &#91;</kbd> |
+| カードのボタンへ移動 | <kbd>G A</kbd> 入力中以外 | <kbd>G A</kbd> 入力中以外 |
+| 推奨の選択肢を押す | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 2番目の選択肢を押す | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 3番目の選択肢を押す | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 4番目の選択肢を押す | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| ウインドウの次の部分へ移動 | <kbd>⌃W W</kbd> 入力中以外, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| ウインドウの前の部分へ移動 | <kbd>⌃W P</kbd> 入力中以外, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| ウインドウの左の部分へ移動 | <kbd>⌃W H</kbd> 入力中以外, <kbd>⌃H</kbd> 入力中以外, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| ウインドウの下の部分へ移動 | <kbd>⌃W J</kbd> 入力中以外, <kbd>⌃J</kbd> 入力中以外, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| ウインドウの上の部分へ移動 | <kbd>⌃W K</kbd> 入力中以外, <kbd>⌃K</kbd> 入力中以外, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| ウインドウの右の部分へ移動 | <kbd>⌃W L</kbd> 入力中以外, <kbd>⌃L</kbd> 入力中以外, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| 左へ移動 | <kbd>H</kbd> 入力中以外 | <kbd>H</kbd> 入力中以外 |
+| 下へ移動 | <kbd>J</kbd> 入力中以外, <kbd>⌃N</kbd> | <kbd>J</kbd> 入力中以外 |
+| 上へ移動 | <kbd>K</kbd> 入力中以外, <kbd>⌃P</kbd> | <kbd>K</kbd> 入力中以外 |
+| 右へ移動 | <kbd>L</kbd> 入力中以外 | <kbd>L</kbd> 入力中以外 |
+| 先頭へ移動 | <kbd>G G</kbd> 入力中以外 | <kbd>G G</kbd> 入力中以外 |
+| 末尾へ移動 | <kbd>⇧G</kbd> 入力中以外 | <kbd>Shift+G</kbd> 入力中以外 |
+| 1ページ上へ移動 | <kbd>⌃U</kbd> 入力中以外 | — |
+| 1ページ下へ移動 | <kbd>⌃D</kbd> 入力中以外, <kbd>⌃F</kbd> 入力中以外 | — |
+| キャンセル | <kbd>⌃&#91;</kbd> | — |
+| 前の作業コンピューター | — | — |
+| 次の作業コンピューター | — | — |
+| プロジェクトに絞り込む | <kbd>G P</kbd> 入力中以外, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 入力中以外, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| すべてのプロジェクトを表示 | — | — |
+| 前のカードを表示 | <kbd>⇧H</kbd> 入力中以外, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 入力中以外, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 次のカードを表示 | <kbd>⇧L</kbd> 入力中以外, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 入力中以外, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 次の新着カードを表示 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| カードを脇に置く | <kbd>Q</kbd> 入力中以外, <kbd>⌃W C</kbd> 入力中以外, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 入力中以外, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| すべてのカードを脇に置く&#12289;または戻す | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| お知らせの&#12300;完了&#12301;または&#12300;了解&#12301;を押す | — | — |
+| カードのすべての選択肢を断る | — | — |
+| カードを最大化または元に戻す | <kbd>⌃W O</kbd> 入力中以外, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| このカード内を検索 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 次の一致を検索 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 前の一致を検索 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 次の改訂箇所へ移動 | <kbd>&#93; C</kbd> 入力中以外 | <kbd>&#93; C</kbd> 入力中以外 |
+| 次の質問へ移動 | <kbd>&#125;</kbd> 入力中以外, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 入力中以外, <kbd>Ctrl+J</kbd> |
+| 前の質問へ移動 | <kbd>&#123;</kbd> 入力中以外, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 入力中以外, <kbd>Ctrl+Shift+J</kbd> |
+| 次の未回答の質問へ移動 | — | — |
+| カードの一部を指し示す | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| カードのスレッドを表示&#47;非表示 | <kbd>Z A</kbd> 入力中以外, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 入力中以外, <kbd>Ctrl+&#92;</kbd> |
+| スレッドの新着メッセージへ移動 | — | — |
+| カードのサウンドを再生または一時停止 | — | — |
+| 情報を表示 | — | — |
+| カードを表示 | — | — |
+| アクティビティを表示 | — | — |
+| 乗組員を表示 | — | — |
+| ブラウザの操作を引き継ぐ&#47;戻す | — | — |
+| ブラウザのページへ移動 | — | — |
+| カードに戻る | — | — |
+| タスクを別のコンピューターへ移す | — | — |
+| タスクを完了として閉じる | — | — |
+| ブラウザを表示 | — | — |
+| 次のタブ | <kbd>G T</kbd> 入力中以外, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 入力中以外 |
+| 前のタブ | <kbd>G ⇧T</kbd> 入力中以外, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 入力中以外 |
+| Find a task | <kbd>&#47;</kbd> 入力中以外, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> 入力中以外, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> 入力中以外, <kbd>⌘B</kbd> | <kbd>G B</kbd> 入力中以外 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 設定を開く | <kbd>G S</kbd> 入力中以外, <kbd>⌘,</kbd> | <kbd>G S</kbd> 入力中以外, <kbd>Ctrl+,</kbd> |
+| キーボード設定を開く | <kbd>&#63;</kbd> 入力中以外, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> 入力中以外, <kbd>Ctrl+B &#63;</kbd> |
+| パネルを並べ替える | — | — |
+| 利用可能なアップデートを表示 | — | — |
+| 後でアップデート | — | — |
+| アップデートを確認 | — | — |
+| 一等航海士のコンピューターをアップデート | — | — |
+| 新機能を表示 | — | — |
+| 一等航海士の返信を開く | — | — |
+| ランブックを開く | — | — |
+| ランブックのフォルダを開く | — | — |
+| 使用量を開く | — | — |
+| 自動化を開く | — | — |
+| 連携を開く | — | — |
+| すべての自動化を一時停止 | — | — |
+| アンビエント音楽を再生または一時停止 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 使用量の単位を切り替える | — | — |
+| 利用枠を再確認 | — | — |
+| すべてを大きく表示 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| すべてを小さく表示 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 通常のサイズに戻す | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**メインのメッセージ欄とカードの返信欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 行頭まで削除 | <kbd>⌃U</kbd> | — |
+| 行末まで削除 | <kbd>⌃K</kbd> | — |
+| カーソルの前の単語を削除 | <kbd>⌃W</kbd> | — |
+| 最後に削除したものを元に戻す | <kbd>⌃Y</kbd> | — |
+
+**メインのメッセージ欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 最後に送ったメッセージを呼び戻す | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**ウインドウ内のどこでも**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| コマンドを検索 | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| メインのメッセージ欄へ移動 | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| カードの返信欄へ移動 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| カードの本文へ移動 | — | — |
+| カードのボタンへ移動 | — | — |
+| 推奨の選択肢を押す | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 2番目の選択肢を押す | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 3番目の選択肢を押す | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 4番目の選択肢を押す | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| ウインドウの次の部分へ移動 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| ウインドウの前の部分へ移動 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| ウインドウの左の部分へ移動 | — | — |
+| ウインドウの下の部分へ移動 | — | — |
+| ウインドウの上の部分へ移動 | — | — |
+| ウインドウの右の部分へ移動 | — | — |
+| 左へ移動 | — | — |
+| 下へ移動 | — | — |
+| 上へ移動 | — | — |
+| 右へ移動 | — | — |
+| 先頭へ移動 | — | — |
+| 末尾へ移動 | — | — |
+| 1ページ上へ移動 | — | — |
+| 1ページ下へ移動 | — | — |
+| キャンセル | — | — |
+| 前の作業コンピューター | — | — |
+| 次の作業コンピューター | — | — |
+| プロジェクトに絞り込む | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| すべてのプロジェクトを表示 | — | — |
+| 前のカードを表示 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 次のカードを表示 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 次の新着カードを表示 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| カードを脇に置く | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| すべてのカードを脇に置く&#12289;または戻す | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| お知らせの&#12300;完了&#12301;または&#12300;了解&#12301;を押す | — | — |
+| カードのすべての選択肢を断る | — | — |
+| カードを最大化または元に戻す | — | — |
+| このカード内を検索 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 次の一致を検索 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 前の一致を検索 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 次の改訂箇所へ移動 | — | — |
+| 次の質問へ移動 | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| 前の質問へ移動 | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| 次の未回答の質問へ移動 | — | — |
+| カードの一部を指し示す | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| カードのスレッドを表示&#47;非表示 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| スレッドの新着メッセージへ移動 | — | — |
+| カードのサウンドを再生または一時停止 | — | — |
+| 情報を表示 | — | — |
+| カードを表示 | — | — |
+| アクティビティを表示 | — | — |
+| 乗組員を表示 | — | — |
+| ブラウザの操作を引き継ぐ&#47;戻す | — | — |
+| ブラウザのページへ移動 | — | — |
+| カードに戻る | — | — |
+| タスクを別のコンピューターへ移す | — | — |
+| タスクを完了として閉じる | — | — |
+| ブラウザを表示 | — | — |
+| 次のタブ | — | — |
+| 前のタブ | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 設定を開く | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| キーボード設定を開く | — | — |
+| パネルを並べ替える | — | — |
+| 利用可能なアップデートを表示 | — | — |
+| 後でアップデート | — | — |
+| アップデートを確認 | — | — |
+| 一等航海士のコンピューターをアップデート | — | — |
+| 新機能を表示 | — | — |
+| 一等航海士の返信を開く | — | — |
+| ランブックを開く | — | — |
+| ランブックのフォルダを開く | — | — |
+| 使用量を開く | — | — |
+| 自動化を開く | — | — |
+| 連携を開く | — | — |
+| すべての自動化を一時停止 | — | — |
+| アンビエント音楽を再生または一時停止 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 使用量の単位を切り替える | — | — |
+| 利用枠を再確認 | — | — |
+| すべてを大きく表示 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| すべてを小さく表示 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 通常のサイズに戻す | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**メインのメッセージ欄とカードの返信欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 行頭まで削除 | <kbd>⌃U</kbd> | — |
+| 行末まで削除 | <kbd>⌃K</kbd> | — |
+| カーソルの前の単語を削除 | <kbd>⌃W</kbd> | — |
+| 最後に削除したものを元に戻す | <kbd>⌃Y</kbd> | — |
+
+**メインのメッセージ欄**
+
+| コマンド | Mac | Linux |
+| --- | --- | --- |
+| 最後に送ったメッセージを呼び戻す | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

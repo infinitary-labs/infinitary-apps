@@ -1,4 +1,5 @@
-import type { BatchChange } from "@shared/batches";
+import { type BatchChange, mergeWait } from "@shared/batches";
+import { englishOf } from "@shared/i18n/said";
 import { describe, expect, it } from "vitest";
 import { passed, REPO, setup } from "../../../tests/helpers/batchesHarness";
 import { BATCH_WORDS } from "./batches";
@@ -106,6 +107,109 @@ describe("a batch merge whose outcome the host did not confirm", () => {
     await home.pass();
     expect(home.record().open).toBeUndefined();
     expect(home.place(PARSER)).toMatchObject({ state: "merged" });
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  // Intent: INF-5566, the captain's answer on INF-5195's review: "Show the
+  // wait in Settings and the feed, with Try again", so a merge the host keeps
+  // reading as running (Bitbucket reads an expired reference as pending too)
+  // never holds the project's batch line silently. No time limit decides it.
+  it("shows a merge the host still reads as running as a wait from the first read, says so once, and keeps it across a restart", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const head = home.open().head;
+    await home.pass();
+    const wait = mergeWait(home.open());
+    expect(wait).toEqual({ head, pending: expect.any(Number) });
+    expect(home.open().hold).toBeUndefined();
+    expect(home.heard.notes.at(-1)).toEqual(BATCH_WORDS.mergeRunning("meter", "#31", "GitHub"));
+    const told = home.heard.notes.length;
+
+    // Later passes, and the app starting again, keep the same wait, say nothing more and send nothing.
+    await home.pass();
+    await home.restart();
+    expect(mergeWait(home.open())).toEqual(wait);
+    expect(home.heard.notes).toHaveLength(told);
+    expect(home.host.merges).toHaveLength(1);
+
+    // The host finishes it after all: the batch merges and the wait is gone with it.
+    home.host.land(31, "rebase");
+    await home.pass();
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+  });
+
+  // The captain's pick on the review of this change: "Try again closes the old
+  // pull request and opens a fresh one", so a merge the host may still finish
+  // can never take a version whose checks never ran.
+  it("answers Try again on a merge still read as running by closing its pull request and combining on a new one, and never sends the first merge again", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const { head, branch } = home.open();
+    await home.pass();
+    expect(mergeWait(home.open())).toBeDefined();
+    const told = home.heard.notes.length;
+
+    expect(await home.batches.answer(REPO, { action: "try-again", head })).toBeUndefined();
+    // The first pull request is closed unmerged and its branch is gone.
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.host.branches.has(branch)).toBe(false);
+    const again = home.heard.pushes.at(-1);
+    expect(again?.branch).not.toBe(branch);
+    expect(home.open()).toMatchObject({ number: 32, branch: again?.branch, head: again?.head });
+    expect(home.open().members.map((member) => member.taskId)).toEqual([
+      PARSER.taskId,
+      EXPORT.taskId,
+    ]);
+    expect(mergeWait(home.open())).toBeUndefined();
+    // The feed names only the new pull request, never #31's checks running again.
+    expect(home.heard.notes.slice(told)).toEqual([BATCH_WORDS.formed("meter", "#32", 2)]);
+
+    home.host.report([passed("build")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.host.merges.map((merge) => [merge.number, merge.head])).toEqual([
+      [31, head],
+      [32, again?.head],
+    ]);
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(EXPORT)).toMatchObject({ state: "merged", receipt: { number: 32 } });
+  });
+
+  it("keeps the wait when the host does not close its pull request, and records a merge that finished as the close was asked", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const head = home.open().head;
+    await home.pass();
+    const wait = mergeWait(home.open());
+    const pushes = home.heard.pushes.length;
+
+    home.host.closeRefusal = "GitHub cannot close a pull request while it merges it.";
+    await expect(home.batches.answerOrThrow(REPO, { action: "try-again", head })).rejects.toThrow(
+      englishOf(BATCH_WORDS.stillOpen("#31", "GitHub")),
+    );
+    expect(mergeWait(home.open())).toEqual(wait);
+    expect(home.host.pulls.get(31)?.state).toBe("open");
+    expect(home.heard.pushes).toHaveLength(pushes);
+    expect(home.host.merges).toHaveLength(1);
+
+    // The host finishes the merge as it is asked to close the pull request.
+    home.host.duringClose = () => home.host.land(31, "rebase");
+    expect(await home.batches.answer(REPO, { action: "try-again", head })).toBe(BATCH_WORDS.ended);
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+    expect(home.heard.pushes).toHaveLength(pushes);
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  it("reads the pull request before Try again replaces a wait, so a merge that finished meanwhile is recorded and nothing more is done", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const head = home.open().head;
+    await home.pass();
+    const pushes = home.heard.pushes.length;
+
+    home.host.land(31, "rebase");
+    expect(await home.batches.answer(REPO, { action: "try-again", head })).toBe(BATCH_WORDS.ended);
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+    expect(home.heard.pushes).toHaveLength(pushes);
     expect(home.host.merges).toHaveLength(1);
   });
 

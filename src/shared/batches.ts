@@ -106,8 +106,13 @@ export const openBatchSchema = z.object({
    * on a host whose merge names no version (docs/forge.md, "Batches of your
    * own"): later passes read how it ended and never send it again.
    * `mergeTask` is the host's own reference to that merge, when it gave one.
+   * `pending` is when a pass first read the host's merge as still running:
+   * from then Settings → Projects shows the wait with Try again, and the
+   * Activity feed said so once. No time decides that the merge ended.
    */
-  unconfirmed: z.object({ head: z.string(), mergeTask: z.string().optional() }).optional(),
+  unconfirmed: z
+    .object({ head: z.string(), mergeTask: z.string().optional(), pending: z.number().optional() })
+    .optional(),
   /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
   stale: z.literal(true).optional(),
   /**
@@ -127,6 +132,21 @@ export const openBatchSchema = z.object({
   passed: z.object({ head: z.string(), checks: z.array(z.string()) }).optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
+
+/**
+ * The merge an open batch waits on while its host still reads it as running
+ * (`unconfirmed.pending`), at the version the batch holds now: Settings →
+ * Projects shows it with Try again, which closes that pull request and
+ * combines its changes on a new one. A held batch shows its hold instead.
+ */
+export function mergeWait(
+  open: OpenBatch | undefined,
+): { head: string; pending: number } | undefined {
+  const sent = open?.unconfirmed;
+  if (!open || open.hold || sent?.pending === undefined || sent.head !== open.head)
+    return undefined;
+  return { head: sent.head, pending: sent.pending };
+}
 
 /** A member of a merged batch: its own commit on the default branch, where it could be read. */
 export const batchReceiptSchema = z.object({
@@ -234,9 +254,12 @@ export type BatchRecord = z.infer<typeof batchRecordSchema>;
 export const EMPTY_BATCH_RECORD: BatchRecord = { line: [], receipts: [], leftOut: [] };
 
 /**
- * A by-hand answer to a held batch, from Settings or a repair: try the
- * batch again, or send changes back, each with its reason. `head` names
- * the held version it answers, so an answer to a hold that ended is refused.
+ * A by-hand answer to a held batch, from Settings, the first mate or a
+ * repair: try the batch again, or send changes back, each with its reason.
+ * Try again also answers a batch waiting on a merge its host still reads as
+ * running (`mergeWait`), which has nothing to send back. `head` names the
+ * held or waiting version it answers, so an answer to a hold or a wait that
+ * ended is refused.
  */
 export const batchAnswerSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("try-again"), head: z.string().min(1) }),

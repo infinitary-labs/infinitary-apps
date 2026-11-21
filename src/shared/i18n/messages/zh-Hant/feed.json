@@ -18,6 +18,8 @@
   "feedBatchHeldUnanswered": "{project}：{place} 沒有確認合併，pull request 在那裡仍然開著，{label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。",
   "feedBatchHeldUnansweredHost": "{project}：專案的主機沒有確認合併，pull request 在那裡仍然開著，{label} 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。",
   "feedBatchHeldUnnamed": "{project}：檢查失敗，{label} 已暫緩。期間核准的變更會等它。",
+  "feedBatchMergeRunning": "{project}：{place} 已接受 {label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。",
+  "feedBatchMergeRunningHost": "{project}：專案的主機已接受 {label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。",
   "feedBatchMergedMany": {
     "plural": "count",
     "other": "{project}：{label} 已連同 {count} 項變更合併，每項變更一個提交。"

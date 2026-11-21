@@ -46,6 +46,7 @@ import type { QuotaCatalogModel } from "../../src/core/quota/auth";
 import type { QuotaService } from "../../src/core/quota/quotaService";
 import { computerBoardModels } from "../../src/core/routing/computerPool";
 import { type AccountModels, ModelSlots } from "../../src/core/routing/modelSlots";
+import { PlacedWorkScores } from "../../src/core/routing/placedWork";
 import { Router } from "../../src/core/routing/router";
 import type { PiModelRef } from "../../src/core/routing/routingEngine";
 import type { Runbooks } from "../../src/core/runbooks/runbooks";
@@ -310,6 +311,8 @@ export function startPlacedHome(options: {
         decisions,
         availableModels: () => routing.available,
         slots,
+        // Each model is ranked on the account bound to serve it, as `createServices` routes.
+        placedWork: new PlacedWorkScores(db, settings),
       })
     : undefined;
   // A task that moves home keeps its working copy here, in the real workspace.

@@ -1,9 +1,11 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fenced } from "@shared/outsideData";
+import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import type { PlacedHome } from "../../../tests/helpers/placedHome";
+import { row, snapshot } from "../../../tests/helpers/placedWorkRecord";
 import {
   api,
   CODEX_MEDIUM_STARTER,
@@ -42,10 +44,11 @@ placedWorldHooks({ now: Date.now, reset: () => {} });
 /** That computer signed in to two Codex accounts, one serving the starter and one GPT-6 Sol. */
 const SOL = { provider: "openai-codex", id: "gpt-6-sol" };
 const STARTER = { provider: "openai-codex", id: CODEX_MEDIUM_STARTER };
-async function codexThere(changes?: string[]) {
+async function codexThere(changes?: string[], allowance?: () => QuotaSnapshotView | null) {
   const runs = await piStubRuntime(api.url, STARTER, [SOL.id]);
   return world(undefined, {
     ...(changes ? { changes } : {}),
+    ...(allowance ? { allowance } : {}),
     routing: THIS_MAC_ON_NEWER_CODEX,
     signedInTo: [
       computerAccount("acct_codex_other", "openai-codex"),
@@ -362,6 +365,106 @@ describe("reopening after a work computer restarts, when the task's model left e
     });
     // Said once, on the task's record.
     expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 11 finding 5, joined: that computer reads the starter's
+  // account as spent and has no reading yet for the account bound to serve
+  // GPT-6 Sol. The real router ranks GPT-6 Sol on its bound account alone, so
+  // its allowance stays unknown and the next words reach it, never dropped on
+  // the spent sibling's reading.
+  it("sends the next words to a model whose bound account there has no reading while a sibling's is spent", async () => {
+    let reading: QuotaSnapshotView | null = null;
+    const at = await codexThere(undefined, () => reading);
+    const taskId = "t-unread";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+    starterLeft(home);
+    // Only the starter's account has a reading there, and it is spent.
+    reading = snapshot(Date.now(), [row("codex", "acct_codex_other", 0)]);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain("Carry on.");
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed).toMatchObject({ provider: SOL.provider, model: SOL.id });
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 12 findings 2 and 5, joined: a turn there ends at the
+  // context limit and the restart's fresh open there fails on the model it
+  // keeps. The failure is said once; after this Mac restarts, a lane sweep
+  // that meets the same failure gives the restart back with its attempt
+  // unspent; the next sweep opens a new conversation and delivers it once.
+  it("keeps a context-limit restart whose fresh open there fails, and opens it fresh on a later sweep", async () => {
+    const at = await world();
+    const taskId = "t-fresh-fails";
+    model([
+      { text: "Started on it." },
+      { refuse: "prompt is too long: 250000 tokens > 200000 maximum" },
+      { text: "In the new conversation." },
+    ]);
+    await at.start(taskId);
+    let home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const from = home.tasks.get(taskId)?.sessionFile;
+    let failing = true;
+    let refused = 0;
+    const failFresh = (target: PlacedHome) => {
+      const ask = target.devices.ask.bind(target.devices);
+      vi.spyOn(target.devices, "ask").mockImplementation(async (device, channel, args) => {
+        const [open] = args as [{ spec?: { fresh?: boolean; notOpened?: boolean } }];
+        // That computer answers that its open left nothing new there.
+        if (channel === "inf:session:open" && open.spec?.fresh === true && failing) {
+          expect(open.spec.notOpened).toBe(true);
+          refused += 1;
+          return { notOpened: "This model is not served here right now." };
+        }
+        return ask(device, channel, args);
+      });
+    };
+    failFresh(home);
+    await home.supervisor.steer.steerCrewmate(taskId, "Read the next part.", "captain");
+    await expect.poll(() => refused).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const couldNotOpen = () =>
+      home.tasks
+        .timeline(taskId)
+        .filter((entry) => entry.text?.includes("could not open") === true);
+    await expect.poll(() => couldNotOpen().length).toBe(1);
+    const restart = () =>
+      home.inbox.allFor(taskId).filter((row) => row.facts?.kind === "conversation-restart");
+    expect(restart()).toHaveLength(1);
+
+    await at.restartHome();
+    home = at.home();
+    failFresh(home);
+    await at.inReach(taskId);
+    const requests = api.requests.length;
+    const before = refused;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(refused).toBeGreaterThan(before);
+    expect(restart()).toMatchObject([{ deliveredAt: null, attempts: 0 }]);
+    expect(api.requests.length).toBe(requests);
+
+    failing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("In the new conversation.");
+    const sent = api.requests.slice(requests);
+    expect(sent).toHaveLength(1);
+    // A new conversation: the filled one's words are not carried.
+    expect(said(sent[0])).not.toContain("Started on it.");
+    expect(home.tasks.get(taskId)?.sessionFile).not.toBe(from);
+    expect(restart()[0]?.deliveredAt).not.toBeNull();
+    expect(couldNotOpen()).toHaveLength(1);
   });
 
   // INF-5438 round 7 findings 6 and 12: this Mac reattaches to the live

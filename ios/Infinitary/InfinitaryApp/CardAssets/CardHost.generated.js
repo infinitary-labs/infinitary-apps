@@ -102583,8 +102583,9 @@ a:hover {
   [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before, [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after {
     white-space: normal; max-width: 100%;
   }
-  /* A narrow plane's cells are too slim for a pill: its tag becomes a line of
-     small words above or below the option's, broken only between words. */
+  /* A narrow plane's cells are too slim for a pill or a ring: a tag becomes
+     small words beside the option's, broken only between words, and a pick
+     shows by its accent border alone. */
   [data-inf-tradeoff-plane] { container-type: inline-size; }
   @container (max-width: 480px) {
     [data-inf-tradeoff-cell] > [data-inf-tradeoff-pick] { padding: var(--space-1); }
@@ -102592,6 +102593,7 @@ a:hover {
       padding: 0; border: 0; background: none; font-size: 10px;
     }
     [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::before { display: inline; white-space: nowrap; }
+    [data-inf-tradeoff-cell] [data-inf-tradeoff-ring] { display: none; }
     [data-inf-tradeoff-cell] [data-inf-tradeoff-words]::after { display: block; margin: 0; }
   }
   [data-inf-tradeoff-recommended][data-inf-tradeoff-pick], [data-inf-tradeoff-default][data-inf-tradeoff-pick] { border-color: var(--accent-dim); }

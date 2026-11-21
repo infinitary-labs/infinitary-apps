@@ -4,6 +4,9 @@ import { useRestLabelWith } from "./restLabel";
 
 export type IconButtonTone = "neutral" | "accent" | "danger" | "ok";
 
+/** An icon button's side when its caller names none, in px. */
+export const ICON_BUTTON_SIZE = 32;
+
 export type IconButtonProps = {
   /**
    * Accessible name; rendered as aria-label and as the label the app draws
@@ -47,7 +50,7 @@ export function IconButton({
   label,
   restWords,
   keys,
-  size = 32,
+  size = ICON_BUTTON_SIZE,
   tone = "neutral",
   disabled,
   off = false,

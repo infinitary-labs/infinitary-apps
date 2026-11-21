@@ -2,6 +2,7 @@ import { ENDED_CHIP_LABEL } from "@shared/endedCard";
 import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
+import { ICON_BUTTON_SIZE } from "../core/IconButton";
 import { ModelChip } from "../core/ModelChip";
 import { useCardFindField } from "./CardFind";
 import { CardCorner } from "./CardSize";
@@ -207,6 +208,15 @@ export const cardFloor = (px: number) => `var(--card-floor, min(${px}px, ${CARD_
  */
 const COMMENT_BODY_FLOOR = "var(--space-4)";
 
+/** The room between the head's parts: its chips, its meta line, its corner. */
+const HEAD_GAP = 10;
+/**
+ * The meta line's last part before the model chip widens its gap from the
+ * line's own (one mono space) to the head's, at its end, so a chip that
+ * moves under the key starts at the line's edge.
+ */
+const beforeChip: React.CSSProperties = { marginInlineEnd: `calc(${HEAD_GAP}px - 1ch)` };
+
 export function ResponseCard({
   kind = "note",
   chrome,
@@ -283,99 +293,146 @@ export function ResponseCard({
               data-card-head=""
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: 10,
+                alignItems: "flex-start",
+                gap: HEAD_GAP,
                 padding: "14px 12px 0 20px",
                 flexShrink: 0,
               }}
             >
-              <Badge tone={k.tone} dot style={{ flexShrink: 0 }}>
-                {k.label}
-              </Badge>
-              {reviewFinding && (
-                <Badge tone="warn" style={{ flexShrink: 0 }}>
-                  {m.cardReviewFinding()}
-                </Badge>
-              )}
-              {quick && (
-                <span data-card-quick="" style={{ display: "inline-flex", flexShrink: 0 }}>
-                  <Badge tone="outline">{m.cardQuickAnswer()}</Badge>
-                </span>
-              )}
-              {headExtra}
-              {findField ? (
-                <span style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
-                  {findField}
-                </span>
-              ) : (
-                (taskKey || meta || place || model) && (
-                  // The meta line and the model chip share the room between the
-                  // chip and close. A long meta line (crewmate ref carrying a repo
-                  // name) truncates with an ellipsis instead of wrapping the card
-                  // header, and it is the one that gives way: the chip keeps its
-                  // whole name, wrapping inside itself only when the name is longer
-                  // than all the room there is.
+              {/* The head's line beside the corner. What does not fit beside the
+                  chips moves under them whole, so the corner keeps the top right
+                  and nothing is drawn over anything (design skill
+                  `components/cards/ResponseCard.prompt.md`, the model chip). */}
+              <div
+                data-card-head-line=""
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  columnGap: HEAD_GAP,
+                  rowGap: "var(--space-1)",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {corner && (
+                  // As tall as the corner's buttons, so the chips stay level
+                  // with them on the first line however many lines follow.
                   <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
-                    {(taskKey || meta || place) && (
-                      // The task's key leads the line and keeps its whole width;
-                      // where the task runs reads right after the meta line, in
-                      // its voice, "Fix the footer · on Mac mini": the meta line
-                      // gives way first, and the place keeps its words unless
-                      // they are longer than all the room there is.
-                      <span
-                        style={{
-                          display: "flex",
-                          gap: "1ch",
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "var(--text-xs)",
-                          color: "var(--fg-3)",
-                          whiteSpace: "nowrap",
-                          minWidth: 0,
-                          flex: model ? "0 1 auto" : 1,
-                        }}
-                      >
-                        {taskKey && (
-                          <span data-card-key="" style={{ flexShrink: 0, display: "inline-flex" }}>
-                            {taskKey}
-                          </span>
-                        )}
-                        {taskKey && meta && <span aria-hidden="true">·</span>}
-                        {meta && (
-                          <span
-                            data-card-meta=""
-                            style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}
-                          >
-                            {meta}
-                          </span>
-                        )}
-                        {place && (
-                          <span
-                            data-card-place=""
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              flexShrink: 0,
-                              maxWidth: "100%",
-                            }}
-                          >
-                            {meta ? `· ${place}` : place}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                    {model && <ModelChip label={model} />}
+                    aria-hidden="true"
+                    style={{ height: ICON_BUTTON_SIZE, marginInlineEnd: -HEAD_GAP }}
+                  />
+                )}
+                <Badge tone={k.tone} dot style={{ flexShrink: 0 }}>
+                  {k.label}
+                </Badge>
+                {reviewFinding && (
+                  <Badge tone="warn" style={{ flexShrink: 0 }}>
+                    {m.cardReviewFinding()}
+                  </Badge>
+                )}
+                {quick && (
+                  <span data-card-quick="" style={{ display: "inline-flex", flexShrink: 0 }}>
+                    <Badge tone="outline">{m.cardQuickAnswer()}</Badge>
                   </span>
-                )
-              )}
-              {corner && <CardCorner style={{ marginInlineStart: "auto" }} buttonRef={closeRef} />}
+                )}
+                {headExtra}
+                {findField ? (
+                  <span style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
+                    {findField}
+                  </span>
+                ) : (
+                  (taskKey || meta || place || model) && (
+                    // The meta line and the model chip share the room after the
+                    // chips. The line asks for the key, the place and the chip
+                    // whole; the meta words ask for nothing and take what is left,
+                    // so a long meta line (a task's title) truncates with an
+                    // ellipsis, and it is the one that gives way. When even the
+                    // key and the chip do not fit beside the chips, the whole line
+                    // moves under them; on a line of its own too narrow for both,
+                    // the chip moves under the key, wrapping inside itself only
+                    // when its name is longer than all the room there is.
+                    <span
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        columnGap: "1ch",
+                        rowGap: "var(--space-1)",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "var(--text-xs)",
+                        minWidth: 0,
+                        flex: "1 1 auto",
+                      }}
+                    >
+                      {(taskKey || meta || place) && (
+                        // The task's key leads the line and keeps its whole width;
+                        // where the task runs reads right after the meta line, in
+                        // its voice, "Fix the footer · on Mac mini": the meta line
+                        // gives way first, and the place keeps its words unless
+                        // they are longer than all the room there is. Its parts are
+                        // the line's own items, so the chip can follow the meta
+                        // words wherever they end.
+                        <span
+                          style={{
+                            display: "contents",
+                            color: "var(--fg-3)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {taskKey && (
+                            <span
+                              data-card-key=""
+                              style={{
+                                flexShrink: 0,
+                                display: "inline-flex",
+                                ...(model && !meta && !place ? beforeChip : {}),
+                              }}
+                            >
+                              {taskKey}
+                            </span>
+                          )}
+                          {taskKey && meta && <span aria-hidden="true">·</span>}
+                          {meta && (
+                            <span
+                              data-card-meta=""
+                              style={{
+                                // Asks for no room and grows to its words: the
+                                // line breaks on what the rest needs.
+                                width: 0,
+                                flexGrow: 1,
+                                maxWidth: "max-content",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                minWidth: 0,
+                                ...(model && !place ? beforeChip : {}),
+                              }}
+                            >
+                              {meta}
+                            </span>
+                          )}
+                          {place && (
+                            <span
+                              data-card-place=""
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                flexShrink: 0,
+                                maxWidth: "100%",
+                                ...(model ? beforeChip : {}),
+                              }}
+                            >
+                              {meta ? `· ${place}` : place}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {model && <ModelChip label={model} />}
+                    </span>
+                  )
+                )}
+              </div>
+              {corner && <CardCorner buttonRef={closeRef} />}
             </div>
           ))}
       <div

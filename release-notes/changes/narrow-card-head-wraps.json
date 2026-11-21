@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "narrow-card-head-wraps",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A narrow card's top line keeps the model name whole",
+      "body": "In a small window or a card you made narrower, the model name at the top of a card could squeeze until it broke letter by letter and covered the task's key. Now, when the line is too full, the task's key, its title and the model name move together under the card's labels, and the model name stays whole on one line. Cards with room to spare look as they did.",
+      "picture": {
+        "dark": "narrow-card-head-wraps-dark.webp",
+        "light": "narrow-card-head-wraps-light.webp",
+        "alt": "A narrowed review card: the Decision and Review finding labels sit beside the find, maximize and minimize buttons, and under them the task's key, its title cut short and the whole Claude Opus 5.5 model name"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

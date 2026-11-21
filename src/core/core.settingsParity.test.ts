@@ -121,6 +121,16 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     expect(unit.lines).toEqual(["usage shown in usd"]);
   });
 
+  it("switches Pause when you're away off and on, as its Settings switch does", async () => {
+    const was = await appearance();
+    const kept = await asked("ambient-away", { pause: false });
+    expect(await appearance()).toEqual({ ...was, ambientPlaysWhenAway: true });
+    expect(kept.lines).toEqual(["ambient music plays while you're away"]);
+    const paused = await asked("ambient-away", { pause: true });
+    expect((await appearance()).ambientPlaysWhenAway).not.toBe(true);
+    expect(paused.lines).toEqual(["ambient music pauses while you're away"]);
+  });
+
   it("chooses a language by its tag and goes back to the default with null", async () => {
     const tag = (
       ACTIONS.language.value.safeParse({ language: "zh-Hans" }).success ? "zh-Hans" : null

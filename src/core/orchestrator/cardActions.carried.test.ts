@@ -238,8 +238,10 @@ describe("a card button carries what waits in the card's field", () => {
       shape: { basis: h.tasks.get(taskId)?.key ?? taskId },
     });
     await tick();
-    // Its picture is read back from disk, real I/O the fake clock does not wait on.
-    for (let i = 0; i < 50 && builder.promptCalls.length === 0; i++) {
+    // Its picture is read back from disk, real I/O the fake clock does not wait on,
+    // so the test waits for the builder's first prompt itself, however long a busy
+    // machine takes to read the file; the test's own timeout ends a prompt that never comes.
+    while (builder.promptCalls.length === 0) {
       await new Promise<void>((resolve) => setImmediate(resolve));
       await tick();
     }

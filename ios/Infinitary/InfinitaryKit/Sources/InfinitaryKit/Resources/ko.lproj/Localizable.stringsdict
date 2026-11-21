@@ -1333,6 +1333,34 @@
       <string>이 컴퓨터에서 정확히 이 읽기만 최대 %1$ld번 반복해요. 설정 → 비밀 정보에서 멈출 수 있어요.</string>
     </dict>
   </dict>
+  <key>secretsAskReplaceMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>비밀 정보 %1$ld개를 바꿀까요?</string>
+    </dict>
+  </dict>
+  <key>secretsAskTitleMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>비밀 정보 %1$ld개를 추가할까요?</string>
+    </dict>
+  </dict>
   <key>settingsAccountsCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

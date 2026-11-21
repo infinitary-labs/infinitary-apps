@@ -71,6 +71,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
 | held (a batch that stopped) | 暂缓 | The same word as a merge a rule holds (暂缓了它); 暂停 stays for what a person pauses. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
+| How to get it (an ask for a secret) | 获取方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
 | Integrations / integration | 集成 | |
@@ -125,6 +126,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | rigor levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |
 | Runbooks | 操作手册 | |
 | Runs on | 运行于 | |
+| Save secret / Don't save (an ask for a secret) | 保存机密 / 不保存 | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | 已保存的重置 | ChatGPT's saved resets for Codex, counted with 次; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets (the Settings section) | 机密 | |
 | send back (a change out of a batch) | 退回 | |

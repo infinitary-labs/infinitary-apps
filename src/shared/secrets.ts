@@ -838,37 +838,81 @@ export const secretKeepSchema = z.strictObject({
 });
 export type SecretKeep = z.infer<typeof secretKeepSchema>;
 
-/** The ask card's own words (INF-4239, direction A). */
+/**
+ * The ask card's own words (INF-4239, direction A; INF-5516's plan): Add
+ * and Save, never Keep, in the person's language. Its title names the
+ * secrets alone; who asks is said under the reason.
+ */
 export const SECRET_ASK_CARD_WORDS = {
-  /** Its title names the secrets and who asks, the task's title in quotes. */
-  title: (secrets: string, task: string | null) =>
-    `Keep ${secrets} for ${task ? `“${task}”` : "the first mate"}?`,
+  /** One or two secrets by name, more by count; Replace when every secret on the card replaces a saved one. */
+  title: (names: readonly string[], replace: boolean) => {
+    const [first = "", second = ""] = names;
+    if (names.length > 2)
+      return replace
+        ? m.secretsAskReplaceMany({ count: names.length })
+        : m.secretsAskTitleMany({ count: names.length });
+    if (names.length === 2)
+      return replace
+        ? m.secretsAskReplaceTwo({ first, second })
+        : m.secretsAskTitleTwo({ first, second });
+    return replace
+      ? m.secretsAskReplaceOne({ name: first })
+      : m.secretsAskTitleOne({ name: first });
+  },
+  /** Under the reason: who wrote it, the task by its title. */
   asked: (task: string | null) =>
-    task
-      ? "Asked by the crewmate on this task, in its own words."
-      : "Asked by the first mate, in its own words.",
-  secret: "Secret",
-  secrets: "Secrets",
-  place: "Place",
-  replaces: (version: number) => `Replaces version ${version} of the secret you keep`,
-  reason: "Its reason",
-  /** What keeping allows, then what it never does. */
-  keeps: (task: string | null, many: boolean) =>
-    `Infinitary keeps ${many ? "them" : "it"} sealed in Secrets. ${task ? "The crewmate" : "The first mate"} gets ${many ? "their names and references" : "its name and reference"}, never ${many ? "the values" : "the value"}. Each use still asks you.`,
+    task ? m.secretsAskAskedTask({ task }) : m.secretsAskAskedFirstMate(),
+  /** The heading over the asker's how-to. */
+  how: (many: boolean) => (many ? m.secretsAskHowMany() : m.secretsAskHowOne()),
+  /** Under the how-to: who wrote it, and to check each address. */
+  by: (task: string | null) => (task ? m.secretsAskByCrewmate() : m.secretsAskByFirstMate()),
+  /** Beside a field's name: the place it is saved under, and the version it replaces. */
+  place: (place: string) => m.secretsAskPlace({ place }),
+  replaces: (version: number) => m.secretsAskReplaces({ version: formatNumber(version) }),
+  get placeholder() {
+    return m.secretsAskPlaceholder();
+  },
+  /** Under the fields: where each value goes, and what the crew gets. */
+  note: (many: boolean) => (many ? m.secretsAskNoteMany() : m.secretsAskNoteOne()),
+  /** The fields' group, for screen readers. */
+  get fields() {
+    return m.secretsAskFields();
+  },
   /** Shown only where the window draws no field: an older window or phone. */
-  elsewhere:
-    "No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.",
-  keep: "Keep in Secrets",
-  dontKeep: "Don't keep",
-  unlock: "Unlock",
-  openSettings: "Open Settings",
-  /** Above the card's rows when the last Keep could not finish. */
-  locked: "Secrets storage is locked. Unlock it, then keep again.",
-  recovery:
-    "Secrets storage needs recovery before it can keep anything. Open Settings → Secrets to see the options.",
-  unavailable: "Secrets could not keep this now. Nothing was kept; try Keep again.",
-  stale: "This secret changed since the card asked. The card now names its current version.",
-  empty: "Type a value in every field before keeping.",
-  closed: "The task that asked has closed, so nothing was kept.",
-  gone: "This card no longer asks. Nothing was kept.",
-} as const;
+  get elsewhere() {
+    return m.secretsAskElsewhere();
+  },
+  save: (many: boolean) => (many ? m.secretsAskSaveMany() : m.secretsAskSaveOne()),
+  get dontSave() {
+    return m.secretsAskDontSave();
+  },
+  get unlock() {
+    return m.secretsAskUnlock();
+  },
+  /** Above the card's body when the last Save could not finish. */
+  get locked() {
+    return m.secretsAskLocked();
+  },
+  get recovery() {
+    return m.secretsAskRecovery();
+  },
+  get unavailable() {
+    return m.secretsAskUnavailable();
+  },
+  get stale() {
+    return m.secretsAskStale();
+  },
+  get empty() {
+    return m.secretsAskEmpty();
+  },
+  get closed() {
+    return m.secretsAskClosed();
+  },
+  get gone() {
+    return m.secretsAskGone();
+  },
+  /** The line a seen card keeps once its ask ended. */
+  get ended() {
+    return m.secretsAskEnded();
+  },
+};

@@ -143,7 +143,7 @@ It reads the door's address, pin and key from the door's folder at each dial, as
   The other Mac is never asked: its own notice is about its own app.
 - A press of Allow once on a Secrets use card is this Mac's own signed answer (`MacApprover`, `src/main/view/macApprover.ts`): set up as an approver, it asks this Mac's Touch ID or password and signs; otherwise it refuses with where to set it up, and never sends the press (`docs/secrets.md`, "Remote decisions").
 - Anything else is refused here, without being sent: "answered only on the computer where your first mate lives".
-  That is what stays with the first mate's computer (`reach: "home"`): its Secrets (`docs/secrets.md`, "Remote decisions"), but for the Keep on an ask to keep a secret ("Asking to keep a secret on a view", below), and what is only ever that computer's own - its look, dictation, voice model, Observe, release notes, Dock and update, and what only the window on that computer may ask (`docs/run.md`, "The window opened beside it").
+  That is what stays with the first mate's computer (`reach: "home"`): its Secrets (`docs/secrets.md`, "Remote decisions"), but for the Save on an ask to keep a secret ("Asking to keep a secret on a view", below), and what is only ever that computer's own - its look, dictation, voice model, Observe, release notes, Dock and update, and what only the window on that computer may ask (`docs/run.md`, "The window opened beside it").
   Its computers and phones, the addresses they find it at, and its Knowledge are asked there (`reach: "views"`, the `devices-from-a-view` contract change), as the captain at another computer.
   Whatever started the first mate, a view asks every other request (`docs/connection.md`, "Requests").
 
@@ -372,8 +372,8 @@ The first mate refuses the click from a paired window too, an older one included
 
 ## Asking to keep a secret on a view
 
-An ask to keep a secret is answered at any window: this Mac draws the card's masked fields as the first mate's computer does and sends Keep in Secrets with the typed values in its own request over the connection, `inf:secrets:keep`, which that computer keeps straight in its Secrets (`docs/secrets.md`, "Asking to keep a secret").
-A window on a version that does not list the change gets the card without Keep in Secrets and says where to answer it.
+An ask to keep a secret is answered at any window: this Mac draws the card's masked fields as the first mate's computer does and sends Save secret with the typed values in its own request over the connection, `inf:secrets:keep`, which that computer keeps straight in its Secrets (`docs/secrets.md`, "Asking to keep a secret").
+A window on a version that does not list the change gets the card without Save secret and says where to answer it.
 
 ## Card buttons that open Settings
 

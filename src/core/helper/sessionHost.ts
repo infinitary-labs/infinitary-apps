@@ -27,6 +27,7 @@ import {
   placedSecretUseAnswerSchema,
 } from "@shared/workSecrets";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import type { TaskFiles } from "../files/taskFiles";
 import { hostEnv } from "../hostEnv";
@@ -245,6 +246,8 @@ export type OwnAccounts = {
 /** The crewmate tools whose callbacks can ask the home; the home names which a task gets. */
 /** The crewmate tools a conversation here serves by asking its home: the app's own (`APP_TOOL_REQUESTS`). */
 const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
+/** A home that draws an ask's how-to (`secret-ask-how.md`). */
+const SECRET_ASK_HOW = contractChange("secret-ask-how");
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
@@ -1354,6 +1357,7 @@ export class SessionHost {
               await this.call(held, "inf:work:secret-ask", { callId: randomUUID(), input }),
             )
         : undefined,
+      listsChange(this.options.homeChanges?.() ?? null, SECRET_ASK_HOW),
     );
     return uses;
   }

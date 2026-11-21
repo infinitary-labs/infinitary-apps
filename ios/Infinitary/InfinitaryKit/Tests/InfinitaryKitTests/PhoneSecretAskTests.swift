@@ -16,15 +16,16 @@ import Testing
         }
     }
 
-    static func card(author: String = "host") throws -> PhoneCard {
-        let offer = #"{"fields":[{"id":"s1","name":"Stripe test key","place":"Test"},{"id":"s2","name":"Webhook secret"}]}"#
+    static let twoSecrets = #"{"fields":[{"id":"s1","name":"Stripe test key","place":"Test"},{"id":"s2","name":"Webhook secret"}]}"#
+
+    static func card(author: String = "host", offer: String = twoSecrets) throws -> PhoneCard {
         return try PhoneCard(.object([
-            "id": .string("card-secrets-ask-t1-stripe"), "title": .string("Keep two secrets?"), "author": .string(author),
+            "id": .string("card-secrets-ask-t1-stripe"), "title": .string("Add Stripe test key and Webhook secret to Secrets?"), "author": .string(author),
             "body": .string("<p>Asked.</p>"),
             "actions": .array([
-                .object(["id": .string("pass-dont"), "label": .string("Don't keep"), "variant": .string("ghost"),
+                .object(["id": .string("pass-dont"), "label": .string("Don't save"), "variant": .string("ghost"),
                          "effect": .object(["kind": .string("host"), "op": .string("secrets-decision"), "arg": .string("pass-dont")])]),
-                .object(["id": .string("pass-keep"), "label": .string("Keep in Secrets"), "default": .bool(true),
+                .object(["id": .string("pass-keep"), "label": .string("Save secrets"), "default": .bool(true),
                          "effect": .object(["kind": .string("host"), "op": .string("secrets-keep"), "arg": .string(offer)])]),
             ]),
         ]))
@@ -35,6 +36,18 @@ import Testing
         #expect(ask.pass == "pass-keep")
         #expect(ask.fields.map(\.id) == ["s1", "s2"])
         #expect(ask.fields.map(\.place) == ["Test", nil])
+        #expect(ask.fields.map(\.details) == [[PhoneMessages.phoneSecretsAskPlace(place: "Test")], []])
+    }
+
+    /// INF-5516's plan: a replacement's label names the version it replaces, read from the Save button's offer, once
+    /// beside the name rather than inside the field.
+    @Test func aReplacementNamesTheVersionItReplaces() throws {
+        let offer = #"{"fields":[{"id":"s1","name":"Planning calendar","place":"staging","replaces":{"ref":"planning-calendar","version":2}}]}"#
+        let ask = try #require(PhoneSecretAsk.of(try Self.card(offer: offer)))
+        #expect(ask.fields.first?.replaces == 2)
+        #expect(ask.fields.first?.details == [
+            PhoneMessages.phoneSecretsAskPlace(place: "staging"), PhoneMessages.phoneSecretsAskReplaces(version: "2"),
+        ])
     }
 
     /// An agent's own card cannot make the phone draw a secret field.
@@ -57,8 +70,8 @@ import Testing
     @Test func aKeepTheHomeRefusesSaysWhy() async throws {
         let ask = try #require(PhoneSecretAsk.of(try Self.card()))
         let home = Home()
-        home.answer = ["kept": false, "words": "Secrets storage is locked. Unlock it, then keep again."]
+        home.answer = ["kept": false, "words": "Secrets storage is locked. Unlock it, then save again."]
         let outcome = try await ask.keep(["s1": "a", "s2": "b"], home: home)
-        #expect(outcome == .refused("Secrets storage is locked. Unlock it, then keep again."))
+        #expect(outcome == .refused("Secrets storage is locked. Unlock it, then save again."))
     }
 }

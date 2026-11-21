@@ -70,6 +70,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
 | held (a batch that stopped) | 暫緩 | 暫停 stays for what a person pauses. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
+| How to get it (an ask for a secret) | 取得方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
 | Integrations | 整合 | Standard. |
@@ -128,6 +129,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | rigor levels (Quick, Default, Careful) | 快速、預設、謹慎 | The dimension itself is 謹慎度, as in 謹慎度：快速. |
 | Runbooks | 作業手冊 | Plain word for the guidance folder. |
 | save point (never said) | 提交 | Never 存檔點. |
+| Save secret / Don't save (an ask for a secret) | 儲存機密 / 不儲存 | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | 已儲存的重設 | ChatGPT's saved resets for Codex, counted with 次; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | schedule (an automation's) | 排程 | As in 依排程. |
 | Secrets | 機密 | The Settings tab; 密鑰 and 秘密 are avoided. |

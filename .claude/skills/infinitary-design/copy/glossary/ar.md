@@ -77,6 +77,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
 | hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
+| How to get it (an ask for a secret) | كيف تحصل عليه | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | inspector | التفاصيل | The side pane that shows one entry. |
 | Integrations | التكاملات | |
@@ -140,6 +141,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
 | Runbooks | أدلة التشغيل | |
 | save point (never said) | إيداع | |
+| Save secret / Don't save (an ask for a secret) | حفظ السر / عدم الحفظ | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | إعادة تعيين محفوظة | ChatGPT's saved resets for Codex; plural "إعادات تعيين محفوظة"; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
 | Secrets | الأسرار | |

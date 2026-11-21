@@ -42,10 +42,13 @@ extension PhoneJourney {
         waitForShownBodyRevealed()
         let field = app.secureTextFields["secret-ask-s1"]
         XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
+        // INF-5516's plan: the field sits under its secret's name, with its place beside it once.
+        let place = try XCTUnwrap(asked["place"] as? String)
+        XCTAssertTrue(app.staticTexts[place].waitForPresence(timeout: 10), app.debugDescription)
         reveal(field); tapOnPhone(field)
         field.typeText("sk_test_invented_phone_value")
         picture("1-secret-ask-typed")
-        // A return in the only field keeps, as the Keep in Secrets button does.
+        // A return in the only field saves, as the Save secret button does.
         field.typeText("\n")
         let gone = NSPredicate { _, _ in !self.cardHeading(title).exists }
         XCTAssertEqual(waitForPhonePredicate(gone, object: nil, timeout: 20), .completed, app.debugDescription)

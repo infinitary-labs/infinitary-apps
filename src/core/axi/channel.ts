@@ -962,7 +962,9 @@ export class AxiChannel {
                 ? answer.help
                 : answer.state === "kept"
                   ? SECRET_ASK_WORDS.kept
-                  : SECRET_ASK_WORDS.waiting,
+                  : answer.without === "how"
+                    ? SECRET_ASK_WORDS.waitingWithoutHow
+                    : SECRET_ASK_WORDS.waiting,
           };
         }
         case "secrets.cancel": {

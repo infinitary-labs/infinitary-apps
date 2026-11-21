@@ -1,0 +1,2 @@
+An ask to keep a secret from a computer that runs work, `inf:work:secret-ask`, may carry the optional `how`: an HTML fragment saying how the captain gets the secrets, which the home checks and draws on its ask card under "How to get it".
+A computer sends `how` only to a home that lists this change; to an older home it sends the ask without it, and its command tells the asking task that the card went up without its how-to.

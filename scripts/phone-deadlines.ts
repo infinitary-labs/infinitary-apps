@@ -17,11 +17,19 @@ export const PHONE_PACKAGE_TESTS_BUDGET_MS = 5 * 60_000;
 /** The least a part is given, however short its recorded time: its app's start and its own test home. */
 export const PHONE_PART_BUDGET_FLOOR_MS = 3 * 60_000;
 
-/** INF-5387's plan, piece 2: the recorded minutes (`scripts/phone-part-times.json`) one job of a manual request holds at
- * most. Parts take about 0.45 of their recorded minutes on a phone Mac with two simulators and 0.69 on one, and a job
- * adds 5 to 6 fixed minutes, so a job of 19 recorded minutes ends near 13 minutes on the first and 19 on the second,
- * inside the job's 25-minute limit in phone.yml. */
-export const PHONE_JOB_BUDGET_MS = 19 * 60_000;
+/** INF-5387's plan, piece 2, and INF-5546: the recorded minutes (`scripts/phone-part-times.json`) one job of a manual
+ * request holds at most, each device past its first counted as `PHONE_DEVICE_START_MS` (`phoneJobMs`). The recorded
+ * times come from a full gate that ran two simulators at once. A job may land on a phone Mac with one simulator, which
+ * runs its parts one after another at up to 1.08 of their recorded minutes (a job of twelve short iPhone parts, run
+ * 44868118991; a job of six long ones ran at 0.69). Its gate step also builds the app for up to 3.1 minutes, starts
+ * the first part about a minute late and cleans up, so a job of 14 recorded minutes ends near 19.5 minutes there,
+ * inside the gate step's 21-minute limit in phone.yml, and sooner on a phone Mac with two simulators. The first job's
+ * package tests add about a minute, which its Mac part, counted here though it runs beside the simulators, covers. */
+export const PHONE_JOB_BUDGET_MS = 14 * 60_000;
+/** INF-5546: what each device past a job's first adds on a phone Mac with one simulator, which starts a device only
+ * after the last one's parts end: deleting that simulator and starting the next took 40 to 72 seconds, and the new
+ * device's first part ran about a minute past its recorded time (runs 44868118991 and 44868828667). */
+export const PHONE_DEVICE_START_MS = 2 * 60_000;
 
 export const phoneMinutes = (ms: number): string => (ms / 60_000).toFixed(1);
 

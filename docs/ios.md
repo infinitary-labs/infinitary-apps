@@ -1317,7 +1317,7 @@ The phone release (`ios-release.yml`) runs every part on both devices, while a c
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 A request's Linux `request` job runs the chooser, `scripts/affected-phone.ts`, before any phone Mac is taken; an unreadable comparison runs the gate, and a change it selects no gate for starts no job on a phone Mac.
-The chooser deals the request's passes into jobs of at most 19 recorded minutes, each on its own phone Mac, side by side (`docs/testing.md`, "Native phone checks").
+The chooser deals the request's passes into jobs of at most 14 recorded minutes, each device past a job's first counted as 2, each on its own phone Mac, side by side (`docs/testing.md`, "Native phone checks").
 A default run on request (`workflow_dispatch`) runs every part on every device, dealt the same way, and starts no release step (`docs/testing.md`, "The phone check on request"); the phone release's one job of every device keeps each part's minutes as `part-times.json` in `phone-logs`.
 On a branch it needs `task` and `reason` inputs, and the workflow refuses it without them (`docs/testing.md`, "What a task branch requests").
 Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).

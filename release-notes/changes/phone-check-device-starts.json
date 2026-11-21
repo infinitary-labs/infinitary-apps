@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-check-device-starts",
+      "reason": "Deals a requested phone check into jobs of at most 14 recorded minutes, each later device's start counted, so a job ends inside its gate step's limit on a phone Mac with one simulator. Only how the project is checked changes; nothing in the app does."
+    }
+  ]
+}

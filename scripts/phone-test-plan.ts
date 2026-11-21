@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { PHONE_JOB_BUDGET_MS, recordedPartMs } from "./phone-deadlines.ts";
+import { PHONE_DEVICE_START_MS, PHONE_JOB_BUDGET_MS, recordedPartMs } from "./phone-deadlines.ts";
 import type { PhoneHinge } from "./phone-hinge.ts";
 
 // INF-662 piece 1: the phone check builds once and gives each device's tests their own
@@ -368,17 +368,29 @@ export function phonePassMs({ device, part }: PhoneJob, times: PhonePassTimes,
   return typeof own === "number" && own > 0 ? own : recordedPartMs(part, longer);
 }
 
+/** INF-5546: a dealt job's recorded milliseconds, as the dealing counts them: its passes' recorded times, and
+ * `PHONE_DEVICE_START_MS` for each device past its first, since a phone Mac with one simulator starts each device after
+ * the last one's parts. A part on the Mac starts no device. */
+export function phoneJobMs(passes: readonly PhoneJob[], times: PhonePassTimes,
+  longer: ReadonlyMap<string, number> | undefined = partTimes(JSON.stringify(times))): number {
+  const devices = new Set(passes.filter((pass) => !partOnMac(pass.part)).map((pass) => pass.device));
+  return passes.reduce((sum, pass) => sum + phonePassMs(pass, times, longer), 0)
+    + Math.max(0, devices.size - 1) * PHONE_DEVICE_START_MS;
+}
+
 /** One job a manual request deals to its own phone Mac: its number, counted from one, and its passes in plan order.
  * The first job also runs the phone's Swift package tests, once for the request, and holds the Mac part when one is
  * dealt, since that part reuses their build. */
 export type PhoneDealtJob = { number: number; passes: PhoneJob[] };
 
-/** INF-5387's plan, piece 2: deals a request's passes into jobs of at most `budget` recorded milliseconds, each run on
- * its own phone Mac. The count is the passes' recorded time over the budget, rounded up, and one more while the
- * dealing leaves a job of more than one pass past it; a pass longer than the budget by itself runs alone. Passes go longest
- * first to the lightest job, as `phoneLanePlan` shares a device's parts among its simulators, except that a pass goes
- * to a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the
- * lightest choice would. Every pass is dealt exactly once, and each job keeps its passes in plan order. */
+/** INF-5387's plan, piece 2: deals a request's passes into jobs of at most `budget` recorded milliseconds as
+ * `phoneJobMs` counts them, each run on its own phone Mac. A pass longer than the budget by itself runs alone. The
+ * count is those passes and the other passes' recorded time over the budget, rounded up, and one more while the
+ * dealing leaves a job of more than one pass past it. Passes go longest first to the job they leave lightest, a
+ * device's start counted where the pass brings a job another device (INF-5546), as `phoneLanePlan` shares a device's
+ * parts among its simulators, except that a pass goes to a job already holding its device, whose simulators it then
+ * reuses, when that leaves no job longer than the lightest choice would. Every pass is dealt exactly once, and each
+ * job keeps its passes in plan order. */
 export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTimes,
   budget: number = PHONE_JOB_BUDGET_MS): PhoneDealtJob[] {
   const longer = partTimes(JSON.stringify(times));
@@ -386,21 +398,30 @@ export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTim
   const order = passes.map((_, index) => index).sort((a, b) => ms[b]! - ms[a]! || a - b);
   const total = ms.reduce((sum, each) => sum + each, 0);
   const deal = (count: number) => {
-    const jobs = Array.from({ length: count }, () => ({ load: 0, indices: [] as number[] }));
+    const jobs = Array.from({ length: count }, () => ({ load: 0, indices: [] as number[], devices: new Set<PhoneDevice>() }));
+    // What a pass adds to a job: its recorded time, and a device's start when it brings the job another device.
+    const adds = (job: (typeof jobs)[number], index: number) => {
+      const { device, part } = passes[index]!;
+      const starts = !partOnMac(part) && job.devices.size > 0 && !job.devices.has(device);
+      return ms[index]! + (starts ? PHONE_DEVICE_START_MS : 0);
+    };
     const lighter = <Job extends { load: number }>(best: Job, job: Job) => job.load < best.load ? job : best;
     for (const index of order) {
-      const lightest = jobs.reduce(lighter);
+      const lightest = jobs.reduce((best, job) => job.load + adds(job, index) < best.load + adds(best, index) ? job : best);
       // Never past the budget, so a pass longer than it by itself raises no other job's bound.
-      const longest = Math.min(budget, Math.max(lightest.load + ms[index]!, total / count, ...jobs.map((job) => job.load)));
-      const holders = jobs.filter((job) => job.load + ms[index]! <= longest
+      const longest = Math.min(budget, Math.max(lightest.load + adds(lightest, index), total / count, ...jobs.map((job) => job.load)));
+      const holders = jobs.filter((job) => job.load + adds(job, index) <= longest
         && job.indices.some((each) => passes[each]!.device === passes[index]!.device));
       const chosen = holders.length ? holders.reduce(lighter) : lightest;
-      chosen.load += ms[index]!;
+      chosen.load += adds(chosen, index);
       chosen.indices.push(index);
+      if (!partOnMac(passes[index]!.part)) chosen.devices.add(passes[index]!.device);
     }
     return jobs;
   };
-  let count = Math.max(1, Math.ceil(total / budget));
+  // A pass past the budget runs alone, so the count starts at those passes and the rest's time over the budget.
+  const alone = ms.filter((each) => each > budget);
+  let count = Math.max(1, alone.length + Math.ceil((total - alone.reduce((sum, each) => sum + each, 0)) / budget));
   let jobs = deal(count);
   // A job past the budget holding one pass is that pass alone; only a job past it with more passes needs another job.
   while (jobs.some((job) => job.load > budget && job.indices.length > 1) && count < passes.length) jobs = deal(++count);

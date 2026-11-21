@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-count-after-closing-note",
+      "reason": "Internal: the crew model names test checks the painted crew count after dismissing the cancellation note; the app is unchanged."
+    }
+  ]
+}

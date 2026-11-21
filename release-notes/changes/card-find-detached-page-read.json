@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-find-detached-page-read",
+      "reason": "Makes the card Find journey read a card page the stage takes away mid-read as not drawn, so its poll looks again instead of failing. Test-only; no app behavior changes."
+    }
+  ]
+}

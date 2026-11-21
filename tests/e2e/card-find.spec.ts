@@ -10,7 +10,7 @@ import { presetKeys } from "../../src/shared/keyPresets";
 import { SMALLEST_WINDOW } from "../../src/shared/smallestWindow";
 import { scratchDir } from "../helpers/scratchDirs";
 import { THIS_DESKTOP } from "./desktop";
-import { cardBody, cardBodyAsHeld, cardBodyElement } from "./frames";
+import { cardBody, cardBodyAsHeld, cardBodyElement, readFrameOnce } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
@@ -79,35 +79,58 @@ const findButton = (page: Page) =>
 const findClose = (page: Page) =>
   shownEntry(page).getByRole("button", { name: m.uiCardFindClose(), exact: true });
 
-/** The matches lit, and the current one, in a document: the window or a card's page. */
-const litIn = (body: Locator) =>
-  body.evaluate((element) => {
-    const lit = (name: string) =>
-      [...(CSS.highlights.get(name) ?? [])].filter(
-        (range) => range instanceof Range && range.startContainer.isConnected,
-      ) as Range[];
-    const outside = (ranges: Range[]) =>
-      ranges.filter((range) => !element.contains(range.startContainer)).length;
-    const every = lit("inf-find");
-    const current = lit("inf-find-current");
-    return { every: every.length, current: current.length, outside: outside(every) };
-  });
+/**
+ * The matches lit, and the current one, in the document holding `element`:
+ * the window or a card's page. `outside` counts the lit ones outside it.
+ */
+const litMatches = (element: Element) => {
+  const named = (name: string) =>
+    [...(CSS.highlights.get(name) ?? [])].filter(
+      (range) => range instanceof Range && range.startContainer.isConnected,
+    ) as Range[];
+  const outside = (ranges: Range[]) =>
+    ranges.filter((range) => !element.contains(range.startContainer)).length;
+  const every = named("inf-find");
+  const current = named("inf-find-current");
+  return { every: every.length, current: current.length, outside: outside(every) };
+};
+
+/** A page that lights nothing: one not drawn, or torn down while it was read. */
+const NOTHING_LIT = { every: 0, current: 0, outside: 0 };
+
+/** What the document holding `body` lights. */
+const litIn = (body: Locator) => body.evaluate(litMatches);
 
 /** What the window lights, read against the shown entry: a match outside it would be another card's. */
 const windowLit = (page: Page) => litIn(shownEntry(page));
 
-/** What the page of the card titled `title` lights, wherever the stage keeps it; none when it is not drawn. */
+/**
+ * What the page of the card titled `title` lights, wherever the stage keeps
+ * it; none when it is not drawn, or is torn down while it is read.
+ */
 async function pageLit(page: Page, title: string): Promise<number> {
-  if ((await cardBodyElement(page, title).count()) === 0) return 0;
-  return (await litIn(cardBodyAsHeld(page, title).locator("body"))).every;
+  return (await readFrameOnce(cardBodyAsHeld(page, title), litMatches, NOTHING_LIT)).every;
 }
 
-/** What the facts strip of the card titled `title` lights; none when its page is not drawn. */
+/**
+ * What the facts strip of the card titled `title` lights; none when its
+ * page is not drawn, or is torn down while it is read.
+ */
 async function factsLit(page: Page, title: string): Promise<{ every: number; current: number }> {
-  if ((await cardBodyElement(page, title).count()) === 0) return { every: 0, current: 0 };
-  const { every, current } = await litIn(factsStrip(cardBody(page, title)).strip);
+  const facts = factsStrip(cardBody(page, title)).page;
+  const { every, current } = await readFrameOnce(facts, litMatches, NOTHING_LIT);
   return { every, current };
 }
+
+/**
+ * A read that marks the page it runs in (`HELD_READ`) and never answers on
+ * its own: only its page's teardown ends it.
+ */
+const holdRead = (body: HTMLElement) => {
+  body.setAttribute("data-held-read", "");
+  return new Promise<string>(() => {});
+};
+const HELD_READ = "body[data-held-read]";
 
 /**
  * Whether the current match in the card titled `title` lies in sight
@@ -312,8 +335,21 @@ test("⌘F finds words across a card's title, body, folded section and thread", 
       await expect(findCount(page)).toHaveText(m.uiCardFindCount({ current: "4", total: "5" }));
       await expect.poll(() => factsLit(page, NEIGHBOR)).toEqual({ every: 2, current: 1 });
 
+      // Paging on takes this card's pages away once it has left. A read still
+      // running in one then answers as not drawn, so a poll looks again
+      // instead of failing with the frame detached: one read held in the
+      // body's page and one in the facts strip's, each in place before the page turns.
+      const held = [cardBodyAsHeld(page, NEIGHBOR), factsStrip(cardBody(page, NEIGHBOR)).page].map(
+        (frame) => ({ frame, answer: readFrameOnce(frame, holdRead, "not drawn") }),
+      );
+      for (const { frame } of held) await expect(frame.locator(HELD_READ)).toHaveCount(1);
+
       await pressWindowKey(app, "]", ["meta", "shift"]);
       await expect(shownEntry(page).locator("[data-card-title]")).toHaveText(TITLE);
+      expect(await Promise.all(held.map(({ answer }) => answer))).toEqual([
+        "not drawn",
+        "not drawn",
+      ]);
       await expect(findCount(page)).toHaveText(m.uiCardFindCount({ current: "1", total: "4" }));
       await expect.poll(() => pageLit(page, NEIGHBOR)).toBe(0);
       await expect.poll(() => factsLit(page, NEIGHBOR)).toEqual({ every: 0, current: 0 });

@@ -5,6 +5,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { choosableLanguages, FOLLOWS_COMPUTER } from "@shared/i18n/start";
 import { type AmbientStyle, ambientStyleOf, UI_SIZES, type UiSize } from "@shared/preferences";
 import { useEffect, useRef, useState } from "react";
+import { usePresence } from "../ambient/presence";
 import type { AppearanceChoice } from "../app/appearance";
 import { useCommandKeys } from "../app/keyHints";
 import { notePickerChange, takePickerFocus, windowDefaultLanguage } from "../app/language";
@@ -365,6 +366,10 @@ function SoundRows() {
   // A style a newer Infinitary saved shows, and plays, as the default.
   const style = ambientStyleOf(useShellStore((s) => s.ambientStyle));
   const setAmbientStyle = useShellStore((s) => s.setAmbientStyle);
+  const playsWhenAway = useShellStore((s) => s.ambientPlaysWhenAway);
+  const setPlaysWhenAway = useShellStore((s) => s.setAmbientPlaysWhenAway);
+  // Offered only where this computer can tell nobody is at it.
+  const watched = usePresence((s) => s.watched);
   const appearanceError = useShellStore((s) => s.appearanceError);
   const errorFor = (choice: AppearanceChoice) =>
     appearanceError?.choice === choice ? appearanceError.message : null;
@@ -441,6 +446,21 @@ function SoundRows() {
             </label>
           }
         />
+        {watched && (
+          <SettingRow
+            id="ambient-away"
+            error={errorFor("ambientPlaysWhenAway")}
+            title={m.settingsSoundPauseWhenAway()}
+            description={m.settingsSoundPauseWhenAwayDescription()}
+            control={
+              <Switch
+                checked={!playsWhenAway}
+                aria-label={m.settingsSoundPauseWhenAway()}
+                onChange={(pauses) => setPlaysWhenAway(!pauses)}
+              />
+            }
+          />
+        )}
       </div>
     </div>
   );

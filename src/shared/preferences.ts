@@ -118,6 +118,11 @@ export const appearanceSchema = z.strictObject({
   ambientMusic: z.boolean().optional(),
   /** Whether enabled ambient music is manually paused. */
   ambientPaused: z.boolean().optional(),
+  /**
+   * Whether the ambient music keeps playing while nobody is at the computer;
+   * missing means it pauses then and plays again once someone is back.
+   */
+  ambientPlaysWhenAway: z.boolean().optional(),
   /** How loud the ambient music plays, 0-100 percent; missing means 40. */
   ambientVolume: ambientVolumeSchema.optional(),
   /**

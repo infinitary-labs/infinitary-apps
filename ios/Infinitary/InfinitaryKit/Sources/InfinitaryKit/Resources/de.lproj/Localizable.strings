@@ -3057,6 +3057,8 @@
 "settingsSoundAmbientMusic" = "Ambient-Musik";
 "settingsSoundAmbientMusicDescription" = "Ruhige Musik, prozedural auf deinem Computer erzeugt, während sie läuft, darum wiederholt sie sich nie. Die Musik folgt der Crew und lässt ein Glockenspiel erklingen, wenn etwas auf dich wartet.";
 "settingsSoundHeading" = "Ton";
+"settingsSoundPauseWhenAway" = "Pausieren, wenn du weg bist";
+"settingsSoundPauseWhenAwayDescription" = "Pausiert, solange dein Bildschirm aus oder gesperrt ist, damit die Musik deinen Computer nicht wach hält, und spielt weiter, sobald du zurück bist.";
 "settingsSoundStyle" = "Stil";
 "settingsSoundStyleColdSleep" = "Kälteschlaf";
 "settingsSoundStyleColdSleepDescription" = "Vor allem Klavier: ein sanftes Filzklavier in einem weiten, kalten Raum über einem tiefen Bordun und einem langsamen Herzschlag.";

@@ -1192,6 +1192,8 @@
   "settingsSoundAmbientMusic": "موسيقى هادئة",
   "settingsSoundAmbientMusicDescription": "موسيقى هادئة تُولَّد إجرائيًا على حاسوبك أثناء تشغيلها، فلا تتكرر أبدًا. تتبع الطاقم وترن نغمة عندما ينتظرك شيء.",
   "settingsSoundHeading": "الصوت",
+  "settingsSoundPauseWhenAway": "إيقاف مؤقت عند ابتعادك",
+  "settingsSoundPauseWhenAwayDescription": "تتوقف الموسيقى مؤقتًا ما دامت شاشتك مطفأة أو مقفلة، حتى لا تُبقي حاسوبك مستيقظًا، ثم تعود عند رجوعك.",
   "settingsSoundStyle": "النمط",
   "settingsSoundStyleColdSleep": "نوم بارد",
   "settingsSoundStyleColdSleepDescription": "بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء.",

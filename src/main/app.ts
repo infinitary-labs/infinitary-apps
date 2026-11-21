@@ -14,6 +14,7 @@ import type { MoveDeps } from "@core/folderMove/move";
 import { olderRunAgent, type TakeOverDeps } from "@core/folderMove/takeOver";
 import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
+import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
 import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { watchRunForce } from "@core/helper/runForce";
@@ -92,11 +93,11 @@ import { startOwnDisplay } from "./ownDisplay";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
+  commandHolding,
   followInstalledProgram,
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
-  ownedRun,
   ownedRunOf,
   processAlive,
   programIdentity,
@@ -669,7 +670,10 @@ export async function startApp(
   // Start it here over a run that its own agent started again since (the job's own start after a
   // force stop, or one that came in its place): the window opens beside that run as its own, with its
   // starter, and neither starts nor stops it; over a run started by hand, or none, it has no starter.
-  const ownRunHere = startsHere && ownedRun(dataDir) !== null;
+  // One reading decides both whether a command holds the folder and whether it is the agent's own,
+  // so the window never opens beside an owned run with no starter, nor keeps a starter for none.
+  const startHolder = startsHere ? commandHolding(dataDir) : null;
+  const ownRunHere = startHolder?.owned != null;
   const starter =
     windowless ||
     move ||
@@ -680,7 +684,7 @@ export async function startApp(
     !keepsStarterBesideGrant(dataDir, grantFollowed(work.place.dataDir, joinedHere))
       ? null
       : commandStarter(starterOptions);
-  let besideRun = !windowless && runningByCommand(dataDir);
+  let besideRun = !windowless && (startHolder ? startHolder.running : runningByCommand(dataDir));
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:
@@ -700,7 +704,8 @@ export async function startApp(
     !starter ||
     besideRun ||
     Boolean(await findWindowsGit(process.env));
-  if (!besideRun && starter && !heldByWindow && gitForRun) {
+  // Start it here never starts the command: its starter only keeps the run it opens beside.
+  if (!besideRun && starter && !startsHere && !heldByWindow && gitForRun) {
     startedAt = Date.now();
     besideRun = await starter.start();
     if (!besideRun) {
@@ -723,7 +728,10 @@ export async function startApp(
     // A run took the folder after this window read it, as the agent's job starting its run again
     // after Start it here's force stop: a run ignores a second launch, so this window starts again
     // and opens beside it, never quitting with no window and never starting or stopping that run.
-    else if (startsHere && !besideRun && runningByCommand(dataDir)) {
+    // A run holds the single-instance lock a moment before it notes that it holds the folder, so
+    // the window waits, as long as a command waits for a stopped run, for that note; a window that
+    // holds the lock focuses itself instead, and this launch quits.
+    else if (startsHere && !besideRun && (await commandNoted(dataDir))) {
       if (!isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
       app.quit();
     } else app.quit();
@@ -1641,4 +1649,14 @@ export async function startApp(
 function grantFollowed(workDir: string, joined: JoinedHome): boolean {
   const found = windowFromWork(workDir, joined.leftDeviceId());
   return Boolean(found && found.grant.deviceId !== joined.keptOwnDeviceId());
+}
+
+/** Whether a command notes that it holds `dataDir` within a stopped run's wait. */
+async function commandNoted(dataDir: string): Promise<boolean> {
+  const until = Date.now() + STOPPED_RUN_WAIT_MS;
+  while (!runningByCommand(dataDir)) {
+    if (Date.now() >= until) return false;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return true;
 }

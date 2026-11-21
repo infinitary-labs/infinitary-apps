@@ -15,6 +15,7 @@ import {
   STANDBY_PIECE_ORDER,
   standbyHelloSchema,
 } from "@shared/standby";
+import koffi from "koffi";
 import { startConnection } from "../../src/core/connection/connection";
 import { thisDeviceUser } from "../../src/core/devices/deviceUser";
 import { joinCommand } from "../../src/core/devices/joinCommand";
@@ -23,14 +24,22 @@ import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { serviceLabel } from "../../src/core/helper/background";
-import { endRunByForce } from "../../src/core/helper/runForce";
+import { processAlive } from "../../src/core/helper/lock";
+import { type RunAgentContext, stopRunAgent } from "../../src/core/helper/runAgent";
+import {
+  endRunByForce,
+  RUN_FORCE_DIR,
+  RUN_FORCE_WATCH_SOURCE,
+} from "../../src/core/helper/runForce";
 import {
   powerShellTaskLookup,
+  RUN_RECORD_FILE,
   requestRunStop,
   runTaskFile,
   WORK_TASK_AGAIN,
 } from "../../src/core/helper/windowsTask";
 import { helperWords } from "../../src/core/helper/words";
+import { readWindowsTable } from "../../src/core/placed/windowsProcesses";
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
@@ -455,6 +464,14 @@ test("the Windows installer installs for this person, offers Git, starts the com
     }
     await expect.poll(() => runProcesses().length, { timeout: 120_000 }).toBe(0);
     await expect.poll(() => runTask(label)?.state, { timeout: 60_000 }).toBe("Ready");
+
+    // A run whose whole process is suspended, as a fully frozen first mate's (the review of
+    // INF-5409), through the force stop Restart it and Start it here ask (`stopRunAgent`'s
+    // force): the starter lets the run go on only through a handle to the program whose birth its
+    // record keeps, which Windows itself reads (`readWindowsTable`). A record naming another birth
+    // leaves the run suspended and the stop is withdrawn; the run's own birth lets it go on, and it
+    // ends itself. A disposable program stands in for the run, heartbeating while it runs.
+    await suspendedRunForce();
 
     // Task Scheduler's own answer for this task, which a refused removal reads before it lets
     // the task's file go (the review of INF-5409): there while it is registered.
@@ -994,4 +1011,79 @@ function closeProcessTree(pid: number): void {
   try {
     execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
   } catch {}
+}
+
+/** The force stop of a suspended stand-in run, through its recorded birth (see its caller). */
+async function suspendedRunForce(): Promise<void> {
+  const folder = scratchDir("infinitary-installed-force-");
+  const heartbeat = join(folder, "heartbeat");
+  const startedAt = new Date().toISOString();
+  const program = `
+    const { Worker } = require("node:worker_threads");
+    const { writeFileSync } = require("node:fs");
+    new Worker(process.env.WATCH, {
+      eval: true,
+      workerData: { dir: process.env.DIR, startedAt: process.env.STARTED, every: 100 },
+    });
+    setInterval(() => writeFileSync(process.env.BEAT, String(Date.now())), 100);
+  `;
+  mkdirSync(join(folder, RUN_FORCE_DIR), { recursive: true });
+  const run = spawn(process.execPath, ["-e", program], {
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      WATCH: RUN_FORCE_WATCH_SOURCE,
+      DIR: join(folder, RUN_FORCE_DIR),
+      STARTED: startedAt,
+      BEAT: heartbeat,
+    },
+  });
+  const pid = run.pid ?? -1;
+  try {
+    await expect.poll(() => existsSync(heartbeat), { timeout: 30_000 }).toBe(true);
+    const birth = readWindowsTable()?.find((row) => row.pid === pid)?.started;
+    expect(birth).toMatch(/^win:/);
+    const kernel32 = koffi.load("kernel32.dll");
+    const ntdll = koffi.load("ntdll.dll");
+    const openProcess = kernel32.func(
+      "void * __stdcall OpenProcess(uint32_t access, int32_t inherit, uint32_t pid)",
+    );
+    const suspend = ntdll.func("int32_t __stdcall NtSuspendProcess(void *process)");
+    const closeHandle = kernel32.func("int32_t __stdcall CloseHandle(void *handle)");
+    const handle = openProcess(0x0800, 0, pid);
+    expect(handle).toBeTruthy();
+    try {
+      expect(suspend(handle)).toBe(0);
+    } finally {
+      closeHandle(handle);
+    }
+    const beat = () => readFileSync(heartbeat, "utf8");
+    const suspendedAt = beat();
+    const record = (recorded: string) =>
+      writeFileSync(
+        join(folder, RUN_RECORD_FILE),
+        `${JSON.stringify({ pid, startedAt, agent: true, birth: recorded })}\n`,
+      );
+    const context = {
+      label: "infinitary-force-check",
+      dataDir: folder,
+      homeDir: folder,
+      uid: 0,
+      unitsDir: folder,
+      env: {},
+      processes: { alive: processAlive, forceWaitMs: 2_000 },
+    } as unknown as RunAgentContext;
+    const run0 = { pid, startedAt };
+
+    record("win:1");
+    expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("withdrawn");
+    expect(stillRunning([pid])).toEqual([pid]);
+    expect(beat()).toBe(suspendedAt);
+
+    record(birth as string);
+    expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("ended");
+    expect(stillRunning([pid])).toEqual([]);
+  } finally {
+    if (stillRunning([pid]).length > 0) run.kill();
+  }
 }

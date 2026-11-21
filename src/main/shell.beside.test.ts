@@ -569,6 +569,7 @@ describe("the window beside a command's first mate", () => {
     // The run named ends, and its records say it let the folder go.
     at.starter.stop.mockImplementation(async () => {
       at.command.records = { running: false, run: null, lastStop: null };
+      return "ended" as const;
     });
     expect(at.shell.startHere()).toBe(true);
     // Ended by force through its own agent's starter: the window starting here lets the job go.
@@ -577,6 +578,67 @@ describe("the window beside a command's first mate", () => {
       .toEqual([[{ startHere: true, letGoJob: true }]]);
     // By the run's process and start, so its starter ends that run alone.
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: false, force: JOINED }]]);
+  });
+
+  // The review of INF-5409: only a force stop that ended the run lets the window starting here
+  // retire the job. A run gone before the press is ended by nothing, so the job stays as it is.
+  it("leaves the job in place where the run was gone before Start it here ended anything", async () => {
+    const command = silentRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    at.starter.stop.mockImplementation(async () => {
+      at.command.records = { running: false, run: null, lastStop: null };
+      return "untouched" as const;
+    });
+    expect(at.shell.startHere()).toBe(true);
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+  });
+
+  // The review of INF-5409: a force stop the run claimed and has not acted on may still end it.
+  // Start it here stays pending on that run, its buttons away, and starts here once the run let
+  // the folder go, with no retirement of the job its stop was not shown to end; Restart it keeps
+  // waiting under its notice, offering neither button again nor a join.
+  it("keeps Start it here and Restart it pending on a force stop the run claimed", async () => {
+    const command = silentRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    at.starter.restart.mockImplementation(async () => "uncertain" as const);
+    expect(at.shell.restartCommand()).toBe(true);
+    await expect.poll(() => at.starter.restart.mock.calls.length).toBe(1);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(at.shell.thisMac()).toMatchObject({ command: { state: "waiting", ending: "restart" } });
+    expect(at.shell.followsAdded()).toMatchObject({ joins: false, pastes: false });
+    expect(at.shell.startHere()).toBe(false);
+
+    const second = silentRun();
+    await second.open().settled();
+    const here = besideShell(second.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      stopWaitMs: 300,
+    });
+    await here.shell.start();
+    await expect
+      .poll(() => here.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    here.starter.stop.mockImplementation(async () => "uncertain" as const);
+    expect(here.shell.startHere()).toBe(true);
+    await expect.poll(() => here.starter.stop.mock.calls.length).toBe(1);
+    // Past the wait for a stopped run, the run still holds the folder: nothing is started.
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(here.relaunch).not.toHaveBeenCalled();
+    expect(here.shell.restartCommand()).toBe(false);
+    here.command.records = { running: false, run: null, lastStop: null };
+    await expect.poll(() => here.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
   });
 
   // The review of INF-5409: Start it here starts this window again only once the run its notice

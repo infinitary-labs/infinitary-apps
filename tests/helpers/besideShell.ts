@@ -3,7 +3,7 @@ import { type HomeConnection, startConnection } from "@core/connection/connectio
 import { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { DevicePairing } from "@core/devices/pairing";
-import type { RestartOutcome } from "@core/helper/runAgent";
+import type { AgentRunEnd, RestartOutcome } from "@core/helper/runAgent";
 import type { Core } from "@core/index";
 import type { Card } from "@shared/cards";
 import { DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "@shared/keymap";
@@ -203,9 +203,9 @@ export function besideShell(
       },
     },
     inPlace: () => true,
-    stop: vi.fn(async (_how: { forget: boolean }) => {}) as Mock<
-      (how: { forget: boolean }) => Promise<void>
-    >,
+    stop: vi.fn(
+      async (_how: { forget: boolean }): Promise<AgentRunEnd | undefined> => undefined,
+    ) as Mock<(how: { forget: boolean }) => Promise<AgentRunEnd | undefined>>,
     restart: vi.fn(async (_run?: { pid?: number }): Promise<RestartOutcome> => "restarted") as Mock<
       (run?: { pid?: number }) => Promise<RestartOutcome>
     >,

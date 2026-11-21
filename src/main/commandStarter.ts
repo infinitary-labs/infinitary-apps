@@ -1,6 +1,7 @@
 import { homedir, userInfo } from "node:os";
 import { resolve } from "node:path";
 import {
+  type AgentRunEnd,
   type RestartOutcome,
   type RunAgentContext,
   type RunManager,
@@ -39,12 +40,13 @@ export type CommandStarter = {
    * not answer is ended rather than asked, and nothing where another runs,
    * and with `run` a stop asked through the folder is for that process alone,
    * or with `run` null for none: the agent is let go and no stop is asked.
+   * A force stop answers what it did (`AgentRunEnd`).
    */
   stop: (options: {
     forget: boolean;
     force?: RunInstance;
     run?: RunInstance | null;
-  }) => Promise<void>;
+  }) => Promise<AgentRunEnd | undefined>;
   /**
    * Restart it: ends the run named, by its process and start, by force and
    * starts it again (`RestartOutcome`): untouched, ending nothing, where this

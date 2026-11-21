@@ -72,10 +72,16 @@ export type RunAgentContext = {
   /** What the run carries of the window's environment: a development run's stand-ins alone. */
   env: Readonly<Record<string, string>>;
   /**
-   * Whether a process runs, the system's own unless a test stands in, and
-   * how long a force stop waits for its run to end (`endRunByForce`).
+   * Whether a process runs, the system's own unless a test stands in, how
+   * long a force stop waits for its run to end (`endRunByForce`), and how a
+   * suspended run is let go on to read it.
    */
-  processes?: { alive: (pid: number) => boolean; forceWaitMs?: number };
+  processes?: {
+    alive: (pid: number) => boolean;
+    forceWaitMs?: number;
+    /** Lets a suspended run go on to read its force stop (`wakeRun`). */
+    wake?: (pid: number, birth?: string) => void;
+  };
 } & RunManager;
 
 /** Where this user's own systemd reads their services. */
@@ -302,16 +308,15 @@ export function forgetRunAgentFiles(
  * go for good (`forget`), a job the service manager would not end, or a task
  * Task Scheduler would not take away, rejects, so the joining window says so,
  * unless the service manager or Task Scheduler says it holds no such job, or the job is stopped,
- * which is let go quietly; any other stop answers as it always has.
+ * which is let go quietly; any other stop answers as it always has. A
+ * force stop answers what it did (`endAgentRun`), and only `ended` lets the
+ * window starting here retire the job.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
   options: { forget: boolean; force?: RunInstance; run?: RunInstance | null },
-): Promise<void> {
-  if (options.force) {
-    await endAgentRun(context, options.force);
-    return;
-  }
+): Promise<AgentRunEnd | undefined> {
+  if (options.force) return await endAgentRun(context, options.force);
   if ("schtasks" in context) {
     // Task Scheduler's own end of a task ends its program with no clean stop,
     // so the run is asked to stop itself, as a signal asks it elsewhere. A
@@ -376,9 +381,11 @@ const SYSTEMD_STOPPED: ReadonlySet<string> = new Set(["inactive", "failed"]);
  * What Restart it did: started a run again; did nothing at all, where the
  * run named is not one this app's own agent started that still runs, or its
  * program cannot be shown to be that run; or ended or asked something and
- * did not start a run again, so the run named may or may not still run.
+ * did not start a run again, so the run named may or may not still run;
+ * or the run named claimed its force stop and has not ended yet, so it may
+ * still end, and nothing was started beside it.
  */
-export type RestartOutcome = "restarted" | "untouched" | "failed";
+export type RestartOutcome = "restarted" | "untouched" | "failed" | "uncertain";
 
 /**
  * Restart it, on the notice over a window whose command runs and does not
@@ -397,8 +404,11 @@ export async function restartRunAgent(
   if (!run) return "untouched";
   const ended = await endAgentRun(context, run);
   if (ended === "untouched") return "untouched";
-  // Withdrawn, the run named still runs; uncertain, it may yet end: neither started a run again.
-  if (ended === "withdrawn" || ended === "uncertain") return "failed";
+  // Withdrawn, the run named still runs and its stop never acts: no run is started again.
+  if (ended === "withdrawn") return "failed";
+  // Claimed and not yet ended: the stop may still act, and its job, which starts a run that ended
+  // unasked again, brings the next one. Nothing is started beside the named run meanwhile.
+  if (ended === "uncertain") return "uncertain";
   if ("schtasks" in context) {
     if (await startRunTask(context.schtasks, context.label)) return "restarted";
     return (await startRunAgent(context)) === "running" ? "restarted" : "failed";
@@ -446,20 +456,26 @@ function recordedRun(
  * a program that took its number and a run its job started again both keep
  * going, and nothing is asked of the service manager. Untouched for any
  * other run, and where the stop could not be asked; otherwise as
- * `endRunByForce` answers.
+ * `endRunByForce` answers (`AgentRunEnd`).
  */
-async function endAgentRun(
-  context: RunAgentContext,
-  run: RunInstance,
-): Promise<"ended" | "untouched" | "withdrawn" | "uncertain"> {
+async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
   const recorded = recordedRun(context, run);
   if (!recorded?.agent) return "untouched";
+  const wake = context.processes?.wake ?? wakeRun;
   const ended = await endRunByForce(
     context.dataDir,
     run,
     context.processes?.alive ?? processAlive,
     context.processes?.forceWaitMs,
-    () => wakeRun(run.pid, recorded.birth),
+    () => wake(run.pid, recorded.birth),
   );
   return ended === "unasked" ? "untouched" : ended;
 }
+
+/**
+ * What a force stop of the agent's own run did, as `endRunByForce` answers:
+ * `ended`, `withdrawn` where it still runs and its stop never acts,
+ * `uncertain` where it claimed the stop and may yet end, so what asked it
+ * stays pending on that run; `untouched` where nothing was asked of it.
+ */
+export type AgentRunEnd = "ended" | "untouched" | "withdrawn" | "uncertain";

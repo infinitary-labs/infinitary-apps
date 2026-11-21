@@ -134,7 +134,8 @@ function supervise(label) {
   let child = null;
   let stopping = false;
   const start = () => {
-    child = spawn(job.words[0], job.words.slice(1), { stdio: "inherit", env: { ...process.env, ...job.env } });
+    // Its own process group, as launchd and systemd start a job's program in a session of its own.
+    child = spawn(job.words[0], job.words.slice(1), { stdio: "inherit", detached: true, env: { ...process.env, ...job.env } });
     appendFileSync(join(STATE, label + ".runs"), child.pid + "\n");
     child.on("exit", (code) => {
       appendFileSync(join(STATE, label + ".exits"), String(code) + "\n");

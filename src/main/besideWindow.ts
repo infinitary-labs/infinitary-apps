@@ -478,7 +478,10 @@ export class BesideWindow {
     this.away();
     void starter.restart(outgoing ?? undefined).then((outcome) => {
       restart.settled = true;
-      restart.refused = outcome !== "restarted";
+      // A force stop the run claimed and has not acted on yet may still end it: the window keeps
+      // waiting under its notice, as for a run started again, never offering a join or the run
+      // named back, until a run its agent started in its place welcomes it.
+      restart.refused = outcome !== "restarted" && outcome !== "uncertain";
       if (this.closed || this.restart !== restart) return;
       const status = this.options.beside.status();
       // Nothing was ended or started: the run named is not one its agent started that still runs,
@@ -879,14 +882,21 @@ export class BesideWindow {
     const { starter, stopCommand } = this.options.beside;
     const target = this.unansweredRun;
     // Ended by force through its own agent's starter, whose job may start the run again: the window
-    // starting here lets that job go once it holds the folder.
-    const forced = Boolean(target && starter && byWindow);
-    if (target && starter && byWindow)
-      await starter.stop({ forget: false, force: target }).catch((error: unknown) => {
+    // starting here lets that job go once it holds the folder, and only where that stop ended the
+    // run. One that was gone already, or a stop withdrawn, leaves the job as it is.
+    let forced = false;
+    if (target && starter && byWindow) {
+      const ended = await starter.stop({ forget: false, force: target }).catch((error: unknown) => {
         console.warn(
           `[shell] could not stop the command that does not answer: ${(error as Error).message}`,
         );
+        return undefined;
       });
+      forced = ended === "ended";
+      // Claimed and not yet ended, the stop may still act: Start it here stays pending on that run,
+      // its buttons away, until a reading says the run let the folder go, however long that takes.
+      if (ended === "uncertain") await this.released(target, Number.POSITIVE_INFINITY);
+    }
     // A stop asked through the folder is read by its run within a second: the app starts again
     // only once that run let the folder go, so it is never joined again in its own place.
     else if (target && stopCommand?.(target)) await this.released(target);
@@ -908,11 +918,12 @@ export class BesideWindow {
     );
   }
 
-  /** Waits, as long as a command waits for a stopped run, until `run` let the folder go. */
-  private async released(run: OwnedRun): Promise<void> {
-    const readings = Math.ceil(
-      (this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS) / BESIDE_RUN_READ_MS,
-    );
+  /** Waits, as long as a command waits for a stopped run unless `waitMs` says, until `run` let the folder go. */
+  private async released(
+    run: OwnedRun,
+    waitMs: number = this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS,
+  ): Promise<void> {
+    const readings = Math.ceil(waitMs / BESIDE_RUN_READ_MS);
     for (let read = 0; read < readings && !this.closed; read++) {
       if (this.letGo(this.options.beside.status(), run)) return;
       await new Promise((resolve) => setTimeout(resolve, BESIDE_RUN_READ_MS));

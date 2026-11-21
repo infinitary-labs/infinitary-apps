@@ -249,16 +249,34 @@ export function runningByCommand(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
 ): boolean {
-  let marker: Partial<RunMarker>;
+  return commandHolding(dataDir, alive).running;
+}
+
+/**
+ * Whether a command holds the folder (`runningByCommand`) and, from the same
+ * reading of its note, whether this app's own agent started it
+ * (`ownedRun`): one reading, so the two never describe different runs.
+ */
+export function commandHolding(
+  dataDir: string,
+  alive: (pid: number) => boolean = processAlive,
+): { running: boolean; owned: OwnedRun | null } {
+  let marker: unknown;
   try {
-    marker = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")) as Partial<RunMarker>;
+    marker = JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
   } catch {
-    return false;
+    return { running: false, owned: null };
   }
-  const { pid } = marker;
-  if (typeof pid !== "number" || pid <= 0 || !alive(pid)) return false;
+  const pid = (marker as Partial<RunMarker> | null)?.pid;
+  if (typeof pid !== "number" || pid <= 0 || !alive(pid)) return { running: false, owned: null };
   const holder = lockHolder(dataDir);
-  return holder === undefined || holder === pid;
+  if (holder !== undefined && holder !== pid) return { running: false, owned: null };
+  const parsed = RunMarkerSchema.safeParse(marker);
+  const owned =
+    parsed.success && parsed.data.agent === true
+      ? { pid: parsed.data.pid, startedAt: parsed.data.startedAt }
+      : null;
+  return { running: true, owned };
 }
 
 /**
@@ -317,15 +335,7 @@ export function ownedRun(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
 ): OwnedRun | null {
-  if (!runningByCommand(dataDir, alive)) return null;
-  try {
-    const marker = RunMarkerSchema.parse(
-      JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")),
-    );
-    return marker.agent === true ? { pid: marker.pid, startedAt: marker.startedAt } : null;
-  } catch {
-    return null;
-  }
+  return commandHolding(dataDir, alive).owned;
 }
 
 /**

@@ -87,10 +87,41 @@ BUNDLED_GIT_VERSION="$("$SCRIPT_DIR/check-bundled-git.sh" "$APP_DIR")" || exit 1
 # mac.x64ArchFiles, the one list, matched by scripts/x64-arch-files.mjs
 # exactly as @electron/universal matches it. The whole tree is read before
 # anything is judged, so a failure is one line and never a broken pipe.
+# One run of file reads every file (a run per file took most of a minute on
+# a release app). It skips only the text tests (-e ascii -e encoding -e
+# text), which file tries after its binary magic finds nothing, so they can
+# never name a Mach-O file and were most of what remained. With --print0 it
+# writes each name, a NUL, then ": " and the description, which for a
+# universal file runs on over several lines, so each description ends where
+# the next name, known from the list, begins.
+FILES=()
+while IFS= read -r -d '' f; do
+  FILES+=("$f")
+done < <(find "$APP_DIR" -type f -print0)
+[[ "${#FILES[@]}" -gt 0 ]] || fail "no files under $APP_DIR"
+PARTS=()
+while IFS= read -r -d '' part; do
+  PARTS+=("$part")
+done < <(
+  printf '%s\0' "${FILES[@]}" | xargs -0 file --print0 --no-pad -e ascii -e encoding -e text -- || echo "file failed"
+  printf '\0'
+)
+[[ "${#PARTS[@]}" -eq $((${#FILES[@]} + 1)) && "${PARTS[0]}" == "${FILES[0]}" ]] \
+  || fail "could not read file's descriptions of the bundle's files"
 MACH_O_COUNT=0
 SINGLE_ARCH=()
-while IFS= read -r -d '' f; do
-  DESCRIPTION="$(file -b "$f")"
+for ((i = 0; i < ${#FILES[@]}; i++)); do
+  f="${FILES[$i]}"
+  DESCRIPTION="${PARTS[$((i + 1))]}"
+  [[ "$DESCRIPTION" == ": "* ]] || fail "could not read file's description of $f"
+  DESCRIPTION="${DESCRIPTION#: }"
+  if ((i + 1 < ${#FILES[@]})); then
+    NEXT=$'\n'"${FILES[$((i + 1))]}"
+  else
+    NEXT=$'\n'
+  fi
+  [[ "$DESCRIPTION" == *"$NEXT" ]] || fail "could not read file's description of $f"
+  DESCRIPTION="${DESCRIPTION%"$NEXT"}"
   [[ "$DESCRIPTION" == *Mach-O* ]] || continue
   MACH_O_COUNT=$((MACH_O_COUNT + 1))
   if [[ "$DESCRIPTION" != *arm64* || "$DESCRIPTION" != *x86_64* ]]; then

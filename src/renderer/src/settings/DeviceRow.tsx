@@ -17,18 +17,20 @@ import { remoteLoginWords } from "@shared/remoteLogin";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { runsForAnotherFirstmate, sshConnectionWords } from "@shared/sshConnection";
 import type { StandbyView } from "@shared/standby";
+import type React from "react";
 import { Fragment, useState } from "react";
-import { Button, GroupedPills, Input } from "../design";
+import { Button, GroupedPills, Input, RowMenu, type RowMenuItem } from "../design";
 import { sshMustBeOn } from "../devices/NearbyList";
 import { useHereAs } from "../devices/useFirstMatePlace";
 import type { CarryAsk, DevicesTabViewProps } from "./devicesState";
 import {
   addingWords,
-  deviceDetail,
-  deviceState,
+  deviceIdentity,
+  deviceStatus,
   deviceSummary,
   heldLine,
   offersFixWork,
+  type RowAct,
   removeLines,
   sshStoppedLine,
   strandedLine,
@@ -38,35 +40,26 @@ import {
 import { PhoneApprovals } from "./PhoneApprovals";
 import { StandbyLine } from "./Standby";
 
-/**
- * The version each copy on a device runs (design skill
- * `components/devices/DevicesTab`, "Each copy's version"): its app's, in
- * `--warn` and marked while it is behind this computer's, and its work's
- * on this computer's version.
- */
-function CopyVersions({ device }: { device: DeviceView }) {
-  const here = useHereAs();
-  const words = deviceWords.copyVersions(device);
-  if (!words) return null;
-  const behind = device.appVersion !== undefined && appBehind(device, device.appVersion);
-  return (
-    <span
-      className="fm-devices-version"
-      data-device-copy-versions=""
-      data-behind={behind ? "" : undefined}
-      data-tone={behind ? "warn" : undefined}
-    >
-      {here(words)}
-    </span>
-  );
-}
+/** One thing on a row that needs the captain: its sentence, and the one button that answers it. */
+type Notice = {
+  id: string;
+  text: string;
+  tone?: "warn" | undefined;
+  act?: React.ReactNode;
+  /** The strip's own data hooks, kept from the lines it replaced. */
+  hook?: Record<string, string>;
+};
 
 /**
  * One device in Settings -> Devices (design skill
- * `components/devices/DevicesTab`): its row with what it can do now, and the
- * two questions that stand in its place, Change address and Remove.
+ * `components/devices/DevicesTab`, "The row"), in three parts that every
+ * state fills in the same order: the head, its dot, name, one status and the
+ * ⋯ menu; the facts under it; then one strip per thing that needs the
+ * captain, its sentence beside its one button. The rarely used actions wait
+ * in the ⋯ menu, Remove last. When each is offered is `@shared/deviceActs`'s
+ * rule; this row only places it. Change address, Remove and Carry its tasks
+ * on stand in its place as a question (below).
  */
-
 export function DeviceRow({
   device,
   devices,
@@ -102,48 +95,257 @@ export function DeviceRow({
 }) {
   const here = useHereAs();
   const label = deviceLabel(device);
-  if (!deviceRunsWork(device.kind)) {
-    const summary = deviceSummary(device, undefined);
-    return (
-      <div
-        className="fm-devices-row"
-        data-device-row={device.id}
-        data-controlling={device.controlling ? "" : undefined}
-      >
-        <span className="fm-devices-dot" data-tone={device.inReach ? "ok" : "warn"} />
-        <span className="fm-devices-text">
-          <span className="fm-devices-name">{device.name}</span>
-          <span className="fm-devices-detail">{here(deviceDetail(device, now))}</span>
-          {summary && <span className="fm-devices-summary">{summary}</span>}
-          <CopyVersions device={device} />
-          {approvesSecretUses(device) && <PhoneApprovals paired={device.id} name={device.name} />}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesRemoveNamed({ device: label })}
-          onClick={() => onAskRemove(device.id)}
-        >
-          {m.settingsDevicesRemoveButton()}
-        </Button>
-      </div>
-    );
-  }
-  const state = deviceState(device);
+  const works = deviceRunsWork(device.kind);
   const own = signIns.find((entry) => entry.deviceId === device.id);
-  const updatingHere = updating.includes(device.id);
+  const updatingHere = works && updating.includes(device.id);
   const copy = updateCopy?.[device.id];
   // Brought back over Remote Login: reached, then told where this Mac is now.
-  const finding = adding.find((mac) => mac.deviceId === device.id);
+  const finding = works ? adding.find((mac) => mac.deviceId === device.id) : undefined;
   // Looked for at another address, to be reached there from now on.
-  const moved = moving.find((each) => each.deviceId === device.id);
+  const moved = works ? moving.find((each) => each.deviceId === device.id) : undefined;
   const settling =
-    device.removal === "bringing-work" ||
-    device.removal === "cleaning-up" ||
-    device.carrying !== undefined ||
-    updatingHere ||
-    finding !== undefined ||
-    moved !== undefined;
+    works &&
+    (device.removal === "bringing-work" ||
+      device.removal === "cleaning-up" ||
+      device.carrying !== undefined ||
+      updatingHere ||
+      finding !== undefined ||
+      moved !== undefined);
+  const status = deviceStatus(device, now);
+  const other = works ? device.otherVersion : undefined;
+  const notices = works
+    ? computerNotices({
+        device,
+        devices,
+        label,
+        settling,
+        updatingHere,
+        busy,
+        here,
+        onUpdate,
+        onKeep,
+        onAskCarry,
+        onMake,
+        onTryAgain,
+        onFixWork,
+        onAskChangeAddress,
+      })
+    : [];
+  const versions = deviceWords.copyVersions(device);
+  const behind = device.appVersion !== undefined && appBehind(device, device.appVersion);
+  // A copy behind this computer's is something to act on; any other difference is a plain fact.
+  if (versions && behind && !updatingHere)
+    notices.push({
+      id: "copy-versions",
+      text: here(versions),
+      tone: "warn",
+      hook: { "data-device-copy-versions": "", "data-behind": "" },
+    });
+  const acts = rowActs({
+    device,
+    settling,
+    standby,
+    moveHome: onAskMoveHome !== undefined,
+    keepCopy: onKeepCopy !== undefined,
+    readyList: onAskStandbyReady !== undefined,
+  });
+  const picks: Record<Exclude<RowAct, "remove">, { label: string; onSelect: () => void }> = {
+    address: {
+      label: m.settingsDevicesChangeAddress(),
+      onSelect: () => onAskChangeAddress(device.id),
+    },
+    "home-move": { label: m.settingsDevicesMoveHere(), onSelect: () => onAskMoveHome?.(device.id) },
+    "standby-ready": {
+      label: m.settingsDevicesStandbyReady(),
+      onSelect: () => onAskStandbyReady?.(device.id),
+    },
+    "standby-keep": {
+      label: m.settingsDevicesStandbyKeep(),
+      onSelect: () => onKeepCopy?.(device.id),
+    },
+  };
+  // Remove stands last, in the danger tone, behind a separator when anything comes before it.
+  const items: RowMenuItem[] = acts.flatMap((act): RowMenuItem[] =>
+    act === "remove"
+      ? [
+          ...(acts.length > 1 ? [{ separator: true } as const] : []),
+          {
+            id: act,
+            label: m.settingsDevicesRemoveButton(),
+            tone: "danger",
+            onSelect: () => onAskRemove(device.id),
+          },
+        ]
+      : [{ id: act, ...picks[act] }],
+  );
+  const summary = works
+    ? here(
+        finding
+          ? addingWords(finding, label)
+          : moved
+            ? remoteLoginWords.reachingRow(moved.address)
+            : device.carrying
+              ? m.settingsDevicesCarrying({ to: carryName(devices, device.carrying) })
+              : updatingHere
+                ? copy?.download
+                  ? remoteLoginWords.downloading(label, copy.download.received, copy.download.total)
+                  : copy?.state === "sending"
+                    ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
+                    : copy?.state === "starting"
+                      ? remoteLoginWords.startingRow(label)
+                      : remoteLoginWords.updatingRow(device)
+                : deviceSummary(device, own),
+      )
+    : deviceSummary(device, undefined);
+  return (
+    <div
+      className="fm-devices-row fm-devices-entry"
+      data-device-row={device.id}
+      data-controlling={device.controlling ? "" : undefined}
+      data-removal={device.removal}
+      data-other-version={other ? (other.takesWork ? "takes-work" : "no-work") : undefined}
+      data-device-acts={acts.join(" ")}
+    >
+      <div className="fm-devices-head">
+        <span
+          className="fm-devices-dot"
+          data-device-dot=""
+          data-tone={
+            !works
+              ? device.inReach
+                ? "ok"
+                : "warn"
+              : device.inReach && other?.takesWork !== false
+                ? "ok"
+                : deviceConnecting(device) || device.ssh?.state === "reconnecting"
+                  ? "idle"
+                  : "warn"
+          }
+        />
+        <span className="fm-devices-name">{label}</span>
+        {!settling && (
+          <span className="fm-devices-state" data-device-status="" data-tone={status.tone}>
+            {status.text}
+          </span>
+        )}
+        {items.length > 0 && (
+          <RowMenu
+            className="fm-devices-more"
+            label={m.settingsDevicesRowActions({ device: label })}
+            items={items}
+          />
+        )}
+      </div>
+      <div className="fm-devices-facts">
+        <span className="fm-devices-detail" data-device-identity="">
+          <DetailParts text={here(deviceIdentity(device, now))} />
+        </span>
+        {summary && (
+          <span className="fm-devices-summary" role={settling ? "status" : undefined}>
+            {summary}
+          </span>
+        )}
+        {versions && !behind && !updatingHere && (
+          <span className="fm-devices-version" data-device-copy-versions="">
+            {here(versions)}
+          </span>
+        )}
+        {standby && <StandbyLine view={standby} now={now} />}
+        {approvesSecretUses(device) && <PhoneApprovals paired={device.id} name={label} />}
+      </div>
+      {notices.length > 0 && (
+        <div className="fm-devices-notices">
+          {notices.map((notice) => (
+            <div
+              key={notice.id}
+              className="fm-devices-notice"
+              data-notice={notice.id}
+              data-tone={notice.tone}
+              {...notice.hook}
+            >
+              <span className="fm-devices-notice-text" data-notice-text="">
+                {notice.text}
+              </span>
+              {notice.act}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The ⋯ menu's actions for a device, each under `@shared/deviceActs`'s own
+ * rule for when it is offered: Change address, Move your first mate here,
+ * Ready to take over while it keeps a copy or Keep a copy here, then Remove,
+ * which waits while a removal waits or the row is settling. A phone or a Mac
+ * that only controls offers Remove alone.
+ */
+export function rowActs({
+  device,
+  settling,
+  standby,
+  moveHome,
+  keepCopy,
+  readyList,
+}: {
+  device: DeviceView;
+  settling: boolean;
+  standby: StandbyView | undefined;
+  /** Whether this window can move the first mate, or keep a copy, or open the Ready list. */
+  moveHome: boolean;
+  keepCopy: boolean;
+  readyList: boolean;
+}): RowAct[] {
+  if (!deviceRunsWork(device.kind)) return ["remove"];
+  const acts: RowAct[] = [];
+  if (offersAddressChange(device, settling)) acts.push("address");
+  if (moveHome && offersHomeMove(device, settling)) acts.push("home-move");
+  if (standby && readyList) acts.push("standby-ready");
+  else if (keepCopy && offersStandby(device, standby !== undefined)) acts.push("standby-keep");
+  if (device.removal !== "when-back" && !settling) acts.push("remove");
+  return acts;
+}
+
+/**
+ * The strips of a computer that runs work, in one fixed order (design skill
+ * `components/devices/DevicesTab`, "The row"): what blocks it first, then
+ * what waits on it. Each keeps the button it had, beside its sentence.
+ */
+function computerNotices({
+  device,
+  devices,
+  label,
+  settling,
+  updatingHere,
+  busy,
+  here,
+  onUpdate,
+  onKeep,
+  onAskCarry,
+  onMake,
+  onTryAgain,
+  onFixWork,
+  onAskChangeAddress,
+}: Pick<
+  DevicesTabViewProps,
+  | "devices"
+  | "busy"
+  | "onUpdate"
+  | "onKeep"
+  | "onAskCarry"
+  | "onMake"
+  | "onTryAgain"
+  | "onFixWork"
+  | "onAskChangeAddress"
+> & {
+  device: DeviceView;
+  label: string;
+  settling: boolean;
+  updatingHere: boolean;
+  here: (words: string) => string;
+}): Notice[] {
   const startup = automaticStartupOf(device);
   const startupProblem = startup === "unavailable" || startup === "unknown";
   const stranded = settling ? null : strandedLine(device);
@@ -160,242 +362,123 @@ export function DeviceRow({
       ? undefined
       : devices.find((each) => device.earlier?.includes(each.id));
   const other = device.otherVersion;
-  return (
-    <div
-      className="fm-devices-row"
-      data-device-row={device.id}
-      data-controlling={device.controlling ? "" : undefined}
-      data-removal={device.removal}
-      data-other-version={other ? (other.takesWork ? "takes-work" : "no-work") : undefined}
-    >
-      <span
-        className="fm-devices-dot"
-        data-tone={
-          device.inReach && other?.takesWork !== false
-            ? "ok"
-            : deviceConnecting(device) || device.ssh?.state === "reconnecting"
-              ? "idle"
-              : "warn"
-        }
-      />
-      <span className="fm-devices-text">
-        <span className="fm-devices-name">{label}</span>
-        <span className="fm-devices-detail">
-          <DetailParts text={here(deviceDetail(device, now))} />
-        </span>
-        <span className="fm-devices-summary" role={finding || moved ? "status" : undefined}>
-          {here(
-            finding
-              ? addingWords(finding, label)
-              : moved
-                ? remoteLoginWords.reachingRow(moved.address)
-                : device.carrying
-                  ? m.settingsDevicesCarrying({ to: carryName(devices, device.carrying) })
-                  : updatingHere
-                    ? copy?.download
-                      ? remoteLoginWords.downloading(
-                          label,
-                          copy.download.received,
-                          copy.download.total,
-                        )
-                      : copy?.state === "sending"
-                        ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
-                        : copy?.state === "starting"
-                          ? remoteLoginWords.startingRow(label)
-                          : remoteLoginWords.updatingRow(device)
-                    : deviceSummary(device, own),
-          )}
-        </span>
-        {earlier && (
-          <span className="fm-devices-summary" data-device-earlier={earlier.id}>
-            {earlier.carriesOn
-              ? m.settingsDevicesCarryEarlier({ count: earlier.carriesOn })
-              : m.settingsDevicesCarryEarlierProjects()}
-          </span>
-        )}
-        {startupProblem && !settling && (
-          <span className="fm-devices-summary" data-device-startup="">
-            {startup === "unavailable"
-              ? automaticStartupWords.guidance
-              : automaticStartupWords.unchecked}
-          </span>
-        )}
-        {stranded && (
-          <span className="fm-devices-summary" data-device-stranded="">
-            {here(stranded)}
-          </span>
-        )}
-        {working && (
-          <span
-            className="fm-devices-summary"
-            data-device-work-setup={device.workSetup?.reason ?? device.workSetup?.state}
-          >
-            {here(working)}
-          </span>
-        )}
-        {held && (
-          <span className="fm-devices-summary" data-device-held="">
-            {here(held)}
-          </span>
-        )}
-        {stopped && (
-          <span className="fm-devices-version" data-tone="warn" data-device-ssh-stopped="">
-            {here(stopped)}
-          </span>
-        )}
-        {other && !updatingHere && (
-          <span className="fm-devices-version" data-tone={other.takesWork ? undefined : "warn"}>
-            {here(deviceWords.otherVersion(other, installedThere(device)))}
-          </span>
-        )}
-        {!updatingHere && <CopyVersions device={device} />}
-        {standby && <StandbyLine view={standby} now={now} />}
-        {approvesSecretUses(device) && <PhoneApprovals paired={device.id} name={label} />}
-      </span>
-      {!settling && (
-        <span className="fm-devices-state" data-tone={state.tone}>
-          {state.text}
-        </span>
-      )}
-      {earlier && onAskCarry && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesCarryHereNamed({ device: label })}
-          data-device-carry-here={earlier.id}
-          onClick={() => onAskCarry({ row: device.id, from: earlier.id, to: device.id })}
-        >
-          {m.settingsDevicesCarryHere()}
-        </Button>
-      )}
-      {device.carriesOn && !settling && onAskCarry && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesCarryToNamed({ device: label })}
-          data-device-carry-to={device.id}
-          onClick={() => onAskCarry({ row: device.id, from: device.id })}
-        >
-          {m.settingsDevicesCarryTo()}
-        </Button>
-      )}
-      {back && (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={busy === "link"}
-          onClick={() => onMake(back.does)}
-        >
-          {back.label}
-        </Button>
-      )}
-      {fix && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesFixItNamed({ device: label })}
-          data-device-fix-work={device.id}
-          onClick={() => onFixWork?.(device.id)}
-        >
-          {m.settingsDevicesFixIt()}
-        </Button>
-      )}
-      {held && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesAddByAddressNamed({ device: label })}
-          onClick={() => onAskChangeAddress(device.id)}
-        >
-          {m.settingsDevicesAddByAddress()}
-        </Button>
-      )}
-      {stopped && !left && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesTryAgainNamed({ device: label })}
-          onClick={() => onTryAgain(device.id)}
-        >
-          {m.settingsDevicesTryAgain()}
-        </Button>
-      )}
-      {offersAddressChange(device, settling) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={m.settingsDevicesChangeAddressNamed({ device: label })}
-          onClick={() => onAskChangeAddress(device.id)}
-        >
-          {m.settingsDevicesChangeAddress()}
-        </Button>
-      )}
-      {other && !settling && device.removal !== "when-back" && !installedThere(device) && (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={
-            other.than === "newer"
-              ? m.settingsDevicesUpdateOlderNamed({ device: label })
-              : m.settingsDevicesUpdateNamed({ device: label })
-          }
-          disabled={busy === "link"}
-          onClick={() => onUpdate(device)}
-        >
-          {other.than === "newer" ? m.settingsDevicesUpdateOlder() : m.settingsDevicesUpdate()}
-        </Button>
-      )}
-      {onAskMoveHome && offersHomeMove(device, settling) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={m.settingsDevicesMoveHereNamed({ device: label })}
-          data-home-move-ask={device.id}
-          onClick={() => onAskMoveHome(device.id)}
-        >
-          {m.settingsDevicesMoveHere()}
-        </Button>
-      )}
-      {standby && onAskStandbyReady ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={m.settingsDevicesStandbyReadyNamed({ device: label })}
-          data-standby-ask={device.id}
-          onClick={() => onAskStandbyReady(device.id)}
-        >
-          {m.settingsDevicesStandbyReady()}
-        </Button>
-      ) : (
-        onKeepCopy &&
-        offersStandby(device, standby !== undefined) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={m.settingsDevicesStandbyKeepNamed({ device: label })}
-            data-standby-keep={device.id}
-            onClick={() => onKeepCopy(device.id)}
-          >
-            {m.settingsDevicesStandbyKeep()}
-          </Button>
-        )
-      )}
-      {device.removal === "when-back" ? (
-        <Button variant="ghost" size="sm" onClick={() => onKeep(device.id)}>
-          {m.settingsDevicesKeepIt()}
-        </Button>
-      ) : settling ? null : (
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={m.settingsDevicesRemoveNamed({ device: label })}
-          onClick={() => onAskRemove(device.id)}
-        >
-          {m.settingsDevicesRemoveButton()}
-        </Button>
-      )}
-    </div>
+  const act = (
+    text: string,
+    onClick: () => void,
+    more: Record<string, string | boolean | undefined> = {},
+  ) => (
+    <Button variant="secondary" size="sm" onClick={onClick} {...more}>
+      {text}
+    </Button>
   );
+  const notices: Notice[] = [];
+  if (device.removal === "when-back")
+    notices.push({
+      id: "removal",
+      text: other
+        ? m.settingsDevicesRemovedOnceUpdatedLine()
+        : m.settingsDevicesRemovedWhenBackLine(),
+      act: act(m.settingsDevicesKeepIt(), () => onKeep(device.id)),
+    });
+  if (stopped)
+    notices.push({
+      id: "ssh-stopped",
+      text: here(stopped),
+      tone: "warn",
+      hook: { "data-device-ssh-stopped": "" },
+      act: left
+        ? undefined
+        : act(m.settingsDevicesTryAgain(), () => onTryAgain(device.id), {
+            "aria-label": m.settingsDevicesTryAgainNamed({ device: label }),
+          }),
+    });
+  if (stranded)
+    notices.push({
+      id: "stranded",
+      text: here(stranded),
+      hook: { "data-device-stranded": "" },
+      act: back
+        ? act(back.label, () => onMake(back.does), { disabled: busy === "link" })
+        : undefined,
+    });
+  if (working)
+    notices.push({
+      id: "work-setup",
+      text: here(working),
+      hook: {
+        "data-device-work-setup": device.workSetup?.reason ?? device.workSetup?.state ?? "",
+      },
+      act: fix
+        ? act(m.settingsDevicesFixIt(), () => onFixWork?.(device.id), {
+            "aria-label": m.settingsDevicesFixItNamed({ device: label }),
+            "data-device-fix-work": device.id,
+          })
+        : undefined,
+    });
+  if (held)
+    notices.push({
+      id: "held",
+      text: here(held),
+      hook: { "data-device-held": "" },
+      act: act(m.settingsDevicesAddByAddress(), () => onAskChangeAddress(device.id), {
+        "aria-label": m.settingsDevicesAddByAddressNamed({ device: label }),
+      }),
+    });
+  if (startupProblem && !settling)
+    notices.push({
+      id: "startup",
+      text:
+        startup === "unavailable"
+          ? automaticStartupWords.guidance
+          : automaticStartupWords.unchecked,
+      hook: { "data-device-startup": "" },
+    });
+  if (other && !updatingHere)
+    notices.push({
+      id: "version",
+      text: here(deviceWords.otherVersion(other, installedThere(device))),
+      tone: other.takesWork ? undefined : "warn",
+      act:
+        !settling && device.removal !== "when-back" && !installedThere(device)
+          ? act(
+              other.than === "newer" ? m.settingsDevicesUpdateOlder() : m.settingsDevicesUpdate(),
+              () => onUpdate(device),
+              {
+                disabled: busy === "link",
+                "aria-label":
+                  other.than === "newer"
+                    ? m.settingsDevicesUpdateOlderNamed({ device: label })
+                    : m.settingsDevicesUpdateNamed({ device: label }),
+              },
+            )
+          : undefined,
+    });
+  if (earlier && onAskCarry)
+    notices.push({
+      id: "earlier",
+      text: earlier.carriesOn
+        ? m.settingsDevicesCarryEarlier({ count: earlier.carriesOn })
+        : m.settingsDevicesCarryEarlierProjects(),
+      hook: { "data-device-earlier": earlier.id },
+      act: act(
+        m.settingsDevicesCarryHere(),
+        () => onAskCarry({ row: device.id, from: earlier.id, to: device.id }),
+        {
+          "aria-label": m.settingsDevicesCarryHereNamed({ device: label }),
+          "data-device-carry-here": earlier.id,
+        },
+      ),
+    });
+  if (device.carriesOn && !settling && onAskCarry)
+    notices.push({
+      id: "tasks-wait",
+      text: m.settingsDevicesTasksWait({ count: device.carriesOn }),
+      act: act(m.settingsDevicesCarryTo(), () => onAskCarry({ row: device.id, from: device.id }), {
+        "aria-label": m.settingsDevicesCarryToNamed({ device: label }),
+        "data-device-carry-to": device.id,
+      }),
+    });
+  return notices;
 }
 
 /**

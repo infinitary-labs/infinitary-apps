@@ -30,10 +30,11 @@ import { COMPUTER, hereAs } from "../../src/shared/deviceNames";
 import {
   type DeviceView,
   deviceJoinedLine,
-  deviceWords,
   PAIRING_LINK_PREFIX,
+  sharedVersion,
 } from "../../src/shared/devices";
 import { feedLineFrom } from "../../src/shared/feed";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { RETURN_CONTROL_LABEL, TAKE_CONTROL_LABEL } from "../../src/shared/taskBrowser";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -359,8 +360,12 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       const airRow = (await listed()) as DeviceView;
       await openDevices(pro.page);
       const row = await selectDevice(pro.page, airRow.id);
-      await expect(row).toContainText(deviceWords.copyVersions(airRow) as string);
-      await expect(row.locator("[data-device-copy-versions]")).not.toHaveAttribute("data-behind");
+      // The same version is one mark beside what the computer is, never a sentence of its own.
+      expect(sharedVersion(airRow)).toBe(version);
+      await expect(row.locator("[data-device-identity]")).toContainText(
+        m.settingsDevicesVersionMark({ version }),
+      );
+      await expect(row.locator("[data-device-copy-versions]")).toHaveCount(0);
       await pro.page.getByRole("button", { name: "Back", exact: true }).click();
       await expect(pro.page.locator('[data-screen-label="Settings"]')).toHaveCount(0);
     });

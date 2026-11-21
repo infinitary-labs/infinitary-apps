@@ -796,17 +796,15 @@ test("the first mate's cards for a computer open its row or its GitHub sign-in, 
     await expect(page.locator("[data-settings-column]")).toHaveCount(0);
   });
 
-  for (const [action, control] of [
-    ["home-move", "data-home-move-ask"],
-    ["standby-keep", "data-standby-keep"],
-  ] as const)
+  for (const action of ["home-move", "standby-keep"] as const)
     await test.step(`the ${action} card chooses its row, where the captain's own button is, and starts nothing`, async () => {
       const offer = offeredCard(action, { deviceId }, devices, { standbys: [] });
       await askFor(action, { deviceId });
       const card = await handoverCard(page, offer);
       await pressKey(card.getByRole("button", { name: offer.label, exact: true }), "Enter");
       const row = page.locator(`[data-device-row="${deviceId}"]`);
-      await expect(row.locator(`[${control}="${deviceId}"]`)).toBeVisible();
+      // The captain's own choice sits in the row's ⋯ menu.
+      await expect(row).toHaveAttribute("data-device-acts", new RegExp(`\\b${action}\\b`));
       // Nothing started: no move's Ready list, and no copy kept.
       await expect(page.locator(`[data-home-move="${deviceId}"]`)).toHaveCount(0);
       expect(
@@ -846,7 +844,7 @@ test("a computer signs in to GitHub Enterprise with a key typed here, by keys, a
 
   // Under the computer's rows, the servers it signs in to: one of each kind it keeps a sign-in for.
   const servers = page.locator(`[data-device-forge-servers="${deviceId}"]`);
-  const chip = servers.locator('[data-forge-chip="github@' + deviceId + '"]');
+  const chip = servers.locator(`[data-forge-chip="github@${deviceId}"]`);
   await expect(servers.locator("[data-forge-chip]")).toHaveCount(SIGN_IN_KINDS.length);
   await pressKey(chip, "Enter");
 

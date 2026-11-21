@@ -452,16 +452,16 @@
   "settingsDevicesRemoveWait": "병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 {device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.",
   "settingsDevicesRemoveWaitOn": "{projects}의 병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 {device}이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.",
   "settingsDevicesRemoveWhenBack": "돌아오면 제거",
+  "settingsDevicesRemovedOnceUpdatedLine": "업데이트되면 제거돼요.",
+  "settingsDevicesRemovedWhenBackLine": "돌아오면 제거돼요.",
   "settingsDevicesRemoving": "제거 중...",
   "settingsDevicesRemovingSetUp": "Infinitary가 {where} 설정한 것을 제거하는 중…",
+  "settingsDevicesRowActions": "{device} 동작",
   "settingsDevicesRunningAs": "{user}(으)로 실행 중",
   "settingsDevicesRuns": "{projects} 실행",
   "settingsDevicesRunsNoProject": "아직 실행하는 프로젝트 없음",
   "settingsDevicesRunsWhileLoggedIn": "{user}이(가) 로그인한 동안 작업만 실행",
   "settingsDevicesSeenNow": "방금 확인됨",
-  "settingsDevicesSeenRemovedOnceUpdated": "새 작업을 받지 않음 · 업데이트되면 제거",
-  "settingsDevicesSeenRemovedWhenBack": "연락 닿지 않음 · 돌아오면 제거",
-  "settingsDevicesSeenRemovedWhenBackConnecting": "연결 중 · 돌아오면 제거",
   "settingsDevicesSeenRestarted": "이 컴퓨터가 다시 시작된 뒤로 로그인하지 않음",
   "settingsDevicesSeenSince": "연락 닿지 않음 · 마지막 연결",
   "settingsDevicesSeenSinceWhen": "{when}부터 연락 닿지 않음",
@@ -523,6 +523,10 @@
     "plural": "count",
     "other": "작업 {count}개"
   },
+  "settingsDevicesTasksWait": {
+    "plural": "count",
+    "other": "작업 {count}개가 돌아올 때까지 기다려요."
+  },
   "settingsDevicesTryAgain": "다시 시도",
   "settingsDevicesTryAgainFailed": "다시 시도할 수 없어요.",
   "settingsDevicesTryAgainNamed": "{device}에 다시 연락하기",
@@ -531,6 +535,7 @@
   "settingsDevicesUpdateNamed": "{device} 업데이트",
   "settingsDevicesUpdateOlder": "이전 버전 설치",
   "settingsDevicesUpdateOlderNamed": "{device}에 이전 버전 설치",
+  "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "컴퓨터 {count}대"

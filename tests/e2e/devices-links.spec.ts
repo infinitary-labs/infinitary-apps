@@ -11,7 +11,7 @@ import { aDevice, chipWords } from "../../src/shared/deviceNames";
 import { connectClient } from "../helpers/connectionClient";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { waitForFirstmateIdle } from "./crew";
-import { ask, linkInTab, openDevices, selectDevice } from "./deviceFixtures";
+import { ask, linkInTab, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { launchApp } from "./launch";
 import { feedLineOf } from "./rails";
 import { savedText } from "./savedText";
@@ -105,7 +105,7 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
     );
 
     // Remove asks once in place, then cuts the device off before it answers.
-    await page.getByRole("button", { name: "Remove MacBook Air", exact: true }).click();
+    await (await rowAction(page, air.deviceId, "remove")).click();
     const question = page.locator(`[data-device-removing="${air.deviceId}"]`);
     await question.getByRole("button", { name: "Remove", exact: true }).click();
     expect(await airConnection.closed).toBe(CONNECTION_CLOSE.unpaired);
@@ -239,7 +239,7 @@ test("a phone joins as a view whichever link it used, and this Mac announces whi
     await openDevices(page);
     const row = await selectDevice(page, phone.deviceId);
     await expect(row).toContainText(aDevice({ system: "ios" }));
-    await page.getByRole("button", { name: "Remove Kun's iPhone", exact: true }).click();
+    await (await rowAction(page, phone.deviceId, "remove")).click();
     await page
       .locator(`[data-device-removing="${phone.deviceId}"]`)
       .getByRole("button", { name: "Remove", exact: true })

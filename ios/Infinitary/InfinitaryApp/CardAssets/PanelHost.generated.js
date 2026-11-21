@@ -52968,6 +52968,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Remove when it is back`;
   }
+  function settingsDevicesRemovedOnceUpdatedLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُزال بعد تحديثه.`;
+      case "de":
+        return `Er wird entfernt, sobald er aktualisiert ist.`;
+      case "es":
+        return `Se quita cuando se actualice.`;
+      case "fr":
+        return `Il est retiré une fois mis à jour.`;
+      case "ja":
+        return `更新後に削除されます。`;
+      case "ko":
+        return `업데이트되면 제거돼요.`;
+      case "pt-BR":
+        return `Ele é removido depois de atualizado.`;
+      case "zh-Hans":
+        return `它更新后会被移除。`;
+      case "zh-Hant":
+        return `它更新後會被移除。`;
+      case "en-XA":
+        return `[Îţ îš ŕéɱöṽéð öñçé îţ îš ûþðáţéð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It is removed once it is updated.‬`;
+    }
+    return `It is removed once it is updated.`;
+  }
+  function settingsDevicesRemovedWhenBackLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُزال عند عودته.`;
+      case "de":
+        return `Er wird entfernt, sobald er zurück ist.`;
+      case "es":
+        return `Se quita cuando vuelva.`;
+      case "fr":
+        return `Il est retiré à son retour.`;
+      case "ja":
+        return `戻ったら削除されます。`;
+      case "ko":
+        return `돌아오면 제거돼요.`;
+      case "pt-BR":
+        return `Ele é removido quando voltar.`;
+      case "zh-Hans":
+        return `它恢复联系后会被移除。`;
+      case "zh-Hant":
+        return `它恢復連絡後會被移除。`;
+      case "en-XA":
+        return `[Îţ îš ŕéɱöṽéð ŵĥéñ îţ îš ƀáçķ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It is removed when it is back.‬`;
+    }
+    return `It is removed when it is back.`;
+  }
   function settingsDevicesRemoving() {
     switch (currentLanguage()) {
       case "ar":
@@ -53022,6 +53076,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Removing what Infinitary set up ‬${where}‮…‬`;
     }
     return `Removing what Infinitary set up ${where}…`;
+  }
+  function settingsDevicesRowActions(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إجراءات ${device}`;
+      case "de":
+        return `Aktionen für ${device}`;
+      case "es":
+        return `Acciones de ${device}`;
+      case "fr":
+        return `Actions de ${device}`;
+      case "ja":
+        return `${device} の操作`;
+      case "ko":
+        return `${device} 동작`;
+      case "pt-BR":
+        return `Ações de ${device}`;
+      case "zh-Hans":
+        return `${device} 的操作`;
+      case "zh-Hant":
+        return `${device} 的動作`;
+      case "en-XA":
+        return `[${device} áçţîöñš ~~~]`;
+      case "ar-XB":
+        return `${device}‮ actions‬`;
+    }
+    return `${device} actions`;
   }
   function settingsDevicesRunningAs(input2) {
     const user = input2.user;
@@ -53160,87 +53242,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮seen just now‬`;
     }
     return `seen just now`;
-  }
-  function settingsDevicesSeenRemovedOnceUpdated() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `لا يأخذ عملًا جديدًا · يُزال بعد تحديثه`;
-      case "de":
-        return `nimmt keine neue Arbeit an · wird entfernt, sobald er aktualisiert ist`;
-      case "es":
-        return `no acepta trabajo nuevo · se quita cuando se actualice`;
-      case "fr":
-        return `ne prend plus de nouveau travail · retiré une fois mis à jour`;
-      case "ja":
-        return `新しい作業は受けません · 更新後に削除`;
-      case "ko":
-        return `새 작업을 받지 않음 · 업데이트되면 제거`;
-      case "pt-BR":
-        return `não aceita trabalho novo · removido depois de atualizado`;
-      case "zh-Hans":
-        return `不再接新工作 · 更新后移除`;
-      case "zh-Hant":
-        return `不再接新工作 · 更新後移除`;
-      case "en-XA":
-        return `[ţáķéš ñö ñéŵ ŵöŕķ · ŕéɱöṽéð öñçé îţ îš ûþðáţéð ~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮takes no new work · removed once it is updated‬`;
-    }
-    return `takes no new work · removed once it is updated`;
-  }
-  function settingsDevicesSeenRemovedWhenBack() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `خارج المتناول · يُزال عند عودته`;
-      case "de":
-        return `außer Reichweite · wird entfernt, sobald er zurück ist`;
-      case "es":
-        return `fuera de alcance · se quita cuando vuelva`;
-      case "fr":
-        return `hors de portée · retiré à son retour`;
-      case "ja":
-        return `連絡がつきません · 戻ったら削除`;
-      case "ko":
-        return `연락 닿지 않음 · 돌아오면 제거`;
-      case "pt-BR":
-        return `fora de alcance · removido quando voltar`;
-      case "zh-Hans":
-        return `无法联系 · 恢复联系后移除`;
-      case "zh-Hant":
-        return `連絡不上 · 恢復連絡後移除`;
-      case "en-XA":
-        return `[öûţ öƒ ŕéáçĥ · ŕéɱöṽéð ŵĥéñ îţ îš ƀáçķ ~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮out of reach · removed when it is back‬`;
-    }
-    return `out of reach · removed when it is back`;
-  }
-  function settingsDevicesSeenRemovedWhenBackConnecting() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `جارٍ الاتصال · يُزال عند عودته`;
-      case "de":
-        return `verbindet sich · wird entfernt, sobald er zurück ist`;
-      case "es":
-        return `conectándose · se quita cuando vuelva`;
-      case "fr":
-        return `connexion en cours · retiré à son retour`;
-      case "ja":
-        return `接続中 · 戻ったら削除`;
-      case "ko":
-        return `연결 중 · 돌아오면 제거`;
-      case "pt-BR":
-        return `conectando · removido quando voltar`;
-      case "zh-Hans":
-        return `正在连接 · 恢复联系后移除`;
-      case "zh-Hant":
-        return `連線中 · 恢復連絡後移除`;
-      case "en-XA":
-        return `[çöññéçţîñĝ · ŕéɱöṽéð ŵĥéñ îţ îš ƀáçķ ~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮connecting · removed when it is back‬`;
-    }
-    return `connecting · removed when it is back`;
   }
   function settingsDevicesSeenRestarted() {
     switch (currentLanguage()) {
@@ -54894,6 +54895,100 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} tasks`;
     }
   }
+  function settingsDevicesTasksWait(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تنتظر ${count} مهمة حتى يعود.`;
+          case "one":
+            return `تنتظر مهمته حتى يعود.`;
+          case "two":
+            return `تنتظر مهمتاه حتى يعود.`;
+          case "few":
+            return `تنتظر ${count} مهام حتى يعود.`;
+          case "many":
+            return `تنتظر ${count} مهمةً حتى يعود.`;
+          default:
+            return `تنتظر ${count} مهمة حتى يعود.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Seine Aufgabe wartet, bis er zurück ist.`;
+          default:
+            return `Seine ${count} Aufgaben warten, bis er zurück ist.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Su tarea espera hasta que vuelva.`;
+          case "many":
+            return `Sus ${count} tareas esperan hasta que vuelva.`;
+          default:
+            return `Sus ${count} tareas esperan hasta que vuelva.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Sa tâche attend son retour.`;
+          case "many":
+            return `Ses ${count} tâches attendent son retour.`;
+          default:
+            return `Ses ${count} tâches attendent son retour.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}件のタスクが、戻るまで待機しています。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 ${count}개가 돌아올 때까지 기다려요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Sua tarefa espera até ele voltar.`;
+          case "many":
+            return `Suas ${count} tarefas esperam até ele voltar.`;
+          default:
+            return `Suas ${count} tarefas esperam até ele voltar.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的 ${count} 个任务会等到它恢复联系。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的 ${count} 個任務會等到它恢復連絡。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îţš ţášķ ŵáîţš ûñţîļ îţ îš ƀáçķ. ~~~~~~~~~~~]`;
+          default:
+            return `[Îţš ${count} ţášķš ŵáîţ ûñţîļ îţ îš ƀáçķ. ~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Its task waits until it is back.‬`;
+          default:
+            return `‮Its ‬${count}‮ tasks wait until it is back.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Its task waits until it is back.`;
+      default:
+        return `Its ${count} tasks wait until it is back.`;
+    }
+  }
   function settingsDevicesTryAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -55112,6 +55207,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Install the older version on ‬${device}`;
     }
     return `Install the older version on ${device}`;
+  }
+  function settingsDevicesVersionMark(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary ${version2}`;
+      case "de":
+        return `Infinitary ${version2}`;
+      case "es":
+        return `Infinitary ${version2}`;
+      case "fr":
+        return `Infinitary ${version2}`;
+      case "ja":
+        return `Infinitary ${version2}`;
+      case "ko":
+        return `Infinitary ${version2}`;
+      case "pt-BR":
+        return `Infinitary ${version2}`;
+      case "zh-Hans":
+        return `Infinitary ${version2}`;
+      case "zh-Hant":
+        return `Infinitary ${version2}`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ${version2} ~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary ‬${version2}`;
+    }
+    return `Infinitary ${version2}`;
   }
   function settingsDevicesWayCount(input2) {
     const count = formatNumber(input2.count);
@@ -88387,16 +88510,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesRemoveWait,
     settingsDevicesRemoveWaitOn,
     settingsDevicesRemoveWhenBack,
+    settingsDevicesRemovedOnceUpdatedLine,
+    settingsDevicesRemovedWhenBackLine,
     settingsDevicesRemoving,
     settingsDevicesRemovingSetUp,
+    settingsDevicesRowActions,
     settingsDevicesRunningAs,
     settingsDevicesRuns,
     settingsDevicesRunsNoProject,
     settingsDevicesRunsWhileLoggedIn,
     settingsDevicesSeenNow,
-    settingsDevicesSeenRemovedOnceUpdated,
-    settingsDevicesSeenRemovedWhenBack,
-    settingsDevicesSeenRemovedWhenBackConnecting,
     settingsDevicesSeenRestarted,
     settingsDevicesSeenSince,
     settingsDevicesSeenSinceWhen,
@@ -88452,6 +88575,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesStrandedThere,
     settingsDevicesTakeoverAddress,
     settingsDevicesTasks,
+    settingsDevicesTasksWait,
     settingsDevicesTryAgain,
     settingsDevicesTryAgainFailed,
     settingsDevicesTryAgainNamed,
@@ -88460,6 +88584,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesUpdateNamed,
     settingsDevicesUpdateOlder,
     settingsDevicesUpdateOlderNamed,
+    settingsDevicesVersionMark,
     settingsDevicesWayCount,
     settingsDevicesWaysCopyCommand,
     settingsDevicesWaysCopyLink,
@@ -91194,16 +91319,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesRemoveWait": ["device"],
     "settingsDevicesRemoveWaitOn": ["device", "projects"],
     "settingsDevicesRemoveWhenBack": [],
+    "settingsDevicesRemovedOnceUpdatedLine": [],
+    "settingsDevicesRemovedWhenBackLine": [],
     "settingsDevicesRemoving": [],
     "settingsDevicesRemovingSetUp": ["where"],
+    "settingsDevicesRowActions": ["device"],
     "settingsDevicesRunningAs": ["user"],
     "settingsDevicesRuns": ["projects"],
     "settingsDevicesRunsNoProject": [],
     "settingsDevicesRunsWhileLoggedIn": ["user"],
     "settingsDevicesSeenNow": [],
-    "settingsDevicesSeenRemovedOnceUpdated": [],
-    "settingsDevicesSeenRemovedWhenBack": [],
-    "settingsDevicesSeenRemovedWhenBackConnecting": [],
     "settingsDevicesSeenRestarted": [],
     "settingsDevicesSeenSince": [],
     "settingsDevicesSeenSinceWhen": ["when"],
@@ -91259,6 +91384,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesStrandedThere": [],
     "settingsDevicesTakeoverAddress": [],
     "settingsDevicesTasks": ["count"],
+    "settingsDevicesTasksWait": ["count"],
     "settingsDevicesTryAgain": [],
     "settingsDevicesTryAgainFailed": [],
     "settingsDevicesTryAgainNamed": ["device"],
@@ -91267,6 +91393,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesUpdateNamed": ["device"],
     "settingsDevicesUpdateOlder": [],
     "settingsDevicesUpdateOlderNamed": ["device"],
+    "settingsDevicesVersionMark": ["version"],
     "settingsDevicesWayCount": ["count"],
     "settingsDevicesWaysCopyCommand": [],
     "settingsDevicesWaysCopyLink": [],

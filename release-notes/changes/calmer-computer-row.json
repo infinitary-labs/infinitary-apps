@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "calmer-computer-row",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A calmer row for each computer in Settings → Devices",
+      "body": "A computer's row now says one status beside its name, such as idle, 1 task or out of reach since a time, with what it is and where on the line under it, and its version as one short mark when it matches this computer's. Each thing that needs you, such as an old address or tasks waiting until it is back, is a line of its own with its one button. The rarer choices - Change address, Move your first mate here, Keep a copy here and Remove - wait in the row's ⋯ menu, which works from the keyboard too.",
+      "picture": {
+        "dark": "calmer-computer-row-dark.webp",
+        "light": "calmer-computer-row-light.webp",
+        "alt": "Settings, Devices, with Workshop tower selected: out of reach since a time beside its name, a ⋯ menu, and two lines below, one with Make a command and one with Move its tasks to…"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

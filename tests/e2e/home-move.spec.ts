@@ -18,7 +18,7 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
-import { BUILDER, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
@@ -144,9 +144,9 @@ test("the captain moves the live first mate to a computer that runs work: the ol
   const ready = pro.page.locator(`[data-home-move="${joined.grant.deviceId}"]`);
   await test.step("the Ready list names what differs on the computer before the click", async () => {
     await openDevices(pro.page);
-    const row = await selectDevice(pro.page, joined.grant.deviceId);
-    const ask = row.locator(`[data-home-move-ask="${joined.grant.deviceId}"]`);
-    await expect(ask).toBeVisible();
+    await selectDevice(pro.page, joined.grant.deviceId);
+    const ask = await rowAction(pro.page, joined.grant.deviceId, "home-move");
+    await expect(ask).toHaveText(m.settingsDevicesMoveHere());
     await pressKey(ask, "Enter");
     await expect(ready).toBeVisible();
     await expect(ready.getByRole("button", { name: m.settingsDevicesMoveNow() })).toBeEnabled();
@@ -273,10 +273,8 @@ async function commandHome(options: {
 /** Opens the Ready list on the computer's row in Settings, Devices and presses Move now, by keys. */
 async function moveNow(page: Page, deviceId: string) {
   await openDevices(page);
-  const row = await selectDevice(page, deviceId);
-  const ask = row.locator(`[data-home-move-ask="${deviceId}"]`);
-  await expect(ask).toBeVisible();
-  await pressKey(ask, "Enter");
+  await selectDevice(page, deviceId);
+  await pressKey(await rowAction(page, deviceId, "home-move"), "Enter");
   const ready = page.locator(`[data-home-move="${deviceId}"]`);
   const now = ready.getByRole("button", { name: m.settingsDevicesMoveNow() });
   await expect(now).toBeEnabled({ timeout: 30_000 });

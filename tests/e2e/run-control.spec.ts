@@ -23,7 +23,7 @@ import {
   startGoogleStandIn,
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
-import { BUILDER, linkInTab, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, linkInTab, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { knowledgePanel } from "./knowledgeBrowser";
@@ -465,7 +465,7 @@ test("another computer controls a first mate with its window: a card's Settings 
       ).toContain(deviceId);
       const row = await selectDevice(page, deviceId);
       await expect(row).toBeVisible();
-      await pressKey(row.getByRole("button", { name: /^Remove / }), "Enter");
+      await pressKey(await rowAction(page, deviceId, "remove"), "Enter");
       const question = page.locator(`[data-device-removing="${deviceId}"]`);
       await pressKey(question.getByRole("button", { name: "Remove", exact: true }), "Enter");
       expect(await started.run.ended).toBe("removed");

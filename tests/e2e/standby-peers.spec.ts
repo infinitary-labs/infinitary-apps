@@ -14,7 +14,7 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { COPY_LINK_PATH, COPY_WHERE_ORDER } from "../../src/shared/standbyPeers";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
-import { BUILDER, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -112,13 +112,10 @@ test("computers that keep a copy reach each other, refuse a stranger, and still 
 
   await test.step("Keep a copy here on both rows, by keys: each Ready to take over list says it reaches the other copy", async () => {
     await openDevices(pro.page);
-    for (const there of [mini, studio])
-      await pressKey(
-        (await rowOf(there)).getByRole("button", {
-          name: m.settingsDevicesStandbyKeepNamed({ device: there.name }),
-        }),
-        "Enter",
-      );
+    for (const there of [mini, studio]) {
+      await rowOf(there);
+      await pressKey(await rowAction(pro.page, there.deviceId, "standby-keep"), "Enter");
+    }
     for (const there of [mini, studio])
       await expect((await rowOf(there)).locator("[data-standby]")).toHaveAttribute(
         "data-standby",
@@ -133,13 +130,10 @@ test("computers that keep a copy reach each other, refuse a stranger, and still 
       const line = ready.locator(`[data-gap="peer-${other.deviceId}"]`);
       // The other copy's address reaches this one in the record, so the line may first say it has not heard.
       await expect(async () => {
-        if ((await ready.count()) === 0)
-          await pressKey(
-            (await rowOf(here)).getByRole("button", {
-              name: m.settingsDevicesStandbyReadyNamed({ device: here.name }),
-            }),
-            "Enter",
-          );
+        if ((await ready.count()) === 0) {
+          await rowOf(here);
+          await pressKey(await rowAction(pro.page, here.deviceId, "standby-ready"), "Enter");
+        }
         try {
           await expect(line).toHaveAttribute("data-level", "notes", { timeout: 1_000 });
         } catch (error) {

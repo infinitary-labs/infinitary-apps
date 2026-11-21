@@ -158,7 +158,32 @@ export function button(within: Element, name: string): HTMLButtonElement {
   return found;
 }
 
+/**
+ * What a device's ⋯ menu offers, in its order, as its row lists it
+ * (`data-device-acts`, design skill components/devices/DevicesTab, "The
+ * row"), without opening the menu; nothing while the row is not drawn.
+ */
+export function rowActs(id: string): string[] {
+  const acts = document
+    .querySelector(`[data-device-row="${id}"]`)
+    ?.getAttribute("data-device-acts");
+  return acts ? acts.split(" ") : [];
+}
+
+/**
+ * Opens a device's ⋯ menu as a person does, with a click on its kebab, and
+ * returns the item for `act` (a `rowActs` name) once the menu draws it.
+ */
+export async function rowAction(id: string, act: string): Promise<HTMLButtonElement> {
+  const row = await shown(`[data-device-row="${id}"]`);
+  const kebab = row.querySelector<HTMLButtonElement>('.fm-devices-more [aria-haspopup="menu"]');
+  if (!kebab) throw new Error(`No actions menu on ${id}'s row`);
+  await userEvent.click(kebab);
+  return (await shown(`[role="menu"] [data-menu-item="${act}"]`)) as HTMLButtonElement;
+}
+
 /** The problem line Settings -> Devices says above Your devices, or null. */
+
 export function problemLine(): string | null {
   return document.querySelector('[data-settings-error="devices"]')?.textContent ?? null;
 }

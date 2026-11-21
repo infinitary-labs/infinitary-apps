@@ -7,9 +7,12 @@ import {
   ADDRESSES,
   AIR,
   button,
+  gone,
   LISTED_AT,
   MINI as OLDER_MINI,
   openDevices,
+  rowAction,
+  rowActs,
   STUDIO,
   selectDevice,
   shown,
@@ -65,14 +68,19 @@ test("only a computer in reach on this version offers the move, and Move now sta
   // Section: the older computer and the one out of reach offer nothing; the one in reach on this version does.
   await selectDevice("mini");
   await shown('[data-device-row="mini"]');
-  expect(document.querySelector('[data-home-move-ask="mini"]')).toBeNull();
+  expect(rowActs("mini")).not.toContain("home-move");
   await selectDevice("studio");
   await shown('[data-device-row="studio"]');
-  expect(document.querySelector('[data-home-move-ask="studio"]')).toBeNull();
+  expect(rowActs("studio")).not.toContain("home-move");
   await selectDevice("box");
   await shown('[data-device-row="box"]');
-  const ask = await shown('[data-home-move-ask="box"]');
-  expect(ask.getAttribute("aria-label")).toBe(m.settingsDevicesMoveHereNamed({ device: label }));
+  // It waits in the computer's ⋯ menu, before Remove.
+  expect(rowActs("box")).toEqual(["home-move", "standby-keep", "remove"]);
+  const ask = await rowAction("box", "home-move");
+  expect(ask.closest('[role="menu"]')?.getAttribute("aria-label")).toBe(
+    m.settingsDevicesRowActions({ device: label }),
+  );
+  expect(ask.textContent).toBe(m.settingsDevicesMoveHere());
 
   // Section: the Ready list names each gap, and the blocking one keeps Move now off.
   await userEvent.click(ask);
@@ -84,4 +92,10 @@ test("only a computer in reach on this version offers the move, and Move now sta
   const moveNow = button(aside, m.settingsDevicesMoveNow());
   expect(moveNow.disabled).toBe(true);
   expect(bridge.requests("inf:home-move:start")).toEqual([]);
+
+  // Section: Escape in the row's ⋯ menu closes the menu alone; the Ready list stays open.
+  await rowAction("box", "home-move");
+  await userEvent.keyboard("{Escape}");
+  await gone('[role="menu"]');
+  expect(document.querySelector('[data-home-move="box"]')).toBe(aside);
 });

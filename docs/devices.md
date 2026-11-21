@@ -517,7 +517,7 @@ How this Mac reaches each computer it set up over Remote Login is kept in `devic
 `connection` is how it reaches this Mac: `ssh` when it reaches this Mac only through this Mac's own SSH connection to `address` (below, "Through the home's SSH"), as every Mac added by its address does, and `network` when it dials this Mac's address itself.
 `cleanups` holds what this Mac has yet to remove on a computer it took off the list (below, "Removing it there"): `{ "<id>": { "address", "name", "at" } }`, bound to that computer's id.
 A computer found again over Remote Login keeps the address that found it, whichever way it was added first, so Update and Remove reach it there.
-Settings -> Devices names it by it ("a computer · sam@mini.local · seen just now").
+Settings -> Devices names it by it ("a computer · sam@mini.local").
 A file that cannot be read leaves every computer on the list and none reached over SSH, and is never written over, so nothing in it is lost; moving it away starts it over.
 
 ### Updating by itself
@@ -564,7 +564,7 @@ Settings -> Devices' list reads the apps open now from the connection's `running
 Two apps of one device read as the older, and an app from before apps said their version reads with no `app`, as one too old to say it.
 A phone's versions are its own, so its `appVersion` is never measured against this computer's.
 A computer whose work runs this computer's version carries that version as `workVersion`; one on another version says it in `otherVersion` (above).
-The row says each under its summary, the app first, and marks an app behind this computer's in `--warn` (`appBehind`; design skill `components/devices/DevicesTab`, "Each copy's version").
+When every copy runs this computer's version, the row says it once as a mark at the end of its mono line (`sharedVersion`, `src/shared/devices.ts`); otherwise it says each under its summary, the app first, and an app behind this computer's is a strip in `--warn` (`appBehind`; design skill `components/devices/DevicesTab`, "Each copy's version").
 Out of reach, and while no app is open there, a row says nothing of that copy's version, because the home cannot tell.
 The first mate reads the same versions in `computer_versions`.
 
@@ -670,7 +670,7 @@ The home never treats the two as one computer on its own: a name and a user prov
   Each entry in reach lists in `earlier` the work entries out of reach with the same name, the same user and an earlier join, that still hold a task or a project (`Computers.list`).
   Settings -> Devices says so under the new entry's row, with one button, Carry its tasks on here.
 - **Any entry out of reach.**
-  An entry out of reach that still holds a started task that can move is marked `carriesOn`, with how many, and its row offers Move its tasks to..., which asks where: another computer in reach, or this Mac.
+  An entry out of reach that still holds a started task that can move is marked `carriesOn`, with how many, and its row says its tasks wait, with Move its tasks to..., which asks where: another computer in reach, or this Mac.
 - **The question.**
   Both buttons open one question in place of the row, saying how many tasks continue, that each continues from the last commit the first mate's computer holds, what stays on the old entry - commits after that one, edits not committed, files git does not track and the files in its task folders there - and that the old entry then comes off the list.
 - **Carrying on.**
@@ -735,14 +735,14 @@ Settings -> Devices then says how it comes back (below, "Settings -> Devices").
 ## Moving the first mate
 
 The captain can move the first mate, while it runs, to a paired computer that runs work, as from a MacBook to a Mac mini.
-Only the captain's click on Move your first mate here, on that computer's row in Settings -> Devices, starts a move; nothing moves the first mate by itself, and the first mate has no tool for it.
-The button stands on a computer that runs work, in reach, on this computer's version and not being updated or removed (design skill `components/devices/DevicesTab`, "Moving your first mate"), and only where the first mate lives, never in a window of another computer.
+Only the captain's click on Move your first mate here, in that computer's ⋯ menu in Settings -> Devices, starts a move; nothing moves the first mate by itself, and the first mate has no tool for it.
+The item stands in the menu of a computer that runs work, in reach, on this computer's version and not being updated or removed (design skill `components/devices/DevicesTab`, "Moving your first mate"), and only where the first mate lives, never in a window of another computer.
 The old home runs the move (`OutgoingHomeMove`, `src/core/homeMove/outgoing.ts`) and the computer it moves to answers its orders (`IncomingHomeMove`, `src/core/homeMove/arriving.ts`), over the connection that computer already keeps with it, under the contract change `home-move` (`src/shared/contract-changes/home-move.md`).
 Pairing and its key checks are left as they are: the new home shows the same key, so every device that trusted the old one trusts it.
 
 ### The Ready list
 
-Before the click, the button opens the Ready list under the row: each gap on that computer, asked of it with `inf:home:ready` (`homeMoveFactsSchema`, `src/shared/homeMove.ts`).
+Before the click, the item opens the Ready list under the row: each gap on that computer, asked of it with `inf:home:ready` (`homeMoveFactsSchema`, `src/shared/homeMove.ts`).
 A gap that keeps the move from starting shows in `--warn`: that computer is out of reach or runs a version without the change, the two run different versions, a first mate of its own already answers there, it cannot start the first mate in the background, it offers no address another device could reach, it has less than twice the record's size free, or a started task here cannot move now, or cannot move to that computer, and its own reason says why.
 A note says what will differ after the move: started tasks here move there first, that computer's own first mate's record is set aside there, the captain signs in again there to each subscription and host where projects live this computer is signed in to, a computer that reaches the first mate only through this computer's own SSH connection is out of reach after the move until it is added again from there, Secrets stay here, integrations are signed in here only, except one that is a host's own sign-in, such as GitHub's, which the note on sign-ins already names (`forgeSignInHost`, `src/shared/integrations.ts`), a project has uncommitted changes, and dictation stays off in this computer's window once it is a window of another computer.
 Move now stays disabled while any gap blocks, and `start` asks the Ready list again before it begins.
@@ -821,7 +821,7 @@ It raises a card for each one not signed in there, once, and takes it down when 
 ## Keeping a copy on another computer
 
 The captain can name any number of paired computers that run work to keep a live copy of the first mate's record.
-Only the captain's click on Keep a copy here, on that computer's row in Settings -> Devices, names one, and Stop keeping a copy in its Ready to take over list unnames it (design skill `components/devices/DevicesTab`, "Keeping a copy").
+Only the captain's click on Keep a copy here, in that computer's ⋯ menu in Settings -> Devices, names one, and Stop keeping a copy in its Ready to take over list unnames it (design skill `components/devices/DevicesTab`, "Keeping a copy").
 The named computers are kept in `devices/standbys.json`, part of the record, so a move carries them; a computer no longer on the list, or the one the first mate now runs on, keeps no copy.
 A removed computer's copy goes with the rest of what Infinitary set up there (`cleanUp`, `docs/helper.md`, "Removed"), and a computer the first mate moves to drops its own copy once the first mate starts there; either way the home takes it off the list without asking it anything.
 The home sends each copy (`StandbyStream`, `src/core/standby/stream.ts`) and the computer keeps it (`StandbyKeeper`, `src/core/standby/keeper.ts`), over the connection it already keeps, under the contract change `standby-copy` (`src/shared/contract-changes/standby-copy.md`).

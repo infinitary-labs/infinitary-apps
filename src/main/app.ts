@@ -11,6 +11,7 @@ import { dueMove } from "@core/folderMove/due";
 import { olderRunAgent } from "@core/folderMove/takeOver";
 import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
+import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
@@ -790,6 +791,31 @@ export async function startApp(
               : {}),
             ...(olderRun ? { runAgent: olderRun } : {}),
           },
+          // The older agent goes once the work is in, as the work run's move
+          // hands it over, so its file starts nothing on the frozen older folder.
+          ...(serviceManager
+            ? {
+                handBackground: async () => {
+                  const dataDir = join(move.to, "work");
+                  const { workLog } = await import("@core/helper/run");
+                  return handBackgroundOver(dataDir, {
+                    spelling: work.place.spelling,
+                    flavor: work.place.flavor,
+                    background: (dir, spelling) => ({
+                      flavor: work.place.flavor,
+                      dataDir: dir,
+                      spelling,
+                      homeDir: homedir(),
+                      uid: process.getuid?.() ?? userInfo().uid,
+                      ...serviceManager,
+                    }),
+                    launcher: work.launcher,
+                    env: work.backgroundEnv,
+                    log: workLog(dataDir),
+                  });
+                },
+              }
+            : {}),
           startAtLogin: () => {
             // A development run's rehearsal leaves this computer's login items alone.
             if (isDev) return;

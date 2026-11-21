@@ -4,11 +4,12 @@ import { basename, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { pauseInBackground, writeInstalled } from "../helper/background";
-import { moveWork } from "../helper/moveWork";
+import { pauseInBackground, readInstalled, writeInstalled } from "../helper/background";
+import { handBackgroundOver, moveWork } from "../helper/moveWork";
 import { helperPlace } from "../helper/place";
 import { SESSION_AGENT_FILE } from "../helper/runAgent";
 import { isProfileRetired } from "../storage/retiredProfile";
+import { runMove } from "./move";
 import {
   olderRunAgent,
   runsUnderAgent,
@@ -329,5 +330,103 @@ describe("taking over from the older copy that holds the saved work", () => {
     expect(isProfileRetired(at.from)).toBe(true);
     expect(existsSync(join(at.appData, "infinitary", "work", "home.json"))).toBe(true);
     expect(notes[0]).toContain(`after letting its agent ${OLDER_LABEL} go`);
+  });
+  // The captain's choice on the review: background work, which nobody watches, stops only an older work run.
+  it("leaves a run a command started to the person when the work run moves", async () => {
+    const at = olderFolder();
+    writeFileSync(join(at.work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
+    const holder = await started(at.from, ["run"]);
+    const place = helperPlace({
+      packaged: true,
+      flavor: "release",
+      appData: at.appData,
+      env: {},
+      spelling: "inf",
+    });
+    const moved = await moveWork({
+      place,
+      background: (dataDir, spelling) => ({
+        flavor: "release",
+        dataDir,
+        spelling,
+        homeDir: at.homeDir,
+        uid: 502,
+        launchctl: async (args) => {
+          at.asked.push([...args]);
+          return { ok: true, output: "" };
+        },
+      }),
+      launcher: { executable: "/opt/infinitary/infinitary", args: [] },
+      env: {},
+      deps: {
+        platform: "linux",
+        claudeConfigDir: scratchDir("infinitary-take-over-claude-"),
+        hostname: HOSTNAME,
+      },
+      takeOver: { platform: process.platform, programs: PROGRAMS, runsUnder: () => false },
+      log: () => {},
+    });
+    expect(moved).toEqual({ kind: "stayed", dataDir: at.work });
+    expect(stillRunning(holder)).toBe(true);
+    expect(holder.said()).toEqual(["holding"]);
+    expect(at.asked).toEqual([]);
+    expect(isProfileRetired(at.from)).toBe(false);
+  });
+
+  // The captain's choice on the review: after the window's move the background goes to the new label, as the work run's does.
+  it("hands the older background to Infinitary's label after the window's take-over and move", async () => {
+    const at = olderFolder();
+    writeFileSync(join(at.work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
+    mkdirSync(join(at.homeDir, "Library", "LaunchAgents"), { recursive: true });
+    writeFileSync(at.service.file, "<plist/>\n");
+    const holder = await started(at.from, ["work", "run"]);
+    const place = helperPlace({
+      packaged: true,
+      flavor: "release",
+      appData: at.appData,
+      env: {},
+      spelling: "inf",
+    });
+    const move = place.move;
+    if (!move) throw new Error("The scratch older folder should be due to move.");
+    expect(await takeOverOlderCopy(at.from, at.deps)).toMatchObject({ kind: "stopped" });
+    expect(await holder.ended).toEqual({ code: 0, signal: null });
+    const deps = {
+      platform: process.platform,
+      claudeConfigDir: scratchDir("infinitary-take-over-claude-"),
+      hostname: HOSTNAME,
+    };
+    expect((await runMove(move, deps)).kind).toBe("moved");
+    const dataDir = join(move.to, "work");
+    const label = workLabelOf("inf", "release");
+    const handed = await handBackgroundOver(dataDir, {
+      spelling: "inf",
+      flavor: "release",
+      background: (dir, spelling) => ({
+        flavor: "release",
+        dataDir: dir,
+        spelling,
+        homeDir: at.homeDir,
+        uid: 502,
+        launchctl: async (args) => {
+          at.asked.push([...args]);
+          return { ok: true, output: "" };
+        },
+      }),
+      launcher: { executable: "/Applications/Infinitary.app/Contents/MacOS/Infinitary", args: [] },
+      env: {},
+      log: () => {},
+    });
+    expect(handed).toBe(true);
+    expect(readInstalled(dataDir).service?.label).toBe(label);
+    expect(existsSync(at.service.file)).toBe(false);
+    expect(existsSync(join(at.homeDir, "Library", "LaunchAgents", `${label}.plist`))).toBe(true);
+    expect(at.asked[0]).toEqual(["bootout", `gui/502/${OLDER_LABEL}`]);
+    expect(at.asked).toContainEqual([
+      "bootstrap",
+      "gui/502",
+      join(at.homeDir, "Library", "LaunchAgents", `${label}.plist`),
+    ]);
+    expect(at.asked.at(-1)).toEqual(["bootout", `gui/502/${OLDER_LABEL}`]);
   });
 });

@@ -126,10 +126,10 @@ A window's saved work in that folder moves with it, as the window's own move wou
 ### An older copy still running
 
 An older copy may still hold the older folder with no window: its background work, by `work/running.lock`, or a run a command started, such as one left in a terminal, by Chromium's `SingletonLock` (INF-5468's plan, piece 3).
-The hand-over and the work run take over from it before the move instead of refusing (`src/core/folderMove/takeOver.ts`):
+The hand-over takes over from either before the move instead of refusing, and the work run from background work only, since nobody watches it stop a first mate the person runs (`src/core/folderMove/takeOver.ts`):
 
 1. It reads the process the lock names and confirms by its program that it is Infinitary or Firstmate 3000, on a Mac from `ps` and on Linux from `/proc/<pid>/cmdline`; `work run` among its arguments is background work, `run` a command's run, and neither a window.
-2. For background work it lets go of the agent the older folder's `installed.json` records, as an update's pause does (`pauseInBackground`), so the service manager does not start that run again, unless this process is that agent's own run (`runsUnderAgent`).
+2. For background work it lets go of the agent the older folder's `installed.json` records, as an update's pause does (`pauseInBackground`), so the service manager does not start that run again while the move runs, unless this process is that agent's own run (`runsUnderAgent`).
    A run's own start entry, the run agent the window or `start-at-boot` sets up, stays: it starts the run again only after a failure, never after a clean stop (`docs/run.md`).
 3. It sends the ordinary stop, which saves and exits, and waits up to fifteen seconds for the lock to be let go (`STOPPED_RUN_WAIT_MS`), then makes the move.
 
@@ -139,6 +139,7 @@ Stop it now first lets go of a run's start entry (`olderRunAgent`), from whichev
 Whenever the hand-over ends without moving before anything was committed - Quit, a closed window, a later refusal or the question about both folders - the agents the take-over let go start again (`resumeInBackground`), so the older copy runs as it did.
 The work run starts them again only when it ends without the work, to be started again itself; when it carries the work on from the older folder instead, the older agent stays let go, so the two do not take turns at the folder.
 Once the move committed, the older folder is a frozen recovery copy, and nothing starts on it again.
+Once the work is in, the hand-over hands the background to Infinitary's label, set up anew from the moved folder, and the older agent and its file go, as the work run's move does (`handBackgroundOver`, `docs/helper.md`, "Under the other name"), so the older agent does not start its program again at the next login.
 An older copy with its window open keeps the person's own Quit and the refusal's words, and a process that is not ours, or whose program cannot be read (Windows), is never stopped, so the refusal stands.
 Once taken over, a copy that holds the folder again shows the refusal, and Try again takes over once more.
 

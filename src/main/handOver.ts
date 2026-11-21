@@ -27,8 +27,9 @@ import { standaloneDocument, standaloneWindow } from "./savedDataRefusal";
  * does not (src/core/folderMove/takeOver.ts). While it counts,
  * copies and checks, Quit, continue later stops the move - which leaves
  * nothing changed - and quits; the next launch starts it again. Once the work is in,
- * it turns on start at login when the older app had it, and starts the app
- * again on its own folder.
+ * it turns on start at login when the older app had it, hands the work's
+ * background to this app's own label, and starts the app again on its own
+ * folder.
  *
  * Chromium keeps its own files in userData from the moment it starts, so
  * the hand-over runs on a throwaway profile of its own beside the folders
@@ -49,6 +50,8 @@ export type HandOverOptions = {
   takeOver?: TakeOverDeps;
   /** Turns start at login on for this app. */
   startAtLogin: () => void;
+  /** Hands the moved work's background to this app's own label, so the older agent's file starts nothing again (`handBackgroundOver`). */
+  handBackground?: () => Promise<unknown>;
   /** Starts the app again, now on its own folder, and ends this process. */
   relaunch: () => void;
   quit: () => void;
@@ -102,6 +105,8 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
     options.quit();
   };
+  // Once the work is in, the background goes to this app's label with it; a failure leaves it for the work check.
+  const handBackground = () => options.handBackground?.().catch(() => undefined);
   let closed = false;
   let takingOver = false;
   win.on("closed", () => {
@@ -214,6 +219,7 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       if (stop.signal.aborted) {
         if (outcome.kind === "moved") {
           if (outcome.startAtLogin) options.startAtLogin();
+          await handBackground();
           finished = true;
           options.quit();
         } else await leave();
@@ -257,8 +263,9 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
               await leave();
               return;
             }
-            await show({ kind: "stopping" });
+            // Taking over from here on: a close during the stopping view waits for the forced end, then leaves.
             takingOver = true;
+            await show({ kind: "stopping" });
             const forced = await stopOlderCopyNow(move.from, taken.pid, options.takeOver).finally(
               () => {
                 takingOver = false;
@@ -284,6 +291,7 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       if (outcome.kind === "moved") {
         await show({ kind: "moved" });
         if (outcome.startAtLogin) options.startAtLogin();
+        await handBackground();
         // Long enough to read that the work is in before the window gives way to the app.
         await new Promise((resolve) => setTimeout(resolve, READY_HOLD_MS));
       }

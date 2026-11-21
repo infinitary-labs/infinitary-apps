@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import type { MoveDeps } from "../folderMove/move";
-import type { TakeOverDeps } from "../folderMove/takeOver";
+import { type TakeOverDeps, takeOverOlderCopy } from "../folderMove/takeOver";
 import { isProfileRetired } from "../storage/retiredProfile";
 import {
   type BackgroundContext,
@@ -27,14 +27,15 @@ import { type HelperPlace, workFolderNow } from "./place";
  * folder, and only a process other than the agent's own run can set up an
  * agent anew under the same label.
  *
- * An older copy with no window holding the older folder - its background
- * work, or a run a command started - is taken over first, as the window's
- * hand-over does (src/core/folderMove/takeOver.ts): its agent let go, the
- * ordinary stop sent, and the move made once it let the folder go. One that
- * does not stop, another move under way, or a move committed and not
- * finished ends this run, and the background starts it again. Any other
- * refusal leaves the work where it is for this run, which goes on from the
- * older folder, and the next run tries again.
+ * An older copy's background work holding the older folder is taken over
+ * first, as the window's hand-over does (src/core/folderMove/takeOver.ts):
+ * its agent let go, the ordinary stop sent, and the move made once it let
+ * the folder go. A run a command started is a first mate the person runs,
+ * so, like the older app's window, it is theirs to stop: nobody watches this
+ * run. An older work run that does not stop, another move under way, or a
+ * move committed and not finished ends this run, and the background starts
+ * it again. Any other refusal leaves the work where it is for this run,
+ * which goes on from the older folder, and the next run tries again.
  */
 
 export type MoveWorkOptions = {
@@ -84,11 +85,7 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
   // work from the older folder itself, and once committed the older folder
   // is a frozen recovery copy that nothing should start on again.
   let resumeOnLater = async () => {};
-  if (
-    outcome.kind === "refused" &&
-    (outcome.refusal.reason === "old-work-running" || outcome.refusal.reason === "old-app-open")
-  ) {
-    const { takeOverOlderCopy } = await import("../folderMove/takeOver");
+  if (outcome.kind === "refused" && outcome.refusal.reason === "old-work-running") {
     const background = options.background(place.dataDir, place.folderSpelling);
     const deps: TakeOverDeps = {
       platform: options.deps.platform,
@@ -143,24 +140,34 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
   });
   if (now.dataDir !== join(move.to, "work")) return stay("its work is not in this app's folder");
   log(`moved the work from ${move.from} into ${move.to}`);
-  return handOver(now.dataDir, options);
+  return (await handBackgroundOver(now.dataDir, { ...options, ...place }))
+    ? { kind: "handed-over" }
+    : { kind: "here", dataDir: now.dataDir };
 }
+
+/** What handing the background over takes: the app's own spelling and flavor, and how to set up its agent. */
+export type BackgroundHandOver = Pick<HelperPlace, "spelling" | "flavor"> &
+  Pick<MoveWorkOptions, "background" | "launcher" | "env" | "log">;
 
 /**
  * Hands the background to this app's own label, set up anew from the work
  * folder it moved into; the agent recorded before it goes last, which ends
- * this run when it is that agent's own. With no agent, or one under this
- * app's label already, the run goes on from the folder. A new agent the
- * service manager refuses leaves the one before running as it was, and the
- * next run tries again.
+ * this run when it is that agent's own. The work run calls it after its
+ * move, and so does the window's hand-over, so the older agent's file does
+ * not start the older program again at the next login. True once the new
+ * agent runs the work. With no agent, or one under this app's label
+ * already, nothing changes. A new agent the service manager refuses leaves
+ * the one before as it was, its file naming this folder, and the next run
+ * tries again.
  */
-async function handOver(dataDir: string, options: MoveWorkOptions): Promise<MovedWork> {
-  const { place } = options;
+export async function handBackgroundOver(
+  dataDir: string,
+  options: BackgroundHandOver,
+): Promise<boolean> {
   const installed = readInstalled(dataDir);
-  const background = options.background(dataDir, place.spelling);
-  const label = workLabelOf(place.spelling, place.flavor);
-  if (!installed.service || !background || installed.service.label === label)
-    return { kind: "here", dataDir };
+  const background = options.background(dataDir, options.spelling);
+  const label = workLabelOf(options.spelling, options.flavor);
+  if (!installed.service || !background || installed.service.label === label) return false;
   const moved = await moveInBackground(background, {
     label,
     launcher: fetchedLauncher(installed.app) ?? options.launcher,
@@ -176,8 +183,8 @@ async function handOver(dataDir: string, options: MoveWorkOptions): Promise<Move
       app: installed.app,
     });
     options.log("could not start the background under this app's own label");
-    return { kind: "here", dataDir };
+    return false;
   }
   await moved.retire();
-  return { kind: "handed-over" };
+  return true;
 }

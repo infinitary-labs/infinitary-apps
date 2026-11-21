@@ -23,9 +23,6 @@ import { hostEnv } from "../hostEnv";
  * stop did not work (`stopOlderCopyNow`).
  */
 
-/** What holds the older folder: a process, by the lock that names it. */
-export type OlderHolder = { pid: number; lock: "window" | "work" };
-
 /** A process's program and the arguments after it. */
 export type ProcessCommand = { program: string; args: string[] };
 
@@ -131,16 +128,13 @@ export function chromiumHolder(
   return holderAlive(lock, pid, alive) ? pid : null;
 }
 
-/** What holds the older folder now: a window or a run by its Chromium lock, or its background work by `work/running.lock`. */
+/** The process holding the older folder now: a window or a run by its Chromium lock, or its background work by `work/running.lock`. */
 export function olderHolder(
   from: string,
   hostname: string,
   alive: (pid: number) => boolean = processAlive,
-): OlderHolder | null {
-  const window = chromiumHolder(from, hostname, alive);
-  if (window !== null) return { pid: window, lock: "window" };
-  const work = folderHolder(join(from, "work"), alive);
-  return work === null ? null : { pid: work, lock: "work" };
+): number | null {
+  return chromiumHolder(from, hostname, alive) ?? folderHolder(join(from, "work"), alive);
 }
 
 function run(program: string, args: readonly string[]): Promise<string | null> {
@@ -223,7 +217,7 @@ async function letGo(from: string, pid: number, deps: TakeOverDeps, waitMs: numb
   const alive = deps.alive ?? processAlive;
   const until = Date.now() + waitMs;
   for (;;) {
-    if (olderHolder(from, deps.hostname, alive)?.pid !== pid) return true;
+    if (olderHolder(from, deps.hostname, alive) !== pid) return true;
     if (Date.now() >= until) return false;
     await new Promise((resolve) => setTimeout(resolve, READ_EVERY_MS));
   }
@@ -246,13 +240,13 @@ async function identify(
   | { kind: "left"; why: "window" | "not-ours" }
   | { kind: "ours"; pid: number; copy: OlderCopy }
 > {
-  const holder = olderHolder(from, deps.hostname, deps.alive ?? processAlive);
-  if (!holder) return { kind: "free" };
-  const command = await (deps.command ?? ((pid) => processCommand(pid, deps.platform)))(holder.pid);
+  const pid = olderHolder(from, deps.hostname, deps.alive ?? processAlive);
+  if (pid === null) return { kind: "free" };
+  const command = await (deps.command ?? ((pid) => processCommand(pid, deps.platform)))(pid);
   const copy = command ? olderCopyOf(command, deps.programs) : null;
   if (!copy) return { kind: "left", why: "not-ours" };
   if (copy === "window") return { kind: "left", why: "window" };
-  return { kind: "ours", pid: holder.pid, copy };
+  return { kind: "ours", pid, copy };
 }
 
 /**

@@ -34,6 +34,8 @@
     "electron.vite.config.ts",
     "vitest.config.ts",
     "scripts/**/*.ts",
+    // The docs site's languages; its scripts and checks read them here (docs/docs-site.md, "Languages").
+    "docs-site/languages.ts",
     "tests/**/*.ts",
     // The card geometry is pure arithmetic the e2e specs read their layout
     // constants from (docs/testing.md, the e2e assertion contract). The crew

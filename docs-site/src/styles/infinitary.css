@@ -8,11 +8,19 @@
  */
 @import "../../../.claude/skills/infinitary-design/tokens/colors.css";
 @import "../../../.claude/skills/infinitary-design/tokens/fonts.css";
+/*
+ * The type tokens give each script Space Grotesk does not draw the visitor's
+ * own typeface for it, by the page's lang, with tracking at zero
+ * (docs/docs-site.md, "Languages"). They sit in the lowest layer, below all
+ * of Starlight's, so only their custom properties and Arabic's zero tracking
+ * reach the site, never the app window's own body and link rules.
+ */
+@import "../../../.claude/skills/infinitary-design/tokens/typography.css" layer(starlight.base.tokens);
 
 :root,
 :root[data-theme="light"] {
-  --sl-font: "Space Grotesk", system-ui, sans-serif;
-  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --sl-font: var(--font-ui);
+  --sl-font-mono: var(--font-mono);
 
   --sl-color-accent-low: var(--accent-dim);
   --sl-color-accent: var(--accent-strong);
@@ -115,4 +123,24 @@ li > .task-mark:first-child {
 }
 .task-mark-track {
   stroke: var(--line-2);
+}
+
+/*
+ * A key reads as the app prints it in every language: inside right-to-left
+ * text, ⇧⌘] keeps its order and its bracket (docs/docs-site.md, "Languages").
+ * Keys written in a translated page's prose sit in <bdi dir="ltr"> for the same reason.
+ */
+kbd {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/*
+ * Pagefind places the search icon at the form's left edge, where the field
+ * starts in left-to-right text. In right-to-left text on a narrow screen,
+ * Starlight's Cancel button takes that edge and the field starts after it,
+ * so the icon moves past the button into the field.
+ */
+[dir="rtl"] #starlight__search .pagefind-ui__form::before {
+  left: calc(var(--sl-search-cancel-space) + 20px * var(--pagefind-ui-scale));
 }

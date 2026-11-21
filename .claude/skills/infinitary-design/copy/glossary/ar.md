@@ -21,7 +21,9 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
 | an automation | أتمتة | One is "أتمتة" ("هذه الأتمتة"), several are "عمليات الأتمتة". |
 | Appearance | المظهر | |
+| Approve and build / Save and defer (a plan card's buttons) | «الموافقة والبناء» / «الحفظ والتأجيل» | |
 | Approves secret uses (switch) | «يوافق على استخدام الأسرار» | The computer's Settings → Devices should show the same words. |
+| Ask before merging (a project's switch) | «السؤال قبل الدمج» | |
 | Asks first | يسأل أولًا | |
 | Automation | الأتمتة | |
 | backlog | قائمة المهام المؤجلة | |
@@ -44,6 +46,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
 | credits (a provider's, paid past the allowance) | الاعتمادات | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | الطاقم | |
+| crew's browser | متصفح الطاقم | |
 | crewmate | فرد الطاقم | Plural "أفراد الطاقم"; masculine default. |
 | custom API | API مخصصة | A connection to a model server the person adds; "اتصال API مخصص" for the connection itself. |
 | decision records | سجلات القرارات | What Contribution sends; "redacted" is "منقّحة". |
@@ -69,6 +72,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | font (Settings → Appearance) | خط | |
 | form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
 | gate (the checks work passes before it merges) | بوابة | As in "بوابة الجودة", the usual Arabic for a quality gate. |
+| Got it (a note's button) | «فهمت» | |
 | graph | المخطط | |
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
@@ -77,6 +81,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | inspector | التفاصيل | The side pane that shows one entry. |
 | Integrations | التكاملات | |
 | Intelligence | الذكاء | |
+| job (one a computer's scheduler keeps running) | عملية | Plural "عمليات"; kept apart from "مهمة", a task. |
 | key (an integration's key) | مفتاح | Also a keyboard key; the sentence makes it clear. |
 | knowledge (Knowledge used) | المعرفة | "المعرفة المستخدمة"; a finding is "نتيجة" and a concept "مفهوم". |
 | Knowledge (panel) | المعرفة | "فتح المعرفة" for Open Knowledge. |
@@ -88,6 +93,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
 | main message | الرسالة الرئيسية | |
 | merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
+| merge card | بطاقة الدمج | |
 | merge queue (the host's own) | قائمة انتظار الدمج | |
 | Merges on its own | يدمج تلقائيًا | |
 | message box | مربع الرسالة | |
@@ -98,6 +104,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | out of reach | خارج المتناول | Chosen over "غير متصل", which is the "offline" the vocabulary avoids. |
 | panel | لوحة | Plural "لوحات"; "لوحة المفاتيح" stays the keyboard. |
 | passcode (iOS) | رمز الدخول | Apple's Arabic word. |
+| personal context | السياق الشخصي | |
 | phone | هاتف | |
 | pin / unpin (a task) | تثبيت / إلغاء التثبيت | |
 | plan (a task's plan) | خطة | |
@@ -108,6 +115,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | preset (keyboard) | الإعداد المسبق | |
 | project | مشروع | Plural "مشاريع". |
 | prompt (an automation's words) | الرسالة | What the first mate gets. |
+| prototype | تجربة أولية | "نموذج" names a model. |
 | provider | مزوّد | |
 | pull request | طلب سحب | The term Arabic Git and GitHub material uses; masculine. |
 | purge (task data) | محو | Stronger than "حذف", for removing every task at once; "مُحيت" for "purged". |
@@ -126,6 +134,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | report | تقرير | |
 | repository (one of a project's) | مستودع | Plural مستودعات; "إضافة مستودع", "{count} مستودعات". Names one of a project's repositories, or the thing on GitHub. |
 | review | المراجعة | |
+| Review carefully (a merge card's button) | «مراجعة متأنية» | Echoes "متأنٍّ" for Careful. |
 | revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |
 | revision (of a knowledge entry) | التعديل | "التعديل {revision}"; "المراجعة" is the review and "نسخة" a version. |
 | rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
@@ -139,12 +148,14 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | session, transcript (never said) | المحادثة | |
 | Settings | الإعدادات | |
 | sign-in / sign in | تسجيل الدخول / سجّل الدخول | The usual Arabic interface words. |
+| standing direction | توجيه دائم | Plural "توجيهات دائمة". |
 | start | بدء | "بدأت" in the feed. |
 | starter | عبارة بدء | The ready sentence the person presses to begin. |
 | Steer (button) | إرشاد | توجيه is a knowledge direction. |
 | stop | إيقاف | "إيقاف مؤقت" for pause. |
 | story (a change's) | قصة | |
 | subscription | اشتراك | |
+| take over (another computer's first mate) | التولّي | |
 | task | مهمة | Feminine, plural "مهام"; feed lines about a task agree in the feminine. |
 | task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |
 | Text size; Text Size, Control Center (iOS's own names) | حجم النص; حجم النص, مركز التحكم | iOS's own Arabic names for the control. |

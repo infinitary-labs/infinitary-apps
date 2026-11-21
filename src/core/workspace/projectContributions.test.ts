@@ -25,6 +25,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   createForgeResolver,
   type Forge,
+  ForgeAllowanceSpent,
   type ForgeLocation,
   type ForgePull,
   ForgeWriteError,
@@ -673,6 +674,21 @@ describe("approved once-per-project contribution consent", () => {
     expect(world.create).toHaveBeenCalledTimes(2);
     expect(world.repos.get(world.repo.id)?.contribution?.fork).toEqual(world.fork);
     expect(world.events.at(-1)).toMatchObject({ type: "repo_configured", repoId: world.repo.id });
+  });
+
+  // A spent allowance is the host refusing before it did anything, as Bitbucket's 429 on its workspace reads.
+  it("allows another explicit fork attempt after the host's allowance ran out", async () => {
+    const world = await fixture(false);
+    world.create.mockRejectedValueOnce(
+      new ForgeAllowanceSpent(Date.now() + 60_000, "The host's hourly allowance is spent."),
+    );
+    const service = world.make();
+    await service.discover(world.repo.id);
+    await service.answer(world.choose(world.offer(), "make-fork"));
+    expect(world.repos.get(world.repo.id)?.contribution?.creationAttempted).toBe(false);
+    await service.answer(world.choose(world.offer(), "make-fork"));
+    expect(world.create).toHaveBeenCalledTimes(2);
+    expect(world.repos.get(world.repo.id)?.contribution?.fork).toEqual(world.fork);
   });
 
   it("a work computer fetches upstream but sends its task branch only to the owned fork", async () => {

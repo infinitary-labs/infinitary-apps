@@ -33,7 +33,11 @@ import {
 } from "./api";
 import { BitbucketClient, type BitbucketOptions, BitbucketRefusal, sentNothing } from "./client";
 import { readBitbucketPullComments } from "./comments";
-import { BitbucketContributions, bitbucketRepositoryNumber } from "./contributions";
+import {
+  BitbucketContributions,
+  bitbucketRepositoryNumber,
+  repositoryPathOf,
+} from "./contributions";
 import { BitbucketProjects } from "./projects";
 import { BitbucketWorkflows } from "./workflows";
 
@@ -557,13 +561,10 @@ export class BitbucketForge implements Forge {
    * anything else, pending and an unknown task included, is not refused.
    */
   async mergeTaskRefused(number: number, task: string): Promise<boolean> {
-    const kept = /^(\d+)\/(.+)$/.exec(task);
-    if (!kept || Number(kept[1]) !== number) return false;
+    const path = this.mergeTaskPath(task, number);
+    if (!path) return false;
     try {
-      await this.client.request(
-        "GET",
-        `${this.pullRequestPath(number)}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`,
-      );
+      await this.client.request("GET", path);
       return false;
     } catch (caught) {
       if (caught instanceof BitbucketRefusal && caught.status === 400) return true;
@@ -576,14 +577,12 @@ export class BitbucketForge implements Forge {
    * queue holds the pull request: a pending task with the queue's entry.
    */
   private async mergeTaskQueued(task: string): Promise<boolean> {
-    const kept = /^(\d+)\/(.+)$/.exec(task);
-    if (!kept) return false;
+    const path = this.mergeTaskPath(task);
+    if (!path) return false;
     const status = await this.read<{
       task_status?: unknown;
       queued_pullrequest?: unknown;
-    } | null>(
-      `${this.pullRequestPath(Number(kept[1]))}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`,
-    );
+    } | null>(path);
     return status?.task_status === "PENDING" && !!status.queued_pullrequest;
   }
 
@@ -937,6 +936,13 @@ export class BitbucketForge implements Forge {
     return `${id}/${decodeURIComponent(task)}`;
   }
 
+  /** The status path of a kept `<N>/<task>` merge reference; with a number, only that pull request's. */
+  private mergeTaskPath(task: string, number?: number): string | undefined {
+    const kept = /^(\d+)\/(.+)$/.exec(task);
+    if (!kept || (number !== undefined && Number(kept[1]) !== number)) return undefined;
+    return `${this.pullRequestPath(Number(kept[1]))}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`;
+  }
+
   private pullRequestPath(id: number): string {
     return `${this.repositoryPath()}/pullrequests/${id}`;
   }
@@ -948,12 +954,6 @@ const MERGE_STRATEGY: Readonly<Record<MergeWay, string>> = {
   rebase: "rebase_merge",
   merge: "merge_commit",
 };
-
-/** A repository's API path from its `workspace/name`. */
-function repositoryPathOf(fullName: string): string {
-  const [workspace = "", name = ""] = fullName.split("/");
-  return `/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(name)}`;
-}
 
 function numbered(change: ForgeChange, place: string): number {
   if (change.number === undefined)

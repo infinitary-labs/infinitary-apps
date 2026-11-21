@@ -32,6 +32,12 @@ export function bitbucketRepositoryNumber(uuid: unknown): number | undefined {
   return Number.isSafeInteger(id) && id > 0 ? id : undefined;
 }
 
+/** A repository's API path from its `workspace/name`. */
+export function repositoryPathOf(fullName: string): string {
+  const [workspace = "", name = ""] = fullName.split("/");
+  return `/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(name)}`;
+}
+
 /**
  * Contributing through a fork on Bitbucket Cloud (docs/forge.md,
  * "Contributing through an owned fork"). Whether the sign-in may push is
@@ -48,7 +54,7 @@ export class BitbucketContributions implements ForgeContributions {
   ) {}
 
   private path(): string {
-    return `/repositories/${encodeURIComponent(this.workspace)}/${encodeURIComponent(this.slug)}`;
+    return repositoryPathOf(`${this.workspace}/${this.slug}`);
   }
 
   private identity(repository: Repository | null | undefined): ContributionProject {

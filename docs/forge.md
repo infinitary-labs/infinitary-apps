@@ -309,7 +309,7 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 
 ## Bitbucket pull requests
 
-A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, merges the pull request with a squash where the main branch allows one.
+A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, merges the pull request with a squash where the main branch allows one, otherwise a rebase merge, then a merge commit.
 Before it sends the merge, the app reads that the branch is still at the checked version and that Bitbucket reports no conflict, draft or blocking rule.
 Bitbucket's merge itself holds to no version, so a push in the moment after that read goes in with it, and the app says so rather than promising the checked version alone.
 That is the chosen guarantee: the merge stays one click, best effort at the checked version, with this limit said in the release note and on the task, rather than handing the merge to Bitbucket until it can hold a merge to a version.
@@ -1453,7 +1453,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The app checks new save-point subjects and change titles against the active naming runbook's rule before opening and putting in a change (`docs/runbooks.md`, Commit and PR naming); it holds no form of its own.
 The built-in Commit and PR naming runbook asks for `type(scope): summary` or `type: summary`: the scope is optional and open-ended, the types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs` and `perf`, and a breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
 A runbook that replaces it decides all of this instead, and with no naming runbook on no name is checked.
-An existing change's current title on GitHub, GitLab or Bitbucket is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), GitLab a squash or merge commit whose message is the title, a blank line and the description, and Bitbucket a squash whose commit message is the title, a blank line and the description.
+An existing change's current title on GitHub, GitLab or Bitbucket is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), GitLab a squash or merge commit whose message is the title, a blank line and the description, and Bitbucket a squash, a rebase merge or a merge commit, as its main branch allows, whose commit message is the title, a blank line and the description.
 The app does not rewrite older commits; incoming commits are checked relative to the common base.
 For a change it opens or puts in, that base is measured from the fetched `origin/<default>` when it exists, so a local default branch this Mac has not pulled never makes merged commits look like the branch's own.
 Merge commits are skipped: git names them, and they bring in no work of the branch's own.

@@ -30,7 +30,7 @@ import { join } from "node:path";
  * with 400 and answering the merged pull request otherwise. A branch names
  * the merge strategies its pull requests may use; with a merge queue on, a
  * merge answers 202 with its task's link and the pull request reads
- * `queued` until the queue merges or removes it; the app's own comments are
+ * `queued` until the queue merges it; the app's own comments are
  * kept, listed, replaced and deleted; and a deleted branch is gone.
  */
 export const BITBUCKET_STUB_KEY = "ATATT3xFfGF0hermetic_sign-in-key=0A1B2C3D";
@@ -124,8 +124,6 @@ type StubPullRequest = {
   draft: boolean;
   /** The merge queue holds it, with the merge it was asked for. */
   queued?: { strategy: string; message: string };
-  /** The queue removed it without merging. */
-  removed?: boolean;
   comments: StubComment[];
   /** The version it merged, once merged. */
   mergedHead?: string;
@@ -153,8 +151,6 @@ export async function startBitbucketStub() {
   let approvalRequired = false;
   /** Bitbucket answers a merge 202 and is still merging it in the background. */
   let mergesLater = false;
-  /** Main's merge strategies. */
-  let strategies = EVERY_STRATEGY;
   /** Main has Bitbucket's merge queue: a merge request joins it. */
   let queueOn = false;
   /** Each pull request's own build statuses on its head, newest last, by its number; one naming a head holds only for that version. */
@@ -291,8 +287,8 @@ export async function startBitbucketStub() {
           type: "branch",
           name: branch,
           target: { type: "commit", hash: head },
-          merge_strategies: strategies,
-          default_merge_strategy: strategies[0],
+          merge_strategies: EVERY_STRATEGY,
+          default_merge_strategy: EVERY_STRATEGY[0],
         });
       return true;
     }
@@ -432,11 +428,6 @@ export async function startBitbucketStub() {
           task_status: "PENDING",
           queued_pullrequest: { type: "queued_pullrequest", status: "QUEUED", rank: 1 },
         });
-      else if (request.removed)
-        send(400, {
-          type: "error",
-          error: { message: "The pull request left the merge queue without merging." },
-        });
       else send(200, { task_status: "PENDING" });
     } else if (method === "POST" && part === "/merge") {
       onMergeRequest();
@@ -462,7 +453,6 @@ export async function startBitbucketStub() {
           strategy: String(body.merge_strategy ?? "merge_commit"),
           message: String(body.message ?? ""),
         };
-        request.removed = false;
         send(202, null, taskLink);
       } else {
         mergeNow(
@@ -636,10 +626,6 @@ export async function startBitbucketStub() {
       pullRequests.set(request.id, request);
       return request.id;
     },
-    /** Main's merge strategies, as its branch settings allow them. */
-    setMergeStrategies: (next: string[]) => {
-      strategies = next;
-    },
     /** One pull request's own build statuses on its head, by its number; with a head, only on that version. */
     setPullRequestStatuses: (id: number, next: BitbucketStubStatus[], head?: string) => {
       pullStatuses.set(id, [
@@ -669,14 +655,6 @@ export async function startBitbucketStub() {
       const head = request ? headOfRequest(request) : undefined;
       if (!request?.queued || !head) throw new Error(`The merge queue does not hold #${id}.`);
       mergeNow(request, head, request.queued.strategy, request.queued.message);
-    },
-    /** The merge queue removes a pull request it holds without merging it. */
-    removeQueued: (id: number) => {
-      const request = pullRequests.get(id);
-      if (request?.queued) {
-        request.queued = undefined;
-        request.removed = true;
-      }
     },
     /** Each pull request as Bitbucket holds it now, oldest first. */
     pullRequests: () =>

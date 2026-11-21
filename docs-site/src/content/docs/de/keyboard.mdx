@@ -1,0 +1,603 @@
+---
+title: Tastatur
+description: Jeder Befehl, den du in Infinitary über die Tastatur ausführen kannst, und seine Tasten in jeder Vorlage auf einem Mac und unter Linux.
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Alles in Infinitary funktioniert über die Tastatur.
+Tab springt zwischen den Bedienelementen, und die Pfeiltasten bewegen sich innerhalb einer Liste.
+
+## Befehlssuche {#command-search}
+
+Drück <kbd>⌘K</kbd> auf einem Mac oder <kbd>Ctrl+K</kbd> unter Linux, um die Befehlssuche zu öffnen.
+Schreib ein paar Wörter, wähl einen Befehl mit den Pfeiltasten und drück Enter.
+Jeder Befehl auf dieser Seite ist dort zu finden, mit seiner Taste daneben, auch die Befehle ohne Taste.
+
+## Vorlagen {#presets}
+
+Infinitary bringt Tastensätze mit, die Vorlagen heißen: Vim, Emacs, VS Code, Tmux, Legacy.
+Eine neue Installation beginnt mit Vim.
+Legacy wird nur angeboten, wenn du Infinitary schon verwendet hast, bevor es Vorlagen gab.
+Wähl eine Vorlage in den **Einstellungen** unter **Tastatur**.
+
+## Eine Taste ändern {#change-a-key}
+
+In den **Einstellungen** unter **Tastatur** hat jeder Befehl **Aufnehmen**, **Entfernen** und **Zurücksetzen**.
+Drück **Aufnehmen**, dann die gewünschten Tasten und dann Enter, um sie zu speichern.
+Wenn ein anderer Befehl diese Tasten schon verwendet, sagt Infinitary dir, welcher, bevor sich etwas ändert.
+
+## Jeder Befehl und seine Tasten {#every-command-and-its-keys}
+
+Ein Strich bedeutet, dass der Befehl noch keine Taste hat: Führ ihn über die Befehlssuche aus oder gib ihm eine eigene Taste.
+Zwei Tasten mit einem Leerzeichen dazwischen werden nacheinander gedrückt.
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**überall im Fenster**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Befehle suchen | <kbd>&#58;</kbd> wenn du nicht schreibst, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> wenn du nicht schreibst, <kbd>Ctrl+K</kbd> |
+| Zur Hauptnachricht gehen | <kbd>I</kbd> wenn du nicht schreibst, <kbd>⌘L</kbd> | <kbd>I</kbd> wenn du nicht schreibst, <kbd>Ctrl+L</kbd> |
+| Zur Antwort der Karte gehen | <kbd>R</kbd> wenn du nicht schreibst, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+L</kbd> |
+| Zum Inhalt der Karte gehen | <kbd>G C</kbd> wenn du nicht schreibst | <kbd>G C</kbd> wenn du nicht schreibst |
+| Zu den Tasten der Karte gehen | <kbd>G A</kbd> wenn du nicht schreibst | <kbd>G A</kbd> wenn du nicht schreibst |
+| Die empfohlene Wahl drücken | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Die zweite Wahl drücken | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Die dritte Wahl drücken | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Die vierte Wahl drücken | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Zum nächsten Teil des Fensters gehen | <kbd>⌃W W</kbd> wenn du nicht schreibst, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Zum vorherigen Teil des Fensters gehen | <kbd>⌃W P</kbd> wenn du nicht schreibst, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Zum Teil des Fensters links gehen | <kbd>⌃W H</kbd> wenn du nicht schreibst, <kbd>⌃H</kbd> wenn du nicht schreibst | — |
+| Zum Teil des Fensters darunter gehen | <kbd>⌃W J</kbd> wenn du nicht schreibst, <kbd>⌃J</kbd> wenn du nicht schreibst | — |
+| Zum Teil des Fensters darüber gehen | <kbd>⌃W K</kbd> wenn du nicht schreibst, <kbd>⌃K</kbd> wenn du nicht schreibst | — |
+| Zum Teil des Fensters rechts gehen | <kbd>⌃W L</kbd> wenn du nicht schreibst, <kbd>⌃L</kbd> wenn du nicht schreibst | — |
+| Nach links | <kbd>H</kbd> wenn du nicht schreibst | <kbd>H</kbd> wenn du nicht schreibst |
+| Nach unten | <kbd>J</kbd> wenn du nicht schreibst, <kbd>⌃N</kbd> | <kbd>J</kbd> wenn du nicht schreibst |
+| Nach oben | <kbd>K</kbd> wenn du nicht schreibst, <kbd>⌃P</kbd> | <kbd>K</kbd> wenn du nicht schreibst |
+| Nach rechts | <kbd>L</kbd> wenn du nicht schreibst | <kbd>L</kbd> wenn du nicht schreibst |
+| Zum Anfang | <kbd>G G</kbd> wenn du nicht schreibst | <kbd>G G</kbd> wenn du nicht schreibst |
+| Zum Ende | <kbd>⇧G</kbd> wenn du nicht schreibst | <kbd>Shift+G</kbd> wenn du nicht schreibst |
+| Eine Seite nach oben | <kbd>⌃U</kbd> wenn du nicht schreibst, <kbd>⌃B</kbd> wenn du nicht schreibst | — |
+| Eine Seite nach unten | <kbd>⌃D</kbd> wenn du nicht schreibst, <kbd>⌃F</kbd> wenn du nicht schreibst | — |
+| Abbrechen | <kbd>⌃&#91;</kbd> | — |
+| Vorherige Arbeitscomputer | — | — |
+| Nächste Arbeitscomputer | — | — |
+| Auf ein Projekt konzentrieren | <kbd>G P</kbd> wenn du nicht schreibst, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+P</kbd> |
+| Alle Projekte anzeigen | — | — |
+| Vorherige Karte anzeigen | <kbd>⇧H</kbd> wenn du nicht schreibst, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Nächste Karte anzeigen | <kbd>⇧L</kbd> wenn du nicht schreibst, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Nächste neue Karte anzeigen | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Karte beiseitelegen | <kbd>Q</kbd> wenn du nicht schreibst, <kbd>⌃W C</kbd> wenn du nicht schreibst, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+M</kbd> |
+| Alle Karten beiseitelegen oder zurückholen | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| &#8222;Fertig&#8220; oder &#8222;Verstanden&#8220; der Notiz drücken | — | — |
+| Jede Wahl auf der Karte ablehnen | — | — |
+| Karte maximieren oder wiederherstellen | <kbd>⌃W O</kbd> wenn du nicht schreibst | — |
+| In dieser Karte suchen | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Nächsten Treffer suchen | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Vorherigen Treffer suchen | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Zum nächsten überarbeiteten Bereich gehen | <kbd>&#93; C</kbd> wenn du nicht schreibst | <kbd>&#93; C</kbd> wenn du nicht schreibst |
+| Zur nächsten Frage gehen | <kbd>&#125;</kbd> wenn du nicht schreibst, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> wenn du nicht schreibst, <kbd>Ctrl+J</kbd> |
+| Zur vorherigen Frage gehen | <kbd>&#123;</kbd> wenn du nicht schreibst, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+J</kbd> |
+| Zur nächsten unbeantworteten Frage gehen | — | — |
+| Auf einen Teil der Karte zeigen | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Verlauf der Karte ein- oder ausblenden | <kbd>Z A</kbd> wenn du nicht schreibst, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> wenn du nicht schreibst, <kbd>Ctrl+&#92;</kbd> |
+| Zu den neuen Nachrichten im Verlauf gehen | — | — |
+| Ton der Karte abspielen oder anhalten | — | — |
+| Info anzeigen | — | — |
+| Karten anzeigen | — | — |
+| Aktivität anzeigen | — | — |
+| Crewmitglied anzeigen | — | — |
+| Browser übernehmen oder zurückgeben | — | — |
+| Zur Browserseite wechseln | — | — |
+| Zurück zur Karte | — | — |
+| Aufgabe auf einen anderen Computer verschieben | — | — |
+| Aufgabe als erledigt schließen | — | — |
+| Browser anzeigen | — | — |
+| Nächster Tab | <kbd>G T</kbd> wenn du nicht schreibst, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> wenn du nicht schreibst |
+| Vorheriger Tab | <kbd>G ⇧T</kbd> wenn du nicht schreibst, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> wenn du nicht schreibst |
+| Find a task | <kbd>&#47;</kbd> wenn du nicht schreibst, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> wenn du nicht schreibst, <kbd>⌘B</kbd> | <kbd>G B</kbd> wenn du nicht schreibst, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Einstellungen öffnen | <kbd>G S</kbd> wenn du nicht schreibst, <kbd>⌘,</kbd> | <kbd>G S</kbd> wenn du nicht schreibst, <kbd>Ctrl+,</kbd> |
+| Tastatureinstellungen öffnen | <kbd>&#63;</kbd> wenn du nicht schreibst | <kbd>&#63;</kbd> wenn du nicht schreibst |
+| Panels anordnen | — | — |
+| Verfügbares Update anzeigen | — | — |
+| Später aktualisieren | — | — |
+| Nach Updates suchen | — | — |
+| Computer des ersten Offiziers aktualisieren | — | — |
+| Neuigkeiten anzeigen | — | — |
+| Antwort des ersten Offiziers öffnen | — | — |
+| Leitfäden öffnen | — | — |
+| Deinen Leitfäden-Ordner öffnen | — | — |
+| Nutzung öffnen | — | — |
+| Automatisierung öffnen | — | — |
+| Integrationen öffnen | — | — |
+| Alle Automatisierungen pausieren | — | — |
+| Ambient-Musik abspielen oder pausieren | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Einheit der Nutzung wechseln | — | — |
+| Kontingent erneut prüfen | — | — |
+| Alles größer machen | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Alles kleiner machen | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Zur üblichen Größe zurückkehren | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**in der Hauptnachricht und in der Antwort einer Karte**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Bis zum Zeilenanfang löschen | <kbd>⌃U</kbd> | — |
+| Bis zum Zeilenende löschen | <kbd>⌃K</kbd> | — |
+| Wort vor dem Cursor löschen | <kbd>⌃W</kbd> | — |
+| Zuletzt Gelöschtes wiederherstellen | <kbd>⌃Y</kbd> | — |
+
+**in der Hauptnachricht**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Zuletzt gesendete Nachricht zurückholen | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**überall im Fenster**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Befehle suchen | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| Zur Hauptnachricht gehen | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> wenn du nicht schreibst, <kbd>Ctrl+L</kbd> |
+| Zur Antwort der Karte gehen | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Zum Inhalt der Karte gehen | — | — |
+| Zu den Tasten der Karte gehen | — | — |
+| Die empfohlene Wahl drücken | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Die zweite Wahl drücken | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Die dritte Wahl drücken | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Die vierte Wahl drücken | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Zum nächsten Teil des Fensters gehen | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> wenn du nicht schreibst, <kbd>F6</kbd> |
+| Zum vorherigen Teil des Fensters gehen | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Zum Teil des Fensters links gehen | — | — |
+| Zum Teil des Fensters darunter gehen | — | — |
+| Zum Teil des Fensters darüber gehen | — | — |
+| Zum Teil des Fensters rechts gehen | — | — |
+| Nach links | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| Nach unten | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| Nach oben | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| Nach rechts | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| Zum Anfang | <kbd>&#60;</kbd> wenn du nicht schreibst | <kbd>&#60;</kbd> wenn du nicht schreibst |
+| Zum Ende | <kbd>&#62;</kbd> wenn du nicht schreibst | <kbd>&#62;</kbd> wenn du nicht schreibst |
+| Eine Seite nach oben | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| Eine Seite nach unten | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> wenn du nicht schreibst |
+| Abbrechen | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| Vorherige Arbeitscomputer | — | — |
+| Nächste Arbeitscomputer | — | — |
+| Auf ein Projekt konzentrieren | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+P</kbd> |
+| Alle Projekte anzeigen | — | — |
+| Vorherige Karte anzeigen | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Nächste Karte anzeigen | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Nächste neue Karte anzeigen | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Karte beiseitelegen | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> wenn du nicht schreibst, <kbd>Ctrl+X K</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+M</kbd> |
+| Alle Karten beiseitelegen oder zurückholen | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| &#8222;Fertig&#8220; oder &#8222;Verstanden&#8220; der Notiz drücken | — | — |
+| Jede Wahl auf der Karte ablehnen | — | — |
+| Karte maximieren oder wiederherstellen | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> wenn du nicht schreibst |
+| In dieser Karte suchen | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| Nächsten Treffer suchen | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| Vorherigen Treffer suchen | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| Zum nächsten überarbeiteten Bereich gehen | — | — |
+| Zur nächsten Frage gehen | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> wenn du nicht schreibst, <kbd>Ctrl+J</kbd> |
+| Zur vorherigen Frage gehen | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+J</kbd> |
+| Zur nächsten unbeantworteten Frage gehen | — | — |
+| Auf einen Teil der Karte zeigen | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Verlauf der Karte ein- oder ausblenden | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Zu den neuen Nachrichten im Verlauf gehen | — | — |
+| Ton der Karte abspielen oder anhalten | — | — |
+| Info anzeigen | — | — |
+| Karten anzeigen | — | — |
+| Aktivität anzeigen | — | — |
+| Crewmitglied anzeigen | — | — |
+| Browser übernehmen oder zurückgeben | — | — |
+| Zur Browserseite wechseln | — | — |
+| Zurück zur Karte | — | — |
+| Aufgabe auf einen anderen Computer verschieben | — | — |
+| Aufgabe als erledigt schließen | — | — |
+| Browser anzeigen | — | — |
+| Nächster Tab | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| Vorheriger Tab | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> wenn du nicht schreibst, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> wenn du nicht schreibst |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Einstellungen öffnen | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Tastatureinstellungen öffnen | <kbd>⌃H B</kbd> wenn du nicht schreibst | <kbd>Ctrl+H B</kbd> wenn du nicht schreibst |
+| Panels anordnen | — | — |
+| Verfügbares Update anzeigen | — | — |
+| Später aktualisieren | — | — |
+| Nach Updates suchen | — | — |
+| Computer des ersten Offiziers aktualisieren | — | — |
+| Neuigkeiten anzeigen | <kbd>⌃H N</kbd> wenn du nicht schreibst | <kbd>Ctrl+H N</kbd> wenn du nicht schreibst |
+| Antwort des ersten Offiziers öffnen | — | — |
+| Leitfäden öffnen | — | — |
+| Deinen Leitfäden-Ordner öffnen | — | — |
+| Nutzung öffnen | — | — |
+| Automatisierung öffnen | — | — |
+| Integrationen öffnen | — | — |
+| Alle Automatisierungen pausieren | — | — |
+| Ambient-Musik abspielen oder pausieren | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Einheit der Nutzung wechseln | — | — |
+| Kontingent erneut prüfen | — | — |
+| Alles größer machen | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> wenn du nicht schreibst, <kbd>Ctrl+X Ctrl+=</kbd> wenn du nicht schreibst, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Alles kleiner machen | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> wenn du nicht schreibst, <kbd>Ctrl+Minus</kbd> |
+| Zur üblichen Größe zurückkehren | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> wenn du nicht schreibst, <kbd>Ctrl+0</kbd> |
+
+**in der Hauptnachricht und in der Antwort einer Karte**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Bis zum Zeilenanfang löschen | <kbd>⌃U</kbd> | — |
+| Bis zum Zeilenende löschen | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| Wort vor dem Cursor löschen | <kbd>⌃W</kbd> | — |
+| Zuletzt Gelöschtes wiederherstellen | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**in der Hauptnachricht**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Zuletzt gesendete Nachricht zurückholen | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**überall im Fenster**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Befehle suchen | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| Zur Hauptnachricht gehen | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Zur Antwort der Karte gehen | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Zum Inhalt der Karte gehen | — | — |
+| Zu den Tasten der Karte gehen | — | — |
+| Die empfohlene Wahl drücken | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Die zweite Wahl drücken | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Die dritte Wahl drücken | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Die vierte Wahl drücken | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Zum nächsten Teil des Fensters gehen | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Zum vorherigen Teil des Fensters gehen | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Zum Teil des Fensters links gehen | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| Zum Teil des Fensters darunter gehen | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| Zum Teil des Fensters darüber gehen | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| Zum Teil des Fensters rechts gehen | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| Nach links | — | — |
+| Nach unten | — | — |
+| Nach oben | — | — |
+| Nach rechts | — | — |
+| Zum Anfang | — | — |
+| Zum Ende | — | — |
+| Eine Seite nach oben | — | — |
+| Eine Seite nach unten | — | — |
+| Abbrechen | — | — |
+| Vorherige Arbeitscomputer | — | — |
+| Nächste Arbeitscomputer | — | — |
+| Auf ein Projekt konzentrieren | <kbd>⌃R</kbd> | — |
+| Alle Projekte anzeigen | — | — |
+| Vorherige Karte anzeigen | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Nächste Karte anzeigen | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Nächste neue Karte anzeigen | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Karte beiseitelegen | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Alle Karten beiseitelegen oder zurückholen | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| &#8222;Fertig&#8220; oder &#8222;Verstanden&#8220; der Notiz drücken | — | — |
+| Jede Wahl auf der Karte ablehnen | — | — |
+| Karte maximieren oder wiederherstellen | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| In dieser Karte suchen | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Nächsten Treffer suchen | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Vorherigen Treffer suchen | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Zum nächsten überarbeiteten Bereich gehen | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| Zur nächsten Frage gehen | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| Zur vorherigen Frage gehen | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| Zur nächsten unbeantworteten Frage gehen | — | — |
+| Auf einen Teil der Karte zeigen | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Verlauf der Karte ein- oder ausblenden | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Zu den neuen Nachrichten im Verlauf gehen | — | — |
+| Ton der Karte abspielen oder anhalten | — | — |
+| Info anzeigen | — | — |
+| Karten anzeigen | — | — |
+| Aktivität anzeigen | — | — |
+| Crewmitglied anzeigen | <kbd>⌃&#96;</kbd> | — |
+| Browser übernehmen oder zurückgeben | — | — |
+| Zur Browserseite wechseln | — | — |
+| Zurück zur Karte | — | — |
+| Aufgabe auf einen anderen Computer verschieben | — | — |
+| Aufgabe als erledigt schließen | — | — |
+| Browser anzeigen | — | — |
+| Nächster Tab | <kbd>⌃⇥</kbd> | — |
+| Vorheriger Tab | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Einstellungen öffnen | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Tastatureinstellungen öffnen | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| Panels anordnen | — | — |
+| Verfügbares Update anzeigen | — | — |
+| Später aktualisieren | — | — |
+| Nach Updates suchen | — | — |
+| Computer des ersten Offiziers aktualisieren | — | — |
+| Neuigkeiten anzeigen | — | — |
+| Antwort des ersten Offiziers öffnen | — | — |
+| Leitfäden öffnen | — | — |
+| Deinen Leitfäden-Ordner öffnen | — | — |
+| Nutzung öffnen | — | — |
+| Automatisierung öffnen | — | — |
+| Integrationen öffnen | — | — |
+| Alle Automatisierungen pausieren | — | — |
+| Ambient-Musik abspielen oder pausieren | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Einheit der Nutzung wechseln | — | — |
+| Kontingent erneut prüfen | — | — |
+| Alles größer machen | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Alles kleiner machen | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Zur üblichen Größe zurückkehren | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**in der Hauptnachricht und in der Antwort einer Karte**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Bis zum Zeilenanfang löschen | <kbd>⌃U</kbd> | — |
+| Bis zum Zeilenende löschen | <kbd>⌃K</kbd> | — |
+| Wort vor dem Cursor löschen | <kbd>⌃W</kbd> | — |
+| Zuletzt Gelöschtes wiederherstellen | <kbd>⌃Y</kbd> | — |
+
+**in der Hauptnachricht**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Zuletzt gesendete Nachricht zurückholen | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**überall im Fenster**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Befehle suchen | <kbd>&#58;</kbd> wenn du nicht schreibst, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> wenn du nicht schreibst, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| Zur Hauptnachricht gehen | <kbd>I</kbd> wenn du nicht schreibst, <kbd>⌘L</kbd> | <kbd>I</kbd> wenn du nicht schreibst, <kbd>Ctrl+L</kbd> |
+| Zur Antwort der Karte gehen | <kbd>R</kbd> wenn du nicht schreibst, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+L</kbd> |
+| Zum Inhalt der Karte gehen | <kbd>G C</kbd> wenn du nicht schreibst, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> wenn du nicht schreibst, <kbd>Ctrl+B &#91;</kbd> |
+| Zu den Tasten der Karte gehen | <kbd>G A</kbd> wenn du nicht schreibst | <kbd>G A</kbd> wenn du nicht schreibst |
+| Die empfohlene Wahl drücken | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Die zweite Wahl drücken | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Die dritte Wahl drücken | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Die vierte Wahl drücken | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Zum nächsten Teil des Fensters gehen | <kbd>⌃W W</kbd> wenn du nicht schreibst, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| Zum vorherigen Teil des Fensters gehen | <kbd>⌃W P</kbd> wenn du nicht schreibst, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Zum Teil des Fensters links gehen | <kbd>⌃W H</kbd> wenn du nicht schreibst, <kbd>⌃H</kbd> wenn du nicht schreibst, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| Zum Teil des Fensters darunter gehen | <kbd>⌃W J</kbd> wenn du nicht schreibst, <kbd>⌃J</kbd> wenn du nicht schreibst, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| Zum Teil des Fensters darüber gehen | <kbd>⌃W K</kbd> wenn du nicht schreibst, <kbd>⌃K</kbd> wenn du nicht schreibst, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| Zum Teil des Fensters rechts gehen | <kbd>⌃W L</kbd> wenn du nicht schreibst, <kbd>⌃L</kbd> wenn du nicht schreibst, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| Nach links | <kbd>H</kbd> wenn du nicht schreibst | <kbd>H</kbd> wenn du nicht schreibst |
+| Nach unten | <kbd>J</kbd> wenn du nicht schreibst, <kbd>⌃N</kbd> | <kbd>J</kbd> wenn du nicht schreibst |
+| Nach oben | <kbd>K</kbd> wenn du nicht schreibst, <kbd>⌃P</kbd> | <kbd>K</kbd> wenn du nicht schreibst |
+| Nach rechts | <kbd>L</kbd> wenn du nicht schreibst | <kbd>L</kbd> wenn du nicht schreibst |
+| Zum Anfang | <kbd>G G</kbd> wenn du nicht schreibst | <kbd>G G</kbd> wenn du nicht schreibst |
+| Zum Ende | <kbd>⇧G</kbd> wenn du nicht schreibst | <kbd>Shift+G</kbd> wenn du nicht schreibst |
+| Eine Seite nach oben | <kbd>⌃U</kbd> wenn du nicht schreibst | — |
+| Eine Seite nach unten | <kbd>⌃D</kbd> wenn du nicht schreibst, <kbd>⌃F</kbd> wenn du nicht schreibst | — |
+| Abbrechen | <kbd>⌃&#91;</kbd> | — |
+| Vorherige Arbeitscomputer | — | — |
+| Nächste Arbeitscomputer | — | — |
+| Auf ein Projekt konzentrieren | <kbd>G P</kbd> wenn du nicht schreibst, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> wenn du nicht schreibst, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| Alle Projekte anzeigen | — | — |
+| Vorherige Karte anzeigen | <kbd>⇧H</kbd> wenn du nicht schreibst, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> wenn du nicht schreibst, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Nächste Karte anzeigen | <kbd>⇧L</kbd> wenn du nicht schreibst, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> wenn du nicht schreibst, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Nächste neue Karte anzeigen | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Karte beiseitelegen | <kbd>Q</kbd> wenn du nicht schreibst, <kbd>⌃W C</kbd> wenn du nicht schreibst, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> wenn du nicht schreibst, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Alle Karten beiseitelegen oder zurückholen | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| &#8222;Fertig&#8220; oder &#8222;Verstanden&#8220; der Notiz drücken | — | — |
+| Jede Wahl auf der Karte ablehnen | — | — |
+| Karte maximieren oder wiederherstellen | <kbd>⌃W O</kbd> wenn du nicht schreibst, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| In dieser Karte suchen | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Nächsten Treffer suchen | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Vorherigen Treffer suchen | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Zum nächsten überarbeiteten Bereich gehen | <kbd>&#93; C</kbd> wenn du nicht schreibst | <kbd>&#93; C</kbd> wenn du nicht schreibst |
+| Zur nächsten Frage gehen | <kbd>&#125;</kbd> wenn du nicht schreibst, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> wenn du nicht schreibst, <kbd>Ctrl+J</kbd> |
+| Zur vorherigen Frage gehen | <kbd>&#123;</kbd> wenn du nicht schreibst, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+J</kbd> |
+| Zur nächsten unbeantworteten Frage gehen | — | — |
+| Auf einen Teil der Karte zeigen | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Verlauf der Karte ein- oder ausblenden | <kbd>Z A</kbd> wenn du nicht schreibst, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> wenn du nicht schreibst, <kbd>Ctrl+&#92;</kbd> |
+| Zu den neuen Nachrichten im Verlauf gehen | — | — |
+| Ton der Karte abspielen oder anhalten | — | — |
+| Info anzeigen | — | — |
+| Karten anzeigen | — | — |
+| Aktivität anzeigen | — | — |
+| Crewmitglied anzeigen | — | — |
+| Browser übernehmen oder zurückgeben | — | — |
+| Zur Browserseite wechseln | — | — |
+| Zurück zur Karte | — | — |
+| Aufgabe auf einen anderen Computer verschieben | — | — |
+| Aufgabe als erledigt schließen | — | — |
+| Browser anzeigen | — | — |
+| Nächster Tab | <kbd>G T</kbd> wenn du nicht schreibst, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> wenn du nicht schreibst |
+| Vorheriger Tab | <kbd>G ⇧T</kbd> wenn du nicht schreibst, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> wenn du nicht schreibst |
+| Find a task | <kbd>&#47;</kbd> wenn du nicht schreibst, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> wenn du nicht schreibst, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> wenn du nicht schreibst, <kbd>⌘B</kbd> | <kbd>G B</kbd> wenn du nicht schreibst |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Einstellungen öffnen | <kbd>G S</kbd> wenn du nicht schreibst, <kbd>⌘,</kbd> | <kbd>G S</kbd> wenn du nicht schreibst, <kbd>Ctrl+,</kbd> |
+| Tastatureinstellungen öffnen | <kbd>&#63;</kbd> wenn du nicht schreibst, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> wenn du nicht schreibst, <kbd>Ctrl+B &#63;</kbd> |
+| Panels anordnen | — | — |
+| Verfügbares Update anzeigen | — | — |
+| Später aktualisieren | — | — |
+| Nach Updates suchen | — | — |
+| Computer des ersten Offiziers aktualisieren | — | — |
+| Neuigkeiten anzeigen | — | — |
+| Antwort des ersten Offiziers öffnen | — | — |
+| Leitfäden öffnen | — | — |
+| Deinen Leitfäden-Ordner öffnen | — | — |
+| Nutzung öffnen | — | — |
+| Automatisierung öffnen | — | — |
+| Integrationen öffnen | — | — |
+| Alle Automatisierungen pausieren | — | — |
+| Ambient-Musik abspielen oder pausieren | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Einheit der Nutzung wechseln | — | — |
+| Kontingent erneut prüfen | — | — |
+| Alles größer machen | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Alles kleiner machen | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Zur üblichen Größe zurückkehren | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**in der Hauptnachricht und in der Antwort einer Karte**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Bis zum Zeilenanfang löschen | <kbd>⌃U</kbd> | — |
+| Bis zum Zeilenende löschen | <kbd>⌃K</kbd> | — |
+| Wort vor dem Cursor löschen | <kbd>⌃W</kbd> | — |
+| Zuletzt Gelöschtes wiederherstellen | <kbd>⌃Y</kbd> | — |
+
+**in der Hauptnachricht**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Zuletzt gesendete Nachricht zurückholen | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**überall im Fenster**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Befehle suchen | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| Zur Hauptnachricht gehen | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Zur Antwort der Karte gehen | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Zum Inhalt der Karte gehen | — | — |
+| Zu den Tasten der Karte gehen | — | — |
+| Die empfohlene Wahl drücken | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Die zweite Wahl drücken | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Die dritte Wahl drücken | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Die vierte Wahl drücken | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Zum nächsten Teil des Fensters gehen | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Zum vorherigen Teil des Fensters gehen | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Zum Teil des Fensters links gehen | — | — |
+| Zum Teil des Fensters darunter gehen | — | — |
+| Zum Teil des Fensters darüber gehen | — | — |
+| Zum Teil des Fensters rechts gehen | — | — |
+| Nach links | — | — |
+| Nach unten | — | — |
+| Nach oben | — | — |
+| Nach rechts | — | — |
+| Zum Anfang | — | — |
+| Zum Ende | — | — |
+| Eine Seite nach oben | — | — |
+| Eine Seite nach unten | — | — |
+| Abbrechen | — | — |
+| Vorherige Arbeitscomputer | — | — |
+| Nächste Arbeitscomputer | — | — |
+| Auf ein Projekt konzentrieren | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| Alle Projekte anzeigen | — | — |
+| Vorherige Karte anzeigen | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Nächste Karte anzeigen | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Nächste neue Karte anzeigen | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Karte beiseitelegen | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| Alle Karten beiseitelegen oder zurückholen | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| &#8222;Fertig&#8220; oder &#8222;Verstanden&#8220; der Notiz drücken | — | — |
+| Jede Wahl auf der Karte ablehnen | — | — |
+| Karte maximieren oder wiederherstellen | — | — |
+| In dieser Karte suchen | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Nächsten Treffer suchen | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Vorherigen Treffer suchen | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Zum nächsten überarbeiteten Bereich gehen | — | — |
+| Zur nächsten Frage gehen | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| Zur vorherigen Frage gehen | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| Zur nächsten unbeantworteten Frage gehen | — | — |
+| Auf einen Teil der Karte zeigen | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Verlauf der Karte ein- oder ausblenden | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Zu den neuen Nachrichten im Verlauf gehen | — | — |
+| Ton der Karte abspielen oder anhalten | — | — |
+| Info anzeigen | — | — |
+| Karten anzeigen | — | — |
+| Aktivität anzeigen | — | — |
+| Crewmitglied anzeigen | — | — |
+| Browser übernehmen oder zurückgeben | — | — |
+| Zur Browserseite wechseln | — | — |
+| Zurück zur Karte | — | — |
+| Aufgabe auf einen anderen Computer verschieben | — | — |
+| Aufgabe als erledigt schließen | — | — |
+| Browser anzeigen | — | — |
+| Nächster Tab | — | — |
+| Vorheriger Tab | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Einstellungen öffnen | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Tastatureinstellungen öffnen | — | — |
+| Panels anordnen | — | — |
+| Verfügbares Update anzeigen | — | — |
+| Später aktualisieren | — | — |
+| Nach Updates suchen | — | — |
+| Computer des ersten Offiziers aktualisieren | — | — |
+| Neuigkeiten anzeigen | — | — |
+| Antwort des ersten Offiziers öffnen | — | — |
+| Leitfäden öffnen | — | — |
+| Deinen Leitfäden-Ordner öffnen | — | — |
+| Nutzung öffnen | — | — |
+| Automatisierung öffnen | — | — |
+| Integrationen öffnen | — | — |
+| Alle Automatisierungen pausieren | — | — |
+| Ambient-Musik abspielen oder pausieren | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Einheit der Nutzung wechseln | — | — |
+| Kontingent erneut prüfen | — | — |
+| Alles größer machen | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Alles kleiner machen | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Zur üblichen Größe zurückkehren | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**in der Hauptnachricht und in der Antwort einer Karte**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Bis zum Zeilenanfang löschen | <kbd>⌃U</kbd> | — |
+| Bis zum Zeilenende löschen | <kbd>⌃K</kbd> | — |
+| Wort vor dem Cursor löschen | <kbd>⌃W</kbd> | — |
+| Zuletzt Gelöschtes wiederherstellen | <kbd>⌃Y</kbd> | — |
+
+**in der Hauptnachricht**
+
+| Befehl | Mac | Linux |
+| --- | --- | --- |
+| Zuletzt gesendete Nachricht zurückholen | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

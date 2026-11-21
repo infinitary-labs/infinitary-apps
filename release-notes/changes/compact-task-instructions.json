@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "compact-task-instructions",
+      "reason": "Shortens internal task guidance without changing the interface or its rules."
+    }
+  ]
+}

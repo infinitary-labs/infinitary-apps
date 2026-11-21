@@ -390,7 +390,7 @@ const SHAPE_FIELD_RULES = {
   override_model_id:
     "The user-named model: exact id or provider-qualified key if the provider matters. Only when named by the user; it wins when available; otherwise the task waits for a computer serving it. Omit for normal routing.",
   escalate_from:
-    "The task (id or key) whose result the user rejected, only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
+    "Task (id or key) whose result the user rejected, only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",
   autonomy_ask:
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository default is unchanged.",
@@ -398,9 +398,9 @@ const SHAPE_FIELD_RULES = {
   internal_step: INTERNAL_STEP_DESCRIPTION,
   in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
-    "For a direct build with no chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
+    "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
-    "Task whose committed work an independent reviewer checks, read-only; pass the user's original words and the same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
+    "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -554,7 +554,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Spawn crewmate",
     description: [
       "Commission a crewmate for project work or evidence-gathering investigation.",
-      "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
+      "Pass a goal, the user's verbatim words, typed constraints and an optional delivery note;",
       "the crewmate briefs itself from these on its first turn; do not author a brief.",
       "Pass repo_id to bind a project, or omit it for the default workspace.",
       "Lessons and the user's own panels on the rails use personal_ui true: the",
@@ -574,7 +574,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       user_words: Type.Optional(
         Type.String({
           description:
-            "The captain's words for this task or the ask it is a step of, verbatim; outranks every elaboration downstream; else omit",
+            "The captain's verbatim words for this task or the ask it is a step of; outrank every elaboration downstream; else omit",
         }),
       ),
       repo_id: Type.Optional(
@@ -587,14 +587,13 @@ export function createCrewTools(delegate: CrewDelegate) {
       delivery_note: DELIVERY_NOTE_PARAM,
       parent: Type.Optional(
         Type.String({
-          description:
-            "The task this work belongs under (a task id or key); it inherits that task's project",
+          description: "Parent task id or key; this work inherits its project",
         }),
       ),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Tasks (ids or keys) that must close before this work starts; queues it instead of starting now",
+            "Task ids or keys that must close before this work starts; queues it instead of starting now",
         }),
       ),
       priority: Type.Optional(
@@ -632,7 +631,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       branch_from: Type.Optional(
         Type.String({
           description:
-            "Start from this task’s last commit, held on this computer; for work on another computer, name its pushed version in the brief.",
+            "Start from this task’s last commit, held here; for work on another computer, name its pushed version in the brief.",
         }),
       ),
       branch: Type.Optional(BRANCH_PARAM),
@@ -736,11 +735,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     parameters: Type.Object({
       task_id: Type.String({ description: "Task id from context or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
-      response_mode: Type.Optional(
-        stringEnum(["expected", "guidance-only"], {
-          description: "Default expected; guidance-only explicitly requires no response.",
-        }),
-      ),
+      // Its default and guidance-only behavior are in the tool description.
+      response_mode: Type.Optional(stringEnum(["expected", "guidance-only"])),
       response_context: Type.Optional(
         Type.Object(
           {
@@ -877,7 +873,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       drop_waiting: Type.Optional(
         Type.Array(Type.Integer(), {
           description:
-            "For done: ids of messages waiting for its idle crewmate, as a refusal named them, that it no longer needs; dropped once the close goes through",
+            "For done: refusal-named ids of messages the idle crewmate no longer needs; dropped once the close goes through",
         }),
       ),
       confirm: Type.Optional(
@@ -940,7 +936,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       keep: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Ignored files or folders that must move too, by path in its working copy, as the captain or its crewmate named them",
+            "Ignored files or folders to move too, by working-copy path, as the captain or its crewmate named them",
         }),
       ),
       // The description above is the one home of its rule.

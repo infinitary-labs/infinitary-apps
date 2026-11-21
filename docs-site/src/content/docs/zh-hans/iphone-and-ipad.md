@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone 和 iPad
 description: 申请 iPhone 和 iPad 版 Infinitary 的私有 TestFlight 邀请，然后连接你的电脑，阅读卡片并发送消息。
 ---
@@ -80,7 +80,7 @@ iPhone 和 iPad 版 Infinitary 目前处于私有 TestFlight 阶段。
 
 要让手机不再显示你的电脑，请轻点手机顶部栏右侧的电脑按钮，然后选择 **离开** 加上你电脑的名称。
 手机会忘记这台电脑。
-在你的电脑上，设置 → **设备** 中这部手机那一行的 **移除** 会立即切断它。
+在你的电脑上，设置 → **设备** 中这部手机的菜单（它那一行上的三个点）里的 **移除** 会立即切断它。
 要再次加入，请生成一个新链接。
 
 另请参阅[你的其他电脑](/zh-hans/your-other-computers/)。

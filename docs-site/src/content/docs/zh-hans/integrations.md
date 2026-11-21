@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -40,9 +40,8 @@ Infinitary 如何用它克隆项目和提交改动，请参阅[项目](/zh-hans/
 - **GitLab**：你在浏览器中登录或粘贴密钥，可以在 gitlab.com 上，也可以在你自己的 GitLab 服务器上。
 - **GitHub Enterprise**：你在自己的服务器上生成一个密钥并粘贴到这里。
 - **Bitbucket**：你在 Atlassian 账户中生成一个 API 令牌并粘贴到这里，用于 bitbucket.org。
-  它的那一行会显示你以谁的身份登录；它目前还没有可供大副和船员使用的操作。
 
-每个 GitHub、GitLab 和 GitHub Enterprise 行都有两个操作：一个用于读取，一个用于更改，例如“**在 GitHub 上更改内容**”。
+每一行都有两个操作：一个用于读取，一个用于更改，例如“**在 GitHub 上更改内容**”。
 大副和船员在任务本身的工作之外，在那里查找信息或执行操作时，用的就是它们。
 任务的分支、拉取请求、检查和合并则遵循你项目的设置。
 

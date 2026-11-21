@@ -280,10 +280,13 @@ describe("every workflow", () => {
         ),
         `${file} (${why}) still sets up pnpm the old way, or leaves the list`,
       ).toBe(true);
-    // The two jobs that failed, and a virtual Mac's journeys.
+    // The two jobs that failed (the branch check, now its three jobs), and a
+    // virtual Mac's journeys.
     expect(covered).toEqual(
       expect.arrayContaining([
-        "ci.yml:typecheck-lint-build",
+        "ci.yml:code-checks",
+        "ci.yml:reached-tests",
+        "ci.yml:build",
         "journeys.yml:choose-journeys",
         "source-journeys.yml:source-desktop",
         "journeys.yml:affected-journeys",
@@ -363,10 +366,11 @@ describe("every workflow", () => {
   // 504 there. So every job that prepares Playwright's window recorder for a
   // recording journey restores the demo encoder's download too
   // (.github/actions/demo-encoder).
-  // Every pull request's check prepares the Linux desktop for its one fixed
-  // journey, the critical path, which records no demo, so it restores none.
+  // Every pull request's check prepares the Linux desktop in its build job for
+  // its one fixed journey, the critical path, which records no demo, so it
+  // restores none.
   it("restores the demo encoder wherever a job prepares the window recorder", () => {
-    const noDemo = ["ci.yml:typecheck-lint-build"];
+    const noDemo = ["ci.yml:build"];
     const recorders: string[] = [];
     for (const file of workflows) {
       for (const [id, job] of Object.entries(load(file).jobs)) {

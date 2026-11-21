@@ -1,49 +1,64 @@
-import type { TaskLinkView, TaskView } from "@shared/tasks";
+import type { TaskView } from "@shared/tasks";
 
 /**
- * A program the host runs, drawn on the stage as a branching constellation
- * (the captain's INF-799 choice). Everything here is read from the graph's
- * own facts: a task the board marks as running a program (`TaskView.program`,
- * its `shape.program`), its children, and the recorded "blocks" links among
- * them. A part hangs from the parts it waits on, so parallel parts are
- * siblings under the root, a pipeline is a chain and a part after a barrier
- * joins several branches. No link is inferred from a title, a script or an
- * order, and a task that only holds children is no program (INF-999): its
- * parts orbit as every crewmate does.
+ * A program the host runs, drawn on the stage as its running parts circling
+ * the program's ring (the captain's INF-5365 choice, "Moons": "The parts
+ * circle the program as the crew circle the first mate"). Everything here is
+ * read from the graph's own facts: a task the board marks as running a
+ * program (`TaskView.program`, its `shape.program`) and its children. A task
+ * that only holds children is no program (INF-999): its parts orbit as every
+ * crewmate does. A wait between two parts draws as the ordinary wait arrow
+ * (the captain's INF-5365 answer), so the look never depends on the waits.
  */
 
 /**
- * The captain's staged settings (INF-799, `program_animation.tree`):
- * branches of 60 px, 70 degrees of spread at each layer, and a finished
- * tree that folds into its root. The shape and the demo's parts and pace
- * were the preview's only.
+ * The captain's staged settings (INF-5365, `program_look.moons`): a ring of
+ * 40 px tilted 40 degrees, turning 26 degrees a second, a second ring past
+ * ten parts, and a faint ring line. The rest are the preview's own numbers.
  */
 export const CONSTELLATION = {
-  /** The first layer's distance from the root, scene px. */
-  branchPx: 60,
-  /** Each later layer is this share of the one before, as in the preview. */
-  branchDecay: 0.82,
-  /** A layer's whole spread round the root's outward direction, degrees. */
-  spreadDeg: 70,
+  /** The least radius of the ring the parts circle on, scene px. */
+  ringPx: 40,
+  /** The ring's tilt out of the screen, degrees. */
+  tiltDeg: 40,
+  /** How fast the parts circle, degrees a second; the second ring turns the other way. */
+  speedDegS: 26,
+  /** Past this many running parts a second ring opens outside the first. */
+  secondRingPastParts: 10,
+  /** The faint ring line's light on its near half and its far half (`ring_line: "faint"`). */
+  ringLineNear: 0.3,
+  ringLineFar: 0.13,
+  /** Each part's share of its ring's length, so neighbours keep a glyph and some air apart, px. */
+  partArcPx: 30,
+  /** The second ring lies at least this far outside the first, px. */
+  ringStepPx: 26,
+  /** The second ring tilts this much less than the first, degrees. */
+  secondTiltDropDeg: 18,
+  /** Each ring's turn about the screen's normal, radians, so the two rings cross rather than nest. */
+  firstNodeRad: -0.3,
+  secondNodeRad: 1.1,
   collapse: "fold" as "fold" | "fade",
   /** The program's mark, a hollow ring, px. */
   rootMarkPx: 5,
   /**
-   * The least room between two neighbours on a layer, screen px: a glyph's
-   * width, so running crewmates keep their full size and never overlap
-   * (INF-1037). A layer that needs more room than the spread widens its fan.
+   * A glyph's width on screen, px: running crewmates keep their full size,
+   * and a remote computer's group asks for the same room on screen.
    */
   crewGapPx: 25,
-  /** The widest a fan opens before its layer moves outward instead, degrees. */
-  widestSpreadDeg: 180,
+  /**
+   * The gem round the mark (the captain's INF-5365 answer, "Build a gem
+   * round it"): an icosahedron of this radius, px, that gains a wire as each
+   * part finishes and is whole when the program is done.
+   */
+  gemPx: 10,
+  /** How fast the gem turns, radians a second. */
+  gemSpinRadS: 0.5,
 } as const;
 
 export type PartState = "live" | "done" | "open";
 
 export type ProgramPart = {
   id: string;
-  /** The sibling parts it waits on; empty hangs it from the root. */
-  parents: string[];
   state: PartState;
 };
 
@@ -54,6 +69,11 @@ export type Program = {
   state: "live" | "done" | "dropped";
   /** In the order they were filed. */
   parts: ProgramPart[];
+  /**
+   * How much of the whole program has finished, set on a copy that holds
+   * only the parts running on one computer (`programShare` otherwise reads it).
+   */
+  share?: number;
 };
 
 function partState(task: TaskView): PartState | null {
@@ -66,14 +86,21 @@ function partState(task: TaskView): PartState | null {
 
 /**
  * The parts the stage draws (INF-1037): only the running ones, each a
- * crewmate. A finished or unstarted part draws nothing, so a running part
- * hangs from another only by a wait on a part that also runs - a wait the
- * captain released - and otherwise from the root.
+ * crewmate. A finished or unstarted part draws nothing.
  */
 export function runningParts(parts: readonly ProgramPart[]): ProgramPart[] {
-  const live = parts.filter((part) => part.state === "live");
-  const ids = new Set(live.map((part) => part.id));
-  return live.map((part) => ({ ...part, parents: part.parents.filter((id) => ids.has(id)) }));
+  return parts.filter((part) => part.state === "live");
+}
+
+/**
+ * How much of a program has finished, for its gem: finished parts over every
+ * part that is not dropped, and whole once the program itself is done.
+ */
+export function programShare(program: Program): number {
+  if (program.state === "done") return 1;
+  if (program.share !== undefined) return program.share;
+  const finished = program.parts.filter((part) => part.state === "done").length;
+  return program.parts.length ? finished / program.parts.length : 0;
 }
 
 /** How far a program has got, for the summary its ring opens (INF-1037). */
@@ -104,10 +131,10 @@ export function programProgress(tasks: readonly TaskView[], programId: string): 
 }
 
 /**
- * Every program on the board with work parts, and how each part hangs. A
- * host-commissioned review is the builder's own cue, never a part.
+ * Every program on the board with work parts. A host-commissioned review is
+ * the builder's own cue, never a part.
  */
-export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkView[]): Program[] {
+export function programsOf(tasks: readonly TaskView[]): Program[] {
   const byId = new Map(tasks.map((task) => [task.id, task]));
   const children = new Map<string, TaskView[]>();
   for (const task of tasks) {
@@ -117,18 +144,11 @@ export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkV
     list.push(task);
     children.set(task.parentId, list);
   }
-  const waitsOn = new Map<string, string[]>();
-  for (const link of links) {
-    if (link.type !== "blocks") continue;
-    const list = waitsOn.get(link.toId) ?? [];
-    list.push(link.fromId);
-    waitsOn.set(link.toId, list);
-  }
   const programs: Program[] = [];
   for (const [parentId, kids] of children) {
     const parent = byId.get(parentId);
-    // Only a program the host runs is a constellation; any other parent's
-    // children orbit as they always have (INF-999).
+    // Only a program the host runs draws its parts round its ring; any other
+    // parent's children orbit as they always have (INF-999).
     if (!parent?.program) continue;
     const ordered = [...kids].sort(
       (a, b) => a.createdAt - b.createdAt || a.key.localeCompare(b.key),
@@ -136,14 +156,8 @@ export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkV
     const parts: ProgramPart[] = [];
     for (const kid of ordered) {
       const state = partState(kid);
-      if (!state) continue;
-      parts.push({ id: kid.id, parents: [], state });
+      if (state) parts.push({ id: kid.id, state });
     }
-    const siblings = new Set(parts.map((part) => part.id));
-    for (const part of parts)
-      part.parents = (waitsOn.get(part.id) ?? []).filter(
-        (id) => siblings.has(id) && id !== part.id,
-      );
     if (parts.length === 0) continue;
     const state =
       parent.status === "done" ? "done" : parent.status === "dropped" ? "dropped" : "live";
@@ -152,33 +166,94 @@ export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkV
   return programs.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export type NodePlace = { x: number; y: number; layer: number; angle: number };
+/** One ring the parts circle on, round the program's mark. */
+export type MoonRing = {
+  /** Scene px. */
+  radius: number;
+  /** Out of the screen, radians. */
+  tilt: number;
+  /** About the screen's normal, radians. */
+  node: number;
+  /** How many parts circle on it. */
+  count: number;
+};
+
+const TAU = Math.PI * 2;
+const DEG = Math.PI / 180;
 
 /**
- * The layered layout from the root (scene px, y down): a layer per distance
- * from the root, each layer spread evenly across the spread and ordered by
- * its parents' angles so a chain stays straight, and the whole graph
- * scaled about its root when a node would leave `half` (a square half-size).
- * Neighbours on a layer stay `gap` apart (scene px; a glyph's width, divided
- * by the share a remote computer's group draws at): a crowded layer first
- * widens its fan up to the widest spread, then moves outward.
+ * The rings `count` running parts circle on: one, or two past
+ * `secondRingPastParts`, the first holding the larger half. Each ring is wide
+ * enough for its parts to keep a glyph and some air apart; `gap` is a glyph's
+ * width in scene px (larger in a remote computer's smaller group), so the
+ * room is kept on screen.
+ */
+export function moonRings(count: number, gap: number = CONSTELLATION.crewGapPx): MoonRing[] {
+  if (count <= 0) return [];
+  const scale = gap / CONSTELLATION.crewGapPx;
+  const counts =
+    count > CONSTELLATION.secondRingPastParts
+      ? [Math.ceil(count / 2), Math.floor(count / 2)]
+      : [count];
+  const rings: MoonRing[] = [];
+  let reach = 0;
+  for (const [j, n] of counts.entries()) {
+    const radius = Math.max(
+      CONSTELLATION.ringPx,
+      (n * CONSTELLATION.partArcPx) / TAU,
+      j > 0 ? reach + CONSTELLATION.ringStepPx : 0,
+    );
+    reach = radius;
+    rings.push({
+      radius: radius * scale,
+      tilt: Math.max(0, CONSTELLATION.tiltDeg - j * CONSTELLATION.secondTiltDropDeg) * DEG,
+      node: j === 0 ? CONSTELLATION.firstNodeRad : CONSTELLATION.secondNodeRad,
+      count: n,
+    });
+  }
+  return rings;
+}
+
+/** A point on `ring` at angle `theta`, from the mark: x and y on the screen, z toward the viewer. */
+export function ringPoint(ring: MoonRing, theta: number): { x: number; y: number; z: number } {
+  const across = ring.radius * Math.cos(theta);
+  const along = ring.radius * Math.sin(theta);
+  const flat = along * Math.cos(ring.tilt);
+  const c = Math.cos(ring.node);
+  const s = Math.sin(ring.node);
+  return { x: across * c - flat * s, y: across * s + flat * c, z: along * Math.sin(ring.tilt) };
+}
+
+export type NodePlace = { x: number; y: number; z: number; ring: number };
+
+/** A program's parts where they circle, and the rings they circle on, as scaled to fit. */
+export type ProgramPlaces = { places: Map<string, NodePlace>; rings: MoonRing[] };
+
+/**
+ * Where each running part circles at `seconds` (scene px, y down): in the
+ * order filed, evenly round its ring, the first ring turning one way and the
+ * second the other. The whole is scaled about the mark when a part would
+ * leave `half` (a square half-size).
  */
 export function layoutProgram(
   parts: readonly ProgramPart[],
   root: { x: number; y: number },
   half: number,
   gap: number = CONSTELLATION.crewGapPx,
-): Map<string, NodePlace> {
-  const out = Math.atan2(root.y, root.x);
+  seconds = 0,
+): ProgramPlaces {
+  const rings = moonRings(parts.length, gap);
   const placed = new Map<string, NodePlace>();
-  for (const node of programShape(parts, gap)) {
-    const angle = out + node.turn;
-    placed.set(node.id, {
-      x: root.x + Math.cos(angle) * node.distance,
-      y: root.y + Math.sin(angle) * node.distance,
-      layer: node.layer,
-      angle,
-    });
+  const turn = seconds * CONSTELLATION.speedDegS * DEG;
+  let index = 0;
+  for (const [j, ring] of rings.entries()) {
+    for (let i = 0; i < ring.count; i++) {
+      const part = parts[index++];
+      if (!part) continue;
+      const theta = (TAU * i) / ring.count + (j === 0 ? turn : 0.5 - turn);
+      const at = ringPoint(ring, theta);
+      placed.set(part.id, { x: root.x + at.x, y: root.y + at.y, z: at.z, ring: j });
+    }
   }
   let fit = 1;
   for (const place of placed.values()) {
@@ -196,71 +271,11 @@ export function layoutProgram(
     for (const place of placed.values()) {
       place.x = root.x + (place.x - root.x) * fit;
       place.y = root.y + (place.y - root.y) * fit;
+      place.z *= fit;
     }
   }
-  return placed;
-}
-
-/** A part's place relative to the root's outward direction: its layer, distance and turn. */
-type ShapeNode = { id: string; layer: number; distance: number; turn: number };
-
-/**
- * The graph's shape, which moves only when its parts or gap do (the last
- * gap is kept): a program
- * draws every frame while its root rides the orbit, so the layering is kept
- * per parts list and only the coordinates are placed again (INF-1073).
- */
-const shapes = new WeakMap<readonly ProgramPart[], { gap: number; nodes: readonly ShapeNode[] }>();
-
-function programShape(parts: readonly ProgramPart[], gap: number): readonly ShapeNode[] {
-  const kept = shapes.get(parts);
-  if (kept?.gap === gap) return kept.nodes;
-  const byId = new Map(parts.map((part) => [part.id, part]));
-  const layer = new Map<string, number>();
-  const layerOf = (id: string, seen: Set<string>): number => {
-    const known = layer.get(id);
-    if (known !== undefined) return known;
-    const part = byId.get(id);
-    if (!part || seen.has(id)) return 0;
-    seen.add(id);
-    let deepest = 0;
-    for (const parent of part.parents) deepest = Math.max(deepest, layerOf(parent, seen));
-    layer.set(id, deepest + 1);
-    return deepest + 1;
+  return {
+    places: placed,
+    rings: fit < 1 ? rings.map((ring) => ({ ...ring, radius: ring.radius * fit })) : rings,
   };
-  for (const part of parts) layerOf(part.id, new Set());
-  const layers: ProgramPart[][] = [];
-  for (const part of parts) {
-    const l = layer.get(part.id) ?? 1;
-    const members = layers[l] ?? [];
-    members.push(part);
-    layers[l] = members;
-  }
-  const least = (CONSTELLATION.spreadDeg * Math.PI) / 180;
-  const widest = (CONSTELLATION.widestSpreadDeg * Math.PI) / 180;
-  const turns = new Map<string, number>();
-  const nodes: ShapeNode[] = [];
-  let distance = 0;
-  for (let l = 1; l < layers.length; l++) {
-    distance += CONSTELLATION.branchPx * CONSTELLATION.branchDecay ** (l - 1);
-    const members = layers[l] ?? [];
-    // Each neighbour a chord of `gap` apart; past the widest fan the layer moves out.
-    const steps = members.length - 1;
-    if (steps > 0) distance = Math.max(distance, gap / (2 * Math.sin(widest / steps / 2)));
-    const spread =
-      steps > 0 ? Math.max(least, steps * 2 * Math.asin(Math.min(1, gap / (2 * distance)))) : 0;
-    const keyed = members.map((part, order) => {
-      const angles = part.parents.map((id) => turns.get(id) ?? 0);
-      const key = angles.length ? angles.reduce((a, b) => a + b, 0) / angles.length : 0;
-      return { part, key, order };
-    });
-    keyed.sort((a, b) => a.key - b.key || a.order - b.order);
-    keyed.forEach(({ part }, j) => {
-      const turn = steps > 0 ? spread * (j / steps - 0.5) : 0;
-      turns.set(part.id, turn);
-      nodes.push({ id: part.id, layer: l, distance, turn });
-    });
-  }
-  shapes.set(parts, { gap, nodes });
-  return nodes;
 }

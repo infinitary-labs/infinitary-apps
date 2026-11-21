@@ -1,7 +1,7 @@
 // Companions: crewmates drawn off their own slots beside the crewmate they
 // relate to. A crewmate that waits on another, or reviews it, circles it on
 // a little perpendicular circle (./satellites.ts); a program's running part
-// sits at its node on the constellation (./programs.ts); and every wait and
+// circles its program's mark (./programs.ts); and every wait and
 // review keeps its arrow, circling or on a slot. Here each one's target is
 // worked out, as an offset from its own slot in scene space; the orbit model
 // (./orbit.ts) eases it there on its springs and draws it.
@@ -79,16 +79,14 @@ export function withReviewCues(
 }
 
 /**
- * A part is seated at its node and never circles. Its branches replace a
- * wait arrow to a sibling part; a wait outside its parent keeps its arrow,
- * and a wait on a seated part keeps its slot. Edits `cues` in place.
+ * A part circles its program's mark and never its blocker: its waits keep
+ * their arrows, a sibling part's included (the captain's INF-5365 answer),
+ * and a wait on a part keeps its slot. Edits `cues` in place.
  */
 export function seatParts(cues: Map<string, CenterCue>, seats: ReadonlyMap<string, Seat>): void {
   for (const [id, cue] of cues) {
-    const seat = seats.get(id);
-    if (seat) {
-      const arrows = cue.arrows.filter((to) => !seat.siblings.has(to));
-      if (arrows.length > 0) cues.set(id, { ...cue, mode: "tether", index: 0, count: 1, arrows });
+    if (seats.has(id)) {
+      if (cue.arrows.length > 0) cues.set(id, { ...cue, mode: "tether", index: 0, count: 1 });
       else cues.delete(id);
     } else if (cue.mode === "satellite" && seats.has(cue.blockerId))
       cues.set(id, { ...cue, mode: "tether", index: 0, count: 1 });
@@ -99,7 +97,7 @@ export function seatParts(cues: Map<string, CenterCue>, seats: ReadonlyMap<strin
  * Where every companion wants to be this frame. A satellite cue circles its
  * blocker once the planes have settled in (not `blending`) and the whole
  * group fits the scene; otherwise it keeps its slot, arrow and all. A
- * seated part sits at its node. `fallback` holds the groups whose circle
+ * program's part circles its mark. `fallback` holds the groups whose circle
  * already failed its bounds check this frame; `failed` names this pass's.
  */
 export function companionTargets(input: {

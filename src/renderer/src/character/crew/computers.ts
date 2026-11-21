@@ -5,7 +5,7 @@ import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
 import { Spring } from "../face";
 import type { WarpFrame } from "../warp";
-import type { Program } from "./constellation";
+import { type Program, programShare } from "./constellation";
 import {
   CrewOrbit,
   type CrewStatus,
@@ -426,7 +426,8 @@ export class ComputerOrbits extends CrewOrbit {
           (part) => part.state !== "live" || this.computerOf(part.id) === computer,
         );
         const list = byComputer.get(computer) ?? [];
-        list.push({ ...program, parts });
+        // Each copy's gem counts the whole program's parts.
+        list.push({ ...program, parts, share: programShare(program) });
         byComputer.set(computer, list);
       }
     }

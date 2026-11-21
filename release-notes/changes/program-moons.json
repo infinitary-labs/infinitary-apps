@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "program-moons",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A task with parts now draws as moons round a growing gem",
+      "body": "When a task runs in parts, its running crewmates now circle the task's ring on a tilted orbit of their own, like moons, in place of a fan of branches. A gem inside the ring gains a wire each time part of the work finishes, and is whole when the task is done. A finished part's result flies straight to the ring and lights it. The same look appears on your iPhone and iPad.",
+      "picture": {
+        "dark": "program-moons-dark.webp",
+        "light": "program-moons-light.webp",
+        "alt": "The first mate with a task's ring beside it: two crewmates circle the ring on a faint tilted orbit, and a small gem turns inside the ring"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

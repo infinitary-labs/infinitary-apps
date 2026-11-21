@@ -1,5 +1,5 @@
 ---
-source: 1311a517163799dd
+source: d29b96f163790a41
 title: Tus otras computadoras
 description: Agrega tus otras computadoras para controlar a tu primer oficial desde cualquiera de ellas, dejar que hagan el trabajo de tus proyectos y guardar una copia que pueda tomar el relevo.
 ---
@@ -57,7 +57,7 @@ Cada computadora conserva su propia Apariencia, Teclado y Paneles.
 Las demás secciones de Configuración se leen y se cambian en la computadora donde vive tu primer oficial.
 
 Para dejar de hacerlo, abre Configuración → **Dispositivos** en esa computadora y presiona **Salir**.
-Para desconectar una computadora de la computadora donde vive tu primer oficial, presiona **Quitar** en su fila.
+Para desconectar una computadora de la computadora donde vive tu primer oficial, abre su menú, los tres puntos de su fila, y elige **Quitar**.
 Una computadora que solo controla a tu primer oficial necesita un enlace nuevo para volver.
 
 ## Una computadora que hace trabajo {#a-computer-that-runs-work}
@@ -90,7 +90,7 @@ Cada copia agrega una línea a la Actividad de la tarea, que nombra el archivo y
 
 ## Mudar a tu primer oficial {#move-your-first-mate}
 
-En la fila de una computadora que hace trabajo, **Mudar aquí a tu primer oficial** muda a tu primer oficial ahí.
+En el menú de una computadora que hace trabajo, los tres puntos de su fila, **Mudar aquí a tu primer oficial** muda a tu primer oficial ahí.
 Primero una lista muestra cualquier cosa que lo impida.
 Los [Secretos](/es/secrets/) se quedan en la computadora que deja, y vuelves a iniciar sesión ahí en tus suscripciones.
 
@@ -100,7 +100,7 @@ Una computadora que hace trabajo puede guardar una copia en vivo del registro de
 Si luego se pierde la computadora donde vive tu primer oficial, o queda fuera de alcance mucho tiempo, esa computadora puede [tomar el relevo](#take-over).
 
 1. En la computadora donde vive tu primer oficial, abre Configuración → **Dispositivos** y elige la otra computadora.
-2. Presiona **Guardar una copia aquí** en su fila.
+2. Abre su menú, los tres puntos de su fila, y elige **Guardar una copia aquí**.
 
 Hace una copia completa, y luego cada cambio que guarda tu primer oficial.
 Su fila dice en qué punto está la copia, como **Copia al día** o **Copia poniéndose al día · 3 cambios**, y mientras está fuera de alcance, **Copia de** una hora.
@@ -112,7 +112,7 @@ Por sí sola, la copia no contiene ninguno de tus proyectos, inicios de sesión 
 
 - Cuando toma el relevo, cada proyecto se vuelve a clonar desde donde se aloja.
   Un proyecto que solo se guardaba en la computadora perdida empieza vacío ahí.
-- **Listo para tomar el relevo**, en su fila, enumera lo que esa computadora todavía necesitaría, como un inicio de sesión propio en cada suscripción que usa tu primer oficial, y en el sitio donde se alojan tus proyectos.
+- **Listo para tomar el relevo**, en su menú, enumera lo que esa computadora todavía necesitaría, como un inicio de sesión propio en cada suscripción que usa tu primer oficial, y en el sitio donde se alojan tus proyectos.
   Un botón para cada uno, como **Iniciar sesión en GitHub allí**, empieza ese inicio de sesión desde esta ventana.
 - **Guardar los Secretos allí**, en la misma lista, guarda tus Secretos con la copia cuando confirmas en esa misma computadora.
   Consulta [Secretos](/es/secrets/#when-your-first-mate-moves).

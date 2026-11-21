@@ -1,5 +1,5 @@
 ---
-source: 9ced91a9d5bca6c2
+source: 67e6220319b54d48
 title: Lo que sale de tu computadora
 description: Lo que envía Infinitary, adónde va, y el único interruptor que nos envía algo a nosotros.
 ---
@@ -20,7 +20,7 @@ Tus inicios de sesión se quedan en tu computadora.
 ## Tus proyectos van donde se alojan {#your-projects-go-where-they-live}
 
 Un tripulante trabaja en una copia de trabajo de tu proyecto en tu computadora.
-Cuando una tarea se ofrece como solicitud de incorporación de cambios, su rama se inserta donde se aloja tu proyecto, como GitHub o GitLab, y la solicitud de incorporación de cambios se abre ahí.
+Cuando una tarea se ofrece como solicitud de incorporación de cambios, su rama se inserta donde se aloja tu proyecto, como GitHub, GitLab o Bitbucket, y la solicitud de incorporación de cambios se abre ahí.
 Un proyecto que solo se guarda en esta computadora se queda en esta computadora.
 
 Cuando un tripulante prepara una copia de trabajo o hace su tarea, puede obtener lo que tu proyecto necesita, como lo harías a mano.

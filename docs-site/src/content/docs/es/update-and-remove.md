@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Actualizar y quitar Infinitary
 description: Cómo recibe cada tipo de instalación una nueva versión estable, y cómo quitar Infinitary conservando tu trabajo guardado.
 ---
@@ -87,3 +87,15 @@ Si esta computadora hace trabajo para otra, presiona primero **Salir** en Config
   Para una AppImage, borra el archivo.
 
 Tu trabajo guardado se queda en `~/Library/Application Support/infinitary` en una Mac, y en `~/.config/infinitary` en Linux.
+
+### Qué elimina tu trabajo guardado {#what-deletes-your-saved-work}
+
+Esto elimina esa carpeta, y lo que Infinitary guardaba ahí se va con ella:
+
+- `brew uninstall --zap`.
+- Una app desinstaladora que también quita los archivos de soporte de una app.
+- Mover la propia carpeta a la Papelera, o eliminarla.
+
+En una computadora que hace trabajo para otra, esa carpeta contiene la clave propia de la computadora, sus copias de trabajo y los archivos de sus tareas.
+Sin ella, la computadora se vuelve a unir como una entrada nueva, y el trabajo que no había traído se pierde.
+Consulta [Una computadora aparece dos veces](/es/troubleshooting/#a-computer-is-listed-twice).

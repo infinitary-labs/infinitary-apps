@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -40,9 +40,8 @@ Consulta [Proyectos](/es/projects/#your-github-gitlab-or-bitbucket-sign-in) para
 - **GitLab**: inicias sesión en tu navegador o pegas una clave, en gitlab.com o en tu propio servidor de GitLab.
 - **GitHub Enterprise**: creas una clave en tu propio servidor y la pegas aquí.
 - **Bitbucket**: creas un token de API en tu cuenta de Atlassian y lo pegas aquí, para bitbucket.org.
-  Su fila muestra con quién tienes la sesión iniciada; todavía no tiene acciones para tu primer oficial y tu tripulación.
 
-Cada fila de GitHub, GitLab y GitHub Enterprise tiene dos acciones: una que lee y otra que cambia algo, como **Cambiar algo en GitHub**.
+Cada fila tiene dos acciones: una que lee y otra que cambia algo, como **Cambiar algo en GitHub**.
 Son las que usan tu primer oficial y tu tripulación para consultar cosas o actuar ahí más allá del trabajo propio de una tarea.
 La rama de una tarea, su solicitud de incorporación de cambios, sus comprobaciones y su fusión siguen en cambio los ajustes de tu proyecto.
 

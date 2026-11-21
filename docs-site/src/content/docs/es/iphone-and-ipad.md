@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone y iPad
 description: Pide una invitación privada de TestFlight para Infinitary en iPhone y iPad, y luego únete a tu computadora para leer tarjetas y enviar mensajes.
 ---
@@ -80,7 +80,7 @@ El teléfono te avisa de una tarjeta nueva solo mientras la app está abierta.
 
 Para dejar de mostrar tu computadora, toca el botón de la computadora a la derecha de la barra superior del teléfono y elige **Salir** con el nombre de tu computadora.
 El teléfono olvida la computadora.
-En tu computadora, **Quitar** en la fila del teléfono, en Configuración → **Dispositivos**, lo desconecta enseguida.
+En tu computadora, **Quitar** en el menú del teléfono, en Configuración → **Dispositivos**, los tres puntos de su fila, lo desconecta enseguida.
 Para volver a unirte, crea un enlace nuevo.
 
 Consulta también [Tus otras computadoras](/es/your-other-computers/).

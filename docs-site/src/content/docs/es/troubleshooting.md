@@ -1,5 +1,5 @@
 ---
-source: 3e64699c942fc0e5
+source: 797265acca38baf9
 title: Solución de problemas
 description: Problemas comunes en Infinitary, las palabras que muestra la app para cada uno y qué hacer.
 ---
@@ -69,10 +69,25 @@ O bien: «Infinitary está cerrado en» esa computadora.
 2. Pon las dos computadoras en la misma red, o en la misma red privada.
 3. En Configuración → **Dispositivos**, presiona **Volver a intentar** en su fila.
 
-Si una computadora que agregaste por su dirección tiene una dirección nueva, presiona **Cambiar dirección** en su fila.
+Si una computadora que agregaste por su dirección tiene una dirección nueva, abre su menú, los tres puntos de su fila, y elige **Cambiar dirección**.
 En una Mac, macOS puede mantener a Infinitary fuera de la red local hasta que alguien en esa Mac lo permita.
 Su fila ofrece entonces **Agregar por su dirección**.
 Consulta [Tus otras computadoras](/es/your-other-computers/).
+
+## Una computadora aparece dos veces {#a-computer-is-listed-twice}
+
+Configuración → **Dispositivos** muestra el mismo nombre dos veces: una fila al alcance, y otra fuera de alcance que todavía tiene tareas.
+Esto ocurre cuando una computadora que hace trabajo se vuelve a unir después de que se eliminó su trabajo guardado, o después de instalar Infinitary desde cero ahí.
+La fila al alcance dice «Una entrada anterior con este nombre y este usuario está fuera de alcance».
+
+1. En la fila al alcance, presiona **Continuar sus tareas aquí**.
+2. Lee lo que continúa y lo que se queda atrás, y luego presiona **Continuarlas**.
+3. Cada tarea continúa desde la última confirmación que trajo la computadora donde vive tu primer oficial.
+   La fila anterior sale de tu lista cuando todas las tareas se han movido.
+
+Las confirmaciones posteriores a esa, los cambios sin confirmar y los archivos de las carpetas de tareas anteriores se quedan con la entrada anterior.
+Para una fila fuera de alcance sin coincidencia, presiona **Mover sus tareas a…** y elige una computadora.
+Consulta [Qué elimina tu trabajo guardado](/es/update-and-remove/#what-deletes-your-saved-work).
 
 ## La ventana deja de responder {#the-window-stops-answering}
 

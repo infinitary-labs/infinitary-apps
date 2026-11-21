@@ -36,7 +36,7 @@ import { crewComposer, crewmateView, sentWords } from "./crewmateTab";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type Rect, resizeWindow, within } from "./layout";
-import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { isTaskRequest, providerMessages } from "./providerRequest";
@@ -1073,5 +1073,94 @@ test("a page's second page opens inside the task's browser, named by its own sit
     });
   } finally {
     await Promise.all([bank, shop, untrusted].map(closeSite));
+  }
+});
+
+// INF-5474's plan, piece 1: a task's browser open when the app quits is kept
+// with its task, so after the app starts again on the same data its card says
+// it stopped, and Try it opens that page again (docs/task-browser.md, "After a restart").
+test("a task's browser open at the quit opens again from its card after the app starts again on the same data", async () => {
+  // Its own app, since it quits and starts it again; one mock provider across both.
+  test.setTimeout(300_000);
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  const site = createServer((request, response) => {
+    if (request.url === "/ready") {
+      response.writeHead(200, { "content-type": "text/plain" });
+      response.end("yes");
+      return;
+    }
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(WATCHED_PAGE);
+  });
+  await new Promise<void>((resolve) => site.listen(0, "127.0.0.1", resolve));
+  const pageUrl = `http://127.0.0.1:${(site.address() as AddressInfo).port}/`;
+  const provider = await startMockProvider({ scenarios: [taskBrowserJourneys] });
+  let app = await launchApp({ reuseMockProvider: provider });
+  const title = `${TASK_BROWSER_CARD_MARKER}${pageUrl} as Sam`;
+  const detail = async (): Promise<TaskDetail | null> =>
+    app.page.evaluate(async (wanted) => {
+      const row = (await window.infinitary.tasks.board()).tasks.find(
+        (task) => task.title === wanted,
+      );
+      return row ? window.infinitary.tasks.detail(row.id) : null;
+    }, title);
+  try {
+    await resizeWindow(app.app, app.page, { width: 1280, height: 900 });
+    const task =
+      await test.step("the crewmate leaves its task's browser open at the page", async () => {
+        await promptInput(app.page).fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+        await promptInput(app.page).press("Enter");
+        await expect
+          .poll(async () => (await detail())?.outcome ?? "", { timeout: 60_000 })
+          .toContain(MOCK_BROWSER_CARD_REPORT);
+        expect((await detail())?.browser).toMatchObject({ state: "open", url: pageUrl });
+        return (await detail()) as TaskDetail;
+      });
+
+    await test.step("the app quits with that browser open, and starts again on the same data", async () => {
+      const { userDataDir, homeDir } = app;
+      await app.close();
+      app = await launchApp({ reuseMockProvider: provider, userDataDir, homeDir });
+      await resizeWindow(app.app, app.page, { width: 1280, height: 900 });
+    });
+
+    const strip = () => app.page.locator(`${SHOWN_ENTRY} [data-card-attachment="browser"]`);
+    await test.step("the card's browser line says the browser stopped when the app quit", async () => {
+      expect((await detail())?.browser).toMatchObject({
+        state: "stopped",
+        url: pageUrl,
+        quit: true,
+      });
+      // The task waits on the captain, so its row shows the card it waits on.
+      await pressRow(app.page, task.key);
+      await expect(shownCard(app.page, MOCK_BROWSER_CARD_TITLE)).toBeVisible();
+      await expect(strip().locator("[data-attachment-line]")).toContainText(new URL(pageUrl).host);
+      // Still the card's own browser, kept from the earlier run: stopped, not replaced.
+      await expect(strip()).toHaveAttribute("data-attachment-standing", "same");
+      await expect(strip().locator("[data-attachment-line]")).toHaveAttribute(
+        "data-browser-driver",
+        "stopped",
+      );
+      if (evidence) {
+        await app.page.locator(SHOWN_ENTRY).screenshot({
+          path: join(evidence, "card-after-restart-dark.png"),
+        });
+      }
+    });
+
+    await test.step("Try it opens the page the browser was on again", async () => {
+      const tryIt = strip().getByRole("button", { name: MOCK_BROWSER_BUTTON });
+      await focusOn(tryIt);
+      await pressKey(tryIt, "Enter");
+      await expect(view(app.page, task.id)).not.toHaveAttribute("data-browser-state", "stopped");
+      await expect
+        .poll(async () => (await detail())?.browser)
+        .toMatchObject({ state: "open", url: pageUrl });
+    });
+  } finally {
+    await stopTaskBrowsers(app.page).catch(() => undefined);
+    await app.close();
+    await provider.close();
+    await closeSite(site);
   }
 });

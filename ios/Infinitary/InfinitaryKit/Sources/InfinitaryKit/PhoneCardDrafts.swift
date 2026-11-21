@@ -123,15 +123,11 @@ import Observation
 
     private func apply(_ cardID: String, _ parts: PhoneDraftParts) {
         if let taken = parts.answers {
-            let held = answers[cardID]?.list ?? []
-            let merged = PhoneDraftSync.withDraftAnswers(held, taken)
-            // Answers the phone already holds, such as its own kept change coming back, would only redraw the body.
-            if merged != held {
-                // A body on screen takes them at once and reads them back; a body born later starts with them.
-                var filled = false
-                for fill in (bodies[cardID] ?? [:]).values where fill(.array(taken)) { filled = true }
-                if !filled { set(\.answers, cardID, .array(merged)) }
-            }
+            // A body on screen takes them at once, even its own kept answers, which replace another screen's answer
+            // waiting on a question being typed in, and reads them back; a body born later starts with them.
+            var filled = false
+            for fill in (bodies[cardID] ?? [:]).values where fill(.array(taken)) { filled = true }
+            if !filled { set(\.answers, cardID, .array(PhoneDraftSync.withDraftAnswers(answers[cardID]?.list ?? [], taken))) }
         }
         if let given = parts.words {
             if typing.contains(cardID) { waitingWords[cardID] = (given, words[cardID]) }

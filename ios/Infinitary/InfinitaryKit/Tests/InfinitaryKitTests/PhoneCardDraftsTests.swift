@@ -87,7 +87,8 @@ import Testing
     }
 
     /// The computer's answer to the phone's own change carries that change back; the phone already shows it, so the
-    /// answer neither refills the body on screen nor rewrites the card's words, which would redraw the card mid-scroll.
+    /// answer rewrites none of the card's draft, which would redraw the card mid-scroll. The body on screen still takes
+    /// it, so it replaces another screen's answer waiting on a question being typed in.
     @Test func theComputerKeepingThePhonesOwnChangeRedrawsNothing() async {
         let home = await joined()
         var filled: [PhoneJSON] = []
@@ -101,7 +102,9 @@ import Testing
         withObservationTracking { _ = home.drafts.words; _ = home.drafts.answers } onChange: { rewritten.set() }
         await home.pause()
         #expect(home.sent.count == 1)
-        #expect(filled.isEmpty)
+        #expect(filled == [.array([Self.answer("size", "large")])])
+        // The body reads the same answers back.
+        home.drafts.read("card-1", answers: .array([Self.answer("size", "large")]))
         #expect(!rewritten.happened)
         detach()
     }

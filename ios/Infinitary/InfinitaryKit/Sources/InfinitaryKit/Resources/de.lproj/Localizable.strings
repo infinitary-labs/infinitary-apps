@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "%1$@ verwenden";
 "accountsCustomApiUseForFirstMate" = "%1$@ für deinen ersten Offizier verwenden";
 "accountsCustomApiUseModel" = "%1$@ verwenden";
+"accountsSavedResetBusy" = "Infinitary löst bereits einen gespeicherten Reset für %1$@ ein. Warte, bis es fertig ist.";
 "accountsSavedResetCodexStopped" = "Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.";
 "accountsSavedResetNoCodex" = "Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex %1$@ oder neuer. Installiere Codex oder löse den Reset auf %2$@ ein.";
 "accountsSavedResetNoneLeft" = "%1$@ hat keinen gespeicherten Reset mehr zum Einlösen.";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "Diese Adresse enthält keinen Anmeldecode. Füge die ganze Adresse ein, bei der die Seite gelandet ist.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Wenn dein Browser auf einem anderen Computer ist, füge die Adresse ein, bei der seine Seite nach der Anmeldung gelandet ist.";
+"accountsSavedResetSignInAgain" = "Die Anmeldung von Codex bei %1$@ funktioniert nicht mehr, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.";
 "accountsSavedResetSignInFailed" = "Codex konnte sich nicht anmelden.";
 "accountsSavedResetSignInFirst" = "Codex ist noch nicht bei %1$@ angemeldet, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex anzumelden.";
 "accountsSavedResetSignInNotice" = "Melde dich im Browser beim ChatGPT-Konto von %1$@ an, damit Codex seinen gespeicherten Reset einlösen kann.";

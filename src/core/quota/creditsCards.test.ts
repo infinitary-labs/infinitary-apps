@@ -24,9 +24,21 @@ const body = JSON.parse(
   ),
 ) as Record<string, Record<string, unknown>>;
 
-/** That computer's Codex row with its weekly window at `used` percent, credits as the fixture says. */
-function codexRow(used: number, keepGoingOnCredits = false): QuotaProviderView {
+/** What that computer's Codex row holds beyond its spent window. */
+type Holds = { credits: boolean; savedResets: boolean };
+
+/**
+ * That computer's Codex row with its weekly window at `used` percent,
+ * credits as the fixture says, and with `savedResets` the fixture's saved
+ * resets applying now.
+ */
+function codexRow(
+  used: number,
+  keepGoingOnCredits = false,
+  holds: Holds = { credits: true, savedResets: false },
+): QuotaProviderView {
   const rateLimit = body.rate_limit as Record<string, Record<string, unknown>>;
+  const resets = body.rate_limit_reset_credits as Record<string, unknown>;
   const parsed = parseCodexUsage(
     {
       ...body,
@@ -34,6 +46,10 @@ function codexRow(used: number, keepGoingOnCredits = false): QuotaProviderView {
         ...rateLimit,
         primary_window: { ...rateLimit.primary_window, used_percent: used },
       },
+      ...(holds.credits ? {} : { credits: null }),
+      rate_limit_reset_credits: holds.savedResets
+        ? { ...resets, applicable_available_count: resets.available_count }
+        : resets,
     },
     NOW,
   );
@@ -46,12 +62,13 @@ function codexRow(used: number, keepGoingOnCredits = false): QuotaProviderView {
     stale: false,
     windows: parsed.windows,
     ...(parsed.credits ? { credits: parsed.credits } : {}),
+    ...(parsed.savedResets ? { savedResets: parsed.savedResets } : {}),
     ...(keepGoingOnCredits ? { keepGoingOnCredits: true } : {}),
   };
 }
 
 /** What Mac mini says of its sign-ins: its Codex account, its switch and its reading. */
-function said(used: number, keepGoingOnCredits: boolean): ComputerSignIns {
+function said(used: number, keepGoingOnCredits: boolean, holds?: Holds): ComputerSignIns {
   return {
     providers: [],
     accounts: [
@@ -70,12 +87,12 @@ function said(used: number, keepGoingOnCredits: boolean): ComputerSignIns {
     quota: {
       generatedAt: new Date(NOW).toISOString(),
       fetchedAt: NOW,
-      providers: [codexRow(used, keepGoingOnCredits)],
+      providers: [codexRow(used, keepGoingOnCredits, holds)],
     },
   };
 }
 
-function home(signIns: { now: ComputerSignIns }) {
+function home(signIns: { now: ComputerSignIns }, canUseSavedReset = true) {
   const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
   const withdrawn: string[] = [];
   const sent: [string, string, boolean][] = [];
@@ -94,6 +111,7 @@ function home(signIns: { now: ComputerSignIns }) {
       },
       lastSaid: (deviceId) => (deviceId === "mini" ? signIns.now : null),
       placeOf: (deviceId) => (deviceId === "mini" ? { where: "on Mac mini" } : undefined),
+      canUseSavedReset: () => canUseSavedReset,
     },
     cards: {
       raiseHostCard: (card) => raised.push(card),
@@ -129,6 +147,34 @@ describe("a computer's own account that used up its allowance", () => {
     await world.cards.setKeepGoing("acct-codex", true, "mini");
     expect(world.sent).toEqual([["mini", "acct-codex", true]]);
     expect(world.withdrawn).toEqual(["card-credits-offer-mini-acct-codex"]);
+  });
+
+  // INF-5478's plan, piece 1: the button runs only on a computer that takes the order and is in reach.
+  it("offers Use a saved reset only while that computer can use one, and raises no card with nothing to offer", () => {
+    const both = { credits: true, savedResets: true };
+    const ops = (world: ReturnType<typeof home>) =>
+      world.raised.flatMap((card) => (card.actions ?? []).map((action) => action.effect));
+    const able = home({ now: said(100, false, both) });
+    able.cards.spentAt(["openai-codex"], "mini");
+    expect(ops(able)).toContainEqual({
+      kind: "host",
+      op: "use-saved-reset",
+      arg: "acct-codex@mini",
+    });
+
+    const older = home({ now: said(100, false, both) }, false);
+    older.cards.spentAt(["openai-codex"], "mini");
+    expect(older.raised).toHaveLength(1);
+    expect(ops(older).map((effect) => effect?.kind === "host" && effect.op)).toEqual([
+      "keep-going-on-credits",
+    ]);
+
+    const resetsOnly = home(
+      { now: said(100, false, { credits: false, savedResets: true }) },
+      false,
+    );
+    resetsOnly.cards.spentAt(["openai-codex"], "mini");
+    expect(resetsOnly.raised).toEqual([]);
   });
 
   it("is not offered once its switch is on there", () => {

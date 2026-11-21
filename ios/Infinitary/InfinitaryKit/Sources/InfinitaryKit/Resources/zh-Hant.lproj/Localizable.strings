@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "使用 %1$@";
 "accountsCustomApiUseForFirstMate" = "讓你的大副使用 %1$@";
 "accountsCustomApiUseModel" = "使用 %1$@";
+"accountsSavedResetBusy" = "Infinitary 已在 %1$@ 上使用已儲存的重設。請等待它完成。";
 "accountsSavedResetCodexStopped" = "Codex 在使用任何內容之前停止了回應，因此沒有使用已儲存的重設。請再試一次。";
 "accountsSavedResetNoCodex" = "要在 Infinitary 中使用已儲存的重設，這台電腦需要 Codex %1$@ 或更新版本。請安裝 Codex，或在 %2$@ 使用重設。";
 "accountsSavedResetNoneLeft" = "%1$@ 沒有剩餘可用的已儲存的重設。";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "該網址中沒有登入代碼。請貼上頁面最後停留的完整網址。";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "如果瀏覽器在另一台電腦上，請貼上登入後頁面最後停留的網址。";
+"accountsSavedResetSignInAgain" = "Codex 在 %1$@ 上的登入已失效，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。";
 "accountsSavedResetSignInFailed" = "Codex 無法登入。";
 "accountsSavedResetSignInFirst" = "Codex 尚未登入 %1$@，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 登入。";
 "accountsSavedResetSignInNotice" = "請在瀏覽器中登入 %1$@ 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。";

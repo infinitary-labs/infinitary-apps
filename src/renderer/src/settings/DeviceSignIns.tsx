@@ -175,8 +175,8 @@ export function DeviceSignInGroups({
     const device = groups.find((entry) => entry.deviceId === deviceId);
     if (!device) return;
     useShellStore.getState().clearPendingUseSavedReset();
-    if (device.reach === "in-reach" && device.savedReset && device.flows)
-      applySavedReset(deviceId, pendingUse.slice(0, at));
+    // One that cannot start (an older or unreachable computer) ends under the row, saying why.
+    if (device.flows) applySavedReset(deviceId, pendingUse.slice(0, at));
   }, [pendingUse, groups]);
 
   const answer = (flow: Flow, value: string | null) => {
@@ -193,7 +193,11 @@ export function DeviceSignInGroups({
     <>
       {groups.map((device) => {
         const place = signInPlace(device);
-        const flow = device.flows?.find((entry) => entry.target === "account");
+        // A saved reset's use runs beside a sign-in there, each under its own account's row.
+        const flows = device.flows?.filter((entry) => entry.target === "account") ?? [];
+        const flowOf = (anchor: string | undefined) =>
+          flows.find((entry) => entry.accountId === anchor);
+        const busy = flows.find((entry) => !entry.ended);
         const accounts = (device.signIns?.accounts ?? []).filter(
           (account) => !isCustomApiProvider(account.providerId),
         );
@@ -213,8 +217,9 @@ export function DeviceSignInGroups({
         };
         const quotaRow = (account: AccountView) =>
           device.signIns?.quota?.providers.find((row) => row.accountId === account.id);
-        const aside = (anchor: string | undefined) =>
-          flow && flow.accountId === anchor ? (
+        const aside = (anchor: string | undefined) => {
+          const flow = flowOf(anchor);
+          return flow ? (
             <DeviceSignInAside
               flow={flow}
               providerName={providerName(flow.providerId)}
@@ -225,6 +230,7 @@ export function DeviceSignInGroups({
               onStop={() => stop(flow)}
             />
           ) : null;
+        };
         return (
           <section
             key={device.deviceId}
@@ -241,9 +247,9 @@ export function DeviceSignInGroups({
               <DeviceSignInWait device={device} line={deviceSignInWaitLine(device, home.this)} />
             )}
             <div
-              data-subscriptions-list={device.signIns || flow ? "" : undefined}
+              data-subscriptions-list={device.signIns || flows.length > 0 ? "" : undefined}
               style={
-                device.signIns || flow
+                device.signIns || flows.length > 0
                   ? {
                       background: "var(--bg-1)",
                       border: "1px solid var(--line-1)",
@@ -255,6 +261,7 @@ export function DeviceSignInGroups({
             >
               {accounts.map((account) => {
                 const row = quotaRow(account);
+                const own = flowOf(account.id);
                 return (
                   <div key={account.id}>
                     {renderRow({
@@ -262,7 +269,7 @@ export function DeviceSignInGroups({
                       place: place.who,
                       providerName: providerName(account.providerId),
                       ...(row ? { quotaRow: row } : {}),
-                      signingIn: flow?.accountId === account.id && !flow.ended,
+                      signingIn: !!own && !own.ended,
                       ...(!device.flows ? { signInOff: REMOTE_SIGN_IN_UPDATE_NOTE } : {}),
                       onSignIn: () =>
                         start(
@@ -374,7 +381,7 @@ export function DeviceSignInGroups({
                   <ProviderChips
                     providers={device.reach === "in-reach" ? providers : []}
                     accounts={accounts}
-                    busyProviderId={flow && !flow.ended ? flow.providerId : null}
+                    busyProviderId={busy ? busy.providerId : null}
                     signInOff={!device.flows ? REMOTE_SIGN_IN_UPDATE_NOTE : undefined}
                     onConnect={(provider) => connect(device.deviceId, provider)}
                     variant="foot"

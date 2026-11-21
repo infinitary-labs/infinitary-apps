@@ -28,12 +28,14 @@ Each request has an answer deadline of one minute; the process ending, or a dead
 
 ## One use
 
-`redeemSavedReset` (`src/core/codex/savedReset.ts`) runs these steps:
+`redeemSavedReset` (`src/core/codex/savedReset.ts`) runs one use per account at a time on a computer: a second use of an account while one runs in its Codex home is refused in words that say to wait, since two would each start Codex in one home, could send two keys and spend two resets, and could renew one sign-in twice at once.
+It runs these steps:
 
 1. Check the CLI as above.
 2. Start the app-server and read the account (`account/read`, without refreshing its token).
 3. When Codex has no ChatGPT sign-in in that home, sign it in (below), or, for a use with no way to show a sign-in - the first mate's, or a card's click while Codex is not signed in - refuse in words that say to choose Use a saved reset on the account's row.
 4. Read the allowance (`account/rateLimits/read`) and check that Codex is signed in to the same ChatGPT account as Infinitary's own sign-in: the answer's `accountId`, or the account id in Codex's own sign-in file when the answer leaves it out, against the `chatgpt_account_id` in the account's own token (`chatgptAccountId`).
+   When Codex said it was signed in and refuses this read, the sign-in it kept no longer works: Codex is signed out, then signed in again where a sign-in can be shown, or refused in words that say to sign Codex in again on the account's row.
    Either id missing is refused, saying Infinitary could not check the account; a different account signs Codex out (`account/logout`) and is refused, so nothing is used on an account the captain did not choose.
 5. With no attempt kept and none held, say none is left without asking.
 6. Pick the available reset that expires first (`earliestExpiring`; one without an expiry comes last), and keep the attempt - a new random key and that reset's id - on the account's registry row before sending (`AccountRecord.savedResetAttempt`).
@@ -57,6 +59,8 @@ Codex's device-code sign-in is not used.
 ## Where it runs
 
 A use of this computer's own account runs here; an account on a computer that runs work is used on that computer, with its own Codex CLI and its own Codex home, through the `inf:sign-ins:use-saved-reset` order (`docs/helper.md`, "Its own sign-ins").
+The home shows that use under the account's row beside any sign-in there: neither cancels the other, since Codex may be spending the reset, and a second use of the same account while one runs is refused.
+A computer without the change, or out of reach, is offered no Use a saved reset on its run-out card, and a press that reaches its row anyway ends under the account's row saying why (`DeviceSignIns.redeemSavedReset`).
 The window asks with `inf:accounts:use-saved-reset` (`accounts.redeemSavedReset`), the first mate with the `account-use-reset` catalog line, and a card with the `use-saved-reset` host operation (`docs/quota.md`, "Saved resets").
 
 ## Signing out

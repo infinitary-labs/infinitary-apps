@@ -82,8 +82,30 @@ function codexStopped(error: unknown): never {
   throw error;
 }
 
+/**
+ * The Codex homes a use runs in now, on this computer. One use at a time per
+ * account: two would each start Codex in one home, could send two keys and
+ * spend two resets, and could renew one sign-in twice at once.
+ */
+const usingHomes = new Set<string>();
+
 /** Uses one saved reset of the account, or throws words that say why not. */
 export async function redeemSavedReset(
+  reach: SavedResetReach,
+  use: SavedResetUse,
+): Promise<SavedResetResult> {
+  const home = reach.home(use.accountId);
+  if (usingHomes.has(home)) throw new Error(m.accountsSavedResetBusy({ account: use.account }));
+  usingHomes.add(home);
+  try {
+    return await redeemIn(home, reach, use);
+  } finally {
+    usingHomes.delete(home);
+  }
+}
+
+async function redeemIn(
+  home: string,
   reach: SavedResetReach,
   use: SavedResetUse,
 ): Promise<SavedResetResult> {
@@ -100,7 +122,6 @@ export async function redeemSavedReset(
         site: RESET_SITE,
       }),
     );
-  const home = reach.home(use.accountId);
   const server = await CodexAppServer.start({
     executable: cli.executable,
     home,
@@ -112,13 +133,25 @@ export async function redeemSavedReset(
     const read = await server
       .request<{ account: Account }>("account/read", { refreshToken: false }, ANSWER_WITHIN_MS)
       .catch(codexStopped);
-    if (read.account?.type !== "chatgpt") {
+    const signedIn = read.account?.type === "chatgpt";
+    if (!signedIn) {
       if (!use.bridge) throw new Error(m.accountsSavedResetSignInFirst({ account: use.account }));
       await signIn(server, use, use.bridge);
     }
-    const limits = await server
-      .request<RateLimits>("account/rateLimits/read", {}, ANSWER_WITHIN_MS)
-      .catch(codexStopped);
+    const readLimits = () =>
+      server.request<RateLimits>("account/rateLimits/read", {}, ANSWER_WITHIN_MS);
+    const limits = await readLimits().catch(async (error: unknown) => {
+      // A sign-in kept from before that Codex refuses has stopped working:
+      // signed out, and signed in again where a sign-in can be shown.
+      if (!signedIn || !(error instanceof CodexRefusal)) return codexStopped(error);
+      await server.request("account/logout", undefined, ANSWER_WITHIN_MS).catch(() => undefined);
+      if (!use.bridge)
+        throw new Error(
+          `${m.accountsSavedResetSignInAgain({ account: use.account })} ${error.message}`,
+        );
+      await signIn(server, use, use.bridge);
+      return readLimits().catch(codexStopped);
+    });
     const theirs = limits.accountId ?? signedInAccountId(home);
     const ours = await reach.ownAccountId(use.accountId);
     if (!theirs || !ours) throw new Error(m.accountsSavedResetUnverified({ account: use.account }));

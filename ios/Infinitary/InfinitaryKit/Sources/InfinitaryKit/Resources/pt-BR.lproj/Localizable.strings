@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "Usar %1$@";
 "accountsCustomApiUseForFirstMate" = "Usar %1$@ para o seu imediato";
 "accountsCustomApiUseModel" = "Usar %1$@";
+"accountsSavedResetBusy" = "O Infinitary já está usando uma redefinição salva em %1$@. Espere terminar.";
 "accountsSavedResetCodexStopped" = "O Codex parou de responder antes de usar qualquer coisa, então nenhuma redefinição salva foi usada. Tente de novo.";
 "accountsSavedResetNoCodex" = "Para usar uma redefinição salva pelo Infinitary, este computador precisa do Codex %1$@ ou mais recente. Instale o Codex ou use a redefinição em %2$@.";
 "accountsSavedResetNoneLeft" = "%1$@ não tem mais redefinições salvas para usar.";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "Esse endereço não tem código de login. Cole o endereço completo em que a página parou.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Se o navegador estiver em outro computador, cole o endereço em que a página parou depois do login.";
+"accountsSavedResetSignInAgain" = "O login do Codex em %1$@ não funciona mais, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.";
 "accountsSavedResetSignInFailed" = "O Codex não conseguiu fazer login.";
 "accountsSavedResetSignInFirst" = "O Codex ainda não fez login em %1$@, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex.";
 "accountsSavedResetSignInNotice" = "Faça login na conta do ChatGPT de %1$@ no navegador, para o Codex poder usar a redefinição salva.";

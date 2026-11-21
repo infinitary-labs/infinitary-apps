@@ -10439,6 +10439,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use ${model}`;
   }
+  function accountsSavedResetBusy(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم Infinitary إعادة تعيين محفوظة على ${account} بالفعل. انتظر حتى ينتهي.`;
+      case "de":
+        return `Infinitary löst bereits einen gespeicherten Reset für ${account} ein. Warte, bis es fertig ist.`;
+      case "es":
+        return `Infinitary ya está usando un restablecimiento guardado en ${account}. Espera a que termine.`;
+      case "fr":
+        return `Infinitary utilise déjà une réinitialisation enregistrée sur ${account}. Attendez qu’elle se termine.`;
+      case "ja":
+        return `Infinitary はすでに ${account} で保存済みのリセットを使っています。終わるまでお待ちください。`;
+      case "ko":
+        return `Infinitary가 이미 ${account}에서 저장된 재설정을 사용하고 있어요. 끝날 때까지 기다리세요.`;
+      case "pt-BR":
+        return `O Infinitary já está usando uma redefinição salva em ${account}. Espere terminar.`;
+      case "zh-Hans":
+        return `Infinitary 已在 ${account} 上使用已保存的重置。请等待它完成。`;
+      case "zh-Hant":
+        return `Infinitary 已在 ${account} 上使用已儲存的重設。請等待它完成。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš áļŕéáðý ûšîñĝ á šáṽéð ŕéšéţ öñ ${account}. Ŵáîţ ƒöŕ îţ ţö ƒîñîšĥ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is already using a saved reset on ‬${account}‮. Wait for it to finish.‬`;
+    }
+    return `Infinitary is already using a saved reset on ${account}. Wait for it to finish.`;
+  }
   function accountsSavedResetCodexStopped() {
     switch (currentLanguage()) {
       case "ar":
@@ -10689,6 +10717,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮If your browser is on another computer, paste the address its page ended on after you signed in.‬`;
     }
     return `If your browser is on another computer, paste the address its page ended on after you signed in.`;
+  }
+  function accountsSavedResetSignInAgain(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد تسجيل دخول Codex إلى ${account} يعمل، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول مرة أخرى.`;
+      case "de":
+        return `Die Anmeldung von Codex bei ${account} funktioniert nicht mehr, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.`;
+      case "es":
+        return `El inicio de sesión de Codex en ${account} ya no funciona, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.`;
+      case "fr":
+        return `La connexion de Codex à ${account} ne fonctionne plus, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.`;
+      case "ja":
+        return `${account} への Codex のサインインが使えなくなったため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。`;
+      case "ko":
+        return `${account}에 대한 Codex 로그인이 더 이상 작동하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.`;
+      case "pt-BR":
+        return `O login do Codex em ${account} não funciona mais, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.`;
+      case "zh-Hans":
+        return `Codex 在 ${account} 上的登录已失效，因此没有使用重置。请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。`;
+      case "zh-Hant":
+        return `Codex 在 ${account} 上的登入已失效，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。`;
+      case "en-XA":
+        return `[Çöðéẋ'š šîĝñ-îñ ƒöŕ ${account} ñö ļöñĝéŕ ŵöŕķš, šö ñö ŕéšéţ ŵáš ûšéð. Çĥööšé Ûšé á šáṽéð ŕéšéţ öñ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex's sign-in for ‬${account}‮ no longer works, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in again.‬`;
+    }
+    return `Codex's sign-in for ${account} no longer works, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in again.`;
   }
   function accountsSavedResetSignInFailed() {
     switch (currentLanguage()) {
@@ -84658,6 +84714,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseFix,
     accountsCustomApiUseForFirstMate,
     accountsCustomApiUseModel,
+    accountsSavedResetBusy,
     accountsSavedResetCodexStopped,
     accountsSavedResetNoCodex,
     accountsSavedResetNoneLeft,
@@ -84667,6 +84724,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsSavedResetPasteAgain,
     accountsSavedResetPastePlaceholder,
     accountsSavedResetPastePrompt,
+    accountsSavedResetSignInAgain,
     accountsSavedResetSignInFailed,
     accountsSavedResetSignInFirst,
     accountsSavedResetSignInNotice,
@@ -87389,6 +87447,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseFix": ["address"],
     "accountsCustomApiUseForFirstMate": ["model"],
     "accountsCustomApiUseModel": ["model"],
+    "accountsSavedResetBusy": ["account"],
     "accountsSavedResetCodexStopped": [],
     "accountsSavedResetNoCodex": ["floor", "site"],
     "accountsSavedResetNoneLeft": ["account"],
@@ -87398,6 +87457,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsSavedResetPasteAgain": [],
     "accountsSavedResetPastePlaceholder": [],
     "accountsSavedResetPastePrompt": [],
+    "accountsSavedResetSignInAgain": ["account"],
     "accountsSavedResetSignInFailed": [],
     "accountsSavedResetSignInFirst": ["account"],
     "accountsSavedResetSignInNotice": ["account"],

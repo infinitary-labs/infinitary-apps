@@ -198,6 +198,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiUseFix`(`address`: String) -> String { PhoneWords.format("accountsCustomApiUseFix", [`address`]) }
     public static func `accountsCustomApiUseForFirstMate`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseForFirstMate", [`model`]) }
     public static func `accountsCustomApiUseModel`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseModel", [`model`]) }
+    public static func `accountsSavedResetBusy`(`account`: String) -> String { PhoneWords.format("accountsSavedResetBusy", [`account`]) }
     public static func `accountsSavedResetCodexStopped`() -> String { PhoneWords.format("accountsSavedResetCodexStopped", []) }
     public static func `accountsSavedResetNoCodex`(`floor`: String, `site`: String) -> String { PhoneWords.format("accountsSavedResetNoCodex", [`floor`, `site`]) }
     public static func `accountsSavedResetNoneLeft`(`account`: String) -> String { PhoneWords.format("accountsSavedResetNoneLeft", [`account`]) }
@@ -207,6 +208,7 @@ public enum PhoneMessages {
     public static func `accountsSavedResetPasteAgain`() -> String { PhoneWords.format("accountsSavedResetPasteAgain", []) }
     public static func `accountsSavedResetPastePlaceholder`() -> String { PhoneWords.format("accountsSavedResetPastePlaceholder", []) }
     public static func `accountsSavedResetPastePrompt`() -> String { PhoneWords.format("accountsSavedResetPastePrompt", []) }
+    public static func `accountsSavedResetSignInAgain`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInAgain", [`account`]) }
     public static func `accountsSavedResetSignInFailed`() -> String { PhoneWords.format("accountsSavedResetSignInFailed", []) }
     public static func `accountsSavedResetSignInFirst`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInFirst", [`account`]) }
     public static func `accountsSavedResetSignInNotice`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInNotice", [`account`]) }
@@ -3932,6 +3934,7 @@ extension PhoneWords {
         "accountsCustomApiUseFix": ["address"],
         "accountsCustomApiUseForFirstMate": ["model"],
         "accountsCustomApiUseModel": ["model"],
+        "accountsSavedResetBusy": ["account"],
         "accountsSavedResetCodexStopped": [],
         "accountsSavedResetNoCodex": ["floor", "site"],
         "accountsSavedResetNoneLeft": ["account"],
@@ -3941,6 +3944,7 @@ extension PhoneWords {
         "accountsSavedResetPasteAgain": [],
         "accountsSavedResetPastePlaceholder": [],
         "accountsSavedResetPastePrompt": [],
+        "accountsSavedResetSignInAgain": ["account"],
         "accountsSavedResetSignInFailed": [],
         "accountsSavedResetSignInFirst": ["account"],
         "accountsSavedResetSignInNotice": ["account"],

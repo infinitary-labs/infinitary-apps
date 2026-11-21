@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "استخدام %1$@";
 "accountsCustomApiUseForFirstMate" = "استخدام %1$@ لنائب القبطان";
 "accountsCustomApiUseModel" = "استخدام %1$@";
+"accountsSavedResetBusy" = "يستخدم Infinitary إعادة تعيين محفوظة على %1$@ بالفعل. انتظر حتى ينتهي.";
 "accountsSavedResetCodexStopped" = "توقف Codex عن الرد قبل أن يستخدم أي شيء، لذلك لم تُستخدم أي إعادة تعيين محفوظة. حاول مرة أخرى.";
 "accountsSavedResetNoCodex" = "لاستخدام إعادة تعيين محفوظة من Infinitary يحتاج هذا الحاسوب إلى Codex %1$@ أو أحدث. ثبّت Codex، أو استخدم إعادة التعيين على %2$@.";
 "accountsSavedResetNoneLeft" = "لم يتبقَّ لدى %1$@ أي إعادة تعيين محفوظة لاستخدامها.";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "لا يحتوي هذا العنوان على رمز تسجيل الدخول. الصق العنوان كاملًا الذي انتهت إليه الصفحة.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "إذا كان متصفحك على حاسوب آخر، فالصق العنوان الذي انتهت إليه صفحته بعد تسجيل الدخول.";
+"accountsSavedResetSignInAgain" = "لم يعد تسجيل دخول Codex إلى %1$@ يعمل، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول مرة أخرى.";
 "accountsSavedResetSignInFailed" = "تعذّر على Codex تسجيل الدخول.";
 "accountsSavedResetSignInFirst" = "لم يسجّل Codex الدخول إلى %1$@ بعد، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول.";
 "accountsSavedResetSignInNotice" = "سجّل الدخول إلى حساب ChatGPT الخاص بـ %1$@ في متصفحك، ليتمكن Codex من استخدام إعادة التعيين المحفوظة.";

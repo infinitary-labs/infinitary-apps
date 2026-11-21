@@ -11,6 +11,7 @@ import {
   type ForgeKeySignInResult,
   isForgeHostName,
 } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import { catalogEntry } from "@shared/providers";
 import type { SavedResetResult } from "@shared/savedResets";
 import {
@@ -25,6 +26,7 @@ import {
   signInOrders,
   signInPlace,
 } from "@shared/signIns";
+import { accountWords } from "../codex/savedResets";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import type { CoreEventSink } from "../events";
@@ -446,15 +448,33 @@ export class DeviceSignIns {
   ): Promise<SavedResetResult> {
     this.computer(deviceId);
     const who = this.who(deviceId);
-    if (!this.takesSavedReset(deviceId))
-      throw new Error(`Update Infinitary on ${who} to use a saved reset there.`);
     const account = this.said
       .get(deviceId)
       ?.signIns?.accounts.find((entry) => entry.id === accountId);
     if (!account)
       throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    // One use of an account at a time: a second could spend a second reset.
+    for (const [id, running] of this.running)
+      if (
+        this.uses.has(id) &&
+        running.deviceId === deviceId &&
+        running.accountId === accountId &&
+        running.phase === "running"
+      )
+        throw new Error(m.accountsSavedResetBusy({ account: accountWords(account) }));
+    // A use that cannot start ends under the account's row, saying why.
+    if (!this.takesSavedReset(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`Update Infinitary on ${who} to use a saved reset there.`),
+      );
     if (!this.options.work.inReach(deviceId))
-      throw new Error(`${who} is out of reach, so nothing was sent.`);
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`${who} is out of reach, so nothing was sent.`),
+      );
     const signInId = randomBytes(16).toString("base64url");
     const ended = new Promise<Extract<SignInStep, { kind: "ended" }>>((resolve) =>
       this.uses.set(signInId, resolve),
@@ -481,6 +501,31 @@ export class DeviceSignIns {
     const step = await ended;
     if (step.savedReset) return step.savedReset;
     throw new Error(step.error ?? `The saved reset on ${who} stopped before it ended.`);
+  }
+
+  /** A use refused before it was sent, its reason left under the account's row as its end. */
+  private refusedUse(
+    deviceId: string,
+    account: { id: string; providerId: string },
+    error: Error,
+  ): Error {
+    const signInId = randomBytes(16).toString("base64url");
+    this.uses.set(signInId, () => {});
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: account.providerId,
+      accountId: account.id,
+      target: "account",
+      phase: "running",
+    });
+    this.end(signInId, { kind: "ended", outcome: "failed", error: error.message });
+    return error;
+  }
+
+  /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
+  canUseSavedReset(deviceId: string): boolean {
+    return this.takesSavedReset(deviceId) && this.options.work.inReach(deviceId);
   }
 
   /** Whether that computer takes `inf:sign-ins:use-saved-reset` (`use-saved-reset.md`). */
@@ -765,9 +810,19 @@ export class DeviceSignIns {
   }
 
   private begin(flow: Running): void {
-    for (const [id, previous] of this.running)
-      if (previous.deviceId === flow.deviceId && previous.target === flow.target)
+    // A saved reset's use keeps its own place beside a sign-in: Codex may be
+    // spending the reset, so no sign-in cancels it, and it cancels none.
+    // A use replaces only its own account's ended one.
+    const use = this.uses.has(flow.signInId);
+    for (const [id, previous] of this.running) {
+      if (previous.deviceId !== flow.deviceId || previous.target !== flow.target) continue;
+      if (
+        use
+          ? previous.accountId === flow.accountId && previous.phase === "ended"
+          : !this.uses.has(id)
+      )
         void this.cancel(id);
+    }
     this.running.set(flow.signInId, flow);
     this.push();
   }

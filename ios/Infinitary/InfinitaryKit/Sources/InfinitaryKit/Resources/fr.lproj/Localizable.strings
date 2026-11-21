@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "Utiliser %1$@";
 "accountsCustomApiUseForFirstMate" = "Utiliser %1$@ pour votre second";
 "accountsCustomApiUseModel" = "Utiliser %1$@";
+"accountsSavedResetBusy" = "Infinitary utilise déjà une réinitialisation enregistrée sur %1$@. Attendez qu’elle se termine.";
 "accountsSavedResetCodexStopped" = "Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.";
 "accountsSavedResetNoCodex" = "Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex %1$@ ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur %2$@.";
 "accountsSavedResetNoneLeft" = "%1$@ n’a plus de réinitialisation enregistrée à utiliser.";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "Cette adresse ne contient pas de code de connexion. Collez l’adresse complète où la page s’est arrêtée.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Si votre navigateur est sur un autre ordinateur, collez l’adresse où sa page s’est arrêtée après la connexion.";
+"accountsSavedResetSignInAgain" = "La connexion de Codex à %1$@ ne fonctionne plus, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.";
 "accountsSavedResetSignInFailed" = "Codex n’a pas pu se connecter.";
 "accountsSavedResetSignInFirst" = "Codex n’est pas encore connecté à %1$@, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour connecter Codex.";
 "accountsSavedResetSignInNotice" = "Connectez-vous au compte ChatGPT de %1$@ dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.";

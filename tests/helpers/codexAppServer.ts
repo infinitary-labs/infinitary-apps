@@ -26,6 +26,8 @@ export type Behavior = {
   consume?: string | "crash";
   /** How a sign-in ends once it starts. */
   login?: "success" | "failure" | "never";
+  /** A kept sign-in that no longer works: Codex says it is signed in and refuses the allowance read until it signs in again. */
+  stale?: boolean;
 };
 
 /**
@@ -38,6 +40,7 @@ export function standInCodex(behavior: Behavior = {}) {
   let starts = 0;
   let signedIn = behavior.signedIn ?? true;
   let available = behavior.available ?? 2;
+  let stale = behavior.stale ?? false;
   const start: StartCodexProcess = (_executable, args, env) => {
     starts++;
     if (!args.includes("app-server")) throw new Error(`not the app-server: ${args.join(" ")}`);
@@ -97,7 +100,10 @@ export function standInCodex(behavior: Behavior = {}) {
             if (behavior.login !== "never")
               setImmediate(() => {
                 const success = (behavior.login ?? "success") === "success";
-                if (success) signedIn = true;
+                if (success) {
+                  signedIn = true;
+                  stale = false;
+                }
                 stdout.write(
                   `${JSON.stringify({
                     method: "account/login/completed",
@@ -112,7 +118,7 @@ export function standInCodex(behavior: Behavior = {}) {
               });
             break;
           case "account/rateLimits/read":
-            if (!signedIn) {
+            if (!signedIn || stale) {
               refuse(id, "codex account authentication required to read rate limits");
               break;
             }

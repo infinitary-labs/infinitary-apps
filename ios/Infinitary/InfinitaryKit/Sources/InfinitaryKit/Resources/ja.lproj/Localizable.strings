@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "%1$@ を使う";
 "accountsCustomApiUseForFirstMate" = "一等航海士に %1$@ を使う";
 "accountsCustomApiUseModel" = "%1$@ を使う";
+"accountsSavedResetBusy" = "Infinitary はすでに %1$@ で保存済みのリセットを使っています。終わるまでお待ちください。";
 "accountsSavedResetCodexStopped" = "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。";
 "accountsSavedResetNoCodex" = "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex %1$@ 以降が必要です。Codex をインストールするか、%2$@ でリセットを使ってください。";
 "accountsSavedResetNoneLeft" = "%1$@ には使える保存済みのリセットが残っていません。";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "そのアドレスにはサインインのコードがありません。ページが最後に表示したアドレスをそのまま貼り付けてください。";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "ブラウザが別のコンピュータにある場合は、サインイン後にそのページが最後に表示したアドレスを貼り付けてください。";
+"accountsSavedResetSignInAgain" = "%1$@ への Codex のサインインが使えなくなったため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。";
 "accountsSavedResetSignInFailed" = "Codex はサインインできませんでした。";
 "accountsSavedResetSignInFirst" = "Codex はまだ %1$@ にサインインしていないため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がサインインします。";
 "accountsSavedResetSignInNotice" = "ブラウザで %1$@ の ChatGPT アカウントにサインインすると、Codex が保存済みのリセットを使えます。";

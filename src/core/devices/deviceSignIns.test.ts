@@ -1,4 +1,5 @@
 import { type DeviceSsh, type DeviceView, reachFrom } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it, vi } from "vitest";
@@ -172,6 +173,16 @@ describe("a computer's sign-ins view", () => {
       expect(ask.mock.calls.map(([, channel]) => channel)).not.toContain(
         "inf:sign-ins:use-saved-reset",
       );
+      // Its reason stays under the account's row, where a card's press lands.
+      expect(signIns.view()[0]?.flows).toEqual([
+        expect.objectContaining({
+          accountId: "acct-codex",
+          ended: expect.objectContaining({
+            outcome: "failed",
+            error: "Update Infinitary on Mac mini to use a saved reset there.",
+          }),
+        }),
+      ]);
       changes.push("use-saved-reset");
       expect(signIns.view()[0]?.savedReset).toBe(true);
       const used = signIns.redeemSavedReset(MINI.id, "acct-codex", true);
@@ -182,10 +193,20 @@ describe("a computer's sign-ins view", () => {
         ([, channel]) => channel === "inf:sign-ins:use-saved-reset",
       ) as [string, string, [{ signInId: string; accountId: string; signIn: boolean }]];
       expect(order).toMatchObject({ accountId: "acct-codex", signIn: true });
-      // Its sign-in shows under the account's row while it runs.
+      // Its sign-in shows under the account's row while it runs, in place of the refusal.
       expect(signIns.view()[0]?.flows).toEqual([
         expect.objectContaining({ signInId: order.signInId, accountId: "acct-codex" }),
       ]);
+      // A second press while it runs is refused, and sends nothing.
+      await expect(signIns.redeemSavedReset(MINI.id, "acct-codex", true)).rejects.toThrow(
+        m.accountsSavedResetBusy({ account: "Codex · Work" }),
+      );
+      // A sign-in started there meanwhile runs beside it and cancels nothing.
+      await signIns.start(MINI.id, "anthropic-claude", "oauth");
+      expect(ask.mock.calls.map(([, channel]) => channel)).not.toContain("inf:sign-ins:cancel");
+      expect(ask.mock.calls.filter(([, c]) => c === "inf:sign-ins:use-saved-reset")).toHaveLength(
+        1,
+      );
       signIns.step(MINI.id, {
         signInId: order.signInId,
         step: {

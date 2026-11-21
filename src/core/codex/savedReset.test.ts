@@ -174,6 +174,46 @@ describe("using a saved Codex reset", () => {
     );
   });
 
+  it("refuses a second use of the same account while one runs, and the first one alone sends a key", async () => {
+    const stand = standInCodex({});
+    const { reach, saves } = reachWith(stand);
+    const first = redeemSavedReset(reach, USE);
+    await expect(redeemSavedReset(reach, USE)).rejects.toThrow(
+      m.accountsSavedResetBusy({ account: USE.account }),
+    );
+    await expect(first).resolves.toMatchObject({ outcome: "used" });
+    expect(stand.starts()).toBe(1);
+    expect(saves).toHaveLength(1);
+    // Once it ended, the account takes a use again.
+    await expect(redeemSavedReset(reach, USE)).resolves.toMatchObject({ outcome: "used" });
+  });
+
+  it("signs Codex out and in again when the sign-in it kept no longer works, then uses the reset", async () => {
+    const stand = standInCodex({ stale: true });
+    const { reach } = reachWith(stand);
+    const { bridge, notices } = bridgeRecorder();
+    await expect(redeemSavedReset(reach, { ...USE, bridge })).resolves.toMatchObject({
+      outcome: "used",
+    });
+    expect(notices).toHaveLength(1);
+    const methods = stand.methods();
+    expect(methods.indexOf("account/logout")).toBeLessThan(methods.indexOf("account/login/start"));
+    expect(methods.indexOf("account/login/start")).toBeLessThan(
+      methods.indexOf("account/rateLimitResetCredit/consume"),
+    );
+  });
+
+  it("says to sign Codex in again on the row when its kept sign-in no longer works and none can be shown", async () => {
+    const stand = standInCodex({ stale: true });
+    const { reach, saves } = reachWith(stand);
+    await expect(redeemSavedReset(reach, USE)).rejects.toThrow(
+      m.accountsSavedResetSignInAgain({ account: USE.account }),
+    );
+    expect(stand.methods()).toContain("account/logout");
+    expect(stand.methods()).not.toContain("account/login/start");
+    expect(saves).toEqual([]);
+  });
+
   it("uses nothing when Codex's sign-in fails", async () => {
     const stand = standInCodex({ signedIn: false, login: "failure" });
     const { reach } = reachWith(stand);

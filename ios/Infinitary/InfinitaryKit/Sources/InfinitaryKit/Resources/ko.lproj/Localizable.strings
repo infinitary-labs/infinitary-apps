@@ -192,6 +192,7 @@
 "accountsCustomApiUseFix" = "%1$@ 사용";
 "accountsCustomApiUseForFirstMate" = "일등항해사에 %1$@ 사용";
 "accountsCustomApiUseModel" = "%1$@ 사용";
+"accountsSavedResetBusy" = "Infinitary가 이미 %1$@에서 저장된 재설정을 사용하고 있어요. 끝날 때까지 기다리세요.";
 "accountsSavedResetCodexStopped" = "Codex가 무엇이든 사용하기 전에 응답을 멈춰서 저장된 재설정은 사용되지 않았습니다. 다시 시도하세요.";
 "accountsSavedResetNoCodex" = "Infinitary에서 저장된 재설정을 사용하려면 이 컴퓨터에 Codex %1$@ 이상이 필요해요. Codex를 설치하거나 %2$@에서 재설정을 사용하세요.";
 "accountsSavedResetNoneLeft" = "%1$@에는 사용할 저장된 재설정이 남아 있지 않아요.";
@@ -201,6 +202,7 @@
 "accountsSavedResetPasteAgain" = "그 주소에는 로그인 코드가 없어요. 페이지가 마지막으로 보여 준 주소 전체를 붙여 넣으세요.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "브라우저가 다른 컴퓨터에 있다면 로그인한 뒤 페이지가 마지막으로 보여 준 주소를 붙여 넣으세요.";
+"accountsSavedResetSignInAgain" = "%1$@에 대한 Codex 로그인이 더 이상 작동하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.";
 "accountsSavedResetSignInFailed" = "Codex가 로그인하지 못했어요.";
 "accountsSavedResetSignInFirst" = "Codex가 아직 %1$@에 로그인하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 로그인하세요.";
 "accountsSavedResetSignInNotice" = "브라우저에서 %1$@의 ChatGPT 계정에 로그인하면 Codex가 저장된 재설정을 사용할 수 있어요.";

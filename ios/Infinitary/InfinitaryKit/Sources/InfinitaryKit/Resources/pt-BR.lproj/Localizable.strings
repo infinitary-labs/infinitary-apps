@@ -702,6 +702,8 @@
 "feedBatchHeldUnanswered" = "%3$@: %1$@ está retido porque o %2$@ não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.";
 "feedBatchHeldUnansweredHost" = "%2$@: %1$@ está retido porque o host do projeto não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ está retido porque as verificações falharam. As alterações aprovadas enquanto isso esperam por ele.";
+"feedBatchMergeRunning" = "%3$@: o %2$@ aceitou a mesclagem de %1$@ e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.";
+"feedBatchMergeRunningHost" = "%2$@: o host do projeto aceitou a mesclagem de %1$@ e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.";
 "feedBatchMergedOne" = "%2$@: %1$@ foi mesclado.";
 "feedBatchNoStory" = "%2$@: %1$@ está aberto sem a história de %3$@, que não pôde ser adicionada à descrição. Ela é adicionada assim que for possível.";
 "feedBatchQueued" = "%3$@: o %2$@ colocou %1$@ na fila de mesclagem do branch principal. Ele é mesclado lá assim que as verificações da fila passarem.";
@@ -2958,6 +2960,11 @@
 "settingsProjectsBatchRetried" = "Combinando o lote de novo. As verificações rodam na nova versão.";
 "settingsProjectsBatchSendBack" = "Devolver com um motivo";
 "settingsProjectsBatchTryAgain" = "Tentar de novo";
+"settingsProjectsBatchWaiting" = "Lote esperando sua mesclagem";
+"settingsProjectsBatchWaitingSince" = "Esperando desde as %2$@: o %1$@ aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.";
+"settingsProjectsBatchWaitingSinceHost" = "Esperando desde as %1$@: o host do projeto aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.";
+"settingsProjectsBatchWaitingStillOpen" = "O %2$@ não fechou %1$@, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.";
+"settingsProjectsBatchWaitingStillOpenHost" = "O host do projeto não fechou %1$@, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.";
 "settingsProjectsCare" = "Cuidado";
 "settingsProjectsCareNone" = "nenhum";
 "settingsProjectsCarePersonal" = "Nada aqui passa por uma etapa de controle.";

@@ -11,13 +11,14 @@ import {
   EMPTY_BATCH_RECORD,
   keepsCommits,
   type MergeWays,
+  mergeWait,
   mergeWayFor,
   type OpenBatch,
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
 import { checkSnapshotSummary, checksThatRan, isRedCheckState } from "@shared/checkSnapshot";
 import { formatList, formatTime } from "@shared/i18n/format";
-import { type Said, said } from "@shared/i18n/said";
+import { englishOf, type Said, said, wordSaid } from "@shared/i18n/said";
 import type { RepoView } from "@shared/repos";
 import type { NamingRule } from "@shared/runbooks";
 import {
@@ -117,6 +118,19 @@ export const BATCH_WORDS = {
     place
       ? said("feedBatchQueued", { project, label, place })
       : said("feedBatchQueuedHost", { project, label }),
+  /** A merge the host took and still reads as running: said once, and never sent again. */
+  mergeRunning: (project: string, label: string, place: string | null | undefined): Said =>
+    place
+      ? said("feedBatchMergeRunning", { project, label, place })
+      : said("feedBatchMergeRunningHost", { project, label }),
+  /**
+   * Try again on a wait whose pull request the host did not close: its merge
+   * may still finish, so nothing new was sent and the wait stays.
+   */
+  stillOpen: (label: string, place: string | null | undefined): Said =>
+    place
+      ? said("settingsProjectsBatchWaitingStillOpen", { label, place })
+      : said("settingsProjectsBatchWaitingStillOpenHost", { label }),
   /** A hold detail's name for a host that names no place of its own. */
   host: "The project's host",
   /** The hold's saved detail, which the batch's status reads in English. */
@@ -161,7 +175,7 @@ export const BATCH_WORDS = {
   superseded: (label: string, link: string | null) =>
     `This change merged as part of ${label}${link ? ` (${link})` : ""}, so this pull request is closed.`,
   ended:
-    "That batch is no longer held at that version, so nothing was done; Settings shows it as it is now.",
+    "That batch is no longer held or waiting at that version, so nothing was done; Settings shows it as it is now.",
   notMember: (task: string) => `${task} is not in the held batch, so nothing was sent back.`,
   namedTwice: (task: string) =>
     `${task} is named more than once, so nothing was sent back: name each change once, with one reason.`,
@@ -432,11 +446,15 @@ export class Batches {
   }
 
   /**
-   * A by-hand answer to a held batch, from Settings, the first mate or a
-   * repair. Try again combines the batch again at a new version with every
-   * change waiting in line, so its checks run again; a send-back takes each
-   * named change out with its reason, and the rest combine again with the
-   * line. Answers the refusal in words, or nothing.
+   * A by-hand answer to a held batch, or Try again on a batch waiting on a
+   * merge its host still reads as running (`mergeWait`), from Settings, the
+   * first mate or a repair. Try again on a hold combines the batch again at
+   * a new version on the same pull request with every change waiting in
+   * line, so its checks run again; on a wait it closes that pull request
+   * first and combines on a new one (`replaceWaited`). A send-back, on a
+   * hold only, takes each named change out with its reason, and the rest
+   * combine again with the line. Answers the refusal in English words, as
+   * the first mate and a repair read it, or nothing.
    *
    * A repair that sends changes back and declares its own change the fix in
    * one declaration names that task as `fix`: the named changes leave, and
@@ -444,14 +462,53 @@ export class Batches {
    * approved and joins with the rest and every change waiting in line.
    */
   async answer(repoId: string, answer: BatchAnswer, fix?: string): Promise<string | undefined> {
-    const refused = await this.serial(repoId, async () => {
+    const refused = await this.answered(repoId, answer, fix);
+    return refused === undefined || typeof refused === "string" ? refused : englishOf(refused);
+  }
+
+  /** The same answer for Settings, where a refusal fails the request with its words, in the captain's language where it has them. */
+  async answerOrThrow(repoId: string, answer: BatchAnswer): Promise<{ ok: true }> {
+    const refused = await this.answered(repoId, answer);
+    if (refused)
+      throw new Error(
+        typeof refused === "string" ? refused : (wordSaid(refused) ?? englishOf(refused)),
+      );
+    return { ok: true };
+  }
+
+  /** An answer's refusal as its owner words it: English words, or a fact worded where it is shown. */
+  private async answered(
+    repoId: string,
+    answer: BatchAnswer,
+    fix?: string,
+  ): Promise<string | Said | undefined> {
+    const refused = await this.serial(repoId, async (): Promise<string | Said | undefined> => {
       const repo = this.options.repos.get(repoId);
-      const record = this.record(repoId);
+      let record = this.record(repoId);
       const open = record.open;
-      if (!repo || !open?.hold || open.hold.head !== answer.head) return BATCH_WORDS.ended;
+      // A merge the host still reads as running takes Try again alone (`mergeWait`).
+      const waiting = answer.action === "try-again" && mergeWait(open)?.head === answer.head;
+      if (!repo || !open || (!waiting && open.hold?.head !== answer.head)) return BATCH_WORDS.ended;
       if (!this.atBatchAddress(repo, open)) return BATCH_WORDS.ended;
       const label = this.label(repo, open);
       if (answer.action === "try-again") {
+        if (waiting) {
+          // The pass's own reading first: a merge that finished or was queued meanwhile is
+          // followed as it is, and the first merge is never sent again. One the host says
+          // failed meanwhile holds the batch at this version, so Try again goes on below
+          // as on any hold, on the same pull request.
+          record = await this.follow(repo, record);
+          const now = record.open;
+          if (now && mergeWait(now)?.head === answer.head) {
+            const refusal = await this.replaceWaited(repo, record);
+            if (refusal) return refusal;
+            this.clashesEnded(repoId);
+            // The new pull request's own line on the feed says what happened; the retried
+            // line would say the closed one's checks run again.
+            return undefined;
+          }
+          if (now?.hold?.head !== answer.head) return BATCH_WORDS.ended;
+        }
         await this.recombine(repo, release(record), "line");
         this.clashesEnded(repoId);
         this.options.note(BATCH_WORDS.retried(repo.name, label));
@@ -495,13 +552,6 @@ export class Batches {
     });
     if (!refused && fix) void this.pass(repoId);
     return refused;
-  }
-
-  /** The same answer for Settings, where a refusal fails the request with its words. */
-  async answerOrThrow(repoId: string, answer: BatchAnswer): Promise<{ ok: true }> {
-    const refused = await this.answer(repoId, answer);
-    if (refused) throw new Error(refused);
-    return { ok: true };
   }
 
   /** Every project with a line, a batch or receipts takes one pass. */
@@ -817,7 +867,8 @@ export class Batches {
    * the pull request still open: never sent again. The host's merge queue
    * holding it reads as queued; the host's own word that the merge failed,
    * or no word at all, holds the batch with nothing sent until Try again;
-   * a merge the host still reports as running waits. Undefined once the
+   * a merge the host still reports as running waits, shown from the first
+   * such reading with Try again (`mergeWait`). Undefined once the
    * passes go on as before, the record cleared of it.
    */
   private async settleUnconfirmed(
@@ -836,8 +887,21 @@ export class Batches {
     const task = unconfirmed?.mergeTask;
     const refused =
       task && forge.mergeTaskRefused ? await forge.mergeTaskRefused(number, task) : !task;
-    // The host's own merge is still running: the next pass reads it again.
-    if (!refused) return record;
+    // The host's own merge is still running: the next pass reads it again. From the first
+    // such reading Settings shows the wait with Try again, and the feed says it once, since a
+    // host can read a merge that never ends as running too.
+    if (!refused) {
+      if (unconfirmed?.pending !== undefined) return record;
+      const waiting = this.save(repo.id, {
+        ...record,
+        open: {
+          ...open,
+          unconfirmed: { head: open.head, ...unconfirmed, pending: this.options.now() },
+        },
+      });
+      this.options.note(BATCH_WORDS.mergeRunning(repo.name, this.label(repo, open), forge.place));
+      return waiting;
+    }
     const place = forge.place ?? BATCH_WORDS.host;
     const detail = task ? BATCH_WORDS.notMerged(place) : BATCH_WORDS.unconfirmed(place);
     const held = hold(
@@ -852,6 +916,46 @@ export class Batches {
           : BATCH_WORDS.unanswered(repo.name, this.label(repo, open), forge.place),
       );
     return held.record;
+  }
+
+  /**
+   * Try again on a merge the host still reads as running (`mergeWait`): that
+   * merge may still finish, and a host whose merge names no version would
+   * merge whatever its branch holds then, so no new version goes on its pull
+   * request. The pull request is closed first and read again; once it reads
+   * closed, its branch goes and its changes combine with the line on a new
+   * branch and pull request. A close the host refused or did not take keeps
+   * the wait and answers so; a merge that finished meanwhile is recorded as
+   * merged. Answers the refusal, or nothing once the new batch is combined.
+   */
+  private async replaceWaited(
+    repo: RepoView,
+    record: BatchRecord,
+  ): Promise<string | Said | undefined> {
+    const forge = this.options.forgeFor(repo);
+    const open = record.open as OpenBatch;
+    const number = open.number as number;
+    if (!forge.pull) return BATCH_WORDS.ended;
+    // A refused or failed close is answered by the reading below: the pull request
+    // says what became of it and of its merge.
+    await forge
+      .close({ number, branch: open.branch, headSha: open.head, url: open.url ?? null })
+      .catch(() => {});
+    const pull = await forge.pull(number);
+    if (
+      !this.atBatchAddress(repo, open) ||
+      pull.number !== number ||
+      (pull.branch && pull.branch !== open.branch)
+    )
+      return BATCH_WORDS.ended;
+    if (pull.merged) {
+      if (pull.headSha === open.head) await this.finish(repo, record, forge, pull.mergedSha);
+      return BATCH_WORDS.ended;
+    }
+    if (pull.state !== "closed") return BATCH_WORDS.stillOpen(this.label(repo, open), forge.place);
+    await forge.deleteBranch?.(open.branch).catch(() => {});
+    await this.recombine(repo, this.save(repo.id, reopened(record)), "line");
+    return undefined;
   }
 
   /** Merge at the batch's version, keeping one commit per change. */

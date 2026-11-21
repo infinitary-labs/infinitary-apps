@@ -239,6 +239,8 @@ public struct PhoneNotice: Equatable, Sendable {
     /// the phone held, after which every panel read runs again.
     @ObservationIgnored public var onPanelPush: ((String, PhoneJSON) -> Void)?
     @ObservationIgnored public var onPanelResync: (() -> Void)?
+    /// INF-5531 piece 2: each crewmate card's page that reads live (`hearReads`) hears the same pushes and reloads.
+    @ObservationIgnored private var readPages: [UUID: (push: (String, PhoneJSON) -> Void, resync: () -> Void)] = [:]
     @ObservationIgnored private var homeLeavesClosed = false
     @ObservationIgnored private var closedRowsWanted = false
     @ObservationIgnored private let phone: PhoneIdentity
@@ -399,6 +401,15 @@ public struct PhoneNotice: Equatable, Sendable {
             throw PhoneError.invalidReply
         }
     }
+
+    /// INF-5531 piece 2: a crewmate card's page whose body reads live hears each push a panel's page hears, and each
+    /// reload, until `stopHearingReads` with the returned id.
+    public func hearReads(push: @escaping (String, PhoneJSON) -> Void, resync: @escaping () -> Void) -> UUID {
+        let id = UUID()
+        readPages[id] = (push, resync)
+        return id
+    }
+    public func stopHearingReads(_ id: UUID) { readPages[id] = nil }
 
     /// INF-3830 piece 2: one of the asks a panel's page makes, on a channel the generated list allows. A read waits for
     /// the computer to be in reach and asks again after a reconnect, so a panel out of reach keeps what it last drew; a
@@ -1194,7 +1205,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
-            if catchUp == "reload" { onPanelResync?() }
+            if catchUp == "reload" { onPanelResync?(); for page in readPages.values { page.resync() } }
             homeUpdates = PhoneHomeUpdate.supported(homeVersion: frame["protocolVersion"] as? String,
                                                     changes: frame["changes"] as? [String] ?? [])
             if !homeUpdates { homeUpdate = nil }
@@ -1304,9 +1315,10 @@ public struct PhoneNotice: Equatable, Sendable {
                     if holding { held?.work = true } else { workRevision += 1 }
                 }
             }
-            if let onPanelPush, servesPanels, let channel = frame["channel"] as? String, PhonePanelRequest.pushes.contains(channel),
-               let payload = frame["payload"], let value = try? PhoneJSON.read(payload) {
-                onPanelPush(channel, value)
+            if onPanelPush != nil || !readPages.isEmpty, servesPanels, let channel = frame["channel"] as? String,
+               PhonePanelRequest.pushes.contains(channel), let payload = frame["payload"], let value = try? PhoneJSON.read(payload) {
+                onPanelPush?(channel, value)
+                for page in readPages.values { page.push(channel, value) }
             }
             if frame["channel"] as? String == "inf:secrets:changed" { onSecretsChanged?() }
             // A replay ends in reach, where the open page reads again anyway.

@@ -53,6 +53,12 @@ import SwiftUI
         return host
     }
 
+    /// INF-5531 piece 2: every kept body's live reads follow its card, the shown one's and its neighbours' alike, so a
+    /// card its author ended stops updating at once wherever its body is loaded (docs/live-prototype-security.md).
+    func declare(_ cards: [PhoneCard]) {
+        for card in cards { bodies[Self.key(card)]?.declare(card) }
+    }
+
     /// The bodies of these cards, drawn or not, for the row's probe.
     func drawn(_ cards: [PhoneCard]) -> [Bool] { cards.map { bodies[Self.key($0)]?.drawn ?? false } }
 

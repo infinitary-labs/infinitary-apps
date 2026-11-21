@@ -1,4 +1,5 @@
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { scratchDir } from "./scratchDirs";
 
@@ -10,7 +11,8 @@ import { scratchDir } from "./scratchDirs";
  * because Node's type stripping does not resolve the `@shared` aliases.
  */
 export async function bundleSqlProcess(): Promise<string> {
-  const root = resolve(__dirname, "../..");
+  // Read from this file's own address, so a vitest file and the phone test home's module runner both find the root.
+  const root = fileURLToPath(new URL("../..", import.meta.url));
   const outDir = scratchDir("infinitary-sql-process-");
   await build({
     configFile: false,

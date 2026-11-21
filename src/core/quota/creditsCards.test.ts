@@ -92,7 +92,11 @@ function said(used: number, keepGoingOnCredits: boolean, holds?: Holds): Compute
   };
 }
 
-function home(signIns: { now: ComputerSignIns }, canUseSavedReset = true) {
+function home(
+  signIns: { now: ComputerSignIns },
+  canUseSavedReset = true,
+  offersAutoResets = false,
+) {
   const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
   const withdrawn: string[] = [];
   const sent: [string, string, boolean][] = [];
@@ -113,6 +117,7 @@ function home(signIns: { now: ComputerSignIns }, canUseSavedReset = true) {
       placeOf: (deviceId) => (deviceId === "mini" ? { where: "on Mac mini" } : undefined),
       canUseSavedReset: () => canUseSavedReset,
     },
+    offersAutoResets: () => offersAutoResets,
     cards: {
       raiseHostCard: (card) => raised.push(card),
       withdrawHostCard: (id) => withdrawn.push(id),
@@ -175,6 +180,23 @@ describe("a computer's own account that used up its allowance", () => {
     );
     resetsOnly.cards.spentAt(["openai-codex"], "mini");
     expect(resetsOnly.raised).toEqual([]);
+  });
+
+  // INF-5478's plan, piece 2: the run-out card offers Use saved resets on their own beside the reset.
+  it("offers Use saved resets on their own after Use a saved reset, only while that switch can be turned on", () => {
+    const both = { credits: true, savedResets: true };
+    const ids = (world: ReturnType<typeof home>) =>
+      world.raised.flatMap((card) => (card.actions ?? []).map((action) => action.id));
+    const offered = home({ now: said(100, false, both) }, true, true);
+    offered.cards.spentAt(["openai-codex"], "mini");
+    expect(ids(offered)).toEqual(["keep-going-on-credits", "use-saved-reset", "use-saved-resets"]);
+    const action = offered.raised[0]?.actions?.find((each) => each.id === "use-saved-resets");
+    expect(action?.variant).toBe("secondary");
+    expect(action?.effect).toEqual({ kind: "host", op: "use-saved-resets", arg: "acct-codex@mini" });
+
+    const notOffered = home({ now: said(100, false, both) }, true, false);
+    notOffered.cards.spentAt(["openai-codex"], "mini");
+    expect(ids(notOffered)).toEqual(["keep-going-on-credits", "use-saved-reset"]);
   });
 
   it("is not offered once its switch is on there", () => {

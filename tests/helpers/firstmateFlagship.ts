@@ -91,6 +91,8 @@ export function setupWithFlagship(options: {
   db?: ReturnType<typeof openInMemoryDatabase>;
   /** The captain's recheck of the allowance, as the composition root runs it. */
   recheckAllowance?: () => Promise<undefined>;
+  /** Hears the seat weigh a saved reset for its spent account (docs/quota.md, "Saved resets on their own"). */
+  savedResetsSpent?: (accountId: string) => void;
   /** Each Pi seat attach waits for this, as a real one waits on its runtime. */
   attachReady?: () => Promise<void>;
 }) {
@@ -221,6 +223,7 @@ export function setupWithFlagship(options: {
     modelRuntime: { kind: "base" } as unknown as ModelRuntime,
     flagship,
     ...(options.recheckAllowance ? { recheckAllowance: options.recheckAllowance } : {}),
+    ...(options.savedResetsSpent ? { savedResetsSpent: options.savedResetsSpent } : {}),
     availableModels: () => options.availableModels ?? [{ provider: "openai-codex", id: "gpt-5.5" }],
     quotaModels: () => (options.catalog ? { generatedAt: "", models: options.catalog } : undefined),
     quotaLine: () => "quota",
@@ -360,6 +363,7 @@ export async function claudeLoginSeat(
   options: {
     codex?: number;
     recheckAllowance?: () => Promise<undefined>;
+    savedResetsSpent?: (accountId: string) => void;
     /** A previous run's accounts and database: the app restarted. */
     restart?: {
       accounts: FlagshipAccount[];
@@ -395,6 +399,7 @@ export async function claudeLoginSeat(
     accounts,
     availableModels: [CLAUDE_MODEL, ...(options.codex !== undefined ? [CODEX_MODEL] : [])],
     ...(options.recheckAllowance ? { recheckAllowance: options.recheckAllowance } : {}),
+    ...(options.savedResetsSpent ? { savedResetsSpent: options.savedResetsSpent } : {}),
   });
   t.settings.setFirstmateModel(CLAUDE_MODEL);
   t.setHeadroom(CLAUDE_ACCOUNT, 80);

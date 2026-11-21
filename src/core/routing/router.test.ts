@@ -896,6 +896,40 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
     expect(spent).toEqual([[["openai-codex"], "mini"]]);
   });
 
+  // INF-5478's plan, piece 2: a crew task kept going on credits is work that
+  // waits on a spent allowance, so a saved reset may come before credits.
+  it("names the provider a committed decision keeps going on credits, only once committed", () => {
+    const db = openInMemoryDatabase();
+    const credits: [string[], string | undefined][] = [];
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings: new SettingsStore(db),
+      quota: fakeQuota({
+        generatedAt: "now",
+        models: [
+          {
+            provider: "codex",
+            id: "gpt-5.5",
+            label: "gpt-5.5",
+            effectivePercentRemaining: 0,
+            onCredits: true,
+          },
+        ],
+      }),
+      availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
+      onCreditsAt: (providers, deviceId) => credits.push([providers, deviceId]),
+    });
+    const shape: WorkShape = { ...UNCLEAR, intelligence: "medium" };
+    const prepared = { placed: { work: [], samples: [], charges: {} } };
+    expect(router.preview("add a settings row", shape, prepared)?.result.choice).toEqual({
+      provider: "openai-codex",
+      id: "gpt-5.5",
+    });
+    expect(credits).toEqual([]);
+    router.decide("here", "add a settings row", shape, prepared);
+    expect(credits).toEqual([[["openai-codex"], undefined]]);
+  });
+
   // INF-443 piece 2: the captain asked why so many tasks went to one
   // provider whose allowance was tight; the record must show every
   // candidate's score and reading, the 0% ones the router skips included.

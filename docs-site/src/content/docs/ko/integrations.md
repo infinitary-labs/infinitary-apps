@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -40,9 +40,8 @@ Infinitary가 이 로그인으로 프로젝트를 복제하고 변경을 제안�
 - **GitLab**: gitlab.com이나 선장님의 GitLab 서버에서, 브라우저로 로그인하거나 키를 붙여 넣어요.
 - **GitHub Enterprise**: 선장님의 서버에서 키를 만들어 여기에 붙여 넣어요.
 - **Bitbucket**: Atlassian 계정에서 API 토큰을 만들어 bitbucket.org용으로 여기에 붙여 넣어요.
-  그 줄은 누구로 로그인했는지 보여 주며, 아직 일등항해사와 선원들을 위한 동작은 없어요.
 
-GitHub, GitLab, GitHub Enterprise 줄에는 동작이 두 개 있어요: 읽는 동작 하나와, **GitHub에서 무언가 변경**처럼 무언가를 바꾸는 동작 하나예요.
+줄마다 동작이 두 개 있어요: 읽는 동작 하나와, **GitHub에서 무언가 변경**처럼 무언가를 바꾸는 동작 하나예요.
 일등항해사와 선원들은 작업 자체의 일을 넘어 그곳에서 무언가를 찾아보거나 행동할 때 이 동작들을 써요.
 작업의 분기, 끌어오기 요청, 검사, 병합은 대신 프로젝트의 설정을 따라요.
 

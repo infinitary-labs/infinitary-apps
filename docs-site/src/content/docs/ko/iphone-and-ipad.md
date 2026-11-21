@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone과 iPad
 description: iPhone과 iPad용 Infinitary의 비공개 TestFlight 초대를 요청하고, 컴퓨터에 연결해 카드를 읽고 메시지를 보내세요.
 ---
@@ -80,7 +80,7 @@ iPhone과 iPad용 Infinitary는 비공개 TestFlight로 제공돼요.
 
 컴퓨터를 그만 보여 주려면, 휴대폰 위쪽 막대 오른쪽의 컴퓨터 버튼을 탭하고 컴퓨터 이름이 붙은 **나가기**를 고르세요.
 휴대폰은 그 컴퓨터를 지워요.
-컴퓨터에서는 설정 → **기기**에 있는 휴대폰 줄의 **제거**가 곧바로 연결을 끊어요.
+컴퓨터에서는 설정 → **기기**에 있는 휴대폰 메뉴(그 줄의 점 세 개)의 **제거**가 곧바로 연결을 끊어요.
 다시 연결하려면 새 링크를 만드세요.
 
 [다른 컴퓨터](/ko/your-other-computers/)도 보세요.

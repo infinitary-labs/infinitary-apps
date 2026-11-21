@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Infinitary 업데이트와 제거
 description: 설치 방식마다 새 안정 버전을 받는 방법과, 저장된 작업을 남겨 둔 채 Infinitary를 제거하는 방법이에요.
 ---
@@ -87,3 +87,15 @@ Homebrew는 앱을 바꾸는 동안 Infinitary를 종료하므로, 끝나면 Inf
   AppImage라면 파일을 지우세요.
 
 저장된 작업은 Mac에서는 `~/Library/Application Support/infinitary`에, Linux에서는 `~/.config/infinitary`에 남아 있어요.
+
+### 저장된 작업을 지우는 것 {#what-deletes-your-saved-work}
+
+다음은 그 폴더를 지우고, Infinitary가 그곳에 보관한 것도 함께 사라져요:
+
+- `brew uninstall --zap`.
+- 앱의 지원 파일까지 지우는 제거 앱.
+- 폴더 자체를 휴지통으로 옮기거나 지우는 것.
+
+다른 컴퓨터를 위해 일을 실행하는 컴퓨터에서는 그 폴더에 컴퓨터 자체의 키, 작업 사본, 작업의 파일이 들어 있어요.
+그 폴더가 없으면 컴퓨터는 새 항목으로 다시 참여하고, 아직 가져오지 않은 작업은 잃어버린 채로 남아요.
+[컴퓨터가 두 번 나열될 때](/ko/troubleshooting/#a-computer-is-listed-twice)를 보세요.

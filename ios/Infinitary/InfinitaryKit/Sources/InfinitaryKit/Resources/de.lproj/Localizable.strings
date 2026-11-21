@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "Geschrieben, nachdem die Karte geschlossen wurde";
 "cardThreadWrittenBy" = "Geschrieben von %1$@";
 "cardThreadWrittenByAfterClose" = "Geschrieben von %1$@, nachdem die Karte geschlossen wurde";
+"cardTradeoffTable" = "Die Abwägung als Tabelle";
 "cardUseSavedReset" = "Gespeicherten Reset einlösen";
 "closeYourFirstMate" = "Dein erster Offizier: „%1$@“";
 "closedDropped" = "%1$@ aufgegeben";

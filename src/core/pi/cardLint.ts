@@ -12,6 +12,7 @@ import {
 import { ANYTHING_ELSE_ANSWER, isPlayableBody, mergeEffectOf, settleEffectOf } from "@shared/cards";
 import { hasHook } from "@shared/codeNames";
 import type { Rigor } from "@shared/rigor";
+import { tradeoffProblem } from "@shared/tradeoffChart";
 import { ElementType, parseDocument } from "htmlparser2";
 import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import type { EmittedCard } from "./cardTool";
@@ -660,6 +661,13 @@ export function lintCardShape(card: ShapedCard): string | undefined {
   // every reader fills (docs/card-authoring.md, "Parts by reference").
   const partRefusal = appPartProblem(card.body);
   if (partRefusal) return partRefusal;
+
+  // A product fact: the app draws a tradeoff table only from its structure -
+  // two headings or more, a row per option naming it, a level in every cell
+  // and a row for what the code does now (docs/card-authoring.md, "The
+  // tradeoff chart"); no heading's or option's words are read.
+  const tradeoffRefusal = tradeoffProblem(card.body);
+  if (tradeoffRefusal) return tradeoffRefusal;
 
   // A product fact: no figure text under 11 px, in a preview too.
   const figureRefusal = figureTypeRefusal(card.body);

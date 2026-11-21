@@ -17906,6 +17906,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Written by ${label}, after the card closed`;
   }
+  function cardTradeoffTable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الموازنة في جدول`;
+      case "de":
+        return `Die Abwägung als Tabelle`;
+      case "es":
+        return `La comparación en una tabla`;
+      case "fr":
+        return `Le compromis sous forme de tableau`;
+      case "ja":
+        return `トレードオフを表で見る`;
+      case "ko":
+        return `장단점을 표로 보기`;
+      case "pt-BR":
+        return `A comparação em tabela`;
+      case "zh-Hans":
+        return `以表格查看取舍`;
+      case "zh-Hant":
+        return `以表格檢視取捨`;
+      case "en-XA":
+        return `[Ţĥé ţŕáðéöƒƒ áš á ţáƀļé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tradeoff as a table‬`;
+    }
+    return `The tradeoff as a table`;
+  }
   function cardUseSavedReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -87378,6 +87405,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenAfterClose,
     cardThreadWrittenBy,
     cardThreadWrittenByAfterClose,
+    cardTradeoffTable,
     cardUseSavedReset,
     closeYourFirstMate,
     closedDropped,
@@ -90189,6 +90217,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenAfterClose": [],
     "cardThreadWrittenBy": ["label"],
     "cardThreadWrittenByAfterClose": ["label"],
+    "cardTradeoffTable": [],
     "cardUseSavedReset": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
@@ -96955,6 +96984,40 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       tagSelect(select, "data-inf-current", "data-inf-as-built", ${JSON.stringify(AS_BUILT_WORDS)});
       tagSelect(select, "data-inf-recommended", "data-inf-recommendation", group && skippable(group) ? ${JSON.stringify(DEFAULT_WORDS)} : "Recommended");
     });
+    tagTradeoffs();
+  }
+  // The tradeoff chart (docs/card-authoring.md, "The tradeoff chart"): each
+  // option's mark on it follows the option it stands for - filled while that
+  // option is picked, and its Recommended pill worded Default where the
+  // option's own is. The marks come drawn from the markup; only these two
+  // states are the script's.
+  function tradeoffChoice(mark) {
+    var value = mark.getAttribute("data-inf-tradeoff-pick");
+    var scope = mark.closest("fieldset") || document;
+    return Array.from(scope.querySelectorAll("input:is([type=radio], [type=checkbox])")).find(function (control) {
+      return control.value === value;
+    }) || null;
+  }
+  function tagTradeoffs() {
+    document.querySelectorAll("[data-inf-tradeoff-pick]").forEach(function (mark) {
+      var control = tradeoffChoice(mark);
+      var picked = Boolean(control && control.checked);
+      if (picked !== mark.hasAttribute("data-inf-tradeoff-picked")) mark.toggleAttribute("data-inf-tradeoff-picked", picked);
+      var asDefault = Boolean(control && Array.from(control.labels || []).some(function (owner) { return owner.hasAttribute("data-inf-default-label"); }));
+      if (asDefault !== mark.hasAttribute("data-inf-tradeoff-default")) mark.toggleAttribute("data-inf-tradeoff-default", asDefault);
+      var focused = Boolean(control && control === document.activeElement && control.matches(":focus-visible"));
+      if (focused !== mark.hasAttribute("data-inf-tradeoff-focused")) mark.toggleAttribute("data-inf-tradeoff-focused", focused);
+    });
+  }
+  // A press on an option's mark picks the option, as a press on its row
+  // would; the option's own control stays the keyboard's way to it.
+  function pickTradeoff(event) {
+    var mark = event.target && event.target.closest ? event.target.closest("[data-inf-tradeoff-pick]") : null;
+    if (!mark || form.locked) return;
+    var control = tradeoffChoice(mark);
+    if (!control || control.disabled) return;
+    if (control.type === "radio" && control.checked) return;
+    control.click();
   }
   // The words of the option a skip sends, as a pick of it would read.
   function defaultLabel(group, value) {
@@ -97509,6 +97572,10 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("input", watch, true);
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
+      document.addEventListener("click", pickTradeoff);
+      // A charted option's control is out of view; its mark shows the focus.
+      document.addEventListener("focusin", tagTradeoffs);
+      document.addEventListener("focusout", function () { setTimeout(tagTradeoffs, 0); });
       // Focus leaves on the next turn, once the next element holds it.
       document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
       window.addEventListener("blur", settleWaiting);
@@ -98084,7 +98151,7 @@ ${FRAME_TAG_SCRIPT}
   // viewer, as a picture does - the outermost drawing in a figure, or one
   // drawn the width of what holds it. A small mark beside words, a drawing
   // inside a control and one in a caption are not diagrams.
-  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption";
+  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption, [data-inf-tradeoff-pick]";
   function outermostDrawing(element) {
     var drawing = element && element.closest ? element.closest("svg") : null;
     while (drawing && drawing.parentElement && drawing.parentElement.closest("svg")) {
@@ -99023,7 +99090,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-bgLU+7GZu3JaZWF3oBVIwlHR53zOWCgYLbvh/CCfLj0=";
+  const FRAME_BRIDGE_SHA256 = "sha256-9Svlpmc0LO+7AgpXxlwuEeXRWXXHuEvWD/mORlGo8IU=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

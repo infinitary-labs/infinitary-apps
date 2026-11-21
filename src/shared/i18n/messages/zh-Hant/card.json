@@ -247,5 +247,6 @@
   "cardThreadWrittenAfterClose": "於卡片關閉後撰寫",
   "cardThreadWrittenBy": "由 {label} 撰寫",
   "cardThreadWrittenByAfterClose": "由 {label} 撰寫，於卡片關閉後",
+  "cardTradeoffTable": "以表格檢視取捨",
   "cardUseSavedReset": "使用已儲存的重設"
 }

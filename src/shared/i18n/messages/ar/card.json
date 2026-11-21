@@ -322,5 +322,6 @@
   "cardThreadWrittenAfterClose": "كُتبت بعد إغلاق البطاقة",
   "cardThreadWrittenBy": "كتبها {label}",
   "cardThreadWrittenByAfterClose": "كتبها {label} بعد إغلاق البطاقة",
+  "cardTradeoffTable": "الموازنة في جدول",
   "cardUseSavedReset": "استخدم إعادة تعيين محفوظة"
 }

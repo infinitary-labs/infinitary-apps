@@ -1,5 +1,5 @@
 import { Type } from "typebox";
-import type { SecretAskAnswer, SecretAskInput } from "../secrets/asks";
+import { type SecretAskAnswer, type SecretAskInput, secretAskHowProblem } from "../secrets/asks";
 import { boundTool } from "../session/tools";
 
 /**
@@ -13,7 +13,7 @@ import { boundTool } from "../session/tools";
 export const ASK_SECRET_TOOL_NAME = "ask_secret";
 
 export const ASK_SECRET_TOOL_DESCRIPTION =
-  "Ask the captain to keep a key, token or password in Secrets: name each (place optional) or a kept reference to replace, and why; never a value. The app raises its masked card; emit none. You hear once what was kept; cancel withdraws. Never ask for one in another tool: a crewmate moves it (bring-secrets skill).";
+  "Ask the captain to keep a key, token or password in Secrets: name each short (place only tells two of one name apart) or a kept reference to replace, and why; never a value. Give how when the captain must make or find it. The app raises its masked card; emit none. You hear once what was kept; cancel withdraws. Never ask for one in another tool: a crewmate moves it (bring-secrets skill).";
 
 /** What the first mate's ask reaches: the Secrets owner's ask, for the first mate. */
 export type SecretAskReach = {
@@ -40,6 +40,12 @@ export function createSecretTools(reach: SecretAskReach, raised?: (askId: string
             }),
           ),
         ),
+        how: Type.Optional(
+          Type.String({
+            description:
+              "How to get it, an HTML fragment you lay out: <ol> steps, <code> names, <table>, <details>. No script, style or field; each link a full https:// address shown as its text.",
+          }),
+        ),
         cancel: Type.Optional(Type.Boolean()),
       }),
       run: async (params) => {
@@ -52,9 +58,15 @@ export function createSecretTools(reach: SecretAskReach, raised?: (askId: string
           ...(secret.place !== undefined ? { place: secret.place } : {}),
           ...(secret.replace !== undefined ? { replace: secret.replace } : {}),
         }));
-        const answer = await reach
-          .ask({ id: params.id, reason: params.reason ?? "", secrets })
-          .catch(() => undefined);
+        const input: SecretAskInput = {
+          id: params.id,
+          reason: params.reason ?? "",
+          secrets,
+          ...(params.how !== undefined ? { how: params.how } : {}),
+        };
+        const problem = secretAskHowProblem(input);
+        if (problem) return { text: `Refused: nothing was asked. ${problem}` };
+        const answer = await reach.ask(input).catch(() => undefined);
         if (!answer)
           return {
             text: "Refused: give an id, a reason and at least one secret, each by name (and place) or by replace with a kept reference, each once.",

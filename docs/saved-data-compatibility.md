@@ -233,6 +233,13 @@ An older build refuses a recovery archive holding a server key, because its arch
 Each start of such a server is journaled with `given` on its request line and no approval line, and its history item carries `given: true` with no `approval`; an older build ignores the field and shows the use with no approval words, and its recovery archive takes that history as it is.
 The format revision therefore stays at 1.
 
+## An ask's how-to in waiting asks
+
+A waiting ask in `<userData>/secret-asks.json` may carry `how`, the how-to its card draws, already checked and drawn again (`docs/secrets.md`, "How to get it").
+Files written before read the same: an ask without it draws no "How to get it" part.
+An older build reads a file holding `how` as unreadable, because its schema is strict, so no ask waits there and no card comes back after the restart, and its next ask rewrites the file without them; such an asker hears nothing more of that ask.
+The format revision therefore stays at 1.
+
 ## Card pictures with a demo recording
 
 A card picture may carry an optional `demo` (docs/card-authoring.md, "Demo recordings"): the recording its poster stands for - its id, kind, size, length, byte size and SHA-256.

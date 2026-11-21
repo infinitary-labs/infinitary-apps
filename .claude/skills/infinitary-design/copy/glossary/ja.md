@@ -77,6 +77,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
 | held (a batch that stopped) | 保留中 | The same word as a merge a rule holds (保留しています); 一時停止 stays for what a person pauses. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
+| How to get it (an ask for a secret) | 入手方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
 | Infinitary | Infinitary | Never translated or written in katakana. |
 | inspector | インスペクター | The Knowledge pane that reads one entry. |
@@ -135,6 +136,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | rigor (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} rigor". |
 | Runbooks | ランブック | Settings section name. |
 | Runs on | 実行先 | Record label. |
+| Save secret / Don't save (an ask for a secret) | シークレットを保存 / 保存しない | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | 保存済みのリセット | ChatGPT's saved resets for Codex, counted with 回分; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets (settings section) | シークレット | The section's own name. |
 | send back (a change out of a batch) | 差し戻す | The usual word for returning work with a reason. |

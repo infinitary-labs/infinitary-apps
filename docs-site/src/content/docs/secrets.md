@@ -38,10 +38,12 @@ Forget removes it from this computer, but it does not turn the key off where it 
 ### When a crewmate needs one you have not kept
 
 A crewmate that needs a secret you have not kept asks for it by name, never for its value.
-Infinitary then puts up its own card, such as "Keep the Website deployment secret for “Publish the site”?", with the crewmate's reason.
+Infinitary then puts up its own card, such as "Add Website deployment secret to Secrets?", with the crewmate's reason in its own words.
+When you have to make or find the secret yourself, the card also shows **How to get it**: the steps, names or places the crewmate laid out for this case, and a line saying who wrote them.
+Check each address it shows before you sign in there.
 
-Type or paste each value into the hidden field Infinitary draws on the card, then choose **Keep in Secrets**.
-**Don't keep** keeps nothing.
+Type or paste each value into the hidden field Infinitary draws on the card, then choose **Save secret**.
+**Don't save** saves nothing.
 The crewmate gets the secret's name, never its value, and each use still asks you.
 
 Type a secret only into a field Infinitary draws, never into a card's reply field or your message box.

@@ -671,6 +671,8 @@
 "feedBatchHeldRefused" = "%3$@: %2$@ está retenido porque la fusión se rechazó donde se aloja el proyecto: %1$@";
 "feedBatchHeldRemoved" = "%3$@: %1$@ está retenido porque la fusión se rechazó donde se aloja el proyecto: %2$@ quitó la solicitud de incorporación de cambios de su cola de fusión sin fusionarla; su página allí explica por qué.";
 "feedBatchHeldRemovedHost" = "%2$@: %1$@ está retenido porque la fusión se rechazó donde se aloja el proyecto: el sitio que aloja el proyecto quitó la solicitud de incorporación de cambios de su cola de fusión sin fusionarla; su página allí explica por qué.";
+"feedBatchHeldUnanswered" = "%3$@: %1$@ está retenido porque %2$@ no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.";
+"feedBatchHeldUnansweredHost" = "%2$@: %1$@ está retenido porque el sitio que aloja el proyecto no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ está retenido porque fallaron sus comprobaciones. Los cambios aprobados mientras tanto lo esperan.";
 "feedBatchMergedOne" = "%2$@: se fusionó %1$@.";
 "feedBatchNoStory" = "%2$@: %1$@ está abierto sin la historia de %3$@, que no se pudo añadir a su descripción. Se añadirá en cuanto se pueda.";

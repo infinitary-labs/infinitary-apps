@@ -671,6 +671,8 @@
 "feedBatchHeldRefused" = "%3$@：合併在專案所在處遭到拒絕，%2$@ 已暫緩：%1$@";
 "feedBatchHeldRemoved" = "%3$@：合併在專案所在處遭到拒絕，%1$@ 已暫緩：%2$@ 沒有合併就把 pull request 移出合併佇列；原因見那裡的頁面。";
 "feedBatchHeldRemovedHost" = "%2$@：合併在專案所在處遭到拒絕，%1$@ 已暫緩：專案的主機沒有合併就把 pull request 移出合併佇列；原因見那裡的頁面。";
+"feedBatchHeldUnanswered" = "%3$@：%2$@ 沒有確認合併，pull request 在那裡仍然開著，%1$@ 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。";
+"feedBatchHeldUnansweredHost" = "%2$@：專案的主機沒有確認合併，pull request 在那裡仍然開著，%1$@ 已暫緩。沒有再次傳送任何內容：再試一次會傳送一次新的合併。";
 "feedBatchHeldUnnamed" = "%2$@：檢查失敗，%1$@ 已暫緩。期間核准的變更會等它。";
 "feedBatchMergedOne" = "%2$@：%1$@ 已合併。";
 "feedBatchNoStory" = "%2$@：%1$@ 已開啟，但缺少 %3$@ 的變更說明，無法加入它的描述。一有可能就會加入。";

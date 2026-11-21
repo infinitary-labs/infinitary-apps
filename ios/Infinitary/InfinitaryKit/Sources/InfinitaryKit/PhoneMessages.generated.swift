@@ -702,6 +702,8 @@ public enum PhoneMessages {
     public static func `feedBatchHeldRefused`(`detail`: String, `label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldRefused", [`detail`, `label`, `project`]) }
     public static func `feedBatchHeldRemoved`(`label`: String, `place`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldRemoved", [`label`, `place`, `project`]) }
     public static func `feedBatchHeldRemovedHost`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldRemovedHost", [`label`, `project`]) }
+    public static func `feedBatchHeldUnanswered`(`label`: String, `place`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnanswered", [`label`, `place`, `project`]) }
+    public static func `feedBatchHeldUnansweredHost`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnansweredHost", [`label`, `project`]) }
     public static func `feedBatchHeldUnnamed`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnnamed", [`label`, `project`]) }
     public static func `feedBatchMergedMany`(`count`: Int, `label`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergedMany", [`count`, `label`, `project`]) }
     public static func `feedBatchMergedOne`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergedOne", [`label`, `project`]) }
@@ -4483,6 +4485,8 @@ extension PhoneWords {
         "feedBatchHeldRefused": ["detail", "label", "project"],
         "feedBatchHeldRemoved": ["label", "place", "project"],
         "feedBatchHeldRemovedHost": ["label", "project"],
+        "feedBatchHeldUnanswered": ["label", "place", "project"],
+        "feedBatchHeldUnansweredHost": ["label", "project"],
         "feedBatchHeldUnnamed": ["label", "project"],
         "feedBatchMergedMany": ["count", "label", "project"],
         "feedBatchMergedOne": ["label", "project"],

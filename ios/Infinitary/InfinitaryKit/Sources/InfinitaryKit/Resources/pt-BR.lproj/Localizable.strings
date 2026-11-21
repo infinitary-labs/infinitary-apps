@@ -671,6 +671,8 @@
 "feedBatchHeldRefused" = "%3$@: %2$@ está retido porque a mesclagem foi recusada onde o projeto fica: %1$@";
 "feedBatchHeldRemoved" = "%3$@: %1$@ está retido porque a mesclagem foi recusada onde o projeto fica: o %2$@ tirou a solicitação de pull da fila de mesclagem sem mesclá-la; a página dela lá diz por quê.";
 "feedBatchHeldRemovedHost" = "%2$@: %1$@ está retido porque a mesclagem foi recusada onde o projeto fica: o host do projeto tirou a solicitação de pull da fila de mesclagem sem mesclá-la; a página dela lá diz por quê.";
+"feedBatchHeldUnanswered" = "%3$@: %1$@ está retido porque o %2$@ não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.";
+"feedBatchHeldUnansweredHost" = "%2$@: %1$@ está retido porque o host do projeto não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ está retido porque as verificações falharam. As alterações aprovadas enquanto isso esperam por ele.";
 "feedBatchMergedOne" = "%2$@: %1$@ foi mesclado.";
 "feedBatchNoStory" = "%2$@: %1$@ está aberto sem a história de %3$@, que não pôde ser adicionada à descrição. Ela é adicionada assim que for possível.";

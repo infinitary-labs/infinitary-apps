@@ -97,6 +97,8 @@ describe("a batch merge whose outcome the host did not confirm", () => {
       head,
       detail: BATCH_WORDS.unconfirmed("GitHub"),
     });
+    // The host never answered, so the feed says so and never calls the merge refused.
+    expect(home.heard.notes.at(-1)).toEqual(BATCH_WORDS.unanswered("meter", "#31", "GitHub"));
     await home.pass();
     expect(home.host.merges).toHaveLength(1);
 

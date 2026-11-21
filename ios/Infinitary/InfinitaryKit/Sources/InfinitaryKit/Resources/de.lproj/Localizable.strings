@@ -671,6 +671,8 @@
 "feedBatchHeldRefused" = "%3$@: %2$@ ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: %1$@";
 "feedBatchHeldRemoved" = "%3$@: %1$@ ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: %2$@ hat den Pull Request aus seiner Merge-Warteschlange genommen, ohne ihn zusammenzuführen; seine Seite dort sagt, warum.";
 "feedBatchHeldRemovedHost" = "%2$@: %1$@ ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: Der Host des Projekts hat den Pull Request aus seiner Merge-Warteschlange genommen, ohne ihn zusammenzuführen; seine Seite dort sagt, warum.";
+"feedBatchHeldUnanswered" = "%3$@: %1$@ ist angehalten, weil %2$@ das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.";
+"feedBatchHeldUnansweredHost" = "%2$@: %1$@ ist angehalten, weil der Host des Projekts das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.";
 "feedBatchHeldUnnamed" = "%2$@: %1$@ ist angehalten, weil seine Überprüfungen fehlgeschlagen sind. Inzwischen bestätigte Änderungen warten darauf.";
 "feedBatchMergedOne" = "%2$@: %1$@ wurde zusammengeführt.";
 "feedBatchNoStory" = "%2$@: %1$@ ist ohne die Geschichte von %3$@ offen, die seiner Beschreibung nicht hinzugefügt werden konnte. Sie wird hinzugefügt, sobald es geht.";

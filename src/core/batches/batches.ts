@@ -103,6 +103,11 @@ export const BATCH_WORDS = {
   /** The host's own words on a refused merge, kept as it gave them. */
   refused: (project: string, label: string, detail: string): Said =>
     said("feedBatchHeldRefused", { project, label, detail }),
+  /** A merge the host never answered, whose pull request is still open: held, never called refused. */
+  unanswered: (project: string, label: string, place: string | null | undefined): Said =>
+    place
+      ? said("feedBatchHeldUnanswered", { project, label, place })
+      : said("feedBatchHeldUnansweredHost", { project, label }),
   /** The host's merge queue removed the batch without merging it. */
   removedHeld: (project: string, label: string, place: string | null | undefined): Said =>
     place
@@ -840,7 +845,11 @@ export class Batches {
     );
     this.save(repo.id, held.record);
     if (held.fresh)
-      this.options.note(BATCH_WORDS.refused(repo.name, this.label(repo, open), detail));
+      this.options.note(
+        task
+          ? BATCH_WORDS.refused(repo.name, this.label(repo, open), detail)
+          : BATCH_WORDS.unanswered(repo.name, this.label(repo, open), forge.place),
+      );
     return held.record;
   }
 

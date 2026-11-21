@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "ipad-rest-phone-check-flakes",
-      "reason": "The phone check's rest part taps the crew scene's orbiting crewmates inside a real held first mate turn, so no idle warp sweeps them away mid-tap, and the fold part reads where the open Duo sent its key from the live log as well as the kept log; only the tests change, and nothing a person sees."
+      "reason": "Phone check tests only, nothing a person sees: the rest part taps the crew scene's orbiting crewmates inside a held first mate turn and closes the crew summary once its sheet holds still, the fold part reads the open Duo's key from the live log as well as the kept log, and the diagram zoom test sets each zoom until the page reads it."
     }
   ]
 }

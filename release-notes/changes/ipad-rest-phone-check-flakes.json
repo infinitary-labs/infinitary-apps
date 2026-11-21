@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipad-rest-phone-check-flakes",
+      "reason": "Phone check tests only, nothing a person sees: the rest part taps the crew scene's orbiting crewmates inside a held first mate turn and closes the crew summary once its sheet holds still, the fold part reads the open Duo's key from the live log as well as the kept log, and the diagram zoom test sets each zoom until the page reads it."
+    }
+  ]
+}

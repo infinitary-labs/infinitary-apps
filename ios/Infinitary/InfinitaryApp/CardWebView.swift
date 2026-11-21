@@ -79,6 +79,48 @@ import SwiftUI
          heightLag: TimeInterval = 0, covering: PhoneJSON? = nil) {
         self.card = card; self.session = session; self.fill = fill; self.part = part; self.keys = keys
         self.heightLag = heightLag; self.covering = part == .cover ? covering : nil
+        granted = Self.liveReads(card, part: part)
+    }
+
+    /// INF-5531 piece 2: the live reads and views the body's own script may subscribe to now, as the Mac grants them
+    /// (docs/ui-plugins.md, "A card's reads"): the ones the card's crewmate declared, only while the card is open, and none
+    /// to a past card, a fact strip or a cover, as on the Mac. An empty object grants nothing.
+    static func liveReads(_ card: PhoneCard, part: Part) -> PhoneJSON {
+        guard part == .body, !card.isPast, card.value["ended"] == .null else { return .object([:]) }
+        var fields: [String: PhoneJSON] = [:]
+        for key in ["reads", "sql"] where !card.value[key].list.isEmpty { fields[key] = .array(card.value[key].list.filter { $0.text != nil }) }
+        return .object(fields)
+    }
+    /// What the page grants the body now, and the session's pushes it hears while it grants any.
+    @ObservationIgnored private var granted: PhoneJSON
+    @ObservationIgnored private var hearing: UUID?
+    private var grantsReads: Bool { granted != .object([:]) }
+
+    /// The card changed under the body, as when its author ended it: a read it no longer grants ends at once in the page,
+    /// whose body keeps what it drew.
+    func declare(_ next: PhoneCard) {
+        let reads = Self.liveReads(next, part: part)
+        guard reads != granted else { return }
+        granted = reads
+        hearReads()
+        guard mounted, let view, let value = try? reads.foundation else { return }
+        view.callAsyncJavaScript("window.phoneCard?.reads(value)", arguments: ["value": value], in: nil, in: .page, completionHandler: nil)
+    }
+
+    /// While the body may read live, the session hands the page each push and reload its reads read again on.
+    private func hearReads() {
+        if grantsReads, hearing == nil {
+            hearing = session.hearReads(push: { [weak self] channel, payload in
+                guard let self, let view = self.view, self.mounted, let value = try? payload.foundation else { return }
+                view.callAsyncJavaScript("window.phoneCard?.push(channel, payload)", arguments: ["channel": channel, "payload": value],
+                                         in: nil, in: .page, completionHandler: nil)
+            }, resync: { [weak self] in
+                guard let self, self.mounted else { return }
+                self.view?.evaluateJavaScript("window.phoneCard?.resync()", completionHandler: nil)
+            })
+        } else if !grantsReads, let hearing {
+            session.stopHearingReads(hearing); self.hearing = nil
+        }
     }
 
     /// INF-1574: the isolated phone gate's stand-in for a loaded computer, where a retried body's drawn height reaches
@@ -187,6 +229,7 @@ import SwiftUI
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
         detachDraft?(); detachDraft = nil
+        if let hearing { session.stopHearingReads(hearing); self.hearing = nil }
     }
 
     /// INF-5445 piece 2: lets go of the card's draft when the body closes.
@@ -375,6 +418,11 @@ import SwiftUI
             fields["expanded"] = .object(["index": covering["index"], "state": covering["state"]])
             input = .object(fields)
         }
+        if case .object(var fields) = input, case .object(let reads) = granted, !reads.isEmpty {
+            fields.merge(reads) { _, read in read }
+            input = .object(fields)
+        }
+        hearReads()
         do {
             mounted = true
             webView.callAsyncJavaScript("await window.phoneCard.mount(input)", arguments: ["input": try input.foundation], in: nil, in: .page) { [weak self] result in
@@ -479,6 +527,18 @@ import SwiftUI
                     // The session's own notice says why a change was taken back; the page still hears the refusal.
                     replyHandler(nil, error.localizedDescription)
                 }
+            }
+        case "ask":
+            // INF-5531 piece 2: one of the live reads the open card declared, asked as a panel's page asks it, on a read's
+            // channel alone: never a change, a panel's store, files or background work. The page holds the grant.
+            guard grantsReads, let name = payload["channel"].text, let channel = PhonePanelRequest(rawValue: name),
+                  PhonePanelRequest.cardReads.contains(channel) else {
+                replyHandler(nil, PhoneMessages.phoneCardWebCannotDo()); return
+            }
+            let args = payload["args"].list
+            Task {
+                do { replyHandler(try await session.panelAsk(channel, args).foundation, nil) }
+                catch { replyHandler(nil, error.localizedDescription) }
             }
         case "data":
             // A data file the card's body names, its text from the Mac's copy (docs/card-authoring.md, "Data by reference").

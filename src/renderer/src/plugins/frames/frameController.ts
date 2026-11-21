@@ -20,7 +20,6 @@ import {
   ACTION_VALUE_MAX_BYTES,
   FRAME_BRIDGE_VERSION,
   FRAME_MAX_IN_FLIGHT,
-  FRAME_MAX_SUBSCRIPTIONS,
   type FrameAnswers,
   type FrameBox,
   type FrameDemo,
@@ -38,10 +37,10 @@ import {
 } from "@shared/plugins/bridge";
 import type { MediatedFetchCall, MediatedFetchResult } from "@shared/plugins/fetch";
 import { type FrameTheme, PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
-import { transferReadValue } from "@shared/plugins/readTransfer";
 import type { ReadGrant } from "@shared/reads";
-import { type ReadExecutor, ReadSubscriptionError } from "../reads/executor";
+import type { ReadExecutor } from "../reads/executor";
 import { noteDroppedLinkMessage, noteFrameLink } from "./frameLink";
+import { type FrameReadRefusal, FrameSubscriptions } from "./frameSubscriptions";
 
 /**
  * The host side of bridge v2 (docs/ui-plugins.md, phase 1): one controller
@@ -414,11 +413,7 @@ export class FrameController {
   private births = 0;
   private disposed = false;
   private inFlight = 0;
-  private readonly subscriptions = new Map<number, () => void>();
-  /** The read each live subscription names, so a declaration that drops it ends it. */
-  private readonly subscribedReads = new Map<number, string>();
-  /** Subscriptions the host ended because their read is no longer declared. */
-  private readonly revoked = new Set<number>();
+  private readonly subscriptions: FrameSubscriptions;
   private watchdog: unknown = null;
   private pingSeq = 0;
   /**
@@ -467,6 +462,12 @@ export class FrameController {
   ) {
     this.spec = spec;
     this.theme = theme;
+    this.subscriptions = new FrameSubscriptions(
+      deps.executor,
+      (message) => this.port.post(message),
+      () => this.reuseReads,
+      () => this.hostUpdated(),
+    );
   }
 
   get isReady(): boolean {
@@ -484,26 +485,9 @@ export class FrameController {
    * closed): the frame's `onError` hears why, and it keeps what it drew.
    */
   update(spec: Partial<FrameMountSpec>): void {
-    const views = viewsOf(this.spec.grant);
+    const before = this.spec;
     this.spec = { ...this.spec, ...spec };
-    const viewsMoved = viewsOf(this.spec.grant) !== views;
-    for (const [sub, read] of this.subscribedReads) {
-      if (this.spec.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
-      this.subscriptions.get(sub)?.();
-      this.subscriptions.delete(sub);
-      this.subscribedReads.delete(sub);
-      this.revoked.add(sub);
-      this.port.post({
-        fm: V,
-        type: "data",
-        sub,
-        error: {
-          code: "read_not_declared",
-          // i18n-exempt: not shown (a console line, or an error for the panel's code)
-          message: `"${read}" is no longer a read this frame may use`,
-        },
-      });
-    }
+    this.subscriptions.redeclared(before, this.spec);
   }
 
   setTheme(theme: FrameTheme): void {
@@ -1292,26 +1276,11 @@ export class FrameController {
   private handle(asker: Asker, request: FrameRequest): void {
     switch (request.verb) {
       case "subscribe":
-        this.subscribe(asker, request);
+        this.answerRead(asker, this.subscriptions.subscribe(this.spec, request));
         return;
-      case "unsubscribe": {
-        // One the host ended already: the frame's own stop is answered as done.
-        if (this.revoked.delete(request.sub)) {
-          this.respond(asker);
-          return;
-        }
-        const stop = this.subscriptions.get(request.sub);
-        if (!stop) {
-          // i18n-exempt: not shown (a console line, or an error for the panel's code)
-          this.refuse(asker, "subscription_unknown", `no subscription ${request.sub}`);
-          return;
-        }
-        this.subscriptions.delete(request.sub);
-        this.subscribedReads.delete(request.sub);
-        stop();
-        this.respond(asker);
+      case "unsubscribe":
+        this.answerRead(asker, this.subscriptions.unsubscribe(request.sub));
         return;
-      }
       case "action":
         void this.action(asker, request);
         return;
@@ -1383,66 +1352,10 @@ export class FrameController {
     }
   }
 
-  private subscribe(asker: Asker, request: Extract<FrameRequest, { verb: "subscribe" }>): void {
-    if (!this.spec.reads.includes(request.read)) {
-      this.refuse(
-        asker,
-        "read_not_declared",
-        // i18n-exempt: not shown (a console line, or an error for the panel's code)
-        `plugin "${this.spec.pluginId}" does not declare the read "${request.read}"`,
-      );
-      return;
-    }
-    if (this.subscriptions.has(request.sub)) {
-      // i18n-exempt: not shown (a console line, or an error for the panel's code)
-      this.refuse(asker, "bad_request", `subscription ${request.sub} already exists`);
-      return;
-    }
-    if (this.subscriptions.size >= FRAME_MAX_SUBSCRIPTIONS) {
-      this.refuse(
-        asker,
-        "too_many_subscriptions",
-        // i18n-exempt: not shown (a console line, or an error for the panel's code)
-        `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`,
-      );
-      return;
-    }
-    const sub = request.sub;
-    let previous: unknown;
-    let stop: () => void;
-    try {
-      stop = this.deps.executor.subscribe(
-        request.read,
-        request.args,
-        {
-          onValue: (value) => {
-            if (!this.subscriptions.has(sub)) return;
-            const transfer = this.reuseReads ? transferReadValue(previous, value) : { value };
-            previous = value;
-            this.port.post({ fm: V, type: "data", sub, ...transfer });
-            this.hostUpdated();
-          },
-          onError: (error) => {
-            if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, error });
-          },
-        },
-        this.spec.grant,
-      );
-    } catch (caught) {
-      if (caught instanceof ReadSubscriptionError) {
-        this.refuse(asker, caught.code, caught.message);
-      } else {
-        this.refuse(
-          asker,
-          "read_failed",
-          caught instanceof Error ? caught.message : String(caught),
-        );
-      }
-      return;
-    }
-    this.subscriptions.set(sub, stop);
-    this.subscribedReads.set(sub, request.read);
-    this.respond(asker);
+  /** A read's subscribe or unsubscribe answered: done, or refused with why. */
+  private answerRead(asker: Asker, refusal: FrameReadRefusal | undefined): void {
+    if (refusal) this.refuse(asker, refusal.code, refusal.message);
+    else this.respond(asker);
   }
 
   private async action(asker: Asker, request: Extract<FrameRequest, { verb: "action" }>) {
@@ -1530,16 +1443,8 @@ export class FrameController {
   }
 
   private dropSubscriptions(): void {
-    for (const stop of this.subscriptions.values()) stop();
-    this.subscriptions.clear();
-    this.subscribedReads.clear();
-    this.revoked.clear();
+    this.subscriptions.drop();
   }
-}
-
-/** A grant's views as one comparable key. */
-function viewsOf(grant: ReadGrant | undefined): string {
-  return (grant?.sql ?? []).join(",");
 }
 
 /**

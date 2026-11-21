@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reviews-ask-real-tradeoffs",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A careful review asks you only when every answer gives something up",
+      "body": "When a careful review finds a small fix that is better in every way, or one your words, the approved plan or a project rule already answer, the crew now makes it and lists it on the merge card, where you can overturn it by reply. You are asked when every way forward costs something, when the fix would take real work, or when only you can approve it. Each question now carries a table of what every option gives and gives up, such as user experience, security or how fast it ships.",
+      "noPicture": "The reviewing crewmate writes each question card for its own change, so no single view shows the change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -400,15 +400,28 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "findings: one entry per finding - id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence of text, and an action",
     );
+    // INF-5510's plan, piece 1 (captain: "a decision is mine only if i would
+    // lose something in any case"; settle line small-only): a noticeable
+    // small fix that wins under every heading is settled, a medium or larger
+    // one or a real tradeoff asks, and a heading is a product-level quality.
     expect(brief).toContain(
-      "ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt",
+      "auto-fix: a non-user-visible issue (correctness, error handling, security, performance, mechanical code quality) safely fixable without discussing the author's intent; a noticeable finding whose fix is small and wins or ties under every heading against what the code does now",
+    );
+    expect(brief).toContain(
+      "ask-user: a finding where every way gives something up under some heading; one whose only winning fix is medium or larger",
+    );
+    expect(brief).toContain(
+      "A heading names a quality of the whole product the captain wants more of, in one or two words that would fit a question about an unrelated change (security would; approval guarantee would not)",
+    );
+    expect(brief).toContain(
+      "An auto-fix or no-op finding a person would notice is settled without asking: its text begins Settled without asking",
     );
     expect(brief).toContain("high: should not be merged without explicit human approval");
     // INF-3716 (captain: the reason should come from whoever gave that
     // recommendation): the reviewer sizes every way forward and recommends one
     // with its reason, or says it recommends none.
     expect(brief).toContain(
-      "An ask-user finding's text may run past one sentence: it says what the code does now, lists every way forward with a rough size in your own words (what the code does now is sized as no further change), and names the way you recommend with one reason, or says you recommend none.",
+      "An ask-user finding's text may run past one sentence: it says what the code does now, lists every way forward with a rough size in your own words (what the code does now is sized as no further change), gives each way's level under each heading where the ways differ, and names the way you recommend with one reason and what it gives up, or says you recommend none; an approval names only its yes and its no.",
     );
     expect(brief).toContain(
       "An error, a warning or an ask-user finding blocks; info findings never block, so they ride a clear review",

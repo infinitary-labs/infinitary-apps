@@ -32,7 +32,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "Host handoff from Review: repair the saved merge at 0123456789abcdef0123456789abcdef01234567: The approval remains bound to the offered change.\nThe review passed. Follow your brief's delivery for the reviewed version, then show its completion card. A local-only change needs no push or pull request. Do not bring it up to date merely because the default branch moved. Passing review grants no merge consent.",
+        "Host handoff from Review: repair the saved merge at 0123456789abcdef0123456789abcdef01234567: The approval remains bound to the offered change.\nThe review passed. Follow your brief's delivery for the reviewed version, then show its completion card. A local-only change needs no push or pull request. Do not bring it up to date merely because the default branch moved. Passing review grants no merge consent. A finding the review settled without asking the captain - its text, or the reviewer's report, says Settled without asking - is listed on your merge card, in a saved story as checked facts, several in one fact when they would not fit: one line of a few words each for what was found, what was done and why it needed no decision, in words for a stranger, such as a project rule, the approved scope or better on every count, never the whole finding again. If you judge a settled fix wrong, leave it unmade and say why in your report; when that report brings no new commit, or the review has already passed, also name the dispute in needs_firstmate, so it reaches the reviewer or the captain as a question. A reply under your merge card that overturns a settled finding is the captain's decision: make that change.",
     },
     {
       name: "a code pass keeps its reader for proof (F8, replaces the retired first-mate pass)",
@@ -60,7 +60,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn, and the captain's newest answer on your Review finding card in the history. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+        "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn, and the captain's newest answer on your Review finding card in the history. A code pass already recorded at this head makes this a proof read only. A finding you settled without asking that the builder's report disputes becomes an ask-user finding in your review. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
     },
     {
       // INF-4338: the captain's choice on the reviewer's own card reaches the

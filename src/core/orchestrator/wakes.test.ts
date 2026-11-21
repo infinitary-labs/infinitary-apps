@@ -24,6 +24,7 @@ import {
   REVIEW_NEW_HEAD_NEXT,
   REVIEWER_IDLE_NEXT,
   reviewFindingsNext,
+  SETTLED_FINDINGS_RULES,
   STALL_RECOVERY_GUIDANCE,
 } from "./reportWakes";
 import {
@@ -553,6 +554,11 @@ describe("renderWake", () => {
     expect(REVIEW_HANDOFF_NEXT.ship).toContain(
       "A local-only change needs no push or pull request.",
     );
+    // INF-5510's plan, piece 1: a finding the reviewer settled without asking
+    // reaches the captain on the merge card, whether it came as a fix or
+    // only in the passing review's report, and his reply there overturns it.
+    for (const stage of ["fix", "ship"] as const)
+      expect(REVIEW_HANDOFF_NEXT[stage]).toContain(SETTLED_FINDINGS_RULES);
   });
 
   /** A Firstmate lane holding one raw payload, as a build wrote it to the column. */

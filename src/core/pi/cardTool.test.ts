@@ -457,6 +457,42 @@ describe("createEmitCardTool", () => {
     expect(onCard).toHaveBeenCalledWith(expect.not.objectContaining({ riskDeclaration: RISK }));
   });
 
+  // INF-5531 piece 1 (docs/ui-plugins.md, "A card's reads"): a crewmate's
+  // card takes the reads a custom panel may name and the views the app
+  // publishes, as a panel's manifest declares them; anything else refuses it,
+  // and the first mate's cards stay static.
+  it("keeps a crewmate card's declared panel reads and published views, and refuses any other", async () => {
+    const onCard = vi.fn(() => "card-t1-4");
+    const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
+    const card = { title: "Allowance this week", body: "<p>Reading the meter.</p>" };
+    await tool.execute("t1", {
+      ...card,
+      reads: ["quota.snapshot", "tasks.board", "quota.snapshot"],
+      sql: ["v_usage_v1"],
+    });
+    expect(onCard).toHaveBeenLastCalledWith({
+      ...card,
+      actions: [],
+      reads: ["quota.snapshot", "tasks.board"],
+      sql: ["v_usage_v1"],
+    });
+    // A catalog read no panel may name, and a view the app does not publish.
+    await expect(tool.execute("t2", { ...card, reads: ["crew.counts"] })).rejects.toThrow(
+      /Card refused: reads names "crew\.counts", which is not a read a card may use/,
+    );
+    await expect(tool.execute("t3", { ...card, sql: ["v_accounts_v1"] })).rejects.toThrow(
+      /Card refused: sql names "v_accounts_v1", which is not a view this version publishes/,
+    );
+    expect(onCard).toHaveBeenCalledTimes(1);
+    const firstmate = vi.fn(() => "card-fm-4");
+    const fmTool = piToolOf(
+      createEmitCardTool(firstmate, undefined, { role: "firstmate" }),
+    ) as unknown as AnyTool;
+    expect(fmTool.parameters.properties).not.toHaveProperty("reads");
+    await fmTool.execute("f1", { ...card, reads: ["quota.snapshot"], sql: ["v_usage_v1"] });
+    expect(firstmate).toHaveBeenCalledWith({ ...card, actions: [] });
+  });
+
   it("forwards the author's width hint, which only names a wider card", async () => {
     const onCard = vi.fn(() => "card-t1-3");
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;

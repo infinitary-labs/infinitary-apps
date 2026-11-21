@@ -8,6 +8,7 @@ import {
   REVERSE_AFTER_MERGE,
   REVERSE_ANSWERED_BY,
   REVERSE_CARD_FILES,
+  REVERSE_CARD_LIVE_READS,
   REVERSE_MIGRATION_57,
   REVERSE_MIGRATION_59,
   REVERSE_MIGRATION_65,
@@ -28,6 +29,7 @@ import {
   CARD_AFTER_MERGE_MIGRATION_VERSION,
   CARD_ANSWERER_MIGRATION_VERSION,
   CARD_FILES_MIGRATION_VERSION,
+  CARD_LIVE_READS_MIGRATION_VERSION,
   openDatabase,
 } from "./db";
 import { dropViews } from "./views";
@@ -473,6 +475,34 @@ const CARD_COLUMNS: CardColumnCase[] = [
       expect(store.get(offer.id)).not.toHaveProperty("files");
     },
     reverse: REVERSE_CARD_FILES,
+    rows: "older card",
+  },
+  // INF-5531 piece 1 (docs/ui-plugins.md, "A card's reads"): a crewmate's
+  // card keeps the reads and views it declared across a restart, so its body
+  // stays live once the window opens again; a revision with none takes
+  // them away.
+  {
+    it: "upgrades existing cards with no live reads, keeps a card's declared reads across reopen and reverses without losing it",
+    from: CARD_LIVE_READS_MIGRATION_VERSION - 1,
+    added: "live_reads_json",
+    card: olderCard("crewmate"),
+    id: "card-old",
+    legacy: (offer) => {
+      expect(offer).not.toHaveProperty("reads");
+      expect(offer).not.toHaveProperty("sql");
+    },
+    write: (offer, store) =>
+      store.upsert({ ...offer, reads: ["quota.snapshot", "tasks.board"], sql: ["v_tasks_v1"] }),
+    readBack: (store, offer) => {
+      expect(store.get(offer.id)).toMatchObject({
+        reads: ["quota.snapshot", "tasks.board"],
+        sql: ["v_tasks_v1"],
+      });
+      store.upsert(offer);
+      expect(store.get(offer.id)).not.toHaveProperty("reads");
+      expect(store.get(offer.id)).not.toHaveProperty("sql");
+    },
+    reverse: REVERSE_CARD_LIVE_READS,
     rows: "older card",
   },
 ];

@@ -5,6 +5,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import type { CrewResponse } from "@shared/crewResponses";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { InvokeRequest } from "@shared/ipc";
+import type { SqlViewName } from "@shared/personal/contracts";
 import type { PutOffUntil } from "@shared/putOff";
 import type { RequiredAction, RequiredActionRevisionInput } from "@shared/requiredActions";
 import type { Rigor } from "@shared/rigor";
@@ -160,6 +161,14 @@ export type EmittedCardInput = {
   browserPage?: string;
   /** The live attachment the host resolved; never the author's to write. */
   attachment?: LiveAttachment;
+  /**
+   * The read-catalog names a crewmate's card body may subscribe to while the
+   * card is open (`reads`, docs/ui-plugins.md "A card's reads"), and the
+   * views its `sql` read runs under (`sql`): checked by the tool, kept on
+   * the card. Only a crewmate's schema offers them.
+   */
+  reads?: string[];
+  sql?: SqlViewName[];
   /**
    * The risk a crewmate declared on its completion card (`risk`,
    * docs/card-authoring.md "The risk chart"), which the host keeps as `risk`.

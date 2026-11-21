@@ -166,6 +166,16 @@ export function addCardFiles(db: AppDatabase): void {
 }
 
 /**
+ * The live reads and views a crewmate's card declared (docs/ui-plugins.md,
+ * "A card's reads"), as `{ reads, sql }`: null on every existing card, which
+ * draws as it always did. `CardStore` is the only writer; no published view
+ * reads it. Dropping the column reverses it.
+ */
+export function addCardLiveReads(db: AppDatabase): void {
+  addColumn(db, "cards", "live_reads_json", "TEXT");
+}
+
+/**
  * Shared cards (INF-2225, docs/card-threads.md "Shared cards"): who actually
  * wrote a thread line on a card that is not theirs, which captain message a
  * final answer ends, a closed card's dated clarification, the response a

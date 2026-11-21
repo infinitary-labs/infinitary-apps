@@ -1,4 +1,6 @@
+import { PANEL_READ_NAMES } from "@shared/personal/manifest";
 import { RISK_DIMENSIONS, RISK_WHY_MAX, RISK_WORDS } from "@shared/risk";
+import { SQL_VIEWS } from "@shared/sql";
 
 /** The acknowledgement clause shared by the report fields and card guidance. */
 export const ORDINARY_NOTE_READ_ACK =
@@ -382,6 +384,13 @@ export const CARD_PARAMS = {
     "True when the card delivers the requested result, even if it offers further work. Not for a prerequisite question or consent; repeat on each revision.",
   review_task_id: "Review task relayed here; must review task_id. The app labels its findings.",
   related: "Tasks it mentions, by id or key; each one's record links to it",
+  /**
+   * A crewmate card's live reads (docs/ui-plugins.md "A card's reads"): the
+   * same reads a custom panel's manifest names, through the same bridge.
+   * Top-level parameters, so a Claude crewmate reads them whole.
+   */
+  reads: `Optional: live app data this card's own script may read while the card is open, as a custom panel's manifest names it. inf.subscribe(read, args, onValue, onError?) answers only a read listed here, one of ${PANEL_READ_NAMES.join(", ")}. Write each value the script fills as static markup too, so a view that mounts the card without reads still shows it. Name only what the body draws. A revision passes the list again; a closed card stops updating and keeps what it last drew.`,
+  sql: `Optional: views of the app's record this card's script may query, from ${SQL_VIEWS.join(", ")}, through inf.subscribe("sql", { sql, params }, onValue). Passed again on each revision, as reads.`,
 } as const;
 
 function pinnableSentences(text: string): string[] {

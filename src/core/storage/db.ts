@@ -8,6 +8,7 @@ import {
   addCardAnswerer,
   addCardContributions,
   addCardFiles,
+  addCardLiveReads,
   clearInterimAnswers,
 } from "./cardMigrations";
 import { addOriginalCaptainText } from "./correctionMigrations";
@@ -78,6 +79,7 @@ export const TOOL_REPETITION_VERSION = MIGRATIONS.indexOf(REPETITION_TABLES) + 1
 export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
 export const CARD_AFTER_MERGE_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAfterMerge) + 1;
 export const CARD_FILES_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardFiles) + 1;
+export const CARD_LIVE_READS_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardLiveReads) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;
 
 /** Named boundaries keep upgrade fixtures tied to their migration, not the newest release. */

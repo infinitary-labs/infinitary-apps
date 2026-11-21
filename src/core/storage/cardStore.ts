@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { replyWithSettings } from "@shared/cardAnswerLines";
 import { type CardFile, cardFileSchema } from "@shared/cardFiles";
 import { type CardNote, cardNotesSchema } from "@shared/cardNotes";
+import { cardReadsSchema, cardViewsSchema } from "@shared/cardReads";
 import {
   CARD_CAPTURE_VERSION,
   type Card,
@@ -88,6 +89,7 @@ type Row = {
   offer_id: string | null;
   attachment_json: string | null;
   files_json: string | null;
+  live_reads_json: string | null;
   risk_json: string | null;
   replies: number | null;
   holds_place: number | null;
@@ -234,6 +236,25 @@ function riskOf(row: Row): RiskAssessment | undefined {
   }
 }
 
+/**
+ * A row's live reads and views, read on their own like its attachment: a
+ * value that no longer reads is left off its card rather than taking the
+ * card with it, and the card draws without live data.
+ */
+function liveReadsOf(row: Row): Pick<Card, "reads" | "sql"> {
+  if (!row.live_reads_json) return {};
+  try {
+    const parsed = z
+      .object({ reads: cardReadsSchema.optional(), sql: cardViewsSchema.optional() })
+      .safeParse(JSON.parse(row.live_reads_json));
+    if (!parsed.success) return {};
+    const { reads, sql } = parsed.data;
+    return { ...(reads?.length ? { reads } : {}), ...(sql?.length ? { sql } : {}) };
+  } catch {
+    return {};
+  }
+}
+
 function fromRow(row: Row): Card | undefined {
   const attachment = attachmentOf(row);
   const files = filesOf(row);
@@ -258,6 +279,7 @@ function fromRow(row: Row): Card | undefined {
     ...(row.sent_back_at !== null ? { sentBackAt: row.sent_back_at } : {}),
     ...(row.width ? { width: row.width } : {}),
     ...(attachment ? { attachment } : {}),
+    ...liveReadsOf(row),
     ...(risk ? { risk } : {}),
     ...(row.required_actions_json
       ? { requiredActions: JSON.parse(row.required_actions_json) }
@@ -460,8 +482,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by, after_merge_json, files_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by, after_merge_json, files_json, live_reads_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -491,7 +513,8 @@ export class CardStore {
            answering = excluded.answering,
            answered_by = excluded.answered_by,
            after_merge_json = excluded.after_merge_json,
-           files_json = excluded.files_json`,
+           files_json = excluded.files_json,
+           live_reads_json = excluded.live_reads_json`,
       )
       .run(
         card.id,
@@ -525,6 +548,12 @@ export class CardStore {
         card.answeredBy ?? null,
         card.afterMerge?.length ? JSON.stringify(card.afterMerge) : null,
         card.files?.length ? JSON.stringify(card.files) : null,
+        card.reads?.length || card.sql?.length
+          ? JSON.stringify({
+              ...(card.reads?.length ? { reads: card.reads } : {}),
+              ...(card.sql?.length ? { sql: card.sql } : {}),
+            })
+          : null,
       );
   }
 

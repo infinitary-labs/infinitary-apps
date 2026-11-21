@@ -15,6 +15,8 @@ import {
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { mergeActionsOf, withoutHeldMark } from "@shared/mergeHeld";
+import { PANEL_READ_NAMES } from "@shared/personal/manifest";
+import { isPublishedView } from "@shared/sql";
 import { revisedLineWords } from "@shared/threadLines";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -754,6 +756,10 @@ export function buildEmittedCard(
     // The host resolved it from the author's label (docs/task-browser.md,
     // "From a card"); a revision without one takes it away.
     ...(input.attachment ? { attachment: input.attachment } : {}),
+    // A crewmate's card alone carries live reads (docs/ui-plugins.md "A
+    // card's reads"), held to this home's own lists whichever computer's
+    // tool checked them; a revision without them takes them away.
+    ...(context.author === "crewmate" ? liveReadsOf(input) : {}),
     // The host keeps the author's declaration alone
     // (docs/card-authoring.md "The risk chart"); a revision replaces it.
     ...(input.risk ? { risk: input.risk } : {}),
@@ -775,4 +781,18 @@ export function buildEmittedCard(
  */
 export function crewmateCardId(taskId: string, stableId: string): string {
   return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;
+}
+
+/**
+ * A crewmate card's declared reads and views as this home keeps them: the
+ * reads a custom panel may name and the views this version publishes. A
+ * computer that runs work checked them with its own lists, which a newer
+ * build may have widened; a name this home does not have is left out.
+ */
+function liveReadsOf(input: Pick<EmittedCardInput, "reads" | "sql">): Pick<Card, "reads" | "sql"> {
+  const reads = (input.reads ?? []).filter((read) =>
+    (PANEL_READ_NAMES as readonly string[]).includes(read),
+  );
+  const sql = (input.sql ?? []).filter(isPublishedView);
+  return { ...(reads.length ? { reads } : {}), ...(sql.length ? { sql } : {}) };
 }

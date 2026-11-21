@@ -8,6 +8,7 @@ import {
 import type { PanelBodySaid, PanelFrameConfig, PanelModule } from "@shared/plugins/frameDocument";
 import type { BuiltinFramePanel } from "@shared/plugins/frameLib";
 import type { SidePanelSize } from "@shared/plugins/manifest";
+import { frameReads } from "@shared/reads";
 import type React from "react";
 import {
   type ComponentType,
@@ -202,8 +203,7 @@ function useGrants(content: FramedPanelContent) {
         reads: readsKey ? (readsKey.split(",") as PanelFrameConfig["reads"]) : [],
         sql: viewsKey ? (viewsKey.split(",") as PanelFrameConfig["sql"]) : [],
       },
-      reads: [...(readsKey ? readsKey.split(",") : []), ...(viewsKey ? ["sql"] : [])],
-      grant: { sql: viewsKey ? viewsKey.split(",") : [] },
+      ...frameReads(readsKey ? readsKey.split(",") : [], viewsKey ? viewsKey.split(",") : []),
     }),
     [readsKey, viewsKey],
   );

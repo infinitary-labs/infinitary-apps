@@ -3,6 +3,8 @@ import { afterMergeShownListSchema } from "./afterMerge.ts";
 import { cardFileSchema } from "./cardFiles.ts";
 import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
+import { cardLiveReadsShape } from "./cardReads.ts";
+import { cardWidthSchema } from "./cardWidth.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { HOST_OPS } from "./hostOps.ts";
 import { servedNumber } from "./i18n/format.ts";
@@ -11,6 +13,9 @@ import { putOffUntilSchema } from "./putOff.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
 import { SETTLE_FACTS_OPEN } from "./settleFacts.ts";
+
+export { CARD_WIDTHS, type CardWidth, cardWidthSchema, widerCardWidth } from "./cardWidth.ts";
+
 import { throughSchema } from "./through.ts";
 
 export {
@@ -699,25 +704,6 @@ export function splitMergeClosesLine(strip: string): {
   return { strip, words: undefined };
 }
 
-/**
- * How much of the stage a card asks for (the captain's Q5 to Q7 A of
- * 2026-09-28; docs/card-authoring.md "Card width"): `regular` is the 560 px
- * card every card was until then, `wide` 800 px, `full` the stage up to
- * 1,040 px. The host decides it at emit from closed facts about the body -
- * a wide table, a long code line, a large picture, a picture group, a
- * preview - and the author's `width` hint can only widen it. The captain's
- * drag is the shell's alone and never reaches the row.
- */
-export const CARD_WIDTHS = ["regular", "wide", "full"] as const;
-export const cardWidthSchema = z.enum(CARD_WIDTHS);
-export type CardWidth = z.infer<typeof cardWidthSchema>;
-
-/** The wider of two widths: the order every widening rule reads. */
-export function widerCardWidth(a: CardWidth, b: CardWidth | undefined): CardWidth {
-  if (!b) return a;
-  return CARD_WIDTHS.indexOf(b) > CARD_WIDTHS.indexOf(a) ? b : a;
-}
-
 /** What a card off the stage waits on (`Card.awaiting`). */
 export const cardAwaitingSchema = z.enum(["answer", "close-out"]);
 export type CardAwaiting = z.infer<typeof cardAwaitingSchema>;
@@ -1160,6 +1146,8 @@ export const cardSchema = z.strictObject({
    * labeled door to its task's browser. Absent on every other card.
    */
   attachment: liveAttachmentSchema.optional(),
+  /** The live reads its crewmate declared (`cards.live_reads_json`; cardReads.ts). */
+  ...cardLiveReadsShape,
   /**
    * A merge card's risk assessment (`cards.risk_json`; docs/card-authoring.md
    * "The risk chart"): the levels and lines its crewmate declared, which the chrome draws as a
@@ -1803,6 +1791,7 @@ export const cardOfferPayloadSchema = z.strictObject({
   files: z.array(cardFileSchema).optional(),
   width: cardWidthSchema.optional(),
   attachment: liveAttachmentSchema.optional(),
+  ...cardLiveReadsShape,
   risk: riskAssessmentSchema.optional(),
   asking: z.literal(true).optional(),
   designOnly: z.literal(true).optional(),

@@ -127,8 +127,10 @@ export const REVERSE_CARD_DRAFTS =
 export const REVERSE_SCHEDULE_NOTES = `${REVERSE_CARD_DRAFTS}DROP TABLE IF EXISTS schedule_notes;\n`;
 /** INF-3108's record of the close controls it gave back, undone: its one table. */
 export const REVERSE_CLOSE_CONTROL_RESTORE = "DROP TABLE IF EXISTS card_close_control_restore;\n";
-/** INF-3898 piece 2's command mark on a card's resolution, undone: the `cards` column. */
-export const REVERSE_RESOLVED_THROUGH = "ALTER TABLE cards DROP COLUMN resolved_through;\n";
+/** A crewmate card's declared live reads (the newest card column), undone. */
+export const REVERSE_CARD_LIVE_READS = "ALTER TABLE cards DROP COLUMN live_reads_json;\n";
+/** INF-3898 piece 2's command mark on a card's resolution, with the later card column undone. */
+export const REVERSE_RESOLVED_THROUGH = `${REVERSE_CARD_LIVE_READS}ALTER TABLE cards DROP COLUMN resolved_through;\n`;
 /** INF-3846's put-off kept on a closed card, with the later card column undone. */
 export const REVERSE_PUT_OFF = `${REVERSE_RESOLVED_THROUGH}ALTER TABLE schedules DROP COLUMN card_id;\nDROP INDEX cards_put_off;\nALTER TABLE cards DROP COLUMN put_off_json;\n`;
 /** The files for the captain a card holds by reference, with the later card column undone. */

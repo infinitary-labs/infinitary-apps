@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -136,7 +137,9 @@ function end(label) {
   const supervisor = Number(readFileSync(pidFile(label), "utf8"));
   const said = signalRun(label, "stop", null);
   for (let i = 0; i < 600 && said !== "timeout" && alive(supervisor); i++) spawnSync("sleep", ["0.05"]);
-  if (alive(supervisor)) return 1;
+  // Unloaded only once its supervisor exited having seen its run exit: one that died first, its run
+  // never seen to exit, leaves the job as it was.
+  if (alive(supervisor) || outstanding(label)) return 1;
   writeFileSync(goneFile(label), "");
   return 0;
 }
@@ -198,6 +201,13 @@ function supervise(label) {
       const { signal, gen: asked } = JSON.parse(readFileSync(base + ".taken", "utf8"));
       const ours = live() && (asked === null || asked === gen);
       let said = "gone";
+      // A crash the journey asked for at the job's next stop: the supervisor dies before it stops
+      // its run, as a supervisor that crashed leaves its run behind.
+      const crash = join(STATE, label + ".crash-on-stop");
+      if (signal === "stop" && existsSync(crash)) {
+        rmSync(crash, { force: true });
+        process.exit(1);
+      }
       if (signal === "stop" || signal === "teardown") {
         ending(signal === "stop" ? "SIGTERM" : "SIGKILL");
         said = "sent";
@@ -233,12 +243,13 @@ else if (args[0] === "--user" && args[1] === "stop") code = end(args[2]);
 else if (args[0] === "--user" && args[1] === "restart") {
   code = end(args[2]) === 1 ? 1 : begin(unitJob(join(__UNITS__, args[2]), args[2]));
 }
-// A job's ActiveState, as systemd shows it: active while its supervisor runs, inactive once stopped.
+// A job's ActiveState, as systemd shows it: active while its supervisor runs, or while a run it
+// started was never seen to exit, its supervisor gone first; inactive once stopped.
 else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=MainPID") {
   writeSync(1, String(current(args[4]) ?? 0) + "\n");
 }
 else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=ActiveState" && existsSync(jobFile(args[4]))) {
-  writeSync(1, running(args[4]) ? "active\n" : "inactive\n");
+  writeSync(1, running(args[4]) || outstanding(args[4]) ? "active\n" : "inactive\n");
 }
 else if (args[0] === "--user") code = 0;
 else code = 1;
@@ -260,6 +271,8 @@ export type ServiceManagerStandIn = {
   refuseStarts: (count: number) => void;
   /** At the job's next stop, its run fails first and the job starts it again as another process before the stop takes effect. */
   restartOnStop: (label: string) => void;
+  /** At the job's next stop, its supervisor dies before it stops its run, which it leaves running. */
+  crashOnStop: (label: string) => void;
   /**
    * Signals the job's run with process number `pid` through the supervisor that started it, named
    * by its run number (its first place in `runs`), only while that run has not ended: "sent";
@@ -356,6 +369,7 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
     running,
     refuseStarts: (count) => writeFileSync(join(state, "refuse"), String(count)),
     restartOnStop: (label) => writeFileSync(join(state, `${label}.restart-on-stop`), ""),
+    crashOnStop: (label) => writeFileSync(join(state, `${label}.crash-on-stop`), ""),
     signal: (label, signal, pid) => request(label, signal, pid),
     state: (label, pid) => request(label, "state", pid),
     asks: () => {
@@ -390,4 +404,40 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
         );
     },
   };
+}
+
+/**
+ * A journey's cleanup after a test that used the stand-in: stops it
+ * (`stopAll`) and runs each of `steps`, each whatever another's fails; keeps
+ * its records and each command's output at `keepTo` when the test failed or
+ * any of those failed; and throws what failed, the first teardown failure
+ * first, with a failure to keep the records after it, which fails the
+ * cleanup even alone.
+ */
+export function afterStandIn(
+  kept: ServiceManagerStandIn | null,
+  failed: boolean,
+  keepTo: () => string,
+  steps: (() => void)[] = [],
+): void {
+  const failures: unknown[] = [];
+  for (const step of [() => kept?.stopAll(), ...steps])
+    try {
+      step();
+    } catch (error) {
+      failures.push(error);
+    }
+  if (kept && (failed || failures.length > 0))
+    try {
+      cpSync(kept.dir, keepTo(), { recursive: true });
+    } catch (error) {
+      failures.push(error);
+    }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    const said = failures.map((failure) =>
+      failure instanceof Error ? failure.message : String(failure),
+    );
+    throw new AggregateError(failures, `${said[0]} (and then: ${said.slice(1).join("; ")})`);
+  }
 }

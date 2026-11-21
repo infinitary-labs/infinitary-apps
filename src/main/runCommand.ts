@@ -450,7 +450,7 @@ export function ownedRunOf(status: {
  */
 export function ownedRun(
   dataDir: string,
-  alive: (pid: number) => boolean = processAlive,
+  alive: (pid: number, birth?: string) => boolean = runAlive,
 ): OwnedRun | null {
   return commandHolding(dataDir, alive).owned;
 }
@@ -463,7 +463,7 @@ export function ownedRun(
  */
 export function stopRunningCommand(
   dataDir: string,
-  alive: (pid: number) => boolean = processAlive,
+  alive: (pid: number, birth?: string) => boolean = runAlive,
   signal: (pid: number, only?: OwnedRun) => void = (pid, only) => {
     // A stop for one run alone is asked through its folder, by its process
     // and start, and only that run reads it as its own: a signal goes to a

@@ -4,6 +4,7 @@ import {
   closeSync,
   constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -196,8 +197,12 @@ export function watchRunForce(
   let helperUp = hostPlatformProfile().windows;
   let failed = false;
   let said = false;
+  const pipe = join(dir, runForceWakeFile(process.pid, startedAt));
+  // The helper is reached through the pipe it holds at its own path: a folder made again since the
+  // pipe was made keeps no pipe of this run's, so its helper can be reached no more.
+  const reachable = () => hostPlatformProfile().windows || (held !== null && sameFile(held, pipe));
   const settled = () => {
-    if (said || !online || !helperUp || failed || ended) return;
+    if (said || !online || !helperUp || failed || ended || !reachable()) return;
     said = true;
     ready(true);
   };
@@ -240,11 +245,11 @@ export function watchRunForce(
   } catch (error) {
     console.warn(`[run] could not read force stops: ${(error as Error).message}`);
   }
-  const pipe = join(dir, runForceWakeFile(process.pid, startedAt));
   const helperFailed = (error: Error) => {
     // A pipe the run does not hold is never left behind: an asker would read nobody holding it as
-    // the run gone.
-    if (held === null) rmSync(pipe, { force: true });
+    // the run gone. One that cannot be removed only stays: nothing holds it, so no asker reads it
+    // as held, and the run goes on without its helper.
+    if (held === null) removeQuietly(pipe);
     // i18n-exempt: the run's own log, never shown to a person.
     lost(`the force helper stopped: ${error.message}`);
   };
@@ -298,12 +303,35 @@ export function watchRunForce(
     void worker?.terminate();
     helper?.kill();
     if (held !== null) {
+      // Only while this run's own pipe is still the one it held: a folder made again since keeps none of its own.
+      const own = sameFile(held, pipe);
       try {
         closeSync(held);
       } catch {}
-      rmSync(pipe, { force: true });
+      if (own) removeQuietly(pipe);
     }
   };
+}
+
+/** Removes `path`, ignoring a failure: what removes it is never held up by it. */
+function removeQuietly(path: string): void {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    // i18n-exempt: the run's own log, never shown to a person.
+    console.warn(`[run] could not remove ${path}`);
+  }
+}
+
+/** Whether the file open as `fd` is the one at `path` now. */
+function sameFile(fd: number, path: string): boolean {
+  try {
+    const open = fstatSync(fd);
+    const there = lstatSync(path);
+    return open.ino === there.ino && open.dev === there.dev;
+  } catch {
+    return false;
+  }
 }
 
 /** The words a force stop for this run starts with, up to its time, as `endRunByForce` writes them. */
@@ -384,8 +412,12 @@ const WAKE_EVERY_MS = 1_000;
  * that took the folder since clears an earlier run's pipe only once it
  * noted itself: a pipe found and gone since is the run gone too. A run that
  * says a force stop can end it holds its pipe, so on a Mac or Linux a run
- * whose pipe was not found is asked nothing either, whatever holds its
- * number now. `held`, for a test, stands in for whether a program holds it.
+ * whose pipe was not found, or that no program is seen holding (one that
+ * cannot be told included), is asked nothing either, whatever holds its
+ * number now; once asked, only a pipe nobody holds is the run gone. A stop
+ * none of whose files is there any more past its time, as where the folder
+ * was made again, is withdrawn too. `held`, for a test, stands in for
+ * whether a program holds it.
  * The attempt's files go once its end is known, and one that cannot be
  * removed changes nothing of what it answers.
  */
@@ -407,8 +439,11 @@ export async function endRunByForce(
   const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
   const posix = !hostPlatformProfile().windows;
   if (posix && !piped) return "unasked";
-  const runs = (pid: number) => alive(pid) && (!posix || (held ? held() : pipeHeld(pipe)));
-  if (!runs(run.pid)) return "unasked";
+  const state = () => (held ? (held() ? "held" : "unheld") : pipeState(pipe));
+  // Asked only once a program is seen holding the pipe; once asked, a pipe that cannot be told is
+  // no proof the run ended, and only one nobody holds is.
+  if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
+  const runs = (pid: number) => alive(pid) && (!posix || state() !== "unheld");
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;
   try {
@@ -421,7 +456,7 @@ export async function endRunByForce(
     return "unasked";
   }
   const outcome = await settle(attempt, run, runs, until, wake);
-  for (const end of [".json", ".taken", ".ended", ".declined", ".withdrawn"])
+  for (const end of ATTEMPT_ENDS)
     try {
       rmSync(`${attempt}${end}`, { force: true });
     } catch {
@@ -429,6 +464,9 @@ export async function endRunByForce(
     }
   return outcome;
 }
+
+/** Each file one attempt's stop can be, as it moves on. */
+const ATTEMPT_ENDS = [".json", ".taken", ".ended", ".declined", ".withdrawn"] as const;
 
 /** Whether `run`'s own pipe is there, on a Mac or Linux: false on Windows, which keeps none. */
 export function runPipeThere(dataDir: string, run: RunInstance): boolean {
@@ -448,18 +486,30 @@ function isPipe(path: string): boolean {
 }
 
 /**
- * Whether a program holds the pipe at `path` open to read it: false once the
- * pipe is gone or opening it to write finds nobody reading (`ENXIO`); true
- * while it opens, and while it cannot be told. Opening and closing it writes
+ * Whether a program holds the pipe at `path` open to read it: `held` once
+ * opening it to write finds a reader, `unheld` once the pipe is gone or
+ * opening it finds nobody reading (`ENXIO`), and `unknown` while it cannot be
+ * told, as a pipe this account may not open. Opening and closing it writes
  * nothing, so its helper lets nothing go on.
  */
-function pipeHeld(path: string): boolean {
+function pipeState(path: string): "held" | "unheld" | "unknown" {
   try {
     closeSync(openSync(path, constants.O_WRONLY | constants.O_NONBLOCK));
-    return true;
+    return "held";
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    return code !== "ENXIO" && code !== "ENOENT";
+    return code === "ENXIO" || code === "ENOENT" ? "unheld" : "unknown";
+  }
+}
+
+/** Whether `path` is positively not there: its folder or itself gone, or its folder no folder at all. */
+function absent(path: string): boolean {
+  try {
+    lstatSync(path);
+    return false;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "ENOENT" || code === "ENOTDIR";
   }
 }
 
@@ -484,6 +534,10 @@ async function settle(
           renameSync(`${attempt}${from}`, `${attempt}.withdrawn`);
           return "withdrawn";
         } catch {}
+      // None of the attempt's files is there at all, as where the folder was removed and made again
+      // since it was written: the run can no longer claim or commit it, and a run that committed it
+      // ends at the same moment, so a run still there past its time never acts on it.
+      if (ATTEMPT_ENDS.every((end) => absent(`${attempt}${end}`))) return "withdrawn";
       // Committed meanwhile, or declined: read again.
     } else if (
       (committed || Date.now() + WAKE_EVERY_MS <= until) &&

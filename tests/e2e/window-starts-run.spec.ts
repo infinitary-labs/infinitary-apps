@@ -1,13 +1,5 @@
 import { spawn } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  readFileSync,
-  readlinkSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
@@ -40,7 +32,11 @@ import {
   HELD_MOVE_TURN_REPORT,
   heldMoveTurn,
 } from "./scenarios/heldMoveTurn";
-import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceManagerStandIn";
+import {
+  afterStandIn,
+  type ServiceManagerStandIn,
+  serviceManagerStandIn,
+} from "./serviceManagerStandIn";
 import { settingRow, settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
@@ -63,17 +59,11 @@ test.afterEach(() => {
   const testInfo = test.info();
   const kept = standIn;
   standIn = null;
-  let failure: unknown = null;
-  try {
-    kept?.stopAll();
-  } catch (error) {
-    failure = error;
-  }
   // A failed run, or one whose service manager did not stop, keeps that manager's records and each
   // command's output with its results.
-  if (kept && (failure !== null || testInfo.status !== testInfo.expectedStatus))
-    cpSync(kept.dir, testInfo.outputPath("service-manager"), { recursive: true });
-  if (failure !== null) throw failure;
+  afterStandIn(kept, testInfo.status !== testInfo.expectedStatus, () =>
+    testInfo.outputPath("service-manager"),
+  );
 });
 
 function seededDataDir(port: number): string {

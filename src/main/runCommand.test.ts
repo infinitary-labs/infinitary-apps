@@ -5,6 +5,7 @@ import { RUN_AGENT_ENV } from "@core/helper/background";
 import { RUN_STOP_FOR_FILE } from "@core/helper/windowsTask";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { runEnd } from "./besideRun";
 import {
   answerLaunch,
   askLoginShellEarly,
@@ -194,6 +195,38 @@ describe("a window opened beside a run", () => {
     markRunning(earlier, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
     symlinkSync(`${hostname()}-4242`, join(earlier, "SingletonLock"));
     expect(commandHolding(earlier, reused).running).toBe(true);
+  });
+
+  // The review of INF-5409: the open window reads the run by the same identity its startup does.
+  // On Windows a lock names no holder (stood in here by a lock link that cannot be read): an
+  // agent's run that ended without taking its note away, its number taken since by another
+  // program, is not that run, and a folder another process holds is unknown, so the window neither
+  // joins as if nothing ran nor as the owner of that run, offers no stopped notice, and asks no
+  // stop of it. The run whose birth matches is owned and stopped; an earlier note with no birth is
+  // read by its number alone.
+  it("reads a stale Windows run in the open window by its birth, as unknown beside another holder", () => {
+    const stale = scratchDir("infinitary-run-stale-window-");
+    markRunning(stale, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, "win:1");
+    writeFileSync(join(stale, "SingletonLock"), "held, naming no holder");
+    expect(lockHolder(stale, "darwin")).toBeUndefined();
+    const reused = (pid: number, birth?: string) => pid === 4242 && (!birth || birth === "win:2");
+    const status = readRunStatus(stale, reused);
+    expect(status.running).toBeNull();
+    expect(ownedRunOf(status)).toBeNull();
+    expect(runEnd(status, null)).toBeNull();
+    const signalled: number[] = [];
+    const owned = { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" };
+    expect(stopRunningCommand(stale, reused, (pid) => void signalled.push(pid), owned)).toBe(false);
+    expect(ownedRun(stale, reused)).toBeNull();
+    expect(signalled).toEqual([]);
+    const same = (pid: number, birth?: string) => pid === 4242 && birth === "win:1";
+    expect(ownedRunOf(readRunStatus(stale, same))).toEqual(owned);
+    expect(stopRunningCommand(stale, same, (pid) => void signalled.push(pid), owned)).toBe(true);
+    expect(signalled).toEqual([4242]);
+    const earlier = scratchDir("infinitary-run-earlier-window-");
+    markRunning(earlier, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
+    writeFileSync(join(earlier, "SingletonLock"), "held, naming no holder");
+    expect(ownedRunOf(readRunStatus(earlier, reused))).toEqual(owned);
   });
 
   // The review of INF-5409: Start it here refused the lock reads who holds it from what the holder

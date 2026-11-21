@@ -1,10 +1,12 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import {
+  chmodSync,
   closeSync,
   constants,
   mkdirSync,
   openSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -221,6 +223,132 @@ describe("a run's reading of force stops", () => {
     } finally {
       await reading.terminate();
     }
+  });
+});
+
+/**
+ * A run of its own that starts the run's own reading and helper as a command
+ * does (`watchRunForce`, loaded from the source as it is), leading its own
+ * process group as a service manager starts one, and says each word of its
+ * readiness on a line of its own: `started` once `watchRunForce` returned,
+ * `ready` or `unready` as its `ready` is called, and `stopped` once what
+ * ends them returned at a SIGTERM, which it then exits 0 after.
+ */
+async function watchingRun(
+  dataDir: string,
+  startedAt: string,
+): Promise<{ run: ChildProcess; pid: number; words: string[] }> {
+  const program = `
+    const { pathToFileURL } = await import("node:url");
+    const { watchRunForce } = await import(pathToFileURL(process.env.SOURCE).href);
+    const say = (word) => process.stdout.write(word + "\\n");
+    const stop = watchRunForce(process.env.DATA, process.env.STARTED, 50, (can) => say(can ? "ready" : "unready"));
+    say("started");
+    process.on("SIGTERM", () => {
+      stop();
+      process.stdout.write("stopped\\n", () => process.exit(0));
+    });
+    setInterval(() => {}, 1000);
+  `;
+  const programFile = join(scratchDir("run-force-program-"), "run.mjs");
+  writeFileSync(programFile, program);
+  const run = spawn(
+    process.execPath,
+    [
+      "--no-warnings",
+      "--experimental-transform-types",
+      "--import",
+      join(__dirname, "..", "..", "..", "tests", "helpers", "sourceImports.preload.mjs"),
+      // A file of its own, not words after -e: a module's -e would make the run's own reading one too.
+      programFile,
+    ],
+    {
+      env: {
+        PATH: process.env.PATH ?? "",
+        SOURCE: join(__dirname, "runForce.ts"),
+        DATA: dataDir,
+        STARTED: startedAt,
+      },
+      stdio: ["ignore", "pipe", "inherit"],
+      detached: POSIX,
+    },
+  );
+  await started(run);
+  const words: string[] = [];
+  let partial = "";
+  run.stdout?.on("data", (data: Buffer) => {
+    const lines = (partial + String(data)).split("\n");
+    partial = lines.pop() ?? "";
+    words.push(...lines);
+  });
+  await expect.poll(() => words, { timeout: 10_000 }).toContain("started");
+  return { run, pid: ownedPid(run), words };
+}
+
+// The review of INF-5409: what starts and ends a run's reading and helper never holds up the run
+// itself. A folder of force stops that cannot be made, read or cleared leaves the run starting,
+// going on and stopping as it would, saying no force stop can end it; and a run says one can only
+// while its helper is reached at its own pipe: one whose folder failed to read a moment says so
+// again once it reads it, while one whose folder was made again since, which keeps no pipe of its
+// helper's, says so no more, and is asked no force stop.
+describe.skipIf(!POSIX)("a run's reading and helper, as a command starts them", () => {
+  it("starts and stops the run whatever its folder of force stops is", async () => {
+    const dataDir = scratchDir("run-force-");
+    writeFileSync(join(dataDir, RUN_FORCE_DIR), "not a folder");
+    const { run, words } = await watchingRun(dataDir, STARTED);
+    const gone = new Promise<number | null>((resolve) => run.once("exit", (code) => resolve(code)));
+    await pause(500);
+    expect(words).toEqual(["started"]);
+    process.kill(ownedPid(run), "SIGTERM");
+    expect(await gone).toBe(0);
+    expect(words).toEqual(["started", "stopped"]);
+  });
+
+  it("stops the run when its pipe cannot be cleared at the end", async () => {
+    const dataDir = scratchDir("run-force-");
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    const { run, words } = await watchingRun(dataDir, STARTED);
+    await expect.poll(() => words, { timeout: 10_000 }).toContain("ready");
+    const gone = new Promise<number | null>((resolve) => run.once("exit", (code) => resolve(code)));
+    chmodSync(dir, 0o000);
+    try {
+      process.kill(ownedPid(run), "SIGTERM");
+      expect(await gone).toBe(0);
+      expect(words).toContain("stopped");
+    } finally {
+      chmodSync(dir, 0o700);
+    }
+  });
+
+  it("says it can be ended by force again after a failed reading, never after its folder was made again", async () => {
+    const dataDir = scratchDir("run-force-");
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    const { run, pid, words } = await watchingRun(dataDir, STARTED);
+    await expect.poll(() => words, { timeout: 10_000 }).toEqual(["started", "ready"]);
+    // The same folder, unreadable a moment.
+    chmodSync(dir, 0o000);
+    try {
+      await expect.poll(() => words).toEqual(["started", "ready", "unready"]);
+    } finally {
+      chmodSync(dir, 0o700);
+    }
+    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready"]);
+    // The folder made again: unreadable while something else is in its place, then a new folder.
+    renameSync(dir, `${dir}-old`);
+    writeFileSync(dir, "");
+    await expect.poll(() => words).toEqual(["started", "ready", "unready", "ready", "unready"]);
+    rmSync(dir);
+    mkdirSync(dir);
+    // Its reading reads the new folder (many times over at every 50 ms), and it says nothing more.
+    await pause(1_000);
+    expect(words).toEqual(["started", "ready", "unready", "ready", "unready"]);
+    // Asked to end, as the window's Restart it would ask: nothing is asked, and it goes on.
+    expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 1_000)).toBe(
+      "unasked",
+    );
+    expect(left(dataDir)).toEqual([]);
+    expect(run.exitCode).toBeNull();
+    expect(processAlive(pid)).toBe(true);
   });
 });
 
@@ -466,6 +594,49 @@ describe("a run that does not answer, ended by force", () => {
       expect(left(dataDir)).toEqual([]);
     },
   );
+
+  // The review of INF-5409: on a Mac or Linux a stop is written only once a program is seen holding
+  // the run's pipe. A pipe whose holding cannot be told, as one this account may not open, is no
+  // proof the named run is there, so a reused number alone (stood in by a reading that says the
+  // number runs) is asked nothing.
+  it.skipIf(!POSIX)("asks nothing where the run's pipe cannot be told to be held", async () => {
+    const dataDir = scratchDir("run-force-");
+    const run = { pid: 4242, startedAt: STARTED };
+    mkdirSync(join(dataDir, RUN_FORCE_DIR));
+    const made = spawnSync("mkfifo", [
+      "-m",
+      "000",
+      join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)),
+    ]);
+    expect(made.status).toBe(0);
+    expect(runPipeThere(dataDir, run)).toBe(true);
+    expect(await endRunByForce(dataDir, run, () => true, 1_000)).toBe("unasked");
+    expect(left(dataDir)).toEqual([]);
+  });
+
+  // The review of INF-5409: a stop whose files went with its folder, made again since it was
+  // written, can no longer be claimed or committed by the run, which still runs (stood in by a
+  // reading that says it does): once its time is over it is withdrawn, never waited on for good,
+  // and never told as the stop's end.
+  it("withdraws a stop whose files went with its folder, once its time is over", async () => {
+    const dataDir = scratchDir("run-force-");
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    const run = { pid: 4242, startedAt: STARTED };
+    const asked = endRunByForce(
+      dataDir,
+      run,
+      () => true,
+      600,
+      () => {},
+      true,
+      () => true,
+    );
+    await expect.poll(() => left(dataDir).length).toBe(1);
+    rmSync(dir, { recursive: true });
+    mkdirSync(dir);
+    expect(await asked).toBe("withdrawn");
+    expect(left(dataDir)).toEqual([]);
+  });
 
   // A run that ends on its own after its stop was written and before it claimed it was not ended
   // by that stop: the stop answers that it is gone, never that it ended it.

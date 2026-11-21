@@ -1,4 +1,4 @@
-import { cpSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
@@ -9,7 +9,11 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
 import { GITHUB_STUB_KEY, type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
-import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceManagerStandIn";
+import {
+  afterStandIn,
+  type ServiceManagerStandIn,
+  serviceManagerStandIn,
+} from "./serviceManagerStandIn";
 
 /**
  * Following along beside a command (docs/view.md, "Following along"; the review of INF-5409):
@@ -48,19 +52,14 @@ test.afterEach(() => {
   const testInfo = test.info();
   const kept = standIn;
   standIn = null;
-  // Each cleanup runs whatever another's fails, and the first failure is the one the run reports.
-  const failures: unknown[] = [];
-  for (const step of [() => kept?.stopAll(), endCommands])
-    try {
-      step();
-    } catch (error) {
-      failures.push(error);
-    }
   // A failed run, or one whose service manager did not stop, keeps that manager's records and each
-  // command's output with its results.
-  if (kept && (failures.length > 0 || testInfo.status !== testInfo.expectedStatus))
-    cpSync(kept.dir, testInfo.outputPath("service-manager"), { recursive: true });
-  if (failures.length > 0) throw failures[0];
+  // command's output with its results; each cleanup runs whatever another's fails.
+  afterStandIn(
+    kept,
+    testInfo.status !== testInfo.expectedStatus,
+    () => testInfo.outputPath("service-manager"),
+    [endCommands],
+  );
 });
 
 /** The command that holds the data folder now, by the note it keeps there. */

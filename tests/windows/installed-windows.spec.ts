@@ -29,6 +29,7 @@ import {
   endRunByForce,
   RUN_FORCE_DIR,
   RUN_FORCE_WATCH_SOURCE,
+  wakeRun,
 } from "../../src/core/helper/runForce";
 import {
   powerShellTaskLookup,
@@ -38,7 +39,7 @@ import {
   WORK_TASK_AGAIN,
 } from "../../src/core/helper/windowsTask";
 import { helperWords } from "../../src/core/helper/words";
-import { readWindowsTable } from "../../src/core/placed/windowsProcesses";
+import { readWindowsTable, resumeWindowsRun } from "../../src/core/placed/windowsProcesses";
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
@@ -1085,6 +1086,15 @@ async function suspendedRunForce(): Promise<void> {
     // asked or woken, and the program stays suspended. Only the birth differs from the case below.
     record("win:1");
     expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("untouched");
+    expect(stillRunning([pid])).toEqual([pid]);
+    expect(beat()).toBe(suspendedAt);
+    // The wake's own check of the birth, at the native handle: a program under the run's number
+    // since the first look whose birth is not the one asked for is not let go on, through the
+    // production wake as through its native call, and the run stays suspended. Its heartbeat would
+    // move within 100 ms of going on.
+    wakeRun(folder, run0, "win:1");
+    expect(resumeWindowsRun(pid, "win:1")).toBe("other");
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
     expect(stillRunning([pid])).toEqual([pid]);
     expect(beat()).toBe(suspendedAt);
 

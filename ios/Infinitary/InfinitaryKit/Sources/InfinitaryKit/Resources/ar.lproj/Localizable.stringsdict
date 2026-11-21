@@ -459,6 +459,126 @@
       <string>· عبر %1$ld مهمة</string>
     </dict>
   </dict>
+  <key>cardConsentRunbookPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+      <key>one</key>
+      <string>إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+      <key>two</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+      <key>few</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+      <key>many</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+      <key>other</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@.</string>
+    </dict>
+  </dict>
+  <key>cardConsentRunbookPanelsThrough</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+      <key>one</key>
+      <string>إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+      <key>two</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+      <key>few</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+      <key>many</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+      <key>other</key>
+      <string>إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج %2$@ إلا عبر تلك التكاملات.</string>
+    </dict>
+  </dict>
+  <key>cardConsentShowsPanels</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>يعرض لوحات</string>
+      <key>one</key>
+      <string>يعرض لوحة</string>
+      <key>two</key>
+      <string>يعرض لوحات</string>
+      <key>few</key>
+      <string>يعرض لوحات</string>
+      <key>many</key>
+      <string>يعرض لوحات</string>
+      <key>other</key>
+      <string>يعرض لوحات</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesActions</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$@، الإجراءات %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+      <key>one</key>
+      <string>%2$@، الإجراء %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+      <key>two</key>
+      <string>%2$@، الإجراءات %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+      <key>few</key>
+      <string>%2$@، الإجراءات %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+      <key>many</key>
+      <string>%2$@، الإجراءات %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+      <key>other</key>
+      <string>%2$@، الإجراءات %3$@، وفق قاعدته في الإعدادات → التكاملات.</string>
+    </dict>
+  </dict>
+  <key>cardConsentUsesEvents</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$@، الأحداث %3$@.</string>
+      <key>one</key>
+      <string>%2$@، الحدث %3$@.</string>
+      <key>two</key>
+      <string>%2$@، الأحداث %3$@.</string>
+      <key>few</key>
+      <string>%2$@، الأحداث %3$@.</string>
+      <key>many</key>
+      <string>%2$@، الأحداث %3$@.</string>
+      <key>other</key>
+      <string>%2$@، الأحداث %3$@.</string>
+    </dict>
+  </dict>
   <key>cardFilesAll</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -346,6 +346,35 @@ public enum PhoneMessages {
     public static func `cardBrowserUnansweredStarting`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredStarting", [`site`]) }
     public static func `cardBrowserUnansweredWorking`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredWorking", [`site`]) }
     public static func `cardBrowserWord`() -> String { PhoneWords.format("cardBrowserWord", []) }
+    public static func `cardConsentFrom`() -> String { PhoneWords.format("cardConsentFrom", []) }
+    public static func `cardConsentFullDetails`() -> String { PhoneWords.format("cardConsentFullDetails", []) }
+    public static func `cardConsentGuidanceOnly`() -> String { PhoneWords.format("cardConsentGuidanceOnly", []) }
+    public static func `cardConsentKeeps`() -> String { PhoneWords.format("cardConsentKeeps", []) }
+    public static func `cardConsentKeepsLittle`() -> String { PhoneWords.format("cardConsentKeepsLittle", []) }
+    public static func `cardConsentKeepsUpTo`(`size`: String) -> String { PhoneWords.format("cardConsentKeepsUpTo", [`size`]) }
+    public static func `cardConsentMoves`() -> String { PhoneWords.format("cardConsentMoves", []) }
+    public static func `cardConsentMovesDetail`() -> String { PhoneWords.format("cardConsentMovesDetail", []) }
+    public static func `cardConsentMovesLine`() -> String { PhoneWords.format("cardConsentMovesLine", []) }
+    public static func `cardConsentMovesValue`() -> String { PhoneWords.format("cardConsentMovesValue", []) }
+    public static func `cardConsentNothingOfYours`() -> String { PhoneWords.format("cardConsentNothingOfYours", []) }
+    public static func `cardConsentPanelNote`(`here`: String) -> String { PhoneWords.format("cardConsentPanelNote", [`here`]) }
+    public static func `cardConsentPanelNoteThrough`(`here`: String) -> String { PhoneWords.format("cardConsentPanelNoteThrough", [`here`]) }
+    public static func `cardConsentReaches`() -> String { PhoneWords.format("cardConsentReaches", []) }
+    public static func `cardConsentReachesAll`() -> String { PhoneWords.format("cardConsentReachesAll", []) }
+    public static func `cardConsentReachesNamed`() -> String { PhoneWords.format("cardConsentReachesNamed", []) }
+    public static func `cardConsentReads`() -> String { PhoneWords.format("cardConsentReads", []) }
+    public static func `cardConsentReadsList`(`list`: String) -> String { PhoneWords.format("cardConsentReadsList", [`list`]) }
+    public static func `cardConsentReadsNothing`() -> String { PhoneWords.format("cardConsentReadsNothing", []) }
+    public static func `cardConsentRunbookPanels`(`count`: Int, `here`: String) -> String { PhoneWords.format("cardConsentRunbookPanels", [`count`, `here`]) }
+    public static func `cardConsentRunbookPanelsThrough`(`count`: Int, `here`: String) -> String { PhoneWords.format("cardConsentRunbookPanelsThrough", [`count`, `here`]) }
+    public static func `cardConsentShowsPanels`(`count`: Int) -> String { PhoneWords.format("cardConsentShowsPanels", [`count`]) }
+    public static func `cardConsentTurnBackOn`() -> String { PhoneWords.format("cardConsentTurnBackOn", []) }
+    public static func `cardConsentTurnsOff`() -> String { PhoneWords.format("cardConsentTurnsOff", []) }
+    public static func `cardConsentUses`() -> String { PhoneWords.format("cardConsentUses", []) }
+    public static func `cardConsentUsesActions`(`count`: Int, `integration`: String, `names`: String) -> String { PhoneWords.format("cardConsentUsesActions", [`count`, `integration`, `names`]) }
+    public static func `cardConsentUsesEvents`(`count`: Int, `integration`: String, `names`: String) -> String { PhoneWords.format("cardConsentUsesEvents", [`count`, `integration`, `names`]) }
+    public static func `cardConsentUsesLine`(`integration`: String, `names`: String) -> String { PhoneWords.format("cardConsentUsesLine", [`integration`, `names`]) }
+    public static func `cardConsentUsesWhy`(`why`: String) -> String { PhoneWords.format("cardConsentUsesWhy", [`why`]) }
     public static func `cardCrewmateLog`() -> String { PhoneWords.format("cardCrewmateLog", []) }
     public static func `cardCrewmateSendFailed`() -> String { PhoneWords.format("cardCrewmateSendFailed", []) }
     public static func `cardCrewmateSurface`() -> String { PhoneWords.format("cardCrewmateSurface", []) }
@@ -454,7 +483,6 @@ public enum PhoneMessages {
     public static func `cardRevisionLinksUnavailable`() -> String { PhoneWords.format("cardRevisionLinksUnavailable", []) }
     public static func `cardRevisionMore`(`count`: String) -> String { PhoneWords.format("cardRevisionMore", [`count`]) }
     public static func `cardRevisionShowFewer`() -> String { PhoneWords.format("cardRevisionShowFewer", []) }
-    public static func `cardRunbookAddPanels`() -> String { PhoneWords.format("cardRunbookAddPanels", []) }
     public static func `cardSavedResetCrewWaits`() -> String { PhoneWords.format("cardSavedResetCrewWaits", []) }
     public static func `cardSavedResetCrewWaitsThere`(`where`: String) -> String { PhoneWords.format("cardSavedResetCrewWaitsThere", [`where`]) }
     public static func `cardSavedResetsNow`(`account`: String, `count`: Int) -> String { PhoneWords.format("cardSavedResetsNow", [`account`, `count`]) }
@@ -4289,6 +4317,35 @@ extension PhoneWords {
         "cardBrowserUnansweredStarting": ["site"],
         "cardBrowserUnansweredWorking": ["site"],
         "cardBrowserWord": [],
+        "cardConsentFrom": [],
+        "cardConsentFullDetails": [],
+        "cardConsentGuidanceOnly": [],
+        "cardConsentKeeps": [],
+        "cardConsentKeepsLittle": [],
+        "cardConsentKeepsUpTo": ["size"],
+        "cardConsentMoves": [],
+        "cardConsentMovesDetail": [],
+        "cardConsentMovesLine": [],
+        "cardConsentMovesValue": [],
+        "cardConsentNothingOfYours": [],
+        "cardConsentPanelNote": ["here"],
+        "cardConsentPanelNoteThrough": ["here"],
+        "cardConsentReaches": [],
+        "cardConsentReachesAll": [],
+        "cardConsentReachesNamed": [],
+        "cardConsentReads": [],
+        "cardConsentReadsList": ["list"],
+        "cardConsentReadsNothing": [],
+        "cardConsentRunbookPanels": ["count", "here"],
+        "cardConsentRunbookPanelsThrough": ["count", "here"],
+        "cardConsentShowsPanels": ["count"],
+        "cardConsentTurnBackOn": [],
+        "cardConsentTurnsOff": [],
+        "cardConsentUses": [],
+        "cardConsentUsesActions": ["count", "integration", "names"],
+        "cardConsentUsesEvents": ["count", "integration", "names"],
+        "cardConsentUsesLine": ["integration", "names"],
+        "cardConsentUsesWhy": ["why"],
         "cardCrewmateLog": [],
         "cardCrewmateSendFailed": [],
         "cardCrewmateSurface": [],
@@ -4397,7 +4454,6 @@ extension PhoneWords {
         "cardRevisionLinksUnavailable": [],
         "cardRevisionMore": ["count"],
         "cardRevisionShowFewer": [],
-        "cardRunbookAddPanels": [],
         "cardSavedResetCrewWaits": [],
         "cardSavedResetCrewWaitsThere": ["where"],
         "cardSavedResetsNow": ["account", "count"],
@@ -7908,6 +7964,11 @@ extension PhoneWords {
         "cardAnswersDefaults": "count",
         "cardAnswersToAnswer": "count",
         "cardAskedThrough": "count",
+        "cardConsentRunbookPanels": "count",
+        "cardConsentRunbookPanelsThrough": "count",
+        "cardConsentShowsPanels": "count",
+        "cardConsentUsesActions": "count",
+        "cardConsentUsesEvents": "count",
         "cardFilesAll": "count",
         "cardFilesMore": "count",
         "cardNoteQueued": "count",

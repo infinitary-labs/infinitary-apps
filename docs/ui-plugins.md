@@ -474,6 +474,7 @@ An added plugin is served only what the captain consented to: a tree on disk ask
 A third root holds the panels of the runbooks that are on (`docs/runbooks.md`, "Panels"), checked the same way by `src/core/personal/framedPanels.ts`; an id either root above holds stays theirs, and the runbook's panel is named in the snapshot's `refused` list, which the window lists among its refused panels.
 
 **Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; only Don't add declines, while the minus keeps the staged offer pending) -> one feed line.
+The card's body is `panelConsentBody` (`src/core/plugins/consentWords.ts`): rows From, Reads, Uses and Moves in plain words, one quiet line saying it runs no code of its own and sends nothing off this computer, and a Full details holding the exact names, each integration's rule and reason, the moves fine print and what it keeps; a runbook's add card shows its panels in the same rows.
 A top-level `runbook.json` instead takes guidance admission through the same installer and consent effects, and its card agrees to the panels the runbook lists, shown while it is on; `docs/runbooks.md` ("Panels") owns that contract.
 An added panel's update asks again only on a capability diff, while every runbook update asks again (`docs/runbooks.md`, "Adding from elsewhere"); `personalize remove` uninstalls an added panel, and answers that a runbook's panel goes with its runbook's switch.
 
@@ -608,7 +609,7 @@ Activity links every key on its lines and the Knowledge browser the keys in its 
 ### Moving tasks (piece 4)
 
 The captain's answer on FI3-1014: "Asked for once, agreed when you add it, then each move on your click or key".
-`manifest.json` `"moves": true` is a capability like `reads` (`capabilitiesSchema.moves`, `PLUGIN_HOST_SUPPORT.moves`): the consent card of a panel from elsewhere says "It can queue, start and drop your tasks, each only when you click or press a key in it.
+`manifest.json` `"moves": true` is a capability like `reads` (`capabilitiesSchema.moves`, `PLUGIN_HOST_SUPPORT.moves`): the consent card of a panel from elsewhere says in its Moves row "Your tasks when you click: queue, start and drop", and under Full details "Your tasks, each only when you click or press a key in it.
 It can never merge or discard.", and an update that adds it asks again, because the canonical block differs.
 A panel with the grant gets `PanelProps.tasks.run(taskId, move, review?)` (`panelTasks.ts`): one of the lifecycle moves (`TASK_LIFECYCLE_OPS`), run through the task record's own `inf:task:run` and its write-time checks, answering `{ ok: true }` or the app's words with nothing written.
 A move counts only from the captain's click or key, gated as pointing is; one made otherwise answers "Only your own click or key in this panel moves a task.

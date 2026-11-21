@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "close-sweep-reads-once",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The window answers sooner after a task closes",
+      "body": "After each task closed, and once a minute, the app checked whether any waiting work could start, reading every waiting and working task several times over and holding the window still meanwhile. It now reads each task once per check, so that check takes less than half as long.",
+      "noPicture": "The window looks the same; the change shortens the pause after a task closes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

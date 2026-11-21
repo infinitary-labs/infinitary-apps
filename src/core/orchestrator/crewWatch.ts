@@ -819,7 +819,14 @@ export class CrewWatch {
    */
   sweepGates(now: number): Promise<void> {
     if (this.core.disposed()) return Promise.resolve();
-    const sweep: Promise<void> = this.sweepReady(now).finally(() => this.sweeping.delete(sweep));
+    // One projection over the sweep's synchronous stretch, which is the
+    // whole sweep unless it starts a task or drives a move: its witnesses
+    // re-read the same open and active tasks, and each read composed the
+    // whole record again (docs/freeze-recorder.md, "A task's close"). A
+    // write inside clears it; what runs after an await reads afresh.
+    const sweep: Promise<void> = this.core.options.tasks
+      .readProjection(() => this.sweepReady(now))
+      .finally(() => this.sweeping.delete(sweep));
     this.sweeping.add(sweep);
     return sweep;
   }

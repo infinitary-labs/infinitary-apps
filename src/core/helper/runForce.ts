@@ -9,6 +9,7 @@ import {
   mkdirSync,
   openSync,
   readdirSync,
+  readSync,
   renameSync,
   rmSync,
   writeSync,
@@ -378,23 +379,31 @@ export type ForceEnd = "ended" | "gone" | "withdrawn" | "unasked";
  * act on its force stop (docs/run.md, "When the command does not answer").
  * This ends nothing. On a Mac or Linux it writes a line to the run's own
  * pipe, which its helper waits on (`watchRunForce`), so nothing here signals
- * a process; on Windows it goes only through a handle to the program whose
- * birth is the run's own (`birth`, as its record keeps it), so a later
- * program under its number is never touched, and with no birth recorded the
- * run is left.
+ * a process, and only to the pipe found as `seen` (`runPipeSeen`): the file
+ * opened is checked to be that same pipe before anything is written, so
+ * another file put in its place, a pipe included, receives nothing, and with
+ * no pipe seen nothing is written. On Windows it goes only through a handle
+ * to the program whose birth is the run's own (`birth`, as its record keeps
+ * it), so a later program under its number is never touched, and with no
+ * birth recorded the run is left.
  */
-export function wakeRun(dataDir: string, run: RunInstance, birth?: string): void {
+export function wakeRun(
+  dataDir: string,
+  run: RunInstance,
+  birth?: string,
+  seen?: PipeSeen | null,
+): void {
   if (hostPlatformProfile().windows) {
     if (birth) resumeWindowsRun(run.pid, birth);
     return;
   }
+  if (!seen) return;
   const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
   try {
-    if (!lstatSync(pipe).isFIFO()) return;
     // Never waits: with nothing reading it the pipe does not open, and nothing is woken.
     const fd = openSync(pipe, constants.O_WRONLY | constants.O_NONBLOCK);
     try {
-      writeSync(fd, "\n");
+      if (isSeen(fstatSync(fd), seen)) writeSync(fd, "\n");
     } finally {
       closeSync(fd);
     }
@@ -432,10 +441,11 @@ const WAKE_EVERY_MS = 1_000;
  * cannot be told included), is asked nothing either, whatever holds its
  * number now. The pipe is told by the file it was found as, never by its
  * name alone: another file put in its place, a pipe included, tells
- * nothing, and is never read as the run held or gone. Once asked, only that
- * same pipe found there with nobody holding it is the run gone; one no
- * longer found tells nothing, as where the run or anything else took it
- * away. A stop none of whose files is there any more past its time, as
+ * nothing, and is never read as the run held or gone. The asker opens that
+ * pipe once, as the file it was found as, and reads through it until the
+ * stop's end is known, so once asked the run is gone when nobody holds it to
+ * write, even after the pipe's name is taken from the folder or another file
+ * put there; a pipe that could not be opened tells nothing. A stop none of whose files is there any more past its time, as
  * where the folder was made again, is not known to be withdrawn: the run
  * may have committed it before it went, and acts on it once it goes on, so
  * the run is waited for until it is gone, and nothing is woken for it; one
@@ -462,16 +472,39 @@ export async function endRunByForce(
   const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
   const posix = !hostPlatformProfile().windows;
   if (posix && !piped) return "unasked";
-  // Read by the file it was found as, unless a test stands in for whether it is held.
-  const seen = typeof piped === "object" ? piped : null;
+  // Read through the pipe itself, opened once as the file it was found as and kept open to read
+  // until the stop's end is known, unless a test stands in for whether it is held: whatever happens
+  // to its name, taken away or another file put there, the run's own end of it tells whether the
+  // run is still there.
+  const probe = posix && !held && piped && typeof piped === "object" ? openSeen(pipe, piped) : null;
   const state = () => {
     if (held) return held() ? "held" : "unheld";
-    return seen === null ? "unknown" : pipeState(pipe, seen);
+    return probe === null ? "unknown" : pipeState(probe);
   };
-  // Asked only once a program is seen holding the pipe; once asked, a pipe that cannot be told is
-  // no proof the run ended, and only one nobody holds is.
-  if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
-  const runs = (pid: number) => alive(pid) && (!posix || state() !== "unheld");
+  try {
+    // Asked only once the run is seen holding the pipe; once asked, a pipe that cannot be told is
+    // no proof the run ended, and only one the run no longer holds is.
+    if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
+    return await ask(
+      dir,
+      run,
+      waitMs,
+      wake,
+      (pid) => alive(pid) && (!posix || state() !== "unheld"),
+    );
+  } finally {
+    if (probe !== null) closeSync(probe);
+  }
+}
+
+/** Writes `run`'s force stop and waits on it (`endRunByForce`), with `runs` reading whether it is still there. */
+async function ask(
+  dir: string,
+  run: RunInstance,
+  waitMs: number,
+  wake: () => void,
+  runs: (pid: number) => boolean,
+): Promise<ForceEnd> {
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;
   try {
@@ -523,40 +556,44 @@ function isSeen(
   return stats.isFIFO() && stats.ino === seen.ino && stats.dev === seen.dev;
 }
 
-/** Whether the file at `path` now is the pipe `seen` found. */
-function seenAt(path: string, seen: PipeSeen): boolean {
+/**
+ * The pipe at `path` opened to read, without waiting and without taking any
+ * line from it, once the file opened is checked to be the pipe `seen`
+ * found; null for any other file there, a pipe included, or none.
+ */
+function openSeen(path: string, seen: PipeSeen): number | null {
+  let fd: number;
   try {
-    return isSeen(lstatSync(path), seen);
+    fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
   } catch {
-    return false;
+    return null;
   }
+  try {
+    if (isSeen(fstatSync(fd), seen)) return fd;
+  } catch {}
+  closeSync(fd);
+  return null;
 }
 
 /**
- * Whether a program holds the pipe `seen` found at `path` open to read it:
- * `held` once the file opened to write is that same pipe, found with a
- * reader; `unheld` once opening it finds nobody reading (`ENXIO`) while that
- * same pipe is found there just before and just after; `unknown` otherwise,
- * as where no pipe is there, another file is, a pipe included, or a pipe
- * this account may not open. Opening and closing it writes nothing, so its
- * helper lets nothing go on.
+ * Whether the run still holds its pipe, read through `fd`, that pipe kept
+ * open to read: the run holds it open to write while it runs, and only it
+ * does, beside an asker's moment of writing a line, so `held` while reading
+ * it would wait for a line (`EAGAIN`), `unheld` once it reads its end, with
+ * nobody holding it to write, and `unknown` where it cannot be read. A line
+ * read on the way, written for the run's helper, is let go: a wake comes
+ * again within a second.
  */
-function pipeState(path: string, seen: PipeSeen): "held" | "unheld" | "unknown" {
-  const before = seenAt(path, seen);
-  let fd: number;
-  try {
-    fd = openSync(path, constants.O_WRONLY | constants.O_NONBLOCK);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    return code === "ENXIO" && before && seenAt(path, seen) ? "unheld" : "unknown";
-  }
-  try {
-    return isSeen(fstatSync(fd), seen) ? "held" : "unknown";
-  } catch {
-    return "unknown";
-  } finally {
-    closeSync(fd);
-  }
+function pipeState(fd: number): "held" | "unheld" | "unknown" {
+  const buffer = Buffer.alloc(64);
+  for (let read = 0; read < 16; read++)
+    try {
+      if (readSync(fd, buffer, 0, buffer.length, null) === 0) return "unheld";
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "EAGAIN" ? "held" : "unknown";
+    }
+  // Lines go on arriving: someone holds it to write.
+  return "held";
 }
 
 async function settle(

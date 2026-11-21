@@ -361,7 +361,7 @@ test("Restart it ends a command that does not answer and the window joins the on
  * and what it said, the window's ownership of the command, and the card with no notice.
  */
 test("Start it here ends a command that does not answer and opens beside the one its job started again", async () => {
-  test.setTimeout(300_000);
+  test.setTimeout(420_000);
   const provider = await startMockProvider();
   const hold = join(scratchDir("infinitary-window-starts-run-hold-"), "hold");
   const relaunchNote = join(scratchDir("infinitary-window-starts-run-relaunch-"), "relaunch.json");
@@ -389,6 +389,41 @@ test("Start it here ends a command that does not answer and opens beside the one
     const gone = join(standIn.dir, "state", `${LABEL}.gone`);
     const noted = () =>
       existsSync(join(userDataDir, RUN_MARKER)) ? commandPid(userDataDir) : null;
+    /**
+     * Launches the app with `args` while the run the job started holds the folder's lock and has
+     * not noted it: the launch waits with no window, past a stopped run's wait, never taking that
+     * run for a window, and ends once the run notes itself as `run`. Answers what it said.
+     */
+    const waitBeside = async (args: string[], run: number) => {
+      const started = spawn(
+        electronPath as unknown as string,
+        [builtAppDir(), `--user-data-dir=${userDataDir}`, ...args],
+        {
+          env: {
+            ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+            INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+            ...env,
+          },
+          cwd: scratchDir("infinitary-window-starts-run-cwd-"),
+        },
+      );
+      waiting = started;
+      let said = "";
+      started.stdout?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      started.stderr?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      const ended = new Promise<void>((resolve) => started.once("exit", () => resolve()));
+      await new Promise((resolve) => setTimeout(resolve, STOPPED_RUN_WAIT_MS + 2_000));
+      expect(started.exitCode).toBeNull();
+      expect(started.signalCode).toBeNull();
+      rmSync(hold, { force: true });
+      await expect.poll(noted, { timeout: 60_000 }).toBe(run);
+      await ended;
+      return said;
+    };
 
     // Section: the window starts the command, then quits; the command is frozen.
     let opened = await open();
@@ -470,33 +505,7 @@ test("Start it here ends a command that does not answer and opens beside the one
     const [, , third] = standIn.runs(LABEL) as [number, number, number];
     await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(third);
     expect(noted()).toBe(second);
-    waiting = spawn(
-      electronPath as unknown as string,
-      [builtAppDir(), `--user-data-dir=${userDataDir}`, START_HERE_ARG, LET_GO_JOB_ARG],
-      {
-        env: {
-          ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
-          INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
-          ...env,
-        },
-        cwd: scratchDir("infinitary-window-starts-run-cwd-"),
-      },
-    );
-    let said = "";
-    waiting.stdout?.on("data", (chunk) => {
-      said += String(chunk);
-    });
-    waiting.stderr?.on("data", (chunk) => {
-      said += String(chunk);
-    });
-    const started = waiting;
-    const ended = new Promise<void>((resolve) => started.once("exit", () => resolve()));
-    await new Promise((resolve) => setTimeout(resolve, STOPPED_RUN_WAIT_MS + 2_000));
-    expect(started.exitCode).toBeNull();
-    expect(started.signalCode).toBeNull();
-    rmSync(hold, { force: true });
-    await expect.poll(noted, { timeout: 60_000 }).toBe(third);
-    await ended;
+    let said = await waitBeside([START_HERE_ARG, LET_GO_JOB_ARG], third);
     expect(said).toContain("[app] Start it here found the folder held by a run");
     const startedWith = askedStart();
     expect(startedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
@@ -524,10 +533,47 @@ test("Start it here ends a command that does not answer and opens beside the one
     expect(standIn.running(LABEL)).toBe(true);
     expect(existsSync(gone)).toBe(false);
     expect(noted()).toBe(third);
+
+    // Section: an ordinary launch, with no Start it here, while the command the job started again
+    // holds the folder's lock and has not noted it yet, waits the same way, never quitting with no
+    // window, and starts again once the command notes it.
+    writeFileSync(hold, "");
+    expect(await standIn.signal(LABEL, "SIGKILL", third)).toBe("sent");
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(4);
+    const [, , , fourth] = standIn.runs(LABEL) as [number, number, number, number];
+    await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(fourth);
+    expect(noted()).toBe(third);
+    said = await waitBeside([], fourth);
+    expect(said).toContain("[app] the launch found the folder held by a run");
+    const ordinaryWith = askedStart();
+    expect(ordinaryWith).toEqual([]);
+
+    // Section: the start that ordinary launch asked for opens a usable window beside the command.
+    opened = await open(ordinaryWith);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
+    } finally {
+      await opened.close();
+    }
+    // Nothing asked the service manager to start or stop anything for that launch either.
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first, second, third, fourth]);
+    expect(standIn.exits(LABEL)).toEqual([null, null, null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(fourth);
   } finally {
     rmSync(hold, { force: true });
-    if (waiting && waiting.exitCode === null && waiting.signalCode === null)
-      waiting.kill("SIGKILL");
+    // Set only inside `waitBeside`, which the compiler does not follow.
+    const left = waiting as ReturnType<typeof spawn> | null;
+    if (left && left.exitCode === null && left.signalCode === null) left.kill("SIGKILL");
     await provider.close();
   }
 });

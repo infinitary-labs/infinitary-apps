@@ -5,6 +5,8 @@ import {
   mkdirSync,
   openSync,
   readdirSync,
+  readFileSync,
+  readSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -452,9 +454,11 @@ describe("a run that does not answer, ended by force", () => {
         await expect.poll(() => stopped(pid)).toBe(true);
         const gone = exited(run);
         const named = { pid, startedAt: STARTED };
+        const seen = runPipeSeen(dataDir, named);
+        expect(seen).not.toBeNull();
         expect(
           await endRunByForce(dataDir, named, processAlive, undefined, () =>
-            wakeRun(dataDir, named),
+            wakeRun(dataDir, named, undefined, seen),
           ),
         ).toBe("ended");
         await endedByForce(gone, pid);
@@ -479,14 +483,24 @@ describe("a run that does not answer, ended by force", () => {
       process.kill(pid, "SIGSTOP");
       await expect.poll(() => stopped(pid)).toBe(true);
       writeStop(dataDir, "stale", { pid, startedAt: STARTED, until: Date.now() - 1_000 });
-      wakeRun(dataDir, { pid, startedAt: STARTED });
+      wakeRun(
+        dataDir,
+        { pid, startedAt: STARTED },
+        undefined,
+        runPipeSeen(dataDir, { pid, startedAt: STARTED }),
+      );
       await pause(500);
       expect(stopped(pid)).toBe(true);
       // Early in a second, a stop whose time ends later in that same second.
       while (Date.now() % 1_000 > 300) await pause(20);
       const second = Math.floor(Date.now() / 1_000) * 1_000;
       writeStop(dataDir, "last-second", { pid, startedAt: STARTED, until: second + 950 });
-      wakeRun(dataDir, { pid, startedAt: STARTED });
+      wakeRun(
+        dataDir,
+        { pid, startedAt: STARTED },
+        undefined,
+        runPipeSeen(dataDir, { pid, startedAt: STARTED }),
+      );
       await pause(500);
       expect(stopped(pid)).toBe(true);
     },
@@ -595,7 +609,12 @@ describe("a run that does not answer, ended by force", () => {
       process.kill(pid, "SIGSTOP");
       await expect.poll(() => stopped(pid)).toBe(true);
       writeStop(dataDir, "slow", { pid, startedAt: STARTED, until: Date.now() + 2_000 });
-      wakeRun(dataDir, { pid, startedAt: STARTED });
+      wakeRun(
+        dataDir,
+        { pid, startedAt: STARTED },
+        undefined,
+        runPipeSeen(dataDir, { pid, startedAt: STARTED }),
+      );
       await pause(3_500);
       expect(stopped(pid)).toBe(true);
     },
@@ -717,7 +736,9 @@ describe("a run that does not answer, ended by force", () => {
   // committed it in the moment before, and ends on it once it goes on, so it is waited for, past
   // its time, until it is gone, whether it committed it there (moved to `.ended` and gone with the
   // folder before the next reading) or never claimed it. Called gone, as nothing shows the stop
-  // ended it; a stop still in its folder past its time is withdrawn (above).
+  // ended it; a stop still in its folder past its time is withdrawn (above). Its first wake, while
+  // it was there to read with time left, is the only one: once its files are gone nothing is woken
+  // for it again, though more than a wake interval of its time is left.
   it("waits on a stop whose files went with its folder until the run is gone", async () => {
     for (const committed of [true, false]) {
       const dataDir = scratchDir("run-force-");
@@ -725,31 +746,112 @@ describe("a run that does not answer, ended by force", () => {
       const run = { pid: 4242, startedAt: STARTED };
       let running = true;
       let answer: string | null = null;
+      let woken = 0;
       const asked = endRunByForce(
         dataDir,
         run,
         () => running,
-        300,
-        () => {},
+        2_500,
+        () => void woken++,
         true,
         () => true,
       ).then((end) => {
         answer = end;
         return end;
       });
+      expect(woken).toBe(1);
       const [pending = ""] = left(dataDir);
       expect(pending.endsWith(".json")).toBe(true);
       if (committed)
         renameSync(join(dir, pending), join(dir, pending.replace(/\.json$/, ".ended")));
       rmSync(dir, { recursive: true });
       mkdirSync(dir);
-      await pause(800);
+      await pause(2_800);
       expect(answer).toBeNull();
+      expect(woken).toBe(1);
       running = false;
       expect(await asked).toBe("gone");
       expect(left(dataDir)).toEqual([]);
     }
   });
+
+  // The review of INF-5409: a wake goes only to the pipe the run was found holding. Another file put
+  // in its place, a pipe someone reads or a file anyone may write, receives nothing; the run's own
+  // pipe receives the line.
+  it.skipIf(!POSIX)("wakes only the pipe it found, never another file in its place", async () => {
+    const dataDir = scratchDir("run-force-");
+    const run = { pid: 4242, startedAt: STARTED };
+    const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+    mkdirSync(join(dataDir, RUN_FORCE_DIR), { recursive: true });
+    expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+    // Held as the run holds it, and read here without waiting for a line.
+    const holding = openSync(pipe, constants.O_RDWR | constants.O_NONBLOCK);
+    const lines = (fd: number) => {
+      try {
+        return readSync(fd, Buffer.alloc(16), 0, 16, null);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EAGAIN") return 0;
+        throw error;
+      }
+    };
+    try {
+      const seen = runPipeSeen(dataDir, run);
+      expect(seen).not.toBeNull();
+      wakeRun(dataDir, run, undefined, seen);
+      expect(lines(holding)).toBe(1);
+      rmSync(pipe);
+      expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+      const other = openSync(pipe, constants.O_RDWR | constants.O_NONBLOCK);
+      try {
+        wakeRun(dataDir, run, undefined, seen);
+        expect(lines(other)).toBe(0);
+      } finally {
+        closeSync(other);
+      }
+      rmSync(pipe);
+      writeFileSync(pipe, "", { mode: 0o600 });
+      wakeRun(dataDir, run, undefined, seen);
+      expect(readFileSync(pipe, "utf8")).toBe("");
+      expect(lines(holding)).toBe(0);
+    } finally {
+      closeSync(holding);
+    }
+  });
+
+  // The review of INF-5409: a stop the run committed is waited for through the pipe it was found
+  // holding, read through that pipe itself, not its name. With the pipe taken away from its folder,
+  // as a later run clears an earlier one's, and its number still taken (stood in by a reading that
+  // says it runs), the run still holding it is waited for, and once it lets it go, as it does when it
+  // ends, the stop is called ended.
+  it.skipIf(!POSIX)(
+    "tells a committed run's end through its pipe once that pipe is taken from its folder",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const dir = join(dataDir, RUN_FORCE_DIR);
+      const run = { pid: 4242, startedAt: STARTED };
+      const holding = holdPipe(dataDir, run);
+      let released = false;
+      try {
+        let answer: string | null = null;
+        const asked = endRunByForce(dataDir, run, () => true, 300).then((end) => {
+          answer = end;
+          return end;
+        });
+        const [pending = ""] = left(dataDir);
+        renameSync(join(dir, pending), join(dir, pending.replace(/\.json$/, ".ended")));
+        await pause(300);
+        rmSync(join(dir, runForceWakeFile(run.pid, run.startedAt)));
+        await pause(800);
+        expect(answer).toBeNull();
+        closeSync(holding);
+        released = true;
+        expect(await asked).toBe("ended");
+        expect(left(dataDir)).toEqual([]);
+      } finally {
+        if (!released) closeSync(holding);
+      }
+    },
+  );
 
   // The review of INF-5409: a stop the run was seen to commit is waited for until the run is gone,
   // even once its file went with its folder, and then called ended, never withdrawn: the run acts

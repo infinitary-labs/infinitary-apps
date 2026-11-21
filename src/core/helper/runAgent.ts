@@ -17,7 +17,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunByForce, runPipeSeen, wakeRun } from "./runForce";
+import { endRunByForce, type PipeSeen, runPipeSeen, wakeRun } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -86,8 +86,11 @@ export type RunAgentContext = {
      */
     alive: (pid: number, birth?: string) => boolean | null;
     forceWaitMs?: number;
-    /** Lets a suspended run go on to read its force stop (`wakeRun`). */
-    wake?: (run: RunInstance, birth?: string) => void;
+    /**
+     * Lets a suspended run go on to read its force stop (`wakeRun`), on a Mac
+     * or Linux only through the pipe found as `seen`.
+     */
+    wake?: (run: RunInstance, birth?: string, seen?: PipeSeen | null) => void;
     /**
      * On a Mac or Linux, the run's own pipe in the folder of force stops: whether it is there
      * (`runPipeThere`) and whether a program holds it.
@@ -489,7 +492,8 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
   // stopped since says no longer that a force stop can end it, and is asked nothing.
   if (!recorded?.agent || !recorded.recovers) return "untouched";
   const wake =
-    context.processes?.wake ?? ((named, birth) => wakeRun(context.dataDir, named, birth));
+    context.processes?.wake ??
+    ((named, birth, seen) => wakeRun(context.dataDir, named, birth, seen));
   const alive = context.processes?.alive ?? runIdentity;
   // Asked only of a run its number is seen to be: one whose birth cannot be read is asked nothing.
   if (alive(run.pid, recorded.birth) !== true) return "untouched";
@@ -500,7 +504,7 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
     run,
     (pid) => alive(pid, recorded.birth) !== false,
     context.processes?.forceWaitMs,
-    () => wake(run, recorded.birth),
+    () => wake(run, recorded.birth, typeof piped === "object" ? piped : null),
     piped,
     context.processes?.pipe ? () => context.processes?.pipe?.held(run) ?? false : undefined,
   );

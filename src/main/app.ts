@@ -745,11 +745,12 @@ export async function startApp(
       startedHere: startedHere(dataDir),
     });
   if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
-  // Start it here asks a window that holds the lock to answer, which a run never does
-  // (`lockHolderKind`), so a refused launch knows a window is there before it quits; so does a launch
-  // beside a holder not known to be the noted run.
-  const answerAsk =
-    (startsHere || unknownHolder) && !besideRun ? randomBytes(8).toString("hex") : null;
+  // A window launch on the folder's own lock that opens beside no run asks a window that holds the
+  // lock to answer, which a run never does (`lockHolderKind`), so a refused launch knows a window is
+  // there before it quits: a run may hold the lock before it notes itself, or with a note this
+  // launch cannot tell, and ignores a second launch. Never during a folder move, whose lock is a
+  // throwaway profile's.
+  const answerAsk = !windowless && !move && !besideRun ? randomBytes(8).toString("hex") : null;
   const lockAsk = answerAsk ? { windowAnswers: answerAsk } : undefined;
   /** The live program the folder's lock names, by its link: null for none, undefined unnamed. */
   const lockHolderNow = () => {
@@ -770,8 +771,8 @@ export async function startApp(
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
     // that holds the lock answers and focuses itself, and this launch quits. A holder that shows
-    // neither is waited for, never taken for a window. A launch beside a holder not known to be the
-    // noted run waits the same way, for a run known to hold the folder or a window's answer.
+    // neither is waited for, never taken for a window. An ordinary launch waits the same way, for a
+    // run known to hold the folder or a window's answer, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
       const kind = await lockHolderKind({

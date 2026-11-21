@@ -623,11 +623,15 @@ export class FirstmateAgent {
     // seconds later for facts this turn already holds. The rows ride the
     // ack-after-handling contract like any drained batch.
     this.clearCoalesceTimer();
-    // The one retry is served alone (drainInbox), never carried on a captain turn.
+    // The one retry, and an answer a captain's message waits on, are served
+    // alone (drainInbox), never carried on a captain turn.
     const served = this.withPictures(
       this.options.inbox
         .pending(FIRSTMATE_RECIPIENT, this.now(), { limit: 20 })
-        .filter((row) => row.facts?.kind !== "answer-missing"),
+        .filter(
+          (row) =>
+            row.facts?.kind !== "answer-missing" && this.delivery.waitingOn(row).length === 0,
+        ),
     );
     const pending = served.rows;
     const turnImages = [...(images ?? []), ...(served.images ?? [])];
@@ -1485,13 +1489,15 @@ export class FirstmateAgent {
     if (!oldest) return;
     const waited = now - oldest.createdAt;
     // A captain's words never wait out the window, nor does the one retry
-    // for a message nothing took effect after, how his setup click came out,
+    // for a message nothing took effect after, an answer a message of his
+    // waits on, how his setup click came out,
     // an Update panel press, or a Start held for this turn. A queued task's
     // directions can still batch.
     const waiting = rows.some(
       (row) =>
         row.origin === "captain" ||
         row.facts?.kind === "answer-missing" ||
+        this.delivery.waitingOn(row).length > 0 ||
         row.facts?.kind === "project-setup" ||
         row.facts?.kind === "panel-update-asked" ||
         (row.facts?.kind === "captain-start" && row.facts.move === "start"),
@@ -1527,7 +1533,12 @@ export class FirstmateAgent {
     // The answer-delivery retry is served alone: a typed wake of its own,
     // never batched with anything and never carried on a captain's turn.
     const retry = choice ? undefined : pending.find((row) => row.facts?.kind === "answer-missing");
-    const batch = choice ? [choice] : retry ? [retry] : pending;
+    // So is an answer a captain's message waits on: the turn that reads it
+    // reads that message alone, so nothing else in it counts toward it
+    // (docs/task-capture.md "Waiting for an answer").
+    const answer =
+      choice || retry ? undefined : pending.find((row) => this.delivery.waitingOn(row).length > 0);
+    const batch = choice ? [choice] : retry ? [retry] : answer ? [answer] : pending;
     if (batch.length === 0) return;
     const batchImages = choice ? undefined : served.images;
     const classified = classifyInboxBatch(batch);

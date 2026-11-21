@@ -176,6 +176,78 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.tasks.get("t1")?.status).toBe("active");
   });
 
+  // The captain's choice on the review of INF-5578's finding 1: the answer a
+  // message waits on gets a turn of its own, and "carry on" there keeps the tie.
+  it("serves the answer a message waits on in a turn of its own, where a carry-on steer keeps the tie", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+      ],
+    });
+    const inbox = new InboxStore(f.db);
+    await f.agent.converse("will updating get the new alpha?");
+    await toolsOf(f.specs)
+      .get("steer_crewmate")
+      ?.execute("s1", { task_id: "t1", message: "Will updating get the new alpha?" });
+    await finish(f, "I'll answer you once it reports.");
+
+    // Another wake waits on the lane when the answer comes back.
+    notifyProse(f.db, f.agent, "[fm-op] another task reported", "agent");
+    const [request] = inbox.pendingResponses("t1");
+    if (!request) throw new Error("No open request on t1");
+    inbox.submitResponse(
+      { requestId: request.id, responseId: "r1", status: "answered" },
+      { task: "t1", session: null },
+      "Yes, updating gets the alpha.",
+    );
+    f.agent.pokeInbox();
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain("Yes, updating gets the alpha.");
+    expect(f.session.prompts[1]).not.toContain("another task reported");
+
+    // "Carry on" to the same task leaves the tie: the message is due on this
+    // turn's answer, not on the task's close.
+    await toolsOf(f.specs)
+      .get("steer_crewmate")
+      ?.execute("s2", { task_id: "t1", message: "Carry on.", response_mode: "guidance-only" });
+    await finish(f, "Updating gets the alpha.");
+    await drained(f.session, 3);
+    expect(retries(f)).toHaveLength(1);
+    expect(f.tasks.get("t1")?.status).toBe("active");
+  });
+
+  it("never carries the answer a message waits on on a captain's turn", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+      ],
+    });
+    const inbox = new InboxStore(f.db);
+    await f.agent.converse("will updating get the new alpha?");
+    await toolsOf(f.specs)
+      .get("steer_crewmate")
+      ?.execute("s1", { task_id: "t1", message: "Will updating get the new alpha?" });
+    await finish(f, "I'll answer you once it reports.");
+    const [request] = inbox.pendingResponses("t1");
+    if (!request) throw new Error("No open request on t1");
+    // The answer lands while the captain's next message is already on its way.
+    inbox.submitResponse(
+      { requestId: request.id, responseId: "r1", status: "answered" },
+      { task: "t1", session: null },
+      "Yes, updating gets the alpha.",
+    );
+    await f.agent.converse("and what about the phone app?");
+    expect(f.session.prompts[1]).toContain("and what about the phone app?");
+    expect(f.session.prompts[1]).not.toContain("Yes, updating gets the alpha.");
+    await toolsOf(f.specs).get("emit_card")?.execute("c1", note("phone", "The phone app"));
+    await finish(f, "Noted.");
+    await drained(f.session, 3);
+    expect(f.session.prompts[2]).toContain("Yes, updating gets the alpha.");
+    expect(f.session.prompts[2]).not.toContain("and what about the phone app?");
+  });
+
   // INF-5578's audit, finding 1: a change the task refused stops counting as
   // the message's work, whichever tool path refused it, so the message does
   // not wait for the task to close; the task stays about the message.

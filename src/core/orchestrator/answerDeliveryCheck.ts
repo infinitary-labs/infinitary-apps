@@ -1,5 +1,5 @@
 import { type Card, onStage } from "@shared/cards";
-import { askReceipt } from "../storage/askStore";
+import { type AskRecord, askReceipt } from "../storage/askStore";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import {
@@ -110,14 +110,30 @@ export class AnswerDeliveryCheck {
         // that reads it reads that message too, so its follow-up stays the
         // message's and the message is judged when it ends - its card, or
         // the one retry (docs/task-capture.md "How a message ends").
-        for (const ask of this.host.tasks.capture.requestAsks(facts.taskId, facts.requestId)) {
-          if (!ask.followed || ask.answeredAt !== null) continue;
+        for (const ask of this.waitingOn(row)) {
           if (ask.delivery === "covered") this.host.tasks.capture.setAskDelivery(ask.id, "pending");
-          else if (!JUDGEABLE_DELIVERY.includes(ask.delivery)) continue;
           this.adopted.add(ask.id);
         }
       }
     }
+  }
+
+  /**
+   * The captain's messages still waiting on the answer a requested-response
+   * wake carries. Such a wake is served in a turn of its own, as the one
+   * retry is, so the turn that reads it reads only those messages.
+   */
+  waitingOn(row: InboxRow): AskRecord[] {
+    const facts = row.facts;
+    if (facts?.kind !== "requested-response") return [];
+    return this.host.tasks.capture
+      .requestAsks(facts.taskId, facts.requestId)
+      .filter(
+        (ask) =>
+          ask.followed &&
+          ask.answeredAt === null &&
+          (ask.delivery === "covered" || JUDGEABLE_DELIVERY.includes(ask.delivery)),
+      );
   }
 
   /** The saved messages a drained batch carried back to the running turn. */

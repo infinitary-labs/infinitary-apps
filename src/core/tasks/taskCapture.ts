@@ -656,6 +656,9 @@ export class TaskCapture {
       if (!ask) throw new Error(`Unknown ask "${askId}".`);
       this.writer.mustGet(taskId);
       const already = this.writer.events.askEvent(taskId, askId);
+      // A steer to a task the message is tied to - "carry on" after its
+      // answer - passes guidance on and leaves the tie as it is.
+      if (already?.data?.tie === true && via === "tool:steer_crewmate") return false;
       // Whether this is the message's first attachment as work: a tie
       // before it - a question asked, a change refused - joins nothing.
       const firstWork =

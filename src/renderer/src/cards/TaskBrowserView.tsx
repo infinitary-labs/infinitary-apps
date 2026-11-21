@@ -758,7 +758,9 @@ export function TaskBrowserView({
       : "same";
   // Nothing answers at its page: said in the same line, ahead of a stale card's words.
   const unanswered =
-    fact?.state === "open" && fact.unanswered ? unansweredWords(fact.site, driver) : undefined;
+    fact?.state === "open" && fact.unanswered
+      ? unansweredWords(fact.site, driver, fact.starting)
+      : undefined;
   const noticeWords =
     unanswered ?? (standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing]);
   // A request docks beside the page it asked about, never beside another,

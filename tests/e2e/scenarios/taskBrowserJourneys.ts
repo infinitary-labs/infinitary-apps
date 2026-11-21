@@ -776,6 +776,94 @@ function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
 }
 
 /**
+ * A crewmate saves its page's start (docs/task-browser.md, "Starting a page
+ * again"; task-browser-start.spec.ts). A brief carrying this marker, the
+ * page this Mac serves ("start the build page at http://127.0.0.1:PORT/
+ * then") opens its browser there with `--start` and the command that
+ * starts its build (`buildPageCommand`) while nothing answers, puts up a
+ * card with a Try it button, and reports. Woken because nothing answers,
+ * it reports that.
+ */
+export const TASK_BROWSER_START_MARKER = "start the build page at ";
+export const MOCK_START_CARD_TITLE = "The build page is up to try";
+export const MOCK_START_CARD_REPORT = "The build page is up behind its Try it card.";
+export const MOCK_START_WOKEN_REPORT = "Nothing answered at the build page, so I was woken.";
+
+/** The build page's own title, which its page shows once it answers. */
+export const BUILD_PAGE_TITLE = "Build page";
+
+/**
+ * Each build page's gate, by its port: a file the journey makes when the
+ * build may answer, so what the view shows while it starts follows the
+ * journey's order, never a clock. The stand-in runs in the journey's own
+ * process, so the journey sets it here.
+ */
+export const BUILD_PAGE_GATES = new Map<number, string>();
+
+/**
+ * The command that starts the build page: a real server on this computer
+ * that serves its port once its gate is open, as a project's build does
+ * once it compiles.
+ */
+export function buildPageCommand(port: number): string {
+  const page = `<!doctype html><title>${BUILD_PAGE_TITLE}</title><h1>${BUILD_PAGE_TITLE}</h1><p>The build answers.</p>`;
+  const code = `require("http").createServer((q, s) => { s.writeHead(200, { "content-type": "text/html; charset=utf-8" }); s.end(${JSON.stringify(page)}); }).listen(${port}, "127.0.0.1")`;
+  const gate = BUILD_PAGE_GATES.get(port);
+  const wait = gate ? `while [ ! -f '${gate}' ]; do sleep 0.05; done; ` : "";
+  return `${wait}exec '${process.execPath}' -e '${code}'`;
+}
+
+/** The saved start's next scripted step, from the browser answers so far. */
+function taskBrowserStartStep(body: string): ScriptedCall[] | undefined {
+  const ask = body.match(/start the build page at (http:\/\/127\.0\.0\.1:(\d+)\/) then/);
+  if (!ask) return undefined;
+  const [, url, port] = ask as unknown as [string, string, string];
+  const command = buildPageCommand(Number(port));
+  const messages = providerMessages(body);
+  const woken = messages.findLastIndex(
+    (message) => message.role === "user" && message.text.includes(PAGE_UNANSWERED_OPENING),
+  );
+  if (woken !== -1) {
+    return toolAnswers(messages, woken).length === 0
+      ? [{ name: "report", args: { text: MOCK_START_WOKEN_REPORT } }]
+      : undefined;
+  }
+  const answers = toolAnswers(messages);
+  // The open waits for the build to answer, which can outlast the shell's
+  // limit: its answer then comes with the next bare command.
+  const opened = answers.find((answer) => answer.includes("--start command"));
+  if (!opened) {
+    if (answers.length === 0) return [browser("open", url, "--start", command, "--within", "60")];
+    const last = answers.at(-1) ?? "";
+    if (last.includes("running: open") && answers.length < 10) return [browser()];
+    return [
+      { name: "report", args: { text: `The build page did not open: ${last.slice(0, 400)}` } },
+    ];
+  }
+  if (toolCallCount(body, "emit_card") === 0) {
+    return [
+      {
+        name: "emit_card",
+        args: {
+          id: "try-build",
+          title: MOCK_START_CARD_TITLE,
+          body: "<p>The build page answers. Its browser is still open on this Mac, so you can try it yourself.</p>",
+          actions: [
+            { id: "change-it", label: "Change it" },
+            { id: "looks-right", label: "Looks right", default: true },
+          ],
+          browser_button: MOCK_BROWSER_BUTTON,
+        },
+      },
+    ];
+  }
+  const reported = toolCallCount(body, "report") > 0;
+  return reported
+    ? undefined
+    : [{ name: "report", args: { text: `${MOCK_START_CARD_REPORT} ${opened}` } }];
+}
+
+/**
  * The captain takes a task's browser while its crewmate's command runs
  * (docs/task-browser.md, "Taking control"; task-browser-handoff.spec.ts). A brief
  * carrying this marker and the account page this Mac serves ("keep the
@@ -924,6 +1012,7 @@ const JOURNEYS: ReadonlyArray<
   [TASK_BROWSER_TAKE_MARKER, taskBrowserTakeStep, false],
   [TASK_BROWSER_FENCE_MARKER, taskBrowserFenceStep, false],
   [TASK_BROWSER_CARD_MARKER, taskBrowserCardStep, false],
+  [TASK_BROWSER_START_MARKER, taskBrowserStartStep, false],
 ];
 
 /** The task browser's journeys past the plain sign-up page, for the crewmate whose brief names one. */

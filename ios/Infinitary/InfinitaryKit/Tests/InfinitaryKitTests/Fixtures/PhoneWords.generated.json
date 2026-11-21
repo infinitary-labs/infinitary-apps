@@ -293,6 +293,7 @@
   {"said":{"m":"cardBrowserStop"},"words":"Stop browser"},
   {"said":{"m":"cardBrowserSurface"},"words":"Task browser"},
   {"said":{"m":"cardBrowserUnansweredAsked","a":{"site":"‹site›"}},"words":"Nothing answers at ‹site›, so its crewmate was asked to start it again. The page shows here once it answers."},
+  {"said":{"m":"cardBrowserUnansweredStarting","a":{"site":"‹site›"}},"words":"Nothing answers at ‹site›, so Infinitary is starting it again. The page shows here once it answers."},
   {"said":{"m":"cardBrowserUnansweredWorking","a":{"site":"‹site›"}},"words":"Nothing answers at ‹site›, and its crewmate is working now. The page shows here once it answers."},
   {"said":{"m":"cardBrowserWord"},"words":"Browser"},
   {"said":{"m":"cardCrewmateLog"},"words":"The crewmate's session"},

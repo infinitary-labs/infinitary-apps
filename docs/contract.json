@@ -45427,6 +45427,10 @@
                     "type": "boolean",
                     "const": true
                   },
+                  "starting": {
+                    "type": "boolean",
+                    "const": true
+                  },
                   "session": {
                     "type": "string"
                   },
@@ -83359,6 +83363,10 @@
                             "type": "boolean",
                             "const": true
                           },
+                          "starting": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -83428,6 +83436,10 @@
                     "type": "null"
                   }
                 ]
+              },
+              "unstarted": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [
@@ -83810,6 +83822,37 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 512
+                      },
+                      "start": {
+                        "type": "object",
+                        "properties": {
+                          "command": {
+                            "type": "string"
+                          },
+                          "exit": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ranOut": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "log": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "command",
+                          "log"
+                        ]
                       }
                     },
                     "required": [
@@ -107085,6 +107128,10 @@
                             "type": "boolean",
                             "const": true
                           },
+                          "starting": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -107149,6 +107196,10 @@
                         ]
                       }
                     ]
+                  },
+                  "unstarted": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -108176,6 +108227,44 @@
                 "text"
               ]
             }
+          ]
+        }
+      },
+      "inf:task-browser:turn": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "running": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "task",
+                "running"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
           ]
         }
       },

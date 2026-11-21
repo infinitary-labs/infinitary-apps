@@ -340,6 +340,7 @@ public enum PhoneMessages {
     public static func `cardBrowserStop`() -> String { PhoneWords.format("cardBrowserStop", []) }
     public static func `cardBrowserSurface`() -> String { PhoneWords.format("cardBrowserSurface", []) }
     public static func `cardBrowserUnansweredAsked`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredAsked", [`site`]) }
+    public static func `cardBrowserUnansweredStarting`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredStarting", [`site`]) }
     public static func `cardBrowserUnansweredWorking`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredWorking", [`site`]) }
     public static func `cardBrowserWord`() -> String { PhoneWords.format("cardBrowserWord", []) }
     public static func `cardCrewmateLog`() -> String { PhoneWords.format("cardCrewmateLog", []) }
@@ -4273,6 +4274,7 @@ extension PhoneWords {
         "cardBrowserStop": [],
         "cardBrowserSurface": [],
         "cardBrowserUnansweredAsked": ["site"],
+        "cardBrowserUnansweredStarting": ["site"],
         "cardBrowserUnansweredWorking": ["site"],
         "cardBrowserWord": [],
         "cardCrewmateLog": [],

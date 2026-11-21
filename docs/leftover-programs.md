@@ -119,6 +119,10 @@ The same holders are left alone there: the computer's own run and what it starte
 A leftover close after the task's record was purged carries no start time, so there every program holding the task's folders is ended.
 A computer without the change gets neither, and its tasks keep today's close.
 
+## A page's saved start
+
+A program the host started from a page's saved start (`docs/task-browser.md`, "Starting a page again") is the host's own, not the crewmate's: it needs no registered stop, and the host stops it when the task's browser stops (at the end of a crewmate's turn, if the browser stopped during one), at the task's close before the sweep, and when Infinitary quits.
+
 ## What it leaves alone
 
 The programs of open tasks and their heavy-run bookings (`docs/heavy-runs.md`), programs that hold no closed task's folder and were never registered, programs already running before the task started, and tasks closed before this shipped.

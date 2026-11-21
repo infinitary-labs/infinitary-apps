@@ -654,6 +654,13 @@ export type CrewSupervisorOptions = {
      * the browser uses none for the site.
      */
     markSavedSignInFailed?: (taskId: string, site: string) => boolean;
+    /**
+     * A turn of the task's crewmate began or ended (docs/task-browser.md,
+     * "Starting a page again"): a build the host started lives through it.
+     */
+    turn?: (taskId: string, running: boolean) => void;
+    /** The task's browser shows a page this computer serves with no saved start for it. */
+    unstarted?: (taskId: string) => boolean;
     /** The captain's click on a request card's saved sign-in. */
     grantSavedSignIn?: (
       taskId: string,

@@ -103,6 +103,10 @@ function layer(host: HTMLElement, depth: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
   canvas.style.zIndex = String(depth);
+  // No room until its first frame sizes it: a canvas's own 300 by 150 would
+  // reach past the card while its mark waits hidden.
+  canvas.style.width = "0px";
+  canvas.style.height = "0px";
   host.append(canvas);
   return canvas;
 }

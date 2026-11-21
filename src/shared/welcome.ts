@@ -249,7 +249,12 @@ const PRESENTATION_SCRIPT = `<script>
     "task": [["fill", "var(--accent)", "var(--line-2)"]]
   };
   var chapter = 1;
-  function parts(name) { return figure.querySelectorAll('[data-part="' + name + '"]'); }
+  // A still the stage part drew over (display none) is left alone, so each part moves once.
+  function parts(name) {
+    return Array.prototype.filter.call(figure.querySelectorAll('[data-part="' + name + '"]'), function (element) {
+      return getComputedStyle(element).display !== "none";
+    });
+  }
   function token(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   function duration() {
     var value = token("--dur-med");

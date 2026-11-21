@@ -362,7 +362,11 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       chapter: Number(shown.getAttribute("data-chapter")),
       count: shown.querySelector("[data-count]")?.textContent,
       parts: [...shown.querySelectorAll("[data-part]:not([data-part='words'])")]
-        .filter((part) => getComputedStyle(part).visibility === "visible")
+        // A still the live stage drew over is out of the layout (INF-5609).
+        .filter((part) => {
+          const style = getComputedStyle(part);
+          return style.display !== "none" && style.visibility === "visible";
+        })
         .map((part) => part.getAttribute("data-part")),
       words: shown.querySelector("[data-part='words']")?.textContent,
       lit: [...shown.querySelectorAll<SVGElement>("[data-look]")]
@@ -389,7 +393,8 @@ test("the welcome shows one part per press by keys in both themes at the minimum
   const atRest = {
     chapter: 1,
     count: `1 / ${WELCOME_CHAPTERS}`,
-    parts: ["firstmate", "box"],
+    // The live first mate draws beside the picture's lines, after them.
+    parts: ["box", "firstmate"],
     words: WELCOME_WORDS.box,
     lit: ["box"],
   };
@@ -418,14 +423,15 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       await press(next, " ");
       await expect.poll(reading).toMatchObject({
         chapter: 3,
-        parts: ["box", "card", "activity"],
+        parts: ["box", "card", "activity", "crewmate"],
         lit: ["crew"],
       });
-      expect(await passes()).toHaveLength(1);
+      // Activity and the live crewmate beside the card each come in with a pass.
+      expect(await passes()).toHaveLength(2);
       await press(next);
       await expect.poll(reading).toMatchObject({
         chapter: 4,
-        parts: ["box", "card", "activity", "tasks"],
+        parts: ["box", "card", "activity", "tasks", "crewmate"],
         lit: ["task"],
       });
       expect(await passes()).toHaveLength(1);
@@ -433,7 +439,7 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       await expect.poll(reading).toEqual({
         chapter: 5,
         count: `${WELCOME_CHAPTERS} / ${WELCOME_CHAPTERS}`,
-        parts: ["box", "card", "activity", "tasks"],
+        parts: ["box", "card", "activity", "tasks", "crewmate"],
         words: WELCOME_WORDS.end,
         lit: ["box"],
       });

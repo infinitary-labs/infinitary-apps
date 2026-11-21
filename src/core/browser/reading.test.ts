@@ -160,4 +160,37 @@ describe("which elements the window shows", () => {
     // A snapshot with no layout marks nothing.
     expect(applyScreen([node(11)], screenFromSnapshot({}, viewport))[0]?.onScreen).toBeUndefined();
   });
+
+  it("gives each element the window shows its box from the window's top left, for Point at", () => {
+    const screen = screenFromSnapshot(snapshot, viewport);
+    // The page is scrolled 1,000 pixels down: the element at 1,200 is 200 from the window's top.
+    expect(screen.boxes?.get(12)).toEqual({ x: 8, y: 200, width: 600, height: 40 });
+    expect(screen.boxes?.has(11)).toBe(false);
+    expect(screen.boxes?.has(13)).toBe(false);
+    const [shown, above] = applyScreen(
+      [
+        {
+          id: "12",
+          role: "link",
+          name: "",
+          ignored: false,
+          childIds: [],
+          properties: {},
+          target: 12,
+        },
+        {
+          id: "11",
+          role: "link",
+          name: "",
+          ignored: false,
+          childIds: [],
+          properties: {},
+          target: 11,
+        },
+      ],
+      screen,
+    );
+    expect(shown?.box).toEqual({ x: 8, y: 200, width: 600, height: 40 });
+    expect(above?.box).toBeUndefined();
+  });
 });

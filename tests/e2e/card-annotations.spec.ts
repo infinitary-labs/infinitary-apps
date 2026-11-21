@@ -1,13 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
+import { boxPlace, keyStep, middleBox, movedBox, sizedBox } from "../../src/shared/cardNoteMarks";
 import {
   ANNOTATE,
+  type CardNote,
   EMPTY_NOTE,
+  MARKED_PICTURES_LINE,
   NOTE_COMMENT_LABEL,
   NOTE_EDIT,
   NOTE_REMOVE,
+  noteLabel,
   POINT_AT,
   POINTED_AT,
+  pointedAtLines,
   queuedNotesWords,
   sendNotesLabel,
 } from "../../src/shared/cardNotes";
@@ -20,9 +25,12 @@ import {
 } from "../fixtures/cardAnnotations";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
+import { type Rect, within } from "./layout";
 import { readInMain } from "./mainProcess";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { encodeInBrowser, WIDE_PICTURE, WORKING_COPY_PICTURES } from "./pictureFixtures";
 import { promptInput } from "./prompt";
+import { providerMessages } from "./providerRequest";
 import { readSavedData } from "./savedData";
 import {
   ANNOTATION_ACK,
@@ -30,8 +38,22 @@ import {
   ANNOTATION_FIRSTMATE_PROMPT,
   cardAnnotations,
 } from "./scenarios/cardAnnotations";
-import { cardReply, cardThread, shownCard } from "./stack";
-import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
+import {
+  CARD_DIAGRAM,
+  CARD_PICTURES_PROMPT_MARKER,
+  cardPictures,
+  PICTURE_CARD_TITLES,
+} from "./scenarios/cardPictures";
+import { newestPictures } from "./scenarios/pictureRetry";
+import { cardReply, cardThread, clickInBody, pager, showCard, shownCard } from "./stack";
+import {
+  focusOn,
+  pressKey,
+  pressWindowKey,
+  runFromSearch,
+  typeInto,
+  untilFocused,
+} from "./windowKeys";
 
 /**
  * Intent: the captain-approved desktop annotation plan, INF-3786's approved
@@ -317,3 +339,190 @@ for (const author of ["crewmate", "firstmate"] as const) {
     }
   });
 }
+
+/** Where the viewer draws its picture once it has stopped moving: two reads in a row agree. */
+async function drawnAt(picture: Locator) {
+  let last = "";
+  await expect
+    .poll(async () => {
+      const read = JSON.stringify(await picture.boundingBox());
+      const same = read === last && read !== "null";
+      last = read;
+      return same;
+    })
+    .toBe(true);
+  return JSON.parse(last) as { x: number; y: number; width: number; height: number };
+}
+
+const BOX_COMMENT = "Make this meter wider";
+const LINE_COMMENT = "Underline the total";
+const KEYS_COMMENT = "Name the viewer here";
+
+/**
+ * Intent: the accepted Point at plan's place in a picture - "a journey that
+ * marks by keys and by pointer and reads the author's side". Promised result:
+ * the crewmate reads each numbered mark's place and gets one picture per
+ * marked picture, and nothing leaves before the send. Data: the crewmate's
+ * real card of working-copy pictures and a drawing (`cardPictures`).
+ * Completion signal: the provider request that carries the Pointed at lines.
+ * Portable: no sign-in; the pointer is the window's own, on the viewer, which
+ * is no frame. One disposable app.
+ */
+test("the crewmate receives marks made by pointer and by keys, one marked picture per picture", async () => {
+  const a = await launchApp({ withMockProvider: true, scenarios: [cardPictures] });
+  try {
+    const { page, app } = a;
+    await encodeInBrowser(page, WORKING_COPY_PICTURES);
+    const prompt = promptInput(page);
+    await prompt.fill(`${SPAWN_PROMPT_MARKER} ${CARD_PICTURES_PROMPT_MARKER}`);
+    await pressKey(prompt, "Enter");
+    await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
+    const title = PICTURE_CARD_TITLES.mixed;
+    await showCard(page, title);
+    const frame = cardBody(page, title);
+    const viewer = page.locator("[data-picture-viewer]");
+    const shown = viewer.locator("[data-picture-image]");
+    const marks = viewer.locator("[data-picture-marks]");
+    const pointAt = viewer.locator("[data-viewer-point-at]");
+    const pop = page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
+    const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+    const reads = () =>
+      (a.mockProvider?.requestBodies() ?? []).filter((body) =>
+        providerMessages(body)
+          .findLast((message) => message.role === "user")
+          ?.text.includes(`${POINTED_AT}:`),
+      );
+
+    // By pointer: a box dragged on the wide picture, then a line drawn on it.
+    await clickInBody(frame.getByRole("img", { name: WIDE_PICTURE.alt }));
+    await expect(viewer).toBeVisible();
+    await expect.poll(() => shown.evaluate((image: HTMLImageElement) => image.complete)).toBe(true);
+    await pointAt.click();
+    await expect(marks).toHaveAttribute("data-picture-marking", "box");
+    const drawn = await drawnAt(shown);
+    const at = (x: number, y: number) => ({
+      x: drawn.x + drawn.width * x,
+      y: drawn.y + drawn.height * y,
+    });
+    const from = at(0.2, 0.25);
+    const to = at(0.4, 0.75);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.up();
+    await expect(pop).toBeVisible();
+    // The picture's caption is the note's excerpt, and Point at turned off once it marked.
+    await expect(pop.getByText(WIDE_PICTURE.alt, { exact: true })).toBeVisible();
+    await expect(pointAt).toHaveAttribute("aria-pressed", "false");
+    await typeInto(comment, BOX_COMMENT);
+    await pressKey(comment, "Enter");
+    await expect(pop).toHaveCount(0);
+    await expect(marks).toHaveAttribute("data-picture-marks", "1");
+    await pointAt.click();
+    await viewer.locator('[data-viewer-tool="line"]').click();
+    await expect(marks).toHaveAttribute("data-picture-marking", "line");
+    const start = at(0.6, 0.5);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    for (let step = 1; step <= 8; step++) {
+      const next = at(0.6 + step * 0.02, 0.5 + (step % 2) * 0.1);
+      await page.mouse.move(next.x, next.y);
+    }
+    await page.mouse.up();
+    await expect(pop).toBeVisible();
+    await typeInto(comment, LINE_COMMENT);
+    await pressKey(comment, "Enter");
+    await expect(marks).toHaveAttribute("data-picture-marks", "1 2");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toHaveCount(0);
+
+    // By keys: the drawing opens with Enter, the command's key turns Point at on, the arrows
+    // move a box, Shift with them sizes it and Enter opens its note.
+    await focusOn(frame.getByRole("img", { name: "Card, card page and viewer" }));
+    await page.keyboard.press("Enter");
+    await expect(viewer.locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
+    await pressWindowKey(app, "A", ["meta", "shift"]);
+    await expect(pointAt).toHaveAttribute("aria-pressed", "true");
+    for (const key of ["ArrowRight", "ArrowRight", "ArrowDown", "Shift+ArrowRight", "Enter"])
+      await page.keyboard.press(key);
+    await expect(pop).toBeVisible();
+    await untilFocused(comment);
+    await typeInto(comment, KEYS_COMMENT);
+    await pressKey(comment, "Enter");
+    // The third mark is the drawing's first: the other two are on their own picture.
+    await expect(marks).toHaveAttribute("data-picture-marks", "3");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toHaveCount(0);
+
+    // Three notes wait with their small marked copies, and nothing has left.
+    await expect(page.getByText(queuedNotesWords(3), { exact: true })).toBeVisible();
+    await expect(page.locator("[data-marked-copy]")).toHaveCount(3);
+    expect(reads()).toHaveLength(0);
+    const send = page.getByRole("button", { name: new RegExp(`^${sendNotesLabel(3)}`) });
+    await pressKey(send, "Enter");
+    await expect.poll(() => reads().length).toBeGreaterThan(0);
+    const request = reads()[0] ?? "";
+    const served =
+      providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+
+    const sent = readSavedData(
+      a.userDataDir,
+      (db) =>
+        db
+          .prepare(
+            "SELECT m.card_id, m.notes_json FROM card_messages m JOIN cards c ON c.id=m.card_id WHERE c.title=? AND m.who='captain' ORDER BY m.id",
+          )
+          .all(title) as { card_id: string; notes_json: string }[],
+    );
+    expect(sent).toHaveLength(1);
+    const notes = JSON.parse(sent[0]?.notes_json ?? "[]") as CardNote[];
+    const [boxed, lined, keyed] = notes;
+    const wide = { width: WIDE_PICTURE.width, height: WIDE_PICTURE.height };
+    expect(boxed).toMatchObject({
+      kind: "picture",
+      excerpt: WIDE_PICTURE.alt,
+      comment: BOX_COMMENT,
+    });
+    expect(boxed?.place).toMatchObject(wide);
+    // The dragged box is kept in the picture's own pixels. The pointer is aimed in window
+    // pixels, so the kept box lies between the aimed one drawn two window pixels smaller and
+    // two larger.
+    const slack = 2 * Math.ceil(wide.width / drawn.width);
+    const aimedBy = (grow: number) =>
+      boxPlace(
+        wide,
+        { x: wide.width * 0.2 - grow, y: wide.height * 0.25 - grow },
+        { x: wide.width * 0.4 + grow, y: wide.height * 0.75 + grow },
+      ).box as Rect;
+    const kept = boxed?.place?.box as Rect;
+    expect(within(kept, aimedBy(slack))).toEqual([]);
+    expect(within(aimedBy(-slack), kept)).toEqual([]);
+    expect(lined?.place?.lines?.[0]?.length).toBeGreaterThan(2);
+    expect(lined?.place?.box).toBeUndefined();
+    const diagram = { width: CARD_DIAGRAM.width, height: CARD_DIAGRAM.height };
+    const step = keyStep(diagram);
+    expect(keyed).toMatchObject({
+      kind: "drawing",
+      excerpt: CARD_DIAGRAM.caption,
+      comment: KEYS_COMMENT,
+      place: sizedBox(movedBox(movedBox(middleBox(diagram), step, 0), 0, step), step, 0),
+    });
+
+    // The author reads each numbered mark's place, and one marked picture per marked picture.
+    const lines = pointedAtLines(notes);
+    expect(lines).toHaveLength(5);
+    expect(lines.at(-1)).toBe(MARKED_PICTURES_LINE);
+    for (const line of lines) expect(served).toContain(line);
+    expect(newestPictures(request)).toHaveLength(2);
+
+    // A press on a sent note opens the viewer at its mark, numbered as its reply numbered it.
+    const thread = cardThread(page, sent[0]?.card_id ?? "");
+    await thread
+      .getByRole("button", { name: noteLabel(keyed as CardNote, 3), exact: true })
+      .click();
+    await expect(viewer.locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
+    await expect(marks).toHaveAttribute("data-picture-marks", "3");
+  } finally {
+    await a.close();
+  }
+});

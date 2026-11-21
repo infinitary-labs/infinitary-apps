@@ -6,6 +6,19 @@ import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { MAXIMIZE_LABEL, RESTORE_LABEL } from "../../src/renderer/src/design/cards/cardSizeWords";
+import { boxPlace } from "../../src/shared/cardNoteMarks";
+import {
+  ANNOTATE,
+  type CardNote,
+  MARKED_PICTURES_LINE,
+  NOTE_COMMENT_LABEL,
+  type NotePlace,
+  PAGE_NOTE_KEY,
+  PAGE_NOTE_KIND,
+  PAGE_NOTE_SHOWS,
+  POINTED_AT,
+  pointedAtLines,
+} from "../../src/shared/cardNotes";
 import { CREWMATE_TAB_LABEL } from "../../src/shared/crewTranscript";
 import {
   ACTIVITY_TAB_LABEL,
@@ -21,11 +34,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { crewComposer, crewmateView, sentWords } from "./crewmateTab";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { resizeWindow } from "./layout";
+import { type Rect, resizeWindow, within } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
+import { providerMessages } from "./providerRequest";
+import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
+import { newestPictures } from "./scenarios/pictureRetry";
 import {
   MOCK_BROWSER_BUTTON,
   MOCK_BROWSER_CARD_ANSWER,
@@ -52,6 +67,7 @@ import { SHOWN_ENTRY, showCard, shownCard } from "./stack";
 import {
   canvasReading,
   closeSite,
+  onPage,
   pageFillsView,
   pageLaidOutAt,
   pageSays,
@@ -62,7 +78,14 @@ import {
   windowCount,
 } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
-import { focusOn, pressKey, pressWindowKey, runFromSearch, untilFocused } from "./windowKeys";
+import {
+  focusOn,
+  pressKey,
+  pressWindowKey,
+  runFromSearch,
+  typeInto,
+  untilFocused,
+} from "./windowKeys";
 
 /**
  * A task's own browser as the captain sees it (docs/task-browser.md, "The
@@ -351,6 +374,212 @@ test("the captain opens a task's browser from its record and watches the crewmat
       await expect(page.locator(`[data-task-browser="${task.id}"]`)).toHaveCount(0);
       expect((await detail())?.browser?.state).toBe("open");
       expect(await windowCount(launched.app)).toBe(before + 1);
+    });
+  } finally {
+    await stopTaskBrowsers(page);
+    await closeSite(watched);
+  }
+});
+
+const KEYS_NOTE = "Say what happens after this";
+const POINTER_NOTE = "Make this easier to see";
+const PAGE_NOTE_WORDS = "Two things on the sign-up page.";
+
+/**
+ * Intent: the accepted Point at plan's running page - "marks a local page and
+ * reads the crewmate's side". Promised result: the crewmate reads the page,
+ * each numbered place and what is under it, with one marked picture per held
+ * picture; nothing leaves before the send, and the pointer never reaches the
+ * page while it marks. Data: the sign-up page this journey serves, driven by
+ * the scripted crewmate, and the outline the product itself reads of it.
+ * Completion signal: the provider request that carries the Pointed at lines.
+ * Portable: a local page and the window's own pointer and keys. The app is
+ * this file's shared one; the task, its page and its browser are this test's.
+ */
+test("the captain points at a task's running page by keys and by pointer, and its crewmate reads each place", async () => {
+  const { page, app } = launched;
+  let ready = false;
+  const watched = createServer((request, response) => {
+    if (request.url === "/ready") {
+      response.writeHead(200, { "content-type": "text/plain" });
+      response.end(ready ? "yes" : "no");
+      return;
+    }
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(WATCHED_PAGE);
+  });
+  await new Promise<void>((resolve) => watched.listen(0, "127.0.0.1", resolve));
+  const watchedUrl = `http://127.0.0.1:${(watched.address() as AddressInfo).port}/`;
+  try {
+    await resizeWindow(app, page, { width: 1280, height: 900 });
+    const title = `${TASK_BROWSER_WATCH_MARKER}${watchedUrl} as Sam`;
+    const detail = async (): Promise<TaskDetail | null> =>
+      page.evaluate(async (wanted) => {
+        const row = (await window.infinitary.tasks.board()).tasks.find(
+          (task) => task.title === wanted,
+        );
+        return row ? window.infinitary.tasks.detail(row.id) : null;
+      }, title);
+    await promptInput(page).fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+    await promptInput(page).press("Enter");
+    await expect
+      .poll(async () => (await detail())?.browser?.state ?? "", { timeout: 60_000 })
+      .toBe("open");
+    // The crewmate typed the name and waits on the page: its turn runs.
+    await expect
+      .poll(() => pageSays(app, watchedUrl, "name", "value").catch(() => null), {
+        timeout: 30_000,
+      })
+      .toBe("Sam");
+    const task = (await detail()) as TaskDetail;
+    await expandDock(page, "now");
+    await pressRow(page, task.key);
+    await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+    await taskFact(recordCard(page), "browser").locator("[data-browser-open]").click();
+    const browser = view(page, task.id);
+    await expect(browser).toHaveAttribute("data-browser-state", "watching");
+    await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
+
+    const pointAt = browser.locator("[data-browser-point-at]");
+    const layer = browser.locator("[data-browser-pointing]");
+    const queued = browser.locator("[data-crew-notes]");
+    const pop = page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
+    const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+    const picture = { width: TASK_BROWSER_PAGE.width, height: TASK_BROWSER_PAGE.height };
+    const reads = () =>
+      (launched.mockProvider?.requestBodies() ?? []).filter((body) => {
+        const said = providerMessages(body).findLast((message) => message.role === "user")?.text;
+        return said?.includes(`${POINTED_AT}:`) && said.includes(KEYS_NOTE);
+      });
+    const noteOn = (place: NotePlace, said: string): CardNote => ({
+      kind: PAGE_NOTE_KIND,
+      key: PAGE_NOTE_KEY,
+      start: 0,
+      line: 1,
+      excerpt: "Sign up",
+      comment: said,
+      place,
+      page: { url: watchedUrl, title: "Sign up", under: { role: "button", name: "Send" } },
+    });
+
+    const { keyed, button } =
+      await test.step("the command's key holds the picture still, the arrows step through what the page names, and Enter writes the note", async () => {
+        await pressWindowKey(app, "A", ["meta", "shift"]);
+        await expect(layer).toBeVisible();
+        await expect(pointAt).toHaveAttribute("aria-pressed", "true");
+        await expect.poll(() => layer.getAttribute("data-browser-places")).not.toBe("0");
+        const still = (await canvasReading(page)).frames;
+        // What the product reads of the page: the same read the held picture's outline came from.
+        const outline = await page.evaluate((id) => window.infinitary.browser.places(id), task.id);
+        expect(outline).toMatchObject({ ok: true, ...picture, url: watchedUrl, title: "Sign up" });
+        const send = (outline.ok ? outline.places : []).find(
+          (place) => place.role === "button" && place.name === "Send",
+        );
+        if (!send) throw new Error("the outline names no Send button");
+        const button: Rect = { x: send.x, y: send.y, width: send.width, height: send.height };
+        // The page changes while its picture is held.
+        await onPage(
+          app,
+          watchedUrl,
+          `document.getElementById("state").textContent = "Signing up"`,
+        );
+        await untilFocused(layer);
+        // Forward from nothing is the first thing the page names; back from it wraps to the last.
+        await page.keyboard.press("ArrowRight");
+        await expect(layer).toHaveAttribute("data-browser-stepped", "heading Sign up");
+        await page.keyboard.press("ArrowLeft");
+        await expect(layer).toHaveAttribute("data-browser-stepped", "button Send");
+        await page.keyboard.press("Enter");
+        await expect(pop).toBeVisible();
+        // The popover shows the picture that will go; watching, it shows the crewmate nothing new.
+        await expect(pop.locator("[data-note-page-picture] img")).toBeVisible();
+        await expect(pop.locator("[data-note-page-shows]")).toHaveCount(0);
+        await untilFocused(comment);
+        await typeInto(comment, KEYS_NOTE);
+        // Held: nothing was drawn since Point at came on.
+        expect((await canvasReading(page)).frames).toBe(still);
+        await pressKey(comment, "Enter");
+        await expect(pop).toHaveCount(0);
+        // Point at ends with its note, and the live pictures resume with the page's change.
+        await expect(layer).toHaveCount(0);
+        await expect(queued).toHaveAttribute("data-crew-notes", "1");
+        await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(still);
+        return { keyed: noteOn({ ...picture, box: button }, KEYS_NOTE), button };
+      });
+
+    const aimed =
+      await test.step("with Point at on, a press on the page's button marks it and never reaches the page", async () => {
+        await pointAt.click();
+        await expect(layer).toBeVisible();
+        await atRest(page, layer);
+        const drawn = (await layer.boundingBox()) as Rect;
+        const middle = { x: button.x + button.width / 2, y: button.y + button.height / 2 };
+        await page.mouse.move(
+          drawn.x + (middle.x * drawn.width) / picture.width,
+          drawn.y + (middle.y * drawn.height) / picture.height,
+        );
+        await page.mouse.down();
+        await page.mouse.up();
+        await expect(pop).toBeVisible();
+        await untilFocused(comment);
+        await typeInto(comment, POINTER_NOTE);
+        await pressKey(comment, "Enter");
+        await expect(queued).toHaveAttribute("data-crew-notes", "2");
+        // The window's pointer lands on a whole window pixel: the press is this near its aim.
+        return { middle, slack: Math.ceil(picture.width / drawn.width) + 1 };
+      });
+
+    await test.step("nothing leaves before the send; sent from the crewmate's box, the crewmate reads each place and gets each held picture", async () => {
+      expect(reads()).toHaveLength(0);
+      const field = crewComposer(browser.locator("[data-browser-crew]"));
+      await field.fill(PAGE_NOTE_WORDS);
+      await pressKey(field, "Enter");
+      await expect.poll(() => reads().length, { timeout: 30_000 }).toBeGreaterThan(0);
+      const request = reads()[0] ?? "";
+      const served =
+        providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+      expect(served).toContain(PAGE_NOTE_WORDS);
+      // The mark made by keys is the outline's own box for the button.
+      const [heading, byKeys] = pointedAtLines([keyed]);
+      expect(served).toContain(`${heading}\n${byKeys}`);
+      expect(served).toContain(MARKED_PICTURES_LINE);
+      // The mark made by the pointer is a spot on the same button, second in the order queued.
+      const near: string[] = [];
+      for (let dx = -aimed.slack; dx <= aimed.slack; dx++)
+        for (let dy = -aimed.slack; dy <= aimed.slack; dy++) {
+          const at = { x: aimed.middle.x + dx, y: aimed.middle.y + dy };
+          const spot = noteOn(boxPlace(picture, at, at), POINTER_NOTE);
+          expect(within(spot.place?.box as Rect, button)).toEqual([]);
+          near.push(pointedAtLines([keyed, spot])[2] ?? "");
+        }
+      expect(near.filter((line) => served.includes(line))).toHaveLength(1);
+      // Two held pictures, one for each time Point at held the page: the page changed between.
+      expect(newestPictures(request)).toHaveLength(2);
+      await expect(queued).toHaveAttribute("data-crew-notes", "0");
+      // The page never got the press on its button: it says nothing was sent.
+      expect(await pageSays(app, watchedUrl, "out")).toBe("");
+    });
+
+    await test.step("on a browser the captain holds, the note says its picture shows the page to the crewmate", async () => {
+      ready = true;
+      await expect(browser).toHaveAttribute("data-browser-state", "nobody", { timeout: 60_000 });
+      await browser.getByRole("button", { name: TAKE_CONTROL_LABEL }).click();
+      await expect(browser).toHaveAttribute("data-browser-state", "captain");
+      await pointAt.click();
+      await expect(layer).toBeVisible();
+      await atRest(page, layer);
+      const drawn = (await layer.boundingBox()) as Rect;
+      await page.mouse.move(drawn.x + drawn.width / 2, drawn.y + drawn.height / 2);
+      await page.mouse.down();
+      await page.mouse.up();
+      await expect(pop.locator("[data-note-page-shows]")).toHaveText(PAGE_NOTE_SHOWS);
+      // Put away unwritten, the note is not kept and nothing was sent for it.
+      await untilFocused(comment);
+      await pressKey(comment, "Escape");
+      await expect(pop).toHaveCount(0);
+      await expect(queued).toHaveAttribute("data-crew-notes", "0");
+      await browser.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
+      await expect(browser).not.toHaveAttribute("data-browser-state", "captain");
     });
   } finally {
     await stopTaskBrowsers(page);

@@ -90,6 +90,8 @@ export const STALE_NOTE = m.cardNoteStale();
 export const UNAVAILABLE_NOTE = m.cardNoteUnavailable();
 export const EDIT_UNAVAILABLE = m.cardNoteEditUnavailable();
 export const EMPTY_NOTE = m.cardNoteEmpty();
+/** What a note on a page says when its picture shows the crewmate a page the captain holds. */
+export const PAGE_NOTE_SHOWS = m.cardNotePageShows();
 
 /**
  * Each note's mark number, or undefined for a note with no place: marks are numbered in the

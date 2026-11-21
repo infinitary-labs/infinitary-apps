@@ -23,8 +23,10 @@ import { focusOn, pressKey } from "./windowKeys";
  * the app's real sign-in, on a fresh install. Its page lists only a local
  * merge and pull requests and never names a batch; the captain turns
  * Batched pull requests on in Settings → Runbooks by keys, then picks
- * batched pull requests on the project page by keys. Turning the runbook
- * off while the project uses it is refused with its reason. Completion
+ * batched pull requests on the project page by keys. The runbook's Batches
+ * panel arrives when it is turned on and leaves when it is turned off before
+ * any project batches, with no restart. Turning the runbook off while the
+ * project uses it is refused with its reason. Completion
  * signals are the saved project record (`delivery`) and the saved switch.
  * Requires desktop Electron and local git; no real sign-in or shared pull
  * request.
@@ -96,6 +98,18 @@ test("batched pull requests appear in a project's settings only once their runbo
     await focusOn(batches);
     await pressKey(batches, "Space");
     await expect(batches).toHaveAttribute("aria-checked", "true");
+
+    // The runbook's Batches panel follows its switch with no restart: it arrives
+    // when the runbook is turned on and, with no project batching yet, leaves when
+    // it is turned off (docs/runbooks.md, "Built-in panels").
+    const panel = page.locator('[data-side-panel="batches-panel"]');
+    await expect(panel).toHaveCount(1);
+    await pressKey(batches, "Space");
+    await expect(batches).toHaveAttribute("aria-checked", "false");
+    await expect(panel).toHaveCount(0);
+    await pressKey(batches, "Space");
+    await expect(batches).toHaveAttribute("aria-checked", "true");
+    await expect(panel).toHaveCount(1);
 
     // Back on the project page, batched pull requests are the third choice, picked by keys.
     await openProject();

@@ -47,9 +47,11 @@ describe("an asker's how-to", () => {
   });
 
   it("draws again from its elements: comments go, text is escaped, attributes are quoted", () => {
-    expect(drawn("<p>Copy it <!-- not shown -->& paste it</p><ol start=3><li>Next</li></ol>")).toBe(
-      '<p>Copy it &amp; paste it</p><ol start="3"><li>Next</li></ol>',
-    );
+    expect(
+      drawn(
+        "<p>Copy it <!-- not shown -->& paste it</p><table><tr><td colspan=2>Next</td></tr></table>",
+      ),
+    ).toBe('<p>Copy it &amp; paste it</p><table><tr><td colspan="2">Next</td></tr></table>');
   });
 
   it("is none when empty", () => {
@@ -68,7 +70,9 @@ describe("an asker's how-to", () => {
     ["a handler", '<p onclick="x()">Press</p>', "onclick"],
     ["a data hook", '<p data-inf-action="merge">Merge</p>', "data-inf-action"],
     ["a class of its own", '<p class="secret-ask-elsewhere">Shown</p>', "secret-ask-elsewhere"],
-    ["a number that is not one", '<ol start="1;x"><li>One</li></ol>', "start"],
+    ["a number that is not one", '<table><tr><td colspan="1;x">One</td></tr></table>', "colspan"],
+    // The card numbers each list's steps itself, from one: a list resumed elsewhere would draw the wrong numbers.
+    ["a list's start", '<ol start="4"><li>Four</li></ol>', "start"],
     ["a doctype", "<!doctype html><p>Steps</p>", "doctype"],
   ])("refuses %s, naming it", (_kind, fragment, named) => {
     expect(problem(fragment)).toContain(named);
@@ -80,6 +84,17 @@ describe("an asker's how-to", () => {
     ["a link with no address", "<a>bitbucket.org</a>"],
   ])("refuses a link with %s", (_kind, fragment) => {
     expect(problem(fragment)).toMatch(/link/);
+  });
+
+  it("refuses a link that hides part of its address inside an element", () => {
+    expect(
+      problem(
+        '<a href="https://bitbucket.org.evil.example/login">https://bitbucket.org<details><summary></summary>.evil.example/login</details></a>',
+      ),
+    ).toMatch(/only its address as text/);
+    expect(problem('<a href="https://bitbucket.org/">https://<b>bitbucket.org</b></a>')).toMatch(
+      /only its address as text/,
+    );
   });
 
   it("refuses a link whose text hides where it goes, and says how to show it", () => {

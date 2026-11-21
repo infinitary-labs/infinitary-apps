@@ -42,9 +42,10 @@ extension PhoneJourney {
         waitForShownBodyRevealed()
         let field = app.secureTextFields["secret-ask-s1"]
         XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
-        // INF-5516's plan: the field sits under its secret's name, with its place beside it once.
+        // INF-5516's plan: the field sits under its secret's name, with its place beside it once; the visible
+        // name and place are read once, as the field's own label.
         let place = try XCTUnwrap(asked["place"] as? String)
-        XCTAssertTrue(app.staticTexts[place].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(field.label.contains(place), field.label)
         reveal(field); tapOnPhone(field)
         field.typeText("sk_test_invented_phone_value")
         picture("1-secret-ask-typed")

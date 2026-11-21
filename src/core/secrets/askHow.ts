@@ -33,7 +33,7 @@ const ELEMENTS: Readonly<Record<string, readonly string[]>> = {
   p: [],
   br: [],
   hr: [],
-  ol: ["start"],
+  ol: [],
   ul: [],
   li: [],
   dl: [],
@@ -74,7 +74,7 @@ const ELEMENTS: Readonly<Record<string, readonly string[]>> = {
 const CLASSES = new Set(["inf-mono", "inf-muted", "inf-row", "inf-grid", "inf-panel"]);
 const VOID = new Set(["br", "hr"]);
 /** Attributes whose value is a small whole number, or none at all. */
-const NUMBERED = new Set(["start", "colspan", "rowspan"]);
+const NUMBERED = new Set(["colspan", "rowspan"]);
 
 // i18n-exempt: served to the asking agent, which reads English
 const ALLOWED_WORDS =
@@ -84,11 +84,19 @@ const escapeText = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escapeAttribute = (text: string) => escapeText(text).replace(/"/g, "&quot;");
 
-function textOf(nodes: readonly DomNode[]): string {
+/**
+ * A link's own text: a link holds text alone, so nothing inside it, such as a
+ * closed <details>, can hide part of the address it shows.
+ */
+function linkText(nodes: readonly DomNode[]): string {
   let text = "";
   for (const node of nodes) {
     if (node.type === ElementType.Text) text += node.data ?? "";
-    else if (node.children) text += textOf(node.children);
+    else if (node.type !== ElementType.Comment)
+      throw new Refused(
+        // i18n-exempt: served to the asking agent, which reads English
+        "A link in the how-to holds only its address as text, with no element inside it. Put any words or formatting outside the link.",
+      );
   }
   return text;
 }
@@ -132,7 +140,7 @@ function element(node: DomNode): string {
     if (!allowed.includes(key))
       // i18n-exempt: served to the asking agent, which reads English
       throw new Refused(
-        `The how-to's <${name}> carries the attribute ${key}, which it may not: no style, id, data-, on- or other attribute beyond class, a link's href, a list's start, a cell's colspan or rowspan and details' open.`,
+        `The how-to's <${name}> carries the attribute ${key}, which it may not: no style, id, data-, on- or other attribute beyond class, a link's href, a cell's colspan or rowspan and details' open.`,
       );
     if (key === "open") {
       attributes.push("open");
@@ -152,7 +160,7 @@ function element(node: DomNode): string {
       throw new Refused(
         `The how-to links to "${href}", which is not a secure web address: give each link as https://... in full.`,
       );
-    if (!sameAddress(textOf(children), href))
+    if (!sameAddress(linkText(children), href))
       // i18n-exempt: served to the asking agent, which reads English
       throw new Refused(
         `A link in the how-to must show its own address as its text, so the captain sees where it goes before signing in: <a href="${href}">${href}</a>. Put any words about it outside the link.`,

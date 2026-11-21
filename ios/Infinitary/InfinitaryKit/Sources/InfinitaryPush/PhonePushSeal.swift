@@ -19,8 +19,25 @@ public struct PhonePushComputer: Codable, Equatable, Sendable {
     public var name: String
     /// 32 random bytes in base64url, for AES-256-GCM.
     public var key: String
+    /// INF-5275: the grant the last letter the relay took for this computer carried, so the phone writes one again only
+    /// once it holds another grant (docs/phone-push.md, "Letters").
+    public var lettered: String?
 
     public init(pin: String, name: String, key: String) { self.pin = pin; self.name = name; self.key = key }
+}
+
+/// INF-5275: a stop letter for a forgotten computer, kept until the relay answers it: the box and sealed letter, made
+/// while its key was still kept, and the push address, service and grant the relay checks it with.
+public struct PhonePushStop: Codable, Equatable, Sendable {
+    public var box: String
+    public var sealed: String
+    public var token: String
+    public var environment: PhonePushEnvironment
+    public var grant: String
+
+    public init(box: String, sealed: String, token: String, environment: PhonePushEnvironment, grant: String) {
+        self.box = box; self.sealed = sealed; self.token = token; self.environment = environment; self.grant = grant
+    }
 }
 
 /// What the phone keeps for its pushes, in the Keychain group the app shares with its notification part: the sealing
@@ -42,6 +59,10 @@ public struct PhonePushHeld: Codable, Equatable, Sendable {
     public var grant: String?
     /// When the phone last asked the relay for a grant: each ask costs one of Apple's few background pushes an hour.
     public var asked: Date?
+    /// INF-5275: stop letters for forgotten computers the relay has not answered yet, written at the next open.
+    public var stops: [PhonePushStop]?
+    /// INF-5275: when the newest letter was written, in milliseconds by this phone's clock; each letter is later.
+    public var letterAt: Int64?
 
     public init(key: String, token: String? = nil, environment: PhonePushEnvironment? = nil, grant: String? = nil, asked: Date? = nil,
                 computers: [PhonePushComputer]? = nil) {

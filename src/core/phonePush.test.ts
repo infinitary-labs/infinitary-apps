@@ -8,7 +8,7 @@ import {
 } from "@shared/phonePush";
 import { describe, expect, it } from "vitest";
 import { NOTICE_BODY_LIMIT } from "./notifications";
-import { APPLE_PAYLOAD_LIMIT, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
+import { APPLE_PAYLOAD_LIMIT, cardNotifiers, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
 
 /**
  * The phone sender on its own (docs/phone-push.md; INF-4774's plan, approved
@@ -194,6 +194,61 @@ describe("PhonePushes", () => {
       pushes.send(NOTICE);
       await pushes.settled();
       expect(relay.posts).toHaveLength(1);
+    },
+  );
+
+  // INF-5275's plan, piece 2: a computer the phone is not showing learns a
+  // renewed grant from the letter the phone left; the refused card goes once
+  // more under it, and only once.
+  it.each([403, 410])(
+    "sends a card refused with %i once more after a newer letter, under the renewed registration",
+    async (status) => {
+      const old = registration();
+      const renewed = { ...registration(), key: old.key };
+      let targets = [{ deviceId: PHONE, registration: old }];
+      const posts: { grant: string; sealed: string }[] = [];
+      const refusedGrants = new Set([old.grant]);
+      const read: string[] = [];
+      let letterRenews = true;
+      const pushes = new PhonePushes({
+        targets: () => targets,
+        forget: () => {
+          targets = [];
+        },
+        refused: async (deviceId) => {
+          read.push(deviceId);
+          if (letterRenews) targets = [{ deviceId: PHONE, registration: renewed }];
+          return letterRenews;
+        },
+        relay: "https://relay.test/v1/push",
+        fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
+          const request = phonePushRelayRequestSchema.parse(JSON.parse(String(init?.body)));
+          posts.push(request);
+          return new Response(null, { status: refusedGrants.has(request.grant) ? status : 204 });
+        }) as typeof fetch,
+        onProblem: () => {},
+      });
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(read).toEqual([PHONE]);
+      expect(posts.map((post) => post.grant)).toEqual([old.grant, renewed.grant]);
+      const [first, again] = posts.map((post) => openAsThePhone(old.key, post.sealed));
+      expect(again).toEqual(first);
+
+      // The card sent once more is refused too: it is not sent a third time.
+      targets = [{ deviceId: PHONE, registration: old }];
+      refusedGrants.add(renewed.grant);
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(posts.slice(2).map((post) => post.grant)).toEqual([old.grant, renewed.grant]);
+      expect(read).toEqual([PHONE, PHONE, PHONE]);
+
+      // With no newer letter, nothing goes again.
+      letterRenews = false;
+      targets = [{ deviceId: PHONE, registration: old }];
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(posts).toHaveLength(5);
     },
   );
 
@@ -837,5 +892,47 @@ describe("PhonePushes withdrawals", () => {
       "the push relay refused a withdrawal with 404",
       "the push relay refused a withdrawal with 404",
     ]);
+  });
+});
+
+// The review of INF-5275's piece 2: a home paused mid-move writes nothing to the record it hands on, so the letter
+// reads that may write push-letters.json and pushes.json start only when the core starts its timers.
+describe("each phone's box of letters", () => {
+  it("is read only once started, then from the pass, until stopped", () => {
+    const reads: string[] = [];
+    const passes: Array<() => void> = [];
+    let stopped = 0;
+    const notifier = cardNotifiers({
+      notifications: { supported: () => false, focused: () => false, show: () => {} },
+      windowsInFront: () => false,
+      switchedOn: () => true,
+      phones: {
+        pushTargets: () => [],
+        forgetPush: () => {},
+        letterBoxes: () => {
+          reads.push("read");
+          return [];
+        },
+        noteLetterRead: () => {},
+        takeLetter: () => "ignored",
+      },
+      relay: "https://push.getinfinitary.com/v1/push",
+      every: (run) => {
+        passes.push(run);
+        return () => {
+          stopped += 1;
+        };
+      },
+    });
+    expect(reads).toEqual([]);
+    expect(passes).toHaveLength(0);
+    notifier.start();
+    notifier.start();
+    expect(reads).toHaveLength(1);
+    expect(passes).toHaveLength(1);
+    passes[0]?.();
+    expect(reads).toHaveLength(2);
+    notifier.stop();
+    expect(stopped).toBe(1);
   });
 });

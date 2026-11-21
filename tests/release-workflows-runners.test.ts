@@ -412,6 +412,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The batch's reading of its Windows-relevant files (INF-4243's pick:
     // "On each combined batch that touches Windows-relevant files").
     "batch-checks.yml:windows-paths",
+    // The batch's release notes check and phone contract flag: plain Node
+    // reading the batch's commits, as release.yml's notes job does.
+    "batch-checks.yml:notes",
     // The docs site's publish, which holds its publishing key (docs/docs-site.md, "Publishing").
     "docs-site-publish.yml:publish",
     // An outside contributor's pull request reads what its change reaches

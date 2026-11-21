@@ -65,6 +65,8 @@ export type ElectronHostOptions = {
   setAsideProcessPath?: string | undefined;
   /** The Linux autostart entry's name: this run's data folder's name (`startAtLoginFor`). */
   autostartName?: string | undefined;
+  /** A run from source on the person's own data folder (`HostAppInfo.sourceOnOwnData`). */
+  sourceOnOwnData?: boolean | undefined;
   /**
    * Opens the window again where closing it kept Firstmate working with
    * none (./trayIcon.ts): a notification's click reopens it.
@@ -177,6 +179,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       appDir: app.getAppPath(),
       resourcesDir: process.resourcesPath,
       flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
+      ...(options.sourceOnOwnData ? { sourceOnOwnData: true } : {}),
     },
     ...(options.frameLib ? { frameLib: options.frameLib } : {}),
     openExternal: (url) => shell.openExternal(url),

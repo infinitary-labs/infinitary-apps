@@ -140,6 +140,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/freeze/freezeRecorder.integration.test.ts` | a worker thread watching the test's own main thread on the real clock, which the test holds busy and waiting, once after loading 30 MB of source | 10 s (Mac fastest per case 1.1 s, 1.4 s with the source) |
 | `tests/scale-check.test.ts` | a record of the captain's size seeded through the app's writers (3,400 closed tasks, then 13,600), and the first mate, the crew's minute pass and the board read over it | 300 s (Mac fastest 33 s, on a loaded host) |
 | `tests/browser-fresh-home.test.ts` | the browser layer's fresh and seeded homes: a real core booted twice on throwaway folders, which asks a login shell for its search path and runs git | 5 s default (Linux check slowest case 0.40 s, Mac fastest per case 0.77 s) |
+| `tests/frame-lib.test.ts` | a Vite build of the frame realm's library under `NODE_ENV=development`, as `pnpm dev` starts it | 10 s (Mac fastest 2.0 s) |
 | `src/core/placed/loadLine.integration.test.ts` | real native wrappers, command processes, process groups and two-second admission/lifetime cadence | 35 s |
 | `src/core/workspace/worktreePool.test.ts` | real git, real pnpm, at the run's own priority | 15 s for the file; the real-pnpm measurement test is 600 s |
 | `src/core/orchestrator/changeChecks.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.59 s) |

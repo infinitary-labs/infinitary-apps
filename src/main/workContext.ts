@@ -16,7 +16,7 @@ import { hostPlatform } from "@core/platform";
 import { findOnPath } from "@core/userBin";
 import { SETTING_PREFIXES, settingFrom } from "@shared/envSettings";
 import { app } from "electron";
-import { folderSpellingFor, packagedFlavor, readPackageJsonAt } from "./userDataDir";
+import { folderSpellingFor, readPackageJsonAt, runFlavor } from "./userDataDir";
 
 /**
  * Where this user's work lives and how its background starts
@@ -63,8 +63,20 @@ export type WorkContext = {
  * stands in its own service manager.
  */
 export function workContext(isolatedUserData?: string): WorkContext {
-  const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
   const env = process.env;
+  const named = !app.isPackaged && Boolean(settingFrom(env, "HELPER_DATA_DIR")?.trim());
+  // A run from source opens the person's own folders, as the window does
+  // (./userDataDir.ts `runFlavor`), unless its data or its work is
+  // isolated: then it keeps the development flavor's folders and labels.
+  const flavor = runFlavor({
+    packaged: app.isPackaged,
+    readAppPackageJson: readPackageJsonAt(app.getAppPath()),
+    isolated:
+      named ||
+      Boolean(isolatedUserData) ||
+      Boolean(settingFrom(env, "USER_DATA_DIR")?.trim()) ||
+      app.commandLine.hasSwitch("user-data-dir"),
+  });
   const platform = hostPlatform();
   // Whose folders it reads: this build's own, or a development run's
   // stand-in for Infinitary's, which rehearses the one-time move of its work
@@ -76,7 +88,6 @@ export function workContext(isolatedUserData?: string): WorkContext {
     env,
     spelling: folderSpellingFor({ packaged: app.isPackaged, env }),
   });
-  const named = !app.isPackaged && Boolean(settingFrom(env, "HELPER_DATA_DIR")?.trim());
   const isolated = !app.isPackaged && (named || Boolean(isolatedUserData));
   // A development run may stand in its own launchctl or systemctl, so a test
   // never loads a real agent, and its background carries the stand-ins it

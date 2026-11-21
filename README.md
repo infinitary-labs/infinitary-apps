@@ -51,10 +51,12 @@ pnpm install
 pnpm dev
 ```
 
-A dev run keeps its state in `~/Library/Application Support/infinitary-dev`, apart
-from the installed app's `infinitary`, so it never opens the database the release
-is using (`src/shared/userDataFolders.ts`). The first dev run moves an older
-`firstmate-3000-dev` folder into it once.
+A dev run opens your own saved data, `~/Library/Application Support/infinitary`,
+as the installed app does, so quit the installed app first; only one of them opens
+the folder at a time (`src/shared/userDataFolders.ts`). Before it first opens that
+data it keeps a copy in the folder's `before-source-run`, and says in the terminal
+how to go back. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR`
+to an empty folder.
 
 That's it - no hidden step to fetch the Electron binary. `pnpm install`'s postinstall
 downloads it for you (see `scripts/ensure-electron-installed.mjs` and the note on

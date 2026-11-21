@@ -42,7 +42,7 @@ export function chooseUserDataDir(input: UserDataInput): UserDataChoice {
   const isolated = input.packaged ? undefined : settingFrom(input.env, "USER_DATA_DIR")?.trim();
   if (isolated) return { kind: "isolated", dir: isolated };
   if (input.hasUserDataDirSwitch) return { kind: "switch" };
-  const flavor = input.packaged ? packagedFlavor(input.readAppPackageJson) : "dev";
+  const flavor = runFlavor({ ...input, isolated: false });
   const spelling = input.spelling ?? OWN_IDENTITY;
   return { kind: "flavor", flavor, dir: join(input.appData, userDataFolderOf(spelling, flavor)) };
 }
@@ -50,8 +50,8 @@ export function chooseUserDataDir(input: UserDataInput): UserDataChoice {
 /**
  * Whose data folders this run opens: this build's own identity's
  * (`OWN_IDENTITY`, `@shared/codeNames`). A development run may stand in Infinitary's with
- * `INFINITARY_FOLDER_SPELLING=inf`, so it opens `infinitary-dev` and first moves
- * `firstmate-3000-dev` into it: the one-time move, rehearsed on a throwaway
+ * `INFINITARY_FOLDER_SPELLING=inf`, so it opens `infinitary` and first moves
+ * `firstmate-3000` into it: the one-time move, rehearsed on a throwaway
  * home (docs/saved-data-compatibility.md, "The one-time move"). A packaged
  * app ignores it.
  */
@@ -63,6 +63,24 @@ export function folderSpellingFor(input: {
   return (
     readSpellings([settingFrom(input.env, "FOLDER_SPELLING")?.trim() ?? ""])?.[0] ?? OWN_IDENTITY
   );
+}
+
+/**
+ * The flavor whose folders and background labels a run uses
+ * (src/shared/userDataFolders.ts): a packaged build's own, from its stamp;
+ * a run from source with nothing isolating it (`pnpm dev`) the release's,
+ * so it opens the person's own saved data, as the installed app does; and a
+ * run from source that a test or an experiment isolated - its data folder or
+ * its work folder named - the development flavor's, so its background never
+ * takes the installed app's label.
+ */
+export function runFlavor(input: {
+  packaged: boolean;
+  readAppPackageJson: () => string;
+  isolated: boolean;
+}): BuildFlavor {
+  if (input.packaged) return packagedFlavor(input.readAppPackageJson);
+  return input.isolated ? "dev" : "release";
 }
 
 /**

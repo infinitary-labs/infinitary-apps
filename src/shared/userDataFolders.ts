@@ -7,9 +7,10 @@ import type { Spelling } from "./codeNames";
  *
  * The release keeps the folder Electron gives it - the package.json `name` -
  * so an installed app's data stays where it is from one version to the next.
- * Every other run (`pnpm dev`, an unpackaged e2e launch, the local dev bundle
- * from `electron-builder.dev.yml`) is the dev flavor and keeps its own folder,
- * so a dev run never opens the database the installed app is using.
+ * `pnpm dev` opens the same folder, the person's own saved data, one app at a
+ * time (src/main/userDataDir.ts `runFlavor`). The local dev bundle from
+ * `electron-builder.dev.yml`, and a run from source that a test isolated,
+ * keep the development folder, so neither opens the installed app's data.
  */
 
 export type BuildFlavor = "release" | "dev";

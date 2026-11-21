@@ -198,8 +198,7 @@ The developer [account evaluation runner](account-evaluation.md) therefore permi
 This does not authorize account-management operations in two processes or prove the real providers' endpoints; keep quitting for the account-list command above, whose quota-resolution path has broader vault access.
 
 **Do not use `pnpm dev` for this.**
-A dev build opens `~/Library/Application Support/infinitary-dev`, never the release profile.
-Pointing it at the release profile with `INFINITARY_USER_DATA_DIR` would run the whole app on real data: queued work would resume and rows would be written.
+`pnpm dev` opens the release profile, `~/Library/Application Support/infinitary`, and runs the whole app on real data: queued work would resume and rows would be written.
 
 **Reading a running app's log instead:**
 - A successful read logs `[models] <provider> model list read: N models`.

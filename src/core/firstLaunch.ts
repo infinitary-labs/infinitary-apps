@@ -176,6 +176,10 @@ export function startFirstLaunch(options: {
       releaseNotes.reconcile();
       return;
     }
+    // A run from source on the person's own data names no release: the
+    // record keeps the installed version that last opened it, so the
+    // installed app's next start is no upgrade from the source's version.
+    if (host.app.sourceOnOwnData) return;
     try {
       recordLaunch(settings, { version: host.app.version, source: null }, now);
     } catch (error) {

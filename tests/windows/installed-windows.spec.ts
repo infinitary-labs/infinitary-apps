@@ -1,9 +1,9 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { connect } from "node:net";
+import { connect, createServer } from "node:net";
 import { userInfo } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
 import { HERE } from "@shared/deviceNames";
@@ -42,10 +42,13 @@ import { helperWords } from "../../src/core/helper/words";
 import { readWindowsTable, resumeWindowsRun } from "../../src/core/placed/windowsProcesses";
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
+import { START_HERE_ARG } from "../../src/main/besideRun";
+import { PERSON_WORD_ARG, WORD_TEMP_DIR } from "../../src/main/personWordArg";
 import { commandPipe, commandPipeHeld, RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
 import { BOOT_WORDS } from "../../src/main/startAtBoot";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
 import { windowsAppUserModelId } from "../../src/main/windowsStartup";
+import * as m from "../../src/shared/i18n/messages.generated";
 import {
   CANCEL_PROMPT_MARKER,
   MOCK_COMPLETION_TEXT,
@@ -64,14 +67,19 @@ import {
   windowsCrew,
 } from "./windowsCrew";
 import {
+  childApps,
   closeShownWindow,
   consoleText,
+  holdLockAsStandIn,
+  messageWindows,
   openConsole,
   pressDialogButton,
+  pressQuitKey,
   ps,
   removalEntries,
   runProcesses,
   runTask,
+  type StandInHolder,
   screenshot,
   showsWindow,
   startMenuEntry,
@@ -101,6 +109,18 @@ import {
  */
 
 const evidence = process.env.INFINITARY_INSTALLED_EVIDENCE;
+
+/** The profile a launch's copy was started with, from its command line (`askPersonWord`). */
+function userDataDirOf(commandLine: string): string {
+  const flag = "--user-data-dir=";
+  const at = commandLine.indexOf(flag);
+  if (at < 0) throw new Error(`no profile in ${commandLine}`);
+  const rest = commandLine.slice(at + flag.length);
+  // Quoted as a whole where it holds a space: the quote ends it, otherwise the next space.
+  const quoted = commandLine[at - 1] === '"';
+  const end = quoted ? rest.indexOf('"') : rest.search(/\s/);
+  return end < 0 ? rest : rest.slice(0, end);
+}
 const keep = (name: string, text: string) => {
   if (!evidence) return;
   mkdirSync(evidence, { recursive: true });
@@ -399,8 +419,9 @@ test("the Windows installer installs for this person, offers Git, starts the com
     // refused launch calls its holder a window only from that window's answer, never from what the
     // holder runs as (`holderIsWindow`), so the launch's own last line is the window's receipt: a
     // launch that ended at once, or on anything else, never says it.
-    const refusedLaunch = async (name: string): Promise<string> => {
-      const launch = spawn(executable, [], { stdio: ["ignore", "pipe", "pipe"] });
+    // A launch of the installed app, its words kept in the evidence once it ends.
+    const startLaunch = (name: string, args: string[] = []) => {
+      const launch = spawn(executable, args, { stdio: ["ignore", "pipe", "pipe"] });
       let said = "";
       launch.stdout?.on("data", (chunk) => {
         said += String(chunk);
@@ -408,12 +429,25 @@ test("the Windows installer installs for this person, offers Git, starts the com
       launch.stderr?.on("data", (chunk) => {
         said += String(chunk);
       });
-      const code = await new Promise<number | null>((resolve) =>
-        launch.once("exit", (exitCode) => resolve(exitCode)),
+      const ended = new Promise<number | null>((resolve) =>
+        launch.once("exit", (exitCode) => {
+          keep(name, said);
+          resolve(exitCode);
+        }),
       );
-      keep(name, said);
-      expect(code, said).toBe(0);
-      return said;
+      return {
+        pid: launch.pid ?? -1,
+        said: () => said,
+        ended,
+        end: () => {
+          if (launch.exitCode === null) launch.kill();
+        },
+      };
+    };
+    const refusedLaunch = async (name: string): Promise<string> => {
+      const launch = startLaunch(name);
+      expect(await launch.ended, launch.said()).toBe(0);
+      return launch.said();
     };
     const ANSWERED = "[app] the launch found the folder held by a window";
     expect(await refusedLaunch("refused-launch.txt")).toContain(ANSWERED);
@@ -434,7 +468,174 @@ test("the Windows installer installs for this person, offers Git, starts the com
     expect(topAppProcesses().map((app) => app.pid)).toEqual([ownWindow]);
     expect(runProcesses()).toEqual([]);
     expect(runTask(label)).toBe(null);
+    // The lock window Electron made for that window, by its class and the folder that titles it: a
+    // stand-in holder (`holdLockAsStandIn`) copies it, as a window from before windows answered a
+    // launch would hold the folder, answering nothing and holding no command's pipe, so a refused
+    // launch has to tell that holder apart by what it shows (the review of INF-5409).
+    const lockWindows = messageWindows(ownWindow);
+    keep("lock-windows.json", JSON.stringify(lockWindows, null, 2));
+    const lockWindow = lockWindows.find(
+      (shown) => resolve(shown.title).toLowerCase() === resolve(dataDir).toLowerCase(),
+    );
+    if (!lockWindow) throw new Error("the window shows no lock window titled by its data folder");
     await closeWindow(ownWindow);
+
+    const holders: StandInHolder[] = [];
+    const launches: { end: () => void }[] = [];
+    const standIn = async (): Promise<StandInHolder> => {
+      const holder = await holdLockAsStandIn({
+        lockFile: join(dataDir, "lockfile"),
+        window: lockWindow,
+        control: scratchDir("infinitary-windows-holder-"),
+      });
+      holders.push(holder);
+      return holder;
+    };
+    // The one copy of the launch that shows the person its word (`askPersonWord`), once it runs.
+    const wordCopy = async (launchPid: number) => {
+      const copies = () =>
+        childApps(launchPid).filter((app) => app.commandLine.includes(PERSON_WORD_ARG));
+      await expect.poll(() => copies().length, { timeout: 60_000 }).toBe(1);
+      const [copy] = copies();
+      if (!copy) throw new Error("the launch shows no word");
+      return copy;
+    };
+    const LEFT_OPEN = "[app] the launch found the folder held by a holder the person left open";
+    const FREED = "[app] the launch found the folder held by nothing now";
+    // How each launch ended: nothing else of the app runs on the folder, no command and no task.
+    const nothingRuns = () => {
+      expect(topAppProcesses()).toEqual([]);
+      expect(runProcesses()).toEqual([]);
+      expect(runTask(label)).toBe(null);
+    };
+    try {
+      await test.step("a holder that shows nothing has the person asked, and their Leave it leaves it open and starts nothing when it quits", async () => {
+        const holder = await standIn();
+        const leaving = startLaunch("refused-launch-left-open.txt");
+        launches.push(leaving);
+        // Asked once by its own refused ask, then read twice with nothing shown: the person is asked.
+        const copy = await wordCopy(leaving.pid);
+        expect(holder.asks()).toBe(1);
+        if (evidence) screenshot(join(evidence, "once-closed-question.png"));
+        await expect
+          .poll(
+            () =>
+              pressDialogButton(
+                copy.pid,
+                m.dialogLeaveIt(),
+                evidence && join(evidence, "once-closed-tree.json"),
+              ),
+            { timeout: 60_000, intervals: [500] },
+          )
+          .toBe(true);
+        expect(await leaving.ended, leaving.said()).toBe(0);
+        expect(leaving.said()).toContain(LEFT_OPEN);
+        // Left open: never asked again, and its quit later starts nothing, since the launch that
+        // could have started again on it has ended.
+        expect(holder.asks()).toBe(1);
+        await holder.letGo();
+        nothingRuns();
+      });
+
+      await test.step("a command's holder is waited for in silence; once its pipe goes the person is asked, a window that takes the folder then answers, the question is taken away unanswered, its private scratch stays theirs, and Ctrl+Q quits that window for good", async () => {
+        const me = await thisDeviceUser({ platform: "win32" });
+        if (!me || !("sid" in me)) throw new Error("Windows did not say which user this is");
+        // The command's pipe, held by the check as a command holds it, counting each read of it.
+        let pipeReads = 0;
+        const pipe = createServer((socket) => {
+          pipeReads += 1;
+          socket.destroy();
+        });
+        await new Promise<void>((done) => pipe.listen(commandPipe(dataDir), done));
+        const holder = await standIn();
+        const turnover = startLaunch("refused-launch-window-took-over.txt");
+        launches.push(turnover);
+        try {
+          // Asked once by its own refused ask, then read by its pipe again and again with nothing
+          // shown: a command may hold the lock before it notes itself.
+          await expect.poll(() => pipeReads, { timeout: 60_000 }).toBeGreaterThanOrEqual(3);
+          expect(holder.asks()).toBe(1);
+          expect(
+            childApps(turnover.pid).filter((app) => app.commandLine.includes(PERSON_WORD_ARG)),
+          ).toEqual([]);
+          expect(stillRunning([turnover.pid])).toEqual([turnover.pid]);
+        } finally {
+          await new Promise((done) => pipe.close(done));
+        }
+        // The pipe gone while the lock stays held: another holder, never read, so it is asked once
+        // more, and, still showing nothing on its next read, the person is asked.
+        const copy = await wordCopy(turnover.pid);
+        expect(holder.asks()).toBe(2);
+        // The copy's own profile and its temporary folder, inside the data folder.
+        const profile = userDataDirOf(copy.commandLine);
+        const scratch = join(profile, WORD_TEMP_DIR);
+        expect(existsSync(scratch)).toBe(true);
+        // A file of the copy's scratch, which the next holder's start must leave where it is.
+        const kept = join(scratch, "check-scratch.txt");
+        writeFileSync(kept, "kept\n");
+        await holder.letGoSeen();
+        // Start it here takes the folder while the question is up, and runs its own first mate.
+        const window = startLaunch("start-here-window.txt", [START_HERE_ARG]);
+        launches.push(window);
+        expect(await turnover.ended, turnover.said()).toBe(0);
+        expect(turnover.said()).toContain(ANSWERED);
+        // Taken away with no press: the copy ended with its launch.
+        await expect.poll(() => stillRunning([copy.pid]), { timeout: 30_000 }).toEqual([]);
+        expect(readFileSync(kept, "utf8")).toBe("kept\n");
+        for (const folder of [profile, scratch]) {
+          const sddl = ps<string>("(Get-Acl -LiteralPath $env:WORD_DIR).Sddl", {
+            WORD_DIR: folder,
+          });
+          keep(`word-${basename(folder)}-access.txt`, sddl);
+          expect(onlyOwnerReaches(readAccessList(sddl), me.sid)).toBe(true);
+        }
+        await expect.poll(() => showsWindow(window.pid), { timeout: 60_000 }).toBe(true);
+        if (evidence) screenshot(join(evidence, "window-took-over.png"));
+        expect(topAppProcesses().map((app) => app.pid)).toEqual([window.pid]);
+        expect(runProcesses()).toEqual([]);
+        // The person quits that window on purpose with its own key, which runs the tray's Quit.
+        await expect
+          .poll(() => pressQuitKey(window.pid), { timeout: 60_000, intervals: [1_000] })
+          .toBe(true);
+        expect(await window.ended, window.said()).toBe(0);
+        nothingRuns();
+      });
+
+      await test.step("the person's Open here waits for the holder to close, then opens the window, which starts the command", async () => {
+        const holder = await standIn();
+        const opening = startLaunch("refused-launch-open-here.txt");
+        launches.push(opening);
+        const copy = await wordCopy(opening.pid);
+        await expect
+          .poll(() => pressDialogButton(copy.pid, m.dialogOpenOnceClosed()), {
+            timeout: 60_000,
+            intervals: [500],
+          })
+          .toBe(true);
+        await expect.poll(() => stillRunning([copy.pid]), { timeout: 30_000 }).toEqual([]);
+        // Answered, it still waits for the holder: no window of its own while the folder is held.
+        expect(stillRunning([opening.pid])).toEqual([opening.pid]);
+        expect(topAppProcesses().map((app) => app.pid)).toEqual([opening.pid]);
+        await holder.letGo();
+        expect(await opening.ended, opening.said()).toBe(0);
+        expect(opening.said()).toContain(FREED);
+        // Started again, the launch opens its window and starts the command as any window does.
+        await expect
+          .poll(() => topAppProcesses().filter((app) => showsWindow(app.pid)).length, {
+            timeout: 60_000,
+          })
+          .toBe(1);
+        const [reopened] = topAppProcesses().filter((app) => showsWindow(app.pid));
+        if (!reopened) throw new Error("the launch opened no window");
+        await expectRunning("off");
+        if (evidence) screenshot(join(evidence, "opened-once-closed.png"));
+        await closeWindow(reopened.pid);
+        await stopRun();
+      });
+    } finally {
+      for (const launch of launches) launch.end();
+      for (const holder of holders) holder.end();
+    }
 
     // Opened again from the Start menu, the window registers the run's task,
     // its sign-in trigger off until Start at login turns it on, and asks

@@ -123,12 +123,9 @@ export function phoneCardReadControls(core: Core, queries: () => Promise<void>) 
     /** Adds one task to the record, which the computer pushes to the phone as its own change. */
     async addTask() {
       added += 1;
-      seedTask(core.services.tasks, {
-        id: `phone-live-added-${added}`,
-        title: `Added task ${added}`,
-        status: "queued",
-      });
-      return { count: await count() };
+      const taskId = `phone-live-added-${added}`;
+      seedTask(core.services.tasks, { id: taskId, title: `Added task ${added}`, status: "queued" });
+      return { count: await count(), taskId };
     },
     end: () => end("first"),
     endBeside: () => end("beside"),

@@ -72,11 +72,12 @@ extension PhoneJourney {
         XCTAssertTrue(line("stopped: read_not_declared").waitForPresence(timeout: 30), app.debugDescription)
         let laterFixture = try await home("live-card-add-task")
         let later = try XCTUnwrap(laterFixture["count"] as? Int)
+        let laterTask = try XCTUnwrap(laterFixture["taskId"] as? String)
         XCTAssertEqual(later, next + 1, "The home added one more task")
         // The board's push and the count's read ride the same computer pushes, so a phone that holds the new task on Tasks
         // would have moved a live count too.
         tab("Tasks", repeatDiscarded: false)
-        XCTAssertTrue(app.staticTexts["Added task 3"].firstMatch.waitForPresence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(app.buttons["task-\(laterTask)"].waitForPresence(timeout: 30), app.debugDescription)
         tab("Home", repeatDiscarded: false)
         showCard(title)
         waitForShownBodyRevealed()

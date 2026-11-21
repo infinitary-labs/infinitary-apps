@@ -92,6 +92,11 @@ jobs:
     needs: paths
     if: ${{ needs.paths.outputs.windows == 'true' }}
     name: Pull request · Contributor's Windows build
+    # windows.yml's update check reads earlier runs' artifacts, so its jobs
+    # ask to read Actions; a contributor's build never runs that check.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/windows.yml
     with:
       trigger: Pull request

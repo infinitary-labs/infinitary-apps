@@ -159,7 +159,7 @@ It runs only on request: nothing a batch or an alpha runs asks for it.
 `build` first points the checkout's release source at the machine's own feed, `https://localhost:8443/` (`scripts/windows-update-source.ts`, `tests/windows/updateVersions.ts`), builds once, and packages two unsigned test versions per channel from that one build, telling them apart only by their version: `0.0.1-alpha.1` and `0.0.1-alpha.2` for alpha, `0.0.1` and `0.0.2` for stable.
 Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
 `update` is a matrix of one fresh machine per channel and round (`rounds`, as for `check`), set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
-Every round takes the same test installers the run built once.
+Every round takes the same test installers, which the run built once or took from an earlier run ("Reusing the test versions" below).
 With more than one round the jobs run one at a time, in order, and a failed round cancels every round after it, none of which has started; one round runs both channels side by side, each to its end.
 With more than one round each job's name ends `; round N`.
 The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone as one of their own roots, answering Yes to the Security Warning Windows shows first, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
@@ -181,3 +181,13 @@ It stops every process it started when it ends, and keeps the hand-overs' error 
 
 When it ends it takes back the certificate and puts `NODE_USE_SYSTEM_CA` back as it was, and a change it could not take back fails a journey that otherwise passed.
 Its pictures and readings go to the `windows-update-evidence-<channel>` artifact, with `-round-N` after it when the run has more than one round.
+
+### Reusing the test versions
+
+A loop of update checks that changes only the journey or the update job would otherwise build the same four installers again each run, which is most of the run's time on the PC's Windows.
+So `build` first reads the key of everything the installers are made from (`scripts/windows-update-builds.ts`): each file on the desktop app's build list (`scripts/desktop-build.ts`), `electron-builder.win.yml`, the test versions' release source (`scripts/windows-update-source.ts`, `tests/windows/updateVersions.ts`), the composite actions the build job uses, and the build job's own text in `windows.yml`.
+It keeps the installers in an artifact named `windows-update-installers-<key>` for three days.
+When an earlier run kept installers under the same key, `build` installs and builds nothing, and each `update` job downloads that run's artifact.
+It takes an artifact only from a run of this project's own `windows.yml` that someone with write access asked for, never from a pull request of another project, which can keep an artifact under any name; and only one kept long enough for every `update` job of this run to read it, one hour for each job the run may start one after another and one for the queue.
+A lookup that fails builds.
+A reused installer was built from an earlier commit with the same inputs, so the app it installs reports that commit as its source.

@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "%1$@ 的網頁，顯示船員瀏覽器中的畫面";
 "cardBrowserPageYours" = "%1$@ 的網頁，由你控制";
 "cardBrowserPageYoursOff" = "%2$@ 的網頁，由你控制 · %1$@";
+"cardBrowserQuitLead" = "這個瀏覽器在 Infinitary 結束時已停止。";
 "cardBrowserRecord" = "任務紀錄";
 "cardBrowserReload" = "重新載入";
 "cardBrowserReport" = "回報問題";
 "cardBrowserReturnWordsTooLong" = "欄位中的文字太長，無法在交還控制時一起送出。請先縮短。";
 "cardBrowserStop" = "停止瀏覽器";
 "cardBrowserSurface" = "任務瀏覽器";
+"cardBrowserUnansweredAsked" = "%1$@ 沒有回應，已請船員重新啟動。它一回應，頁面就會顯示在這裡。";
+"cardBrowserUnansweredWorking" = "%1$@ 沒有回應，船員正在工作。它一回應，頁面就會顯示在這裡。";
 "cardBrowserWord" = "瀏覽器";
 "cardCrewmateLog" = "船員的對話";
 "cardCrewmateSendFailed" = "這一行現在無法送出。";
@@ -3459,6 +3462,7 @@
 "taskBrowserStoppedCrewmate" = "船員已關閉";
 "taskBrowserStoppedGone" = "它的頁面已無法運作";
 "taskBrowserStoppedIdle" = "閒置 30 分鐘後已停止";
+"taskBrowserStoppedQuit" = "Infinitary 結束時已停止";
 "taskBrowserStoppedTaskClosed" = "任務關閉時已停止";
 "taskGroupBacklog" = "待辦清單";
 "taskGroupLanded" = "完成 · 7 天";

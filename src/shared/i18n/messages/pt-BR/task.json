@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "o tripulante o fechou",
   "taskBrowserStoppedGone": "a página dele parou de funcionar",
   "taskBrowserStoppedIdle": "parou após 30 minutos sem uso",
+  "taskBrowserStoppedQuit": "parou quando o Infinitary foi fechado",
   "taskBrowserStoppedTaskClosed": "parou quando a tarefa foi encerrada",
   "taskGroupBacklog": "backlog",
   "taskGroupLanded": "concluídas · 7 d",

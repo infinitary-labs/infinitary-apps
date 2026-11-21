@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "%1$@ のページ（乗組員のブラウザの表示）";
 "cardBrowserPageYours" = "%1$@ のページ（あなたが操作中）";
 "cardBrowserPageYoursOff" = "%2$@ のページ（あなたが操作中） · %1$@";
+"cardBrowserQuitLead" = "このブラウザは Infinitary の終了時に停止しました。";
 "cardBrowserRecord" = "タスクの記録";
 "cardBrowserReload" = "再読み込み";
 "cardBrowserReport" = "問題を報告";
 "cardBrowserReturnWordsTooLong" = "欄の言葉が長すぎて、操作を返すときに送れません。先に短くしてください。";
 "cardBrowserStop" = "ブラウザを停止";
 "cardBrowserSurface" = "タスクのブラウザ";
+"cardBrowserUnansweredAsked" = "%1$@ が応答しないため、乗組員に再起動を依頼しました。応答するとページがここに表示されます。";
+"cardBrowserUnansweredWorking" = "%1$@ が応答しません。乗組員は現在作業中です。応答するとページがここに表示されます。";
 "cardBrowserWord" = "ブラウザ";
 "cardCrewmateLog" = "乗組員のノート";
 "cardCrewmateSendFailed" = "この行は今は送信できませんでした。";
@@ -3459,6 +3462,7 @@
 "taskBrowserStoppedCrewmate" = "乗組員が閉じました";
 "taskBrowserStoppedGone" = "ページが動作しなくなりました";
 "taskBrowserStoppedIdle" = "30分間使われず停止しました";
+"taskBrowserStoppedQuit" = "Infinitary の終了時に停止しました";
 "taskBrowserStoppedTaskClosed" = "タスクの終了とともに停止しました";
 "taskGroupBacklog" = "バックログ";
 "taskGroupLanded" = "完了 · 7日";

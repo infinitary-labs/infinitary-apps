@@ -8,7 +8,7 @@ import { type Reasoning, reasoningNote } from "./reasoning";
 import {
   browserDriverOf,
   DRIVER_WORDS,
-  STOP_LINE_WORDS,
+  stopLineWords,
   type TaskBrowserDriver,
   type TaskBrowserFact,
 } from "./taskBrowser";
@@ -311,7 +311,7 @@ export function browserLineOf(
   fact: TaskBrowserFact,
   task: Parameters<typeof browserDriverOf>[0],
 ): TaskBrowserLine {
-  if (fact.state === "stopped") return { site: fact.site, words: STOP_LINE_WORDS[fact.stopped] };
+  if (fact.state === "stopped") return { site: fact.site, words: stopLineWords(fact) };
   const driver = browserDriverOf(task, fact);
   return { site: fact.site, words: DRIVER_WORDS[driver], driver };
 }

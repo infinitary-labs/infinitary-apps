@@ -1119,6 +1119,13 @@ export const workRequests = {
           saved: z.literal(true).optional(),
           once: z.string().min(1).max(512),
         }),
+        // Nothing answers at a task's page there (`page-unanswered.md`).
+        z.object({
+          kind: z.literal("unanswered"),
+          site: z.string(),
+          url: z.string(),
+          once: z.string().min(1).max(512),
+        }),
         z.object({
           kind: z.literal("sign-in"),
           site: z.string().min(1),

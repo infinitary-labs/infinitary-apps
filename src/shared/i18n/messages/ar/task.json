@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "أغلقه فرد الطاقم",
   "taskBrowserStoppedGone": "توقفت صفحته عن العمل",
   "taskBrowserStoppedIdle": "أُوقف بعد 30 دقيقة دون استخدام",
+  "taskBrowserStoppedQuit": "توقف عند إغلاق Infinitary",
   "taskBrowserStoppedTaskClosed": "أُوقف عند إغلاق المهمة",
   "taskGroupBacklog": "المؤجلة",
   "taskGroupLanded": "دُمجت · 7 أيام",

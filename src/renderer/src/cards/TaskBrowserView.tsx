@@ -17,9 +17,9 @@ import {
   RETURN_CONTROL_NOTICE,
   SHOW_CHROME_WINDOW_LABEL,
   STALE_ATTACHMENT_WORDS,
-  STOP_VIEW_WORDS,
   signInCaption,
   signInRuleLegend,
+  stopViewWords,
   TAKE_CONTROL_LABEL,
   TASK_BROWSER_PAGE,
   TASK_BROWSER_PAGE_MAX,
@@ -32,6 +32,7 @@ import {
   toldWords,
   USE_PASSKEY_LABEL,
   USE_WITHOUT_ASKING_LABEL,
+  unansweredWords,
   VIEW_DRIVER_WORDS,
 } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
@@ -755,7 +756,11 @@ export function TaskBrowserView({
     from?.session !== undefined && from.generation !== undefined && detail
       ? attachmentStanding({ session: from.session, generation: from.generation }, fact)
       : "same";
-  const noticeWords = standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing];
+  // Nothing answers at its page: said in the same line, ahead of a stale card's words.
+  const unanswered =
+    fact?.state === "open" && fact.unanswered ? unansweredWords(fact.site, driver) : undefined;
+  const noticeWords =
+    unanswered ?? (standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing]);
   // A request docks beside the page it asked about, never beside another,
   // and only while that page is the captain's; any other card docks beside
   // the page the task's browser shows, whoever drives it.
@@ -790,9 +795,9 @@ export function TaskBrowserView({
     fact && fact.state !== "stopped" ? [fact.title, fact.url].filter(Boolean).join(" · ") : "";
   const pageRest = useRestLabel(pageWords || undefined, { fact: true });
   const notice =
-    standing === "same" ? null : (
+    noticeWords === undefined ? null : (
       <div
-        data-browser-notice={standing}
+        data-browser-notice={unanswered ? "unanswered" : standing}
         ref={noticeFit.ref}
         title={noticeFit.title}
         style={{
@@ -806,7 +811,7 @@ export function TaskBrowserView({
           flexShrink: 0,
         }}
       >
-        {STALE_ATTACHMENT_WORDS[standing]}
+        {noticeWords}
       </div>
     );
   const facts = detail ? taskFactsOf(detail, modelName) : null;
@@ -840,7 +845,7 @@ export function TaskBrowserView({
 
   if (there !== null || !fact || fact.state === "stopped") {
     const stopped = fact?.state === "stopped" ? fact : null;
-    const words = there ?? (stopped ? STOP_VIEW_WORDS[stopped.stopped] : null);
+    const words = there ?? (stopped ? stopViewWords(stopped) : null);
     const again = there === null && stopped !== null && canOpenAgain(stopped);
     const openAgain = async () => {
       setOpening(true);

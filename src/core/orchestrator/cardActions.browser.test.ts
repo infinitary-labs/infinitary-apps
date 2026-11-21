@@ -795,6 +795,36 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
   });
 
+  it("wakes the crewmate once for a page nothing answers at, queued while its turn runs", async () => {
+    const h = await crewmateWithBrowser();
+    const prompts = h.crewmate.promptCalls.length;
+    const unanswered = {
+      site: "localhost:5173",
+      url: "http://localhost:5173/settings",
+      once: "page-unanswered:run-1:t1:1",
+    };
+    const wake = renderWake({
+      facts: {
+        kind: "page-unanswered",
+        site: "localhost:5173",
+        url: "http://localhost:5173/settings",
+      },
+    });
+    const told = () => [
+      ...h.crewmate.promptCalls.slice(prompts),
+      ...h.crewmate.steer.mock.calls.map(([text]) => text),
+    ];
+    // Its turn is running: the wake still goes, into that turn at its next chance.
+    h.supervisor.cardActions.pageUnanswered(h.taskId, unanswered);
+    await tick();
+    expect(told()).toEqual([wake]);
+    // The same outage again, once the turn ended, is not new.
+    await h.endTurn();
+    h.supervisor.cardActions.pageUnanswered(h.taskId, unanswered);
+    await tick();
+    expect(told()).toEqual([wake]);
+  });
+
   // The captain's words on INF-155's sign-in card: "i clicked "open browser",
   // finished the sign in process and came back. but the card is still here".
   it("takes a request card down when the captain returns the browser he took from its record, leaving a plain door", async () => {

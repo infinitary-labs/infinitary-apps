@@ -70,7 +70,7 @@ Do not add a second store of website sign-ins: each computer's signed-in sites l
 
 - Unknown outcomes: if the page does not confirm a submission - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown; the crewmate never submits, reloads or resends it, checks where the site lists it, and asks the captain on a card, in the words of `UNKNOWN_OUTCOME_WORDS`.
 - The browser never sends a form twice: a page that answers a sent form is never reloaded (`FORM_RESEND`), whoever asks.
-- No retry replays a browser commitment: a redelivered wake is words alone, and a restart keeps no browser, page or form.
+- No retry replays a browser commitment: a redelivered wake is words alone, and a restart keeps no browser or form, only a stopped browser's address for Open again (`docs/task-browser.md`, "After a restart").
 - A card whose browser is gone still answers on the click, and the crewmate is steered once that its browser was gone (`attachmentStanding`).
 - A crash or quit while the captain holds a browser keeps nothing and wakes nobody.
 - A site may end or refuse a copied session; the crewmate then asks again, and the card offers only `Sign in myself`.

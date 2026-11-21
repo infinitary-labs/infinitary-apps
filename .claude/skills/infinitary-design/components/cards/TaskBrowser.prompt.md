@@ -19,6 +19,10 @@ The line is 32 px tall with `--space-3` at its sides and a `--line-1` hairline u
 It reads `This card's browser has stopped, so this is the task's newer one, which kept nothing from it` or `This card's browser stopped when Infinitary quit; only what you signed in to for a sign-in request stays`, each ending in a full stop.
 Under it the view is in whatever state the task's browser is now - the live page, the stopped panel with Open again, or `This task has no browser on this computer.` - so nothing pretends the card's page is still there.
 A card whose browser is still the task's, open or stopped, opens the view with no line.
+When the task's browser has stopped and may be opened again, the same press also opens it again, as Open again would, so the view shows the stopped panel only until the fresh page arrives.
+
+**When nothing answers.**
+When the page is on an address the task's own build serves on its computer and nothing answers there, the same line under the row says so instead of a stale card's words, in the same size and colour: `Nothing answers at localhost:5173, so its crewmate was asked to start it again. The page shows here once it answers.`, or, while its crewmate is working, `Nothing answers at localhost:5173, and its crewmate is working now. The page shows here once it answers.` The line goes once the address answers again; the page shows by itself when the crewmate opens it.
 
 **A page from the project.**
 A card's door may name a page from its task's project instead, such as a finished game's `Play` (the app's `docs/task-browser.md`, "A page from the project").
@@ -187,7 +191,8 @@ While it uses a signed-in site it names it instead: `signed in on aurora.example
 | Unavailable | as Stopped | why it cannot open now, Open again still offered |
 | Waits for an update on another computer: this computer controls a first mate on MacBook Pro too old to send its pictures | as Stopped | `Update Infinitary on MacBook Pro to show this task's browser here.` over `Until then, only a window on MacBook Pro can show it.`; no Open again (`../devices/RemoteControl.prompt.md`) |
 
-The stopped sentence says what stopped it, in `--fg-1` at `--text-base` weight 500, ending in a full stop: `You stopped this browser`, `The crewmate closed this browser`, `This browser stopped after 30 minutes unused`, `This browser's page stopped working`, or `This browser was stopped when the task closed`.
+The stopped sentence says what stopped it, in `--fg-1` at `--text-base` weight 500, ending in a full stop: `You stopped this browser`, `The crewmate closed this browser`, `This browser stopped after 30 minutes unused`, `This browser's page stopped working`, `This browser stopped when Infinitary quit`, or `This browser was stopped when the task closed`.
+A browser that was open when Infinitary quit reads `This browser stopped when Infinitary quit` after the restart and keeps Open again.
 The second line is `--text-sm` `--fg-2`: `What you signed in to for a sign-in request stays; nothing else was kept`, or on a closed task `Its pictures are in the task's record`.
 Then comes `Open again` (secondary Button), which starts a fresh browser at the last page with nothing signed in, and under it `A fresh browser, with nothing signed in` in `--text-xs` `--fg-3`; a closed task has no Open again.
 Unavailable says why in the same place - `Four task browsers are already open on this computer. Stop one, then open this again.` or `This computer could not open a browser for this task right now.` - and keeps Open again for a later try.

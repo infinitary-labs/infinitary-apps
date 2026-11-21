@@ -30,6 +30,7 @@ import type {
   BrowserFrameSink,
   BrowserReturned,
   CrewmateBrowser,
+  PageUnanswered,
   ProjectPage,
   TaskBrowsers,
 } from "../browser/taskBrowsers";
@@ -90,6 +91,8 @@ export type PlacedBrowsersOptions = {
   onChange: (taskId: string) => void;
   /** The captain returned a task's browser there: its crewmate's one wake. */
   onReturned: (taskId: string, returned: BrowserReturned) => void;
+  /** Nothing answers at a task's page there: its crewmate's one wake for that outage. */
+  onUnanswered?: (taskId: string, unanswered: PageUnanswered) => void;
   now?: () => number;
   log?: (line: string) => void;
 };
@@ -152,6 +155,9 @@ export class PlacedBrowsers implements PlacedBrowserSink {
           ...(event.saved ? { saved: true as const } : {}),
           once: event.once,
         });
+        return;
+      case "unanswered":
+        this.options.onUnanswered?.(task, { site: event.site, url: event.url, once: event.once });
         return;
       case "sign-in":
         // A retired copy from an older computer: nothing on this Mac keeps one.

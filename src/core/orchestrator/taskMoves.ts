@@ -941,6 +941,7 @@ export class TaskMoves {
             this.options.machines?.servedState?.(machine) ?? "",
             this.options.machines?.reattachOnly?.(machine) === true,
             this.options.machines?.conversationOpen?.(machine, taskId) === true,
+            this.refusedThere(taskId),
           ].join("\n"),
     ].join("\n");
   }

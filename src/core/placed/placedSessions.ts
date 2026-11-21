@@ -1624,16 +1624,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * The words from outside a task's conversation there holds, once due
    * (`inf:session:delete-outside`; docs/task-retention.md, "Words from
-   * outside"). This Mac's own copy of the answers it gave that
-   * conversation's callbacks goes first, whatever that computer can do;
-   * then that computer replaces them in its files, and this Mac copies each
-   * file of the record it changed whole, with any of this Mac's copy that
-   * still holds some. `files` are files from outside due in its hand-over
-   * folder there, which that computer removes first. A computer out of
-   * reach, or without the change, follows on a later pass, as does an open
-   * there still unanswered; one no longer on the list leaves this Mac's copy
-   * to the caller (`gone`). This Mac opens the conversation again, routed,
-   * or, on an older computer that opens it by itself, lets its own go first.
+   * outside"): this Mac's copy of its callbacks' answers first, then that
+   * computer's files, and this Mac's copy of each it changed, whole. `files`
+   * are files from outside due in its hand-over folder there. A computer out
+   * of reach or without the change, or an open there unanswered, waits for
+   * a later pass; one no longer on the list leaves this Mac's copy to the
+   * caller (`gone`). This Mac opens the conversation again, routed, or, on
+   * an older computer that opens it by itself, lets its own go first.
    */
   async deleteOutside(
     record: TaskRecord,
@@ -1652,18 +1649,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
     // An open there still unanswered could give this Mac a conversation the cleanup lets go.
     if (placed.asking > 0 || placed.adopting || placed.cleaning) return "waiting";
-    // An older computer opens the conversation again by itself, unchecked: this Mac lets its own
-    // go first, once its turn is over, and never reattaches to what it opens (`refusedThere`).
+    // An older computer opens the conversation again by itself, unchecked: this Mac never
+    // reattaches to what it opens (`refusedThere`), and lets its own go first, once its turn is over.
     const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    if (older) this.refuseHeld(placed.task, true);
     if (older && heldSession(placed)) {
       if (!heldSession(placed)?.isStreaming()) this.host?.letGo?.(placed.task);
       if (heldSession(placed)) return "waiting";
     }
-    if (older) this.refuseHeld(placed.task, true);
-    // Opens there, and words to it, wait for the cleanup and for the reopen it asks.
+    // Opens there wait for its answer, and words to it for the reopen it asks too.
     let cleaned: (open: boolean | Promise<boolean>) => void = () => {};
     const gate = new Promise<boolean>((done) => (cleaned = done));
-    placed.cleaning = gate.then(() => undefined);
+    let answered = () => {};
+    placed.cleaning = new Promise<void>((done) => (answered = done));
     const before = placed.reopening;
     const held = gate.then(async (open) => open && (await before) !== false);
     placed.reopening = held;
@@ -1687,14 +1685,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       lost = caught;
     }
     placed.cleaning = undefined;
-    // The session held once it answered, which an open asked during the cleanup cannot change.
-    const session = older ? undefined : heldSession(placed);
-    // Let go of there, not opened again by itself, or not known: this Mac opens it again, routed first.
-    // Words it gave back unspent meanwhile go once that open settled.
+    answered();
+    // A reopen asked meanwhile, which waited for this answer, is the one that opens it again.
+    const session = older || placed.adopting ? undefined : heldSession(placed);
+    // Let go of there or not known: this Mac opens it again, routed; words given back then go.
     if (session && (!answer || answer.reopen || answer.status === "changed"))
       void this.reopen(placed, session, deviceId).then(() => this.host?.caughtUp([placed.task]));
     if (placed.reopening === held) placed.reopening = before;
     cleaned(placed.reopening ?? true);
+    // A wait for that computer's update ends: what it holds is refused now.
+    if (older) this.host?.caughtUp([placed.task]);
     if (!answer) {
       if (lost instanceof DeviceOutOfReachError) return { computer, until: "reach" };
       throw lost;

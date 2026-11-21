@@ -1217,6 +1217,84 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(after.supervisor.moves.refusedThere(taskId)).toBe(false);
     expect(rerouted(after, taskId)).toHaveLength(1);
   });
+
+  // INF-5438 round 16 findings 1 and 3: that computer restarts while a
+  // cleanup's answer is out, so this Mac asks to open the conversation again
+  // then; the cleanup's answer lets that open go, it is the one reopen, routed
+  // to GPT-6 Sol, and the words sent meanwhile reach GPT-6 Sol once.
+  it("lets a reopen asked during a cleanup open the conversation once the cleanup answers", async () => {
+    const at = await codexThere();
+    const taskId = "t-reconnect";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(home);
+    const answer = gate();
+    let answeredThere = false;
+    const asked = recordAsks(home, async (channel) => {
+      if (channel !== "inf:session:delete-outside") return;
+      answeredThere = true;
+      await answer.held;
+    });
+    const reopens = vi.spyOn(home.supervisor, "toolsNow");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const requests = api.requests.length;
+
+    // Nothing in the conversation is due, so that computer answers unchanged.
+    const cleaning = home.placed.deleteOutside(record, DUE);
+    await expect.poll(() => answeredThere).toBe(true);
+    await at.restartComputer();
+    await expect.poll(() => reopens.mock.calls.some(([id]) => id === taskId)).toBe(true);
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    expect(asked.map((ask) => ask.channel)).not.toContain("inf:session:open");
+
+    answer.open();
+    expect(await cleaning).toBe("unchanged");
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(rerouted(home, taskId)).toHaveLength(1);
+    await at.inReach(taskId);
+  });
+
+  // INF-5438 round 16 findings 2 and 3: words already held because an older
+  // computer holds the conversation open, waiting for its update, go once its
+  // cleanup marks what it holds refused: they route to GPT-6 Sol, which that
+  // computer serves, unspent before and delivered once.
+  it("routes words held for an older computer's update once its cleanup runs", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-held";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // This Mac restarts, so the conversation that computer holds open is all it knows of it.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "And now?");
+    await expect.poll(() => home.supervisor.moves.modelWaitCause(taskId)).toBe("update");
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(api.requests.length).toBe(requests);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("And now?");
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(home.supervisor.moves.waitsForModel(taskId)).toBe(false);
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
 });
 
 /** Words read from Gmail long ago, fenced as an integration answers them, and the pass that removes them. */

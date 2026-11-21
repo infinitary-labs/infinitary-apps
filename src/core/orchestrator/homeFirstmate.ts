@@ -1,4 +1,5 @@
 import type { FmEvent } from "@shared/events";
+import { runbookGatesOf } from "@shared/surfaces";
 import type { CoreServices } from "../coreServices";
 import type { startCorrections } from "../decisions/startCorrections";
 import type { Computers } from "../devices/computers";
@@ -258,10 +259,12 @@ export function startHomeFirstmate({
       uninstallPlugin: (id) => pluginInstaller.uninstall(id),
       personalWorkspaceDir: paths.personalWorkspaceDir,
       // The Knowledge panel is a surface only while there is knowledge to show (docs/knowledge.md),
-      // and the Automation panel while a rule is saved (docs/automation.md).
+      // and the Automation panel while a rule is saved (docs/automation.md); a built-in
+      // runbook's panel while that runbook is on (docs/runbooks.md, "Panels").
       gates: () => ({
         knowledge: knowledge.held(),
         automation: scheduler.rules().length > 0,
+        ...runbookGatesOf(runbooks.list()),
       }),
       mounts: () => panelMounts.current(),
     },

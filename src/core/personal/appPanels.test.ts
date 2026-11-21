@@ -1,10 +1,16 @@
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { personalManifestSchema } from "@shared/personal/manifest";
-import { BUILTIN_FRAME_PANELS } from "@shared/plugins/frameLib";
+import {
+  BUILTIN_FRAME_PANELS,
+  type BuiltinFramePanel,
+  builtinPanelSource,
+  RUNBOOK_FRAME_PANELS,
+} from "@shared/plugins/frameLib";
 import { panelCardsProblem } from "@shared/plugins/panelCards";
 import { APP_PANEL_FOLDERS } from "@shared/surfaces";
 import { describe, expect, it } from "vitest";
+import { RUNBOOK_PANEL_DIRS } from "../../../scripts/generate-messages";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { lintPanelSources } from "../plugins/pluginLint";
 import { compilePersonalModule } from "./compiler";
@@ -18,15 +24,26 @@ import { extensionSources } from "./liveWorkspace";
  * `@infinitary/ui` and its own files alone, every card, button and command
  * it names is one it has, and the panel lint finds nothing - and the app
  * registers exactly these folders, with the card views the compiler found.
+ * A built-in runbook's panel folders (docs/runbooks.md, "Panels") are held
+ * to the same, from their runbook's folder.
  */
 
-const PANELS = join(__dirname, "../../panels");
+const ROOT = join(__dirname, "../../..");
+const PANELS = join(ROOT, "src/panels");
 
 function folders(): string[] {
-  return readdirSync(PANELS, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+  return [
+    ...readdirSync(PANELS, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+    ...Object.keys(RUNBOOK_FRAME_PANELS),
+  ].sort();
+}
+
+/** An app panel's folder, as `extensionSources` reads it: the folder it is in, and its name. */
+function sourcesOf(id: string) {
+  const dir = join(ROOT, builtinPanelSource(id as BuiltinFramePanel));
+  return extensionSources(dirname(dir), basename(dir));
 }
 
 describe("the app's own panel folders", () => {
@@ -35,12 +52,23 @@ describe("the app's own panel folders", () => {
     expect(APP_PANEL_FOLDERS.map((folder) => folder.id).sort()).toEqual(folders());
   });
 
+  it("compile their words where the panel compiler reads them: a runbook's panel in its runbook's folder", () => {
+    for (const [key, { runbook, folder }] of Object.entries(RUNBOOK_FRAME_PANELS)) {
+      const id = key as BuiltinFramePanel;
+      expect(builtinPanelSource(id)).toBe(`resources/runbooks/${runbook}/${folder}`);
+      expect(RUNBOOK_PANEL_DIRS[id], id).toBe(builtinPanelSource(id));
+    }
+    expect(Object.keys(RUNBOOK_PANEL_DIRS).sort()).toEqual(
+      Object.keys(RUNBOOK_FRAME_PANELS).sort(),
+    );
+  });
+
   it("each build for the frame realm on the panel library alone, their card views as the app lists them", async () => {
     const cacheRoot = scratchDir("infinitary-app-panels-");
     for (const folder of APP_PANEL_FOLDERS) {
       const compiled = await compilePersonalModule({
         extensionId: folder.id,
-        extensionDir: join(PANELS, folder.id),
+        extensionDir: join(ROOT, builtinPanelSource(folder.id)),
         kind: "panel",
         cacheRoot,
       });
@@ -51,7 +79,7 @@ describe("the app's own panel folders", () => {
 
   it("each read as the one manifest, naming no maker: the app's own carry no attribution", async () => {
     for (const folder of APP_PANEL_FOLDERS) {
-      const sources = await extensionSources(PANELS, folder.id);
+      const sources = await sourcesOf(folder.id);
       const manifest = sources.find((file) => file.path === "manifest.json");
       expect(personalManifestSchema.parse(JSON.parse(manifest?.text ?? "null")), folder.id).toEqual(
         folder.manifest,
@@ -63,7 +91,7 @@ describe("the app's own panel folders", () => {
 
   it("each pass the panel lint: nothing refused, and every value on the design system's tokens", async () => {
     for (const folder of APP_PANEL_FOLDERS) {
-      const findings = lintPanelSources(await extensionSources(PANELS, folder.id));
+      const findings = lintPanelSources(await sourcesOf(folder.id));
       expect(
         findings.filter((finding) => finding.severity !== "note"),
         folder.id,

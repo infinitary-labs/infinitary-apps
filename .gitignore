@@ -31,3 +31,4 @@ tests/browser/__screenshots__/
 # the tests and the build, never committed (docs/i18n.md, "The catalog").
 /src/shared/i18n/messages.generated.ts
 /src/panels/*/messages.generated.ts
+/resources/runbooks/*/*/messages.generated.ts

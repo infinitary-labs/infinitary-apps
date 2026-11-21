@@ -70,6 +70,16 @@ A personal runbook's panel is served what its manifest asks, as your own panels 
 An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.
 Settings → Runbooks names a runbook's panels under its switch.
+
+### Built-in panels
+
+A built-in runbook's panels are the app's own: each folder is listed in `RUNBOOK_FRAME_PANELS` (`src/shared/plugins/frameLib.ts`) and in `APP_PANEL_FOLDERS`, and the main build compiles it into the frame lib with the folders under `src/panels/`, under the id `<runbook>-<folder>` (`builtinPanelSource`).
+The first is Batches, the Batched pull requests runbook's `panel` folder (`docs/forge.md`, "The Batches panel").
+`Runbooks.panels()` leaves a built-in's panels out; each waits instead on its runbook's gate, `runbook-<id>`, open while that built-in is on (`runbookGate`, `runbookGatesOf`, `src/shared/surfaces.ts`), which the window asks at start, after each `runbooks_changed` and when a view's first mate comes back in reach ("A folder that waits on a gate" in `docs/ui-plugins.md`).
+Whether the panel then takes room on its rail is the panel's own choice, as for any panel.
+A built-in panel's words are catalog messages under `src/shared/i18n/messages/<language>/`, compiled into a `messages.generated.ts` beside it (`RUNBOOK_PANEL_DIRS`, `scripts/generate-messages.ts`), which is never committed.
+Making the runbook yours copies that compiled file with the folder, from the source in development and from the self-source in a packaged build (`scripts/generate-self-source.mjs`), so the copy builds as a runbook of yours with the words of every language.
+The copy keeps the built-in's panel id, and turning it on turns the built-in off, so its own panel shows in the built-in's place.
 An added runbook is read only under its record's id: files changed to name another runbook are listed as not available, never served under that one's agreement.
 Removing an added runbook clears every slice of saved data its id owns, whatever its files list now; asking the first mate to remove a runbook's panel answers that its runbook's switch takes it away.
 The same folder can still be added as a panel of its own through the installer's separate panel card, with its own record, grant and lifecycle.

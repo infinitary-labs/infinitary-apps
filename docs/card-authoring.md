@@ -1001,6 +1001,7 @@ When the captain had seen the card in its current lifecycle, and it was on the s
 An ended card carries `ended` (who ended it, the reason, when and the thread's app line from `endedLineWords` in `src/shared/endedCard.ts`), no actions, a note's one button reading Close, and a corner that closes it too.
 Close tells nobody: the past card still reads "Withdrawn by its author".
 A reply under an ended card goes to its author, or to the first mate once its task has closed, as under an open card.
+A crewmate's sign-off (`reply` with `signs_off`, `docs/card-threads.md` "Signing off") ends its answering card the same way, with no reason: `CardThreads.signOff` hands `CardService.resolve` its `ends`, so the crewmate's last line stays readable in the thread above the ended line.
 `close_card`'s reason is the line the captain reads, so its parameter asks for one plain line written for them, and its answer says when the card stays up.
 
 ## A card places the gate

@@ -159,6 +159,7 @@ export class CardService {
       topPriority: (floor) => this.topPriority(floor),
       othersOpen: (taskId, except) => this.othersOpen(taskId, except),
       resolve: (...args) => this.resolve(...args),
+      ended: this.ended,
     };
     this.threads = new CardThreads(host, stack);
     this.emits = new CardEmits(host, stack, this.threads, this.putOffs);
@@ -407,12 +408,17 @@ export class CardService {
     by: "captain" | "firstmate" | "crewmate" = "captain",
     evidence?: CardInteractionEvidence,
     alongside?: () => void,
+    ends?: { by: "crewmate" | "firstmate" },
   ): boolean {
     // The row and the action it records commit together, before the stack
     // moves: a choice that could not be kept is never shown as made. What
     // the choice grants (`alongside`: a merge approval, FI3-304) commits in
-    // the same transaction.
+    // the same transaction. A card its author's mark resolves (`ends`, a
+    // crewmate's sign-off) stays in front of a captain who had seen it,
+    // ended, with one Close, as `close` keeps one (INF-3071).
     let observation: string | undefined;
+    const shown = ends ? this.snapshot().find((entry) => entry.id === card.id) : undefined;
+    let kept: Card | undefined;
     this.host.cardStore.transaction(() => {
       // A script-fired action may close a card, but it is not a captain
       // resolution in the next context block or a replayed human click.
@@ -424,8 +430,10 @@ export class CardService {
       observation = this.evidence.noteAction(card, action, { closes: true, answers, by, evidence });
       alongside?.();
       if (by === "captain") this.host.captainResponded?.(card, "choice", action);
+      if (ends) kept = this.ended.end(shown, ends.by, undefined, this.host.now());
     });
     this.drop(card.id);
+    if (ends) this.ended.hold(card.id, kept);
     const closedAnswer = this.recordResolution(card, action, by, answers, observation);
     this.scheduleBroadcast();
     return closedAnswer;

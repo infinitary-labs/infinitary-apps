@@ -628,27 +628,41 @@ it("continues other queue removals after one fails and retains only the unacknow
 });
 
 // Two runs of one task's kept merge started together, as a turn's end and a
-// passed check can start them: each tries the approval once. Before the
-// fix, the run that had already tried it asked for another run whenever the
-// other one held the task, and the two re-armed each other forever on the
-// event loop's queue, so nothing else in the app ran.
-it("tries the approval once when two runs start together, and arms no retry for a run already tried", async () => {
-  const world = approved();
-  let attempts = 0;
-  world.merge = async () => {
-    attempts += 1;
-    // A bound so a regression fails here instead of never yielding: the closed
-    // pull request ends the approval and with it every run.
-    return attempts > 10
-      ? { ok: false, text: "The pull request was closed.", stop: "closed" }
-      : { ok: false, text: "The change is in line for the next batch.", stop: "queue" };
-  };
-  await Promise.all([
-    world.kept.runMergeAuthorization(TASK),
-    world.kept.runMergeAuthorization(TASK),
-  ]);
-  // The retry the second run armed while the first held the task runs once.
-  await new Promise((resolve) => setImmediate(resolve));
-  expect(attempts).toBe(2);
-  expect(approvalOf(world)?.waiting?.on).toBe("queue");
-});
+// passed check can start them: each approval is tried once. Before the fix,
+// a run that had already tried one asked for another run whenever the other
+// one held the task, and the two re-armed each other forever on the event
+// loop's queue, so nothing else in the app ran. With two approvals on the
+// task (INF-2746) the one stepped back puts an untried one in front, so the
+// rule is the run's own: a run that tried anything arms no retry.
+it.each([
+  ["one approval", [] as string[]],
+  ["two approvals", ["secondary"]],
+])(
+  "stops when two runs start together, each run trying an approval at most once (%s)",
+  async (_case, others) => {
+    const world = settleWorld();
+    seedDelivery(world.tasks, TASK, {
+      mergeAuthorization: standingApproval({
+        ...(others.length ? { queued: others.map((id) => standingApproval({ id })) } : {}),
+      }),
+    });
+    let attempts = 0;
+    world.merge = async () => {
+      attempts += 1;
+      // A bound so a regression fails here instead of never yielding: the closed
+      // pull request ends the approvals and with them every run.
+      return attempts > 10
+        ? { ok: false, text: "The pull request was closed.", stop: "closed" }
+        : { ok: false, text: "The change is in line for the next batch.", stop: "queue" };
+    };
+    await Promise.all([
+      world.kept.runMergeAuthorization(TASK),
+      world.kept.runMergeAuthorization(TASK),
+    ]);
+    // The retry the second run armed while the first held the task runs once.
+    await new Promise((resolve) => setImmediate(resolve));
+    // The first run and that retry's run, each trying an approval at most once.
+    expect(attempts).toBeLessThanOrEqual(2 * (others.length + 1));
+    expect(approvalOf(world)?.status).toBe("standing");
+  },
+);

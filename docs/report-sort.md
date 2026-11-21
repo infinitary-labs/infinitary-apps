@@ -143,6 +143,7 @@ It is a moving witness like a timed wait: a report sorts row 3 with no wake on a
 A wait on unstarted work beside it keeps the task out of this witness, so row 2a and the ladder still act.
 The task reads as waiting: its posture is `dependency` ("Blocked by another task"), the record names the work (`blockedBy` includes a live task a standing baseline wait names), and its context-block row says `waits on KEY`.
 When that work closes, done or dropped, the ready sweep's active branch ends the wait as it ends a timed one: one typed steer on the task's own lane (`dependency-closed`, actor supervisor), named by that work so the inbox queues it once even across a restart, and a new idle episode.
+A task built on that work's approved version that closed without merging hears `base-closed-unmerged` in its place, named the same way, and that steer stands for the close when its wait moves (`docs/task-graph.md`, "Following the part under it").
 It goes only for work that closed after the wait began (the link's `createdAt`, the diagnosis's host-stamped `at`) and after the task started - so a continuation its origin's close started hears nothing - and while the task has not gone idle since the close.
 A wait moves with its work when a `replaced-by` link is written, so a waiter hears the carrier's close, not the drop of the task it first named (INF-1826).
 When the link comes after the waiter already heard that drop, the sweep sends one `wait-moved` steer naming the task that took the work over, once per pair of tasks.

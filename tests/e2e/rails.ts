@@ -557,6 +557,17 @@ export async function showRecordTab(page: Page, view: RecordView): Promise<void>
 }
 
 /**
+ * Opens a task's record from its row by keys and waits until its body is
+ * drawn. Chromium drops native clicks into a hidden window's sandboxed frames.
+ */
+export async function openRecord(page: Page, key: string, id: string): Promise<void> {
+  await pressRow(page, key);
+  await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
+  await expect(recordCard(page)).toHaveCSS("opacity", "1");
+  await expectRecordBody(page);
+}
+
+/**
  * Opens the More row that ends the record's Info tab (INF-2261): the
  * remaining facts, Knowledge used and live validation.
  */

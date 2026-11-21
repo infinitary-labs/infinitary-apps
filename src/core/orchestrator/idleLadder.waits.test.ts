@@ -40,7 +40,7 @@ import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import type { CrewSupervisor } from "./crewSupervisor";
-import { baseApprovalEndedWake } from "./deliveryWakes";
+import { baseApprovalEndedWake, baseClosedUnmergedWake, baseMovedWake } from "./deliveryWakes";
 import { type FirstmateTaskToolsHost, firstmateTaskTools } from "./firstmateTaskTools";
 import { JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
@@ -577,7 +577,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts + 2);
 
-      // The base closes without merging while approved: it is never approved again, so no steer.
+      // The base closes without merging while approved: it is never approved again, so no
+      // ended-approval steer; the part hears once that its base will not merge (INF-5269 part 3).
       await endTurn(crewmate, later.id, "Waiting for the export to be approved again.");
       approval("standing", "approval-base-third");
       await supervisor.watch.sweepGates(clock.now);
@@ -587,16 +588,259 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       clock.now += minutes(30);
       await supervisor.watch.sweepGates(clock.now);
       await settle();
-      // It hears that the dropped base no longer holds it, and not that it waits for an approval.
+      // It hears that the dropped base will not merge, not that it waits for an approval, and
+      // not the dropped wait's own carry-on words, which say less.
       const ended = renderWake(
         baseApprovalEndedWake({ id: base.id, key: base.key, title: base.title, head }),
       );
-      const heard = [
+      const closed = renderWake(
+        baseClosedUnmergedWake({
+          id: base.id,
+          key: base.key,
+          title: base.title,
+          head,
+          closed: "dropped",
+        }),
+      );
+      const heard = () => [
         ...crewmate.promptCalls,
         ...vi.mocked(crewmate.steer).mock.calls.map(([text]) => String(text)),
       ];
-      expect(heard.filter((text) => text.includes(ended))).toHaveLength(2);
-      expect(crewmate.promptCalls.at(-1)).toContain("was dropped and no longer holds it");
+      expect(heard().filter((text) => text.includes(ended))).toHaveLength(2);
+      expect(crewmate.promptCalls.at(-1)).toContain(closed);
+      expect(heard().some((text) => text.includes("was dropped and no longer holds it"))).toBe(
+        false,
+      );
+      // Told once: later sweeps send nothing more.
+      clock.now += minutes(30);
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
+      expect(heard().filter((text) => text.includes(closed))).toHaveLength(1);
+
+      // INF-5297's review: that steer stands for the drop, so a replacement linked later is
+      // named once (INF-1826's wait-moved), as for a waiter told of the drop the usual way.
+      await endTurn(crewmate, later.id, "Reported to the first mate.");
+      const carrier = seedTask(tasks, {
+        id: "carrier",
+        title: "Add the CSV export again",
+        status: "running",
+      });
+      tasks.graph.link(base.id, carrier.id, "replaced-by", "firstmate");
+      clock.now += minutes(10);
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
+      expect(
+        heard().filter((text) =>
+          text.includes(
+            `${base.key} "Add the CSV export", which you heard was dropped, goes on in ${carrier.key} "Add the CSV export again"`,
+          ),
+        ),
+      ).toHaveLength(1);
+    });
+
+    // INF-5269 part 3: a part hears once for each newer version its base is approved at,
+    // whether by a new approval or a kept approval's repair, naming both versions.
+    it("tells a part built on an approved version once for each newer approved version of its base", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = clockedSetup(crewmate);
+      const head = "4c2e8a1f6b3d9e7a5c1f8b2d4e6a9c3f7b1d5e8a";
+      const newer = "7d1b3f5a9c2e4d6f8a1b3c5e7f9a2b4d6c8e1f3a";
+      const repaired = "2e4f6a8c1d3b5e7f9a2c4e6b8d1f3a5c7e9b2d4f";
+      const base = seedTask(tasks, {
+        id: "base",
+        title: "Add the CSV export",
+        status: "completed",
+        worktreeDir: "/work/base",
+        sessionFile: "/tmp/base.jsonl",
+      });
+      const later = seedTask(tasks, {
+        id: "later",
+        title: "Show the export in the panel",
+        status: "completed",
+        worktreeDir: "/work/later",
+        sessionFile: "/tmp/later.jsonl",
+        shape: {
+          kind: "implement",
+          built_on: { task: base.key, branch: "inf/csv-export-a1b2", head },
+        },
+      });
+      tasks.graph.link(base.id, later.id, "blocks", "firstmate");
+      const approval = (approvedHead: string, lineage: string[] = []) =>
+        seedDelivery(tasks, base.id, {
+          mergeAuthorization: {
+            version: 1,
+            id: `approval-${approvedHead}`,
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+            target: {
+              repoId: "r1",
+              host: "github.com",
+              owner: "example",
+              name: "meter",
+              branch: "inf/csv-export-a1b2",
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead,
+            proceedWithOpen: false,
+            status: "standing",
+            lineage: lineage.map((toHead, index) => ({
+              fromHead: index === 0 ? approvedHead : (lineage[index - 1] ?? approvedHead),
+              toHead,
+              newBase: "0a1b2c3d4e5f0a1b2c3d4e5f0a1b2c3d4e5f0a1b",
+              impact: "none" as const,
+              changedPaths: [],
+              evidence: "rebased onto the default branch",
+              validation: "the unit tests",
+              generation: 1,
+              at: 2,
+            })),
+          },
+        });
+      const moved = (to: string, from = head) =>
+        renderWake(
+          baseMovedWake({
+            id: base.id,
+            key: base.key,
+            title: base.title,
+            branch: "inf/csv-export-a1b2",
+            from,
+            to,
+          }),
+        );
+      const heard = () => [
+        ...crewmate.promptCalls,
+        ...vi.mocked(crewmate.steer).mock.calls.map(([text]) => String(text)),
+      ];
+      const sweep = async () => {
+        clock.now += minutes(30);
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
+      };
+
+      // Approved at the version the part started on: nothing to follow.
+      approval(head);
+      const prompts = crewmate.promptCalls.length;
+      await sweep();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+
+      // Approved at a newer version: told once, naming both versions.
+      approval(newer);
+      await sweep();
+      await sweep();
+      expect(heard().filter((text) => text.includes(moved(newer)))).toHaveLength(1);
+
+      // A kept approval's repair moves its newest version again: told once more.
+      await endTurn(crewmate, later.id, "Moved onto the newer export.");
+      approval(newer, [repaired]);
+      await sweep();
+      await sweep();
+      expect(heard().filter((text) => text.includes(moved(repaired)))).toHaveLength(1);
+
+      // Once the part's recorded base names the newest version, nothing more is said.
+      await endTurn(crewmate, later.id, "Moved onto the repaired export.");
+      tasks.placement.setBuiltOn(later.id, {
+        task: base.key,
+        branch: "inf/csv-export-a1b2",
+        head: repaired,
+      });
+      const told = heard().length;
+      await sweep();
+      expect(heard()).toHaveLength(told);
+    });
+
+    // INF-5297's review: the steer about a closed base names the newest version its ended
+    // approval covered, which the part may have been brought onto.
+    it("names the repaired version too when a base closes after its kept repair, before the part followed it", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = clockedSetup(crewmate);
+      const head = "4c2e8a1f6b3d9e7a5c1f8b2d4e6a9c3f7b1d5e8a";
+      const repaired = "2e4f6a8c1d3b5e7f9a2c4e6b8d1f3a5c7e9b2d4f";
+      const base = seedTask(tasks, {
+        id: "base",
+        title: "Add the CSV export",
+        status: "completed",
+        worktreeDir: "/work/base",
+        sessionFile: "/tmp/base.jsonl",
+      });
+      const later = seedTask(tasks, {
+        id: "later",
+        title: "Show the export in the panel",
+        status: "completed",
+        worktreeDir: "/work/later",
+        sessionFile: "/tmp/later.jsonl",
+        shape: {
+          kind: "implement",
+          built_on: { task: base.key, branch: "inf/csv-export-a1b2", head },
+        },
+      });
+      tasks.graph.link(base.id, later.id, "blocks", "firstmate");
+      const approval = (approvedHead: string, lineage: string[] = []) =>
+        seedDelivery(tasks, base.id, {
+          mergeAuthorization: {
+            version: 1,
+            id: `approval-${approvedHead}`,
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+            target: {
+              repoId: "r1",
+              host: "github.com",
+              owner: "example",
+              name: "meter",
+              branch: "inf/csv-export-a1b2",
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead,
+            proceedWithOpen: false,
+            status: "standing",
+            lineage: lineage.map((toHead, index) => ({
+              fromHead: index === 0 ? approvedHead : (lineage[index - 1] ?? approvedHead),
+              toHead,
+              newBase: "0a1b2c3d4e5f0a1b2c3d4e5f0a1b2c3d4e5f0a1b",
+              impact: "none" as const,
+              changedPaths: [],
+              evidence: "rebased onto the default branch",
+              validation: "the unit tests",
+              generation: 1,
+              at: 2,
+            })),
+          },
+        });
+      const heard = () => [
+        ...crewmate.promptCalls,
+        ...vi.mocked(crewmate.steer).mock.calls.map(([text]) => String(text)),
+      ];
+      const sweep = async () => {
+        clock.now += minutes(30);
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
+      };
+
+      // INF-5297's review: the base is repaired and then dropped before anything moved the
+      // part's recorded base, so the part may hold either version; the steer names both.
+      approval(head, [repaired]);
+      await sweep();
+      await endTurn(crewmate, later.id, "Brought my branch onto the repaired export.");
+      tasks.close(base.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      await sweep();
+      await sweep();
+      const closed = renderWake(
+        baseClosedUnmergedWake({
+          id: base.id,
+          key: base.key,
+          title: base.title,
+          head,
+          newest: repaired,
+          closed: "dropped",
+        }),
+      );
+      expect(closed).toContain(`or on its newer approved version ${repaired}`);
+      expect(heard().filter((text) => text.includes(closed))).toHaveLength(1);
     });
 
     it("after the resume the ladder reads the task on its own clock again", async () => {

@@ -216,10 +216,11 @@ export type BatchesOptions = {
   merged?: (taskId: string) => string | undefined;
   /**
    * For a change built on another task's approved version (`after`) whose
-   * task closed without merging: the version it was built on, which the
-   * batch must not carry. Absent, none is.
+   * task closed without merging: the version it was built on and the newest
+   * version that task's approval covered, which the batch must not carry.
+   * Absent, none is.
    */
-  unmergedBase?: (change: BatchChange) => string | undefined;
+  unmergedBase?: (change: BatchChange) => readonly string[] | undefined;
   /** A member's story as the batch's pull request shows it, with the words around it. */
   story: (
     member: BatchChange,

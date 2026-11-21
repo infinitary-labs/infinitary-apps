@@ -280,6 +280,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/core.wiring.test.ts` | the whole core, a loopback GitHub and GitLab stand-in, the e2e mock provider | 120 s on its boot and its one first mate turn |
 | `tests/replay-gate-catches-lint.test.ts` | the replay CLI, git | 60 s |
 | `src/core/batches/combine.test.ts` | real git against a bare host, at the run's own priority | 10 s (Mac slowest 1.1 s) |
+| `src/core/orchestrator/baseFollow.test.ts` | real git in a scratch repository, at the run's own priority | 12 s (Mac slowest 2.4 s) |
 | `src/core/forge/providers/plainGit.test.ts` | real git, at the run's own priority | 5 s default (five times its slowest is 2.5 s) |
 | `tests/bench-patch-pool.test.ts` | real git, python3's tomllib (benchmark tooling, `scripts/bench/`) | 5 s default |
 | `src/core/personal/personalExtensions.test.ts` | real git, at the run's own priority | 5 s default |

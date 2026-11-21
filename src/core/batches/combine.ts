@@ -51,8 +51,12 @@ export type CombineInput = {
   timeoutMs?: number;
   /** The approved version a task's work merged at; absent while it has not merged. */
   merged?: (taskId: string) => string | undefined;
-  /** The version a change was built on, when the task it was built on closed without merging. */
-  unmergedBase?: (change: BatchChange) => string | undefined;
+  /**
+   * The versions of the task a change was built on, when that task closed
+   * without merging: the one the change was built on and the newest its
+   * approval covered, which the change may have been brought onto.
+   */
+  unmergedBase?: (change: BatchChange) => readonly string[] | undefined;
   /**
    * The project's batch versions that held, newest first (`BatchRecord.held`). A
    * declared fix built on one of them combines as its own difference from
@@ -131,7 +135,7 @@ export async function combine(input: CombineInput): Promise<Combined> {
       : undefined;
     const builtOn = ahead?.head ?? (change.after ? input.merged?.(change.after) : undefined);
     const unmerged = change.after && !builtOn ? input.unmergedBase?.(change) : undefined;
-    if (change.after && !builtOn && !unmerged) {
+    if (change.after && !builtOn && !unmerged?.length) {
       waiting.push(change);
       continue;
     }
@@ -147,8 +151,14 @@ export async function combine(input: CombineInput): Promise<Combined> {
       continue;
     }
     // Its base closed without merging: it goes only once its branch no longer carries that work.
-    if (unmerged && (await contains(input.repoDir, change.head, unmerged))) {
-      leftOut.push({ change, reason: LEFT_OUT_WORDS.baseClosed(unmerged) });
+    let carriedBase: string | undefined;
+    for (const version of unmerged ?? [])
+      if (await contains(input.repoDir, change.head, version)) {
+        carriedBase = version;
+        break;
+      }
+    if (carriedBase) {
+      leftOut.push({ change, reason: LEFT_OUT_WORDS.baseClosed(carriedBase) });
       continue;
     }
     if (builtOn && !(await contains(input.repoDir, change.head, builtOn))) {

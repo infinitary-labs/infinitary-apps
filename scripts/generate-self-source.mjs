@@ -151,7 +151,9 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
   for (const panel of Object.keys(RUNBOOK_PANEL_DIRS)) {
     const path = panelMessagesPath(panel);
     const text = panels[path];
-    if (text) writeFileSync(join(selfSourceDir, path), text);
+    // A panel with no words would build a copy that cannot import them.
+    if (!text) throw new Error(`generate-self-source: no compiled words for ${panel} (${path})`);
+    writeFileSync(join(selfSourceDir, path), text);
   }
 
   mkdirSync(dest, { recursive: true });

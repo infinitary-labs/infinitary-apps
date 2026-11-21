@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "إنهاء",
+  "handoverStopNow": "إيقافه الآن",
+  "handoverStoppingText": "لا يزال {from} يعمل هنا دون نافذة، ويُبقي عملك المحفوظ مفتوحًا. يطلب منه {to} أن يحفظ ويتوقف، ثم يتابع من تلقاء نفسه.",
+  "handoverStoppingTitle": "جارٍ إيقاف العمل في الخلفية لـ {from}",
+  "handoverWontStopText": "طلب {to} منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. يُنهيه «إيقافه الآن» دون انتظار. لم يتغير شيء.",
+  "handoverWontStopTitle": "لم يتوقف {from}"
+}

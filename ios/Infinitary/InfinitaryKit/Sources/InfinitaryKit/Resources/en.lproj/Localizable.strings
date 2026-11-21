@@ -747,6 +747,12 @@
 "filePreparing" = "Preparing";
 "fileReady" = "Ready";
 "fileReadyAnnounce" = "%1$@ ready";
+"handoverQuit" = "Quit";
+"handoverStopNow" = "Stop it now";
+"handoverStoppingText" = "%1$@ is still running here with no window, and it holds your saved work. %2$@ is asking it to save and stop, then carries on by itself.";
+"handoverStoppingTitle" = "Stopping %1$@'s background work";
+"handoverWontStopText" = "%1$@ asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.";
+"handoverWontStopTitle" = "%1$@ has not stopped";
 "integrationsSignInAgain" = "Open the page again";
 "integrationsSignInCancel" = "Cancel";
 "integrationsSignInWaiting" = "Finish signing in to %1$@ in your browser.";

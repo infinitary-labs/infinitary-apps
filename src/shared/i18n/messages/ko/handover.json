@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "종료",
+  "handoverStopNow": "지금 중지",
+  "handoverStoppingText": "{from}이(가) 창 없이 아직 실행 중이고 저장된 작업을 열어 두고 있어요. {to}이(가) 저장하고 중지하도록 요청하고 있으며, 그다음 알아서 이어 가요.",
+  "handoverStoppingTitle": "{from}의 백그라운드 작업을 중지하는 중",
+  "handoverWontStopText": "{to}이(가) 저장하고 중지하도록 요청했지만 저장된 작업을 아직 열어 두고 있어요. 지금 중지를 누르면 기다리지 않고 종료해요. 아무것도 바뀌지 않았어요.",
+  "handoverWontStopTitle": "{from}이(가) 중지되지 않았어요"
+}

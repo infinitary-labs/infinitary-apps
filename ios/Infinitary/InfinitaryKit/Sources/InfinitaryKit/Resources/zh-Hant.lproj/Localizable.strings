@@ -747,6 +747,12 @@
 "filePreparing" = "準備中";
 "fileReady" = "就緒";
 "fileReadyAnnounce" = "%1$@ 已就緒";
+"handoverQuit" = "結束";
+"handoverStopNow" = "立即停止";
+"handoverStoppingText" = "%1$@ 仍在這裡以無視窗方式執行，並佔用著你儲存的工作。%2$@ 正在請它儲存並停止，之後會自行繼續。";
+"handoverStoppingTitle" = "正在停止 %1$@ 的背景工作";
+"handoverWontStopText" = "%1$@ 已請它儲存並停止，但它仍佔用著你儲存的工作。「立即停止」會直接結束它，不再等待。沒有做任何變更。";
+"handoverWontStopTitle" = "%1$@ 沒有停止";
 "integrationsSignInAgain" = "重新開啟頁面";
 "integrationsSignInCancel" = "取消";
 "integrationsSignInWaiting" = "請在瀏覽器中完成登入 %1$@。";

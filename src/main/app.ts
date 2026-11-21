@@ -8,8 +8,10 @@ import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
-import { startInBackground } from "@core/helper/background";
+import { olderRunAgent } from "@core/folderMove/takeOver";
+import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
+import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
@@ -750,6 +752,28 @@ export async function startApp(
         }
       }
       if (move) {
+        const serviceManager = work.serviceManager;
+        // The older copy's names follow the folder it moves from, never where
+        // this computer's work happens to be (`folderSpelling` names this app's
+        // own folder whenever its work is not still in the older one).
+        const olderSpelling = spellingOfUserDataFolder(basename(move.from)) ?? "fm";
+        // The start entry a run of the older copy may have, let go before Stop it now ends it.
+        const olderRun = olderRunAgent({
+          spelling: olderSpelling,
+          flavor: work.place.flavor,
+          platform: hostPlatform(),
+          homeDir: homedir(),
+          unitsDir: userUnitsDir(process.env, homedir()),
+          dataDir: move.from,
+        });
+        const olderBackground = serviceManager && {
+          flavor: work.place.flavor,
+          dataDir: join(move.from, "work"),
+          spelling: olderSpelling,
+          homeDir: homedir(),
+          uid: process.getuid?.() ?? userInfo().uid,
+          ...serviceManager,
+        };
         await runHandOver(move, {
           names: { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) },
           hidden: hideWindow,
@@ -758,6 +782,44 @@ export async function startApp(
             claudeConfigDir: defaultClaudeConfigDir(),
             hostname: hostname(),
           },
+          // An older copy still running with no window is asked to stop,
+          // its background agent let go first (src/core/folderMove/takeOver.ts).
+          takeOver: {
+            platform: hostPlatform(),
+            hostname: hostname(),
+            ...(olderBackground
+              ? {
+                  unloadAgent: (service) => pauseInBackground(olderBackground, service),
+                  resumeAgent: (service) => resumeInBackground(olderBackground, service),
+                }
+              : {}),
+            ...(olderRun ? { runAgent: olderRun } : {}),
+          },
+          // The older agent goes once the work is in, as the work run's move
+          // hands it over, so its file starts nothing on the frozen older folder.
+          ...(serviceManager
+            ? {
+                handBackground: async () => {
+                  const dataDir = join(move.to, "work");
+                  const { workLog } = await import("@core/helper/run");
+                  return handBackgroundOver(dataDir, {
+                    spelling: work.place.spelling,
+                    flavor: work.place.flavor,
+                    background: (dir, spelling) => ({
+                      flavor: work.place.flavor,
+                      dataDir: dir,
+                      spelling,
+                      homeDir: homedir(),
+                      uid: process.getuid?.() ?? userInfo().uid,
+                      ...serviceManager,
+                    }),
+                    launcher: work.launcher,
+                    env: work.backgroundEnv,
+                    log: workLog(dataDir),
+                  });
+                },
+              }
+            : {}),
           startAtLogin: () => {
             // A development run's rehearsal leaves this computer's login items alone.
             if (isDev) return;

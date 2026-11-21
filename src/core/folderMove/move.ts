@@ -3,7 +3,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -11,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
-import { folderHolder, holderAlive, processAlive } from "../helper/lock";
+import { folderHolder, processAlive } from "../helper/lock";
 import { assertSavedDataCompatible } from "../storage/db";
 import {
   acquireMoveLock,
@@ -46,6 +45,7 @@ import {
   rewriteLinks,
   rewritePathFiles,
 } from "./rewrite";
+import { chromiumHolder } from "./takeOver";
 import {
   compareTrees,
   LEFT_BEHIND,
@@ -216,15 +216,7 @@ export function chromiumHolds(
   hostname: string,
   alive: (pid: number) => boolean,
 ): boolean {
-  const lock = join(dir, "SingletonLock");
-  let target: string;
-  try {
-    target = readlinkSync(lock);
-  } catch {
-    return false;
-  }
-  const match = /^(.*)-(\d+)$/.exec(target);
-  return Boolean(match && match[1] === hostname && holderAlive(lock, Number(match[2]), alive));
+  return chromiumHolder(dir, hostname, alive) !== null;
 }
 
 function realOf(path: string): string {

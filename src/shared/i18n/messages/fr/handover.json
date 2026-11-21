@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "Quitter",
+  "handoverStopNow": "L’arrêter maintenant",
+  "handoverStoppingText": "{from} tourne encore ici sans fenêtre et garde votre travail enregistré ouvert. {to} lui demande d’enregistrer et de s’arrêter, puis continue de lui-même.",
+  "handoverStoppingTitle": "Arrêt du travail en arrière-plan de {from}",
+  "handoverWontStopText": "{to} lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.",
+  "handoverWontStopTitle": "{from} ne s’est pas arrêté"
+}

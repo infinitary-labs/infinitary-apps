@@ -781,6 +781,12 @@ public enum PhoneMessages {
     public static func `filePreparing`() -> String { PhoneWords.format("filePreparing", []) }
     public static func `fileReady`() -> String { PhoneWords.format("fileReady", []) }
     public static func `fileReadyAnnounce`(`name`: String) -> String { PhoneWords.format("fileReadyAnnounce", [`name`]) }
+    public static func `handoverQuit`() -> String { PhoneWords.format("handoverQuit", []) }
+    public static func `handoverStopNow`() -> String { PhoneWords.format("handoverStopNow", []) }
+    public static func `handoverStoppingText`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverStoppingText", [`from`, `to`]) }
+    public static func `handoverStoppingTitle`(`from`: String) -> String { PhoneWords.format("handoverStoppingTitle", [`from`]) }
+    public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
+    public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
     public static func `integrationsSignInAgain`() -> String { PhoneWords.format("integrationsSignInAgain", []) }
     public static func `integrationsSignInCancel`() -> String { PhoneWords.format("integrationsSignInCancel", []) }
     public static func `integrationsSignInWaiting`(`name`: String) -> String { PhoneWords.format("integrationsSignInWaiting", [`name`]) }
@@ -4517,6 +4523,12 @@ extension PhoneWords {
         "filePreparing": [],
         "fileReady": [],
         "fileReadyAnnounce": ["name"],
+        "handoverQuit": [],
+        "handoverStopNow": [],
+        "handoverStoppingText": ["from", "to"],
+        "handoverStoppingTitle": ["from"],
+        "handoverWontStopText": ["to"],
+        "handoverWontStopTitle": ["from"],
         "integrationsSignInAgain": [],
         "integrationsSignInCancel": [],
         "integrationsSignInWaiting": ["name"],

@@ -1,0 +1,8 @@
+{
+  "handoverQuit": "終了",
+  "handoverStopNow": "今すぐ停止",
+  "handoverStoppingText": "{from} がウインドウなしでまだ動いていて、保存した作業を開いたままです。{to} が保存して停止するよう求めています。停止したら、そのまま続けます。",
+  "handoverStoppingTitle": "{from} のバックグラウンドの作業を停止しています",
+  "handoverWontStopText": "{to} は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。",
+  "handoverWontStopTitle": "{from} が停止していません"
+}

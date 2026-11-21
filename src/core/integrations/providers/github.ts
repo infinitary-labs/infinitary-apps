@@ -1,4 +1,4 @@
-import type { SignInKind } from "@shared/forgeKinds";
+import { type SignInKind, serverFactsAt } from "@shared/forgeKinds";
 import type { ForgeSignInState } from "@shared/forges";
 import { INTEGRATION_KIND_NAMES, INTEGRATIONS_SIGN_IN_HOST } from "@shared/integrations";
 import { z } from "zod";
@@ -137,7 +137,9 @@ export function githubIntegration(
   },
 ): IntegrationBinding {
   const { host, id, name, label, kind } = target;
-  const api = KIND_API[kind];
+  // A server running another product than the kind's public host (Bitbucket
+  // Data Center) offers no actions until its own REST API is reached.
+  const api = serverFactsAt(kind, host) ? null : KIND_API[kind];
   // Allow for the rest of this task covers one kind of request to one repository or project.
   const scope = api ? forgeScope(kind) : undefined;
   const actions =

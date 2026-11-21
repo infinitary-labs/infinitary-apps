@@ -233,7 +233,14 @@ export class ForgeSignInStore {
 
 /** What a host answers when asked who a sign-in is; `status` is its HTTP status, where it answered. */
 export type ForgeWhoAmI =
-  | { state: "ok"; login: string; status?: number; scopes?: string[] }
+  | {
+      state: "ok";
+      login: string;
+      status?: number;
+      scopes?: string[];
+      /** The user name git gives this sign-in, where the host names one per person (Bitbucket Data Center). */
+      gitUser?: string;
+    }
   | { state: "rejected"; status?: number }
   | { state: "unavailable"; reason: string; status?: number };
 
@@ -340,12 +347,6 @@ export type ForgeServer = ForgeServerView & {
   gitUser: string;
   /** Public hosts of this kind that also sign in with a key, rather than a device code. */
   hosts?: readonly string[];
-  /**
-   * The kind signs in only at its public hosts (`hosts`), never at an
-   * address on the person's own server: Bitbucket Cloud, until Bitbucket
-   * Data Center is offered.
-   */
-  publicOnly?: boolean;
   /** The keys this kind issues, when they hold more than `KEY` allows (an Atlassian token's `=`). */
   keyPattern?: RegExp;
   signIn: (host: string, applicationId?: string) => ForgeSignInProvider;
@@ -611,7 +612,6 @@ export class ForgeSignIns {
     if (
       !server ||
       (isPublicForgeHost(host) && !server.hosts?.includes(host)) ||
-      (server.publicOnly && !server.hosts?.includes(host)) ||
       (named !== undefined && named !== server.kind)
     ) {
       return { ok: false, problem: "not-server", host };
@@ -640,7 +640,7 @@ export class ForgeSignIns {
       login: reading.login,
       createdAt: this.now(),
       kind: server.kind,
-      gitUser: server.gitUser,
+      gitUser: reading.gitUser ?? server.gitUser,
     });
     this.health.set(host, { state: "ok", login: reading.login });
     if (this.ended?.host === host) this.ended = null;

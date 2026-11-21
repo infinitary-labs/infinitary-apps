@@ -39,6 +39,8 @@ See [Projects](/projects/#your-github-gitlab-or-bitbucket-sign-in) for how Infin
 - **GitLab**: you sign in in your browser or paste a key, on gitlab.com or on your own GitLab server.
 - **GitHub Enterprise**: you make a key on your own server and paste it here.
 - **Bitbucket**: you make an API token on your Atlassian account and paste it here, for bitbucket.org.
+  For your own Bitbucket Data Center server, version 8.19 or newer, you enter its address and paste an HTTP access token you make on it, with Project read and Repository write permissions.
+  A Data Center row offers no actions yet.
 
 Each row has two actions: one that reads, and one that changes something, such as **Change something on GitHub**.
 They are what your first mate and crew use to look things up or act there beyond a task's own work.

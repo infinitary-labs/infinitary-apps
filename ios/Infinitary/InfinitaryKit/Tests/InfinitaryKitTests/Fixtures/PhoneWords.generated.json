@@ -1972,6 +1972,8 @@
   {"said":{"m":"settingsForgeConnecting"},"words":"Connecting..."},
   {"said":{"m":"settingsForgeDeviceRole"},"words":"clones and pushes its own work"},
   {"said":{"m":"settingsForgeEnterCode","a":{"host":"‹host›"}},"words":"Enter this code on ‹host›:"},
+  {"said":{"m":"settingsForgeKeyDataCenterScopes"},"words":"Give the token Project read and Repository write permissions."},
+  {"said":{"m":"settingsForgeKeyNotDataCenter","a":{"host":"‹host›"}},"words":"‹host› did not answer as Bitbucket Data Center 8.19 or newer does. Check the address."},
   {"said":{"m":"settingsForgeMakeKey","a":{"host":"‹host›"}},"words":"Make a key on ‹host›"},
   {"said":{"m":"settingsForgeNewCode"},"words":"Get a new code"},
   {"said":{"m":"settingsForgeNotSignedIn","a":{"host":"‹host›"}},"words":"not signed in to ‹host›"},

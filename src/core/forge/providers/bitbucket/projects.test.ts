@@ -184,7 +184,13 @@ describe("Bitbucket sign-in by API token", () => {
     const options = {
       store,
       providers: [],
-      servers: [createBitbucketServer({ apiBaseFor: () => API, fetch: fetcher })],
+      servers: [
+        createBitbucketServer({
+          apiBaseFor: () => API,
+          dataCenterBaseFor: (host) => `https://${host}`,
+          fetch: fetcher,
+        }),
+      ],
       projectsOn: () => 0,
       push: () => {},
     };
@@ -287,16 +293,20 @@ describe("Bitbucket sign-in by API token", () => {
     expect(await signIns.token(HOST)).toBe(THIRD_KEY);
   });
 
-  it("signs in to bitbucket.org alone, and refuses a malformed token before asking", async () => {
-    const fetcher = responder(() => Response.json({ nickname: "octo" }));
+  it("asks any other address whether it is Bitbucket Data Center, and refuses a malformed token before asking", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({ nickname: "octo" }));
     const { signIns } = service(fetcher);
-    expect(
-      await signIns.signInWithKey({ kind: "bitbucket", address: "git.example.com", key: KEY }),
-    ).toEqual({ ok: false, problem: "not-server", host: "git.example.com" });
     expect(
       await signIns.signInWithKey({ kind: "bitbucket", address: HOST, key: "has spaces in it ok" }),
     ).toEqual({ ok: false, problem: "key", host: HOST });
     expect(fetcher).not.toHaveBeenCalled();
+    // An address that does not name itself Bitbucket is not this kind of server.
+    expect(
+      await signIns.signInWithKey({ kind: "bitbucket", address: "git.example.com", key: KEY }),
+    ).toEqual({ ok: false, problem: "not-server", host: "git.example.com" });
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe(
+      "https://git.example.com/rest/api/latest/application-properties",
+    );
   });
 
   it("keeps a 403 distinct from a refused token, and reports an unreadable answer", async () => {
@@ -306,6 +316,7 @@ describe("Bitbucket sign-in by API token", () => {
     ] as const) {
       const server = createBitbucketServer({
         apiBaseFor: () => API,
+        dataCenterBaseFor: (host) => `https://${host}`,
         fetch: responder(() => response),
       });
       expect(await server.signIn(HOST).whoAmI(KEY)).toMatchObject(expected);

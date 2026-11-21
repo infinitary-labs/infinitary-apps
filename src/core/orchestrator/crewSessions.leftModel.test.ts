@@ -28,10 +28,12 @@ import type { QuotaService } from "../quota/quotaService";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { ModelSlots } from "../routing/modelSlots";
 import { Router } from "../routing/router";
-import type { openInMemoryDatabase } from "../storage/db";
+import { openInMemoryDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
 import { SettingsStore } from "../storage/settingsStore";
+import { seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
+import { TaskService } from "../tasks/taskService";
 import { TaskTimeline } from "../tasks/taskTimeline";
 import type { CrewmateSpec } from "./crewSession";
 import type { AccountAttachment } from "./crewSupervisorOptions";
@@ -369,6 +371,49 @@ it("words the reroute's Activity line from its saved fact", async () => {
       entry.entry.content.ref.eventId === row?.id,
   );
   expect(reading?.entry.summary).toBe(german);
+});
+
+it("words the reroute's whole line where a custom connection's long model names would pass a summary's length", () => {
+  const db = openInMemoryDatabase();
+  const tasks = new TaskService({ db });
+  const { id } = seedTask(tasks, {
+    id: "reroute-long",
+    title: "Tidy the release notes",
+    status: "idle",
+  });
+  // A custom connection's model reads by its id, which runs up to 256 characters.
+  const named = (tail: string) =>
+    `acme-research/${"fine-tuned-checkpoint-".repeat(11)}${tail}`.slice(-256);
+  const fact = said("crewmateRoutedAgain", { left: named("old"), model: named("new") });
+  // As TaskMoves records a reroute.
+  tasks.placement.recordMove(id, {
+    model: { provider: "custom-acme", id: named("new") },
+    accountId: null,
+    actor: "host",
+    text: englishOf(fact),
+    data: { rerouted: {}, said: fact, feedLine: true },
+  });
+  const record = new TaskProtocol({
+    tasks,
+    repos: { get: () => undefined },
+    cards: { listOpen: () => [], snapshot: () => [] },
+    broadcastEvent: () => {},
+    emit: () => {},
+    now: () => Date.now(),
+    coalesceMs: 0,
+    timeline: new TaskTimeline({ tasks }),
+  }).detail(id);
+  const german = inLanguage("de", () => wordSaid(fact)) ?? "";
+  const shown = inLanguage("de", () => wordedActivity(record));
+  const row = record.activityLog.find((line) => line.said);
+  const reading = shown.timeline?.find(
+    (entry) =>
+      entry.entry.content.ref.source === "task-event" &&
+      entry.entry.content.ref.eventId === row?.id,
+  );
+  expect(german).toContain(named("new"));
+  expect(reading?.entry.summary).toBe(german);
+  db.close();
 });
 
 it("routes to another provider's model with the account the selector picks, recorded once", async () => {

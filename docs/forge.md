@@ -22,8 +22,8 @@ This is the one home of what the seam is in the code.
 | `label(change)` / `url(change)` | `#N` and its page | `!N` and its page | `#N` and its page | the branch, no page | the branch, no page |
 | `listProjects()` | the person's repositories, newest first, every page up to 1,000 (`listProjectsPaged` also says whether that was all; `findProject` reads one exact owner/name) | the person's projects, newest first, up to 1,000 (`findProject` reads one exact nested path) | every workspace's repositories, newest first, under ten pages (`findProject` reads one exact workspace/name) | none | none |
 | `hasChecks` | yes: the app watches them (below) | yes | yes | no: nothing is watched, and the crewmate is told so | no |
-| `workflows` | read-only Actions runs, jobs, logs and artifact downloads, whole or in parts | read-only pipelines, jobs, logs and artifacts archives | not yet | unsupported | unsupported |
-| `api` | the gateway's raw REST call under GitHub's policy | the gateway's raw REST call under GitLab's policy | not yet | unsupported | unsupported |
+| `workflows` | read-only Actions runs, jobs, logs and artifact downloads, whole or in parts | read-only pipelines, jobs, logs and artifacts archives | read-only pipelines, their steps and a step's log; no artifact download | unsupported | unsupported |
+| `api` | the gateway's raw REST call under GitHub's policy | the gateway's raw REST call under GitLab's policy | the gateway's raw REST call under Bitbucket's policy | unsupported | unsupported |
 
 A `Forge` is per repository.
 `createForgeResolver` in `src/core/forge/index.ts` picks it from the repository's `host`, which the registry stamps from its `origin` through `forgeOf` (`src/shared/forge.ts`) at insert and migration 40 backfilled for older rows (logged in `forge_backfill`).
@@ -151,7 +151,7 @@ GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -
   A base other than the default branch is a stacked change's; the app retargets nothing when that branch merges, and the host's own behavior decides where the change then points, which each reading records (`TaskDelivery.prBase`).
   Existing diagnosis, repair and rerun fields remain readable; conflictRepair and captainGuidance retain the captain's approval boundary.
   Handed to every crewmate whose task ships a change, never on the personal workspace or an answer task.
-- **The personal panels' read**: `forge.changes` (`inf:forges:changes`) - the captain's open pull requests on every GitHub and GitLab host the captain signed in to, newest first across them, each with its checks and the host's own name for it (`label`: `#12`, `!4`).
+- **The personal panels' read**: `forge.changes` (`inf:forges:changes`) - the captain's open pull requests on every GitHub, GitLab and Bitbucket host the captain signed in to, newest first across them, each with its checks and the host's own name for it (`label`: `#12`, `!4`).
   GitHub's come from one GraphQL request per host with each one's check rollup (`providers/github/changes.ts`); GitLab's from `GET /merge_requests?scope=created_by_me&state=opened`, 20 at most, then each merge request's own read for its head pipeline, five at a time (`providers/gitlab/changes.ts`): a passed or skipped pipeline is passed, a failed or cancelled one failed, any other pending, and none is none.
   A host that cannot be read makes the read unreachable this time, never a guessed row; a GitLab 401 counts as a sign-in only once GitLab no longer answers for the key.
   The `github-prs` authoring skill teaches it; no panel shells out for it.
@@ -278,7 +278,7 @@ Bitbucket Cloud signs in with an API token the person makes on their Atlassian a
 The Bitbucket chip in Settings -> Integrations opens the key form at bitbucket.org; another address is refused as not that kind of server (`ForgeServer.publicOnly`).
 The form says to make the key on the person's Atlassian account, and Make a key names and opens Atlassian's API tokens page at id.atlassian.com (`SignInHost.keyAccount`, `forgeKeyPlace`).
 That page cannot tick scopes itself, so the form names them: create the token with scopes, pick Bitbucket as the app, and tick `read:user`, `read:workspace`, `read:repository`, `write:repository`, `read:pullrequest`, `write:pullrequest`, `read:pipeline` and `write:pipeline`, each ending in `:bitbucket`.
-Those are the scopes the app reads and writes with for Bitbucket's pull requests now and the crew's reach later, so one token serves them all.
+Those are the scopes the app reads and writes with for Bitbucket's pull requests and the crew's reach, so one token serves them all.
 An Atlassian token is padded with `=`, so the kind checks a key against its own pattern (`ForgeServer.keyPattern`).
 
 `createBitbucketServer` (`providers/bitbucket/signIn.ts`) supplies the kind `bitbucket`, the git user `x-bitbucket-api-token-auth` and `GET /2.0/user` to verify the token and read its health, naming the account by its nickname.
@@ -300,7 +300,7 @@ Settings' Add project offers Bitbucket repo beside GitHub's and GitLab's, and `B
 Git on this Mac answers bitbucket.org with the app's sign-in alone, as it does gitlab.com, since the pull requests the app opens there are made with that sign-in too; with none on file a push there is refused, and the task waits for the sign-in.
 An HTTPS authentication refusal on bitbucket.org waits for its sign-in through `forgeAuthRequired`; SSH still uses the person's own setup.
 
-Integrations lists one Bitbucket row with its sign-in's health and account, and no actions yet.
+Integrations lists one Bitbucket row with its sign-in's health and account, and its read and write actions (`docs/integrations.md`, "Bitbucket").
 
 ## Bitbucket pull requests
 
@@ -356,7 +356,7 @@ A Bitbucket project added before the app opened pull requests there delivers thi
 
 Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409, a 202 and an answer naming no version each sent once, a failed branch read sending nothing, the last check run as the request leaves, a 202's task reference kept only for this pull request and its failure read, and a description replaced without its title; `mergeReviews.test.ts` holds a numbered review's receipt naming the version that merged; and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a rule wanting an approval, a draft, a failed, running or stopped build each merging nothing, a merge Bitbucket has not finished asked once, and a push during the merge merged and told.
 
-**Not yet:** a manual Pipelines step told apart from a running one, the crew's reach through the gateway (`api`, the raw write rules and an integration's scopes, workflow logs and artifacts), the open pull requests panel and its wakes, batches, forks, and Bitbucket Data Center.
+**Not yet:** a manual Pipelines step told apart from a running one, batches, forks, and Bitbucket Data Center.
 
 ## GitLab merge requests
 
@@ -504,10 +504,21 @@ On GitLab (`providers/gitlab/workflows.ts`) a run is a pipeline, a job one of it
   A server that keeps artifacts on other storage, such as its own MinIO, is refused as an unsafe download.
 - A 401 asks GitLab who the key is (`GET /user`): only a key it no longer answers for is a sign-in, which asks the health service to look again; otherwise it is a permission refusal.
 
+On Bitbucket (`providers/bitbucket/workflows.ts`) a run is a pipeline, named by its build number, the number Bitbucket shows on its page, and a job is one of its steps, named by its place in the pipeline from 1, since Bitbucket names a step by a UUID alone:
+
+- Listing pipelines is `github_read`'s job here too: `GET /repositories/<workspace>/<repo>/pipelines?sort=-created_on` lists them, newest first, each with its `build_number` and its commit.
+- `read_workflow({ runId: <build number> })` reads `GET .../pipelines/<build number>` and refuses an answer that names another number, then lists `GET .../pipelines/<uuid>/steps`, 100 a page, up to ten pages, one line per step numbered by its place.
+  A completed pipeline or step reads `completed` with Bitbucket's result: `SUCCESSFUL` success, `FAILED` and `ERROR` failure, `STOPPED` and `EXPIRED` cancelled, `NOT_RUN` skipped; one still going reads its state in lower case (`pending`, `in_progress`) with no conclusion, so the run watch reads it as running.
+  The run's attempt is Bitbucket's `run_number`, which a rerun from its page raises.
+- `read_workflow({ runId, jobId: <step place> })` reads the step's log, `GET .../pipelines/<uuid>/steps/<step uuid>/log`, under the same bounds, without its colour codes.
+  Bitbucket may send the log from storage through a redirect (`BitbucketClient.download`): up to three are followed by hand, the token goes only with the first request, and a next address must be the API's own origin, a bitbucket.org host or Amazon S3 over HTTPS (`isBitbucketLogStorage`).
+- `download_artifact` answers that Bitbucket offers no download of a pipeline's artifacts through its API, without a request; the crewmate reads the step's log instead.
+
 Evidence: `src/core/forge/providers/github/workflows.test.ts` drives the actual tool entries through the task service and real HTTP stand-in, lists runs, failed steps and artifacts with `github_read`, checks log continuation, verifies the archive bytes/hash/mode, and exercises authorization, membership, expiry, byte limits, unsafe redirects, linked folders and overwrite refusals.
 Its parts tests list and select files from an archive past 64 MiB built from records of a real phone-logs artifact (`tests/fixtures/forge/phone-logs-sample.zip`) and a 64-bit one (`phone-logs-zip64.zip`), unpack the selection with an independent reader, and hold the bytes read under 1 MiB.
 `tests/e2e/forge-signin.spec.ts` commissions a crewmate in the hermetic app with the app's sign-in, lists the version's run, jobs and artifacts with `github_read`, reads a failed measurement job, downloads and reads the ZIP's JSON, and separately proves missing sign-in reports a blocker without an Actions request.
 `crewmateTaskTools.test.ts` holds the Pi and Claude tools to the same callbacks, descriptions and schemas.
+`src/core/forge/providers/bitbucket/workflows.test.ts` reads a pipeline by its build number, its steps by place with the run watch naming the failed one, a step's log as plain lines, a log redirected to storage the token never reaches and one redirected elsewhere refused, a step past the last named, and the artifact answer sent with no request.
 `src/core/forge/providers/gitlab/workflows.test.ts` drives the same tool entries over a GitLab stand-in - the version's pipelines and jobs with `github_read`, a log paged without colour codes, the archive saved from signed storage the key never reaches - and every refusal: another pipeline's job, a missing, expired or oversized archive, a 401 by whether GitLab still answers for the key, an unknown redirect, and the bounds; `tests/gitlabStub.test.ts` reads the e2e stand-in's log and archive on both kinds of host, and `tests/e2e/gitlab-delivery.spec.ts` has a crewmate on gitlab.com and on a self-hosted server list a failed pipeline, read its job's log, save and read its archive, and be refused a write to another project.
 
 ## The gateway (`github_read`, `github_write`)
@@ -577,6 +588,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   The bytes go to that project's generic package registry, under the package `release` at that tag, and a link on the release points at that package file.
   A server whose package registry is not available is refused in plain words, and no release link is created.
   The file stays within the same 2 GB cap.
+  On Bitbucket the path is the repository's Downloads, `/repositories/{workspace}/{repo}/downloads`, and the file goes there as one multipart upload under the field `files`; a file of the same name already there is replaced, as Bitbucket does.
   The own-project and ask rules stay: a file for another project is kept, and the click reads the file then, so the ask stores the path and not the bytes.
   A task running on another computer is refused, because the file is in that computer's working copy and the call is sent from here.
 - **Reading a project's pull request history.**
@@ -657,7 +669,28 @@ The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/
   An absolute link in the answer's body loses the same `token` and `access_token` query parameters as a GitHub answer, before it is saved.
   Refusals and the call budget name the host: "Cannot call GitLab", "Cannot call gitlab.example.com".
 
+### On Bitbucket
+
+`BitbucketForge.api` sends the same requests to `https://api.bitbucket.org/2.0` with the app's own API token, under Bitbucket's own policy (`providers/bitbucket/api.ts`), with the caps above.
+
+- **Its paths.**
+  A repository is `/repositories/{workspace}/{repo}/...` by its slugs.
+  A page's size is `pagelen`, from 1 to 100, and an oversized answer is read again at the largest `pagelen` that fits, as `per_page` is elsewhere (`ForgeApi.pageParam`).
+- **Reads** reach whatever the token may read, as on GitHub and GitLab: there is no read list.
+- **Writes** go at once only under `/repositories/<the task's workspace>/<the task's repo>/...`, the slugs compared without case; a repository named by its UUID in braces, or any other repository, workspace or the account, asks like any other write, and the ask names the slugs to use when it is the task's own.
+  Deleting the repository itself is refused.
+  A raw pull request merge (`pullrequests/{id}/merge`), a main branch move or deletion (`refs/branches/<main>`, `mainbranch` in the repository's own write) and a commit through `src` on the main branch are refused with the same pointer to the merge card; writes on other branches still reach Bitbucket.
+  The task's own pull request is opened, and its saved description (`description` or `summary`) replaced, only through `open_change` ("Saved change stories").
+- **Pipelines**: Bitbucket's API offers no rerun of a pipeline or a step, so nothing is a rerun there.
+  A pipeline start, `POST .../pipelines`, is a run start: an accepted one arms the run watch from the answer's `build_number`, and a task that only answers sends it at once on its own project.
+- **Its comments**: a comment a crewmate sends (`POST .../pullrequests/{id}/comments`) is kept on the task by its id, so the comment wake never wakes it about its own words.
+- **Its answers** carry Bitbucket's `x-request-id`, `Retry-After`, and `nextPath` from the answer's own `next`, whenever that page stays under `/2.0`.
+  Bitbucket's allowance is 1,000 requests an hour for the token; a spent one answers 429, and the answer says to retry later.
+  A redirect is refused, and a 401 asks the health service to look again.
+  Refusals and the call budget name the host: "Cannot call Bitbucket".
+
 Evidence: `src/core/forge/api.test.ts` (the policy) and `src/core/forge/providers/github/gateway.test.ts` (the tool entries over a real HTTP stand-in, including caller-selected refs/inputs, project operations, reads of other repositories, search and the account, a task with no project, GraphQL and account-write refusals, the rerun arming the watch, a private file read that keeps the file and drops GitHub's download token, and a private repository read that drops its temporary clone token), and the journeys in `tests/e2e/forge-signin.spec.ts`: the verification requests (an existing disposable ref with workflow inputs, app-owned sign-in, queued run and cancellation, account-scope refusal and missing sign-in), and a project kept on this computer reading the person's notifications and a repository listing's `/repositories/{id}` next page through the github.com sign-in, with GraphQL never sent.
+Bitbucket's are `src/core/forge/providers/bitbucket/gateway.test.ts` (the tool entries over a Bitbucket stand-in: reads with the token and Bitbucket's next page, a `pagelen` out of range, own-repository writes and asks elsewhere, the repository's deletion, raw merges and main branch moves, the task's own description, a pipeline start arming the watch, a release file to Downloads and a redirect).
 GitLab's are `src/core/forge/providers/gitlab/api.test.ts` (its policy: encoded paths, reads anywhere, account writes kept out, own-project writes, the project's deletion, reruns and next pages) and `src/core/forge/providers/gitlab/gateway.test.ts` (the tool entries over a GitLab stand-in: reads by encoded path with GitLab's ids, allowance and next page, other projects' reads, refused writes, a 401 by whether GitLab still answers for the key, a job retry arming the watch, redirects, oversize, a missing sign-in and the budget).
 
 ## The app's own git (phase 2)
@@ -1226,6 +1259,9 @@ While an enabled runbook asks for the `pull-request-comments` wake (`docs/runboo
   Each pass of a batch of your own reads the batch's pull request (`Batches.follow`), for the changes whose crewmates were served it.
   A merged or closed pull request is not read.
 - **Only when it moved**: the reading is a delivery fact, `commentCursor { number, updatedAt, seen }`; while the pull request's last-changed time equals the cursor's, nothing is asked for, and otherwise GitHub's lists are asked only for what changed since it (`readPullComments`, `src/core/forge/providers/github/comments.ts`): conversation comments, line comments and submitted reviews.
+  On Bitbucket the one comment list is read, 100 a page up to ten pages, and only comments changed since are kept (`readBitbucketPullComments`, `src/core/forge/providers/bitbucket/comments.ts`): a comment with `inline` is a line comment and `parent` names the one it answers; a deleted or draft comment is left out, and an approval carries no words, so it is no comment.
+  Bitbucket's pull request keeps its `updated_on` when someone comments, so its reading names no last-changed time (`BitbucketForge.pull`): every reading there reads the comment list, and the cursor's `seen` keeps each comment to one wake.
+  The forge is handed `seen` too, so a comment already read asks for no account or permission again, and a reading with nothing new costs the comment list alone.
   The first reading of a pull request reads every comment already on it.
   For a crewmate told of the wake, a pull request's last-changed time alone no longer sends the contribution-updated wake; a state change still does, and an untold crewmate still hears every activity.
 - **Whose comments**: the crewmate's own replies are left out by id, since they share the captain's sign-in: the gateway keeps the id of each comment, line comment or review a crewmate's `github_write` sent, on whichever project it went to (`sentComments`), and a line comment inside such a review is left out by its review.
@@ -1235,6 +1271,7 @@ While an enabled runbook asks for the `pull-request-comments` wake (`docs/runboo
 - **The wake** names each new comment's id, kind, author, the author's relation and its file and line, never its words, which the crewmate reads itself with `github_read` as outside data.
   The relation comes from GitHub's facts: `bot` for a bot account, `you` for the signed-in person, `can-write` for an owner, or for a member or collaborator whose permission on the project GitHub names as admin or write, which folds every role, a custom one included (`GET /collaborators/{login}/permission`, once per author per reading), `cannot-write` for anyone else.
   When GitHub refuses that lookup, a member or collaborator counts as `can-write`.
+  On Bitbucket an `app_user` is `bot`, the token's own account is `you`, and an author whose repository permission Bitbucket names as write or admin is `can-write` (`GET .../permissions-config/users/{account}`, once per author per reading); only a repository admin may read that, so when Bitbucket refuses it the author counts as `cannot-write`.
   One wake per reading, named by the comments it carries (`pull-comments:<number>:<digest>`), so a restart between the wake and the saved reading never sends it again (`InboxStore.enqueueSteerOnce`).
 - **A batch's comments** go to the changes they are about: a line comment to each change whose commit changes its file (`Forge.commitFiles`), any other comment, or one whose file no commit changed, to every change; the wake names the change's commit and how many changes the batch carries.
   The batch's cursor is kept on each of its changes' tasks.
@@ -1249,6 +1286,7 @@ A reading wakes nobody until it is final: an incomplete reading, a read problem,
 Each waiting task then hears one `main-check-observed` steer per commit, through the ordinary steer path, naming the commit and each check's state; the host declares no readiness, and the crewmate judges whether the reading clears its wait.
 The inbox records `main-check-finished:<sha>`, so a restart does not send that commit's wake twice, and a later commit's finished reading does.
 The named task's close still resumes the crewmate.
+On Bitbucket the reading is the build statuses on the main branch's head.
 A host without `branchChecks` — a plain Git host, and GitLab until it can read a branch's checks apart from a merge request — keeps that close as the only resume.
 A failed read waits out the check watch's slow pause and wakes nobody; on a spent hourly allowance it waits until the reset GitHub named, when that is later.
 The same branch reading answers a crewmate's own failed check at once: a reading of the task's pull request that finds a check red records the default branch's newest run of it as evidence ("Check facts and crew judgment", INF-1915 fix 1), so the diagnosis a `baseline-blocked` classification needs starts from a typed fact rather than a second read.

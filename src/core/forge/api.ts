@@ -28,18 +28,12 @@ export const API_OVERSIZE_HOLD_BYTES = API_PER_PAGE_MAX * API_RESPONSE_MAX_BYTES
 /** Calls a task may make through the gateway in one run of the app. */
 export const API_CALLS_PER_TASK = 200;
 
-/**
- * The kinds whose REST API the crew reaches through the app's sign-in. A
- * Bitbucket project opens, checks and merges its pull requests, but its raw
- * API, write rules and scopes come with its gateway (docs/forge.md,
- * "Bitbucket pull requests"), so none of them answers for it yet.
- */
-export type RawApiKind = Exclude<ChangeRequestKind, "bitbucket">;
+/** The kinds whose REST API the crew reaches through the app's sign-in: every change-request kind. */
+export type RawApiKind = ChangeRequestKind;
 
 /** The kind, when the crew reaches its REST API. */
 export function rawApiKind(kind: string | null | undefined): RawApiKind | undefined {
-  const known = changeRequestKind(kind);
-  return known === "bitbucket" ? undefined : known;
+  return changeRequestKind(kind);
 }
 
 export type ApiProject = { owner: string; name: string };
@@ -84,8 +78,10 @@ export type ForgeApiResponse = {
 export interface ForgeApi {
   /** The host in a sentence: "GitHub", "GitLab", or a server's own address. */
   readonly place: string;
-  /** The page size the host answers a list with when the read names no `per_page`. */
+  /** The page size the host answers a list with when the read names no page size. */
   readonly defaultPerPage: number;
+  /** The query key that names a page's size: `per_page`, or Bitbucket's `pagelen`. */
+  readonly pageParam?: string;
   /** Parse and check a request; throws `ForgeError("refused")` naming the rule it broke. */
   route(method: string, raw: string, bodyBytes?: number): ApiRoute;
   /** The next page's relative path from a `Link` header, only where `route` would take it. */
@@ -203,18 +199,20 @@ export type SmallerPage = { path: string; perPage: number } | { refused: string 
  * the asked page, and `page` moves to the same first item, so the host's own
  * next page continues from it. The answer's items are the answer when it is
  * a list, or the one list it holds (a run listing's `workflow_runs`, a
- * search's `items`); their sizes in the held answer say how many fit. A path
- * with no `per_page` asked for the host's `defaultPerPage`.
+ * search's `items`, Bitbucket's `values`); their sizes in the held answer say
+ * how many fit. A path with no page size asked for the host's
+ * `defaultPerPage`; `pageParam` is the host's name for that size.
  */
 export function smallerPage(
   path: string,
   answer: OversizedAnswer,
   defaultPerPage: number,
+  pageParam = "per_page",
 ): SmallerPage {
   const limit = `${API_RESPONSE_MAX_BYTES / 1024} KiB`;
   const [pathPart = "", query = ""] = path.split(/\?(.*)/s, 2);
   const params = new URLSearchParams(query);
-  const askedSize = params.get("per_page");
+  const askedSize = params.get(pageParam);
   const askedPage = params.get("page");
   if (askedPage !== null && !/^[1-9]\d*$/.test(askedPage)) {
     return { refused: "Its page is not a page number, so a smaller page cannot keep its place." };
@@ -243,7 +241,7 @@ export function smallerPage(
   const { items } = list;
   if (items.length > perPage) {
     return {
-      refused: `It holds ${items.length} items where a page holds ${perPage}, so per_page does not page it.`,
+      refused: `It holds ${items.length} items where a page holds ${perPage}, so ${pageParam} does not page it.`,
     };
   }
   let fit = 0;
@@ -261,7 +259,7 @@ export function smallerPage(
   let size = fit;
   while (before % size !== 0) size -= 1;
   const nextPage = before / size + 1;
-  params.set("per_page", String(size));
+  params.set(pageParam, String(size));
   if (askedPage !== null || nextPage > 1) params.set("page", String(nextPage));
   return { path: `${pathPart}?${params.toString()}`, perPage: size };
 }
@@ -279,7 +277,8 @@ export type ApiShape = {
 /**
  * The checks every host's policy shares: a method the gateway sends, a body
  * within its bounds, a relative path with no transport tricks, and a query
- * that repeats no key and asks no page over 100. `encodedSlash` is
+ * that repeats no key and asks no page over 100 (`pageParam`, `per_page`
+ * unless the host names its own). `encodedSlash` is
  * GitLab's paths: a segment may carry `%2F`, as its project and group ids
  * and file paths do, each piece it decodes to is held to the same rules as
  * a segment, and no segment may be empty, a trailing one included.
@@ -288,8 +287,9 @@ export function apiShapeOf(
   method: string,
   raw: string,
   bodyBytes: number,
-  rules: { encodedSlash: boolean; scope: string },
+  rules: { encodedSlash: boolean; scope: string; pageParam?: string },
 ): ApiShape {
+  const pageParam = rules.pageParam ?? "per_page";
   const verb = method.toUpperCase();
   const write = WRITES.has(verb);
   if (!write && !READS.has(verb)) refuse(`${method} is not a method the gateway sends.`);
@@ -332,10 +332,10 @@ export function apiShapeOf(
     if (seen.has(key)) refuse(`The query repeats "${key}".`);
     seen.add(key);
     if (
-      key === "per_page" &&
+      key === pageParam &&
       !(/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= API_PER_PAGE_MAX)
     ) {
-      refuse(`per_page must be 1 to ${API_PER_PAGE_MAX}.`);
+      refuse(`${pageParam} must be 1 to ${API_PER_PAGE_MAX}.`);
     }
   }
   return { method: verb as ApiRoute["method"], write, segments, query: params.toString() };

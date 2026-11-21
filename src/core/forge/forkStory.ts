@@ -5,17 +5,22 @@ import type { Forge, ForgeChange } from "./forge";
 import { ForgeError, ForgeWriteError } from "./forge";
 import { presentationRegionMarkers } from "./presentation";
 
-/** Where each kind keeps a change's comments, and how one is rewritten. */
-const STORY_COMMENTS: Record<
-  RawApiKind,
-  {
-    list: (project: string, number: number) => string;
-    update: (
-      project: string,
-      number: number,
-      id: number,
-    ) => { method: "PATCH" | "PUT"; path: string };
-  }
+/**
+ * Where each kind keeps a change's comments, and how one is rewritten.
+ * Bitbucket has none yet: a contributor's fork there comes later.
+ */
+const STORY_COMMENTS: Partial<
+  Record<
+    RawApiKind,
+    {
+      list: (project: string, number: number) => string;
+      update: (
+        project: string,
+        number: number,
+        id: number,
+      ) => { method: "PATCH" | "PUT"; path: string };
+    }
+  >
 > = {
   github: {
     list: (project, number) => `/repos/${project}/issues/${number}/comments`,
@@ -29,7 +34,7 @@ const STORY_COMMENTS: Record<
       `/projects/${encodeURIComponent(project)}/merge_requests/${number}/notes`,
     update: (project, number, id) => ({
       method: "PUT",
-      path: `${STORY_COMMENTS.gitlab.list(project, number)}/${id}`,
+      path: `/projects/${encodeURIComponent(project)}/merge_requests/${number}/notes/${id}`,
     }),
   },
 };
@@ -47,6 +52,8 @@ export function forkStoryForge(forge: Forge, review: MergeReview, taskId: string
   const readPull = forge.pull.bind(forge);
   const project = `${review.owner}/${review.name}`;
   const storyComments = STORY_COMMENTS[rawApiKind(forge.kind) ?? "github"];
+  if (!storyComments)
+    throw new ForgeError("unsupported", "This host cannot publish a review story comment.");
   const root = storyComments.list(project, review.number);
   const marker = presentationRegionMarkers(taskId).start;
   type Comment = { id: number; body: string };

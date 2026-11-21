@@ -144,9 +144,9 @@ export class PullComments {
     if (!forge.pullComments) return undefined;
     if (cursor && pull.updatedAt !== undefined && cursor.updatedAt === pull.updatedAt)
       return undefined;
-    const comments = await forge.pullComments(pull.number, cursor?.updatedAt);
-    const own = sent();
     const seen = new Set(cursor?.seen);
+    const comments = await forge.pullComments(pull.number, cursor?.updatedAt, seen);
+    const own = sent();
     const fresh = comments.filter(
       (comment) =>
         !seen.has(comment.id) &&

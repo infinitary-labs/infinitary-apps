@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "Esa dirección no tiene código de inicio de sesión. Pega la dirección completa en la que terminó la página.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Si tu navegador está en otro equipo, pega la dirección en la que terminó su página después de iniciar sesión.";
-"accountsSavedResetSignInAgain" = "El inicio de sesión de Codex en %1$@ ya no funciona, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.";
+"accountsSavedResetSignInAgain" = "Codex no pudo leer la asignación de %1$@, así que no se usó ningún restablecimiento. Si sigue pasando, elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.";
 "accountsSavedResetSignInFailed" = "Codex no pudo iniciar sesión.";
 "accountsSavedResetSignInFirst" = "Codex todavía no inició sesión en %1$@, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para iniciar sesión en Codex.";
 "accountsSavedResetSignInNotice" = "Inicia sesión en la cuenta de ChatGPT de %1$@ en tu navegador para que Codex pueda usar su restablecimiento guardado.";

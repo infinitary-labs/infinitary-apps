@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "Esse endereço não tem código de login. Cole o endereço completo em que a página parou.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Se o navegador estiver em outro computador, cole o endereço em que a página parou depois do login.";
-"accountsSavedResetSignInAgain" = "O login do Codex em %1$@ não funciona mais, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.";
+"accountsSavedResetSignInAgain" = "O Codex não conseguiu ler a franquia de %1$@, então nenhuma redefinição foi usada. Se continuar acontecendo, escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.";
 "accountsSavedResetSignInFailed" = "O Codex não conseguiu fazer login.";
 "accountsSavedResetSignInFirst" = "O Codex ainda não fez login em %1$@, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex.";
 "accountsSavedResetSignInNotice" = "Faça login na conta do ChatGPT de %1$@ no navegador, para o Codex poder usar a redefinição salva.";

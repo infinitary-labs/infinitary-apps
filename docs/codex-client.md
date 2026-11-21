@@ -35,7 +35,8 @@ It runs these steps:
 2. Start the app-server and read the account (`account/read`, without refreshing its token).
 3. When Codex has no ChatGPT sign-in in that home, sign it in (below), or, for a use with no way to show a sign-in - the first mate's, or a card's click while Codex is not signed in - refuse in words that say to choose Use a saved reset on the account's row.
 4. Read the allowance (`account/rateLimits/read`) and check that Codex is signed in to the same ChatGPT account as Infinitary's own sign-in: the answer's `accountId`, or the account id in Codex's own sign-in file when the answer leaves it out, against the `chatgpt_account_id` in the account's own token (`chatgptAccountId`).
-   When Codex said it was signed in and refuses this read, the sign-in it kept no longer works: Codex is signed out, then signed in again where a sign-in can be shown, or refused in words that say to sign Codex in again on the account's row.
+   When Codex said it was signed in and refuses this read, its kept sign-in may have stopped working, or the read only failed, offline or in an outage.
+   Only a use from the account's row in Settings, where a sign-in is shown, signs Codex out and in again; a card's or the first mate's use keeps Codex's sign-in and is refused with Codex's reason, in words that say to choose Use a saved reset on the account's row if it keeps failing.
    Either id missing is refused, saying Infinitary could not check the account; a different account signs Codex out (`account/logout`) and is refused, so nothing is used on an account the captain did not choose.
 5. With no attempt kept and none held, say none is left without asking.
 6. Pick the available reset that expires first (`earliestExpiring`; one without an expiry comes last), and keep the attempt - a new random key and that reset's id - on the account's registry row before sending (`AccountRecord.savedResetAttempt`).

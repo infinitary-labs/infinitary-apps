@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "Diese Adresse enthält keinen Anmeldecode. Füge die ganze Adresse ein, bei der die Seite gelandet ist.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Wenn dein Browser auf einem anderen Computer ist, füge die Adresse ein, bei der seine Seite nach der Anmeldung gelandet ist.";
-"accountsSavedResetSignInAgain" = "Die Anmeldung von Codex bei %1$@ funktioniert nicht mehr, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.";
+"accountsSavedResetSignInAgain" = "Codex konnte das Kontingent von %1$@ nicht lesen, daher wurde kein Reset eingelöst. Wenn das wieder passiert, wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.";
 "accountsSavedResetSignInFailed" = "Codex konnte sich nicht anmelden.";
 "accountsSavedResetSignInFirst" = "Codex ist noch nicht bei %1$@ angemeldet, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex anzumelden.";
 "accountsSavedResetSignInNotice" = "Melde dich im Browser beim ChatGPT-Konto von %1$@ an, damit Codex seinen gespeicherten Reset einlösen kann.";

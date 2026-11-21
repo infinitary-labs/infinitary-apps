@@ -203,13 +203,14 @@ describe("using a saved Codex reset", () => {
     );
   });
 
-  it("says to sign Codex in again on the row when its kept sign-in no longer works and none can be shown", async () => {
+  it("keeps Codex's sign-in when its allowance read fails and no sign-in can be shown, and says to use Settings if it keeps failing", async () => {
     const stand = standInCodex({ stale: true });
     const { reach, saves } = reachWith(stand);
     await expect(redeemSavedReset(reach, USE)).rejects.toThrow(
       m.accountsSavedResetSignInAgain({ account: USE.account }),
     );
-    expect(stand.methods()).toContain("account/logout");
+    // A failed read may be only offline or an outage: the card and the first mate never sign Codex out.
+    expect(stand.methods()).not.toContain("account/logout");
     expect(stand.methods()).not.toContain("account/login/start");
     expect(saves).toEqual([]);
   });

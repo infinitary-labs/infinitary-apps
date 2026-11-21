@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "该地址中没有登录代码。请粘贴页面最终停留的完整地址。";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "如果浏览器在另一台电脑上，请粘贴登录后页面最终停留的地址。";
-"accountsSavedResetSignInAgain" = "Codex 在 %1$@ 上的登录已失效，因此没有使用重置。请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。";
+"accountsSavedResetSignInAgain" = "Codex 无法读取 %1$@ 的额度，因此没有使用重置。如果反复出现，请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。";
 "accountsSavedResetSignInFailed" = "Codex 无法登录。";
 "accountsSavedResetSignInFirst" = "Codex 尚未登录 %1$@，因此没有使用重置。请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 登录。";
 "accountsSavedResetSignInNotice" = "请在浏览器中登录 %1$@ 的 ChatGPT 账户，以便 Codex 使用它已保存的重置。";

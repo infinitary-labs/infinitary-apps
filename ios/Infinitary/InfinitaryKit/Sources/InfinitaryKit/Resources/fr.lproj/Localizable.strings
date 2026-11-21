@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "Cette adresse ne contient pas de code de connexion. Collez l’adresse complète où la page s’est arrêtée.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "Si votre navigateur est sur un autre ordinateur, collez l’adresse où sa page s’est arrêtée après la connexion.";
-"accountsSavedResetSignInAgain" = "La connexion de Codex à %1$@ ne fonctionne plus, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.";
+"accountsSavedResetSignInAgain" = "Codex n’a pas pu lire l’allocation de %1$@, donc aucune réinitialisation n’a été utilisée. Si cela se reproduit, choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.";
 "accountsSavedResetSignInFailed" = "Codex n’a pas pu se connecter.";
 "accountsSavedResetSignInFirst" = "Codex n’est pas encore connecté à %1$@, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour connecter Codex.";
 "accountsSavedResetSignInNotice" = "Connectez-vous au compte ChatGPT de %1$@ dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.";

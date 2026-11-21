@@ -10722,29 +10722,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const account = input2.account;
     switch (currentLanguage()) {
       case "ar":
-        return `لم يعد تسجيل دخول Codex إلى ${account} يعمل، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول مرة أخرى.`;
+        return `لم يتمكن Codex من قراءة رصيد ${account}، لذا لم تُستخدم أي إعادة تعيين. إذا تكرر ذلك، فاختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول مرة أخرى.`;
       case "de":
-        return `Die Anmeldung von Codex bei ${account} funktioniert nicht mehr, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.`;
+        return `Codex konnte das Kontingent von ${account} nicht lesen, daher wurde kein Reset eingelöst. Wenn das wieder passiert, wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.`;
       case "es":
-        return `El inicio de sesión de Codex en ${account} ya no funciona, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.`;
+        return `Codex no pudo leer la asignación de ${account}, así que no se usó ningún restablecimiento. Si sigue pasando, elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.`;
       case "fr":
-        return `La connexion de Codex à ${account} ne fonctionne plus, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.`;
+        return `Codex n’a pas pu lire l’allocation de ${account}, donc aucune réinitialisation n’a été utilisée. Si cela se reproduit, choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.`;
       case "ja":
-        return `${account} への Codex のサインインが使えなくなったため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。`;
+        return `Codex が ${account} の利用枠を読み取れなかったため、リセットは使っていません。繰り返し起きる場合は、設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。`;
       case "ko":
-        return `${account}에 대한 Codex 로그인이 더 이상 작동하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.`;
+        return `Codex가 ${account}의 사용량을 읽지 못해 재설정을 사용하지 않았어요. 계속 그러면 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.`;
       case "pt-BR":
-        return `O login do Codex em ${account} não funciona mais, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.`;
+        return `O Codex não conseguiu ler a franquia de ${account}, então nenhuma redefinição foi usada. Se continuar acontecendo, escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.`;
       case "zh-Hans":
-        return `Codex 在 ${account} 上的登录已失效，因此没有使用重置。请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。`;
+        return `Codex 无法读取 ${account} 的额度，因此没有使用重置。如果反复出现，请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。`;
       case "zh-Hant":
-        return `Codex 在 ${account} 上的登入已失效，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。`;
+        return `Codex 無法讀取 ${account} 的額度，因此沒有使用重設。如果反覆發生，請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。`;
       case "en-XA":
-        return `[Çöðéẋ'š šîĝñ-îñ ƒöŕ ${account} ñö ļöñĝéŕ ŵöŕķš, šö ñö ŕéšéţ ŵáš ûšéð. Çĥööšé Ûšé á šáṽéð ŕéšéţ öñ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Çöðéẋ çöûļð ñöţ ŕéáð ţĥé áļļöŵáñçé öƒ ${account}, šö ñö ŕéšéţ ŵáš ûšéð. Îƒ ţĥîš ķééþš ĥáþþéñîñĝ, çĥööšé Ûšé á šáṽéð ŕéšéţ öñ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Codex's sign-in for ‬${account}‮ no longer works, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in again.‬`;
+        return `‮Codex could not read the allowance of ‬${account}‮, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.‬`;
     }
-    return `Codex's sign-in for ${account} no longer works, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in again.`;
+    return `Codex could not read the allowance of ${account}, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.`;
   }
   function accountsSavedResetSignInFailed() {
     switch (currentLanguage()) {

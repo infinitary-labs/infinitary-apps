@@ -141,14 +141,17 @@ async function redeemIn(
     const readLimits = () =>
       server.request<RateLimits>("account/rateLimits/read", {}, ANSWER_WITHIN_MS);
     const limits = await readLimits().catch(async (error: unknown) => {
-      // A sign-in kept from before that Codex refuses has stopped working:
-      // signed out, and signed in again where a sign-in can be shown.
+      // Codex refusing the read with a sign-in kept from before may mean that
+      // sign-in stopped working, or only that the read failed (offline, an
+      // outage). Only Settings, where a sign-in is shown, signs Codex out and
+      // in again; a card's or the first mate's use keeps the sign-in and says
+      // Codex's reason.
       if (!signedIn || !(error instanceof CodexRefusal)) return codexStopped(error);
-      await server.request("account/logout", undefined, ANSWER_WITHIN_MS).catch(() => undefined);
       if (!use.bridge)
         throw new Error(
           `${m.accountsSavedResetSignInAgain({ account: use.account })} ${error.message}`,
         );
+      await server.request("account/logout", undefined, ANSWER_WITHIN_MS).catch(() => undefined);
       await signIn(server, use, use.bridge);
       return readLimits().catch(codexStopped);
     });

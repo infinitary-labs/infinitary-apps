@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "そのアドレスにはサインインのコードがありません。ページが最後に表示したアドレスをそのまま貼り付けてください。";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "ブラウザが別のコンピュータにある場合は、サインイン後にそのページが最後に表示したアドレスを貼り付けてください。";
-"accountsSavedResetSignInAgain" = "%1$@ への Codex のサインインが使えなくなったため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。";
+"accountsSavedResetSignInAgain" = "Codex が %1$@ の利用枠を読み取れなかったため、リセットは使っていません。繰り返し起きる場合は、設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。";
 "accountsSavedResetSignInFailed" = "Codex はサインインできませんでした。";
 "accountsSavedResetSignInFirst" = "Codex はまだ %1$@ にサインインしていないため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がサインインします。";
 "accountsSavedResetSignInNotice" = "ブラウザで %1$@ の ChatGPT アカウントにサインインすると、Codex が保存済みのリセットを使えます。";

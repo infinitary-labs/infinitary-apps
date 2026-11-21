@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "That address has no sign-in code. Paste the whole address the page ended on.";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "If your browser is on another computer, paste the address its page ended on after you signed in.";
-"accountsSavedResetSignInAgain" = "Codex's sign-in for %1$@ no longer works, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in again.";
+"accountsSavedResetSignInAgain" = "Codex could not read the allowance of %1$@, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.";
 "accountsSavedResetSignInFailed" = "Codex could not sign in.";
 "accountsSavedResetSignInFirst" = "Codex is not signed in to %1$@ yet, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in.";
 "accountsSavedResetSignInNotice" = "Sign in to the ChatGPT account of %1$@ in your browser, so Codex can use its saved reset.";

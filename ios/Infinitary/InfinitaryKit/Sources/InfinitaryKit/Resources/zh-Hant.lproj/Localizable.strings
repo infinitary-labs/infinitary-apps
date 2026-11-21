@@ -202,7 +202,7 @@
 "accountsSavedResetPasteAgain" = "該網址中沒有登入代碼。請貼上頁面最後停留的完整網址。";
 "accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
 "accountsSavedResetPastePrompt" = "如果瀏覽器在另一台電腦上，請貼上登入後頁面最後停留的網址。";
-"accountsSavedResetSignInAgain" = "Codex 在 %1$@ 上的登入已失效，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。";
+"accountsSavedResetSignInAgain" = "Codex 無法讀取 %1$@ 的額度，因此沒有使用重設。如果反覆發生，請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。";
 "accountsSavedResetSignInFailed" = "Codex 無法登入。";
 "accountsSavedResetSignInFirst" = "Codex 尚未登入 %1$@，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 登入。";
 "accountsSavedResetSignInNotice" = "請在瀏覽器中登入 %1$@ 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。";

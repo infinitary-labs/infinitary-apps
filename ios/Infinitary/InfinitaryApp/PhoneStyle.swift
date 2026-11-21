@@ -181,6 +181,7 @@ private struct PhoneSheetSurface: ViewModifier {
 /// the rest in a hairline outline. Each is drawn about 37 points tall inside a 44-point touch area.
 struct PhoneChoiceStyle: ButtonStyle {
     /// INF-1524: `muted` is the Mac's default choice while a required question waits, drawn quiet until it is answered.
+    /// INF-5448's plan: every choice is drawn `muted` while the card's reply types.
     enum Kind { case primary, secondary, danger, muted }
     let kind: Kind
     /// INF-1524: on a past card, the choice that was made keeps full contrast with an accent edge, as on the Mac.

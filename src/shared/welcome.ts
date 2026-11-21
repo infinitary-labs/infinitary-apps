@@ -185,9 +185,10 @@ const STAGE_PART = '<script data-inf-part="stage"></script>';
  * the card over the Firstmate as the window shows it, the box lit. The
  * script beside it starts it at the first chapter and shows one part per
  * press; without the script the card still reads whole. The live first mate
- * draws under the picture's lines and fades with the still as the card
- * rises, as the window hides the character while a card is up, and the
- * live crewmate draws over them.
+ * draws under the picture's lines and fades as the card rises, as the
+ * window hides the character while a card is up, and the live crewmate
+ * draws over them; the stills they cover follow the chapter unseen, for a
+ * copy of the picture that shows them.
  */
 const picture = (
   said = chapterWords(),
@@ -249,12 +250,10 @@ const PRESENTATION_SCRIPT = `<script>
     "task": [["fill", "var(--accent)", "var(--line-2)"]]
   };
   var chapter = 1;
-  // A still the stage part drew over (display none) is left alone, so each part moves once.
-  function parts(name) {
-    return Array.prototype.filter.call(figure.querySelectorAll('[data-part="' + name + '"]'), function (element) {
-      return getComputedStyle(element).display !== "none";
-    });
-  }
+  function parts(name) { return Array.prototype.slice.call(figure.querySelectorAll('[data-part="' + name + '"]')); }
+  // A still the stage part drew over (display none) follows the chapter but never
+  // moves, so each part on screen moves once and an opened picture shows the chapter.
+  function drawn(element) { return getComputedStyle(element).display !== "none"; }
   function token(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   function duration() {
     var value = token("--dur-med");
@@ -270,14 +269,14 @@ const PRESENTATION_SCRIPT = `<script>
         var shown = c < chapter && !(ADDS[c][p] === "firstmate" && chapter > 1);
         parts(ADDS[c][p]).forEach(function (element) {
           element.style.visibility = shown ? "visible" : "hidden";
-          if (pass > 0 && shown && c === chapter - 1) {
+          if (pass > 0 && shown && c === chapter - 1 && drawn(element)) {
             element.animate([{ opacity: 0, transform: "translateY(" + (c === 1 ? 10 : 6) + "px)" }, { opacity: 1, transform: "none" }], { duration: pass, easing: ease });
           }
         });
       }
     }
     if (pass > 0 && chapter === 2) {
-      parts("firstmate").forEach(function (firstmate) {
+      parts("firstmate").filter(drawn).forEach(function (firstmate) {
         firstmate.style.visibility = "visible";
         firstmate.animate([{ opacity: 1 }, { opacity: 0 }], { duration: pass, easing: ease, fill: "forwards" }).onfinish = function () {
           firstmate.style.visibility = "hidden";

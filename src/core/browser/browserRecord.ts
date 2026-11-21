@@ -278,19 +278,23 @@ export function signedIn(browser: Browser): boolean {
 /**
  * An address as the crewmate reads it: once signed in, without its query
  * and fragment, and with a key in a known format hidden.
+ *
+ * `held` is for what is read for the crewmate while the captain holds the
+ * browser, which its own reads never are: he may be signing in, and its
+ * next read comes after the return, so this one reads as that one will.
  */
-export function shown(browser: Browser, url: string): string {
-  return signedIn(browser) ? hideKeys(bareAddress(url)) : url;
+export function shown(browser: Browser, url: string, held = false): string {
+  return held || signedIn(browser) ? hideKeys(bareAddress(url)) : url;
 }
 
-/** Words the page shows, as the crewmate reads them: with a key in a known format hidden once signed in. */
-export function pageWords(browser: Browser, text: string): string {
-  return signedIn(browser) ? hideKeys(text) : text;
+/** Words the page shows, as the crewmate reads them: with a key in a known format hidden once signed in (`held`: see `shown`). */
+export function pageWords(browser: Browser, text: string, held = false): string {
+  return held || signedIn(browser) ? hideKeys(text) : text;
 }
 
 /** A page's title as the crewmate reads it (`pageWords`). */
-export function titleOf(browser: Browser, entry: PageEntry): string {
-  return pageWords(browser, entry.page.title().trim());
+export function titleOf(browser: Browser, entry: PageEntry, held = false): string {
+  return pageWords(browser, entry.page.title().trim(), held);
 }
 
 /** A page's address, or where the browser opened while its first page shows none. */

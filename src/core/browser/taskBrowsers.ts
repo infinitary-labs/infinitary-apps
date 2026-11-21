@@ -775,13 +775,15 @@ export class TaskBrowsers {
     try {
       const nodes = await browser.current.page.nodes();
       const size = { width: browser.size.width, height: browser.size.height };
+      // A mark made while the captain holds the browser reads as its crewmate's next read will.
+      const held = browser.control === "captain";
       return {
         ok: true,
         ...size,
         // The address and title as the crewmate's own reads give them (`shown`, `titleOf`).
-        url: shown(browser, addressOf(browser, browser.current)).slice(0, 2_048),
-        title: titleOf(browser, browser.current).slice(0, 240),
-        places: pagePlaces(nodes, size, { hideKeys: signedIn(browser) }),
+        url: shown(browser, addressOf(browser, browser.current), held).slice(0, 2_048),
+        title: titleOf(browser, browser.current, held).slice(0, 240),
+        places: pagePlaces(nodes, size, { hideKeys: held || signedIn(browser) }),
       };
     } catch {
       return { ok: false };

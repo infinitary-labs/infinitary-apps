@@ -55,7 +55,7 @@ describe("what Point at reads of a task's page", () => {
     expect(page.effects).not.toContain("capture");
   });
 
-  it("gives the address bare and hides a key once the captain signed in, as the crewmate's reads do", async () => {
+  it("gives the address bare and hides a key while the captain holds the browser and once he handed it back, as the crewmate's reads do", async () => {
     const { browsers, page, handle } = await opened("https://aurora.example/sign-in");
     // An invented key in GitHub's personal token format, built here so no file holds one whole.
     const key = ["github", "pat", "11FIXTURE0INVENTED0NOT0A0KEY0000000"].join("_");
@@ -66,8 +66,11 @@ describe("what Point at reads of a task's page", () => {
     page.nodeList = shownForm(page).map((node) =>
       node.role === "button" ? { ...node, name: `Copy ${key}` } : node,
     );
+    // He holds it for the first time and may be signing in: its crewmate's next read is after the return.
+    const held = await browsers.places("t1");
     expect(await browsers.returnControl("t1", handle)).toEqual({ ok: true });
     const read = await browsers.places("t1");
+    expect(held).toEqual(read);
     expect(read).toMatchObject({
       ok: true,
       url: `https://aurora.example/tokens/${KEY_HIDDEN}/bookings`,

@@ -96,6 +96,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | panel | 面板 | |
 | part (of a program or task) | 部分 / 组成部分 | |
 | passcode (iOS) | 密码 | iOS's word. |
+| personal context | 个人背景 | What the person tells the first mate about themselves, kept in Knowledge. |
 | phone | 手机 | |
 | pin (a task) | 固定 | As for a pinned model. |
 | plan | 套餐 | A subscription plan, distinct from a task's 计划. |
@@ -111,6 +112,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | pull request | 拉取请求 | GitHub's own Simplified Chinese docs say 拉取请求. |
 | purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
 | push | 推送 | |
+| Put aside (a card) | 放到一边 | The card's own button; a card set aside without an answer. |
 | queued | 排队中 | |
 | Quick answer (a card's mark) | 快速回答 | The chip on a quick answer's card. |
 | rail | 侧栏 | |
@@ -121,6 +123,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | report | 汇报 | |
 | repository (one of a project's) | 仓库 | GitHub's own Simplified Chinese word; 「添加仓库」「2 个仓库」. Names one of a project's repositories; what work belongs to stays 项目. |
 | review (the reviewer's pass) | 审查 | |
+| Review carefully (a merge card's button) | 仔细审查 | Raises the task to 谨慎. |
 | revision (of a record) | 修订 | 修订 {revision}. |
 | rigor levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |
 | Runbooks | 操作手册 | |
@@ -131,12 +134,15 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | server (a custom API's) | 服务器 | Only for the custom API's server, never for a computer of the person's. |
 | Settings | 设置 | |
 | sign-in / sign in | 登录 | Used instead of token, OAuth or credential. |
+| Signed-in sites (Settings → Secrets) | 已登录的网站 | The sites the crew's browser stays signed in to. |
+| standing direction | 长期指引 | 指引 with 长期 for standing. |
 | start | 开始 | |
 | starter | 开头语 | The tappable opening phrases on the welcome card. |
 | Steer (button) | 引导 |  |
 | stop | 停止 | |
 | story (a change's) | 改动说明 | |
 | subscription | 订阅 | |
+| take over (another computer's first mate) | 接手 | The app's own button. |
 | task | 任务 | |
 | task board | 任务看板 | 看板 alone for the Board view. |
 | task key | 任务编号前缀 | The letters tasks are numbered with, such as {key}-1; 键 alone would read as a keyboard key. |

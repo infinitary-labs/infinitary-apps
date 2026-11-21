@@ -4,14 +4,17 @@ import { join } from "node:path";
 import { RUN_AGENT_ENV } from "@core/helper/background";
 import { RUN_STOP_FOR_FILE } from "@core/helper/windowsTask";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { scratchDir, socketScratchDir } from "../../tests/helpers/scratchDirs";
 import { runEnd } from "./besideRun";
 import {
   answerLaunch,
   askLoginShellEarly,
   clearWindowAnswers,
   commandHolding,
+  commandPipe,
+  commandPipeHeld,
   followInstalledProgram,
+  holdCommandPipe,
   holderIsWindow,
   keepsStarterBesideGrant,
   lockHolder,
@@ -25,6 +28,7 @@ import {
   runningByCommand,
   runOptions,
   stopRunningCommand,
+  windowAnswerAsker,
   windowAnswerFile,
   wordsAfterProgram,
   writeWindowAnswer,
@@ -405,15 +409,18 @@ describe("a window opened beside a run", () => {
     expect(await silent.kind).toBe("free");
     expect(silent.asks).toHaveLength(1);
 
-    // No link names the holder: the lock is asked for again after each wait until it is let go.
+    // No link names the holder, as Windows' own lock: it is never asked again while it holds the
+    // lock, so a window from before windows answered is not brought forward again after each wait,
+    // and is asked once more only once the lock is let go.
     const unnamed = look({}, false);
     let free = false;
     void unnamed.kind.then(() => (free = true));
     await new Promise((resolve) => setTimeout(resolve, 350));
     expect(free).toBe(false);
-    expect(unnamed.asks.length).toBeGreaterThanOrEqual(2);
+    expect(unnamed.asks).toEqual([]);
     unnamed.leave();
     expect(await unnamed.kind).toBe("free");
+    expect(unnamed.asks).toHaveLength(1);
 
     // The holder took the lock after the launch's own ask reached none: it is asked once, then
     // only watched.
@@ -440,6 +447,7 @@ describe("a window opened beside a run", () => {
     ) => {
       const asks: number[] = [];
       const reads: number[] = [];
+      const order: string[] = [];
       const kind = lockHolderKind({
         running,
         answered: () => false,
@@ -447,16 +455,18 @@ describe("a window opened beside a run", () => {
         asked: 4242,
         windowHolder: (named) => {
           reads.push(Date.now());
-          return holderIsWindow(named, words);
+          order.push("read");
+          return holderIsWindow(named, { words });
         },
         lockFree: () => {
           asks.push(Date.now());
+          order.push("ask");
           return false;
         },
         askEveryMs: 150,
         everyMs: 20,
       });
-      return { kind, asks, reads };
+      return { kind, asks, reads, order };
     };
     const exe = "/Applications/Infinitary.app/Contents/MacOS/Infinitary";
     // A window, one from before windows answered included: taken for one at once, asked nothing.
@@ -506,6 +516,17 @@ describe("a window opened beside a run", () => {
     );
     expect(await moved.kind).toBe("run");
     expect(moved.reads).toHaveLength(2);
+    // The command that took over was asked once, before it was read.
+    expect(moved.order).toEqual(["read", "ask", "read"]);
+    // A window took the lock after the launch's own ask reached another: it is asked once, so it
+    // brings its window forward, before it is taken for the window that takes over.
+    const taken = look(
+      async () => [exe],
+      () => false,
+      () => 5151,
+    );
+    expect(await taken.kind).toBe("window");
+    expect(taken.order).toEqual(["ask", "read"]);
   });
 
   it("reads a program's words after its own path, however many spaces it holds", async () => {
@@ -514,28 +535,94 @@ describe("a window opened beside a run", () => {
     expect(wordsAfterProgram(exe, exe)).toEqual([exe]);
     expect(wordsAfterProgram(`${exe}Helper run`, exe)).toBeNull();
     expect(wordsAfterProgram("/usr/bin/other run", exe)).toBeNull();
-    expect(await holderIsWindow(1, async () => [exe])).toBe(true);
-    expect(await holderIsWindow(1, async () => [exe, "run"])).toBe(false);
-    expect(await holderIsWindow(1, async () => null)).toBeNull();
+    expect(await holderIsWindow(1, { words: async () => [exe] })).toBe(true);
+    expect(await holderIsWindow(1, { words: async () => [exe, "run"] })).toBe(false);
+    expect(await holderIsWindow(1, { words: async () => null })).toBeNull();
     // The program's own path is never one of its words, even where it ends in `run`.
-    expect(await holderIsWindow(1, async () => ["run"])).toBe(true);
+    expect(await holderIsWindow(1, { words: async () => ["run"] })).toBe(true);
+    // A lock that names no holder has no words to read.
+    expect(await holderIsWindow(undefined, { words: async () => [exe] })).toBeNull();
   });
 
-  // The review of INF-5409: a launch that told the window from its words quits without reading the
-  // answer the window writes a moment later, so the window takes away its unread answers as it quits.
-  it("takes away a window's answers no launch read as the window quits", () => {
+  // The review of INF-5409: on a Windows PC, whose lock names no holder, a command holds a pipe of
+  // its own from before it asks for the lock until it ends, so a window launch refused the lock
+  // waits on a command that has not noted itself and takes a holder with no such pipe for the
+  // window its ask brought forward, asking it nothing again. Read through a real local socket.
+  it("tells a command from a window on an unnamed lock by the pipe the command holds", async () => {
+    const pipe = join(socketScratchDir("inf-pipe-"), "run.sock");
+    expect(await commandPipeHeld(pipe)).toBe(false);
+    const letGo = holdCommandPipe(pipe);
+    expect(await commandPipeHeld(pipe)).toBe(true);
+    let noted = false;
+    const asks: number[] = [];
+    const reads: (number | undefined)[] = [];
+    const look = (running: () => boolean) =>
+      lockHolderKind({
+        running,
+        answered: () => false,
+        holder: () => undefined,
+        asked: undefined,
+        windowHolder: (holder) => {
+          reads.push(holder);
+          return holderIsWindow(holder, { commandPipe: () => commandPipeHeld(pipe) });
+        },
+        lockFree: () => {
+          asks.push(Date.now());
+          return false;
+        },
+        askEveryMs: 100,
+        everyMs: 20,
+      });
+    const command = look(() => noted);
+    let settled: string | null = null;
+    void command.then((kind) => (settled = kind));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(settled).toBeNull();
+    // Read again after each wait, since an unnamed holder may change unseen; never asked again.
+    expect(reads.length).toBeGreaterThanOrEqual(2);
+    expect(asks).toEqual([]);
+    noted = true;
+    expect(await command).toBe("run");
+    // A command that let its pipe go, as one that ended: the holder is the window.
+    letGo();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(await commandPipeHeld(pipe)).toBe(false);
+    expect(await look(() => false)).toBe("window");
+    expect(asks).toEqual([]);
+    // The pipe's name follows the folder, whatever its letters' case.
+    expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));
+    expect(commandPipe("C:\\Users\\a\\Infinitary")).not.toBe(
+      commandPipe("C:\\Users\\b\\Infinitary"),
+    );
+  });
+
+  // The review of INF-5409: a launch that told the window from what it runs as quits without
+  // reading the answer the window writes a moment later, so the window takes away an answer whose
+  // launch is gone as it quits; one whose launch is still there stays for that launch to read,
+  // even where the window quits just after it answered.
+  it("keeps a window's answer for a launch still there and takes away one whose launch is gone", () => {
     const dataDir = scratchDir("infinitary-window-answers-");
-    const written = new Set<string>();
-    expect(writeWindowAnswer(dataDir, "late", written)).toBe(true);
-    expect(writeWindowAnswer(dataDir, "read", written)).toBe(true);
-    // The launch that asked "read" read and removed its answer; "late" was written after its asker quit.
-    rmSync(join(dataDir, windowAnswerFile("read")));
-    expect(readFileSync(join(dataDir, windowAnswerFile("late")), "utf8")).toBe("");
-    clearWindowAnswers(written);
+    const written = new Map<string, number | null>();
+    const live = new Set([101, 202]);
+    const alive = (pid: number) => live.has(pid);
+    expect(writeWindowAnswer(dataDir, "waiting", 101, written, alive)).toBe(true);
+    expect(writeWindowAnswer(dataDir, "late", 202, written, alive)).toBe(true);
+    // A launch already gone is answered with nothing written.
+    expect(writeWindowAnswer(dataDir, "gone", 303, written, alive)).toBe(true);
+    expect(() => readFileSync(join(dataDir, windowAnswerFile("gone")))).toThrow();
+    // The launch asking "late" quit before the answer came; "waiting" is still reading.
+    live.delete(202);
+    clearWindowAnswers(written, alive);
+    expect(readFileSync(join(dataDir, windowAnswerFile("waiting")), "utf8")).toBe("");
     expect(() => readFileSync(join(dataDir, windowAnswerFile("late")))).toThrow();
     expect(written.size).toBe(0);
-    expect(() => writeWindowAnswer(join(dataDir, "missing"), "lost", written)).toThrow();
+    expect(() =>
+      writeWindowAnswer(join(dataDir, "missing"), "lost", 101, written, alive),
+    ).toThrow();
     expect(written.size).toBe(0);
+    expect(windowAnswerAsker({ windowAnswers: "a", asker: 101 })).toBe(101);
+    expect(windowAnswerAsker({ windowAnswers: "a", asker: "101" })).toBeNull();
+    expect(windowAnswerAsker(null)).toBeNull();
   });
 
   // The review of INF-5409: Restart it is offered over a run only while a force stop can end it.

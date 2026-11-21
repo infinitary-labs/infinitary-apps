@@ -98,7 +98,10 @@ import {
   answerLaunch,
   clearWindowAnswers,
   commandHolding,
+  commandPipe,
+  commandPipeHeld,
   followInstalledProgram,
+  holdCommandPipe,
   holderIsWindow,
   keepsStarterBesideGrant,
   lockHolder,
@@ -115,6 +118,7 @@ import {
   runOptions,
   stopRunningCommand,
   windowAnswerAsked,
+  windowAnswerAsker,
   windowAnswerFile,
   windowProfileDir,
   writeWindowAnswer,
@@ -754,7 +758,7 @@ export async function startApp(
   // launch cannot tell, and ignores a second launch. Never during a folder move, whose lock is a
   // throwaway profile's.
   const answerAsk = !windowless && !move && !besideRun ? randomBytes(8).toString("hex") : null;
-  const lockAsk = answerAsk ? { windowAnswers: answerAsk } : undefined;
+  const lockAsk = answerAsk ? { windowAnswers: answerAsk, asker: process.pid } : undefined;
   /** The live program the folder's lock names, by its link: null for none, undefined unnamed. */
   const lockHolderNow = () => {
     const pid = lockHolder(dataDir);
@@ -763,6 +767,12 @@ export async function startApp(
   // The holder this launch's own ask reaches, read just before it, so a holder that takes the
   // lock after is asked too (`lockHolderKind`).
   const askedHolder = answerAsk ? lockHolderNow() : undefined;
+  // On a Windows PC, whose lock names no holder, a command holds a pipe of its own from before it
+  // asks for the lock until it ends, so a window launch refused the lock tells it from a window
+  // (`commandPipe`). Never during a folder move, nor on a folder it would refuse.
+  const onWindows = hostPlatform() === "win32";
+  if (windowless && !move && onWindows && !dataFolderRefusal(dataDir, privacy))
+    holdCommandPipe(commandPipe(dataDir));
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -774,9 +784,10 @@ export async function startApp(
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
     // that holds the lock answers and focuses itself, and this launch quits, as it does once the
-    // words the holder runs with show it is a window, one from before that answer included, since
-    // a command always runs with `run`. A holder that shows nothing yet is waited for, never taken
-    // for a window. An ordinary launch waits the same way, for a run known to hold
+    // holder its ask reached shows it is no command by what it runs as (`holderIsWindow`): a window
+    // from before that answer, which brought its window forward at the ask as every version does.
+    // A holder that shows nothing yet is waited for, never taken for a window, and never asked
+    // again unless it changes. An ordinary launch waits the same way, for a run known to hold
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
@@ -785,7 +796,11 @@ export async function startApp(
         answered: () => existsSync(answer),
         holder: lockHolderNow,
         asked: askedHolder,
-        windowHolder: (holder) => holderIsWindow(holder),
+        windowHolder: (holder) =>
+          holderIsWindow(
+            holder,
+            onWindows ? { commandPipe: () => commandPipeHeld(commandPipe(dataDir)) } : {},
+          ),
         lockFree: () => app.requestSingleInstanceLock(lockAsk),
         askEveryMs: STOPPED_RUN_WAIT_MS,
       });
@@ -809,12 +824,14 @@ export async function startApp(
     // Only after a force stop of the agent's own run, and only on the folder's own lock: never during
     // a folder move, whose lock is a throwaway profile's. A job that refuses to let go is reported;
     // the window goes on as this computer's first mate either way.
+    // Never on a folder this launch refuses, which it opens nothing on (`dataFolderRefusal`).
     if (
       startsHere &&
       process.argv.includes(LET_GO_JOB_ARG) &&
       !besideRun &&
       !move &&
-      app.getPath("userData") === dataDir
+      app.getPath("userData") === dataDir &&
+      !dataFolderRefusal(dataDir, privacy)
     )
       commandStarter(starterOptions)
         ?.stop({ forget: false, run: null })
@@ -954,15 +971,17 @@ export async function startApp(
       );
       // Restart it and Start it here end a run that does not answer by asking it to end itself, by
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
-      // Only a run this app's own agent started is ever asked so; one started by hand reads nothing.
-      const stopForceWatch = byAgent
-        ? watchRunForce(
-            app.getPath("userData"),
-            runStartedAt.toISOString(),
-            undefined,
-            (can, pipes) => noteRecovers(can, pipes),
-          )
-        : () => {};
+      // Only a run this app's own agent started is ever asked so; one started by hand reads nothing,
+      // and nor does a run on a folder it refuses, which ends below with nothing started on it.
+      const stopForceWatch =
+        byAgent && !dataFolderRefusal(dataDir, privacy)
+          ? watchRunForce(
+              app.getPath("userData"),
+              runStartedAt.toISOString(),
+              undefined,
+              (can, pipes) => noteRecovers(can, pipes),
+            )
+          : () => {};
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
@@ -976,12 +995,14 @@ export async function startApp(
     }
     // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
     const asked = new Set<string>();
-    // The answers this window wrote, which it takes away as it quits where no launch read them, as
-    // one that told this window from its words before the answer came (`writeWindowAnswer`).
-    const answers = new Set<string>();
+    // The answers this window wrote, with the launch that asked: as it quits, it takes away those
+    // whose launch is gone, as one that told this window from what it runs as before the answer
+    // came, and leaves one whose launch is still there to read it (`clearWindowAnswers`).
+    const answers = new Map<string, number | null>();
     if (!windowless) app.on("will-quit", () => clearWindowAnswers(answers));
     app.on("second-instance", (_event, _argv, _cwd, additionalData) => {
       if (windowless) return;
+      const asker = windowAnswerAsker(additionalData);
       answerLaunch(windowAnswerAsked(additionalData), {
         asked,
         bringForward: () => {
@@ -999,7 +1020,7 @@ export async function startApp(
         whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
         answer: (word) => {
           try {
-            return writeWindowAnswer(app.getPath("userData"), word, answers);
+            return writeWindowAnswer(app.getPath("userData"), word, asker, answers);
           } catch (error) {
             console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
             return false;

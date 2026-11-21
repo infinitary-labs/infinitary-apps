@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -80,7 +80,7 @@ Das Telefon meldet dir eine neue Karte nur, solange die App geöffnet ist.
 
 Um deinen Computer nicht mehr anzuzeigen, tipp rechts in der oberen Leiste des Telefons auf die Computer-Taste und wähl **Verlassen** mit dem Namen deines Computers.
 Das Telefon vergisst den Computer.
-Auf deinem Computer trennt **Entfernen** in der Zeile des Telefons unter Einstellungen → **Geräte** es sofort.
+Auf deinem Computer trennt **Entfernen** im Menü des Telefons unter Einstellungen → **Geräte**, den drei Punkten in seiner Zeile, es sofort.
 Um dich erneut zu verbinden, erstelle einen neuen Link.
 
 Siehe auch [Deine anderen Computer](/de/your-other-computers/).

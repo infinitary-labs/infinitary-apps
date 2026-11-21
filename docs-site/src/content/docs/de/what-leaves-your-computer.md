@@ -1,5 +1,5 @@
 ---
-source: 9ced91a9d5bca6c2
+source: 67e6220319b54d48
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -20,7 +20,7 @@ Deine Anmeldungen bleiben auf deinem Computer.
 ## Deine Projekte gehen dorthin, wo sie liegen {#your-projects-go-where-they-live}
 
 Ein Crewmitglied arbeitet in einer Arbeitskopie deines Projekts auf deinem Computer.
-Wenn eine Aufgabe als Pull Request angeboten wird, wird ihr Branch dorthin gepusht, wo dein Projekt liegt, etwa GitHub oder GitLab, und der Pull Request wird dort geöffnet.
+Wenn eine Aufgabe als Pull Request angeboten wird, wird ihr Branch dorthin gepusht, wo dein Projekt liegt, etwa GitHub, GitLab oder Bitbucket, und der Pull Request wird dort geöffnet.
 Ein Projekt, das auf diesem Computer bleibt, bleibt nur auf diesem Computer.
 
 Wenn ein Crewmitglied eine Arbeitskopie vorbereitet oder seine Aufgabe erledigt, kann es holen, was dein Projekt braucht, so wie du es von Hand tun würdest.

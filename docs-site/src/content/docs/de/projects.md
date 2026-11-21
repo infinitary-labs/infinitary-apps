@@ -1,5 +1,5 @@
 ---
-source: 86ec7e76bee97816
+source: 7c4d9925493d8861
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -49,7 +49,10 @@ Bei GitLab kannst du dich in deinem Browser anmelden oder einen Schlüssel einf�
 Bei Bitbucket erstellst du in deinem Atlassian-Konto ein API-Token und fügst es ein, für Projekte auf bitbucket.org.
 Das Schlüsselformular nennt die Berechtigungen, die du auf der Seite von Atlassian ankreuzen musst.
 Deine Bitbucket-Projekte werden aus den Arbeitsbereichen aufgelistet, zu denen du gehörst; bei vielen sind vielleicht nicht alle geprüft, und die Liste sagt das.
-Vorerst werden die Änderungen eines Bitbucket-Projekts als Branch angeboten, nicht als Pull Request.
+Die Änderungen eines Bitbucket-Projekts werden als Pull Requests angeboten, wie bei GitHub und GitLab; ein Projekt, das du vorher hinzugefügt hast, funktioniert ab seiner nächsten Aufgabe genauso.
+Die Beschreibung eines Bitbucket-Pull-Requests enthält die Geschichte als Text, und ihre Bilder bleiben auf der Karte.
+Ein Bitbucket-Projekt kann auch gebündelte Pull Requests wählen, und sein Zusammenführen folgt den Strategien und der Merge-Warteschlange, die sein Hauptbranch auf bitbucket.org hat.
+Bei einem Bitbucket-Projekt kann deine Crew außerdem die Pipelines des Projekts und das Log eines Schritts lesen, eine Release-Datei in seine Downloads legen und bei neuen Kommentaren zu seinem Pull Request aufwachen, wie bei GitHub und GitLab; Bitbucket bietet keinen Download der Artefakte einer Pipeline.
 Deine Anmeldung bleibt auf diesem Computer.
 
 Wenn eine Anmeldung nicht mehr funktioniert, bittet dich eine Karte, dich erneut anzumelden.
@@ -85,7 +88,7 @@ Infinitary merkt sich deinen Fokus, wenn du es neu startest.
 Öffne ein Projekt unter **Einstellungen → Projekte**, um zu wählen, wie seine fertige Arbeit zusammengeführt wird.
 **Wohin Änderungen gehen** bietet:
 
-- **Pull Requests**: Jede Änderung wird als Pull Request auf GitHub oder GitLab angeboten.
+- **Pull Requests**: Jede Änderung wird als Pull Request auf GitHub, GitLab oder Bitbucket angeboten.
 - **Gebündelte Pull Requests**: Deine bestätigten Änderungen werden zu einem Bündel-Pull-Request zusammengefasst, mit einem Commit je Änderung, und zusammengeführt, sobald seine Überprüfungen erfolgreich sind.
 - **Lokal zusammenführen**: Die Änderung wird auf diesem Computer in das Projekt zusammengeführt, ohne Pull Request.
 

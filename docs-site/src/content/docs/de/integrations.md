@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -40,9 +40,8 @@ Unter [Projekte](/de/projects/#your-github-gitlab-or-bitbucket-sign-in) steht, w
 - **GitLab**: Du meldest dich in deinem Browser an oder fügst einen Schlüssel ein, auf gitlab.com oder auf deinem eigenen GitLab-Server.
 - **GitHub Enterprise**: Du erstellst auf deinem eigenen Server einen Schlüssel und fügst ihn hier ein.
 - **Bitbucket**: Du erstellst in deinem Atlassian-Konto ein API-Token und fügst es hier ein, für bitbucket.org.
-  Seine Zeile zeigt, als wer du angemeldet bist; für deinen ersten Offizier und die Crew hat sie noch keine Aktionen.
 
-Jede Zeile für GitHub, GitLab und GitHub Enterprise hat zwei Aktionen: eine, die liest, und eine, die etwas ändert, etwa **Etwas auf GitHub ändern**.
+Jede Zeile hat zwei Aktionen: eine, die liest, und eine, die etwas ändert, etwa **Etwas auf GitHub ändern**.
 Damit schlagen dein erster Offizier und deine Crew etwas nach oder handeln dort über die eigene Arbeit einer Aufgabe hinaus.
 Der Branch einer Aufgabe, ihr Pull Request, ihre Überprüfungen und ihr Zusammenführen folgen stattdessen den Einstellungen deines Projekts.
 

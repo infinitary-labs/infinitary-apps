@@ -1,5 +1,5 @@
 ---
-source: 1311a517163799dd
+source: d29b96f163790a41
 title: Deine anderen Computer
 description: Füge deine anderen Computer hinzu, damit du deinen ersten Offizier von jedem aus steuern kannst, sie die Arbeit deiner Projekte ausführen lassen kannst und eine Kopie behältst, die übernehmen kann.
 ---
@@ -57,7 +57,7 @@ Jeder Computer behält sein eigenes Erscheinungsbild, seine eigene Tastatur und 
 Die anderen Bereiche der Einstellungen werden auf dem Computer gelesen und geändert, auf dem dein erster Offizier lebt.
 
 Um aufzuhören, öffne auf diesem Computer die Einstellungen → **Geräte** und drück **Verlassen**.
-Um einen Computer vom Computer deines ersten Offiziers abzutrennen, drück in seiner Zeile **Entfernen**.
+Um einen Computer vom Computer deines ersten Offiziers abzutrennen, öffne sein Menü, die drei Punkte in seiner Zeile, und wähl **Entfernen**.
 Ein Computer, der deinen ersten Offizier nur steuert, braucht einen neuen Link, um zurückzukommen.
 
 ## Ein Computer, der Arbeit ausführt {#a-computer-that-runs-work}
@@ -90,7 +90,7 @@ Jede Kopie fügt der Aktivität der Aufgabe eine Zeile hinzu, die die Datei und 
 
 ## Deinen ersten Offizier umziehen {#move-your-first-mate}
 
-In der Zeile eines Computers, der Arbeit ausführt, zieht **Deinen ersten Offizier hierher umziehen** deinen ersten Offizier dorthin um.
+Im Menü eines Computers, der Arbeit ausführt, den drei Punkten in seiner Zeile, zieht **Deinen ersten Offizier hierher umziehen** deinen ersten Offizier dorthin um.
 Eine Liste zeigt zuerst, was im Weg steht.
 [Geheimnisse](/de/secrets/) bleiben auf dem Computer, den er verlässt, und du meldest dich dort erneut bei deinen Abos an.
 
@@ -100,7 +100,7 @@ Ein Computer, der Arbeit ausführt, kann eine aktuelle Kopie des Protokolls dein
 Wenn der Computer, auf dem dein erster Offizier lebt, dann verloren geht oder lange außer Reichweite ist, kann dieser Computer [übernehmen](#take-over).
 
 1. Öffne auf dem Computer, auf dem dein erster Offizier lebt, die Einstellungen → **Geräte** und wähl den anderen Computer.
-2. Drück in seiner Zeile **Hier eine Kopie behalten**.
+2. Öffne sein Menü, die drei Punkte in seiner Zeile, und wähl **Hier eine Kopie behalten**.
 
 Er legt eine vollständige Kopie an, dann jede Änderung, die dein erster Offizier speichert.
 Seine Zeile sagt, wo die Kopie steht, etwa **Kopie aktuell** oder **Kopie holt auf · 3 Änderungen**, und solange er außer Reichweite ist, **Kopie von** einer Uhrzeit.
@@ -112,7 +112,7 @@ Für sich genommen enthält die Kopie keine deiner Projekte, Anmeldungen oder Ge
 
 - Wenn er übernimmt, wird jedes Projekt von dort, wo es liegt, erneut geklont.
   Ein Projekt, das nur auf dem verlorenen Computer lag, beginnt dort leer.
-- **Bereit zur Übernahme** in seiner Zeile listet auf, was dieser Computer noch bräuchte, etwa eine eigene Anmeldung bei jedem Abo, das dein erster Offizier nutzt, und dort, wo deine Projekte liegen.
+- **Bereit zur Übernahme** in seinem Menü listet auf, was dieser Computer noch bräuchte, etwa eine eigene Anmeldung bei jedem Abo, das dein erster Offizier nutzt, und dort, wo deine Projekte liegen.
   Eine Schaltfläche für jeden Punkt, etwa **Dort bei GitHub anmelden**, startet diese Anmeldung aus diesem Fenster.
 - **Geheimnisse dort behalten** in derselben Liste behält deine Geheimnisse bei der Kopie, sobald du auf diesem Computer selbst bestätigst.
   Siehe [Geheimnisse](/de/secrets/#when-your-first-mate-moves).

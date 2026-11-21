@@ -1,5 +1,5 @@
 ---
-source: 3e64699c942fc0e5
+source: 797265acca38baf9
 title: Fehlerbehebung
 description: Häufige Probleme in Infinitary, die Worte, die die App für jedes zeigt, und was du tun kannst.
 ---
@@ -69,10 +69,25 @@ Oder: „Infinitary ist geschlossen auf“ diesem Computer.
 2. Bring beide Computer ins selbe Netzwerk oder ins selbe private Netzwerk.
 3. Drück in Einstellungen → **Geräte** auf seiner Zeile **Erneut versuchen**.
 
-Wenn ein Computer, den du über seine Adresse hinzugefügt hast, eine neue Adresse hat, drück auf seiner Zeile **Adresse ändern**.
+Wenn ein Computer, den du über seine Adresse hinzugefügt hast, eine neue Adresse hat, öffne sein Menü, die drei Punkte in seiner Zeile, und wähl **Adresse ändern**.
 Auf einem Mac kann macOS Infinitary vom lokalen Netzwerk fernhalten, bis jemand an diesem Mac es erlaubt.
 Seine Zeile bietet dann stattdessen **Über seine Adresse hinzufügen** an.
 Siehe [Deine anderen Computer](/de/your-other-computers/).
+
+## Ein Computer steht zweimal in der Liste {#a-computer-is-listed-twice}
+
+Einstellungen → **Geräte** zeigt denselben Namen zweimal: eine Zeile in Reichweite und eine außer Reichweite, auf der noch Aufgaben liegen.
+Das passiert, wenn sich ein Computer, der Arbeit ausführt, erneut verbindet, nachdem seine gespeicherte Arbeit gelöscht oder Infinitary dort neu installiert wurde.
+Die Zeile in Reichweite sagt „Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite“.
+
+1. Drück in der Zeile in Reichweite **Seine Aufgaben hier weiterführen**.
+2. Lies, was weiterläuft und was zurückbleibt, und drück dann **Weiterführen**.
+3. Jede Aufgabe läuft ab dem letzten Commit weiter, den der Computer deines ersten Offiziers geholt hat.
+   Die frühere Zeile verschwindet aus deiner Liste, sobald jede Aufgabe umgezogen ist.
+
+Commits nach diesem, nicht committete Änderungen und Dateien in den alten Aufgabenordnern bleiben beim alten Eintrag.
+Bei einer Zeile außer Reichweite ohne Gegenstück drück **Seine Aufgaben verschieben nach…** und wähl einen Computer.
+Siehe [Was deine gespeicherte Arbeit löscht](/de/update-and-remove/#what-deletes-your-saved-work).
 
 ## Das Fenster antwortet nicht mehr {#the-window-stops-answering}
 

@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Infinitary aktualisieren und entfernen
 description: Wie jede Art von Installation eine neue stabile Version bekommt und wie du Infinitary entfernst, ohne deine gespeicherte Arbeit zu verlieren.
 ---
@@ -87,3 +87,15 @@ Wenn dieser Computer Arbeit für einen anderen ausführt, drück vorher **Verlas
   Bei einem AppImage lösch die Datei.
 
 Deine gespeicherte Arbeit liegt auf einem Mac in `~/Library/Application Support/infinitary` und unter Linux in `~/.config/infinitary`.
+
+### Was deine gespeicherte Arbeit löscht {#what-deletes-your-saved-work}
+
+Diese Schritte löschen diesen Ordner, und was Infinitary dort aufbewahrt hat, geht mit:
+
+- `brew uninstall --zap`.
+- Ein Deinstallationsprogramm, das auch die Hilfsdateien einer App entfernt.
+- Den Ordner selbst in den Papierkorb zu legen oder ihn zu löschen.
+
+Auf einem Computer, der Arbeit für einen anderen ausführt, enthält dieser Ordner den eigenen Schlüssel des Computers, seine Arbeitskopien und die Dateien seiner Aufgaben.
+Ohne ihn verbindet sich der Computer erneut als neuer Eintrag, und Arbeit, die er noch nicht zurückgebracht hatte, bleibt verloren.
+Siehe [Ein Computer steht zweimal in der Liste](/de/troubleshooting/#a-computer-is-listed-twice).

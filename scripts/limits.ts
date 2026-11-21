@@ -56,7 +56,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       "the package tests are ended and kept as hung-*.txt; their failure is reported and the simulator tests still run",
     ),
     PHONE_JOB_BUDGET_MS: record(
-      "a request whose passes add up to more is dealt into more jobs, each on its own phone Mac; a pass longer by itself runs in a job of its own, still stopped at the job's 25 minutes",
+      "a request whose passes, and the starts of a job's later devices, add up to more is dealt into more jobs, each on its own phone Mac; a pass longer by itself runs in a job of its own, still stopped at the gate step's 21 minutes",
     ),
     PHONE_PART_BUDGET_FLOOR_MS: record(
       "a part past twice its recorded time fails naming itself; a part that grew records its new time in scripts/phone-part-times.json",

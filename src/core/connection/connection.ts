@@ -88,6 +88,7 @@ import {
   cardPushFor,
   legacyCardSnapshot,
   lookFor,
+  SETTINGS_CURRENT,
   THREAD_CHANNELS,
   threadLinesFor,
 } from "./cardCompatibility";
@@ -679,7 +680,7 @@ const WHOLE_LIST_READS: Partial<Record<string, (typeof RELOAD_READS)[number]>> =
   "inf:tasks": "inf:tasks:board",
 };
 
-/** The look's later choices a view does not have, which it cannot read (`lookFor`). */
+/** The look's later choices and panel reads a view does not have, which it cannot read (`lookFor`). */
 function unreadLook(hello: ViewHello): string[] {
   return [
     ...(viewHas(hello, "language-choice") ? [] : ["language"]),
@@ -688,6 +689,7 @@ function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_PAUSE) ? [] : ["ambientPaused"]),
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
+    ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
   ];
 }
 

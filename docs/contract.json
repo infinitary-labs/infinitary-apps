@@ -50654,6 +50654,50 @@
         ]
       }
     },
+    "inf:settings:current": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "theme",
+                "font",
+                "window-wash",
+                "window-size",
+                "crew-model-names",
+                "ambient-music",
+                "notifications",
+                "cost-limit",
+                "personal-resources",
+                "panels-switch"
+              ]
+            }
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      }
+    },
     "inf:settings:layout:get": {
       "effect": "read",
       "reach": "views",
@@ -62789,7 +62833,8 @@
                       "knowledge.directions",
                       "knowledge.findings",
                       "knowledge.entry",
-                      "knowledge.direction"
+                      "knowledge.direction",
+                      "settings.current"
                     ]
                   }
                 },
@@ -63296,7 +63341,8 @@
                       "knowledge.directions",
                       "knowledge.findings",
                       "knowledge.entry",
-                      "knowledge.direction"
+                      "knowledge.direction",
+                      "settings.current"
                     ]
                   }
                 },
@@ -85584,7 +85630,8 @@
                       "knowledge.directions",
                       "knowledge.findings",
                       "knowledge.entry",
-                      "knowledge.direction"
+                      "knowledge.direction",
+                      "settings.current"
                     ]
                   }
                 },
@@ -86091,7 +86138,8 @@
                       "knowledge.directions",
                       "knowledge.findings",
                       "knowledge.entry",
-                      "knowledge.direction"
+                      "knowledge.direction",
+                      "settings.current"
                     ]
                   }
                 },

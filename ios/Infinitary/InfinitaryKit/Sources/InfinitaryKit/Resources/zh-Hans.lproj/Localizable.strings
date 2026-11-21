@@ -1232,6 +1232,7 @@
 "panelMoveNotAsked" = "只有你在这个面板里亲自点击或按键才会移动任务。没有写入任何内容。";
 "panelRailFolded" = "面板已折叠以腾出空间";
 "panelRailMore" = "还有 %1$@ 个";
+"panelReadsSettings" = "你的外观、音乐和其他几项设置";
 "panelRetry" = "重试";
 "panelSaidLineOpen" = "打开 %1$@";
 "panelSettingsAppearance" = "外观";

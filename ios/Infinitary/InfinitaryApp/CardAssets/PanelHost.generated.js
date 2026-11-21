@@ -32103,6 +32103,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${count} more`;
   }
+  function panelReadsSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مظهرك وموسيقاك وبعض الإعدادات الأخرى`;
+      case "de":
+        return `dein Erscheinungsbild, deine Musik und einige weitere Einstellungen`;
+      case "es":
+        return `tu apariencia, tu música y algunos ajustes más`;
+      case "fr":
+        return `votre apparence, votre musique et quelques autres réglages`;
+      case "ja":
+        return `外観、音楽、その他いくつかの設定`;
+      case "ko":
+        return `모양, 음악 및 몇 가지 다른 설정`;
+      case "pt-BR":
+        return `sua aparência, sua música e algumas outras configurações`;
+      case "zh-Hans":
+        return `你的外观、音乐和其他几项设置`;
+      case "zh-Hant":
+        return `你的外觀、音樂和其他幾項設定`;
+      case "en-XA":
+        return `[ýöûŕ ļööķ, ɱûšîç áñð á ƒéŵ öţĥéŕ šéţţîñĝš ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮your look, music and a few other settings‬`;
+    }
+    return `your look, music and a few other settings`;
+  }
   function panelRetry() {
     switch (currentLanguage()) {
       case "ar":
@@ -88041,6 +88068,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
+    panelReadsSettings,
     panelRetry,
     panelSaidLineOpen,
     panelSettingsAppearance,
@@ -90858,6 +90886,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
+    "panelReadsSettings": [],
     "panelRetry": [],
     "panelSaidLineOpen": ["panelTitle"],
     "panelSettingsAppearance": [],
@@ -94383,7 +94412,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "knowledge.directions",
     "knowledge.findings",
     "knowledge.entry",
-    "knowledge.direction"
+    "knowledge.direction",
+    "settings.current"
   ];
   const panelReadNameSchema = _enum(PANEL_READ_NAMES);
   const storeValueSchema = lazy(
@@ -105906,6 +105936,20 @@ ${FRAME_KEYBOARD_SCRIPT}
       request: tuple([privateSiteSchema])
     }
   });
+  const PANEL_SETTING_NAMES = [
+    "theme",
+    "font",
+    "window-wash",
+    "window-size",
+    "crew-model-names",
+    "ambient-music",
+    "notifications",
+    "cost-limit",
+    "personal-resources",
+    "panels-switch"
+  ];
+  const panelSettingNameSchema = _enum(PANEL_SETTING_NAMES);
+  const panelSettingNamesSchema = array(panelSettingNameSchema).min(1).max(PANEL_SETTING_NAMES.length);
   const USAGE_PERIODS = ["7d", "30d", "all"];
   const usagePeriodSchema = _enum(USAGE_PERIODS);
   const USAGE_SCOPES = ["all", "task", "firstmate", "other"];
@@ -106444,6 +106488,22 @@ ${FRAME_KEYBOARD_SCRIPT}
       toRequest: () => [],
       invalidate: { valueFromPush: "inf:shell:preferences" },
       description: "The theme, the rail layout, and the panels switch the host applies for the captain."
+    }),
+    // The app settings a panel may read (primitives/live-reads.md,
+    // "settings.current"): each named action catalog line's panel value, and
+    // never a line without one. A look change pushes the whole preferences;
+    // every other catalog change leaves a `personalized` line.
+    "settings.current": entry({
+      channel: "inf:settings:current",
+      args: strictObject({ names: panelSettingNamesSchema }),
+      toRequest: (args) => [args.names],
+      invalidate: {
+        pushes: ["inf:shell:preferences"],
+        events: (event) => event.type === "personalized",
+        sameValue: (current, next) => JSON.stringify(current) === JSON.stringify(next)
+      },
+      // i18n-exempt: told to a panel's author and the crew, never shown in the window
+      description: "The current value of each named app setting a panel may read: look, sound and a few switches."
     }),
     // The record, through SQL (plugin data surface, Phase B; src/shared/sql.ts):
     // a read-only query over the published views the plugin's grant names -

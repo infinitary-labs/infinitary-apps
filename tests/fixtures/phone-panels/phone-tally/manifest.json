@@ -2,7 +2,7 @@
   "title": "Tally",
   "api": 2,
   "placement": { "x": "left", "y": "top" },
-  "reads": ["tasks.board"],
+  "reads": ["tasks.board", "settings.current"],
   "cards": {
     "note": { "view": "note", "title": "Tally note", "data": { "from": "button" } }
   },

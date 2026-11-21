@@ -1000,6 +1000,7 @@
   {"said":{"m":"panelMoveNotAsked"},"words":"Only your own click or key in this panel moves a task. Nothing was written."},
   {"said":{"m":"panelRailFolded"},"words":"Panels folded for room"},
   {"said":{"m":"panelRailMore","a":{"count":"‹count›"}},"words":"‹count› more"},
+  {"said":{"m":"panelReadsSettings"},"words":"your look, music and a few other settings"},
   {"said":{"m":"panelRetry"},"words":"Retry"},
   {"said":{"m":"panelSaidLineOpen","a":{"panelTitle":"‹panelTitle›"}},"words":"Open ‹panelTitle›"},
   {"said":{"m":"panelSettingsAppearance"},"words":"Appearance"},

@@ -85,6 +85,74 @@ async function drawsTheFirstMatesPanels(page: Page, workspace: string): Promise<
   });
 }
 
+/** A panel the first mate builds while a window on another computer is open, reading settings. */
+const LOOK_PANEL = "look-glance";
+/** The lines LOOK_PANEL_CODE draws before and after the joined window changes its own look. */
+const LOOK_AT_START = "dark theme, music off, notifications off";
+const LOOK_CHANGED = "light theme, music on, notifications off";
+const LOOK_PANEL_CODE = `import type { PanelProps, PanelSettings } from "@infinitary/contracts";
+import { useEffect, useState } from "react";
+
+type Read = PanelSettings<"theme" | "ambient-music" | "notifications">;
+
+export default function Panel({ reads }: PanelProps) {
+  const [now, setNow] = useState<Read | null>(null);
+  useEffect(
+    () =>
+      reads.subscribe(
+        "settings.current",
+        { names: ["theme", "ambient-music", "notifications"] },
+        setNow,
+      ),
+    [reads],
+  );
+  if (!now) return <p>Reading</p>;
+  return (
+    <p data-look>
+      {\`\${now.theme.theme} theme, music \${now["ambient-music"].on ? "on" : "off"}, notifications \${now.notifications.enabled ? "on" : "off"}\`}
+    </p>
+  );
+}
+`;
+
+/**
+ * The captain's choice on INF-5357's review (docs/view.md, "The switch and
+ * the layout"): a panel in a window on another computer reads that window's
+ * own look, which a change there never sends to the first mate, and reads
+ * the first mate's own settings, such as notifications, from it.
+ */
+async function readsItsOwnLook(home: Page, page: Page, workspace: string): Promise<void> {
+  await test.step("a panel reading settings follows this window's look and the first mate's notifications", async () => {
+    await home.evaluate(() => window.infinitary.settings.setNotifications(false));
+    const homeLook = await home.evaluate(() => window.infinitary.settings.getAppearance());
+    const dir = join(workspace, LOOK_PANEL);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "manifest.json"),
+      JSON.stringify({
+        title: "Look",
+        placement: { x: "right", y: "top" },
+        size: "content",
+        presence: { always: true },
+        reads: ["settings.current"],
+      }),
+    );
+    writeFileSync(join(dir, "panel.tsx"), LOOK_PANEL_CODE);
+    const look = panelBody(page, LOOK_PANEL).locator("[data-look]");
+    await expect(look).toHaveText(LOOK_AT_START, { timeout: 60_000 });
+    await page.evaluate(async () => {
+      const own = await window.infinitary.settings.getAppearance();
+      await window.infinitary.settings.setAppearance({
+        ...own,
+        theme: "light",
+        ambientMusic: true,
+      });
+    });
+    await expect(look).toHaveText(LOOK_CHANGED);
+    expect(await home.evaluate(() => window.infinitary.settings.getAppearance())).toEqual(homeLook);
+  });
+}
+
 /**
  * Promised result: the window opened beside Infinitary started by a
  * command, which has no first mate of its own, shows the captain's panels
@@ -117,7 +185,8 @@ test("the window opened beside a command draws the first mate's panels, runs the
  * Promised result: a window on another computer, joined with a link, shows
  * the panels of the first mate it controls, built there. Completion: the
  * same three results as the window beside a command, in the joined window,
- * whose own data folder holds no panel.
+ * whose own data folder holds no panel; then a panel reading settings shows
+ * the joined window's own look and the first mate's notifications.
  */
 test("a window on another computer draws the panels of the first mate it controls, runs their actions there and follows a rebuild", async () => {
   test.setTimeout(240_000);
@@ -150,6 +219,7 @@ test("a window on another computer draws the panels of the first mate it control
       false,
     );
     await drawsTheFirstMatesPanels(page, workspace);
+    await readsItsOwnLook(pro.page, page, workspace);
   } finally {
     await air?.close();
     await pro.close();

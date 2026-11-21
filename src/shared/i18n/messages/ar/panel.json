@@ -21,6 +21,7 @@
   "panelMoveNotAsked": "لا ينقل مهمةً إلا نقرك أو مفتاحك أنت في هذه اللوحة. لم يُكتب شيء.",
   "panelRailFolded": "طُويت اللوحات لتوفير المساحة",
   "panelRailMore": "{count} أخرى",
+  "panelReadsSettings": "مظهرك وموسيقاك وبعض الإعدادات الأخرى",
   "panelRetry": "إعادة المحاولة",
   "panelSaidLineOpen": "فتح {panelTitle}",
   "panelSettingsAppearance": "المظهر",

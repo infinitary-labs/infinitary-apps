@@ -82,10 +82,13 @@ Unknown values stay unknown in a read and in a view column (a count nobody recor
 - The Knowledge browser reads the `knowledge.*` entries ([knowledge](../docs/knowledge.md), "The reads").
 - Personal panels query `v_usage_v1` through `sql`, taught by the seeded `usage` skill with the `token-watch` fixture.
 - A crewmate's card reads what its `emit_card` declared while it is open ([`../tests/e2e/card-live-reads.spec.ts`](../tests/e2e/card-live-reads.spec.ts)).
+- Panels read the app's settings through `settings.current`: each action catalog line's panel value (`PANEL_SETTINGS` in [`../src/shared/panelSettings.ts`](../src/shared/panelSettings.ts)), answered in core over `inf:settings:current`; a line without one, such as anything naming a project, computer or account, is refused.
+  A window on another computer reads the settings its own look holds from that look, and asks the first mate only for the rest (docs/view.md, "The switch and the layout").
 
 ## Checks
 
 - [`../src/shared/reads.test.ts`](../src/shared/reads.test.ts): the frozen names, every entry's request parsing against its channel, and nothing account-, auth- or card-shaped.
+- [`../src/shared/panelSettings.test.ts`](../src/shared/panelSettings.test.ts): every action catalog line has a panel value or a ground, and the readable lines are the names `settings.current` takes; `src/core/core.settings.test.ts` reads them through the real core, and [`../tests/e2e/panel-settings.spec.ts`](../tests/e2e/panel-settings.spec.ts) shows a panel following Settings.
 - [`../src/core/storage/views.test.ts`](../src/core/storage/views.test.ts): every view's column list, and `v_feed_v1` saying what `feed.recent` says.
 - [`../src/renderer/src/plugins/reads/executor.test.ts`](../src/renderer/src/plugins/reads/executor.test.ts), [`appExecutor.test.ts`](../src/renderer/src/plugins/reads/appExecutor.test.ts) and [`sharedPush.test.ts`](../src/renderer/src/plugins/reads/sharedPush.test.ts): coalescing, deltas, staleness and shared pushes.
 - [`../src/core/sql/sqlEngine.test.ts`](../src/core/sql/sqlEngine.test.ts) and [`../src/core/sql/sqlService.test.ts`](../src/core/sql/sqlService.test.ts): name proving, read-only refusal and the timeout kill.

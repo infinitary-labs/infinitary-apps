@@ -8,6 +8,8 @@ import type {
   knowledgeFindingsSchema,
   knowledgeGraphSchema,
 } from "../knowledge";
+import type { PanelSettingName as SharedPanelSettingName } from "../panelSettingNames";
+import type { PanelSettingValuesRead } from "../panelSettings";
 import type {
   PanelKnowledgeCollections,
   PanelKnowledgeConcepts,
@@ -15,6 +17,8 @@ import type {
   PanelKnowledgeEntryRead,
   PanelKnowledgeFindings,
   PanelKnowledgeGraph,
+  PanelSettingName,
+  PanelSettingValues,
   PersonalManifest,
   PersonalPresence,
   StoreValue,
@@ -51,6 +55,10 @@ describe("personal contracts", () => {
     expectTypeOf<
       z.infer<typeof knowledgeDirectionReadSchema>
     >().toEqualTypeOf<PanelKnowledgeDirectionRead>();
+    // The settings a panel reads are the lines the core answers, each as it builds it.
+    expectTypeOf<SharedPanelSettingName>().toEqualTypeOf<PanelSettingName>();
+    const served: PanelSettingValues = {} as PanelSettingValuesRead;
+    expect(served).toEqual({});
     expect(MIN_BACKGROUND_INTERVAL_MS).toBe(60_000);
     expect(Object.keys(PERSONAL_HOST_MODULES)).toEqual([
       "react",

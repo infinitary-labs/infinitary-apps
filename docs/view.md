@@ -211,6 +211,9 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
   The panels switch in Settings is the first mate's, set at its own computer's window; a view reads it from `inf:shell:preferences` at each welcome and follows it when it changes, and takes nothing else of that look (`ViewLook.heardPanels`).
   A switch heard before this Mac has a look of its own waits for the other Mac's saved look, so the window is never drawn in the default look first (`ViewBackend.heardPanels`).
   How the panels sit is each computer's own layout, except in the window opened beside a command, which follows the first mate's whole look.
+  A panel's `settings.current` read follows the same split: a setting this Mac's own look holds, such as the theme or the music, is read from that look, and only the rest, such as notifications or the cost limit, is asked of the first mate (`ViewBackend.settingsNow`).
+- **Settings read by a panel, on an older view.**
+  A view whose hello does not list `settings-current` reads a panel's reads as a closed list, so the first mate leaves out every panel that reads settings, built or being built, from the panel list it answers, pushes and replays to that view (`lookFor`, `src/core/connection/cardCompatibility.ts`).
 - **A gap.**
   A window that missed the first mate's pushes, because the first mate was out of reach or restarted, reads its panels again with everything else (`startPersonalPlugins`, `src/renderer/src/personal/personalPlugins.ts`).
 - **An older first mate.**

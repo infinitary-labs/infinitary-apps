@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { AccessAsk, AccessRun } from "@core/storage/ownerOnly";
 import { setCurrentLanguage } from "@shared/i18n/current";
@@ -172,9 +180,13 @@ describe("a refused launch's word to the person", () => {
     const user = "S-1-5-21-1-2-3-1001";
     const group = "S-1-5-21-1-2-3-513";
     const other = "S-1-5-21-9-9-9-1002";
+    const ownList = `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`;
+    // Every folder above the profiles' folder answers as this account's alone unless `above`
+    // says otherwise; the profiles' folder and what it holds answer `at`.
     const answering = (
       sddl: string,
       at: (path: string) => string = () => sddl,
+      above: (path: string) => string = () => ownList,
     ): AccessRun & { asks: AccessAsk[] } => {
       const asks: AccessAsk[] = [];
       return Object.assign(
@@ -183,41 +195,113 @@ describe("a refused launch's word to the person", () => {
           return {
             user,
             set: ask.set.map((each) => ({ path: each.path, error: null })),
-            read: ask.read.map((path) => ({ path, sddl: at(path), error: null })),
+            read: ask.read.map((path) => ({
+              path,
+              sddl: path.includes("word-profiles") ? at(path) : above(path),
+              error: null,
+            })),
           };
         },
         { asks },
       );
     };
-    const root = () => join(scratchDir("person-word-windows-"), "word-profiles");
-    const own = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    const sets = (run: { asks: AccessAsk[] }) =>
+      run.asks.flatMap((ask) => ask.set.map((each) => each.path));
+    const root = () => join(realpathSync(scratchDir("person-word-windows-")), "word-profiles");
+    const own = answering(ownList);
     const ownRoot = root();
     expect((await ownProfilesFolder(ownRoot, "win32", own))?.path).toBe(ownRoot);
-    expect(own.asks[0]?.read).toEqual([ownRoot]);
-    // Found again by a later launch through one read, with nothing set on it.
-    const again = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    expect(own.asks.some((ask) => ask.read.includes(ownRoot))).toBe(true);
+    // Found again by a later launch, which reads the folder and its mark and sets nothing.
+    const again = answering(ownList);
     expect((await ownProfilesFolder(ownRoot, "win32", again))?.path).toBe(ownRoot);
-    expect(again.asks).toEqual([{ set: [], read: [ownRoot] }]);
-    // One already there that is not owner-only, or whose mark is not the app's, is only read:
-    // no access list is set on it, and a folder at the next name is made instead.
+    expect(sets(again)).toEqual([]);
+    const read = again.asks.flatMap((ask) => ask.read);
+    expect(read).toContain(ownRoot);
+    expect(read).toContain(join(ownRoot, WORD_PROFILES_RESERVED));
+    // One already there that is not owner-only, whose mark is not the app's, or whose mark another
+    // account could have written, is only read: no access list is set on it, and a folder at the
+    // next name is made instead.
     const shared = root();
     mkdirSync(shared, { recursive: true });
     writeFileSync(join(shared, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
-    const inherited = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`, (path) =>
-      path === shared
-        ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
-        : `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`,
+    const inherited = answering(ownList, (path) =>
+      path === shared ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})` : ownList,
     );
     expect((await ownProfilesFolder(shared, "win32", inherited))?.path).toBe(`${shared}-2`);
-    expect(inherited.asks.flatMap((ask) => ask.set.map((each) => each.path))).not.toContain(shared);
+    expect(sets(inherited)).not.toContain(shared);
     const marked = root();
     mkdirSync(marked, { recursive: true });
     writeFileSync(join(marked, WORD_PROFILES_RESERVED), "someone else's\n");
-    const malformed = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    const malformed = answering(ownList);
     expect((await ownProfilesFolder(marked, "win32", malformed))?.path).toBe(`${marked}-2`);
-    expect(malformed.asks.flatMap((ask) => ask.set.map((each) => each.path))).not.toContain(marked);
+    expect(sets(malformed)).not.toContain(marked);
     expect(readFileSync(join(marked, WORD_PROFILES_RESERVED), "utf8")).toBe("someone else's\n");
-    // A folder already there that another account owns is never taken as private.
+    const planted = root();
+    mkdirSync(planted, { recursive: true });
+    writeFileSync(join(planted, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+    const foreignMark = answering(ownList, (path) =>
+      path === join(planted, WORD_PROFILES_RESERVED)
+        ? `O:${other}G:${group}D:AI(A;;FA;;;${other})(A;;FA;;;${user})`
+        : ownList,
+    );
+    expect((await ownProfilesFolder(planted, "win32", foreignMark))?.path).toBe(`${planted}-2`);
+    expect(sets(foreignMark)).not.toContain(planted);
+    // An empty folder of this account's at the name is one a launch made and ended before its
+    // mark went in: it is made owner-only and marked, and used; another account's is left alone.
+    const ended = root();
+    mkdirSync(ended, { recursive: true });
+    const finishing = answering(ownList, (path) =>
+      path === ended && !sets({ asks: finishing.asks }).includes(ended)
+        ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
+        : ownList,
+    );
+    expect((await ownProfilesFolder(ended, "win32", finishing))?.path).toBe(ended);
+    expect(readdirSync(ended)).toEqual([WORD_PROFILES_RESERVED]);
+    const theirs = root();
+    mkdirSync(theirs, { recursive: true });
+    const theirsRun = answering(ownList, (path) =>
+      path === theirs ? `O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})` : ownList,
+    );
+    expect((await ownProfilesFolder(theirs, "win32", theirsRun))?.path).toBe(`${theirs}-2`);
+    expect(sets(theirsRun)).not.toContain(theirs);
+    // A folder above it another account could change: nothing is made or asked of it.
+    const exposed = root();
+    const changeable = answering(ownList, undefined, (path) =>
+      path === join(exposed, "..")
+        ? `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1301bf;;;${other})`
+        : ownList,
+    );
+    expect(await ownProfilesFolder(exposed, "win32", changeable)).toBeNull();
+    expect(existsSync(exposed)).toBe(false);
+    // A folder made that cannot be made private, or whose mark cannot go in, is removed only
+    // while empty: what something else put in it meanwhile stays.
+    for (const failing of ["private", "mark"]) {
+      const made = root();
+      const fails: AccessRun = async (ask) => {
+        if (ask.read.includes(made) && failing === "private")
+          writeFileSync(join(made, "theirs"), "");
+        if (ask.read.includes(made) && failing === "mark")
+          mkdirSync(join(made, WORD_PROFILES_RESERVED), { recursive: true });
+        return {
+          user,
+          set: ask.set.map((each) => ({ path: each.path, error: "refused" })),
+          read: ask.read.map((path) => ({
+            path,
+            sddl:
+              path === made && failing === "private"
+                ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`
+                : ownList,
+            error: null,
+          })),
+        };
+      };
+      expect(await ownProfilesFolder(made, "win32", fails)).toBeNull();
+      expect(readdirSync(made)).toContain(
+        failing === "private" ? "theirs" : WORD_PROFILES_RESERVED,
+      );
+    }
+    // A folder made that another account owns is never taken as private.
     expect(
       await ownProfilesFolder(
         root(),
@@ -235,11 +319,11 @@ describe("a refused launch's word to the person", () => {
       const linked = root();
       mkdirSync(join(linked, ".."), { recursive: true });
       symlinkSync(scratchDir("person-word-elsewhere-"), linked);
-      const asked = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+      const asked = answering(ownList);
       expect((await ownProfilesFolder(linked, "win32", asked))?.path).toBe(`${linked}-2`);
-      expect(
-        asked.asks.flatMap((ask) => [...ask.read, ...ask.set.map((each) => each.path)]),
-      ).toEqual([`${linked}-2`]);
+      const paths = asked.asks.flatMap((ask) => [...ask.read, ...ask.set.map((each) => each.path)]);
+      expect(paths).not.toContain(linked);
+      expect(paths).toContain(`${linked}-2`);
     }
   });
 });

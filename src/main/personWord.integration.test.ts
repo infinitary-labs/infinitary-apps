@@ -5,21 +5,24 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { hostPlatform } from "@core/platform";
 import { clearPrivateTemp } from "@core/storage/ownerOnly";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
-import { askPersonWord } from "./personWord";
+import { askPersonWord, ownProfilesFolder } from "./personWord";
 import {
   PERSON_WORD_ARG,
   WORD_OWNER_FILE,
   WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
+  WORD_REMOVING_PREFIX,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -134,8 +137,13 @@ const alive = (pid: number) => {
 const wordProfiles = (dir: string) =>
   readdirSync(dir).filter((name) => name.startsWith("infinitary-word-"));
 
-/** A profiles' folder of this test's own. */
-const profilesFolder = () => join(scratchDir("person-word-profiles-"), "word-profiles");
+/** A profiles' folder of this test's own, named by its resolved place as the app keeps it. */
+const profilesFolder = () =>
+  join(realpathSync(scratchDir("person-word-profiles-")), "word-profiles");
+
+/** What a removal set aside and could not remove. */
+const setAside = (dir: string) =>
+  readdirSync(dir).filter((name) => name.startsWith(WORD_REMOVING_PREFIX));
 
 /** Lets a waiting copy end, and waits until it has, should a check before that have failed. */
 async function release(marks: string): Promise<void> {
@@ -241,6 +249,31 @@ describe("a refused launch's copy that shows a word", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "makes no profile where another account could replace a folder above its place",
+    async () => {
+      // Its own folder is private, but the one above it lets anyone rename it away; one above
+      // that only lets each entry's owner move it, as /tmp does, and is trusted.
+      const above = realpathSync(scratchDir("person-word-above-"));
+      const own = join(above, "own");
+      mkdirSync(own, { mode: 0o700 });
+      const marks = scratchDir("person-word-marks-");
+      const ask = () =>
+        askPersonWord("dock", {
+          launcher: launcher(copyProgram(), "zero", marks),
+          profiles: join(own, "word-profiles"),
+        });
+      chmodSync(above, 0o777);
+      expect(await ask()).toBe("unshown");
+      expect(existsSync(join(marks, "started"))).toBe(false);
+      expect(readdirSync(own)).toEqual([]);
+      chmodSync(above, 0o1777);
+      expect(await ask()).toBe(0);
+      expect(readdirSync(own)).toEqual(["word-profiles"]);
+      chmodSync(above, 0o700);
+    },
+  );
+
   it("uses only a profiles' folder it made, and leaves a folder already there alone", async () => {
     // One it makes is marked as made, and used again by the next ask.
     const made = profilesFolder();
@@ -275,7 +308,10 @@ describe("a refused launch's copy that shows a word", () => {
 
   it("starts no copy where every name for its profiles' folder is taken", async () => {
     const found = profilesFolder();
-    for (const path of [found, `${found}-2`, `${found}-3`]) mkdirSync(path, { recursive: true });
+    for (const path of [found, `${found}-2`, `${found}-3`]) {
+      mkdirSync(path, { recursive: true });
+      writeFileSync(join(path, "theirs"), "");
+    }
     const marks = scratchDir("person-word-marks-");
     expect(
       await askPersonWord("dock", {
@@ -284,8 +320,29 @@ describe("a refused launch's copy that shows a word", () => {
       }),
     ).toBe("unshown");
     expect(existsSync(join(marks, "started"))).toBe(false);
-    for (const path of [found, `${found}-2`, `${found}-3`]) expect(readdirSync(path)).toEqual([]);
+    for (const path of [found, `${found}-2`, `${found}-3`])
+      expect(readdirSync(path)).toEqual(["theirs"]);
   });
+
+  it.skipIf(process.platform === "win32")(
+    "finishes a profiles' folder a launch made and ended before marking, and only that",
+    async () => {
+      // Made as a launch makes it, this account's alone, and left empty.
+      const ended = profilesFolder();
+      mkdirSync(ended, { recursive: true, mode: 0o700 });
+      const before = statSync(ended);
+      const marks = scratchDir("person-word-marks-");
+      expect(
+        await askPersonWord("dock", {
+          launcher: launcher(copyProgram(), "zero", marks),
+          profiles: ended,
+        }),
+      ).toBe(0);
+      expect(readdirSync(ended)).toEqual([WORD_PROFILES_RESERVED]);
+      expect(statSync(ended).ino).toBe(before.ino);
+      expect(existsSync(`${ended}-2`)).toBe(false);
+    },
+  );
 
   it("keeps the press and leaves a folder that replaced the copy's profile", async () => {
     const profiles = profilesFolder();
@@ -320,10 +377,12 @@ describe("a refused launch's copy that shows a word", () => {
             profiles,
           }),
         ).toBe(1);
-        expect(wordProfiles(profiles)).toHaveLength(1);
+        // What could not go stays set aside, never back at a name something else may now hold.
+        expect(wordProfiles(profiles)).toEqual([]);
+        expect(setAside(profiles)).toHaveLength(1);
       } finally {
         // The scratch folder goes at the run's end, so its kept profile is made removable again.
-        for (const kept of wordProfiles(profiles)) chmodSync(join(profiles, kept), 0o700);
+        for (const kept of setAside(profiles)) chmodSync(join(profiles, kept), 0o700);
       }
     },
   );
@@ -428,9 +487,9 @@ describe("a refused launch's copy that shows a word", () => {
   });
 
   it("removes only profiles whose copy named itself and has positively ended", async () => {
-    const profiles = profilesFolder();
-    mkdirSync(profiles, { recursive: true, mode: 0o700 });
-    writeFileSync(join(profiles, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+    // The profiles' folder as the app keeps it, made by the app itself on this system.
+    const profiles = (await ownProfilesFolder(profilesFolder(), hostPlatform()))?.path;
+    if (profiles === undefined) throw new Error("the app kept no profiles' folder");
     const ended = await endedPid();
     const profile = (name: string, said?: string) => {
       mkdirSync(join(profiles, name));

@@ -15,6 +15,7 @@ import {
   clearPrivateTemp,
   keepDataFolderPrivate,
   keepOwnerOnly,
+  othersCanChange,
   ownerOnlyAccessList,
   ownerOnlyVerdict,
   PRIVATE_TEMP_DIR,
@@ -110,6 +111,18 @@ describe("reading a folder's access list", () => {
   it("finds a folder another account owns, and a drive with no list", () => {
     expect(ownerOnlyVerdict(readAccessList(OTHERS_FOLDER), USER)).toBe("other-owner");
     expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
+  });
+
+  it("finds who besides this account could move or replace what a folder holds", () => {
+    // The profile's own folders: only this account, Windows and the administrators.
+    expect(othersCanChange(readAccessList(IN_PROFILE), USER)).toBe(false);
+    expect(othersCanChange(readAccessList(OTHERS_FOLDER), USER)).toBe(true);
+    // At the top of the drive every signed-in account may change it; reading it, or a right only
+    // handed down to what others make there, changes nothing in it.
+    expect(othersCanChange(readAccessList(AT_DRIVE_TOP), USER)).toBe(true);
+    const readOnly = AT_DRIVE_TOP.replace("(A;ID;0x1301bf;;;AU)", "");
+    expect(othersCanChange(readAccessList(readOnly), USER)).toBe(false);
+    expect(othersCanChange(readAccessList(NO_LIST), USER)).toBe(true);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {

@@ -107,6 +107,37 @@ export function onlyOwnerReaches(list: AccessList, user: string): boolean {
 }
 
 /**
+ * Rights that let an account remove, rename or re-permit what a folder holds, or the folder
+ * itself: delete, delete a child, change the list or owner, or all of them.
+ */
+const CHANGE_MASK = 0x10000 | 0x40 | 0x40000 | 0x80000 | 0x10000000;
+const CHANGE_LETTERS = new Set(["GA", "FA", "SD", "DT", "WD", "WO"]);
+
+function letsChange(rights: string): boolean {
+  if (/^0x[0-9a-f]+$/i.test(rights)) return (Number.parseInt(rights, 16) & CHANGE_MASK) !== 0;
+  return (rights.match(/../g) ?? []).some((letters) => CHANGE_LETTERS.has(letters));
+}
+
+/**
+ * Whether an account besides this one, Windows and the administrators could remove, rename or
+ * re-permit what a folder holds, or the folder itself: an owner that is none of them nor a
+ * Windows service, no list at all, or an entry on the folder itself (not one only handed down)
+ * giving another account such a right. Reading or adding entries alone changes nothing there.
+ */
+export function othersCanChange(list: AccessList, user: string): boolean {
+  if (list.entries === null) return true;
+  if (!ownerKeeps(list.owner, user) && !accountNumber(list.owner ?? "").startsWith("S-1-5-80-"))
+    return true;
+  return list.entries.some(
+    (entry) =>
+      allows(entry) &&
+      !entry.flags.includes("IO") &&
+      !accountMayHold(entry.account, user) &&
+      letsChange(entry.rights),
+  );
+}
+
+/**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
  * list is its own (protected) and lets in no other ordinary account.
  */

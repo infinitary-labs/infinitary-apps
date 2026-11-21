@@ -757,6 +757,16 @@
 "filePreparing" = "Preparando";
 "fileReady" = "Listo";
 "fileReadyAnnounce" = "%1$@ listo";
+"firstCrewmateCards" = "Cuando tenga una respuesta, o necesite que elijas, te lo traigo aquí en una tarjeta como esta. Las tarjetas son lo único que te necesita.";
+"firstCrewmateHandoff" = "Le pasé tu petición a un tripulante. Trabaja en segundo plano, y eso puede llevar un rato.";
+"firstCrewmateLater" = "Después";
+"firstCrewmateLaterCard" = "Vuelve una tarjeta aquí";
+"firstCrewmateLaterWhat" = "Una respuesta o una elección";
+"firstCrewmateNow" = "Ahora";
+"firstCrewmateNowWatch" = "No hace falta vigilarlo";
+"firstCrewmateNowWorks" = "Un tripulante trabaja";
+"firstCrewmatePutAway" = "Puedes guardar esta tarjeta. El trabajo sigue, y mientras tanto puedes pedirme otra cosa.";
+"firstCrewmateTitle" = "Un tripulante se encarga";
 "handoverQuit" = "Salir";
 "handoverRunBothFolders" = "%2$@ encontró trabajo guardado en dos lugares: en su propia carpeta y en la de %1$@. Abre %2$@ con su ventana una vez para elegir el trabajo que abre y luego vuelve a ejecutar este comando.";
 "handoverRunBusy" = "%1$@ ya está moviendo tu trabajo guardado. Vuelve a ejecutar este comando cuando termine ese traslado.";

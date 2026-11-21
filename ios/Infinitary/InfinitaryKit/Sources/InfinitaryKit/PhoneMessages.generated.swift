@@ -791,6 +791,16 @@ public enum PhoneMessages {
     public static func `filePreparing`() -> String { PhoneWords.format("filePreparing", []) }
     public static func `fileReady`() -> String { PhoneWords.format("fileReady", []) }
     public static func `fileReadyAnnounce`(`name`: String) -> String { PhoneWords.format("fileReadyAnnounce", [`name`]) }
+    public static func `firstCrewmateCards`() -> String { PhoneWords.format("firstCrewmateCards", []) }
+    public static func `firstCrewmateHandoff`() -> String { PhoneWords.format("firstCrewmateHandoff", []) }
+    public static func `firstCrewmateLater`() -> String { PhoneWords.format("firstCrewmateLater", []) }
+    public static func `firstCrewmateLaterCard`() -> String { PhoneWords.format("firstCrewmateLaterCard", []) }
+    public static func `firstCrewmateLaterWhat`() -> String { PhoneWords.format("firstCrewmateLaterWhat", []) }
+    public static func `firstCrewmateNow`() -> String { PhoneWords.format("firstCrewmateNow", []) }
+    public static func `firstCrewmateNowWatch`() -> String { PhoneWords.format("firstCrewmateNowWatch", []) }
+    public static func `firstCrewmateNowWorks`() -> String { PhoneWords.format("firstCrewmateNowWorks", []) }
+    public static func `firstCrewmatePutAway`() -> String { PhoneWords.format("firstCrewmatePutAway", []) }
+    public static func `firstCrewmateTitle`() -> String { PhoneWords.format("firstCrewmateTitle", []) }
     public static func `handoverQuit`() -> String { PhoneWords.format("handoverQuit", []) }
     public static func `handoverRunBothFolders`(`from`: String, `to`: String) -> String { PhoneWords.format("handoverRunBothFolders", [`from`, `to`]) }
     public static func `handoverRunBusy`(`to`: String) -> String { PhoneWords.format("handoverRunBusy", [`to`]) }
@@ -4562,6 +4572,16 @@ extension PhoneWords {
         "filePreparing": [],
         "fileReady": [],
         "fileReadyAnnounce": ["name"],
+        "firstCrewmateCards": [],
+        "firstCrewmateHandoff": [],
+        "firstCrewmateLater": [],
+        "firstCrewmateLaterCard": [],
+        "firstCrewmateLaterWhat": [],
+        "firstCrewmateNow": [],
+        "firstCrewmateNowWatch": [],
+        "firstCrewmateNowWorks": [],
+        "firstCrewmatePutAway": [],
+        "firstCrewmateTitle": [],
         "handoverQuit": [],
         "handoverRunBothFolders": ["from", "to"],
         "handoverRunBusy": ["to"],

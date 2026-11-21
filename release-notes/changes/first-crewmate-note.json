@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "first-crewmate-note",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Your first crewmate comes with a short note on what happens next",
+      "body": "The first time the first mate hands your ask to a crewmate, a note says the crewmate works in the background, that its answer or a choice comes back as a card, and that cards are the only part that needs you. It shows once, and if the How we work card is still open, the note takes its place.",
+      "picture": {
+        "dark": "first-crewmate-note-dark.webp",
+        "light": "first-crewmate-note-light.webp",
+        "alt": "A note titled A crewmate is on it, with two panels, Now: a crewmate works, and Later: a card comes back here, above a Got it button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

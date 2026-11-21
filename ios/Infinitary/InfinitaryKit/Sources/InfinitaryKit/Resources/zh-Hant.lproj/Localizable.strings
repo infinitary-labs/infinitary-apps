@@ -757,6 +757,16 @@
 "filePreparing" = "準備中";
 "fileReady" = "就緒";
 "fileReadyAnnounce" = "%1$@ 已就緒";
+"firstCrewmateCards" = "等它有了答案，或需要你做選擇時，我會用像這張一樣的卡片把它帶回這裡。只有卡片需要你處理。";
+"firstCrewmateHandoff" = "我把你的要求交給了一位船員。它在背景工作，可能需要一些時間。";
+"firstCrewmateLater" = "之後";
+"firstCrewmateLaterCard" = "卡片會回到這裡";
+"firstCrewmateLaterWhat" = "一個答案或一個選擇";
+"firstCrewmateNow" = "現在";
+"firstCrewmateNowWatch" = "不必盯著看";
+"firstCrewmateNowWorks" = "船員在工作";
+"firstCrewmatePutAway" = "你可以收起這張卡片。工作會繼續進行，同時你也可以請我做別的事。";
+"firstCrewmateTitle" = "一位船員已接手";
 "handoverQuit" = "結束";
 "handoverRunBothFolders" = "%2$@ 在兩個地方找到儲存的工作：它自己的資料夾和 %1$@ 的資料夾。請用視窗開啟一次 %2$@，選擇它要開啟的工作，然後再次執行此指令。";
 "handoverRunBusy" = "%1$@ 已在移動你儲存的工作。等這次移動完成後，再次執行此指令。";

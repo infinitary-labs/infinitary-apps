@@ -757,6 +757,16 @@
 "filePreparing" = "Wird vorbereitet";
 "fileReady" = "Bereit";
 "fileReadyAnnounce" = "%1$@ ist bereit";
+"firstCrewmateCards" = "Wenn es eine Antwort hat oder du etwas entscheiden musst, bringe ich das als Karte wie diese hierher. Nur die Karten brauchen dich.";
+"firstCrewmateHandoff" = "Ich habe deine Bitte an ein Crewmitglied gegeben. Es arbeitet im Hintergrund, und das kann eine Weile dauern.";
+"firstCrewmateLater" = "Später";
+"firstCrewmateLaterCard" = "Eine Karte kommt hierher zurück";
+"firstCrewmateLaterWhat" = "Eine Antwort oder eine Entscheidung";
+"firstCrewmateNow" = "Jetzt";
+"firstCrewmateNowWatch" = "Du musst nicht zusehen";
+"firstCrewmateNowWorks" = "Ein Crewmitglied arbeitet";
+"firstCrewmatePutAway" = "Du kannst diese Karte weglegen. Die Arbeit geht weiter, und du kannst mich in der Zwischenzeit um etwas anderes bitten.";
+"firstCrewmateTitle" = "Ein Crewmitglied ist dran";
 "handoverQuit" = "Beenden";
 "handoverRunBothFolders" = "%2$@ hat an zwei Orten gespeicherte Arbeit gefunden: in seinem eigenen Ordner und in dem von %1$@. Öffne %2$@ einmal mit seinem Fenster, um die Arbeit zu wählen, die es öffnet, und führ diesen Befehl dann erneut aus.";
 "handoverRunBusy" = "%1$@ verschiebt deine gespeicherte Arbeit bereits. Führ diesen Befehl erneut aus, sobald das Verschieben fertig ist.";

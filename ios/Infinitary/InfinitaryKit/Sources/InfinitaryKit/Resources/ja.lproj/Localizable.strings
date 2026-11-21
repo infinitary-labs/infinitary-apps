@@ -757,6 +757,16 @@
 "filePreparing" = "準備中";
 "fileReady" = "準備完了";
 "fileReadyAnnounce" = "%1$@ の準備ができました";
+"firstCrewmateCards" = "回答が出たときや、選んでいただく必要があるときは、このようなカードでここにお届けします。対応が必要なのはカードだけです。";
+"firstCrewmateHandoff" = "ご依頼を乗組員に渡しました。乗組員はバックグラウンドで作業するので、少し時間がかかることがあります。";
+"firstCrewmateLater" = "あとで";
+"firstCrewmateLaterCard" = "カードがここに戻ります";
+"firstCrewmateLaterWhat" = "回答か選択肢";
+"firstCrewmateNow" = "いま";
+"firstCrewmateNowWatch" = "見守る必要はありません";
+"firstCrewmateNowWorks" = "乗組員が作業中";
+"firstCrewmatePutAway" = "このカードはしまって大丈夫です。作業は続きますし、その間にほかのことを頼むこともできます。";
+"firstCrewmateTitle" = "乗組員が取りかかりました";
 "handoverQuit" = "終了";
 "handoverRunBothFolders" = "%2$@ は2か所で保存した作業を見つけました。自分のフォルダと %1$@ のフォルダです。%2$@ をウインドウで一度開いて開く作業を選んでから、このコマンドをもう一度実行してください。";
 "handoverRunBusy" = "%1$@ がすでに保存した作業を移動しています。その移動が終わってから、このコマンドをもう一度実行してください。";

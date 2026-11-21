@@ -757,6 +757,16 @@
 "filePreparing" = "قيد التجهيز";
 "fileReady" = "جاهز";
 "fileReadyAnnounce" = "%1$@ جاهز";
+"firstCrewmateCards" = "عندما تكون لديه إجابة، أو يحتاج إلى أن تختار، أعيد ذلك إليك هنا في بطاقة مثل هذه. البطاقات وحدها هي ما يحتاج إليك.";
+"firstCrewmateHandoff" = "سلّمت طلبك إلى أحد أفراد الطاقم. يعمل في الخلفية، وقد يستغرق ذلك بعض الوقت.";
+"firstCrewmateLater" = "لاحقًا";
+"firstCrewmateLaterCard" = "تعود بطاقة إلى هنا";
+"firstCrewmateLaterWhat" = "إجابة أو خيار";
+"firstCrewmateNow" = "الآن";
+"firstCrewmateNowWatch" = "لا داعي لمراقبته";
+"firstCrewmateNowWorks" = "فرد من الطاقم يعمل";
+"firstCrewmatePutAway" = "يمكنك إخفاء هذه البطاقة. يستمر العمل، ويمكنك أن تطلب مني شيئًا آخر في الأثناء.";
+"firstCrewmateTitle" = "أحد أفراد الطاقم يتولى الأمر";
 "handoverQuit" = "إنهاء";
 "handoverRunBothFolders" = "وجد %2$@ عملًا محفوظًا في مكانين: في مجلده الخاص وفي مجلد %1$@. افتح %2$@ بنافذته مرة واحدة لتختار العمل الذي يفتحه، ثم شغّل هذا الأمر مرة أخرى.";
 "handoverRunBusy" = "ينقل %1$@ عملك المحفوظ بالفعل. شغّل هذا الأمر مرة أخرى بعد انتهاء هذا النقل.";

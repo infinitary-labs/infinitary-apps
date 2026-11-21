@@ -2,7 +2,7 @@ import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { isCustomApiProvider } from "@shared/customApi";
 import { WELCOME_NOTE } from "@shared/welcome";
 import type { CoreEventSink } from "./events";
-import { crewFacts, FirstRunService, hasPriorActivity } from "./firstRun";
+import { crewFacts, FirstRunService, hasPriorActivity, presentFirstCrewmateNote } from "./firstRun";
 import type { HostCapabilities } from "./host";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
@@ -39,6 +39,8 @@ export type FirstLaunch = {
   cardsChanged: () => void;
   /** The captain's turn was accepted: the first launch has its first exchange. */
   captainTurnAccepted: () => void;
+  /** A crewmate started: a new person's first start shows the first crewmate's note. */
+  crewmateStarted: () => void;
 };
 
 export function startFirstLaunch(options: {
@@ -58,7 +60,9 @@ export function startFirstLaunch(options: {
   >;
   cards: Pick<CardStore, "hasHistory">;
   repos: Pick<RepoRegistry, "list">;
-  supervisor: Pick<CrewSupervisor, "cards">;
+  supervisor: {
+    cards: Pick<CrewSupervisor["cards"], "addRecordedFirstmateNote" | "has" | "takeDown">;
+  };
   sharing: Pick<SharingService, "record">;
   now: () => number;
   emit: CoreEventSink;
@@ -125,6 +129,7 @@ export function startFirstLaunch(options: {
         width: "regular",
       });
     },
+    createFirstCrewmateNote: presentFirstCrewmateNote(supervisor.cards),
     now,
     onStep: (step) => options.sharing.record({ name: `ftue_${step}`, data: {} }),
   });
@@ -192,6 +197,9 @@ export function startFirstLaunch(options: {
     },
     captainTurnAccepted: () => {
       firstRun.noteCaptainTurn();
+    },
+    crewmateStarted: () => {
+      firstRun.noteCrewmateStarted();
     },
   };
 }

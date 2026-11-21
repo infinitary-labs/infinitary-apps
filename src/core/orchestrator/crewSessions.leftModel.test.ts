@@ -1621,6 +1621,24 @@ it("keeps a context-limit restart whose new conversation failed to open, and ope
   ).toBe(true);
   await h.supervisor.disposeAll();
 
+  // The next launch's sweep meets the same failure: the restart goes back
+  // with its delivery attempt unspent, so unattended recovery keeps it.
+  const failing = reboot(
+    h,
+    vi.fn(async () => {
+      throw new Error("This model is not served here right now.");
+    }),
+    { router: h.router as unknown as Router },
+  );
+  await failing.watch.sweepInbox(Date.now() + 60_000);
+  await tick();
+  expect(
+    h.db
+      .prepare("SELECT attempts, delivered_at FROM inbox WHERE recipient = ? ORDER BY id")
+      .all(taskId),
+  ).toEqual([{ attempts: 0, delivered_at: null }]);
+  await failing.disposeAll();
+
   const opened = await relaunchAndSteer(h, taskId, sol);
   expect(opened?.model).toEqual(sol);
   // A new conversation, not the one the context limit filled.

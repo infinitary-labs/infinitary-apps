@@ -704,9 +704,11 @@ describe("INF-443 learned placed-work ranking", () => {
     const w = world();
     const rows = [row("grok", "home-grok", 0)];
     w.scores.observe("home", snapshot(AT, rows));
-    const model = { provider: "grok", id: GROK.id, label: "Grok" };
+    const [model] = buildModelsCatalog([GROK], rows, new Date(AT).toISOString(), AT).models;
+    if (!model) throw new Error("The catalog lists Grok.");
+    expect(model.effectivePercentRemaining).toBe(0);
     const [unread] = w.scores.catalog([model], rows, AT, () => "mini-grok", w.scores.data(AT));
-    expect(unread).toEqual(model);
+    expect(unread).toEqual({ provider: "grok", id: GROK.id, label: GROK.name });
     const [spent] = w.scores.catalog([model], rows, AT, () => "home-grok", w.scores.data(AT));
     expect(spent).toMatchObject({ accountId: "home-grok", effectivePercentRemaining: 0 });
     w.db.close();

@@ -217,6 +217,45 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(at.bound.at(-1)?.provider).toBe(PROVIDER);
   });
 
+  // INF-5438 round 12 finding 4: a notOpened answer that arrives after this
+  // Mac let the session go changes nothing in the next selection.
+  it("passes nothing over for a reopen's notOpened answer that arrives after its session went", async () => {
+    const at = await world();
+    const taskId = "t-late-not-opened";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const passOver = vi.fn();
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "off" },
+      commit: vi.fn(async () => "committed" as const),
+      passOver,
+    });
+    const ask = home.devices.ask.bind(home.devices);
+    const answered = vi.fn();
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (
+        channel === "inf:session:open" &&
+        (args as [{ spec: { reattach?: boolean } }])[0].spec.reattach !== true
+      ) {
+        // This Mac let the session go while that computer answered.
+        home.supervisor.placedLetGo(taskId);
+        answered();
+      }
+      return answer;
+    });
+    at.refuseOpens(true);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => answered.mock.calls.length).toBeGreaterThan(0);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(passOver).not.toHaveBeenCalled();
+  });
+
   // INF-5438 round 11 finding 1: a context restart asks that computer for a
   // fresh conversation, and it replaces the idle one it holds - opened with
   // the same model and contract - instead of answering it.
@@ -1005,5 +1044,63 @@ describe("reopening after a work computer restarts, when the task's model left e
       expect.objectContaining({ until: "update" }),
     );
     expect(orders).toContain("inf:session:delete-outside");
+  });
+
+  // INF-5438 round 12 finding 3: an older computer may open the conversation
+  // again before its cleanup answers: words sent meanwhile wait until it is
+  // checked, and an answer lost leaves it refused and this Mac's session let go.
+  it("sends no words to a conversation an older computer's cleanup opens before it is checked", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older-cleanup";
+    model([{ text: "Started." }, { text: "Carried on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const due = {
+      kinds: [
+        { label: "Gmail", until: Date.now() - 30 * 86_400_000, note: "[removed after 30 days]" },
+      ],
+      legacy: [],
+    };
+    let release: () => void = () => {};
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let lose = false;
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (channel !== "inf:session:delete-outside") return answer;
+      await answered;
+      if (lose) throw new Error("The computer went before it answered.");
+      return answer;
+    });
+    const requests = api.requests.length;
+    const cleaning = home.placed.deleteOutside(record, due);
+    await expect.poll(() => home.placed.refusedHeld(taskId)).toBe(true);
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // The cleanup is still outstanding: nothing reached a model.
+    expect(api.requests.length).toBe(requests);
+    release();
+    await cleaning;
+    await steered;
+    await expect.poll(() => said(api.requests.at(-1))).toContain("Carry on.");
+    expect(api.requests.slice(requests).filter((r) => said(r).includes("Carry on."))).toHaveLength(
+      1,
+    );
+    // Checked and accepted, it is refused no more.
+    await expect.poll(() => home.placed.refusedHeld(taskId)).toBe(false);
+
+    // An answer lost: what may have opened there stays refused, and this
+    // Mac's session is let go, so the next words open a checked conversation.
+    lose = true;
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    await expect(home.placed.deleteOutside(record, due)).rejects.toThrow("went before");
+    expect(home.placed.refusedHeld(taskId)).toBe(true);
+    expect(letGo).toHaveBeenCalledWith(taskId);
   });
 });

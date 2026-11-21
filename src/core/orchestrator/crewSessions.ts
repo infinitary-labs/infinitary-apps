@@ -41,7 +41,7 @@ import {
 import type { ResumeAccount } from "./crewSupervisorOptions";
 import { CrewTurn } from "./crewTurn";
 import { describeStatus } from "./settleService";
-import { ModelWaitError, NotAcceptedError } from "./taskMoves";
+import { ModelWaitError, NotAcceptedError, OpenedNothingError } from "./taskMoves";
 import { conversationRestartWake } from "./turnWakes";
 
 /**
@@ -865,7 +865,12 @@ export class CrewSessions {
         rerouted.passOver();
         return this.openResumed(taskId, move, restart, known);
       }
-      if (nothing || superseded()) throw caught;
+      if (superseded()) throw caught;
+      // One on a model it keeps gives its work back unspent all the same.
+      if (nothing)
+        throw new OpenedNothingError(caught instanceof Error ? caught.message : String(caught), {
+          cause: caught,
+        });
       // Any other may have opened there - its computer went before it
       // answered, or its answer could not be read: what it may hold stays
       // refused until an open there is accepted, and no words went.

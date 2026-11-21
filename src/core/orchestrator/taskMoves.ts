@@ -108,6 +108,14 @@ export class ModelWaitError extends Error {}
  */
 export class NotAcceptedError extends Error {}
 
+/**
+ * An open that surely opened nothing - it failed here, or its computer
+ * answered that nothing opened - on a model it keeps: no words went, so
+ * the work goes back unspent as for `NotAcceptedError`, and the failure is
+ * still said where an open's failure is said.
+ */
+export class OpenedNothingError extends NotAcceptedError {}
+
 /** Why a reopen waits while this Mac's accounts have not said what they serve. */
 const UNREAD_ACCOUNTS_WAIT =
   // i18n-exempt: an internal outcome and error; no person reads it.

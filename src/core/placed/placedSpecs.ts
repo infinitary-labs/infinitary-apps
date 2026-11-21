@@ -60,6 +60,35 @@ export function openOutcome<S>(
   throw new Error("The computer's answer to an open said nothing sure about what opened there.");
 }
 
+/**
+ * Holds an older computer's cleanup of words from outside, which may open
+ * the conversation again before it answers: marked refused, nothing
+ * reattaches to it, and this Mac's session (`held`) takes no words until it
+ * is checked (`reopen`). `done(answer)` lifts the hold once any reopen
+ * began; an answer lost keeps it refused and lets the session go.
+ */
+export function holdForCleanup(
+  held: { reopening: Promise<boolean> | undefined } | undefined,
+  o: { refused: boolean; refuse(on: boolean): void; letGo(): unknown },
+): (answer?: { state?: unknown }) => void {
+  let lift: (open: boolean | Promise<boolean>) => void = () => undefined;
+  const gate = held && new Promise<boolean>((resolve) => (lift = resolve));
+  o.refuse(true);
+  if (held) held.reopening = gate;
+  return (answer) => {
+    const holding = held !== undefined && held.reopening === gate;
+    if (!answer) {
+      if (holding) held.reopening = Promise.resolve(false);
+      o.letGo();
+      return lift(false);
+    }
+    // Nothing opened anew: a mark it did not have before goes.
+    if (answer.state === undefined && !o.refused) o.refuse(false);
+    if (holding) held.reopening = undefined;
+    lift(held?.reopening ?? true);
+  };
+}
+
 /** A conversation's spec reopened on the model and account routing picked. */
 export function routedSpec(
   opened: PlacedSpec,

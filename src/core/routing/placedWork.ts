@@ -448,7 +448,10 @@ export class PlacedWorkScores {
       const named = candidates.some((c) => c.row.accountId !== undefined);
       const boundId = named ? bound?.(model, data) : undefined;
       const best = boundId ? candidates.find((c) => c.row.accountId === boundId) : candidates[0];
-      if (!best) return model;
+      // A named account with no reading clears what the catalog carried,
+      // which is the provider's whole reading, a spent sibling's included.
+      if (!best)
+        return boundId ? { provider: model.provider, id: model.id, label: model.label } : model;
       const resetsAtMs = limitingResetOf(best.row, now, model.id);
       // When the reading was taken: the observed reading's time, else the row's own.
       const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;

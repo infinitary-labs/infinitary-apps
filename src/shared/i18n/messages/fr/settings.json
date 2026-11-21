@@ -1209,6 +1209,12 @@
   "settingsSubscriptionsRetry": "Réessayer",
   "settingsSubscriptionsRetrying": "Nouvel essai...",
   "settingsSubscriptionsRowActions": "Actions pour {account}",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "one": "{count} réinitialisation enregistrée · à utiliser sur {site}",
+    "many": "{count} réinitialisations enregistrées · à utiliser sur {site}",
+    "other": "{count} réinitialisations enregistrées · à utiliser sur {site}"
+  },
   "settingsSubscriptionsSignIn": "Se connecter",
   "settingsSubscriptionsSignInAgainState": "Reconnectez-vous.",
   "settingsSubscriptionsSignedIn": "connecté",

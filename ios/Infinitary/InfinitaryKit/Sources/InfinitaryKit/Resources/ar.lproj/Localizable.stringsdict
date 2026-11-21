@@ -387,6 +387,30 @@
       <string>%1$ld جزء محذوف</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لدى %1$@ إعادات تعيين محفوظة (%2$ld) يمكنك استخدام إحداها الآن لتجديد رصيده.</string>
+      <key>one</key>
+      <string>لدى %1$@ إعادة تعيين محفوظة يمكنك استخدامها الآن لتجديد رصيده.</string>
+      <key>two</key>
+      <string>لدى %1$@ إعادتا تعيين محفوظتان يمكنك استخدام إحداهما الآن لتجديد رصيده.</string>
+      <key>few</key>
+      <string>لدى %1$@ إعادات تعيين محفوظة (%2$ld) يمكنك استخدام إحداها الآن لتجديد رصيده.</string>
+      <key>many</key>
+      <string>لدى %1$@ إعادات تعيين محفوظة (%2$ld) يمكنك استخدام إحداها الآن لتجديد رصيده.</string>
+      <key>other</key>
+      <string>لدى %1$@ إعادات تعيين محفوظة (%2$ld) يمكنك استخدام إحداها الآن لتجديد رصيده.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2737,6 +2761,30 @@
       <string>%1$ld مستودعًا</string>
       <key>other</key>
       <string>%1$ld مستودع</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>إعادات تعيين محفوظة: %1$ld · استخدم واحدة على %2$@</string>
+      <key>one</key>
+      <string>إعادة تعيين محفوظة واحدة · استخدمها على %2$@</string>
+      <key>two</key>
+      <string>إعادتا تعيين محفوظتان · استخدم واحدة على %2$@</string>
+      <key>few</key>
+      <string>إعادات تعيين محفوظة: %1$ld · استخدم واحدة على %2$@</string>
+      <key>many</key>
+      <string>إعادات تعيين محفوظة: %1$ld · استخدم واحدة على %2$@</string>
+      <key>other</key>
+      <string>إعادات تعيين محفوظة: %1$ld · استخدم واحدة على %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

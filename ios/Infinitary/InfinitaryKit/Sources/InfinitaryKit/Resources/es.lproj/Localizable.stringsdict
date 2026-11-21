@@ -291,6 +291,24 @@
       <string>%1$ld partes eliminadas</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ tiene un restablecimiento guardado que puedes usar ahora para renovar su asignación.</string>
+      <key>many</key>
+      <string>%1$@ tiene %2$ld restablecimientos guardados que puedes usar ahora para renovar su asignación.</string>
+      <key>other</key>
+      <string>%1$@ tiene %2$ld restablecimientos guardados que puedes usar ahora para renovar su asignación.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2053,6 +2071,24 @@
       <string>%1$ld de repositorios</string>
       <key>other</key>
       <string>%1$ld repositorios</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld restablecimiento guardado · úsalo en %2$@</string>
+      <key>many</key>
+      <string>%1$ld restablecimientos guardados · usa uno en %2$@</string>
+      <key>other</key>
+      <string>%1$ld restablecimientos guardados · usa uno en %2$@</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

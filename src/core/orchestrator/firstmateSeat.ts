@@ -27,6 +27,7 @@ import {
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS,
   type FirstmatePauseCard,
+  savedResetsWords,
 } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import type { SeatMoveReason, WakeSeat } from "./noticeWakes";
@@ -784,14 +785,15 @@ export class FirstmateSeat {
           ? `Your first mate's ${providerName} accounts have used up their allowance (${summary}).`
           : flagship.pauseSentence(accountId, pause);
       const checked = this.allowanceCheckWords(accountId);
+      const resets = this.savedResetsWords(accountId, providerName);
       const offer = flagship.creditsOffer(accountId);
       if (offer)
-        return `${spent} ${creditsOfferSentence(offer)} Your messages are kept, and your first mate and crew wait until then unless you keep going on credits.${checked}`;
+        return `${spent} ${creditsOfferSentence(offer)} Your messages are kept, and your first mate and crew wait until then unless you keep going on credits.${checked}${resets}`;
       return moveTo
-        ? `${spent} Your messages are kept.${checked} Move your first mate to ${moveTo} until then?`
+        ? `${spent} Your messages are kept.${checked}${resets} Move your first mate to ${moveTo} until then?`
         : `No connected account has allowance left for your first mate right now${
             summary ? ` (${summary})` : ""
-          }. Your messages are kept. It will resume when one resets.${checked}`;
+          }. Your messages are kept. It will resume when one resets.${checked}${resets}`;
     }
     if (pause.class === "unavailable" && !moveTo) {
       return "Your first mate's account was disconnected and no other account can serve it. Connect an account to continue.";
@@ -809,6 +811,20 @@ export class FirstmateSeat {
         : `${said} Your first mate picks them up once you sign in.`;
     }
     return `${said} Your first mate picks them up once it can run.`;
+  }
+
+  /**
+   * The seat account's saved resets that would apply now, with a leading
+   * space, for the spent-allowance card (docs/quota.md, "Saved resets"):
+   * named as its Settings row names it, with a link to where it is used.
+   */
+  private savedResetsWords(accountId: string, providerName: string): string {
+    const flagship = this.options.flagship;
+    const resets = flagship?.savedResetsNow(accountId);
+    if (!flagship || !resets) return "";
+    const label = flagship.labelOf(accountId);
+    const account = label ? `${providerName} · ${label}` : providerName;
+    return ` ${savedResetsWords({ account, ...resets })}`;
   }
 
   /**

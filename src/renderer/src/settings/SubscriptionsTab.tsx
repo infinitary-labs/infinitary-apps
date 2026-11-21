@@ -529,6 +529,11 @@ export function AccountRow({
               {view.credits}
             </span>
           )}
+          {view.savedResets && (
+            <span className="fm-subs-credits" data-saved-resets="">
+              {view.savedResets}
+            </span>
+          )}
           {view.stateText ? (
             <span
               className="fm-subs-state"

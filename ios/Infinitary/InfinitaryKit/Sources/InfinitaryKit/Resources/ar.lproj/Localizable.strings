@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "روابط التغيير غير متاحة";
 "cardRevisionMore" = "%1$@ أخرى";
 "cardRevisionShowFewer" = "عرض أقل";
+"cardSavedResetsOpenPage" = "افتح صفحة الاستخدام على %1$@";
 "cardSinceSeenApproved" = "وافقت على نسخة سابقة · %1$@";
 "cardSinceSeenChose" = "اخترت «%1$@» · %2$@";
 "cardSinceSeenSaw" = "منذ البطاقة التي رأيتها · %1$@";

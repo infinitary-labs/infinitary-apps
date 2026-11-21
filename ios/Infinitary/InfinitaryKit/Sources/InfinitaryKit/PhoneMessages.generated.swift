@@ -364,6 +364,8 @@ public enum PhoneMessages {
     public static func `cardRevisionLinksUnavailable`() -> String { PhoneWords.format("cardRevisionLinksUnavailable", []) }
     public static func `cardRevisionMore`(`count`: String) -> String { PhoneWords.format("cardRevisionMore", [`count`]) }
     public static func `cardRevisionShowFewer`() -> String { PhoneWords.format("cardRevisionShowFewer", []) }
+    public static func `cardSavedResetsNow`(`account`: String, `count`: Int) -> String { PhoneWords.format("cardSavedResetsNow", [`account`, `count`]) }
+    public static func `cardSavedResetsOpenPage`(`site`: String) -> String { PhoneWords.format("cardSavedResetsOpenPage", [`site`]) }
     public static func `cardSinceSeenApproved`(`when`: String) -> String { PhoneWords.format("cardSinceSeenApproved", [`when`]) }
     public static func `cardSinceSeenChose`(`button`: String, `when`: String) -> String { PhoneWords.format("cardSinceSeenChose", [`button`, `when`]) }
     public static func `cardSinceSeenSaw`(`when`: String) -> String { PhoneWords.format("cardSinceSeenSaw", [`when`]) }
@@ -3220,6 +3222,7 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsRetry`() -> String { PhoneWords.format("settingsSubscriptionsRetry", []) }
     public static func `settingsSubscriptionsRetrying`() -> String { PhoneWords.format("settingsSubscriptionsRetrying", []) }
     public static func `settingsSubscriptionsRowActions`(`account`: String) -> String { PhoneWords.format("settingsSubscriptionsRowActions", [`account`]) }
+    public static func `settingsSubscriptionsSavedResets`(`count`: Int, `site`: String) -> String { PhoneWords.format("settingsSubscriptionsSavedResets", [`count`, `site`]) }
     public static func `settingsSubscriptionsSignIn`() -> String { PhoneWords.format("settingsSubscriptionsSignIn", []) }
     public static func `settingsSubscriptionsSignInAgainState`() -> String { PhoneWords.format("settingsSubscriptionsSignInAgainState", []) }
     public static func `settingsSubscriptionsSignedIn`() -> String { PhoneWords.format("settingsSubscriptionsSignedIn", []) }
@@ -4067,6 +4070,8 @@ extension PhoneWords {
         "cardRevisionLinksUnavailable": [],
         "cardRevisionMore": ["count"],
         "cardRevisionShowFewer": [],
+        "cardSavedResetsNow": ["account", "count"],
+        "cardSavedResetsOpenPage": ["site"],
         "cardSinceSeenApproved": ["when"],
         "cardSinceSeenChose": ["button", "when"],
         "cardSinceSeenSaw": ["when"],
@@ -6923,6 +6928,7 @@ extension PhoneWords {
         "settingsSubscriptionsRetry": [],
         "settingsSubscriptionsRetrying": [],
         "settingsSubscriptionsRowActions": ["account"],
+        "settingsSubscriptionsSavedResets": ["count", "site"],
         "settingsSubscriptionsSignIn": [],
         "settingsSubscriptionsSignInAgainState": [],
         "settingsSubscriptionsSignedIn": [],
@@ -7425,6 +7431,7 @@ extension PhoneWords {
         "cardRecordFoldMessages": "count",
         "cardRevisedPartsNew": "count",
         "cardRevisedPartsRemoved": "count",
+        "cardSavedResetsNow": "count",
         "cardThreadJumpNew": "count",
         "cardThreadMessageCount": "count",
         "cardThreadSettingsCount": "count",
@@ -7523,6 +7530,7 @@ extension PhoneWords {
         "settingsProjectsBatchSentBack": "count",
         "settingsProjectsCount": "count",
         "settingsProjectsRepositoryCount": "count",
+        "settingsSubscriptionsSavedResets": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
         "uiCardStackNew": "count",

@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "無法使用變更連結";
 "cardRevisionMore" = "還有 %1$@ 個";
 "cardRevisionShowFewer" = "顯示較少";
+"cardSavedResetsOpenPage" = "在 %1$@ 開啟用量頁面";
 "cardSinceSeenApproved" = "你核准了較早的版本 · %1$@";
 "cardSinceSeenChose" = "你選擇了「%1$@」 · %2$@";
 "cardSinceSeenSaw" = "自你看過的卡片以來 · %1$@";

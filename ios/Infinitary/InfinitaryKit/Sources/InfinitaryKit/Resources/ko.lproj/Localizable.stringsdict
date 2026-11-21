@@ -227,6 +227,20 @@
       <string>%1$ld개 부분 제거됨</string>
     </dict>
   </dict>
+  <key>cardSavedResetsNow</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$@에 지금 사용할 수 있는 저장된 재설정이 %2$ld개 있어 한도를 다시 채울 수 있어요.</string>
+    </dict>
+  </dict>
   <key>cardThreadJumpNew</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1569,6 +1583,20 @@
       <string>ld</string>
       <key>other</key>
       <string>저장소 %1$ld개</string>
+    </dict>
+  </dict>
+  <key>settingsSubscriptionsSavedResets</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>저장된 재설정 %1$ld개 · %2$@에서 사용</string>
     </dict>
   </dict>
   <key>shellGateFreshCheckLine</key>

@@ -201,6 +201,13 @@
   "cardRevisionLinksUnavailable": "Enlaces de cambios no disponibles",
   "cardRevisionMore": "{count} más",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "one": "{account} tiene un restablecimiento guardado que puedes usar ahora para renovar su asignación.",
+    "many": "{account} tiene {count} restablecimientos guardados que puedes usar ahora para renovar su asignación.",
+    "other": "{account} tiene {count} restablecimientos guardados que puedes usar ahora para renovar su asignación."
+  },
+  "cardSavedResetsOpenPage": "Abrir la página de uso en {site}",
   "cardSinceSeenApproved": "Aprobaste una versión anterior · {when}",
   "cardSinceSeenChose": "Elegiste «{button}» · {when}",
   "cardSinceSeenSaw": "Desde la tarjeta que viste · {when}",

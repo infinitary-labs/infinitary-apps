@@ -97,7 +97,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Paying past the allowance: its own line under the meters. */
+/* Paying past the allowance, and saved resets: each its own line under the meters. */
 .fm-subs-credits {
   flex-basis: 100%;
   font-family: var(--font-mono);

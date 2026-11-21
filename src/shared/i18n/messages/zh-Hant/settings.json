@@ -1165,6 +1165,10 @@
   "settingsSubscriptionsRetry": "重試",
   "settingsSubscriptionsRetrying": "重試中...",
   "settingsSubscriptionsRowActions": "{account} 動作",
+  "settingsSubscriptionsSavedResets": {
+    "plural": "count",
+    "other": "{count} 次已儲存的重設 · 在 {site} 使用"
+  },
   "settingsSubscriptionsSignIn": "登入",
   "settingsSubscriptionsSignInAgainState": "請重新登入。",
   "settingsSubscriptionsSignedIn": "已登入",

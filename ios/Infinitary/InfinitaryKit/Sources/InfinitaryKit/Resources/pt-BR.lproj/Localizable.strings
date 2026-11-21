@@ -343,6 +343,7 @@
 "cardRevisionLinksUnavailable" = "Links de alteração indisponíveis";
 "cardRevisionMore" = "mais %1$@";
 "cardRevisionShowFewer" = "Mostrar menos";
+"cardSavedResetsOpenPage" = "Abrir a página de uso em %1$@";
 "cardSinceSeenApproved" = "Você aprovou uma versão anterior · %1$@";
 "cardSinceSeenChose" = "Você escolheu “%1$@” · %2$@";
 "cardSinceSeenSaw" = "Desde o cartão que você viu · %1$@";

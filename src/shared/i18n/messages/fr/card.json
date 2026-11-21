@@ -201,6 +201,13 @@
   "cardRevisionLinksUnavailable": "Liens de modification indisponibles",
   "cardRevisionMore": "{count} de plus",
   "cardRevisionShowFewer": "Afficher moins",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "one": "{account} a une réinitialisation enregistrée que vous pouvez utiliser maintenant pour renouveler son allocation.",
+    "many": "{account} a {count} réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation.",
+    "other": "{account} a {count} réinitialisations enregistrées que vous pouvez utiliser maintenant pour renouveler son allocation."
+  },
+  "cardSavedResetsOpenPage": "Ouvrir la page d’utilisation sur {site}",
   "cardSinceSeenApproved": "Vous avez approuvé une version précédente · {when}",
   "cardSinceSeenChose": "Vous avez choisi « {button} » · {when}",
   "cardSinceSeenSaw": "Depuis la carte que vous avez vue · {when}",

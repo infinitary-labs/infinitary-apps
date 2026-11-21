@@ -179,6 +179,11 @@
   "cardRevisionLinksUnavailable": "改动链接不可用",
   "cardRevisionMore": "还有 {count} 个",
   "cardRevisionShowFewer": "收起",
+  "cardSavedResetsNow": {
+    "plural": "count",
+    "other": "{account} 有 {count} 次已保存的重置可以立即使用，用来恢复额度。"
+  },
+  "cardSavedResetsOpenPage": "在 {site} 打开用量页面",
   "cardSinceSeenApproved": "你批准了较早的版本 · {when}",
   "cardSinceSeenChose": "你选择了“{button}” · {when}",
   "cardSinceSeenSaw": "自你看过的卡片以来 · {when}",

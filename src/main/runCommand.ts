@@ -1,20 +1,16 @@
-import {
-  readdirSync,
-  readFileSync,
-  readlinkSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { execFile } from "node:child_process";
+import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { runIdentity } from "@core/helper/runAgent";
 import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
-import { captureLoginPath } from "@core/hostEnv";
+import { captureLoginPath, hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
 import { APP_IDENTITIES } from "@shared/codeNames";
 import { COMPUTER } from "@shared/deviceNames";
+import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { z } from "zod";
 import { type RunEnvironment, RunEnvironmentSchema } from "./runEnvironment";
 import { commandWords } from "./workCommand";
@@ -407,72 +403,83 @@ export function answerLaunch(
   once();
 }
 
-/** A starting run's note in the data folder, by its process (`noteRunStarting`). */
-export function runStartingFile(pid: number): string {
-  return `run-starting-${pid}.json`;
+/**
+ * Writes the answer a window gives a launch's ask (`windowAnswerFile`) and
+ * keeps it among `written`, so the window that wrote it takes away any the
+ * launch did not read (`clearWindowAnswers`): a launch that already told the
+ * window from its words (`holderIsWindow`) quits without waiting for it.
+ * Throws where it cannot be written, keeping nothing.
+ */
+export function writeWindowAnswer(dataDir: string, word: string, written: Set<string>): boolean {
+  const path = join(dataDir, windowAnswerFile(word));
+  writeFileSync(path, "", { mode: 0o600 });
+  written.add(path);
+  return true;
 }
 
-/**
- * Notes in the data folder, before this run asks for the folder's
- * single-instance lock, that a run is starting on it, by its process and, on
- * Windows, its birth, and keeps that note until the run ends: a window
- * launch refused the lock while the run holds it and has not noted that it
- * holds the folder (`markRunning`) tells it from a window, one from before
- * this note included, that never answers its ask (`runStarting`). Answers
- * what takes the note away, which the run calls as it ends or loses the
- * lock; one it cannot write leaves the run going, as before.
- */
-export function noteRunStarting(dataDir: string, pid: number, birth?: string | null): () => void {
-  const path = join(dataDir, runStartingFile(pid));
-  try {
-    writeFileSync(path, `${JSON.stringify({ pid, ...(birth ? { birth } : {}) })}\n`, {
-      mode: 0o600,
-    });
-  } catch {
-    return () => {};
-  }
-  return () => {
+/** Takes away the answers a window wrote that are still there (`writeWindowAnswer`), as it quits. */
+export function clearWindowAnswers(written: Set<string>): void {
+  for (const path of written)
     try {
       rmSync(path, { force: true });
-    } catch {}
-  };
+    } catch {
+      // Left behind, it answers a word no later launch asks.
+    }
+  written.clear();
 }
 
 /**
- * Whether the lock's holder may be a run that is starting and has not noted
- * that it holds the folder, by the runs' notes (`noteRunStarting`): with a
- * holder the lock names, only a note of that same process, while it runs;
- * with none named, as Windows' own lock, any note whose run is still there
- * by its birth or cannot be told (`runIdentity`); never once the lock names
- * no holder. A folder that cannot be read may hold such a note.
+ * The words a program runs with, read from the system by its process: on
+ * Linux exactly, from `/proc`; on a Mac from `ps`, only where they start
+ * with this program's own path (`execPath`), which tells that path from the
+ * words after it however many spaces it holds. Null where they cannot be
+ * read, and on Windows.
  */
-export function runStarting(
-  dataDir: string,
-  holder: number | null | undefined,
-  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
-): boolean {
-  if (holder === null) return false;
-  let names: string[];
+export async function programWords(
+  pid: number,
+  platform: string = hostPlatform(),
+  execPath: string = process.execPath,
+): Promise<string[] | null> {
   try {
-    names = readdirSync(dataDir).filter((name) => /^run-starting-\d+\.json$/.test(name));
-  } catch {
-    return true;
-  }
-  for (const name of names) {
-    let note: { pid?: unknown; birth?: unknown };
-    try {
-      note = JSON.parse(readFileSync(join(dataDir, name), "utf8"));
-    } catch {
-      // A note being written, or that cannot be read: it may be the holder's.
-      if (holder === undefined || name === runStartingFile(holder)) return true;
-      continue;
+    if (platform === "linux") {
+      const words = (await readFile(`/proc/${pid}/cmdline`, "utf8")).split("\0");
+      if (words.at(-1) === "") words.pop();
+      return words.length > 0 ? words : null;
     }
-    if (typeof note.pid !== "number" || (typeof holder === "number" && note.pid !== holder))
-      continue;
-    if (alive(note.pid, typeof note.birth === "string" ? note.birth : undefined) !== false)
-      return true;
+    if (platform !== "darwin") return null;
+    const { stdout } = await promisify(execFile)(
+      "/bin/ps",
+      ["-ww", "-o", "args=", "-p", String(pid)],
+      {
+        env: hostEnv({ LC_ALL: "C" }),
+        encoding: "utf8",
+        timeout: RESOURCE_READ_TIMEOUT_MS,
+      },
+    );
+    return wordsAfterProgram(stdout.trim(), execPath);
+  } catch {
+    return null;
   }
-  return false;
+}
+
+/** A Mac's `ps` line of a program's words, split after this program's own path; null for another program's. */
+export function wordsAfterProgram(line: string, execPath: string): string[] | null {
+  if (line !== execPath && !line.startsWith(`${execPath} `)) return null;
+  return [execPath, ...line.slice(execPath.length).split(" ").filter(Boolean)];
+}
+
+/**
+ * Whether the program holding the folder's lock is a window, from the words
+ * it runs with (`programWords`): a command always runs with `run` among
+ * them, whatever its version, and a window never does. Null where its words
+ * cannot be read, so it is not known.
+ */
+export async function holderIsWindow(
+  pid: number,
+  words: (pid: number) => Promise<string[] | null> = programWords,
+): Promise<boolean | null> {
+  const read = await words(pid);
+  return read === null ? null : !read.slice(1).includes("run");
 }
 
 /**
@@ -480,21 +487,22 @@ export function runStarting(
  * each holder shows of itself and never from silence: `run` once a command
  * notes that it holds the folder; `window` once the window holding the lock
  * answered the launch's ask (`windowAnswerFile`), which a run never does, or
- * once no run is starting that may hold it (`starting`, by the notes runs
- * write before they ask for the lock), so the holder is a window, one from
- * before that answer included, which the launch's own ask brought forward;
- * `free` once the lock can be taken, as when the holder ended before it
- * noted anything. A holder that shows none of these, as a starting run
- * stopped before it noted itself or whose note cannot be read, is waited
+ * once the holder the lock names is told to be a window by the words it runs
+ * with (`windowHolder`, `holderIsWindow`), a window from before that answer
+ * included, which the launch's own ask brought forward; `free` once the lock
+ * can be taken, as when the holder ended before it noted anything. A holder
+ * that shows none of these, as a command stopped before it noted itself, one
+ * whose note cannot be read, or one whose words cannot be read, is waited
  * for as long as it takes, so the launch never quits with no window to take
- * over. Asking for the lock again is a second launch to its holder, which a
- * window shows itself on, so it is asked only once the holder its link names
- * changes from the one the launch's own ask reached, the lock let go of
- * included, and never again of a holder it names
- * unchanged, which is only watched; only where no link names a holder (as
- * Windows' own lock) is it asked again after `askEveryMs`, with the same
- * word, which a window that was asked once answers without coming forward
- * again (`app.ts`).
+ * over. A named holder's words are read once, and again a while later
+ * (`askEveryMs`) only where they could not be. Asking for the lock again is
+ * a second launch to its holder, which a window shows itself on, so it is
+ * asked only once the holder its link names changes from the one the
+ * launch's own ask reached, the lock let go of included, and never again of
+ * a holder it names unchanged, which is only watched; only where no link
+ * names a holder (as Windows' own lock) is it asked again after
+ * `askEveryMs`, with the same word, which a window that was asked once
+ * answers without coming forward again (`app.ts`).
  */
 export async function lockHolderKind(options: {
   running: () => boolean;
@@ -502,24 +510,27 @@ export async function lockHolderKind(options: {
   holder: () => number | null | undefined;
   /** The holder read just before the launch's own refused ask, the one that ask reached. */
   asked: number | null | undefined;
-  /** Whether a run that has not noted itself may hold the lock the holder named (`runStarting`). */
-  starting: (holder: number | null | undefined) => boolean;
+  /** Whether the program under this number is a window, by its own words; null where not known. */
+  windowHolder: (holder: number) => Promise<boolean | null>;
   lockFree: () => boolean;
   askEveryMs: number;
   everyMs?: number;
 }): Promise<"run" | "free" | "window"> {
   let seen = options.asked;
   let next = Date.now() + options.askEveryMs;
+  let read: number | null = null;
+  let readAgain = 0;
   for (;;) {
     if (options.running()) return "run";
     if (options.answered()) return "window";
     const holder = options.holder();
-    // No run is starting that may hold the lock, so its holder is a window: one named is only
-    // watched, never asked again; one no link names, or none, is asked once, and is a window only
-    // while it still holds the lock.
-    if (!options.starting(holder)) {
-      if (typeof holder === "number") return "window";
-      return options.lockFree() ? "free" : "window";
+    if (typeof holder === "number" && (holder !== read || Date.now() >= readAgain)) {
+      const window = await options.windowHolder(holder);
+      // Only while that same program still holds the lock: words read of one that let it go since
+      // tell nothing of the next.
+      if (window === true && options.holder() === holder) return "window";
+      read = holder;
+      readAgain = window === null ? Date.now() + options.askEveryMs : Number.POSITIVE_INFINITY;
     }
     if (holder !== seen || (typeof holder !== "number" && Date.now() >= next)) {
       seen = holder;

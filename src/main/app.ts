@@ -96,13 +96,14 @@ import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   answerLaunch,
+  clearWindowAnswers,
   commandHolding,
   followInstalledProgram,
+  holderIsWindow,
   keepsStarterBesideGrant,
   lockHolder,
   lockHolderKind,
   markRunning,
-  noteRunStarting,
   ownedRunOf,
   processAlive,
   programIdentity,
@@ -112,11 +113,11 @@ import {
   type RunEnd,
   runningByCommand,
   runOptions,
-  runStarting,
   stopRunningCommand,
   windowAnswerAsked,
   windowAnswerFile,
   windowProfileDir,
+  writeWindowAnswer,
 } from "./runCommand";
 import {
   type RunEnvironment,
@@ -459,9 +460,6 @@ const PROGRAM_READ_EVERY_MS = 60_000;
 /** Records why an owned run ended and removes its live marker. */
 let leaveRun: (end?: RunEnd) => void = () => {};
 
-/** Takes away a run's note that it is starting on the folder (`noteRunStarting`). */
-let leaveStarting: () => void = () => {};
-
 /** This run as its record names it, for its local door to name it too; none without a command. */
 let ownRun: LocalDoorRun | undefined;
 
@@ -471,7 +469,6 @@ let ownRun: LocalDoorRun | undefined;
  */
 function endRun(code: number, lines: readonly string[]): void {
   leaveRun({ reason: "start-failed", exitCode: code, lines: [...lines] });
-  leaveStarting();
   process.stderr.write(`${lines.join("\n")}\n`, () => app.exit(code));
 }
 
@@ -766,16 +763,6 @@ export async function startApp(
   // The holder this launch's own ask reaches, read just before it, so a holder that takes the
   // lock after is asked too (`lockHolderKind`).
   const askedHolder = answerAsk ? lockHolderNow() : undefined;
-  // A run notes that it is starting before it asks for the folder's lock, and keeps the note until it
-  // ends, so a window launch refused that lock before the run notes that it holds the folder tells
-  // the run from a window (`runStarting`). Never during a folder move, whose lock is a throwaway
-  // profile's.
-  if (windowless && !move)
-    leaveStarting = noteRunStarting(
-      dataDir,
-      process.pid,
-      hostPlatform() === "win32" ? ownWindowsBirth() : null,
-    );
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -786,10 +773,10 @@ export async function startApp(
     // and opens beside it, never quitting with no window and never starting or stopping that run.
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
-    // that holds the lock answers and focuses itself, and this launch quits, as it does once no run
-    // that may hold the lock notes that it is starting, so the holder is a window, one from before
-    // that answer included. A holder that may be a starting run and shows nothing yet is waited
-    // for, never taken for a window. An ordinary launch waits the same way, for a run known to hold
+    // that holds the lock answers and focuses itself, and this launch quits, as it does once the
+    // words the holder runs with show it is a window, one from before that answer included, since
+    // a command always runs with `run`. A holder that shows nothing yet is waited for, never taken
+    // for a window. An ordinary launch waits the same way, for a run known to hold
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
@@ -798,7 +785,7 @@ export async function startApp(
         answered: () => existsSync(answer),
         holder: lockHolderNow,
         asked: askedHolder,
-        starting: (holder) => runStarting(dataDir, holder),
+        windowHolder: (holder) => holderIsWindow(holder),
         lockFree: () => app.requestSingleInstanceLock(lockAsk),
         askEveryMs: STOPPED_RUN_WAIT_MS,
       });
@@ -984,12 +971,15 @@ export async function startApp(
         event.preventDefault();
         stopForceWatch();
         leaveRun(runEnd);
-        leaveStarting();
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }
     // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
     const asked = new Set<string>();
+    // The answers this window wrote, which it takes away as it quits where no launch read them, as
+    // one that told this window from its words before the answer came (`writeWindowAnswer`).
+    const answers = new Set<string>();
+    if (!windowless) app.on("will-quit", () => clearWindowAnswers(answers));
     app.on("second-instance", (_event, _argv, _cwd, additionalData) => {
       if (windowless) return;
       answerLaunch(windowAnswerAsked(additionalData), {
@@ -1009,10 +999,7 @@ export async function startApp(
         whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
         answer: (word) => {
           try {
-            writeFileSync(join(app.getPath("userData"), windowAnswerFile(word)), "", {
-              mode: 0o600,
-            });
-            return true;
+            return writeWindowAnswer(app.getPath("userData"), word, answers);
           } catch (error) {
             console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
             return false;

@@ -9,13 +9,14 @@ import { runEnd } from "./besideRun";
 import {
   answerLaunch,
   askLoginShellEarly,
+  clearWindowAnswers,
   commandHolding,
   followInstalledProgram,
+  holderIsWindow,
   keepsStarterBesideGrant,
   lockHolder,
   lockHolderKind,
   markRunning,
-  noteRunStarting,
   ownedRun,
   ownedRunOf,
   programIdentity,
@@ -23,9 +24,10 @@ import {
   runCommand,
   runningByCommand,
   runOptions,
-  runStarting,
-  runStartingFile,
   stopRunningCommand,
+  windowAnswerFile,
+  wordsAfterProgram,
+  writeWindowAnswer,
 } from "./runCommand";
 import { startedByAgent, takeRunAgentMark } from "./runEnvironment";
 import { readRunStatus } from "./runStatus";
@@ -267,8 +269,8 @@ describe("a window opened beside a run", () => {
         answered,
         holder: () => undefined,
         asked: undefined,
-        // The note's run, starting on the folder, may be what holds it.
-        starting: () => true,
+        // Nothing names the holder, so no words of it can be read.
+        windowHolder: async () => null,
         lockFree: () => false,
         askEveryMs: 60_000,
         everyMs: 20,
@@ -367,8 +369,8 @@ describe("a window opened beside a run", () => {
         answered: shown.answered ?? (() => false),
         holder: () => holder,
         asked: reached,
-        // A run starting on the folder, which has not noted that it holds it, may be the holder.
-        starting: () => true,
+        // The holder's words cannot be read, so it may be a command that has not noted itself.
+        windowHolder: async () => null,
         lockFree: () => {
           asks.push(Date.now());
           return holder === null;
@@ -426,92 +428,114 @@ describe("a window opened beside a run", () => {
   });
 
   // The review of INF-5409: a window from before windows answered a launch's ask (as one still open
-  // across an update) brings itself forward at the ask and never answers. A run notes that it is
-  // starting before it asks for the folder's lock, so with no such note of a run still there the
-  // holder is a window: one the lock names at once, with nothing asked again; one no link names,
-  // as Windows' own lock, after one more ask that finds it still held, or the lock let go. A
-  // silent holder that may be a starting run, by its own note, is still waited for until it notes
-  // that it holds the folder.
-  it("takes a holder for a window once no run is starting that may hold the lock", async () => {
-    const dataDir = scratchDir("infinitary-run-starting-");
+  // across an update) brings itself forward at the ask and never answers. Silence is no evidence of
+  // a window: the holder is taken for one only by the words it runs with, which never hold `run`,
+  // while a command's always do, whatever its version. A command's words, or words that cannot be
+  // read, keep the launch waiting for what the holder shows; words read again only after the wait.
+  it("takes a holder for a window only by the words it runs with", async () => {
     const look = (
-      holder: number | undefined,
-      free: boolean,
+      words: (pid: number) => Promise<string[] | null>,
       running: () => boolean = () => false,
+      holder: () => number | null | undefined = () => 4242,
     ) => {
       const asks: number[] = [];
+      const reads: number[] = [];
       const kind = lockHolderKind({
         running,
         answered: () => false,
-        holder: () => holder,
-        asked: holder,
-        starting: (named) => runStarting(dataDir, named, (pid) => pid === 4242),
+        holder,
+        asked: 4242,
+        windowHolder: (named) => {
+          reads.push(Date.now());
+          return holderIsWindow(named, words);
+        },
         lockFree: () => {
           asks.push(Date.now());
-          return free;
+          return false;
         },
-        askEveryMs: 100,
+        askEveryMs: 150,
         everyMs: 20,
       });
-      return { kind, asks };
+      return { kind, asks, reads };
     };
-    const legacy = look(4242, false);
+    const exe = "/Applications/Infinitary.app/Contents/MacOS/Infinitary";
+    // A window, one from before windows answered included: taken for one at once, asked nothing.
+    const legacy = look(async () => [exe, "--enable-features=x"]);
     expect(await legacy.kind).toBe("window");
     expect(legacy.asks).toEqual([]);
-    const unnamed = look(undefined, false);
-    expect(await unnamed.kind).toBe("window");
-    expect(unnamed.asks).toHaveLength(1);
-    const letGo = look(undefined, true);
-    expect(await letGo.kind).toBe("free");
-    expect(letGo.asks).toHaveLength(1);
-    // Another run's note, by another process, says nothing of the holder the lock names.
-    writeFileSync(join(dataDir, runStartingFile(5151)), `${JSON.stringify({ pid: 5151 })}\n`);
-    expect(await look(4242, false).kind).toBe("window");
-    // The holder's own note, while its run is there: it is waited for until it notes itself.
-    const leave = noteRunStarting(dataDir, 4242);
+    // A command that has not noted itself yet: waited for, its words read once, until it notes.
     let noted = false;
-    const starting = look(4242, false, () => noted);
+    const command = look(
+      async () => [exe, "run", "--json"],
+      () => noted,
+    );
     let settled: string | null = null;
-    void starting.kind.then((kind) => (settled = kind));
+    void command.kind.then((kind) => (settled = kind));
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(settled).toBeNull();
-    expect(starting.asks).toEqual([]);
+    expect(command.reads).toHaveLength(1);
+    expect(command.asks).toEqual([]);
     noted = true;
-    expect(await starting.kind).toBe("run");
-    leave();
-    expect(runStarting(dataDir, 4242, () => true)).toBe(false);
+    expect(await command.kind).toBe("run");
+    // Words that cannot be read: waited for, read again after each wait, and a window once they show one.
+    let readable = false;
+    const unread = look(async () => (readable ? [exe] : null));
+    let unreadKind: string | null = null;
+    void unread.kind.then((kind) => (unreadKind = kind));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(unreadKind).toBeNull();
+    expect(unread.reads.length).toBeGreaterThanOrEqual(2);
+    readable = true;
+    expect(await unread.kind).toBe("window");
+    // Words read of a holder that let the lock go meanwhile tell nothing of the next one.
+    // The window read let the lock go during the read, and a command took it; the command is read
+    // anew and waited for, never taken for the window.
+    let holder = 4242;
+    let commandRead = false;
+    const moved = look(
+      async (pid) => {
+        if (pid === 4242) {
+          holder = 5151;
+          return [exe];
+        }
+        commandRead = true;
+        return [exe, "run"];
+      },
+      () => commandRead,
+      () => holder,
+    );
+    expect(await moved.kind).toBe("run");
+    expect(moved.reads).toHaveLength(2);
   });
 
-  it("reads a run starting on the folder from its own note while that run is there", () => {
-    const dataDir = scratchDir("infinitary-run-starting-");
-    expect(runStarting(dataDir, 4242, () => true)).toBe(false);
-    expect(runStarting(dataDir, undefined, () => true)).toBe(false);
-    const leave = noteRunStarting(dataDir, 4242, "win:1");
-    const births: (string | undefined)[] = [];
-    const reads = (answer: boolean | null) => (_pid: number, birth?: string) => {
-      births.push(birth);
-      return answer;
-    };
-    // Named by the lock: only its own note, while its run is there.
-    expect(runStarting(dataDir, 4242, reads(true))).toBe(true);
-    expect(runStarting(dataDir, 5151, reads(true))).toBe(false);
-    expect(runStarting(dataDir, 4242, reads(false))).toBe(false);
-    // Named by nothing, as Windows' own lock: any note whose run is there or cannot be told.
-    expect(runStarting(dataDir, undefined, reads(true))).toBe(true);
-    expect(runStarting(dataDir, undefined, reads(null))).toBe(true);
-    expect(runStarting(dataDir, undefined, reads(false))).toBe(false);
-    expect(births).toEqual(["win:1", "win:1", "win:1", "win:1", "win:1"]);
-    // A lock that names no holder at all has no starting run behind it.
-    expect(runStarting(dataDir, null, reads(true))).toBe(false);
-    // A note being written may be the holder's.
-    writeFileSync(join(dataDir, runStartingFile(6262)), "{");
-    expect(runStarting(dataDir, 6262, reads(false))).toBe(true);
-    expect(runStarting(dataDir, 4242, reads(false))).toBe(false);
-    rmSync(join(dataDir, runStartingFile(6262)));
-    leave();
-    expect(runStarting(dataDir, 4242, reads(true))).toBe(false);
-    // A folder that cannot be read may hold the holder's note.
-    expect(runStarting(join(dataDir, "missing"), 4242, reads(true))).toBe(true);
+  it("reads a program's words after its own path, however many spaces it holds", async () => {
+    const exe = "/Users/a b/Applications/Infinitary.app/Contents/MacOS/Infinitary";
+    expect(wordsAfterProgram(`${exe} run --json`, exe)).toEqual([exe, "run", "--json"]);
+    expect(wordsAfterProgram(exe, exe)).toEqual([exe]);
+    expect(wordsAfterProgram(`${exe}Helper run`, exe)).toBeNull();
+    expect(wordsAfterProgram("/usr/bin/other run", exe)).toBeNull();
+    expect(await holderIsWindow(1, async () => [exe])).toBe(true);
+    expect(await holderIsWindow(1, async () => [exe, "run"])).toBe(false);
+    expect(await holderIsWindow(1, async () => null)).toBeNull();
+    // The program's own path is never one of its words, even where it ends in `run`.
+    expect(await holderIsWindow(1, async () => ["run"])).toBe(true);
+  });
+
+  // The review of INF-5409: a launch that told the window from its words quits without reading the
+  // answer the window writes a moment later, so the window takes away its unread answers as it quits.
+  it("takes away a window's answers no launch read as the window quits", () => {
+    const dataDir = scratchDir("infinitary-window-answers-");
+    const written = new Set<string>();
+    expect(writeWindowAnswer(dataDir, "late", written)).toBe(true);
+    expect(writeWindowAnswer(dataDir, "read", written)).toBe(true);
+    // The launch that asked "read" read and removed its answer; "late" was written after its asker quit.
+    rmSync(join(dataDir, windowAnswerFile("read")));
+    expect(readFileSync(join(dataDir, windowAnswerFile("late")), "utf8")).toBe("");
+    clearWindowAnswers(written);
+    expect(() => readFileSync(join(dataDir, windowAnswerFile("late")))).toThrow();
+    expect(written.size).toBe(0);
+    expect(() => writeWindowAnswer(join(dataDir, "missing"), "lost", written)).toThrow();
+    expect(written.size).toBe(0);
   });
 
   // The review of INF-5409: Restart it is offered over a run only while a force stop can end it.

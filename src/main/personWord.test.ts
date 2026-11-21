@@ -11,7 +11,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { AccessAsk, AccessRun } from "@core/storage/ownerOnly";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
@@ -35,6 +35,7 @@ import {
   WORD_BUTTONS,
   WORD_OWNER_FILE,
   WORD_PROFILES_RESERVED,
+  WORD_REMOVING_PREFIX,
   WORD_TEMP_DIR,
   wordProfilesMark,
 } from "./personWordArg";
@@ -47,7 +48,9 @@ import {
  * coarse to move between them would; `noBirth.reading` runs before each read, and
  * `noBirth.number` and `noBirth.birth` give the number and birth a path answers in place of its
  * own. A number is given again only as the system gives one: never while a file or folder that has
- * it is held open (`noBirth.held`).
+ * it is held open (`noBirth.held`). The folder `noBirth.fresh` names alone answers its last change as
+ * its birth, as a new folder not yet changed does, and `noBirth.opening` runs before each path
+ * opened is opened.
  */
 const noBirth = vi.hoisted(() => ({
   on: false,
@@ -57,6 +60,8 @@ const noBirth = vi.hoisted(() => ({
   number: new Map<string, bigint>(),
   birth: new Map<string, bigint>(),
   held: new Map<number, bigint>(),
+  fresh: null as string | null,
+  opening: null as ((path: string) => void) | null,
 }));
 vi.mock("node:fs", async (original) => {
   const fs = await original<typeof import("node:fs")>();
@@ -72,7 +77,7 @@ vi.mock("node:fs", async (original) => {
       if (number !== undefined && ![...noBirth.held.values()].includes(number)) found.ino = number;
       const birth = noBirth.birth.get(path);
       if (birth !== undefined) found.birthtimeNs = birth;
-      if (noBirth.still !== null && path.startsWith(noBirth.still))
+      if ((noBirth.still !== null && path.startsWith(noBirth.still)) || path === noBirth.fresh)
         found.ctimeNs = found.birthtimeNs;
       if (noBirth.on) found.birthtimeNs = 0n;
       else if (noBirth.fromChange && typeof found.ctimeNs === "bigint")
@@ -81,6 +86,7 @@ vi.mock("node:fs", async (original) => {
     return found;
   }) as typeof fs.lstatSync;
   const openSync = ((...args: Parameters<typeof fs.openSync>) => {
+    noBirth.opening?.(String(args[0]));
     const fd = fs.openSync(...args);
     noBirth.held.set(fd, fs.fstatSync(fd, { bigint: true }).ino);
     return fd;
@@ -416,7 +422,7 @@ describe("a refused launch's word to the person", () => {
     }
     // A folder made that cannot be made private, or whose mark cannot go in, is removed only
     // while empty: what something else put in it meanwhile, a folder or a file at the mark's name
-    // included, stays as it was, and nothing is reserved.
+    // included, stays as it was, set aside under a removal's own name, and nothing is reserved.
     for (const failing of ["private", "mark", "mark-file"]) {
       const made = root();
       const fails: AccessRun = async (ask) => {
@@ -441,7 +447,10 @@ describe("a refused launch's word to the person", () => {
       };
       expect(await ownProfilesFolder(made, "win32", fails)).toBeNull();
       expect(existsSync(made)).toBe(false);
-      const [left] = readdirSync(join(made, "..")).filter((name) => name.startsWith("word-"));
+      const [left] = readdirSync(join(made, "..")).filter((name) =>
+        name.startsWith(WORD_REMOVING_PREFIX),
+      );
+      expect(left).toBeDefined();
       expect(readdirSync(join(made, "..", left ?? ""))).toContain(
         failing === "private" ? "theirs" : WORD_PROFILES_RESERVED,
       );
@@ -495,6 +504,38 @@ describe("a refused launch's word to the person", () => {
       noBirth.still = null;
     }
     expect(readdirSync(join(coarse, ".."))).toEqual([]);
+    // A new folder to go in, not yet changed since it was made, shows its birth and last change
+    // alike; the folders above it on the same device show its births kept, so one is made there.
+    const fresh = root();
+    noBirth.fresh = join(fresh, "..");
+    try {
+      const made = await ownProfilesFolder(fresh, "win32", answering(ownList));
+      expect(made?.path.startsWith(`${fresh}.`)).toBe(true);
+    } finally {
+      noBirth.fresh = null;
+    }
+    // A folder put at the new folder's name before it is held, holding anything, is never held,
+    // set, marked or removed, and nothing is reserved.
+    const heldTheirs = root();
+    let putTheirs: string | null = null;
+    noBirth.opening = (path) => {
+      if (putTheirs !== null || dirname(path) !== dirname(heldTheirs)) return;
+      if (!basename(path).startsWith(`${basename(heldTheirs)}.`)) return;
+      putTheirs = path;
+      renameSync(path, `${heldTheirs}-made`);
+      mkdirSync(path);
+      writeFileSync(join(path, "theirs"), "kept");
+    };
+    const heldTheirsAsk = answering(ownList);
+    try {
+      expect(await ownProfilesFolder(heldTheirs, "win32", heldTheirsAsk)).toBeNull();
+    } finally {
+      noBirth.opening = null;
+    }
+    expect(putTheirs).not.toBeNull();
+    expect(readdirSync(putTheirs ?? "")).toEqual(["theirs"]);
+    expect(touched(heldTheirsAsk)).not.toContain(putTheirs);
+    expect(existsSync(heldTheirs)).toBe(false);
     // A birth the system keeps is relied on even where the new folder's last change still reads
     // as its birth, as the folder it goes in shows the two apart.
     const coarseKept = root();

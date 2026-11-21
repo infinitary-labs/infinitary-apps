@@ -387,12 +387,11 @@ async function makeProfilesFolder(
   mkdirSync(path, { mode: 0o700 });
   const held = holdMade(path);
   if (held === null) return null;
-  const folder = { path, made: lstatSync(path, { bigint: true }) };
+  const folder = { path, made: held.folder };
   const made: MadeFolder = { folder, mark: null, held };
   let alone = false;
   try {
     alone =
-      sameEntry(folder.made, held.folder) &&
       folder.made.birthtimeNs !== 0n &&
       (platform !== "win32" ||
         (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only") &&
@@ -438,15 +437,23 @@ type MadeFolder = { folder: ProfilesFolder; mark: Entry | null; held: Held };
 type Held = { fd: number; folder: Entry; markFd?: number };
 
 /**
- * Holds the folder just made at `path` open, with which folder it is; null, leaving the folder as
- * it is, where it cannot be held: what is there could not then be told from another put there.
+ * Holds the folder just made at `path` open, with which folder it is, only where what it opened is
+ * a folder still at that path and empty, as the one just made is; null otherwise, closing what it
+ * opened and leaving what is there as it is. No system call Node offers makes a folder and opens it
+ * at once, so a folder put at the new name between the two is taken for it only where it too is
+ * empty: one holding anything is never held, used or removed.
  */
 function holdMade(path: string): Held | null {
   let fd: number | undefined;
   try {
     fd = openSync(path, "r");
     const folder = fstatSync(fd, { bigint: true });
-    if (folder.isDirectory()) return { fd, folder };
+    const atPath = () => {
+      const now = entryOf(path);
+      return now?.isDirectory() === true && sameEntry(now, folder);
+    };
+    if (folder.isDirectory() && atPath() && readdirSync(path).length === 0 && atPath())
+      return { fd, folder };
   } catch (error) {
     console.warn(`[app] could not hold a word's folder it made: ${(error as Error).message}`);
   }
@@ -467,20 +474,20 @@ function letGo(held: Held): void {
 }
 
 /**
- * Removes a profiles' folder this launch made and never reserved, while its path still names the
- * folder it holds open (`held`), never otherwise: first its own mark, only while still the file it
- * holds open (none where it made none), then the folder while still that folder and empty. A
- * folder or mark put in their place stays, whatever its number, birth or clock says. It closes
- * nothing; the caller lets go of what it held (`letGo`) once this is done.
+ * Removes a profiles' folder this launch made and never reserved, only as the folder it holds open
+ * (`held`): it first moves that folder to a name of its own (`setAside`), so what it then removes
+ * is the folder it checked there and not whatever comes to the old name, then removes its own mark
+ * in it, only while still the file it holds open (none where it made none), and the folder only
+ * while empty. A folder put in its place is never moved or removed. It closes nothing; the caller
+ * lets go of what it held (`letGo`) once this is done.
  */
 function dropMade(made: MadeFolder): void {
-  const { path } = made.folder;
-  const isHeld = () => {
-    const now = entryOf(path);
-    return now?.isDirectory() === true && sameEntry(now, made.held.folder);
-  };
-  if (!isHeld()) return;
-  const markPath = join(path, WORD_PROFILES_RESERVED);
+  const aside = setAside(
+    made.folder.path,
+    (entry) => entry?.isDirectory() === true && sameEntry(entry, made.held.folder),
+  );
+  if (aside === null) return;
+  const markPath = join(aside, WORD_PROFILES_RESERVED);
   const mark = entryOf(markPath);
   if (made.mark !== null && mark?.isFile() && sameEntry(mark, made.mark))
     try {
@@ -488,9 +495,8 @@ function dropMade(made: MadeFolder): void {
     } catch {
       // Left with the folder, which is then not empty and stays.
     }
-  if (!isHeld()) return;
   try {
-    rmdirSync(path);
+    rmdirSync(aside);
   } catch (error) {
     console.warn(
       `[app] left a word's profiles' folder it could not finish: ${(error as Error).message}`,
@@ -563,29 +569,18 @@ const stillReserved = (folder: ProfilesFolder) => {
 /**
  * Removes a profile this launch made or found ended, only while its path still names that folder:
  * one this launch made by the folder it holds open (`held`), whose number no other folder takes
- * while held, and one found ended by device, number and birth. It first moves the folder to a name of its own beside it
- * (`WORD_REMOVING_PREFIX`), which no other remover reads and nothing else is put at, and checks
- * again what it moved: only that folder goes, so one remover alone owns it through its removal.
- * Anything else it moved, or what of it could not be removed, stays at that name and is never put
- * back, where it could take the place of what came to its old name since.
+ * while held, and one found ended by device, number and birth. It first moves the folder to a name
+ * of its own (`setAside`) and removes only what it moved there, so one remover alone owns it through
+ * its removal; what of it could not be removed stays at that name.
  */
 function removeIfSame(path: string, made: Entry, held?: Entry): void {
-  const same = (entry: Entry | null) =>
-    entry?.isDirectory() === true &&
-    (held === undefined ? sameMade(entry, made) : sameEntry(entry, held));
-  if (!same(entryOf(path))) return;
-  const aside = join(dirname(path), `${WORD_REMOVING_PREFIX}${randomUUID()}`);
-  try {
-    renameSync(path, aside);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
-      console.warn(`[app] could not remove a word's folder: ${(error as Error).message}`);
-    return;
-  }
-  if (!same(entryOf(aside))) {
-    console.warn("[app] a word's folder was replaced before its removal; it is left set aside");
-    return;
-  }
+  const aside = setAside(
+    path,
+    (entry) =>
+      entry?.isDirectory() === true &&
+      (held === undefined ? sameMade(entry, made) : sameEntry(entry, held)),
+  );
+  if (aside === null) return;
   try {
     rmSync(aside, { recursive: true, force: true });
   } catch (error) {
@@ -594,14 +589,46 @@ function removeIfSame(path: string, made: Entry, held?: Entry): void {
 }
 
 /**
+ * Moves the folder at `path`, only while it is the one `same` names, to a name of its own beside it
+ * (`WORD_REMOVING_PREFIX`), which no other remover reads and nothing else is put at, and gives that
+ * name only where what it moved is still that folder; null otherwise. Anything else it moved stays
+ * at that name and is never put back, where it could take the place of what came to its old name.
+ */
+function setAside(path: string, same: (entry: Entry | null) => boolean): string | null {
+  if (!same(entryOf(path))) return null;
+  const aside = join(dirname(path), `${WORD_REMOVING_PREFIX}${randomUUID()}`);
+  try {
+    renameSync(path, aside);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+      console.warn(`[app] could not remove a word's folder: ${(error as Error).message}`);
+    return null;
+  }
+  if (same(entryOf(aside))) return aside;
+  console.warn("[app] a word's folder was replaced before its removal; it is left set aside");
+  return null;
+}
+
+/**
  * Whether the system keeps a folder's birth in `parent` apart from its last change, so a birth read
- * there names one folder for its whole life: shown by `parent` itself, made before the change that
- * putting a folder or a reservation in it made. A system giving the last change in place of a birth
- * shows the two alike on every folder, whatever its clock, and then no birth there is relied on.
+ * there names one folder for its whole life: `parent` gives a birth, and it or a folder above it on
+ * the same device shows its birth apart from its last change, as any folder changed since it was
+ * made does where births are kept. A new `parent` not yet changed shows the two alike, so the
+ * folders above it, which held it before it was made, are read too. A system giving the last change
+ * in place of a birth shows the two alike on every folder, whatever its clock, and then no birth
+ * there is relied on.
  */
 function birthsKept(parent: string): boolean {
   const found = entryOf(parent);
-  return found !== null && found.birthtimeNs !== 0n && found.birthtimeNs !== found.ctimeNs;
+  if (found === null || found.birthtimeNs === 0n) return false;
+  for (let at = parent, entry: Entry | null = found; entry?.dev === found.dev; ) {
+    if (entry.birthtimeNs !== 0n && entry.birthtimeNs !== entry.ctimeNs) return true;
+    const above = dirname(at);
+    if (above === at) return false;
+    at = above;
+    entry = entryOf(at);
+  }
+  return false;
 }
 
 /** A folder this launch made or read, still the same: its device, number and birth. */
@@ -742,18 +769,15 @@ export async function askPersonWord(
   // this launch made goes, while its path still names it (`removeIfSame`).
   // It is held open from its making until it goes, so the folder at its path is known to be it
   // by device and number, which no other folder takes while it is held (`holdMade`).
-  let made: Entry;
-  let held: Held | null;
   try {
     mkdirSync(profile, { mode: 0o700 });
-    held = holdMade(profile);
-    made = lstatSync(profile, { bigint: true });
   } catch (error) {
     console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);
     return "unshown";
   }
-  if (held === null) return "unshown";
-  const holding = held;
+  const holding = holdMade(profile);
+  if (holding === null) return "unshown";
+  const made = holding.folder;
   let cleaned = false;
   // Once only, while the profile is still held: after it lets go, its number names nothing.
   const cleanUp = () => {
@@ -762,11 +786,6 @@ export async function askPersonWord(
     removeIfSame(profile, made, holding.folder);
     letGo(holding);
   };
-  if (!sameEntry(made, holding.folder)) {
-    cleaned = true;
-    letGo(holding);
-    return "unshown";
-  }
   try {
     // Made in the folder this launch reserved, and in no other put in its place.
     if (!stillReserved(folder)) throw new Error("its profiles' folder was replaced");

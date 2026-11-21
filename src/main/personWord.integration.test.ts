@@ -152,6 +152,20 @@ const profilesFolder = () =>
 const someMark = () => wordProfilesMark(randomUUID(), { dev: 1n, ino: 1n, birthtimeNs: 0n });
 
 /**
+ * A folder put at a path just made, before the launch opens it to hold it: `swap.opening`, while
+ * set, runs before each path this module opens is opened.
+ */
+const swap = vi.hoisted(() => ({ opening: null as ((path: string) => void) | null }));
+vi.mock("node:fs", async (original) => {
+  const fs = await original<typeof import("node:fs")>();
+  const openSync = ((...args: Parameters<typeof fs.openSync>) => {
+    swap.opening?.(String(args[0]));
+    return fs.openSync(...args);
+  }) as typeof fs.openSync;
+  return { ...fs, default: { ...fs, openSync }, openSync };
+});
+
+/**
  * The profiles' folder a name reserves: the folder beside it its mark names, whose own mark is the
  * very file at the name, by device and number read whole.
  */
@@ -510,6 +524,37 @@ describe("a refused launch's copy that shows a word", () => {
     const profile = readFileSync(join(marks, "profile"), "utf8");
     expect(existsSync(join(profile, "theirs"))).toBe(true);
     expect(existsSync(join(marks, "moved", WORD_OWNER_FILE))).toBe(true);
+  });
+
+  it("never holds, uses or removes a folder put at its new profile's name before it is held", async () => {
+    const profiles = profilesFolder();
+    const marks = scratchDir("person-word-marks-");
+    // The folder the profiles' folder reserves is made first, by an ask whose copy shows nothing.
+    await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
+    const folder = keptAt(profiles);
+    let theirs: string | null = null;
+    swap.opening = (path) => {
+      if (
+        theirs !== null ||
+        dirname(path) !== folder ||
+        !basename(path).startsWith("infinitary-word-")
+      )
+        return;
+      theirs = path;
+      renameSync(path, join(folder, "made-aside"));
+      mkdirSync(path);
+      writeFileSync(join(path, "theirs"), "kept");
+    };
+    try {
+      expect(
+        await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles }),
+      ).toBe("unshown");
+    } finally {
+      swap.opening = null;
+    }
+    expect(theirs).not.toBeNull();
+    expect(readdirSync(theirs ?? "")).toEqual(["theirs"]);
+    expect(readFileSync(join(theirs ?? "", "theirs"), "utf8")).toBe("kept");
   });
 
   it("removes the profile it made when the copy cannot even be started", async () => {

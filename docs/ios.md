@@ -342,7 +342,7 @@ The press sets the sound session for playback, so the clip plays with the silent
 The player and the session are used only on a queue of their own, never the main thread, because starting the sound can wait on the system's sound service (a test simulator held it for minutes); the strip's button stays held until the sound is playing.
 Leaving the app pauses the clip, and the strip goes, stopping it, when its card leaves the front: another card shows, it is answered, or it goes.
 Assets and drafts are memory-only and are cleared when their owner goes away; a draft is never written to the phone's saved connection file.
-An out-of-reach session refuses changes; a lost reply has an unknown result and is never retried or queued across reconnection.
+An out-of-reach session refuses changes, except a card's draft, which waits in memory and goes on return ("Unsent picks on the phone" below); a lost reply has an unknown result and is never retried or queued across reconnection.
 The phone containment review is in `docs/live-prototype-security.md`, “Phone cards”.
 
 ### Unsent picks on the phone
@@ -355,7 +355,8 @@ Its hello lists the `card-drafts` change; a computer whose welcome does not list
   The draft's opening is the card's as the computer's cards last said, so a tap still on its way never drops it; a card that leaves, or opens anew under its id, lets the phone's draft of it go.
 - A change goes once the captain pauses for `PhoneContract.draftQuietMs` (the Mac's `DRAFT_QUIET_MS`), one request per card at a time with the newest change waiting behind it, so words typed into the field never go key by key.
   Words longer than a reply may hold wait until they fit.
-- Another screen's picks reach a body on screen at once through the bridge's `fill` message, which `CardWebHost` sends through the card page's `fill`; a body not yet born starts with them.
+- Another screen's picks reach a body on screen at once through the bridge's `fill` message, which `CardWebHost` sends through the card page's `fill`; a body not yet born starts with them and the answers it already had.
+  Every body reads its answers into the draft, a body loaded beside the shown card included, so one closed and drawn again, or retried after it stopped, starts from the draft.
   Another screen's words wait while the card's field holds the keyboard, and show once it lets go only if the captain typed nothing there since they arrived.
 - A part changed while the computer is out of reach keeps the revision the phone had then, in memory only, so it goes on return unless another screen changed the same part meanwhile; a draft is never written to the phone's saved connection file, so a phone that quits first loses what it had not sent.
 - A change refused as `closed` lets the card's draft go, and one refused as `too-large` goes again only once it changes, as on the Mac.

@@ -19,6 +19,7 @@ import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { cardFileId, cardFileStoredName } from "@shared/cardFiles";
 import { CARD_LEAVE } from "@shared/cardLeave";
+import type { CardNote } from "@shared/cardNotes";
 import { cardLogUrl } from "@shared/cardPictures";
 import {
   ANYTHING_ELSE_ANSWER,
@@ -1957,10 +1958,11 @@ export async function startPhoneHome(
               [card.id],
             );
           const title = "Book the harbour survey";
+          const part = "The harbour survey needs two answers before the crew books the boat.";
           core.services.supervisor.addFirstmateCard({
             id: "phone-draft-card",
             title,
-            body: `<p>The harbour survey needs two answers before the crew books the boat.</p>
+            body: `<p>${part}</p>
               <fieldset data-inf-options-only><legend>Which day should the survey run?</legend>
               <label><input type="radio" name="day" required value="tuesday"> Tuesday</label>
               <label><input type="radio" name="day" required value="thursday"> Thursday</label></fieldset>
@@ -1975,7 +1977,7 @@ export async function startPhoneHome(
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
           draftChanges.length = 0;
-          result = { title, cardId: "phone-draft-card" };
+          result = { title, part, cardId: "phone-draft-card" };
           break;
         }
         // The card's draft as the computer keeps it, and each change the phone sent to it.
@@ -1986,14 +1988,15 @@ export async function startPhoneHome(
           result = { draft, changes: structuredClone(draftChanges) };
           break;
         }
-        // Waits until the card's draft holds these values for each named question and these words, or is gone, on the
-        // computer's own events, then answers as draft-state does.
+        // Waits until the card's draft holds these values for each named question, these words and notes with these
+        // comments, or is gone, on the computer's own events, then answers as draft-state does.
         case "POST draft-wait": {
           let body = "";
           for await (const chunk of request) body += chunk.toString();
           const want = JSON.parse(body) as {
             answers?: Record<string, string[]>;
             words?: string;
+            notes?: string[];
             gone?: boolean;
           };
           const read = () =>
@@ -2003,6 +2006,11 @@ export async function startPhoneHome(
             if (want.gone) return !draft;
             if (!draft) return false;
             if (want.words !== undefined && draft.words !== want.words) return false;
+            if (
+              want.notes &&
+              JSON.stringify(draft.notes.map((note) => note.comment)) !== JSON.stringify(want.notes)
+            )
+              return false;
             return Object.entries(want.answers ?? {}).every(([name, values]) => {
               const answer = draft.answers.find((one) => one.name === name);
               return JSON.stringify(answer?.values) === JSON.stringify(values);
@@ -2012,12 +2020,16 @@ export async function startPhoneHome(
           result = { draft: read() ?? null, changes: structuredClone(draftChanges) };
           break;
         }
-        // Another screen changes the card's draft, as a window on a Mac would: the given answers and words, at the
-        // revision the computer keeps now.
+        // Another screen changes the card's draft, as a window on a Mac would: the given answers, words and notes, at
+        // the revision the computer keeps now.
         case "POST draft-elsewhere": {
           let body = "";
           for await (const chunk of request) body += chunk.toString();
-          const { answers, words } = JSON.parse(body) as { answers?: CardAnswer[]; words?: string };
+          const { answers, words, notes } = JSON.parse(body) as {
+            answers?: CardAnswer[];
+            words?: string;
+            notes?: CardNote[];
+          };
           const card = core.services.supervisor.cards
             .snapshot()
             .find((one) => one.id === "phone-draft-card")!;
@@ -2029,6 +2041,7 @@ export async function startPhoneHome(
               ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
               ...(answers ? { answers } : {}),
               ...(words !== undefined ? { words } : {}),
+              ...(notes ? { notes } : {}),
             },
           ]);
           break;

@@ -6,14 +6,16 @@ extension PhoneJourney {
     /// picks on the phone"), and the captain: "make sure the words are not literally resending on every keystroke".
     /// Data: the phone home's `draft-card`, a decision with two required questions, on the test home's real core, whose
     /// `draft-elsewhere` changes the card's draft as a window on a Mac would. Completion: a pick on the phone reaches the
-    /// computer's draft; words typed key by key reach it in at most two changes; another screen's pick shows in the body
-    /// and its words in the card's field, and both show again after the app starts again; a pick made out of reach reaches
-    /// the draft once the computer is back; and the captain's choice takes the draft away. It fails when the phone keeps a
-    /// draft to itself, sends one change a key, forgets a draft at a restart, or drops a pick made out of reach.
+    /// computer's draft; words typed key by key reach it in at most two changes; a note queued on the phone reaches it;
+    /// another screen's pick shows in the body, its words in the card's field and its comment on the note, and all three
+    /// show again after the app starts again; a pick made out of reach reaches the draft once the computer is back; and the
+    /// captain's choice takes the draft away. It fails when the phone keeps a draft to itself, sends one change a key,
+    /// keeps its notes to itself, forgets a draft at a restart, or drops a pick made out of reach.
     func testCardDrafts() async throws {
         try await launchJoined()
         let fixture = try await home("draft-card")
         let title = try XCTUnwrap(fixture["title"] as? String)
+        let part = try XCTUnwrap(fixture["part"] as? String)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         waitForShownBodyRevealed()
         waitForDraftCount("2 to answer")
@@ -41,15 +43,31 @@ extension PhoneJourney {
         XCTAssertEqual(after - before, worded.count, "Each change the phone sent moved the draft's revision once")
         try await dismissKeyboardForProbe()
 
-        // Another screen's pick shows in the body on screen, and its words in the card's field.
+        // A note queued on the phone reaches the computer's draft.
+        let point = app.buttons["point-at"]
+        XCTAssertTrue(point.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(point); tapOnPhone(point)
+        let paragraph = app.webViews.staticTexts[part].firstMatch
+        reveal(paragraph); tapOnPhone(paragraph)
+        let editor = app.descendants(matching: .any).matching(identifier: "note-editor").firstMatch
+        XCTAssertTrue(editor.waitForPresence(timeout: 10), "Point at did not open the note editor\n\(app.debugDescription)")
+        tapOnPhone(app.buttons["note-queue"])
+        XCTAssertTrue(editor.waitForAbsence(timeout: 10), app.debugDescription)
+        let noted = try await waitForDraft(["notes": [""]])
+        var note = try XCTUnwrap(((noted["draft"] as? [String: Any])?["notes"] as? [[String: Any]])?.first)
+
+        // Another screen's pick shows in the body on screen, its words in the card's field, and its comment on the note.
         let elsewhere = "Thursday suits the pilot better"
+        let comment = "Ask the harbour office first"
+        note["comment"] = comment
         let launch: [String: Any] = ["name": "boat", "values": ["launch"], "labels": ["The survey launch"], "changed": true]
-        let body = try JSONSerialization.data(withJSONObject: ["answers": [launch], "words": elsewhere])
+        let body = try JSONSerialization.data(withJSONObject: ["answers": [launch], "words": elsewhere, "notes": [note]])
         _ = try await home("draft-elsewhere", body: String(decoding: body, as: UTF8.self))
         waitForDraftCount("2 of 2")
         let shown = NSPredicate { [reply] _, _ in reply.value as? String == elsewhere }
         XCTAssertEqual(waitForPhonePredicate(shown, object: nil, timeout: 10), .completed,
                        "The card's field never showed another screen's words: \(reply.value ?? "nothing")")
+        XCTAssertTrue(app.staticTexts[comment].waitForPresence(timeout: 10), "The note never showed another screen's comment")
         picture("card-drafts-from-elsewhere")
 
         // After the app ends and starts again, the card shows its picks and words again, read from the computer.
@@ -62,6 +80,8 @@ extension PhoneJourney {
         let kept = NSPredicate { [restored] _, _ in restored.value as? String == elsewhere }
         XCTAssertEqual(waitForPhonePredicate(kept, object: nil, timeout: 10), .completed,
                        "The card's field came back without its words: \(restored.value ?? "nothing")")
+        XCTAssertTrue(app.staticTexts[comment].waitForPresence(timeout: 10), "The note came back without its comment")
+        XCTAssertEqual(app.staticTexts["queued-notes-count"].label, "1 note not sent")
         picture("card-drafts-after-restart")
 
         // A pick made while the computer is out of reach stays on the phone and goes once it is back.

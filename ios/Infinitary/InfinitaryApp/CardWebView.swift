@@ -196,7 +196,8 @@ import SwiftUI
     func fill(_ answers: PhoneJSON) -> Bool {
         guard part == .body, !card.isPast, failure == nil else { return false }
         if !bodyReady { fill = .array(PhoneDraftSync.withDraftAnswers(fill.list, answers.list)) }
-        guard mounted, let view, let argument = try? answers.foundation else { return false }
+        // Before its birth the page takes the whole fill, the mount's answers with every one that arrived since.
+        guard mounted, let view, let argument = try? (bodyReady ? answers : fill).foundation else { return false }
         view.callAsyncJavaScript("window.phoneCard?.fill(answers)", arguments: ["answers": argument], in: nil, in: .page, completionHandler: nil)
         return bodyReady
     }

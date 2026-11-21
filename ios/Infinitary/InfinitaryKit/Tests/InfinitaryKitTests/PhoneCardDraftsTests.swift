@@ -52,6 +52,12 @@ import Testing
                  "changed": .bool(true)])
     }
 
+    /// A note on the body's first paragraph as the phone queues one (`cardNoteSchema` in src/shared/cards.ts).
+    static func note(_ comment: String) -> PhoneJSON {
+        .object(["start": .number(0), "key": .string("p:0"), "kind": .string("p"), "excerpt": .string("Pick one"),
+                 "comment": .string(comment), "line": .number(1)])
+    }
+
     /// A phone joined to a computer that keeps drafts, holding one open card whose draft is empty.
     private func joined() async -> Home {
         let home = Home()
@@ -129,6 +135,22 @@ import Testing
         #expect(home.drafts.words["card-1"] == nil)
         home.drafts.typing("card-1", false)
         #expect(home.drafts.words["card-1"] == "From the Mac")
+    }
+
+    @Test func aNoteQueuedOnThePhoneGoesAndAnotherScreensNoteShowsHere() async {
+        let home = await joined()
+        let mine = Self.note("Ask the harbour office first")
+        home.answer = { card, change in .object(["draft": Self.draft(card, revision: 1, notes: change["notes"].list).json]) }
+        home.drafts.note("card-1", notes: [mine])
+        await home.pause()
+        #expect(home.sent.count == 1)
+        #expect(home.sent.first?.change["notes"] == .array([mine]))
+        // Another screen edits the note's comment: the queued note here shows its words.
+        let theirs = Self.note("Ask the pilot too")
+        home.drafts.heard(Self.draft("card-1", revision: 2, notes: [theirs]))
+        #expect(home.drafts.notes["card-1"] == [theirs])
+        await home.pause()
+        #expect(home.sent.count == 1)
     }
 
     @Test func aCardClosedElsewhereLetsItsDraftGo() async {

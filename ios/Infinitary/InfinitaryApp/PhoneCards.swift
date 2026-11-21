@@ -171,7 +171,6 @@ struct PhoneCards<Content: View>: View {
                     fill: card.isPast ? card.value["answers"] : session.cardDrafts.fill(card.id),
                     reply: Binding(get: { session.cardDrafts.words[card.id] ?? "" }, set: { session.cardDrafts.type(card.id, words: $0) }),
                     notes: Binding(get: { session.cardDrafts.notes[card.id] ?? [] }, set: { session.cardDrafts.note(card.id, notes: $0) }),
-                    onReading: { if !card.isPast { session.cardDrafts.read(card.id, answers: $0["answers"]) } },
                     onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
                     onSent: { sent += 1 },
@@ -575,7 +574,6 @@ private struct PhoneCardPane: View {
     @Binding var reply: String
     /// INF-3296's phone piece: the notes waiting for this card's reply.
     @Binding var notes: [PhoneJSON]
-    let onReading: (PhoneJSON) -> Void
     let onSeen: () -> Void
     let onHide: () -> Void
     let onSent: () -> Void
@@ -675,11 +673,11 @@ private struct PhoneCardPane: View {
     enum CardSide { case face, back }
 
     init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>, notes: Binding<[PhoneJSON]>,
-         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
+         onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
          row: PhoneCardRow, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
          side: Binding<PhoneCardSide>) {
         self.card = card; self.session = session; _reply = reply; _notes = notes
-        self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
+        self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
         self.shown = shown; self.visible = visible; self.replyLeaves = replyLeaves
         self.row = row; self.onTask = onTask; self.onDraft = onDraft
         self.bodies = bodies
@@ -696,8 +694,12 @@ private struct PhoneCardPane: View {
         // so a card never links some keys and leaves others as text.
         let keys = (session.board?.tasks ?? []).map(\.key)
         let host = CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
-        // INF-5445 piece 2: the body takes another screen's picks while it shows.
-        if !card.isPast { host.detachDraft = session.cardDrafts.attach(card.id) { [weak host] in host?.fill($0) ?? false } }
+        // INF-5445 piece 2: every body, the ones loaded beside the shown card included, reads its answers into the card's
+        // draft and takes another screen's picks while it is open.
+        if !card.isPast {
+            host.onReading = { session.cardDrafts.read(card.id, answers: $0["answers"]) }
+            host.detachDraft = session.cardDrafts.attach(card.id) { [weak host] in host?.fill($0) ?? false }
+        }
         return host
     }
     private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
@@ -1243,7 +1245,8 @@ private struct PhoneCardPane: View {
                     Text(PhoneMessages.phoneCardsRetryNote()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }
                 Button(PhoneMessages.phoneCommonRetry()) {
-                    let fill = host.reading["answers"]; host.close(); problem = nil
+                    // The draft holds the failed body's last reading and any pick another screen made since.
+                    let fill = card.isPast ? host.reading["answers"] : session.cardDrafts.fill(card.id); host.close(); problem = nil
                     host = Self.bodyHost(card, session, fill, heightLag: CardWebHost.retriedHeightLag)
                     bodies?.replace(card, with: host)
                     connectHost(); retry += 1
@@ -1804,7 +1807,7 @@ private struct PhoneCardPane: View {
         }
     }
     private func connectHost() {
-        host.onReading = onReading; host.onDrawn = { markSeen(); syncNotes() }
+        host.onDrawn = { markSeen(); syncNotes() }
         host.annotates = takesNotes && shown
         host.onAnnotate = { note, box in
             guard takesNotes, shown, !host.changing else { syncNotes(); return }

@@ -227,8 +227,15 @@ for (const [when, setting] of [
       JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
     ).toMatchObject({ reason: "signal", exitCode: 0 });
     expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
-    // The core's disposal ran before the run exited.
-    if (accepted) expect(launchMark(userDataDir)).toBe(false);
+    if (accepted) {
+      // The core opened the app's own record and closed it cleanly, its log folded back in.
+      expect(existsSync(join(userDataDir, "firstmate.db-wal"))).toBe(false);
+      expect(
+        readSavedData(userDataDir, (db) => db.prepare("SELECT COUNT(*) AS n FROM tasks").get()),
+      ).toEqual({ n: 0 });
+      // The core's disposal ran before the run exited.
+      expect(launchMark(userDataDir)).toBe(false);
+    }
   });
 }
 

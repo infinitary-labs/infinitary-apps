@@ -1,7 +1,13 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
 import { holderIsWindow, lockHolderKind } from "./runCommand";
-import { bundleOf, endRefusedLaunch, openWindowOnReopen, reopenOlderWindow } from "./runReopen";
+import {
+  bundleOf,
+  copiesListed,
+  endRefusedLaunch,
+  openWindowOnReopen,
+  reopenOlderWindow,
+} from "./runReopen";
 
 /**
  * The captain's words on INF-4113: "The real fix: the background program
@@ -87,6 +93,7 @@ describe("a launch beside an older Mac window", () => {
       bundle,
       holderAlive: () => true,
       answered: () => false,
+      soleRecipient: async () => true,
       ask: macos.ask,
     });
     expect(outcome).toBe("unconfirmed");
@@ -97,6 +104,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => true,
         answered: () => answering.asked.length > 0,
+        soleRecipient: async () => true,
         ask: answering.ask,
       }),
     ).toBe("confirmed");
@@ -110,6 +118,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => true,
         answered: () => false,
+        soleRecipient: async () => true,
         ask: refused.ask,
       }),
     ).toBe("unconfirmed");
@@ -121,6 +130,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => true,
         answered: () => answeredAnyway.asked.length > 0,
+        soleRecipient: async () => true,
         ask: answeredAnyway.ask,
       }),
     ).toBe("confirmed");
@@ -130,6 +140,7 @@ describe("a launch beside an older Mac window", () => {
         bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
         holderAlive: () => true,
         answered: () => false,
+        soleRecipient: async () => true,
         ask: none.ask,
       }),
     ).toBe("unconfirmed");
@@ -142,6 +153,7 @@ describe("a launch beside an older Mac window", () => {
           bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
           holderAlive: () => holderAlive,
           answered: () => true,
+          soleRecipient: async () => true,
           ask: late.ask,
         }),
       ).toBe("confirmed");
@@ -156,6 +168,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => false,
         answered: () => false,
+        soleRecipient: async () => true,
         ask: macos.ask,
       }),
     ).toBe("gone");
@@ -168,6 +181,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => quitting.asked.length === 0,
         answered: () => false,
+        soleRecipient: async () => true,
         ask: quitting.ask,
       }),
     ).toBe("gone");
@@ -225,13 +239,14 @@ describe("a launch beside an older Mac window", () => {
       const kind = await endRefusedLaunch({
         found,
         answered: () => false,
-        replaced: () => replaced,
+        occupied: () => replaced,
         platform: "darwin",
         reopen: () =>
           reopenOlderWindow({
             bundle,
             holderAlive: () => alive && classified === 4242,
             answered: () => false,
+            soleRecipient: async () => true,
             ask: older.ask,
           }),
         tellDock: async () => {
@@ -262,12 +277,57 @@ describe("a launch beside an older Mac window", () => {
     const ended = olderWindow(true);
     expect(await refusedLaunch(ended, false)).toEqual({ kind: "window", ended: ["quit"] });
     expect(ended.windows).toEqual([]);
+    // Another program took the folder meanwhile, a run or one not yet told apart: the launch ends
+    // nothing and starts nothing, but watches that holder as any other.
     const replacedBy = olderWindow(true);
-    expect(await refusedLaunch(replacedBy, false, true)).toEqual({
-      kind: "window",
-      ended: ["started again", "quit"],
-    });
+    expect(await refusedLaunch(replacedBy, false, true)).toEqual({ kind: "follow", ended: [] });
     expect(replacedBy.windows).toEqual([]);
+  });
+
+  // The review of INF-5409: macOS's open reaches a running copy of the bundle, not one process of
+  // several, so with another copy running besides the holder and this launch it is not asked at
+  // all, and the person is told to click it in the Dock.
+  it("asks macOS only while the holder is the one copy besides the launch", async () => {
+    const macos = asker(true);
+    expect(
+      await reopenOlderWindow({
+        bundle,
+        holderAlive: () => true,
+        answered: () => false,
+        soleRecipient: async () => false,
+        ask: macos.ask,
+      }),
+    ).toBe("unconfirmed");
+    expect(macos.asked).toEqual([]);
+    // The holder quits while the copies are read: nothing asked, the folder read afresh.
+    let alive = true;
+    const quitting = asker(true);
+    expect(
+      await reopenOlderWindow({
+        bundle,
+        holderAlive: () => alive,
+        answered: () => false,
+        soleRecipient: async () => {
+          alive = false;
+          return true;
+        },
+        ask: quitting.ask,
+      }),
+    ).toBe("gone");
+    expect(quitting.asked).toEqual([]);
+  });
+
+  it("lists this program's own copies by what a Mac's process list shows", () => {
+    const exe = "/Applications/Infinitary.app/Contents/MacOS/Infinitary";
+    const listed = [
+      `  412 ${exe}`,
+      `30117 ${exe} --user-data-dir=/Users/a/Library/Application Support/infinitary`,
+      `30118 /Applications/Infinitary.app/Contents/Frameworks/Infinitary Helper (GPU).app/Contents/MacOS/Infinitary Helper (GPU) --type=gpu-process`,
+      `30200 ${exe}Other`,
+      ` 9001 /bin/zsh -c ${exe}`,
+      "",
+    ].join("\n");
+    expect(copiesListed(listed, exe)).toEqual([412, 30117]);
   });
 
   it("ends as a window answered or the person chose, whatever was read before", async () => {
@@ -282,7 +342,7 @@ describe("a launch beside an older Mac window", () => {
         found,
         // An answer that comes after the first look, as one written while the launch decides.
         answered: () => answered || (answersLater && looks++ > 0),
-        replaced: () => false,
+        occupied: () => false,
         platform: "darwin",
         reopen: async () => {
           ended.push("asked to reopen");
@@ -313,7 +373,7 @@ describe("a launch beside an older Mac window", () => {
     await endRefusedLaunch({
       found: "window",
       answered: () => reopened,
-      replaced: () => false,
+      occupied: () => false,
       platform: "darwin",
       reopen: async () => {
         reopened = true;

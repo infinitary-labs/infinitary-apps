@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { dirname } from "node:path";
+import { promisify } from "node:util";
 import { hostEnv } from "@core/hostEnv";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 
@@ -87,6 +88,34 @@ export function askReopen(bundle: string): Promise<boolean> {
 }
 
 /**
+ * The process numbers of every program a Mac's `ps` lists as running from
+ * this app's own executable, the launch itself included; null where they
+ * cannot be read.
+ */
+export async function copiesOf(execPath: string): Promise<number[] | null> {
+  try {
+    const { stdout } = await promisify(execFile)("/bin/ps", ["-axww", "-o", "pid=,args="], {
+      env: hostEnv({ LC_ALL: "C" }),
+      encoding: "utf8",
+      timeout: RESOURCE_READ_TIMEOUT_MS,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    return copiesListed(stdout, execPath);
+  } catch {
+    return null;
+  }
+}
+
+/** The process numbers a Mac's `ps -o pid=,args=` lists as running from `execPath`. */
+export function copiesListed(listed: string, execPath: string): number[] {
+  return listed.split("\n").flatMap((line) => {
+    const read = /^\s*(\d+) (.*)$/.exec(line);
+    const args = read?.[2] ?? "";
+    return read && (args === execPath || args.startsWith(`${execPath} `)) ? [Number(read[1])] : [];
+  });
+}
+
+/**
  * A launch refused the folder's lock by a window from before the launch's
  * ask had an answer, told only by what it runs as (`holderIsWindow`), on a
  * Mac (docs/run.md, "Opened while it runs"): that older window brings itself
@@ -95,7 +124,12 @@ export function askReopen(bundle: string): Promise<boolean> {
  * holder it told by its words once to reopen, as a click in the Dock does,
  * through macOS's own open of its bundle (`askReopen`), which every version
  * opens its window on; a holder is told by its words only where it runs this
- * same program, so the bundle asked is its own. macOS taking the ask confirms
+ * same program, so the bundle asked is its own. macOS sends that open to a
+ * running copy of the bundle and starts none while one runs, as this launch
+ * itself does, so it never opens a copy the person quit; it cannot be sent to
+ * one process of several without the person's consent to control the app, so
+ * it is asked only while the holder is the one copy running besides this
+ * launch (`soleRecipient`), and otherwise not asked at all. macOS taking the ask confirms
  * nothing of a window, so only a window's answer confirms it (`confirmed`),
  * read at every end, whatever macOS said; `gone` where that holder no longer
  * holds the lock, before the ask or once it was made, as a window the person
@@ -107,14 +141,20 @@ export async function reopenOlderWindow(options: {
   bundle: string | null;
   holderAlive: () => boolean;
   answered: () => boolean;
+  /** Whether the holder is the one copy of this program running besides this launch. */
+  soleRecipient: () => Promise<boolean>;
   ask?: (bundle: string) => Promise<boolean>;
 }): Promise<"confirmed" | "gone" | "unconfirmed"> {
-  const end = (otherwise: "gone" | "unconfirmed") =>
-    options.answered() ? ("confirmed" as const) : otherwise;
-  if (!options.holderAlive()) return end("gone");
-  if (options.bundle === null) return end("unconfirmed");
+  const end = () =>
+    options.answered()
+      ? ("confirmed" as const)
+      : options.holderAlive()
+        ? ("unconfirmed" as const)
+        : ("gone" as const);
+  if (!options.holderAlive() || options.bundle === null) return end();
+  if (!(await options.soleRecipient()) || !options.holderAlive()) return end();
   await (options.ask ?? askReopen)(options.bundle);
-  return end(options.holderAlive() ? "unconfirmed" : "gone");
+  return end();
 }
 
 /**
@@ -125,21 +165,23 @@ export async function reopenOlderWindow(options: {
  * what it runs as, on a Mac, is asked once to reopen (`reopenOlderWindow`),
  * and the person is told to click it in the Dock unless a window's answer
  * confirms it. The launch starts again beside a run and on a free folder; where
- * the window it asked to reopen ended meanwhile, as one the person quit, only
- * beside a run that took the folder (`replaced`), so a window quit stays quit.
- * It quits either way. The holder's kind, for the launch's log.
+ * the window it asked to reopen ended meanwhile, as one the person quit, it
+ * starts nothing on a folder left free, so a window quit stays quit, and on a
+ * folder another program took (`occupied`) it ends nothing either: `follow`,
+ * for the launch to watch that holder as any other. It quits otherwise. The
+ * holder's kind, for the launch's log.
  */
 export async function endRefusedLaunch(options: {
   found: "run" | "free" | "window" | "left";
   answered: () => boolean;
-  /** Whether a run holds the folder now. */
-  replaced: () => boolean;
+  /** Whether a program holds the folder now, or a run notes it does. */
+  occupied: () => boolean;
   platform: string;
   reopen: () => Promise<"confirmed" | "gone" | "unconfirmed">;
   tellDock: () => Promise<void>;
   relaunch: () => void;
   quit: () => void;
-}): Promise<"run" | "free" | "window"> {
+}): Promise<"run" | "free" | "window" | "follow"> {
   const answeredFirst = options.answered();
   const kind = answeredFirst || options.found === "left" ? "window" : options.found;
   const reopened =
@@ -147,8 +189,8 @@ export async function endRefusedLaunch(options: {
       ? await options.reopen()
       : null;
   if (reopened === "unconfirmed" && !options.answered()) await options.tellDock();
-  const again = kind !== "window" || (reopened === "gone" && options.replaced());
-  if (again && !options.answered()) options.relaunch();
+  if (reopened === "gone" && !options.answered() && options.occupied()) return "follow";
+  if (kind !== "window" && !options.answered()) options.relaunch();
   options.quit();
   return kind;
 }

@@ -598,6 +598,33 @@ describe("a window opened beside a run", () => {
     );
     expect(await taken.kind).toBe("window");
     expect(taken.order).toEqual(["ask", "read"]);
+    // The review of INF-5409: a command read, then another holder seen in its place that lets the
+    // lock go before its ask: that holder was never read, as an older window the person quit, so
+    // the launch is told before it acts on the folder free. The command itself letting the lock
+    // go is no question.
+    const replacedUnread = async (next: number | null) => {
+      let current: number | null = 4242;
+      const unknowns: number[] = [];
+      const kind = await lockHolderKind({
+        running: () => false,
+        answered: () => false,
+        holder: () => current,
+        asked: 4242,
+        windowHolder: async (pid) => {
+          // Read as a command, then replaced before the next look.
+          if (pid === 4242) setTimeout(() => (current = next), 0);
+          return holderIsWindow(pid, { words: async () => linux([exe, "run"]) });
+        },
+        // The holder seen next has already let the lock go by its ask.
+        lockFree: () => true,
+        readEveryMs: 150,
+        everyMs: 20,
+        onUnknown: () => unknowns.push(1),
+      });
+      return { kind, unknowns };
+    };
+    expect(await replacedUnread(5151)).toEqual({ kind: "free", unknowns: [1] });
+    expect(await replacedUnread(null)).toEqual({ kind: "free", unknowns: [] });
   });
 
   it("reads a program's words after its own path, however many spaces it holds", async () => {
@@ -661,6 +688,7 @@ describe("a window opened beside a run", () => {
         answered?: () => boolean;
         leavesAfterRead?: boolean;
         leavesDuringRead?: boolean;
+        leavesAtAsk?: boolean;
       } = {},
     ) => {
       const asks: number[] = [];
@@ -686,6 +714,8 @@ describe("a window opened beside a run", () => {
         },
         lockFree: () => {
           asks.push(Date.now());
+          // The holder lets the lock go just before this ask reaches it.
+          if (shows.leavesAtAsk) holder = null;
           return holder === null;
         },
         readEveryMs: 60,
@@ -768,6 +798,19 @@ describe("a window opened beside a run", () => {
     letGo();
     expect(await ended.kind).toBe("free");
     expect(ended.unknowns).toEqual([]);
+
+    // A holder shown to be a command by its pipe whose pipe goes while the lock stays held, as one
+    // replaced unseen by an older window that then quits before the ask: never read, so the launch
+    // is told before it acts on the folder free.
+    letGo = holdCommandPipe(pipe);
+    await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
+    const swapped = look({ leavesAtAsk: true });
+    await expect.poll(() => swapped.reads.length).toBeGreaterThanOrEqual(1);
+    expect(swapped.asks).toEqual([]);
+    letGo();
+    expect(await swapped.kind).toBe("free");
+    expect(swapped.asks).toHaveLength(1);
+    expect(swapped.unknowns).toHaveLength(1);
 
     // The pipe's name follows the folder, whatever its letters' case.
     expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));

@@ -143,6 +143,7 @@ import {
 import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
 import {
   bundleOf,
+  copiesOf,
   endRefusedLaunch,
   openNewCopy,
   openWindowOnReopen,
@@ -817,16 +818,18 @@ export async function startApp(
       // they use now; its words are made once that language is set. Electron is ready only once
       // this start returned to ./index.ts, so the handoff below runs after it and is never awaited
       // here. A check's hidden launch shows none and says its words in its output instead: null.
-      // A word that cannot be shown, or its window made, is answered as dismissed (`cancelId`).
+      // A word that cannot be shown, or its window made, is answered as dismissed (`cancelId`); one
+      // no longer wanted by then is not made (null).
       // On a Mac a word that the launch may take away (`signal`) gets a window of its own, since
       // macOS closes a message box on its signal only then.
-      const tellPerson = async (words: () => MessageBoxOptions): Promise<number | null> => {
+      const tellPerson = async (words: () => MessageBoxOptions | null): Promise<number | null> => {
         await app.whenReady();
         startLanguage(
           app.getPreferredSystemLanguages(),
           languageOverride(process.env, app.isPackaged),
         );
         const box = words();
+        if (box === null) return null;
         if (hideWindow) {
           console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
           return null;
@@ -863,13 +866,14 @@ export async function startApp(
         // holds no pipe, is never taken for a window, but the person is asked once whether to open
         // here when it closes, so a window they then quit on purpose stays quit. A question not
         // shown keeps the launch's own way: it opens here once the folder is free.
-        const shownWhy = new AbortController();
+        let shownWhy = new AbortController();
         let openOnceClosed: Promise<boolean> | null = null;
         let leftIt: () => void = () => {};
         const left = new Promise<"left">((resolve) => {
           leftIt = () => resolve("left");
         });
         const askOnceClosed = async () => {
+          const why = shownWhy;
           const response = await tellPerson(() => ({
             type: "info",
             title: "Infinitary",
@@ -878,104 +882,137 @@ export async function startApp(
             buttons: [m.dialogLeaveIt(), m.dialogOpenOnceClosed()],
             defaultId: 0,
             cancelId: 0,
-            signal: shownWhy.signal,
+            signal: why.signal,
           }));
-          if (response === 0 && !shownWhy.signal.aborted) leftIt();
+          if (response === 0 && !why.signal.aborted) leftIt();
           return response !== 0;
         };
         // The window a launch told by what it runs as, the one it asks to reopen.
         let classified: number | null | undefined;
-        const read = await Promise.race([
-          left,
-          lockHolderKind({
-            running: () => runningByCommand(dataDir),
-            answered: () => existsSync(answer),
-            holder: lockHolderNow,
-            asked: askedHolder,
-            windowHolder: (holder) =>
-              holderIsWindow(
-                holder,
-                onWindows ? { commandPipe: () => commandPipeHeld(commandPipe(dataDir)) } : {},
-              ),
-            lockFree: () => app.requestSingleInstanceLock(lockAsk),
-            // A pipe is read again each second, so a command's pipe gone is seen and its next holder asked.
-            readEveryMs: onWindows ? 1_000 : STOPPED_RUN_WAIT_MS,
-            onUnknown: () => {
-              openOnceClosed = askOnceClosed();
-            },
-            onWindow: (holder) => {
-              classified = holder;
-            },
-          }),
-        ]);
-        // The lock this launch took to read it free is let go before anything waits, so the person's
-        // answer holds nothing and the launch started again reads the folder afresh.
-        if (read === "free") app.releaseSingleInstanceLock();
-        // A lock let go while the question is up waits for the person's answer, since a window quit
-        // on purpose and a command that ended look the same, and the folder is watched meanwhile
-        // without taking it: a window's answer or a run found ends the question, and each holder
-        // seen taking the folder is asked once, as the lock refusing this launch asks it, so a
-        // window that takes over answers. Open here starts the launch again, which reads the
-        // folder afresh.
-        let found: "run" | "free" | "window" | "left" = read;
-        if (read === "free" && openOnceClosed !== null) {
-          const asking: Promise<boolean> = openOnceClosed;
-          let personAnswered = false;
-          const watched = (async (): Promise<"run" | "window" | null> => {
-            let last: number | null | undefined = null;
-            while (!personAnswered) {
-              if (existsSync(answer)) return "window";
-              if (runningByCommand(dataDir)) return "run";
-              const holder = lockHolderNow();
-              // A holder newly seen is asked once; were the folder free again by then, the lock
-              // taken for that ask is let go at once.
-              if (holder !== null && holder !== last && app.requestSingleInstanceLock(lockAsk))
-                app.releaseSingleInstanceLock();
-              last = holder;
-              await new Promise((resolve) => setTimeout(resolve, 250));
-            }
-            return null;
-          })();
-          found = await Promise.race([
-            asking.then((open) => {
-              personAnswered = true;
-              return open ? ("free" as const) : ("left" as const);
-            }),
-            watched.then((seen) => seen ?? ("free" as const)),
-          ]);
-          personAnswered = true;
-        }
-        shownWhy.abort();
-        // A window told only by what it runs as is one from before the answer: on a Mac it may have
-        // closed its last window and opened none at the ask, so that same holder is asked once to
-        // reopen as a click in the Dock does, and the person is told to click it there unless a
-        // window's answer confirms it.
-        const kind = await endRefusedLaunch({
-          found,
-          answered: () => existsSync(answer),
-          replaced: () => runningByCommand(dataDir),
-          platform: hostPlatform(),
-          reopen: () =>
-            reopenOlderWindow({
-              bundle: app.isPackaged ? bundleOf(process.execPath) : null,
-              holderAlive: () => typeof classified === "number" && lockHolderNow() === classified,
+        // One watch of the folder from the refusal to the launch's end: each holder seen is asked
+        // once and told apart by what it shows (`lockHolderKind`), through the question and after
+        // the window asked to reopen quit, so a window that takes over is always one asked.
+        let asked = askedHolder;
+        let found: "run" | "free" | "window" | "left";
+        for (;;) {
+          const read = await Promise.race([
+            left,
+            lockHolderKind({
+              running: () => runningByCommand(dataDir),
               answered: () => existsSync(answer),
+              holder: lockHolderNow,
+              asked,
+              windowHolder: (holder) =>
+                holderIsWindow(
+                  holder,
+                  onWindows ? { commandPipe: () => commandPipeHeld(commandPipe(dataDir)) } : {},
+                ),
+              lockFree: () => app.requestSingleInstanceLock(lockAsk),
+              // A pipe is read again each second, so a command's pipe gone is seen and its next holder asked.
+              readEveryMs: onWindows ? 1_000 : STOPPED_RUN_WAIT_MS,
+              onUnknown: () => {
+                openOnceClosed ??= askOnceClosed();
+              },
+              onWindow: (holder) => {
+                classified = holder;
+              },
             }),
-          tellDock: async () => {
-            await tellPerson(() => ({
-              type: "info",
-              title: "Infinitary",
-              message: m.dialogOpenInDock(),
-              detail: m.dialogOpenInDockDetail(),
-            }));
-          },
-          relaunch: () => relaunchWith(process.argv.slice(1)),
-          quit: () => app.quit(),
-        });
+          ]);
+          // The lock this launch took to read it free is let go before anything waits, so the
+          // person's answer holds nothing and the launch started again reads the folder afresh.
+          if (read === "free") app.releaseSingleInstanceLock();
+          found = read;
+          if (read === "free" && openOnceClosed !== null) {
+            // A lock let go while the question is up waits for the person's answer, since a window
+            // quit on purpose and a command that ended look the same. The folder is watched
+            // meanwhile without taking it: a window's answer or a run found ends the question, and
+            // a holder seen taking the folder is watched again from the top, asked once there.
+            // Open here acts on the folder as it is then: free, it starts the launch again, which
+            // reads it afresh; held, the holder is watched as any other.
+            const asking: Promise<boolean> = openOnceClosed;
+            let settled = false;
+            const watched = (async (): Promise<"run" | "window" | "held" | null> => {
+              while (!settled) {
+                if (existsSync(answer)) return "window";
+                if (runningByCommand(dataDir)) return "run";
+                if (lockHolderNow() !== null) return "held";
+                await new Promise((resolve) => setTimeout(resolve, 250));
+              }
+              return null;
+            })();
+            const next = await Promise.race([
+              asking.then((open) => (open ? ("open" as const) : ("left" as const))),
+              watched,
+            ]);
+            settled = true;
+            if (next === "left" || next === "run" || next === "window") found = next;
+            else if (next === "held" || (next === "open" && lockHolderNow() !== null)) {
+              asked = null;
+              continue;
+            }
+          }
+          // What was found ends the question, whatever the person did not answer.
+          shownWhy.abort();
+          // A window told only by what it runs as is one from before the answer: on a Mac it may
+          // have closed its last window and opened none at the ask, so that same holder is asked
+          // once to reopen as a click in the Dock does, and the person is told to click it there
+          // unless a window's answer confirms it. One that quit meanwhile while another took the
+          // folder leaves that other to be watched as any holder.
+          const kind = await endRefusedLaunch({
+            found,
+            answered: () => existsSync(answer),
+            occupied: () => runningByCommand(dataDir) || lockHolderNow() !== null,
+            platform: hostPlatform(),
+            reopen: () =>
+              reopenOlderWindow({
+                bundle: app.isPackaged ? bundleOf(process.execPath) : null,
+                holderAlive: () => typeof classified === "number" && lockHolderNow() === classified,
+                answered: () => existsSync(answer),
+                soleRecipient: async () => {
+                  const copies = await copiesOf(process.execPath);
+                  return copies?.every((pid) => pid === classified || pid === process.pid) ?? false;
+                },
+              }),
+            tellDock: async () => {
+              // Taken away once a window answers or the holder asked to reopen lets the folder go,
+              // and never shown once either came first.
+              const withdrawn = new AbortController();
+              const stale = () => existsSync(answer) || lockHolderNow() !== classified;
+              const watch = setInterval(() => {
+                if (stale()) withdrawn.abort();
+              }, 250);
+              try {
+                await tellPerson(() =>
+                  stale()
+                    ? null
+                    : {
+                        type: "info",
+                        title: "Infinitary",
+                        message: m.dialogOpenInDock(),
+                        detail: m.dialogOpenInDockDetail(),
+                        signal: withdrawn.signal,
+                      },
+                );
+              } finally {
+                clearInterval(watch);
+              }
+            },
+            relaunch: () => relaunchWith(process.argv.slice(1)),
+            quit: () => app.quit(),
+          });
+          if (kind === "follow") {
+            asked = classified;
+            classified = undefined;
+            openOnceClosed = null;
+            shownWhy = new AbortController();
+            continue;
+          }
+          console.warn(
+            `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${found === "left" ? "a holder the person left open" : kind === "free" ? "nothing now" : `a ${kind}`}`,
+          );
+          break;
+        }
         rmSync(answer, { force: true });
-        console.warn(
-          `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${found === "left" ? "a holder the person left open" : kind === "free" ? "nothing now" : `a ${kind}`}`,
-        );
       })().catch((error: unknown) => {
         console.warn(`[app] the refused launch could not finish: ${(error as Error).message}`);
         app.quit();

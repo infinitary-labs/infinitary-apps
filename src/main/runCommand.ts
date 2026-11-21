@@ -646,7 +646,9 @@ export async function lockHolderKind(options: {
    * Once, when a holder read again still shows nothing, as an older window on a Windows PC, which
    * answers nothing and holds no pipe, or when one never shown to be a command lets the lock go, as
    * one read once or not yet: the launch may ask the person what to do when it closes, before acting
-   * on free. A holder shown to be a command that lets it go is no question.
+   * on free. A holder shown to be a command that lets it go is no question; one seen replaced while
+   * the lock stayed held, by another process number or, on Windows, a command's pipe gone, is a
+   * holder never read, and a lock let go after it is a question too.
    */
   onUnknown?: () => void;
   /** The holder told to be a window by what it runs as, when the result is `window` for that. */
@@ -677,7 +679,9 @@ export async function lockHolderKind(options: {
       // else, so it brings its window forward if it is one.
       // A holder never shown to be a command that let the lock go is the person's to judge as one
       // read twice is: an older window they quit on purpose and a command that ended look the same.
-      const unread = unresolved;
+      // Only the lock seen let go is the departure of the holder read before; another holder seen
+      // in its place was never read, whatever the one before it showed.
+      const unread = holder === null ? unresolved : true;
       seen = holder;
       read = null;
       shown = undefined;
@@ -696,10 +700,11 @@ export async function lockHolderKind(options: {
         }
         if (window === null && read === holder && shown === null) tellUnknown();
         if (holder === undefined && read === undefined && window !== shown) {
-          // What the unnamed holder shows changed, so the one before it let go: free is judged by
-          // what that one was shown to be.
+          // What the unnamed holder shows changed while the lock stayed held, so another may hold
+          // it now, one never read: unless it shows a command's pipe, a lock let go before the ask
+          // is the person's to judge, even after a command, which may have been replaced unseen.
           const kind = ask();
-          if (kind === "free" && unresolved) tellUnknown();
+          if (kind === "free" && window !== false) tellUnknown();
           if (kind) return kind;
         }
         read = holder;

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-update-reuse-builds",
+      "reason": "The Windows update check takes an earlier run's four test installers when the app's code, installer config and build steps are unchanged, instead of building them again; only how the project is checked changes."
+    }
+  ]
+}

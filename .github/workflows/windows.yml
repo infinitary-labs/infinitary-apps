@@ -107,9 +107,19 @@ jobs:
     # enters it.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-windows-build', github.run_id, github.run_attempt) }}
+    # The update check looks for an earlier run's test installers and reads
+    # its artifacts (scripts/windows-update-builds.ts).
+    permissions:
+      contents: read
+      actions: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       rounds: ${{ steps.rounds.outputs.rounds }}
+      # The update check's installers: the artifact, named by the key of
+      # what they are built from, and the run that keeps it, this one's when
+      # it built them.
+      installers: ${{ format('windows-update-installers-{0}', steps.reuse.outputs.key) }}
+      installers_run: ${{ steps.reuse.outputs.run || github.run_id }}
       # Carried here so a release's upload never trusts a list from the same download.
       sums: ${{ steps.installer.outputs.sums }}
     defaults:
@@ -175,15 +185,32 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
+      # The update check's four test installers are made only from the app's
+      # code, the installer's config, the test versions' release source and
+      # this job's steps. An earlier run of this workflow, asked for in this
+      # project, that kept installers from the same inputs saves this run
+      # building them again: the update jobs take that run's, and this job
+      # only reads its version and rounds (docs/windows.md, "Reusing the
+      # test versions").
+      - name: Look for an earlier run's test installers
+        id: reuse
+        if: ${{ inputs.update_check }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ROUNDS: ${{ inputs.rounds }}
+        run: node scripts/windows-update-builds.ts
       - uses: ./.github/actions/electron-download
+        if: ${{ !steps.reuse.outputs.run }}
       - run: pnpm install --frozen-lockfile
+        if: ${{ !steps.reuse.outputs.run }}
         timeout-minutes: 20
       # The update check's test versions read their releases from the clean
       # machine's own feed; nothing this run builds then is published.
       - name: Point the test versions at the clean machine's feed
-        if: ${{ inputs.update_check }}
+        if: ${{ inputs.update_check && !steps.reuse.outputs.run }}
         run: node scripts/windows-update-source.ts
       - run: pnpm build
+        if: ${{ !steps.reuse.outputs.run }}
         env:
           INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
       # The requested rounds, as the list the check job's matrix reads: the
@@ -198,6 +225,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/electron-builder-tools
+        if: ${{ !steps.reuse.outputs.run }}
       # electron-builder reads Electron's zip from the cache the install's
       # download step restored, checked first against Electron's own sums
       # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
@@ -220,7 +248,7 @@ jobs:
       # apart. The installers wait outside the project until the last is
       # built, so no later version packs an earlier one's installer.
       - name: Build the update check's test versions
-        if: ${{ inputs.update_check }}
+        if: ${{ inputs.update_check && !steps.reuse.outputs.run }}
         run: |
           node .github/actions/electron-download/zips.mjs win32 x64
           built="$RUNNER_TEMP/update-installers"
@@ -236,18 +264,22 @@ jobs:
           mv "$built" windows-installer
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
       - name: Keep electron-builder's tools
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && !steps.reuse.outputs.run }}
         uses: ./.github/actions/electron-builder-tools
         with:
           save: 'true'
+      # The update check's installers under the key of what they are built
+      # from, so a later run with the same inputs finds them; a release's
+      # and a batch's installer under its plain name.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ !steps.reuse.outputs.run }}
         with:
-          name: windows-installer
+          name: ${{ inputs.update_check && format('windows-update-installers-{0}', steps.reuse.outputs.key) || 'windows-installer' }}
           path: windows-installer/
           if-no-files-found: error
           # An installer is already compressed.
           compression-level: 0
-          retention-days: ${{ inputs.version && 3 || 1 }}
+          retention-days: ${{ (inputs.version || inputs.update_check) && 3 || 1 }}
 
   check:
     name: ${{ format('{0} · Install and run the Windows app (fresh Windows 11{1})', (inputs.trigger || 'Manual request'), (strategy.job-total > 1 && format('; round {0} of {1}', matrix.round, strategy.job-total) || '')) }}
@@ -391,6 +423,11 @@ jobs:
     # after it, none of which has started; one round runs both channels side
     # by side, each to its end.
     if: ${{ !inputs.hosted && inputs.update_check }}
+    # Reads the test installers from the run that keeps them, which may be
+    # an earlier one (scripts/windows-update-builds.ts).
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: ${{ needs.build.outputs.rounds != '[1]' }}
       max-parallel: ${{ needs.build.outputs.rounds != '[1]' && 1 || 2 }}
@@ -454,8 +491,10 @@ jobs:
         timeout-minutes: 20
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: windows-installer
+          name: ${{ needs.build.outputs.installers }}
           path: ${{ runner.temp }}/windows-installer
+          run-id: ${{ needs.build.outputs.installers_run }}
+          github-token: ${{ github.token }}
       - name: Check the installers against the build's list
         working-directory: ${{ runner.temp }}/windows-installer
         run: |

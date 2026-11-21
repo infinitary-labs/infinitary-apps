@@ -371,6 +371,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   `scripts/publish-storage-feeds.ts` retains previous files, verifies the new snapshot publicly, and conditionally switches `feeds/current.json` last.
   See “Download storage” below for the object and credential contract.
   The publication job runs the workflow's own copies of these scripts and the code they load, never the release source's, so a release built from an older commit still writes every entry the workflow publishes.
+  Those copies come from a checkout of committed files alone, with nothing installed or built in it, so the code the feed writer loads imports nothing the project generates, such as the compiled message catalog: it takes the update channel from `src/shared/updateChannel.ts`, which reaches only zod, not from `src/shared/update.ts`, which loads the update words.
   The download origin stays the source's: each feed step lays the source's `packaging/release-source.json` beside the workflow's writer, so the feeds name the origin the upload wrote to and the fetch-back read.
   An alpha moves only alpha; a stable moves stable and also alpha when newer than alpha's current target.
   A late older publication, inconsistent manifest, invalid existing file, or changed bytes at a published version is refused.

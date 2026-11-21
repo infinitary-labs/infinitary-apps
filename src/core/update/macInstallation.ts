@@ -1,5 +1,5 @@
 import receipt from "../../../packaging/mac-installation.json" with { type: "json" };
-import type { UpdateChannel } from "../../shared/update";
+import type { UpdateChannel } from "../../shared/updateChannel";
 import { FIRSTMATE_TAP, INFINITARY_TAP, type TapNames } from "./updateChannels";
 
 /** INF-643: ownership belongs to this installed copy, never its shared data folder. */

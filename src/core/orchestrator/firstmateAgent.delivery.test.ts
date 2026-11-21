@@ -182,6 +182,7 @@ describe("FirstmateAgent answer delivery", () => {
   it.each([
     ["update_task", { task: "t1", withdraw_merge: true }],
     ["settle_task", { task_id: "t1", mode: "done", why: "answered" }],
+    ["link_tasks", { from: "t2", to: "t1", type: "blocks", remove: true }],
   ] as const)(
     "a change %s refused ties the message and asks for its card while the task stays open",
     async (tool, input) => {
@@ -189,6 +190,7 @@ describe("FirstmateAgent answer delivery", () => {
         silent: true,
         seedTasks: [
           { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+          { id: "t2", title: "Write the notes", status: "idle", sessionFile: "/tmp/t2.jsonl" },
         ],
       });
       await f.agent.converse("take back the alpha's merge and close it");

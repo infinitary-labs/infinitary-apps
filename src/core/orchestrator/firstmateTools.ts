@@ -584,10 +584,12 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           [
             createFlagMissedEscalationTool({
               flag: (input) => {
-                // The ask is about the task whose outcome was the miss.
-                host.asks.attach(input.taskId, "flag_missed_escalation");
+                // The ask is about the task whose outcome was the miss; its
+                // work once the flag goes through.
+                host.asks.attach(input.taskId, "flag_missed_escalation", undefined, "tie");
                 const result = flagMissedEscalation(input);
                 if (result.status === "flagged") {
+                  host.asks.attach(input.taskId, "flag_missed_escalation");
                   host.noteDelivery({
                     outcome: "action",
                     kind: "record",
@@ -621,11 +623,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
             createFlagDuplicateTool({
               flag: (input) => {
                 const card = supervisor.cards.snapshot().find((open) => open.id === input.cardId);
-                if (card?.taskId && host.options.tasks.get(card.taskId)) {
-                  host.asks.attach(card.taskId, "flag_duplicate");
-                }
+                const about =
+                  card?.taskId && host.options.tasks.get(card.taskId) ? card.taskId : undefined;
+                // About the card's task; its work once the flag goes through.
+                if (about) host.asks.attach(about, "flag_duplicate", undefined, "tie");
                 const result = flagDuplicate(input);
                 if (result.status === "flagged") {
+                  if (about) host.asks.attach(about, "flag_duplicate");
                   host.noteDelivery({
                     outcome: "action",
                     kind: "record",

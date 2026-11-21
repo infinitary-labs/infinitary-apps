@@ -541,8 +541,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     link: (input) => {
       const from = resolve(input.from);
       const to = resolve(input.to);
-      host.asks.attach(to.id, "link_tasks");
-      host.asks.attach(from.id, "link_tasks");
+      // About both tasks even when refused; their work once the edge changes.
+      host.asks.attach(to.id, "link_tasks", undefined, "tie");
+      host.asks.attach(from.id, "link_tasks", undefined, "tie");
       const linked = () =>
         tasks.graph
           .linksTo(to.id)
@@ -553,6 +554,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         : supervisor.intake.linkTasks(from.id, to.id, input.type);
       // A refusal comes back as text; only an edge that now differs took effect.
       if (linked() !== before) {
+        host.asks.attach(to.id, "link_tasks");
+        host.asks.attach(from.id, "link_tasks");
         host.turn.replyFacts.app = `${input.remove ? "Unlinked" : "Linked"} ${from.key} and ${to.key}`;
         host.noteDelivery({
           outcome: "action",

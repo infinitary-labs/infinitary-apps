@@ -146,6 +146,7 @@ describe("a batch merge whose outcome the host did not confirm", () => {
     const { head, branch } = home.open();
     await home.pass();
     expect(mergeWait(home.open())).toBeDefined();
+    const told = home.heard.notes.length;
 
     expect(await home.batches.answer(REPO, { action: "try-again", head })).toBeUndefined();
     // The first pull request is closed unmerged and its branch is gone.
@@ -159,7 +160,8 @@ describe("a batch merge whose outcome the host did not confirm", () => {
       EXPORT.taskId,
     ]);
     expect(mergeWait(home.open())).toBeUndefined();
-    expect(home.heard.notes.at(-1)).toEqual(BATCH_WORDS.retried("meter", "#31"));
+    // The feed names only the new pull request, never #31's checks running again.
+    expect(home.heard.notes.slice(told)).toEqual([BATCH_WORDS.formed("meter", "#32", 2)]);
 
     home.host.report([passed("build")]);
     home.host.ready("clean");

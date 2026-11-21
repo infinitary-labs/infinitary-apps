@@ -503,7 +503,8 @@ export class Batches {
             const refusal = await this.replaceWaited(repo, record);
             if (refusal) return refusal;
             this.clashesEnded(repoId);
-            this.options.note(BATCH_WORDS.retried(repo.name, label));
+            // The new pull request's own line on the feed says what happened; the retried
+            // line would say the closed one's checks run again.
             return undefined;
           }
           if (now?.hold?.head !== answer.head) return BATCH_WORDS.ended;

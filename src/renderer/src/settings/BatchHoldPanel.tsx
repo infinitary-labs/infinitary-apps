@@ -170,8 +170,8 @@ export function BatchHoldPanel({
 /**
  * A batch whose merge the host took and still reads as running, under
  * "Where changes go" (docs/forge.md, "Batches of your own"): since when,
- * its pull request, and Try again for a merge the pull request there shows
- * is not running. Nothing is sent again until then.
+ * its pull request, and Try again, which closes that pull request and
+ * combines its changes on a new one. Nothing is sent again until then.
  */
 export function BatchWaitPanel({
   repo,

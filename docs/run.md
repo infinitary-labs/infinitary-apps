@@ -93,6 +93,7 @@ On Windows, where one program cannot ask another to stop cleanly, Stop writes `r
 On every system, a stop for one run alone - a window that lets the command go, or Start it here over a run started by hand - writes `run-stop-for.json` naming that run by its process and start, never a signal to its process number, which another program may have taken by the time it arrives; only that run honours it.
 A run reads these files, and a force stop asked of it, only once its folder and saved data are accepted, so a run that refuses its folder ends with them as they were, and one still starting reads a stop asked meanwhile once it has started.
 It listens for those signals itself from its start, so a module that listens later (Pi's sign-in store, through signal-exit) never ends the process before the core stops, as in the work mode (`src/main/work.ts`).
+Once Electron is ready it puts its own handler for those signals in the system's place, which quits as a plain quit does and would lose the stop's reason, so the run then takes every listener for them off and puts it back in its order, and the signals come to it again (`src/main/app.ts`).
 
 When it cannot start, it says why on its error output and exits 1, where the app with its window would open a page of its own (`RUN_WORDS`, `src/main/runCommand.ts`):
 

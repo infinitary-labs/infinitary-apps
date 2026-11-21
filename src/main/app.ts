@@ -1164,7 +1164,8 @@ export async function startApp(
       // taken off and put back, in its order, after Electron's: the signal comes here again.
       void app.whenReady().then(() => {
         for (const [signal] of stopListeners) {
-          const listeners = process.listeners(signal) as (() => void)[];
+          // Raw, so a listener added once stays one that runs once.
+          const listeners = process.rawListeners(signal) as (() => void)[];
           process.removeAllListeners(signal);
           for (const listener of listeners) process.on(signal, listener);
         }

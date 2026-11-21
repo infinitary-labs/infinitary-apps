@@ -113,6 +113,10 @@ describe("reading a folder's access list", () => {
   it("finds a folder another account owns, and a drive with no list", () => {
     expect(ownerOnlyVerdict(readAccessList(OTHERS_FOLDER), USER)).toBe("other-owner");
     expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
+    // A folder with no list that another account owns is that account's, not one to set a list on.
+    expect(ownerOnlyVerdict(readAccessList(`O:${OTHER}G:${GROUP}D:NO_ACCESS_CONTROL`), USER)).toBe(
+      "other-owner",
+    );
   });
 
   it("finds who besides this account could move or replace what a folder holds", () => {
@@ -174,6 +178,10 @@ describe("reading a folder's access list", () => {
       `(OA;OICI;FA;not-an-object;;${OTHER})`,
       `(A;OICI;FA;;;S-1-5-21-4294967296)`,
       `(A;OICI;FA;;;S-1-5-021)`,
+      // An authority Windows writes in decimal below 2^32, and in twelve digits of hex from it up.
+      `(A;OICI;FA;;;S-1-0x00000000FFFF-1)`,
+      `(A;OICI;FA;;;S-1-0x100000000-1)`,
+      `(A;OICI;FA;;;S-1-4294967296-1)`,
       `(A;OICI;FA;;;S-1-5${"-1".repeat(16)})`,
     ]) {
       const reading = readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})${entry}`);
@@ -188,6 +196,15 @@ describe("reading a folder's access list", () => {
       `O:${USER}G:S-1D:P(A;OICI;FA;;;${USER})`,
     ])
       expect(ownerOnlyVerdict(readAccessList(descriptor), USER)).toBe("unread");
+    // An account whose authority is past 32 bits, written as Windows writes it, is read whole, as
+    // an entry's account and as the owner.
+    for (const wide of ["S-1-0x000100000000-1", "S-1-0x0001000000aB-5-21"]) {
+      const reading = readAccessList(
+        `O:${wide}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;;FR;;;${wide})`,
+      );
+      expect(reading.whole).toBe(true);
+      expect(reading.entries?.[1]?.account).toBe(wide);
+    }
     // An object entry naming one object's number is read whole.
     expect(
       readAccessList(
@@ -342,7 +359,7 @@ describe("the data folder on Windows", () => {
     expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNSAFE_FOLDER_TITLE);
   });
 
-  it("changes nothing on a data folder whose list it could not read whole, keeping its denies", async () => {
+  it("changes nothing on a data folder whose list it could not read whole, keeping its denies, nor on another account's with no list", async () => {
     for (const partial of [
       // A deny another tool set, then a conditional entry this reading does not take apart.
       `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(XA;;FA;;;${USER};(x))`,
@@ -360,6 +377,8 @@ describe("the data folder on Windows", () => {
       `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;x;;${OTHER})`,
       // No list, under an owner whose number is too large to be an account.
       `O:S-1-5-21-99999999999G:${GROUP}D:NO_ACCESS_CONTROL`,
+      // No list, under another account: its folder, whatever list it has.
+      `O:${OTHER}G:${GROUP}D:NO_ACCESS_CONTROL`,
     ]) {
       const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
       const temp = join(scratchDir("fm-owner-only-"), "Temp");
@@ -375,7 +394,9 @@ describe("the data folder on Windows", () => {
       expect(pc.asks.every((ask) => ask.set.length === 0)).toBe(true);
       expect(pc.folders[dataDir]).toBe(partial);
       expect(await readdir(dataDir)).toEqual([]);
-      expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNCHECKED_FOLDER_TITLE);
+      expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(
+        partial.startsWith(`O:${OTHER}`) ? UNSAFE_FOLDER_TITLE : UNCHECKED_FOLDER_TITLE,
+      );
     }
   });
 

@@ -45,7 +45,9 @@ import {
  * Node may answer where the system has none; nothing else about it changes. Entries whose path
  * starts with `noBirth.still` answer their birth as their last change too, as a change clock too
  * coarse to move between them would; `noBirth.reading` runs before each read, and
- * `noBirth.number` gives the number a path answers in place of its own.
+ * `noBirth.number` and `noBirth.birth` give the number and birth a path answers in place of its
+ * own. A number is given again only as the system gives one: never while a file or folder that has
+ * it is held open (`noBirth.held`).
  */
 const noBirth = vi.hoisted(() => ({
   on: false,
@@ -53,6 +55,8 @@ const noBirth = vi.hoisted(() => ({
   still: null as string | null,
   reading: null as ((path: string) => void) | null,
   number: new Map<string, bigint>(),
+  birth: new Map<string, bigint>(),
+  held: new Map<number, bigint>(),
 }));
 vi.mock("node:fs", async (original) => {
   const fs = await original<typeof import("node:fs")>();
@@ -65,7 +69,9 @@ vi.mock("node:fs", async (original) => {
     };
     if (found && typeof found.birthtimeNs === "bigint") {
       const number = noBirth.number.get(path);
-      if (number !== undefined) found.ino = number;
+      if (number !== undefined && ![...noBirth.held.values()].includes(number)) found.ino = number;
+      const birth = noBirth.birth.get(path);
+      if (birth !== undefined) found.birthtimeNs = birth;
       if (noBirth.still !== null && path.startsWith(noBirth.still))
         found.ctimeNs = found.birthtimeNs;
       if (noBirth.on) found.birthtimeNs = 0n;
@@ -74,7 +80,17 @@ vi.mock("node:fs", async (original) => {
     }
     return found;
   }) as typeof fs.lstatSync;
-  return { ...fs, default: { ...fs, lstatSync }, lstatSync };
+  const openSync = ((...args: Parameters<typeof fs.openSync>) => {
+    const fd = fs.openSync(...args);
+    noBirth.held.set(fd, fs.fstatSync(fd, { bigint: true }).ino);
+    return fd;
+  }) as typeof fs.openSync;
+  const closeSync = ((fd: number) => {
+    noBirth.held.delete(fd);
+    fs.closeSync(fd);
+  }) as typeof fs.closeSync;
+  const own = { lstatSync, openSync, closeSync };
+  return { ...fs, default: { ...fs, ...own }, ...own };
 });
 
 /**
@@ -492,8 +508,9 @@ describe("a refused launch's word to the person", () => {
     } finally {
       noBirth.still = null;
     }
-    // A folder put in place of the new one as its mark goes in, given its number again, is no
-    // longer that folder: nothing is reserved, and the empty folder put there stays.
+    // A folder put in place of the new one as its mark goes in, answering its number and birth -
+    // as one given the number of a folder no longer held would, on any clock - is no longer that
+    // folder: nothing is reserved, and the empty folder put there stays.
     const putInPlace = root();
     let putAt: string | null = null;
     noBirth.reading = (path) => {
@@ -504,10 +521,11 @@ describe("a refused launch's word to the person", () => {
         existsSync(join(path, WORD_PROFILES_RESERVED))
       ) {
         putAt = path;
-        const number = lstatSync(path, { bigint: true }).ino;
+        const { ino, birthtimeNs } = lstatSync(path, { bigint: true });
         renameSync(path, `${putInPlace}-aside`);
         mkdirSync(path);
-        noBirth.number.set(path, number);
+        noBirth.number.set(path, ino);
+        noBirth.birth.set(path, birthtimeNs);
       }
     };
     try {
@@ -515,6 +533,7 @@ describe("a refused launch's word to the person", () => {
     } finally {
       noBirth.reading = null;
       noBirth.number.clear();
+      noBirth.birth.clear();
     }
     expect(putAt).not.toBeNull();
     expect(readdirSync(putAt ?? "")).toEqual([]);

@@ -162,14 +162,17 @@ const ACCOUNT_LETTERS = new Set(
 
 /**
  * Whether an account is one Windows could write: one of its two-letter names, or an account number
- * (`S-1-<authority>-<part>...`) of one to fifteen parts, its authority and each part a plain number
- * that fits the 32 bits Windows gives it.
+ * (`S-1-<authority>-<part>...`) of one to fifteen parts, each part a plain number that fits the 32
+ * bits Windows gives it, and its authority as Windows writes its 48 bits: a plain number below
+ * 2^32, and `0x` with twelve hexadecimal digits from 2^32 up.
  */
 function knownAccount(account: string): boolean {
   if (ACCOUNT_LETTERS.has(account)) return true;
-  const [s, revision, ...numbers] = account.split("-");
-  if (s !== "S" || revision !== "1" || numbers.length < 2 || numbers.length > 16) return false;
-  return numbers.every((part) => /^(?:0|[1-9]\d{0,9})$/.test(part) && Number(part) <= 0xffffffff);
+  const [s, revision, authority = "", ...parts] = account.split("-");
+  if (s !== "S" || revision !== "1" || parts.length < 1 || parts.length > 15) return false;
+  const part = (text: string) => /^(?:0|[1-9]\d{0,9})$/.test(text) && Number(text) <= 0xffffffff;
+  const wide = /^0[xX][0-9A-Fa-f]{12}$/.test(authority) && Number(authority) > 0xffffffff;
+  return (part(authority) || wide) && parts.every(part);
 }
 
 /**
@@ -300,15 +303,17 @@ export function handsDownToOthers(list: AccessList, user: string): boolean {
 /**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
  * list is its own (protected) and lets in no other ordinary account, `unread`
- * when its descriptor was not read whole, which no set may replace.
+ * when its descriptor was not read whole, which no set may replace, and
+ * `other-owner` when another account owns it, whatever its list - a folder
+ * with no list included - so nothing is set or written there.
  */
 export function ownerOnlyVerdict(
   list: AccessList,
   user: string,
 ): "owner-only" | "no-list" | "other-owner" | "inherited" | "others" | "unread" {
   if (!list.whole) return "unread";
-  if (list.entries === null) return "no-list";
   if (!ownerKeeps(list.owner, user)) return "other-owner";
+  if (list.entries === null) return "no-list";
   if (!onlyOwnerReaches(list, user)) return "others";
   if (!list.protected) return "inherited";
   return "owner-only";

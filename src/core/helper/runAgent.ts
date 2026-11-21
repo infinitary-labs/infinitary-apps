@@ -17,7 +17,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunByForce, runPipeThere, wakeRun } from "./runForce";
+import { endRunByForce, runPipeSeen, wakeRun } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -483,7 +483,7 @@ function recordedRun(
 async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
   // Its pipe is found before its record is read: a run that took the folder since clears it only
   // once it noted itself, so a pipe found while the record still names this run is its own.
-  const piped = context.processes?.pipe?.there(run) ?? runPipeThere(context.dataDir, run);
+  const piped = context.processes?.pipe?.there(run) ?? runPipeSeen(context.dataDir, run);
   const recorded = recordedRun(context, run);
   // Read as the stop is asked, never from the notice the window drew: a run whose reading or helper
   // stopped since says no longer that a force stop can end it, and is asked nothing.

@@ -694,17 +694,22 @@ export async function startApp(
   // so the window never opens beside an owned run with no starter, nor keeps a starter for none.
   // The same reading decides whether a grant waiting keeps the starter (`keepsStarterBesideGrant`).
   const holding = commandHolding(dataDir);
+  // A command holds the folder that is not known to be the noted run, as where Windows cannot read
+  // its birth: it may be a window's lock beside a stale note. The window keeps its starter, opens
+  // beside nothing yet and asks whoever holds the lock to answer (`lockHolderKind`), starting again
+  // once a run is known to hold it.
+  const unknownHolder = holding.running && !holding.known;
   const starter =
     windowless ||
     move ||
-    (startsHere && holding.owned === null) ||
+    (startsHere && holding.owned === null && !unknownHolder) ||
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
     !keepsStarterBesideGrant(holding, grantFollowed(work.place.dataDir, joinedHere))
       ? null
       : commandStarter(starterOptions);
-  let besideRun = !windowless && holding.running;
+  let besideRun = !windowless && holding.running && holding.known;
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:
@@ -741,8 +746,10 @@ export async function startApp(
     });
   if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
   // Start it here asks a window that holds the lock to answer, which a run never does
-  // (`lockHolderKind`), so a refused launch knows a window is there before it quits.
-  const answerAsk = startsHere && !besideRun ? randomBytes(8).toString("hex") : null;
+  // (`lockHolderKind`), so a refused launch knows a window is there before it quits; so does a launch
+  // beside a holder not known to be the noted run.
+  const answerAsk =
+    (startsHere || unknownHolder) && !besideRun ? randomBytes(8).toString("hex") : null;
   const lockAsk = answerAsk ? { windowAnswers: answerAsk } : undefined;
   /** The live program the folder's lock names, by its link: null for none, undefined unnamed. */
   const lockHolderNow = () => {
@@ -763,7 +770,8 @@ export async function startApp(
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
     // that holds the lock answers and focuses itself, and this launch quits. A holder that shows
-    // neither is waited for, never taken for a window.
+    // neither is waited for, never taken for a window. A launch beside a holder not known to be the
+    // noted run waits the same way, for a run known to hold the folder or a window's answer.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
       const kind = await lockHolderKind({
@@ -776,7 +784,7 @@ export async function startApp(
       });
       rmSync(answer, { force: true });
       console.warn(
-        `[app] Start it here found the folder held by ${kind === "free" ? "nothing now" : `a ${kind}`}`,
+        `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${kind === "free" ? "nothing now" : `a ${kind}`}`,
       );
       if (kind !== "window") relaunchWith(process.argv.slice(1));
       app.quit();

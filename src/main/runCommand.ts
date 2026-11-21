@@ -261,13 +261,17 @@ function writeRunRecord(path: string, value: RunMarker | RunStop): void {
  * lock as a link naming its holder (`SingletonLock`, `<host>-<pid>` on a Mac
  * and on Linux), holds that lock. The window asks before it asks for the lock
  * itself, since a process refused the lock never becomes ready to show why; a
- * note a crash left names a process that is gone or holds nothing.
+ * note a crash left names a process that is gone or holds nothing. Only a run
+ * known to be the noted one counts (`commandHolding`'s `known`): on Windows a
+ * note whose run's birth cannot be read while the lock is held may be a
+ * window's lock beside a stale note, so it answers no.
  */
 export function runningByCommand(
   dataDir: string,
   alive: (pid: number, birth?: string) => boolean | null = runIdentity,
 ): boolean {
-  return commandHolding(dataDir, alive).running;
+  const holding = commandHolding(dataDir, alive);
+  return holding.running && holding.known;
 }
 
 /**
@@ -316,13 +320,17 @@ export function commandHolding(
  * this app's own agent started it, so following along stops that command
  * and never one the person started by hand. Read from the one reading of the
  * records (`commandHolding`) the window also opens beside a command by, so
- * the two never describe different runs.
+ * the two never describe different runs. Beside a command not known to be
+ * the noted run (`known` false) it keeps the starter too: the window waits
+ * to learn who holds the folder, and a later reading that finds the agent's
+ * own run there finds the window still its starter, while one beside a run
+ * started by hand reads it as outside then (`BesideWindow.joinState`).
  */
 export function keepsStarterBesideGrant(
-  holding: { running: boolean; owned: OwnedRun | null },
+  holding: { running: boolean; owned: OwnedRun | null; known: boolean },
   grant: boolean,
 ): boolean {
-  return !grant || !holding.running || holding.owned !== null;
+  return !grant || !holding.running || !holding.known || holding.owned !== null;
 }
 
 /**

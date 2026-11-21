@@ -103,9 +103,13 @@ export function readRunStatus(
     problems.push(STATUS_WORDS.unreadable);
   let running: boolean | null = marker.kind === "unreadable" ? null : false;
   const run = marker.kind === "read" ? marker.value : null;
+  // Whether the noted run's exit is not known: its birth cannot be read while the lock is held, so
+  // it may be the one holding it. A lock nobody holds is the run gone, read or not.
+  let unread = false;
   if (run) {
     const holds = alive(run.pid, run.birth);
-    running = holds === true && (holder === undefined || holder === run.pid);
+    unread = holds === null && holder !== null;
+    running = unread ? null : holds === true && (holder === undefined || holder === run.pid);
     // Pick up a stop written while the marker was being read.
     if (!running) stop = readRecord(join(dataDir, RUN_LAST_STOP), RunStopSchema);
   }
@@ -119,7 +123,14 @@ export function readRunStatus(
     }
   }
   let lastStop: RunStatus["lastStop"] = stop.kind === "read" ? stop.value : null;
-  if (run && !running && (lastStop?.pid !== run.pid || lastStop.startedAt !== run.startedAt)) {
+  // A run gone without its stop written ended unrecorded; one whose exit is not known keeps the
+  // stop written before it, never one made up for it.
+  if (
+    run &&
+    !running &&
+    !unread &&
+    (lastStop?.pid !== run.pid || lastStop.startedAt !== run.startedAt)
+  ) {
     lastStop = {
       pid: run.pid,
       startedAt: run.startedAt,

@@ -245,6 +245,56 @@ describe("a window opened beside a run", () => {
     expect(ownedRunOf(readRunStatus(earlier, unread))).toEqual(owned);
   });
 
+  // The review of INF-5409: a launch beside a held lock whose note's run cannot be told by its
+  // Windows birth (stood in by a lock link that cannot be read, naming no holder) does not take the
+  // holder for that run: it may be a window beside a stale note. The launch keeps its starter with a
+  // grant waiting, and waits for who holds the lock to show itself: a window's answer, or the note's
+  // run once its birth reads as the agent's own, which it then starts again beside as its owner.
+  it("waits to learn who holds the lock while a noted run's birth cannot be read", async () => {
+    const stale = scratchDir("infinitary-run-unread-start-");
+    markRunning(stale, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, "win:1");
+    writeFileSync(join(stale, "SingletonLock"), "held, naming no holder");
+    const unread = (pid: number, birth?: string) => (pid !== 4242 ? false : birth ? null : true);
+    const same = (pid: number, birth?: string) => pid === 4242 && birth === "win:1";
+    expect(runningByCommand(stale, unread)).toBe(false);
+    expect(keepsStarterBesideGrant(commandHolding(stale, unread), true)).toBe(true);
+    const whoHolds = (reader: () => typeof unread, answered: () => boolean) =>
+      lockHolderKind({
+        running: () => runningByCommand(stale, reader()),
+        answered,
+        holder: () => undefined,
+        asked: undefined,
+        lockFree: () => false,
+        askEveryMs: 60_000,
+        everyMs: 20,
+      });
+    // A window holds the lock beside the stale note: it answers, and is never taken for the run.
+    let answered = false;
+    setTimeout(() => (answered = true), 300);
+    expect(
+      await whoHolds(
+        () => unread,
+        () => answered,
+      ),
+    ).toBe("window");
+    // The agent's own run holds it, its birth readable a moment later.
+    let reader = unread;
+    setTimeout(() => (reader = same), 300);
+    expect(
+      await whoHolds(
+        () => reader,
+        () => false,
+      ),
+    ).toBe("run");
+    const owned = commandHolding(stale, same);
+    expect(owned).toEqual({
+      running: true,
+      owned: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+      known: true,
+    });
+    expect(keepsStarterBesideGrant(owned, true)).toBe(true);
+  });
+
   // The review of INF-5409: Start it here refused the lock reads who holds it from what the holder
   // shows of itself, never from silence: a run notes that it holds the folder, a window answers
   // the launch's ask, a holder that ends lets the lock go. One that shows none of these, as a run

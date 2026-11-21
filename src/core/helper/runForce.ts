@@ -424,19 +424,23 @@ const WAKE_EVERY_MS = 1_000;
  * until the run is gone. The run is read before its stop is written: one
  * already gone then is asked nothing (`unasked`), so only an exit after the
  * ask is told as the stop's end. Its pipe is found before then (`piped`,
- * `runPipeThere`), by an asker before it reads the run's record, since a run
+ * `runPipeSeen`), by an asker before it reads the run's record, since a run
  * that took the folder since clears an earlier run's pipe only once it
  * noted itself: a pipe found and gone since is the run gone too. A run that
  * says a force stop can end it holds its pipe, so on a Mac or Linux a run
  * whose pipe was not found, or that no program is seen holding (one that
  * cannot be told included), is asked nothing either, whatever holds its
- * number now; once asked, only a pipe nobody holds, or one gone from the
- * folder it was seen held in, is the run gone, while one gone with its
- * folder, made again since, tells nothing. A stop none of whose files is
- * there any more past its time, as where the folder was made again, is
- * withdrawn, and nothing is woken for it; one the run was seen to commit is
- * waited for until the run is gone, its file there or not. `held`, for a test, stands in for
- * whether a program holds it.
+ * number now. The pipe is told by the file it was found as, never by its
+ * name alone: another file put in its place, a pipe included, tells
+ * nothing, and is never read as the run held or gone. Once asked, only that
+ * same pipe found there with nobody holding it is the run gone; one no
+ * longer found tells nothing, as where the run or anything else took it
+ * away. A stop none of whose files is there any more past its time, as
+ * where the folder was made again, is not known to be withdrawn: the run
+ * may have committed it before it went, and acts on it once it goes on, so
+ * the run is waited for until it is gone, and nothing is woken for it; one
+ * the run was seen to commit is waited for the same way and called ended.
+ * `held`, for a test, stands in for whether a program holds it.
  * The attempt's files go once its end is known, and one that cannot be
  * removed changes nothing of what it answers.
  */
@@ -446,33 +450,27 @@ export async function endRunByForce(
   alive: (pid: number) => boolean = processAlive,
   waitMs: number = STOPPED_RUN_WAIT_MS,
   wake: () => void = () => {},
-  piped: boolean = runPipeThere(dataDir, run),
+  piped: PipeSeen | boolean | null = runPipeSeen(dataDir, run),
   held?: () => boolean,
 ): Promise<ForceEnd> {
   const dir = join(dataDir, RUN_FORCE_DIR);
   // On a Mac or Linux the run and its helper hold the run's own pipe open while either runs, and no
-  // other program ever holds it: a pipe nobody holds, or gone since it was found, is the run gone,
-  // whoever has its number now.
+  // other program ever holds it: the same pipe found with nobody holding it is the run gone, whoever
+  // has its number now.
   // A run that says a force stop can end it holds its pipe there: one not found is no proof the
   // named run is still there, so nothing is asked of whatever holds its number.
   const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
   const posix = !hostPlatformProfile().windows;
   if (posix && !piped) return "unasked";
-  // The folder the pipe was seen held in, as the stop is asked: a pipe gone from that same folder was
-  // taken away by the run as it ended or by a run that took the folder since, so the run is gone;
-  // one gone with its folder, made again since, may still be held where nobody reaches it, which
-  // tells nothing either way.
-  let folder: { ino: number; dev: number } | null = null;
+  // Read by the file it was found as, unless a test stands in for whether it is held.
+  const seen = typeof piped === "object" ? piped : null;
   const state = () => {
     if (held) return held() ? "held" : "unheld";
-    const now = pipeState(pipe);
-    if (now !== "absent") return now;
-    return folder !== null && sameFolder(dir, folder) ? "unheld" : "unknown";
+    return seen === null ? "unknown" : pipeState(pipe, seen);
   };
   // Asked only once a program is seen holding the pipe; once asked, a pipe that cannot be told is
   // no proof the run ended, and only one nobody holds is.
   if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
-  if (posix) folder = folderOf(dir);
   const runs = (pid: number) => alive(pid) && (!posix || state() !== "unheld");
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;
@@ -498,65 +496,66 @@ export async function endRunByForce(
 /** Each file one attempt's stop can be, as it moves on. */
 const ATTEMPT_ENDS = [".json", ".taken", ".ended", ".declined", ".withdrawn"] as const;
 
-/** Whether `run`'s own pipe is there, on a Mac or Linux: false on Windows, which keeps none. */
-export function runPipeThere(dataDir: string, run: RunInstance): boolean {
-  return (
-    !hostPlatformProfile().windows &&
-    isPipe(join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)))
-  );
+/** A run's pipe as it was found, by its file number, which a later reading must find it still is. */
+export type PipeSeen = { ino: number; dev: number };
+
+/** `run`'s own pipe, on a Mac or Linux, as it is found now: null where none is, and on Windows, which keeps none. */
+export function runPipeSeen(dataDir: string, run: RunInstance): PipeSeen | null {
+  if (hostPlatformProfile().windows) return null;
+  try {
+    const found = lstatSync(join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)));
+    return found.isFIFO() ? { ino: found.ino, dev: found.dev } : null;
+  } catch {
+    return null;
+  }
 }
 
-/** Whether `path` is a pipe. */
-function isPipe(path: string): boolean {
+/** Whether `run`'s own pipe is there, on a Mac or Linux: false on Windows, which keeps none. */
+export function runPipeThere(dataDir: string, run: RunInstance): boolean {
+  return runPipeSeen(dataDir, run) !== null;
+}
+
+/** Whether `stats` is the pipe `seen` found. */
+function isSeen(
+  stats: { ino: number; dev: number; isFIFO: () => boolean },
+  seen: PipeSeen,
+): boolean {
+  return stats.isFIFO() && stats.ino === seen.ino && stats.dev === seen.dev;
+}
+
+/** Whether the file at `path` now is the pipe `seen` found. */
+function seenAt(path: string, seen: PipeSeen): boolean {
   try {
-    return lstatSync(path).isFIFO();
+    return isSeen(lstatSync(path), seen);
   } catch {
     return false;
   }
 }
 
 /**
- * Whether a program holds the pipe at `path` open to read it: `held` once
- * opening it to write finds a reader, `unheld` once opening it finds nobody
- * reading (`ENXIO`), `absent` where no pipe is at that path, and `unknown`
- * while it cannot be told, as a pipe this account may not open. Opening and closing it writes
- * nothing, so its helper lets nothing go on.
+ * Whether a program holds the pipe `seen` found at `path` open to read it:
+ * `held` once the file opened to write is that same pipe, found with a
+ * reader; `unheld` once opening it finds nobody reading (`ENXIO`) while that
+ * same pipe is found there just before and just after; `unknown` otherwise,
+ * as where no pipe is there, another file is, a pipe included, or a pipe
+ * this account may not open. Opening and closing it writes nothing, so its
+ * helper lets nothing go on.
  */
-function pipeState(path: string): "held" | "unheld" | "absent" | "unknown" {
+function pipeState(path: string, seen: PipeSeen): "held" | "unheld" | "unknown" {
+  const before = seenAt(path, seen);
+  let fd: number;
   try {
-    closeSync(openSync(path, constants.O_WRONLY | constants.O_NONBLOCK));
-    return "held";
+    fd = openSync(path, constants.O_WRONLY | constants.O_NONBLOCK);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENXIO") return "unheld";
-    return code === "ENOENT" || code === "ENOTDIR" ? "absent" : "unknown";
+    return code === "ENXIO" && before && seenAt(path, seen) ? "unheld" : "unknown";
   }
-}
-
-/** Which folder is at `path` now, by its file number, or null where it cannot be read. */
-function folderOf(path: string): { ino: number; dev: number } | null {
   try {
-    const { ino, dev } = lstatSync(path);
-    return { ino, dev };
+    return isSeen(fstatSync(fd), seen) ? "held" : "unknown";
   } catch {
-    return null;
-  }
-}
-
-/** Whether the folder at `path` now is `folder`, the one read before. */
-function sameFolder(path: string, folder: { ino: number; dev: number }): boolean {
-  const now = folderOf(path);
-  return now !== null && now.ino === folder.ino && now.dev === folder.dev;
-}
-
-/** Whether `path` is positively not there: its folder or itself gone, or its folder no folder at all. */
-function absent(path: string): boolean {
-  try {
-    lstatSync(path);
-    return false;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    return code === "ENOENT" || code === "ENOTDIR";
+    return "unknown";
+  } finally {
+    closeSync(fd);
   }
 }
 
@@ -584,11 +583,10 @@ async function settle(
           renameSync(`${attempt}${from}`, `${attempt}.withdrawn`);
           return "withdrawn";
         } catch {}
-      // None of the attempt's files is there at all, as where the folder was removed and made again
-      // since it was written: the run can no longer claim or commit it, and a run that committed it
-      // ends at the same moment, so a run still there past its time never acts on it.
-      if (ATTEMPT_ENDS.every((end) => absent(`${attempt}${end}`))) return "withdrawn";
-      // Committed meanwhile, or declined: read again.
+      // Committed meanwhile, or declined: read again. None of the attempt's files there at all, as
+      // where the folder was removed and made again since it was written, is no withdrawal: the run
+      // may have committed it before it went, and ends on it once it goes on, so the run is waited
+      // for until it is gone, and called gone, as nothing shows the stop ended it.
     } else if (
       (committed ||
         (Date.now() + WAKE_EVERY_MS <= until &&

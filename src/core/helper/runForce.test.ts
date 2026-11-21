@@ -21,6 +21,7 @@ import {
   RUN_FORCE_WATCH_SOURCE,
   runForceNeedle,
   runForceWakeFile,
+  runPipeSeen,
   runPipeThere,
   wakeRun,
 } from "./runForce";
@@ -560,8 +561,8 @@ describe("a run that does not answer, ended by force", () => {
       const pruned = scratchDir("run-force-");
       mkdirSync(join(pruned, RUN_FORCE_DIR), { recursive: true });
       expect(spawnSync("mkfifo", ["-m", "600", join(pruned, RUN_FORCE_DIR, pipe)]).status).toBe(0);
-      const piped = runPipeThere(pruned, run);
-      expect(piped).toBe(true);
+      const piped = runPipeSeen(pruned, run);
+      expect(piped).not.toBeNull();
       rmSync(join(pruned, RUN_FORCE_DIR, pipe));
       expect(
         await endRunByForce(
@@ -646,36 +647,107 @@ describe("a run that does not answer, ended by force", () => {
     expect(left(dataDir)).toEqual([]);
   });
 
+  // The review of INF-5409: once asked, only the pipe found at the press, there with nobody holding
+  // it, is the run gone. The run still runs (stood in by a reading that says its number does) and
+  // holds its pipe, held open here as the run holds it: with that pipe alone taken away from its
+  // folder, or another pipe nobody holds put in its place, nothing is told of the run, so the stop
+  // is never called gone while the run is there, and is withdrawn once its time is over.
+  it.skipIf(!POSIX)("never calls a run gone whose pipe alone was taken or replaced", async () => {
+    for (const replace of [false, true]) {
+      const dataDir = scratchDir("run-force-");
+      const run = { pid: 4242, startedAt: STARTED };
+      const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+      const holding = holdPipe(dataDir, run);
+      try {
+        let answer: string | null = null;
+        const asked = endRunByForce(dataDir, run, () => true, 600).then((end) => {
+          answer = end;
+          return end;
+        });
+        expect(left(dataDir)).toHaveLength(1);
+        rmSync(pipe);
+        if (replace) expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+        await pause(400);
+        expect(answer).toBeNull();
+        expect(await asked).toBe("withdrawn");
+        expect(left(dataDir)).toEqual([]);
+      } finally {
+        closeSync(holding);
+      }
+    }
+  });
+
+  // The review of INF-5409: the pipe is told by the file it was found as, before the run's record
+  // is read, never by its name. Another file put in its place before the stop is asked, a file
+  // anyone may open to write or a pipe another program holds, is not the run's pipe held, so
+  // nothing is asked of whatever holds the run's number.
+  it.skipIf(!POSIX)("asks nothing where another file took the run's pipe's place", async () => {
+    for (const other of ["file", "pipe"] as const) {
+      const dataDir = scratchDir("run-force-");
+      const run = { pid: 4242, startedAt: STARTED };
+      const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+      const holding = holdPipe(dataDir, run);
+      const seen = runPipeSeen(dataDir, run);
+      expect(seen).not.toBeNull();
+      rmSync(pipe);
+      if (other === "file") writeFileSync(pipe, "", { mode: 0o600 });
+      else expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+      const holdingOther = other === "pipe" ? openSync(pipe, constants.O_RDWR) : null;
+      try {
+        expect(
+          await endRunByForce(
+            dataDir,
+            run,
+            () => true,
+            1_000,
+            () => {},
+            seen,
+          ),
+        ).toBe("unasked");
+        expect(left(dataDir)).toEqual([]);
+      } finally {
+        closeSync(holding);
+        if (holdingOther !== null) closeSync(holdingOther);
+      }
+    }
+  });
+
   // The review of INF-5409: a stop whose files went with its folder, made again since it was
-  // written, can no longer be claimed or committed by the run, which still runs (stood in by a
-  // reading that says its number does): once its time is over it is withdrawn, never waited on for
-  // good, and never told as the stop's end, and nothing is woken for it meanwhile. On a Mac or
-  // Linux the run's pipe, held open here as the run holds it, went with that folder too: a pipe
-  // gone with its folder is no proof the run ended, so it is not called gone.
-  it("withdraws a stop whose files went with its folder, once its time is over", async () => {
-    const dataDir = scratchDir("run-force-");
-    const dir = join(dataDir, RUN_FORCE_DIR);
-    const run = { pid: 4242, startedAt: STARTED };
-    const holding = POSIX ? holdPipe(dataDir, run) : null;
-    let woken = 0;
-    try {
+  // written, before its asker read any commitment, is not known to be withdrawn: the run may have
+  // committed it in the moment before, and ends on it once it goes on, so it is waited for, past
+  // its time, until it is gone, whether it committed it there (moved to `.ended` and gone with the
+  // folder before the next reading) or never claimed it. Called gone, as nothing shows the stop
+  // ended it; a stop still in its folder past its time is withdrawn (above).
+  it("waits on a stop whose files went with its folder until the run is gone", async () => {
+    for (const committed of [true, false]) {
+      const dataDir = scratchDir("run-force-");
+      const dir = join(dataDir, RUN_FORCE_DIR);
+      const run = { pid: 4242, startedAt: STARTED };
+      let running = true;
+      let answer: string | null = null;
       const asked = endRunByForce(
         dataDir,
         run,
+        () => running,
+        300,
+        () => {},
+        true,
         () => true,
-        2_500,
-        () => void woken++,
-        POSIX,
-      );
-      await expect.poll(() => left(dataDir).length).toBe(1);
-      await expect.poll(() => woken).toBe(1);
+      ).then((end) => {
+        answer = end;
+        return end;
+      });
+      const [pending = ""] = left(dataDir);
+      expect(pending.endsWith(".json")).toBe(true);
+      if (committed)
+        renameSync(join(dir, pending), join(dir, pending.replace(/\.json$/, ".ended")));
       rmSync(dir, { recursive: true });
       mkdirSync(dir);
-      expect(await asked).toBe("withdrawn");
-      expect(woken).toBe(1);
+      await pause(800);
+      expect(answer).toBeNull();
+      running = false;
+      expect(await asked).toBe("gone");
       expect(left(dataDir)).toEqual([]);
-    } finally {
-      if (holding !== null) closeSync(holding);
     }
   });
 

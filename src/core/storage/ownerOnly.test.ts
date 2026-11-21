@@ -154,6 +154,18 @@ describe("reading a folder's access list", () => {
         USER,
       ),
     ).toBe("unread");
+    // An entry missing its account or its rights, or of a kind this reading does not judge, is
+    // not read whole either: an account read as nothing is no account to judge.
+    for (const entry of [
+      `(A;OICI;FA;;)`,
+      `(A;OICI;FA;;;)`,
+      `(A;OICI;;;;${OTHER})`,
+      `(Q;OICI;FA;;;${OTHER})`,
+    ]) {
+      const reading = readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})${entry}`);
+      expect(reading).toMatchObject({ entries: null, whole: false });
+      expect(ownerOnlyVerdict(reading, USER)).toBe("unread");
+    }
     // The word only in what follows the list leaves the list itself to be judged.
     const audited = `${IN_PROFILE}S:(AU;SA;FA;;;WD)`;
     expect(readAccessList(audited).entries).toHaveLength(3);
@@ -294,6 +306,8 @@ describe("the data folder on Windows", () => {
       `O:${USER}G:${GROUP}`,
       // The no-list word, with entries after it: not Windows saying the folder has no list.
       `O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(D;OICI;WD;;;${OTHER})`,
+      // A deny, then an entry missing its account: not an account besides this one to remove.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;)`,
     ]) {
       const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
       const temp = join(scratchDir("fm-owner-only-"), "Temp");

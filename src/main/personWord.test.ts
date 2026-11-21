@@ -16,7 +16,7 @@ import type { AccessAsk, AccessRun } from "@core/storage/ownerOnly";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askPersonWord,
@@ -38,6 +38,21 @@ import {
   WORD_TEMP_DIR,
   wordProfilesMark,
 } from "./personWordArg";
+
+/**
+ * A file system that gives no birth time, as some do: while `noBirth.on`, every folder read here
+ * answers a birth of zero, and nothing else about it changes.
+ */
+const noBirth = vi.hoisted(() => ({ on: false }));
+vi.mock("node:fs", async (original) => {
+  const fs = await original<typeof import("node:fs")>();
+  const lstatSync = ((path: string, options?: { bigint?: boolean }) => {
+    const found = fs.lstatSync(path, options as never) as unknown as { birthtimeNs?: bigint };
+    if (noBirth.on && found && typeof found.birthtimeNs === "bigint") found.birthtimeNs = 0n;
+    return found;
+  }) as typeof fs.lstatSync;
+  return { ...fs, default: { ...fs, lstatSync }, lstatSync };
+});
 
 /**
  * The review of INF-5409: a window launch refused the folder's lock never sees Electron become
@@ -251,6 +266,20 @@ describe("a refused launch's word to the person", () => {
       expect(instead.startsWith(`${shared.name}-2.`)).toBe(true);
       expect(sets(inherited)).not.toContain(shared.folder);
     }
+    // A folder newly made whose owner-only list, read back once set, hands this account's access
+    // only one level down is not marked or reserved: no name is reserved and nothing is left.
+    const flat = root();
+    const madeFlat = answering(ownList, (path) =>
+      /\.[0-9a-f]{8}-[0-9a-f-]{27}$/.test(path)
+        ? `O:${user}G:${group}D:PAI(A;OICINP;FA;;;${user})`
+        : ownList,
+    );
+    expect(await ownProfilesFolder(flat, "win32", madeFlat)).toBeNull();
+    expect(sets(madeFlat)).toEqual([]);
+    expect(touched(madeFlat).some((path) => path.startsWith(`${flat}.`))).toBe(true);
+    expect(
+      readdirSync(join(flat, "..")).filter((entry) => entry.startsWith("word-profiles")),
+    ).toEqual([]);
     const planted = await reserved();
     const foreignMark = answering(ownList, (path) =>
       path === planted.name
@@ -375,6 +404,27 @@ describe("a refused launch's word to the person", () => {
         expect(readFileSync(join(made, "..", left ?? "", WORD_PROFILES_RESERVED), "utf8")).toBe(
           "not this launch's\n",
         );
+    }
+    // Where the system gives no birth time, a reservation naming none is never used - its folder
+    // is not read, set or changed - and no new one is made, since device and number alone can name
+    // another folder later.
+    const unborn = await reserved();
+    const id = unborn.folder.slice(unborn.name.length + 1);
+    writeFileSync(
+      unborn.name,
+      wordProfilesMark(id, { ...lstatSync(unborn.folder, { bigint: true }), birthtimeNs: 0n }),
+    );
+    noBirth.on = true;
+    try {
+      const birthless = answering(ownList);
+      expect(await ownProfilesFolder(unborn.name, "win32", birthless)).toBeNull();
+      expect(touched(birthless)).not.toContain(unborn.folder);
+      expect(readdirSync(unborn.folder)).toEqual([WORD_PROFILES_RESERVED]);
+      expect(
+        readdirSync(join(unborn.name, "..")).filter((entry) => entry.startsWith("word-profiles-")),
+      ).toEqual([]);
+    } finally {
+      noBirth.on = false;
     }
     // A folder made that another account owns is never taken as private, nor reserved.
     const owned = root();

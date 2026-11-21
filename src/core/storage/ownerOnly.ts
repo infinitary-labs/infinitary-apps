@@ -95,7 +95,8 @@ const DESCRIPTOR =
  * Reads a security descriptor string's owner (`O:`) and access list (`D:`), taken apart in order
  * (`DESCRIPTOR`). Only the list's own `NO_ACCESS_CONTROL` says a folder has no list. Anything
  * else - no owner, no access list at all, a list not read to its end (one holding an entry this
- * reading does not take apart, as a conditional entry with its own brackets), or text out of that
+ * reading does not take apart, as a conditional entry with its own brackets, an entry of a kind it
+ * does not judge or one missing its rights or account; `ENTRY_TYPES`), or text out of that
  * order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
  * the entries it did read nor as a folder with no list.
  */
@@ -108,18 +109,25 @@ export function readAccessList(sddl: string): AccessList {
   const owner = read[1] ?? null;
   if (read[2]) return { owner, entries: null, protected: false, whole: true };
   const flags = read[3] ?? "";
-  const entries = [...(read[4] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
+  const entries: AccessEntry[] = [];
+  for (const match of (read[4] ?? "").matchAll(/\(([^)]*)\)/g)) {
     const fields = (match[1] ?? "").split(";");
-    return {
-      type: fields[0] ?? "",
-      flags: fields[1] ?? "",
-      rights: fields[2] ?? "",
-      account: fields[5] ?? "",
-      text: match[0],
-    };
-  });
+    const [type = "", entryFlags = "", rights = "", , , account = ""] = fields;
+    if (fields.length !== 6 || !ENTRY_TYPES.has(type) || !/^[A-Z]*$/.test(entryFlags))
+      return { owner, entries: null, protected: false, whole: false };
+    if (rights === "" || account === "")
+      return { owner, entries: null, protected: false, whole: false };
+    entries.push({ type, flags: entryFlags, rights, account, text: match[0] });
+  }
   return { owner, entries, protected: flags.includes("P"), whole: true };
 }
+
+/**
+ * The kinds of entry an access list holds that this reading judges: allow and deny, their object
+ * forms and their callback forms. An entry of another kind, or one missing a field it needs (its
+ * rights or its account), is an entry this reading did not take apart, so the list is not whole.
+ */
+const ENTRY_TYPES = new Set(["A", "D", "OA", "OD", "XA", "XD", "ZA"]);
 
 /** An entry that lets an account in: allow, object allow and the callback forms of them. */
 function allows(entry: AccessEntry): boolean {

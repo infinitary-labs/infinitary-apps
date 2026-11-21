@@ -327,7 +327,8 @@ async function reservedAt(
   if (named === null) return "free";
   if (!named.isFile()) return "not-ours";
   const mark = await markedHere(name, platform, access);
-  if (mark === null) return "not-ours";
+  // A mark naming no birth time names no one folder: device and number alone can be used again.
+  if (mark === null || mark.said.birthtimeNs === 0n) return "not-ours";
   const path = `${name}.${mark.said.id}`;
   const markPath = join(path, WORD_PROFILES_RESERVED);
   const found = entryOf(path);
@@ -357,8 +358,10 @@ async function reservedAt(
 /**
  * Makes a profiles' folder under a name of its own beside `name` (`name.<id>`), this account's
  * alone - made with no access for anyone else, or on Windows given an owner-only access list of its
- * own (`keepOwnerOnly`) - and only then marked whole with its own name and which folder it is
- * (`wordProfilesMark`); null
+ * own (`keepOwnerOnly`), and in either case read back as a folder already there is (`aloneNow`), so
+ * on Windows it hands this account's access down to all it holds - and only then marked whole with
+ * its own name and which folder it is (`wordProfilesMark`). A folder the system gives no birth time
+ * could not be told from another put at its path later, so none is made there. Null
  * where it cannot be, the folder then removed again only while still the same, empty folder
  * (`dropIfEmpty`). Its mark is made new, never one already there, and is known by the file it
  * opened, so a mark that could not be finished is removed only while it is still that file.
@@ -373,9 +376,10 @@ async function makeProfilesFolder(
   mkdirSync(path, { mode: 0o700 });
   const folder = { path, made: lstatSync(path, { bigint: true }) };
   const alone =
-    platform === "win32"
-      ? (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only"
-      : folder.made.uid === BigInt(process.getuid?.() ?? -1) && (folder.made.mode & 0o077n) === 0n;
+    folder.made.birthtimeNs !== 0n &&
+    (platform !== "win32" ||
+      (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only") &&
+    (await aloneNow(path, folder.made, platform, access));
   if (!alone || !stillReserved(folder)) {
     dropIfEmpty(path, folder.made);
     return null;

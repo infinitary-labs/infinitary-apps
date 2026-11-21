@@ -106925,6 +106925,12 @@ ${startersHtml()}`;
      * account keeps serving on the credits set up with its provider. Absent is off.
      */
     keepGoingOnCredits: boolean().optional(),
+    /**
+     * Use saved resets on their own (docs/quota.md "Saved resets on their
+     * own"): with work waiting on its spent Codex allowance, Infinitary may
+     * use one of its saved resets without a click. Absent is off.
+     */
+    useSavedResets: boolean().optional(),
     createdAt: number(),
     lastConnectedAt: number().optional(),
     /**
@@ -109311,6 +109317,24 @@ ${startersHtml()}`;
       ])
     },
     /**
+     * Turns that computer's own Codex account's Use saved resets on their own
+     * on or off there (docs/quota.md, "Saved resets on their own"), from the
+     * contract change `auto-saved-resets`. It answers once it has started;
+     * turning it on with `signIn` lets Codex sign in to the account first, its
+     * link and paste-back prompt coming as `inf:work:sign-in` steps, and the
+     * end is a `signed-in` step once the switch is saved.
+     */
+    "inf:sign-ins:use-saved-resets": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          accountId: string().min(1).max(256),
+          on: boolean(),
+          signIn: boolean()
+        })
+      ])
+    },
+    /**
      * Reads every account's allowance there now, rather than at its next
      * tick (`computer-account-settings`); the reading reaches the home as
      * that computer's sign-ins, whole, and this answers once it is read.
@@ -109388,6 +109412,12 @@ ${startersHtml()}`;
      * `use-saved-reset`). Absent means it does not, so the item is not offered.
      */
     savedReset: boolean().optional(),
+    /**
+     * It takes Use saved resets on their own for its own Codex accounts (the
+     * contract change `auto-saved-resets`). Absent means it does not, so the
+     * item stays dim.
+     */
+    autoSavedResets: boolean().optional(),
     /** Active sign-ins and failures awaiting Done; absent on an older home. */
     flows: array(deviceSignInFlowSchema).optional()
   });

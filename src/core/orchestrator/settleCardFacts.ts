@@ -10,7 +10,9 @@ import {
   type SettleFact,
   type SettleLevel,
   splitSettleFacts,
+  type TaskFactsPart,
   takesTaskFacts,
+  taskFactsPartOf,
   withMergeClosesLine,
 } from "@shared/cards";
 import {
@@ -67,8 +69,8 @@ import { reviewCoversHead } from "./reviewCarry";
 
 /** What the facts are read from: the task's record and the stack, never the card's words. */
 export type SettleFactsReading = {
-  /** The task's fact strip and follow-ups now. */
-  facts: () => string | undefined;
+  /** The task's fact strip now, as much of it as the card carries (`taskFactsPartOf`). */
+  facts: (part: TaskFactsPart) => string | undefined;
   /** Whether something besides this card keeps the task open past its merge (INF-2525). */
   othersOpen: () => boolean;
   /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */
@@ -234,7 +236,11 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
       actions: [...card.actions.slice(0, at), action, ...card.actions.slice(at)],
     };
   };
-  const facts = withMergeClosesLine(read.facts(), card.actions, read.othersOpen());
+  const facts = withMergeClosesLine(
+    read.facts(taskFactsPartOf(card)),
+    card.actions,
+    read.othersOpen(),
+  );
   const split = facts ? splitSettleFacts(card.body) : undefined;
   if (!facts || !split) return anyway(relabeled(card));
   const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
@@ -258,7 +264,7 @@ export function emittedSettleFacts(
     followups: () => string | undefined;
   },
 ): EmittedCardInput {
-  const facts = takesTaskFacts(input) ? read.facts() : undefined;
+  const facts = takesTaskFacts(input) ? read.facts(taskFactsPartOf(input)) : undefined;
   const strip = withMergeClosesLine(facts, input.actions, read.othersOpen());
   let next = strip ? { ...input, body: `${input.body}${strip}` } : input;
   if (next.actions.some((action) => mergeEffectOf(action))) {
@@ -346,9 +352,12 @@ export class SettleFacts {
    *   per failed check (`checkVerdicts`).
    *
    * The model and the computer are not here: the card's top line draws
-   * both. Returns an HTML fragment, or undefined when the task is unknown.
+   * both. A Review finding card's strip (`part` reference) keeps the
+   * reference alone, with no states and nothing under the line
+   * (`taskFactsPartOf`). Returns an HTML fragment, or undefined when the
+   * task is unknown.
    */
-  strip(taskId: string): string | undefined {
+  strip(taskId: string, part: TaskFactsPart = "whole"): string | undefined {
     const record = this.options.tasks.get(taskId);
     if (!record) return undefined;
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -542,9 +551,13 @@ export class SettleFacts {
     const policies = this.options.tasks.policiesOf(record);
     if (policies && policies.rigor.value !== "standard")
       ref("care", RIGOR_WORDS[policies.rigor.value], undefined, ` ${RIGOR_REFERENCE_WORD}`);
+    // A Review finding card names the change it asks about and none of its
+    // states or what needs the captain under them.
+    const shown = part === "whole" ? states : [];
+    const needed = part === "whole" ? needs : [];
     const line = `<p class="inf-foot-line">${
-      states.length > 0
-        ? `<span class="inf-foot-states">${states
+      shown.length > 0
+        ? `<span class="inf-foot-states">${shown
             .map((each, index) => ({ ...each, index }))
             .sort(
               (a, b) =>
@@ -555,7 +568,7 @@ export class SettleFacts {
             .join("")}</span>`
         : ""
     }<span class="inf-foot-ref">${refs.join("")}</span></p>`;
-    return `${SETTLE_FACTS_OPEN}${line}${needs.length > 0 ? `<section class="inf-foot-needs">${needs.join("")}</section>` : ""}</div>`;
+    return `${SETTLE_FACTS_OPEN}${line}${needed.length > 0 ? `<section class="inf-foot-needs">${needed.join("")}</section>` : ""}</div>`;
   }
 
   /**

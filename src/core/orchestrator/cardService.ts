@@ -7,7 +7,7 @@ import {
   NOTE_GOT_IT_LABEL,
   noteDoneOf,
 } from "@shared/cardLeave";
-import type { CardRevisionLinks } from "@shared/cards";
+import type { CardRevisionLinks, TaskFactsPart } from "@shared/cards";
 import {
   type Card,
   type CardAnswer,
@@ -255,7 +255,11 @@ export class CardService {
     // The saved and shown revisions carry the same current task facts.
     // A new owner per pass keeps time wording fresh even in an outer read;
     // the task projection invalidates both records and facts after a write.
-    const factsOwner = Symbol("settle facts");
+    // One owner for each part of the strip a card may carry (`taskFactsPartOf`).
+    const factsOwners = {
+      whole: Symbol("settle facts"),
+      reference: Symbol("settle facts reference"),
+    } satisfies Record<TaskFactsPart, symbol>;
     let changed = false;
     const fellBehind = new Map<string, MergeBehind>();
     const refreshed = (card: Card): Card => {
@@ -268,10 +272,10 @@ export class CardService {
         if (body !== card.body) card = { ...card, body };
       }
       return settleCardFacts(card, {
-        facts: () => {
+        facts: (part) => {
           const record = this.host.tasks.get(taskId);
-          const read = () => this.host.settleFacts(taskId);
-          return record ? this.host.tasks.projectedFact(record, factsOwner, read) : read();
+          const read = () => this.host.settleFacts(taskId, part);
+          return record ? this.host.tasks.projectedFact(record, factsOwners[part], read) : read();
         },
         othersOpen: () => this.othersOpen(taskId, card.id),
         mergeLabel: (shown) => this.host.mergeLabel?.(shown),

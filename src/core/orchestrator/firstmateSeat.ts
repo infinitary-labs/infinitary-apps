@@ -652,7 +652,7 @@ export class FirstmateSeat {
           `Your first mate moved to ${sibling.label} - ${label} has used up its allowance, and ${sibling.label} still has some.`,
         );
       }
-      // A saved reset comes before credits, when its switch is on and it beats waiting.
+      // A saved reset is weighed now, when its switch is on; credits serve this turn until it lands.
       if (flagship.onCredits(accountId)) this.options.savedResetsSpent?.(accountId);
       this.servesAgain();
       return session;

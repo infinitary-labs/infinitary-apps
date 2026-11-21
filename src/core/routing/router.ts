@@ -111,8 +111,9 @@ export type RoutePreview = {
   spentAt?: string[];
   /**
    * Providers whose allowance is spent at the asked level and whose chosen
-   * account keeps going on credits: a saved reset comes before credits
-   * (docs/quota.md, "Saved resets on their own").
+   * account keeps going on credits: a saved reset is weighed as that work
+   * starts on credits, which serve it until the reset lands (docs/quota.md,
+   * "Saved resets on their own").
    */
   creditsAt?: string[];
   /** The computer that runs work whose sign-ins `spentAt` names; absent, this Mac's own. */

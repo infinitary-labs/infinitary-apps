@@ -1,5 +1,5 @@
 ---
-source: 4b256578ba14e5e2
+source: a8120adef7569dc8
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -30,6 +30,17 @@ Se a câmera não tiver permissão, cole o link no lugar.
 
 Seu celular e seu computador precisam estar na mesma rede: o mesmo Wi-Fi, ou a mesma rede privada quando você está fora.
 Conecte-se só ao seu próprio computador.
+
+## Mais de um computador {#more-than-one-computer}
+
+Seu celular pode manter mais de um computador, como um em casa e outro no trabalho, e mostra um de cada vez.
+Para adicionar outro, toque no botão do computador à direita da barra superior do celular e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
+O computador que você estava mostrando continua mantido.
+
+Com mais de um mantido, o botão do computador diz o nome do computador mostrado.
+A folha dele lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
+Toque em um, ou pressione Return nele com um teclado, para mostrá-lo.
+O celular nunca troca sozinho: ele fica na sua escolha até você escolher outro.
 
 ## O que ele mostra {#what-it-shows}
 
@@ -74,12 +85,16 @@ Veja [Atualizar e remover o Infinitary](/pt-br/update-and-remove/#your-other-com
 O celular precisa do seu computador acordado, com o Infinitary aberto.
 Se não conseguir alcançá-lo, ele diz “Seu computador está fora de alcance. Verifique se o Infinitary está aberto e se os dois dispositivos estão na mesma rede.”
 
-O celular avisa sobre um novo cartão só enquanto o app está aberto.
+Com as notificações ativadas, seu celular mostra uma notificação para cada novo cartão, mesmo com o Infinitary fechado nele.
+Com mais de um computador mantido, cada um envia as próprias notificações, e a notificação diz o nome do computador de onde veio; tocar nela mostra esse computador e abre o cartão.
+Cada computador continua enviando as notificações enquanto você mostra outro: seu celular deixa para ele um bilhete lacrado pelo retransmissor do Infinitary sempre que a permissão de notificações dele é renovada, e só esse computador consegue ler.
 
 ## Sair ou remover {#leave-or-remove}
 
 Para parar de mostrar seu computador, toque no botão do computador à direita da barra superior do celular e escolha **Sair de** seguido do nome do seu computador.
-O celular esquece o computador.
+O celular esquece esse computador e as notificações dele, e deixa para ele um bilhete lacrado para que ele pare de enviá-las em até um dia, mesmo fora de alcance.
+Quando ele está fora de alcance, **Esquecer** faz o mesmo só no celular.
+Seus outros computadores mantidos continuam: o que você mostrou mais recentemente aparece em seguida e, se não sobrar nenhum, o celular dá as boas-vindas como no início.
 No seu computador, **Remover** no menu do celular em Ajustes → **Dispositivos**, os três pontos na linha dele, o desconecta na hora.
 Para se conectar de novo, crie um novo link.
 

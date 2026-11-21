@@ -114,6 +114,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Reasoning | Razonamiento | |
 | rebase merges, merge commits (the host's settings) | fusiones con cambio de base (rebase), confirmaciones de fusión | Named only as the settings where the project lives, following GitHub's Spanish docs, with "rebase" beside it because that settings page is in English; the app's own action stays "poner al día". |
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
+| relay (Infinitary's push relay) | relé de Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "nota sellada". |
 | Remove (a device) | Quitar | |
 | repo (never said) | proyecto | The app's noun for what work belongs to stays proyecto. |
 | report | informar, informe | "Informó: …". |

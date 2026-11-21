@@ -1,5 +1,5 @@
 ---
-source: 7c4d9925493d8861
+source: 023b6be0be6240d0
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -48,6 +48,9 @@ No GitHub, você digita um código na página do GitHub no seu navegador.
 No GitLab, você pode fazer login no navegador ou colar uma chave, no gitlab.com ou no seu próprio servidor GitLab.
 No Bitbucket, você cria um token de API na sua conta da Atlassian e cola, para projetos no bitbucket.org.
 O formulário da chave diz quais escopos marcar na página da Atlassian.
+Para o seu próprio servidor Bitbucket Data Center, versão 8.19 ou mais recente, você informa o endereço dele e cola um token de acesso HTTP com as permissões Project read e Repository write.
+As mudanças de um projeto do Data Center são oferecidas como solicitações de pull, e a mesclagem só acontece na versão que você aprovou: se alguém fizer push nesse meio-tempo, nada é mesclado e a tarefa avisa.
+No Data Center, ainda não há solicitações de pull em lote, forks nem o acesso próprio da tripulação ao servidor.
 Seus projetos do Bitbucket são listados a partir dos espaços de trabalho de que você faz parte; com muitos, alguns podem não ter sido verificados, e a lista avisa.
 As mudanças de um projeto do Bitbucket são oferecidas como solicitações de pull, como no GitHub e no GitLab; um projeto que você adicionou antes disso funciona do mesmo jeito a partir da próxima tarefa.
 A descrição de uma solicitação de pull do Bitbucket traz a história como texto, e as imagens dela ficam no cartão.

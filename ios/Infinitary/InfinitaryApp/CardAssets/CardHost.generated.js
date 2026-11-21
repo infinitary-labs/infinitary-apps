@@ -106407,8 +106407,11 @@ ${startersHtml()}`;
      * on a host whose merge names no version (docs/forge.md, "Batches of your
      * own"): later passes read how it ended and never send it again.
      * `mergeTask` is the host's own reference to that merge, when it gave one.
+     * `pending` is when a pass first read the host's merge as still running:
+     * from then Settings → Projects shows the wait with Try again, and the
+     * Activity feed said so once. No time decides that the merge ended.
      */
-    unconfirmed: object({ head: string(), mergeTask: string().optional() }).optional(),
+    unconfirmed: object({ head: string(), mergeTask: string().optional(), pending: number().optional() }).optional(),
     /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
     stale: literal(true).optional(),
     /**
@@ -106425,7 +106428,9 @@ ${startersHtml()}`;
      * merges once every other check passed. A fix declared meanwhile goes to
      * the next batch. A combine at a new version drops it.
      */
-    passed: object({ head: string(), checks: array(string()) }).optional()
+    passed: object({ head: string(), checks: array(string()) }).optional(),
+    /** How many times it was held, counted at each fresh hold; absent before its first. */
+    holds: number().int().positive().optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -106471,6 +106476,17 @@ ${startersHtml()}`;
     rebase: boolean(),
     merge: boolean()
   });
+  const finishedBatchSchema = object({
+    number: number().int().positive(),
+    url: string().nullable().optional(),
+    /** When it was first opened (epoch ms). */
+    formed: number(),
+    ended: number(),
+    outcome: _enum(["merged", "closed"]),
+    members: array(object({ taskId: string(), title: string() })),
+    /** How many times it was held while it was open. */
+    holds: number().int().nonnegative()
+  });
   const batchRecordSchema = object({
     line: array(batchChangeSchema),
     open: openBatchSchema.optional(),
@@ -106503,7 +106519,9 @@ ${startersHtml()}`;
      * project's batch gap counts from it (`batchGap` on the project). A held
      * batch combined again by its repair forms no new batch, so it moves nothing.
      */
-    formed: number().optional()
+    formed: number().optional(),
+    /** The batches that ended within `FINISHED_BATCH_KEPT_MS`, oldest first. */
+    finished: array(finishedBatchSchema).optional()
   });
   discriminatedUnion("action", [
     object({ action: literal("try-again"), head: string().min(1) }),
@@ -106528,6 +106546,81 @@ ${startersHtml()}`;
      */
     passed: string().optional(),
     evidence: string()
+  });
+  const batchChecksReadingSchema = object({
+    /** The batch's version the reading is of. */
+    head: string(),
+    /** When the pass read it (epoch ms). */
+    at: number(),
+    passed: number().int().nonnegative(),
+    failed: number().int().nonnegative(),
+    /** Checks that are queued or running. */
+    running: number().int().nonnegative(),
+    /** The failed checks' names, as the host reads them. */
+    failedNames: array(string())
+  });
+  const batchTaskSchema = object({
+    taskId: string(),
+    key: string().nullable(),
+    title: string()
+  });
+  object({
+    repos: array(
+      object({
+        repoId: string(),
+        name: string(),
+        /** The project the repository belongs to, which the window's project focus names. */
+        projectId: string().nullable(),
+        /** Where the project lives, in the host's own name (GitHub), or null when unknown. */
+        place: string().nullable(),
+        /** The project's batch gap in minutes, or null for none. */
+        gap: number().nullable(),
+        /** When the next batch may form under the gap (epoch ms), or null for at once. */
+        nextBatchAt: number().nullable(),
+        line: array(
+          batchTaskSchema.extend({
+            at: number(),
+            /** The task whose approved change it waits on, by key. */
+            afterKey: string().nullable(),
+            /** Declared the held batch's fix. */
+            fix: boolean()
+          })
+        ),
+        open: object({
+          number: number().int().positive().nullable(),
+          url: string().nullable(),
+          since: number(),
+          members: array(batchTaskSchema),
+          hold: object({
+            reason: _enum(["checks", "merge-way", "rules"]),
+            at: number(),
+            checks: array(string()),
+            detail: string().nullable()
+          }).nullable(),
+          /** In the host's own merge queue at its version. */
+          queued: boolean(),
+          /** Its members changed: the next pass combines it again. */
+          stale: boolean(),
+          /** The declared fixes for its hold, by key. */
+          fixKeys: array(string()),
+          /** Its checks as last read at its version; null before the first reading. */
+          checks: batchChecksReadingSchema.nullable()
+        }).nullable(),
+        leftOut: array(
+          batchTaskSchema.extend({
+            reason: string(),
+            /** The change ahead it clashes with, by key. */
+            aheadKey: string().nullable()
+          })
+        ),
+        finished: array(
+          finishedBatchSchema.omit({ members: true, url: true }).extend({
+            url: string().nullable(),
+            members: array(batchTaskSchema)
+          })
+        )
+      })
+    )
   });
   const contributionProjectSchema = strictObject({
     id: number().int().positive(),
@@ -108310,6 +108403,24 @@ ${startersHtml()}`;
     object({
       type: literal("repo_batch"),
       repoId: string()
+    }),
+    /**
+     * A project's open batch's checks read differently, or went with the
+     * batch (docs/forge.md, "The Batches panel"): the Batches panel reads it
+     * again; no feed line. The reading is kept in memory, never on the record.
+     */
+    object({
+      type: literal("batch_checks"),
+      repoId: string()
+    }),
+    /**
+     * Which runbooks are on may have changed: a switch, a copy, an added or
+     * removed runbook, or a built-in turned back on for an offer in use
+     * (docs/runbooks.md, "Panels"). A window reads the runbooks again for the
+     * panels a built-in runbook shows; no feed line.
+     */
+    object({
+      type: literal("runbooks_changed")
     }),
     /**
      * A project's Runs on changed (docs/helper.md, "Runs on"): where its next
@@ -111846,6 +111957,22 @@ ${startersHtml()}`;
         pollMs: 3e4
       },
       description: "The jobs kept running past their task's close: each one's label, computer, account, task and last check."
+    }),
+    // The Batches panel (docs/forge.md, "The Batches panel"): the record moves
+    // on its own event, the checks reading on another, and a project coming,
+    // going or changing how its changes go moves which projects are listed.
+    // A task's key and title come with it; the minute's poll reads a renamed one.
+    "batches.list": entry({
+      channel: "inf:batches:list",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => event.type === "repo_batch" || event.type === "batch_checks" || event.type === "repo_setup" || event.type === "repo_configured" || event.type === "repo_unregistered",
+        // A finished batch leaves Last day a day after it ended, with no event.
+        pollMs: 6e4
+      },
+      // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+      description: "Each project on batched pull requests: the approved changes in line, the open batch with its checks, the changes left out and the batches that ended in the last day."
     }),
     // A delivery is handled when a Firstmate turn ends, which no feed line says.
     "automation.history": entry({

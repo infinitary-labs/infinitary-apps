@@ -1,5 +1,5 @@
 ---
-source: 7c4d9925493d8861
+source: 023b6be0be6240d0
 title: 项目
 description: 如何把项目添加到 Infinitary、让窗口聚焦于一个项目、选择它的改动如何合并，以及如何移除它。
 ---
@@ -48,6 +48,9 @@ description: 如何把项目添加到 Infinitary、让窗口聚焦于一个项�
 对于 GitLab，你可以在浏览器中登录，也可以粘贴一个密钥，适用于 gitlab.com 或你自己的 GitLab 服务器。
 对于 Bitbucket，你要在你的 Atlassian 账户上创建一个 API 令牌并粘贴它，适用于 bitbucket.org 上的项目。
 密钥表单会写明要在 Atlassian 页面上勾选哪些权限范围。
+对于你自己的 Bitbucket Data Center 服务器（8.19 或更新版本），你输入它的地址，并粘贴一个带有 Project read 和 Repository write 权限的 HTTP 访问令牌。
+Data Center 项目的改动以拉取请求的形式提交，并且只会在你批准的版本上合并：如果有人在此期间推送，就什么都不会合并，任务会说明这一点。
+在 Data Center 上，批量拉取请求、复刻以及船员自己对服务器的访问暂时还不支持。
 你的 Bitbucket 项目从你所属的工作区中列出；工作区很多时，可能有一些没有被检查到，列表会说明这一点。
 Bitbucket 项目的改动以拉取请求的形式提交，与 GitHub 和 GitLab 一样；在此之前添加的项目，从它的下一个任务起也是如此。
 Bitbucket 拉取请求的描述以文字形式带上改动说明，图片则留在卡片上。

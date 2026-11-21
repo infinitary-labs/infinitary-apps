@@ -129,6 +129,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | recording (the file) | 録画 | A demo's recording; a voice recording in progress is 録音中. |
 | redacted (decision records) | 個人情報を伏せた | Plain phrase; 墨消し and リダクト read as jargon. |
 | Reduce motion (macOS) | 視差効果を減らす | macOS's own Japanese setting name, used only in the path to it. |
+| relay (Infinitary's push relay) | Infinitary の中継サーバー | It passes sealed notifications and notes it cannot read; a sealed note is 「封をしたメッセージ」. |
 | Remove (a device) | 削除 | At the computer where the first mate lives. |
 | report | 報告 | 「報告：{summary}」. |
 | repository (one of a project's) | リポジトリ | 「リポジトリを追加」「2 個のリポジトリ」. Names one of a project's repositories, or GitHub's own; what work belongs to stays プロジェクト. |

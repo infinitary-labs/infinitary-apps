@@ -220,5 +220,13 @@
     "many": "Se usó un restablecimiento guardado de {account}. Quedan {count}.",
     "other": "Se usó un restablecimiento guardado de {account}. Quedan {count}."
   },
-  "accountsSavedResetUsedChecking": "Se usó un restablecimiento guardado de {account}. Infinitary vuelve a consultar su asignación."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "one": "Infinitary usó un restablecimiento guardado de {account} para que el trabajo en espera continúe. Queda {count}.",
+    "many": "Infinitary usó un restablecimiento guardado de {account} para que el trabajo en espera continúe. Quedan {count}.",
+    "other": "Infinitary usó un restablecimiento guardado de {account} para que el trabajo en espera continúe. Quedan {count}."
+  },
+  "accountsSavedResetUsedAutoChecking": "Infinitary usó un restablecimiento guardado de {account} para que el trabajo en espera continúe. Vuelve a consultar la asignación.",
+  "accountsSavedResetUsedChecking": "Se usó un restablecimiento guardado de {account}. Infinitary vuelve a consultar su asignación.",
+  "accountsUseSavedResetsSignInFirst": "Codex todavía no inició sesión en {account}, así que «Usar restablecimientos guardados por sí solo» sigue desactivado. Actívalo en la fila de la cuenta en Ajustes para iniciar sesión en Codex."
 }

@@ -392,6 +392,7 @@ describe("the core, driven with no Electron in the process", () => {
       "forge-sign-out",
       "account-keep-going",
       "account-use-reset",
+      "account-use-saved-resets",
       "account-disconnect",
       "projects-folder",
     ]);

@@ -328,6 +328,17 @@ export type CoreServices = {
     accountId: string,
     options: { deviceId?: string; bridge?: AuthInteractionBridge },
   ) => Promise<SavedResetResult>;
+  /**
+   * An account's Use saved resets on their own (docs/quota.md, "Saved
+   * resets on their own"), saved where the account is: with `deviceId` on
+   * that computer. Turning it on signs Codex in first when it must, through
+   * the bridge; without one it is refused with words saying where.
+   */
+  setUseSavedResets: (
+    accountId: string,
+    on: boolean,
+    options: { deviceId?: string; bridge?: AuthInteractionBridge },
+  ) => Promise<void>;
   /** Whether Codex keeps a sign-in for this Mac's own account, so a use needs no browser. */
   codexSignedIn: (accountId: string) => boolean;
   settings: SettingsStore;

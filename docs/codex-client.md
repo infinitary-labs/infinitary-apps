@@ -64,6 +64,8 @@ The home shows that use under the account's row beside any sign-in there: neithe
 Cancel under the row asks that computer to stop and keeps the use until that computer says how it ended, and a reconnect while it runs ends it as not known whether a reset was used, since trying again asks about the same reset.
 A computer without the change, or out of reach, is offered no Use a saved reset on its run-out card, and a press that reaches its row anyway ends under the account's row saying why (`DeviceSignIns.redeemSavedReset`).
 The window asks with `inf:accounts:use-saved-reset` (`accounts.redeemSavedReset`), the first mate with the `account-use-reset` catalog line, and a card with the `use-saved-reset` host operation (`docs/quota.md`, "Saved resets").
+Infinitary asks on its own, for an account whose Use saved resets on their own is on, through the same `SavedResets.use` with no way to show a sign-in (`docs/quota.md`, "Saved resets on their own").
+Turning that switch on while Codex is not signed in to the account runs steps 1 to 4 and closes the app-server, using nothing (`signInForSavedResets`).
 
 ## Signing out
 

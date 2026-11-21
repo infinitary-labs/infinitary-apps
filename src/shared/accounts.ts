@@ -40,6 +40,12 @@ export const accountViewSchema = z.object({
    * account keeps serving on the credits set up with its provider. Absent is off.
    */
   keepGoingOnCredits: z.boolean().optional(),
+  /**
+   * Use saved resets on their own (docs/quota.md "Saved resets on their
+   * own"): with work waiting on its spent Codex allowance, Infinitary may
+   * use one of its saved resets without a click. Absent is off.
+   */
+  useSavedResets: z.boolean().optional(),
   createdAt: z.number(),
   lastConnectedAt: z.number().optional(),
   /**

@@ -21,6 +21,7 @@ type AccountHandlers = {
  */
 export const CHANGES_THERE: Partial<Record<string, number>> = {
   "inf:accounts:keep-going": 2,
+  "inf:accounts:use-saved-resets": 2,
   "inf:accounts:rename": 2,
   "inf:accounts:set-enabled": 2,
   "inf:accounts:pin": 2,

@@ -238,7 +238,7 @@ The Codex usage reading's `rate_limit_reset_credits` carries how many the accoun
 A reading without a count is unknown, never zero, and the row then carries no `savedResets`.
 OpenAI's own Codex client reads only the held count, so what decides whether a reset applies now is the provider's, read from the applicable count as sent: a reading may hold one that does not apply yet.
 It is a fact beside the windows, like credits: it never raises a window, and routing, the account pick and the first mate's pause read nothing from it.
-Infinitary uses one only when the captain chooses Use a saved reset, and then through the Codex CLI the person installed, never by calling ChatGPT itself (`docs/codex-client.md`); the provider's own page (`SAVED_RESETS_PAGE`, `https://chatgpt.com/settings/usage` for Codex) stays the other way.
+Infinitary uses one only when the captain chooses Use a saved reset, or on its own for an account whose Use saved resets on their own is on ("Saved resets on their own" below), and then through the Codex CLI the person installed, never by calling ChatGPT itself (`docs/codex-client.md`); the provider's own page (`SAVED_RESETS_PAGE`, `https://chatgpt.com/settings/usage` for Codex) stays the other way.
 
 - The Subscriptions row says the held count in one line under its meters, with the site where one is used (`savedResetsLine` in `src/renderer/src/settings/subscriptionsWords.ts`); none held, or an unknown count, says nothing.
 - While a saved reset applies now (`savedResetsNow`), the row's menu offers Use a saved reset (`savedResetItem` in `src/renderer/src/settings/SubscriptionsTab.tsx`), on this computer's accounts and on each computer that runs work's own (`docs/helper.md`, "Its own sign-ins").
@@ -250,6 +250,28 @@ Infinitary uses one only when the captain chooses Use a saved reset, and then th
 - What the use came to is one feed line naming the account: used, with how many are left when Codex says; nothing to reset, since no allowance it covers was spent; or none left (`savedResetLine` in `src/core/codex/savedResets.ts`).
   After a use the allowance is read again at once (`demand`), and the account's crew run-out card is taken down.
 - A home sends the button only to a view that lists `use-saved-reset` among its contract changes, and leaves it off every card it pushes or answers to an older view (`readsSavedReset`, `withoutUnreadActions` in `src/core/connection/taskAllow.ts`); that view keeps the body's link to the provider's page.
+
+### Saved resets on their own
+
+INF-5478's plan, piece 2.
+Each Codex account carries a switch, Use saved resets on their own, off until the person turns it on (`AccountRecord.useSavedResets`, saved on the computer that holds the account; `AccountVault.setUseSavedResets` refuses any other provider's account).
+With it on, Infinitary may use one of the account's saved resets without a click, only when work waits on its spent allowance and no account at that level has room.
+Accounts with allowance left come first.
+A saved reset is weighed as work starts on credits, not before it: an account that keeps going on credits serves that work until the question ends, the reset is used and a new reading shows the allowance back.
+
+- The moment is a committed crew decision that waits or drops a level on the account's spent allowance (`RoutePreview.spentAt`), or that keeps going on its credits (`RoutePreview.creditsAt`), and the first mate's ladder once no sibling account has room (`savedResetsSpent` in `FirstmateSeat`).
+  There the seat either serves the turn on credits at once, when its account keeps going on credits, without waiting for the question, or pauses on the spent allowance until a higher reading resumes it.
+- Whether a reset beats waiting for the refill is a judgment, so the `saved-reset` decision use asks it as a choice between use and wait (`AutoSavedResets` in `src/core/codex/autoSavedResets.ts`; `docs/decision-models.md`, "The uses").
+  Its facts are the account's plan, how much of each allowance is left and how many hours until it refills, how many saved resets it holds and how many apply now, and which work waits.
+- It is asked once per spent allowance of an account, like `creditsOffers`; a reading that shows the allowance back above zero lets it be asked again the next time the account is spent.
+- An abstention, a failed question, the use switched off, or the account's switch off all mean wait: nothing is used and the run-out card keeps its Use a saved reset button.
+- A use goes through the same path as Use a saved reset (`SavedResets.use`), and its feed line says Infinitary used a saved reset on the account so waiting work could continue, with how many are left when Codex says (`savedResetLine`).
+  It never shows a sign-in: a use that needs Codex's sign-in fails, says why in the feed and leaves the card's button.
+- The switch sits in the account row's menu (`autoResetsItem`), and the run-out card offers it as a secondary action after Use a saved reset while it is off (`autoResetsAction`, the `use-saved-resets` host operation).
+  Turning it on while Codex is not signed in to the account starts Codex's sign-in on the row first and uses nothing; the switch stays off if the sign-in does not finish.
+  A card's click turns it on at once for this computer's account that Codex is already signed in to, and otherwise opens Settings → Intelligence, whose row starts it with the sign-in (`pendingUseSavedResets`).
+- The catalog line `account-use-saved-resets` (`inf:accounts:use-saved-resets`) is at the own-words tier and takes a `deviceId` for a computer that runs work's account; turning it on there with Codex not signed in is refused with words that say to turn it on from the account's row.
+- A computer that runs work is asked with the `inf:sign-ins:use-saved-resets` order, sent only to a computer that lists the `auto-saved-resets` change (`DeviceSignIns.setUseSavedResets`); a view that does not list it gets no switch action on the run-out card (`readsAutoSavedResets`).
 
 ## Amazon Bedrock refusals
 

@@ -208,7 +208,9 @@
 "accountsSavedResetSignInNotice" = "請在瀏覽器中登入 %1$@ 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。";
 "accountsSavedResetUnclear" = "Codex 沒有說明 %1$@ 的重設是否已使用。再試一次只會查詢同一次重設，絕不會使用第二次。";
 "accountsSavedResetUnverified" = "Infinitary 無法確認 Codex 登入的是與 %1$@ 相同的 ChatGPT 帳號，因此沒有使用重設。";
+"accountsSavedResetUsedAutoChecking" = "為讓等待中的工作繼續，Infinitary 使用了 %1$@ 的一次已儲存的重設。它正在重新檢查額度。";
 "accountsSavedResetUsedChecking" = "已使用 %1$@ 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。";
+"accountsUseSavedResetsSignInFirst" = "Codex 尚未登入 %1$@，因此「自動使用已儲存的重設」保持關閉。請在設定中該帳號那一列開啟它，讓 Codex 登入。";
 "activityPanelLinesLabel" = "動態項目";
 "attachCancelled" = "已取消 %1$@";
 "automationEventsSkipped" = "已略過的事件";
@@ -463,6 +465,7 @@
 "cardThreadWrittenByAfterClose" = "由 %1$@ 撰寫，於卡片關閉後";
 "cardTradeoffTable" = "以表格檢視取捨";
 "cardUseSavedReset" = "使用已儲存的重設";
+"cardUseSavedResets" = "自動使用已儲存的重設";
 "closeYourFirstMate" = "你的大副：「%1$@」";
 "closedDropped" = "%1$@ 已放棄";
 "closedFinished" = "%1$@ 已完成";
@@ -2429,6 +2432,8 @@
 "settingsCostLimitSwitchLabel" = "任務花更多錢前先問過你";
 "settingsCostLimitTitle" = "任務花費超過此金額前先問過你";
 "settingsDecisionUseKindReads" = "每項新任務都會用適合這項工作的模型執行，簡單的任務因此更省方案額度。它會讀取任務的標題、目標和你的原話，以及所屬專案和相關工作。";
+"settingsDecisionUseSavedResetName" = "使用已儲存的重設還是等待";
+"settingsDecisionUseSavedResetReads" = "當工作在等待一個開啟了「自動使用已儲存的重設」的 Codex 帳號時，它權衡是使用一次已儲存的重設，還是等待額度恢復。它讀取該帳號的方案、每項額度的剩餘量和恢復時間、持有的已儲存的重設次數，以及等待中的工作。";
 "settingsDecisionsActions" = "決定模型動作";
 "settingsDecisionsAnswerWith" = "用 %1$@ 回覆決定";
 "settingsDecisionsAuto" = "自動 · 等級中最便宜的模型";
@@ -3285,8 +3290,11 @@
 "settingsSubscriptionsMenuResume" = "繼續";
 "settingsSubscriptionsMenuStopKeepingGoing" = "停止花費點數";
 "settingsSubscriptionsMenuStopPreferring" = "不再優先用於船員工作";
+"settingsSubscriptionsMenuStopUsingResets" = "停止自動使用已儲存的重設";
 "settingsSubscriptionsMenuUseReset" = "使用已儲存的重設";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex 登入後使用最先到期的那一次";
+"settingsSubscriptionsMenuUseResets" = "自動使用已儲存的重設";
+"settingsSubscriptionsMenuUseResetsDetail" = "僅在有工作等待且沒有帳號還有額度時";
 "settingsSubscriptionsNoReader" = "Infinitary 不會讀取這個供應商的方案額度。";
 "settingsSubscriptionsNoReaderKey" = "已設定 %1$@ · Infinitary 不會讀取這個供應商的方案額度。";
 "settingsSubscriptionsNotChosenYet" = "尚未選擇";

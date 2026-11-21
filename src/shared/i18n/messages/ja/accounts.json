@@ -216,5 +216,11 @@
     "plural": "count",
     "other": "{account} の保存済みのリセットを使いました。残りは {count} 回分です。"
   },
-  "accountsSavedResetUsedChecking": "{account} の保存済みのリセットを使いました。Infinitary が利用枠を読み取り直しています。"
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "other": "待っている作業を続けるため、Infinitary が {account} の保存済みのリセットを使いました。残りは {count} 回分です。"
+  },
+  "accountsSavedResetUsedAutoChecking": "待っている作業を続けるため、Infinitary が {account} の保存済みのリセットを使いました。利用枠を読み取り直しています。",
+  "accountsSavedResetUsedChecking": "{account} の保存済みのリセットを使いました。Infinitary が利用枠を読み取り直しています。",
+  "accountsUseSavedResetsSignInFirst": "Codex はまだ {account} にサインインしていないため、「保存済みのリセットを自動で使う」はオフのままです。設定でこのアカウントの行からオンにすると、Codex がサインインします。"
 }

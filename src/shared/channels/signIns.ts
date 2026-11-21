@@ -223,6 +223,18 @@ export const signInChannels = {
     request: z.tuple([z.string(), useSavedResetOptionsSchema.optional()]),
     response: savedResetResultSchema,
   },
+  // Use saved resets on their own, on or off (docs/quota.md, "Saved resets
+  // on their own", `auto-saved-resets`): turning it on with `signIn` lets
+  // Codex sign in to the account first, its link and paste-back prompt
+  // shown as a sign-in's; with `deviceId`, the account is that computer
+  // that runs work's own and its switch is saved there.
+  "inf:accounts:use-saved-resets": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string(), z.boolean(), useSavedResetOptionsSchema.optional()]),
+    response: okSchema,
+  },
   "inf:accounts:pin": {
     effect: "change",
     surface: "core",

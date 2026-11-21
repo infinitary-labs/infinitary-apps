@@ -7,7 +7,7 @@ import { connectClient } from "../../../tests/helpers/connectionClient";
 import { home } from "../../../tests/helpers/connectionHome";
 import { eventScreenOfferCard } from "../decisions/eventScreenOffer";
 import type { CoreDispatch } from "../dispatcher";
-import { firstmatePauseCard } from "../orchestrator/hostCards";
+import { creditsOfferCard, firstmatePauseCard, hostCard } from "../orchestrator/hostCards";
 import { integrationApprovalCard } from "../orchestrator/integrationApprovalCard";
 import { bringCardBody } from "../secrets/bringCard";
 import { frameWithoutTaskAllow, readsTaskAllow } from "./taskAllow";
@@ -351,4 +351,43 @@ it("sends a card's Use a saved reset only to views that list its change", async 
   ).toEqual(without);
   expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
   for (const view of [old, phone, current]) await view.close();
+});
+
+// INF-5478's plan, piece 2: an older view's host does not know the
+// use-saved-resets operation, so the home sends that button only to a view
+// that lists `auto-saved-resets`; the card's other buttons still go.
+it("sends a run-out card's Use saved resets on their own only to views that list its change", async () => {
+  const card = cardSchema.parse({
+    ...hostCard(
+      creditsOfferCard({
+        accountId: "codex-work",
+        name: "Codex · Work",
+        resetsAt: "9:00 PM",
+        savedResets: { provider: "codex", count: 2 },
+        offerAutoResets: true,
+      }),
+    ),
+    createdAt: 1000,
+  });
+  const ids = (value: unknown) =>
+    (value as { actions: { id: string }[] }).actions.map((action) => action.id);
+  expect(ids(card)).toEqual(["use-saved-reset", "use-saved-resets"]);
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:cards:list") return [card];
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const old = await connectClient(grant, {
+    protocolVersion: PROTOCOL_VERSION,
+    changes: ["use-saved-reset"],
+  });
+  const current = await connectClient(grant, {
+    protocolVersion: PROTOCOL_VERSION,
+    changes: ["use-saved-reset", "auto-saved-resets"],
+  });
+  expect(ids((await old.invoke("inf:cards:list", []))[0])).toEqual(["use-saved-reset"]);
+  expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+  for (const view of [old, current]) await view.close();
 });

@@ -265,6 +265,27 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(seat.prompts[2]).toContain("check the build");
   });
 
+  // INF-5478's plan, piece 2: with no sibling account that has room, the
+  // seat weighs a saved reset for its spent account before it pauses.
+  it("a spent allowance with no sibling weighs a saved reset for that account as it pauses", async () => {
+    const weighed: string[] = [];
+    const t = await claudeLoginSeat({ savedResetsSpent: (accountId) => weighed.push(accountId) });
+    await t.agent.converse("first");
+    const seat = t.sessions[0] as FakeSession;
+    seat.emitTurnEnd("Hi.");
+    seat.resolveNextPrompt();
+    await tick();
+    expect(weighed).toEqual([]);
+    t.agent.notifyOp(
+      { facts: { kind: "scheduled", prompt: "check the build", catchUp: false } },
+      "scheduled",
+    );
+    await tick();
+    await cutOffTurn(seat, { class: "no_headroom", resetsAt: Date.now() + 3 * 60 * 60_000 });
+    expect(t.cards().some((entry) => entry.id === "card-fm-no-headroom")).toBe(true);
+    expect(weighed).toContain(CLAUDE_ACCOUNT);
+  });
+
   // INF-1079, the captain: "it would be great to have a button here to
   // trigger a recheck" after switching Claude accounts elsewhere.
   it("a spent allowance's Recheck reads it again: still spent, the card comes back; another login's room answers the kept words once", async () => {

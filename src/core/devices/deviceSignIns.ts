@@ -57,6 +57,8 @@ import type { WorkDevices } from "../placed/workDevices";
 const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
 /** Using a computer's own account's saved Codex reset there (`use-saved-reset.md`). */
 const USE_SAVED_RESET = contractChange("use-saved-reset");
+/** A computer that takes Use saved resets on their own for its own accounts (`auto-saved-resets.md`). */
+const AUTO_SAVED_RESETS = contractChange("auto-saved-resets");
 /** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
 const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
 
@@ -113,6 +115,11 @@ export class DeviceSignIns {
   private readonly running = new Map<string, Running>();
   /** Each saved-reset use waiting for its end, by its flow's id. */
   private readonly uses = new Map<string, (step: Extract<SignInStep, { kind: "ended" }>) => void>();
+  /** Each Use saved resets on their own switch turning on there, waiting for its end: it uses no reset. */
+  private readonly switching = new Map<
+    string,
+    (step: Extract<SignInStep, { kind: "ended" }>) => void
+  >();
   private readonly reading = new Map<string, Promise<boolean>>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
@@ -137,6 +144,7 @@ export class DeviceSignIns {
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         keepGoing: this.takesKeepGoing(device.id),
         ...(this.takesSavedReset(device.id) ? { savedReset: true } : {}),
+        ...(this.takesAutoSavedResets(device.id) ? { autoSavedResets: true } : {}),
         accountSettings: this.takesAccountSettings(device.id),
         signIns: this.narrowed(said?.signIns ?? null),
         flows: [...this.running.values()]
@@ -517,7 +525,10 @@ export class DeviceSignIns {
     return accountWords(account ?? { providerId: running.providerId, label: "" });
   }
 
-  /** A use refused before it was sent, its reason left under the account's row as its end. */
+  /**
+   * A use refused before it was sent, or the Use saved resets on their own
+   * switch refused or failed, its reason left under the account's row as its end.
+   */
   private refusedUse(
     deviceId: string,
     account: { id: string; providerId: string },
@@ -540,6 +551,85 @@ export class DeviceSignIns {
   /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
   canUseSavedReset(deviceId: string): boolean {
     return this.takesSavedReset(deviceId) && this.options.work.inReach(deviceId);
+  }
+
+  /**
+   * Turns that computer's own Codex account's Use saved resets on their own
+   * on or off, saved there (docs/quota.md, "Saved resets on their own").
+   * Turning it on with `signIn` lets Codex there sign in first, its link and
+   * paste-back prompt shown under the account's row as a sign-in's are.
+   */
+  async setUseSavedResets(
+    deviceId: string,
+    accountId: string,
+    on: boolean,
+    signIn: boolean,
+  ): Promise<{ ok: true }> {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    const account = this.said
+      .get(deviceId)
+      ?.signIns?.accounts.find((entry) => entry.id === accountId);
+    if (!account)
+      throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    // A refusal, or a turn-off that failed, ends under the account's row, saying why.
+    if (!this.takesAutoSavedResets(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`Update Infinitary on ${who} to use saved resets on their own there.`),
+      );
+    if (!this.options.work.inReach(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`${who} is out of reach, so nothing was sent.`),
+      );
+    const signInId = randomBytes(16).toString("base64url");
+    // Turning it off signs nothing in: that computer saves it and answers, with no flow under the row.
+    if (!on) {
+      try {
+        await this.options.work.ask(deviceId, "inf:sign-ins:use-saved-resets", [
+          { signInId, accountId, on, signIn: false },
+        ]);
+      } catch (error) {
+        throw this.refusedUse(deviceId, account, reachable(error, who));
+      }
+      await this.refresh(deviceId);
+      return { ok: true };
+    }
+    const ended = new Promise<Extract<SignInStep, { kind: "ended" }>>((resolve) =>
+      this.switching.set(signInId, resolve),
+    );
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: account.providerId,
+      accountId,
+      target: "account",
+      phase: "running",
+    });
+    try {
+      await this.options.work.ask(deviceId, "inf:sign-ins:use-saved-resets", [
+        { signInId, accountId, on, signIn },
+      ]);
+    } catch (error) {
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, who).message,
+      });
+    }
+    const step = await ended;
+    if (step.outcome !== "signed-in")
+      throw new Error(step.error ?? `Turning it on ${who} stopped before it ended.`);
+    await this.refresh(deviceId);
+    return { ok: true };
+  }
+
+  /** Whether that computer takes `inf:sign-ins:use-saved-resets` (`auto-saved-resets.md`). */
+  takesAutoSavedResets(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, AUTO_SAVED_RESETS);
   }
 
   /** Whether that computer takes `inf:sign-ins:use-saved-reset` (`use-saved-reset.md`). */
@@ -854,10 +944,13 @@ export class DeviceSignIns {
     else this.running.set(signInId, { ...identity, phase: "ended", ended: step });
     this.tell(signInId, running, step);
     const use = this.uses.get(signInId);
+    const turned = this.switching.get(signInId);
     this.uses.delete(signInId);
+    this.switching.delete(signInId);
     use?.(step);
-    // A saved reset used there signed nothing new in; its own line says what it came to.
-    if (step.outcome === "signed-in" && !use)
+    turned?.(step);
+    // A saved reset used, or the switch turned on, there signed nothing new in; each says what it came to.
+    if (step.outcome === "signed-in" && !use && !turned)
       this.options.broadcastEvent({
         type: "device_signed_in",
         deviceId: running.deviceId,

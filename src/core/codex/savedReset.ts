@@ -94,21 +94,52 @@ export async function redeemSavedReset(
   reach: SavedResetReach,
   use: SavedResetUse,
 ): Promise<SavedResetResult> {
+  return inHome(reach, use, (home) => redeemIn(home, reach, use));
+}
+
+/**
+ * Signs Codex in as the account when it keeps no sign-in for it yet, and
+ * checks it is the same ChatGPT account, using nothing: what turning on
+ * Use saved resets on their own asks first (docs/quota.md, "Saved resets
+ * on their own"). Without a bridge, an account Codex is not signed in to is
+ * refused with words saying where to sign in.
+ */
+export async function signInForSavedResets(
+  reach: SavedResetReach,
+  use: SavedResetUse,
+): Promise<void> {
+  await inHome(reach, use, async (home) => {
+    const { server } = await openVerified(home, reach, use);
+    server.close();
+  });
+}
+
+/** Runs one use in the account's Codex home, refusing a second while one runs there. */
+async function inHome<T>(
+  reach: SavedResetReach,
+  use: SavedResetUse,
+  work: (home: string) => Promise<T>,
+): Promise<T> {
   const home = reach.home(use.accountId);
   if (usingHomes.has(home)) throw new Error(m.accountsSavedResetBusy({ account: use.account }));
   usingHomes.add(home);
   try {
-    return await redeemIn(home, reach, use);
+    return await work(home);
   } finally {
     usingHomes.delete(home);
   }
 }
 
-async function redeemIn(
+/**
+ * Starts Codex in the account's home, signed in as the same ChatGPT account
+ * Infinitary's own sign-in names, with its allowance as Codex read it. The
+ * caller closes the server; a refusal closes it here.
+ */
+async function openVerified(
   home: string,
   reach: SavedResetReach,
   use: SavedResetUse,
-): Promise<SavedResetResult> {
+): Promise<{ server: CodexAppServer; limits: RateLimits }> {
   const cli = await reach.check();
   if (cli.state === "missing")
     throw new Error(
@@ -162,6 +193,20 @@ async function redeemIn(
       await server.request("account/logout", undefined, ANSWER_WITHIN_MS).catch(() => undefined);
       throw new Error(m.accountsSavedResetOtherAccount({ account: use.account }));
     }
+    return { server, limits };
+  } catch (error) {
+    server.close();
+    throw error;
+  }
+}
+
+async function redeemIn(
+  home: string,
+  reach: SavedResetReach,
+  use: SavedResetUse,
+): Promise<SavedResetResult> {
+  const { server, limits } = await openVerified(home, reach, use);
+  try {
     const kept = reach.attempt.read(use.accountId);
     const summary = limits.rateLimitResetCredits ?? undefined;
     if (!kept && summary && countOf(summary.availableCount) === 0)

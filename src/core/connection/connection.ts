@@ -112,6 +112,7 @@ const LOCAL_DOOR_NAME = "Infinitary local door";
 import { Outbox } from "./outbox";
 import {
   type ActionReads,
+  readsAutoSavedResets,
   readsEventScreenOffer,
   readsKeepGoing,
   readsSavedReset,
@@ -1122,6 +1123,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         eventScreen: readsEventScreenOffer(hello.changes, hello.system),
         secretBring: readsSecretBring(hello.changes),
         savedReset: readsSavedReset(hello.changes),
+        autoSavedResets: readsAutoSavedResets(hello.changes),
       };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
@@ -1381,6 +1383,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           eventScreen: false,
           secretBring: false,
           savedReset: false,
+          autoSavedResets: false,
         },
         streamed: "none",
         readings: "none",

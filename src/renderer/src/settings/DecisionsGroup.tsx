@@ -327,8 +327,8 @@ export function DecisionsGroup({
       <ConsentDialog
         title={
           approval
-            ? DECISION_USES_WORDS.allowTitle(use.name, approval.name)
-            : DECISION_USES_WORDS.turnOnNamed(use.name)
+            ? DECISION_USES_WORDS.allowTitle(nameOf(use), approval.name)
+            : DECISION_USES_WORDS.turnOnNamed(nameOf(use))
         }
         facts={[
           ...(approval ? rows(approval.consent) : []),
@@ -510,7 +510,7 @@ function DecisionUseRow({
       style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>{use.name}</div>
+        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>{nameOf(use)}</div>
         <div
           style={{
             fontSize: "var(--text-xs)",
@@ -518,7 +518,7 @@ function DecisionUseRow({
             lineHeight: "var(--leading-body)",
           }}
         >
-          {use.id === "kind" ? m.settingsDecisionUseKindReads() : use.reads}
+          {readsOf(use)}
         </div>
         {approvalFor && (
           <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
@@ -529,7 +529,7 @@ function DecisionUseRow({
       <Switch
         checked={locked || use.on}
         onChange={onSwitch}
-        aria-label={use.name}
+        aria-label={nameOf(use)}
         off={locked}
         note={locked ? DECISION_USES_WORDS.locked : undefined}
       />
@@ -605,4 +605,16 @@ function DecisionAnswerer({
       <RowMenu label={m.settingsDecisionsActions()} items={items} size={24} />
     </div>
   );
+}
+
+/** A use's name in the person's language, where the catalog holds it. */
+function nameOf(use: Pick<DecisionUseView, "id" | "name">): string {
+  return use.id === "saved-reset" ? m.settingsDecisionUseSavedResetName() : use.name;
+}
+
+/** What a use reads, in the person's language where the catalog holds it. */
+function readsOf(use: Pick<DecisionUseView, "id" | "reads">): string {
+  if (use.id === "kind") return m.settingsDecisionUseKindReads();
+  if (use.id === "saved-reset") return m.settingsDecisionUseSavedResetReads();
+  return use.reads;
 }

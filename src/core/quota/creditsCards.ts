@@ -33,6 +33,12 @@ export type CreditsCardsOptions = {
     /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
     canUseSavedReset: (deviceId: string) => boolean;
   };
+  /**
+   * Whether a run-out card may offer to turn on the account's Use saved
+   * resets on their own (docs/quota.md): it is off, and where it is the
+   * switch can be turned on. Absent offers it nowhere.
+   */
+  offersAutoResets?: (accountId: string, deviceId?: string) => boolean;
   cards: {
     raiseHostCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => unknown;
     withdrawHostCard: (id: string, reason: string) => void;
@@ -71,7 +77,9 @@ export class CreditsCards {
         this.options.onHere,
         this.options.now(),
       ))
-        this.options.cards.raiseHostCard(creditsOfferCard(offer));
+        this.options.cards.raiseHostCard(
+          creditsOfferCard({ ...offer, ...this.autoOffer(offer, offer.accountId) }),
+        );
       return;
     }
     const where = this.options.computers.placeOf(deviceId)?.where;
@@ -89,7 +97,11 @@ export class CreditsCards {
       const shown: CreditsOffer = resets ? offer : rest;
       if (!shown.credits && !shown.savedResets) continue;
       this.options.cards.raiseHostCard(
-        creditsOfferCard({ ...shown, computer: { deviceId, where } }),
+        creditsOfferCard({
+          ...shown,
+          ...this.autoOffer(shown, shown.accountId, deviceId),
+          computer: { deviceId, where },
+        }),
       );
     }
   }
@@ -115,6 +127,17 @@ export class CreditsCards {
       this.watchThere.set(deviceId, watch);
     }
     for (const text of watch.observe(snapshot, this.options.now()).lines) this.options.note(text);
+  }
+
+  /** The card's offer to turn on Use saved resets on their own, beside a saved reset it offers. */
+  private autoOffer(
+    offer: CreditsOffer,
+    accountId: string,
+    deviceId?: string,
+  ): { offerAutoResets?: true } {
+    return offer.savedResets && this.options.offersAutoResets?.(accountId, deviceId)
+      ? { offerAutoResets: true }
+      : {};
   }
 
   private offeredOn(deviceId: string): Set<string> {

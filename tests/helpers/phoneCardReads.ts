@@ -16,7 +16,8 @@ export const PHONE_BESIDE_CARD_TITLE = "Tasks on the record, beside";
  * answer on closed cards: "Only while the card is open. Past cards keep what the author wrote, but a closed card stops
  * updating."
  */
-export function phoneCardReadControls(core: Core) {
+/** `queries`: builds the test home's query process, which the card's `sql` read and the count run in. */
+export function phoneCardReadControls(core: Core, queries: () => Promise<void>) {
   const cards = core.services.supervisor.cards;
   /** Each live card's crewmate task and, once put up, its card. */
   const live = {
@@ -109,6 +110,7 @@ export function phoneCardReadControls(core: Core) {
   return {
     /** Puts up the live card as the one card on the stage, with every other card put away. */
     async card() {
+      await queries();
       for (const card of await core.dispatch("inf:cards:list", []))
         await core.dispatch(
           card.noteDone && !card.noteDone.closesTask ? "inf:cards:note-done" : "inf:cards:close",

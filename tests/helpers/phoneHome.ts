@@ -89,6 +89,7 @@ import {
 import { phoneTakeOverControls } from "./phoneTakeOver";
 import { seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
+import { bundleSqlProcess } from "./sqlProcessBundle";
 import { type SshServer, startSshServer } from "./sshServer";
 
 /** INF-3881: the map part as the Advanced architecture runbook ships it, which a card copies whole. */
@@ -204,8 +205,17 @@ export async function startPhoneHome(
   // INF-3830 piece 2: the panel library this checkout builds, which the computer answers the phone as its own build's.
   // Only the panels part asks for it, so its controls build it there, before the computer first reads it.
   const frameLib = { dir: join(root, "frame-lib"), pins: {} as Record<string, string> };
+  // INF-5531 piece 2: the `sql` read's query process, the core's own entry built as the app builds it. Only the
+  // cards-reads part asks for it, so its controls build it there, before a card first reads the record.
+  let sqlEntry: string | undefined;
   const core = await startCore({
     frameLib,
+    sqlProcess: {
+      spawn: () => {
+        if (!sqlEntry) throw new Error("The phone test home built no query process for this part");
+        return forkChildProcess(sqlEntry).spawn();
+      },
+    },
     // A panel's background work runs in the real panel process, as in the app.
     panelProcess: forkChildProcess(
       join(import.meta.dirname, "..", "..", "src", "core", "panels", "panelProcess.ts"),
@@ -242,7 +252,9 @@ export async function startPhoneHome(
   const google = phoneGoogleControls(core);
   const settingsRules = options.settings ? await seedPhoneAutomations(core) : {};
   const panels = phonePanelControls(core, frameLib);
-  const cardReads = phoneCardReadControls(core);
+  const cardReads = phoneCardReadControls(core, async () => {
+    sqlEntry ??= await bundleSqlProcess();
+  });
   const readings = {
     cards: 0,
     feed: 0,

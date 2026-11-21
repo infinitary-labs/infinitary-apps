@@ -34,10 +34,11 @@ export type AskEndingHost = {
    */
   seenCards: (taskId: string) => readonly { cardId: string; at: number }[];
   /**
-   * Whether a response request still waits for its answer: open, or answered
-   * with the answer not yet served to the first mate. Absent, none waits.
+   * Whether a response request still waits for its answer: `pending` while
+   * open, `unread` once answered with the answer not yet served to the first
+   * mate (`InboxStore.requestOpen`). Absent, none waits.
    */
-  requestOpen?: (requestId: string) => boolean;
+  requestOpen?: (requestId: string) => "pending" | "unread" | undefined;
 };
 
 /** A root message with every message that joined its work. */
@@ -111,7 +112,7 @@ export function askEndingOf(
     shownAt(card: Card): number;
     seenCards(taskId: string): readonly { cardId: string; at: number }[];
   },
-  requestOpen?: (requestId: string) => boolean,
+  requestOpen?: (requestId: string) => "pending" | "unread" | undefined,
 ): AskEnding {
   return new AskEnding({
     tasks,
@@ -318,10 +319,12 @@ export class AskEnding {
   }
 
   /**
-   * The open tasks the chain waits on: its own work still running, and each
-   * task a request asked for its messages still owes an answer. A request
-   * whose task closed, or that its sender cancelled, waits no longer: the
-   * message falls back to its work, so it never waits longer than that.
+   * The tasks the chain waits on: its own work still running, each open task
+   * a request asked for its messages still owes an answer, and each task
+   * whose answer is still unread on the first mate's lane, closed or not. A
+   * pending request whose task closed, or that its sender cancelled, waits
+   * no longer: the message never waits longer than its task, and an unread
+   * answer only until its wake is read.
    */
   private waitsOn(chain: AskChain): Set<string> {
     const open = new Set(
@@ -334,9 +337,21 @@ export class AskEnding {
     for (const { taskId, requestId } of chain.requests ?? []) {
       if (open.has(taskId)) continue;
       const task = chain.work.find((entry) => entry.id === taskId);
-      if (task && !TaskService.isClosed(task) && requestOpen(requestId)) open.add(taskId);
+      const waits = task ? requestOpen(requestId) : undefined;
+      if (waits === "unread" || (waits === "pending" && task && !TaskService.isClosed(task)))
+        open.add(taskId);
     }
     return open;
+  }
+
+  /**
+   * The chain's work as its readers list it: its own work, and each task it
+   * is only tied to that it still waits on for an answer.
+   */
+  listedWork(chain: AskChain): TaskCoverageFields[] {
+    const own = new Set(this.ownWork(chain).map((task) => task.id));
+    const waits = this.waitsOn(chain);
+    return chain.work.filter((task) => own.has(task.id) || waits.has(task.id));
   }
 
   /** Whether the chain's own work runs on: the message still waits for its outcome. */

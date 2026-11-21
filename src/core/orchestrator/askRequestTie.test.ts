@@ -118,6 +118,11 @@ function fixture() {
     if (!chain) throw new Error(`No chain for ${askId}`);
     return ending.state(chain);
   };
+  /** The tasks the first mate's reads of open messages list for one. */
+  const listed = (askId: string) => {
+    const chain = ending.chain(askId);
+    return chain ? ending.listedWork(chain).map((task) => task.id) : [];
+  };
   return {
     tasks,
     inbox,
@@ -133,6 +138,7 @@ function fixture() {
     retries,
     delivery,
     state,
+    listed,
   };
 }
 
@@ -147,6 +153,8 @@ describe("a request asked for a captain's message", () => {
     });
     expect(f.delivery("m1")).toBe("covered");
     expect(f.retries()).toEqual([]);
+    // The first mate's reads list the task the message waits on.
+    expect(f.listed("m1")).toEqual(["alpha"]);
 
     // The answer is on the lane, unread: another turn's sweep still waits for it.
     f.crewmateAnswers("alpha", request);
@@ -219,6 +227,25 @@ describe("a request asked for a captain's message", () => {
     f.later();
     f.tasks.close("alpha", { status: "done", reason: "answered", actor: "host" });
     f.check.sweep();
+    expect(f.retries()).toEqual(["m1"]);
+  });
+
+  it("keeps an answer still unread waiting after its task closes, until the turn that reads it", () => {
+    const f = fixture();
+    f.longTask("alpha", "Cut the batch alpha");
+    let request = "";
+    f.captainTurn("m1", "will updating get the new alpha?", () => {
+      request = f.askTask("m1", "alpha", "Will updating get the new alpha?");
+    });
+    f.crewmateAnswers("alpha", request);
+    f.later();
+    f.tasks.close("alpha", { status: "done", reason: "answered", actor: "host" });
+    // The retry would reach the first mate before the answer it asks about.
+    f.check.sweep();
+    expect(f.retries()).toEqual([]);
+    expect(f.delivery("m1")).toBe("covered");
+
+    f.wakeTurn((read) => expect(read).toEqual(["m1"]));
     expect(f.retries()).toEqual(["m1"]);
   });
 
@@ -299,6 +326,21 @@ describe("a change the task refused", () => {
     };
     f.up.push(card);
     expect(f.state("m1")).toEqual({ kind: "waiting", cardId: card.id });
+  });
+
+  it("joins an earlier message's open work once a change tied there takes effect", () => {
+    const f = fixture();
+    f.longTask("review", "Careful review of the batch");
+    f.captainTurn("m0", "review the batch carefully", () => {
+      f.tasks.capture.attachAsk("m0", "review", "tool:spawn_crewmate", true);
+    });
+    f.captainTurn("m1", "give the review a stronger model", () => {
+      f.tasks.capture.attachAsk("m1", "review", "tool:update_task", undefined, true);
+      expect(f.tasks.capture.getAsk("m1")?.continues).toBeNull();
+      f.tasks.capture.attachAsk("m1", "review", "tool:update_task");
+    });
+    expect(f.tasks.capture.getAsk("m1")?.continues).toBe("m0");
+    expect(f.retries()).toEqual([]);
   });
 
   it("becomes the message's work once a change there takes effect", () => {

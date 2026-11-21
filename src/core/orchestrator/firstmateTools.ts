@@ -106,8 +106,8 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
   const settled = async (
     taskId: string,
     closingSentence: string | undefined,
-    close: () => Promise<{ text: string; refusal?: SettleRefusal }>,
-  ): Promise<{ text: string; refusal?: SettleRefusal }> => {
+    close: () => Promise<{ text: string; ok?: boolean; refusal?: SettleRefusal }>,
+  ): Promise<{ text: string; ok?: boolean; refusal?: SettleRefusal }> => {
     const result = closingSentence
       ? await supervisor.settling.closing.withClosingSentence(
           host.options.tasks.resolve(taskId)?.id ?? taskId,
@@ -269,14 +269,15 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     settleTask: async (taskId, mode, confirm, proceedWithOpen, closingSentence) => {
       // About the task even when refused; its work once it takes effect.
       host.asks.attach(taskId, "settle_task", undefined, "tie");
-      const settle = (): Promise<{ text: string; refusal?: SettleRefusal }> =>
+      const settle = (): Promise<{ text: string; ok: boolean; refusal?: SettleRefusal }> =>
         supervisor.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
-      const result = await settled(taskId, closingSentence, settle);
-      if (!result.refusal) host.asks.attach(taskId, "settle_task");
+      const { ok, ...result } = await settled(taskId, closingSentence, settle);
+      if (ok) host.asks.attach(taskId, "settle_task");
       return result;
     },
     closeDone: async (taskId, input) => {
-      host.asks.attach(taskId, "settle_task");
+      // About the task even when refused; its work once the close takes effect.
+      host.asks.attach(taskId, "settle_task", undefined, "tie");
       const record = host.options.tasks.resolve(taskId);
       if (!record) return { text: `Not closed: there is no task "${taskId}".` };
       // The captain's own words, checked as an override's are: this turn's,
@@ -304,7 +305,9 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           ...(captainWords ? { captainWords } : {}),
           ...(input.dropWaiting?.length ? { dropWaiting: input.dropWaiting } : {}),
         });
-      return settled(record.id, input.closingSentence, close);
+      const { ok, ...result } = await settled(record.id, input.closingSentence, close);
+      if (ok) host.asks.attach(record.id, "settle_task");
+      return result;
     },
   };
   const scheduler = host.options.scheduler;

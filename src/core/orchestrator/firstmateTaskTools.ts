@@ -65,8 +65,15 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     }
     return record;
   };
-  /** A graph write on started work that took effect: the reply's words, when it has some, then the delivery. */
+  /**
+   * A graph write on started work that took effect: the task becomes the
+   * message's work, then the reply's words, when it has some, then the
+   * delivery. Each change is attached as about its task before it is tried
+   * (`tie`), so a refused one keeps the message's tie without making the
+   * task its work.
+   */
   const tookEffect = (ref: string, app?: string): void => {
+    host.asks.attach(ref, "update_task");
     if (app !== undefined) host.turn.replyFacts.app = app;
     host.noteDelivery({ outcome: "action", kind: "work", tool: "update_task", ref });
   };
@@ -348,7 +355,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     drop: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const text = supervisor.intake.dropTask(record.id, {
           reason: input.reason,
           ...(input.confirm ? { confirm: true } : {}),
@@ -379,7 +386,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     withdrawMerge: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const withdrawn = supervisor.withdrawMergeApproval(record.id);
         if (withdrawn.ok) {
           tookEffect(record.id, `Withdrew merge approval for ${record.key}: ${record.title}`);
@@ -389,7 +396,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     raisePutOff: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const raised = supervisor.cards.putOffs.raiseForTask(record.id);
         if (raised === 0)
           return `${record.key} has no card put off; nothing changed. Its decisions name what the captain chose.`;
@@ -405,7 +412,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         if (caught instanceof TaskGraphRefusal) return caught.message;
         throw caught;
       }
-      host.asks.attach(record.id, "update_task");
+      host.asks.attach(record.id, "update_task", undefined, "tie");
       const held = await supervisor.holdRules.hold(record.id, input.hold);
       return asText(() => {
         if (held.ok) {
@@ -424,7 +431,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     pin: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const pinned = tasks.setPinned(record.id, input.pinned, { actor: "firstmate" });
         if (!pinned.ok) return pinned.text;
         const words = input.pinned
@@ -454,7 +461,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           words: cited.words,
           ...(cited.mergeClick ? { mergeClick: true as const } : {}),
         };
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const declared = supervisor.overrides.declareOverride(record.id, {
           ...said,
           holds: input.holds,
@@ -474,7 +481,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         // "The cost limit"): set only on their words.
         if (host.turn.origin !== "captain-turn")
           return "cost_limit is set only on the captain's words: ask them on a card first.";
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         supervisor.costLimits.setTaskLimit(record.id, input.limit);
         const limit = input.limit;
         const words =
@@ -489,7 +496,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     withdrawOverride: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const withdrawn = supervisor.overrides.withdrawOverride(record.id);
         if (withdrawn.ok) {
           tookEffect(record.id, `Took back your override on ${record.key}: ${record.title}`);
@@ -499,7 +506,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     withdrawAllowance: (input) =>
       asText(() => {
         const record = resolve(input.task);
-        host.asks.attach(record.id, "update_task");
+        host.asks.attach(record.id, "update_task", undefined, "tie");
         const withdrawn = supervisor.overrides.withdrawAllowance(record.id, input.card);
         if (withdrawn.ok)
           tookEffect(record.id, `Took back your yes on ${record.key}: ${record.title}`);
@@ -519,7 +526,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     },
     startNow: async (input) => {
       const record = resolve(input.task);
-      host.asks.attach(record.id, "update_task", true);
+      host.asks.attach(record.id, "update_task", true, "tie");
       const text = await supervisor.starts.startQueuedNow(record.id);
       // A refusal comes back as text; a start now running behind the
       // answer (INF-3060), or a task a crewmate now holds, took effect.

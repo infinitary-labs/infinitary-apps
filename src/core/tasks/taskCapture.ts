@@ -656,19 +656,17 @@ export class TaskCapture {
       if (!ask) throw new Error(`Unknown ask "${askId}".`);
       this.writer.mustGet(taskId);
       const already = this.writer.events.askEvent(taskId, askId);
-      if (already) {
-        // A tie becomes work once an action for the message takes effect there.
-        if (!tie && already.data?.tie === true) this.writer.events.clearAskTie(already.id);
-        return false;
-      }
-      const first = this.writer.asks.attach(askId, taskId, via, at);
+      // Whether this is the message's first attachment as work: a tie
+      // before it - a question asked, a change refused - joins nothing.
+      const firstWork =
+        !tie &&
+        (!already || already.data?.tie === true) &&
+        !this.writer.events.askAttributions([askId]).some((entry) => !entry.tie);
       // A message first attached to work an earlier message's work includes
       // joins that earlier message while it has not ended (docs/task-capture.md
       // "How a message ends"); a later attachment, such as a message named on
       // other work, never moves it.
-      // A tie joins nothing: a question asked of a task, or a change it
-      // refused, ends on its own answer, not with that task's work.
-      if (first && !tie && ask.followed && ask.continues === null) {
+      if (firstWork && ask.followed && ask.continues === null) {
         const earlier = this.asksAbove(taskId, false).find(
           (other) =>
             other.id !== askId &&
@@ -679,6 +677,12 @@ export class TaskCapture {
         );
         if (earlier) this.writer.asks.setContinues(askId, earlier.continues ?? earlier.id);
       }
+      if (already) {
+        // A tie becomes work once an action for the message takes effect there.
+        if (!tie && already.data?.tie === true) this.writer.events.clearAskTie(already.id);
+        return false;
+      }
+      const first = this.writer.asks.attach(askId, taskId, via, at);
       this.writer.patch(taskId, { updatedAt: at });
       this.writer.addEvent({
         taskId,

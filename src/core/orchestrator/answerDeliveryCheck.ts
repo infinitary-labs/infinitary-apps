@@ -66,7 +66,8 @@ export type DeliveryTurnEnd = {
  *
  * Which messages a turn has read is typed state, never the words: the asks
  * still open (the live one, and every steer it took in), plus the saved
- * messages a parked row or the retry wake carried back.
+ * messages a parked row, the retry wake or the answer to a request asked
+ * for them carried back.
  */
 export class AnswerDeliveryCheck {
   private adopted = new Set<string>();
@@ -88,7 +89,8 @@ export class AnswerDeliveryCheck {
   /**
    * A drained batch carries saved messages back: parked captain words name
    * theirs, the answer-missing wake names the one it retries (and is judged
-   * as retrying from here on).
+   * as retrying from here on), and a requested-response wake brings back
+   * each message its request was asked for.
    */
   adopt(rows: readonly InboxRow[], aboutOf: (row: InboxRow) => string | undefined): void {
     for (const row of rows) {

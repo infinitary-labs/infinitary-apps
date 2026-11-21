@@ -176,6 +176,32 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.tasks.get("t1")?.status).toBe("active");
   });
 
+  // INF-5578's audit, finding 1: a change the task refused stops counting as
+  // the message's work, whichever tool path refused it, so the message does
+  // not wait for the task to close; the task stays about the message.
+  it.each([
+    ["update_task", { task: "t1", withdraw_merge: true }],
+    ["settle_task", { task_id: "t1", mode: "done", why: "answered" }],
+  ] as const)(
+    "a change %s refused ties the message and asks for its card while the task stays open",
+    async (tool, input) => {
+      const f = setup({
+        silent: true,
+        seedTasks: [
+          { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+        ],
+      });
+      await f.agent.converse("take back the alpha's merge and close it");
+      const result = await toolsOf(f.specs).get(tool)?.execute("u1", input);
+      expect(f.tasks.get("t1")?.status).not.toMatch(/done|dropped/);
+      expect(result?.content[0]?.text).toBeDefined();
+      await finish(f, "That could not be done.");
+      await drained(f.session, 2);
+      expect(retries(f)).toHaveLength(1);
+      expect(f.tasks.timeline("t1").some((event) => event.kind === "ask")).toBe(true);
+    },
+  );
+
   it("does not count a lookup or closing words: one output-only retry, served alone, then covered by an answer", async () => {
     const f = setup({
       silent: true,

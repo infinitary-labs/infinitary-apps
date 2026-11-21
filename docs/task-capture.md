@@ -93,7 +93,7 @@ Every row from before migration 62 is `legacy` and never checked; every row from
 The check runs at the turn's end, after reply capture and the first mate's close-out, so the normal output is saved first:
 
 1. A failed or paused turn judges nothing: its messages are `held`, the failure keeps its card and its honest retry, and the turn that serves the words again judges them (parked rows carry the message id in their `captain-turn` facts).
-2. A followed message is `covered` while its own work runs, while a card that can answer it is up, or once its answer is accepted; a message with none of these is missing its answer.
+2. A followed message is `covered` while its own work runs, while a request asked for it waits for its answer ("Waiting for an answer" above), while a card that can answer it is up, or once its answer is accepted; a message with none of these is missing its answer.
 3. A missing answer gets one retry: the typed `answer-missing` wake (`docs/inbox.md`), once-name `answer-repair:<askId>`, served alone at the captain thinking level.
    For a reply under the first mate's own card whose card was not refused, the wake names one place, that card's thread, with the card's id and the captain's message number, and says to change the card only when the answer changes what it says (INF-5202): a wake naming two places had one answer written in both.
    During it every tool that starts, steers, stops or closes work or changes a setting answers with a refusal as text (`ANSWER_ONLY_REFUSED_TOOLS`); `emit_card`, `close_card`, `emote`, `link_tasks` and the lookups stay.
@@ -135,12 +135,13 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   The message's own work is the part of it the first mate's tools acted on for the message (`acted` on the same read), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
 - **Tied, not its work.**
   Two actions tie a message to a task without making the task its work (`tie` on the `ask` event, `TaskService.capture.attachAsk`): a `steer_crewmate` that asks for an answer, which is its default, and a change the first mate tried there before it takes effect (`update_task`, `settle_task`, `interrupt_crewmate`).
-  A change that takes effect makes the task its work; a refused one leaves the tie, so the task's own answering card can still answer the message, and the message no longer waits for the task to close.
+  Every task change the first mate tries is tied first, whatever path it takes, and only the outcome it records as taken effect makes the task the message's work (`settle_task`'s `ok`, including a close as done, and each `update_task` path's own effect); a refused one leaves the tie, so the task's own answering card can still answer the message, and the message no longer waits for the task to close.
   A steer that only passes guidance on (`guidance-only`) makes the task its work as before.
-  A tied task is about the message, so its cards count as above, but the work after it is not walked and it never joins the message to another (`asksAbove` with ties left out).
+  A tied task is about the message, so its cards count as above, but the work after it is not walked and it never joins the message to another (`asksAbove` with ties left out); the message's first attachment as work, a tie turned into work included, is the one that may join it below.
+  The first mate's reads of open messages (`open_asks`, `open_work`) list a tied task while the message waits on it for an answer (`AskEnding.listedWork`).
 - **Waiting for an answer.**
   Each response request the first mate asks for a message is saved on that message's `ask` event (`TaskService.capture.tieRequest`, from `CrewSteer`).
-  The message waits on it while the request is open and its task is open, and while its answer is still waiting unread on the first mate's lane (`InboxStore.requestOpen`).
+  The message waits on it while the request is open and its task is open, and while its answer is still waiting unread on the first mate's lane, whether or not its task has closed (`InboxStore.requestOpen`).
   A crewmate that answers not yet, or never answers, keeps it waiting until the task closes, so the message never waits longer than its task; a request the first mate cancels waits no longer.
   The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
   Several messages asked of one long task each wait on their own requests and end on their own answers.

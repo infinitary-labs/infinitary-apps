@@ -175,7 +175,7 @@ function overview(host: OpenWorkHost): string {
 }
 
 function chainSummary(host: OpenWorkHost, chain: AskChain, words: number) {
-  const work = host.ending.ownWork(chain);
+  const work = host.ending.listedWork(chain);
   return {
     ask_id: chain.root.id,
     sent: iso(chain.root.at),
@@ -241,7 +241,7 @@ function cardSummary(host: OpenWorkHost, card: Card) {
 function readAsk(host: OpenWorkHost, askId: string): Read {
   const chain = host.ending.chain(askId);
   if (!chain) return { text: `No message ${askId}.` };
-  const work = host.ending.ownWork(chain);
+  const work = host.ending.listedWork(chain);
   const images: TurnImage[] = [];
   const text = JSON.stringify(
     {

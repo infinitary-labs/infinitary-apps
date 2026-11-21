@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { attachmentWords } from "@shared/attachments";
 import { replyWithSettings } from "@shared/cardAnswerLines";
-import { type CardNote, cardNotesSchema, noteText } from "@shared/cardNotes";
+import { type CardNote, cardNotesSchema, noteTexts } from "@shared/cardNotes";
 import {
   anythingElseOf,
   CARD_ANSWERS_BOUND_REFUSAL,
@@ -250,7 +250,7 @@ export class CardActions {
       const delivery: [messageFiles?: MessageFile[], receipt?: string] = notes?.length
         ? [
             messageFiles.length ? messageFiles : undefined,
-            [typed, ...notes.map(noteText)].filter(Boolean).join("\n"),
+            [typed, ...noteTexts(notes)].filter(Boolean).join("\n"),
           ]
         : messageFiles.length
           ? [messageFiles]

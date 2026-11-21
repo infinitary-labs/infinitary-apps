@@ -239,6 +239,13 @@ export const framePictureSchema = z.object({
   alt: z.string().max(FRAME_PICTURE_ALT_MAX),
   width: z.number().int().nonnegative(),
   height: z.number().int().nonnegative(),
+  /**
+   * Where the part the picture is in starts in the body (`data-inf-target`), when the host marked
+   * the body's parts: what a place marked in the viewer is a note on.
+   */
+  part: z.number().int().nonnegative().optional(),
+  /** Which of that part's pictures this is, counted from 1; absent when the picture is the part. */
+  of: z.number().int().positive().optional(),
 });
 export type FramePicture = z.infer<typeof framePictureSchema>;
 
@@ -353,6 +360,9 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     offerId: z.string().min(1).max(64),
     top: z.number().finite().nonnegative().max(1_000_000).optional(),
     height: z.number().finite().nonnegative().max(1_000_000).optional(),
+    /** The pictures the revealed part's picture opens with, when the host asked for them (`picture`). */
+    index: z.number().int().nonnegative().optional(),
+    pictures: z.array(framePictureSchema).min(1).max(FRAME_MAX_PICTURES).optional(),
   }),
   /**
    * Where a step through the body's questions went (docs/keyboard.md, "Moving
@@ -595,6 +605,11 @@ export type HostMessage =
       start: number;
       keyboard: boolean;
       span?: { start: number; end: number; endPart?: number };
+      /**
+       * Answer with the pictures a picture of the part opens with: 0 for the part itself, or
+       * which of its pictures counted from 1 (a note's place, `NotePlace.picture`).
+       */
+      picture?: number;
     }
   /** Hand out the words the page shows for finding in the card (`find-text`); never the words looked for. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "find-read"; document: string; seq: number }

@@ -535,7 +535,9 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
           setTimeout(function () { target.removeAttribute("data-inf-revision-highlight"); }, 1000);
         }
         if (data.keyboard) { if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1"); target.focus({preventScroll: true}); }
-        post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height });
+        // A note on a place opens the viewer at its picture: the host asks which pictures that is.
+        var shown = caps.pictures && Number.isSafeInteger(data.picture) && data.picture >= 0 ? partPictureSet(target, data.picture) : null;
+        post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height, index: shown ? shown.index : undefined, pictures: shown ? shown.pictures : undefined });
       });
     } else if (data.type === "find-read") {
       if (data.document !== documentId || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
@@ -827,4 +829,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-qLBUmI4YlM+mVVYVg8riNbB15iQZxP6KX6xFMssJKrw=";
+export const FRAME_BRIDGE_SHA256 = "sha256-bgLU+7GZu3JaZWF3oBVIwlHR53zOWCgYLbvh/CCfLj0=";

@@ -1,8 +1,8 @@
-import type { CardNote } from "@shared/cardNotes";
-import { noteTarget, pickedNote, sameNoteTarget } from "@shared/cardNoteTargets";
+import { type CardNote, placeKey } from "@shared/cardNotes";
+import { notePartIn, noteTarget, pickedNote, sameNoteTarget } from "@shared/cardNoteTargets";
 import { cardNavigationParts } from "@shared/cardParts";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
-import type { FrameAnnotationTarget } from "@shared/plugins/bridge";
+import type { FrameAnnotationTarget, FramePicture } from "@shared/plugins/bridge";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useShellStore } from "../app/store";
 import type { FrameController } from "../plugins/frames/frameController";
@@ -17,37 +17,71 @@ const bridges = new Map<
   string,
   {
     sync: (clear?: boolean) => void;
-    reveal: (note: CardNote, edit: boolean) => Promise<NoteReveal>;
+    reveal: (note: CardNote, edit: boolean, mark?: number) => Promise<NoteReveal>;
+    partNote: (picked: FrameAnnotationTarget) => CardNote | undefined;
+    partOf: (note: CardNote) => number | undefined;
   }
 >();
 export function syncAnnotation(cardId?: string): void {
   if (cardId) bridges.get(cardId)?.sync();
 }
 
+/** One note, by what it points at: two places marked in one picture are two notes. */
 export function sameNote(a: CardNote, b: CardNote): boolean {
   return (
-    a.key === b.key && a.start === b.start && JSON.stringify(a.span) === JSON.stringify(b.span)
+    a.key === b.key &&
+    a.start === b.start &&
+    JSON.stringify(a.span) === JSON.stringify(b.span) &&
+    placeKey(a.place) === placeKey(b.place)
   );
 }
 
-/** Keyboard focus goes back to the card's Point at once its row is drawn again. */
+/**
+ * Keyboard focus goes back to Point at once its row is drawn again: the picture viewer's or the
+ * Browser tab's while one of them is where the note was made, else the card's.
+ */
 export function focusPointAt(cardId: string): void {
   requestAnimationFrame(() =>
-    document
-      .querySelector<HTMLButtonElement>(`[data-card-point-at="${CSS.escape(cardId)}"]`)
-      ?.focus(),
+    (
+      document.querySelector<HTMLButtonElement>("[data-viewer-point-at]") ??
+      document.querySelector<HTMLButtonElement>("[data-browser-point-at]") ??
+      document.querySelector<HTMLButtonElement>(`[data-card-point-at="${CSS.escape(cardId)}"]`)
+    )?.focus(),
   );
+}
+
+/** Whether the card shown under this id offers Point at now: its body is bound and its reply row is drawn. */
+export function offersPointAt(cardId: string): boolean {
+  return (
+    bridges.has(cardId) &&
+    document.querySelector(`[data-card-point-at="${CSS.escape(cardId)}"]:not(:disabled)`) !== null
+  );
+}
+
+/** The note a part of the card's body takes, keyed as a pick in the frame keys it; undefined for no such part. */
+export function partNote(cardId: string, picked: FrameAnnotationTarget): CardNote | undefined {
+  return bridges.get(cardId)?.partNote(picked);
+}
+
+/** Where a note's part starts in the body drawn now; undefined once a revision took the part away. */
+export function notePartOf(cardId: string, note: CardNote): number | undefined {
+  return bridges.get(cardId)?.partOf(note);
 }
 
 /** Queue (or replace) a note and close its editor; the frame's selection clears with it. */
 export function queueNote(cardId: string, note: CardNote): void {
-  useShellStore.setState((s) => ({
-    replyNotes: {
-      ...s.replyNotes,
-      [cardId]: [...(s.replyNotes[cardId] ?? []).filter((n) => !sameNote(n, note)), note],
-    },
-    annotationPick: null,
-  }));
+  useShellStore.setState((s) => {
+    const queued = s.replyNotes[cardId] ?? [];
+    // A note written again keeps its place in the queue, so a mark keeps its number.
+    const at = queued.findIndex((n) => sameNote(n, note));
+    return {
+      replyNotes: {
+        ...s.replyNotes,
+        [cardId]: at < 0 ? [...queued, note] : queued.map((n, index) => (index === at ? note : n)),
+      },
+      annotationPick: null,
+    };
+  });
   bridges.get(cardId)?.sync(true);
 }
 
@@ -95,9 +129,28 @@ export function dismissEmptyAnnotation(cardId: string | undefined): boolean {
   return true;
 }
 
-export function revealNote(cardId: string, note: CardNote, edit = false): Promise<NoteReveal> {
-  return bridges.get(cardId)?.reveal(note, edit) ?? Promise.resolve("unavailable");
+/**
+ * Show where a note points: its part revealed in the card, or, for a note on a place in a
+ * picture, the picture viewer opened at its mark (`mark` is the number it is drawn with).
+ * `edit` also opens the note's editor there.
+ */
+export function revealNote(
+  cardId: string,
+  note: CardNote,
+  edit = false,
+  mark?: number,
+): Promise<NoteReveal> {
+  return bridges.get(cardId)?.reveal(note, edit, mark) ?? Promise.resolve("unavailable");
 }
+
+/** The note whose mark the viewer opens at: the number it is drawn with, and whether its editor opens too. */
+export type PictureMark = { note: CardNote; number?: number | undefined; edit: boolean };
+
+/** A mark's picture as the card's frame gave it, to open in the viewer at that mark. */
+export type OpenMarked = (
+  set: { index: number; pictures: FramePicture[] },
+  mark: PictureMark,
+) => boolean;
 
 /** Bind only card bodies, never panels; no captain words are sent down to the frame. */
 export function useAnnotationBridge(
@@ -107,11 +160,13 @@ export function useAnnotationBridge(
   frame: React.RefObject<HTMLIFrameElement | null>,
   admit?: () => boolean,
   originalToRendered?: (start: number) => number,
+  /** Opens the picture viewer at a note's mark; false when the pictures are none it shows. */
+  openMarked?: OpenMarked,
 ): void {
   const supported = useAnnotationHome();
   const parts = useMemo(() => (supported ? cardNavigationParts(body) : []), [body, supported]);
-  const latest = useRef({ body, parts, admit, originalToRendered });
-  latest.current = { body, parts, admit, originalToRendered };
+  const latest = useRef({ body, parts, admit, originalToRendered, openMarked });
+  latest.current = { body, parts, admit, originalToRendered, openMarked };
   useLayoutEffect(() => {
     if (!cardId || !supported) return;
     let previousMode = false;
@@ -122,8 +177,9 @@ export function useAnnotationBridge(
       const mode = s.pointAtCard === cardId;
       const current =
         s.annotationPick?.cardId === cardId ? target(s.annotationPick.note) : undefined;
+      // A place is drawn in the viewer, on its picture: the frame marks whole parts and words.
       const queued = (s.replyNotes[cardId] ?? []).flatMap((note) => {
-        const t = target(note);
+        const t = note.place ? undefined : target(note);
         return t ? [t] : [];
       });
       controller.current?.annotate(mode, queued, current, mode && !previousMode, clear);
@@ -132,16 +188,41 @@ export function useAnnotationBridge(
     };
     const bridge = {
       sync,
-      reveal: async (note: CardNote, edit: boolean): Promise<NoteReveal> => {
+      partNote: (picked: FrameAnnotationTarget) =>
+        pickedNote({
+          picked,
+          parts: latest.current.parts,
+          source: cardBodyHtml(
+            useShellStore.getState().cards.find((card) => card.id === cardId)?.body ??
+              latest.current.body,
+          ),
+          queued: [],
+          ...(latest.current.originalToRendered
+            ? { originalToRendered: latest.current.originalToRendered }
+            : {}),
+        }),
+      partOf: (note: CardNote) =>
+        notePartIn(latest.current.parts, note, latest.current.originalToRendered),
+      reveal: async (note: CardNote, edit: boolean, mark?: number): Promise<NoteReveal> => {
         if (!frame.current || !controller.current || latest.current.admit?.() === false)
           return "unavailable";
         const t = target(note);
         if (!t) return "missing";
         const shown = frame.current;
-        const revealed = await controller.current.revealAnnotation(t);
+        const revealed = await controller.current.revealAnnotation(
+          t,
+          note.place ? (note.place.picture ?? 0) : undefined,
+        );
         if (!revealed || shown !== frame.current || latest.current.admit?.() === false)
           return "unavailable";
         void revealInCard(shown, revealed.top, false, () => latest.current.admit?.() !== false);
+        // A place is shown where it was marked: the viewer opens at its picture, the mark lit.
+        if (
+          note.place &&
+          revealed.shown &&
+          latest.current.openMarked?.(revealed.shown, { note, number: mark, edit })
+        )
+          return "revealed";
         if (edit) {
           const box = frame.current.getBoundingClientRect();
           useShellStore.setState({

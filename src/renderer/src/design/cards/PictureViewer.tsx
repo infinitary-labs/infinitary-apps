@@ -1,3 +1,5 @@
+import { type DrawnMark, keyStep, middleBox, movedBox, sizedBox } from "@shared/cardNoteMarks";
+import type { NotePlace } from "@shared/cardNotes";
 import { isDrawingSource } from "@shared/cardPictures";
 import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
@@ -6,6 +8,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { useRestLabel } from "../core/restLabel";
+import { type ClientBox, type MarkTool, PictureMarks, placeClientBox } from "./PictureMarks";
 import { pictureHint, pictureSize } from "./pictureViewerWords";
 import {
   HEADING_STYLE,
@@ -37,6 +40,44 @@ export type ViewerPicture = {
   /** The picture's natural size as the frame saw it; 0 while it had not decoded. */
   width: number;
   height: number;
+  /** Where the part the picture is in starts in the card's body, when the frame named it. */
+  part?: number | undefined;
+  /** Which of that part's pictures it is, counted from 1; absent when the picture is the part. */
+  of?: number | undefined;
+};
+
+/**
+ * Point at in the viewer (the design skill's PictureViewer, "Pointing at a
+ * place"): what the card layer gives the viewer for the picture shown now, so
+ * the captain can mark a place in it. The viewer draws the marks and makes a
+ * place from the pointer or the keys; whose note it becomes is the giver's.
+ */
+export type ViewerMarking = {
+  /** The marks on this picture, numbered in the order queued; the one being written is lit. */
+  marks: readonly DrawnMark[];
+  /** A note is being written on this picture: a press beside it keeps the viewer open. */
+  writing?: boolean | undefined;
+  /** Point at, where this picture takes a new mark; absent, its marks are only drawn. */
+  point?: ViewerPointAt | undefined;
+};
+
+export type ViewerPointAt = {
+  /** Point at is on: the pointer marks, and the arrows move a box. */
+  on: boolean;
+  /** Why Point at cannot be turned on now, in words; undefined when it can. */
+  off?: string | undefined;
+  toggle: () => void;
+  tool: MarkTool;
+  setTool: (tool: MarkTool) => void;
+  /** The number the next mark takes. */
+  next: number;
+  /** A place was marked, and where it is drawn in the window. */
+  mark: (place: NotePlace, at: ClientBox) => void;
+  /** A queued mark to write again as soon as the picture is drawn: its note opens there. */
+  again?: NotePlace | undefined;
+  /** The Point at command's key, for the button's label. */
+  keys?: React.ComponentProps<typeof IconButton>["keys"];
+  keyProps?: Record<string, string | undefined> | undefined;
 };
 
 /**
@@ -75,6 +116,8 @@ export type PictureViewerProps = {
   onSound?: (() => void) | undefined;
   /** Whether a demo that keeps its sound is playing now: true while it plays, false once it stops. */
   onSounding?: ((on: boolean) => void) | undefined;
+  /** Point at for a picture, or undefined where it takes no mark. A demo takes none. */
+  marking?: ((picture: ViewerPicture) => ViewerMarking | undefined) | undefined;
   onClose: () => void;
 };
 
@@ -107,6 +150,9 @@ function clock(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
+/** A header tool that is on: the accent on its dim fill, as Point at reads pressed in a card. */
+const PRESSED_TOOL: React.CSSProperties = { ...NO_DRAG, background: "var(--accent-dim)" };
+
 /** A picture offset that keeps its edges outside the viewport's, or centres an axis that fits. */
 function clampOffset(offset: { x: number; y: number }, picture: Size, box: Size) {
   const axis = (value: number, size: number, room: number) =>
@@ -124,6 +170,7 @@ export function PictureViewer({
   demo,
   onSound,
   onSounding,
+  marking,
   onClose,
 }: PictureViewerProps) {
   const [index, setIndex] = useState(() => Math.min(Math.max(first, 0), pictures.length - 1));
@@ -138,6 +185,11 @@ export function PictureViewer({
   const thumbsRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const dragged = useRef(false);
+  // The box the arrow keys move with Point at on, until Enter writes its note.
+  const [keyBox, setKeyBox] = useState<NotePlace | null>(null);
+  const marksLayer = useRef<HTMLDivElement | null>(null);
+  // A press that began while a note was being written closes that note, not the viewer.
+  const pressedWriting = useRef(false);
   const captionId = useId();
   // A demo's player: what its recording is doing now, as the element says.
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -184,6 +236,17 @@ export function PictureViewer({
   const fitsAtOne = fitsBox && (!drawing || Math.abs(scale - 1) < 0.01);
   const zoomable = !demo && size !== null && box !== null && !fitsAtOne;
   const atOne = zoomed && zoomable;
+  const marks = !demo && size ? marking?.(picture) : undefined;
+  const point = marks?.point;
+  const pointing = point?.on === true;
+  // The key box leaves with Point at, and never follows to another picture.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the picture shown is the index
+  useEffect(() => setKeyBox(null), [index, pointing]);
+  // Point at on takes the keys to the viewer itself, off whichever control turned it on: Enter
+  // then writes the note, where on that control it would press the control again.
+  useEffect(() => {
+    if (pointing) dialogRef.current?.focus();
+  }, [pointing]);
   // Why Actual size does nothing, on rest, the pointer's or the keyboard's
   // focus, and in its description (docs/keyboard.md, "Facts shown on rest").
   // Esc stays the viewer's own, which closes it and the label with it.
@@ -300,6 +363,7 @@ export function PictureViewer({
       if (target === index) return;
       setIndex(target);
       setZoomed(false);
+      setKeyBox(null);
     },
     [index, pictures.length],
   );
@@ -319,6 +383,10 @@ export function PictureViewer({
   useEffect(() => {
     if (leaving) return;
     const onKey = (event: KeyboardEvent) => {
+      // A dialog of its own over the viewer, the note popover, keeps its keys.
+      const over =
+        event.target instanceof HTMLElement ? event.target.closest('[role="dialog"]') : null;
+      if (over && over !== dialogRef.current) return;
       const onControl =
         event.target instanceof HTMLElement &&
         event.target.closest("button") !== null &&
@@ -326,6 +394,46 @@ export function PictureViewer({
       // A demo's keys are its controls' own; only Esc and the Tab ring are the viewer's.
       if (demo && event.key !== "Escape" && event.key !== "Tab") return;
       let handled = true;
+      // Point at on: the arrows move a box, Shift with them sizes it, Enter
+      // writes its note and Esc turns Point at off, leaving the viewer open.
+      if (point?.on && size) {
+        const arrow = {
+          ArrowLeft: [-1, 0],
+          ArrowRight: [1, 0],
+          ArrowUp: [0, -1],
+          ArrowDown: [0, 1],
+        }[event.key];
+        if (arrow) {
+          const step = keyStep(size);
+          const from = keyBox ?? middleBox(size);
+          const [dx, dy] = arrow as [number, number];
+          if (point.tool !== "box") point.setTool("box");
+          setKeyBox(
+            !keyBox
+              ? from
+              : event.shiftKey
+                ? sizedBox(from, dx * step, dy * step)
+                : movedBox(from, dx * step, dy * step),
+          );
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        if (event.key === "Escape") {
+          point.toggle();
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        if (event.key === "Enter" && !onControl && marksLayer.current) {
+          const place = keyBox ?? middleBox(size);
+          setKeyBox(null);
+          point.mark(place, placeClientBox(place, marksLayer.current.getBoundingClientRect()));
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+      }
       switch (event.key) {
         case "Escape":
           close();
@@ -364,7 +472,17 @@ export function PictureViewer({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [leaving, close, go, toggle, index, pictures.length, demo]);
+  }, [leaving, close, go, toggle, index, pictures.length, demo, point, size, keyBox]);
+
+  // A queued mark opened from its note is written again where it is drawn, once it is drawn.
+  const again = point?.again;
+  const wroteAgain = useRef<NotePlace | undefined>(undefined);
+  const drawn = box !== null && size !== null;
+  useEffect(() => {
+    if (!again || !drawn || wroteAgain.current === again || !marksLayer.current) return;
+    wroteAgain.current = again;
+    point?.mark(again, placeClientBox(again, marksLayer.current.getBoundingClientRect()));
+  }, [again, drawn, point]);
 
   // Keep the current thumbnail in view when a group outgrows the row.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the current thumbnail moves with index
@@ -387,7 +505,13 @@ export function PictureViewer({
 
   const fitted = size ? { width: size.width * scale, height: size.height * scale } : null;
   const dims = size ? pictureSize(size) : "";
-  const hint = !size ? "" : pictureHint(size, atOne ? "one" : fitsAtOne ? "own" : "fitted");
+  const hint = !size
+    ? ""
+    : point?.on
+      ? point.tool === "line"
+        ? m.cardNoteMarkHintLine()
+        : m.cardNoteMarkHintBox()
+      : pictureHint(size, atOne ? "one" : fitsAtOne ? "own" : "fitted");
   const count = demo
     ? clock(length)
     : pictures.length > 1
@@ -421,6 +545,58 @@ export function PictureViewer({
           {count}
         </span>
       }
+      tools={
+        point && (
+          <>
+            {point.on && (
+              <>
+                <IconButton
+                  label={m.cardNoteToolBox()}
+                  data-viewer-tool="box"
+                  aria-pressed={point.tool === "box"}
+                  tone={point.tool === "box" ? "accent" : "neutral"}
+                  onClick={() => point.setTool("box")}
+                  style={point.tool === "box" ? PRESSED_TOOL : noDrag}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" {...icon} aria-hidden="true">
+                    <rect x="4.5" y="6.5" width="15" height="11" rx="1.5" />
+                  </svg>
+                </IconButton>
+                <IconButton
+                  label={m.cardNoteToolLine()}
+                  data-viewer-tool="line"
+                  aria-pressed={point.tool === "line"}
+                  tone={point.tool === "line" ? "accent" : "neutral"}
+                  onClick={() => point.setTool("line")}
+                  style={point.tool === "line" ? PRESSED_TOOL : noDrag}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" {...icon} aria-hidden="true">
+                    <path d="M4 16c2.5-7 5-7 7-2s4.5 5 9-6" />
+                  </svg>
+                </IconButton>
+              </>
+            )}
+            <IconButton
+              label={m.cardNotePointAt()}
+              restWords={point.off}
+              off={point.off !== undefined}
+              keys={point.keys}
+              {...point.keyProps}
+              data-viewer-point-at=""
+              aria-pressed={point.on}
+              tone={point.on ? "accent" : "neutral"}
+              onClick={() => {
+                if (point.off === undefined) point.toggle();
+              }}
+              style={point.on ? PRESSED_TOOL : noDrag}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" {...icon} aria-hidden="true">
+                <path d="m4 4 7.07 17 2.51-7.39L21 11.07 4 4z" />
+              </svg>
+            </IconButton>
+          </>
+        )
+      }
       closeLabel={m.uiPictureViewerClose()}
       close={close}
     >
@@ -431,8 +607,13 @@ export function PictureViewer({
       <div
         ref={rowRef}
         data-picture-row=""
+        onPointerDownCapture={() => {
+          pressedWriting.current = marks?.writing === true;
+        }}
         onClick={(event) => {
-          if (event.target === event.currentTarget) close();
+          const writing = pressedWriting.current;
+          pressedWriting.current = false;
+          if (event.target === event.currentTarget && !writing) close();
         }}
         style={{ position: "relative", flex: 1, minHeight: 0 }}
       >
@@ -547,11 +728,13 @@ export function PictureViewer({
             aria-disabled={!zoomable}
             aria-describedby={zoomable ? captionId : `${ownSizeId} ${captionId}`}
             {...ownSize}
-            onClick={() => {
+            onClick={(event) => {
               if (dragged.current) {
                 dragged.current = false;
                 return;
               }
+              // A press that closed a note being written does only that.
+              if (event.detail > 0 && pressedWriting.current) return;
               toggle();
             }}
             onPointerDown={(event) => {
@@ -649,6 +832,38 @@ export function PictureViewer({
               }
             />
           </button>
+        )}
+        {box && !demo && size && marks && (atOne || fitted) && (
+          // The marks lie over the picture, in its own pixels; with Point at
+          // on they take the pointer, so a press marks and never zooms.
+          <PictureMarks
+            size={size}
+            marks={
+              keyBox && point
+                ? [...marks.marks, { number: point.next, place: keyBox, lit: true }]
+                : marks.marks
+            }
+            on={pointing}
+            tool={point?.tool ?? "box"}
+            next={point?.next ?? 0}
+            onMark={(place, at) => point?.mark(place, at)}
+            onWheel={(event) => {
+              if (atOne) pan(-event.deltaX, -event.deltaY);
+            }}
+            style={{ ...pictureBox, borderRadius: "var(--radius-s)" }}
+            layerStyle={
+              atOne
+                ? {
+                    left: 0,
+                    top: 0,
+                    width: size.width,
+                    height: size.height,
+                    transform: `translate(${offset.x}px, ${offset.y}px)`,
+                  }
+                : { inset: 0 }
+            }
+            layerRef={marksLayer}
+          />
         )}
         {pictures.length > 1 && (
           <>

@@ -247,6 +247,10 @@ export class ComputerBrowsers {
         browsers.captainAt(task, here === true);
         return browsers.captainInput(task, input);
       }
+      case "inf:task-browser:places": {
+        const [{ task }] = request as BrowserOrderRequest<"inf:task-browser:places">;
+        return browsers.places(task);
+      }
       case "inf:task-browser:take": {
         const [{ task, handle, here }] = request as BrowserOrderRequest<"inf:task-browser:take">;
         browsers.captainAt(task, here === true);

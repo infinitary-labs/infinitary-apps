@@ -97,6 +97,8 @@ export type ViewerShellProps = {
   /** The header's leading words and its trailing count or size. */
   heading: React.ReactNode;
   meta: React.ReactNode;
+  /** Controls of the viewer's own between the count and Close, such as the picture viewer's Point at. */
+  tools?: React.ReactNode;
   closeLabel: string;
   /** Fades the viewer out (`useViewerFade`). */
   close: () => void;
@@ -132,6 +134,7 @@ export function ViewerShell({
   leaving,
   heading,
   meta,
+  tools,
   closeLabel,
   close,
   children,
@@ -180,6 +183,7 @@ export function ViewerShell({
       >
         {heading}
         {meta}
+        {tools}
         <IconButton label={closeLabel} {...fixedKeys("Escape")} onClick={close} style={NO_DRAG}>
           <svg width="16" height="16" viewBox="0 0 24 24" {...VIEWER_ICON} aria-hidden="true">
             <path d="M18 6 6 18M6 6l12 12" />

@@ -15,6 +15,7 @@ import type {
   OpenCardFileResult,
   SavedCardFiles,
 } from "./cardFiles";
+import type { CardNote } from "./cardNotes";
 import type {
   Card,
   CardActionSource,
@@ -25,6 +26,7 @@ import type {
   PastCard,
   TaskLifecycleOp,
   TaskMoveFrom,
+  TurnImage,
 } from "./cards";
 import type { WindowControl, WindowState } from "./channels/shell";
 import type { AppCostLimitView, CostLimit } from "./costLimit";
@@ -160,6 +162,7 @@ import type {
   TaskBrowserFrame,
   TaskBrowserHandle,
   TaskBrowserInput,
+  TaskBrowserPlaces,
   TaskBrowserReturn,
   TaskBrowserSize,
 } from "./taskBrowser";
@@ -303,7 +306,12 @@ export type FirstmateApi = {
       options?: { leaveBehind: true },
     ) => Promise<{ ok: true; text: string } | { ok: false; text: string }>;
     /** A line the captain typed in the Crewmate tab: his steer on the crewmate's lane. */
-    steer: (taskId: string, text: string) => Promise<CrewSendResult>;
+    steer: (
+      taskId: string,
+      text: string,
+      /** The notes on the task's running page and their marked pictures, which leave with the line. */
+      more?: { notes?: CardNote[]; images?: TurnImage[] },
+    ) => Promise<CrewSendResult>;
     /** ⌃C or Stop in the Crewmate tab: his interrupt of the crewmate's running turn. */
     interrupt: (taskId: string) => Promise<CrewSendResult>;
   };
@@ -641,6 +649,13 @@ export type FirstmateApi = {
      * logs"). A view asks the home for it.
      */
     log: (fileName: string) => Promise<{ contentType: string; data: string }>;
+    /**
+     * A card's own picture by its minted name, as base64: what the window draws
+     * the captain's marks on before a reply carries the marked picture
+     * (docs/card-threads.md, "Pointing at a place"). A name the home did not
+     * mint is refused.
+     */
+    picture: (name: string) => Promise<InvokeResponse<"inf:cards:picture">>;
     /** The captain's reply, verbatim; the core routes it to the card's author. */
     reply: (
       cardId: string,
@@ -714,6 +729,8 @@ export type FirstmateApi = {
     stop: (taskId: string) => Promise<TaskBrowserCommandResult>;
     /** Open again: a fresh browser at the stopped one's last page, nothing signed in. */
     reopen: (taskId: string) => Promise<TaskBrowserCommandResult>;
+    /** What the page's outline names on screen now, for Point at; read once and nothing is recorded. */
+    places: (taskId: string) => Promise<TaskBrowserPlaces>;
     /** Take control of the browser the view shows, once the crewmate's command finishes. */
     take: (taskId: string, handle: TaskBrowserHandle) => Promise<TaskBrowserCommandResult>;
     /** The captain's answer to what the page asks: Allow once or Use passkey, Not now, or Show Chrome window for a passkey let run. */

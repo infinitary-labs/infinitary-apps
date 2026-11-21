@@ -1,9 +1,11 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
+import type { CardNote } from "@shared/cardNotes";
 import type { TurnImage } from "@shared/cards";
 import type { AskedResponsePolicy, ResponsePolicy } from "@shared/crewResponses";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
+import { keepImages } from "../attachments";
 import { capWithOverflow } from "../overflow";
 import type { SecretAskEnded } from "../secrets/asks";
 import type { SecretBringEnded } from "../secrets/bring";
@@ -710,9 +712,17 @@ export class CrewSteer {
    * task's timeline. A task no crewmate can be told anything about refuses
    * in words and writes nothing.
    */
-  async steerFromCrewmateTab(taskId: string, words: string): Promise<CrewSendResult> {
+  async steerFromCrewmateTab(
+    taskId: string,
+    words: string,
+    more: { notes?: CardNote[] | undefined; images?: TurnImage[] | undefined } = {},
+  ): Promise<CrewSendResult> {
     const text = words.trim();
-    if (!text) return { ok: false, text: "There is nothing to send." };
+    // Notes on the task's running page ride the line, with the pictures their marks are drawn
+    // on (docs/task-browser.md, "Pointing at a page"); they need no words beside them.
+    const notes = more.notes?.length ? more.notes : undefined;
+    const images = more.images?.length ? more.images : undefined;
+    if (!text && !notes) return { ok: false, text: "There is nothing to send." };
     const record = this.core.options.tasks.get(taskId);
     if (!record) return { ok: false, text: "This task is not on the record." };
     if (TaskService.isClosed(record)) {
@@ -724,10 +734,19 @@ export class CrewSteer {
     try {
       await this.steerCrewmate(
         taskId,
-        { facts: { kind: "crewmate-tab-line", words: text, captainText: words } },
+        {
+          facts: {
+            kind: "crewmate-tab-line",
+            words: text,
+            captainText: words,
+            ...(notes ? { notes } : {}),
+          },
+        },
         "captain",
         {
           via: CREWMATE_TAB_VIA,
+          // The accepted line owns copies of its pictures before its lane records it.
+          ...(images ? { images, attachments: keepImages(randomUUID(), images) } : {}),
         },
       );
     } catch (caught) {

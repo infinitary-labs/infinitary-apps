@@ -106,8 +106,10 @@ export function pickedNote(input: {
     comment: "",
     line: source.slice(0, original?.start ?? part.start).split("\n").length,
   };
+  // A note on a place in the part is its own note: a pick of the whole part never opens it.
   const existing = input.queued.find(
     (queued) =>
+      !queued.place &&
       queued.key === note.key &&
       notePartIn(parts, queued, originalToRendered) === picked.start &&
       JSON.stringify(noteTarget(parts, queued, originalToRendered)?.span) ===

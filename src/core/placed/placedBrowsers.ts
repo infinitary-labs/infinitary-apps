@@ -10,6 +10,7 @@ import type {
   TaskBrowserFact,
   TaskBrowserHandle,
   TaskBrowserInput,
+  TaskBrowserPlaces,
   TaskBrowserRequest,
   TaskBrowserReturn,
   TaskBrowserSize,
@@ -70,6 +71,8 @@ const KEPT_SIGN_INS = contractChange("kept-sign-ins");
 
 /** A computer that puts a page's asks to the captain (`browser-asks.md`). */
 const BROWSER_ASKS = contractChange("browser-asks");
+/** A page's named places, for the captain's Point at (`card-note-places.md`). */
+const CARD_NOTE_PLACES = contractChange("card-note-places");
 
 export type PlacedBrowsersOptions = {
   devices: Pick<WorkDevices, "ask" | "onWorkDevice" | "version">;
@@ -229,6 +232,18 @@ export class PlacedBrowsers implements PlacedBrowserSink {
       input,
       here: this.captainThere(taskId),
     });
+  }
+
+  /** What the page there names on screen; a computer not yet updated answers that it cannot say. */
+  async places(taskId: string): Promise<TaskBrowserPlaces> {
+    const deviceId = this.options.deviceOf(taskId);
+    if (
+      !deviceId ||
+      !listsChange(this.options.devices.version(deviceId)?.changes, CARD_NOTE_PLACES)
+    ) {
+      return { ok: false };
+    }
+    return this.order(taskId, "inf:task-browser:places", {});
   }
 
   /** The captain's answer to what a page there asks; a computer not yet updated never asks. */
@@ -680,6 +695,11 @@ export class HomeBrowsers {
     if (this.there.holds(taskId)) return this.there.captainInput(taskId, input);
     this.local.captainAt(taskId, captainHere());
     return this.local.captainInput(taskId, input);
+  }
+
+  /** What the task's page names on screen now (docs/task-browser.md, "Pointing at a page"). */
+  places(taskId: string): Promise<TaskBrowserPlaces> {
+    return this.there.holds(taskId) ? this.there.places(taskId) : this.local.places(taskId);
   }
 
   /** The captain's answer to what the task's page asks (docs/task-browser.md, "A site's asks"). */

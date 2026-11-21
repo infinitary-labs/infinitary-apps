@@ -1,5 +1,5 @@
 import { fileSizeWords } from "@shared/attachments";
-import { queuedNotesWords, sendNotesLabel } from "@shared/cardNotes";
+import { markNumbers, placeKey, queuedNotesWords, sendNotesLabel } from "@shared/cardNotes";
 import {
   CARD_CHAT_LABEL,
   CARD_REPLY_MAX_CHARS,
@@ -1217,9 +1217,16 @@ function Message({ message }: { message: CardMessage }) {
             {m.cardThreadFromCommand({ command: CAPTAIN_COMMAND })}
           </span>
         ) : null}
-        {message.notes?.map((note) => (
-          <div key={JSON.stringify([note.key, note.start, note.span])} className="inf-sent-note">
-            <NoteAnchor cardId={message.cardId} note={note} />
+        {message.notes?.map((note, at) => (
+          <div
+            key={JSON.stringify([note.key, note.start, note.span, placeKey(note.place)])}
+            className="inf-sent-note"
+          >
+            <NoteAnchor
+              cardId={message.cardId}
+              note={note}
+              mark={markNumbers(message.notes ?? [])[at]}
+            />
             <span>{note.comment || m.cardThreadNoComment()}</span>
           </div>
         ))}

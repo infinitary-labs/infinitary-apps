@@ -25,26 +25,33 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
     }
     return pictures;
   }
-  function showPictures(pictures, index) {
-    post({
-      type: "image",
-      index: index,
-      pictures: pictures.map(function (picture) {
-        return {
-          src: picture.currentSrc || picture.src,
-          alt: picture.getAttribute("alt") || "",
-          width: picture.naturalWidth || 0,
-          height: picture.naturalHeight || 0
-        };
-      })
-    });
-  }
-  function openPicture(picture) {
-    var demo = demoOf(picture.closest("figure[data-inf-demo]"));
-    if (demo && demo.poster === picture) {
-      showDemo(demo, false);
-      return;
+  // The pictures of one part of the body, in reading order: its own pictures and
+  // drawings, never a drawing inside another.
+  function partPictures(holder) {
+    var found = holder.querySelectorAll("img, svg");
+    var pictures = [];
+    for (var i = 0; i < found.length; i++) {
+      if (!found[i].parentElement || !found[i].parentElement.closest("svg")) pictures.push(found[i]);
     }
+    return pictures;
+  }
+  // The part of the body a picture is in, when the host marked its parts, and
+  // which of that part's pictures it is: a place marked in the viewer is a note
+  // on that part.
+  function withPart(element, picture) {
+    var holder = element.closest("[data-inf-target]");
+    var start = holder ? holder.getAttribute("data-inf-target") : null;
+    if (start === null || !/^\\d+$/.test(start)) return picture;
+    picture.part = Number(start);
+    if (holder !== element) {
+      var of = partPictures(holder).indexOf(element);
+      if (of >= 0) picture.of = of + 1;
+    }
+    return picture;
+  }
+  // The pictures a press on this one opens, and which of them it is: its group's,
+  // or the picture alone. A demo's poster opens its recording, never a set.
+  function pictureSet(picture) {
     var group = picture.closest(".inf-pictures");
     var members = group ? groupPictures(group) : [];
     var index = members.indexOf(picture);
@@ -52,7 +59,40 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
       members = [picture];
       index = 0;
     }
-    showPictures(members, index);
+    return { index: index, pictures: members.map(describePicture) };
+  }
+  function describePicture(picture) {
+    return withPart(picture, {
+      src: picture.currentSrc || picture.src,
+      alt: picture.getAttribute("alt") || "",
+      width: picture.naturalWidth || 0,
+      height: picture.naturalHeight || 0
+    });
+  }
+  // The set a note's mark is shown in: the picture its place names in its part.
+  function partPictureSet(holder, of) {
+    var picture = of ? partPictures(holder)[of - 1] : holder;
+    if (!picture) return null;
+    if (picture.tagName === "IMG") {
+      var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+      return demo && demo.poster === picture ? null : pictureSet(picture);
+    }
+    if (picture.namespaceURI === SVG_SPACE && outermostDrawing(picture) === picture && isDiagram(picture)) {
+      return { index: 0, pictures: [drawingPicture(picture)] };
+    }
+    return null;
+  }
+  function showPictures(pictures, index) {
+    post({ type: "image", index: index, pictures: pictures.map(describePicture) });
+  }
+  function openPicture(picture) {
+    var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+    if (demo && demo.poster === picture) {
+      showDemo(demo, false);
+      return;
+    }
+    var set = pictureSet(picture);
+    post({ type: "image", index: set.index, pictures: set.pictures });
   }
   var DEMO_SOURCE = ${JSON.stringify(FRAME_DEMO_SOURCE)};
   var DEMO_CAPTION_MAX = ${FRAME_DEMO_CAPTION_MAX};
@@ -201,12 +241,12 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
     var figure = drawing.closest("figure");
     var caption = figure ? figure.querySelector("figcaption") : null;
     var words = caption ? caption.textContent : (figure && figure.getAttribute("aria-label")) || drawing.getAttribute("aria-label") || "";
-    return {
+    return withPart(drawing, {
       src: ${JSON.stringify(DRAWING_SOURCE_PREFIX)} + encodeURIComponent(new XMLSerializer().serializeToString(copy)),
       alt: (words || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_PICTURE_ALT_MAX}),
       width: Math.max(1, Math.round(width)),
       height: Math.max(1, Math.round(height))
-    };
+    });
   }
   function openDrawing(drawing) {
     post({ type: "image", index: 0, pictures: [drawingPicture(drawing)] });

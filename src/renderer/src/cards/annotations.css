@@ -72,6 +72,11 @@
   box-shadow: var(--shadow-card);
   font: var(--text-sm) / var(--leading-body) var(--font-ui);
 }
+/* A note on a place is written over the picture viewer, which covers the window. */
+.inf-annotation-popover[data-note-place] {
+  z-index: 31;
+  -webkit-app-region: no-drag;
+}
 .inf-annotation-popover:focus {
   outline: none;
 }
@@ -120,6 +125,21 @@
   gap: var(--space-2);
   margin: var(--space-2) 0;
 }
+/* A page's note shows the exact picture that will be sent. */
+.inf-annotation-picture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+.inf-annotation-picture figcaption {
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}
+/* What sending shows the crewmate is its own sentence, on its own line. */
+.inf-annotation-picture figcaption [data-note-page-shows] {
+  display: block;
+}
 .inf-sent-note {
   display: flex;
   flex-direction: column;
@@ -130,4 +150,22 @@
 /* The comment while the dictation key records into it (VoiceInput.prompt.md). */
 .inf-annotation-popover textarea:read-only {
   opacity: 0.55;
+}
+.inf-marked-copy {
+  position: relative;
+  display: block;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+}
+.inf-marked-copy img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }

@@ -109,6 +109,16 @@ function shownPart(entryId: string, selector: string): HTMLElement | null {
   return part && available(part) ? part : null;
 }
 
+/** The open picture viewer's Point at, where its picture takes a mark (docs/card-threads.md, "Pointing at a place"). */
+const viewerPointAt = () =>
+  document.querySelector<HTMLElement>(
+    "[data-picture-viewer] [data-viewer-point-at]:not([aria-disabled=true])",
+  );
+
+/** The shown Browser tab's Point at, while it shows a page (docs/task-browser.md, "Pointing at a page"). */
+const browserPointAt = (entryId: string) =>
+  shownPart(entryId, "[data-browser-point-at]:not(:disabled):not([aria-disabled=true])");
+
 const browserControlButton = (entryId: string) =>
   shownPart(entryId, "[data-browser-handoff] button:not(:disabled):not([aria-disabled=true])");
 
@@ -325,11 +335,16 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "cards.previous-question": () => toShownPart(cardBody, (body) => askQuestionStep(body, -1)),
   "cards.unanswered-question": () =>
     toShownPart(cardBody, (body) => askQuestionStep(body, 1, true)),
-  "cards.point-at": () =>
-    toShownPart(
-      (id) => shownPart(id, `[data-card-point-at="${CSS.escape(id)}"]`),
-      (button) => button.click(),
-    ),
+  // The picture viewer's own Point at while it is open, a Browser tab's over its page, else the card's.
+  "cards.point-at": () => {
+    const viewer = viewerPointAt();
+    if (viewer) viewer.click();
+    else
+      toShownPart(
+        (id) => browserPointAt(id) ?? shownPart(id, `[data-card-point-at="${CSS.escape(id)}"]`),
+        (button) => button.click(),
+      );
+  },
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
   "cards.thread-new": () => toShownPart(threadJumpButton, (button) => button.click()),
   "cards.sound": () => toShownPart(soundToggle, (button) => button.click()),
@@ -473,6 +488,11 @@ function openUsage(): void {
 function windowFacts(): WindowFacts {
   return {
     dialogOpen: modalOpen(),
+    viewerPointAt: viewerPointAt() !== null,
+    browserPointAt: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && browserPointAt(id) !== null;
+    })(),
     cardFinding: useCardFind.getState().open,
     answerDoneReady: (() => {
       const id = shownEntry(useShellStore.getState())?.id;

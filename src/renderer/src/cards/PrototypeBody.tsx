@@ -46,7 +46,13 @@ import type {
 } from "../plugins/frames/frameController";
 import { GESTURE_FOCUS_FRAMES, whenFrameHoldsFocus } from "../plugins/frames/frameFocus";
 import { describeFocus, openFrameLink } from "../plugins/frames/frameLink";
-import { dismissEmptyAnnotation, syncAnnotation, useAnnotationBridge } from "./annotationBridge";
+import {
+  dismissEmptyAnnotation,
+  type OpenMarked,
+  type PictureMark,
+  syncAnnotation,
+  useAnnotationBridge,
+} from "./annotationBridge";
 import { CARD_BODY_WORDS } from "./cardBodyWords";
 import { closeCardFindFrom } from "./cardFind";
 import { useDraftFill } from "./draftFill";
@@ -140,7 +146,16 @@ type BodyProps = {
    * them, where focus returns when the viewer closes.
    */
   onPicture?: (
-    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo; log?: ViewerLog },
+    set: {
+      index: number;
+      pictures: FramePicture[];
+      demo?: ViewerDemo;
+      log?: ViewerLog;
+      /** The card whose body the pictures are in: a place marked in one joins its notes. */
+      cardId?: string | undefined;
+      /** The note whose mark the viewer opens at. */
+      mark?: PictureMark | undefined;
+    },
     opener: HTMLIFrameElement | null,
     title?: string,
   ) => void;
@@ -570,7 +585,8 @@ function cardFrameSpec(
       const set = admitted()
         ? viewablePictures(index, pictures, asked === true || !isPlayableBody(props.body))
         : undefined;
-      if (set) fromCaptain(() => props.onPicture?.(set, frameRef.current));
+      if (set)
+        fromCaptain(() => props.onPicture?.({ ...set, cardId: props.cardId }, frameRef.current));
     },
     // A demo opens in the same viewer, over its poster: only a recording this
     // card's body names, and it plays at once only on the captain's own press
@@ -705,6 +721,23 @@ function cardFrameSpec(
  * scripts, its animations - starts (FrameController.activate). Before the
  * controller's first document is born, the activation waits for it.
  */
+/**
+ * Opens the viewer at a note's mark (docs/card-threads.md, "Pointing at a place"): the pictures
+ * the frame named for the note's part, filtered as a press on one of them is. It is the
+ * captain's own press on the note, in the window, so it asks for no focus in the frame.
+ */
+function markedOpener(
+  props: SrcdocProps,
+  frameRef: React.RefObject<HTMLIFrameElement | null>,
+): OpenMarked {
+  return (shown, mark) => {
+    const set = viewablePictures(shown.index, shown.pictures, !isPlayableBody(props.body));
+    if (!set || !props.onPicture || props.admit?.() === false) return false;
+    props.onPicture({ ...set, cardId: props.cardId, mark }, frameRef.current);
+    return true;
+  };
+}
+
 function useActivation(
   controllerRef: React.RefObject<FrameController | null>,
   active: boolean,
@@ -928,6 +961,7 @@ function SrcdocCardBody(props: SrcdocProps) {
     frameRef,
     props.admit,
     props.revisionStart,
+    markedOpener(props, frameRef),
   );
   // A page without a script holds only its animations, so its held drawing
   // is the one the card shows.
@@ -1089,6 +1123,7 @@ function ScriptedCardBody(props: SrcdocProps) {
     frameRef,
     props.admit,
     props.revisionStart,
+    markedOpener(props, frameRef),
   );
   useActivation(controllerRef, active);
 

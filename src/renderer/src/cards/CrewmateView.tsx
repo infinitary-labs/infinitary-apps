@@ -1,3 +1,4 @@
+import { placeKey, sendNotesLabel } from "@shared/cardNotes";
 import { CARD_REPLY_MAX_CHARS, onStage as cardOnStage } from "@shared/cards";
 import { limitBand } from "@shared/composer";
 import {
@@ -25,6 +26,7 @@ import { thisDesktop } from "../design/core/desktop";
 import { DictationMark } from "../design/voice/VoiceInput";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import "./crewmate.css";
+import { AnnotationPopover, NO_NOTES, QueuedNotes } from "./AnnotationControls";
 import { collapseIcon, openIcon } from "./CardThread";
 import { CrewmateLines } from "./CrewmateLines";
 import {
@@ -35,6 +37,7 @@ import {
   liveWords,
   runningCalls,
 } from "./crewmateState";
+import { forgetMarked, markedPictures, pageQueue } from "./markedPictures";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { TaskTabStrip } from "./TaskTabStrip";
@@ -237,7 +240,15 @@ function Composer({
   const [focus, setFocus] = useState(false);
   const field = useRef<HTMLTextAreaElement | null>(null);
   const text = draft.trim();
-  const canSend = !sending && text.length > 0 && text.length <= CARD_REPLY_MAX_CHARS;
+  // The notes on the task's running page wait here when no card is beside it, and leave with
+  // the line (docs/task-browser.md, "Pointing at a page").
+  const pageNotes = pageQueue(taskId);
+  const notes = useShellStore((s) => s.replyNotes[pageNotes] ?? NO_NOTES);
+  const writing = useShellStore((s) =>
+    s.annotationPick?.cardId === pageNotes ? s.annotationPick.note : undefined,
+  );
+  const canSend =
+    !sending && (text.length > 0 || notes.length > 0) && text.length <= CARD_REPLY_MAX_CHARS;
   const change = (value: string) => {
     setDraft(value);
     keepCrewDraft(taskId, value);
@@ -246,21 +257,53 @@ function Composer({
   // The dictation key writes into the box while it has focus (docs/composer.md, "Voice").
   const dictation = useDictationField(field, () => draft, change);
   const send = async () => {
-    if (!canSend) return;
+    // Read now: a note queued by the key that sends is already in the queue.
+    const queued = useShellStore.getState().replyNotes[pageNotes] ?? NO_NOTES;
+    if (sending || (!text && queued.length === 0) || text.length > CARD_REPLY_MAX_CHARS) return;
     setSending(true);
     setRefusal(null);
+    useShellStore.setState((s) => ({ sendingReplies: { ...s.sendingReplies, [pageNotes]: true } }));
     try {
-      const result = await window.infinitary.task.steer(taskId, text);
-      if (result.ok) change("");
-      else setRefusal(result.text);
+      // Each marked picture of the page rides the line as one picture, drawn as it was marked.
+      const more = queued.length
+        ? { notes: queued, images: await markedPictures(pageNotes, queued) }
+        : undefined;
+      const result = await window.infinitary.task.steer(taskId, text, more);
+      if (result.ok) {
+        change("");
+        if (queued.length) {
+          useShellStore.setState((s) => ({
+            replyNotes: {
+              ...s.replyNotes,
+              [pageNotes]: (s.replyNotes[pageNotes] ?? []).filter((note) => !queued.includes(note)),
+            },
+          }));
+          // The line left with its marked pictures: this window keeps none of them.
+          forgetMarked(pageNotes, []);
+        }
+      } else setRefusal(result.text);
     } catch {
       setRefusal(m.cardCrewmateSendFailed());
     } finally {
       setSending(false);
+      useShellStore.setState((s) => {
+        const { [pageNotes]: _sent, ...rest } = s.sendingReplies;
+        return { sendingReplies: rest };
+      });
     }
   };
   return (
     <>
+      <div className="fm-crew-notes" data-crew-notes={notes.length}>
+        <QueuedNotes cardId={pageNotes} />
+      </div>
+      {writing && (
+        <AnnotationPopover
+          key={placeKey(writing.place)}
+          cardId={pageNotes}
+          send={() => void send()}
+        />
+      )}
       <div className="fm-crew-compose" data-crew-composer="" data-focus={focus ? "" : undefined}>
         <span className="prompt" aria-hidden="true">
           {/* i18n-exempt: a symbol */}
@@ -317,8 +360,9 @@ function Composer({
             transition: "opacity var(--dur-med) var(--ease-out)",
           }}
         />
-        <span className="to">
-          {WORDS.sendsTo} · <KeyCap>{thisDesktop().mac ? "↩" : "Enter"}</KeyCap>
+        <span className="to" data-crew-sends="">
+          {notes.length > 0 ? sendNotesLabel(notes.length) : WORDS.sendsTo} ·{" "}
+          <KeyCap>{thisDesktop().mac ? "↩" : "Enter"}</KeyCap>
         </span>
       </div>
       <DictationMark

@@ -39,6 +39,8 @@ Hide sits in that corner on every tab of the task's card, in every state of the 
   It is one line and never wraps: the action gives way first with an ellipsis, then who is driving; the site never does.
   The whole line, with the page's title and address, is on hover.
 - The control button, a small Button before More: `Take control` (secondary) while the crewmate drives or nobody does, `Take control` (primary) while the browser is paused for the captain's help, `Return control` (primary) while the captain has control, and none while the captain's Take control is finishing the crewmate's command or Return control is on its way.
+- Point at, an IconButton before the control button, the card's own control and key (`AnnotationControls`, the same arrow glyph, ⇧⌘A), offered where a note has somewhere to leave from: a card docked beside the page or the Crewmate column.
+  While it is on, its two tools sit before it as in the picture viewer (`PictureViewer.prompt.md`): the box and the freehand line, the chosen one pressed.
 - More, a small ghost Button, last in the row.
 
 **What the crewmate just did** is one short line at a time, replaced by the next, never a list: `opened /signup`, `read the page`, `waited for "Thanks"`, `typed into "Email"`, `typed into "Email" and pressed Enter`, `clicked "Create account"`, `chose "Economy" in "Class"`, `pressed Tab`, `scrolled down`, `went back`, `reloaded the page`, `photographed the page`.
@@ -193,6 +195,16 @@ Unavailable says why in the same place - `Four task browsers are already open on
 **Never.**
 The view never takes control by a click on the page, never sends what the captain types to the page while the captain watches, and never resumes the crewmate but by Return control; Hide, Esc and paging away change nothing about the browser or who holds it.
 Watching keeps the browser from stopping for being unused: its half hour starts again when the view is put away.
+
+**Point at** holds the newest picture of the page still and marks it, while the captain watches and while the captain has control (`docs/task-browser.md`, "Pointing at a page").
+The held picture stays where the live one was, at the same size; a surface over it takes the pointer and the keys, so nothing reaches the page, and the foot line's title gives way to the hint `The page is held still · press a spot, drag a box or draw · arrows step through the page, Enter writes the note`.
+Marks are drawn as on a picture (`PictureViewer.prompt.md`, "Pointing at a place"): the same two-colour box, spot and line, the same numbered badge, the mark being written lit, and the queued marks of the held picture shown on it.
+The arrows step through what the page's outline names, in its order, lighting each thing's box; Shift with an arrow makes that a box of its own, which the arrows then move and Shift sizes; `Enter` opens the note popover; `Esc` ends Point at and returns focus to its control.
+The note popover is the card's own (`CardThread.prompt.md`), anchored at the mark, with `Annotate page` as its title and the page's title as its excerpt.
+Under the excerpt it shows the exact picture that will be sent, a small copy at most 220 by 160px with the mark's number, captioned `The picture that will be sent` in `--text-xs` `--fg-3`; while the captain has control a second line reads `Sending shows this picture of the page to the crewmate.` Queue or Cancel ends Point at and the live pictures resume; the folded column opens when a mark is made, so the note is written and waits where it will leave from.
+Beside a docked card the note joins that card's queued notes and leaves with its reply; with no card it waits above the Crewmate column's message box, drawn as a queued note is (`Not sent`, its small marked copy, Edit and Remove), in a list at most 13rem tall that scrolls inside, and the box's caption reads `Send 2 notes · ↩`.
+In a column too short for both, the list gives up its room first, down to one note's first lines, so the message box stays whole.
+Nothing leaves before that send.
 
 **When no card is docked.**
 A crewmate's page opens with one Crewmate line under it, showing the newest words or report headline if there is one.

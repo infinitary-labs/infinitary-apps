@@ -136,8 +136,9 @@ export function recordingIntoMain(s: Pick<ShellState, "recording" | "voiceField"
 }
 
 /** Both input rows take only the remaining picture slots and explain any refusal. */
-export function takePictures(held: ImageAttachment[], items: ImageAttachment[]) {
-  const taken = items.slice(0, Math.max(0, TURN_IMAGES_MAX - held.length));
+export function takePictures(held: ImageAttachment[], items: ImageAttachment[], reserved = 0) {
+  // `reserved` are the pictures the message already carries besides the attached ones: a reply's marked pictures.
+  const taken = items.slice(0, Math.max(0, TURN_IMAGES_MAX - held.length - reserved));
   return { taken, refused: taken.length < items.length };
 }
 

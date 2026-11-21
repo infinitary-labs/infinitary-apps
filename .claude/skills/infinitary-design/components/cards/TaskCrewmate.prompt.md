@@ -42,6 +42,7 @@ It follows its end while the captain reads there, and stays where the captain sc
 
 - The status line, mono `--text-xs` `--fg-3`: a `StatusDot` and the state - `Working…` in `--hot` with the turn's age (`12s`, `4m 05s`), the `⌃C` KeyCap and `to interrupt`, then `Stop` as an `--accent` text button (`Stopping…` while it goes); `Paused · you hold its browser` (`captain`); `Waiting on you` (`warn`); `Idle` (`idle`).
 - The prompt: a box at `--radius-m` on `--surface-input` with a `--line-1` border, the hairline and focus ring taking `--line-2` and `--focus-ring` while it is focused; a mono `>` in `--accent`, the shared message field at `--text-sm` growing to six lines or to the room the card has left, then scrolling inside, and `to the crewmate · ↩` in `--text-xs` `--fg-3` at its right.
+  Notes made with Point at on the task's running page wait above the box as queued notes (`TaskBrowser.prompt.md`, "Point at"); while any wait the caption reads `Send 1 note · ↩`, and Enter sends them with whatever is typed, or alone.
   Its placeholder reads `Tell the crewmate something; it hears it at its next step` while a turn runs, else `Tell the crewmate what to do next`.
   A refusal is one `--danger` `--text-sm` line under it; the draft stays.
 

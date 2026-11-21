@@ -11,6 +11,7 @@
   "refuseNoCardIsShownOrPutAside": "表示中のカードも脇に置いたカードもありません",
   "refuseNoCardThreadIsReadAboveIts": "最新メッセージより上を読んでいるカードのスレッドはありません",
   "refuseNoOtherCardIsNew": "ほかに新着カードはありません",
+  "refuseNoPageToPointAt": "指し示せるページが表示されていません",
   "refuseNoReleaseNotesYet": "リリースノートはまだありません",
   "refuseNoUpdateIsAvailable": "利用可能なアップデートはありません",
   "refuseNoUpdateIsSavingWorkNow": "作業を保存中のアップデートはありません",

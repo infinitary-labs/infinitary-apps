@@ -1,3 +1,5 @@
+import { type CardNote, MARKED_PICTURES_LINE } from "@shared/cardNotes";
+import type { TurnImage } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -8,7 +10,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import type { InboxRow } from "../storage/inboxStore";
 import { TaskEventStore } from "../storage/taskEventStore";
-import { renderWake } from "./wakes";
+import { renderWake, replyWordsSpan, type WakeFacts } from "./wakes";
 
 /**
  * Intent: the approved detector includes genuine captain text from either
@@ -74,5 +76,86 @@ describe("captain input from the Crewmate tab", () => {
       ok: false,
     });
     expect(accepted).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Intent: the accepted Point at plan - with no card beside a running page, notes on it leave
+   * from the crewmate's message box, with the pictures their marks are drawn on.
+   */
+  it("carries notes on the task's running page with their marked picture, with or without words", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Build the sign-up page",
+      intent: intentOf("Build the sign-up page"),
+    });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    const note: CardNote = {
+      start: 0,
+      key: "page",
+      kind: "page",
+      excerpt: "Sign up",
+      comment: "This should say what happens next",
+      line: 1,
+      place: { width: 1280, height: 800, box: { x: 40, y: 132, width: 47, height: 18 } },
+      page: {
+        url: "http://localhost:5173/sign-up",
+        title: "Sign up",
+        under: { role: "text", name: "Name" },
+      },
+    };
+    // The one-pixel PNG a marked picture stands in as: the host reads its bytes, never its drawing.
+    const picture: TurnImage = {
+      mimeType: "image/png",
+      data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      name: "marked-1.png",
+    };
+    const pointed =
+      '- page "Sign up" (http://localhost:5173/sign-up), mark 1, box 40,132 47×18 in the 1280×800 picture, on text "Name": This should say what happens next';
+
+    // Notes alone are a line: the box needs no words beside them.
+    expect(
+      await h.supervisor.steer.steerFromCrewmateTab(taskId, "", {
+        notes: [note],
+        images: [picture],
+      }),
+    ).toEqual({ ok: true });
+    const bare: WakeFacts = { kind: "crewmate-tab-line", words: "", notes: [note] };
+    const alone = renderWake({ facts: bare });
+    const said = replyWordsSpan({ facts: bare });
+    expect(said && alone.slice(said.from, said.to).split("\n")).toEqual([
+      "Pointed at:",
+      pointed,
+      MARKED_PICTURES_LINE,
+    ]);
+    expect(said?.to).toBe(alone.length);
+    expect(crewmate.steer).toHaveBeenLastCalledWith(
+      alone,
+      [expect.objectContaining({ mimeType: "image/png", data: picture.data })],
+      expect.stringMatching(/^rows:\d+:/),
+    );
+
+    await h.supervisor.steer.steerFromCrewmateTab(taskId, " Fix the label too ", { notes: [note] });
+    const facts: WakeFacts = {
+      kind: "crewmate-tab-line",
+      words: "Fix the label too",
+      notes: [note],
+    };
+    const worded = renderWake({ facts });
+    expect(crewmate.steer).toHaveBeenLastCalledWith(
+      worded,
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+    // What the record shows as the captain's line is the words and the notes, never the lead.
+    const span = replyWordsSpan({ facts });
+    expect(span && worded.slice(span.from, span.to).split("\n")).toEqual([
+      "Fix the label too",
+      "Pointed at:",
+      pointed,
+      MARKED_PICTURES_LINE,
+    ]);
+    await h.supervisor.sessions.interruptCrewmate(taskId, "cancel");
+    await tick();
   });
 });

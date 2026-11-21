@@ -11,6 +11,7 @@
   "refuseNoCardIsShownOrPutAside": "No se muestra ni está apartada ninguna tarjeta",
   "refuseNoCardThreadIsReadAboveIts": "Ningún hilo de tarjeta está leído por encima de su último mensaje",
   "refuseNoOtherCardIsNew": "No hay otra tarjeta nueva",
+  "refuseNoPageToPointAt": "No se muestra ninguna página que señalar",
   "refuseNoReleaseNotesYet": "Aún no hay notas de la versión",
   "refuseNoUpdateIsAvailable": "No hay ninguna actualización disponible",
   "refuseNoUpdateIsSavingWorkNow": "Ninguna actualización está guardando trabajo ahora",

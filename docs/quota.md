@@ -149,7 +149,8 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
-  The hold and its refused readings are one fact: however the vault's hold ends - its reset, a reading with more left, credits, another login or the captain's Try again - the home's quota wiring ends the account's `rejected` readings with it (`AccountVault.onCutOffChange` in `src/core/quota/homeQuota.ts`), so the seat, the crew lanes and the meter never read two answers.
+  When the captain's Try again ends the hold, the home's quota wiring ends the account's `rejected` readings with it (`AccountVault.onCutOffChange` in `src/core/quota/homeQuota.ts`, only while the account goes by its answers), so the seat, the crew lanes and the meter never read two answers.
+  Every other way a hold ends keeps its own way with the readings: a reset ends each at its own reset, a reading with more left ends them, credits serve past them, and another login forgets them.
 - **Clearing, only when a fact changes** (owner Q1 a: never an automatic attempt).
   Each fact carries the stamp it was seen under (`CredentialStamp`): which login the store holds (a digest of the account and organisation the client's config names), when the credential was last written (the plain-file store's modification time, else the Keychain item's), and the client's version, projected from the shared store result by `claudeCredentialStamp` and never carrying a token.
   Its existing digest and file-first modification-date format stay compatible with saved refusals and records of pasted-code logins; neither needs a second reader.

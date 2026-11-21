@@ -455,7 +455,7 @@
 "cardSinceSeenSaw" = "自你看过的卡片以来 · %1$@";
 "cardSoundUnplayable" = "无法播放这段声音。";
 "cardSoundWord" = "声音";
-"cardSpentTryOnce" = "读数没有变化。如果你的大副通过另一个登录（例如你自己的设置传入的令牌）连接 %1$@，再试一次会把你的消息发送一次；如果额度仍已用完，它会再次暂停。";
+"cardSpentTryOnce" = "如果你的大副通过另一个登录（例如你自己的设置传入的令牌）连接 %1$@，再试一次会把你的消息发送一次；如果额度仍已用完，它会再次暂停。";
 "cardTabStripLabel" = "任务卡片";
 "cardThreadAddFiles" = "向这条回复添加文件";
 "cardThreadCard" = "卡片";

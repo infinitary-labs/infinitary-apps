@@ -349,6 +349,25 @@ describe("a spent allowance on a login Infinitary does not read", () => {
     run.agent.dispose();
   });
 
+  it("a hold ended by credits keeps its refused reading: only the captain's attempt ends both", async () => {
+    const root = scratchDir("spent-attempt-app-");
+    const db = freshDatabase();
+    seedAccount(appPathsFor(root).accountsDir);
+    const run = await boot(root, db);
+    await run.agent.converse("hello");
+    await refusedTurn(run);
+    expect(run.vault.cutOff(ACCOUNT)).toMatchObject({ class: "no_headroom" });
+
+    // Credits answer past the spent week: the hold ends, but the refusal
+    // still stands and keeps the account in the credits band.
+    run.homeQuota.setKeepGoingOnCredits(ACCOUNT, true);
+    expect(run.vault.noteCreditsAvailable(ACCOUNT)).toBe(true);
+    await tick();
+    expect(run.vault.cutOff(ACCOUNT)).toBeUndefined();
+    expect(refusals(run)).toHaveLength(1);
+    run.agent.dispose();
+  });
+
   it("an attempt refused with no reset named pauses again too, on the store login's spent reading", async () => {
     const { run } = await pausedSeat();
     run.supervisor.cardActions.act(FIRSTMATE_BENCH_CARD_ID, "try-again");

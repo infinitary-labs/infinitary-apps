@@ -18187,29 +18187,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `لم تتغير القراءة. إذا كان نائب القبطان يصل إلى ${provider} بتسجيل دخول آخر، مثل رمز يمرّره إعدادك الخاص، فإن المحاولة مرة أخرى ترسل رسائلك مرة واحدة؛ وإذا كان الرصيد لا يزال مستنفدًا، يتوقف مؤقتًا مرة أخرى.`;
+        return `إذا كان نائب القبطان يصل إلى ${provider} بتسجيل دخول آخر، مثل رمز يمرّره إعدادك الخاص، فإن المحاولة مرة أخرى ترسل رسائلك مرة واحدة؛ وإذا كان الرصيد لا يزال مستنفدًا، يتوقف مؤقتًا مرة أخرى.`;
       case "de":
-        return `Der Stand hat sich nicht geändert. Wenn dein erster Offizier ${provider} über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.`;
+        return `Wenn dein erster Offizier ${provider} über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.`;
       case "es":
-        return `La lectura no ha cambiado. Si tu primer oficial llega a ${provider} con otro inicio de sesión, como un token que pasa tu propia configuración, volver a intentarlo envía tus mensajes una vez; si la asignación sigue agotada, vuelve a pausarse.`;
+        return `Si tu primer oficial llega a ${provider} con otro inicio de sesión, como un token que pasa tu propia configuración, volver a intentarlo envía tus mensajes una vez; si la asignación sigue agotada, vuelve a pausarse.`;
       case "fr":
-        return `La lecture n’a pas changé. Si votre second atteint ${provider} avec une autre connexion, comme un jeton que votre propre configuration transmet, réessayer envoie vos messages une fois ; si l’allocation est toujours épuisée, il se remet en pause.`;
+        return `Si votre second atteint ${provider} avec une autre connexion, comme un jeton que votre propre configuration transmet, réessayer envoie vos messages une fois ; si l’allocation est toujours épuisée, il se remet en pause.`;
       case "ja":
-        return `読み取った利用枠は変わっていません。一等航海士が別のサインイン（ご自身の設定が渡すトークンなど）で ${provider} に届く場合は、もう一度試すとメッセージを一度だけ送ります。利用枠がまだ使い切られていれば、再び一時停止します。`;
+        return `一等航海士が別のサインイン（ご自身の設定が渡すトークンなど）で ${provider} に届く場合は、もう一度試すとメッセージを一度だけ送ります。利用枠がまだ使い切られていれば、再び一時停止します。`;
       case "ko":
-        return `읽은 사용량이 바뀌지 않았어요. 일등항해사가 다른 로그인(직접 설정한 환경이 넘겨주는 토큰 등)으로 ${provider}에 닿는다면, 다시 시도하면 메시지를 한 번 보내요. 사용량이 여전히 소진됐다면 다시 일시 중지돼요.`;
+        return `일등항해사가 다른 로그인(직접 설정한 환경이 넘겨주는 토큰 등)으로 ${provider}에 닿는다면, 다시 시도하면 메시지를 한 번 보내요. 사용량이 여전히 소진됐다면 다시 일시 중지돼요.`;
       case "pt-BR":
-        return `A leitura não mudou. Se o seu imediato chega ao ${provider} por outro login, como um token que a sua própria configuração passa, tentar de novo envia suas mensagens uma vez; se a franquia continuar esgotada, ele pausa de novo.`;
+        return `Se o seu imediato chega ao ${provider} por outro login, como um token que a sua própria configuração passa, tentar de novo envia suas mensagens uma vez; se a franquia continuar esgotada, ele pausa de novo.`;
       case "zh-Hans":
-        return `读数没有变化。如果你的大副通过另一个登录（例如你自己的设置传入的令牌）连接 ${provider}，再试一次会把你的消息发送一次；如果额度仍已用完，它会再次暂停。`;
+        return `如果你的大副通过另一个登录（例如你自己的设置传入的令牌）连接 ${provider}，再试一次会把你的消息发送一次；如果额度仍已用完，它会再次暂停。`;
       case "zh-Hant":
-        return `讀數沒有變化。如果你的大副透過另一個登入（例如你自己的設定傳入的權杖）連到 ${provider}，再試一次會把你的訊息送出一次；如果額度仍已用完，它會再次暫停。`;
+        return `如果你的大副透過另一個登入（例如你自己的設定傳入的權杖）連到 ${provider}，再試一次會把你的訊息送出一次；如果額度仍已用完，它會再次暫停。`;
       case "en-XA":
-        return `[Ţĥé ŕéáðîñĝ ĥáš ñöţ çĥáñĝéð. Îƒ ýöûŕ ƒîŕšţ ɱáţé ŕéáçĥéš ${provider} öñ áñöţĥéŕ šîĝñ-îñ, šûçĥ áš á ţöķéñ ýöûŕ öŵñ šéţûþ þáššéš, ţŕýîñĝ áĝáîñ šéñðš ýöûŕ ɱéššáĝéš öñçé; îƒ ţĥé áļļöŵáñçé îš šţîļļ ûšéð ûþ, îţ þáûšéš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îƒ ýöûŕ ƒîŕšţ ɱáţé ŕéáçĥéš ${provider} öñ áñöţĥéŕ šîĝñ-îñ, šûçĥ áš á ţöķéñ ýöûŕ öŵñ šéţûþ þáššéš, ţŕýîñĝ áĝáîñ šéñðš ýöûŕ ɱéššáĝéš öñçé; îƒ ţĥé áļļöŵáñçé îš šţîļļ ûšéð ûþ, îţ þáûšéš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮The reading has not changed. If your first mate reaches ‬${provider}‮ on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.‬`;
+        return `‮If your first mate reaches ‬${provider}‮ on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.‬`;
     }
-    return `The reading has not changed. If your first mate reaches ${provider} on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.`;
+    return `If your first mate reaches ${provider} on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.`;
   }
   function cardTabStripLabel() {
     switch (currentLanguage()) {

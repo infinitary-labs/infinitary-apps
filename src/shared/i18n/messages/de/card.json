@@ -266,7 +266,7 @@
   "cardSinceSeenSaw": "Seit der Karte, die du gesehen hast · {when}",
   "cardSoundUnplayable": "Dieser Ton konnte nicht abgespielt werden.",
   "cardSoundWord": "Ton",
-  "cardSpentTryOnce": "Der Stand hat sich nicht geändert. Wenn dein erster Offizier {provider} über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.",
+  "cardSpentTryOnce": "Wenn dein erster Offizier {provider} über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.",
   "cardTabStripLabel": "Aufgabenkarte",
   "cardThreadAddFiles": "Dateien zu dieser Antwort hinzufügen",
   "cardThreadCard": "Karte",

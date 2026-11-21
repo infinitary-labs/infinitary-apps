@@ -249,7 +249,7 @@
   "cardSinceSeenSaw": "自你看過的卡片以來 · {when}",
   "cardSoundUnplayable": "無法播放這段聲音。",
   "cardSoundWord": "聲音",
-  "cardSpentTryOnce": "讀數沒有變化。如果你的大副透過另一個登入（例如你自己的設定傳入的權杖）連到 {provider}，再試一次會把你的訊息送出一次；如果額度仍已用完，它會再次暫停。",
+  "cardSpentTryOnce": "如果你的大副透過另一個登入（例如你自己的設定傳入的權杖）連到 {provider}，再試一次會把你的訊息送出一次；如果額度仍已用完，它會再次暫停。",
   "cardTabStripLabel": "任務卡片",
   "cardThreadAddFiles": "在這則回覆加入檔案",
   "cardThreadCard": "卡片",

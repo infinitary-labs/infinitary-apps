@@ -73,12 +73,23 @@ export class AnswerDeliveryCheck {
   private adopted = new Set<string>();
   private about = new Map<string, string>();
   private retryAsk: string | undefined;
+  /** The running turn reads an answer a captain's message waits on. */
+  private answerTurn = false;
 
   constructor(private readonly host: AnswerDeliveryHost) {}
 
   /** The running turn is the one output-only retry: it may only show an answer. */
   get outputOnly(): boolean {
     return this.retryAsk !== undefined;
+  }
+
+  /**
+   * The running turn is served alone - the one retry, or an answer a
+   * captain's message waits on - so a new message of his waits on the lane
+   * for a turn of its own instead of riding in as a steer.
+   */
+  get servedAlone(): boolean {
+    return this.outputOnly || this.answerTurn;
   }
 
   /** A message was a reply under one of Firstmate's own cards. */
@@ -111,6 +122,7 @@ export class AnswerDeliveryCheck {
         // message's and the message is judged when it ends - its card, or
         // the one retry (docs/task-capture.md "How a message ends").
         for (const ask of this.waitingOn(row)) {
+          this.answerTurn = true;
           if (ask.delivery === "covered") this.host.tasks.capture.setAskDelivery(ask.id, "pending");
           this.adopted.add(ask.id);
         }
@@ -218,6 +230,7 @@ export class AnswerDeliveryCheck {
     this.adopted.clear();
     this.about.clear();
     this.retryAsk = undefined;
+    this.answerTurn = false;
   }
 
   private hold(id: string): void {

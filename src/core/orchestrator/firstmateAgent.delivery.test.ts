@@ -248,6 +248,45 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.prompts[2]).not.toContain("and what about the phone app?");
   });
 
+  it("parks a captain's message sent while the answer's turn runs, so a card there answers only the earlier one", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+      ],
+    });
+    const inbox = new InboxStore(f.db);
+    await f.agent.converse("will updating get the new alpha?");
+    await toolsOf(f.specs)
+      .get("steer_crewmate")
+      ?.execute("s1", { task_id: "t1", message: "Will updating get the new alpha?" });
+    await finish(f, "I'll answer you once it reports.");
+    const [request] = inbox.pendingResponses("t1");
+    if (!request) throw new Error("No open request on t1");
+    inbox.submitResponse(
+      { requestId: request.id, responseId: "r1", status: "answered" },
+      { task: "t1", session: null },
+      "Yes, updating gets the alpha.",
+    );
+    f.agent.pokeInbox();
+    await drained(f.session, 2);
+
+    // The captain speaks while the answer's turn runs: the words wait.
+    await f.agent.converse("and what about the phone app?");
+    await toolsOf(f.specs)
+      .get("emit_card")
+      ?.execute("c1", note("alpha", "Updating gets the alpha"));
+    await finish(f, "Shown.");
+    await drained(f.session, 3);
+    expect(f.session.prompts[1]).not.toContain("and what about the phone app?");
+    expect(f.session.prompts[2]).toContain("and what about the phone app?");
+    expect(f.session.prompts[2]).not.toContain("Yes, updating gets the alpha.");
+    const [first, second] = f.tasks.capture.listAsks();
+    expect(first?.text).toBe("will updating get the new alpha?");
+    expect(first?.delivery).toBe("covered");
+    expect(second?.delivery).not.toBe("covered");
+  });
+
   // INF-5578's audit, finding 1: a change the task refused stops counting as
   // the message's work, whichever tool path refused it, so the message does
   // not wait for the task to close; the task stays about the message.

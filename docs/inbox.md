@@ -317,6 +317,7 @@ The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` 
   The answer-delivery retry (`answer-missing`, `docs/task-capture.md` "Answer delivery") quotes the captain's words once for the message nothing took effect after.
   It goes out once per message (once-name `answer-repair:<askId>`), skips the coalescing window, and is served alone: never batched with another row and never carried on a captain's turn.
   A crewmate's answer to a request the first mate asked for a captain's message that still waits on it (`requested-response`, `AnswerDeliveryCheck.waitingOn`) is served alone the same way, so the turn that reads it reads only that message (`docs/task-capture.md` "Waiting for an answer").
+  A captain's message sent while such a turn runs is parked for a turn of its own, as during the retry, and parked captain words are served ahead of such an answer, with the answers left out of their batch.
   Each cap carries the cap it reached, so a queued row words the cap it was about.
   The seams a wake reaches the first mate's lane by (`FirstmateAgent.notifyOp`, `FirstmateHooks.notifyOp`, the ladder's `notifyOp` and `steer`) take only a typed wake.
 - **What stays prose** is what an agent wrote, never a sentence the host composed: the first mate's steer and a dispatch brief - and the recorded job result the replay hands `deliverJobResult`, the one seam left wide for it.

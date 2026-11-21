@@ -144,6 +144,7 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   The message waits on it while the request is open and its task is open, and while its answer is still waiting unread on the first mate's lane, whether or not its task has closed (`InboxStore.requestOpen`).
   A crewmate that answers not yet, or never answers, keeps it waiting until the task closes, so the message never waits longer than its task; a request the first mate cancels waits no longer.
   An answer a message still waits on is served in a turn of its own, as the one retry is, never batched with other wakes and never carried on a captain's turn (`AnswerDeliveryCheck.waitingOn`), so nothing else in that turn counts toward the message.
+  A captain's message sent while that turn runs waits on the lane for a turn of its own, as during the retry (`AnswerDeliveryCheck.servedAlone`), and parked captain words are served before a waiting answer.
   The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
   Several messages asked of one long task each wait on their own requests and end on their own answers.
 - **Joining.**

@@ -559,11 +559,13 @@ export class FirstmateAgent {
     const captainOnly = (context: string): ServedInput => ({
       framed: frameServedInput([{ kind: "context", body: context }, userSegment]),
     });
-    if (this.delivery.outputOnly) {
+    if (this.delivery.servedAlone) {
       // The running turn is an answer-delivery retry, which may only show an
       // answer: a new message would meet its refusals if it rode in as a
       // steer, so it waits on the lane for a turn of its own, and the retry
-      // does not judge a message it never read.
+      // does not judge a message it never read. So does a turn reading an
+      // answer an earlier message waits on: a card for the new message must
+      // not count as the earlier one's answer.
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.unreadAsks.add(ask.id);
       return;
@@ -594,7 +596,7 @@ export class FirstmateAgent {
       this.keptReceipt(ask.id);
       return;
     }
-    if (this.delivery.outputOnly) {
+    if (this.delivery.servedAlone) {
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.unreadAsks.add(ask.id);
       return;
@@ -1535,10 +1537,20 @@ export class FirstmateAgent {
     const retry = choice ? undefined : pending.find((row) => row.facts?.kind === "answer-missing");
     // So is an answer a captain's message waits on: the turn that reads it
     // reads that message alone, so nothing else in it counts toward it
-    // (docs/task-capture.md "Waiting for an answer").
+    // (docs/task-capture.md "Waiting for an answer"). Parked captain words
+    // go first, with such answers left out, as a live captain turn does.
+    const words = pending.some((row) => row.origin === "captain");
     const answer =
-      choice || retry ? undefined : pending.find((row) => this.delivery.waitingOn(row).length > 0);
-    const batch = choice ? [choice] : retry ? [retry] : answer ? [answer] : pending;
+      choice || retry || words
+        ? undefined
+        : pending.find((row) => this.delivery.waitingOn(row).length > 0);
+    const batch = choice
+      ? [choice]
+      : retry
+        ? [retry]
+        : answer
+          ? [answer]
+          : pending.filter((row) => this.delivery.waitingOn(row).length === 0);
     if (batch.length === 0) return;
     const batchImages = choice ? undefined : served.images;
     const classified = classifyInboxBatch(batch);

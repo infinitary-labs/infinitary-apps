@@ -326,6 +326,24 @@ export function takesTaskFacts(card: FactsCard): boolean {
 }
 
 /**
+ * How much of its task's facts a card's strip carries, on a card that takes
+ * them (`takesTaskFacts`). `whole` is the status line's states, what needs
+ * the captain under them and the reference. `reference` is the reference
+ * alone - the project, the change, its lines and its care - on a Review
+ * finding card: one naming a review, with no merge or settle of its own.
+ * That card asks about the work itself; the checks and the review's own
+ * state bear on the merge, which the task's merge card shows, and on the
+ * question they only pull the eye away from it.
+ */
+export type TaskFactsPart = "whole" | "reference";
+export function taskFactsPartOf(card: FactsCard): TaskFactsPart {
+  if (!card.reviewTaskId || card.body?.includes(MERGE_HELD_MARK)) return "whole";
+  return card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))
+    ? "whole"
+    : "reference";
+}
+
+/**
  * The story note of a task that merges on its own (INF-1219): a crewmate's
  * card with a risk assessment and no actions. Its task's open change keeps
  * it off the stack until the merge has a result (INF-2533).

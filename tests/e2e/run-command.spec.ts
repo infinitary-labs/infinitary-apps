@@ -185,8 +185,17 @@ test("a run on saved data from a newer version ends with its refusal and recover
 // The review of INF-5409: a stop asked while a run's first mate starts is the run's end. The run
 // stops once that start is done with, as a quit stops it, keeps the stop as its reason, and ends
 // with 0; it starts no first mate after the stop. Held by a development file at the core's start,
-// before its saved data is accepted, and once that start returned to the startup, after it: there
-// the startup's own disposal waits for the held start and closes the core it opened.
+// before its saved data is accepted, and once that start returned to the startup, after it. Once
+// the run took the stop, it stays up while the start is held; after it, the core's own disposal
+// marks the launch a clean quit (`LaunchWatch`) only once the hold is let go, and the run exits
+// after that. A long launch window keeps that mark from settling on its own.
+const launchMark = (userDataDir: string) =>
+  readSavedData(userDataDir, (db) => {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'launch'").get() as
+      | { value: string }
+      | undefined;
+    return row ? (JSON.parse(row.value) as { pending: boolean }).pending : null;
+  });
 for (const [when, setting] of [
   ["before its saved data is accepted", "INFINITARY_RUN_START_HOLD"],
   ["after its saved data is accepted", "INFINITARY_RUN_STARTED_HOLD"],
@@ -196,9 +205,21 @@ for (const [when, setting] of [
     const hold = join(scratchDir("infinitary-run-command-hold-"), "hold");
     // e2e-fixture: input -- holds the run's start back until the stop is asked
     writeFileSync(hold, "");
-    const ran = run({ ...(await runEnv(userDataDir)), [setting]: hold });
+    const ran = run({
+      ...(await runEnv(userDataDir)),
+      [setting]: hold,
+      INFINITARY_EARLY_LAUNCH_MS: "600000",
+    });
     await expect.poll(() => existsSync(`${hold}.reached`)).toBe(true);
+    const accepted = setting === "INFINITARY_RUN_STARTED_HOLD";
+    // Past acceptance the core is up and its launch not yet marked a clean quit.
+    if (accepted) expect(launchMark(userDataDir)).toBe(true);
     ran.child.kill("SIGTERM");
+    await expect.poll(() => existsSync(`${hold}.stopping`)).toBe(true);
+    // The stop is taken, and the run stays up while its start is held.
+    expect(ran.child.exitCode).toBeNull();
+    expect(ran.child.signalCode).toBeNull();
+    if (accepted) expect(launchMark(userDataDir)).toBe(true);
     rmSync(hold);
     expect(await ran.exited, ran.error()).toBe(0);
     expect(ran.lines()).toEqual([RUN_WORDS.stopped]);
@@ -206,13 +227,8 @@ for (const [when, setting] of [
       JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
     ).toMatchObject({ reason: "signal", exitCode: 0 });
     expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
-    if (setting === "INFINITARY_RUN_STARTED_HOLD") {
-      // The core opened the app's own record and closed it cleanly, its log folded back in.
-      expect(existsSync(join(userDataDir, "firstmate.db-wal"))).toBe(false);
-      expect(
-        readSavedData(userDataDir, (db) => db.prepare("SELECT COUNT(*) AS n FROM tasks").get()),
-      ).toEqual({ n: 0 });
-    }
+    // The core's disposal ran before the run exited.
+    if (accepted) expect(launchMark(userDataDir)).toBe(false);
   });
 }
 

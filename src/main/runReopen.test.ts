@@ -129,11 +129,24 @@ describe("a launch beside an older Mac window", () => {
       await reopenOlderWindow({
         bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
         holderAlive: () => true,
-        answered: () => true,
+        answered: () => false,
         ask: none.ask,
       }),
     ).toBe("unconfirmed");
     expect(none.asked).toEqual([]);
+    // A window's answer that came meanwhile wins at every end, with nothing asked of macOS.
+    for (const holderAlive of [true, false]) {
+      const late = asker(true);
+      expect(
+        await reopenOlderWindow({
+          bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
+          holderAlive: () => holderAlive,
+          answered: () => true,
+          ask: late.ask,
+        }),
+      ).toBe("confirmed");
+      expect(late.asked).toEqual([]);
+    }
   });
 
   it("asks nothing of a window that ended meanwhile", async () => {
@@ -181,7 +194,11 @@ describe("a launch beside an older Mac window", () => {
         },
       };
     };
-    const refusedLaunch = async (older: ReturnType<typeof olderWindow>, alive = true) => {
+    const refusedLaunch = async (
+      older: ReturnType<typeof olderWindow>,
+      alive = true,
+      replaced = false,
+    ) => {
       const ended: string[] = [];
       // The holder told to be a window is the one asked to reopen.
       let classified: number | undefined;
@@ -207,7 +224,8 @@ describe("a launch beside an older Mac window", () => {
       expect(classified).toBe(4242);
       const kind = await endRefusedLaunch({
         found,
-        answered: false,
+        answered: () => false,
+        replaced: () => replaced,
         platform: "darwin",
         reopen: () =>
           reopenOlderWindow({
@@ -239,21 +257,32 @@ describe("a launch beside an older Mac window", () => {
     });
     expect(refusing.windows).toEqual([]);
 
-    // The window ended meanwhile: nothing asked, and the launch starts again on the folder.
+    // The window ended meanwhile, as one the person quit: nothing asked, nothing started, so a
+    // window quit stays quit; only a run that took the folder meanwhile has the launch start again.
     const ended = olderWindow(true);
-    expect(await refusedLaunch(ended, false)).toEqual({
+    expect(await refusedLaunch(ended, false)).toEqual({ kind: "window", ended: ["quit"] });
+    expect(ended.windows).toEqual([]);
+    const replacedBy = olderWindow(true);
+    expect(await refusedLaunch(replacedBy, false, true)).toEqual({
       kind: "window",
       ended: ["started again", "quit"],
     });
-    expect(ended.windows).toEqual([]);
+    expect(replacedBy.windows).toEqual([]);
   });
 
   it("ends as a window answered or the person chose, whatever was read before", async () => {
-    const end = async (found: "run" | "free" | "window" | "left", answered: boolean) => {
+    const end = async (
+      found: "run" | "free" | "window" | "left",
+      answered: boolean,
+      answersLater = false,
+    ) => {
       const ended: string[] = [];
+      let looks = 0;
       const kind = await endRefusedLaunch({
         found,
-        answered,
+        // An answer that comes after the first look, as one written while the launch decides.
+        answered: () => answered || (answersLater && looks++ > 0),
+        replaced: () => false,
         platform: "darwin",
         reopen: async () => {
           ended.push("asked to reopen");
@@ -273,6 +302,29 @@ describe("a launch beside an older Mac window", () => {
     // The person left a holder that showed nothing open: nothing asked, nothing started.
     expect(await end("left", false)).toEqual({ kind: "window", ended: ["quit"] });
     expect(await end("run", false)).toEqual({ kind: "run", ended: ["started again", "quit"] });
+    // A window that answers while the launch decides, before it starts again or tells the person
+    // to click it in the Dock, wins as one that answered first.
+    expect(await end("run", false, true)).toEqual({ kind: "run", ended: ["quit"] });
+    expect(await end("free", false, true)).toEqual({ kind: "free", ended: ["quit"] });
     expect(await end("free", false)).toEqual({ kind: "free", ended: ["started again", "quit"] });
+    // An answer once the reopen came back unconfirmed: the person is told nothing of the Dock.
+    const ended: string[] = [];
+    let reopened = false;
+    await endRefusedLaunch({
+      found: "window",
+      answered: () => reopened,
+      replaced: () => false,
+      platform: "darwin",
+      reopen: async () => {
+        reopened = true;
+        return "unconfirmed";
+      },
+      tellDock: async () => {
+        ended.push("told to click it in the Dock");
+      },
+      relaunch: () => ended.push("started again"),
+      quit: () => ended.push("quit"),
+    });
+    expect(ended).toEqual(["quit"]);
   });
 });

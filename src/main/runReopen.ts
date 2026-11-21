@@ -92,15 +92,16 @@ export function askReopen(bundle: string): Promise<boolean> {
  * Mac (docs/run.md, "Opened while it runs"): that older window brings itself
  * forward on the ask while it has a window, but one whose last window was
  * closed keeps running in the Dock and opens nothing. The launch asks the
- * holder it read once to reopen, as a click in the Dock does, through macOS's
- * own open (`askReopen`), which every version opens its window on. macOS
- * taking the ask confirms nothing of a window, so only a window's answer
- * confirms it (`confirmed`), whatever macOS said; `gone` where that holder
- * no longer holds the lock, before the ask or once it was made, so the
- * folder may be free for the launch started again to read afresh;
- * `unconfirmed` otherwise, including where it cannot be asked, macOS refused
- * it, or it reached this launch instead, for the launch to tell the person to
- * click Infinitary in the Dock.
+ * holder it told by its words once to reopen, as a click in the Dock does,
+ * through macOS's own open of its bundle (`askReopen`), which every version
+ * opens its window on; a holder is told by its words only where it runs this
+ * same program, so the bundle asked is its own. macOS taking the ask confirms
+ * nothing of a window, so only a window's answer confirms it (`confirmed`),
+ * read at every end, whatever macOS said; `gone` where that holder no longer
+ * holds the lock, before the ask or once it was made, as a window the person
+ * quit; `unconfirmed` otherwise, including where it cannot be asked, macOS
+ * refused it, or it reached this launch instead, for the launch to tell the
+ * person to click Infinitary in the Dock.
  */
 export async function reopenOlderWindow(options: {
   bundle: string | null;
@@ -108,42 +109,46 @@ export async function reopenOlderWindow(options: {
   answered: () => boolean;
   ask?: (bundle: string) => Promise<boolean>;
 }): Promise<"confirmed" | "gone" | "unconfirmed"> {
-  if (!options.holderAlive()) return "gone";
-  if (options.bundle === null) return "unconfirmed";
+  const end = (otherwise: "gone" | "unconfirmed") =>
+    options.answered() ? ("confirmed" as const) : otherwise;
+  if (!options.holderAlive()) return end("gone");
+  if (options.bundle === null) return end("unconfirmed");
   await (options.ask ?? askReopen)(options.bundle);
-  if (options.answered()) return "confirmed";
-  return options.holderAlive() ? "unconfirmed" : "gone";
+  return end(options.holderAlive() ? "unconfirmed" : "gone");
 }
 
 /**
  * How a window launch refused the folder's lock ends, once it read who holds
  * it (`lockHolderKind`): a window's answer wins, even one that came after the
- * holder was read, and so does the person's word to leave a holder that
- * showed nothing open (`left`). A window told only by what it runs as, on a
- * Mac, is asked once to reopen (`reopenOlderWindow`), and the person is told
- * to click it in the Dock unless a window's answer confirms it. The launch starts
- * again beside a run, on a free folder, or where that window ended
- * meanwhile, and quits either way. The holder's kind, for the launch's log.
+ * holder was read, read again before each step, and so does the person's word
+ * to leave a holder that showed nothing open (`left`). A window told only by
+ * what it runs as, on a Mac, is asked once to reopen (`reopenOlderWindow`),
+ * and the person is told to click it in the Dock unless a window's answer
+ * confirms it. The launch starts again beside a run and on a free folder; where
+ * the window it asked to reopen ended meanwhile, as one the person quit, only
+ * beside a run that took the folder (`replaced`), so a window quit stays quit.
+ * It quits either way. The holder's kind, for the launch's log.
  */
 export async function endRefusedLaunch(options: {
   found: "run" | "free" | "window" | "left";
-  answered: boolean;
+  answered: () => boolean;
+  /** Whether a run holds the folder now. */
+  replaced: () => boolean;
   platform: string;
   reopen: () => Promise<"confirmed" | "gone" | "unconfirmed">;
   tellDock: () => Promise<void>;
   relaunch: () => void;
   quit: () => void;
 }): Promise<"run" | "free" | "window"> {
-  const kind = options.answered || options.found === "left" ? "window" : options.found;
+  const answeredFirst = options.answered();
+  const kind = answeredFirst || options.found === "left" ? "window" : options.found;
   const reopened =
-    kind === "window" &&
-    options.found !== "left" &&
-    !options.answered &&
-    options.platform === "darwin"
+    kind === "window" && options.found !== "left" && !answeredFirst && options.platform === "darwin"
       ? await options.reopen()
       : null;
-  if (reopened === "unconfirmed") await options.tellDock();
-  if (kind !== "window" || reopened === "gone") options.relaunch();
+  if (reopened === "unconfirmed" && !options.answered()) await options.tellDock();
+  const again = kind !== "window" || (reopened === "gone" && options.replaced());
+  if (again && !options.answered()) options.relaunch();
   options.quit();
   return kind;
 }

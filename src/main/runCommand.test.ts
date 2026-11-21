@@ -440,8 +440,13 @@ describe("a window opened beside a run", () => {
 
     // The lock read free: asked for at each look, as when the holder that refused the launch's own
     // ask ended before any look, so the launch never waits beside a free folder.
-    const refusals = [true];
+    // Whatever refused those asks was never read, as a window that took the lock after the read
+    // just before the launch's ask and quit before the next look: the launch is told before it
+    // acts on the folder free, so it may ask the person rather than reopen what they quit.
+    const refusals = [true, true];
     let freeAsks = 0;
+    const unknowns: number[] = [];
+    let unknownsAtFree = -1;
     expect(
       await lockHolderKind({
         running: () => false,
@@ -451,13 +456,18 @@ describe("a window opened beside a run", () => {
         windowHolder: async () => null,
         lockFree: () => {
           freeAsks += 1;
-          return !refusals.shift();
+          const free = !refusals.shift();
+          if (free) unknownsAtFree = unknowns.length;
+          return free;
         },
         readEveryMs: 100,
         everyMs: 20,
+        onUnknown: () => unknowns.push(freeAsks),
       }),
     ).toBe("free");
-    expect(freeAsks).toBe(2);
+    expect(freeAsks).toBe(3);
+    expect(unknownsAtFree).toBe(0);
+    expect(unknowns).toEqual([3]);
     // A window answers and the person quits it just as the launch takes the lock: the answer wins,
     // so the launch quits too and never opens the app the person just quit. An answer there before
     // a run notes itself wins as well.
@@ -636,7 +646,7 @@ describe("a window opened beside a run", () => {
   );
 
   // The review of INF-5409: on a Windows PC, whose lock names no holder, a command holds a pipe of
-  // its own from before it asks for the lock until it ends, so a window launch refused the lock
+  // its own from once it holds the lock until it ends, so a window launch refused the lock
   // waits on a command that has not noted itself. A holder with no such pipe is not known, since a
   // command from before that pipe holds none either: it is waited for, never taken for a window,
   // until it answers, notes itself or lets the lock go, and one that let it go after showing nothing

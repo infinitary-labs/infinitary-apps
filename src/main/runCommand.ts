@@ -475,8 +475,8 @@ export function clearWindowAnswers(
 
 /**
  * The pipe a command holds on a Windows PC for as long as it runs, from
- * before it asks for the folder's lock (`holdCommandPipe`), by the folder it
- * runs on: Windows' own lock names no holder, so a window launch refused
+ * once it holds the folder's lock (`holdCommandPipe`), by the folder it
+ * runs on, so a command refused that lock never holds it: Windows' own lock names no holder, so a window launch refused
  * that lock tells a command holding it from a window by this pipe
  * (`commandPipeHeld`). A pipe is no file in the folder and goes with its
  * program, so a command that ended leaves nothing behind.
@@ -659,9 +659,10 @@ export async function lockHolderKind(options: {
   let shown: boolean | null | undefined;
   let readAgain = 0;
   let unknownTold = false;
-  // Whether the holder now seen was never shown to be a command: one on a lock that names no
-  // holder (Windows) until its pipe is read, and any that a read showed nothing of.
-  let unresolved = options.asked === undefined;
+  // Whether the holder now seen was never shown to be a command: the one that refused the launch's
+  // own ask, and each one after it, until a read of that same holder shows a command; a holder that
+  // refuses a later ask for a free lock is one more never read.
+  let unresolved = true;
   const tellUnknown = () => {
     if (unknownTold) return;
     unknownTold = true;
@@ -680,7 +681,7 @@ export async function lockHolderKind(options: {
       seen = holder;
       read = null;
       shown = undefined;
-      unresolved = holder === undefined;
+      unresolved = true;
       const kind = ask();
       if (kind === "free" && unread) tellUnknown();
       if (kind) return kind;

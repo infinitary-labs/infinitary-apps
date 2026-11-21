@@ -789,12 +789,7 @@ export async function startApp(
   // The holder this launch's own ask reaches, read just before it, so a holder that takes the
   // lock after is asked too (`lockHolderKind`).
   const askedHolder = answerAsk ? lockHolderNow() : undefined;
-  // On a Windows PC, whose lock names no holder, a command holds a pipe of its own from before it
-  // asks for the lock until it ends, so a window launch refused the lock tells it from a window
-  // (`commandPipe`). Never during a folder move, nor on a folder it would refuse.
   const onWindows = hostPlatform() === "win32";
-  if (windowless && !move && onWindows && !dataFolderRefusal(dataDir, privacy))
-    holdCommandPipe(commandPipe(dataDir));
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -918,34 +913,37 @@ export async function startApp(
         if (read === "free") app.releaseSingleInstanceLock();
         // A lock let go while the question is up waits for the person's answer, since a window quit
         // on purpose and a command that ended look the same, and the folder is watched meanwhile
-        // without holding it: a window's answer or a run found ends the question, and a holder that
-        // takes the folder is asked once, as the lock refusing this launch asks it. Open here starts
-        // the launch again, which reads the folder afresh.
+        // without taking it: a window's answer or a run found ends the question, and each holder
+        // seen taking the folder is asked once, as the lock refusing this launch asks it, so a
+        // window that takes over answers. Open here starts the launch again, which reads the
+        // folder afresh.
         let found: "run" | "free" | "window" | "left" = read;
         if (read === "free" && openOnceClosed !== null) {
           const asking: Promise<boolean> = openOnceClosed;
-          let answeredByPerson = false;
+          let personAnswered = false;
           const watched = (async (): Promise<"run" | "window" | null> => {
-            let free = true;
-            while (!answeredByPerson) {
+            let last: number | null | undefined = null;
+            while (!personAnswered) {
               if (existsSync(answer)) return "window";
               if (runningByCommand(dataDir)) return "run";
-              if (free) {
-                free = app.requestSingleInstanceLock(lockAsk);
-                if (free) app.releaseSingleInstanceLock();
-              }
+              const holder = lockHolderNow();
+              // A holder newly seen is asked once; were the folder free again by then, the lock
+              // taken for that ask is let go at once.
+              if (holder !== null && holder !== last && app.requestSingleInstanceLock(lockAsk))
+                app.releaseSingleInstanceLock();
+              last = holder;
               await new Promise((resolve) => setTimeout(resolve, 250));
             }
             return null;
           })();
           found = await Promise.race([
             asking.then((open) => {
-              answeredByPerson = true;
+              personAnswered = true;
               return open ? ("free" as const) : ("left" as const);
             }),
             watched.then((seen) => seen ?? ("free" as const)),
           ]);
-          answeredByPerson = true;
+          personAnswered = true;
         }
         shownWhy.abort();
         // A window told only by what it runs as is one from before the answer: on a Mac it may have
@@ -954,7 +952,8 @@ export async function startApp(
         // window's answer confirms it.
         const kind = await endRefusedLaunch({
           found,
-          answered: existsSync(answer),
+          answered: () => existsSync(answer),
+          replaced: () => runningByCommand(dataDir),
           platform: hostPlatform(),
           reopen: () =>
             reopenOlderWindow({
@@ -983,6 +982,12 @@ export async function startApp(
       });
     } else app.quit();
   } else {
+    // On a Windows PC, whose lock names no holder, a command holds a pipe of its own from once it
+    // holds the lock until it ends, so a window launch refused the lock tells it from a window
+    // (`commandPipe`); a command refused the lock holds none, so it is never taken for the holder.
+    // Never during a folder move, nor on a folder it would refuse.
+    if (windowless && !move && onWindows && !dataFolderRefusal(dataDir, privacy))
+      holdCommandPipe(commandPipe(dataDir));
     // The launch that holds the folder clears what earlier ones left in its
     // own temporary folder; a window beside a run leaves it to the run, and
     // a run clears it once it noted that it holds the folder (below), in the
@@ -1580,14 +1585,25 @@ export async function startApp(
         // Started by a command, a page the core would open goes to each
         // computer that controls it (docs/run.md, "Control from another computer").
         startCore: async (hooks) => {
+          // A development run's hold: while the file a setting names is there, marked reached beside
+          // it once held, and marked stopping once a stop was taken while it holds.
+          const devHold = async (setting: string) => {
+            const hold = windowless && isDev ? settingFrom(process.env, setting) : undefined;
+            if (!hold || !existsSync(hold)) return;
+            writeFileSync(`${hold}.reached`, "");
+            let toldStopping = false;
+            while (existsSync(hold)) {
+              if (stopping && !toldStopping) {
+                toldStopping = true;
+                writeFileSync(`${hold}.stopping`, "");
+              }
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+          };
           // A development run may hold its core's start back while a file it names is there, so a
           // journey stops it while its first mate starts (tests/e2e/run-command.spec.ts); it marks
           // the hold reached beside that file, its stops already listened for.
-          const startHold =
-            windowless && isDev ? settingFrom(process.env, "RUN_START_HOLD") : undefined;
-          if (startHold && existsSync(startHold)) writeFileSync(`${startHold}.reached`, "");
-          while (startHold && existsSync(startHold))
-            await new Promise((resolve) => setTimeout(resolve, 100));
+          await devHold("RUN_START_HOLD");
           const core = await startCore(voiceHost, {
             startedByCommand: windowless,
             // A run reads the stops asked of it once its saved data is accepted, before its first
@@ -1610,11 +1626,7 @@ export async function startApp(
           // A development run may hold its started core back from the startup that disposes it
           // while a file it names is there, so a journey stops it after its saved data was
           // accepted (tests/e2e/run-command.spec.ts), marked reached as the start's hold is.
-          const startedHold =
-            windowless && isDev ? settingFrom(process.env, "RUN_STARTED_HOLD") : undefined;
-          if (startedHold && existsSync(startedHold)) writeFileSync(`${startedHold}.reached`, "");
-          while (startedHold && existsSync(startedHold))
-            await new Promise((resolve) => setTimeout(resolve, 100));
+          await devHold("RUN_STARTED_HOLD");
           capabilities.started?.(core);
           return core;
         },

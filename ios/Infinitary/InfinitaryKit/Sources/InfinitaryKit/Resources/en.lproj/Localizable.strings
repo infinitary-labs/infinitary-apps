@@ -637,6 +637,8 @@
 "devicesRemoteLineReadOnly" = "· read only";
 "devicesRemoteLineReadingAgain" = "· catching up, reading everything again";
 "devicesRemoteOutOfReach" = "%1$@ is out of reach";
+"devicesWorkCopyGone" = "%1$@ no longer had the copy of Infinitary its work started from, so its work now starts from the Infinitary installed there.";
+"devicesWorkSavedByNewer" = "A newer Infinitary saved this work, so this version leaves it as it is. Install that newer Infinitary here to carry on.";
 "dialogAdd" = "Add";
 "dialogAttach" = "Attach";
 "dialogCancel" = "Cancel";
@@ -2491,6 +2493,8 @@
 "settingsDevicesUpdate" = "Update";
 "settingsDevicesUpdateFailed" = "Could not update Infinitary there.";
 "settingsDevicesUpdateNamed" = "Update %1$@";
+"settingsDevicesUpdateOlder" = "Install older version";
+"settingsDevicesUpdateOlderNamed" = "Install the older version on %1$@";
 "settingsDevicesWaysCopyCommand" = "Copy a command";
 "settingsDevicesWaysCopyLink" = "Copy a link";
 "settingsDevicesWaysFoot" = "A link or command carries every way at once. The other computer uses whichever one answers, so there is nothing to choose here.";
@@ -2512,6 +2516,7 @@
 "settingsDevicesWindowsFirewallWay" = "To let them in, run this once in PowerShell as an administrator:";
 "settingsDevicesWorkAppPlace" = "Its work cannot start: Infinitary on %1$@ opens from a disk image or its download folder. Move it to Applications there and open it again.";
 "settingsDevicesWorkBackgroundOff" = "Its work cannot start: Infinitary on %1$@ is not allowed to run in the background. On a Mac, turn it on there in System Settings › General › Login Items.";
+"settingsDevicesWorkNewerWork" = "Its work cannot start: a newer Infinitary saved its work on %1$@. Install that newer Infinitary there.";
 "settingsDevicesWorkNoBackground" = "Its work cannot start: %1$@ has no way to run Infinitary in the background.";
 "settingsDevicesWorkNotReached" = "Its work runs on %1$@, but it has not reached this computer.";
 "settingsDevicesWorkOtherEntry" = "Its work cannot start: %1$@ already runs this work as another computer on this list. Remove that one, then press Fix it.";
@@ -3552,6 +3557,7 @@
 "viewWorkBackgroundOff" = "This computer cannot run work for %1$@: Infinitary is not allowed to run in the background. On a Mac, turn it on in System Settings › General › Login Items, then try again.";
 "viewWorkFolded" = "This computer's work: see why";
 "viewWorkLocalNetwork" = "This computer's work has not reached %1$@: macOS has not let Infinitary use your local network. Allow it in System Settings › Privacy & Security › Local Network, then try again.";
+"viewWorkNewerWork" = "This computer cannot run work for %1$@: a newer Infinitary saved its work here. Install that newer Infinitary to carry on.";
 "viewWorkNoBackground" = "This computer cannot run work for %1$@: it has no way to run Infinitary in the background.";
 "viewWorkNotNow" = "Not now";
 "viewWorkNotReached" = "This computer's work runs, but it has not reached %1$@.";

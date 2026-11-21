@@ -38,6 +38,7 @@
   "viewWorkBackgroundOff": "This computer cannot run work for {home}: Infinitary is not allowed to run in the background. On a Mac, turn it on in System Settings › General › Login Items, then try again.",
   "viewWorkFolded": "This computer's work: see why",
   "viewWorkLocalNetwork": "This computer's work has not reached {home}: macOS has not let Infinitary use your local network. Allow it in System Settings › Privacy & Security › Local Network, then try again.",
+  "viewWorkNewerWork": "This computer cannot run work for {home}: a newer Infinitary saved its work here. Install that newer Infinitary to carry on.",
   "viewWorkNoBackground": "This computer cannot run work for {home}: it has no way to run Infinitary in the background.",
   "viewWorkNotNow": "Not now",
   "viewWorkNotReached": "This computer's work runs, but it has not reached {home}.",

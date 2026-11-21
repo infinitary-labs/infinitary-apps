@@ -7,6 +7,7 @@ import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
 import { isHomeMoveOrderChannel } from "@shared/homeMove";
 import { formatDateTime } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { KEPT_JOB_ORDER } from "@shared/keptJobs";
 import { LEFT_BEHIND_ORDER, leftBehindOrders } from "@shared/leftoverPrograms";
@@ -297,12 +298,17 @@ export type StartHelperOptions = {
 
 export type StartHelperOutcome =
   | { ok: true; run: HelperRun }
-  | { ok: false; reason: "busy" | "not-joined" };
+  | { ok: false; reason: "busy" | "not-joined" | "newer" };
 
 export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   const { dataDir, say } = options;
   const joinedHome = new JoinedHome(dataDir, () => {});
   if (!joinedHome.read()) {
+    // Saved by a newer Infinitary: named, and never read as not joined.
+    if (joinedHome.savedByNewer()) {
+      say([m.devicesWorkSavedByNewer()]);
+      return { ok: false, reason: "newer" };
+    }
     say(helperWords.notJoined);
     return { ok: false, reason: "not-joined" };
   }
@@ -1006,6 +1012,7 @@ export function helperStatus(
 ): readonly string[] {
   const joinedHome = new JoinedHome(dataDir, () => {});
   const joined = joinedHome.read();
+  if (!joined && joinedHome.savedByNewer()) return [m.devicesWorkSavedByNewer()];
   if (!joined) {
     const left = joinedHome.left();
     return left

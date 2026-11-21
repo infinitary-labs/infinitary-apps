@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { workOutcomeLine } from "@shared/remoteLogin";
 import { afterEach, describe, expect, it } from "vitest";
@@ -8,6 +16,7 @@ import { createKeyIdentity } from "../devices/identity";
 import { JoinedHome } from "../devices/joinedHome";
 import {
   type BackgroundContext,
+  launchctlAt,
   readInstalled,
   serviceLabel,
   startInBackground,
@@ -308,5 +317,74 @@ describe("the work mode started by its home over Remote Login", () => {
       "the old version",
     );
     expect(existsSync(join(at.dataDir, "home.json"))).toBe(true);
+  });
+
+  // An update over Remote Login is on trial too (INF-5468's plan, piece 2):
+  // a copy that never reaches the home is taken away within the wait.
+  it("goes back to the copy it replaced when the one the home sent never reaches the home", async () => {
+    const at = await joined();
+    // A launchctl of the test's own, so the watcher the update leaves can ask it too.
+    const dir = scratchDir("infinitary-from-home-launchctl-");
+    const log = join(dir, "asked.log");
+    const program = join(dir, "launchctl");
+    writeFileSync(program, `#!/bin/sh\necho "$*" >> "${log}"\n`, { mode: 0o755 });
+    const background: BackgroundContext = { ...at.background, launchctl: launchctlAt(program) };
+    const asked = () => (existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : []);
+    const file = join(at.background.homeDir, "Library", "LaunchAgents", `${label}.plist`);
+    const agent = readFileSync(file, "utf8");
+    const record = readFileSync(join(at.dataDir, "installed.json"), "utf8");
+    const sent = bundleAt(scratchDir("infinitary-from-home-sent-"), "the home's version");
+
+    const outcome = await updateFromHome(
+      { dataDir: at.dataDir, background, backgroundEnv: {}, expected: EXPECTED, trialSeconds: 1 },
+      sent,
+    );
+    expect(outcome).toEqual({ firstmate: "updated", background: "running" });
+    expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
+      "the home's version",
+    );
+
+    // Nothing ends the trial: the watcher puts the old copy, agent and record
+    // back, then has launchd read the agent anew.
+    const startedNew = asked().length;
+    await expect
+      .poll(() => asked().slice(startedNew), { timeout: 8_000 })
+      .toEqual([`bootout gui/502/${label}`, `bootstrap gui/502 ${file}`]);
+    expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
+      "the old version",
+    );
+    expect(readFileSync(file, "utf8")).toBe(agent);
+    expect(readFileSync(join(at.dataDir, "installed.json"), "utf8")).toBe(record);
+    // Its next hello tells the home the copy it sent did not start here.
+    expect(readdirSync(join(at.dataDir, "app")).sort()).toEqual([
+      "Firstmate 3000.app",
+      "went-back.json",
+    ]);
+  });
+
+  it("keeps the copy the home sent with no trial when its agent starts only at the next login", async () => {
+    const at = await joined();
+    // A launchctl of the test's own for a Mac nobody is logged in to: the
+    // agent's domain is unknown, so the agent starts at the next login.
+    const dir = scratchDir("infinitary-from-home-launchctl-");
+    const program = join(dir, "launchctl");
+    writeFileSync(
+      program,
+      `#!/bin/sh\ncase "$1" in bootstrap|print) echo "Could not find domain"; exit 113;; esac\n`,
+      { mode: 0o755 },
+    );
+    const background: BackgroundContext = { ...at.background, launchctl: launchctlAt(program) };
+    const sent = bundleAt(scratchDir("infinitary-from-home-sent-"), "the home's version");
+
+    const outcome = await updateFromHome(
+      { dataDir: at.dataDir, background, backgroundEnv: {}, expected: EXPECTED, trialSeconds: 1 },
+      sent,
+    );
+    expect(outcome).toEqual({ firstmate: "updated", background: "at-login" });
+    // No trial is open, so no watcher takes it back or calls it a copy that did not start.
+    expect(readdirSync(join(at.dataDir, "app"))).toEqual(["Firstmate 3000.app"]);
+    expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
+      "the home's version",
+    );
   });
 });

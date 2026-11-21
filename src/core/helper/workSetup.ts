@@ -1,4 +1,4 @@
-import { accessSync, constants } from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DeviceGrant } from "@shared/devices";
 import type { WorkSetupReport } from "@shared/workSetup";
@@ -57,11 +57,13 @@ const RUN_LOOK_MS = 250;
  * The window's grant kept in the work folder too (docs/helper.md, "A Mac that
  * also controls"), written when the folder keeps none: `kept` once it keeps
  * this device's grant; `other-device` when it keeps another's, which stays;
- * `removal-unfinished` when a removal there has not finished; `busy` when a
- * run holds the folder, which is then left as it is. Both a check of the
+ * `removal-unfinished` when a removal there has not finished; `newer` when
+ * a newer Infinitary saved the grant there, which this version cannot read
+ * and never writes over; `busy` when a run holds the folder, which is then
+ * left as it is. Both a check of the
  * work and the hand-over of a moved first mate take this one step.
  */
-export type GrantKept = "kept" | "other-device" | "removal-unfinished" | "busy";
+export type GrantKept = "kept" | "other-device" | "removal-unfinished" | "newer" | "busy";
 
 export function keepWindowGrant(options: {
   dataDir: string;
@@ -80,6 +82,8 @@ export function keepWindowGrant(options: {
   try {
     const already = joinedHome.read();
     if (already && already.grant.deviceId !== options.grant.deviceId) return "other-device";
+    // A grant a newer Infinitary saved here is that version's, never written over.
+    if (!already && joinedHome.savedByNewer()) return "newer";
     // A removal that has not finished here is the run's to finish first.
     if (!already && joinedHome.unfinished()) return "removal-unfinished";
     // The grant and the home's name in the one write that puts the record in
@@ -100,9 +104,15 @@ export function keepWindowGrant(options: {
 export function backgroundFromRecord(dataDir: string): {
   launcher: Launcher | null;
   app: string | null;
+  gone?: true;
 } {
   const { app } = readInstalled(dataDir);
-  return { launcher: fetchedLauncher(app), app };
+  const launcher = fetchedLauncher(app);
+  // A copy the record names that is no longer there starts nothing: the app
+  // asking is started instead, and setting it up clears the record.
+  if (launcher && !existsSync(launcher.executable))
+    return { launcher: null, app: null, gone: true };
+  return { launcher, app };
 }
 
 export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupReport | null> {
@@ -110,7 +120,9 @@ export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupRep
   const named = (): WorkSetupReport | null => {
     // The folder's own grant names whose work it is: another first mate's, or
     // this one's under another entry; with none, a removal is finishing.
-    const held = new JoinedHome(dataDir, () => {}).read();
+    const joinedHome = new JoinedHome(dataDir, () => {});
+    const held = joinedHome.read();
+    if (!held && joinedHome.savedByNewer()) return { state: "blocked", reason: "newer-work" };
     if (held?.grant.deviceId === grant.deviceId)
       return options.background ? { state: "running" } : null;
     if (!held) return { state: "blocked", reason: "removal-unfinished" };
@@ -122,6 +134,7 @@ export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupRep
   // A run holds the folder: for this grant it is the work running.
   if (kept === "busy" || kept === "other-device") return named();
   if (kept === "removal-unfinished") return { state: "blocked", reason: "removal-unfinished" };
+  if (kept === "newer") return { state: "blocked", reason: "newer-work" };
   if (!options.background) return null;
   const now = options.now ?? Date.now;
   // A live run, or one the data folder's move is about to start, is left alone.
@@ -135,7 +148,11 @@ export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupRep
     placeDoesNotLast(options.appPath, options.platform ?? hostPlatform())
   )
     return { state: "blocked", reason: "app-place" };
-  const started = await options.background(from).catch((): InBackground => "failed");
+  const started = await options
+    .background({ launcher: from.launcher, app: from.app })
+    .catch((): InBackground => "failed");
+  // The background now starts this app where the copy it named was gone: said once.
+  const gone = from.gone ? ({ copyGone: true } as const) : {};
   switch (started) {
     case "failed":
       return { state: "blocked", reason: "background-off" };
@@ -145,7 +162,7 @@ export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupRep
     case "none":
       return null;
     case "at-login":
-      return { state: "starting" };
+      return { state: "starting", ...gone };
     default:
       break;
   }
@@ -153,8 +170,8 @@ export async function setUpWork(options: WorkSetupOptions): Promise<WorkSetupRep
     options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const until = now() + (options.waitMs ?? RUN_WAIT_MS);
   for (;;) {
-    if (folderHolder(dataDir) !== null) return { state: "running" };
-    if (now() >= until) return { state: "starting" };
+    if (folderHolder(dataDir) !== null) return { state: "running", ...gone };
+    if (now() >= until) return { state: "starting", ...gone };
     await sleep(RUN_LOOK_MS);
   }
 }

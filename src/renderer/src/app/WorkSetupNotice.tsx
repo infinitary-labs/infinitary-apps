@@ -65,6 +65,8 @@ function noticeWords(reason: WorkSetupReason, home: string): string {
       return m.viewWorkBackgroundOff(words);
     case "no-background":
       return m.viewWorkNoBackground(words);
+    case "newer-work":
+      return m.viewWorkNewerWork(words);
     case "local-network":
       return m.viewWorkLocalNetwork(words);
     default:

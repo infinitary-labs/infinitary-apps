@@ -12922,12 +12922,14 @@ ${events}` : prompt;
     "app-place",
     "background-off",
     "no-background",
+    "newer-work",
     "local-network",
     "not-reached"
   ]);
   strictObject({
     state: _enum(["running", "starting", "blocked"]),
-    reason: workSetupReasonSchema.optional()
+    reason: workSetupReasonSchema.optional(),
+    copyGone: literal(true).optional()
   });
   const deviceWorkSetupSchema = strictObject({
     state: _enum(["starting", "blocked"]),

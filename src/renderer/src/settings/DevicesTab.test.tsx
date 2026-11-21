@@ -2,9 +2,11 @@ import {
   type DeviceAddresses,
   type DeviceView,
   deviceJoinedLine,
+  deviceLabel,
   deviceWords,
 } from "@shared/devices";
 import { feedLineFrom } from "@shared/feed";
+import * as m from "@shared/i18n/messages.generated";
 import { NEARBY_OFF, type NearbyMacsView, nearbyMacsWords } from "@shared/nearbyMacs";
 import { type RemoteLoginRefusedAnswer, remoteLoginWords } from "@shared/remoteLogin";
 import type { DeviceSignIns } from "@shared/signIns";
@@ -989,6 +991,20 @@ describe("Settings -> Devices", () => {
     expect(strandedLine(byAddress)).toBeNull();
     // On this Mac's version there is no Update.
     expect(render({ devices: [BUILDER] })).not.toContain(">Update<");
+  });
+
+  // INF-5468's plan, piece 2: Update on a computer with a newer Infinitary installs an older one.
+  it("says the Update button on a computer with a newer Infinitary installs the older version", () => {
+    const newer: DeviceView = {
+      ...BUILDER,
+      otherVersion: { app: "0.1.31", than: "newer", takesWork: true, updateBy: "connection" },
+    };
+    const html = render({ devices: [newer] });
+    const label = deviceLabel(newer);
+    expect(html).toContain("Has Infinitary 0.1.31, newer than this computer&#x27;s.");
+    expect(html).toContain(`>${m.settingsDevicesUpdateOlder()}<`);
+    expect(html).toContain(`aria-label="${m.settingsDevicesUpdateOlderNamed({ device: label })}"`);
+    expect(html).not.toContain(`>${m.settingsDevicesUpdate()}<`);
   });
 
   // INF-5372's plan, piece 1: each copy's version, and any copy behind this computer's marked.

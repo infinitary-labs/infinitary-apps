@@ -637,6 +637,8 @@
 "devicesRemoteLineReadOnly" = "· lecture seule";
 "devicesRemoteLineReadingAgain" = "· rattrapage, tout est relu";
 "devicesRemoteOutOfReach" = "%1$@ est hors de portée";
+"devicesWorkCopyGone" = "%1$@ n’avait plus la copie d’Infinitary à partir de laquelle son travail démarrait, donc son travail démarre maintenant depuis l’Infinitary installé là-bas.";
+"devicesWorkSavedByNewer" = "Une version plus récente d’Infinitary a enregistré ce travail, donc cette version le laisse tel quel. Installez ici cette version plus récente d’Infinitary pour continuer.";
 "dialogAdd" = "Ajouter";
 "dialogAttach" = "Joindre";
 "dialogCancel" = "Annuler";
@@ -2491,6 +2493,8 @@
 "settingsDevicesUpdate" = "Mettre à jour";
 "settingsDevicesUpdateFailed" = "Impossible de mettre à jour Infinitary là-bas.";
 "settingsDevicesUpdateNamed" = "Mettre à jour %1$@";
+"settingsDevicesUpdateOlder" = "Installer la version antérieure";
+"settingsDevicesUpdateOlderNamed" = "Installer la version antérieure sur %1$@";
 "settingsDevicesWaysCopyCommand" = "Copier une commande";
 "settingsDevicesWaysCopyLink" = "Copier un lien";
 "settingsDevicesWaysFoot" = "Un lien ou une commande contient tous les moyens à la fois. L’autre ordinateur utilise celui qui répond, il n’y a donc rien à choisir ici.";
@@ -2512,6 +2516,7 @@
 "settingsDevicesWindowsFirewallWay" = "Pour les laisser entrer, exécutez ceci une fois dans PowerShell en tant qu’administrateur :";
 "settingsDevicesWorkAppPlace" = "Son travail ne peut pas démarrer : Infinitary sur %1$@ s’ouvre depuis une image disque ou son dossier de téléchargement. Placez-le là-bas dans Applications et rouvrez-le.";
 "settingsDevicesWorkBackgroundOff" = "Son travail ne peut pas démarrer : Infinitary sur %1$@ n’est pas autorisé à fonctionner en arrière-plan. Sur un Mac, activez-le là-bas dans Réglages Système › Général › Ouverture.";
+"settingsDevicesWorkNewerWork" = "Son travail ne peut pas démarrer : une version plus récente d’Infinitary a enregistré son travail sur %1$@. Installez-y cette version plus récente d’Infinitary.";
 "settingsDevicesWorkNoBackground" = "Son travail ne peut pas démarrer : %1$@ n’a aucun moyen de faire fonctionner Infinitary en arrière-plan.";
 "settingsDevicesWorkNotReached" = "Son travail tourne sur %1$@, mais il n’a pas joint cet ordinateur.";
 "settingsDevicesWorkOtherEntry" = "Son travail ne peut pas démarrer : %1$@ fait déjà ce travail comme un autre ordinateur de cette liste. Retirez celui-là, puis appuyez sur Réparer.";
@@ -3552,6 +3557,7 @@
 "viewWorkBackgroundOff" = "Cet ordinateur ne peut pas faire de travail pour %1$@ : Infinitary n’est pas autorisé à fonctionner en arrière-plan. Sur un Mac, activez-le dans Réglages Système › Général › Ouverture, puis réessayez.";
 "viewWorkFolded" = "Travail de cet ordinateur : voir pourquoi";
 "viewWorkLocalNetwork" = "Le travail de cet ordinateur n’a pas joint %1$@ : macOS n’a pas laissé Infinitary utiliser votre réseau local. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Réseau local, puis réessayez.";
+"viewWorkNewerWork" = "Cet ordinateur ne peut pas faire de travail pour %1$@ : une version plus récente d’Infinitary a enregistré son travail ici. Installez cette version plus récente d’Infinitary pour continuer.";
 "viewWorkNoBackground" = "Cet ordinateur ne peut pas faire de travail pour %1$@ : il n’a aucun moyen de faire fonctionner Infinitary en arrière-plan.";
 "viewWorkNotNow" = "Pas maintenant";
 "viewWorkNotReached" = "Le travail de cet ordinateur tourne, mais il n’a pas joint %1$@.";

@@ -88,8 +88,10 @@ A window that only controls, or a computer that runs no work, checks nothing; a 
 
 1. The work folder keeps the window's own grant: a missing one is written again, under the folder's lock.
    Another device's grant there stays as it is and is named, `other-home` for another first mate's and `other-entry` for this one's under another entry on its list, and so does a removal there that has not finished, `removal-unfinished`.
+   A grant a newer Infinitary saved, one this version cannot read, is never written over and is named `newer-work` (`docs/helper.md`, "Saved by a newer Infinitary").
 2. A live run holds the folder (`folderHolder`), or the data folder's move is about to start one: nothing is touched.
 3. Otherwise the background is set up again from the copy of the app the work folder records beside it (`installed.json`, `backgroundFromRecord`), as a command's or an address's join left it, so a removal and the home's updates still find it; with none, from the app that runs now, unless that app runs from a place it cannot be started from later, a disk image under `/Volumes` or a copy macOS moved aside (`placeDoesNotLast`), `app-place`.
+   A recorded copy that is no longer there is not used: the app that checks sets the background up from itself, the record is cleared, and the home's feed says so once (`copyGone`).
    The system refusing it is `background-off`, a computer with no background the app can use `no-background`, and a run it started that has not taken the folder within a moment reads as starting.
 
 What the check found (`WorkSetupReport`, `src/shared/workSetup.ts`) is never only logged.

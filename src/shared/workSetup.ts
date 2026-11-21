@@ -19,6 +19,9 @@ import { z } from "zod";
  *   while its Login Items setting keeps Infinitary out of the background;
  * - `no-background`: this computer has no way to start work in the
  *   background that the app can use;
+ * - `newer-work`: a newer Infinitary saved this user's work here, which the
+ *   app there cannot read and leaves as it is (docs/helper.md, "Saved by a
+ *   newer Infinitary");
  * - `local-network`: the work runs, and its home finds it dials on the local
  *   network, where macOS holds a background program's dial until someone at
  *   that Mac allows it (docs/devices.md, "Held on the local network");
@@ -36,6 +39,7 @@ export const workSetupReasonSchema = z.enum([
   "app-place",
   "background-off",
   "no-background",
+  "newer-work",
   "local-network",
   "not-reached",
 ]);
@@ -46,10 +50,14 @@ export type WorkSetupReason = z.infer<typeof workSetupReasonSchema>;
  * (`inf:devices:work-setup`): `running` once a live run holds the work
  * folder, `starting` while the background was asked and its run has not
  * taken the folder yet, `blocked` with the reason it cannot be set up.
+ * `copyGone` when the copy of the app the work folder recorded was no longer
+ * there, so the background now starts the app that checked, and the record
+ * no longer names it: the home says so once.
  */
 export const workSetupReportSchema = z.strictObject({
   state: z.enum(["running", "starting", "blocked"]),
   reason: workSetupReasonSchema.optional(),
+  copyGone: z.literal(true).optional(),
 });
 export type WorkSetupReport = z.infer<typeof workSetupReportSchema>;
 

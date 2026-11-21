@@ -284,7 +284,7 @@ One too old to say its version reads "Has an older Infinitary than this computer
 (or "a newer").
 While it still takes work its dot stays `ok`, its mono line reads "seen just now", and its state is its tasks or "idle".
 One that takes no new work adds "It takes no new work until it is updated." and the line turns `--warn`; its dot is `warn`, its state "no new work" in `--warn`, and its mono line still reads "seen just now", because it is in reach.
-A small secondary "Update" stands before Remove on every such row.
+A small secondary "Update" stands before Remove on every such row; on a computer with a newer Infinitary than this one it reads "Install older version", since it would take that computer back to this computer's version.
 On Update from the row or the card, try the connection update first, then the saved address or current connection’s candidate if the worker needs a package update.
 The app's update by itself tries only the connection, and raises the card as soon as the worker comes back unchanged from that update without being sent a copy.
 Show any address, confirmation or approval question in an inset directly under that worker’s row.

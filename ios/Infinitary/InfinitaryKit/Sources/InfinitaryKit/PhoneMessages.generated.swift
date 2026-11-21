@@ -666,6 +666,8 @@ public enum PhoneMessages {
     public static func `devicesRemoteLineReadOnly`() -> String { PhoneWords.format("devicesRemoteLineReadOnly", []) }
     public static func `devicesRemoteLineReadingAgain`() -> String { PhoneWords.format("devicesRemoteLineReadingAgain", []) }
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
+    public static func `devicesWorkCopyGone`(`device`: String) -> String { PhoneWords.format("devicesWorkCopyGone", [`device`]) }
+    public static func `devicesWorkSavedByNewer`() -> String { PhoneWords.format("devicesWorkSavedByNewer", []) }
     public static func `dialogAdd`() -> String { PhoneWords.format("dialogAdd", []) }
     public static func `dialogAttach`() -> String { PhoneWords.format("dialogAttach", []) }
     public static func `dialogCancel`() -> String { PhoneWords.format("dialogCancel", []) }
@@ -2600,6 +2602,8 @@ public enum PhoneMessages {
     public static func `settingsDevicesUpdate`() -> String { PhoneWords.format("settingsDevicesUpdate", []) }
     public static func `settingsDevicesUpdateFailed`() -> String { PhoneWords.format("settingsDevicesUpdateFailed", []) }
     public static func `settingsDevicesUpdateNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateNamed", [`device`]) }
+    public static func `settingsDevicesUpdateOlder`() -> String { PhoneWords.format("settingsDevicesUpdateOlder", []) }
+    public static func `settingsDevicesUpdateOlderNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateOlderNamed", [`device`]) }
     public static func `settingsDevicesWayCount`(`count`: Int) -> String { PhoneWords.format("settingsDevicesWayCount", [`count`]) }
     public static func `settingsDevicesWaysCopyCommand`() -> String { PhoneWords.format("settingsDevicesWaysCopyCommand", []) }
     public static func `settingsDevicesWaysCopyLink`() -> String { PhoneWords.format("settingsDevicesWaysCopyLink", []) }
@@ -2622,6 +2626,7 @@ public enum PhoneMessages {
     public static func `settingsDevicesWindowsFirewallWay`() -> String { PhoneWords.format("settingsDevicesWindowsFirewallWay", []) }
     public static func `settingsDevicesWorkAppPlace`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkAppPlace", [`device`]) }
     public static func `settingsDevicesWorkBackgroundOff`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkBackgroundOff", [`device`]) }
+    public static func `settingsDevicesWorkNewerWork`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkNewerWork", [`device`]) }
     public static func `settingsDevicesWorkNoBackground`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkNoBackground", [`device`]) }
     public static func `settingsDevicesWorkNotReached`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkNotReached", [`device`]) }
     public static func `settingsDevicesWorkOtherEntry`(`device`: String) -> String { PhoneWords.format("settingsDevicesWorkOtherEntry", [`device`]) }
@@ -3679,6 +3684,7 @@ public enum PhoneMessages {
     public static func `viewWorkBackgroundOff`(`home`: String) -> String { PhoneWords.format("viewWorkBackgroundOff", [`home`]) }
     public static func `viewWorkFolded`() -> String { PhoneWords.format("viewWorkFolded", []) }
     public static func `viewWorkLocalNetwork`(`home`: String) -> String { PhoneWords.format("viewWorkLocalNetwork", [`home`]) }
+    public static func `viewWorkNewerWork`(`home`: String) -> String { PhoneWords.format("viewWorkNewerWork", [`home`]) }
     public static func `viewWorkNoBackground`(`home`: String) -> String { PhoneWords.format("viewWorkNoBackground", [`home`]) }
     public static func `viewWorkNotNow`() -> String { PhoneWords.format("viewWorkNotNow", []) }
     public static func `viewWorkNotReached`(`home`: String) -> String { PhoneWords.format("viewWorkNotReached", [`home`]) }
@@ -4373,6 +4379,8 @@ extension PhoneWords {
         "devicesRemoteLineReadOnly": [],
         "devicesRemoteLineReadingAgain": [],
         "devicesRemoteOutOfReach": ["name"],
+        "devicesWorkCopyGone": ["device"],
+        "devicesWorkSavedByNewer": [],
         "dialogAdd": [],
         "dialogAttach": [],
         "dialogCancel": [],
@@ -6307,6 +6315,8 @@ extension PhoneWords {
         "settingsDevicesUpdate": [],
         "settingsDevicesUpdateFailed": [],
         "settingsDevicesUpdateNamed": ["device"],
+        "settingsDevicesUpdateOlder": [],
+        "settingsDevicesUpdateOlderNamed": ["device"],
         "settingsDevicesWayCount": ["count"],
         "settingsDevicesWaysCopyCommand": [],
         "settingsDevicesWaysCopyLink": [],
@@ -6329,6 +6339,7 @@ extension PhoneWords {
         "settingsDevicesWindowsFirewallWay": [],
         "settingsDevicesWorkAppPlace": ["device"],
         "settingsDevicesWorkBackgroundOff": ["device"],
+        "settingsDevicesWorkNewerWork": ["device"],
         "settingsDevicesWorkNoBackground": ["device"],
         "settingsDevicesWorkNotReached": ["device"],
         "settingsDevicesWorkOtherEntry": ["device"],
@@ -7386,6 +7397,7 @@ extension PhoneWords {
         "viewWorkBackgroundOff": ["home"],
         "viewWorkFolded": [],
         "viewWorkLocalNetwork": ["home"],
+        "viewWorkNewerWork": ["home"],
         "viewWorkNoBackground": ["home"],
         "viewWorkNotNow": [],
         "viewWorkNotReached": ["home"],

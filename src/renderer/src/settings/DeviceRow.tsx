@@ -293,11 +293,15 @@ export function DeviceRow({
         <Button
           variant="secondary"
           size="sm"
-          aria-label={m.settingsDevicesUpdateNamed({ device: label })}
+          aria-label={
+            other.than === "newer"
+              ? m.settingsDevicesUpdateOlderNamed({ device: label })
+              : m.settingsDevicesUpdateNamed({ device: label })
+          }
           disabled={busy === "link"}
           onClick={() => onUpdate(device)}
         >
-          {m.settingsDevicesUpdate()}
+          {other.than === "newer" ? m.settingsDevicesUpdateOlder() : m.settingsDevicesUpdate()}
         </Button>
       )}
       {onAskMoveHome && offersHomeMove(device, settling) && (

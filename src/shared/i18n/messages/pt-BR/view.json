@@ -38,6 +38,7 @@
   "viewWorkBackgroundOff": "Este computador não pode fazer trabalho para {home}: o Infinitary não tem permissão para rodar em segundo plano. Em um Mac, ative em Ajustes do Sistema › Geral › Itens de Início e tente de novo.",
   "viewWorkFolded": "Trabalho deste computador: ver por quê",
   "viewWorkLocalNetwork": "O trabalho deste computador não alcançou {home}: o macOS não deixou o Infinitary usar sua rede local. Permita em Ajustes do Sistema › Privacidade e Segurança › Rede Local e tente de novo.",
+  "viewWorkNewerWork": "Este computador não pode fazer trabalho para {home}: uma versão mais nova do Infinitary salvou o trabalho aqui. Instale essa versão mais nova do Infinitary para continuar.",
   "viewWorkNoBackground": "Este computador não pode fazer trabalho para {home}: ele não tem como rodar o Infinitary em segundo plano.",
   "viewWorkNotNow": "Agora não",
   "viewWorkNotReached": "O trabalho deste computador está rodando, mas não alcançou {home}.",

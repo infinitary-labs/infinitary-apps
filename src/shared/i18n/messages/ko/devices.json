@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "연락 닿지 않음 · 마지막 연락",
   "devicesRemoteLineReadOnly": "· 읽기 전용",
   "devicesRemoteLineReadingAgain": "· 따라잡는 중, 모두 다시 읽는 중",
-  "devicesRemoteOutOfReach": "{name} 연락 닿지 않음"
+  "devicesRemoteOutOfReach": "{name} 연락 닿지 않음",
+  "devicesWorkCopyGone": "{device}에 작업을 시작하던 Infinitary 사본이 더 이상 없어서, 이제 그곳에 설치된 Infinitary에서 작업을 시작해요.",
+  "devicesWorkSavedByNewer": "이 작업은 더 새로운 Infinitary가 저장했기 때문에 이 버전은 그대로 둬요. 계속하려면 여기에 그 새로운 Infinitary를 설치하세요."
 }

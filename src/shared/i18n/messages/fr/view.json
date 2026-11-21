@@ -38,6 +38,7 @@
   "viewWorkBackgroundOff": "Cet ordinateur ne peut pas faire de travail pour {home} : Infinitary n’est pas autorisé à fonctionner en arrière-plan. Sur un Mac, activez-le dans Réglages Système › Général › Ouverture, puis réessayez.",
   "viewWorkFolded": "Travail de cet ordinateur : voir pourquoi",
   "viewWorkLocalNetwork": "Le travail de cet ordinateur n’a pas joint {home} : macOS n’a pas laissé Infinitary utiliser votre réseau local. Autorisez-le dans Réglages Système › Confidentialité et sécurité › Réseau local, puis réessayez.",
+  "viewWorkNewerWork": "Cet ordinateur ne peut pas faire de travail pour {home} : une version plus récente d’Infinitary a enregistré son travail ici. Installez cette version plus récente d’Infinitary pour continuer.",
   "viewWorkNoBackground": "Cet ordinateur ne peut pas faire de travail pour {home} : il n’a aucun moyen de faire fonctionner Infinitary en arrière-plan.",
   "viewWorkNotNow": "Pas maintenant",
   "viewWorkNotReached": "Le travail de cet ordinateur tourne, mais il n’a pas joint {home}.",

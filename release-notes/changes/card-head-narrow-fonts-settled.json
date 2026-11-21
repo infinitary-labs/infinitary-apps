@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-head-narrow-fonts-settled",
+      "reason": "Makes the narrow card head browser test measure the model chip only once the page's fonts have loaded, so a chip drawn in the fallback face before the code font arrives no longer fails it. Test-only; no app behavior changes."
+    }
+  ]
+}

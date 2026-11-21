@@ -46,6 +46,18 @@ function headParts(): Record<string, Element> {
   };
 }
 
+/**
+ * Returns once the head's look has settled: every face the page asked for
+ * has loaded and the stage has drawn it at rest. A part measured while its
+ * face is still loading is measured in the computer's fallback, whose width
+ * differs from the face the window draws in: on Linux the default mono face
+ * sets the model chip's name narrower than the code font does.
+ */
+async function headSettled(): Promise<void> {
+  await document.fonts.ready;
+  await stageAtRest();
+}
+
 /** Each pair of head parts drawn over each other. */
 function overlaps(): string[] {
   const parts = Object.entries(headParts());
@@ -64,7 +76,7 @@ test("a narrow card keeps its head's model chip whole and clear of the key and b
   await page.viewport(APP_WINDOW.width, APP_WINDOW.height);
   await openWindow(bridge);
   await expect.element(page.getByRole("region", { name: CARD, exact: true })).toBeVisible();
-  await stageAtRest();
+  await headSettled();
 
   // At the usual size the chips, the key, the model chip and the corner share one row.
   const whole = box(inShown("[data-model-chip]"));
@@ -83,7 +95,7 @@ test("a narrow card keeps its head's model chip whole and clear of the key and b
   await userEvent.keyboard("{Home}");
   const layer = document.querySelector("[data-card-layer]") as Element;
   await expect.poll(() => box(layer).width).toBeCloseTo(CARD_DRAG_MIN, 0);
-  await stageAtRest();
+  await headSettled();
 
   const narrow = box(inShown("[data-model-chip]"));
   expect(narrow.width, "the model chip keeps its whole name").toBeCloseTo(whole.width, 0);

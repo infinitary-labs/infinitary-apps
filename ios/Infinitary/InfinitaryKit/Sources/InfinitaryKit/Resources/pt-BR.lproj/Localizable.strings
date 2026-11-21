@@ -2509,16 +2509,16 @@
 "settingsDevicesRemoveWait" = "O trabalho não mesclado dele ainda está lá. Espere, e ele vem para este computador antes de %1$@ ser removido.";
 "settingsDevicesRemoveWaitOn" = "O trabalho não mesclado dele em %2$@ ainda está lá. Espere, e ele vem para este computador antes de %1$@ ser removido.";
 "settingsDevicesRemoveWhenBack" = "Remover quando voltar";
+"settingsDevicesRemovedOnceUpdatedLine" = "Ele é removido depois de atualizado.";
+"settingsDevicesRemovedWhenBackLine" = "Ele é removido quando voltar.";
 "settingsDevicesRemoving" = "Removendo...";
 "settingsDevicesRemovingSetUp" = "Removendo o que o Infinitary configurou %1$@…";
+"settingsDevicesRowActions" = "Ações de %1$@";
 "settingsDevicesRunningAs" = "rodando como %1$@";
 "settingsDevicesRuns" = "Roda %1$@";
 "settingsDevicesRunsNoProject" = "Ainda não roda nenhum projeto";
 "settingsDevicesRunsWhileLoggedIn" = "só roda trabalho, enquanto %1$@ estiver com login feito";
 "settingsDevicesSeenNow" = "visto agora mesmo";
-"settingsDevicesSeenRemovedOnceUpdated" = "não aceita trabalho novo · removido depois de atualizado";
-"settingsDevicesSeenRemovedWhenBack" = "fora de alcance · removido quando voltar";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "conectando · removido quando voltar";
 "settingsDevicesSeenRestarted" = "sem login desde que este computador reiniciou";
 "settingsDevicesSeenSince" = "fora de alcance desde";
 "settingsDevicesSeenSinceWhen" = "fora de alcance desde %1$@";
@@ -2580,6 +2580,7 @@
 "settingsDevicesUpdateNamed" = "Atualizar %1$@";
 "settingsDevicesUpdateOlder" = "Instalar versão anterior";
 "settingsDevicesUpdateOlderNamed" = "Instalar a versão anterior em %1$@";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Copiar um comando";
 "settingsDevicesWaysCopyLink" = "Copiar um link";
 "settingsDevicesWaysFoot" = "Um link ou comando leva todos os caminhos de uma vez. O outro computador usa o que responder, então não há nada para escolher aqui.";

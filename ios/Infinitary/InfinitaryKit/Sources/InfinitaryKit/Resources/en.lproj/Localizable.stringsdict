@@ -1731,6 +1731,22 @@
       <string>%1$ld tasks</string>
     </dict>
   </dict>
+  <key>settingsDevicesTasksWait</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its task waits until it is back.</string>
+      <key>other</key>
+      <string>Its %1$ld tasks wait until it is back.</string>
+    </dict>
+  </dict>
   <key>settingsDevicesWayCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

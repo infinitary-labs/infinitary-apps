@@ -2509,16 +2509,16 @@
 "settingsDevicesRemoveWait" = "Su trabajo sin fusionar sigue allí. Espera y vendrá a esta computadora antes de quitar %1$@.";
 "settingsDevicesRemoveWaitOn" = "Su trabajo sin fusionar en %2$@ sigue allí. Espera y vendrá a esta computadora antes de quitar %1$@.";
 "settingsDevicesRemoveWhenBack" = "Quitar cuando vuelva";
+"settingsDevicesRemovedOnceUpdatedLine" = "Se quita cuando se actualice.";
+"settingsDevicesRemovedWhenBackLine" = "Se quita cuando vuelva.";
 "settingsDevicesRemoving" = "Quitando...";
 "settingsDevicesRemovingSetUp" = "Quitando lo que Infinitary configuró %1$@…";
+"settingsDevicesRowActions" = "Acciones de %1$@";
 "settingsDevicesRunningAs" = "se ejecuta como %1$@";
 "settingsDevicesRuns" = "Ejecuta %1$@";
 "settingsDevicesRunsNoProject" = "Todavía no ejecuta ningún proyecto";
 "settingsDevicesRunsWhileLoggedIn" = "solo ejecuta trabajo, mientras %1$@ tenga la sesión iniciada";
 "settingsDevicesSeenNow" = "visto hace un momento";
-"settingsDevicesSeenRemovedOnceUpdated" = "no acepta trabajo nuevo · se quita cuando se actualice";
-"settingsDevicesSeenRemovedWhenBack" = "fuera de alcance · se quita cuando vuelva";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "conectándose · se quita cuando vuelva";
 "settingsDevicesSeenRestarted" = "sin sesión iniciada desde que esta computadora se reinició";
 "settingsDevicesSeenSince" = "fuera de alcance desde";
 "settingsDevicesSeenSinceWhen" = "fuera de alcance desde %1$@";
@@ -2580,6 +2580,7 @@
 "settingsDevicesUpdateNamed" = "Actualizar %1$@";
 "settingsDevicesUpdateOlder" = "Instalar versión anterior";
 "settingsDevicesUpdateOlderNamed" = "Instalar la versión anterior en %1$@";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Copiar un comando";
 "settingsDevicesWaysCopyLink" = "Copiar un enlace";
 "settingsDevicesWaysFoot" = "Un enlace o un comando lleva todas las vías a la vez. La otra computadora usa la que responda, así que aquí no hay nada que elegir.";

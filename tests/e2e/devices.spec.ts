@@ -9,7 +9,6 @@ import { expect, test } from "@playwright/test";
 import { type DeviceView, deviceLabel, PAIRING_LINK_PREFIX } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { remoteLoginWords } from "@shared/remoteLogin";
-import { SEEN_WORDS } from "../../src/renderer/src/settings/devicesWords";
 import { macRelease } from "../helpers/macRelease";
 import { scratchDir } from "../helpers/scratchDirs";
 import { SSH_SERVER_AVAILABLE } from "../helpers/sshServer";
@@ -21,6 +20,7 @@ import {
   linkInTab,
   openDevices,
   otherMacOverSsh,
+  reachDot,
   selectDevice,
 } from "./deviceFixtures";
 import { type HelperRun, startHelper } from "./helperRun";
@@ -171,7 +171,7 @@ for (const operation of ["download", "fallback"] as const) {
             start(thisVersion);
             await expect(row).not.toHaveAttribute("data-other-version", /.+/, { timeout: 30_000 });
             await demo.step(async () => {
-              await expect(row).toContainText(SEEN_WORDS.now);
+              await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
             });
           },
         );

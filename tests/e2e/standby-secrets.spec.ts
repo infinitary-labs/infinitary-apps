@@ -12,7 +12,7 @@ import { SECRET_APPROVAL_CARD_WORDS, SECRETS_WORDS, secretsNamed } from "../../s
 import { claimedPort } from "../helpers/claimedPort";
 import { type DisposableCustody, disposableCustody } from "../helpers/disposableCustody";
 import { scratchDir } from "../helpers/scratchDirs";
-import { BUILDER, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { cardBody } from "./frames";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
@@ -143,10 +143,8 @@ test("Secrets kept with a copy: confirmed once there, sealed with each change, a
   await test.step("Keep a copy here on each row, by keys: both read in sync", async () => {
     await openDevices(home.page);
     for (const there of [mini, studio]) {
-      const keep = (await rowOf(there)).getByRole("button", {
-        name: m.settingsDevicesStandbyKeepNamed({ device: there.name }),
-      });
-      await pressKey(keep, "Enter");
+      await rowOf(there);
+      await pressKey(await rowAction(home.page, there.deviceId, "standby-keep"), "Enter");
     }
     for (const there of [mini, studio])
       await expect(await lineOf(there)).toHaveAttribute("data-standby", "in-sync", {
@@ -157,12 +155,8 @@ test("Secrets kept with a copy: confirmed once there, sealed with each change, a
   const ready = home.page.locator(`[data-standby-ready="${mini.deviceId}"]`);
   const secretsLine = ready.locator('[data-gap="secrets"]');
   await test.step("Mac mini's Ready list asks to keep the Secrets there; one confirmation there keeps them", async () => {
-    await pressKey(
-      (await rowOf(mini)).getByRole("button", {
-        name: m.settingsDevicesStandbyReadyNamed({ device: mini.name }),
-      }),
-      "Enter",
-    );
+    await rowOf(mini);
+    await pressKey(await rowAction(home.page, mini.deviceId, "standby-ready"), "Enter");
     await expect(secretsLine).toHaveAttribute("data-level", "blocks");
     await expect(secretsLine).toContainText(STANDBY_WORDS.secretsNone(mini.name));
     await regionShot(ready, test.info().outputPath("standby-secrets-before-keep.png"));

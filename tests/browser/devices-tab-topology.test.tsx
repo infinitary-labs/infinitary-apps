@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import recoveryFont from "../../src/renderer/src/design/assets/fonts/spacegrotesk-latin.woff2?url";
 import { fakeBridge } from "./bridge";
-import { ADDRESSES, AIR, gone, MINI, openDevices, STUDIO, shown } from "./devicesTab";
+import { ADDRESSES, AIR, gone, MINI, openDevices, rowAction, STUDIO, shown } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openWindow } from "./window";
 
@@ -150,7 +150,7 @@ test("pages known peers and keeps their details and questions when switching lay
   await shown('[data-layout="list"] [data-device-select="fleet-0"] [data-device-glyph="handset"]');
   expect((await shown('[data-device-select="mini"]')).getAttribute("aria-pressed")).toBe("true");
   expect(document.querySelector("[data-device-saved-addresses]")).toBe(saved);
-  await userEvent.click(page.getByRole("button", { name: /^Remove Mac mini/ }));
+  await userEvent.click(await rowAction("mini", "remove"));
   await shown('[data-device-removing="mini"]');
   await userEvent.click(page.getByRole("button", { name: "Map", exact: true }));
   const keep = page.getByRole("button", { name: "Keep it", exact: true });
@@ -161,7 +161,7 @@ test("pages known peers and keeps their details and questions when switching lay
   await gone("[data-device-saved-addresses]");
   await page.viewport(730, 940);
   await expect.poll(() => map.querySelectorAll("[data-device-select]").length).toBeLessThan(9);
-  await userEvent.click(page.getByRole("button", { name: /^Remove Mac mini/ }));
+  await userEvent.click(await rowAction("mini", "remove"));
   await shown('[data-device-removing="mini"]');
   bridge.push(
     "inf:devices",

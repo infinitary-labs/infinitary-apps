@@ -1515,6 +1515,20 @@
       <string>%1$ld 項任務</string>
     </dict>
   </dict>
+  <key>settingsDevicesTasksWait</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>它的 %1$ld 個任務會等到它恢復連絡。</string>
+    </dict>
+  </dict>
   <key>settingsDevicesWayCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

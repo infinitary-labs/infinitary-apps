@@ -17,6 +17,7 @@ import {
   openDevices,
   problemLine,
   refusedAs,
+  rowAction,
   STUDIO,
   selectDevice,
   shown,
@@ -29,8 +30,8 @@ import { openSize, openWindow } from "./window";
  * A computer's row in Settings -> Devices (docs/devices.md, "Updating",
  * "Changing its address", "Through the home's SSH", "Remove"; design skill
  * components/devices/DevicesTab): Update, with its password asked once even
- * beside the address question; Change address; Try again; Remove and Keep
- * it; a card's Remove that lands here; and the problem line, where a "could
+ * beside the address question; Change address and Remove from the row's ⋯
+ * menu; Try again; Keep it; a card's Remove that lands here; and the problem line, where a "could
  * not reach" refusal goes once that computer answers again at the address
  * tried while every other refusal stays. Guardrail for restructuring the
  * tab (INF-2625's plan, the devices piece): the container's row actions and
@@ -220,7 +221,7 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   // action clears the line before.
   const moved = "sam@mini-2.local";
   {
-    await userEvent.click(button(row("mini") as HTMLElement, `Change the address of ${mini}`));
+    await userEvent.click(await rowAction("mini", "address"));
     expect(problemLine()).not.toBeNull();
     const form = await shown('[data-device-address-change="mini"]');
     const input = form.querySelector("input") as HTMLInputElement;
@@ -268,7 +269,7 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   // computer in reach at once.
   {
     await selectDevice("air");
-    await userEvent.click(button(row("air") as HTMLElement, `Remove ${deviceLabel(AIR)}`));
+    await userEvent.click(await rowAction("air", "remove"));
     const question = await shown('[data-device-removing="air"]');
     for (const line of removeLines(AIR)) expect(question.textContent).toContain(line);
     expect(document.activeElement).toBe(button(question, "Keep it"));
@@ -282,7 +283,7 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   // it is back waits, and Keep it takes that wait back.
   {
     await selectDevice("studio");
-    await userEvent.click(button(row("studio") as HTMLElement, `Remove ${studio}`));
+    await userEvent.click(await rowAction("studio", "remove"));
     const question = await shown('[data-device-removing="studio"]');
     expect(button(question, "Remove now")).toBeTruthy();
     await userEvent.click(button(question, "Remove when it is back"));
@@ -292,9 +293,21 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
     expect(bridge.requests("inf:devices:keep")).toEqual([["studio"]]);
     await gone('[data-device-row="studio"][data-removal]');
   }
+  // Section: Keep it closes Remove's question, and focus goes back to the ⋯
+  // that opened it, on the row that stands again.
+  {
+    await selectDevice("mini");
+    await userEvent.click(await rowAction("mini", "remove"));
+    await userEvent.click(button(await shown('[data-device-removing="mini"]'), "Keep it"));
+    const back = await shown('[data-device-row="mini"]');
+    await expect
+      .poll(() => document.activeElement)
+      .toBe(back.querySelector('.fm-devices-more [aria-haspopup="menu"]'));
+  }
   refuseRemove = "Could not remove this device: its work is still coming back.";
   await selectDevice("mini");
-  await userEvent.click(button(row("mini") as HTMLElement, `Remove ${mini}`));
+
+  await userEvent.click(await rowAction("mini", "remove"));
   await userEvent.click(button(await shown('[data-device-removing="mini"]'), "Remove"));
   await expect.poll(problemLine).toBe(refuseRemove);
   await shown('[data-device-row="mini"]');

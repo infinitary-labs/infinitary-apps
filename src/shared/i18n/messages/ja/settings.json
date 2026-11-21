@@ -452,16 +452,16 @@
   "settingsDevicesRemoveWait": "マージされていない作業がまだそちらにあります。待つと、{device} が削除される前にこのコンピューターに移ります。",
   "settingsDevicesRemoveWaitOn": "{projects} のマージされていない作業がまだそちらにあります。待つと、{device} が削除される前にこのコンピューターに移ります。",
   "settingsDevicesRemoveWhenBack": "戻ったら削除",
+  "settingsDevicesRemovedOnceUpdatedLine": "更新後に削除されます。",
+  "settingsDevicesRemovedWhenBackLine": "戻ったら削除されます。",
   "settingsDevicesRemoving": "削除中...",
   "settingsDevicesRemovingSetUp": "Infinitary が {where} 準備したものを削除しています…",
+  "settingsDevicesRowActions": "{device} の操作",
   "settingsDevicesRunningAs": "{user} として実行中",
   "settingsDevicesRuns": "{projects} を実行",
   "settingsDevicesRunsNoProject": "まだプロジェクトを実行していません",
   "settingsDevicesRunsWhileLoggedIn": "{user} がログインしている間、作業だけを実行",
   "settingsDevicesSeenNow": "たった今確認",
-  "settingsDevicesSeenRemovedOnceUpdated": "新しい作業は受けません · 更新後に削除",
-  "settingsDevicesSeenRemovedWhenBack": "連絡がつきません · 戻ったら削除",
-  "settingsDevicesSeenRemovedWhenBackConnecting": "接続中 · 戻ったら削除",
   "settingsDevicesSeenRestarted": "このコンピューターの再起動後、まだログインしていません",
   "settingsDevicesSeenSince": "連絡がつかなくなった時刻",
   "settingsDevicesSeenSinceWhen": "{when} から連絡がつきません",
@@ -523,6 +523,10 @@
     "plural": "count",
     "other": "{count}件のタスク"
   },
+  "settingsDevicesTasksWait": {
+    "plural": "count",
+    "other": "{count}件のタスクが、戻るまで待機しています。"
+  },
   "settingsDevicesTryAgain": "再試行",
   "settingsDevicesTryAgainFailed": "再試行できませんでした。",
   "settingsDevicesTryAgainNamed": "{device} への接続を再試行",
@@ -531,6 +535,7 @@
   "settingsDevicesUpdateNamed": "{device} を更新",
   "settingsDevicesUpdateOlder": "古いバージョンをインストール",
   "settingsDevicesUpdateOlderNamed": "{device} に古いバージョンをインストール",
+  "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "{count}台のコンピューター"

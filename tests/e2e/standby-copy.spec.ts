@@ -8,7 +8,7 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { claimedPort } from "../helpers/claimedPort";
 import { databaseDigest, recordDigest } from "../helpers/recordDigest";
 import { scratchDir } from "../helpers/scratchDirs";
-import { BUILDER, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -119,10 +119,9 @@ test("two computers keep a live copy: one follows, one stops and catches up, all
   await test.step("Keep a copy here on each row, by keys: both take a full copy and read in sync", async () => {
     await openDevices(pro.page);
     for (const there of [mini, studio]) {
-      const keep = (await rowOf(there)).getByRole("button", {
-        name: m.settingsDevicesStandbyKeepNamed({ device: there.name }),
-      });
-      await expect(keep).toBeVisible();
+      await rowOf(there);
+      const keep = await rowAction(pro.page, there.deviceId, "standby-keep");
+      await expect(keep).toHaveText(m.settingsDevicesStandbyKeep());
       await pressKey(keep, "Enter");
     }
     for (const there of [mini, studio])
@@ -142,10 +141,8 @@ test("two computers keep a live copy: one follows, one stops and catches up, all
   });
 
   await test.step("Ready to take over lists the copy first, in sync, then what a move there would show", async () => {
-    const ask = (await rowOf(mini)).getByRole("button", {
-      name: m.settingsDevicesStandbyReadyNamed({ device: mini.name }),
-    });
-    await pressKey(ask, "Enter");
+    await rowOf(mini);
+    await pressKey(await rowAction(pro.page, mini.deviceId, "standby-ready"), "Enter");
     const ready = pro.page.locator(`[data-standby-ready="${mini.deviceId}"]`);
     const copy = ready.locator('[data-gap="copy"]');
     await expect(copy).toHaveAttribute("data-level", "notes");
@@ -209,7 +206,7 @@ test("two computers keep a live copy: one follows, one stops and catches up, all
     }
     // The home is still the only first mate: both rows offer a copy's list, never a home of their own.
     for (const there of [mini, studio])
-      await expect((await rowOf(there)).locator("[data-standby-ask]")).toBeVisible();
+      await expect(await rowOf(there)).toHaveAttribute("data-device-acts", /\bstandby-ready\b/);
   });
 
   await test.step("the home is killed in the middle of saving: both copies open whole", async () => {
@@ -270,12 +267,8 @@ test("two computers keep a live copy: one follows, one stops and catches up, all
         "in-sync",
         { timeout: 60_000 },
       );
-    await pressKey(
-      (await rowAgain(studio)).getByRole("button", {
-        name: m.settingsDevicesStandbyReadyNamed({ device: studio.name }),
-      }),
-      "Enter",
-    );
+    await rowAgain(studio);
+    await pressKey(await rowAction(again.page, studio.deviceId, "standby-ready"), "Enter");
     const ready = again.page.locator(`[data-standby-ready="${studio.deviceId}"]`);
     await pressKey(ready.getByRole("button", { name: m.settingsDevicesStandbyStop() }), "Enter");
     await expect((await rowAgain(studio)).locator("[data-standby]")).toHaveCount(0);

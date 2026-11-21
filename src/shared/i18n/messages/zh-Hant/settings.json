@@ -452,16 +452,16 @@
   "settingsDevicesRemoveWait": "它尚未合併的工作還在那裡。稍等一下，這些工作會在 {device} 移除前移到這台電腦。",
   "settingsDevicesRemoveWaitOn": "它在 {projects} 上尚未合併的工作還在那裡。稍等一下，這些工作會在 {device} 移除前移到這台電腦。",
   "settingsDevicesRemoveWhenBack": "恢復連絡後移除",
+  "settingsDevicesRemovedOnceUpdatedLine": "它更新後會被移除。",
+  "settingsDevicesRemovedWhenBackLine": "它恢復連絡後會被移除。",
   "settingsDevicesRemoving": "正在移除…",
   "settingsDevicesRemovingSetUp": "正在移除 Infinitary {where} 設定的內容…",
+  "settingsDevicesRowActions": "{device} 的動作",
   "settingsDevicesRunningAs": "以 {user} 身分執行",
   "settingsDevicesRuns": "執行 {projects}",
   "settingsDevicesRunsNoProject": "還沒有執行任何專案",
   "settingsDevicesRunsWhileLoggedIn": "只執行工作，在 {user} 登入期間",
   "settingsDevicesSeenNow": "剛剛還連絡得上",
-  "settingsDevicesSeenRemovedOnceUpdated": "不再接新工作 · 更新後移除",
-  "settingsDevicesSeenRemovedWhenBack": "連絡不上 · 恢復連絡後移除",
-  "settingsDevicesSeenRemovedWhenBackConnecting": "連線中 · 恢復連絡後移除",
   "settingsDevicesSeenRestarted": "這台電腦重新啟動後尚未登入",
   "settingsDevicesSeenSince": "連絡不上的起始時間",
   "settingsDevicesSeenSinceWhen": "從 {when} 起連絡不上",
@@ -523,6 +523,10 @@
     "plural": "count",
     "other": "{count} 項任務"
   },
+  "settingsDevicesTasksWait": {
+    "plural": "count",
+    "other": "它的 {count} 個任務會等到它恢復連絡。"
+  },
   "settingsDevicesTryAgain": "再試一次",
   "settingsDevicesTryAgainFailed": "無法再試一次。",
   "settingsDevicesTryAgainNamed": "再次嘗試連絡 {device}",
@@ -531,6 +535,7 @@
   "settingsDevicesUpdateNamed": "更新 {device}",
   "settingsDevicesUpdateOlder": "安裝舊版本",
   "settingsDevicesUpdateOlderNamed": "在 {device} 上安裝舊版本",
+  "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "{count} 台電腦"

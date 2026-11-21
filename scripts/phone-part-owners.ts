@@ -134,6 +134,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneCardDeparture.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecretAsk.swift",
   ] },
+  // INF-5531 piece 2: the reads a card's page and a panel's page run, and the test home's live card.
+  { parts: [...family("cards"), ...family("panels")], files: ["ios/Infinitary/CardRuntime/phoneReads.ts"] },
+  { parts: ["cards-reads"], files: ["tests/helpers/phoneCardReads.ts"] },
   // A card's sound strip: the cards-media part plays, pauses and leaves a clip.
   { parts: ["cards-media"], files: ["ios/Infinitary/InfinitaryApp/CardSoundStrip.swift"] },
   { parts: family("rest"), files: [

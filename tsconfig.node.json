@@ -139,6 +139,7 @@
     "src/renderer/src/plugins/frames/frameController.ts",
     "src/renderer/src/app/draftSync.ts",
     "src/renderer/src/plugins/frames/frameLink.ts",
+    "src/renderer/src/plugins/frames/frameSubscriptions.ts",
     "src/panels/knowledge/graph.ts"
   ],
   // Extension code, not app code. The e2e fixtures are renderer-shaped

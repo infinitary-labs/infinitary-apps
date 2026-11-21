@@ -90,6 +90,8 @@ export const PHONE_PARTS = [
   { name: "cards-secret", test: "testSecretAskKeptFromPhone", photos: false },
   // INF-5445 piece 2: a card's picks and words shared with every other screen through the test home's real core.
   { name: "cards-drafts", test: "testCardDrafts", photos: false },
+  // INF-5531 piece 2: a crewmate's card reads live app data through the panels' reads while it is open, and stops once ended.
+  { name: "cards-reads", test: "testCardLiveReads", photos: false },
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
   { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false, devices: ["ipad"], why: "the iPad's keyboard and its taller suggestion row, upright and turned, over the message box and a reply" },
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false, devices: ["ipad"], why: "a card that scrolls on the iPhone fits whole above the iPad's keyboard (INF-2737 held back a phone release)" },

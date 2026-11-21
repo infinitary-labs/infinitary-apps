@@ -8,5 +8,6 @@
   "pagefind.one_result": "Un resultado para «[SEARCH_TERM]»",
   "pagefind.alt_search": "No hay resultados para «[SEARCH_TERM]». Se muestran los resultados de «[DIFFERENT_TERM]»",
   "pagefind.search_suggestion": "No hay resultados para «[SEARCH_TERM]». Prueba una de estas búsquedas:",
-  "pagefind.searching": "Buscando «[SEARCH_TERM]»…"
+  "pagefind.searching": "Buscando «[SEARCH_TERM]»…",
+  "themeSelect.auto": "Auto"
 }

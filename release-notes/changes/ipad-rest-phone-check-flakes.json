@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipad-rest-phone-check-flakes",
+      "reason": "The phone check's rest part taps the crew scene's orbiting crewmates inside a real held first mate turn, so no idle warp sweeps them away mid-tap; only the tests change, and nothing a person sees."
+    }
+  ]
+}

@@ -115,14 +115,24 @@ struct PhonePushTests {
         var delivered: [(id: String, cardID: String?, push: String?, computer: String?)] = []
         var removed: [String] = []
         var now = Date(timeIntervalSince1970: 1_795_000_000)
+        /// INF-5275: each letter posted to the relay's letter request, and its answers in turn (204 once they run out).
+        var letters: [[String: String]] = []
+        var letterAnswers: [Int?] = []
+        var waits: [TimeInterval] = []
 
         func pushes(_ environment: PhonePushEnvironment = .production) -> PhonePushes {
             let posted: @Sendable (URL, Data) async -> Int? = { [weak self] url, body in
                 await MainActor.run {
+                    let fields = (try? JSONSerialization.jsonObject(with: body)) as? [String: String] ?? [:]
+                    guard let self else { return 202 }
+                    if url.absoluteString == "https://push.getinfinitary.com/v1/letter" {
+                        self.letters.append(fields)
+                        return self.letterAnswers.isEmpty ? 204 : self.letterAnswers.removeFirst()
+                    }
                     #expect(url.absoluteString == "https://push.getinfinitary.com/v1/register")
-                    self?.posts.append((try? JSONSerialization.jsonObject(with: body)) as? [String: String] ?? [:])
+                    self.posts.append(fields)
+                    return 202
                 }
-                return 202
             }
             return PhonePushes(effects: PhonePushEffects(
                 permission: { self.permission },
@@ -139,7 +149,8 @@ struct PhonePushTests {
                 },
                 askedPerson: { self.askedPerson }, noteAskedPerson: { self.askedPerson = true },
                 delivered: { self.delivered }, remove: { self.removed += $0 },
-                now: { self.now }), environment: environment)
+                now: { self.now },
+                wait: { [weak self] seconds in await MainActor.run { self?.waits.append(seconds) } }), environment: environment)
         }
 
         func hand(_ registration: PhonePushRegistration?) async throws -> Bool {
@@ -562,8 +573,8 @@ struct PhonePushTests {
         let outside = Outside()
         outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
         let pushes = outside.pushes()
-        pushes.kept([studio])
-        pushes.kept([office, studio])
+        await pushes.kept([studio])?.value
+        await pushes.kept([office, studio])?.value
         outside.delivered = [("n1", "card-0e7e2c55-from-before", nil, nil), ("n2", "card-41d6e0b2-export-retries", nil, office.pin), ("n3", nil, nil, nil)]
         await pushes.forgot(computer: studio.pin)
         #expect(outside.removed == ["n1"])
@@ -734,7 +745,7 @@ struct PhonePushTests {
         let key = PhonePushSeal.newKey()
         outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
         let pushes = outside.pushes()
-        pushes.kept([studio, office])
+        await pushes.kept([studio, office])?.value
         let officeKey = try #require(outside.held?.computers?.last?.key)
         outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-41d6e0b2-export-retries", nil, office.pin)]
 
@@ -759,5 +770,192 @@ struct PhonePushTests {
         #expect(PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: office.pin, shown: studio.pin))
         #expect(!PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: studio.pin, shown: studio.pin))
         #expect(!PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: nil, shown: studio.pin))
+    }
+
+    // INF-5275's plan, piece 2 (docs/phone-push.md, "Letters"): the phone leaves each kept computer a sealed letter at
+    // the relay, so a computer it does not show still learns a renewed grant or a new push address, or that it was
+    // forgotten.
+
+    /// Letters sealed by the phone's own `PhonePush.sealLetter`, which src/core/phoneLetters.test.ts opens.
+    private struct Letters: Decodable {
+        struct Letter: Decodable { let sealed: String; let opens: PhonePushLetter }
+        struct Sealed: Decodable { let sealed: String }
+        let key: String
+        let box: String
+        let otherKey: String
+        let otherBox: String
+        let renew: Letter
+        let stop: Letter
+        /// The renew letter as the computer's own `sealLetter` seals it (src/core/phoneLetters.ts).
+        let computerSealed: Sealed
+    }
+
+    @Test func opensTheLettersItSealedInTheBoxBothSidesName() throws {
+        let url = try #require(Bundle.module.url(forResource: "PhonePushLetters", withExtension: "json", subdirectory: "Fixtures"))
+        let fixture = try JSONDecoder().decode(Letters.self, from: Data(contentsOf: url))
+        #expect(PhonePush.letterBox(key: fixture.key) == fixture.box)
+        #expect(PhonePush.letterBox(key: fixture.otherKey) == fixture.otherBox)
+        #expect(PhonePush.openLetter(fixture.renew.sealed, key: fixture.key) == fixture.renew.opens)
+        #expect(PhonePush.openLetter(fixture.stop.sealed, key: fixture.key) == fixture.stop.opens)
+        #expect(PhonePush.openLetter(fixture.renew.sealed, key: fixture.otherKey) == nil)
+        #expect(PhonePush.openLetter(fixture.computerSealed.sealed, key: fixture.key) == fixture.renew.opens)
+        #expect(fixture.renew.opens == .renew(token: "5f3c8e1a9b2d4c6e8f0a1b3c5d7e9f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e",
+                                              environment: .production,
+                                              grant: "1797811200.Dy98c6Z0_-kag0UUqCPONV9N3A2aRCMVgIl-3H8xsb8",
+                                              at: 1_795_000_000_123))
+    }
+
+    /// The letter one post carries, opened with the key of the computer whose box it names.
+    private func letter(_ posted: [String: String], keys: [String]) -> (key: String, letter: PhonePushLetter)? {
+        for key in keys where posted["box"] == PhonePush.letterBox(key: key) {
+            guard let sealed = posted["sealed"], let letter = PhonePush.openLetter(sealed, key: key) else { return nil }
+            return (key, letter)
+        }
+        return nil
+    }
+
+    @MainActor @Test func writesEachKeptComputerALetterAfterANewGrantAndOnlyThen() async throws {
+        let outside = Outside()
+        let pushes = outside.pushes()
+        await pushes.kept([studio, office])?.value
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        #expect(outside.letters.isEmpty, "No grant is held yet")
+        #expect(await pushes.pushArrived(outside.grantPush(grant(expiring: 30))))
+        let keys = try #require(outside.held?.computers?.map(\.key))
+        #expect(outside.letters.count == 2)
+        let opened = outside.letters.compactMap { letter($0, keys: keys) }
+        #expect(Set(opened.map(\.key)) == Set(keys), "One letter to each computer's own box")
+        for (posted, (_, sealed)) in zip(outside.letters, opened) {
+            #expect(posted["token"] == token && posted["environment"] == "production" && posted["grant"] == grant(expiring: 30))
+            #expect(sealed.kind == "renew" && sealed.token == token && sealed.environment == .production)
+            #expect(sealed.grant == grant(expiring: 30))
+            // Nothing but the box names the computer: no key or pin crosses to the relay.
+            for key in keys { #expect(!posted.values.contains(key)) }
+        }
+        #expect(opened[1].letter.at > opened[0].letter.at)
+        #expect(outside.held?.computers?.allSatisfy { $0.lettered == grant(expiring: 30) } == true)
+
+        // Lettered with the grant held: the next opens write nothing.
+        await pushes.opened()
+        let next = outside.pushes()
+        await next.kept([studio, office])?.value
+        await next.opened()
+        #expect(outside.letters.count == 2)
+        // The next grant goes to both again.
+        outside.now = outside.now.addingTimeInterval(PhonePush.askEvery)
+        #expect(await next.pushArrived(outside.grantPush(grant(expiring: 31))))
+        #expect(outside.letters.count == 4)
+    }
+
+    @MainActor @Test func writesAtOpenOnlyToAComputerWhoseLastLetterPredatesTheGrant() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        await pushes.kept([studio, office])?.value
+        outside.held?.computers?[0].lettered = grant(expiring: 20)
+        outside.held?.computers?[1].lettered = grant(expiring: 10)
+        let officeKey = try #require(outside.held?.computers?[1].key)
+        let again = outside.pushes()
+        await again.opened()
+        #expect(outside.letters.count == 1)
+        #expect(letter(outside.letters[0], keys: [officeKey])?.letter.grant == grant(expiring: 20))
+    }
+
+    @MainActor @Test func writesNoLetterWhileNotificationsAreOffOrWithAGrantTheRelayNoLongerTakes() async {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        outside.permission = .off
+        await outside.pushes().kept([studio])?.value
+        await outside.pushes().opened()
+        #expect(outside.letters.isEmpty)
+        // A minute or less left: the relay refuses such a letter.
+        outside.permission = .on
+        outside.held?.grant = "\(Int(now.timeIntervalSince1970 + 60)).Dy98c6Z0_-kag0UUqCPONV9N3A2aRCMVgIl-3H8xsb8"
+        await outside.pushes().opened()
+        #expect(outside.letters.isEmpty)
+    }
+
+    @MainActor @Test func forgettingAComputerLeavesItAStopLetterTheLastOneToo() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        await pushes.kept([studio, office])?.value
+        let studioKey = try #require(outside.held?.computers?[0].key)
+        let officeKey = try #require(outside.held?.computers?[1].key)
+
+        await pushes.forgot(computer: office.pin)
+        #expect(outside.letters.count == 1)
+        let stop = try #require(letter(outside.letters[0], keys: [officeKey]))
+        #expect(stop.letter == .stop(at: stop.letter.at))
+        #expect(outside.letters[0]["grant"] == grant(expiring: 20) && outside.letters[0]["token"] == token)
+        #expect(outside.held?.stops == nil, "The relay stored it, so it waits no more")
+        #expect(outside.held?.openers.contains { $0.key == officeKey } == false)
+
+        // The last computer: the push address goes, and its stop still goes with the grant it was made with.
+        await pushes.forgot(computer: studio.pin)
+        #expect(outside.unregistered == 1)
+        #expect(outside.letters.count == 2)
+        #expect(letter(outside.letters[1], keys: [studioKey])?.letter.kind == "stop")
+        #expect(outside.letters[1]["grant"] == grant(expiring: 20))
+        #expect(outside.held?.stops == nil && outside.held?.grant == nil)
+    }
+
+    @MainActor @Test func aStopTheRelayDidNotAnswerWaitsForTheNextOpen() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        // A list read without the office, forgotten while Infinitary was closed: its stop goes too.
+        await pushes.kept([studio, office])?.value
+        let officeKey = try #require(outside.held?.computers?[1].key)
+        outside.letterAnswers = [nil]
+        await pushes.kept([studio])?.value
+        #expect(outside.letters.count == 1)
+        #expect(outside.held?.stops?.count == 1)
+        #expect(outside.held?.openers.contains { $0.key == officeKey } == false, "Its key opens nothing meanwhile")
+        await outside.pushes().opened()
+        // The stop first, then the studio's renew letter, which no open had written yet.
+        #expect(outside.letters.count == 3)
+        #expect(outside.letters[1] == outside.letters[0], "The same stop, written again")
+        #expect(letter(outside.letters[1], keys: [officeKey])?.letter.kind == "stop")
+        #expect(outside.held?.stops == nil)
+    }
+
+    @MainActor @Test func writesTheNewestLetterAgainASecondAfterTheBoxWasBusyAFewTimesAtMost() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        await outside.pushes().kept([studio])?.value
+        outside.letterAnswers = [429, 429, 204]
+        await outside.pushes().opened()
+        #expect(outside.letters.count == 3)
+        #expect(Set(outside.letters).count == 1, "The same letter each time, never an older one")
+        #expect(outside.waits == [1, 1])
+        #expect(outside.held?.computers?.first?.lettered == grant(expiring: 20))
+
+        outside.held?.computers?[0].lettered = nil
+        outside.letterAnswers = [429, 429, 429]
+        await outside.pushes().opened()
+        #expect(outside.letters.count == 6)
+        #expect(outside.held?.computers?.first?.lettered == nil, "Not stored: the next open writes it again")
+    }
+
+    @MainActor @Test func aLetterTheRelayRefusesAsksForANewGrantAndARelayWithoutLettersEndsThePass() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20),
+                                     asked: now.addingTimeInterval(-10 * 86_400))
+        await outside.pushes().kept([studio, office])?.value
+        // A relay without letters: one try, nothing kept, and the other computer is not tried this time.
+        outside.letterAnswers = [404]
+        await outside.pushes().opened()
+        #expect(outside.letters.count == 1)
+        #expect(outside.held?.computers?.allSatisfy { $0.lettered == nil } == true)
+        // The relay refuses the grant: the phone drops it and asks for a new one, as when its computer did not keep it.
+        outside.letterAnswers = [403]
+        let pushes = outside.pushes()
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        #expect(outside.letters.count == 2)
+        #expect(outside.held?.grant == nil)
+        #expect(outside.posts == [["token": token, "environment": "production"]])
     }
 }

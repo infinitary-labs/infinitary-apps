@@ -2688,6 +2688,8 @@
 "settingsForgeConnecting" = "جارٍ الاتصال...";
 "settingsForgeDeviceRole" = "يستنسخ عمله ويدفعه بنفسه";
 "settingsForgeEnterCode" = "أدخل هذا الرمز على %1$@:";
+"settingsForgeKeyDataCenterScopes" = "امنح الرمز صلاحيتي Project read وRepository write.";
+"settingsForgeKeyNotDataCenter" = "لم يستجب %1$@ كما يستجيب Bitbucket Data Center 8.19 أو أحدث. تحقّق من العنوان.";
 "settingsForgeMakeKey" = "إنشاء مفتاح على %1$@";
 "settingsForgeNewCode" = "الحصول على رمز جديد";
 "settingsForgeNotSignedIn" = "غير مسجّل الدخول إلى %1$@";

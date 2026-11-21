@@ -21,6 +21,7 @@ import {
   changeHostOf,
   changeRequestHost,
   changeRequestKind,
+  serverFactsAt,
 } from "./forgeKinds.ts";
 
 export type ForgeKind = "github" | "gitlab" | "bitbucket" | "git" | "none";
@@ -66,7 +67,9 @@ export function changeNumberLabel(kind: ForgeKind | undefined, number: number): 
  * The page where the project lives that shows what a pushed branch adds to
  * the branch it builds on: GitHub's and GitLab's compare page (INF-4196).
  * A batched change has no pull request of its own, so this is the page its
- * merge card and Info tab link. Null for a kind with no such page.
+ * merge card and Info tab link. Null for a kind with no such page, and on a
+ * server whose pages differ from its public host's (Bitbucket Data Center),
+ * which takes no batches yet.
  */
 export function branchComparePage(where: {
   kind: ForgeKind;
@@ -79,7 +82,7 @@ export function branchComparePage(where: {
   const path = (value: string) => value.split("/").map(encodeURIComponent).join("/");
   const project = `https://${where.host}/${path(where.owner)}/${encodeURIComponent(where.name)}`;
   const facts = changeRequestHost(where.kind);
-  if (!facts) return null;
+  if (!facts || serverFactsAt(where.kind, where.host)) return null;
   const range =
     facts.compareRange?.(path(where.base), path(where.branch)) ??
     `${path(where.base)}...${path(where.branch)}`;

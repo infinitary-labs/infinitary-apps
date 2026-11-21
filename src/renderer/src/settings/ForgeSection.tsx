@@ -321,8 +321,9 @@ export function KeyAside({
   const hereAsThis = useHereAs();
   const here = computer ? (text: string) => hereAs(text, computer.who) : hereAsThis;
   const host = hostOfAddress(address);
-  // The scopes a key needs where its page cannot tick them (Bitbucket's API token).
-  const scopes = forgeKeyScopesText(form.server.kind);
+  // The scopes a key needs where its page cannot tick them (Bitbucket's API
+  // token), or a Bitbucket Data Center token's permissions.
+  const scopes = forgeKeyScopesText(form.server.kind, host);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!host || !key.trim() || checking) return;

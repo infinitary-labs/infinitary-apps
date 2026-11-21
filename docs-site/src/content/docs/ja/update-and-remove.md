@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Infinitary のアップデートと削除
 description: インストール方法ごとに新しい安定版を入手する方法と、保存した作業を残したまま Infinitary を削除する方法です。
 ---
@@ -87,3 +87,15 @@ Homebrew は置き換えの間 Infinitary を終了させるので、終わっ�
   AppImage の場合は、ファイルを削除します。
 
 保存した作業は、Mac では `~/Library/Application Support/infinitary`、Linux では `~/.config/infinitary` に残ります。
+
+### 保存した作業が削除される操作 {#what-deletes-your-saved-work}
+
+次の操作はそのフォルダーを削除し、Infinitary がそこに保存していたものも一緒に消えます：
+
+- `brew uninstall --zap`。
+- アプリのサポートファイルも削除するアンインストーラーアプリ。
+- フォルダーそのものをゴミ箱に入れる、または削除する。
+
+ほかのコンピューターのために作業を実行するコンピューターでは、そのフォルダーにコンピューター自身の鍵、作業コピー、タスクのファイルが入っています。
+それがなくなると、コンピューターは新しい項目としてもう一度参加し、まだ持ち帰っていなかった作業は失われたままになります。
+[同じコンピューターが 2 つ表示される](/ja/troubleshooting/#a-computer-is-listed-twice)を参照してください。

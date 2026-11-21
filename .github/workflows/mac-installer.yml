@@ -177,7 +177,11 @@ jobs:
         env:
           EXPECTED_CHIP: ${{ matrix.chip }}
         run: node -e 'if(process.arch !== process.env.EXPECTED_CHIP) throw new Error("This runner does not provide the requested native architecture");'
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        # Version 8.0.2 gives up on a transfer that stalls for 30 seconds and
+        # fetches it again, and fails on a differing digest. The older pin cut
+        # a stalled transfer off without failing, so its step passed with the
+        # copies half unpacked (alpha from main run 18's second try).
         if: ${{ inputs.reuse == '' }}
         with:
           name: signed-installer-fixtures

@@ -525,7 +525,10 @@ export class DeviceSignIns {
     return accountWords(account ?? { providerId: running.providerId, label: "" });
   }
 
-  /** A use refused before it was sent, its reason left under the account's row as its end. */
+  /**
+   * A use refused before it was sent, or the Use saved resets on their own
+   * switch refused or failed, its reason left under the account's row as its end.
+   */
   private refusedUse(
     deviceId: string,
     account: { id: string; providerId: string },
@@ -564,15 +567,24 @@ export class DeviceSignIns {
   ): Promise<{ ok: true }> {
     this.computer(deviceId);
     const who = this.who(deviceId);
-    if (!this.takesAutoSavedResets(deviceId))
-      throw new Error(`Update Infinitary on ${who} to use saved resets on their own there.`);
     const account = this.said
       .get(deviceId)
       ?.signIns?.accounts.find((entry) => entry.id === accountId);
     if (!account)
       throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    // A refusal, or a turn-off that failed, ends under the account's row, saying why.
+    if (!this.takesAutoSavedResets(deviceId))
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`Update Infinitary on ${who} to use saved resets on their own there.`),
+      );
     if (!this.options.work.inReach(deviceId))
-      throw new Error(`${who} is out of reach, so nothing was sent.`);
+      throw this.refusedUse(
+        deviceId,
+        account,
+        new Error(`${who} is out of reach, so nothing was sent.`),
+      );
     const signInId = randomBytes(16).toString("base64url");
     // Turning it off signs nothing in: that computer saves it and answers, with no flow under the row.
     if (!on) {
@@ -581,7 +593,7 @@ export class DeviceSignIns {
           { signInId, accountId, on, signIn: false },
         ]);
       } catch (error) {
-        throw reachable(error, who);
+        throw this.refusedUse(deviceId, account, reachable(error, who));
       }
       await this.refresh(deviceId);
       return { ok: true };

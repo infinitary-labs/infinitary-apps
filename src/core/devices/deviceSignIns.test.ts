@@ -277,27 +277,31 @@ describe("a computer's sign-ins view", () => {
     }
   });
   // INF-5484's review: turning Use saved resets on their own on or off there uses no reset, so it never gets a use's words.
-  it("turns a computer's switch on as a sign-in, and off with no flow under the row", async () => {
-    const ask = vi.fn(async (_deviceId: string, channel: string, _args: unknown[]) =>
-      channel === "inf:sign-ins:list"
-        ? {
-            providers: [],
-            accounts: [
-              {
-                id: "acct-codex",
-                providerId: "openai-codex",
-                kind: "subscription_oauth",
-                label: "Work",
-                enabled: true,
-                connected: true,
-                pinned: false,
-                createdAt: 1,
-              },
-            ],
-            quota: null,
-          }
-        : { ok: true },
-    );
+  it("turns a computer's switch on as a sign-in, and off with no flow unless it is refused, its reason under the row", async () => {
+    let refuseOff = false;
+    let inReach = true;
+    const ask = vi.fn(async (_deviceId: string, channel: string, args: unknown[]) => {
+      if (channel === "inf:sign-ins:list")
+        return {
+          providers: [],
+          accounts: [
+            {
+              id: "acct-codex",
+              providerId: "openai-codex",
+              kind: "subscription_oauth",
+              label: "Work",
+              enabled: true,
+              connected: true,
+              pinned: false,
+              createdAt: 1,
+            },
+          ],
+          quota: null,
+        };
+      if (refuseOff && (args[0] as { on?: boolean } | undefined)?.on === false)
+        throw new Error("This computer has no account with that id.");
+      return { ok: true };
+    });
     let contactOf: ((contact: WorkDeviceContact) => void) | undefined;
     const signIns = new DeviceSignIns({
       devices: () => [MINI],
@@ -307,7 +311,7 @@ describe("a computer's sign-ins view", () => {
           contactOf = listener;
           return () => {};
         },
-        inReach: () => true,
+        inReach: () => inReach,
         version: () => ({
           contract: PROTOCOL_VERSION,
           takesWork: true,
@@ -341,6 +345,23 @@ describe("a computer's sign-ins view", () => {
         "Mac mini reconnected, so the earlier sign-in stopped. Try signing in again.",
       );
       expect(failure).not.toBe(m.accountsSavedResetUnclear({ account: "Codex · Work" }));
+
+      // A turn-off that computer refuses stays under the account's row, so the switch is not left on unseen.
+      refuseOff = true;
+      await expect(signIns.setUseSavedResets(MINI.id, "acct-codex", false, false)).rejects.toThrow(
+        "This computer has no account with that id.",
+      );
+      const ends = () =>
+        (signIns.view()[0]?.flows ?? [])
+          .filter((flow) => flow.accountId === "acct-codex")
+          .map((flow) => flow.ended?.error);
+      expect(ends()).toContain("This computer has no account with that id.");
+      // So does one refused before it is sent, with that computer out of reach.
+      inReach = false;
+      await expect(signIns.setUseSavedResets(MINI.id, "acct-codex", false, false)).rejects.toThrow(
+        "Mac mini is out of reach, so nothing was sent.",
+      );
+      expect(ends()).toContain("Mac mini is out of reach, so nothing was sent.");
     } finally {
       signIns.dispose();
     }

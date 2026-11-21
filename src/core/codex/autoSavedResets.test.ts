@@ -160,6 +160,11 @@ describe("saved resets on their own", () => {
     await useOff.auto.spentAt(["openai-codex"], "crew task");
     expect(useOff.asked).toEqual([]);
     expect(useOff.used).toEqual([]);
+    // Turned on while the allowance is still spent: the next moment asks.
+    useOff.set({ allowed: true });
+    await useOff.auto.spentAt(["openai-codex"], "crew task");
+    expect(useOff.asked).toHaveLength(1);
+    expect(useOff.used).toEqual([ACCOUNT]);
 
     const room = harness(() => answered("use"));
     room.set({ row: codexRow(40) });

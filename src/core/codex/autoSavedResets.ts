@@ -153,8 +153,9 @@ export class AutoSavedResets {
     if (left === undefined || left > 0) return;
     const key = keyOf(accountId, deviceId);
     if (this.asked.has(key)) return;
-    this.asked.add(key);
+    // A use turned on while the allowance is already spent still asks then.
     if (!this.options.models.allowsUse("saved-reset")) return;
+    this.asked.add(key);
     const answers = await this.options.models.decide(
       { purpose: "saved-reset", use: "saved-reset" },
       savedResetState(row, waiting, now),

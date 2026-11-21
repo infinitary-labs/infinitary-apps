@@ -58,6 +58,7 @@ export const RECORD_ROOTS = [
   "devices/systems.json",
   "devices/pushes.json",
   "devices/push-withdrawals.json",
+  "devices/push-letters.json",
   "devices/standbys.json",
   "devices/standby-locks.json",
   "devices/standby-secrets.json",

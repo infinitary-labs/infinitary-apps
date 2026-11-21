@@ -36,7 +36,12 @@ import {
   splitDialAddress,
   systemRunsWork,
 } from "@shared/devices";
-import type { PhonePushAnswer, PhonePushRegistration, PhonePushTarget } from "@shared/phonePush";
+import type {
+  PhonePushAnswer,
+  PhonePushLetter,
+  PhonePushRegistration,
+  PhonePushTarget,
+} from "@shared/phonePush";
 import { remoteLoginAddressSchema } from "@shared/remoteLogin";
 import { devicePlace } from "@shared/signIns";
 import type { PhoneStandby } from "@shared/standbyPhone";
@@ -51,7 +56,7 @@ import {
 } from "../connection/addresses";
 import type { PairedDevice, PairedDevices, PairOutcome } from "../connection/connection";
 import { readHomeNumber, writeHomeNumber } from "./homeNumber";
-import { PairingPushRecords } from "./pairingPushRecords";
+import { type LetterTaken, PairingPushRecords, type PhoneLetterBox } from "./pairingPushRecords";
 
 /** Which takeover made this home, in its record (`TAKE_OVER_RECORD`, src/core/standby/takeOver.ts). */
 const TAKE_OVER_FILE = "take-over.json";
@@ -897,6 +902,19 @@ export class DevicePairing implements PairedDevices {
 
   forgetPush(deviceId: string, grant: string): void {
     this.phonePushRecords.forget(deviceId, grant);
+  }
+
+  /** Each paired phone whose box of letters is read (docs/phone-push.md, "Letters"). */
+  letterBoxes(): PhoneLetterBox[] {
+    return this.unreadable ? [] : this.phonePushRecords.letterBoxes(this.entries);
+  }
+
+  noteLetterRead(deviceId: string, at: number): void {
+    this.phonePushRecords.noteLetterRead(deviceId, at);
+  }
+
+  takeLetter(deviceId: string, key: string, letter: PhonePushLetter): LetterTaken {
+    return this.phonePushRecords.takeLetter(deviceId, key, letter);
   }
 
   /**

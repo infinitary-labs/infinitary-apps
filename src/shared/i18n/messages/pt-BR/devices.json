@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "está fora de alcance · desde",
   "devicesRemoteLineReadOnly": "· somente leitura",
   "devicesRemoteLineReadingAgain": "· atualizando, lendo tudo de novo",
-  "devicesRemoteOutOfReach": "{name} está fora de alcance"
+  "devicesRemoteOutOfReach": "{name} está fora de alcance",
+  "devicesWorkCopyGone": "{device} não tinha mais a cópia do Infinitary da qual o trabalho dele começava, então agora o trabalho começa pelo Infinitary instalado lá.",
+  "devicesWorkSavedByNewer": "Uma versão mais nova do Infinitary salvou este trabalho, então esta versão o deixa como está. Instale aqui essa versão mais nova do Infinitary para continuar."
 }

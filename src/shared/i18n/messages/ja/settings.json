@@ -509,6 +509,8 @@
   "settingsDevicesUpdate": "更新",
   "settingsDevicesUpdateFailed": "そちらの Infinitary を更新できませんでした。",
   "settingsDevicesUpdateNamed": "{device} を更新",
+  "settingsDevicesUpdateOlder": "古いバージョンをインストール",
+  "settingsDevicesUpdateOlderNamed": "{device} に古いバージョンをインストール",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "{count}台のコンピューター"
@@ -534,6 +536,7 @@
   "settingsDevicesWindowsFirewallWay": "許可するには、管理者として PowerShell でこれを一度実行してください:",
   "settingsDevicesWorkAppPlace": "作業を開始できません。{device} の Infinitary がディスクイメージまたはダウンロードフォルダーから開かれています。そちらでアプリケーションフォルダーに移動し、もう一度開いてください。",
   "settingsDevicesWorkBackgroundOff": "作業を開始できません。{device} の Infinitary はバックグラウンドでの実行を許可されていません。Mac では、そちらの システム設定 › 一般 › ログイン項目 でオンにしてください。",
+  "settingsDevicesWorkNewerWork": "作業を開始できません。{device} の作業は新しいバージョンの Infinitary が保存しました。その新しい Infinitary をそこにインストールしてください。",
   "settingsDevicesWorkNoBackground": "作業を開始できません。{device} には Infinitary をバックグラウンドで実行する方法がありません。",
   "settingsDevicesWorkNotReached": "{device} で作業は実行中ですが、このコンピューターに届いていません。",
   "settingsDevicesWorkOtherEntry": "作業を開始できません。{device} はすでにこの一覧の別のコンピューターとしてこの作業を実行しています。それを削除してから「修正」を押してください。",

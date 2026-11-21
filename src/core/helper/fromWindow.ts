@@ -58,9 +58,8 @@ export async function workFromWindow(options: WorkFromWindowOptions): Promise<Wo
   if (kept !== "kept") return "busy";
   // Out of the folder's lock, so the run the background starts can take it.
   if (!options.background) return "none";
-  return options
-    .background(backgroundFromRecord(options.dataDir))
-    .catch((): InBackground => "failed");
+  const { launcher, app } = backgroundFromRecord(options.dataDir);
+  return options.background({ launcher, app }).catch((): InBackground => "failed");
 }
 
 /**

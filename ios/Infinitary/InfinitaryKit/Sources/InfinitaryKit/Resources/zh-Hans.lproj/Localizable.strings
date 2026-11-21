@@ -637,6 +637,8 @@
 "devicesRemoteLineReadOnly" = "· 只读";
 "devicesRemoteLineReadingAgain" = "· 正在追上，重新读取全部内容";
 "devicesRemoteOutOfReach" = "%1$@ 无法联系";
+"devicesWorkCopyGone" = "%1$@ 上已经没有它的工作原先启动的那份 Infinitary 副本，所以它的工作现在从那里安装的 Infinitary 启动。";
+"devicesWorkSavedByNewer" = "这份工作由更新版本的 Infinitary 保存，所以这个版本不会改动它。请在这里安装那个更新的 Infinitary 以继续。";
 "dialogAdd" = "添加";
 "dialogAttach" = "附加";
 "dialogCancel" = "取消";
@@ -2491,6 +2493,8 @@
 "settingsDevicesUpdate" = "更新";
 "settingsDevicesUpdateFailed" = "无法更新那里的 Infinitary。";
 "settingsDevicesUpdateNamed" = "更新 %1$@";
+"settingsDevicesUpdateOlder" = "安装旧版本";
+"settingsDevicesUpdateOlderNamed" = "在 %1$@ 上安装旧版本";
 "settingsDevicesWaysCopyCommand" = "复制命令";
 "settingsDevicesWaysCopyLink" = "复制链接";
 "settingsDevicesWaysFoot" = "一个链接或命令会同时带上所有方式。另一台电脑会使用能应答的那一种，所以这里无需选择。";
@@ -2512,6 +2516,7 @@
 "settingsDevicesWindowsFirewallWay" = "要让它们连入，请以管理员身份在 PowerShell 中运行一次：";
 "settingsDevicesWorkAppPlace" = "它的工作无法开始：%1$@ 上的 Infinitary 是从磁盘映像或下载文件夹打开的。请在那边把它移到“应用程序”，再重新打开。";
 "settingsDevicesWorkBackgroundOff" = "它的工作无法开始：%1$@ 上的 Infinitary 不允许在后台运行。在 Mac 上，请在那边的“系统设置” › “通用” › “登录项”中打开它。";
+"settingsDevicesWorkNewerWork" = "它的工作无法开始：%1$@ 上的工作由更新版本的 Infinitary 保存。请在那里安装那个更新的 Infinitary。";
 "settingsDevicesWorkNoBackground" = "它的工作无法开始：%1$@ 没有办法在后台运行 Infinitary。";
 "settingsDevicesWorkNotReached" = "它的工作正在 %1$@ 上运行，但还没有连上这台电脑。";
 "settingsDevicesWorkOtherEntry" = "它的工作无法开始：%1$@ 已经以这个列表上的另一台电脑运行这项工作。请移除那一台，然后点击“修复”。";
@@ -3552,6 +3557,7 @@
 "viewWorkBackgroundOff" = "这台电脑无法为 %1$@ 运行工作：Infinitary 不允许在后台运行。在 Mac 上，请在“系统设置” › “通用” › “登录项”中打开它，然后重试。";
 "viewWorkFolded" = "这台电脑的工作：查看原因";
 "viewWorkLocalNetwork" = "这台电脑的工作还没有连上 %1$@：macOS 没有允许 Infinitary 使用你的本地网络。请在“系统设置” › “隐私与安全性” › “本地网络”中允许，然后重试。";
+"viewWorkNewerWork" = "这台电脑无法为 %1$@ 运行工作：这里的工作由更新版本的 Infinitary 保存。请安装那个更新的 Infinitary 以继续。";
 "viewWorkNoBackground" = "这台电脑无法为 %1$@ 运行工作：它没有办法在后台运行 Infinitary。";
 "viewWorkNotNow" = "暂不";
 "viewWorkNotReached" = "这台电脑的工作正在运行，但还没有连上 %1$@。";

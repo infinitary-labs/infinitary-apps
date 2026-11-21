@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "連絡不上 · 自",
   "devicesRemoteLineReadOnly": "· 唯讀",
   "devicesRemoteLineReadingAgain": "· 正在追上，重新讀取全部內容",
-  "devicesRemoteOutOfReach": "{name} 連絡不上"
+  "devicesRemoteOutOfReach": "{name} 連絡不上",
+  "devicesWorkCopyGone": "{device} 上已經沒有它的工作原先啟動的那份 Infinitary 副本，所以它的工作現在從那裡安裝的 Infinitary 啟動。",
+  "devicesWorkSavedByNewer": "這份工作由較新版本的 Infinitary 儲存，所以這個版本不會更動它。請在這裡安裝那個較新的 Infinitary 以繼續。"
 }

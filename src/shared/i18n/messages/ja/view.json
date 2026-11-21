@@ -38,6 +38,7 @@
   "viewWorkBackgroundOff": "このコンピューターは {home} の作業を実行できません。Infinitary はバックグラウンドでの実行を許可されていません。Mac では システム設定 › 一般 › ログイン項目 でオンにしてから再試行してください。",
   "viewWorkFolded": "このコンピューターの作業: 理由を見る",
   "viewWorkLocalNetwork": "このコンピューターの作業が {home} に届いていません。macOS が Infinitary にローカルネットワークの使用を許可していません。システム設定 › プライバシーとセキュリティ › ローカルネットワーク で許可してから再試行してください。",
+  "viewWorkNewerWork": "このコンピューターは {home} の作業を実行できません。ここの作業は新しいバージョンの Infinitary が保存しました。続けるには、その新しい Infinitary をインストールしてください。",
   "viewWorkNoBackground": "このコンピューターは {home} の作業を実行できません。Infinitary をバックグラウンドで実行する方法がありません。",
   "viewWorkNotNow": "今はしない",
   "viewWorkNotReached": "このコンピューターの作業は実行中ですが、{home} に届いていません。",

@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "ist außer Reichweite · seit",
   "devicesRemoteLineReadOnly": "· nur lesen",
   "devicesRemoteLineReadingAgain": "· holt auf, liest alles neu",
-  "devicesRemoteOutOfReach": "{name} ist außer Reichweite"
+  "devicesRemoteOutOfReach": "{name} ist außer Reichweite",
+  "devicesWorkCopyGone": "{device} hatte die Infinitary-Kopie, von der seine Arbeit startete, nicht mehr, daher startet seine Arbeit jetzt von dem dort installierten Infinitary.",
+  "devicesWorkSavedByNewer": "Eine neuere Infinitary-Version hat diese Arbeit gespeichert, daher lässt diese Version sie unverändert. Installiere hier diese neuere Infinitary-Version, um weiterzumachen."
 }

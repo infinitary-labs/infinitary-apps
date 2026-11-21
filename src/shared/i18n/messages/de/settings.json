@@ -520,6 +520,8 @@
   "settingsDevicesUpdate": "Aktualisieren",
   "settingsDevicesUpdateFailed": "Infinitary konnte dort nicht aktualisiert werden.",
   "settingsDevicesUpdateNamed": "{device} aktualisieren",
+  "settingsDevicesUpdateOlder": "Ältere Version installieren",
+  "settingsDevicesUpdateOlderNamed": "Ältere Version auf {device} installieren",
   "settingsDevicesWayCount": {
     "plural": "count",
     "one": "{count} Computer",
@@ -546,6 +548,7 @@
   "settingsDevicesWindowsFirewallWay": "Um sie hereinzulassen, führe dies einmal in PowerShell als Administrator aus:",
   "settingsDevicesWorkAppPlace": "Seine Arbeit kann nicht starten: Infinitary auf {device} startet von einem Disk-Image oder aus seinem Download-Ordner. Bewege es dort in den Ordner „Programme“ und öffne es erneut.",
   "settingsDevicesWorkBackgroundOff": "Seine Arbeit kann nicht starten: Infinitary auf {device} darf nicht im Hintergrund laufen. Schalte es auf einem Mac dort in Systemeinstellungen › Allgemein › Anmeldeobjekte ein.",
+  "settingsDevicesWorkNewerWork": "Seine Arbeit kann nicht starten: Eine neuere Infinitary-Version hat seine Arbeit auf {device} gespeichert. Installiere dort diese neuere Infinitary-Version.",
   "settingsDevicesWorkNoBackground": "Seine Arbeit kann nicht starten: {device} kann Infinitary nicht im Hintergrund ausführen.",
   "settingsDevicesWorkNotReached": "Seine Arbeit läuft auf {device}, hat diesen Computer aber nicht erreicht.",
   "settingsDevicesWorkOtherEntry": "Seine Arbeit kann nicht starten: {device} führt diese Arbeit bereits als anderer Computer in dieser Liste aus. Entferne ihn und klicke dann auf Beheben.",

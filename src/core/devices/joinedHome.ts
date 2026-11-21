@@ -124,6 +124,29 @@ export class JoinedHome {
     return also ? { ...joined, grant: { ...joined.grant, also } } : joined;
   }
 
+  /**
+   * Whether the grant here was saved by a newer Infinitary than this one
+   * (docs/helper.md, "Saved by a newer Infinitary"): `home.json` reads as
+   * this version's record but for a later version number or fields this
+   * version does not know. It is not read as no grant, and nothing here
+   * writes over it. False with no file, or one unreadable for another reason.
+   */
+  savedByNewer(): boolean {
+    const path = join(this.dir, HOME_FILE);
+    if (!existsSync(path)) return false;
+    let value: unknown;
+    try {
+      value = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+      return false;
+    }
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    const version = (value as { version?: unknown }).version;
+    if (typeof version === "number" && Number.isInteger(version) && version > 1) return true;
+    const read = joinedSchema.safeParse(value);
+    return !read.success && read.error.issues.every((issue) => issue.code === "unrecognized_keys");
+  }
+
   /** The home's other addresses this grant keeps; none when unread, unreadable or another grant's. */
   private readAddresses(deviceId: string): string[] | null {
     const path = join(this.dir, HOME_ADDRESSES_FILE);

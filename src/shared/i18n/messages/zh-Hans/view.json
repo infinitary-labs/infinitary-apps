@@ -38,6 +38,7 @@
   "viewWorkBackgroundOff": "这台电脑无法为 {home} 运行工作：Infinitary 不允许在后台运行。在 Mac 上，请在“系统设置” › “通用” › “登录项”中打开它，然后重试。",
   "viewWorkFolded": "这台电脑的工作：查看原因",
   "viewWorkLocalNetwork": "这台电脑的工作还没有连上 {home}：macOS 没有允许 Infinitary 使用你的本地网络。请在“系统设置” › “隐私与安全性” › “本地网络”中允许，然后重试。",
+  "viewWorkNewerWork": "这台电脑无法为 {home} 运行工作：这里的工作由更新版本的 Infinitary 保存。请安装那个更新的 Infinitary 以继续。",
   "viewWorkNoBackground": "这台电脑无法为 {home} 运行工作：它没有办法在后台运行 Infinitary。",
   "viewWorkNotNow": "暂不",
   "viewWorkNotReached": "这台电脑的工作正在运行，但还没有连上 {home}。",

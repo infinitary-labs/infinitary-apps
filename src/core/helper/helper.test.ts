@@ -8,6 +8,7 @@ import {
   parsePairingLink,
   splitDialAddress,
 } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
 import {
   controllerSaysSchema,
@@ -1016,6 +1017,39 @@ describe("running work for a home", () => {
     const { started, said } = start(scratchDir("infinitary-helper-"));
     expect(started).toEqual({ ok: false, reason: "not-joined" });
     expect(said).toEqual(helperWords.notJoined);
+  });
+
+  // The Mac Studio report (INF-5468): an older copy started on a folder a
+  // newer one wrote read its grant as none and was started again forever.
+  it("names work a newer Infinitary saved, never as not joined, and leaves it as it is", () => {
+    const dataDir = scratchDir("infinitary-helper-");
+    const own = createKeyIdentity("Infinitary device");
+    new JoinedHome(dataDir).join(
+      {
+        at: "192.168.1.20:47623",
+        homeKey: "K".repeat(43),
+        deviceId: "studio",
+        kind: "work",
+        key: own.key,
+        cert: own.cert,
+      },
+      1_000,
+    );
+    // The grant as a newer version writes it, with a field this one does not know.
+    const file = join(dataDir, "home.json");
+    const saved = JSON.parse(readFileSync(file, "utf8"));
+    saved.grant.relay = "wss://relay.example/route";
+    writeFileSync(file, `${JSON.stringify(saved, null, 2)}\n`);
+    const written = readFileSync(file, "utf8");
+
+    const { started, said } = start(dataDir);
+    expect(started).toEqual({ ok: false, reason: "newer" });
+    expect(said).toEqual([m.devicesWorkSavedByNewer()]);
+    expect(helperStatus(dataDir)).toEqual([m.devicesWorkSavedByNewer()]);
+    expect(readFileSync(file, "utf8")).toBe(written);
+    // A record this version cannot read for another reason is still none.
+    writeFileSync(file, "{ not json");
+    expect(start(dataDir).started).toEqual({ ok: false, reason: "not-joined" });
   });
 
   it("stays in reach of its home, keeps trying while Firstmate is closed there, and comes back", async () => {

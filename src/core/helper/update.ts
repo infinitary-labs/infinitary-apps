@@ -32,11 +32,20 @@ import {
   reloadInBackground,
   rewriteInBackground,
   separateMac,
+  serviceFiles,
   writeInstalled,
 } from "./background";
 import { fetchedLauncher, keepApp } from "./join";
 import { homeDialOptions } from "./route";
-import { beginTrial, previousOf, trialWatchOf, watchTrial } from "./updateTrial";
+import {
+  beginTrial,
+  previousOf,
+  putBack,
+  setAside,
+  setAsidePath,
+  trialWatchOf,
+  watchTrial,
+} from "./updateTrial";
 
 /**
  * Updated by its home over the connection (docs/helper.md, "Updated by its
@@ -54,13 +63,18 @@ import { beginTrial, previousOf, trialWatchOf, watchTrial } from "./updateTrial"
  * rewrites its agent to start that copy before the answer goes, and once
  * the run let the folder go has launchd read the agent anew from outside
  * the run (`reloadInBackground`); should that not happen, the agent starts
- * the copy from the next login. The installed app is left as it is.
+ * the copy from the next login. The installed app is left as it is. Where
+ * launchctl can be asked from outside the run, the update is on trial
+ * (docs/helper.md, "A copy that does not start"): the agent's file and the
+ * record are put back should the copy not reach the home in time.
  *
  * A home on the other side of the Infinitary rename sends that app, under
  * its own name (FI3-1780 step 2): `Infinitary.app` to a computer that keeps
  * `Firstmate 3000.app`, or back. It is kept beside the one here, and the
  * background moves to it, under that app's own label, before the run ends;
- * the old copy and agent go once the run let the folder go (`afterRun`).
+ * the old copy and agent go once the run let the folder go (`afterRun`),
+ * kept aside on trial while the new agent runs, and put back with the old
+ * agent should the new copy not reach the home in time.
  * An app that keeps its work in another folder - Infinitary's - takes the
  * work there first: once the run let the folder go, the whole data folder
  * moves into that app's own with the one-time move (src/core/folderMove/),
@@ -99,9 +113,11 @@ export type UpdateHereOptions = {
 };
 
 /**
- * The answer to the home, and for a copy kept under another name what
- * follows once the run let the folder go: the old copy and the old agent
- * taken away. Run from that agent, the last step ends this process.
+ * The answer to the home, and what follows once the run let the folder go:
+ * the watcher of a trial left behind, launchd reading a rewritten agent
+ * anew, or for a copy kept under another name the old copy and the old
+ * agent taken away or set aside. Run from that agent, the last step ends
+ * this process.
  */
 export type UpdatedHere = WorkUpdateAnswer & { afterRun?: () => Promise<void> };
 
@@ -153,7 +169,9 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
           ? { system, chip }
           : undefined,
       );
-      afterRun = first ? keepFirst(first, bundle) : await keepHere(options, installed, bundle);
+      afterRun = first
+        ? keepFirst(first, bundle, options)
+        : await keepHere(options, installed, bundle);
     } finally {
       rmSync(into, { recursive: true, force: true });
     }
@@ -190,24 +208,67 @@ function keepsFirst(
  * Keeps the home's app as this Mac's first copy and rewrites its agent to
  * start it, then answers what follows once the run let the folder go: launchd
  * reads the agent anew. An app the agent's label is not for changes nothing.
+ * With a launchctl that can be asked from outside the run, the agent's file
+ * and the record are set aside first, and the update is on trial: a copy
+ * that does not reach the home in time is taken away, and the agent starts
+ * the installed app again (docs/helper.md, "A copy that does not start").
  */
-function keepFirst(first: FirstCopy, bundle: string): () => Promise<void> {
-  const { context, service } = first;
+function keepFirst(
+  first: FirstCopy,
+  bundle: string,
+  options: Pick<UpdateHereOptions, "log" | "trialSeconds"> = {},
+): () => Promise<void> {
+  const { context, service, dataDir } = first;
   const spelling = spellingOfMacApp(basename(bundle), context.flavor);
   if (!spelling || workLabelOf(spelling, context.flavor) !== service.label)
     throw new Error("The home sent another app than the one that runs here, so nothing changed.");
-  const kept = keepApp(bundle, first.dataDir);
+  const watch = trialWatchOf(context, service);
+  const previous = setAsidePath(dataDir);
+  const pairs = watch
+    ? setAside(previous, [{ path: service.file }, { path: join(dataDir, "installed.json") }])
+    : [];
+  let kept: string | null = null;
   try {
+    kept = keepApp(bundle, dataDir);
     rewriteInBackground(context, service, {
       launcher: fetchedLauncher(kept) as NonNullable<ReturnType<typeof fetchedLauncher>>,
       env: first.env,
       app: kept,
     });
   } catch (error) {
-    rmSync(kept, { recursive: true, force: true });
+    if (kept) rmSync(kept, { recursive: true, force: true });
+    if (watch) putBack(pairs, previous);
     throw error;
   }
-  return () => reloadInBackground(context, service);
+  const reload = () => reloadInBackground(context, service);
+  if (!watch) return reload;
+  if (!openTrial(dataDir, kept, previous, options.log)) return reload;
+  const restore = { restore: pairs, remove: [kept], commands: watch.reload(service) };
+  return async () => {
+    await watchTrial(dataDir, watch, { seconds: options.trialSeconds, restore });
+    await reload();
+  };
+}
+
+/**
+ * Writes the trial for an update that set aside what it replaced: false,
+ * with what was set aside let go, when it could not be written, so the
+ * update goes on as one that keeps nothing.
+ */
+function openTrial(
+  dataDir: string,
+  app: string,
+  previous: string,
+  log: UpdateHereOptions["log"],
+): boolean {
+  try {
+    beginTrial(dataDir, app, previous);
+    return true;
+  } catch (error) {
+    rmSync(previous, { recursive: true, force: true });
+    log?.(`could not keep the previous copy on trial: ${String(error)}`);
+    return false;
+  }
 }
 
 /**
@@ -252,14 +313,8 @@ async function keepOnTrial(
     return undefined;
   }
   keepApp(bundle, dataDir, { previous: previousOf(kept) });
-  try {
-    beginTrial(dataDir, kept);
-  } catch (error) {
-    // With no trial written, nothing could go back: the previous copy goes.
-    rmSync(previousOf(kept), { recursive: true, force: true });
-    options.log?.(`could not keep the previous copy on trial: ${String(error)}`);
-    return undefined;
-  }
+  // With no trial written, nothing could go back: the previous copy goes.
+  if (!openTrial(dataDir, kept, previousOf(kept), options.log)) return undefined;
   return async () => watchTrial(dataDir, watch, { seconds: options.trialSeconds });
 }
 
@@ -326,7 +381,9 @@ export async function downloadHere(options: DownloadHereOptions): Promise<Downlo
     if (!bundle) return { fallback: "failed", ...last };
     options.onProgress({ ...last, state: "updating" });
     const got = join(into, bundle);
-    const afterRun = first ? keepFirst(first, got) : await keepHere(options, installed, got);
+    const afterRun = first
+      ? keepFirst(first, got, options)
+      : await keepHere(options, installed, got);
     return {
       restarts: await canRestart(options, installed.service),
       ...last,
@@ -420,6 +477,13 @@ async function keepRenamed(
     return async () =>
       moveThenHandOver({ ...options, background }, { from, to, old, kept, spelling });
   }
+  // On trial where the agent can be asked from outside the run: the record
+  // is set aside before the move rewrites it, and the old copy and agent file
+  // once the run let the folder go, so a copy that does not reach the home
+  // in time is taken away with its agent, and the old one starts again.
+  const watch = trialWatchOf(context, installed.service);
+  const previous = setAsidePath(dataDir);
+  const record = watch ? setAside(previous, [{ path: join(dataDir, "installed.json") }]) : [];
   let moved: Awaited<ReturnType<typeof moveInBackground>>;
   try {
     if (!spelling || !launcher) throw new Error("Not an app of this flavor.");
@@ -433,12 +497,41 @@ async function keepRenamed(
       throw new Error("The background refused it.");
   } catch (error) {
     rmSync(kept, { recursive: true, force: true });
+    rmSync(previous, { recursive: true, force: true });
     throw new Error(
       `Infinitary could not start in the background from the home's copy, so nothing changed: ${(error as Error).message}`,
     );
   }
+  const before = installed.service;
+  const now = readInstalled(dataDir).service;
+  // A new agent that starts only at the next login could not reach the home
+  // within the trial's wait: it is kept with no trial.
+  if (
+    !watch ||
+    !now ||
+    moved.state !== "running" ||
+    !openTrial(dataDir, kept, previous, options.log)
+  )
+    return async () => {
+      rmSync(previous, { recursive: true, force: true });
+      rmSync(old, { recursive: true, force: true });
+      await moved.retire();
+    };
   return async () => {
-    rmSync(old, { recursive: true, force: true });
+    // The old copy and agent file wait inside the trial's previous, which
+    // ending the trial takes away; its agent is let go last, which ends this run.
+    const restore = {
+      restore: [
+        ...record,
+        ...setAside(previous, [
+          { path: old, move: true },
+          { path: before.file, move: true },
+        ]),
+      ],
+      remove: [kept, ...serviceFiles(now)],
+      commands: [watch.unload(now.label), ...watch.reload(before)],
+    };
+    await watchTrial(dataDir, watch, { seconds: options.trialSeconds, restore });
     await moved.retire();
   };
 }

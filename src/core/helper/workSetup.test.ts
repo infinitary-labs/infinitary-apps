@@ -1,3 +1,4 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DeviceGrant } from "@shared/devices";
 import { describe, expect, it, vi } from "vitest";
@@ -89,6 +90,23 @@ describe("a Mac's window checking its work", () => {
     expect(background).not.toHaveBeenCalled();
   });
 
+  it("never writes over work a newer Infinitary saved, and names it", async () => {
+    const dataDir = workDir();
+    const grant = grantFor("studio");
+    new JoinedHome(dataDir).join(grant, 1_000);
+    const file = join(dataDir, "home.json");
+    const saved = JSON.parse(readFileSync(file, "utf8"));
+    saved.grant.relay = "wss://relay.example/route";
+    writeFileSync(file, `${JSON.stringify(saved, null, 2)}\n`);
+    const written = readFileSync(file, "utf8");
+    const background = vi.fn(async () => "running" as const);
+    expect(
+      await setUpWork({ dataDir, grant, name: "MacBook Pro", joinedAt: 2_000, background }),
+    ).toEqual({ state: "blocked", reason: "newer-work" });
+    expect(readFileSync(file, "utf8")).toBe(written);
+    expect(background).not.toHaveBeenCalled();
+  });
+
   it("names a removal here that has not finished", async () => {
     const dataDir = workDir();
     new JoinedHome(dataDir).leave({ name: "MacBook Pro", reason: "removed", at: 1_000 }, [
@@ -165,7 +183,7 @@ describe("a Mac a command or its address added, opened later as a window", () =>
     const grant = grantFor("mini");
     new JoinedHome(dataDir).join(grant, 1_000);
     // The command's join kept a copy of the app beside the work and recorded it.
-    const kept = join(dataDir, "app", "Infinitary.app");
+    const kept = keptCopy(dataDir);
     writeInstalled(dataDir, {
       service: { label: "com.infinitary.work", file: join(dataDir, "agent.plist") },
       app: kept,
@@ -187,7 +205,30 @@ describe("a Mac a command or its address added, opened later as a window", () =>
       app: kept,
     });
   });
+  it("starts this app where the copy the record names is gone, and says so once", async () => {
+    const dataDir = workDir();
+    const grant = grantFor("studio");
+    new JoinedHome(dataDir).join(grant, 1_000);
+    // The record names a copy that was deleted since.
+    writeInstalled(dataDir, {
+      service: { label: "com.infinitary.work", file: join(dataDir, "agent.plist") },
+      app: join(dataDir, "app", "Infinitary.app"),
+    });
+    const background = takesTheFolder(dataDir);
+    const found = await setUpWork({ dataDir, grant, name: null, joinedAt: 2_000, background });
+    expect(found).toEqual({ state: "running", copyGone: true });
+    // The background sets up from the app that checks, which clears the record.
+    expect(background).toHaveBeenCalledWith({ launcher: null, app: null });
+  });
 });
+
+/** A copy of the app kept beside the work, as a command's join keeps one. */
+function keptCopy(dataDir: string): string {
+  const kept = join(dataDir, "app", "Infinitary.app");
+  mkdirSync(join(kept, "Contents", "MacOS"), { recursive: true });
+  writeFileSync(join(kept, "Contents", "MacOS", "Infinitary"), "#!/bin/sh\n", { mode: 0o755 });
+  return kept;
+}
 
 describe("where an app runs from", () => {
   const app = "Infinitary.app/Contents/MacOS/Infinitary";

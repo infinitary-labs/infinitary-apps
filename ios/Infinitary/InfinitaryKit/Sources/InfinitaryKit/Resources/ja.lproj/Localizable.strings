@@ -637,6 +637,8 @@
 "devicesRemoteLineReadOnly" = "· 閲覧のみ";
 "devicesRemoteLineReadingAgain" = "· 追いつき中、すべてを読み直しています";
 "devicesRemoteOutOfReach" = "%1$@ と連絡がつきません";
+"devicesWorkCopyGone" = "%1$@ には作業の起動元だった Infinitary のコピーがもうないため、作業はそこにインストールされた Infinitary から起動するようになりました。";
+"devicesWorkSavedByNewer" = "この作業は新しいバージョンの Infinitary が保存したため、このバージョンはそのままにします。続けるには、その新しい Infinitary をここにインストールしてください。";
 "dialogAdd" = "追加";
 "dialogAttach" = "添付";
 "dialogCancel" = "キャンセル";
@@ -2491,6 +2493,8 @@
 "settingsDevicesUpdate" = "更新";
 "settingsDevicesUpdateFailed" = "そちらの Infinitary を更新できませんでした。";
 "settingsDevicesUpdateNamed" = "%1$@ を更新";
+"settingsDevicesUpdateOlder" = "古いバージョンをインストール";
+"settingsDevicesUpdateOlderNamed" = "%1$@ に古いバージョンをインストール";
 "settingsDevicesWaysCopyCommand" = "コマンドをコピー";
 "settingsDevicesWaysCopyLink" = "リンクをコピー";
 "settingsDevicesWaysFoot" = "リンクやコマンドには、すべての方法が一度に含まれます。相手のコンピューターは応答した方法を使うので、ここで選ぶ必要はありません。";
@@ -2512,6 +2516,7 @@
 "settingsDevicesWindowsFirewallWay" = "許可するには、管理者として PowerShell でこれを一度実行してください:";
 "settingsDevicesWorkAppPlace" = "作業を開始できません。%1$@ の Infinitary がディスクイメージまたはダウンロードフォルダーから開かれています。そちらでアプリケーションフォルダーに移動し、もう一度開いてください。";
 "settingsDevicesWorkBackgroundOff" = "作業を開始できません。%1$@ の Infinitary はバックグラウンドでの実行を許可されていません。Mac では、そちらの システム設定 › 一般 › ログイン項目 でオンにしてください。";
+"settingsDevicesWorkNewerWork" = "作業を開始できません。%1$@ の作業は新しいバージョンの Infinitary が保存しました。その新しい Infinitary をそこにインストールしてください。";
 "settingsDevicesWorkNoBackground" = "作業を開始できません。%1$@ には Infinitary をバックグラウンドで実行する方法がありません。";
 "settingsDevicesWorkNotReached" = "%1$@ で作業は実行中ですが、このコンピューターに届いていません。";
 "settingsDevicesWorkOtherEntry" = "作業を開始できません。%1$@ はすでにこの一覧の別のコンピューターとしてこの作業を実行しています。それを削除してから「修正」を押してください。";
@@ -3552,6 +3557,7 @@
 "viewWorkBackgroundOff" = "このコンピューターは %1$@ の作業を実行できません。Infinitary はバックグラウンドでの実行を許可されていません。Mac では システム設定 › 一般 › ログイン項目 でオンにしてから再試行してください。";
 "viewWorkFolded" = "このコンピューターの作業: 理由を見る";
 "viewWorkLocalNetwork" = "このコンピューターの作業が %1$@ に届いていません。macOS が Infinitary にローカルネットワークの使用を許可していません。システム設定 › プライバシーとセキュリティ › ローカルネットワーク で許可してから再試行してください。";
+"viewWorkNewerWork" = "このコンピューターは %1$@ の作業を実行できません。ここの作業は新しいバージョンの Infinitary が保存しました。続けるには、その新しい Infinitary をインストールしてください。";
 "viewWorkNoBackground" = "このコンピューターは %1$@ の作業を実行できません。Infinitary をバックグラウンドで実行する方法がありません。";
 "viewWorkNotNow" = "今はしない";
 "viewWorkNotReached" = "このコンピューターの作業は実行中ですが、%1$@ に届いていません。";

@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "と連絡がつきません · 最終",
   "devicesRemoteLineReadOnly": "· 閲覧のみ",
   "devicesRemoteLineReadingAgain": "· 追いつき中、すべてを読み直しています",
-  "devicesRemoteOutOfReach": "{name} と連絡がつきません"
+  "devicesRemoteOutOfReach": "{name} と連絡がつきません",
+  "devicesWorkCopyGone": "{device} には作業の起動元だった Infinitary のコピーがもうないため、作業はそこにインストールされた Infinitary から起動するようになりました。",
+  "devicesWorkSavedByNewer": "この作業は新しいバージョンの Infinitary が保存したため、このバージョンはそのままにします。続けるには、その新しい Infinitary をここにインストールしてください。"
 }

@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "est hors de portée · depuis",
   "devicesRemoteLineReadOnly": "· lecture seule",
   "devicesRemoteLineReadingAgain": "· rattrapage, tout est relu",
-  "devicesRemoteOutOfReach": "{name} est hors de portée"
+  "devicesRemoteOutOfReach": "{name} est hors de portée",
+  "devicesWorkCopyGone": "{device} n’avait plus la copie d’Infinitary à partir de laquelle son travail démarrait, donc son travail démarre maintenant depuis l’Infinitary installé là-bas.",
+  "devicesWorkSavedByNewer": "Une version plus récente d’Infinitary a enregistré ce travail, donc cette version le laisse tel quel. Installez ici cette version plus récente d’Infinitary pour continuer."
 }

@@ -637,6 +637,8 @@
 "devicesRemoteLineReadOnly" = "· 읽기 전용";
 "devicesRemoteLineReadingAgain" = "· 따라잡는 중, 모두 다시 읽는 중";
 "devicesRemoteOutOfReach" = "%1$@ 연락 닿지 않음";
+"devicesWorkCopyGone" = "%1$@에 작업을 시작하던 Infinitary 사본이 더 이상 없어서, 이제 그곳에 설치된 Infinitary에서 작업을 시작해요.";
+"devicesWorkSavedByNewer" = "이 작업은 더 새로운 Infinitary가 저장했기 때문에 이 버전은 그대로 둬요. 계속하려면 여기에 그 새로운 Infinitary를 설치하세요.";
 "dialogAdd" = "추가";
 "dialogAttach" = "첨부";
 "dialogCancel" = "취소";
@@ -2491,6 +2493,8 @@
 "settingsDevicesUpdate" = "업데이트";
 "settingsDevicesUpdateFailed" = "그곳의 Infinitary를 업데이트할 수 없어요.";
 "settingsDevicesUpdateNamed" = "%1$@ 업데이트";
+"settingsDevicesUpdateOlder" = "이전 버전 설치";
+"settingsDevicesUpdateOlderNamed" = "%1$@에 이전 버전 설치";
 "settingsDevicesWaysCopyCommand" = "명령 복사";
 "settingsDevicesWaysCopyLink" = "링크 복사";
 "settingsDevicesWaysFoot" = "링크나 명령에는 모든 방법이 한꺼번에 들어 있어요. 다른 컴퓨터는 응답하는 방법을 쓰므로 여기서 고를 건 없어요.";
@@ -2512,6 +2516,7 @@
 "settingsDevicesWindowsFirewallWay" = "허용하려면 관리자 권한으로 PowerShell에서 이것을 한 번 실행하세요:";
 "settingsDevicesWorkAppPlace" = "작업을 시작할 수 없어요. %1$@의 Infinitary가 디스크 이미지나 다운로드 폴더에서 열려 있어요. 그쪽에서 응용 프로그램 폴더로 옮기고 다시 여세요.";
 "settingsDevicesWorkBackgroundOff" = "작업을 시작할 수 없어요. %1$@의 Infinitary가 백그라운드에서 실행되도록 허용되지 않았어요. Mac에서는 그쪽의 시스템 설정 › 일반 › 로그인 항목에서 켜세요.";
+"settingsDevicesWorkNewerWork" = "작업을 시작할 수 없어요. %1$@의 작업은 더 새로운 Infinitary가 저장했어요. 그곳에 그 새로운 Infinitary를 설치하세요.";
 "settingsDevicesWorkNoBackground" = "작업을 시작할 수 없어요. %1$@에는 Infinitary를 백그라운드에서 실행할 방법이 없어요.";
 "settingsDevicesWorkNotReached" = "%1$@에서 작업은 실행 중이지만 이 컴퓨터에 연결되지 않았어요.";
 "settingsDevicesWorkOtherEntry" = "작업을 시작할 수 없어요. %1$@는 이미 이 목록의 다른 컴퓨터로 이 작업을 실행하고 있어요. 그 항목을 제거한 다음 고치기를 누르세요.";
@@ -3554,6 +3559,7 @@
 "viewWorkBackgroundOff" = "이 컴퓨터는 %1$@의 작업을 실행할 수 없어요. Infinitary가 백그라운드에서 실행되도록 허용되지 않았어요. Mac에서는 시스템 설정 › 일반 › 로그인 항목에서 켠 다음 다시 시도하세요.";
 "viewWorkFolded" = "이 컴퓨터의 작업: 이유 보기";
 "viewWorkLocalNetwork" = "이 컴퓨터의 작업이 %1$@에 연결되지 않았어요. macOS가 Infinitary의 로컬 네트워크 사용을 허용하지 않았어요. 시스템 설정 › 개인정보 보호 및 보안 › 로컬 네트워크에서 허용한 다음 다시 시도하세요.";
+"viewWorkNewerWork" = "이 컴퓨터는 %1$@의 작업을 실행할 수 없어요. 여기의 작업은 더 새로운 Infinitary가 저장했어요. 계속하려면 그 새로운 Infinitary를 설치하세요.";
 "viewWorkNoBackground" = "이 컴퓨터는 %1$@의 작업을 실행할 수 없어요. Infinitary를 백그라운드에서 실행할 방법이 없어요.";
 "viewWorkNotNow" = "나중에";
 "viewWorkNotReached" = "이 컴퓨터의 작업은 실행 중이지만 %1$@에 연결되지 않았어요.";

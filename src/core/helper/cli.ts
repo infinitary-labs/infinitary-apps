@@ -32,6 +32,7 @@ import {
   type Launcher,
   linuxReadiness,
   pauseInBackground,
+  pauseNewerWork,
   readInstalled,
   resumeInBackground,
   type ServiceManager,
@@ -541,6 +542,8 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       if (!started.ok) {
         // Task Scheduler starts this run every minute, joined or not.
         if (started.reason === "not-joined" && inBackground) await stopUnjoinedTask(inBackground);
+        // Work a newer Infinitary saved is not started on again and again.
+        if (started.reason === "newer" && inBackground) await pauseNewerWork(inBackground);
         return 1;
       }
       // Updated by its home, the run ends and the background starts the

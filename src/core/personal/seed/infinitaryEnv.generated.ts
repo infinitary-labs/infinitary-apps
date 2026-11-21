@@ -941,22 +941,22 @@ declare module "@infinitary/contracts" {
                   : N extends "batches.list"
                     ? PanelBatches
                     : N extends "knowledge.collections"
-                    ? PanelKnowledgeCollections
-                    : N extends "knowledge.graph"
-                      ? PanelKnowledgeGraph
-                      : N extends "knowledge.concepts"
-                        ? PanelKnowledgeConcepts
-                        : N extends "knowledge.findings"
-                          ? PanelKnowledgeFindings
-                          : N extends "knowledge.entry"
-                            ? PanelKnowledgeEntryRead
-                            : N extends "knowledge.directions"
-                              ? PanelKnowledgeDirections
-                              : N extends "knowledge.direction"
-                                ? PanelKnowledgeDirectionRead
-                                : N extends "settings.current"
-                                  ? PanelSettings
-                                  : PanelFeedLine[];
+                      ? PanelKnowledgeCollections
+                      : N extends "knowledge.graph"
+                        ? PanelKnowledgeGraph
+                        : N extends "knowledge.concepts"
+                          ? PanelKnowledgeConcepts
+                          : N extends "knowledge.findings"
+                            ? PanelKnowledgeFindings
+                            : N extends "knowledge.entry"
+                              ? PanelKnowledgeEntryRead
+                              : N extends "knowledge.directions"
+                                ? PanelKnowledgeDirections
+                                : N extends "knowledge.direction"
+                                  ? PanelKnowledgeDirectionRead
+                                  : N extends "settings.current"
+                                    ? PanelSettings
+                                    : PanelFeedLine[];
 
   // --- the app's own record, through SQL -------------------------------------
 

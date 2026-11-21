@@ -186,6 +186,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/forge/providers/bitbucket/contributions.ts": {
     MAX_PAGES: physical("refused in words, nothing made; adding the fork as a project contributes from it"),
   },
+  "src/core/forge/providers/bitbucket/dataCenterContributions.ts": {
+    MAX_PAGES: physical("refused in words, nothing made; adding the fork as a project contributes from it"),
+  },
   "src/core/forge/providers/bitbucket/dataCenterProjects.ts": {
     MAX_REPOSITORY_PAGES: physical("listing says some were not read; a pasted link or KEY/slug is looked up"),
   },

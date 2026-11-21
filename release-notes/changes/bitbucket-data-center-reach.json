@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "bitbucket-data-center-reach",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Batched pull requests, forks and your crew's reach on Bitbucket Data Center",
+      "body": "A project on your own Bitbucket Data Center server can now choose batched pull requests. Your crew can read and change things in the project's own repository there, while a change anywhere else waits for your click. A project you cannot push to is offered through your fork. New comments on a crewmate's pull request wake it, and your open changes panel lists your Data Center pull requests. The server keeps no check logs, runs or release files, and your crew says so.",
+      "picture": {
+        "dark": "bitbucket-data-center-reach-dark.webp",
+        "light": "bitbucket-data-center-reach-light.webp",
+        "alt": "A Bitbucket Data Center project's settings, where Where changes go offers local merge, pull requests and batched pull requests."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

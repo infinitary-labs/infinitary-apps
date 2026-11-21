@@ -443,6 +443,13 @@ export interface Forge {
   readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */
   readonly workflows?: ForgeWorkflows;
+  /**
+   * The host's own words for why it has no runs, logs or release files,
+   * where it keeps none of its own (Bitbucket Data Center, whose checks are
+   * build statuses another service posts); said to a crewmate that asks
+   * for one in place of the general refusal.
+   */
+  readonly noRunsWords?: string;
   /** Native evidence attachments, offered only on hosts qualified for publication. */
   readonly attachments?: ForgeAttachments;
   readonly contributions?: ForgeContributions;

@@ -2,8 +2,9 @@ import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { cutText } from "@shared/textCut";
-import { API_RESPONSE_MAX_BYTES } from "../../api";
+import { API_RESPONSE_MAX_BYTES, type ForgeApiResponse, gatewayAnswerBytes } from "../../api";
 import { ForgeAllowanceSpent, ForgeError, type ForgeFailure, ForgeWriteError } from "../../forge";
+import { dataCenterNextLink } from "./dataCenterApi";
 
 /**
  * A Bitbucket Data Center server's address (`docs/forge.md`, "Bitbucket
@@ -155,6 +156,65 @@ export class DataCenterClient {
   }
 
   /**
+   * The gateway's raw call (`docs/forge.md`, "The gateway"): every status
+   * answers, a redirect is never followed, the answer is bounded. Data
+   * Center names the next page's place in the answer's `nextPageStart`,
+   * which reaches the gateway as a `Link` header's `rel="next"` so every
+   * forge pages one way.
+   */
+  async call(method: string, path: string, body?: string): Promise<ForgeApiResponse> {
+    if (!path.startsWith("/rest/"))
+      throw new ForgeError("refused", `${this.place} was asked for a page outside its API.`, true);
+    const token = await this.options.token();
+    if (!token) throw new ForgeError("sign-in", notSignedInText(this.place, this.host), true);
+    let response: Response;
+    try {
+      response = await this.fetcher(`${this.options.serverUrl}${path}`, {
+        method,
+        headers: {
+          // i18n-exempt: HTTP headers, not words
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "X-Atlassian-Token": "no-check",
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
+    }
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel();
+      throw new ForgeError(
+        "refused",
+        `${this.place} answered with a redirect, which the gateway does not follow.`,
+      );
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = await gatewayAnswerBytes(response);
+    } catch (caught) {
+      if (caught instanceof ForgeError) throw caught;
+      throw new ForgeError("transient", `${this.place}'s answer could not be read.`);
+    }
+    const text = new TextDecoder().decode(bytes);
+    if (response.status === 401 && dataCenterFailureOf(401, exceptionIn(text)) === "sign-in")
+      this.options.onSignInRejected?.();
+    const retryAfter = Number(response.headers.get("retry-after"));
+    return {
+      status: response.status,
+      requestId: response.headers.get("x-arequestid"),
+      rateLimit: null,
+      retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+      link: response.ok ? dataCenterNextLink(this.options.serverUrl, path, text) : null,
+      body: text,
+    };
+  }
+
+  /**
    * The user name the server's application-links page answers for the
    * token, as plain text: the fallback when an answer carried no
    * `X-AUSERNAME` header. Null when the page answers nothing usable.
@@ -283,6 +343,17 @@ export class DataCenterRefusal extends ForgeError {
   ) {
     super(dataCenterFailureOf(status, exception), message);
     this.name = "DataCenterRefusal";
+  }
+}
+
+/** The first error's exception name in a Data Center refusal's body, or empty. */
+function exceptionIn(text: string): string {
+  try {
+    const json = JSON.parse(text) as { errors?: { exceptionName?: unknown }[] };
+    const name = Array.isArray(json.errors) ? json.errors[0]?.exceptionName : undefined;
+    return typeof name === "string" ? name : "";
+  } catch {
+    return "";
   }
 }
 

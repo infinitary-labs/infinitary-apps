@@ -106,9 +106,23 @@ export type ServerFacts = {
    * names (`scm/prj` and `repo` for `https://host/scm/prj/repo.git`).
    */
   projectPage: (owner: string, name: string) => string;
+  /**
+   * The page comparing a pushed branch with the branch it builds on, under
+   * the project's page (`projectPage`), already spelled for a link.
+   */
+  comparePage: (base: string, branch: string) => string;
   /** Whether a project on the server may choose batched pull requests. */
   batches: boolean;
+  /**
+   * The server's own REST API, whose paths the crew's gateway, its write
+   * rules and an integration's actions read in place of the kind's
+   * (`docs/forge.md`, "The gateway").
+   */
+  api: ServerApi;
 };
+
+/** The REST APIs a server of a kind speaks in place of its public host's. */
+export type ServerApi = "bitbucket-data-center";
 
 export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequestHost>> = {
   github: {
@@ -197,10 +211,15 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
       "write:pipeline:bitbucket",
     ],
     batches: true,
-    // Bitbucket Data Center on the person's own server: its own pages, and no
-    // batches until its batch pull request is built (`docs/forge.md`,
-    // "Bitbucket Data Center").
-    server: { projectPage: bitbucketServerProjectPage, batches: false },
+    // Bitbucket Data Center on the person's own server: its own pages and
+    // its own REST API (`docs/forge.md`, "Bitbucket Data Center").
+    server: {
+      projectPage: bitbucketServerProjectPage,
+      comparePage: (base, branch) =>
+        `compare/commits?sourceBranch=${encodeURIComponent(`refs/heads/${branch}`)}&targetBranch=${encodeURIComponent(`refs/heads/${base}`)}`,
+      batches: true,
+      api: "bitbucket-data-center",
+    },
   },
 };
 

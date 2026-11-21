@@ -32,6 +32,7 @@ import {
 import { BitbucketForge } from "./providers/bitbucket/bitbucketForge";
 import { readBitbucketOpenChanges } from "./providers/bitbucket/changes";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
+import { readDataCenterOpenChanges } from "./providers/bitbucket/dataCenterChanges";
 import { bitbucketDataCenterBaseFor } from "./providers/bitbucket/dataCenterClient";
 import { DataCenterForge } from "./providers/bitbucket/dataCenterForge";
 import { readOpenChanges } from "./providers/github/changes";
@@ -270,10 +271,15 @@ export function startHomeForges(options: {
           apiBaseUrl: gitlabApiBaseFor(forgeHost, forgeEndpoints),
           onSignInRejected: () => forgeSignIns.rejected(forgeHost),
         }),
-      // A Bitbucket Data Center server's open pull requests are not read here yet.
+      // Any address but bitbucket.org is a Bitbucket Data Center server.
       bitbucket: async (forgeHost, token) =>
         forgeHost !== "bitbucket.org"
-          ? []
+          ? readDataCenterOpenChanges({
+              host: forgeHost,
+              token: async () => token,
+              serverUrl: bitbucketDataCenterBaseFor(forgeHost, forgeEndpoints),
+              onSignInRejected: () => forgeSignIns.rejected(forgeHost),
+            })
           : readBitbucketOpenChanges({
               host: forgeHost,
               token: async () => token,

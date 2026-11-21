@@ -1,5 +1,10 @@
 import type { Readable } from "node:stream";
-import { type ChangeRequestKind, changeRequestKind } from "@shared/forgeKinds";
+import {
+  type ChangeRequestKind,
+  changeRequestKind,
+  type ServerApi,
+  serverFactsAt,
+} from "@shared/forgeKinds";
 import { ForgeError } from "./forge";
 
 /**
@@ -34,6 +39,23 @@ export type RawApiKind = ChangeRequestKind;
 /** The kind, when the crew reaches its REST API. */
 export function rawApiKind(kind: string | null | undefined): RawApiKind | undefined {
   return changeRequestKind(kind);
+}
+
+/**
+ * Whose REST paths a host speaks: its kind's, or a server's own where the
+ * person's server runs another product (Bitbucket Data Center). The
+ * gateway's write rules, its own-project paths and an integration's scope
+ * are kept per dialect.
+ */
+export type ApiDialect = RawApiKind | ServerApi;
+
+/** The REST dialect a host of `kind` at `host` speaks, when the crew reaches its API. */
+export function apiDialectAt(
+  kind: string | null | undefined,
+  host: string | null | undefined,
+): ApiDialect | undefined {
+  const raw = rawApiKind(kind);
+  return raw && (serverFactsAt(raw, host)?.api ?? raw);
 }
 
 export type ApiProject = { owner: string; name: string };

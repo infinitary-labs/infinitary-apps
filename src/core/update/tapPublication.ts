@@ -7,17 +7,14 @@ import {
   MAC_INSTALLATION_ATTRIBUTE,
   MAC_INSTALLATION_RESOURCE,
 } from "./macInstallation";
+import { BUILDS_FILE, type BuildsFile, type ChannelBuilds, parseBuilds } from "./releaseBuilds";
 import {
-  BUILDS_FILE,
-  type BuildsFile,
   buildDownloadUrl,
   buildUpdateTarget,
-  type ChannelBuilds,
   channelVersionProblem,
   downloadUrlProblem,
   FIRSTMATE_TAP,
   INFINITARY_TAP,
-  parseBuilds,
   parseUpdateTargets,
   TAP,
   type TapNames,

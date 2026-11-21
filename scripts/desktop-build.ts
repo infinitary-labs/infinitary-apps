@@ -85,7 +85,8 @@ export function isDesktopPath(path: string): boolean {
  * relies on the update check, which every alpha runs.
  *
  * The files, by what they hold: the Mac update code (and the update file Mac
- * shares with Linux and Windows), the app's own executables the packaging
+ * shares with Linux and Windows, but not `releaseBuilds.ts`, the builds file
+ * only Linux and Windows read), the app's own executables the packaging
  * steps place, signing and notarization, and app shutdown, which an update's
  * relaunch waits on. Entries match like DESKTOP_BUILD's.
  */

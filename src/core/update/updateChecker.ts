@@ -15,12 +15,15 @@ import {
   readLinuxInstallation,
 } from "./linuxInstall";
 import { createMacUpdateChecker, type MacUpdateDriver } from "./macUpdates";
-import { PUBLIC_RELEASE_NAMES, publicBuildsUrl, releaseSource } from "./releaseSource";
 import {
   BUILDS_URL,
   type BuildDownload,
   buildOfferFor,
   parseBuilds,
+  WINDOWS_INSTALLER,
+} from "./releaseBuilds";
+import { PUBLIC_RELEASE_NAMES, publicBuildsUrl, releaseSource } from "./releaseSource";
+import {
   parseUpdateTargets,
   releasesPageFor,
   resolveUpdateChannel,
@@ -29,7 +32,6 @@ import {
   type TapNames,
   targetsUrlOf,
   upgradeCommandFor,
-  WINDOWS_INSTALLER,
 } from "./updateChannels";
 import { UpdateInstallProblem } from "./updateDownload";
 import {

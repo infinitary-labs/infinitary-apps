@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { parseBuilds } from "./releaseBuilds";
 import { PUBLIC_RELEASE_NAMES } from "./releaseSource";
 import { advanceBuilds, advanceUpdateTargets, type Publication } from "./tapPublication";
-import { buildDownloadUrl, parseBuilds } from "./updateChannels";
+import { buildDownloadUrl } from "./updateChannels";
 
 const digest = z.string().regex(/^[0-9a-f]{64}$/);
 const asset = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);

@@ -13,9 +13,9 @@ import { thisDeviceSystem } from "../platform";
 import { ACTIVE_MARK_HEADER } from "./activeMark";
 import { type LinuxInstallPlan, PACKAGE_TYPE_FILE } from "./linuxInstall";
 import type { MacUpdateDriver } from "./macUpdates";
+import { BUILDS_URL } from "./releaseBuilds";
 import { publicBuildsUrl } from "./releaseSource";
 import {
-  BUILDS_URL,
   buildDownloadUrl,
   buildUpdateTarget,
   FIRSTMATE_TAP,

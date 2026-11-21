@@ -5,7 +5,7 @@ import { chmod, mkdir, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import { cutTextEnd } from "@shared/textCut";
 import type { UpdateChannel } from "@shared/update";
-import { type BuildDownload, isLinuxPackage, type LinuxPackage } from "./updateChannels";
+import { type BuildDownload, isLinuxPackage, type LinuxPackage } from "./releaseBuilds";
 import { downloadChecked, rememberUpdateChannel, UpdateInstallProblem } from "./updateDownload";
 
 /**

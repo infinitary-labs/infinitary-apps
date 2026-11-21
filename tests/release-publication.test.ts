@@ -14,6 +14,7 @@ import {
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseBuilds } from "../src/core/update/releaseBuilds";
 import { PUBLIC_RELEASE_NAMES, releaseSource } from "../src/core/update/releaseSource";
 import { renderCask } from "../src/core/update/tapPublication";
 import {
@@ -21,7 +22,6 @@ import {
   buildUpdateTarget,
   CASK_TOKENS,
   FIRSTMATE_TAP,
-  parseBuilds,
   parseUpdateTargets,
   type UpdateTarget,
   type UpdateTargets,

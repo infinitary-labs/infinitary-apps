@@ -74,7 +74,7 @@ describe("batch-checks.yml", () => {
   it("runs the critical path on the batch's version, on hosted Linux, in a job of its own", () => {
     const job = batch.jobs["critical-path"];
     const sweep = batch.jobs.sweep;
-    const change = workflow(".github/workflows/ci.yml").jobs["typecheck-lint-build"]?.steps?.find(
+    const change = workflow(".github/workflows/ci.yml").jobs.build?.steps?.find(
       (step) => step.id === "critical-path",
     );
     expect(job?.uses).toBe("./.github/workflows/source-journeys.yml");

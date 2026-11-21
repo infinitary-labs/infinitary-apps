@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { HERE } from "./deviceNames";
-import { CHANGE_REQUEST_HOSTS, type SignInKind, signInHost } from "./forgeKinds";
+import { CHANGE_REQUEST_HOSTS, type SignInKind, serverFactsAt, signInHost } from "./forgeKinds";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * The app's own sign-ins where projects live (git integration PR 1.2,
@@ -399,9 +400,11 @@ export function forgeKeyPlace(kind: string, host: string): string {
 
 /**
  * The key form's line naming the scopes a kind's key needs, where its key
- * page cannot tick them (Bitbucket's API token); null where it can.
+ * page cannot tick them (Bitbucket's API token); null where it can. A
+ * Bitbucket Data Center address names its HTTP access token's permissions.
  */
-export function forgeKeyScopesText(kind: string): string | null {
+export function forgeKeyScopesText(kind: string, host: string | null = null): string | null {
+  if (host && serverFactsAt(kind, host)) return m.settingsForgeKeyDataCenterScopes();
   const scopes = signInHost(kind)?.keyScopes;
   if (!scopes?.length) return null;
   const name = SERVER_VIEWS[kind as SignInKind]?.name ?? kind;
@@ -427,6 +430,8 @@ export function forgeKeyProblemText(
     case "unreachable":
       return `Could not reach ${where}. Check the address and your connection.`;
     case "not-server":
+      if (host && serverFactsAt(server.kind, host))
+        return m.settingsForgeKeyNotDataCenter({ host });
       return `${where} did not answer as ${server.name} does. Check the address.`;
   }
 }
@@ -478,7 +483,8 @@ export const FORGE_SECTION_WORDS = {
 
 /** The key sign-in's opening line: where to make the key, and that it stays on this Mac. */
 export function forgeKeyIntro(host: string | null, server: ForgeServerView): string {
-  const account = signInHost(server.kind)?.keyAccount;
+  const account =
+    host && serverFactsAt(server.kind, host) ? undefined : signInHost(server.kind)?.keyAccount;
   const where = account
     ? `${account}${host ? ` at ${forgeKeyPlace(server.kind, host)}` : ""}`
     : (host ?? `your ${server.name}`);

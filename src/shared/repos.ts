@@ -4,7 +4,7 @@ import { contributionDestinationSchema, contributionRouteSchema } from "./contri
 import { costLimitSchema } from "./costLimit";
 import { HERE, PLACE_SAID } from "./deviceNames";
 import { type ForgeKind, hasChangeRequests } from "./forge";
-import { changeRequestHost } from "./forgeKinds";
+import { changeRequestHost, serverFactsAt } from "./forgeKinds";
 import { englishOf, type Said, said } from "./i18n/said";
 import { placementRequirementsSchema } from "./placement";
 import { rigorSchema } from "./rigor";
@@ -251,7 +251,10 @@ export const BATCH_HOST_REFUSAL =
  * offered there.
  */
 export function hostTakesBatches(host: RepoHost | undefined): boolean {
-  return changeRequestHost(host?.kind)?.batches ?? false;
+  // A server running another product than the public host (Bitbucket Data
+  // Center) answers for its own batches.
+  const server = serverFactsAt(host?.kind, host?.name);
+  return server ? server.batches : (changeRequestHost(host?.kind)?.batches ?? false);
 }
 
 /**

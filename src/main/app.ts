@@ -753,9 +753,13 @@ export async function startApp(
       }
       if (move) {
         const serviceManager = work.serviceManager;
+        // The older copy's names follow the folder it moves from, never where
+        // this computer's work happens to be (`folderSpelling` names this app's
+        // own folder whenever its work is not still in the older one).
+        const olderSpelling = spellingOfUserDataFolder(basename(move.from)) ?? "fm";
         // The start entry a run of the older copy may have, let go before Stop it now ends it.
         const olderRun = olderRunAgent({
-          spelling: work.place.folderSpelling,
+          spelling: olderSpelling,
           flavor: work.place.flavor,
           platform: hostPlatform(),
           homeDir: homedir(),
@@ -765,7 +769,7 @@ export async function startApp(
         const olderBackground = serviceManager && {
           flavor: work.place.flavor,
           dataDir: join(move.from, "work"),
-          spelling: work.place.folderSpelling,
+          spelling: olderSpelling,
           homeDir: homedir(),
           uid: process.getuid?.() ?? userInfo().uid,
           ...serviceManager,

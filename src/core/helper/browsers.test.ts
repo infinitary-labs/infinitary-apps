@@ -176,6 +176,8 @@ describe('a work computer\'s kept page and outage, heard at the home (docs/task-
     const unwatch = home.watch("t1", () => undefined);
     for (let i = 0; i < 20 && told.length < 2; i += 1) await flush();
     unwatch();
+    // A second check ran and reached the home, still under the outage's one name.
+    expect(told).toHaveLength(2);
     expect(new Set(told.map((entry) => entry.unanswered.once)).size).toBe(1);
   });
 });

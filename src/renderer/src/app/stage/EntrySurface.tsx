@@ -249,6 +249,7 @@ export function EntrySurface({
                 // column's width, or folded to its latest line under it.
                 open: view.request?.open ?? true,
                 width: view.thread,
+                onOpen: () => onThread?.(true, false),
                 column: (
                   <BrowserRequestColumn
                     card={docked.card}

@@ -59,7 +59,12 @@ export type PageSnapshot = {
 export type PageSize = { width: number; height: number };
 
 /** Which elements the page lays out, and of those, which its window shows now. */
-export type PageScreen = { laidOut: Set<number>; onScreen: Set<number> };
+export type PageScreen = {
+  laidOut: Set<number>;
+  onScreen: Set<number>;
+  /** Where the window shows each element that has a size, from the window's top left. */
+  boxes?: Map<number, { x: number; y: number; width: number; height: number }>;
+};
 
 /**
  * Which elements of the page's own document the window shows, from a page
@@ -70,6 +75,7 @@ export type PageScreen = { laidOut: Set<number>; onScreen: Set<number> };
 export function screenFromSnapshot(snapshot: PageSnapshot, viewport: PageSize): PageScreen {
   const laidOut = new Set<number>();
   const onScreen = new Set<number>();
+  const boxes = new Map<number, { x: number; y: number; width: number; height: number }>();
   const document = snapshot.documents?.[0];
   const ids = document?.nodes?.backendNodeId ?? [];
   const indexes = document?.layout?.nodeIndex ?? [];
@@ -91,22 +97,23 @@ export function screenFromSnapshot(snapshot: PageSnapshot, viewport: PageSize): 
     if (meets || (width === 0 && height === 0 && y - top >= 0 && y - top < viewport.height)) {
       onScreen.add(id);
     }
+    if (meets && width > 0 && height > 0) boxes.set(id, { x: x - left, y: y - top, width, height });
   }
-  return { laidOut, onScreen };
+  return { laidOut, onScreen, boxes };
 }
 
 /**
- * Mark each node the page lays out with whether its window shows it now;
+ * Mark each node the page lays out with whether its window shows it now, and where;
  * a node it does not lay out is left unmarked, and reads as where its
  * parent is.
  */
 export function applyScreen(nodes: readonly BrowserNode[], screen: PageScreen): BrowserNode[] {
   if (screen.laidOut.size === 0) return [...nodes];
-  return nodes.map((node) =>
-    node.target !== undefined && screen.laidOut.has(node.target)
-      ? { ...node, onScreen: screen.onScreen.has(node.target) }
-      : node,
-  );
+  return nodes.map((node) => {
+    if (node.target === undefined || !screen.laidOut.has(node.target)) return node;
+    const box = screen.boxes?.get(node.target);
+    return { ...node, onScreen: screen.onScreen.has(node.target), ...(box ? { box } : {}) };
+  });
 }
 
 function textAt(strings: string[], index: number | undefined): string {

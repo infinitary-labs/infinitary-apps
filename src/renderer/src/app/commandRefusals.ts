@@ -79,6 +79,10 @@ export type RefusalState = Pick<
 export type WindowFacts = {
   /** A modal dialog other than command search holds focus: the picture viewer, the custom API form. */
   dialogOpen: boolean;
+  /** The open picture viewer offers Point at on its picture: the one command a viewer lets through. */
+  viewerPointAt?: boolean;
+  /** The shown Browser tab offers Point at over its page. */
+  browserPointAt?: boolean;
   browserControl?: boolean;
   /** The shown entry has a reply field: a card's, or the request docked beside a browser's page. */
   browserReply?: boolean;
@@ -371,10 +375,14 @@ const REFUSALS: Readonly<
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),
-  "cards.point-at": (s) => {
+  "cards.point-at": (s, facts) => {
+    if (facts.viewerPointAt) return null;
     const refused = cardRefusal(s);
     if (refused) return refused;
     const entry = shownEntry(s);
+    // A Browser tab points at its page, which it must be showing.
+    if (entry?.browserTaskId !== undefined)
+      return facts.browserPointAt ? null : m.refuseNoPageToPointAt();
     return !entry || isHeldEntry(entry) || !cardTakesReplies(entry)
       ? m.refuseThisCardTakesNoReply()
       : null;
@@ -463,7 +471,10 @@ export function commandRefusal(
   if (s.pickingDictationKey) return m.refuseSettingsIsWaitingForADictationKey();
   if (s.recordingKeys) return m.refuseSettingsIsRecordingAKey();
   if (id !== "commands.search" && s.commandSearchOpen) return m.refuseCommandSearchIsOpen();
-  if (!s.commandSearchOpen && facts.dialogOpen) return m.refuseCloseTheOpenDialogFirst();
+  // The picture viewer is a dialog that takes one window command: Point at, on its picture.
+  const viewerOwn = id === "cards.point-at" && facts.viewerPointAt === true;
+  if (!s.commandSearchOpen && facts.dialogOpen && !viewerOwn)
+    return m.refuseCloseTheOpenDialogFirst();
   if (isPanelCommandId(id)) return facts.panelCommand?.(id, s.recording) ?? null;
   return REFUSALS[id](s, facts);
 }

@@ -11,6 +11,7 @@
   "refuseNoCardIsShownOrPutAside": "没有显示或放到一边的卡片",
   "refuseNoCardThreadIsReadAboveIts": "没有哪张卡片的讨论停在最新消息之上",
   "refuseNoOtherCardIsNew": "没有其他新卡片",
+  "refuseNoPageToPointAt": "没有可指向的页面",
   "refuseNoReleaseNotesYet": "还没有发布说明",
   "refuseNoUpdateIsAvailable": "没有可用的更新",
   "refuseNoUpdateIsSavingWorkNow": "目前没有更新在保存工作",

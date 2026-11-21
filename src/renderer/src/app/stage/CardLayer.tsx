@@ -1,4 +1,5 @@
 import { cardCornerOf } from "@shared/cardLeave";
+import { placeKey } from "@shared/cardNotes";
 import { isDrawingSource, withDrawingFaces } from "@shared/cardPictures";
 import { cardTakesReplies } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
@@ -12,7 +13,9 @@ import {
   useRef,
   useState,
 } from "react";
+import type { PictureMark } from "../../cards/annotationBridge";
 import { CardFindField } from "../../cards/CardFindField";
+import { CardPictureViewer } from "../../cards/CardPictureViewer";
 import { closeCardFind, openCardFind, useCardFind, useCardFindStage } from "../../cards/cardFind";
 import { CARD_DRAG_MIN, CARD_SIZES, cardPlacement, shownCardSize } from "../../cards/cardGeometry";
 import {
@@ -58,7 +61,7 @@ import { type CardSize, CardSizeContext } from "../../design/cards/CardSize";
 import { CardPeeks } from "../../design/cards/CardStack";
 import { cardFace } from "../../design/cards/drawingFaces";
 import { LogReader, type ViewerLog } from "../../design/cards/LogReader";
-import { PictureViewer, type ViewerDemo } from "../../design/cards/PictureViewer";
+import type { ViewerDemo } from "../../design/cards/PictureViewer";
 import { CARD_MAX_HEIGHT } from "../../design/cards/ResponseCard";
 import { focusWithRing } from "../../design/focus";
 import {
@@ -907,14 +910,24 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     setExpanded({ cardId, title: shownTitle() ?? "", ...open, opener });
   };
   const openPictures = (
-    set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo; log?: ViewerLog },
+    {
+      cardId: noteCardId,
+      ...set
+    }: {
+      index: number;
+      pictures: FramePicture[];
+      demo?: ViewerDemo;
+      log?: ViewerLog;
+      cardId?: string | undefined;
+      mark?: PictureMark | undefined;
+    },
     opener: HTMLIFrameElement | null,
     recordTitle?: string,
   ) => {
     const title = shownTitle(recordTitle);
     if (!card || !cardId) return;
     if (!set.pictures.some((picture) => isDrawingSource(picture.src))) {
-      setViewer({ cardId, title: title ?? "", ...set, opener });
+      setViewer({ cardId, title: title ?? "", ...set, noteCardId, opener });
       return;
     }
     // A diagram takes the card's typefaces inside it before it opens (INF-3107).
@@ -923,7 +936,9 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
         ...picture,
         src: await withDrawingFaces(picture.src, cardFace),
       })),
-    ).then((pictures) => setViewer({ cardId, title: title ?? "", ...set, pictures, opener }));
+    ).then((pictures) =>
+      setViewer({ cardId, title: title ?? "", ...set, pictures, noteCardId, opener }),
+    );
   };
   // Paging remembers which way the arrow went, for the slide (../../cards/stageMoves),
   // and the page number slides the same way, going round included (INF-4541).
@@ -1221,11 +1236,15 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
         />
       )}
       {viewing && !viewing.log && (
-        <PictureViewer
+        <CardPictureViewer
+          // A note's mark opens the viewer again at its own picture.
+          key={viewing.mark ? `${viewing.index}-${placeKey(viewing.mark.note.place)}` : "pictures"}
           title={viewing.title}
           pictures={viewing.pictures}
           index={viewing.index}
           demo={viewing.demo}
+          noteCardId={viewing.noteCardId}
+          lit={viewing.mark}
           onSound={stopAnyCardSound}
           onSounding={setDemoSounding}
           onClose={() => {
@@ -1252,5 +1271,9 @@ type OpenPictures = {
   demo?: ViewerDemo;
   /** A proof log, read in the log reader instead of the viewer; the set has no pictures. */
   log?: ViewerLog;
+  /** The card whose body the pictures are in, where a place marked in one joins its notes. */
+  noteCardId?: string | undefined;
+  /** The note whose mark the viewer opened at. */
+  mark?: PictureMark | undefined;
   opener: HTMLIFrameElement | null;
 };

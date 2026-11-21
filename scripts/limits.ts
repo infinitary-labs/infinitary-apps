@@ -473,6 +473,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     ATTACHMENT_MAX_BYTES: physical("a notice says it is too big; nothing attaches, not even its path"),
     CHOSEN_FILES_MAX: physical("files past twenty are silently not read; choose them again"),
   },
+  "src/shared/cardNotes.ts": {
+    NOTE_LINE_POINTS_MAX: physical("a longer line is thinned evenly as it is drawn; its start and end are kept"),
+    NOTE_PLACE_LINES_MAX: physical("refused as an invalid note; the window writes one line to a note"),
+  },
   "src/shared/cards.ts": {
     CARD_CHANGE_MARKS_MAX: physical("past it new parts are counted in the line, not drawn as bars"),
     CARD_MAX_ANSWERS: physical("none yet: the reading is dropped; a click sends an older one or none"),
@@ -609,6 +613,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     TASK_BROWSER_PAGE_MIN: physical("the view's room is clamped up to it; the page lays out there"),
     TASK_BROWSER_PAGE_MAX: physical("the view's room is clamped down to it; the page lays out there"),
     TASK_BROWSER_PASTE_MAX: physical("a longer paste carries no words; the page pastes from its own clipboard"),
+    TASK_BROWSER_PLACES_MAX: physical("later things are left out of the read; a mark there still names its box"),
   },
   "src/shared/taskKeys.ts": {
     TASK_KEYS_MAX: physical("later keys stay plain text, unlinked"),

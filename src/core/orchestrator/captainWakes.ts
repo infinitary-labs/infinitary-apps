@@ -140,6 +140,8 @@ export type CaptainFacts =
       words: string;
       /** Original input before delivery normalization; unknown on older rows. */
       captainText?: string;
+      /** The notes on the task's running page that left with the line (docs/task-browser.md, "Pointing at a page"). */
+      notes?: CardNote[];
     }
   | {
       /**
@@ -357,6 +359,14 @@ export function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply"
  * he reads the crewmate's session as it works, so the line is his direct
  * guidance, answered by the work and the next report.
  */
+/**
+ * What the captain sent from the Crewmate tab's box, as the crewmate reads it: his words, then
+ * the notes on the task's running page that left with them. Notes need no words beside them.
+ */
+export function crewmateTabLine(facts: { words: string; notes?: CardNote[] }): string {
+  return [...(facts.words ? [facts.words] : []), ...pointedAtLines(facts.notes ?? [])].join("\n");
+}
+
 export const CREWMATE_TAB_STEER_LEAD = [
   "The captain typed this to you in your task's Crewmate tab, where they read your session as you work.",
   "Treat it as their direct guidance: do what their words need, and answer through your work and your next report, never with an acknowledgement or a card about having read it.",
@@ -467,7 +477,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
   "project-change": (facts) =>
     `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`,
   "project-setup": (facts) => renderProjectSetup(facts),
-  "crewmate-tab-line": (facts) => `${CREWMATE_TAB_STEER_LEAD}\n${facts.words}`,
+  "crewmate-tab-line": (facts) => [CREWMATE_TAB_STEER_LEAD, crewmateTabLine(facts)].join("\n"),
   "thread-reply": (facts) =>
     [
       threadReplyLead(facts),

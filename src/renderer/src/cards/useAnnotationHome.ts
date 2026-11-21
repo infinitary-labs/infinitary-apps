@@ -22,3 +22,26 @@ export function useAnnotationHome(): boolean {
   }, [view]);
   return !view || available;
 }
+
+/**
+ * A note's place and a note on a running page need a home that reads them (`card-note-places.md`):
+ * a view of an older home offers neither, since that home would drop the place and send the rest.
+ */
+export function usePlacesHome(): boolean {
+  const view = useShellStore((s) => s.thisMac?.role === "view");
+  const [available, setAvailable] = useState(false);
+  useEffect(() => {
+    if (!view) return;
+    let live = true;
+    void window.infinitary.app
+      .healthcheck()
+      .then((home) => {
+        if (live) setAvailable(home.changes?.includes("card-note-places") ?? false);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [view]);
+  return !view || available;
+}

@@ -268,3 +268,39 @@ describe("a page's asks on that computer (docs/task-browser.md, \"A site's asks\
     expect(asked).toEqual([]);
   });
 });
+
+/** Intent: the accepted Point at plan - a page on another computer is read by that computer, where its browser runs. */
+describe('Point at on a page that computer runs (docs/task-browser.md, "Pointing at a page")', () => {
+  const read = {
+    ok: true,
+    width: 1280,
+    height: 800,
+    url: `https://${site}/`,
+    title: "Club",
+    places: [{ role: "button", name: "Join", x: 40, y: 252, width: 72, height: 32 }],
+  };
+
+  it("asks that computer what its page names on screen, and gives the answer as it came", async () => {
+    const { browsers, asked } = setup(async () => read, {
+      changes: ["kept-sign-ins", "card-note-places"],
+    });
+    expect(await browsers.places("task")).toEqual(read);
+    expect(asked).toEqual([["work-computer", "inf:task-browser:places", [{ task: "task" }]]]);
+  });
+
+  it("asks nothing of a computer not yet updated, and says the page could not be read", async () => {
+    const { browsers, asked } = setup(async () => read);
+    expect(await browsers.places("task")).toEqual({ ok: false });
+    expect(asked).toEqual([]);
+  });
+
+  it("says the page could not be read while that computer is out of reach", async () => {
+    const { browsers } = setup(
+      async () => {
+        throw new DeviceOutOfReachError("work-computer");
+      },
+      { changes: ["kept-sign-ins", "card-note-places"] },
+    );
+    expect(await browsers.places("task")).toMatchObject({ ok: false });
+  });
+});

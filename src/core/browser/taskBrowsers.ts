@@ -13,6 +13,7 @@ import {
   type TaskBrowserFact,
   type TaskBrowserHandle,
   type TaskBrowserInput,
+  type TaskBrowserPlaces,
   type TaskBrowserRequest,
   type TaskBrowserReturn,
   type TaskBrowserSize,
@@ -47,6 +48,7 @@ import {
   signedIn,
   siteNamed,
   siteOf,
+  titleOf,
 } from "./browserRecord";
 import { browserCommand } from "./commandWords";
 import {
@@ -71,6 +73,7 @@ import { saveDownload } from "./evidenceFiles";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
 import { SavedSignInGrants, type SignInStore } from "./savedSignInGrants";
@@ -757,6 +760,33 @@ export class TaskBrowsers {
       return { ok: true };
     } catch {
       return { ok: false, text: "The page did not take that." };
+    }
+  }
+
+  /**
+   * What the outline of the task's page names on screen now (docs/task-browser.md,
+   * "Pointing at a page"): read once when the captain's Point at holds the page's
+   * picture, through the same read the crewmate's outline takes. Names only, with a
+   * key hidden where the crewmate's own reads hide it; nothing is recorded.
+   */
+  async places(taskId: string): Promise<TaskBrowserPlaces> {
+    const browser = this.browsers.get(taskId);
+    if (!browser) return { ok: false };
+    try {
+      const nodes = await browser.current.page.nodes();
+      const size = { width: browser.size.width, height: browser.size.height };
+      // A mark made while the captain holds the browser reads as its crewmate's next read will.
+      const held = browser.control === "captain";
+      return {
+        ok: true,
+        ...size,
+        // The address and title as the crewmate's own reads give them (`shown`, `titleOf`).
+        url: shown(browser, addressOf(browser, browser.current), held).slice(0, 2_048),
+        title: titleOf(browser, browser.current, held).slice(0, 240),
+        places: pagePlaces(nodes, size, { hideKeys: held || signedIn(browser) }),
+      };
+    } catch {
+      return { ok: false };
     }
   }
 

@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "id": "point-at-a-place-in-a-picture",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Point at a place in a card's picture",
+      "body": "In the picture viewer, Point at now marks a place in a picture or a drawing: drag a box, draw a line, or move a box with the arrow keys and press Enter. Each note waits with a small copy of its numbered mark, and your reply sends the crewmate the picture with every mark drawn in.",
+      "picture": {
+        "dark": "point-at-a-place-in-a-picture-dark.webp",
+        "light": "point-at-a-place-in-a-picture-light.webp",
+        "alt": "The picture viewer showing a diagram of three boxes, with a numbered box drawn around one of them and a numbered line drawn under another's words"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "point-at-a-running-page",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Point at a place on a task's running page",
+      "body": "On a task's Browser tab, Point at holds the page still so you can press a spot, drag a box or draw on it, or move through the things on the page with the arrow keys. Your note reaches the crewmate with the marked picture, the page's address and the name of what you marked, and nothing leaves before you send it.",
+      "picture": {
+        "dark": "point-at-a-running-page-dark.webp",
+        "light": "point-at-a-running-page-light.webp",
+        "alt": "A task's Browser tab holding a sign-up page still, its heading and its Send button marked with numbers, beside a waiting note that shows a small copy of the marked page"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

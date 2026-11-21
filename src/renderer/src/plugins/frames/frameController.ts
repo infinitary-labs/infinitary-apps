@@ -396,6 +396,13 @@ function questionsOf(message: {
   return { questions: questions.data };
 }
 
+/** Where a revealed part is, and the pictures its picture opens with when the host asked for them. */
+export type FrameRevealed = {
+  top: number;
+  height: number;
+  shown?: { index: number; pictures: FramePicture[] };
+};
+
 export class FrameController {
   private spec: FrameMountSpec;
   private theme: FrameTheme;
@@ -433,7 +440,7 @@ export class FrameController {
   private revealing?: {
     seq: number;
     offerId: string;
-    resolve: (box: { top: number; height: number } | undefined) => void;
+    resolve: (box: FrameRevealed | undefined) => void;
   };
   private findSeq = 0;
   private findMarks = 0;
@@ -672,7 +679,13 @@ export class FrameController {
           return;
         pending.resolve(
           message.top !== undefined && message.height !== undefined
-            ? { top: message.top, height: message.height }
+            ? {
+                top: message.top,
+                height: message.height,
+                ...(message.pictures && message.index !== undefined
+                  ? { shown: { index: message.index, pictures: message.pictures } }
+                  : {}),
+              }
             : undefined,
         );
         return;
@@ -845,12 +858,17 @@ export class FrameController {
     });
   }
 
+  /**
+   * Reveal a note's part. `picture` also asks which pictures the part's picture opens with: 0 for
+   * the part itself, or which of its pictures counted from 1.
+   */
   revealAnnotation(
     target: FrameAnnotationTarget,
-  ): Promise<{ top: number; height: number } | undefined> {
+    picture?: number,
+  ): Promise<FrameRevealed | undefined> {
     const offer = this.spec.revision?.offerId;
     return offer
-      ? this.reveal(offer, target.start, false, target.span)
+      ? this.reveal(offer, target.start, false, target.span, picture)
       : Promise.resolve(undefined);
   }
 
@@ -860,7 +878,8 @@ export class FrameController {
     start: number,
     keyboard: boolean,
     span?: { start: number; end: number; endPart?: number },
-  ): Promise<{ top: number; height: number } | undefined> {
+    picture?: number,
+  ): Promise<FrameRevealed | undefined> {
     if (
       this.disposed ||
       !this.ready ||
@@ -872,7 +891,7 @@ export class FrameController {
     this.revealing?.resolve(undefined);
     const seq = ++this.revealSeq;
     return new Promise((resolve) => {
-      const finish = (box: { top: number; height: number } | undefined) => {
+      const finish = (box: FrameRevealed | undefined) => {
         globalThis.clearTimeout(timer);
         if (this.revealing?.seq === seq) this.revealing = undefined;
         resolve(box);
@@ -888,6 +907,7 @@ export class FrameController {
         start,
         keyboard,
         ...(span ? { span } : {}),
+        ...(picture !== undefined ? { picture } : {}),
       });
     });
   }

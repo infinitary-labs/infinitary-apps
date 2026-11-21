@@ -34,6 +34,7 @@ import {
   CAPTAIN_WORDS,
   type CaptainFacts,
   CREWMATE_TAB_STEER_LEAD,
+  crewmateTabLine,
   threadReplyLead,
 } from "./captainWakes";
 import { DELIVERY_WORDS, type DeliveryFacts } from "./deliveryWakes";
@@ -236,7 +237,9 @@ export function replyWordsSpan(wake: WakeBody): { from: number; to: number } | u
         ? CREWMATE_TAB_STEER_LEAD
         : undefined;
   if (lead === undefined || !("words" in wake.facts)) return undefined;
-  const words = wake.facts.words;
+  // A line from the Crewmate tab's box is the captain's whole: its notes on the page ride it.
+  const words =
+    wake.facts.kind === "crewmate-tab-line" ? crewmateTabLine(wake.facts) : wake.facts.words;
   if (words === undefined) return undefined;
   const from = lead.length + 1;
   const to = from + words.length;

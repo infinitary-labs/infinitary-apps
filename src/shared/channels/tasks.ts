@@ -18,6 +18,7 @@ import {
   taskBrowserCommandResultSchema,
   taskBrowserHandleSchema,
   taskBrowserInputSchema,
+  taskBrowserPlacesSchema,
   taskBrowserReturnSchema,
   taskBrowserSizeSchema,
 } from "../taskBrowser";
@@ -190,6 +191,16 @@ export const taskChannels = {
     reach: "views",
     request: z.tuple([z.string().min(1).max(64), taskBrowserInputSchema]),
     response: taskBrowserCommandResultSchema,
+  },
+  // What the outline of a task's page names on screen now, each by role, name and
+  // box (docs/task-browser.md, "Pointing at a page"; `card-note-places.md`): read once
+  // when the captain's Point at holds the page's picture, from any view. Names only.
+  "inf:browser:places": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: taskBrowserPlacesSchema,
   },
   // A task's own browser, from the captain's view of it (docs/task-browser.md,
   // "The view"): Stop browser, and Open again on a stopped one, from any

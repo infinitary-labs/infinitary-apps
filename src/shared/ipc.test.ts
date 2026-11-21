@@ -381,6 +381,7 @@ describe("ipc contract", () => {
       "inf:automation:state",
       "inf:browser:ask",
       "inf:browser:input",
+      "inf:browser:places",
       "inf:browser:private-sites",
       "inf:browser:private-sites:add",
       "inf:browser:private-sites:remove",
@@ -688,6 +689,8 @@ describe("ipc contract", () => {
       "inf:browser:take",
       "inf:browser:ask",
       "inf:browser:return",
+      // Point at's outline read: a view on another computer marks the picture it already has.
+      "inf:browser:places",
     ])
       expect(views.has(channel), channel).toBe(true);
     // Each signed-in Settings read a view of any first mate opens.

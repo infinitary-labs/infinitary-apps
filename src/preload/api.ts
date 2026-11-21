@@ -190,7 +190,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         options
           ? invoke("inf:task:move", taskId, to, options)
           : invoke("inf:task:move", taskId, to),
-      steer: (taskId, text) => invoke("inf:task:steer", taskId, text),
+      steer: (taskId, text, more) =>
+        more
+          ? invoke("inf:task:steer", taskId, text, more)
+          : invoke("inf:task:steer", taskId, text),
       interrupt: (taskId) => invoke("inf:task:interrupt", taskId),
     },
     automation: {
@@ -390,6 +393,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       openPage: (cardId) => invoke("inf:cards:open-page", cardId),
       data: (name) => invoke("inf:cards:data", name),
       log: (fileName) => invoke("inf:cards:log", fileName),
+      picture: (name) => invoke("inf:cards:picture", name),
       saveFile: (cardId, fileId) =>
         readableRequest("inf:cards:save-file", () => invoke("inf:cards:save-file", cardId, fileId)),
       savedFiles: (cardId, fileIds) => invoke("inf:cards:saved-files", cardId, fileIds),
@@ -452,6 +456,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       onFrame: (listener) => subscribe("inf:browser:frame", listener),
       stop: (taskId) => invoke("inf:browser:stop", taskId),
       reopen: (taskId) => invoke("inf:browser:reopen", taskId),
+      places: (taskId) => invoke("inf:browser:places", taskId),
       take: (taskId, handle) => invoke("inf:browser:take", taskId, handle),
       ask: (taskId, handle, id, answer) => invoke("inf:browser:ask", taskId, handle, id, answer),
       return: (taskId, handle, options) =>

@@ -363,6 +363,18 @@
   font-size: var(--text-xs);
   color: var(--fg-2);
 }
+/* The notes on the task's running page, waiting above the box they leave from. */
+.fm-crew-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* Short enough that the box they leave from stays in sight in the column beside a page. */
+  max-height: min(30vh, 13rem);
+  overflow-y: auto;
+}
+.fm-crew-notes:empty {
+  display: none;
+}
 .fm-crew-refusal {
   margin: 0;
   font-size: var(--text-sm);
@@ -400,6 +412,19 @@
 }
 .fm-crew-browser .fm-crew-log {
   flex-basis: 0;
+}
+/* The column is as tall as the page beside it. Notes that wait give up their room, down to one
+   note's first lines, before the box they leave from is cut off; they scroll in what is left. */
+.fm-crew-browser .fm-crew-foot:has(> .fm-crew-notes:not(:empty)) {
+  flex-shrink: 1;
+  min-height: 0;
+}
+.fm-crew-browser .fm-crew-foot > :not(.fm-crew-notes) {
+  flex-shrink: 0;
+}
+.fm-crew-browser .fm-crew-notes {
+  flex: 0 1 auto;
+  min-height: 3.5rem;
 }
 .fm-crew-browser .fm-crew-compose {
   flex-wrap: wrap;

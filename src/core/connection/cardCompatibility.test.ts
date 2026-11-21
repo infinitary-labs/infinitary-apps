@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 import {
   ANNOTATION_BODY,
   ANNOTATION_COMMENT,
+  ANNOTATION_DRAWING,
+  ANNOTATION_DRAWING_CAPTION,
   ANNOTATION_WORDS,
 } from "../../../tests/fixtures/cardAnnotations";
 import { threadLinesFor } from "./cardCompatibility";
@@ -101,5 +103,37 @@ describe("annotation compatibility", () => {
     const card = older.cards[0];
     expect(card?.answers?.map((answer) => strict.parse(answer))).toEqual([unmarked]);
     expect(card?.messages[0]?.answers?.map((answer) => strict.parse(answer))).toEqual([unmarked]);
+  });
+  /** Intent: the accepted Point at plan - "A view without it reads the readable Pointed at line." */
+  it("folds a note's place into the line's words for a view that draws notes and reads no place", () => {
+    const value = thread(),
+      message = value.messages[0],
+      plain = message?.notes?.[0];
+    const drawing = cardNavigationParts(`${ANNOTATION_BODY}\n${ANNOTATION_DRAWING}`).at(-1);
+    if (!message || !plain || !drawing) throw new Error("missing reply or drawing");
+    const marked: CardNote = {
+      start: drawing.start,
+      key: drawing.key,
+      kind: "drawing",
+      excerpt: ANNOTATION_DRAWING_CAPTION,
+      comment: "Say which card",
+      line: 4,
+      place: { width: 750, height: 120, box: { x: 450, y: 25, width: 280, height: 70 } },
+    };
+    const placed = { ...value, messages: [{ ...message, notes: [plain, marked] }] };
+    const reads = { sharing: true, annotations: true, through: true, skipped: true };
+    expect(threadLinesFor(placed, { ...reads, places: true })).toEqual(placed);
+    const older = threadLinesFor(placed, { ...reads, places: false }) as typeof placed;
+    // The note on words stays a note; the mark reads as a line, numbered as the reply numbers it.
+    expect(older.messages[0]?.notes).toEqual([plain]);
+    expect(older.messages[0]?.text).toBe(
+      `${ANNOTATION_WORDS}\nPointed at drawing: “${ANNOTATION_DRAWING_CAPTION}” (mark 1, box 450,25 280×70 in the 750×120 picture)\nSay which card`,
+    );
+    // A view that draws no notes at all reads every one as a line, the mark with its place.
+    const oldest = threadLinesFor(placed, { sharing: true, annotations: false }) as typeof placed;
+    expect(oldest.messages[0]?.notes).toBeUndefined();
+    expect(oldest.messages[0]?.text).toContain(
+      "(mark 1, box 450,25 280×70 in the 750×120 picture)",
+    );
   });
 });

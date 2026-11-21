@@ -21,7 +21,7 @@ The design system's modal-level surface, which command search shares (`component
 
 **Three rows, top to bottom.**
 
-- **Header**, 52 px (the top bar's height, which it covers): the card's title in `--fg-1` at `--text-base`, one line with an ellipsis; then the count in mono `--text-xs` / `--fg-3`, `2 / 6`, as the card pager counts - a group of one shows the picture's size instead (`2800 × 520`); then an `IconButton` "Close the viewer".
+- **Header**, 52 px (the top bar's height, which it covers): the card's title in `--fg-1` at `--text-base`, one line with an ellipsis; then the count in mono `--text-xs` / `--fg-3`, `2 / 6`, as the card pager counts - a group of one shows the picture's size instead (`2800 × 520`); then, where the picture takes a mark, Point at ("Pointing at a place" below); then an `IconButton` "Close the viewer".
   The header drags the window like the top bar, and clears the window controls as it does, the Mac's at its left and Linux's at its right; its controls do not drag.
 - **The picture**, the rest of the height: contained in the row minus `--space-8` at each side, never cropped, never upscaled past 1:1 (one picture pixel per CSS pixel, as the browser draws a picture of its own size), `--radius-s`, `--shadow-2`.
   A group puts previous and next `IconButton`s (36 px, `--fg-1`, a `--line-2` ring) in the row's side gutters, `--space-3` from its edges and centred on its height, disabled at the ends.
@@ -32,7 +32,7 @@ The design system's modal-level surface, which command search shares (`component
   A diagram is a drawing, sharp at any size, so fitted it fills the row, larger than its own size where there is room; a click, `Z`, `Enter` or `Space` toggles its own size, one unit to a pixel, wherever the two differ.
   It is drawn on `--bg-1` with `--radius-s`, as a picture is in the card.
 - **Foot**: the picture's `alt` as its caption, `--text-sm` / `--fg-2`, centred, at most 70ch; under it one hint in mono `--text-xs` / `--fg-3` - `2800 × 520 · fitted · click or Z for 1:1`, `2800 × 520 · 1:1 · drag or scroll to move`, or `640 × 400 · shown at its own size`; under that, for a group, its thumbnails: 64 × 44 buttons, each picture cropped to its top on `--bg-1`, a `--line-1` border, `--radius-s`, at 70% opacity, each labelled "Picture N: <alt>".
-  The current one is at full opacity with an `--accent` border - the viewer's only accent.
+  The current one is at full opacity with an `--accent` border - the viewer's only accent at rest; the marks of "Pointing at a place" are the other.
   When a group outgrows the row, the row scrolls sideways and keeps the current thumbnail in view.
 
 **Keys**, while it is open: `←` `→` previous and next, `Home` `End` first and last, `Z` `Enter` `Space` toggle 1:1 (`Enter` and `Space` on a focused control press that control instead), `Esc` closes.
@@ -42,6 +42,25 @@ They never reach the card stack: the stack's own paging stays a click.
 `Esc`, the close control, or a click on the backdrop - anywhere in the picture row that is not the picture or an arrow.
 Focus returns to the picture in the card body that opened it.
 The card leaving the stage closes its viewer with it.
+
+**Pointing at a place.**
+Feedback on a picture is about a place in it, so the viewer is where a place is marked (`docs/card-threads.md`, "Pointing at a place").
+The header carries Point at, the card's own control and key (`AnnotationControls`, the same arrow glyph), on a picture of a card that takes a reply, when its frame named the picture's part; a demo, a held record and a card that takes no reply show none.
+On, it reads pressed in `--accent` on `--accent-dim`, the cursor over the picture is a crosshair, and two tools appear before it in the header, pressed the same way: "Box or spot" and "Freehand line".
+With the box tool a drag draws a box and a press with no drag marks a spot; with the line tool the pointer draws one freehand line, as wide as a pen presses where the pointer reports its pressure.
+With Point at on the pointer only marks: it does not zoom, drag or close, and the wheel still moves a picture at 1:1.
+A mark is drawn in the picture's own pixels, so it keeps its place fitted and at 1:1: `--accent` ink two units wide over a `--bg-0` halo that keeps it legible on any picture, a unit being the picture's longer side over 500.
+Each mark carries its number in a filled `--accent` badge with the number in `--bg-0`, beside the box's top left corner or where a line starts, up and to the left so it covers none of what is marked, and kept inside the picture; the mark being written is lit, its box filled with the accent at 14%.
+A mark takes both tokens from the theme the window shows, and is drawn again when the theme changes.
+Marks are numbered in the order queued across the whole reply, and the viewer shows a picture's queued marks whenever it shows that picture.
+Letting go opens the note popover (`docs/card-threads.md`) just under the mark, over the viewer, with the picture's caption as its excerpt; Point at turns off once it has marked, as it does in a card.
+While a note is being written, a press beside it keeps its words and leaves the viewer open.
+The foot's hint says what Point at does instead of the size line: `Drag a box or press a spot · arrows move a box, Shift sizes it, Enter writes the note`, or `Draw on the picture · a line needs a pointer`.
+**Its keys**, while Point at is on: the arrows show a box in the picture's middle, a quarter of each side, and then move it a hundredth of the longer side a press; `Shift` with the arrows sizes it from its top left corner; `Enter` opens the popover on it; `Esc` turns Point at off and leaves the viewer open.
+Turning Point at on moves focus from its control to the viewer itself, so `Enter` writes the note and never presses Point at again.
+The picture keys - paging, `Z` - wait until Point at is off; a freehand line needs a pointer.
+When a message already carries its four pictures, Point at on a picture not yet marked is off and says why on rest, as Actual size does.
+A queued note shows a small copy of its marked picture in the thread, at most 220 px wide, with its mark drawn in; a press on the note opens the viewer at that picture with the mark lit.
 
 **A demo.**
 A demo is a recording of the app being used, shown in the body as its poster (`ResponseCard.prompt.md`, "A demo"); the viewer is where it plays.

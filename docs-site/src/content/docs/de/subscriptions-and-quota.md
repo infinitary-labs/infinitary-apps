@@ -1,5 +1,5 @@
 ---
-source: 9b6e613d96f64f80
+source: f2b6491db2dbaf8c
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -69,6 +69,7 @@ Wenn das eigene Konto deines ersten Offiziers aufgebraucht ist, wechselt er zuer
 Gibt es keins, sagt eine Karte **Dein erster Offizier hat sein Kontingent aufgebraucht**.
 Deine Worte warten, und nichts geht verloren.
 Auf der Karte kannst du **Kontingent erneut prüfen** wählen, deinen ersten Offizier zu einem anderen Anbieter wechseln lassen oder **Einstellungen öffnen**.
+Findet die erneute Prüfung keine Änderung, bietet die Karte auch an, es bei deinem Anbieter noch einmal zu versuchen, etwa mit **Try Claude again**, für den Fall, dass dein erster Offizier ihn über eine andere Anmeldung erreicht; ist das Kontingent noch aufgebraucht, pausiert er wieder.
 
 Manche Anbieter können weiter antworten, und zwar mit Guthaben, das du bei ihnen eingerichtet hast.
 Bei einem Claude- oder Codex-Konto enthält das Menü **Mit Guthaben weitermachen**.

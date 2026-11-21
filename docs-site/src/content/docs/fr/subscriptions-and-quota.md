@@ -1,5 +1,5 @@
 ---
-source: 9b6e613d96f64f80
+source: f2b6491db2dbaf8c
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -69,6 +69,7 @@ Quand le compte de votre second est lui-même épuisé, il passe d’abord à un
 S’il n’y en a aucun, une carte indique **Votre second a épuisé son allocation**.
 Vos mots attendent, et rien n’est perdu.
 Sur la carte, vous pouvez choisir **Revérifier l’allocation**, faire passer votre second à un autre fournisseur, ou **Ouvrir les Réglages**.
+Si la revérification ne trouve aucun changement, la carte propose aussi de réessayer votre fournisseur, par exemple **Try Claude again**, pour le cas où votre second l’atteint avec une autre connexion ; si l’allocation est toujours épuisée, il se met de nouveau en pause.
 
 Certains fournisseurs peuvent continuer à répondre avec des crédits que vous avez configurés chez eux.
 Pour un compte Claude ou Codex, le menu propose **Continuer avec les crédits**.

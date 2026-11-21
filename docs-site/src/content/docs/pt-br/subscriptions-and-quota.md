@@ -1,5 +1,5 @@
 ---
-source: 9b6e613d96f64f80
+source: f2b6491db2dbaf8c
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -69,6 +69,7 @@ Quando a conta do próprio imediato acaba, ele primeiro passa para outra conta d
 Se não houver nenhuma, um cartão diz **Seu imediato esgotou a franquia**.
 Suas palavras esperam, e nada se perde.
 No cartão, você pode escolher **Verificar a franquia de novo**, passar seu imediato para outro provedor ou **Abrir Ajustes**.
+Se a verificação não encontrar mudança, o cartão também oferece tentar seu provedor de novo, como **Try Claude again**, para quando seu imediato chega a ele por outro login; se a franquia ainda estiver esgotada, ele pausa de novo.
 
 Alguns provedores podem continuar respondendo com créditos que você configura com eles.
 Em uma conta do Claude ou do Codex, o menu tem **Continuar com créditos**.

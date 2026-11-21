@@ -116,10 +116,11 @@ function standIn(permissions: Record<string, string | null>) {
       });
     return Response.json({ type: "error" }, { status: 404 });
   });
-  return new BitbucketForge(
+  const forge = new BitbucketForge(
     { kind: "bitbucket", host: "bitbucket.org", owner: "field-team", name: "field-notes", dir: "" },
     { token: async () => KEY, apiBaseUrl: API, fetch: fetcher },
   );
+  return Object.assign(forge, { asked: () => fetcher.mock.calls.map(([input]) => String(input)) });
 }
 
 describe("the wakes' readings on Bitbucket", () => {
@@ -152,6 +153,21 @@ describe("the wakes' readings on Bitbucket", () => {
     const forge = standIn({ [WRITER]: "admin" });
     const since = await forge.pullComments(7, "2026-11-19T18:15:00Z");
     expect(since.map((comment) => comment.id)).toEqual([503, 504]);
+  });
+
+  // The review of this task's live check: Bitbucket's pull request names no
+  // last-changed time, so every reading reads the comment list; the account
+  // and each author's permission are asked only for comments not yet read,
+  // so a quiet reading spends one page of the hourly allowance.
+  it("asks no account or permission for comments an earlier reading already read", async () => {
+    const forge = standIn({ [WRITER]: "write", [VISITOR]: "read" });
+    expect(await forge.pullComments(7, undefined, new Set([501, 502, 503, 504]))).toEqual([]);
+    expect(forge.asked()).toEqual([`${API}${REPO}/pullrequests/7/comments?pagelen=100`]);
+    const fresh = await forge.pullComments(7, undefined, new Set([501, 503, 504]));
+    expect(fresh.map((comment) => [comment.id, comment.relation])).toEqual([[502, "can-write"]]);
+    expect(forge.asked().filter((url) => url.includes("/permissions-config/"))).toEqual([
+      `${API}${REPO}/permissions-config/users/${encodeURIComponent(WRITER)}`,
+    ]);
   });
 
   it("counts an author as one who cannot write when Bitbucket refuses the permission read", async () => {

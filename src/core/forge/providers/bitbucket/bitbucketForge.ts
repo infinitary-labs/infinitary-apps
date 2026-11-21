@@ -259,14 +259,18 @@ export class BitbucketForge implements Forge {
   }
 
   /** The pull request's comments changed since `since`, for the comment wake. */
-  async pullComments(number: number, since?: string): Promise<ForgePullComment[]> {
-    const viewer = await this.viewerAccount();
+  async pullComments(
+    number: number,
+    since?: string,
+    seen?: ReadonlySet<number>,
+  ): Promise<ForgePullComment[]> {
     return readBitbucketPullComments(
       (path) => this.read(path),
       this.repositoryPath(),
       number,
-      viewer,
+      () => this.viewerAccount(),
       since,
+      seen,
     );
   }
 

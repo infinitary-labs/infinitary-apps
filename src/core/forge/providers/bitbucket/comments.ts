@@ -46,8 +46,11 @@ type CommentJson = {
 type Get = (path: string) => Promise<unknown>;
 
 /**
- * The comments changed at or after `since`, oldest first by id. `viewer` is
- * the signed-in account's `account_id`. Whether another author can write
+ * The comments changed at or after `since`, oldest first by id, leaving out
+ * those in `seen`, which an earlier reading already read. `viewer` reads
+ * the signed-in account's `account_id`, asked only when a comment is left
+ * to describe, so a reading with nothing new costs the comment list alone.
+ * Whether another author of a comment left to describe can write
  * is asked once per author through the repository's user permissions,
  * which only a repository admin may read: a refused lookup counts that
  * author as one who cannot write.
@@ -56,8 +59,9 @@ export async function readBitbucketPullComments(
   get: Get,
   repositoryPath: string,
   number: number,
-  viewer: string,
+  viewerAccount: () => Promise<string>,
   since?: string,
+  seen?: ReadonlySet<number>,
 ): Promise<ForgePullComment[]> {
   const rows: CommentJson[] = [];
   let link: string | undefined =
@@ -73,7 +77,10 @@ export async function readBitbucketPullComments(
       const changed = row.updated_on ?? row.created_on;
       return !since || (changed !== undefined && Date.parse(changed) >= Date.parse(since));
     })
+    .filter((row) => !seen?.has(row.id as number))
     .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+  if (sent.length === 0) return [];
+  const viewer = await viewerAccount();
   const roles = await writeRoles(get, repositoryPath, sent, viewer);
   return sent.map((row) => {
     const user = row.user;

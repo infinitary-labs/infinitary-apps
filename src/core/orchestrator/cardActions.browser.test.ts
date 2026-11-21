@@ -21,7 +21,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
-import { startWords } from "../browser/pageStarts";
+import { startWords } from "../browser/pageStartSteps";
 import { BROWSER_SIGN_IN_STEP, EMIT_CARD_TOOL } from "../pi/cardTool";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
 import { bindTool } from "../session/tools";

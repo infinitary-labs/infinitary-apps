@@ -411,7 +411,7 @@ The view says so in the line under its row ahead of a stale card's words: `Nothi
 
 ### Starting a page again
 
-A crewmate may save the command that starts its page with `open <url> --start '<command>' --within <seconds>`, for an address this computer serves (`PageStarts`, `src/core/browser/pageStarts.ts`).
+A crewmate may save the command that starts its page with `open <url> --start '<command>' --within <seconds>`, for an address this computer serves (`PageStarts`, `src/core/browser/pageStarts.ts`, which runs it; the browser's own steps around it, which load no process code, are `src/core/browser/pageStartSteps.ts`).
 `--within` goes with `--start`, a whole number of seconds the build may take to answer; it is the crewmate's number, and the host adds no default and no ceiling of its own.
 `--start` for any other address is refused in words, and nothing is kept.
 The host keeps the command, the folder the command's shell was in, the page's origin and the wait in one owner-only file, `page-start.json`, in the task's own folder on the computer that runs its browser, beside its kept page; one for each task, the newest replacing the last, removed at the task's close, and never part of a card or of a fact a view or phone reads.

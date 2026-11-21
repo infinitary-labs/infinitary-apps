@@ -17,7 +17,7 @@ import {
   USE_SAVED_SIGN_IN_ACTION,
 } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
-import { startWords } from "../browser/pageStarts";
+import { startWords } from "../browser/pageStartSteps";
 import type { DeclaredAction, EmittedAction, EmittedCardInput } from "../session/tools";
 import { projectPageFile } from "../workspace/projectPage";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";

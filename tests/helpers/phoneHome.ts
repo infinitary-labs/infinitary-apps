@@ -1207,6 +1207,15 @@ export async function startPhoneHome(
         case "POST live-card-end":
           result = await cardReads.end();
           break;
+        case "POST live-card-beside":
+          result = await cardReads.beside();
+          break;
+        case "POST live-card-beside-end":
+          result = await cardReads.endBeside();
+          break;
+        case "POST live-card-past":
+          result = await cardReads.past();
+          break;
         case "GET state":
           result = {
             devices: core.services.devices.list(),

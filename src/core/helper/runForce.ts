@@ -43,7 +43,8 @@ import { RUN_STOP_READ_MS, type RunInstance } from "./windowsTask";
  * one move that commits it; `.declined`, the run claimed it once its time
  * was over and did not act; `.withdrawn`, the asker took it back, pending
  * or claimed, before the run committed it. On a Mac or Linux the run's own
- * pipe (`runForceWakeFile`) is there too.
+ * pipes are there too: the one its helper waits on (`runForceWakeFile`) and
+ * the one that tells its lifetime (`runForceLifeFile`).
  */
 export const RUN_FORCE_DIR = "run-force";
 
@@ -169,14 +170,29 @@ export function runForceWakeFile(pid: number, startedAt: string): string {
 }
 
 /**
+ * The pipe that tells a run's lifetime, named by its process and start, in
+ * the folder of force stops: the run holds it open from its helper's start
+ * until its process ends, never closing it itself, and nothing ever writes a
+ * line to it, so reading it takes nothing from its helper and tells only
+ * whether the run's process is still there.
+ */
+export function runForceLifeFile(pid: number, startedAt: string): string {
+  return `life-${pid}-${Date.parse(startedAt)}`;
+}
+
+/**
  * Starts the run's own reading of force stops for `startedAt`, the start it
  * wrote of itself in its record, and on a Mac or Linux its helper that lets
- * a stopped run go on (`FORCE_WAKE`), on a pipe the run holds open. Answers
- * what ends them. `ready(true)` is called once both work, the reading
+ * a stopped run go on (`FORCE_WAKE`), on a pipe the run holds open, beside
+ * the pipe that tells its lifetime (`runForceLifeFile`), which the run holds
+ * until its process ends: what ends the reading and helper leaves that one
+ * held, so an asker never reads a run still there as gone. Answers what ends
+ * them. `ready(true)` is called once both work, the reading
  * saying it is in place and, on a Mac or Linux, the helper saying it holds the pipe
  * and leads nothing but the run's own group: only then can a force stop end
  * this run however stuck it is, so only then does the run say it can be
- * ended so (`markRunning`'s `recovers`). A reading or helper that cannot
+ * ended so (`markRunning`'s `recovers`), with the two pipes it holds, as the
+ * files they are (`pipes`), so an asker reaches only those. A reading or helper that cannot
  * start, or fails or ends before the run does, ends only itself: `ready` is
  * never called with true, or is called with false once it was, so the run
  * no longer says so; a reading that fails to read the folder calls it with
@@ -189,25 +205,31 @@ export function watchRunForce(
   dataDir: string,
   startedAt: string,
   every: number = RUN_STOP_READ_MS,
-  ready: (can: boolean) => void = () => {},
+  ready: (can: boolean, pipes?: RunPipes) => void = () => {},
 ): () => void {
   const dir = join(dataDir, RUN_FORCE_DIR);
   let worker: Worker | null = null;
   let helper: ChildProcess | null = null;
   let held: number | null = null;
+  // Held until the process ends, never closed here: the run's lifetime as an asker reads it.
+  let life: number | null = null;
   let ended = false;
   let online = false;
   let helperUp = hostPlatformProfile().windows;
   let failed = false;
   let said = false;
   const pipe = join(dir, runForceWakeFile(process.pid, startedAt));
-  // The helper is reached through the pipe it holds at its own path: a folder made again since the
-  // pipe was made keeps no pipe of this run's, so its helper can be reached no more.
-  const reachable = () => hostPlatformProfile().windows || (held !== null && sameFile(held, pipe));
+  const lifePipe = join(dir, runForceLifeFile(process.pid, startedAt));
+  // The helper is reached through the pipe it holds at its own path, and the run's lifetime read
+  // through the other at its own: a folder made again since they were made keeps neither, so the
+  // run can be reached no more.
+  const reachable = () =>
+    hostPlatformProfile().windows ||
+    (held !== null && life !== null && sameFile(held, pipe) && sameFile(life, lifePipe));
   const settled = () => {
     if (said || !online || !helperUp || failed || ended || !reachable()) return;
     said = true;
-    ready(true);
+    ready(true, pipesOf(held, life));
   };
   const lost = (why: string) => {
     if (ended || failed) return;
@@ -266,6 +288,7 @@ export function watchRunForce(
     // the run gone. One that cannot be removed only stays: nothing holds it, so no asker reads it
     // as held, and the run goes on without its helper.
     if (held === null) removeQuietly(pipe);
+    if (life === null) removeQuietly(lifePipe);
     // i18n-exempt: the run's own log, never shown to a person.
     lost(`the force helper stopped: ${error.message}`);
   };
@@ -273,13 +296,20 @@ export function watchRunForce(
     try {
       // Only the run that holds the folder starts a helper: an earlier run's pipe is its own no more.
       for (const name of readdirSync(dir))
-        if (name.startsWith("wake-")) rmSync(join(dir, name), { force: true });
-      const making = spawn("mkfifo", ["-m", "600", pipe], { stdio: "ignore", env: hostEnv() });
+        if (name.startsWith("wake-") || name.startsWith("life-"))
+          rmSync(join(dir, name), { force: true });
+      const making = spawn("mkfifo", ["-m", "600", pipe, lifePipe], {
+        stdio: "ignore",
+        env: hostEnv(),
+      });
       making.on("error", helperFailed);
       making.on("exit", (code) => {
         if (ended) return;
-        if (code !== 0) return helperFailed(new Error("mkfifo did not make the pipe"));
+        if (code !== 0) return helperFailed(new Error("mkfifo did not make the pipes"));
         try {
+          // Held open for both reading and writing, so opening it never waits and nobody holding it
+          // to write is this process gone; the system closes it as the process ends, and only then.
+          life = openSync(lifePipe, constants.O_RDWR);
           // Held open for both reading and writing, so opening it never waits and the helper
           // reads the end of it once this run ends, however it ends.
           held = openSync(pipe, constants.O_RDWR);
@@ -327,7 +357,21 @@ export function watchRunForce(
       } catch {}
       if (own) removeQuietly(pipe);
     }
+    // The lifetime pipe's name goes, but this process keeps holding it until it ends: a run that
+    // stopped its reading and is still finishing is no run gone to an asker reading through it.
+    if (life !== null && sameFile(life, lifePipe)) removeQuietly(lifePipe);
   };
+}
+
+/** The pipes open as `wake` and `life`, as the files they are; none where either is not open. */
+function pipesOf(wake: number | null, life: number | null): RunPipes | undefined {
+  if (wake === null || life === null) return undefined;
+  try {
+    const [w, l] = [fstatSync(wake), fstatSync(life)];
+    return { wake: { ino: w.ino, dev: w.dev }, life: { ino: l.ino, dev: l.dev } };
+  } catch {
+    return undefined;
+  }
 }
 
 /** Removes `path`, ignoring a failure: what removes it is never held up by it. */
@@ -379,10 +423,11 @@ export type ForceEnd = "ended" | "gone" | "withdrawn" | "unasked";
  * act on its force stop (docs/run.md, "When the command does not answer").
  * This ends nothing. On a Mac or Linux it writes a line to the run's own
  * pipe, which its helper waits on (`watchRunForce`), so nothing here signals
- * a process, and only to the pipe found as `seen` (`runPipeSeen`): the file
- * opened is checked to be that same pipe before anything is written, so
- * another file put in its place, a pipe included, receives nothing, and with
- * no pipe seen nothing is written. On Windows it goes only through a handle
+ * a process, and only to the wake pipe of `seen`, the pipes the run said it
+ * holds as it said a force stop can end it: the file opened is checked to be
+ * that same pipe before anything is written, so another file put in its
+ * place, a pipe included, receives nothing, and with no pipes seen nothing is
+ * written. On Windows it goes only through a handle
  * to the program whose birth is the run's own (`birth`, as its record keeps
  * it), so a later program under its number is never touched, and with no
  * birth recorded the run is left.
@@ -391,7 +436,7 @@ export function wakeRun(
   dataDir: string,
   run: RunInstance,
   birth?: string,
-  seen?: PipeSeen | null,
+  seen?: RunPipes | null,
 ): void {
   if (hostPlatformProfile().windows) {
     if (birth) resumeWindowsRun(run.pid, birth);
@@ -403,7 +448,7 @@ export function wakeRun(
     // Never waits: with nothing reading it the pipe does not open, and nothing is woken.
     const fd = openSync(pipe, constants.O_WRONLY | constants.O_NONBLOCK);
     try {
-      if (isSeen(fstatSync(fd), seen)) writeSync(fd, "\n");
+      if (isSeen(fstatSync(fd), seen.wake)) writeSync(fd, "\n");
     } finally {
       closeSync(fd);
     }
@@ -422,8 +467,10 @@ const WAKE_EVERY_MS = 1_000;
  * waits for a stopped run to let its folder go, until the run is gone, as
  * `alive` reads that one run (on Windows by its process's birth, so a later
  * program under its number is not it) and, on a Mac or Linux, as its own
- * pipe shows once nobody holds it, so a program that took its number is not
- * waited for either. The stop is this attempt's own file,
+ * lifetime pipe (`runForceLifeFile`) shows once nobody holds it, which the
+ * run holds until its process ends, so a program that took its number is
+ * not waited for either, and a run still finishing after its reading
+ * stopped is not called gone. The stop is this attempt's own file,
  * carrying the end of that wait, so another attempt's stop is never moved by
  * this one, and one left behind by an asker that quit is past its time and
  * never acts. While the stop can still act, pending or claimed within its
@@ -432,20 +479,19 @@ const WAKE_EVERY_MS = 1_000;
  * in time is withdrawn, pending or claimed; one it committed is waited for
  * until the run is gone. The run is read before its stop is written: one
  * already gone then is asked nothing (`unasked`), so only an exit after the
- * ask is told as the stop's end. Its pipe is found before then (`piped`,
- * `runPipeSeen`), by an asker before it reads the run's record, since a run
- * that took the folder since clears an earlier run's pipe only once it
- * noted itself: a pipe found and gone since is the run gone too. A run that
- * says a force stop can end it holds its pipe, so on a Mac or Linux a run
- * whose pipe was not found, or that no program is seen holding (one that
- * cannot be told included), is asked nothing either, whatever holds its
- * number now. The pipe is told by the file it was found as, never by its
- * name alone: another file put in its place, a pipe included, tells
- * nothing, and is never read as the run held or gone. The asker opens that
- * pipe once, as the file it was found as, and reads through it until the
- * stop's end is known, so once asked the run is gone when nobody holds it to
- * write, even after the pipe's name is taken from the folder or another file
- * put there; a pipe that could not be opened tells nothing. A stop none of whose files is there any more past its time, as
+ * ask is told as the stop's end. Its pipes are found before then (`piped`,
+ * `runPipeSeen`), as the files the run said it holds (`markRunning`'s
+ * `pipes`). A run that says a force stop can end it holds them, so on a Mac
+ * or Linux a run whose pipes were not found, or whose lifetime pipe no
+ * program is seen holding (one that cannot be told included), is asked
+ * nothing, whatever holds its number now. The pipes are told by the files
+ * they were found as, never by their names alone: another file put in their
+ * place, a pipe included, tells nothing, and is never read as the run held
+ * or gone. The asker opens the lifetime pipe once, as the file it was found
+ * as, and reads through it until the stop's end is known, taking nothing
+ * from the helper, which waits on the other: once asked the run is gone when
+ * nobody holds it to write, even after its name is taken from the folder or
+ * another file put there; a pipe that could not be opened tells nothing. A stop none of whose files is there any more past its time, as
  * where the folder was made again, is not known to be withdrawn: the run
  * may have committed it before it went, and acts on it once it goes on, so
  * the run is waited for until it is gone, and nothing is woken for it; one
@@ -460,29 +506,30 @@ export async function endRunByForce(
   alive: (pid: number) => boolean = processAlive,
   waitMs: number = STOPPED_RUN_WAIT_MS,
   wake: () => void = () => {},
-  piped: PipeSeen | boolean | null = runPipeSeen(dataDir, run),
+  piped: RunPipes | boolean | null = runPipeSeen(dataDir, run),
   held?: () => boolean,
 ): Promise<ForceEnd> {
   const dir = join(dataDir, RUN_FORCE_DIR);
-  // On a Mac or Linux the run and its helper hold the run's own pipe open while either runs, and no
-  // other program ever holds it: the same pipe found with nobody holding it is the run gone, whoever
-  // has its number now.
-  // A run that says a force stop can end it holds its pipe there: one not found is no proof the
+  // On a Mac or Linux the run holds its lifetime pipe open until its process ends, and no other
+  // program ever holds it: that pipe with nobody holding it is the run gone, whoever has its
+  // number now.
+  // A run that says a force stop can end it holds its pipes there: none found is no proof the
   // named run is still there, so nothing is asked of whatever holds its number.
-  const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
+  const lifePipe = join(dir, runForceLifeFile(run.pid, run.startedAt));
   const posix = !hostPlatformProfile().windows;
   if (posix && !piped) return "unasked";
-  // Read through the pipe itself, opened once as the file it was found as and kept open to read
-  // until the stop's end is known, unless a test stands in for whether it is held: whatever happens
-  // to its name, taken away or another file put there, the run's own end of it tells whether the
-  // run is still there.
-  const probe = posix && !held && piped && typeof piped === "object" ? openSeen(pipe, piped) : null;
+  // Read through the lifetime pipe itself, opened once as the file it was found as and kept open to
+  // read until the stop's end is known, unless a test stands in for whether it is held: whatever
+  // happens to its name, taken away or another file put there, the run's own end of it tells
+  // whether the run is still there, and the helper's own pipe is never read.
+  const probe =
+    posix && !held && piped && typeof piped === "object" ? openSeen(lifePipe, piped.life) : null;
   const state = () => {
     if (held) return held() ? "held" : "unheld";
     return probe === null ? "unknown" : pipeState(probe);
   };
   try {
-    // Asked only once the run is seen holding the pipe; once asked, a pipe that cannot be told is
+    // Asked only once the run is seen holding its pipe; once asked, a pipe that cannot be told is
     // no proof the run ended, and only one the run no longer holds is.
     if (!alive(run.pid) || (posix && state() !== "held")) return "unasked";
     return await ask(
@@ -532,18 +579,32 @@ const ATTEMPT_ENDS = [".json", ".taken", ".ended", ".declined", ".withdrawn"] as
 /** A run's pipe as it was found, by its file number, which a later reading must find it still is. */
 export type PipeSeen = { ino: number; dev: number };
 
-/** `run`'s own pipe, on a Mac or Linux, as it is found now: null where none is, and on Windows, which keeps none. */
-export function runPipeSeen(dataDir: string, run: RunInstance): PipeSeen | null {
-  if (hostPlatformProfile().windows) return null;
-  try {
-    const found = lstatSync(join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)));
-    return found.isFIFO() ? { ino: found.ino, dev: found.dev } : null;
-  } catch {
-    return null;
-  }
+/** A run's two pipes, its helper's (`runForceWakeFile`) and its lifetime's (`runForceLifeFile`). */
+export type RunPipes = { wake: PipeSeen; life: PipeSeen };
+
+/** Whether two readings name the same two pipes. */
+export function samePipes(a: RunPipes, b: RunPipes): boolean {
+  const same = (x: PipeSeen, y: PipeSeen) => x.ino === y.ino && x.dev === y.dev;
+  return same(a.wake, b.wake) && same(a.life, b.life);
 }
 
-/** Whether `run`'s own pipe is there, on a Mac or Linux: false on Windows, which keeps none. */
+/** `run`'s own pipes, on a Mac or Linux, as they are found now: null where either is not, and on Windows, which keeps none. */
+export function runPipeSeen(dataDir: string, run: RunInstance): RunPipes | null {
+  if (hostPlatformProfile().windows) return null;
+  const found = (name: string): PipeSeen | null => {
+    try {
+      const stats = lstatSync(join(dataDir, RUN_FORCE_DIR, name));
+      return stats.isFIFO() ? { ino: stats.ino, dev: stats.dev } : null;
+    } catch {
+      return null;
+    }
+  };
+  const wake = found(runForceWakeFile(run.pid, run.startedAt));
+  const life = found(runForceLifeFile(run.pid, run.startedAt));
+  return wake && life ? { wake, life } : null;
+}
+
+/** Whether `run`'s own pipes are there, on a Mac or Linux: false on Windows, which keeps none. */
 export function runPipeThere(dataDir: string, run: RunInstance): boolean {
   return runPipeSeen(dataDir, run) !== null;
 }
@@ -576,24 +637,19 @@ function openSeen(path: string, seen: PipeSeen): number | null {
 }
 
 /**
- * Whether the run still holds its pipe, read through `fd`, that pipe kept
- * open to read: the run holds it open to write while it runs, and only it
- * does, beside an asker's moment of writing a line, so `held` while reading
- * it would wait for a line (`EAGAIN`), `unheld` once it reads its end, with
- * nobody holding it to write, and `unknown` where it cannot be read. A line
- * read on the way, written for the run's helper, is let go: a wake comes
- * again within a second.
+ * Whether the run still holds its lifetime pipe, read through `fd`, that
+ * pipe kept open to read: the run holds it open to write until its process
+ * ends, only it does, and nothing writes to it, so `held` while reading it
+ * would wait (`EAGAIN`), `unheld` once it reads its end, with nobody holding
+ * it to write, and `unknown` where it cannot be read. Anything read from it
+ * was written by someone holding it, so it is held.
  */
 function pipeState(fd: number): "held" | "unheld" | "unknown" {
-  const buffer = Buffer.alloc(64);
-  for (let read = 0; read < 16; read++)
-    try {
-      if (readSync(fd, buffer, 0, buffer.length, null) === 0) return "unheld";
-    } catch (error) {
-      return (error as NodeJS.ErrnoException).code === "EAGAIN" ? "held" : "unknown";
-    }
-  // Lines go on arriving: someone holds it to write.
-  return "held";
+  try {
+    return readSync(fd, Buffer.alloc(16), 0, 16, null) === 0 ? "unheld" : "held";
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EAGAIN" ? "held" : "unknown";
+  }
 }
 
 async function settle(

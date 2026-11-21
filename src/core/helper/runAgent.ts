@@ -17,7 +17,7 @@ import {
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
 import { holderAlive, processAlive } from "./lock";
-import { endRunByForce, type PipeSeen, runPipeSeen, wakeRun } from "./runForce";
+import { endRunByForce, type RunPipes, runPipeSeen, samePipes, wakeRun } from "./runForce";
 import {
   RUN_RECORD_FILE,
   type RunInstance,
@@ -88,9 +88,9 @@ export type RunAgentContext = {
     forceWaitMs?: number;
     /**
      * Lets a suspended run go on to read its force stop (`wakeRun`), on a Mac
-     * or Linux only through the pipe found as `seen`.
+     * or Linux only through the pipes found as `seen`.
      */
-    wake?: (run: RunInstance, birth?: string, seen?: PipeSeen | null) => void;
+    wake?: (run: RunInstance, birth?: string, seen?: RunPipes | null) => void;
     /**
      * On a Mac or Linux, the run's own pipe in the folder of force stops: whether it is there
      * (`runPipeThere`) and whether a program holds it.
@@ -439,20 +439,22 @@ export async function restartRunAgent(
  * Whether the run on this data folder is still `run`, by its own record: the
  * same process and start, a process that still runs, and a record written
  * since this computer last started; with whether this app's own agent
- * started it, whether its helper was up to be ended by force (`recovers`), and on Windows its
- * process's own birth, as the run wrote. Null for any other run, a process number
+ * started it, whether its helper was up to be ended by force (`recovers`), with the pipes it
+ * said it holds then on a Mac or Linux (`pipes`), and on Windows its process's own birth, as the
+ * run wrote. Null for any other run, a process number
  * reused included, and while none is recorded or its record cannot be read.
  */
 function recordedRun(
   context: RunAgentContext,
   run: RunInstance,
-): { agent: boolean; recovers: boolean; birth?: string } | null {
+): { agent: boolean; recovers: boolean; pipes?: RunPipes; birth?: string } | null {
   const path = join(context.dataDir, RUN_RECORD_FILE);
   let record: {
     pid?: unknown;
     startedAt?: unknown;
     agent?: unknown;
     recovers?: unknown;
+    pipes?: unknown;
     birth?: unknown;
   } | null;
   try {
@@ -467,8 +469,20 @@ function recordedRun(
   return {
     agent: record.agent === true,
     recovers: record.recovers === true,
+    ...(pipesOf(record.pipes) ? { pipes: pipesOf(record.pipes) as RunPipes } : {}),
     ...(typeof record.birth === "string" ? { birth: record.birth } : {}),
   };
+}
+
+/** The run's pipes as its record keeps them, or none where the record keeps no such reading. */
+function pipesOf(value: unknown): RunPipes | undefined {
+  const seen = (pipe: unknown) => {
+    const { ino, dev } = (pipe ?? {}) as { ino?: unknown; dev?: unknown };
+    return typeof ino === "number" && typeof dev === "number" ? { ino, dev } : null;
+  };
+  const { wake, life } = (value ?? {}) as { wake?: unknown; life?: unknown };
+  const [w, l] = [seen(wake), seen(life)];
+  return w && l ? { wake: w, life: l } : undefined;
 }
 
 /**
@@ -484,13 +498,22 @@ function recordedRun(
  * `endRunByForce` answers (`AgentRunEnd`).
  */
 async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
-  // Its pipe is found before its record is read: a run that took the folder since clears it only
-  // once it noted itself, so a pipe found while the record still names this run is its own.
+  // Its pipes are found before its record is read, and are its own only as the files its record
+  // says it holds (below).
   const piped = context.processes?.pipe?.there(run) ?? runPipeSeen(context.dataDir, run);
   const recorded = recordedRun(context, run);
   // Read as the stop is asked, never from the notice the window drew: a run whose reading or helper
   // stopped since says no longer that a force stop can end it, and is asked nothing.
   if (!recorded?.agent || !recorded.recovers) return "untouched";
+  // On a Mac or Linux only the pipes the run said it holds as it said a force stop can end it are
+  // its own: pipes found at their names that are other files, as where something took their place
+  // before the press, are no run's to ask, wake or read, whatever the note still says.
+  if (
+    typeof piped === "object" &&
+    piped !== null &&
+    !(recorded.pipes && samePipes(piped, recorded.pipes))
+  )
+    return "untouched";
   const wake =
     context.processes?.wake ??
     ((named, birth, seen) => wakeRun(context.dataDir, named, birth, seen));

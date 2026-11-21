@@ -1,4 +1,12 @@
-import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { runIdentity } from "@core/helper/runAgent";
 import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
@@ -172,6 +180,18 @@ export const RunMarkerSchema = z.object({
    * offered. Absent until then and from earlier runs.
    */
   recovers: z.literal(true).optional(),
+  /**
+   * On a Mac or Linux, the two pipes the run holds as it says a force stop
+   * can end it (`watchRunForce`), as the files they are: a stop asks, wakes
+   * and reads only these, never another file found at their names. Written
+   * and taken away with `recovers`.
+   */
+  pipes: z
+    .object({
+      wake: z.object({ ino: z.number(), dev: z.number() }),
+      life: z.object({ ino: z.number(), dev: z.number() }),
+    })
+    .optional(),
 });
 export type RunMarker = z.infer<typeof RunMarkerSchema>;
 export const RunStopSchema = RunMarkerSchema.extend({
@@ -194,8 +214,9 @@ export type RunEnd = Pick<RunStop, "reason" | "exitCode" | "lines">;
  * which waits for the app to be ready, and the app is ready only once the
  * start that writes this note has returned (./index.ts). Whether a force
  * stop can end the run (`recovers`) is added the same way once it can, and
- * taken away again should that stop being so: `recovers` is handed the
- * setter its reading calls (`watchRunForce`'s `ready`).
+ * taken away again should that stop being so, with the pipes it holds then
+ * (`pipes`): `recovers` is handed the setter its reading calls
+ * (`watchRunForce`'s `ready`).
  */
 export function markRunning(
   dataDir: string,
@@ -204,7 +225,7 @@ export function markRunning(
   environment?: RunEnvironment | Promise<RunEnvironment>,
   agent = false,
   birth?: string | null,
-  recovers?: (note: (can: boolean) => void) => void,
+  recovers?: (note: (can: boolean, pipes?: RunMarker["pipes"]) => void) => void,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
   let marker: RunMarker = {
@@ -226,10 +247,10 @@ export function markRunning(
     );
   else if (environment) marker = { ...marker, environment };
   writeRunRecord(path, marker);
-  recovers?.((can) => {
+  recovers?.((can, pipes) => {
     if (ended || (marker.recovers === true) === can) return;
-    const { recovers: _was, ...rest } = marker;
-    marker = can ? { ...rest, recovers: true } : rest;
+    const { recovers: _was, pipes: _held, ...rest } = marker;
+    marker = can ? { ...rest, recovers: true, ...(pipes ? { pipes } : {}) } : rest;
     writeRunRecord(path, marker);
   });
   return (end = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] }) => {
@@ -386,13 +407,84 @@ export function answerLaunch(
   once();
 }
 
+/** A starting run's note in the data folder, by its process (`noteRunStarting`). */
+export function runStartingFile(pid: number): string {
+  return `run-starting-${pid}.json`;
+}
+
 /**
- * Who holds the single-instance lock a launch was refused, for Start it
- * here, from what each holder shows of itself and never from silence: `run`
- * once a command notes that it holds the folder; `window` once the window
- * holding the lock answered the launch's ask (`windowAnswerFile`), which a
- * run never does; `free` once the lock can be taken, as when the holder
- * ended before it noted anything. A holder that shows neither, as a run
+ * Notes in the data folder, before this run asks for the folder's
+ * single-instance lock, that a run is starting on it, by its process and, on
+ * Windows, its birth, and keeps that note until the run ends: a window
+ * launch refused the lock while the run holds it and has not noted that it
+ * holds the folder (`markRunning`) tells it from a window, one from before
+ * this note included, that never answers its ask (`runStarting`). Answers
+ * what takes the note away, which the run calls as it ends or loses the
+ * lock; one it cannot write leaves the run going, as before.
+ */
+export function noteRunStarting(dataDir: string, pid: number, birth?: string | null): () => void {
+  const path = join(dataDir, runStartingFile(pid));
+  try {
+    writeFileSync(path, `${JSON.stringify({ pid, ...(birth ? { birth } : {}) })}\n`, {
+      mode: 0o600,
+    });
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try {
+      rmSync(path, { force: true });
+    } catch {}
+  };
+}
+
+/**
+ * Whether the lock's holder may be a run that is starting and has not noted
+ * that it holds the folder, by the runs' notes (`noteRunStarting`): with a
+ * holder the lock names, only a note of that same process, while it runs;
+ * with none named, as Windows' own lock, any note whose run is still there
+ * by its birth or cannot be told (`runIdentity`); never once the lock names
+ * no holder. A folder that cannot be read may hold such a note.
+ */
+export function runStarting(
+  dataDir: string,
+  holder: number | null | undefined,
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
+): boolean {
+  if (holder === null) return false;
+  let names: string[];
+  try {
+    names = readdirSync(dataDir).filter((name) => /^run-starting-\d+\.json$/.test(name));
+  } catch {
+    return true;
+  }
+  for (const name of names) {
+    let note: { pid?: unknown; birth?: unknown };
+    try {
+      note = JSON.parse(readFileSync(join(dataDir, name), "utf8"));
+    } catch {
+      // A note being written, or that cannot be read: it may be the holder's.
+      if (holder === undefined || name === runStartingFile(holder)) return true;
+      continue;
+    }
+    if (typeof note.pid !== "number" || (typeof holder === "number" && note.pid !== holder))
+      continue;
+    if (alive(note.pid, typeof note.birth === "string" ? note.birth : undefined) !== false)
+      return true;
+  }
+  return false;
+}
+
+/**
+ * Who holds the single-instance lock a window launch was refused, from what
+ * each holder shows of itself and never from silence: `run` once a command
+ * notes that it holds the folder; `window` once the window holding the lock
+ * answered the launch's ask (`windowAnswerFile`), which a run never does, or
+ * once no run is starting that may hold it (`starting`, by the notes runs
+ * write before they ask for the lock), so the holder is a window, one from
+ * before that answer included, which the launch's own ask brought forward;
+ * `free` once the lock can be taken, as when the holder ended before it
+ * noted anything. A holder that shows none of these, as a starting run
  * stopped before it noted itself or whose note cannot be read, is waited
  * for as long as it takes, so the launch never quits with no window to take
  * over. Asking for the lock again is a second launch to its holder, which a
@@ -410,6 +502,8 @@ export async function lockHolderKind(options: {
   holder: () => number | null | undefined;
   /** The holder read just before the launch's own refused ask, the one that ask reached. */
   asked: number | null | undefined;
+  /** Whether a run that has not noted itself may hold the lock the holder named (`runStarting`). */
+  starting: (holder: number | null | undefined) => boolean;
   lockFree: () => boolean;
   askEveryMs: number;
   everyMs?: number;
@@ -420,6 +514,13 @@ export async function lockHolderKind(options: {
     if (options.running()) return "run";
     if (options.answered()) return "window";
     const holder = options.holder();
+    // No run is starting that may hold the lock, so its holder is a window: one named is only
+    // watched, never asked again; one no link names, or none, is asked once, and is a window only
+    // while it still holds the lock.
+    if (!options.starting(holder)) {
+      if (typeof holder === "number") return "window";
+      return options.lockFree() ? "free" : "window";
+    }
     if (holder !== seen || (typeof holder !== "number" && Date.now() >= next)) {
       seen = holder;
       next = Date.now() + options.askEveryMs;

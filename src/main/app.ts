@@ -19,7 +19,7 @@ import { windowFromWork } from "@core/helper/fromWindow";
 import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
 import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
-import { watchRunForce } from "@core/helper/runForce";
+import { type RunPipes, watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
@@ -102,6 +102,7 @@ import {
   lockHolder,
   lockHolderKind,
   markRunning,
+  noteRunStarting,
   ownedRunOf,
   processAlive,
   programIdentity,
@@ -111,6 +112,7 @@ import {
   type RunEnd,
   runningByCommand,
   runOptions,
+  runStarting,
   stopRunningCommand,
   windowAnswerAsked,
   windowAnswerFile,
@@ -457,6 +459,9 @@ const PROGRAM_READ_EVERY_MS = 60_000;
 /** Records why an owned run ended and removes its live marker. */
 let leaveRun: (end?: RunEnd) => void = () => {};
 
+/** Takes away a run's note that it is starting on the folder (`noteRunStarting`). */
+let leaveStarting: () => void = () => {};
+
 /** This run as its record names it, for its local door to name it too; none without a command. */
 let ownRun: LocalDoorRun | undefined;
 
@@ -466,6 +471,7 @@ let ownRun: LocalDoorRun | undefined;
  */
 function endRun(code: number, lines: readonly string[]): void {
   leaveRun({ reason: "start-failed", exitCode: code, lines: [...lines] });
+  leaveStarting();
   process.stderr.write(`${lines.join("\n")}\n`, () => app.exit(code));
 }
 
@@ -760,6 +766,16 @@ export async function startApp(
   // The holder this launch's own ask reaches, read just before it, so a holder that takes the
   // lock after is asked too (`lockHolderKind`).
   const askedHolder = answerAsk ? lockHolderNow() : undefined;
+  // A run notes that it is starting before it asks for the folder's lock, and keeps the note until it
+  // ends, so a window launch refused that lock before the run notes that it holds the folder tells
+  // the run from a window (`runStarting`). Never during a folder move, whose lock is a throwaway
+  // profile's.
+  if (windowless && !move)
+    leaveStarting = noteRunStarting(
+      dataDir,
+      process.pid,
+      hostPlatform() === "win32" ? ownWindowsBirth() : null,
+    );
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -770,9 +786,11 @@ export async function startApp(
     // and opens beside it, never quitting with no window and never starting or stopping that run.
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
-    // that holds the lock answers and focuses itself, and this launch quits. A holder that shows
-    // neither is waited for, never taken for a window. An ordinary launch waits the same way, for a
-    // run known to hold the folder or a window's answer, and starts again beside such a run.
+    // that holds the lock answers and focuses itself, and this launch quits, as it does once no run
+    // that may hold the lock notes that it is starting, so the holder is a window, one from before
+    // that answer included. A holder that may be a starting run and shows nothing yet is waited
+    // for, never taken for a window. An ordinary launch waits the same way, for a run known to hold
+    // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
       const kind = await lockHolderKind({
@@ -780,6 +798,7 @@ export async function startApp(
         answered: () => existsSync(answer),
         holder: lockHolderNow,
         asked: askedHolder,
+        starting: (holder) => runStarting(dataDir, holder),
         lockFree: () => app.requestSingleInstanceLock(lockAsk),
         askEveryMs: STOPPED_RUN_WAIT_MS,
       });
@@ -868,7 +887,7 @@ export async function startApp(
       // Restart it is offered over this run only while a force stop can end it (`watchRunForce`):
       // on Windows only with the birth a wake goes through, without which a frozen run stays frozen.
       const birth = byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null;
-      let noteRecovers: (can: boolean) => void = () => {};
+      let noteRecovers: (can: boolean, pipes?: RunPipes) => void = () => {};
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -950,8 +969,11 @@ export async function startApp(
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
       // Only a run this app's own agent started is ever asked so; one started by hand reads nothing.
       const stopForceWatch = byAgent
-        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString(), undefined, (can) =>
-            noteRecovers(can),
+        ? watchRunForce(
+            app.getPath("userData"),
+            runStartedAt.toISOString(),
+            undefined,
+            (can, pipes) => noteRecovers(can, pipes),
           )
         : () => {};
       // The last line once the core stopped, then the process ends with its code.
@@ -962,6 +984,7 @@ export async function startApp(
         event.preventDefault();
         stopForceWatch();
         leaveRun(runEnd);
+        leaveStarting();
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }

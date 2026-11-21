@@ -15,6 +15,7 @@ import {
   lockHolder,
   lockHolderKind,
   markRunning,
+  noteRunStarting,
   ownedRun,
   ownedRunOf,
   programIdentity,
@@ -22,6 +23,8 @@ import {
   runCommand,
   runningByCommand,
   runOptions,
+  runStarting,
+  runStartingFile,
   stopRunningCommand,
 } from "./runCommand";
 import { startedByAgent, takeRunAgentMark } from "./runEnvironment";
@@ -264,6 +267,8 @@ describe("a window opened beside a run", () => {
         answered,
         holder: () => undefined,
         asked: undefined,
+        // The note's run, starting on the folder, may be what holds it.
+        starting: () => true,
         lockFree: () => false,
         askEveryMs: 60_000,
         everyMs: 20,
@@ -362,6 +367,8 @@ describe("a window opened beside a run", () => {
         answered: shown.answered ?? (() => false),
         holder: () => holder,
         asked: reached,
+        // A run starting on the folder, which has not noted that it holds it, may be the holder.
+        starting: () => true,
         lockFree: () => {
           asks.push(Date.now());
           return holder === null;
@@ -418,6 +425,95 @@ describe("a window opened beside a run", () => {
     expect(await later.kind).toBe("free");
   });
 
+  // The review of INF-5409: a window from before windows answered a launch's ask (as one still open
+  // across an update) brings itself forward at the ask and never answers. A run notes that it is
+  // starting before it asks for the folder's lock, so with no such note of a run still there the
+  // holder is a window: one the lock names at once, with nothing asked again; one no link names,
+  // as Windows' own lock, after one more ask that finds it still held, or the lock let go. A
+  // silent holder that may be a starting run, by its own note, is still waited for until it notes
+  // that it holds the folder.
+  it("takes a holder for a window once no run is starting that may hold the lock", async () => {
+    const dataDir = scratchDir("infinitary-run-starting-");
+    const look = (
+      holder: number | undefined,
+      free: boolean,
+      running: () => boolean = () => false,
+    ) => {
+      const asks: number[] = [];
+      const kind = lockHolderKind({
+        running,
+        answered: () => false,
+        holder: () => holder,
+        asked: holder,
+        starting: (named) => runStarting(dataDir, named, (pid) => pid === 4242),
+        lockFree: () => {
+          asks.push(Date.now());
+          return free;
+        },
+        askEveryMs: 100,
+        everyMs: 20,
+      });
+      return { kind, asks };
+    };
+    const legacy = look(4242, false);
+    expect(await legacy.kind).toBe("window");
+    expect(legacy.asks).toEqual([]);
+    const unnamed = look(undefined, false);
+    expect(await unnamed.kind).toBe("window");
+    expect(unnamed.asks).toHaveLength(1);
+    const letGo = look(undefined, true);
+    expect(await letGo.kind).toBe("free");
+    expect(letGo.asks).toHaveLength(1);
+    // Another run's note, by another process, says nothing of the holder the lock names.
+    writeFileSync(join(dataDir, runStartingFile(5151)), `${JSON.stringify({ pid: 5151 })}\n`);
+    expect(await look(4242, false).kind).toBe("window");
+    // The holder's own note, while its run is there: it is waited for until it notes itself.
+    const leave = noteRunStarting(dataDir, 4242);
+    let noted = false;
+    const starting = look(4242, false, () => noted);
+    let settled: string | null = null;
+    void starting.kind.then((kind) => (settled = kind));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(settled).toBeNull();
+    expect(starting.asks).toEqual([]);
+    noted = true;
+    expect(await starting.kind).toBe("run");
+    leave();
+    expect(runStarting(dataDir, 4242, () => true)).toBe(false);
+  });
+
+  it("reads a run starting on the folder from its own note while that run is there", () => {
+    const dataDir = scratchDir("infinitary-run-starting-");
+    expect(runStarting(dataDir, 4242, () => true)).toBe(false);
+    expect(runStarting(dataDir, undefined, () => true)).toBe(false);
+    const leave = noteRunStarting(dataDir, 4242, "win:1");
+    const births: (string | undefined)[] = [];
+    const reads = (answer: boolean | null) => (_pid: number, birth?: string) => {
+      births.push(birth);
+      return answer;
+    };
+    // Named by the lock: only its own note, while its run is there.
+    expect(runStarting(dataDir, 4242, reads(true))).toBe(true);
+    expect(runStarting(dataDir, 5151, reads(true))).toBe(false);
+    expect(runStarting(dataDir, 4242, reads(false))).toBe(false);
+    // Named by nothing, as Windows' own lock: any note whose run is there or cannot be told.
+    expect(runStarting(dataDir, undefined, reads(true))).toBe(true);
+    expect(runStarting(dataDir, undefined, reads(null))).toBe(true);
+    expect(runStarting(dataDir, undefined, reads(false))).toBe(false);
+    expect(births).toEqual(["win:1", "win:1", "win:1", "win:1", "win:1"]);
+    // A lock that names no holder at all has no starting run behind it.
+    expect(runStarting(dataDir, null, reads(true))).toBe(false);
+    // A note being written may be the holder's.
+    writeFileSync(join(dataDir, runStartingFile(6262)), "{");
+    expect(runStarting(dataDir, 6262, reads(false))).toBe(true);
+    expect(runStarting(dataDir, 4242, reads(false))).toBe(false);
+    rmSync(join(dataDir, runStartingFile(6262)));
+    leave();
+    expect(runStarting(dataDir, 4242, reads(true))).toBe(false);
+    // A folder that cannot be read may hold the holder's note.
+    expect(runStarting(join(dataDir, "missing"), 4242, reads(true))).toBe(true);
+  });
+
   // The review of INF-5409: Restart it is offered over a run only while a force stop can end it.
   // The run notes that it holds the folder at once, with its agent's mark, that it can be ended by
   // force only once its own reading and helper work, and no longer once either stopped; a run that
@@ -425,17 +521,21 @@ describe("a window opened beside a run", () => {
   it("notes that a force stop can end the run only while it can", () => {
     const note = (dataDir: string) => JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
     const dataDir = scratchDir("infinitary-run-recovers-");
-    let ready: (can: boolean) => void = () => {};
+    let ready: (can: boolean, pipes?: { wake: Seen; life: Seen }) => void = () => {};
+    type Seen = { ino: number; dev: number };
     markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, null, (set) => {
       ready = set;
     });
     expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true });
     expect(note(dataDir).recovers).toBeUndefined();
-    ready(true);
-    expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true, recovers: true });
+    // With the pipes it holds then, which a stop asks only through.
+    const pipes = { wake: { ino: 11, dev: 1 }, life: { ino: 12, dev: 1 } };
+    ready(true, pipes);
+    expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true, recovers: true, pipes });
     ready(false);
     expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true });
     expect(note(dataDir).recovers).toBeUndefined();
+    expect(note(dataDir).pipes).toBeUndefined();
 
     const ended = scratchDir("infinitary-run-recovers-");
     let late: (can: boolean) => void = () => {};

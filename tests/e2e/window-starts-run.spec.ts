@@ -365,17 +365,24 @@ test("Start it here ends a command that does not answer and opens beside the one
   const provider = await startMockProvider();
   const hold = join(scratchDir("infinitary-window-starts-run-hold-"), "hold");
   const relaunchNote = join(scratchDir("infinitary-window-starts-run-relaunch-"), "relaunch.json");
-  /** The words of Start it here in the start the app last asked for, which the journey starts. */
-  const askedStart = () => {
-    const words = (JSON.parse(readFileSync(relaunchNote, "utf8")) as string[]).filter(
-      (arg) => arg === START_HERE_ARG || arg === LET_GO_JOB_ARG,
-    );
-    rmSync(relaunchNote, { force: true });
-    return words;
-  };
   let waiting: ReturnType<typeof spawn> | null = null;
   try {
     const userDataDir = seededDataDir(provider.port);
+    /**
+     * The words of the start the app last asked for, which the journey starts: the built app and
+     * this data folder, checked and then left for the journey's own launch to add again, and every
+     * other word as asked, a mode such as `run` included. Only the switches the journey's own
+     * launches add (`launchApp`) are set aside.
+     */
+    const askedStart = () => {
+      const words = JSON.parse(readFileSync(relaunchNote, "utf8")) as string[];
+      rmSync(relaunchNote, { force: true });
+      const [entry, ...rest] = words.filter((arg) => !launcherSwitch(arg));
+      expect(entry).toBe(builtAppDir());
+      const folder = (arg: string) => arg.startsWith("--user-data-dir=");
+      expect(rest.filter(folder)).toEqual([`--user-data-dir=${userDataDir}`]);
+      return rest.filter((arg) => !folder(arg));
+    };
     const homeDir = scratchDir("infinitary-window-starts-run-home-");
     standIn = serviceManagerStandIn(homeDir);
     const env = {
@@ -577,6 +584,22 @@ test("Start it here ends a command that does not answer and opens beside the one
     await provider.close();
   }
 });
+
+/**
+ * Whether `arg` is a switch the journey's own launches add (`launchApp`, and Playwright's own
+ * debugging switches), which a start the app asks for carries along from its own launch.
+ */
+function launcherSwitch(arg: string): boolean {
+  return (
+    [
+      "--use-fake-device-for-media-stream",
+      "--use-fake-ui-for-media-stream",
+      "--enable-gpu-benchmarking",
+      "--disable-lcd-text",
+      "--disable-gpu",
+    ].includes(arg) || /^--(inspect|remote-debugging-port|force-device-scale-factor)=/.test(arg)
+  );
+}
 
 /** The process holding a browser profile folder, by the lock Chromium keeps there (`<host>-<pid>`). */
 function profileHolder(dir: string): number {

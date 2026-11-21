@@ -2,6 +2,7 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import {
   closeSync,
   constants,
+  lstatSync,
   mkdirSync,
   openSync,
   readdirSync,
@@ -16,17 +17,20 @@ import { Worker } from "node:worker_threads";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { processAlive } from "./lock";
+import { type RunAgentContext, restartRunAgent } from "./runAgent";
 import {
   endRunByForce,
   RUN_FORCE_DIR,
   RUN_FORCE_WAKE_SOURCE,
   RUN_FORCE_WATCH_SOURCE,
+  runForceLifeFile,
   runForceNeedle,
   runForceWakeFile,
   runPipeSeen,
   runPipeThere,
   wakeRun,
 } from "./runForce";
+import { RUN_RECORD_FILE } from "./windowsTask";
 
 /**
  * Ending a run that does not answer by force (docs/run.md, "When the command
@@ -96,7 +100,13 @@ async function stuckRun(
     program?: string;
     path?: string;
   } = {},
-): Promise<{ run: ChildProcess; pid: number; sibling: number | null; helperReady: boolean }> {
+): Promise<{
+  run: ChildProcess;
+  pid: number;
+  sibling: number | null;
+  helperReady: boolean;
+  helper: number | null;
+}> {
   const program = `
     const { Worker } = require("node:worker_threads");
     const { spawn, spawnSync } = require("node:child_process");
@@ -109,14 +119,18 @@ async function stuckRun(
     });
     let helperReady = false;
     let say = (fn) => setTimeout(fn, 300);
-    // On a Mac or Linux the run holds its own pipe, as one that says a force stop can end it does.
+    // On a Mac or Linux the run holds its own pipes, as one that says a force stop can end it does.
     const pipe = process.env.PIPE ? join(process.env.DIR, process.env.PIPE.replace("wake-0-", "wake-" + process.pid + "-")) : null;
     if (pipe) {
-      spawnSync("mkfifo", ["-m", "600", pipe]);
+      const life = join(process.env.DIR, process.env.LIFE.replace("life-0-", "life-" + process.pid + "-"));
+      spawnSync("mkfifo", ["-m", "600", pipe, life]);
+      fs.openSync(life, fs.constants.O_RDWR);
       fs.openSync(pipe, fs.constants.O_RDWR);
     }
+    let helperPid = 0;
     if (process.env.HELPER) {
       const helper = spawn("/bin/sh", ["-c", process.env.HELPER, "sh", pipe, String(process.pid), process.env.NEEDLE.replace("PID", String(process.pid)), process.env.DIR], { stdio: ["ignore", "pipe", "ignore"] });
+      helperPid = helper.pid;
       say = (fn) => {
         const fallback = setTimeout(fn, 5000);
         helper.stdout.on("data", (data) => {
@@ -128,7 +142,7 @@ async function stuckRun(
       };
     }
     const sibling = process.env.SIBLING ? spawn("sleep", ["30"], { stdio: "ignore" }).pid : 0;
-    say(() => process.stdout.write("ready " + sibling + " " + (helperReady ? 1 : 0) + "\\n", () => { for (;;) {} }));
+    say(() => process.stdout.write("ready " + sibling + " " + (helperReady ? 1 : 0) + " " + helperPid + "\\n", () => { for (;;) {} }));
   `;
   const run = spawn(process.execPath, ["-e", program], {
     env: {
@@ -137,7 +151,9 @@ async function stuckRun(
       DIR: join(dataDir, RUN_FORCE_DIR),
       STARTED: startedAt,
       EVERY: String(options.every ?? 50),
-      ...(POSIX ? { PIPE: runForceWakeFile(0, startedAt) } : {}),
+      ...(POSIX
+        ? { PIPE: runForceWakeFile(0, startedAt), LIFE: runForceLifeFile(0, startedAt) }
+        : {}),
       ...(options.helper
         ? {
             HELPER: RUN_FORCE_WAKE_SOURCE,
@@ -154,13 +170,15 @@ async function stuckRun(
     run.stdout?.once("data", (data: Buffer) => resolve(String(data)));
     run.once("exit", () => reject(new Error("the run ended before it was ready")));
   });
-  const [, siblingSaid, helperSaid] = said.trim().split(" ");
+  const [, siblingSaid, helperSaid, helperPidSaid] = said.trim().split(" ");
   const sibling = Number(siblingSaid);
+  const helper = Number(helperPidSaid);
   return {
     run,
     pid: ownedPid(run),
     sibling: sibling > 0 ? sibling : null,
     helperReady: helperSaid === "1",
+    helper: helper > 0 ? helper : null,
   };
 }
 
@@ -170,10 +188,12 @@ function exited(child: ChildProcess): Promise<NodeJS.Signals | null> {
   return new Promise((resolve) => child.once("exit", (_code, signal) => resolve(signal)));
 }
 
-/** What is left in the folder of force stops, besides each run's own pipe. */
+/** What is left in the folder of force stops, besides each run's own pipes. */
 function left(dataDir: string): string[] {
   try {
-    return readdirSync(join(dataDir, RUN_FORCE_DIR)).filter((name) => !name.startsWith("wake-"));
+    return readdirSync(join(dataDir, RUN_FORCE_DIR)).filter(
+      (name) => !name.startsWith("wake-") && !name.startsWith("life-"),
+    );
   } catch {
     return [];
   }
@@ -193,12 +213,26 @@ function writeStop(dataDir: string, name: string, stop: object): void {
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Makes `run`'s own pipe and holds it open as the run does, answering what holds it. */
+/** Makes `run`'s own two pipes, mode `mode`, answering their paths in the folder of force stops. */
+function makePipes(
+  dataDir: string,
+  run: { pid: number; startedAt: string },
+  mode = "600",
+): { wake: string; life: string } {
+  const dir = join(dataDir, RUN_FORCE_DIR);
+  mkdirSync(dir, { recursive: true });
+  const wake = join(dir, runForceWakeFile(run.pid, run.startedAt));
+  const life = join(dir, runForceLifeFile(run.pid, run.startedAt));
+  expect(spawnSync("mkfifo", ["-m", mode, wake, life]).status).toBe(0);
+  return { wake, life };
+}
+
+/**
+ * Makes `run`'s own pipes and holds its lifetime pipe open as the run does, answering what holds
+ * it: closing it is the run's process ending.
+ */
 function holdPipe(dataDir: string, run: { pid: number; startedAt: string }): number {
-  const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
-  mkdirSync(join(dataDir, RUN_FORCE_DIR), { recursive: true });
-  expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
-  return openSync(pipe, constants.O_RDWR);
+  return openSync(makePipes(dataDir, run).life, constants.O_RDWR);
 }
 
 /** What a POSIX run ended by its own force stop ends with: its own SIGKILL, never an ordinary exit. */
@@ -250,7 +284,7 @@ describe("a run's reading of force stops", () => {
 async function watchingRun(
   dataDir: string,
   startedAt: string,
-  options: { removeFails?: boolean } = {},
+  options: { removeFails?: boolean; every?: number; holdAfterStop?: boolean } = {},
 ): Promise<{ run: ChildProcess; pid: number; words: string[]; logged: () => string }> {
   const program = `
     const { pathToFileURL } = await import("node:url");
@@ -258,7 +292,7 @@ async function watchingRun(
     const { syncBuiltinESMExports } = await import("node:module");
     const { watchRunForce } = await import(pathToFileURL(process.env.SOURCE).href);
     const say = (word) => process.stdout.write(word + "\\n");
-    const stop = watchRunForce(process.env.DATA, process.env.STARTED, 50, (can) => say(can ? "ready" : "unready"));
+    const stop = watchRunForce(process.env.DATA, process.env.STARTED, Number(process.env.EVERY), (can) => say(can ? "ready" : "unready"));
     say("started");
     process.on("SIGTERM", () => {
       if (process.env.REMOVE_FAILS) {
@@ -268,6 +302,12 @@ async function watchingRun(
         syncBuiltinESMExports();
       }
       stop();
+      // Held after its reading and helper ended, as a run still finishing its last words is.
+      if (process.env.HOLD_AFTER_STOP) {
+        process.stdout.write("stopped\\n");
+        process.on("SIGUSR2", () => process.exit(0));
+        return;
+      }
       process.stdout.write("stopped\\n", () => process.exit(0));
     });
     setInterval(() => {}, 1000);
@@ -290,7 +330,9 @@ async function watchingRun(
         SOURCE: join(__dirname, "runForce.ts"),
         DATA: dataDir,
         STARTED: startedAt,
+        EVERY: String(options.every ?? 50),
         ...(options.removeFails ? { REMOVE_FAILS: "1" } : {}),
+        ...(options.holdAfterStop ? { HOLD_AFTER_STOP: "1" } : {}),
       },
       stdio: ["ignore", "pipe", "pipe"],
       detached: POSIX,
@@ -385,6 +427,41 @@ describe.skipIf(!POSIX)("a run's reading and helper, as a command starts them", 
     await pause(500);
     expect(words).toEqual(["started", "ready", "unready"]);
   });
+
+  // The review of INF-5409: a run whose reading and helper already ended, their pipes taken from
+  // the folder, is still there until its process ends, as a command's last words are written after
+  // them. Its number taken by another program once it ends (stood in by a reading that says the
+  // number always runs) changes nothing: the stop asked of it is called gone only once the process
+  // has ended, never while it is still there.
+  it("calls an asked run gone only once its process ends, after its reading and helper ended", async () => {
+    const dataDir = scratchDir("run-force-");
+    // Its reading reads the folder at its start and then not again within this test, so the stop
+    // asked of it is never acted on.
+    const { run, pid, words } = await watchingRun(dataDir, STARTED, {
+      every: 60_000,
+      holdAfterStop: true,
+    });
+    await expect.poll(() => words, { timeout: 10_000 }).toEqual(["started", "ready"]);
+    let answer: string | null = null;
+    const asked = endRunByForce(dataDir, { pid, startedAt: STARTED }, () => true, 4_000).then(
+      (end) => {
+        answer = end;
+      },
+    );
+    await pause(300);
+    process.kill(pid, "SIGTERM");
+    await expect.poll(() => words).toContain("stopped");
+    expect(runPipeThere(dataDir, { pid, startedAt: STARTED })).toBe(false);
+    await pause(800);
+    expect(answer).toBeNull();
+    expect(processAlive(pid)).toBe(true);
+    const gone = exited(run);
+    process.kill(pid, "SIGUSR2");
+    await gone;
+    await asked;
+    expect(answer).toBe("gone");
+    expect(left(dataDir)).toEqual([]);
+  });
 });
 
 describe("a run that does not answer, ended by force", () => {
@@ -468,6 +545,51 @@ describe("a run that does not answer, ended by force", () => {
       } finally {
         // A stopped program cannot end on its own, so its number is still its own here.
         if (stopped(sibling)) process.kill(sibling, "SIGKILL");
+      }
+    },
+  );
+
+  // The review of INF-5409: the asker reads whether the run is there through the run's lifetime
+  // pipe, never the helper's own. The run holds both (held open here as it holds them, its number
+  // stood in by a reading that says it runs); its helper, held up a while, reads its pipe only
+  // after many of the asker's readings passed, and still finds the one line it was woken with.
+  it.skipIf(!POSIX)(
+    "leaves the helper's line for it while the asker reads whether the run is there",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const run = { pid: 4242, startedAt: STARTED };
+      const life = holdPipe(dataDir, run);
+      const wakePipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+      const held = openSync(wakePipe, constants.O_RDWR);
+      const seen = runPipeSeen(dataDir, run);
+      expect(seen).not.toBeNull();
+      let woken = 0;
+      try {
+        const asked = endRunByForce(
+          dataDir,
+          run,
+          () => true,
+          2_500,
+          () => {
+            // One line only, written at the first wake: a line the asker took is never written again.
+            if (woken++ === 0) wakeRun(dataDir, run, undefined, seen);
+          },
+        );
+        // Several of the asker's readings pass before the helper reads.
+        await pause(700);
+        expect(woken).toBe(1);
+        const helper = openSync(wakePipe, constants.O_RDONLY | constants.O_NONBLOCK);
+        try {
+          const line = Buffer.alloc(16);
+          expect(readSync(helper, line, 0, 16, null)).toBe(1);
+          expect(line.toString("utf8", 0, 1)).toBe("\n");
+        } finally {
+          closeSync(helper);
+        }
+        expect(await asked).toBe("withdrawn");
+      } finally {
+        closeSync(held);
+        closeSync(life);
       }
     },
   );
@@ -562,22 +684,24 @@ describe("a run that does not answer, ended by force", () => {
     "asks nothing of a run already gone at the press, though its number is taken",
     async () => {
       const run = { pid: 4242, startedAt: STARTED };
-      const pipe = runForceWakeFile(run.pid, run.startedAt);
+      const pipes = [
+        runForceLifeFile(run.pid, run.startedAt),
+        runForceWakeFile(run.pid, run.startedAt),
+      ];
       const unheld = scratchDir("run-force-");
-      mkdirSync(join(unheld, RUN_FORCE_DIR), { recursive: true });
-      expect(spawnSync("mkfifo", ["-m", "600", join(unheld, RUN_FORCE_DIR, pipe)]).status).toBe(0);
+      makePipes(unheld, run);
       expect(await endRunByForce(unheld, run, () => true, 2_000)).toBe("unasked");
-      expect(readdirSync(join(unheld, RUN_FORCE_DIR))).toEqual([pipe]);
+      expect(readdirSync(join(unheld, RUN_FORCE_DIR)).sort()).toEqual(pipes);
       const absent = scratchDir("run-force-");
       mkdirSync(join(absent, RUN_FORCE_DIR), { recursive: true });
       expect(await endRunByForce(absent, run, () => true, 2_000)).toBe("unasked");
       expect(readdirSync(join(absent, RUN_FORCE_DIR))).toEqual([]);
       const pruned = scratchDir("run-force-");
-      mkdirSync(join(pruned, RUN_FORCE_DIR), { recursive: true });
-      expect(spawnSync("mkfifo", ["-m", "600", join(pruned, RUN_FORCE_DIR, pipe)]).status).toBe(0);
+      const made = makePipes(pruned, run);
       const piped = runPipeSeen(pruned, run);
       expect(piped).not.toBeNull();
-      rmSync(join(pruned, RUN_FORCE_DIR, pipe));
+      rmSync(made.wake);
+      rmSync(made.life);
       expect(
         await endRunByForce(
           pruned,
@@ -654,13 +778,7 @@ describe("a run that does not answer, ended by force", () => {
   it.skipIf(!POSIX)("asks nothing where the run's pipe cannot be told to be held", async () => {
     const dataDir = scratchDir("run-force-");
     const run = { pid: 4242, startedAt: STARTED };
-    mkdirSync(join(dataDir, RUN_FORCE_DIR));
-    const made = spawnSync("mkfifo", [
-      "-m",
-      "000",
-      join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt)),
-    ]);
-    expect(made.status).toBe(0);
+    makePipes(dataDir, run, "000");
     expect(runPipeThere(dataDir, run)).toBe(true);
     expect(await endRunByForce(dataDir, run, () => true, 1_000)).toBe("unasked");
     expect(left(dataDir)).toEqual([]);
@@ -675,7 +793,7 @@ describe("a run that does not answer, ended by force", () => {
     for (const replace of [false, true]) {
       const dataDir = scratchDir("run-force-");
       const run = { pid: 4242, startedAt: STARTED };
-      const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+      const pipe = join(dataDir, RUN_FORCE_DIR, runForceLifeFile(run.pid, run.startedAt));
       const holding = holdPipe(dataDir, run);
       try {
         let answer: string | null = null;
@@ -704,7 +822,7 @@ describe("a run that does not answer, ended by force", () => {
     for (const other of ["file", "pipe"] as const) {
       const dataDir = scratchDir("run-force-");
       const run = { pid: 4242, startedAt: STARTED };
-      const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
+      const pipe = join(dataDir, RUN_FORCE_DIR, runForceLifeFile(run.pid, run.startedAt));
       const holding = holdPipe(dataDir, run);
       const seen = runPipeSeen(dataDir, run);
       expect(seen).not.toBeNull();
@@ -781,9 +899,7 @@ describe("a run that does not answer, ended by force", () => {
   it.skipIf(!POSIX)("wakes only the pipe it found, never another file in its place", async () => {
     const dataDir = scratchDir("run-force-");
     const run = { pid: 4242, startedAt: STARTED };
-    const pipe = join(dataDir, RUN_FORCE_DIR, runForceWakeFile(run.pid, run.startedAt));
-    mkdirSync(join(dataDir, RUN_FORCE_DIR), { recursive: true });
-    expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+    const pipe = makePipes(dataDir, run).wake;
     // Held as the run holds it, and read here without waiting for a line.
     const holding = openSync(pipe, constants.O_RDWR | constants.O_NONBLOCK);
     const lines = (fd: number) => {
@@ -840,7 +956,7 @@ describe("a run that does not answer, ended by force", () => {
         const [pending = ""] = left(dataDir);
         renameSync(join(dir, pending), join(dir, pending.replace(/\.json$/, ".ended")));
         await pause(300);
-        rmSync(join(dir, runForceWakeFile(run.pid, run.startedAt)));
+        rmSync(join(dir, runForceLifeFile(run.pid, run.startedAt)));
         await pause(800);
         expect(answer).toBeNull();
         closeSync(holding);
@@ -1003,5 +1119,106 @@ describe("a run that does not answer, ended by force", () => {
     await gone;
     expect(await asked).toBe("ended");
     expect(left(dataDir)).toEqual([]);
+  });
+});
+
+// The review of INF-5409: only the pipes a run said it holds as it said a force stop can end it
+// (its record's `pipes`) are its own to ask. Its pipes replaced at their names before the press, by
+// pipes another program holds, while its record still says it can be ended, are no run's: the
+// window's Restart asks, wakes and reads nothing, and the pipe in the helper's place receives
+// nothing. The run's own pipes, as recorded, are asked, and the run (stood in by one that claims
+// and commits its stop at its next reading) ends on it.
+describe.skipIf(!POSIX)("a force stop the window's Restart asks", () => {
+  const run = { pid: 4242, startedAt: STARTED };
+
+  /** Makes `run`'s two pipes and holds each open as the run does: the files they are, and what holds them. */
+  function heldPipes(dataDir: string): { pipes: { wake: Seen; life: Seen }; held: number[] } {
+    const made = makePipes(dataDir, run);
+    const held = [openSync(made.life, constants.O_RDWR), openSync(made.wake, constants.O_RDWR)];
+    const seen = (path: string): Seen => {
+      const stats = lstatSync(path);
+      return { ino: stats.ino, dev: stats.dev };
+    };
+    return { pipes: { wake: seen(made.wake), life: seen(made.life) }, held };
+  }
+  type Seen = { ino: number; dev: number };
+
+  /** A Mac's agent context on `dataDir`, its run claiming and committing a stop at its next reading. */
+  function restartContext(dataDir: string, asked: string[][]): RunAgentContext {
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    let gone = false;
+    return {
+      label: "com.infinitary.app.dev.run",
+      dataDir,
+      homeDir: scratchDir("run-force-home-"),
+      uid: 502,
+      unitsDir: "/nowhere",
+      launcher: { executable: "/Applications/Infinitary.app/Contents/MacOS/Infinitary", args: [] },
+      env: {},
+      processes: {
+        alive: () => {
+          for (const name of readdirSync(dir).filter((file) => file.endsWith(".json"))) {
+            renameSync(join(dir, name), join(dir, name.replace(/\.json$/, ".ended")));
+            asked.push(["end", String(run.pid)]);
+            gone = true;
+          }
+          return !gone;
+        },
+        forceWaitMs: 2_000,
+      },
+      launchctl: async (args) => {
+        asked.push([...args]);
+        return { ok: true, output: "" };
+      },
+    };
+  }
+
+  function record(dataDir: string, pipes: { wake: Seen; life: Seen }): void {
+    writeFileSync(
+      join(dataDir, RUN_RECORD_FILE),
+      `${JSON.stringify({ ...run, agent: true, recovers: true, pipes })}\n`,
+    );
+  }
+
+  it("asks nothing through pipes put in the place of those the run recorded", async () => {
+    const dataDir = scratchDir("run-force-");
+    const own = heldPipes(dataDir);
+    record(dataDir, own.pipes);
+    const dir = join(dataDir, RUN_FORCE_DIR);
+    const wakeName = runForceWakeFile(run.pid, run.startedAt);
+    for (const name of [wakeName, runForceLifeFile(run.pid, run.startedAt)])
+      renameSync(join(dir, name), join(dir, `${name}-old`));
+    const substitute = heldPipes(dataDir);
+    const asked: string[][] = [];
+    try {
+      expect(await restartRunAgent(restartContext(dataDir, asked), run)).toBe("untouched");
+      expect(asked).toEqual([]);
+      expect(left(dataDir).filter((name) => !name.endsWith("-old"))).toEqual([]);
+      const reader = openSync(join(dir, wakeName), constants.O_RDONLY | constants.O_NONBLOCK);
+      try {
+        expect(() => readSync(reader, Buffer.alloc(16), 0, 16, null)).toThrow(/EAGAIN/);
+      } finally {
+        closeSync(reader);
+      }
+    } finally {
+      for (const fd of [...own.held, ...substitute.held]) closeSync(fd);
+    }
+  });
+
+  it("asks the run through the pipes it recorded", async () => {
+    const dataDir = scratchDir("run-force-");
+    const own = heldPipes(dataDir);
+    record(dataDir, own.pipes);
+    const asked: string[][] = [];
+    try {
+      expect(await restartRunAgent(restartContext(dataDir, asked), run)).toBe("restarted");
+      expect(asked).toEqual([
+        ["end", String(run.pid)],
+        ["kickstart", "gui/502/com.infinitary.app.dev.run"],
+      ]);
+      expect(left(dataDir)).toEqual([]);
+    } finally {
+      for (const fd of own.held) closeSync(fd);
+    }
   });
 });

@@ -1652,11 +1652,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     // An older computer opens the conversation again by itself, unchecked: this Mac never
     // reattaches to what it opens (`refusedThere`), and lets its own go first, once its turn is over.
     const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    const refused = this.refusedHeld(placed.task);
     if (older) this.refuseHeld(placed.task, true);
-    if (older && heldSession(placed)) {
-      if (!heldSession(placed)?.isStreaming()) this.host?.letGo?.(placed.task);
-      if (heldSession(placed)) return "waiting";
-    }
+    // Only at once: a release left for a turn's end would wake its words before the cleanup.
+    if (older && !heldSession(placed)?.isStreaming()) this.host?.letGo?.(placed.task, true);
+    if (older && heldSession(placed)) return this.refuseHeld(placed.task, refused), "waiting";
     // Opens there wait for its answer, and words to it for the reopen it asks too.
     let cleaned: (open: boolean | Promise<boolean>) => void = () => {};
     const gate = new Promise<boolean>((done) => (cleaned = done));

@@ -141,9 +141,10 @@ export type PlacedHost = {
    * The conversation this crewmate holds did not open there again - no
    * model there can take it, or the one that can runs on the other backend
    * - so the crewmate here lets go of it: the task's next turn opens a new
-   * one through the ordinary resume, which routes it again.
+   * one through the ordinary resume, which routes it again. With `now`, a
+   * turn still out keeps it instead of releasing it at that turn's end.
    */
-  letGo?(taskId: string): void;
+  letGo?(taskId: string, now?: boolean): void;
   /**
    * A computer the task moved off while it was out of reach is back and its
    * copy is kept (docs/helper.md, "Moving a task off a computer that is out

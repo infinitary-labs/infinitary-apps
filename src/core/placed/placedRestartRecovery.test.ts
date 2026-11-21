@@ -24,6 +24,7 @@ import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
 import { crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { PlacedLedger } from "./placedLedger";
+import { PlacedSession } from "./placedSession";
 
 // Captain's lost-turn regression: after a work computer quits mid-turn,
 // steers, interrupts and a backlog restart must reach its crewmate again.
@@ -1032,7 +1033,7 @@ describe("reopening after a work computer restarts, when the task's model left e
 
     expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
     // This Mac let its conversation go before it asked, and asked no hold it cannot read.
-    expect(letGo).toHaveBeenCalledWith(taskId);
+    expect(letGo).toHaveBeenCalledWith(taskId, undefined, true);
     const cleanup = asked.find((ask) => ask.channel === "inf:session:delete-outside");
     expect(cleanup?.args).not.toHaveProperty("0.holdReopen");
     expect(filesHolding(there, SECRET)).toEqual([]);
@@ -1077,7 +1078,7 @@ describe("reopening after a work computer restarts, when the task's model left e
     const record = home.tasks.get(taskId);
     if (!record) throw new Error("no task record");
 
-    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    // X
     expect(asked.map((entry) => entry.channel)).not.toContain("inf:session:delete-outside");
     answer.open();
     await steered;
@@ -1294,6 +1295,62 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(said(sent[0])).not.toContain(SECRET);
     expect(home.supervisor.moves.waitsForModel(taskId)).toBe(false);
     expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 17 findings 1 and 2: the conversation there stopped but
+  // this Mac's turn has not ended, so an older computer's cleanup waits
+  // without marking that conversation refused or leaving a release for the
+  // turn's end; words queued meanwhile go once to the conversation still
+  // open, as with no cleanup, and the next pass removes the words from both
+  // copies before the next words route to GPT-6 Sol.
+  it("leaves an older computer's conversation alone when its cleanup comes while this Mac's turn is still ending", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await codexThere(older);
+    const taskId = "t-older-ending";
+    const first = api.requests.length;
+    const ended = gate();
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { held: ended.held, text: "Done." },
+      { text: "On GPT-6 Sol." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    void home.supervisor.steer.steerCrewmate(taskId, "Go on.", "captain");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    starterLeft(home);
+    const queued = home.inbox.enqueue(taskId, "And now?");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const streaming = vi.spyOn(PlacedSession.prototype, "isStreaming").mockReturnValue(false);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    streaming.mockRestore();
+    expect(home.placed.refusedHeld(taskId)).toBe(false);
+    const requests = api.requests.length;
+
+    ended.open();
+    const row = () => home.inbox.allFor(taskId).find((entry) => entry.id === queued);
+    await expect.poll(() => row()).toBeUndefined();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const started = api.requests[first]?.body.model;
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([started]);
+    expect(said(sent[0])).toContain("And now?");
+    // The cleanup left no release for its turn's end: it lets go only as it runs.
+    expect(letGo.mock.calls).toEqual([[taskId, undefined, true]]);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    await home.supervisor.steer.steerCrewmate(taskId, "Anything else?", "captain");
+    await expect.poll(() => api.requests.length).toBe(requests + 2);
+    const next = api.requests[requests + 1];
+    expect(next?.body.model).toBe(SOL.id);
+    expect(said(next)).toContain("Anything else?");
+    expect(said(next)).not.toContain(SECRET);
   });
 });
 

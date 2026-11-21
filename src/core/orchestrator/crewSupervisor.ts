@@ -1391,14 +1391,15 @@ export class CrewSupervisor {
    * go, so its next turn opens a new one by the ordinary resume, once a
    * turn it was in has ended.
    */
-  placedLetGo(taskId: string, held?: TaskRuntime): void {
+  placedLetGo(taskId: string, held?: TaskRuntime, now?: boolean): void {
     const task = this.tasks.get(taskId);
     if (!task || task.turn.closing || (held && task !== held)) return;
     // A turn still out ends first through its own end - taken, failed or
     // given back to the lane - so none of its rows is lost with the session;
     // it goes as that turn ends, before words given back start another on it.
+    // Asked to go only now, it stays held instead.
     if (task.turn.busy) {
-      this.turns.atTurnOver(task, () => this.placedLetGo(taskId, task));
+      if (!now) this.turns.atTurnOver(task, () => this.placedLetGo(taskId, task));
       return;
     }
     this.sessions.releaseSession(task);

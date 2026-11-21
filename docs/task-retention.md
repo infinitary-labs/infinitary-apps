@@ -208,6 +208,7 @@ From its ask until the reopen it asks settles, this Mac sends that computer no o
 An open this Mac asks meanwhile, after that computer restarted, waits for the answer and is then the one reopen.
 This Mac never reattaches to what an older computer opened again by itself, so the next words route as for a new conversation.
 It marks that conversation so before letting go of its own session, and words already waiting for that computer's update go then.
+While this Mac's own turn on it has not ended, the cleanup asks nothing, marks nothing and leaves no release for that turn's end; a later pass cleans it.
 This Mac then copies each file that computer changed whole into its own copy of the record, written beside it and renamed into place once whole, and with them any file of its copy that still holds due words, so a pass a drop cut short is finished on the next.
 The answers this Mac kept for that conversation's callbacks (`crewmates/<taskId>/placed/calls.jsonl`) are replaced here first, whatever that computer can do.
 A computer out of reach or on another contract major is asked again on a later sweep: its own record, and this Mac's copy of it, keep the words until then, since this Mac's copy follows that record by where each file ends and can only take it whole once that computer has replaced them; the answers kept for its callbacks go at once.

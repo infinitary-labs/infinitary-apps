@@ -648,7 +648,8 @@ export function startPlacedHome(options: {
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
     reopenModel: (taskId, machine, attach) => supervisor.reopenModel(taskId, machine, attach),
     modelKept: (taskId, machine) => supervisor.moves.keepsModel(taskId, machine),
-    letGo: (taskId) => supervisor.placedLetGo(taskId),
+    letGo: (taskId, now) =>
+      now ? supervisor.placedLetGo(taskId, undefined, now) : supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
   });
   const dispatch = (async (channel, rawArgs, actor) => {

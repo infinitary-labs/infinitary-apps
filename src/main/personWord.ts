@@ -10,7 +10,7 @@ import {
   openSync,
   readdirSync,
   readSync,
-  rmdirSync,
+  renameSync,
   rmSync,
   type Stats,
   writeFileSync,
@@ -33,6 +33,7 @@ import {
   replyLine,
   WORD_OWNER_FILE,
   WORD_PROFILE_PREFIX,
+  WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
   WORD_TEMP_DIR,
 } from "./personWordArg";
@@ -151,10 +152,11 @@ const OWNER_FILE_BYTES = 16;
 
 /**
  * Makes the profiles' folder and says whether it is this app's and this account's alone. Only a
- * folder this app made, marked as it was made (`WORD_PROFILES_RESERVED`), is ever used: one already
- * there without the mark, or a link, is left exactly as it is. Away from Windows it must be owned by
- * this account with no access for anyone else (a wider mode of its own is narrowed); on Windows it
- * gets an owner-only access list of its own (`keepOwnerOnly`).
+ * folder this app made, marked whole before it took its name (`WORD_PROFILES_RESERVED`), is ever
+ * used: one already there without that mark, with a mark of any other kind, or away from Windows
+ * one it or its mark belongs to another account, or a link, is left exactly as it is. Away from
+ * Windows it must have no access for anyone else (a wider mode of its own is narrowed); on Windows
+ * it gets an owner-only access list of its own (`keepOwnerOnly`).
  */
 export async function ownProfilesFolder(
   root: string,
@@ -162,15 +164,13 @@ export async function ownProfilesFolder(
   access: AccessRun = powerShellAccess,
 ): Promise<boolean> {
   try {
-    if (!reserveProfilesFolder(root)) {
+    if (!reserveProfilesFolder(root, platform)) {
       console.warn("[app] a word's profiles' folder is there but not this app's; it is left alone");
       return false;
     }
     if (platform === "win32")
       return (await keepOwnerOnly([root], access)).kept[0]?.kind === "owner-only";
-    const folder = lstatSync(root);
-    if (folder.uid !== process.getuid?.()) return false;
-    if ((folder.mode & 0o077) !== 0) chmodSync(root, 0o700);
+    if ((lstatSync(root).mode & 0o077) !== 0) chmodSync(root, 0o700);
     return (lstatSync(root).mode & 0o077) === 0;
   } catch (error) {
     console.warn(`[app] could not keep a word's profiles private: ${(error as Error).message}`);
@@ -179,29 +179,60 @@ export async function ownProfilesFolder(
 }
 
 /**
- * Makes the profiles' folder with its mark, or finds one this app made: a real folder, not a link,
- * holding the mark as a plain file. A folder it made but could not mark goes again, so the next
- * launch can make it whole.
+ * Makes the profiles' folder whole, or finds one this app made. Where nothing is there, a folder of
+ * its own beside it (`.making-`) gets the mark first and then takes the name in one move, which
+ * never replaces a folder holding anything; so the name never stands for a folder without its mark,
+ * and a launch ended halfway leaves only its own `.making-` folder. Where the move loses to another
+ * launch, or anything is there already, the folder is this app's only where it is a real folder,
+ * not a link, holding the mark whole (`isProfilesMark`), and away from Windows both are this
+ * account's.
  */
-function reserveProfilesFolder(root: string): boolean {
-  let made = false;
-  try {
-    mkdirSync(root, { mode: 0o700 });
-    made = true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+function reserveProfilesFolder(root: string, platform: NodeJS.Platform): boolean {
+  if (entryOf(root) === null) {
+    const making = `${root}.making-${randomUUID()}`;
+    mkdirSync(making, { mode: 0o700 });
+    const made = lstatSync(making);
+    try {
+      writeFileSync(join(making, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK, {
+        flag: "wx",
+        mode: 0o600,
+      });
+      renameSync(making, root);
+    } catch (error) {
+      removeIfSame(making, made);
+      const code = (error as NodeJS.ErrnoException).code;
+      // Another launch's folder took the name first: it is read as any folder already there.
+      if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM") throw error;
+    }
   }
-  const folder = lstatSync(root);
-  if (!folder.isDirectory() || folder.isSymbolicLink()) return false;
-  const mark = join(root, WORD_PROFILES_RESERVED);
-  if (!made) return entryOf(mark)?.isFile() === true;
+  const folder = entryOf(root);
+  if (folder === null || !folder.isDirectory() || folder.isSymbolicLink()) return false;
+  if (platform !== "win32" && folder.uid !== process.getuid?.()) return false;
+  return isProfilesMark(join(root, WORD_PROFILES_RESERVED), platform);
+}
+
+/** The profiles' folder's mark: a plain file of this account's saying `WORD_PROFILES_MARK` whole. */
+function isProfilesMark(path: string, platform: NodeJS.Platform): boolean {
+  const mark = readSmallFile(path, Buffer.byteLength(WORD_PROFILES_MARK));
+  return (
+    mark !== null &&
+    mark.text === WORD_PROFILES_MARK &&
+    (platform === "win32" || mark.file.uid === process.getuid?.())
+  );
+}
+
+/**
+ * Removes a folder this launch made, only while its path still names that folder: one replaced
+ * since, by whatever moved it away, is left as it is.
+ */
+function removeIfSame(path: string, made: { dev: number; ino: number }): void {
+  const now = entryOf(path);
+  if (now === null || !now.isDirectory() || !sameEntry(now, made)) return;
   try {
-    writeFileSync(mark, "", { flag: "wx", mode: 0o600 });
+    rmSync(path, { recursive: true, force: true });
   } catch (error) {
-    rmdirSync(root);
-    throw error;
+    console.warn(`[app] could not remove a word's folder: ${(error as Error).message}`);
   }
-  return true;
 }
 
 /** Which entry a path is, by device and number: the same only while nothing replaced it. */
@@ -212,32 +243,39 @@ const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: numbe
 type Owner = { pid: number; dev: number; ino: number };
 
 /**
- * The copy a profile's owner file names (`claimWordProfile`): a plain file, never a link nor a pipe,
- * whose opened file is the one the path named and which reads to its end in no more than the
- * copy's whole record - its number and the line's end - and nothing else; anything else, a record
- * not yet written whole, or no file, is no owner.
+ * The copy a profile's owner file names (`claimWordProfile`): its number and the line's end, and
+ * nothing else, read whole (`readSmallFile`); anything else, a record not yet written whole, or no
+ * file, is no owner.
  */
 function profileOwner(profile: string): Owner | null {
-  const path = join(profile, WORD_OWNER_FILE);
+  const owner = readSmallFile(join(profile, WORD_OWNER_FILE), OWNER_FILE_BYTES);
+  if (owner === null || !/^[1-9][0-9]{0,9}\n$/.test(owner.text)) return null;
+  return { pid: Number(owner.text.trimEnd()), dev: owner.file.dev, ino: owner.file.ino };
+}
+
+/**
+ * A small file's whole text and which file it was: a plain file, never a link nor a pipe, whose
+ * opened file is the one the path named and which reads to its end in no more than `most` bytes;
+ * null for anything else or nothing there.
+ */
+function readSmallFile(path: string, most: number): { text: string; file: Stats } | null {
   let fd: number | undefined;
   try {
     // Checked before it is opened, where opening cannot refuse a link itself, as on Windows.
     const named = lstatSync(path);
-    if (!named.isFile() || named.size > OWNER_FILE_BYTES) return null;
+    if (!named.isFile() || named.size > most) return null;
     fd = openSync(
       path,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
     );
     const kept = fstatSync(fd);
-    if (!kept.isFile() || !sameEntry(kept, named) || kept.size > OWNER_FILE_BYTES) return null;
-    const bytes = Buffer.alloc(OWNER_FILE_BYTES + 1);
+    if (!kept.isFile() || !sameEntry(kept, named) || kept.size > most) return null;
+    const bytes = Buffer.alloc(most + 1);
     let read = 0;
     for (let got = 1; got > 0 && read < bytes.length; read += got)
       got = readSync(fd, bytes, read, bytes.length - read, read);
     if (read !== kept.size) return null;
-    const said = bytes.toString("utf8", 0, read);
-    if (!/^[1-9][0-9]{0,9}\n$/.test(said)) return null;
-    return { pid: Number(said.trimEnd()), dev: kept.dev, ino: kept.ino };
+    return { text: bytes.toString("utf8", 0, read), file: kept };
   } catch {
     return null;
   } finally {
@@ -327,16 +365,22 @@ export async function askPersonWord(
   const profile = join(profiles, `${WORD_PROFILE_PREFIX}${randomUUID()}`);
   const temp = join(profile, WORD_TEMP_DIR);
   // Its profile and temporary folder are there before the copy runs, so its temporary files
-  // have a place from its start; it names itself there before using either.
+  // have a place from its start; it names itself there before using either. Only the profile
+  // this launch made goes, while its path still names it (`removeIfSame`).
+  let made: Stats;
   try {
-    mkdirSync(temp, { recursive: true, mode: 0o700 });
+    mkdirSync(profile, { mode: 0o700 });
+    made = lstatSync(profile);
   } catch (error) {
     console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);
-    try {
-      rmSync(profile, { recursive: true, force: true });
-    } catch {
-      // Unnamed, so a later ask leaves it; nothing here used it.
-    }
+    return "unshown";
+  }
+  const cleanUp = () => removeIfSame(profile, made);
+  try {
+    mkdirSync(temp, { mode: 0o700 });
+  } catch (error) {
+    console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);
+    cleanUp();
     return "unshown";
   }
   return new Promise((done) => {
@@ -348,14 +392,6 @@ export async function askPersonWord(
       signal?.removeEventListener("abort", takeAway);
       done(reply);
     };
-    // Only once the copy has ended, or never started.
-    const cleanUp = () => {
-      try {
-        rmSync(profile, { recursive: true, force: true });
-      } catch (error) {
-        console.warn(`[app] could not remove a word's profile: ${(error as Error).message}`);
-      }
-    };
     let copy: ChildProcess;
     try {
       copy = spawn(
@@ -366,6 +402,7 @@ export async function askPersonWord(
       );
     } catch (error) {
       console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
+      cleanUp();
       settle("unshown");
       return;
     }

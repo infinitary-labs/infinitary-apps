@@ -18,6 +18,7 @@ import { askPersonWord } from "./personWord";
 import {
   PERSON_WORD_ARG,
   WORD_OWNER_FILE,
+  WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
   WORD_TEMP_DIR,
 } from "./personWordArg";
@@ -49,7 +50,7 @@ function copyProgram(): string {
   writeFileSync(
     file,
     `
-    import { existsSync, mkdirSync, chmodSync, writeFileSync } from "node:fs";
+    import { existsSync, mkdirSync, chmodSync, renameSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
     import { claimWordProfile, endWithRequester, replyLine } from ${sourceUrl("personWordArg.ts")};
     const [mode, marks] = process.argv.slice(2);
@@ -75,6 +76,13 @@ function copyProgram(): string {
       mkdirSync(join(profile, "inside"));
       chmodSync(profile, 0o500);
       say(replyLine(1));
+    } else if (mode === "replace") {
+      // Its profile moved away and another folder made at its path before it ends.
+      renameSync(profile, join(marks, "moved"));
+      mkdirSync(profile);
+      writeFileSync(join(profile, "theirs"), "");
+      writeFileSync(join(marks, "profile"), profile);
+      say(replyLine(0));
     } else if (mode === "wait") {
       // Shows its box until its requester goes; where an ordinary end can be ignored, only that
       // requester's going ends it, and then only once the test lets it, so its profile can be seen
@@ -244,6 +252,70 @@ describe("a refused launch's copy that shows a word", () => {
     expect(statSync(found).mode).toBe(before);
   });
 
+  it("leaves a folder whose mark is not the app's whole mark alone", async () => {
+    for (const said of ["", `${WORD_PROFILES_MARK}more`, "someone else's\n"]) {
+      const found = profilesFolder();
+      mkdirSync(found, { recursive: true, mode: 0o755 });
+      chmodSync(found, 0o755);
+      writeFileSync(join(found, WORD_PROFILES_RESERVED), said);
+      mkdirSync(join(found, "infinitary-word-theirs"));
+      writeFileSync(
+        join(found, "infinitary-word-theirs", WORD_OWNER_FILE),
+        `${await endedPid()}\n`,
+      );
+      const marks = scratchDir("person-word-marks-");
+      expect(
+        await askPersonWord("dock", {
+          launcher: launcher(copyProgram(), "zero", marks),
+          profiles: found,
+        }),
+      ).toBe("unshown");
+      expect(existsSync(join(marks, "started"))).toBe(false);
+      expect(readdirSync(found).sort()).toEqual([WORD_PROFILES_RESERVED, "infinitary-word-theirs"]);
+      expect(statSync(found).mode & 0o777).toBe(0o755);
+    }
+  });
+
+  it("makes its profiles' folder whole beside a half-made one a launch left", async () => {
+    const profiles = profilesFolder();
+    // A launch that ended while making it leaves only its own folder, never the name unmarked.
+    const left = `${profiles}.making-left`;
+    mkdirSync(left, { recursive: true });
+    const marks = scratchDir("person-word-marks-");
+    expect(
+      await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles }),
+    ).toBe(0);
+    expect(readdirSync(profiles)).toEqual([WORD_PROFILES_RESERVED]);
+    expect(readFileSync(join(profiles, WORD_PROFILES_RESERVED), "utf8")).toBe(WORD_PROFILES_MARK);
+    expect(existsSync(left)).toBe(true);
+    // Its own making folder went into the name, with no other left beside it.
+    expect(readdirSync(join(profiles, "..")).filter((name) => name.includes(".making-"))).toEqual([
+      "word-profiles.making-left",
+    ]);
+  });
+
+  it("keeps the press and leaves a folder that replaced the copy's profile", async () => {
+    const profiles = profilesFolder();
+    const marks = scratchDir("person-word-marks-");
+    expect(
+      await askPersonWord("dock", {
+        launcher: launcher(copyProgram(), "replace", marks),
+        profiles,
+      }),
+    ).toBe(0);
+    const profile = readFileSync(join(marks, "profile"), "utf8");
+    expect(existsSync(join(profile, "theirs"))).toBe(true);
+    expect(existsSync(join(marks, "moved", WORD_OWNER_FILE))).toBe(true);
+  });
+
+  it("removes the profile it made when the copy cannot even be started", async () => {
+    const profiles = profilesFolder();
+    // A program name no process can start with, refused before anything runs.
+    const refused = { execPath: `${process.execPath}\0`, args: [] };
+    expect(await askPersonWord("dock", { launcher: refused, profiles })).toBe("unshown");
+    expect(readdirSync(profiles)).toEqual([WORD_PROFILES_RESERVED]);
+  });
+
   it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     "keeps the person's press when the copy's profile cannot be removed",
     async () => {
@@ -365,7 +437,7 @@ describe("a refused launch's copy that shows a word", () => {
   it("removes only profiles whose copy named itself and has positively ended", async () => {
     const profiles = profilesFolder();
     mkdirSync(profiles, { recursive: true, mode: 0o700 });
-    writeFileSync(join(profiles, WORD_PROFILES_RESERVED), "");
+    writeFileSync(join(profiles, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
     const ended = await endedPid();
     const profile = (name: string, said?: string) => {
       mkdirSync(join(profiles, name));

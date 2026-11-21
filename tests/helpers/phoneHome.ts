@@ -1045,9 +1045,12 @@ export async function startPhoneHome(
             id: "phone-ask",
             reason: "Charge the test card in the checkout tests",
             secrets: [{ name: "Stripe test key", place: "Test" }],
+            how: '<ol><li>Open your Stripe API keys page: <a href="https://dashboard.stripe.com/test/apikeys">dashboard.stripe.com/test/apikeys</a></li><li>Reveal the <strong>Secret key</strong> and copy it.</li></ol>',
           });
           result = {
             state: answer.state,
+            // The field's label says its place once, beside the name (INF-5516's plan).
+            place: SECRET_ASK_CARD_WORDS.place("Test"),
             title:
               (await core.dispatch("inf:cards:list", [])).find((card) =>
                 card.id.startsWith("card-secrets-ask-"),

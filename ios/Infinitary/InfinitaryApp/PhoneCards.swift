@@ -1625,33 +1625,42 @@ private struct PhoneCardPane: View {
                 && !(PhoneSecretAsk.of(card) != nil && action["declines"].flag))
     }
 
-    /// INF-4239 piece 4: one masked field per secret an ask names, as the Mac's SecretAskFields draws them. A return
-    /// moves to the next field and, in the last, keeps.
+    /// INF-4239 piece 4: one masked field per secret an ask names, as the Mac's SecretAskFields draws them: each under
+    /// its secret's name, with its place and the version it replaces beside it once (INF-5516's plan). A return moves
+    /// to the next field and, in the last, saves.
     private func secretFields(_ ask: PhoneSecretAsk) -> some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text(PhoneMessages.phoneSecretsAskFields()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+        VStack(alignment: .leading, spacing: PhoneTheme.space3) {
             ForEach(Array(ask.fields.enumerated()), id: \.element.id) { at, field in
-                let label = field.place.map { "\(field.name) · \($0)" } ?? field.name
-                SecureField(label, text: Binding(
-                    get: { secretValues[field.id] ?? "" },
-                    set: { secretValues[field.id] = $0 }))
-                    .textFieldStyle(.phone).textContentType(.password)
-                    .autocorrectionDisabled().textInputAutocapitalization(.never)
-                    .focused($secretFocus, equals: field.id)
-                    .submitLabel(at + 1 < ask.fields.count ? .next : .done)
-                    .onSubmit {
-                        if at + 1 < ask.fields.count { secretFocus = ask.fields[at + 1].id } else { keepSecrets(ask) }
+                VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(field.name).font(PhoneFont.subheadline.weight(.medium)).foregroundStyle(PhoneTheme.text)
+                        ForEach(field.details, id: \.self) { detail in
+                            Text(detail).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                        }
                     }
-                    .disabled(host.changing || !session.canChange)
-                    .accessibilityLabel(label)
-                    .accessibilityIdentifier("secret-ask-\(field.id)")
+                    .accessibilityHidden(true)
+                    SecureField(PhoneMessages.phoneSecretsAskPlaceholder(), text: Binding(
+                        get: { secretValues[field.id] ?? "" },
+                        set: { secretValues[field.id] = $0 }))
+                        .textFieldStyle(.phone).textContentType(.password)
+                        .autocorrectionDisabled().textInputAutocapitalization(.never)
+                        .focused($secretFocus, equals: field.id)
+                        .submitLabel(at + 1 < ask.fields.count ? .next : .done)
+                        .onSubmit {
+                            if at + 1 < ask.fields.count { secretFocus = ask.fields[at + 1].id } else { keepSecrets(ask) }
+                        }
+                        .disabled(host.changing || !session.canChange)
+                        .accessibilityLabel(([field.name] + field.details).joined(separator: ", "))
+                        .accessibilityIdentifier("secret-ask-\(field.id)")
+                }
             }
-            Text(PhoneMessages.phoneSecretsAskNote()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+            Text(ask.fields.count > 1 ? PhoneMessages.phoneSecretsAskNoteMany() : PhoneMessages.phoneSecretsAskNoteOne())
+                .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
         }
         .onDisappear { secretValues.removeAll() }
     }
 
-    /// Sends what was typed with the Keep button's pass in its own request, never as a card choice. The home withdraws
+    /// Sends what was typed with the Save button's pass in its own request, never as a card choice. The home withdraws
     /// the card once everything is kept; otherwise the card stays, says why, and keeps the fields for another Keep.
     private func keepSecrets(_ ask: PhoneSecretAsk) {
         let values = secretValues

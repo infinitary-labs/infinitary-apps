@@ -1,7 +1,7 @@
 import Foundation
 
 /// INF-4239 piece 4: Infinitary's own ask to keep a secret, typed on the phone (docs/secrets.md, "Asking to keep a
-/// secret"; docs/ios.md, "Asking to keep a secret"). A host card's Keep in Secrets button carries the secrets it asks
+/// secret"; docs/ios.md, "Asking to keep a secret"). A host card's Save secret button carries the secrets it asks
 /// for as its host effect's argument, as on the Mac (`secretKeepFields`); the phone draws one masked field each and
 /// sends what was typed with that button's one-time pass in its own request, never as a card choice, so a value
 /// never reaches a card answer, its thread or the task record.
@@ -10,9 +10,29 @@ public struct PhoneSecretAsk: Equatable, Sendable {
         public let id: String
         public let name: String
         public let place: String?
+        /// The version of the saved secret this field replaces, which its label names.
+        public let replaces: Int?
+
+        public init(id: String, name: String, place: String?, replaces: Int? = nil) {
+            self.id = id
+            self.name = name
+            self.place = place
+            self.replaces = replaces
+        }
+
+        /// What its label says beside the name, once: the place it is saved under and the version it replaces.
+        public var details: [String] {
+            var details: [String] = []
+            if let place, !place.isEmpty { details.append(PhoneMessages.phoneSecretsAskPlace(place: place)) }
+            if let replaces {
+                details.append(PhoneMessages.phoneSecretsAskReplaces(
+                    version: PhoneFormats.whole(replaces, locale: PhoneFormats.locale)))
+            }
+            return details
+        }
     }
 
-    /// The Keep in Secrets button's id, its one-time pass.
+    /// The Save secret button's id, its one-time pass.
     public let pass: String
     public let fields: [Field]
 
@@ -25,14 +45,15 @@ public struct PhoneSecretAsk: Equatable, Sendable {
             else { return nil }
             let fields = offer["fields"].list.compactMap { field -> Field? in
                 guard let id = field["id"].text, let name = field["name"].text else { return nil }
-                return Field(id: id, name: name, place: field["place"].text)
+                return Field(id: id, name: name, place: field["place"].text,
+                             replaces: field["replaces"]["version"].numeric.map { Int($0) })
             }
             return fields.isEmpty ? nil : PhoneSecretAsk(pass: pass, fields: fields)
         }
         return nil
     }
 
-    /// Whether this button is an ask's Keep in Secrets, whose click sends the typed values, never a card choice.
+    /// Whether this button is an ask's Save secret, whose click sends the typed values, never a card choice.
     public static func isKeep(_ action: PhoneJSON) -> Bool {
         action["effect"]["kind"].text == "host" && action["effect"]["op"].text == "secrets-keep"
     }

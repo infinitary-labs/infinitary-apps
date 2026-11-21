@@ -198,14 +198,14 @@ describe("asking to keep a secret", () => {
     expect(f.cards).toEqual([]);
   });
 
-  it("a spent pass, a missing value or a Keep sent as a card choice keeps nothing", async () => {
+  it("a spent pass, a missing value or a Save sent as a card choice keeps nothing", async () => {
     const f = fixture();
     await f.settings.askToKeep("task-a", { id: "a", reason: "Tests", secrets: [STRIPE] });
     const keep = f.keepOf();
     expect(
       await f.settings.keep({ pass: keep.pass, values: [{ field: "s1", value: "" }] }),
     ).toEqual({ kept: false, words: SECRET_ASK_CARD_WORDS.empty });
-    // A card choice cannot spend Keep: only the window's own request carries values.
+    // A card choice cannot spend Save: only the window's own request carries values.
     await f.settings.decide(keep.pass);
     expect(f.heard).toEqual([]);
     expect(
@@ -219,11 +219,11 @@ describe("asking to keep a secret", () => {
     );
   });
 
-  it("Don't keep ends the ask, and the asker hears not-kept once", async () => {
+  it("Don't save ends the ask, and the asker hears not-kept once", async () => {
     const f = fixture();
     await f.settings.askToKeep(null, { id: "a", reason: "Tests", secrets: [STRIPE] });
     const keep = f.keepOf();
-    await f.press(SECRET_ASK_CARD_WORDS.dontKeep);
+    await f.press(SECRET_ASK_CARD_WORDS.dontSave);
     expect(f.heard).toEqual([{ task: null, ended: { ask: "a", state: "not-kept" } }]);
     expect(
       await f.settings.keep({ pass: keep.pass, values: [{ field: "s1", value: VALUE }] }),
@@ -244,7 +244,7 @@ describe("asking to keep a secret", () => {
     });
     const offer = f.keepOf();
     expect(offer.fields[0]?.replaces).toEqual({ ref, version: 1 });
-    // Settings replaces it meanwhile: the card's Keep would overwrite a version it did not name.
+    // Settings replaces it meanwhile: the card's Save would overwrite a version it did not name.
     const entry = (await f.settings.view()).entries.find((one) => one.ref === ref);
     await f.settings.put({
       ref,
@@ -287,12 +287,12 @@ describe("asking to keep a secret", () => {
     expect(
       await f.settings.keep({ pass: first.pass, values: [{ field: "s1", value: VALUE }] }),
     ).toEqual({ kept: false, words: SECRET_ASK_CARD_WORDS.locked });
-    // Keep's answer says why where it was pressed; the card's body does not say it again.
+    // Save's answer says why where it was pressed; the card's body does not say it again.
     expect(f.cards.at(-1)?.body).not.toContain(SECRET_ASK_CARD_WORDS.locked);
     expect(f.cards.at(-1)?.actions.map((action) => action.label)).toEqual([
-      SECRET_ASK_CARD_WORDS.dontKeep,
+      SECRET_ASK_CARD_WORDS.dontSave,
       SECRET_ASK_CARD_WORDS.unlock,
-      SECRET_ASK_CARD_WORDS.keep,
+      SECRET_ASK_CARD_WORDS.save(false),
     ]);
     await f.press(SECRET_ASK_CARD_WORDS.unlock);
     expect(f.unlocks()).toBe(1);
@@ -418,5 +418,46 @@ describe("asking to keep a secret", () => {
     expect(f.withdrawn).toContain(card?.id);
     expect(await there.cancelAsk?.("webhook")).toBe(false);
     expect(JSON.stringify(sent)).not.toContain(VALUE);
+  });
+
+  // Intent: INF-5516's plan with the captain's write-in, on a computer that
+  // runs work: the asker's how-to reaches a home that lists the change, and
+  // a home without it gets the ask with no how-to while the asker hears so.
+  it("a how-to rides to a home that takes it, and an older home gets the ask without it", async () => {
+    const how =
+      '<ol><li>Open <a href="https://dashboard.stripe.com/test/apikeys">dashboard.stripe.com/test/apikeys</a>.</li></ol>';
+    const offer = (takesHow: boolean) => {
+      const f = fixture();
+      const sent: unknown[] = [];
+      const there = new SecretUsesThere({
+        home: {
+          list: async () => [],
+          use: async () => ({ receipt: null }),
+          take: async () => ({ state: "unavailable" }),
+        },
+        runsDir: scratchDir("secret-asks-how-there-"),
+        environment: () => ({}),
+      });
+      there.offerAsks(async (input) => {
+        sent.push(input);
+        const request = placedSecretAskInputSchema.parse(structuredClone(input));
+        return placedSecretAskAnswerSchema.parse(await f.settings.askElsewhere("task-a", request));
+      }, takesHow);
+      return { f, sent, there };
+    };
+    const newer = offer(true);
+    expect(
+      await newer.there.ask?.({ id: "checkout", reason: "Tests", secrets: [STRIPE], how }),
+    ).toEqual({ ask: "checkout", state: "waiting" });
+    expect(newer.sent).toEqual([
+      { op: "ask", id: "checkout", reason: "Tests", secrets: [STRIPE], how },
+    ]);
+    expect(newer.f.cards.at(-1)?.body).toContain(SECRET_ASK_CARD_WORDS.by("task-a"));
+    const older = offer(false);
+    expect(
+      await older.there.ask?.({ id: "checkout", reason: "Tests", secrets: [STRIPE], how }),
+    ).toEqual({ ask: "checkout", state: "waiting", without: "how" });
+    expect(older.sent).toEqual([{ op: "ask", id: "checkout", reason: "Tests", secrets: [STRIPE] }]);
+    expect(older.f.cards.at(-1)?.body).not.toContain(SECRET_ASK_CARD_WORDS.by("task-a"));
   });
 });

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "faster-signed-installer-check",
+      "reason": "Internal: the signed installer check notarizes while it builds, checks each copy's files in one pass, makes its tampered copy on the checking Mac, checks Apple silicon only and puts a publishing release's build in the release's own line; the app itself is unchanged."
+    }
+  ]
+}

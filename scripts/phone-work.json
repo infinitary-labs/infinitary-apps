@@ -91,6 +91,12 @@
       "launches": 1
     }
   },
+  "homes": {
+    "iphone": {
+      "reads": 1268,
+      "launches": 2
+    }
+  },
   "join-activity": {
     "iphone": {
       "reads": 737,

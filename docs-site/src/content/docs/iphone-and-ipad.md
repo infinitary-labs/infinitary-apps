@@ -30,6 +30,17 @@ If the camera is not allowed, paste the link instead.
 Your phone and your computer need to share a network: the same Wi-Fi, or the same private network when you are away.
 Only join your own computer.
 
+## More than one computer
+
+Your phone can keep more than one computer, such as one at home and one at work, and shows one at a time.
+To add another, tap the computer button at the right of the phone's top bar and choose **Add another computer**, then scan its code, paste its link or join by its address.
+The computer you were showing stays kept.
+
+With more than one kept, the computer button names the computer shown.
+Its sheet lists your other computers and marks each one that answers from where you are now, such as when your phone is on that computer's network or private network.
+Tap one, or press Return on it with a keyboard, to show it.
+The phone never switches by itself: it stays on your choice until you pick another.
+
 ## What it shows
 
 The top bar has **Home**, **Tasks** and **Activity**.
@@ -73,12 +84,16 @@ See [Update and remove Infinitary](/update-and-remove/#your-other-computers-and-
 The phone needs your computer awake, with Infinitary open.
 If it cannot reach it, it says "Your computer is out of reach. Check that Infinitary is open and both devices share a network."
 
-The phone tells you about a new card only while the app is open.
+With notifications on, your phone shows a notification for each new card, even while Infinitary is closed there.
+With more than one computer kept, each one sends its own, and the notification names the computer it came from; tapping it shows that computer and opens the card.
+A computer you have not shown for a while may stop sending them after a few days, until you show it again.
 
 ## Leave or remove
 
 To stop showing your computer, tap the computer button at the right of the phone's top bar and choose **Leave** with your computer's name.
-The phone forgets the computer.
+The phone forgets that computer and its notifications.
+When it is out of reach, **Forget** does the same on the phone alone.
+Your other kept computers stay: the one you showed most recently shows next, and with none left the phone welcomes you as at first.
 On your computer, **Remove** in the phone's menu in Settings → **Devices**, the three dots on its row, cuts it off at once.
 To join again, make a new link.
 

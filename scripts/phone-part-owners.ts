@@ -50,6 +50,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     // The computer's own update under every part's message box and in Settings (MessageComposer.swift).
     "ios/Infinitary/InfinitaryApp/PhoneHomeUpdateViews.swift",
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
+    // INF-5265: the kept computers every part's model restores.
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneKeptMacs.swift",
     // Home's pages and the one-row bar every tab and sheet asks for (PhoneWorkspace.swift, PhoneStyle.swift).
     "ios/Infinitary/InfinitaryApp/PhonePages.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
@@ -99,6 +101,11 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/NotificationsInfo.plist",
     "ios/Infinitary/SimulatorNotifications.entitlements",
     "tests/helpers/phonePushRelay.ts",
+  ] },
+  // INF-5265: the kept computers, the computer sheet that switches them and the second computer beside the test home.
+  { parts: family("homes"), files: [
+    "tests/helpers/phoneSecondHome.ts",
+    "tests/helpers/phoneSecondHomeProcess.ts",
   ] },
   { parts: family("cards"), files: [
     "ios/Infinitary/CardRuntime/cardHost.ts",
@@ -170,8 +177,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift",
   ] },
   // INF-4207 piece 9: Take over on the computer's sheet, the link to a computer that keeps a copy and the test home's
-  // computer that keeps a copy beside it; join-activity draws the sheet out of reach, without a copy kept.
-  { parts: [...family("take"), ...family("join")], files: [
+  // computer that keeps a copy beside it; join-activity draws the sheet out of reach, without a copy kept. INF-5265:
+  // the homes part lists the other kept computers on it and adds one.
+  { parts: [...family("take"), ...family("join"), ...family("homes")], files: [
     "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift",
     "ios/Infinitary/InfinitaryApp/PhoneTakeOverSection.swift",
   ] },

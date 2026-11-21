@@ -1380,6 +1380,9 @@
 "phoneComposerTooLong" = "Ce message est trop long. Raccourcissez-le avant de l’envoyer.";
 "phoneComposerWorking" = "En cours…";
 "phoneComposerYou" = "Vous";
+"phoneComputerAddLine" = "Rejoignez-en un de plus et gardez celui-ci.";
+"phoneComputerAddTitle" = "Ajouter un autre ordinateur";
+"phoneComputerAnswers" = "Répond maintenant";
 "phoneComputerFirstMateHere" = "Votre second vit ici.";
 "phoneComputerForgetAsk" = "Oublier cet ordinateur ?";
 "phoneComputerForgetButton" = "Oublier cet ordinateur";
@@ -1394,6 +1397,10 @@
 "phoneComputerLeaveExplain" = "Cet appareil cesse de l’afficher. Pour revenir, scannez un nouveau code.";
 "phoneComputerLeaveHeading" = "Quitter";
 "phoneComputerLeaveWarning" = "Cet appareil oublie l’ordinateur. Pour revenir, utilisez un nouveau lien.";
+"phoneComputerLooking" = "Vérification…";
+"phoneComputerNotAnswering" = "Ne répond pas d’ici";
+"phoneComputerOthersHeading" = "Vos autres ordinateurs";
+"phoneComputerShowHint" = "Affiche cet ordinateur";
 "phoneComputerTitle" = "Votre ordinateur";
 "phoneCrewSummaryOpenTask" = "Ouvrir la tâche";
 "phoneFormatDays" = "%1$@ j";
@@ -1469,9 +1476,10 @@
 "phoneModelForgotDamaged" = "Infinitary a oublié une liaison endommagée. Utilisez un nouveau lien pour rejoindre de nouveau votre ordinateur.";
 "phoneModelKeepAddressFailed" = "Impossible de conserver la nouvelle adresse de cet ordinateur.";
 "phoneModelKeepFingerprintFailed" = "Impossible de conserver l’empreinte de cet ordinateur. Réessayez.";
-"phoneModelLeaveBeforeJoining" = "Quittez ou oubliez votre ordinateur enregistré avant d’en rejoindre un autre.";
 "phoneModelReadSavedRetry" = "Impossible de lire l’ordinateur enregistré sur ce téléphone. Réessayez.";
 "phoneModelReadSavedUnlock" = "Impossible de lire l’ordinateur enregistré sur ce téléphone. Déverrouillez votre téléphone et réessayez.";
+"phoneModelRemovedShowingNext" = "%1$@ a retiré cet appareil. Votre ordinateur suivant s’affiche.";
+"phoneModelShowFailed" = "Impossible de passer à cet ordinateur. Réessayez.";
 "phoneNoticeDismiss" = "Ignorer";
 "phoneNoticeDismissHint" = "Ignore cet avis";
 "phoneNoticeLabel" = "%1$@ : %2$@";

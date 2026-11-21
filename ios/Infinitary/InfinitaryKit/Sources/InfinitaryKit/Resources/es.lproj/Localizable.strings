@@ -1380,6 +1380,9 @@
 "phoneComposerTooLong" = "Este mensaje es demasiado largo. Acórtalo antes de enviarlo.";
 "phoneComposerWorking" = "Trabajando…";
 "phoneComposerYou" = "Tú";
+"phoneComputerAddLine" = "Únete a una más y conserva esta.";
+"phoneComputerAddTitle" = "Agregar otra computadora";
+"phoneComputerAnswers" = "Responde ahora";
 "phoneComputerFirstMateHere" = "Tu primer oficial vive aquí.";
 "phoneComputerForgetAsk" = "¿Olvidar esta computadora?";
 "phoneComputerForgetButton" = "Olvidar esta computadora";
@@ -1394,6 +1397,10 @@
 "phoneComputerLeaveExplain" = "Este dispositivo deja de mostrarla. Para volver, escanea un código nuevo.";
 "phoneComputerLeaveHeading" = "Salir";
 "phoneComputerLeaveWarning" = "Este dispositivo olvida la computadora. Para volver, usa un enlace nuevo.";
+"phoneComputerLooking" = "Comprobando…";
+"phoneComputerNotAnswering" = "No responde desde aquí";
+"phoneComputerOthersHeading" = "Tus otras computadoras";
+"phoneComputerShowHint" = "Muestra esta computadora";
 "phoneComputerTitle" = "Tu computadora";
 "phoneCrewSummaryOpenTask" = "Abrir tarea";
 "phoneFormatDays" = "%1$@ d";
@@ -1469,9 +1476,10 @@
 "phoneModelForgotDamaged" = "Infinitary olvidó una conexión dañada. Usa un enlace nuevo para volver a unirte a tu computadora.";
 "phoneModelKeepAddressFailed" = "No se pudo guardar la nueva dirección de esta computadora.";
 "phoneModelKeepFingerprintFailed" = "No se pudo guardar la huella digital de esta computadora. Vuelve a intentarlo.";
-"phoneModelLeaveBeforeJoining" = "Sal de tu computadora guardada u olvídala antes de unirte a otra.";
 "phoneModelReadSavedRetry" = "No se pudo leer la computadora guardada en este teléfono. Vuelve a intentarlo.";
 "phoneModelReadSavedUnlock" = "No se pudo leer la computadora guardada en este teléfono. Desbloquea tu teléfono y vuelve a intentarlo.";
+"phoneModelRemovedShowingNext" = "%1$@ quitó este dispositivo. Se muestra tu siguiente computadora.";
+"phoneModelShowFailed" = "No se pudo cambiar a esa computadora. Inténtalo de nuevo.";
 "phoneNoticeDismiss" = "Descartar";
 "phoneNoticeDismissHint" = "Descarta este aviso";
 "phoneNoticeLabel" = "%1$@: %2$@";

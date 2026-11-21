@@ -120,6 +120,10 @@ export const PHONE_PARTS = [
   // to its stand-in relay, which the simulator delivers with the relay's words (a simulated push runs no
   // notification part), to the tap that brings Infinitary back.
   { name: "push", test: "testCardPushes", photos: false },
+  // INF-5265: one phone keeping two computers, the test home and a second home in a process of its own
+  // (tests/helpers/phoneSecondHome.ts): the bar names the one shown, the sheet marks the other and shows it by keys,
+  // a push from the one not shown shows it with its card, and leaving one shows the other.
+  { name: "homes", test: "testSeveralComputers", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them. INF-4326 (INF-4241's speed-ups):

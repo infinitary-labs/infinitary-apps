@@ -1380,6 +1380,9 @@
 "phoneComposerTooLong" = "このメッセージは長すぎます。短くしてから送信してください。";
 "phoneComposerWorking" = "作業中…";
 "phoneComposerYou" = "あなた";
+"phoneComputerAddLine" = "このコンピューターはそのままで、もう1台に接続します。";
+"phoneComputerAddTitle" = "別のコンピューターを追加";
+"phoneComputerAnswers" = "いま応答あり";
 "phoneComputerFirstMateHere" = "一等航海士はここにいます。";
 "phoneComputerForgetAsk" = "このコンピューターの登録を解除しますか？";
 "phoneComputerForgetButton" = "このコンピューターの登録を解除";
@@ -1394,6 +1397,10 @@
 "phoneComputerLeaveExplain" = "このデバイスにはコンピューターが表示されなくなります。戻るには新しいコードをスキャンしてください。";
 "phoneComputerLeaveHeading" = "離脱";
 "phoneComputerLeaveWarning" = "このデバイスからこのコンピューターの情報が消去されます。戻るには新しいリンクを使ってください。";
+"phoneComputerLooking" = "確認中…";
+"phoneComputerNotAnswering" = "ここからは応答なし";
+"phoneComputerOthersHeading" = "ほかのコンピューター";
+"phoneComputerShowHint" = "このコンピューターを表示します";
 "phoneComputerTitle" = "コンピューター";
 "phoneCrewSummaryOpenTask" = "タスクを開く";
 "phoneFormatDays" = "%1$@日";
@@ -1469,9 +1476,10 @@
 "phoneModelForgotDamaged" = "Infinitary は破損した接続を消去しました。新しいリンクを使って、もう一度コンピューターに接続してください。";
 "phoneModelKeepAddressFailed" = "このコンピューターの新しいアドレスを保存できませんでした。";
 "phoneModelKeepFingerprintFailed" = "このコンピューターのフィンガープリントを保存できませんでした。もう一度お試しください。";
-"phoneModelLeaveBeforeJoining" = "別のコンピューターに接続する前に、保存済みのコンピューターから離脱するか、登録を解除してください。";
 "phoneModelReadSavedRetry" = "このスマートフォンに保存されたコンピューターを読み込めませんでした。もう一度お試しください。";
 "phoneModelReadSavedUnlock" = "このスマートフォンに保存されたコンピューターを読み込めませんでした。スマートフォンのロックを解除して、もう一度お試しください。";
+"phoneModelRemovedShowingNext" = "%1$@ がこのデバイスを削除しました。次のコンピューターを表示しています。";
+"phoneModelShowFailed" = "そのコンピューターに切り替えられませんでした。もう一度お試しください。";
 "phoneNoticeDismiss" = "閉じる";
 "phoneNoticeDismissHint" = "この通知を閉じます";
 "phoneNoticeLabel" = "%1$@：%2$@";

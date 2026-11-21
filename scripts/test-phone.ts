@@ -336,12 +336,20 @@ const recording = {
     writeFileSync(file, JSON.stringify(payload));
     await run("xcrun", ["simctl", "push", simulator, phoneBundle, file]);
   },
+  // INF-5265's homes part: the phone's own network going and coming back, which the app's stand-in path monitor reads
+  // as the system's (PhoneModel's `standInNetwork`); a test cannot change the simulator's own network.
+  phonePath: async (usable: boolean) => {
+    if (!simulator) throw new Error("No owned simulator exists");
+    const name = `com.getinfinitary.infinitary.test.path-${usable ? "back" : "lost"}`;
+    await run("xcrun", ["simctl", "spawn", simulator, "notifyutil", "-p", name]);
+  },
   appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme, phoneDisplayDeadline())).confirmed }),
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");
     const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, phoneBundle, "data"])).trim());
     if (!container.split("/").includes(simulator)) throw new Error("The app container is not on this run's simulator");
-    const saved = join(container, "Library", "Application Support", "JoinedMac.json");
+    // INF-5265: the phone keeps its computers in one record (docs/ios.md, "Saved records").
+    const saved = join(container, "Library", "Application Support", "KeptMacs.json");
     const bytes = readFileSync(saved);
     // Reproduce a truncated version of the actual saved record, never another simulator's data.
     writeFileSync(saved, bytes.subarray(0, bytes.length - 8));

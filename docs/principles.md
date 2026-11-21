@@ -117,3 +117,11 @@ It covers every surface the app has and every one it adds.
 A surface reaches a service outside your projects only through `IntegrationsService`, as one more caller with the same list, show and call, the same rule per action in Settings, and the same approval card.
 A new kind is a binding the service serves, and every surface reaches it with no code of its own for that kind.
 No surface keeps a sign-in or a key of its own, declares a host it may reach, or asks for approval its own way: a panel's manifest names the integrations it uses and why, never a host or a key (`docs/integrations.md`, "How a panel reaches them").
+
+## The iOS app adds no feature the desktop app lacks (captain, 2026-10-25)
+
+The iOS app may adapt how things work and where they appear, but anything new needs a deliberate design decision the captain approves first (`docs/ios.md`).
+An approved exception is recorded here with its decision.
+
+- **Keeping several computers on one phone (INF-5264's plan, INF-5265).**
+  The captain chose "The phone only, recorded as an approved exception to that rule": the phone keeps every computer it joined and switches between them, which the desktop app does not do, because a person's computers behind separate VPNs cannot see each other and one phone is the device that travels between them (`docs/ios.md`, "Several computers").

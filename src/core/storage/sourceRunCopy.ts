@@ -29,7 +29,8 @@ export const SOURCE_RUN_COPY_FILES = [
 
 /**
  * Keeps the copy, before anything opens the record, and answers where it
- * is; null when a run from source kept one before. The copy is made beside
+ * is; null, keeping nothing, when a run from source kept one before or the
+ * folder holds no record yet. The copy is made beside
  * its final place and moved there whole, so a start that ends partway keeps
  * nothing and the next start copies again. `copy` is `privateCopy`, which
  * clones where the disk can.
@@ -40,6 +41,10 @@ export function keepRecordBeforeSourceRun(
 ): string | null {
   const kept = join(dataDir, SOURCE_RUN_COPY_DIR);
   if (existsSync(kept)) return null;
+  // No record yet, as on a fresh computer or a view of another home: there
+  // is nothing to go back to, and the first record this folder gets is kept
+  // by the run that first finds it.
+  if (!existsSync(join(dataDir, SOURCE_RUN_COPY_FILES[0]))) return null;
   const partial = `${kept}.partial`;
   rmSync(partial, { recursive: true, force: true });
   mkdirSync(partial, { recursive: true, mode: 0o700 });

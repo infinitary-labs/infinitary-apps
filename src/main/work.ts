@@ -22,7 +22,6 @@ import { createTaskBrowserHost } from "./host/taskBrowser";
 import { createMediaProbe, createTypefaceProbe } from "./mediaProbe";
 import { startOwnDisplay } from "./ownDisplay";
 import { openWindowOnReopen } from "./runReopen";
-import { packagedFlavor, readPackageJsonAt } from "./userDataDir";
 import { windowsStdin } from "./windowsStdin";
 import { workContext } from "./workContext";
 
@@ -218,7 +217,7 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
     ? undefined
     : nativeStandbyLock({
         platform: hostPlatform(),
-        flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
+        flavor: place.flavor,
       });
 
   void runCli(args, {

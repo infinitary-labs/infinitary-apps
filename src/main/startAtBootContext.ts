@@ -21,7 +21,7 @@ import {
   startEntryInPlace,
   userUnitsDir,
 } from "./startAtBoot";
-import { packagedFlavor, readPackageJsonAt } from "./userDataDir";
+import { ownRunFlavor } from "./workContext";
 
 /**
  * What `start-at-boot` and `help` read of this app and this user (./startAtBoot.ts).
@@ -85,7 +85,7 @@ export async function answerBootCommand(
     const found = path || findOnPath(command, hostEnv());
     return found ? systemSystemctl(found) : null;
   };
-  const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
+  const flavor = ownRunFlavor();
   const platform = hostPlatform();
   return runStartAtBoot(words, {
     platform,
@@ -125,7 +125,7 @@ export function ownStartEntry(dataDir: string): StartEntry {
           ? "windows-task"
           : null;
   }
-  const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
+  const flavor = ownRunFlavor();
   return startEntryInPlace({
     platform,
     unitsDir: userUnitsDir(process.env, homedir()),

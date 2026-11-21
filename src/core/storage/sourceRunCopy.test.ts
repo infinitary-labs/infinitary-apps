@@ -69,4 +69,21 @@ describe("the copy a run from source keeps before it opens the person's record",
     ]);
     expect(readdirSync(join(kept, "knowledge"))).toContain("knowledge.db");
   });
+
+  // The review of piece 1 (F1): an empty first copy must not stand in for the
+  // first real record a folder gets later.
+  it("keeps nothing for a folder with no record yet, and keeps the first record it gets", () => {
+    const dir = scratchDir("infinitary-source-copy-empty-");
+    expect(keepRecordBeforeSourceRun(dir, copyFileSync)).toBeNull();
+    expect(readdirSync(dir)).toEqual([]);
+    const db = openDatabase(dir);
+    seedTask(new TaskService({ db, strict: true }), {
+      id: "later-task",
+      title: "Moved in later",
+      status: "completed",
+    });
+    db.close();
+    const kept = keepRecordBeforeSourceRun(dir, copyFileSync);
+    expect(kept && readdirSync(kept)).toContain("firstmate.db");
+  });
 });

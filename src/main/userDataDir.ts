@@ -84,6 +84,27 @@ export function runFlavor(input: {
 }
 
 /**
+ * Whether something isolates a run from source from the person's own
+ * folders: its data folder named (`INFINITARY_USER_DATA_DIR`, Chromium's
+ * `--user-data-dir`, or a folder a test handed the window) or its work folder
+ * named (`INFINITARY_HELPER_DATA_DIR`). Every name a run derives from its
+ * flavor - its folders, its background and run labels, its standby lock, the
+ * folder it looks for on another computer - reads `runFlavor` with this.
+ */
+export function sourceRunIsolated(input: {
+  env: Record<string, string | undefined>;
+  hasUserDataDirSwitch: boolean;
+  isolatedUserData?: string | undefined;
+}): boolean {
+  return (
+    Boolean(settingFrom(input.env, "HELPER_DATA_DIR")?.trim()) ||
+    Boolean(input.isolatedUserData) ||
+    Boolean(settingFrom(input.env, "USER_DATA_DIR")?.trim()) ||
+    input.hasUserDataDirSwitch
+  );
+}
+
+/**
  * A packaged build is the release unless its package.json carries the dev
  * stamp. An unreadable or unparseable file reads as the release: the
  * installed app must keep opening the folder it always has.

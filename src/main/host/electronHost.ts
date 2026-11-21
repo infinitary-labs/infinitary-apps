@@ -1,6 +1,6 @@
 import type { HostCapabilities } from "@core/host";
 import * as m from "@shared/i18n/messages.generated";
-import { userDataFolderFor } from "@shared/userDataFolders";
+import { type BuildFlavor, userDataFolderFor } from "@shared/userDataFolders";
 import { app, dialog, Notification, shell } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
 import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
@@ -65,6 +65,8 @@ export type ElectronHostOptions = {
   setAsideProcessPath?: string | undefined;
   /** The Linux autostart entry's name: this run's data folder's name (`startAtLoginFor`). */
   autostartName?: string | undefined;
+  /** The flavor of this run's folders (../workContext.ts `ownRunFlavor`), when the window knows it. */
+  flavor?: BuildFlavor | undefined;
   /** A run from source on the person's own data folder (`HostAppInfo.sourceOnOwnData`). */
   sourceOnOwnData?: boolean | undefined;
   /**
@@ -178,7 +180,9 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       userDataDir: app.getPath("userData"),
       appDir: app.getAppPath(),
       resourcesDir: process.resourcesPath,
-      flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
+      flavor:
+        options.flavor ??
+        (app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev"),
       ...(options.sourceOnOwnData ? { sourceOnOwnData: true } : {}),
     },
     ...(options.frameLib ? { frameLib: options.frameLib } : {}),

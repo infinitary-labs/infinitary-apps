@@ -1011,6 +1011,7 @@ export async function startApp(
           ? { autostartName: basename(userDataChoice.dir) }
           : {}),
         sourceOnOwnData,
+        flavor: work.place.flavor,
         frameLib,
         keychainProcessPath: join(mainDir, "keychainProcessMain.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),

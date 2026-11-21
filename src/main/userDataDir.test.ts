@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { chooseUserDataDir, folderSpellingFor, runFlavor, type UserDataInput } from "./userDataDir";
+import {
+  chooseUserDataDir,
+  folderSpellingFor,
+  runFlavor,
+  sourceRunIsolated,
+  type UserDataInput,
+} from "./userDataDir";
 
 const appData = "/Users/someone/Library/Application Support";
 
@@ -140,5 +146,33 @@ describe("runFlavor", () => {
         "release",
       );
     }
+  });
+});
+
+// The review of piece 1 (F3): every name a run derives from its flavor - its
+// run label, its standby lock, the folder it looks for on another computer -
+// reads one isolation rule, so pnpm dev on the person's data never names the
+// development folders while a test's isolated run never names the installed app's.
+describe("sourceRunIsolated", () => {
+  it("reads a plain pnpm dev as not isolated", () => {
+    expect(sourceRunIsolated({ env: {}, hasUserDataDirSwitch: false })).toBe(false);
+  });
+
+  it("reads a named data folder, work folder, switch or test folder as isolated", () => {
+    for (const env of [
+      { INFINITARY_USER_DATA_DIR: "/tmp/scratch" },
+      { INFINITARY_HELPER_DATA_DIR: "/tmp/work" },
+    ])
+      expect(sourceRunIsolated({ env, hasUserDataDirSwitch: false })).toBe(true);
+    expect(sourceRunIsolated({ env: {}, hasUserDataDirSwitch: true })).toBe(true);
+    expect(
+      sourceRunIsolated({ env: {}, hasUserDataDirSwitch: false, isolatedUserData: "/tmp/scratch" }),
+    ).toBe(true);
+  });
+
+  it("reads a blank setting as not set", () => {
+    expect(
+      sourceRunIsolated({ env: { INFINITARY_USER_DATA_DIR: "  " }, hasUserDataDirSwitch: false }),
+    ).toBe(false);
   });
 });

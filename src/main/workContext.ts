@@ -15,8 +15,9 @@ import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import { findOnPath } from "@core/userBin";
 import { SETTING_PREFIXES, settingFrom } from "@shared/envSettings";
+import type { BuildFlavor } from "@shared/userDataFolders";
 import { app } from "electron";
-import { folderSpellingFor, readPackageJsonAt, runFlavor } from "./userDataDir";
+import { folderSpellingFor, readPackageJsonAt, runFlavor, sourceRunIsolated } from "./userDataDir";
 
 /**
  * Where this user's work lives and how its background starts
@@ -57,6 +58,25 @@ export type WorkContext = {
 };
 
 /**
+ * The flavor of this run's folders and every name derived from them - its
+ * background and run labels, its standby lock, the folder it looks for on
+ * another computer. A run from source opens the person's own folders, as the
+ * window does (./userDataDir.ts `runFlavor`), unless its data or its work is
+ * isolated: then it keeps the development flavor's folders and names.
+ */
+export function ownRunFlavor(isolatedUserData?: string): BuildFlavor {
+  return runFlavor({
+    packaged: app.isPackaged,
+    readAppPackageJson: readPackageJsonAt(app.getAppPath()),
+    isolated: sourceRunIsolated({
+      env: process.env,
+      hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
+      isolatedUserData,
+    }),
+  });
+}
+
+/**
  * The work context. `isolatedUserData` is the app's own userData folder
  * when a test isolated it: then the work folder sits inside it unless the
  * test named one, and nothing is set up in the background unless the test
@@ -65,18 +85,7 @@ export type WorkContext = {
 export function workContext(isolatedUserData?: string): WorkContext {
   const env = process.env;
   const named = !app.isPackaged && Boolean(settingFrom(env, "HELPER_DATA_DIR")?.trim());
-  // A run from source opens the person's own folders, as the window does
-  // (./userDataDir.ts `runFlavor`), unless its data or its work is
-  // isolated: then it keeps the development flavor's folders and labels.
-  const flavor = runFlavor({
-    packaged: app.isPackaged,
-    readAppPackageJson: readPackageJsonAt(app.getAppPath()),
-    isolated:
-      named ||
-      Boolean(isolatedUserData) ||
-      Boolean(settingFrom(env, "USER_DATA_DIR")?.trim()) ||
-      app.commandLine.hasSwitch("user-data-dir"),
-  });
+  const flavor = ownRunFlavor(isolatedUserData);
   const platform = hostPlatform();
   // Whose folders it reads: this build's own, or a development run's
   // stand-in for Infinitary's, which rehearses the one-time move of its work

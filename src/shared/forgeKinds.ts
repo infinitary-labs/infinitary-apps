@@ -174,8 +174,7 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
       "read:pipeline:bitbucket",
       "write:pipeline:bitbucket",
     ],
-    // Batches of a person's own on Bitbucket come with its merge queue, a later change.
-    batches: false,
+    batches: true,
   },
 };
 

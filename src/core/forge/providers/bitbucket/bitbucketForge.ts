@@ -1,4 +1,4 @@
-import type { MergeWay } from "@shared/batches";
+import type { MergeWay, MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { branchComparePage, forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
@@ -6,7 +6,7 @@ import type { PresentationDestination } from "@shared/presentationDestination";
 import type { NamingRule } from "@shared/runbooks";
 import { requireNamed } from "../../../workspace/naming";
 import type { ForgeApi } from "../../api";
-import type { ForgePullComment } from "../../forge";
+import type { ForgeComment, ForgePullComment } from "../../forge";
 import {
   checkTimes,
   type Forge,
@@ -31,8 +31,13 @@ import {
   nextBitbucketPagePath,
   parseBitbucketApiRequest,
 } from "./api";
-import { BitbucketClient, type BitbucketOptions, BitbucketRefusal } from "./client";
+import { BitbucketClient, type BitbucketOptions, BitbucketRefusal, sentNothing } from "./client";
 import { readBitbucketPullComments } from "./comments";
+import {
+  BitbucketContributions,
+  bitbucketRepositoryNumber,
+  repositoryPathOf,
+} from "./contributions";
 import { BitbucketProjects } from "./projects";
 import { BitbucketWorkflows } from "./workflows";
 
@@ -42,7 +47,9 @@ import { BitbucketWorkflows } from "./workflows";
  * account (`./signIn.ts`). A proposed change is a pull request onto the
  * main branch, named `#N`; its checks are the build statuses on the
  * change's head, which every check service posts there, Bitbucket
- * Pipelines included; putting it in is Bitbucket's squash merge.
+ * Pipelines included; putting it in is Bitbucket's squash merge, or for
+ * a batch of several its rebase merge or a merge commit, as the main
+ * branch's merge strategies allow (`mergeWays`).
  *
  * Bitbucket's merge takes no version, so the app reads the branch just
  * before the merge and sends nothing if it moved; after the merge it reads
@@ -54,8 +61,14 @@ import { BitbucketWorkflows } from "./workflows";
  * The crew reaches Bitbucket's REST API through the gateway (`api`, its
  * policy in `./api.ts`), reads Pipelines through `workflows`, and the
  * comment and main-failure wakes read through `pullComments` and
- * `branchChecks`. A contributor's fork, batches and Bitbucket's own merge
- * queue come later; this forge refuses a fork's merge.
+ * `branchChecks`. A branch with Bitbucket's own merge queue answers a
+ * merge with 202 and takes the pull request into the queue: that reads as
+ * queued (`MergeAnswer.queued`), and the pull request's `queued` flag is
+ * where it stands (`inHostQueue`). A person who cannot push contributes
+ * from their fork (`contributions`, `location.source`): the pull request
+ * opens on this repository from the fork, its branch and checks are read
+ * in the fork, and this forge refuses a fork's merge, which is the
+ * maintainers'.
  */
 
 export type BitbucketForgeOptions = BitbucketOptions & {
@@ -172,6 +185,14 @@ export class BitbucketForge implements Forge {
     return this.projects.findProject(fullName);
   }
 
+  /** The person's fork of this repository, read and made with the same sign-in. */
+  get contributions(): BitbucketContributions | undefined {
+    const { owner, name } = this.location;
+    return owner && name
+      ? new BitbucketContributions(this.host, owner, name, this.client)
+      : undefined;
+  }
+
   /**
    * The story's place: the repository and who may read it. Bitbucket keeps
    * no pictures in a description, so every story's media stays on its card.
@@ -184,11 +205,8 @@ export class BitbucketForge implements Forge {
       full_name?: unknown;
       is_private?: unknown;
     }>(`${this.repositoryPath()}?fields=uuid,full_name,is_private`);
-    const uuid = typeof repository?.uuid === "string" ? repository.uuid : "";
-    const digits = uuid.replace(/[^0-9a-f]/gi, "").slice(0, 13);
-    const projectId = digits.length === 13 ? Number.parseInt(digits, 16) : Number.NaN;
-    if (!Number.isSafeInteger(projectId) || projectId <= 0)
-      throw unreadableError(this.place, "the repository's identity");
+    const projectId = bitbucketRepositoryNumber(repository?.uuid);
+    if (!projectId) throw unreadableError(this.place, "the repository's identity");
     return {
       host: this.host,
       projectId,
@@ -219,12 +237,6 @@ export class BitbucketForge implements Forge {
     draft?: boolean;
     base?: string;
   }): Promise<ForgeChange> {
-    if (this.location.source)
-      throw new ForgeWriteError(
-        "failed",
-        "unsupported",
-        `${this.place} contributions from a fork are not supported yet; no pull request was sent.`,
-      );
     const target =
       input.base ??
       (await this.defaultBranch().catch((error: unknown) => {
@@ -240,7 +252,13 @@ export class BitbucketForge implements Forge {
       {
         title: input.title,
         description: input.body,
-        source: { branch: { name: input.branch } },
+        source: {
+          branch: { name: input.branch },
+          // A contribution's branch is in the person's fork.
+          ...(this.location.source
+            ? { repository: { full_name: this.location.source.fullName } }
+            : {}),
+        },
         destination: { branch: { name: target } },
         close_source_branch: false,
         ...(input.draft ? { draft: true } : {}),
@@ -278,7 +296,7 @@ export class BitbucketForge implements Forge {
     let found: { target?: { hash?: unknown } } | null;
     try {
       found = await this.read<{ target?: { hash?: unknown } } | null>(
-        `${this.repositoryPath()}/refs/branches/${encodeURIComponent(branch)}?fields=target.hash`,
+        `${this.sourcePath()}/refs/branches/${encodeURIComponent(branch)}?fields=target.hash`,
       );
     } catch (caught) {
       if (caught instanceof ForgeError && caught.failure !== "not-found") throw caught;
@@ -335,12 +353,16 @@ export class BitbucketForge implements Forge {
     );
     if (!Array.isArray(listed?.values)) throw unreadableError(this.place, "its pull requests");
     const own = `${this.location.owner}/${this.location.name}`.toLowerCase();
-    // A fork's pull request from a branch of the same name is not this branch's.
+    const from = this.location.source?.fullName.toLowerCase() ?? own;
+    // Another repository's pull request from a branch of the same name is
+    // not this branch's: a contribution's comes from the person's fork,
+    // every other from this repository.
     const open = listed.values.find(
       (request) =>
         request.source?.branch?.name === branch &&
-        (request.source?.repository?.full_name === undefined ||
-          request.source.repository.full_name.toLowerCase() === own),
+        (request.source?.repository?.full_name === undefined
+          ? !this.location.source
+          : request.source.repository.full_name.toLowerCase() === from),
     );
     return open ? this.changeOf(open) : null;
   }
@@ -355,7 +377,7 @@ export class BitbucketForge implements Forge {
     const head = movedPast ?? change.headSha;
     const items: ForgeCheck[] = [];
     let link: string | undefined =
-      `${this.repositoryPath()}/commit/${encodeURIComponent(head)}/statuses?pagelen=${PAGE_LENGTH}`;
+      `${this.sourcePath()}/commit/${encodeURIComponent(head)}/statuses?pagelen=${PAGE_LENGTH}`;
     for (let page = 0; link && page < 5; page++) {
       const read: { values?: StatusJson[]; next?: string } | null = await this.read(link);
       if (!Array.isArray(read?.values)) throw unreadableError(this.place, `the checks on ${head}`);
@@ -385,19 +407,53 @@ export class BitbucketForge implements Forge {
   }
 
   /**
+   * The merges the main branch allows, from its own merge strategies:
+   * a squash, a rebase merge (`rebase_merge`, which keeps each commit) or a
+   * merge commit. The fast-forward strategies are none of them, so a branch
+   * that allows only those allows no merge the app sends.
+   */
+  async mergeWays(): Promise<MergeWays> {
+    const branch = await this.defaultBranch();
+    const read = await this.read<{ merge_strategies?: unknown } | null>(
+      `${this.repositoryPath()}/refs/branches/${encodeURIComponent(branch)}?fields=merge_strategies`,
+    );
+    const strategies = read?.merge_strategies;
+    if (!Array.isArray(strategies)) throw unreadableError(this.place, "the main branch's merges");
+    return {
+      squash: strategies.includes(MERGE_STRATEGY.squash),
+      rebase: strategies.includes(MERGE_STRATEGY.rebase),
+      merge: strategies.includes(MERGE_STRATEGY.merge),
+    };
+  }
+
+  /** Whether Bitbucket's merge queue holds the pull request now: its own `queued` flag. */
+  async inHostQueue(number: number): Promise<boolean> {
+    return (await this.pullRequest(number)).queued === true;
+  }
+
+  /**
    * Bitbucket's merge names no version, so this reads the branch first and
    * sends nothing when it moved past `headSha`. Once merged, the answer
    * names the version Bitbucket merged (`mergedHead`): a push that landed
-   * between the read and the merge is told, never hidden or retried.
+   * between the read and the merge is told, never hidden or retried. A
+   * branch with a merge queue answers 202 and takes the pull request into
+   * the queue, which reads as queued; nothing is sent again.
    */
   async putIn(
     change: ForgeChange,
     headSha: string,
-    way: MergeWay = "squash",
+    way: MergeWay | undefined,
     beforeSend?: () => void,
   ): Promise<MergeAnswer | undefined> {
     if (this.location.source) throw new ForgeError("permission", CONTRIBUTION_MERGE_REFUSAL);
     const id = numbered(change, this.place);
+    // The merge is read from the branch's strategies right before the call, never assumed.
+    if (!way)
+      throw new ForgeError(
+        "refused",
+        `No merge strategy was read for #${id} on ${this.place}, so nothing was sent.`,
+        true,
+      );
     const title = requireNamed(
       change.title ?? "",
       // i18n-exempt: names the request in an error served to the crewmate
@@ -424,8 +480,8 @@ export class BitbucketForge implements Forge {
         {
           type: "pullrequest",
           message: body ? `${title}\n\n${body}` : title,
-          // A batch keeps one commit per change; anything else is one squashed commit.
-          merge_strategy: way === "squash" ? "squash" : "merge_commit",
+          // The merge the caller chose from the branch's strategies: a squash, a rebase or a merge commit.
+          merge_strategy: MERGE_STRATEGY[way],
           close_source_branch: false,
         },
         () => {
@@ -440,7 +496,18 @@ export class BitbucketForge implements Forge {
       // A ref moved while Bitbucket merged: nothing merged, and the next read says why.
       if (caught instanceof BitbucketRefusal && caught.status === 409)
         throw new ForgeBaseMoved(caught.message);
-      throw caught;
+      // Bitbucket's own refusal (a 400, such as a queue not taking entries)
+      // merged nothing; anything else after the request left is an outcome
+      // not yet known, never a failure, and nothing is sent again.
+      if (
+        caught instanceof ForgeAllowanceSpent ||
+        (caught instanceof ForgeError && caught.failure !== "transient")
+      )
+        throw caught;
+      throw new ForgeMergeUnconfirmed(
+        // i18n-exempt: served to the crewmate in the merge answer, stays English
+        `${this.place} was asked to merge #${id} and its answer could not be read; nothing is sent again until a read shows how it ended.`,
+      );
     }
     // Bitbucket's own reference to a merge still running (a 202), which a
     // later read asks how it ended: only one its Location names under this
@@ -460,9 +527,13 @@ export class BitbucketForge implements Forge {
     let merged = answer.status === 202 ? null : (answer.body as PullRequestJson | null);
     let sha: string | undefined;
     let mergedHead: string | undefined;
+    let queued = false;
     try {
       // Only an answer naming this pull request confirms its merge.
       if (merged?.state !== "MERGED" || merged.id !== id) merged = await this.pullRequest(id);
+      // The branch's merge queue took it: Bitbucket merges or removes it later.
+      if (answer.status === 202 && merged.state === "OPEN")
+        queued = merged.queued === true || (task ? await this.mergeTaskQueued(task) : false);
       if (merged.state === "MERGED") {
         sha = await this.fullCommit(merged.merge_commit?.hash).catch(() => undefined);
         // The version merged is read, never assumed.
@@ -472,6 +543,7 @@ export class BitbucketForge implements Forge {
       // i18n-exempt: served to the crewmate in the merge answer, stays English
       throw unknown("its answer could not be read");
     }
+    if (queued) return { queued: true };
     // i18n-exempt: served to the crewmate in the merge answer, stays English
     if (merged.state !== "MERGED") throw unknown("has not finished it");
     // i18n-exempt: served to the crewmate in the merge answer, stays English
@@ -489,17 +561,106 @@ export class BitbucketForge implements Forge {
    * anything else, pending and an unknown task included, is not refused.
    */
   async mergeTaskRefused(number: number, task: string): Promise<boolean> {
-    const kept = /^(\d+)\/(.+)$/.exec(task);
-    if (!kept || Number(kept[1]) !== number) return false;
+    const path = this.mergeTaskPath(task, number);
+    if (!path) return false;
     try {
-      await this.client.request(
-        "GET",
-        `${this.pullRequestPath(number)}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`,
-      );
+      await this.client.request("GET", path);
       return false;
     } catch (caught) {
       if (caught instanceof BitbucketRefusal && caught.status === 400) return true;
       throw caught;
+    }
+  }
+
+  /**
+   * Whether Bitbucket's word on a merge it took with a 202 says its merge
+   * queue holds the pull request: a pending task with the queue's entry.
+   */
+  private async mergeTaskQueued(task: string): Promise<boolean> {
+    const path = this.mergeTaskPath(task);
+    if (!path) return false;
+    const status = await this.read<{
+      task_status?: unknown;
+      queued_pullrequest?: unknown;
+    } | null>(path);
+    return status?.task_status === "PENDING" && !!status.queued_pullrequest;
+  }
+
+  /** The files one commit changes, against its first parent, for a batch's line comments. */
+  async commitFiles(sha: string): Promise<string[]> {
+    const files = new Set<string>();
+    let link: string | undefined =
+      `${this.repositoryPath()}/diffstat/${encodeURIComponent(sha)}?pagelen=${PAGE_LENGTH}&fields=next,values.old.path,values.new.path`;
+    for (let page = 0; link && page < 10; page++) {
+      const read: {
+        values?: { old?: { path?: unknown } | null; new?: { path?: unknown } | null }[];
+        next?: string;
+      } | null = await this.read(link);
+      if (!Array.isArray(read?.values))
+        throw unreadableError(this.place, `the files commit ${sha} changes`);
+      for (const entry of read.values)
+        for (const path of [entry.new?.path, entry.old?.path])
+          if (typeof path === "string" && path) files.add(path);
+      link = typeof read.next === "string" && read.next ? read.next : undefined;
+    }
+    if (link) throw unreadableError(this.place, `every file commit ${sha} changes`);
+    return [...files];
+  }
+
+  /**
+   * The signed-in account's comments on the pull request that open with
+   * `marker`, oldest first: the app's own comments that carry a batch's
+   * stories past its description. A deleted comment is left out.
+   */
+  async ownComments(number: number, marker: string): Promise<ForgeComment[]> {
+    const viewer = await this.viewerAccount();
+    const found: ForgeComment[] = [];
+    let link: string | undefined =
+      `${this.pullRequestPath(number)}/comments?pagelen=${PAGE_LENGTH}&sort=id&fields=next,values.id,values.deleted,values.user.account_id,values.content.raw,values.inline,values.parent.id`;
+    for (let page = 0; link && page < 10; page++) {
+      const read: {
+        values?: {
+          id?: unknown;
+          deleted?: boolean;
+          user?: { account_id?: unknown } | null;
+          content?: { raw?: unknown } | null;
+          inline?: unknown;
+          parent?: unknown;
+        }[];
+        next?: string;
+      } | null = await this.read(link);
+      if (!Array.isArray(read?.values))
+        throw unreadableError(this.place, `the comments on pull request #${number}`);
+      for (const comment of read.values)
+        if (
+          typeof comment.id === "number" &&
+          comment.deleted !== true &&
+          !comment.inline &&
+          !comment.parent &&
+          comment.user?.account_id === viewer &&
+          typeof comment.content?.raw === "string" &&
+          comment.content.raw.startsWith(marker)
+        )
+          found.push({ id: comment.id, body: comment.content.raw });
+      link = typeof read.next === "string" && read.next ? read.next : undefined;
+    }
+    if (link) throw unreadableError(this.place, `every comment on pull request #${number}`);
+    return found;
+  }
+
+  async writeComment(number: number, body: string, id?: number): Promise<void> {
+    await this.client.request(
+      id === undefined ? "POST" : "PUT",
+      `${this.pullRequestPath(number)}/comments${id === undefined ? "" : `/${id}`}`,
+      { content: { raw: body } },
+    );
+  }
+
+  async deleteComment(number: number, id: number): Promise<void> {
+    try {
+      await this.client.request("DELETE", `${this.pullRequestPath(number)}/comments/${id}`);
+    } catch (caught) {
+      if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
     }
   }
 
@@ -676,7 +837,12 @@ export class BitbucketForge implements Forge {
 
   /** The pull request's head as a full commit id: Bitbucket names it by a short one. */
   private async headOf(request: PullRequestJson): Promise<string> {
-    const head = await this.fullCommit(request.source?.commit?.hash);
+    // A fork's pull request names a commit of the fork, which only the fork holds.
+    const from = request.source?.repository?.full_name;
+    const head = await this.fullCommit(
+      request.source?.commit?.hash,
+      from && /^[^/\s]+\/[^/\s]+$/.test(from) ? repositoryPathOf(from) : undefined,
+    );
     if (!head)
       throw new ForgeError(
         "transient",
@@ -686,11 +852,14 @@ export class BitbucketForge implements Forge {
   }
 
   /** A commit's full id from the short one Bitbucket gives, or undefined for none. */
-  private async fullCommit(hash: string | undefined | null): Promise<string | undefined> {
+  private async fullCommit(
+    hash: string | undefined | null,
+    repository = this.repositoryPath(),
+  ): Promise<string | undefined> {
     if (!hash || !/^[0-9a-f]{7,64}$/.test(hash)) return undefined;
     if (isFullCommitId(hash)) return hash;
     const commit = await this.read<{ hash?: unknown } | null>(
-      `${this.repositoryPath()}/commit/${encodeURIComponent(hash)}?fields=hash`,
+      `${repository}/commit/${encodeURIComponent(hash)}?fields=hash`,
     );
     const full = commit?.hash;
     if (typeof full !== "string" || !isFullCommitId(full) || !full.startsWith(hash))
@@ -735,6 +904,13 @@ export class BitbucketForge implements Forge {
     return `/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
   }
 
+  /** Where the change's branch lives: the person's fork for a contribution, otherwise this repository. */
+  private sourcePath(): string {
+    return this.location.source
+      ? repositoryPathOf(this.location.source.fullName)
+      : this.repositoryPath();
+  }
+
   /**
    * The merge task a 202's Location names (`.../repositories/<workspace>/<name>/pullrequests/<N>/merge/task-status/<task>`),
    * kept as `<N>/<task>` only when it names this repository and pull request.
@@ -760,23 +936,29 @@ export class BitbucketForge implements Forge {
     return `${id}/${decodeURIComponent(task)}`;
   }
 
+  /** The status path of a kept `<N>/<task>` merge reference; with a number, only that pull request's. */
+  private mergeTaskPath(task: string, number?: number): string | undefined {
+    const kept = /^(\d+)\/(.+)$/.exec(task);
+    if (!kept || (number !== undefined && Number(kept[1]) !== number)) return undefined;
+    return `${this.pullRequestPath(Number(kept[1]))}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`;
+  }
+
   private pullRequestPath(id: number): string {
     return `${this.repositoryPath()}/pullrequests/${id}`;
   }
 }
 
+/** Bitbucket's name for each merge the app sends. */
+const MERGE_STRATEGY: Readonly<Record<MergeWay, string>> = {
+  squash: "squash",
+  rebase: "rebase_merge",
+  merge: "merge_commit",
+};
+
 function numbered(change: ForgeChange, place: string): number {
   if (change.number === undefined)
     throw new ForgeError("unsupported", `${change.branch} has no pull request on ${place}`);
   return change.number;
-}
-
-/** A failure before the merge request left: nothing was sent, which a caller may retry. */
-function sentNothing(caught: unknown): unknown {
-  if (caught instanceof ForgeError && (caught.beforeSend || caught instanceof ForgeAllowanceSpent))
-    return caught;
-  const message = caught instanceof Error ? caught.message : String(caught);
-  return new ForgeError(caught instanceof ForgeError ? caught.failure : "transient", message, true);
 }
 
 function unreadableError(place: string, what: string): ForgeError {

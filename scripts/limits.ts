@@ -183,6 +183,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/forge/providers/bitbucket/client.ts": {
     MAX_DOWNLOAD_REDIRECTS: physical("refused in words: redirected too many times; nothing further"),
   },
+  "src/core/forge/providers/bitbucket/contributions.ts": {
+    MAX_PAGES: physical("refused in words, nothing made; adding the fork as a project contributes from it"),
+  },
   "src/core/forge/providers/bitbucket/projects.ts": {
     MAX_PAGES: physical("listing says some were not read; a pasted link or workspace/name is looked up"),
   },

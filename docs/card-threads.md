@@ -572,3 +572,37 @@ Draft notes live with this window's reply draft; sent notes persist on the card'
 
 A view that lists the annotation change, the phone included, receives the structured note field; one without it receives readable Pointed at lines instead.
 The phone draws the same notes natively (`docs/ios.md`, "Cards on the phone").
+
+### Pointing at a place
+
+Feedback on visual work is about a place, so a note can mark one inside a picture.
+In the picture viewer, Point at in the header, or its key, marks the shown picture, on a card that takes a reply whose home lists the `card-note-places` change.
+With the box tool a drag draws a box and a press with no drag marks a spot; with the line tool the pointer draws one freehand line.
+A pen's pressure sets the line's width where the pointer reports it.
+Letting go opens the same note popover over the viewer, with the picture's caption as its excerpt, or its description where it has no caption.
+By keys, the arrows show a box in the picture's middle and move it, Shift with the arrows sizes it from its top left corner, and Enter opens the popover; a freehand line needs a pointer.
+Point at turns off once a mark is made, as it does on a part, and Escape turns it off and leaves the viewer open.
+A drawing opened in the viewer takes the same marks as a picture.
+
+A note's optional `place` holds the mark in the picture's own pixels: the picture's `width` and `height`, a `box` (a box of no size is a spot) or `lines`, and `picture`, which of its part's pictures it is where a part holds several.
+A line holds at most `NOTE_LINE_POINTS_MAX` points, thinned evenly as it is drawn, and a place at most `NOTE_PLACE_LINES_MAX` lines; `scripts/limits.ts` says what each rests on.
+The geometry and the one drawing of a mark live in `src/shared/cardNoteMarks.ts`, which reads no window, so the viewer, a queued note's small copy and the picture the author is sent draw the same marks.
+
+Marks are numbered in the order queued across the whole reply, and each number sits beside its mark.
+A queued note shows Not sent with a small copy of its picture and its numbered mark, and the viewer shows a picture's queued marks whenever it shows that picture.
+A press on a queued or sent note with a place opens the viewer at its mark, and Edit opens the viewer with the note's popover.
+A note whose picture a revision replaced reads “This part is no longer in the card”.
+
+On send, the author reads the Pointed at line with the mark's number and place, as `mark 1, box 40,133 47×18 in the 1280×800 picture`, then one sentence saying each numbered mark is drawn on an attached picture.
+The reply carries one picture per marked picture, the picture at its own size with its numbered marks drawn in, on the reply's own picture path beside any the captain attached.
+The window draws that picture at the moment of sending, from the picture as it was marked: a card's own picture is asked of the core by its minted name (`inf:cards:picture`), since the frame's copy belongs to another origin.
+A message carries at most `TURN_IMAGES_MAX` pictures, so once the queued marks fill it, Point at on a picture not yet marked is off and says why, and a reply whose attached pictures would pass it is refused in words before anything is sent.
+The card's frame still never receives the captain's comments, and no marked picture is made or kept before the send.
+
+The place and the page a note marks (`docs/task-browser.md`, "Pointing at a page") are the named contract change `card-note-places`.
+A view whose hello does not list it, the phone included, reads each such note folded into the line's words: its label, mark number, place and comment.
+
+`cardNoteMarks.test.ts` holds a mark's geometry as a pointer or the keys make it, and where each number is drawn.
+`tests/cardNotes.test.ts` holds the place's bounds, the numbering and the author's lines, and `cardCompatibility.test.ts` the fold for a view that reads no place.
+`tests/browser/card-picture-marks.test.tsx` marks a drawing by keys in the real viewer, opens the viewer from the queued note, reads the note of a replaced picture, and reads the pictures a reply carries: one per marked picture, at its own size, with its marks drawn in.
+A journey in `tests/e2e/card-annotations.spec.ts` marks a card's picture by pointer and its drawing by keys, and reads the crewmate's side: each numbered place and one picture per marked picture.

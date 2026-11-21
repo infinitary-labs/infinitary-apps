@@ -406,6 +406,34 @@ A reply from the field rides the card's thread lane as any reply does, and putti
 A card a crewmate of the same task puts up while that task's Browser tab shows arrives in the column instead of in front of the view (`arrivedInBrowser`, read by `reconcileStack` in `src/renderer/src/app/stack.ts`): the view keeps the stage, the card counts as seen once drawn, and the newest such card replaces an earlier one.
 A card from another task arrives in the stack as usual, and while a request stands the request keeps the column and nothing arrives there.
 
+### Pointing at a page
+
+Feedback on a running build is about a place on its page, so the captain's Point at marks one there as it marks a picture (`docs/card-threads.md`, "Pointing at a place").
+Point at sits in the row before the control button, with the card's own key (`cards.point-at`), and is offered while a browser is open and a note has somewhere to leave from: a card docked beside the page or the Crewmate column, on a home that lists the `card-note-places` change.
+It works while the captain watches and while the captain has control.
+
+Turning it on holds the newest picture of the page still (`useWatchedPage`'s `hold`, `usePagePointAt` in `src/renderer/src/cards/BrowserPointAt.tsx`): pictures that arrive meanwhile wait, and the newest is drawn when Point at ends.
+A surface over the held picture takes the pointer and the keys, so nothing reaches the page: the captain's input is off while Point at is on, whoever holds the browser.
+The captain presses a spot, drags a box or, with the line tool, draws one freehand line, in the held picture's own pixels.
+By keys, the arrows step through what the page's outline names, lighting each thing's box, Shift with an arrow makes a box of the captain's own that the arrows then move and Shift sizes, and Enter opens the note popover; Escape ends Point at.
+
+`TaskBrowsers.places` reads what the outline names once, when Point at holds the picture, through the read the crewmate's own outline takes (`pagePlaces`, `src/core/browser/places.ts`): each thing on screen by its role, its name and the box the window shows it in, at most `TASK_BROWSER_PLACES_MAX` of them.
+It reads names only: no value typed into the page and nothing inside a typed field or an editable part.
+The answer also carries the page's address and title as the crewmate's own reads give them, so where the browser may hold a sign-in the address loses its query and fragment and a key in a name or the title reads hidden.
+Nothing is recorded by the read, and a mark waits for it, so a note never leaves without the name the read could give.
+The read is a core request every view may ask (`inf:browser:places`), and a view on another computer marks the picture it already has.
+
+A note on a page is a card note whose `page` holds the page's address and title and, as `under`, the role and name of the smallest thing the outline names around the mark's middle; its `place` is the mark and its excerpt the page's title.
+The popover shows the exact picture that will be sent, the held picture with the mark's number, and Queue keeps the note; while the captain has control it also says that sending shows this picture of the page to the crewmate.
+Point at ends when the popover closes, queued or put away, and the live pictures resume.
+A mark made while the column is folded opens it, so the note is written and waits where it will leave from.
+
+With a card beside the page, the note joins that card's queued notes and leaves as one reply on its thread, with the card's other notes.
+With no card there, it waits above the Crewmate column's message box and leaves with the box's next line, or alone: `inf:task:steer` takes the notes and their pictures as a third value, and `CrewSteer.steerFromCrewmateTab` words them after the captain's words and keeps the pictures as the line's own.
+Either way the crewmate reads a Pointed at line with the page's title and address, the mark's number and place and what it is on, as `- page "Sign up" (http://127.0.0.1:5173/), mark 1, box 40,133 47×18 in the 1280×800 picture, on text "Name": …`, and gets one picture per held picture with its numbered marks drawn in.
+Marks made on the same held picture share one picture; a page that changed between two marks gives two.
+Nothing is recorded or sent before the captain sends, and a held picture that is never sent is forgotten with its queue.
+
 ## A page from the project
 
 A browser button may open a page from the task's project instead of the browser as it is: a crewmate gives `browser_page`, an HTML file's path relative to its working copy, which is its path in the project folder too, such as `index.html` for a finished game's `Play`.
@@ -657,6 +685,7 @@ The captain reads and drives it from the home as the captain does one here (`Pla
   The captain signs in to its page through the view, its Return control carries the rule (`rule` on `inf:task-browser:return`), and a request card's offer is read off its fact.
   The click on that offer, the crewmate's mark that it failed, the Settings list, the rule, Remove and Remove all are orders to that computer (`inf:task-browser:use-sign-in`, `inf:task-browser:sign-in-failed`, `inf:task-browser:sign-ins`, `inf:task-browser:sign-in-rule`, `inf:task-browser:sign-in-remove`, `inf:task-browser:sign-in-remove-all`), answered there by the same rules.
   A computer without the change keeps no sign-in for later tasks, and its browsers start signed out; one with it refuses the retired copy orders in words.
+- Point at's outline read is an order to that computer (`inf:task-browser:places`), asked only of one that lists the `card-note-places` change; without it the home answers that the outline could not be read, and a mark still carries its place and its picture with no name under it and no stepping by keys.
 - The home's quit leaves a browser there running with its crewmate's turn; that computer's quit or restart ends it, and the home reads that it has none once that computer is back.
 
 ## The page itself
@@ -781,6 +810,9 @@ It also holds the maximized view's room: the page, its pictures and its photogra
 Its reading journey has a crewmate click a release that opens without a full load, its old ref refused rather than used on the link that took its place, then read the long passage, the exact time and a plain-text feed.
 Its long-page journey has a crewmate open a changelog too long for one answer, read its map and folded repeats, find words in its last section, read on from the line the first answer's next lines name, and scroll to see the lines on screen rather than the top again.
 `tests/e2e/task-browser-view.spec.ts` has the captain open a crewmate's browser from the record and watch the page's own pixels while the crewmate drives, maximize the view and find the page laid out at the view's room and following the window's size, restore it to 1280 by 800, carry the task on the first mate input, see nobody driving once the turn ends, stop the browser from More, open it again fresh, and hide the view with the browser still running.
+`places.test.ts` holds what Point at reads of a page's outline: each named thing once with its box in whole pixels, nothing typed, only what the window shows, a hidden key and the most one read carries.
+`taskBrowsers.places.test.ts` holds the read against the stand-in page: the names with the page's address and title, nothing recorded, the bare address and hidden key once the captain signed in, and the answer for a page that cannot be read; `reading.test.ts` holds each shown element's box, `placedBrowsers.test.ts` the same order to a computer that runs work and none to one without the change, and `crewSteer.captainInput.test.ts` the notes and their pictures leaving on the Crewmate tab's line.
+A journey in `tests/e2e/task-browser-view.spec.ts` has the captain point at a running page by keys and by pointer: the held picture stays still and the live pictures resume, the press never reaches the page, the crewmate reads each place with what it is on and gets each held picture, and a note made while the captain holds the browser says its picture shows the page to the crewmate.
 Its second journey has a crewmate emit a decision whose door reads `Try it`: the card names the task's browser, the click shows the page with the card unanswered behind it (the same offer, no thread line, the task as it was) and its checklist docked beside the page with no choices, Back to the card shows the card with its buttons, a reply from the column's field (reached with ⇧⌘L) is answered in the card's thread, the card the crewmate then puts up arrives in the column while the view stays, Back to the card from command search shows it with its choices, and once the browser is stopped and opened again both the card and the view it opens say the card's browser has stopped.
 `cardTool.test.ts` holds that only a crewmate with a browser is offered `browser_button`, `cardActions.browser.test.ts` the attachment it writes and its refusals, `cardStore.test.ts` and `cardColumnMigrations.test.ts` the column, and `CardAttachment.test.tsx` and `stackActions.test.ts` the door's line and the view's return to its card; `browserRequest.test.ts` holds which card docks beside the page, and `stackActions.test.ts` a card arriving in the column and none while a request stands.
 `taskBrowsers.handoff.test.ts` holds taking and returning control against the stand-in page: a take while a command runs lets it finish and refuses the one queued behind it, the captain's input reaches the page and nothing records it, what the page said in the captain's time never reaches the crewmate, a return during a reload waits for it and refuses every older ref, each return is one named wake, a stale handle is refused, a crash or a quit in the captain's hands wakes nobody, and a request pauses the browser only on the site it names.

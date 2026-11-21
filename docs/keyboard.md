@@ -321,6 +321,8 @@ The main process's own commands, the size keys, are never refused by the page.
 - `cards.point-at`, Point at a part of the card, enters pointing from the reply row or command search with ⇧⌘A (Ctrl+Shift+A on Linux).
   The reply-row control shows the installed key, and the mode uses arrows, Enter and Escape inside the card body.
   Selecting words keeps their usual Copy behavior; Tab enters the popover's comment field.
+  With the picture viewer open it turns Point at on for the shown picture instead, where the arrows show and move a box, Shift with the arrows sizes it and Enter opens the popover (`docs/card-threads.md`, "Pointing at a place").
+  On a task's Browser tab it holds the page's picture still, where the arrows step through what the page's outline names, Shift with an arrow makes and sizes a box, Enter opens the popover and Escape ends it (`docs/task-browser.md`, "Pointing at a page"); with no page to point at it refuses in words.
 - `cards.thread`, Show or hide the card's thread, is the thread head's Collapse thread and the collapsed card's latest line in one key (`docs/card-threads.md`, "Collapsing the thread"), lent by the card layer like the arrows; on a browser view it opens or folds the docked card or Crewmate column (`docs/task-browser.md`, "The request beside the page").
   It refuses on a card that takes no reply or has no thread yet, and while a recording runs; a focused reply field keeps the focus, and otherwise focus lands, ringed, on what undoes it.
 - `cards.thread-new`, Go to the thread's new messages, presses the shown card's jump down in its thread (`docs/card-threads.md`, "Keeping your place"); it is refused while the thread shows its foot.

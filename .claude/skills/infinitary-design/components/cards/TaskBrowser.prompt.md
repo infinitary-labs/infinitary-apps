@@ -201,9 +201,9 @@ The held picture stays where the live one was, at the same size; a surface over 
 Marks are drawn as on a picture (`PictureViewer.prompt.md`, "Pointing at a place"): the same two-colour box, spot and line, the same numbered badge, the mark being written lit, and the queued marks of the held picture shown on it.
 The arrows step through what the page's outline names, in its order, lighting each thing's box; Shift with an arrow makes that a box of its own, which the arrows then move and Shift sizes; `Enter` opens the note popover; `Esc` ends Point at and returns focus to its control.
 The note popover is the card's own (`CardThread.prompt.md`), anchored at the mark, with `Annotate page` as its title and the page's title as its excerpt.
-Under the excerpt it shows the exact picture that will be sent, a small copy at most 220 by 140px with the mark's number, captioned `The picture that will be sent` in `--text-xs` `--fg-3`; while the captain has control a second line reads `Sending shows this picture of the page to the crewmate.`
-Queue or Cancel ends Point at and the live pictures resume; the folded column opens when a mark is made, so the note is written and waits where it will leave from.
+Under the excerpt it shows the exact picture that will be sent, a small copy at most 220 by 160px with the mark's number, captioned `The picture that will be sent` in `--text-xs` `--fg-3`; while the captain has control a second line reads `Sending shows this picture of the page to the crewmate.` Queue or Cancel ends Point at and the live pictures resume; the folded column opens when a mark is made, so the note is written and waits where it will leave from.
 Beside a docked card the note joins that card's queued notes and leaves with its reply; with no card it waits above the Crewmate column's message box, drawn as a queued note is (`Not sent`, its small marked copy, Edit and Remove), in a list at most 13rem tall that scrolls inside, and the box's caption reads `Send 2 notes · ↩`.
+In a column too short for both, the list gives up its room first, down to one note's first lines, so the message box stays whole.
 Nothing leaves before that send.
 
 **When no card is docked.**

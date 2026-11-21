@@ -93,8 +93,10 @@ With no card docked in the Browser tab, its folded Crewmate line opens this same
 ## Typing
 
 The boxed prompt is the captain's direct door to the crewmate: Enter sends the line as the captain's steer on the crewmate's own lane (`window.infinitary.task.steer`, `inf:task:steer`), the path a reply under its card takes (`docs/card-threads.md`), never a first mate turn.
-`CrewSteer.steerFromCrewmateTab` refuses in words, writing nothing, when no crewmate can be told anything: an empty line, a task not started, a closed one.
+`CrewSteer.steerFromCrewmateTab` refuses in words, writing nothing, when no crewmate can be told anything: an empty line with no notes, a task not started, a closed one.
 Otherwise the steer is a typed wake (`crewmate-tab-line`, `CREWMATE_TAB_STEER_LEAD` then the captain's words verbatim), recorded as a `steered` event with `via: "crewmate-tab"` (`CREWMATE_TAB_VIA`, `src/shared/provenance.ts`) and the span of the captain's words, which Activity reads as `You told the crewmate: ...`, and one task-less feed line (`toldInCrewmateTabLine`).
+Notes the captain made with Point at on the task's running page wait above the box and leave with its next line, or alone, with one marked picture per held picture (`docs/task-browser.md`, "Pointing at a page"): the wake words them as Pointed at lines after the captain's words, the span covers both, and the transcript's line shows both.
+While notes wait, the box's caption reads Send 1 note or Send N notes, and Enter sends them even with nothing typed.
 The first mate reads it on the task's timeline.
 The accepted inbox fact also retains `captainText` before delivery normalization, without adding it to the rendered guidance.
 The task event keeps that original input in its private `captain_text` column after delivery acknowledgement; `TaskEventStore.captainText` reads it by task and event identity.

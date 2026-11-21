@@ -376,10 +376,37 @@ export async function pushBatch(input: {
 }
 
 /**
+ * The rewritten commits ending at `end`, one per member in order, matched
+ * by subject: each member whose commit's words name it.
+ */
+async function matchRewritten(
+  repoDir: string,
+  end: string,
+  members: readonly BatchMember[],
+): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  const rewritten = (
+    await git(repoDir, ["rev-list", "--first-parent", "-n", String(members.length), end])
+  )
+    .split("\n")
+    .filter(Boolean)
+    .reverse();
+  if (rewritten.length !== members.length) return found;
+  for (const [index, member] of members.entries()) {
+    const sha = rewritten[index] as string;
+    const subject = await git(repoDir, ["log", "-1", "--format=%s", sha]);
+    if (subject === member.title) found.set(member.taskId, sha);
+  }
+  return found;
+}
+
+/**
  * Each member's own commit on the default branch after its batch merged.
  * A merge that kept the batch's commits answers them as they were written;
  * a rebase merge wrote new ones, read as the last commits of the default
- * branch up to the merge, in the batch's order, each matched by its title.
+ * branch up to the merge, in the batch's order, each matched by its title;
+ * a rebase that ends in a merge commit is read under that commit's second
+ * parent.
  * A commit that cannot be read stays undefined, never guessed.
  */
 export async function landedCommits(input: {
@@ -420,24 +447,18 @@ export async function landedCommits(input: {
       return landed;
     }
     const end = input.merged ?? tip;
-    const rewritten = (
-      await git(input.repoDir, [
-        "rev-list",
-        "--first-parent",
-        "-n",
-        String(input.members.length),
-        end,
-      ])
-    )
-      .split("\n")
-      .filter(Boolean)
-      .reverse();
-    if (rewritten.length !== input.members.length) return landed;
-    for (const [index, member] of input.members.entries()) {
-      const sha = rewritten[index] as string;
-      const subject = await git(input.repoDir, ["log", "-1", "--format=%s", sha]);
-      if (subject === member.title) landed.set(member.taskId, sha);
-    }
+    const matched = await matchRewritten(input.repoDir, end, input.members);
+    // A rebase that ends in a merge commit, as Bitbucket's rebase merge
+    // makes, keeps the rewritten commits under its second parent.
+    const found =
+      matched.size === 0 &&
+      (await git(input.repoDir, ["rev-parse", "--verify", "--quiet", `${end}^2`]).then(
+        () => true,
+        () => false,
+      ))
+        ? await matchRewritten(input.repoDir, `${end}^2`, input.members)
+        : matched;
+    for (const [taskId, sha] of found) landed.set(taskId, sha);
   } catch (caught) {
     console.warn(`[batches] reading the merged commits: ${gitFailure(caught)}`);
   }

@@ -2392,6 +2392,20 @@
                     "queued": {
                       "type": "string"
                     },
+                    "unconfirmed": {
+                      "type": "object",
+                      "properties": {
+                        "head": {
+                          "type": "string"
+                        },
+                        "mergeTask": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "head"
+                      ]
+                    },
                     "stale": {
                       "type": "boolean",
                       "const": true
@@ -3226,6 +3240,20 @@
                       },
                       "queued": {
                         "type": "string"
+                      },
+                      "unconfirmed": {
+                        "type": "object",
+                        "properties": {
+                          "head": {
+                            "type": "string"
+                          },
+                          "mergeTask": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "head"
+                        ]
                       },
                       "stale": {
                         "type": "boolean",
@@ -4391,6 +4419,20 @@
                   },
                   "queued": {
                     "type": "string"
+                  },
+                  "unconfirmed": {
+                    "type": "object",
+                    "properties": {
+                      "head": {
+                        "type": "string"
+                      },
+                      "mergeTask": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "head"
+                    ]
                   },
                   "stale": {
                     "type": "boolean",
@@ -9490,6 +9532,20 @@
                   },
                   "queued": {
                     "type": "string"
+                  },
+                  "unconfirmed": {
+                    "type": "object",
+                    "properties": {
+                      "head": {
+                        "type": "string"
+                      },
+                      "mergeTask": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "head"
+                    ]
                   },
                   "stale": {
                     "type": "boolean",

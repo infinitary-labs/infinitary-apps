@@ -10,6 +10,7 @@ import type {
 } from "../../src/core/forge";
 import {
   ForgeError,
+  ForgeMergeUnconfirmed,
   ForgeWriteError,
   presentationBodyLimit,
   presentationCommentLimit,
@@ -107,6 +108,16 @@ function standInHost(ways: MergeWays) {
     queued: new Set<number>(),
     /** How many times that queue was read. */
     queueReads: 0,
+    /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
+    noVersion: false,
+    /**
+     * The next merge request leaves and its outcome is not known, as when
+     * Bitbucket answers 202 or the answer is lost: nothing merges until the
+     * test lands it, and `task` is the host's reference to that merge.
+     */
+    unconfirmNext: undefined as { task?: string } | undefined,
+    /** The merge references whose merge the host says failed. */
+    refusedTasks: new Set<string>(),
     /** The connection drops as the next pull request opens: its answer is lost, and so is every read after. */
     loseNextOpen: false,
     offline: false,
@@ -195,6 +206,9 @@ function standInHost(ways: MergeWays) {
     host: "github.com",
     place: "GitHub",
     hasChecks: true,
+    get mergeNamesNoVersion() {
+      return host.noVersion ? (true as const) : undefined;
+    },
     defaultBranch: async () => "main",
     changeFor: async (branch: string) => {
       if (host.offline) throw new ForgeError("transient", "GitHub could not be reached.");
@@ -284,12 +298,21 @@ function standInHost(ways: MergeWays) {
         ...(change.squashMessage ? { body: change.squashMessage } : {}),
       });
       if (host.refusal) throw new ForgeError("refused", host.refusal);
+      const unconfirmed = host.unconfirmNext;
+      if (unconfirmed) {
+        host.unconfirmNext = undefined;
+        throw new ForgeMergeUnconfirmed(
+          `GitHub was asked to merge #${number} and has not finished it.`,
+          unconfirmed.task,
+        );
+      }
       if (host.mergeQueue) {
         host.queued.add(number);
         return { queued: true as const };
       }
       return { sha: host.land(number, way ?? "squash", { title: change.title }) };
     },
+    mergeTaskRefused: async (_number: number, task: string) => host.refusedTasks.has(task),
     inHostQueue: async (number: number) => {
       host.queueReads += 1;
       return host.queued.has(number);

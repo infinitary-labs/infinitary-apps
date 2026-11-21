@@ -23,10 +23,12 @@ import type { NamingRule } from "@shared/runbooks";
 import {
   BATCH_STORIES_MARKER,
   type Forge,
+  ForgeAllowanceSpent,
   type ForgeChange,
   type ForgeCheck,
   type ForgeChecks,
   ForgeError,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   ForgeWriteError,
   isSignInForgeFailure,
@@ -110,9 +112,19 @@ export const BATCH_WORDS = {
     place
       ? said("feedBatchQueued", { project, label, place })
       : said("feedBatchQueuedHost", { project, label }),
+  /** A hold detail's name for a host that names no place of its own. */
+  host: "The project's host",
   /** The hold's saved detail, which the batch's status reads in English. */
   removed: (place: string) =>
     `${place} removed the pull request from its merge queue without merging it; its page there says why.`,
+  /** The hold's saved detail for a merge the host took and then did not make. */
+  // i18n-exempt: a hold's saved detail is English text shown beside the host's own refusals (docs/i18n.md, "Saved facts")
+  notMerged: (place: string) =>
+    `${place} took the merge and did not make it; its page there says why. Nothing was sent again: Try again sends a new merge.`,
+  /** The hold's saved detail for a merge whose answer never came and that has not happened. */
+  // i18n-exempt: a hold's saved detail is English text shown beside the host's own refusals (docs/i18n.md, "Saved facts")
+  unconfirmed: (place: string) =>
+    `${place} did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.`,
   blocked: (project: string, label: string, place: string | null | undefined): Said =>
     place
       ? said("feedBatchBlocked", { project, label, place })
@@ -693,7 +705,7 @@ export class Batches {
       if (after.state !== "open") return record;
       // Removed without a merge: held with the host's verdict until a person answers.
       const { queued: _queued, ...left } = open;
-      const detail = BATCH_WORDS.removed(forge.place ?? "The project's host");
+      const detail = BATCH_WORDS.removed(forge.place ?? BATCH_WORDS.host);
       const held = hold(
         { ...record, open: left },
         { at: this.options.now(), head: open.head, reason: "merge-way", checks: [], detail },
@@ -702,6 +714,10 @@ export class Batches {
       if (held.fresh)
         this.options.note(BATCH_WORDS.removedHeld(repo.name, this.label(repo, open), forge.place));
       return held.record;
+    }
+    if (open.unconfirmed?.head === open.head) {
+      const settled = await this.settleUnconfirmed(repo, record, forge, open);
+      if (settled) return settled;
     }
     // A held batch's approved fix joins it, and the changes waiting in line join with it.
     // A batch held for its checks reads them first: a version that passes on a rerun
@@ -790,6 +806,44 @@ export class Batches {
     return this.merge(repo, record, forge, change);
   }
 
+  /**
+   * A merge sent at this version whose outcome the host did not confirm,
+   * the pull request still open: never sent again. The host's merge queue
+   * holding it reads as queued; the host's own word that the merge failed,
+   * or no word at all, holds the batch with nothing sent until Try again;
+   * a merge the host still reports as running waits. Undefined once the
+   * passes go on as before, the record cleared of it.
+   */
+  private async settleUnconfirmed(
+    repo: RepoView,
+    record: BatchRecord,
+    forge: Forge,
+    open: OpenBatch,
+  ): Promise<BatchRecord | undefined> {
+    const { unconfirmed, ...rest } = open;
+    const number = open.number as number;
+    if (forge.inHostQueue && (await forge.inHostQueue(number))) {
+      const next = this.save(repo.id, { ...record, open: { ...rest, queued: open.head } });
+      this.options.note(BATCH_WORDS.queued(repo.name, this.label(repo, open), forge.place));
+      return next;
+    }
+    const task = unconfirmed?.mergeTask;
+    const refused =
+      task && forge.mergeTaskRefused ? await forge.mergeTaskRefused(number, task) : !task;
+    // The host's own merge is still running: the next pass reads it again.
+    if (!refused) return record;
+    const place = forge.place ?? BATCH_WORDS.host;
+    const detail = task ? BATCH_WORDS.notMerged(place) : BATCH_WORDS.unconfirmed(place);
+    const held = hold(
+      { ...record, open: rest },
+      { at: this.options.now(), head: open.head, reason: "merge-way", checks: [], detail },
+    );
+    this.save(repo.id, held.record);
+    if (held.fresh)
+      this.options.note(BATCH_WORDS.refused(repo.name, this.label(repo, open), detail));
+    return held.record;
+  }
+
   /** Merge at the batch's version, keeping one commit per change. */
   private async merge(
     repo: RepoView,
@@ -848,6 +902,29 @@ export class Batches {
       }
       sha = answer?.sha;
     } catch (caught) {
+      // A merge that left on a host whose merge names no version, with its
+      // outcome unknown: kept, read on later passes, and never sent again.
+      if (
+        forge.mergeNamesNoVersion &&
+        caught instanceof ForgeError &&
+        !caught.beforeSend &&
+        !(caught instanceof ForgeAllowanceSpent) &&
+        isTransientForgeFailure(caught)
+      ) {
+        const { hold: _hold, ...waiting } = open;
+        return this.save(repo.id, {
+          ...record,
+          open: {
+            ...waiting,
+            unconfirmed: {
+              head: open.head,
+              ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
+                ? { mergeTask: caught.mergeTask }
+                : {}),
+            },
+          },
+        });
+      }
       if (!(caught instanceof ForgeError) || caught.failure !== "refused") throw caught;
       // The host's verdict on the merge itself: held with its own words, never sent again.
       const held = hold(record, {

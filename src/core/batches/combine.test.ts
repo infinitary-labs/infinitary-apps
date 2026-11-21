@@ -1233,6 +1233,37 @@ describe("each member's own commit on the default branch after its batch merged"
     );
   });
 
+  // INF-5186 piece 5: Bitbucket's rebase merge (`rebase_merge`) writes the
+  // batch's commits again on the default branch and then a merge commit over
+  // them, so they sit under that commit's second parent.
+  it("is the commit a rebase merge wrote for it under the merge commit it ended in", async () => {
+    const at = host();
+    const result = await pushed(at);
+    run(at.work, "fetch", "--quiet", "origin");
+    run(at.work, "checkout", "--quiet", "-B", "main", "origin/main");
+    write(at.work, "README.md", "# Meter\n");
+    run(at.work, "add", "-A");
+    run(at.work, "commit", "-m", "docs: add a readme");
+    run(at.work, "checkout", "--quiet", "-B", "rebased", "origin/infinitary-batch/7c41");
+    run(at.work, "rebase", "--quiet", "main");
+    const rebased = run(at.work, "rev-parse", "HEAD");
+    run(at.work, "checkout", "--quiet", "main");
+    run(at.work, "merge", "--quiet", "--no-ff", "-m", "Merged in infinitary-batch/7c41", "rebased");
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    const mergeCommit = run(at.work, "rev-parse", "HEAD");
+
+    const landed = await landedCommits({
+      repoDir: at.home,
+      defaultBranch: "main",
+      members: result.members,
+      merged: mergeCommit,
+    });
+
+    expect(landed.get("task-export")).toBe(rebased);
+    expect(landed.get("task-parser")).toBe(run(at.work, "rev-parse", `${rebased}~1`));
+    expect(landed.get("task-parser")).not.toBe(result.members[0]?.commit);
+  });
+
   it("names no commit when the default branch does not hold the batch", async () => {
     const at = host();
     const result = await pushed(at);

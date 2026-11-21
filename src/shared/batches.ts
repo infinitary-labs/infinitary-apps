@@ -101,6 +101,13 @@ export const openBatchSchema = z.object({
    * merge queue"): its place there is read, and nothing is sent again.
    */
   queued: z.string().optional(),
+  /**
+   * The version a merge was sent at whose outcome the host did not confirm,
+   * on a host whose merge names no version (docs/forge.md, "Batches of your
+   * own"): later passes read how it ended and never send it again.
+   * `mergeTask` is the host's own reference to that merge, when it gave one.
+   */
+  unconfirmed: z.object({ head: z.string(), mergeTask: z.string().optional() }).optional(),
   /** Its members, or the words of one, changed since it was pushed: the next pass combines it again. */
   stale: z.literal(true).optional(),
   /**

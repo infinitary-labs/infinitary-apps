@@ -409,6 +409,10 @@ export function PagePointAtLayer({
       place: drawn,
       page: { ...whole.page, ...(on ? { under: { role: on.role, name: on.name } } : {}) },
     };
+    // A note still open is kept first; one whose words are past their limit stays open to trim.
+    const open = useShellStore.getState().annotationPick;
+    if (open && !(open.cardId === owner && sameNote(open.note, note)) && !settleAnnotation())
+      return;
     rememberMarked(owner, note, {
       src: held.src,
       alt: whole.page.title || whole.page.url,
@@ -416,8 +420,6 @@ export function PagePointAtLayer({
       height: size.height,
       ...(shows ? { shows: true as const } : {}),
     });
-    const open = useShellStore.getState().annotationPick;
-    if (open && !(open.cardId === owner && sameNote(open.note, note))) settleAnnotation();
     setStepped(null);
     setKeyBox(null);
     openColumn();

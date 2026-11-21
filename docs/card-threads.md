@@ -593,11 +593,16 @@ A queued note shows Not sent with a small copy of its picture and its numbered m
 A press on a queued or sent note with a place opens the viewer at its mark, and Edit opens the viewer with the note's popover.
 A note whose picture a revision replaced reads “This part is no longer in the card”.
 
-On send, the author reads the Pointed at line with the mark's number and place, as `mark 1, box 40,133 47×18 in the 1280×800 picture`, then one sentence saying each numbered mark is drawn on an attached picture.
+On send, the author reads the Pointed at line with the mark's number and place, as `mark 1, box 40,133 47×18 in the 1280×800 picture`, then one sentence saying each numbered mark is drawn on an attached picture, and to go by each line's place when none is attached.
 The reply carries one picture per marked picture, the picture at its own size with its numbered marks drawn in, on the reply's own picture path beside any the captain attached.
 The window draws that picture at the moment of sending, from the picture as it was marked: a card's own picture is asked of the core by its minted name (`inf:cards:picture`), since the frame's copy belongs to another origin.
 A message carries at most `TURN_IMAGES_MAX` pictures, so once the queued marks fill it, Point at on a picture not yet marked is off and says why, and a reply whose attached pictures would pass it is refused in words before anything is sent.
 The card's frame still never receives the captain's comments, and no marked picture is made or kept before the send.
+
+A queued note's place follows the card's draft to every other window and across a restart, as its words do (`docs/card-authoring.md`, "Unsent picks follow you"), and the viewer there draws the mark from the note alone.
+The picture a mark was made on is remembered only by the window that marked it (`src/renderer/src/cards/markedPictures.ts`), and is never part of a draft.
+So a note that reached a window through the draft shows no small copy there, and a reply sent from that window carries no marked picture for it: its Pointed at line still gives the mark's number and place.
+A mark made while a note's words are past their limit, which only dictation writes, is not made: that note stays open to trim, as a pick on another part leaves it (`settleAnnotation`).
 
 The place and the page a note marks (`docs/task-browser.md`, "Pointing at a page") are the named contract change `card-note-places`.
 A view whose hello does not list it, the phone included, reads each such note folded into the line's words: its label, mark number, place and comment.

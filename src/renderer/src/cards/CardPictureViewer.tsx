@@ -138,16 +138,21 @@ export function CardPictureViewer({
             });
           if (!base) return;
           const note: CardNote = { ...base, place };
+          // A note still open is kept as a press beside it keeps it, then this one opens; one
+          // whose words are past their limit stays open to trim, and this mark is not made.
+          const open = useShellStore.getState().annotationPick;
+          if (
+            open &&
+            !(open.cardId === noteCardId && sameNote(open.note, note)) &&
+            !settleAnnotation()
+          )
+            return;
           rememberMarked(noteCardId, note, {
             src: picture.src,
             alt: picture.alt,
             width: place.width,
             height: place.height,
           });
-          // A note still open is kept as a press beside it keeps it, then this one opens.
-          const open = useShellStore.getState().annotationPick;
-          if (open && !(open.cardId === noteCardId && sameNote(open.note, note)))
-            settleAnnotation();
           useShellStore.setState({
             annotationPick: { cardId: noteCardId, note, box: at },
             annotationOffer: null,

@@ -134,7 +134,7 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
                 // A note on a running page is no part of a card: its words are edited here.
                 if (note.page) {
                   const box = event.currentTarget.getBoundingClientRect();
-                  settleAnnotation();
+                  if (!settleAnnotation()) return;
                   useShellStore.setState({
                     annotationPick: {
                       cardId,

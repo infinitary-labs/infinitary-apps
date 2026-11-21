@@ -433,7 +433,10 @@ With a card beside the page, the note joins that card's queued notes and leaves 
 With no card there, it waits above the Crewmate column's message box and leaves with the box's next line, or alone: `inf:task:steer` takes the notes and their pictures as a third value, and `CrewSteer.steerFromCrewmateTab` words them after the captain's words and keeps the pictures as the line's own.
 Either way the crewmate reads a Pointed at line with the page's title and address, the mark's number and place and what it is on, as `- page "Sign up" (http://127.0.0.1:5173/), mark 1, box 40,133 47×18 in the 1280×800 picture, on text "Name": …`, and gets one picture per held picture with its numbered marks drawn in.
 Marks made on the same held picture share one picture; a page that changed between two marks gives two.
-Nothing is recorded or sent before the captain sends, and a held picture that is never sent is forgotten with its queue.
+Nothing reaches the crewmate or the task's record before the captain sends, and a held picture that is never sent is forgotten with its queue.
+A note beside a card is kept with that card's draft, as the card's other notes are (`docs/card-authoring.md`, "Unsent picks follow you"): its words, place and page follow to every window that shows the card and across a restart, and no agent reads a draft.
+The held picture is never part of a draft, so only the window that marked the page sends it (`docs/card-threads.md`, "Pointing at a place").
+A note with no card beside the page waits in its own window alone.
 
 ## A page from the project
 

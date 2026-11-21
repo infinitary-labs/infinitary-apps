@@ -187,10 +187,14 @@ export function pointedAtLines(notes: readonly CardNote[]): string[] {
   ];
 }
 
-/** What follows the notes when any has a place: where the crew sees the marks. Served to a model, so English. */
+/**
+ * What follows the notes when any has a place: where the crew sees the marks. A note that
+ * reached the sending window through the card's draft rides without its picture, so the line
+ * also says what to go by then. Served to a model, so English.
+ */
 // i18n-exempt: served to a model
 export const MARKED_PICTURES_LINE =
-  "Each numbered mark is drawn on a marked picture attached to this message, one picture per marked picture or page.";
+  "Each numbered mark is drawn on a marked picture attached to this message, one per marked picture or page. If no marked picture is attached, go by the place each line gives.";
 
 export const ANNOTATE = m.cardNoteAnnotate();
 export const QUEUE_NOTE = m.cardNoteQueue();

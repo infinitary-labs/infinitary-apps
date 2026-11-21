@@ -1,6 +1,12 @@
 import { listsPrivateSite } from "@shared/privateSites";
 import { describe, expect, it } from "vitest";
-import { checkOpenable, decideRequest, isLoopbackHost, originKey } from "./destinations";
+import {
+  checkOpenable,
+  decidePageRequest,
+  decideRequest,
+  isLoopbackHost,
+  originKey,
+} from "./destinations";
 
 /**
  * Where a task browser may go: the crewmate opens public websites over
@@ -166,5 +172,54 @@ describe("the task browser's destinations", () => {
       allowed: false,
       kind: "private",
     });
+  });
+  // INF-5578's finding 2, then the captain's "yeah we should do that" to
+  // letting a page's own move open a local address while a website's hidden
+  // requests to the computer stay refused.
+  it("lets a sign-in's return reach a program on this Mac, and only that page reach it again", () => {
+    const none = new Set<string>();
+    const callback = "http://localhost:1455/auth/callback?code=sign-in-code";
+    // The sign-in's redirect is the page's own top-level move.
+    const move = decidePageRequest(
+      { url: callback, topLevel: true, page: "https://auth.example.com/authorize" },
+      none,
+      none,
+    );
+    expect(move).toEqual({ allowed: true, reach: "http://localhost:1455" });
+    const reached = new Set(["http://localhost:1455"]);
+    // The program's page loads its own parts, its live socket included.
+    for (const url of ["http://localhost:1455/app.js", "ws://localhost:1455/live"]) {
+      expect(
+        decidePageRequest({ url, topLevel: false, page: callback }, none, reached),
+        url,
+      ).toEqual({ allowed: true });
+    }
+    // A website's hidden request to the same program, or any other, stays refused.
+    for (const request of [
+      { url: "http://localhost:1455/api", page: "https://evil.example/" },
+      { url: "http://localhost:1455/api" },
+      { url: "http://localhost:5173/", page: callback },
+      { url: "http://127.0.0.1:1455/api", page: "https://evil.example/" },
+    ]) {
+      expect(
+        decidePageRequest({ ...request, topLevel: false }, none, reached),
+        request.url,
+      ).toMatchObject({ allowed: false, kind: "local" });
+    }
+    // A local page the move never reached is not reached by its parts either.
+    expect(
+      decidePageRequest(
+        { url: "http://localhost:1455/app.js", topLevel: false, page: callback },
+        none,
+        none,
+      ),
+    ).toMatchObject({ allowed: false, kind: "local" });
+    // The move opens web pages on this Mac only, never a private network's or plain http's.
+    expect(
+      decidePageRequest({ url: "http://10.0.0.5/", topLevel: true }, none, none),
+    ).toMatchObject({ allowed: false, kind: "private" });
+    expect(
+      decidePageRequest({ url: "http://example.com/", topLevel: true }, none, none),
+    ).toMatchObject({ allowed: false, kind: "insecure" });
   });
 });

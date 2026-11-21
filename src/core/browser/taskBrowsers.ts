@@ -9,6 +9,7 @@ import {
   TASK_BROWSER_PAGE,
   TASK_BROWSER_PAGES_MAX,
   type TaskBrowserAskAnswer,
+  type TaskBrowserBlock,
   type TaskBrowserCommandResult,
   type TaskBrowserFact,
   type TaskBrowserHandle,
@@ -67,14 +68,20 @@ import {
   CrewmateCommands,
   refused,
 } from "./crewmateCommands";
-import { checkOpenable, decideRequest, originKey } from "./destinations";
+import {
+  checkOpenable,
+  decidePageRequest,
+  decideRequest,
+  originKey,
+  pageBlock,
+} from "./destinations";
 import { PageDiagnostics } from "./diagnostics";
 import { saveDownload } from "./evidenceFiles";
 import type { KeptPages } from "./keptPages";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
 import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
-import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { blockedPageWords, clip, PageNotices, refusalWords } from "./pageNotices";
 import { startAfterOpen, startBeforeOpen, startMissing } from "./pageStartSteps";
 import type { PageStart, PageStarts } from "./pageStarts";
 import { pagePlaces } from "./places";
@@ -156,6 +163,10 @@ export const FORM_RESEND_CAPTAIN_WORDS =
 
 /** The page's place as the crewmate names it, from 1. */
 const PAGE_WORDS = ["", "first", "second"];
+
+/** How the crewmate's first look after the captain returned its browser opens. */
+export const RETURNED_NOTICE =
+  "The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.";
 
 /**
  * One task's browser, as its crewmate's command reaches it
@@ -289,7 +300,9 @@ function reachesOrigin(browser: Browser, host: string, port: number): boolean {
   // A name the address parser refuses is no origin anyone opened.
   return ["http:", "https:"].some((scheme) => {
     const url = URL.parse(`${scheme}//${host}:${port}`);
-    return url !== null && browser.origins.has(originKey(url));
+    return (
+      url !== null && (browser.origins.has(originKey(url)) || browser.reached.has(originKey(url)))
+    );
   });
 }
 
@@ -446,12 +459,12 @@ export class TaskBrowsers {
       state: "open",
       site: siteOf(url),
       url,
-      title: browser.current.page.title().trim(),
+      title: this.viewTitle(browser, browser.current),
       ...(many
         ? {
             pages: browser.pages.map((entry) => ({
               site: siteOf(addressOf(browser, entry)),
-              title: entry.page.title().trim(),
+              title: this.viewTitle(browser, entry),
             })),
             page: browser.pages.indexOf(browser.current) + 1,
           }
@@ -487,9 +500,36 @@ export class TaskBrowsers {
             ...(this.options.starts?.starting(taskId) ? { starting: true as const } : {}),
           }
         : {}),
+      ...this.blockOf(browser),
       session: this.session,
       generation: browser.generation,
     };
+  }
+
+  /** The page's own address, when the browser refuses it, as the fact carries it. */
+  private blockOf(browser: Browser): { blocked?: TaskBrowserBlock } {
+    const block = this.pageBlockOf(browser);
+    return block ? { blocked: block.kind } : {};
+  }
+
+  /** Why the current page's own address is refused, so it shows the browser's refusal; nothing otherwise. */
+  private pageBlockOf(browser: Browser, entry = browser.current): ReturnType<typeof pageBlock> {
+    return pageBlock(
+      addressOf(browser, entry),
+      new Set([...browser.origins, ...browser.reached]),
+      (host) => listsPrivateSite(this.sites, host),
+    );
+  }
+
+  /**
+   * A page's title as the captain's view reads it. The browser's refusal of
+   * an address has no title of its own and takes that address, whose query
+   * may carry a sign-in's code: it reads as the refused host and port.
+   */
+  private viewTitle(browser: Browser, entry: PageEntry): string {
+    const title = entry.page.title().trim();
+    const block = this.pageBlockOf(browser, entry);
+    return block && title && entry.page.url().includes(title) ? block.host : title;
   }
 
   /**
@@ -785,12 +825,14 @@ export class TaskBrowsers {
         return { ok: false, text: "This browser stopped before control went back." };
       }
       const after = browser.request?.after;
+      // A page left on an address the browser refuses, such as a sign-in's
+      // return to a program on this computer, says why in the first look.
+      const block = this.pageBlockOf(browser);
       browser.control = "crewmate";
       browser.request = undefined;
       browser.returns += 1;
       this.handBack(taskId, browser, {
-        notice:
-          "The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.",
+        notice: `${RETURNED_NOTICE}${block ? `\n${blockedPageWords(block)}` : ""}`,
         note: "you returned control of its browser",
         returned: {
           site: siteOf(addressOf(browser, browser.current)),
@@ -1277,6 +1319,7 @@ export class TaskBrowsers {
       generation: (this.generations.get(taskId) ?? 0) + 1,
       booksFrom: (this.books.get(taskId) ?? 0) + 1,
       origins: new Set(),
+      reached: new Set(),
       // While the captain holds the page, what it says is his and is kept for nobody.
       notices: new PageNotices(() => browser.control === "captain"),
       // His own from the start, before anything hears it opened.
@@ -1384,8 +1427,8 @@ export class TaskBrowsers {
           password: guard.password,
         },
         ...(kept ? { kept: true as const } : {}),
-        allow: ({ url, topLevel }) => {
-          const decision = decideRequest(url, browser.origins, (host) =>
+        allow: (request) => {
+          const decision = decidePageRequest(request, browser.origins, browser.reached, (host) =>
             listsPrivateSite(this.sites, host),
           );
           if (!decision.allowed) {
@@ -1393,7 +1436,10 @@ export class TaskBrowsers {
             return false;
           }
           // A page of the kept profile goes only to the sites its task may use there.
-          if (kept && topLevel && !this.grants.keptMayOpen(taskId, browser, url)) return false;
+          if (kept && request.topLevel && !this.grants.keptMayOpen(taskId, browser, request.url)) {
+            return false;
+          }
+          if ("reach" in decision) browser.reached.add(decision.reach);
           return true;
         },
         // A site's every picture may fail its certificate: it is said once.
@@ -1507,6 +1553,10 @@ export class TaskBrowsers {
         if (!entry.loading && browser.control !== "captain") entry.moved = url;
         // A sign-in page the captain passes through in the kept profile is the task's to open too.
         if (browser.kept && browser.control === "captain") this.grants.passedThrough(browser, url);
+        if (live()) this.options.onChange?.(taskId);
+      },
+      onLoadFailed: () => {
+        // The captain's view reads the page's address again, and says why it is blocked.
         if (live()) this.options.onChange?.(taskId);
       },
       onConsole: (level, text) => {

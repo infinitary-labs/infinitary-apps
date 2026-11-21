@@ -72,6 +72,12 @@ export type Browser = {
   guard: ConnectionGuardHandle;
   /** Origins on this Mac the crewmate opened: the only local servers the page reaches. */
   origins: Set<string>;
+  /**
+   * Origins on this Mac a page's own top-level move reached, such as a
+   * sign-in's return to a program (docs/task-browser.md, "Where a page may
+   * go"): only a page at one of them reaches it again.
+   */
+  reached: Set<string>;
   /** What it keeps to tell its crewmate at the head of the next answer. */
   notices: PageNotices;
   /** What the crewmate did last, as the captain reads it. */
@@ -292,9 +298,21 @@ export function pageWords(browser: Browser, text: string, held = false): string 
   return held || signedIn(browser) ? hideKeys(text) : text;
 }
 
-/** A page's title as the crewmate reads it (`pageWords`). */
+/**
+ * A page's title as the crewmate reads it (`pageWords`). A page with no
+ * title of its own, such as the browser's refusal of an address, takes its
+ * address as its title, so that title reads as the address does (`shown`):
+ * once signed in, without the query that may carry a sign-in's code.
+ */
 export function titleOf(browser: Browser, entry: PageEntry, held = false): string {
-  return pageWords(browser, entry.page.title().trim(), held);
+  const title = entry.page.title().trim();
+  const address = entry.page.url();
+  const bare = address.replace(/^https?:\/\//i, "");
+  if (title && (title === address || title === bare)) {
+    const read = shown(browser, address, held);
+    return title === bare ? read.replace(/^https?:\/\//i, "") : read;
+  }
+  return pageWords(browser, title, held);
 }
 
 /** A page's address, or where the browser opened while its first page shows none. */

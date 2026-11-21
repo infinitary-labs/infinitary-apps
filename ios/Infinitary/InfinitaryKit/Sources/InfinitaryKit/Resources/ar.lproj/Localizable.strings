@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "الحجم الفعلي";
 "cardBrowserBack" = "رجوع";
 "cardBrowserBackToCard" = "العودة إلى البطاقة";
+"cardBrowserBlockedInsecure" = "حظر Infinitary ‏%1$@: متصفحات المهام تفتح المواقع عبر https فقط.";
+"cardBrowserBlockedLocal" = "حظر Infinitary ‏%1$@، وهو برنامج على حاسوب المتصفح لم يفتحه فرد الطاقم بعد.";
+"cardBrowserBlockedLocalHeld" = "حظر Infinitary ‏%1$@، وهو برنامج على حاسوب المتصفح. أعد التحكم، وسيتمكن فرد الطاقم من السماح للصفحة بالوصول إليه.";
+"cardBrowserBlockedPrivate" = "حظر Infinitary ‏%1$@ على شبكة خاصة. لا يصل متصفح المهمة إلى موقع كهذا إلا بعد أن تسمح به في الإعدادات.";
 "cardBrowserCopyAddress" = "نسخ عنوان الصفحة";
 "cardBrowserFit" = "ملاءمة";
 "cardBrowserForward" = "تقدّم";

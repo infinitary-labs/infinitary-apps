@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "Originalgröße";
 "cardBrowserBack" = "Zurück";
 "cardBrowserBackToCard" = "Zurück zur Karte";
+"cardBrowserBlockedInsecure" = "Infinitary hat %1$@ blockiert: Aufgabenbrowser öffnen Websites nur über https.";
+"cardBrowserBlockedLocal" = "Infinitary hat %1$@ blockiert, ein Programm auf dem Computer des Browsers, das das Crewmitglied noch nicht geöffnet hat.";
+"cardBrowserBlockedLocalHeld" = "Infinitary hat %1$@ blockiert, ein Programm auf dem Computer des Browsers. Gib die Kontrolle zurück, dann kann das Crewmitglied die Seite dorthin lassen.";
+"cardBrowserBlockedPrivate" = "Infinitary hat %1$@ in einem privaten Netzwerk blockiert. Ein Aufgabenbrowser erreicht so eine Seite erst, wenn du sie in den Einstellungen erlaubst.";
 "cardBrowserCopyAddress" = "Seitenadresse kopieren";
 "cardBrowserFit" = "Einpassen";
 "cardBrowserForward" = "Vorwärts";

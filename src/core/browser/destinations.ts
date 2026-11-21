@@ -1,4 +1,5 @@
 import { HERE } from "@shared/deviceNames";
+import type { TaskBrowserBlock } from "@shared/taskBrowser";
 import { isPublicAddress, literalAddress } from "./addresses";
 
 /**
@@ -177,4 +178,63 @@ export function decideRequest(
     return { allowed: false, host: url.hostname, kind: "insecure" };
   }
   return { allowed: true };
+}
+
+/** One request a task page made, as its engine reports it. */
+export type PageRequest = {
+  url: string;
+  /** Whether it loads a page's own top-level document: a link, a redirect, a typed address. */
+  topLevel: boolean;
+  /** The address of the top-level document that asked, when the engine knows it. */
+  page?: string;
+};
+
+/**
+ * Decide one request a task page made (docs/task-browser.md, "Where a page
+ * may go"), as `decideRequest` does, with one more way to another server
+ * on this Mac: a page's own top-level move to it, such as a sign-in's
+ * return to a program, goes through, and `reach` names its origin for the
+ * caller to keep in `reached`. Then that page's own requests to the same
+ * origin go through too, while a request from any other page to it - a
+ * website's hidden request to this Mac - stays refused.
+ */
+export function decidePageRequest(
+  request: PageRequest,
+  origins: ReadonlySet<string>,
+  reached: ReadonlySet<string>,
+  listed: ListedSite = () => false,
+): RequestDecision | { allowed: true; reach: string } {
+  const decision = decideRequest(request.url, origins, listed);
+  if (decision.allowed || decision.kind !== "local") return decision;
+  const url = parse(request.url);
+  if (!url) return decision;
+  const key = originKey(url);
+  if (request.topLevel && (url.protocol === "http:" || url.protocol === "https:")) {
+    return { allowed: true, reach: key };
+  }
+  const page = request.page ? parse(request.page) : undefined;
+  if (page && reached.has(key) && isLoopbackHost(page.hostname) && originKey(page) === key) {
+    return { allowed: true };
+  }
+  return decision;
+}
+
+/**
+ * Why a page's own address is one its browser refuses, so the page shows
+ * the browser engine's own refusal (docs/task-browser.md, "A page on a
+ * refused address"): the address's host and port and its scheme's origin,
+ * never its path or query, which may carry a sign-in's code. Nothing for an
+ * address the browser reaches, or one that is not a web address, since no
+ * page commits there.
+ */
+export function pageBlock(
+  value: string,
+  origins: ReadonlySet<string>,
+  listed: ListedSite = () => false,
+): { kind: TaskBrowserBlock; host: string; origin: string } | undefined {
+  const decision = decideRequest(value, origins, listed);
+  if (decision.allowed || decision.kind === "scheme") return undefined;
+  const url = parse(value);
+  if (!url) return undefined;
+  return { kind: decision.kind, host: url.host, origin: `${url.protocol}//${url.host}/` };
 }

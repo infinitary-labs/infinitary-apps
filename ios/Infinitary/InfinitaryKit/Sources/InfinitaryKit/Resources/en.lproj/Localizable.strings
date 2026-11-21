@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "Actual size";
 "cardBrowserBack" = "Back";
 "cardBrowserBackToCard" = "Back to the card";
+"cardBrowserBlockedInsecure" = "Infinitary blocked %1$@: task browsers open websites over https only.";
+"cardBrowserBlockedLocal" = "Infinitary blocked %1$@, a program on the browser's computer that the crewmate has not opened.";
+"cardBrowserBlockedLocalHeld" = "Infinitary blocked %1$@, a program on the browser's computer. Return control, and the crewmate can let the page reach it.";
+"cardBrowserBlockedPrivate" = "Infinitary blocked %1$@ on a private network. A task browser reaches one only once you allow it in Settings.";
 "cardBrowserCopyAddress" = "Copy page address";
 "cardBrowserFit" = "Fit";
 "cardBrowserForward" = "Forward";

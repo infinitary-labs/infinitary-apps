@@ -6,6 +6,7 @@ import {
   ASK_FAILED_WORDS,
   askWords,
   attachmentStanding,
+  blockedWords,
   browserDriverOf,
   CLOSE_PAGE_LABEL,
   canOpenAgain,
@@ -761,8 +762,14 @@ export function TaskBrowserView({
     fact?.state === "open" && fact.unanswered
       ? unansweredWords(fact.site, driver, fact.starting)
       : undefined;
+  // A page on an address the browser refuses shows the engine's own error:
+  // the same line says what Infinitary blocked and why.
+  const blocked =
+    fact?.state === "open" && fact.blocked
+      ? blockedWords(fact.site, fact.blocked, driver)
+      : undefined;
   const noticeWords =
-    unanswered ?? (standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing]);
+    unanswered ?? blocked ?? (standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing]);
   // A request docks beside the page it asked about, never beside another,
   // and only while that page is the captain's; any other card docks beside
   // the page the task's browser shows, whoever drives it.
@@ -799,7 +806,7 @@ export function TaskBrowserView({
   const notice =
     noticeWords === undefined ? null : (
       <div
-        data-browser-notice={unanswered ? "unanswered" : standing}
+        data-browser-notice={unanswered ? "unanswered" : blocked ? "blocked" : standing}
         ref={noticeFit.ref}
         title={noticeFit.title}
         style={{

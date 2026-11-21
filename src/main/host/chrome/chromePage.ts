@@ -206,7 +206,8 @@ export async function driveChromePage(input: ChromePageInput): Promise<ChromePag
     const request = params.request as { url: string; method: string };
     const top = params.resourceType === "Document" && params.frameId === targetId;
     const requestId = String(params.requestId);
-    if (!open.allow({ url: request.url, topLevel: top })) {
+    // Every frame and worker under this page shares its top-level address.
+    if (!open.allow({ url: request.url, topLevel: top, ...(url ? { page: url } : {}) })) {
       void pipe
         .send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" }, from)
         .catch(() => undefined);
@@ -366,6 +367,7 @@ export async function driveChromePage(input: ChromePageInput): Promise<ChromePag
       // site's: the built-in engine reports none either.
       if (frame.unreachableUrl) {
         url = frame.unreachableUrl;
+        events.onLoadFailed(url);
         return;
       }
       url = `${frame.url}${frame.urlFragment ?? ""}`;

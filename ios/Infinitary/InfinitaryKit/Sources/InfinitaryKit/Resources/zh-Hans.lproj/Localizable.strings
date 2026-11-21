@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "实际大小";
 "cardBrowserBack" = "后退";
 "cardBrowserBackToCard" = "返回卡片";
+"cardBrowserBlockedInsecure" = "Infinitary 已阻止 %1$@：任务浏览器只通过 https 打开网站。";
+"cardBrowserBlockedLocal" = "Infinitary 已阻止 %1$@，它是浏览器所在电脑上船员还没有打开的程序。";
+"cardBrowserBlockedLocalHeld" = "Infinitary 已阻止 %1$@，它是浏览器所在电脑上的一个程序。交还控制后，船员可以让页面访问它。";
+"cardBrowserBlockedPrivate" = "Infinitary 已阻止私有网络上的 %1$@。任务浏览器只有在你于设置中允许后才能访问它。";
 "cardBrowserCopyAddress" = "复制网页地址";
 "cardBrowserFit" = "适应";
 "cardBrowserForward" = "前进";

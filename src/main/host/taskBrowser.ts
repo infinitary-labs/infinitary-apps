@@ -118,6 +118,24 @@ function noteDocumentRequest(contents: WebContents, method: string): void {
 }
 let signInsAnswered = false;
 
+/** An address a page's navigation reaches over the network, where its request is judged. */
+const WEB_NAVIGATION = /^https?:/i;
+
+/**
+ * The address of the top-level document a request came from, when Electron
+ * still knows its frame: a page's own requests to a server on this computer
+ * its top-level move reached go through, and no other's.
+ */
+function topPageOf(details: { frame?: Electron.WebFrameMain | null }): { page?: string } {
+  try {
+    const page = details.frame?.top?.url;
+    return page ? { page } : {};
+  } catch {
+    // A frame that went away mid-request has no address to read.
+    return {};
+  }
+}
+
 /** An identity without this app's name and version: an ordinary Chrome's. */
 function ordinaryUserAgent(userAgent: string): string {
   return userAgent
@@ -287,7 +305,11 @@ async function keptProfileSession(proxy: HostBrowserOpen["proxy"]): Promise<Sess
       if (details.resourceType === "mainFrame" && details.webContents) {
         noteDocumentRequest(details.webContents, details.method);
       }
-      const request = { url: details.url, topLevel: details.resourceType === "mainFrame" };
+      const request = {
+        url: details.url,
+        topLevel: details.resourceType === "mainFrame",
+        ...topPageOf(details),
+      };
       const open = keptOpenOf(details.webContents);
       const allowed = open
         ? open.allow(request)
@@ -471,7 +493,11 @@ async function openTaskPage(input: HostBrowserOpen): Promise<HostBrowserPage> {
       noteDocumentRequest(details.webContents, details.method);
     }
     callback({
-      cancel: !input.allow({ url: details.url, topLevel: details.resourceType === "mainFrame" }),
+      cancel: !input.allow({
+        url: details.url,
+        topLevel: details.resourceType === "mainFrame",
+        ...topPageOf(details),
+      }),
     });
   });
   // Every connection off this Mac's loopback goes through the browser's own
@@ -539,14 +565,18 @@ async function drivePage(
   contents.setUserAgent(ordinaryUserAgent(contents.getUserAgent()));
   // WebRTC reaches its peers only through the proxy, so never around the guard.
   contents.setWebRTCIPHandlingPolicy("disable_non_proxied_udp");
-  const refuse = (event: { preventDefault: () => void }, url: string): void => {
-    if (!open.allow({ url, topLevel: true })) event.preventDefault();
+  // A web address the policy refuses is refused by its request
+  // (`onBeforeRequest`), so the page shows the browser's own refusal at that
+  // address, as Google Chrome's does, and never stays put as if nothing was
+  // asked (docs/task-browser.md, "A page on a refused address"); any other
+  // scheme never reaches the network, so it is refused here.
+  const refuse = (event: { preventDefault: () => void }, url: string, topLevel: boolean): void => {
+    if (WEB_NAVIGATION.test(url)) return;
+    if (!open.allow({ url, topLevel })) event.preventDefault();
   };
-  contents.on("will-navigate", (event) => refuse(event, event.url));
-  contents.on("will-redirect", (event) => refuse(event, event.url));
-  contents.on("will-frame-navigate", (event) => {
-    if (!open.allow({ url: event.url, topLevel: event.isMainFrame })) event.preventDefault();
-  });
+  contents.on("will-navigate", (event) => refuse(event, event.url, true));
+  contents.on("will-redirect", (event) => refuse(event, event.url, true));
+  contents.on("will-frame-navigate", (event) => refuse(event, event.url, event.isMainFrame));
   contents.on("certificate-error", (event, url, error, _certificate, callback) => {
     event.preventDefault();
     callback(false);
@@ -632,6 +662,11 @@ async function drivePage(
   // A same-document move (history.pushState, a site's own navigation) does
   // not load a new document, and did-navigate does not fire for it. The
   // same address twice is one move.
+  // A load the browser refused or could not make shows its own error page at
+  // that address; a load replaced by another (-3) leaves the page where it was.
+  contents.on("did-fail-load", (_event, code, _description, url, isMainFrame) => {
+    if (isMainFrame && code !== -3) events.onLoadFailed(url);
+  });
   contents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
     if (!isMainFrame || url === lastNav) return;
     lastNav = url;

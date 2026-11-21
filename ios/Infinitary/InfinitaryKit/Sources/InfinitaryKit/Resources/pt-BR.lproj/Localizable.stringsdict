@@ -1713,6 +1713,42 @@
       <string>No seu computador, repete só esta leitura exata, até %1$ld vezes. Você pode pará-la em Ajustes → Segredos.</string>
     </dict>
   </dict>
+  <key>secretsAskReplaceMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Substituir %1$ld segredo?</string>
+      <key>many</key>
+      <string>Substituir %1$ld segredos?</string>
+      <key>other</key>
+      <string>Substituir %1$ld segredos?</string>
+    </dict>
+  </dict>
+  <key>secretsAskTitleMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Adicionar %1$ld segredo?</string>
+      <key>many</key>
+      <string>Adicionar %1$ld segredos?</string>
+      <key>other</key>
+      <string>Adicionar %1$ld segredos?</string>
+    </dict>
+  </dict>
   <key>settingsAccountsCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

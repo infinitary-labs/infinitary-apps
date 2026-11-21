@@ -76,6 +76,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | header (a request header) | Header | Masculine, plural "Header"; only in the custom API form. |
 | held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
+| How to get it (an ask for a secret) | So bekommst du es | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | Integrations | Integrationen | The Settings section; one of them is "eine Integration". |
 | Intelligence | Intelligenz | |
@@ -128,6 +129,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | run (of an automation) | Lauf, laufen | "Nächster Lauf", "Zuletzt gelaufen", "Läuft". |
 | Runbooks | Leitfäden | Plain word for a settings section a non-developer reads. |
 | Runs on | Läuft auf | |
+| Save secret / Don't save (an ask for a secret) | Geheimnis speichern / Nicht speichern | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | gespeicherter Reset | ChatGPT's saved resets for Codex; one is „eingelöst“ (einlösen), by Infinitary only when the person chooses it, through Codex. |
 | Secrets | Geheimnisse | As GitHub's German docs name secrets. |
 | send back (a change out of a batch) | zurückschicken | "Mit Begründung zurückschicken"; the change "geht zurück" to its crewmate. |

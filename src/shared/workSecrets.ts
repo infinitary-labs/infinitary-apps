@@ -102,8 +102,9 @@ const placedKeptSecretSchema = z.strictObject({
 /**
  * What a computer that runs work asks of the home's Secrets to keep a secret
  * for its task (docs/secrets.md, "Asking to keep a secret"): an ask by its
- * names, places, the references it replaces, a reason and the asker's own id,
- * or the withdrawal of a waiting ask by that id. It never carries a value:
+ * names, places, the references it replaces, a reason, the asker's own id
+ * and, from a computer whose home lists `secret-ask-how`, its how-to, or the
+ * withdrawal of a waiting ask by that id. It never carries a value:
  * the captain types it into the home's own card. Each repeats safely: asking
  * again with a waiting ask's id raises nothing new.
  */
@@ -121,6 +122,8 @@ export const placedSecretAskInputSchema = z.discriminatedUnion("op", [
         }),
       )
       .min(1),
+    /** How the captain gets the secrets, an HTML fragment the home checks and draws (`secret-ask-how.md`). */
+    how: z.string().optional(),
   }),
   z.strictObject({ op: z.literal("cancel"), id: z.string().min(1) }),
 ]);

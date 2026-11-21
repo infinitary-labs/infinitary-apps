@@ -32,7 +32,7 @@ The app writes some private files in the system's temporary folder: short-lived 
 Windows' own temporary folder is inside the profile and reaches no other account.
 When it reaches another account, as a `TEMP` moved to `C:\Temp` does, the app points itself and every program it starts at `private-temp` inside the data folder (`TEMP` and `TMP`), which takes the data folder's list.
 The system's own temporary folder is only read, never changed.
-A launch whose data folder was refused never judged the temporary folder, so it makes no browser profile there for a word it would show while another window holds the folder (`wordProfilePrivate`, `docs/run.md`).
+A launch whose data folder was refused makes no browser profile for a word it would show while another window holds the folder (`wordProfilePrivate`, `docs/run.md`); a launch whose data folder was kept private makes it in the data folder's `word-profiles` folder, never in the private temporary folder a holder clears at its start.
 Windows' own cleanup never reaches `private-temp`, so the launch that holds the data folder clears what earlier launches left there before it starts anything (`clearPrivateTemp`); a window opened beside a run leaves it to the run, and a file still open elsewhere stays until a later launch.
 
 ## How the lists are read and written

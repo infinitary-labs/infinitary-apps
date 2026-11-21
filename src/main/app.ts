@@ -98,6 +98,7 @@ import {
   type PersonReply,
   type PersonWord,
   personWordBox,
+  WORD_PROFILES_DIR,
   wordLauncher,
   wordProfilePrivate,
 } from "./personWord";
@@ -837,8 +838,11 @@ export async function startApp(
             resourcesDir: process.resourcesPath,
             env: process.env,
           }),
-          // On Windows only where the data folder was kept private, its temporary folder with it.
-          privateTemp: wordProfilePrivate(hostPlatform(), privacy),
+          // In the data folder's own folder for them, away from the temporary folder its holder
+          // clears; on Windows only where the data folder was kept private.
+          profiles: wordProfilePrivate(hostPlatform(), privacy)
+            ? join(dataDir, WORD_PROFILES_DIR)
+            : null,
           signal,
         });
         if (reply === "unshown" && !signal?.aborted) sayInOutput(word);

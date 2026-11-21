@@ -57,7 +57,7 @@ describe("a refused launch's word to the person", () => {
     expect(
       await askPersonWord("once-closed", {
         launcher: { execPath: "/nonexistent/infinitary", args: [] },
-        privateTemp: true,
+        profiles: "/nonexistent/word-profiles",
         signal: taken.signal,
       }),
     ).toBeNull();

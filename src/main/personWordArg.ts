@@ -64,9 +64,9 @@ export function endWithRequester(input: NodeJS.ReadableStream, end: () => void):
 }
 
 /**
- * Whether the copy's throwaway profile may be made in this launch's temporary folder: anywhere but
- * Windows, whose modes keep it private; on Windows only once the data folder was kept private
- * (`keepDataFolderPrivate`), which also moved a temporary folder another account can read into it.
+ * Whether the copy's throwaway profile may be made in the data folder's folder for them
+ * (`WORD_PROFILES_DIR`): anywhere but Windows, whose modes keep it this account's alone; on Windows
+ * only once the data folder was kept private (`keepDataFolderPrivate`), whose access list it takes.
  * A launch that never judged it, or whose data folder was refused, makes none.
  */
 export function wordProfilePrivate(

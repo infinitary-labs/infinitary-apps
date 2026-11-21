@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  chmodSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
@@ -118,32 +126,67 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
   process.stdout.write(replyLine(reply), () => app.exit(0));
 }
 
-/** The file in a copy's profile naming the copy's process, which `reclaimWordProfiles` reads. */
-const COPY_PID_FILE = "infinitary-word-copy.pid";
+/**
+ * The folder in the data folder that holds the copies' throwaway profiles, and only them: a folder of
+ * this account's alone, apart from the temporary folder a holder clears at its start
+ * (`clearPrivateTemp`) and from one other accounts share, so a profile is never taken from under a
+ * copy still using it and reclaiming touches nothing another program made.
+ */
+export const WORD_PROFILES_DIR = "word-profiles";
+/** The file in a profile naming the launch that made it and, once started, its copy. */
+const OWNER_FILE = "infinitary-word.pid";
 const PROFILE_PREFIX = "infinitary-word-";
+/** Two process numbers and a space: anything longer is no owner file of ours. */
+const OWNER_FILE_BYTES = 64;
 
 /**
- * Removes the throwaway profiles of earlier copies whose launch died before it could, as one ended
- * by force: only a profile naming a copy that has positively ended (no process with its number), so
- * a profile still being made, or one whose copy lives or whose number another program took since,
- * is left as it is.
+ * Makes the profiles' folder and says whether it is this account's alone: a real folder, not a link,
+ * and away from Windows owned by this account with no access for anyone else (a wider one of its own
+ * is narrowed). On Windows it takes the data folder's owner-only access list (`wordProfilePrivate`).
  */
-export function reclaimWordProfiles(temp: string): void {
+function ownProfilesFolder(root: string): boolean {
+  try {
+    mkdirSync(root, { recursive: true, mode: 0o700 });
+    const folder = lstatSync(root);
+    if (!folder.isDirectory() || folder.isSymbolicLink()) return false;
+    if (hostPlatform() === "win32") return true;
+    if (folder.uid !== process.getuid?.()) return false;
+    if ((folder.mode & 0o077) !== 0) chmodSync(root, 0o700);
+    return (lstatSync(root).mode & 0o077) === 0;
+  } catch (error) {
+    console.warn(`[app] could not keep a word's profiles private: ${(error as Error).message}`);
+    return false;
+  }
+}
+
+/**
+ * Removes the throwaway profiles in the profiles' folder whose launch died before it could, as one
+ * ended by force: only a profile whose owner file names a copy that has positively ended (no process
+ * with its number), or, where its copy never started, a launch that has. A profile with no such file,
+ * a file that is not a small plain file, or an owner still running or whose number another program
+ * took since, is left as it is.
+ */
+function reclaimWordProfiles(root: string): void {
   let names: string[];
   try {
-    names = readdirSync(temp).filter((name) => name.startsWith(PROFILE_PREFIX));
+    names = readdirSync(root).filter((name) => name.startsWith(PROFILE_PREFIX));
   } catch {
     return;
   }
   for (const name of names) {
-    const profile = join(temp, name);
-    let pid: number;
+    const profile = join(root, name);
+    let owner: number | undefined;
     try {
-      pid = Number(readFileSync(join(profile, COPY_PID_FILE), "utf8"));
+      if (!lstatSync(profile).isDirectory()) continue;
+      const file = join(profile, OWNER_FILE);
+      const kept = lstatSync(file);
+      if (!kept.isFile() || kept.size > OWNER_FILE_BYTES) continue;
+      // The copy where it started, or else the launch that made the profile.
+      owner = Number(readFileSync(file, "utf8").trim().split(" ").at(-1));
     } catch {
       continue;
     }
-    if (!Number.isInteger(pid) || pid <= 0 || !processGone(pid)) continue;
+    if (!Number.isInteger(owner) || owner <= 0 || !processGone(owner)) continue;
     try {
       rmSync(profile, { recursive: true, force: true });
     } catch (error) {
@@ -166,23 +209,25 @@ function processGone(pid: number): boolean {
  * Shows a word through a copy of this program (`showPersonWord`) and gives its reply (`readReply`)
  * once the copy has ended and said all it had: null where the word was taken away (`signal`),
  * which ends that copy and its box, and unshown where the copy could not be made, started or show
- * its box, or where its profile could not be kept private (`privateTemp`, `wordProfilePrivate`),
- * which then makes none. The copy's input stays open while this launch lives, so the copy ends
- * with it too. Its throwaway profile goes once the copy has ended - by this launch, or by a later
- * one's `reclaimWordProfiles` where this launch died first - and a profile that cannot go changes
- * no reply. `launcher` starts this app as it was started (`wordLauncher`).
+ * its box, or where its profile has no private folder to go in (`profiles` null, as
+ * `wordProfilePrivate` decides, or one not this account's alone), which then makes none. The copy's
+ * input stays open while this launch lives, so the copy ends with it too. Its throwaway profile, in
+ * `profiles` (`WORD_PROFILES_DIR`), names this launch from its making and the copy once it started,
+ * and goes once the copy has ended - by this launch, or by a later one's ask where this launch died
+ * first - and a profile that cannot go changes no reply. `launcher` starts this app as it was
+ * started (`wordLauncher`).
  */
 export function askPersonWord(
   word: PersonWord,
   options: {
     launcher: { execPath: string; args: readonly string[] };
-    privateTemp: boolean;
+    profiles: string | null;
     signal?: AbortSignal;
   },
 ): Promise<PersonReply | null> {
-  const { signal } = options;
+  const { signal, profiles } = options;
   if (signal?.aborted) return Promise.resolve(null);
-  if (!options.privateTemp) return Promise.resolve("unshown");
+  if (profiles === null || !ownProfilesFolder(profiles)) return Promise.resolve("unshown");
   return new Promise((done) => {
     let settled = false;
     let takeAway = () => {};
@@ -204,9 +249,11 @@ export function askPersonWord(
     };
     let copy: ChildProcess;
     try {
-      const temp = tmpdir();
-      reclaimWordProfiles(temp);
-      profile = mkdtempSync(join(temp, PROFILE_PREFIX));
+      reclaimWordProfiles(profiles);
+      profile = mkdtempSync(join(profiles, PROFILE_PREFIX));
+      // Named from its making: a later launch removes it once this launch has gone, should no copy
+      // have started.
+      writeFileSync(join(profile, OWNER_FILE), String(process.pid));
       copy = spawn(
         options.launcher.execPath,
         [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
@@ -218,16 +265,17 @@ export function askPersonWord(
       settle("unshown");
       return;
     }
+    // The copy's number is known as it starts, before anything else runs here: from now its own
+    // end, not this launch's, lets a later launch remove the profile.
+    try {
+      if (copy.pid !== undefined)
+        writeFileSync(join(profile, OWNER_FILE), `${process.pid} ${copy.pid}`);
+    } catch (error) {
+      console.warn(`[app] could not name a word's copy: ${(error as Error).message}`);
+    }
     let started = false;
     copy.once("spawn", () => {
       started = true;
-      // A later launch removes this profile once this copy has ended, should this launch die first.
-      try {
-        if (profile !== null && copy.pid !== undefined)
-          writeFileSync(join(profile, COPY_PID_FILE), String(copy.pid));
-      } catch (error) {
-        console.warn(`[app] could not name a word's copy: ${(error as Error).message}`);
-      }
     });
     let said = "";
     takeAway = () => {

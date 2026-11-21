@@ -247,6 +247,8 @@
   "cardRevisionLinksUnavailable": "روابط التغيير غير متاحة",
   "cardRevisionMore": "{count} أخرى",
   "cardRevisionShowFewer": "عرض أقل",
+  "cardSavedResetCrewWaits": "ينتقل عمل الطاقم إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.",
+  "cardSavedResetCrewWaitsThere": "ينتقل عمل الطاقم {where} إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.",
   "cardSavedResetsNow": {
     "plural": "count",
     "zero": "لدى {account} إعادات تعيين محفوظة ({count}) يمكنك استخدام إحداها الآن لتجديد رصيده.",
@@ -319,5 +321,6 @@
   "cardThreadWorking": "قيد العمل",
   "cardThreadWrittenAfterClose": "كُتبت بعد إغلاق البطاقة",
   "cardThreadWrittenBy": "كتبها {label}",
-  "cardThreadWrittenByAfterClose": "كتبها {label} بعد إغلاق البطاقة"
+  "cardThreadWrittenByAfterClose": "كتبها {label} بعد إغلاق البطاقة",
+  "cardUseSavedReset": "استخدم إعادة تعيين محفوظة"
 }

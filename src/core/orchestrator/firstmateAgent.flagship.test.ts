@@ -226,8 +226,9 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(t.cards().some((card) => card.id === "card-fm-no-headroom")).toBe(false);
   });
 
-  // INF-5369 piece 6 (docs/quota.md, "Saved resets"): shown, never used.
-  it("says on the spent-allowance card when a saved reset would refill the account now, with a link to its usage page", async () => {
+  // INF-5369 piece 6 (docs/quota.md, "Saved resets"), and INF-5478's
+  // accepted plan piece 1 (docs/codex-client.md): a button uses it.
+  it("says on the spent-allowance card when a saved reset would refill the account now, with a link to its usage page and a button that uses it", async () => {
     const live = parseCodexUsage(
       JSON.parse(
         readFileSync(
@@ -258,8 +259,9 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       m.cardSavedResetsNow({ account: "Codex · Work", count: live.available }),
     );
     expect(applies.body).toContain(`<a href="${SAVED_RESETS_PAGE.codex}"`);
-    // Shown only: no button uses it.
+    // Its button uses one, ahead of the others.
     expect(applies.actions.map((action) => action.id)).toEqual([
+      "use-saved-reset",
       "recheck-allowance",
       "open-settings",
     ]);

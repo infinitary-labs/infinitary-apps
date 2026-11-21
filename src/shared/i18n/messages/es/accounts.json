@@ -197,5 +197,28 @@
   "accountsCustomApiUnreachable": "No se pudo conectar con {host}. Comprueba que esté en marcha y que estés en su red.",
   "accountsCustomApiUseFix": "Usar {address}",
   "accountsCustomApiUseForFirstMate": "Usar {model} para tu primer oficial",
-  "accountsCustomApiUseModel": "Usar {model}"
+  "accountsCustomApiUseModel": "Usar {model}",
+  "accountsSavedResetBusy": "Infinitary ya está usando un restablecimiento guardado en {account}. Espera a que termine.",
+  "accountsSavedResetCodexStopped": "Codex dejó de responder antes de usar nada, así que no se usó ningún reinicio guardado. Inténtalo de nuevo.",
+  "accountsSavedResetNoCodex": "Para usar un restablecimiento guardado desde Infinitary, este equipo necesita Codex {floor} o posterior. Instala Codex o usa el restablecimiento en {site}.",
+  "accountsSavedResetNoneLeft": "{account} no tiene más restablecimientos guardados para usar.",
+  "accountsSavedResetNothing": "{account} no tiene asignación agotada que cubra un restablecimiento guardado, así que no se usó ninguno.",
+  "accountsSavedResetOldCodex": "Este equipo tiene Codex {version} y para usar un restablecimiento guardado se necesita {floor} o posterior. Actualiza Codex o usa el restablecimiento en {site}.",
+  "accountsSavedResetOtherAccount": "Codex inició sesión en una cuenta de ChatGPT distinta de {account}, así que Infinitary no usó ningún restablecimiento y cerró la sesión de Codex. Vuelve a intentarlo con la misma cuenta.",
+  "accountsSavedResetPasteAgain": "Esa dirección no tiene código de inicio de sesión. Pega la dirección completa en la que terminó la página.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "Si tu navegador está en otro equipo, pega la dirección en la que terminó su página después de iniciar sesión.",
+  "accountsSavedResetSignInAgain": "Codex no pudo leer la asignación de {account}, así que no se usó ningún restablecimiento. Si sigue pasando, elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.",
+  "accountsSavedResetSignInFailed": "Codex no pudo iniciar sesión.",
+  "accountsSavedResetSignInFirst": "Codex todavía no inició sesión en {account}, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para iniciar sesión en Codex.",
+  "accountsSavedResetSignInNotice": "Inicia sesión en la cuenta de ChatGPT de {account} en tu navegador para que Codex pueda usar su restablecimiento guardado.",
+  "accountsSavedResetUnclear": "Codex no dijo si se usó un restablecimiento de {account}. Volver a intentarlo pregunta por el mismo restablecimiento y nunca usa un segundo.",
+  "accountsSavedResetUnverified": "Infinitary no pudo confirmar que Codex inició sesión en la misma cuenta de ChatGPT que {account}, así que no se usó ningún restablecimiento.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "one": "Se usó un restablecimiento guardado de {account}. Queda {count}.",
+    "many": "Se usó un restablecimiento guardado de {account}. Quedan {count}.",
+    "other": "Se usó un restablecimiento guardado de {account}. Quedan {count}."
+  },
+  "accountsSavedResetUsedChecking": "Se usó un restablecimiento guardado de {account}. Infinitary vuelve a consultar su asignación."
 }

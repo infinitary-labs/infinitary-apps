@@ -5,6 +5,7 @@ import { HERE } from "@shared/deviceNames";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { standInCodex } from "../../../tests/helpers/codexAppServer";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type AccountBackend, type AccountRef, statusFromHealth } from "../accounts/accountBackend";
 import type {
@@ -18,6 +19,7 @@ import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { createNormalizerState, fmEventsFromClaudeMessage } from "../claude/claudeEvents";
 import { claudeAvailableModels } from "../claude/claudeModels";
 import { readClaudeStore } from "../claude/claudeQuota";
+import { signOutCodexHome } from "../codex/savedResets";
 import { appPathsFor } from "../paths";
 import { createQuotaFetcher } from "../quota/fetchQuota";
 import { PushedQuotaStore, withRejectedReadings } from "../quota/pushedQuota";
@@ -201,6 +203,32 @@ describe("AccountVault", () => {
       entry.authPath.includes(work.id),
     )?.runtime;
     expect((removedRuntime as FakeRuntime).logout).toHaveBeenCalledWith("openai-codex");
+  });
+
+  // INF-5478's plan, piece 1: Codex's own sign-in for a saved reset goes with the account.
+  it("signs Codex out of the account's Codex home and removes it with the account", async () => {
+    const paths = freshPaths();
+    const codex = standInCodex();
+    const ready = async () =>
+      ({ state: "ready", executable: "/usr/local/bin/codex", version: "0.155.1" }) as const;
+    const vault = AccountVault.create(paths, {
+      signOutCodex: (home) => signOutCodexHome(home, "0.8.5", { check: ready, start: codex.start }),
+    });
+    const work = await vault.add("openai-codex", "oauth", bridge());
+    const untouched = await vault.add("openai-codex", "oauth", bridge());
+    const home = vault.codexHome(work.id);
+    expect(statSync(home).mode & 0o777).toBe(0o700);
+    writeFileSync(join(home, "auth.json"), "{}");
+    expect(vault.codexSignedIn(work.id)).toBe(true);
+
+    await vault.remove(untouched.id);
+    // An account whose Codex never signed in starts no Codex.
+    expect(codex.starts()).toBe(0);
+
+    await vault.remove(work.id);
+    expect(codex.homes).toEqual([home]);
+    expect(codex.methods()).toEqual(["initialize", "initialized", "account/logout"]);
+    expect(existsSync(home)).toBe(false);
   });
 
   it("signs an existing account in again into its own store, moving nothing else", async () => {

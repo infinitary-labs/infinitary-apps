@@ -124,7 +124,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
 | run (of an automation) | exécution | "Prochaine exécution", "Dernière exécution"; the verb is "s’exécuter". |
 | runbooks | procédures | The Settings section "Procédures". |
-| saved reset (a provider's, refills the allowance) | réinitialisation enregistrée | ChatGPT's saved resets for Codex; Infinitary never uses one. |
+| saved reset (a provider's, refills the allowance) | réinitialisation enregistrée | ChatGPT's saved resets for Codex; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | send back (a change out of a batch) | renvoyer | "Renvoyer avec un motif". |
 | server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |
 | session, transcript (never said) | conversation | |

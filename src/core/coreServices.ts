@@ -3,6 +3,7 @@ import type { DeviceChip, DeviceInvite, DeviceInviteRequest, DeviceSystem } from
 import type { FmEvent } from "@shared/events";
 import type { ForgeChangesView } from "@shared/forges";
 import type { ProviderView } from "@shared/providers";
+import type { SavedResetResult } from "@shared/savedResets";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
 import type { Batches } from "./batches/batches";
@@ -41,7 +42,7 @@ import type { PanelMountsHolder } from "./personal/panelMounts";
 import type { PersonalExtensions } from "./personal/personalExtensions";
 import type { LaunchWatch } from "./personal/safeMode";
 import type { AccountVault } from "./pi/accountVault";
-import type { PiAuthService } from "./pi/piAuth";
+import type { AuthInteractionBridge, PiAuthService } from "./pi/piAuth";
 import type { AutomaticPlacement } from "./placed/automaticPlacement";
 import type { ComputerLoads } from "./placed/computerLoads";
 import type { ComputerResourceFeed } from "./placed/computerResourceFeed";
@@ -318,6 +319,17 @@ export type CoreServices = {
    * that computer that runs work's own, and its switch is saved there.
    */
   setKeepGoingOnCredits: (accountId: string, on: boolean, deviceId?: string) => Promise<void>;
+  /**
+   * Uses one of a Codex account's saved resets (docs/codex-client.md) and
+   * says what it came to in the feed; with `deviceId` on that computer that
+   * runs work. With a bridge, Codex may sign in to the account through it.
+   */
+  redeemSavedReset: (
+    accountId: string,
+    options: { deviceId?: string; bridge?: AuthInteractionBridge },
+  ) => Promise<SavedResetResult>;
+  /** Whether Codex keeps a sign-in for this Mac's own account, so a use needs no browser. */
+  codexSignedIn: (accountId: string) => boolean;
   settings: SettingsStore;
   /**
    * The Notifications switch changed (Settings -> General): a phone

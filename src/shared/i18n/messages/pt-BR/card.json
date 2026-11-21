@@ -214,6 +214,8 @@
   "cardRevisionLinksUnavailable": "Links de alteração indisponíveis",
   "cardRevisionMore": "mais {count}",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardSavedResetCrewWaits": "O trabalho da tripulação passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.",
+  "cardSavedResetCrewWaitsThere": "O trabalho da tripulação {where} passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.",
   "cardSavedResetsNow": {
     "plural": "count",
     "one": "{account} tem uma redefinição salva que você pode usar agora para renovar a franquia.",
@@ -274,5 +276,6 @@
   "cardThreadWorking": "trabalhando",
   "cardThreadWrittenAfterClose": "Escrito depois que o cartão foi fechado",
   "cardThreadWrittenBy": "Escrito por {label}",
-  "cardThreadWrittenByAfterClose": "Escrito por {label}, depois que o cartão foi fechado"
+  "cardThreadWrittenByAfterClose": "Escrito por {label}, depois que o cartão foi fechado",
+  "cardUseSavedReset": "Usar uma redefinição salva"
 }

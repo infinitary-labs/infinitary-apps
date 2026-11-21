@@ -2,7 +2,12 @@ import type { Card } from "@shared/cards";
 import type { QuotaSnapshotView } from "@shared/quota";
 import type { ComputerSignIns } from "@shared/signIns";
 import { creditsOfferCard, creditsOfferCardId } from "../orchestrator/hostCards";
-import { CreditsWatch, creditsOffers, forgetAnsweredOffers } from "./creditsSwitch";
+import {
+  type CreditsOffer,
+  CreditsWatch,
+  creditsOffers,
+  forgetAnsweredOffers,
+} from "./creditsSwitch";
 
 /**
  * Keep going on credits at the home (docs/quota.md "Keep going on credits"):
@@ -25,6 +30,8 @@ export type CreditsCardsOptions = {
     keepGoing: (deviceId: string, accountId: string, on: boolean) => Promise<unknown>;
     lastSaid: (deviceId: string) => ComputerSignIns | null;
     placeOf: (deviceId: string) => { where: string } | undefined;
+    /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
+    canUseSavedReset: (deviceId: string) => boolean;
   };
   cards: {
     raiseHostCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => unknown;
@@ -69,16 +76,22 @@ export class CreditsCards {
     }
     const where = this.options.computers.placeOf(deviceId)?.where;
     if (!where) return;
+    const resets = this.options.computers.canUseSavedReset(deviceId);
     for (const offer of creditsOffers(
       this.options.computers.lastSaid(deviceId)?.quota ?? undefined,
       piProviders,
       this.offeredOn(deviceId),
       this.onThere(deviceId),
       this.options.now(),
-    ))
+    )) {
+      // A computer that cannot use a saved reset now is offered none: an older one, or one out of reach.
+      const { savedResets, ...rest } = offer;
+      const shown: CreditsOffer = resets ? offer : rest;
+      if (!shown.credits && !shown.savedResets) continue;
       this.options.cards.raiseHostCard(
-        creditsOfferCard({ ...offer, computer: { deviceId, where } }),
+        creditsOfferCard({ ...shown, computer: { deviceId, where } }),
       );
+    }
   }
 
   /** A new reading of this Mac's own allowance. */

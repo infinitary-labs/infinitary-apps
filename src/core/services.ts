@@ -35,6 +35,7 @@ import { primeClaudeExecutable } from "./claude/claudeCli";
 import { claudeCostReportingAllowed } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { createClaudeSessionFactory } from "./claude/session";
+import { SavedResets, savedResetReach, signOutCodexHome } from "./codex/savedResets";
 import type { CoreServices } from "./coreServices";
 import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
 import { startHomeDecisions } from "./decisions/homeDecisions";
@@ -72,6 +73,7 @@ import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { startHomeAutomation } from "./orchestrator/homeAutomation";
 import { startHomeCrew } from "./orchestrator/homeCrew";
 import { startHomeFirstmate } from "./orchestrator/homeFirstmate";
+import { creditsOfferCardId } from "./orchestrator/hostCards";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
 import { createOwnBatches } from "./orchestrator/ownBatches";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
@@ -218,6 +220,7 @@ export async function createServices(
     pi: piBackend,
     backends: [claudeBackend],
     holdSeat: async (accountId) => (await holdSeat?.(accountId)) ?? (() => {}),
+    signOutCodex: (home) => signOutCodexHome(home, host.app.version),
     packaged: host.app.packaged,
     claudeConfigDir: () => defaultClaudeConfigDir(),
     rail: { protectedIds: (providerId) => slots.protectedIds(providerId) },
@@ -562,6 +565,8 @@ export async function createServices(
   // "Keep going on credits"); wired once the card stack exists.
   let onSpentAt: (piProviders: string[], deviceId?: string) => void = () => {};
   let setKeepGoingOnCredits: CoreServices["setKeepGoingOnCredits"] = async () => {};
+  // Using a saved Codex reset (docs/codex-client.md); wired once the computers' sign-ins exist.
+  let savedResets: SavedResets | undefined;
   // A computer that runs work said its sign-ins: its accounts' credits lines and offers.
   let onDeviceCredits: (deviceId: string) => void = () => {};
   // The routing pool, the slot record and the router (routing/homeRouting.ts).
@@ -1327,6 +1332,10 @@ export async function createServices(
     quota,
     vault,
     setKeepGoingOnCredits: (...args) => setKeepGoingOnCredits(...args),
+    redeemSavedReset: (accountId, options) => {
+      if (!savedResets) throw new Error("Infinitary is still starting.");
+      return savedResets.use(accountId, options);
+    },
     broadcastEvent,
     sessionFactories,
     localSeat,
@@ -1489,6 +1498,23 @@ export async function createServices(
   });
   setKeepGoingOnCredits = (accountId, on, deviceId) =>
     creditsCards.setKeepGoing(accountId, on, deviceId);
+  savedResets = new SavedResets({
+    vault,
+    reach: savedResetReach(vault, host.app.version),
+    computers: {
+      redeemSavedReset: (deviceId, accountId, signIn) =>
+        deviceSignIns.redeemSavedReset(deviceId, accountId, signIn),
+      accountOf: (deviceId, accountId) =>
+        deviceSignIns.lastSaid(deviceId)?.accounts.find((account) => account.id === accountId),
+    },
+    note: (fact) => broadcastEvent({ type: "firstmate_note", ...saidLine(fact) }),
+    recheck: () => void quota.refresh("demand"),
+    used: (accountId, deviceId) =>
+      supervisor.cards.hostCards.withdrawHostCard(
+        creditsOfferCardId(accountId, deviceId),
+        "saved-reset-used",
+      ),
+  });
   onSpentAt = (piProviders, deviceId) => creditsCards.spentAt(piProviders, deviceId);
   onDeviceCredits = (deviceId) => creditsCards.readThere(deviceId);
   onQuotaRefreshed = () => {
@@ -1605,6 +1631,11 @@ export async function createServices(
     auth,
     vault,
     setKeepGoingOnCredits: (...args) => setKeepGoingOnCredits(...args),
+    redeemSavedReset: (accountId, options) => {
+      if (!savedResets) throw new Error("Infinitary is still starting.");
+      return savedResets.use(accountId, options);
+    },
+    codexSignedIn: (accountId) => vault.codexSignedIn(accountId),
     flagship,
     scheduler,
     ticker,

@@ -34,6 +34,7 @@ import {
   integrationsViewSchema,
 } from "../integrations";
 import { providerViewSchema } from "../providers";
+import { savedResetResultSchema, useSavedResetOptionsSchema } from "../savedResets";
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** Sign-ins: subscriptions and their accounts, custom API connections, where projects live, and integrations. */
@@ -209,6 +210,18 @@ export const signInChannels = {
     reach: "views",
     request: z.tuple([z.string(), z.boolean(), DEVICE]),
     response: okSchema,
+  },
+  // Uses one of a Codex account's saved resets through the Codex CLI the
+  // person installed (docs/codex-client.md, `use-saved-reset`): with
+  // `signIn`, Codex may sign in to the account, its link and paste-back
+  // prompt shown as a sign-in's; with `deviceId`, the account is that
+  // computer that runs work's own and is used there.
+  "inf:accounts:use-saved-reset": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string(), useSavedResetOptionsSchema.optional()]),
+    response: savedResetResultSchema,
   },
   "inf:accounts:pin": {
     effect: "change",

@@ -7,6 +7,9 @@ const SECRETS_ASK = contractChange("secrets-ask");
 /** Bringing secrets from another tool (`secrets-bring.md`). */
 const SECRETS_BRING = contractChange("secrets-bring");
 
+/** A card's Use a saved reset (`use-saved-reset.md`). */
+const USE_SAVED_RESET = contractChange("use-saved-reset");
+
 /** The event screen's offer card's Turn on (`event-screen-offer.md`). */
 const EVENT_SCREEN_OFFER = contractChange("event-screen-offer");
 
@@ -57,6 +60,15 @@ export function readsSecretBring(changes?: readonly string[]): boolean {
   return listsChange(changes, SECRETS_BRING);
 }
 
+/**
+ * Whether a view reads a card's Use a saved reset (`use-saved-reset.md`):
+ * only a view that lists the change, since without it the click's way on,
+ * the account's row in Settings, does nothing there.
+ */
+export function readsSavedReset(changes?: readonly string[]): boolean {
+  return listsChange(changes, USE_SAVED_RESET);
+}
+
 /** Which card buttons an older view reads strictly, and so must not be sent. */
 export interface ActionReads {
   /** Allow for the rest of this task (`readsTaskAllow`). */
@@ -69,6 +81,8 @@ export interface ActionReads {
   eventScreen?: boolean;
   /** Bring into Secrets on a bring card (`readsSecretBring`); absent reads as true. */
   secretBring?: boolean;
+  /** Use a saved reset on a spent-allowance or run-out card (`readsSavedReset`); absent reads as true. */
+  savedReset?: boolean;
 }
 
 /** The markers only a frame carrying one of those buttons holds, so most frames pass as they are. */
@@ -77,6 +91,7 @@ const KEEP_GOING_MARK = '"op":"keep-going-on-credits"';
 const SECRET_KEEP_MARK = '"op":"secrets-keep"';
 const EVENT_SCREEN_MARK = '"op":"turn-on-event-screen"';
 const SECRET_BRING_MARK = '"op":"secrets-bring"';
+const SAVED_RESET_MARK = '"op":"use-saved-reset"';
 
 function effectOf(action: unknown): { kind?: unknown; integration?: unknown; op?: unknown } {
   return (action as { effect?: { kind?: unknown } } | null)?.effect ?? {};
@@ -93,6 +108,8 @@ function unread(action: unknown, reads: ActionReads): boolean {
     return true;
   if (reads.secretBring === false && effect.kind === "host" && effect.op === "secrets-bring")
     return true;
+  if (reads.savedReset === false && effect.kind === "host" && effect.op === "use-saved-reset")
+    return true;
   return !reads.keepGoing && effect.kind === "host" && effect.op === "keep-going-on-credits";
 }
 
@@ -103,7 +120,8 @@ export function withoutUnreadActions(value: unknown, reads: ActionReads): unknow
     reads.keepGoing &&
     reads.secretKeep !== false &&
     reads.eventScreen !== false &&
-    reads.secretBring !== false
+    reads.secretBring !== false &&
+    reads.savedReset !== false
   )
     return value;
   if (Array.isArray(value)) return value.map((entry) => withoutUnreadActions(entry, reads));
@@ -137,7 +155,8 @@ export function frameWithoutUnreadActions(text: string, reads: ActionReads): str
     (!reads.keepGoing && text.includes(KEEP_GOING_MARK)) ||
     (reads.secretKeep === false && text.includes(SECRET_KEEP_MARK)) ||
     (reads.eventScreen === false && text.includes(EVENT_SCREEN_MARK)) ||
-    (reads.secretBring === false && text.includes(SECRET_BRING_MARK));
+    (reads.secretBring === false && text.includes(SECRET_BRING_MARK)) ||
+    (reads.savedReset === false && text.includes(SAVED_RESET_MARK));
   return carries ? JSON.stringify(withoutUnreadActions(JSON.parse(text), reads)) : text;
 }
 

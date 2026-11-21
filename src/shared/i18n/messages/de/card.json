@@ -203,6 +203,8 @@
   "cardRevisionLinksUnavailable": "Änderungslinks nicht verfügbar",
   "cardRevisionMore": "{count} weitere",
   "cardRevisionShowFewer": "Weniger anzeigen",
+  "cardSavedResetCrewWaits": "Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
+  "cardSavedResetCrewWaitsThere": "Crew-Arbeit {where} wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.",
   "cardSavedResetsNow": {
     "plural": "count",
     "one": "{account} hat einen gespeicherten Reset, mit dem du sein Kontingent jetzt wieder auffüllen kannst.",
@@ -259,5 +261,6 @@
   "cardThreadWorking": "arbeitet",
   "cardThreadWrittenAfterClose": "Geschrieben, nachdem die Karte geschlossen wurde",
   "cardThreadWrittenBy": "Geschrieben von {label}",
-  "cardThreadWrittenByAfterClose": "Geschrieben von {label}, nachdem die Karte geschlossen wurde"
+  "cardThreadWrittenByAfterClose": "Geschrieben von {label}, nachdem die Karte geschlossen wurde",
+  "cardUseSavedReset": "Gespeicherten Reset einlösen"
 }

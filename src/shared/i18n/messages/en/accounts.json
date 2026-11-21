@@ -196,5 +196,27 @@
   "accountsCustomApiUnreachable": "Could not reach {host}. Check that it is running and that you are on its network.",
   "accountsCustomApiUseFix": "Use {address}",
   "accountsCustomApiUseForFirstMate": "Use {model} for your first mate",
-  "accountsCustomApiUseModel": "Use {model}"
+  "accountsCustomApiUseModel": "Use {model}",
+  "accountsSavedResetBusy": "Infinitary is already using a saved reset on {account}. Wait for it to finish.",
+  "accountsSavedResetCodexStopped": "Codex stopped answering before it used anything, so no saved reset was used. Try again.",
+  "accountsSavedResetNoCodex": "Using a saved reset from Infinitary needs Codex {floor} or later on this computer. Install Codex, or use the reset on {site}.",
+  "accountsSavedResetNoneLeft": "{account} has no saved reset left to use.",
+  "accountsSavedResetNothing": "{account} has no spent allowance a saved reset covers, so no reset was used.",
+  "accountsSavedResetOldCodex": "This computer has Codex {version}, and using a saved reset needs {floor} or later. Update Codex, or use the reset on {site}.",
+  "accountsSavedResetOtherAccount": "Codex signed in to a different ChatGPT account than {account}, so Infinitary used no reset and signed Codex out. Try again and sign in to the same account.",
+  "accountsSavedResetPasteAgain": "That address has no sign-in code. Paste the whole address the page ended on.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "If your browser is on another computer, paste the address its page ended on after you signed in.",
+  "accountsSavedResetSignInAgain": "Codex could not read the allowance of {account}, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.",
+  "accountsSavedResetSignInFailed": "Codex could not sign in.",
+  "accountsSavedResetSignInFirst": "Codex is not signed in to {account} yet, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in.",
+  "accountsSavedResetSignInNotice": "Sign in to the ChatGPT account of {account} in your browser, so Codex can use its saved reset.",
+  "accountsSavedResetUnclear": "Codex did not say whether a reset of {account} was used. Trying again asks about the same reset and never uses a second one.",
+  "accountsSavedResetUnverified": "Infinitary could not confirm that Codex is signed in to the same ChatGPT account as {account}, so no reset was used.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "one": "Used a saved reset on {account}. It has {count} left.",
+    "other": "Used a saved reset on {account}. It has {count} left."
+  },
+  "accountsSavedResetUsedChecking": "Used a saved reset on {account}. Infinitary is checking its allowance again."
 }

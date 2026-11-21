@@ -27,6 +27,30 @@
       <string>يعرض هذا الخادم %1$ld نموذج. اختر ما تريد استخدامه:</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. لم يتبقَّ أي منها.</string>
+      <key>one</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت واحدة.</string>
+      <key>two</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت اثنتان.</string>
+      <key>few</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت %2$ld.</string>
+      <key>many</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت %2$ld.</string>
+      <key>other</key>
+      <string>استُخدمت إعادة تعيين محفوظة لـ %1$@. تبقّت %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

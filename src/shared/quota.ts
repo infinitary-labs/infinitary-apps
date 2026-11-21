@@ -111,7 +111,8 @@ export type QuotaCreditsView = z.infer<typeof quotaCreditsViewSchema>;
  * allowance the provider keeps on the account until they are used or
  * expire, read from ChatGPT's Codex usage reading
  * (`rate_limit_reset_credits`). A fact beside the windows, never a window:
- * Infinitary never uses one, and routing reads nothing from it.
+ * Infinitary uses one only on the captain's Use a saved reset, through Codex
+ * (docs/codex-client.md), and routing reads nothing from it.
  * - `available` how many the account holds,
  * - `applicable` how many would take effect right now; absent is unknown.
  * No `savedResets` at all is unknown too, never zero.

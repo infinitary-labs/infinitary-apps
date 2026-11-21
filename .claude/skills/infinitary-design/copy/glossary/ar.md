@@ -140,7 +140,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | rigor | العناية | Written as "العناية: {care}" so the rigor label needs no agreement. |
 | Runbooks | أدلة التشغيل | |
 | save point (never said) | إيداع | |
-| saved reset (a provider's, refills the allowance) | إعادة تعيين محفوظة | ChatGPT's saved resets for Codex; plural "إعادات تعيين محفوظة"; Infinitary never uses one. |
+| saved reset (a provider's, refills the allowance) | إعادة تعيين محفوظة | ChatGPT's saved resets for Codex; plural "إعادات تعيين محفوظة"; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | seconds (short unit) | ث | Durations read "{minutes} د {seconds} ث". |
 | Secrets | الأسرار | |
 | send back (a change out of a batch) | إرجاع | A verbal noun on the button ("إرجاع مع ذكر السبب"). |

@@ -87,6 +87,10 @@
       "about": "The Claude Code the person installed"
     },
     {
+      "name": "Codex client",
+      "about": "The Codex CLI the person installed, used only for saved resets"
+    },
+    {
       "name": "GitHub, GitLab and Bitbucket",
       "about": "Where projects live"
     },
@@ -218,6 +222,11 @@
       "from": "core",
       "to": "Claude client",
       "why": "runs Claude sessions and sign-ins"
+    },
+    {
+      "from": "core",
+      "to": "Codex client",
+      "why": "uses a saved reset and signs Codex in for it"
     },
     {
       "from": "core",

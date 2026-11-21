@@ -1,6 +1,8 @@
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { ZodError } from "zod";
 
+const SIGN_IN_FALLBACK = "Could not sign in to this account. Please try again.";
+
 // Only requests whose caught rejection is shown directly to the captain.
 // Other channels retain their existing error contract.
 export const REQUEST_COPY = {
@@ -109,9 +111,12 @@ export const REQUEST_COPY = {
     prefix: "Could not add this account: ",
   },
   "inf:accounts:sign-in": {
-    fallback: "Could not sign in to this account. Please try again.",
+    fallback: SIGN_IN_FALLBACK,
     prefix: "Could not sign in to this account: ",
   },
+  // Every refusal of a saved reset is already a whole sentence in the
+  // person's language; only an empty one falls back to the sign-in's words.
+  "inf:accounts:use-saved-reset": { fallback: SIGN_IN_FALLBACK, prefix: "" },
   "inf:settings:routing:set": {
     fallback: "Could not save routing. Please try again.",
     prefix: "Could not save routing: ",

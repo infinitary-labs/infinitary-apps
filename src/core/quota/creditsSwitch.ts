@@ -108,7 +108,8 @@ export type CreditsOffer = {
   accountId: string;
   name: string;
   resetsAt?: string;
-  credits: { usedPercent?: number; balance?: string };
+  /** Absent when only its saved resets are offered. */
+  credits?: { usedPercent?: number; balance?: string };
   /** Saved resets that would apply now, when its provider says so (docs/quota.md, "Saved resets"). */
   savedResets?: { provider: string; count: number };
 };
@@ -116,7 +117,8 @@ export type CreditsOffer = {
 /**
  * The crew's run-out cards a decision earns (docs/quota.md "Keep going on
  * credits"): each account of the named providers whose allowance is spent,
- * whose provider says its credits are available and whose switch is off
+ * whose provider says its credits are available or a saved reset would
+ * refill it (docs/codex-client.md), and whose switch is off
  * (`switchOn`) - once per account until its allowance answers again,
  * remembered in `offered` (`forgetAnsweredOffers`). A reset time is not the
  * key: Codex's moves with every reading.
@@ -133,18 +135,19 @@ export function creditsOffers(
     const accountId = row.accountId;
     if (!accountId || switchOn(accountId)) continue;
     const credits = creditsOfferOf(row);
-    if (!credits || !piProviders.includes(servedProviderOf(row.provider))) continue;
+    const savedResets = savedResetsNow(row);
+    if (credits === undefined && savedResets === undefined) continue;
+    if (!piProviders.includes(servedProviderOf(row.provider))) continue;
     const effective = effectiveFromProvider(row, now).effectivePercentRemaining;
     if (effective === undefined || effective > 0) continue;
     if (offered.has(accountId)) continue;
     offered.add(accountId);
     const reset = limitingResetOf(row, now);
-    const savedResets = savedResetsNow(row);
     offers.push({
       accountId,
       name: nameOf(row),
       ...(reset !== undefined ? { resetsAt: clockTime(reset) } : {}),
-      credits,
+      ...(credits ? { credits } : {}),
       ...(savedResets !== undefined
         ? { savedResets: { provider: row.provider, count: savedResets } }
         : {}),

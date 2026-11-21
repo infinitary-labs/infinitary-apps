@@ -18,7 +18,7 @@
   "InfinitaryTests/PhoneOrbitSeatsTests/testProgramRingSitsOnTheFirstOrbit",
   "InfinitaryTests/PhoneOrbitSeatsTests/testRelationshipCircleReturnsInTheNativeView",
   "InfinitaryTests/PhoneOrbitSeatsTests/testVisibleSeatsCloseWaitAndReviewGapsAndOpenOnReturn",
-  "InfinitaryTests/PhoneOrbitSeatsTests/testWaiterKeepsItsShrinkingCircleInsideTheScene",
+  "InfinitaryTests/PhoneOrbitSeatsTests/testWaiterKeepsItsFullCircleThroughAWholeLoop",
   "InfinitaryTests/PhonePagerKeysTests/testPagerChordsTurnOnePageEachAndNeverRepeat",
   "InfinitaryTests/PhoneReopenTests/testReopenDuringAWaitDialsAtOnce",
   "InfinitaryTests/PhoneReopenTests/testReopenRedialsAKeptConnectionThatWentSilent",

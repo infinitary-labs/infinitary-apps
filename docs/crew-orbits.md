@@ -92,8 +92,9 @@ A seat glides on a spring when the formations around it grow or shrink (each of 
 The machine name sits 20 px under the cluster's edge and follows its seat.
 
 **The crew layer is the window.**
-With several computers the two crew canvases grow to the window's width and to its height less the room the activity line and the input keep (`sceneBox` in `CrewOrbit.tsx`), centered on the first mate and never smaller than the scene reaches; they already lie under the rails, their panels, the cards and the message box, and nothing in the app moves or resizes for them.
+With one computer or several, the two crew canvases grow to the window's width and to its height less the room the activity line and the input keep (`sceneBox` in `CrewOrbit.tsx`), centered on the first mate and never smaller than the home formation's 560 px square or than the scene reaches; they already lie under the rails, their panels, the cards and the message box, and nothing in the app moves or resizes for them.
 A cluster may sit under an open panel; a crewmate under a panel or a card takes no pointer and no hover, since the pointer counts only on the stage itself.
+No box holds a crewmate in (captain, INF-5726: "why can't we just let the crewmates render anywhere without being bounded? two computers' animations can totally overlap"): a companion's circle and a task's moons keep their full size wherever they ride, so they may pass beyond the window's edge, under the top bar or the input, or over another computer's cluster or the first mate, and no cluster's seat moves apart for them.
 The whole scene, the first mate included, shrinks only when the window is shorter than the home formation (the existing fit) or narrower or shorter than the wings, never below 30 percent (`sceneFit`, written to the stylesheet as `sceneFitCss` so a still frame keeps fitting as the window changes); the model publishes how far the scene reaches as `OrbitFrame.scene`.
 At 1280 by 800 two computers of eight shrink nothing; five computers of twenty-four each fit at about 60 percent.
 
@@ -117,7 +118,7 @@ The existing painter, solids, working/idle colors, review cues, request flickers
 Spawns, reports, steers and home departures connect to the one first mate, not to a remote invisible character.
 
 `ComputerOrbits` (`character/crew/computers.ts`) retains the original home orbit and adds remote adaptive orbits behind the existing `CrewOrbit` painter.
-The original adaptive orbit remains the unchanged single-computer rendering path, including character size, placement, motion, expressions, model names, empty state, its 560 px square and its fit.
+The original adaptive orbit remains the unchanged single-computer rendering path, including character size, placement, motion, expressions, model names, empty state, its 560 px formation and its fit.
 A control-only device contributes no cluster; a device explicitly known to be another user on this Mac shares the home cluster.
 The task board and `task_changed` carry `executionDeviceId`, the task's actual execution placement, with null meaning home.
 Names and the project's current Runs on never determine identity.
@@ -142,8 +143,8 @@ A crewmate on a relationship circle or program ring keeps its logical orbit memb
 A visible program ring remains a first-orbit occupant.
 A fallback crewmate drawn on its main orbit participates in that orbit's spacing.
 Each orbit preserves its survivors' circular order and turns their spacing as little as possible; a return enters the widest visible gap instead of restoring a reservation.
-Existing easing carries the changed seats, and Reduce Motion resolves placement and any bounds fallback in one settled frame.
-Bounds resolution keeps a rejected companion group (one whose blocker is itself past the scene reach) on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
+Existing easing carries the changed seats, and Reduce Motion resolves placement and any circle fallback in one settled frame.
+Resolution keeps a companion group that cannot circle (a member not yet on its orbit, or a fixed star among them) on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
 The desktop's `offMain` set and the phone's drawing seat books carry resolved drawing occupancy, separately from logical crew counts.
 Tilt, speed, orbit growth, computer grouping, program rings, inspection and arrows remain unchanged; equal angles still project to unequal screen distances.
 No guide, ghost marker, label or setting is added.
@@ -162,7 +163,7 @@ Restart seeds the same relationship from the live board, and two reviews of one 
 `withReviewCues` in `companions.ts` turns each live review into a satellite cue beside the recorded waits.
 The host records no edge from a review onto its builder (INF-1876), so the builder never orbits its own reviewer or points an arrow at it; the orbit layer drops such an edge all the same, the way an earlier release recorded one.
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
-More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a builder past the scene reach keeps the reviewer on its slot; near the scene's edge the circle shrinks instead ("Waiting on another crewmate" below).
+More than three, a builder that is itself a satellite, or a reviewer not yet on its orbit keeps the reviewer on its slot; wherever the builder sits, the circle keeps its full size ("Waiting on another crewmate" below).
 Circling or on its slot, the reviewer draws an arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below), in the working ember (`--wire-hot`) rather than the gray (captain, INF-556: "for a reviewer relationship, it should use the orange color that we use as active").
 Like a waiting crewmate, it keeps circling when other crew pass close to it.
 A reviewer and builder on different computers stay where they are, because each computer's orbit holds only its own crew; the reviewer's arrow still crosses the stage to the builder (captain, INF-556: "the same reach as waits"), drawn by `ComputerOrbits` beside each computer's own arrows.
@@ -196,7 +197,7 @@ Every copy is the same task: pointing at either opens its summary beside it, and
 A ring's radius is at least 40 px, wide enough for 30 px of arc a part, and a second ring sits at least 26 px past the first, tilted 18 degrees less on a different line of nodes.
 `layoutProgram` places the parts in the order filed, evenly round their ring, the first ring turning one way and the second the other, so the running crewmates stay apart without a fan to widen.
 A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
-When a part would leave the stage the whole program scales about its mark.
+The rings keep their full size wherever the mark rides, so a part may pass beyond the window's edge or over another computer's crew.
 A part on the near half of its ring draws in front of the mark and its line brighter, 0.3 against 0.13 in the quiet color, 1 px.
 A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its place on the springs a waiting crewmate's circle uses, without reserving angular space on the main orbit.
 A seated part never circles a blocker, and every wait arrow it has stays, to another part or a task outside its parent, so the arrows into a busy blocker count every live waiter.
@@ -238,9 +239,8 @@ An idle dependency wait with one visible blocker on the same computer orbits tha
 The circle is 64 scene pixels from the blocker, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 It is spanned by the blocker's radial spoke and the main plane's normal, so the planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions share that circle.
-Near the scene's edge the circle shrinks: its radius is the largest, up to 64 scene pixels, that keeps the whole circle inside the scene reach (262 scene pixels each axis) around the blocker's current place, so it shrinks smoothly as the blocker nears the edge and regrows as it moves away (captain, INF-1532, choice A: "Every waiter keeps circling, and nothing crosses the edge").
-A waiter therefore never drops back to its main orbit for part of a loop (`satelliteRadius`).
-A chain, more than one blocker, a larger group, or a blocker that is itself past the scene reach keeps its slot instead.
+The circle keeps its full 64 scene pixels wherever the blocker sits, so it may pass beyond the window's edge or over another computer's crew (captain, INF-5726, which replaced INF-1532's shrinking circle); a waiter never drops back to its main orbit for part of a loop.
+A chain, more than one blocker, or a larger group keeps its slot instead.
 A chain is a crewmate waiting on the waiter: queued work that waits on it has no crewmate, so it makes no chain and the waiter still circles (INF-38).
 Circling or on its slot, a waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker (captain, INF-304: the arrows "should be present at all times to make it more clear there's a relationship").
 The arrow keeps clear of both glyphs; as the two close in on screen, such as when the circle passes in front of the blocker, that clearance gives way so a short arrow still shows (`drawDependencyLink`).

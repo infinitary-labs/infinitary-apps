@@ -10,7 +10,7 @@ import { type CenterCue, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { CrewPhase } from "./orbit";
 import type { SceneSlot } from "./orbitPaths";
 import type { Seat } from "./programs";
-import { satelliteFits, satelliteOffset, satellitePhase, satelliteRadius } from "./satellites";
+import { satelliteOffset, satellitePhase } from "./satellites";
 
 /** What the companions read of a crewmate: its phase, and the plane and angle its slot rides. */
 type Rider = { phase: CrewPhase; plane: number; angle: { readonly x: number } };
@@ -95,10 +95,12 @@ export function seatParts(cues: Map<string, CenterCue>, seats: ReadonlyMap<strin
 
 /**
  * Where every companion wants to be this frame. A satellite cue circles its
- * blocker once the planes have settled in (not `blending`) and the whole
- * group fits the scene; otherwise it keeps its slot, arrow and all. A
- * program's part circles its mark. `fallback` holds the groups whose circle
- * already failed its bounds check this frame; `failed` names this pass's.
+ * blocker on its full circle once the planes have settled in (not
+ * `blending`) and every member is orbiting; otherwise it keeps its slot,
+ * arrow and all. No bound holds a circle back: it may pass beyond the
+ * stage's edge or over another computer's crew. A program's part circles its
+ * mark. `fallback` holds the groups that already could not circle this frame
+ * (a pinned crewmate among them); `failed` names this pass's.
  */
 export function companionTargets(input: {
   cues: ReadonlyMap<string, CenterCue>;
@@ -111,7 +113,7 @@ export function companionTargets(input: {
   settled: boolean;
 }): {
   wanted: Map<string, CompanionTarget>;
-  /** Who is drawn off the main orbit: every seated part and every circle that fits. */
+  /** Who is drawn off the main orbit: every seated part and every group that circles. */
   offMain: Set<string>;
   circleBases: Map<string, CircleBase>;
   failed: string[];
@@ -138,8 +140,6 @@ export function companionTargets(input: {
       for (const id of ids) wanted.set(id, { x: 0, y: 0, z: 0, arrows: [blockerId] });
       continue;
     }
-    // Near the edge the circle shrinks rather than throwing its group back to the main orbit.
-    const radius = satelliteRadius(blocker.plane, blocker.angle.x, origin);
     const placed = ids.flatMap((id) => {
       const cue = cues.get(id);
       const mate = crew.get(id);
@@ -148,14 +148,10 @@ export function companionTargets(input: {
         blocker.plane,
         blocker.angle.x,
         satellitePhase(cue.index, cue.count, now, settled),
-        radius,
       );
       return [{ id, x: origin.x + offset[0], y: origin.y + offset[1], z: offset[2] }];
     });
-    const fits =
-      !ids.some((id) => input.fallback.has(id)) &&
-      placed.length === ids.length &&
-      satelliteFits(origin);
+    const fits = !ids.some((id) => input.fallback.has(id)) && placed.length === ids.length;
     if (!fits) failed.push(...ids);
     else
       for (const id of ids) {

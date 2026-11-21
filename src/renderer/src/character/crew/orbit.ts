@@ -474,7 +474,7 @@ export class CrewOrbit {
   private pinned: string[] = [];
   private stars = new Set<string>();
   private seatsChanged = false;
-  /** A circle that failed its bounds check cannot be retried by a re-spacing pass in this frame. */
+  /** A group that could not circle cannot be retried by a re-spacing pass in this frame. */
   private frameFallback = new Set<string>();
   private nextOrder = 0;
   private lastSpawnAt = Number.NEGATIVE_INFINITY;
@@ -1158,7 +1158,7 @@ export class CrewOrbit {
         this.respacePlanes();
       }
       // Extra passes have dt=0: springs advance once, while Reduce Motion resolves
-      // spacing and any bounds fallback in this very frame. Each failed group
+      // spacing and any circle fallback in this very frame. Each failed group
       // stays on the main orbit for the rest of this resolution.
     } while (this.seatsChanged);
     return frame;

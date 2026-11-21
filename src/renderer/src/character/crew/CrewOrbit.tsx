@@ -278,20 +278,23 @@ export function sceneFitCss(
 }
 
 /**
- * The crew canvases' size: the formation's square at home; with several
- * computers, the window - under the rails and the input - and never less
- * than the scene itself reaches, so a wing is never clipped.
+ * The crew canvases' size: the window - under the rails and the input - and
+ * never less than the formation's square or, with several computers, than
+ * the scene itself reaches, so a wing is never clipped. One computer's crew
+ * get the same room: no box holds a crewmate in, so one circling or a moon
+ * past the formation's square is still drawn whole.
  */
-function sceneBox(
+export function sceneBox(
   need: { halfWidth: number; halfHeight: number } | undefined,
   viewport: { width: number; height: number },
   extent: number,
 ): CanvasBox {
-  if (!need) return { width: extent, height: extent };
   const round = (value: number) => Math.ceil(value / 32) * 32;
   return {
-    width: round(Math.max(viewport.width, 2 * need.halfWidth, extent)),
-    height: round(Math.max(viewport.height - CREW_FIT.reservePx, 2 * need.halfHeight, extent)),
+    width: round(Math.max(viewport.width, 2 * (need?.halfWidth ?? 0), extent)),
+    height: round(
+      Math.max(viewport.height - CREW_FIT.reservePx, 2 * (need?.halfHeight ?? 0), extent),
+    ),
   };
 }
 

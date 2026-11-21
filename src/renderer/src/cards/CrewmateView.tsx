@@ -1,4 +1,5 @@
 import { CARD_REPLY_MAX_CHARS, onStage as cardOnStage } from "@shared/cards";
+import { limitBand } from "@shared/composer";
 import {
   type CrewLive,
   type CrewTranscript,
@@ -12,13 +13,16 @@ import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDictationField } from "../app/dictationField";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
+import { VoiceNotice } from "../app/VoiceNotice";
 import { IconButton, KeyCap, StatusDot } from "../design";
 import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
-import { ComposerField } from "../design/core/ComposerField";
+import { ComposerCount, ComposerField } from "../design/core/ComposerField";
 import { thisDesktop } from "../design/core/desktop";
+import { DictationMark } from "../design/voice/VoiceInput";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import "./crewmate.css";
 import { collapseIcon, openIcon } from "./CardThread";
@@ -239,6 +243,8 @@ function Composer({
     keepCrewDraft(taskId, value);
     setRefusal(null);
   };
+  // The dictation key writes into the box while it has focus (docs/composer.md, "Voice").
+  const dictation = useDictationField(field, () => draft, change);
   const send = async () => {
     if (!canSend) return;
     setSending(true);
@@ -270,6 +276,7 @@ function Composer({
           value={draft}
           // Held, not disabled, while the line sends: a disabled field drops the focus.
           readOnly={sending}
+          recording={dictation.recording}
           lineCap={PROMPT_LINE_CAP}
           frame={foot}
           frameMaxHeight={footRoom}
@@ -277,6 +284,7 @@ function Composer({
           onSend={() => void send()}
           onChange={(event) => change(event.target.value)}
           onKeyDown={(event) => {
+            if (dictation.keyDown(event)) return;
             // ⌃C stops the running turn, as it does in a CLI agent. Where
             // Ctrl+C also copies (Linux), it copies words picked in the field.
             const field = event.currentTarget;
@@ -294,8 +302,8 @@ function Composer({
               if (working) onInterrupt();
               return;
             }
-            // Escape still hides the card; every other key is the field's own,
-            // so none reaches the window's hold-to-talk listeners.
+            // Escape still hides the card; every other key but the dictation
+            // key is the field's own, so none reaches the window's listeners.
             if (event.key !== "Escape") event.stopPropagation();
           }}
           onFocus={() => setFocus(true)}
@@ -305,12 +313,35 @@ function Composer({
             minWidth: 0,
             fontSize: "var(--text-sm)",
             lineHeight: "var(--leading-body)",
+            opacity: dictation.recording ? 0.55 : 1,
+            transition: "opacity var(--dur-med) var(--ease-out)",
           }}
         />
         <span className="to">
           {WORDS.sendsTo} · <KeyCap>{thisDesktop().mac ? "↩" : "Enter"}</KeyCap>
         </span>
       </div>
+      <DictationMark
+        recording={dictation.recording}
+        transcribing={dictation.transcribing}
+        onAbandon={() => {
+          useShellStore.getState().abandonRecording();
+          field.current?.focus();
+        }}
+        onAccept={() => useShellStore.getState().acceptRecording()}
+      />
+      {limitBand(text.length, CARD_REPLY_MAX_CHARS) !== "none" && (
+        // Nothing cuts a long draft: past the limit it says so and does not send.
+        <p className="fm-crew-limit" data-crew-limit="" role="status">
+          <span>
+            {limitBand(text.length, CARD_REPLY_MAX_CHARS) === "over"
+              ? m.composerTooLongShorten()
+              : null}
+          </span>
+          <ComposerCount length={text.length} max={CARD_REPLY_MAX_CHARS} />
+        </p>
+      )}
+      <VoiceNotice width="100%" field={dictation.field} />
       {refusal && (
         <p role="alert" className="fm-crew-refusal" data-crew-refusal="">
           {refusal}

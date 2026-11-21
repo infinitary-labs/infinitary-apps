@@ -28,7 +28,7 @@ A reply that did not send keeps its draft and file chips.
 The field keeps the focus through a send, by Enter or by Chat, so the next reply is typed straight away; on send the words and chips clear immediately; while the core takes the reply, the empty field stays read-only and never goes disabled.
 When not-typing keys are installed, an unused Escape follows the window's Escape chain and its last action leaves the reply for the shown card, preserving its draft.
 Without such keys, Escape stays isolated in the reply as before.
-Right ⌥ does not record from the reply row.
+The dictation key records into the reply while it has focus, the only key that passes the reply's isolation: the dictation mark and any voice line hang under the field (`../voice/VoiceInput.prompt.md`, "Dictating into another field"), and Esc while it records abandons the recording and keeps the draft.
 
 **The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip.
 The card's choices move with it, under the field at the thread's foot, in the same order and grouping, so a click on one plainly carries the field's words (the captain: "move that action buttons to the safe place below the reply input box so it's clear that the reply text will be taken by any of the action buttons").

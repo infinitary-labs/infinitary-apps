@@ -24,7 +24,7 @@ import { VoiceInput } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { useInstalledKeymap } from "../design/core/installedKeys";
 import { ComposerNotice } from "./ComposerNotice";
-import { mainInputHeld } from "./composer";
+import { mainInputHeld, recordingIntoMain } from "./composer";
 import { DiagnosticsNotice } from "./DiagnosticsNotice";
 import { focusTakenElsewhere } from "./focusRecovery";
 import { useCommandKeys } from "./keyHints";
@@ -124,11 +124,13 @@ export const HomePrompt = memo(function HomePrompt() {
   const showComposerNotice = useShellStore((s) => s.showComposerNotice);
   const dictation = useShellStore((s) => s.dictation);
   const voiceSupported = useShellStore((s) => s.voiceSupported);
-  const transcribing = useShellStore((s) => s.transcribing);
+  // Another field's recording is drawn at that field (docs/composer.md, "Voice").
+  const transcribing = useShellStore((s) => s.transcribing && s.voiceField === null);
   const firstRun = useShellStore((s) => s.firstRun);
   const held = useShellStore(mainInputHeld);
   const view = useShellStore((s) => s.view);
   const recording = useShellStore((s) => s.recording);
+  const recordingHere = useShellStore(recordingIntoMain);
   const gateOpen = firstRun?.gateOpen === true;
   // The last turn above the input takes room the stage gives it the way it
   // gives the composer's growth (./promptGeometry `lastTurnRise`): two
@@ -269,7 +271,7 @@ export const HomePrompt = memo(function HomePrompt() {
           <LastTurn />
         </div>
         <VoiceInput
-          mode={recording ? "recording" : "idle"}
+          mode={recordingHere ? "recording" : "idle"}
           width="100%"
           value={inputText}
           disabled={held}

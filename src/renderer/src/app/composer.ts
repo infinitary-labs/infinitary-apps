@@ -127,6 +127,14 @@ export function mainMessageRefusal(
   return null;
 }
 
+/**
+ * The main message is recording: a recording runs and no other field took
+ * it (`voiceField`, docs/composer.md "Voice"), so its words land here.
+ */
+export function recordingIntoMain(s: Pick<ShellState, "recording" | "voiceField">): boolean {
+  return s.recording && s.voiceField === null;
+}
+
 /** Both input rows take only the remaining picture slots and explain any refusal. */
 export function takePictures(held: ImageAttachment[], items: ImageAttachment[]) {
   const taken = items.slice(0, Math.max(0, TURN_IMAGES_MAX - held.length));
@@ -218,7 +226,10 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
     recallLastSent: () =>
       set((s) => {
         const empty =
-          !s.inputText && s.pastes.length === 0 && s.attachments.length === 0 && !s.recording;
+          !s.inputText &&
+          s.pastes.length === 0 &&
+          s.attachments.length === 0 &&
+          !recordingIntoMain(s);
         if (!empty || !s.lastSent) return {};
         const { text, pastes, attachments } = s.lastSent;
         return {
@@ -342,7 +353,7 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
               !now.inputText.trim() &&
               now.attachments.length === 0 &&
               now.pastes.length === 0 &&
-              !now.recording
+              !recordingIntoMain(now)
             ) {
               set((s) => ({
                 inputText: draft,
@@ -359,7 +370,7 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           },
         );
       };
-      if (get().recording) {
+      if (recordingIntoMain(get())) {
         // Submit straight from the recording: transcribe, then send.
         transcribeRecording(set, get, false, async (text, current) => {
           // A voice send still waits for every file to be ready.

@@ -109,6 +109,17 @@ With an empty draft the text row folds away, so recording from an empty input is
 The transcript lands at the caret, with a space before it only when the character before is not already a space (or the start), and a space after it only when the next character is not a space or closing punctuation.
 Esc abandons and never clears a draft.
 
+Dictating into another field: the key writes where the person is typing.
+With focus in a card's reply, a note's comment or the crewmate's message box, the recording is that field's, and the main input stays as it was: no waveform pill, no "transcribing" hint.
+That field keeps its draft on screen, read-only and dimmed to the same 55%, and keeps the focus.
+Under it, at the field's own width, the dictation mark: a 28 px row of abandon (28 px `IconButton`, danger, the Escape key) · waveform (the pill's own, 24 px tall) · accept (28 px, ok); there is no submit, because the field's own Enter sends.
+While the words come back the same row reads "transcribing what you said" in `--text-sm` `--fg-3`, so the field does not jump when the mark goes.
+The transcript lands at that field's caret by the same spacing rule, and the caret goes after it.
+The quiet notice strip's voice lines - the download consent and progress, microphone access, errors - hang under that field too, at its width, below the mark; the main input carries them only when the recording is its own.
+A field that leaves the page while its recording runs hands the recording to the main input: the words land there and the strip moves under it, so nothing said is lost.
+Each field keeps its own limit: a transcript is never cut to fit; past the limit the field shows its count and the too-long sentence and sends nothing until trimmed.
+With focus anywhere else, the main input records as above.
+
 Trim: whitespace alone is empty - no send control, and Enter does nothing.
 On send, leading blank lines and trailing whitespace go; the first line's indentation and interior blank lines stay.
 A trailing line break stays in the draft while typing.

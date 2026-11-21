@@ -543,6 +543,7 @@
 "commandUsageUnitWords" = "tokens, custo, dólares, estimativa";
 "commandWhatsNewShow" = "Mostrar as novidades";
 "commandWhatsNewShowWords" = "lançamento, notas, novidades, alterações, versão";
+"composerTooLongShorten" = "Longo demais para enviar. Encurte primeiro.";
 "composerWordsOnly" = "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto.";
 "crewAPart" = "Uma parte";
 "crewFirstmateLabel" = "Imediato - %1$@";

@@ -1,5 +1,6 @@
 import type { DictationSettings } from "@shared/dictation";
 import * as m from "@shared/i18n/messages.generated";
+import { type DictationField, focusedDictationField } from "../voice/dictationFields";
 import { type MicLine, readMicAccess, settledMicLine } from "../voice/micAccess";
 import { voiceController } from "../voice/voiceController";
 import { insertVoiceTranscript } from "../voice/voiceInput";
@@ -20,6 +21,14 @@ export type VoiceSlice = {
   dictation: DictationSettings | null;
   pickingDictationKey: boolean;
   voiceGeneration: number;
+  /**
+   * The field the latest press of the dictation key writes into and draws
+   * its mark and voice lines at, or null for the main message: the one with
+   * focus as the press began (`focusedDictationField`). A field that leaves
+   * the page sets it back to null (`dropVoiceField`), so its words land in
+   * the main message.
+   */
+  voiceField: DictationField | null;
   applyDictation: (setting: DictationSettings) => void;
   /** null until the WebGPU/mic capability check settles (D-10 gate). */
   voiceSupported: boolean | null;
@@ -41,6 +50,12 @@ export type VoiceSlice = {
   startRecording: () => void;
   acceptRecording: (held?: boolean) => void;
   abandonRecording: () => void;
+  /**
+   * A field leaving the page: if the dictation key writes into it, its
+   * recording, its words still coming back and its voice lines go to the
+   * main message instead, so nothing said is lost.
+   */
+  dropVoiceField: (field: DictationField) => void;
 };
 
 export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
@@ -49,6 +64,7 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
     dictation: null,
     pickingDictationKey: false,
     voiceGeneration: 0,
+    voiceField: null,
     applyDictation: (dictation) => {
       if (!dictation.enabled) {
         voiceController.abandon();
@@ -103,14 +119,17 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
         return;
       // A held input ignores hold-to-talk too (docs/first-launch.md).
       if (mainInputHeld(get())) return;
+      // The words go where the person is typing, and its lines draw there.
+      const voiceField = focusedDictationField();
       if (voiceModelReady !== true) {
         // First use: the model downloads once, with consent (section 8).
         if (get().voiceNotice?.kind !== "download") {
-          set({ voiceNotice: { kind: "consent" } });
+          set({ voiceNotice: { kind: "consent" }, voiceField });
         }
         return;
       }
       set((s) => ({
+        voiceField,
         // A newer recording replaces one still transcribing: its words are
         // dropped, and only this generation could have cleared Transcribing.
         voiceGeneration: s.voiceGeneration + 1,
@@ -155,6 +174,8 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
       if (!get().recording) return;
       transcribeRecording(set, get, held, (text) => {
         if (!text) return;
+        const field = get().voiceField;
+        if (field) return field.insert(text);
         set((s) => {
           const next = insertVoiceTranscript(s.inputText, s.inputCaret, text);
           return {
@@ -170,6 +191,9 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
       if (!get().recording) return;
       voiceController.abandon();
       set({ recording: false });
+    },
+    dropVoiceField: (field) => {
+      if (get().voiceField === field) set({ voiceField: null });
     },
   };
 }

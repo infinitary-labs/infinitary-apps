@@ -1,6 +1,7 @@
 import type { CardNote } from "@shared/cardNotes";
 import { noteTarget, pickedNote, sameNoteTarget } from "@shared/cardNoteTargets";
 import { cardNavigationParts } from "@shared/cardParts";
+import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
 import type { FrameAnnotationTarget } from "@shared/plugins/bridge";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useShellStore } from "../app/store";
@@ -65,14 +66,18 @@ export function removeNote(cardId: string, note: CardNote): void {
 /**
  * A press outside the open note editor closes it and keeps its words (INF-3786):
  * a note with words, or one already queued, is queued; an empty new note is dropped.
+ * A comment past its limit, which only dictation writes, stays open to trim
+ * and answers false.
  */
-export function settleAnnotation(): void {
+export function settleAnnotation(): boolean {
   const s = useShellStore.getState();
   const pick = s.annotationPick;
-  if (!pick || s.sendingReplies[pick.cardId]) return;
+  if (!pick || s.sendingReplies[pick.cardId]) return true;
+  if (pick.note.comment.length > CARD_REPLY_MAX_CHARS) return false;
   const queued = (s.replyNotes[pick.cardId] ?? []).some((n) => sameNote(n, pick.note));
   if (pick.note.comment || queued) queueNote(pick.cardId, pick.note);
   else useShellStore.setState({ annotationPick: null });
+  return true;
 }
 
 /** Escape consumes only this card's Annotate offer or empty pick, without discarding a comment. */
@@ -191,7 +196,7 @@ export function useAnnotationBridge(
               useShellStore.setState({ annotationOffer: { cardId, note, box: at } });
               return;
             }
-            settleAnnotation();
+            if (!settleAnnotation()) return;
             // Point at turns off once it has picked; pointing at another part takes it again.
             useShellStore.setState((state) => ({
               annotationPick: { cardId, note, box: at },

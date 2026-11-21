@@ -543,6 +543,7 @@
 "commandUsageUnitWords" = "consumo, costo, dólares, estimación";
 "commandWhatsNewShow" = "Mostrar las novedades";
 "commandWhatsNewShowWords" = "lanzamiento, notas, cambios, versión";
+"composerTooLongShorten" = "Demasiado largo para enviar. Acórtalo primero.";
 "composerWordsOnly" = "Solo se pueden enviar palabras hasta que se actualice Infinitary. Quita las imágenes y los archivos para enviar esto.";
 "crewAPart" = "Una parte";
 "crewFirstmateLabel" = "Primer oficial - %1$@";

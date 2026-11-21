@@ -388,6 +388,8 @@ export async function completionAction(page: Page, title: string): Promise<Locat
 
 /** A settle card's fact strip, as the stage shows it above the card's buttons. */
 export type FactsStrip = Readonly<Record<SettleFact, Locator>> & {
+  /** The strip's own page, once drawn: for a read that may meet its card paging out (`readFrameOnce`). */
+  readonly page: FrameLocator;
   /** The strip itself. */
   readonly strip: Locator;
   /** A fact's whole item, where its `title` rides: a state of the status line, or a part of its reference. */
@@ -410,15 +412,15 @@ export type FactsStrip = Readonly<Record<SettleFact, Locator>> & {
  */
 export function factsStrip(frame: FrameLocator): FactsStrip {
   const card = frame.owner().locator("xpath=ancestor::section[@data-response-card][1]");
-  const strip = card
-    .frameLocator("[data-card-facts] iframe[data-frame-drawn]")
-    .locator("[data-facts]");
+  const page = card.frameLocator("[data-card-facts] iframe[data-frame-drawn]");
+  const strip = page.locator("[data-facts]");
   const cell = (fact: SettleFact) => strip.locator(`[data-fact="${fact}"]`);
   const values = Object.fromEntries(
     SETTLE_FACTS.map((fact) => [fact, cell(fact).locator(`.${SETTLE_FACT_VALUE_CLASS}`)]),
   ) as Record<SettleFact, Locator>;
   return {
     ...values,
+    page,
     strip,
     cell,
     rest: (fact) => strip.locator(`[data-rest="${fact}"]`),

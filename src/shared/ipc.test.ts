@@ -383,6 +383,7 @@ describe("ipc contract", () => {
       "inf:automation:preview",
       "inf:automation:save",
       "inf:automation:state",
+      "inf:batches:list",
       "inf:browser:ask",
       "inf:browser:input",
       "inf:browser:places",

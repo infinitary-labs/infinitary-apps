@@ -67,7 +67,7 @@ describe("arrangePanels", () => {
         [],
         ["activity"],
         ["tokyo-clock", "open-prs", "scratchpad"],
-        ["now", "automation", "knowledge"],
+        ["now", "batches-panel", "automation", "knowledge"],
       ),
     );
   });
@@ -90,7 +90,7 @@ describe("arrangePanels", () => {
         ["scratchpad"],
         ["activity"],
         ["open-prs", "tokyo-clock"],
-        ["weather", "knowledge", "now", "automation"],
+        ["batches-panel", "weather", "knowledge", "now", "automation"],
       ),
     );
   });
@@ -102,7 +102,7 @@ describe("arrangePanels", () => {
         ["scratchpad", "old-panel"],
         ["activity"],
         [],
-        ["knowledge", "automation", "now"],
+        ["batches-panel", "knowledge", "automation", "now"],
       ),
     );
   });
@@ -209,7 +209,7 @@ describe("defaultArrangement", () => {
         ["scratchpad"],
         ["activity"],
         ["open-prs", "tokyo-clock"],
-        ["now", "knowledge", "automation"],
+        ["now", "batches-panel", "knowledge", "automation"],
       ),
     );
   });

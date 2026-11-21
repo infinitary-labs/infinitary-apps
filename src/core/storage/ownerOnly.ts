@@ -89,16 +89,16 @@ function ownerKeeps(owner: string | null, user: string): boolean {
  * folder has no list, or its flags and entries - and anything of its audit list (`S:`) after.
  */
 const DESCRIPTOR =
-  /^O:([^:()]+?)(?:G:[^:()]+?)?D:(?:(NO_ACCESS_CONTROL)|((?:P|AI|AR)*)((?:\([^()]*\))*))(?:S:.*)?$/s;
+  /^O:([^:()]+?)(?:G:([^:()]+?))?D:(?:(NO_ACCESS_CONTROL)|((?:P|AI|AR)*)((?:\([^()]*\))*))(?:S:.*)?$/s;
 
 /**
  * Reads a security descriptor string's owner (`O:`) and access list (`D:`), taken apart in order
  * (`DESCRIPTOR`). Only the list's own `NO_ACCESS_CONTROL` says a folder has no list. Anything
- * else - no owner, no access list at all, a list not read to its end (one holding an entry this
- * reading does not take apart, as a conditional entry with its own brackets, an entry of a kind it
- * does not judge or one whose flags, rights or account are missing or not in Windows' own form;
- * `ENTRY_TYPES`, `ENTRY_FLAGS`), or text out of that
- * order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
+ * else - no owner, an owner or group not in Windows' own form (`knownAccount`), no access list at
+ * all, a list not read to its end (one holding an entry this reading does not take apart, as a
+ * conditional entry with its own brackets, an entry of a kind it does not judge or one whose flags,
+ * rights, object fields or account are missing or not in Windows' own form; `ENTRY_TYPES`,
+ * `ENTRY_FLAGS`), or text out of that order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
  * the entries it did read nor as a folder with no list.
  */
 export function readAccessList(sddl: string): AccessList {
@@ -108,20 +108,27 @@ export function readAccessList(sddl: string): AccessList {
     return { owner, entries: null, protected: false, whole: false };
   }
   const owner = read[1] ?? null;
-  if (read[2]) return { owner, entries: null, protected: false, whole: true };
-  const flags = read[3] ?? "";
+  const notWhole = { owner, entries: null, protected: false, whole: false };
+  if (!knownAccount(owner ?? "") || (read[2] !== undefined && !knownAccount(read[2])))
+    return notWhole;
+  if (read[3]) return { owner, entries: null, protected: false, whole: true };
+  const flags = read[4] ?? "";
   const entries: AccessEntry[] = [];
-  for (const match of (read[4] ?? "").matchAll(/\(([^)]*)\)/g)) {
+  for (const match of (read[5] ?? "").matchAll(/\(([^)]*)\)/g)) {
     const fields = (match[1] ?? "").split(";");
-    const [type = "", entryFlags = "", rights = "", , , account = ""] = fields;
+    const [type = "", entryFlags = "", rights = "", object = "", inherited = "", account = ""] =
+      fields;
+    const objects = type === "OA" || type === "OD" || type === "ZA";
     if (
       fields.length !== 6 ||
       !ENTRY_TYPES.has(type) ||
       !ENTRY_FLAGS.test(entryFlags) ||
-      !(HEX_RIGHTS.test(rights) || LETTER_RIGHTS.test(rights)) ||
-      !(ACCOUNT_NUMBER.test(account) || ACCOUNT_LETTERS.has(account))
+      rightsMask(rights) === null ||
+      !(objects ? OBJECT_FIELD : NO_OBJECT).test(object) ||
+      !(objects ? OBJECT_FIELD : NO_OBJECT).test(inherited) ||
+      !knownAccount(account)
     )
-      return { owner, entries: null, protected: false, whole: false };
+      return notWhole;
     entries.push({ type, flags: entryFlags, rights, account, text: match[0] });
   }
   return { owner, entries, protected: flags.includes("P"), whole: true };
@@ -137,14 +144,14 @@ const ENTRY_TYPES = new Set(["A", "D", "OA", "OD", "XA", "XD", "ZA"]);
 /**
  * What an entry this reading takes apart must say in its other fields, each in the form Windows
  * writes it, so nothing is judged from a field half read: its flags as the pairs Windows names
- * (`hasFlag` reads them pair by pair), its rights as one number or the pairs naming rights, and its
- * account as a whole account number or one of Windows' own two-letter names for accounts.
+ * (`hasFlag` reads them pair by pair), its rights as one number or the pairs naming rights
+ * (`rightsMask`), its object fields empty, or on the object kinds each empty or one object's
+ * number, and its account, as the list's owner and group, a whole account number within Windows'
+ * own bounds or one of Windows' own two-letter names for accounts (`knownAccount`).
  */
 const ENTRY_FLAGS = /^(?:CI|OI|NP|IO|ID|SA|FA|TP|CR)*$/;
-const HEX_RIGHTS = /^0x[0-9A-Fa-f]{1,8}$/;
-const LETTER_RIGHTS =
-  /^(?:GA|GR|GW|GX|RC|SD|WD|WO|RP|WP|CC|DC|LC|SW|LO|DT|CR|FA|FR|FW|FX|KA|KR|KW|KX|NR|NW|NX)+$/;
-const ACCOUNT_NUMBER = /^S-1-\d+(?:-\d+)+$/;
+const NO_OBJECT = /^$/;
+const OBJECT_FIELD = /^(?:[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})?$/;
 const ACCOUNT_LETTERS = new Set(
   (
     "AA AC AN AO AP AS AU BA BG BO BU CA CD CG CN CO CY DA DC DD DG DU EA ED EK ER ES HA HI HO " +
@@ -152,6 +159,67 @@ const ACCOUNT_LETTERS = new Set(
     "SS SU SY UD WD WR"
   ).split(" "),
 );
+
+/**
+ * Whether an account is one Windows could write: one of its two-letter names, or an account number
+ * (`S-1-<authority>-<part>...`) of one to fifteen parts, its authority and each part a plain number
+ * that fits the 32 bits Windows gives it.
+ */
+function knownAccount(account: string): boolean {
+  if (ACCOUNT_LETTERS.has(account)) return true;
+  const [s, revision, ...numbers] = account.split("-");
+  if (s !== "S" || revision !== "1" || numbers.length < 2 || numbers.length > 16) return false;
+  return numbers.every((part) => /^(?:0|[1-9]\d{0,9})$/.test(part) && Number(part) <= 0xffffffff);
+}
+
+/**
+ * The rights each of Windows' two-letter names stands for, as the number Windows reads them as, so
+ * a right is judged the same however it is written.
+ */
+const RIGHT_LETTERS: Readonly<Record<string, number>> = {
+  GA: 0x10000000,
+  GR: 0x80000000,
+  GW: 0x40000000,
+  GX: 0x20000000,
+  RC: 0x20000,
+  SD: 0x10000,
+  WD: 0x40000,
+  WO: 0x80000,
+  RP: 0x10,
+  WP: 0x20,
+  CC: 0x1,
+  DC: 0x2,
+  LC: 0x4,
+  SW: 0x8,
+  LO: 0x80,
+  DT: 0x40,
+  CR: 0x100,
+  FA: 0x1f01ff,
+  FR: 0x120089,
+  FW: 0x120116,
+  FX: 0x1200a0,
+  KA: 0xf003f,
+  KR: 0x20019,
+  KW: 0x20006,
+  KX: 0x20019,
+  NR: 0x1,
+  NW: 0x2,
+  NX: 0x4,
+};
+
+/** The rights an entry's rights field gives, as one number; null where it is not in Windows' form. */
+function rightsMask(rights: string): number | null {
+  if (/^0x[0-9A-Fa-f]{1,8}$/.test(rights)) return Number.parseInt(rights, 16);
+  const pairs = rights.match(/../g);
+  if (pairs === null || pairs.join("") !== rights) return null;
+  let mask = 0;
+  for (const pair of pairs) {
+    const right = RIGHT_LETTERS[pair];
+    if (right === undefined) return null;
+    mask |= right;
+  }
+  return mask;
+}
 
 /** Whether an entry's flags hold `flag`, read as the pairs they are, never across two of them. */
 function hasFlag(entry: AccessEntry, flag: string): boolean {
@@ -172,14 +240,13 @@ export function onlyOwnerReaches(list: AccessList, user: string): boolean {
 
 /**
  * Rights that let an account remove, rename or re-permit what a folder holds, or the folder
- * itself: delete, delete a child, change the list or owner, or all of them.
+ * itself: delete, delete a child, change the list or owner, or all of them - judged on the number
+ * the rights stand for (`rightsMask`), so two spellings of one right are judged alike.
  */
 const CHANGE_MASK = 0x10000 | 0x40 | 0x40000 | 0x80000 | 0x10000000;
-const CHANGE_LETTERS = new Set(["GA", "FA", "SD", "DT", "WD", "WO"]);
 
 function letsChange(rights: string): boolean {
-  if (/^0x[0-9a-f]+$/i.test(rights)) return (Number.parseInt(rights, 16) & CHANGE_MASK) !== 0;
-  return (rights.match(/../g) ?? []).some((letters) => CHANGE_LETTERS.has(letters));
+  return ((rightsMask(rights) ?? CHANGE_MASK) & CHANGE_MASK) !== 0;
 }
 
 /**

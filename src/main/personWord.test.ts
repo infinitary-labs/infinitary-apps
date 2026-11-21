@@ -42,17 +42,32 @@ import {
 /**
  * A file system that gives no birth time, as some do: while `noBirth.on`, every folder read here
  * answers a birth of zero, and while `noBirth.fromChange` its last change in place of one, as
- * Node may answer where the system has none; nothing else about it changes.
+ * Node may answer where the system has none; nothing else about it changes. Entries whose path
+ * starts with `noBirth.still` answer their birth as their last change too, as a change clock too
+ * coarse to move between them would; `noBirth.reading` runs before each read, and
+ * `noBirth.number` gives the number a path answers in place of its own.
  */
-const noBirth = vi.hoisted(() => ({ on: false, fromChange: false }));
+const noBirth = vi.hoisted(() => ({
+  on: false,
+  fromChange: false,
+  still: null as string | null,
+  reading: null as ((path: string) => void) | null,
+  number: new Map<string, bigint>(),
+}));
 vi.mock("node:fs", async (original) => {
   const fs = await original<typeof import("node:fs")>();
   const lstatSync = ((path: string, options?: { bigint?: boolean }) => {
+    noBirth.reading?.(path);
     const found = fs.lstatSync(path, options as never) as unknown as {
       birthtimeNs?: bigint;
       ctimeNs?: bigint;
+      ino?: bigint;
     };
     if (found && typeof found.birthtimeNs === "bigint") {
+      const number = noBirth.number.get(path);
+      if (number !== undefined) found.ino = number;
+      if (noBirth.still !== null && path.startsWith(noBirth.still))
+        found.ctimeNs = found.birthtimeNs;
       if (noBirth.on) found.birthtimeNs = 0n;
       else if (noBirth.fromChange && typeof found.ctimeNs === "bigint")
         found.birthtimeNs = found.ctimeNs;
@@ -360,6 +375,8 @@ describe("a refused launch's word to the person", () => {
     // nothing is made or set.
     const inParent = (list: string) => (name: string) =>
       answering(ownList, undefined, (path) => (path === join(name, "..") ? list : ownList));
+    const inAncestor = (list: string) => (name: string) =>
+      answering(ownList, undefined, (path) => (path === join(name, "..", "..") ? list : ownList));
     for (const parent of [
       inParent(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1301bf;;;${other})`),
       inParent(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;OICI;0x1200a9;;;${other})`),
@@ -370,6 +387,10 @@ describe("a refused launch's word to the person", () => {
       // A folder handing nothing down to new folders: Windows would give a new one the creating
       // process's default list instead.
       inParent(`O:${user}G:${group}D:PAI(A;;FA;;;${user})(A;OI;FA;;;${user})`),
+      // A folder further up giving another account all of a key's rights, which take in deleting
+      // and re-permitting, whether written as letters or as their number.
+      inAncestor(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;;KA;;;${other})`),
+      inAncestor(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(A;;0xF003F;;;${other})`),
     ]) {
       const exposed = root();
       const run = parent(exposed);
@@ -445,6 +466,59 @@ describe("a refused launch's word to the person", () => {
     }
     expect(existsSync(changing)).toBe(false);
     expect(readdirSync(join(changing, ".."))).toEqual([]);
+    // On a change clock too coarse to move as the mark goes in, a birth that is the last change
+    // reads the same before and after: no folder shows a birth kept apart from its last change,
+    // so nothing is reserved and the folder made is removed again.
+    const coarse = root();
+    noBirth.fromChange = true;
+    noBirth.still = "/";
+    try {
+      expect(await ownProfilesFolder(coarse, "win32", answering(ownList))).toBeNull();
+    } finally {
+      noBirth.fromChange = false;
+      noBirth.still = null;
+    }
+    expect(readdirSync(join(coarse, ".."))).toEqual([]);
+    // A birth the system keeps is relied on even where the new folder's last change still reads
+    // as its birth, as the folder it goes in shows the two apart.
+    const coarseKept = root();
+    noBirth.still = `${coarseKept}.`;
+    try {
+      const kept = await ownProfilesFolder(coarseKept, "win32", answering(ownList));
+      expect(kept?.path.startsWith(`${coarseKept}.`)).toBe(true);
+      expect((await ownProfilesFolder(coarseKept, "win32", answering(ownList)))?.path).toBe(
+        kept?.path,
+      );
+    } finally {
+      noBirth.still = null;
+    }
+    // A folder put in place of the new one as its mark goes in, given its number again, is no
+    // longer that folder: nothing is reserved, and the empty folder put there stays.
+    const putInPlace = root();
+    let putAt: string | null = null;
+    noBirth.reading = (path) => {
+      if (
+        putAt === null &&
+        path.startsWith(`${putInPlace}.`) &&
+        !path.endsWith(WORD_PROFILES_RESERVED) &&
+        existsSync(join(path, WORD_PROFILES_RESERVED))
+      ) {
+        putAt = path;
+        const number = lstatSync(path, { bigint: true }).ino;
+        renameSync(path, `${putInPlace}-aside`);
+        mkdirSync(path);
+        noBirth.number.set(path, number);
+      }
+    };
+    try {
+      expect(await ownProfilesFolder(putInPlace, "win32", answering(ownList))).toBeNull();
+    } finally {
+      noBirth.reading = null;
+      noBirth.number.clear();
+    }
+    expect(putAt).not.toBeNull();
+    expect(readdirSync(putAt ?? "")).toEqual([]);
+    expect(existsSync(putInPlace)).toBe(false);
     // A new folder whose read-back fails, after it was made private, is removed again while empty.
     const unreadBack = root();
     let readsOfNew = 0;

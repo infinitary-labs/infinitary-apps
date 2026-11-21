@@ -169,11 +169,40 @@ describe("reading a folder's access list", () => {
       `(A;OICI;ZZ;;;${OTHER})`,
       `(A;OICI;0x;;;${OTHER})`,
       `(A;XXIO;FA;;;${OTHER})`,
+      `(A;OICI;FA;x;;${OTHER})`,
+      `(A;OICI;FA;;bf967aba-0de6-11d0-a285-00aa003049e2;${OTHER})`,
+      `(OA;OICI;FA;not-an-object;;${OTHER})`,
+      `(A;OICI;FA;;;S-1-5-21-4294967296)`,
+      `(A;OICI;FA;;;S-1-5-021)`,
+      `(A;OICI;FA;;;S-1-5${"-1".repeat(16)})`,
     ]) {
       const reading = readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})${entry}`);
       expect(reading).toMatchObject({ entries: null, whole: false });
       expect(ownerOnlyVerdict(reading, USER)).toBe("unread");
     }
+    // Nor is a descriptor whose owner or group is not an account Windows writes, even one saying
+    // the folder has no list.
+    for (const descriptor of [
+      `O:S-1-5-21-99999999999G:${GROUP}D:NO_ACCESS_CONTROL`,
+      `O:QQG:${GROUP}D:NO_ACCESS_CONTROL`,
+      `O:${USER}G:S-1D:P(A;OICI;FA;;;${USER})`,
+    ])
+      expect(ownerOnlyVerdict(readAccessList(descriptor), USER)).toBe("unread");
+    // An object entry naming one object's number is read whole.
+    expect(
+      readAccessList(
+        `O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(OD;;WD;bf967aba-0de6-11d0-a285-00aa003049e2;;${OTHER})`,
+      ).whole,
+    ).toBe(true);
+    // Rights are judged by what they stand for, however written: all of a key's rights take in
+    // deleting and re-permitting.
+    for (const rights of ["KA", "0xF003F", "0x000f003f"])
+      expect(
+        othersCanChange(
+          readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;;${rights};;;${OTHER})`),
+          USER,
+        ),
+      ).toBe(true);
     // Nor is a list whose own flags are not Windows' (`P`, `AI`, `AR`).
     expect(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`).whole).toBe(false);
     // Flags are read in their pairs: inheriting to folders and to files is not "inherit only".
@@ -327,6 +356,10 @@ describe("the data folder on Windows", () => {
       `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;;S-1-5-21-)`,
       // A deny, then an allow whose rights no letters name.
       `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;ZZ;;;${OTHER})`,
+      // A deny, then an allow carrying an object field a plain entry never has.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;x;;${OTHER})`,
+      // No list, under an owner whose number is too large to be an account.
+      `O:S-1-5-21-99999999999G:${GROUP}D:NO_ACCESS_CONTROL`,
     ]) {
       const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
       const temp = join(scratchDir("fm-owner-only-"), "Temp");

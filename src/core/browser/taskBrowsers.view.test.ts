@@ -190,6 +190,26 @@ describe('a stopped page kept with its task (docs/task-browser.md, "After a rest
     expect(existsSync(join(folders, "t1", KEPT_PAGE_FILE_NAME))).toBe(false);
   });
 
+  it("keeps a page that may hold the captain's sign-in without its query and fragment", async () => {
+    const folders = scratchDir("infinitary-kept-pages-");
+    const kept = keptPagesIn((taskId) => join(folders, taskId));
+    const before = harness({ keptPages: kept, session: "run-1" });
+    await before.browsers
+      .forTask("t1")
+      .navigate({ url: "http://localhost:5173/account?code=abc#token" });
+    // The captain signed in and handed the browser back: it may hold the sign-in now.
+    const handle = { session: before.browsers.session, generation: 1 };
+    await before.browsers.takeControl("t1", handle);
+    await before.browsers.returnControl("t1", handle);
+    before.browsers.closeAll();
+    const after = harness({ keptPages: kept, session: "run-2" });
+    expect(after.browsers.fact("t1")).toMatchObject({
+      state: "stopped",
+      url: "http://localhost:5173/account",
+      quit: true,
+    });
+  });
+
   it("keeps a stopped browser's page and its reason, and forgets it once the task closes", async () => {
     const folders = scratchDir("infinitary-kept-pages-");
     const kept = keptPagesIn((taskId) => join(folders, taskId));

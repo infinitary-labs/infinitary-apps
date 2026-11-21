@@ -1219,7 +1219,6 @@ export async function createServices(
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
     reopenModel: (taskId, machine, attach) => supervisor.reopenModel(taskId, machine, attach),
-    modelMayHaveLeft: (taskId) => supervisor.modelMayHaveLeft(taskId),
     modelKept: (taskId, machine) => supervisor.moves.keepsModel(taskId, machine),
     letGo: (taskId) => supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),

@@ -45,41 +45,6 @@ it("checks what an older computer holding the conversation answers as opened ane
   expect(letGo).toHaveBeenCalledOnce();
 });
 
-// INF-5438 round 11 finding 6: an older computer that opened the conversation
-// again by itself during a cleanup answers it before the home routed it; with
-// routing keeping the model, that conversation is still checked as opened
-// anew - marked refused first, and let go when the model left every level
-// meanwhile - never taken as open without a check.
-it("checks a conversation an older computer opened again by itself as opened anew", async () => {
-  const progress: ReopenProgress = { asked, anew: false };
-  const creating = vi.fn();
-  const ask = vi.fn(async () => ({ state: { model: STARTER } }));
-  const answer = await askReopen(progress, {
-    reattachOnly: false,
-    openedThere: { state: { model: STARTER } },
-    held: true,
-    refused: false,
-    ours: () => true,
-    ask,
-    route: async () => undefined,
-    letGo: vi.fn(),
-    creating,
-  });
-  expect(answer).toEqual({ state: { model: STARTER } });
-  expect(ask).not.toHaveBeenCalled();
-  expect(creating).toHaveBeenCalledOnce();
-  expect(progress.anew).toBe(true);
-  const letGo = vi.fn();
-  expect(
-    await reopenedSpec(
-      progress,
-      { model: STARTER },
-      { ours: () => true, letGo, refuse: vi.fn(), kept: async () => false },
-    ),
-  ).toBe(false);
-  expect(letGo).toHaveBeenCalledOnce();
-});
-
 // INF-5438 round 11 finding 7: an open's answer is read as exactly one
 // outcome; an empty answer, or one the home did not ask for, says nothing
 // sure about what opened there and is never leave to open anew.

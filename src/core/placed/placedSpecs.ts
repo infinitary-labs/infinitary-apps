@@ -60,35 +60,6 @@ export function openOutcome<S>(
   throw new Error("The computer's answer to an open said nothing sure about what opened there.");
 }
 
-/**
- * Holds an older computer's cleanup of words from outside, which may open
- * the conversation again before it answers: marked refused, nothing
- * reattaches to it, and this Mac's session (`held`) takes no words until it
- * is checked (`reopen`). `done(answer)` lifts the hold once any reopen
- * began; an answer lost keeps it refused and lets the session go.
- */
-export function holdForCleanup(
-  held: { reopening: Promise<boolean> | undefined } | undefined,
-  o: { refused: boolean; refuse(on: boolean): void; letGo(): unknown },
-): (answer?: { state?: unknown }) => void {
-  let lift: (open: boolean | Promise<boolean>) => void = () => undefined;
-  const gate = held && new Promise<boolean>((resolve) => (lift = resolve));
-  o.refuse(true);
-  if (held) held.reopening = gate;
-  return (answer) => {
-    const holding = held !== undefined && held.reopening === gate;
-    if (!answer) {
-      if (holding) held.reopening = Promise.resolve(false);
-      o.letGo();
-      return lift(false);
-    }
-    // Nothing opened anew: a mark it did not have before goes.
-    if (answer.state === undefined && !o.refused) o.refuse(false);
-    if (holding) held.reopening = undefined;
-    lift(held?.reopening ?? true);
-  };
-}
-
 /** A conversation's spec reopened on the model and account routing picked. */
 export function routedSpec(
   opened: PlacedSpec,
@@ -176,17 +147,14 @@ export type ReopenProgress = { asked: PlacedSpec; routed?: ReopenRoute; anew: bo
  * (docs/routing.md, "A model that left every level"). `route(attach)` says
  * whether an older computer, holding a conversation of the task (`held`),
  * may bring the old model back; whatever an older computer answers is
- * checked as opened anew, as it may be, including a conversation it already
- * opened again by itself (`openedThere`), which is answered as its outcome
- * when routing keeps its model. An open anew is marked first (`creating`), so a quit or failure before it is
- * accepted leaves nothing the next reopen reattaches to. Undefined
- * opens nothing.
+ * checked as opened anew, as it may be. An open anew is marked first
+ * (`creating`), so a quit or failure before it is accepted leaves nothing
+ * the next reopen reattaches to. Undefined opens nothing.
  */
 export async function askReopen<S>(
   progress: ReopenProgress,
   o: {
     reattachOnly: boolean;
-    openedThere?: OpenOutcome<S> | undefined;
     held: boolean;
     refused: boolean;
     ours(): boolean;
@@ -201,7 +169,7 @@ export async function askReopen<S>(
     if (progress.anew) o.creating();
     return o.ask(spec);
   };
-  if (o.reattachOnly && !o.openedThere) {
+  if (o.reattachOnly) {
     if (!o.refused) {
       const kept = await o.ask({ ...opened, reattach: true });
       if (!("needsOpen" in kept) || !o.ours()) return kept;
@@ -220,12 +188,7 @@ export async function askReopen<S>(
     o.letGo();
     return undefined;
   }
-  if (!routed) {
-    if (!o.openedThere) return anew(opened);
-    // What an older computer opened by itself is checked as opened anew.
-    o.creating();
-    return o.openedThere;
-  }
+  if (!routed) return anew(opened);
   progress.routed = routed;
   progress.anew = true;
   progress.asked = routedSpec(opened, routed);

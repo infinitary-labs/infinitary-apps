@@ -79,7 +79,6 @@ import { metCutOff, PlacedSession, working } from "./placedSession";
 import {
   askReopen,
   confirmedSpec,
-  holdForCleanup,
   type OpenOutcome,
   openOutcome,
   type ReopenProgress,
@@ -1219,7 +1218,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     session: PlacedSession,
     deviceId: string,
     owed = false,
-    openedThere?: OpenOutcome<PlacedState>,
   ): Promise<void> {
     // Still this computer's, in the session this Mac holds, after each wait.
     const ours = () => heldSession(placed) === session && placed.deviceId === deviceId;
@@ -1245,8 +1243,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const progress: ReopenProgress = { asked: opened, anew: false };
     const asking = askReopen(progress, {
       reattachOnly,
-      openedThere,
-      held: owed || openedThere !== undefined,
+      held: owed,
       refused: placed.ledger.refused(),
       ours,
       ask,
@@ -1643,19 +1640,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
     if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
-    // An older computer opens it again by itself: a removed model waits for its update (`reattach-only-open.md`).
-    const holdsReopen = this.listsChange(deviceId, REATTACH_ONLY_OPEN);
-    if (!holdsReopen && this.host?.modelMayHaveLeft?.(record.id) === true)
-      return { computer, until: "update" };
+    // An older computer opens the conversation again by itself before it answers, which this
+    // Mac cannot check before it may take words: its cleanup waits for its update.
+    if (!this.listsChange(deviceId, REATTACH_ONLY_OPEN)) return { computer, until: "update" };
     const session = heldSession(placed);
-    const done = holdsReopen
-      ? undefined
-      : holdForCleanup(session && placed, {
-          refused: placed.ledger.refused(),
-          refuse: (on) => this.refuseHeld(placed.task, on),
-          letGo: () =>
-            session && heldSession(placed) === session && this.host?.letGo?.(placed.task),
-        });
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
@@ -1667,30 +1655,22 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             legacy: due.legacy,
             ...(files.length > 0 ? { files: [...files] } : {}),
             // The home opens it again after routing it (`reattach-only-open.md`).
-            ...(holdsReopen ? { holdReopen: true } : {}),
+            holdReopen: true,
           },
         ]),
       );
     } catch (caught) {
-      done?.();
       if (caught instanceof DeviceOutOfReachError) return { computer, until: "reach" };
       throw caught;
     }
-    if (answer.status === "waiting") {
-      done?.(answer);
-      return "waiting";
-    }
+    if (answer.status === "waiting") return "waiting";
     if (answer.reopen && session) {
       // Let go of there for this Mac to open again, routed first.
       void this.reopen(placed, session, deviceId);
-    } else if (answer.state && session) {
-      // An older computer opened it again by itself: checked as opened anew before it takes words.
-      void this.reopen(placed, session, deviceId, false, { state: answer.state });
     } else if (answer.status === "changed" && session) {
       // It did not open there again by itself.
       void this.reopen(placed, session, deviceId);
     }
-    done?.(answer);
     // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
     const names = new Set(answer.files);
     const recordDir = placed.record.dir;

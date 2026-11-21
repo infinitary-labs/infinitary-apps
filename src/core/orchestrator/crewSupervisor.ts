@@ -1385,11 +1385,6 @@ export class CrewSupervisor {
     });
   }
 
-  /** Whether the task's routed model may have left every level (`TaskMoves.mayRouteAgain`). */
-  modelMayHaveLeft(taskId: string): boolean {
-    return this.moves.mayRouteAgain(taskId);
-  }
-
   /**
    * A task's conversation did not open again on its computer in the
    * session this crewmate holds (`PlacedHost.letGo`): the crewmate lets it

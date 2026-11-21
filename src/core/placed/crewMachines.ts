@@ -132,12 +132,6 @@ export type PlacedHost = {
       >
     | undefined;
   /**
-   * Whether the task's routed model may have left every level, read at once
-   * (`TaskMoves.mayRouteAgain`): an older computer is then asked nothing
-   * that could open it again on that model before the home routes it.
-   */
-  modelMayHaveLeft?(taskId: string): boolean;
-  /**
    * Whether a conversation that opened anew on `machine` on the model it
    * had, routing nothing, keeps it (`TaskMoves.keepsModel`): false when
    * that model left every level there while it opened, so it takes no words.

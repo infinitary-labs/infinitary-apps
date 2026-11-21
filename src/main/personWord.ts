@@ -439,14 +439,25 @@ type Held = { fd: number; folder: Entry; markFd?: number };
 /**
  * Holds the folder just made at `path` open, with which folder it is, only where what it opened is
  * a folder still at that path and empty, as the one just made is; null otherwise, closing what it
- * opened and leaving what is there as it is. No system call Node offers makes a folder and opens it
- * at once, so a folder put at the new name between the two is taken for it only where it too is
- * empty: one holding anything is never held, used or removed.
+ * opened and leaving what is there as it is. Anything not a folder is never opened. No system call
+ * Node offers makes a folder and opens it at once; what binds the folder held to the one made is
+ * the folder it is made in, which only this account can change (`trustedParent`, and a profiles'
+ * folder this account's alone, `aloneNow`), so no other account can put anything at the new name
+ * between the two. A folder holding anything is never held, used or removed.
  */
 function holdMade(path: string): Held | null {
   let fd: number | undefined;
   try {
-    fd = openSync(path, "r");
+    // Checked before it is opened, and opened as a folder alone, never following a link nor
+    // waiting on a pipe, where the system can refuse those itself; on Windows no pipe is a path.
+    if (entryOf(path)?.isDirectory() !== true) return null;
+    fd = openSync(
+      path,
+      constants.O_RDONLY |
+        (constants.O_DIRECTORY ?? 0) |
+        (constants.O_NOFOLLOW ?? 0) |
+        (constants.O_NONBLOCK ?? 0),
+    );
     const folder = fstatSync(fd, { bigint: true });
     const atPath = () => {
       const now = entryOf(path);
@@ -478,10 +489,24 @@ function letGo(held: Held): void {
  * (`held`): it first moves that folder to a name of its own (`setAside`), so what it then removes
  * is the folder it checked there and not whatever comes to the old name, then removes its own mark
  * in it, only while still the file it holds open (none where it made none), and the folder only
- * while empty. A folder put in its place is never moved or removed. It closes nothing; the caller
+ * while empty. A folder holding anything but its own mark is left at its own name, untouched, and
+ * a folder put in its place is never moved or removed. It closes nothing; the caller
  * lets go of what it held (`letGo`) once this is done.
  */
 function dropMade(made: MadeFolder): void {
+  // A folder holding anything but its own mark is left as it is, at its own name.
+  try {
+    const markHere = entryOf(join(made.folder.path, WORD_PROFILES_RESERVED));
+    const ownMark =
+      made.mark !== null && markHere?.isFile() === true && sameEntry(markHere, made.mark);
+    const names = readdirSync(made.folder.path);
+    if (names.some((name) => name !== WORD_PROFILES_RESERVED || !ownMark)) {
+      console.warn("[app] left a word's profiles' folder something else put things in");
+      return;
+    }
+  } catch {
+    return;
+  }
   const aside = setAside(
     made.folder.path,
     (entry) => entry?.isDirectory() === true && sameEntry(entry, made.held.folder),

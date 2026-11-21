@@ -422,7 +422,7 @@ describe("a refused launch's word to the person", () => {
     }
     // A folder made that cannot be made private, or whose mark cannot go in, is removed only
     // while empty: what something else put in it meanwhile, a folder or a file at the mark's name
-    // included, stays as it was, set aside under a removal's own name, and nothing is reserved.
+    // included, stays as it was at its own name, and nothing is reserved.
     for (const failing of ["private", "mark", "mark-file"]) {
       const made = root();
       const fails: AccessRun = async (ask) => {
@@ -447,10 +447,11 @@ describe("a refused launch's word to the person", () => {
       };
       expect(await ownProfilesFolder(made, "win32", fails)).toBeNull();
       expect(existsSync(made)).toBe(false);
-      const [left] = readdirSync(join(made, "..")).filter((name) =>
-        name.startsWith(WORD_REMOVING_PREFIX),
-      );
+      const [left] = readdirSync(join(made, "..")).filter((name) => name.startsWith("word-"));
       expect(left).toBeDefined();
+      expect(
+        readdirSync(join(made, "..")).filter((name) => name.startsWith(WORD_REMOVING_PREFIX)),
+      ).toEqual([]);
       expect(readdirSync(join(made, "..", left ?? ""))).toContain(
         failing === "private" ? "theirs" : WORD_PROFILES_RESERVED,
       );

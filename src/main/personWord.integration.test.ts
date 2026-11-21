@@ -557,6 +557,62 @@ describe("a refused launch's copy that shows a word", () => {
     expect(readFileSync(join(theirs ?? "", "theirs"), "utf8")).toBe("kept");
   });
 
+  it.skipIf(process.platform === "win32")(
+    "never opens a pipe put at its new profile's name to read, and shows nothing",
+    async () => {
+      const profiles = profilesFolder();
+      const marks = scratchDir("person-word-marks-");
+      await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
+      const folder = keptAt(profiles);
+      let pipe: string | null = null;
+      swap.opening = (path) => {
+        if (
+          pipe !== null ||
+          dirname(path) !== folder ||
+          !basename(path).startsWith("infinitary-word-")
+        )
+          return;
+        pipe = path;
+        renameSync(path, join(folder, "made-aside"));
+        execFileSync("mkfifo", [path]);
+      };
+      try {
+        expect(
+          await askPersonWord("dock", {
+            launcher: launcher(copyProgram(), "zero", marks),
+            profiles,
+          }),
+        ).toBe("unshown");
+      } finally {
+        swap.opening = null;
+      }
+      expect(pipe).not.toBeNull();
+      expect(lstatSync(pipe ?? "").isFIFO()).toBe(true);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "never opens a pipe put at a new profiles' folder's name to read, and reserves nothing",
+    async () => {
+      const profiles = profilesFolder();
+      let pipe: string | null = null;
+      swap.opening = (path) => {
+        if (pipe !== null || !path.startsWith(`${profiles}.`)) return;
+        pipe = path;
+        renameSync(path, `${profiles}-made`);
+        execFileSync("mkfifo", [path]);
+      };
+      try {
+        expect(await ownProfilesFolder(profiles, hostPlatform())).toBeNull();
+      } finally {
+        swap.opening = null;
+      }
+      expect(pipe).not.toBeNull();
+      expect(lstatSync(pipe ?? "").isFIFO()).toBe(true);
+      expect(existsSync(profiles)).toBe(false);
+    },
+  );
+
   it("removes the profile it made when the copy cannot even be started", async () => {
     const profiles = profilesFolder();
     // A program name no process can start with, refused before anything runs.

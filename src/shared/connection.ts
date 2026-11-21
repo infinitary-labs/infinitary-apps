@@ -251,7 +251,7 @@ export const CONNECTION_PORT = 47_623;
  */
 export const LOCAL_DOOR_FOLDER = "local-door";
 /** The local door's three files, in its folder. */
-export const LOCAL_DOOR_FILES = { address: "address", pin: "pin", key: "key" } as const;
+export const LOCAL_DOOR_FILES = { address: "address", pin: "pin", key: "key", run: "run" } as const;
 /** The header the local door's key travels in on the WebSocket upgrade. */
 export const LOCAL_DOOR_KEY_HEADER = "x-infinitary-local-key";
 /**

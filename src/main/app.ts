@@ -5,6 +5,7 @@ import { isatty } from "node:tty";
 import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
+import type { LocalDoorRun } from "@core/connection/localDoor";
 import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
@@ -439,6 +440,9 @@ const PROGRAM_READ_EVERY_MS = 60_000;
 /** Records why an owned run ended and removes its live marker. */
 let leaveRun: (end?: RunEnd) => void = () => {};
 
+/** This run as its record names it, for its local door to name it too; none without a command. */
+let ownRun: LocalDoorRun | undefined;
+
 /**
  * Ends a run that cannot go on: its lines reach whoever reads its output
  * before the process ends, with its code.
@@ -756,6 +760,7 @@ export async function startApp(
       // waited for here. Elsewhere there is no Keychain to read, and the
       // reading goes in at once, so a run that ends right away keeps it.
       const runStartedAt = new Date();
+      ownRun = { pid: process.pid, startedAt: runStartedAt.toISOString() };
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -1240,6 +1245,8 @@ export async function startApp(
             events: core.events,
             devices: core.services.devices,
             localDoor: core.paths.localDoorDir,
+            // The window beside this run knows by it which run admitted it (docs/view.md, "Joining").
+            ...(ownRun ? { localDoorRun: ownRun } : {}),
             // Where devices find this computer: every address a link may carry.
             address: () => core.services.devices.listenHosts(),
             port: core.services.devices.port,

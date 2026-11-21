@@ -38,6 +38,7 @@ import {
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { FramePartsReader } from "../connection/frameParts";
+import { type LocalDoorRun, localDoorRunOf } from "../connection/localDoor";
 import { thisDeviceSystem } from "../platform";
 import { dialHome } from "./dial";
 import { FIRST_HOME_NUMBER, type HeardTakeOver } from "./homeNumber";
@@ -72,8 +73,11 @@ const STANDBY_OTHER_HOME = "inf:standby:other-home";
  */
 export type HomeContact = "reaching" | "in-reach" | "lost" | "closed";
 
-/** The connection a link has open: its welcome's number, and when its dial began (`HomeLink.connection`). */
-export type HomeLinkConnection = { welcome: number; dialedAt: number };
+/**
+ * The connection a link has open (`HomeLink.connection`): its welcome's
+ * number, and the run that admitted it where a local door named one.
+ */
+export type HomeLinkConnection = { welcome: number; run: LocalDoorRun | null };
 
 export type HomeLinkState = {
   readonly contact: HomeContact;
@@ -335,10 +339,6 @@ export class HomeLink {
   private open: WebSocket | null = null;
   /** How many welcomes this link has heard: the number of the newest connection's. */
   private welcomes = 0;
-  /** When the attempt under way began to dial, before it reached anyone. */
-  private dialedAt = 0;
-  /** When the attempt the newest welcome came on began to dial. */
-  private welcomeDialedAt = 0;
   private cursor: ConnectionCursor | undefined;
   private attempting = false;
   /** The one attempt right after a drop, before the device says the home is out of reach. */
@@ -382,13 +382,12 @@ export class HomeLink {
 
   /**
    * The connection open now, or null while none is open: the number of its
-   * welcome, and when its dial began, before anyone answered it. A drop the
-   * link dials through at once leaves the contact in reach, and still ends
-   * that number. Whoever welcomed a connection was listening once its dial
-   * began, so a process that started after that moment could not have.
+   * welcome, and the run behind it where it was dialed through a local door
+   * that named its run (`localDoorRunOf`). A drop the link dials through at
+   * once leaves the contact in reach, and still ends that number.
    */
   connection(): HomeLinkConnection | null {
-    return this.open ? { welcome: this.welcomes, dialedAt: this.welcomeDialedAt } : null;
+    return this.open ? { welcome: this.welcomes, run: localDoorRunOf(this.open) } : null;
   }
 
   /** Starts dialing; it keeps dialing until it is closed or the home removes the device. */
@@ -505,7 +504,6 @@ export class HomeLink {
   private async attempt(): Promise<void> {
     this.attempting = true;
     let ending: Ending = { welcomed: false };
-    this.dialedAt = this.now();
     try {
       this.reachedAt = this.grant.at;
       const socket = await this.dial(this.grant, (at) => {
@@ -721,7 +719,6 @@ export class HomeLink {
     );
     this.open = socket;
     this.welcomes += 1;
-    this.welcomeDialedAt = this.dialedAt;
     this.heardNumber(frame.homeNumber ?? FIRST_HOME_NUMBER);
     this.heardTakeOverOf(frame);
     this.followRoutes(frame.addresses);

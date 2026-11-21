@@ -118,12 +118,14 @@ describe("the window beside a command's first mate", () => {
       onProblem: () => {},
     });
     let connection: HomeConnection | null = null;
-    const open = () => {
+    /** Opens the command's door, naming the run it stands for where one is given. */
+    const open = (doorRun?: OwnedRun) => {
       connection = startConnection({
         dispatch: run.core.dispatch,
         events: run.core.events,
         devices: pairing,
         localDoor: doorDir,
+        ...(doorRun ? { localDoorRun: doorRun } : {}),
         port: 0,
         onProblem: () => {},
       });
@@ -161,8 +163,6 @@ describe("the window beside a command's first mate", () => {
       dialHangs?: () => boolean;
       /** Where each link the window dials the command's door with is kept, to read its connection. */
       links?: HomeLink[];
-      /** How long each dial of the command's door takes before it reaches the door. */
-      dialMs?: number;
       /** This user's work folder, where a home that added this computer leaves its grant. */
       workDir?: string;
       /**
@@ -253,8 +253,6 @@ describe("the window beside a command's first mate", () => {
                         ...linkOptions,
                         dial: async (grant, reached) => {
                           if (options.dialHangs?.()) return new Promise<never>(() => {});
-                          if (options.dialMs)
-                            await new Promise((resolve) => setTimeout(resolve, options.dialMs));
                           return (
                             linkOptions.dial?.(grant, reached) ??
                             Promise.reject(new Error("no dial"))
@@ -1310,10 +1308,12 @@ describe("the window beside a command's first mate", () => {
       channel === "inf:own-window:here"
         ? new Promise(() => {})
         : answer?.(channel as never, args as never)) as never);
-    await command.open().settled();
     const first = { pid: 41, startedAt: "2026-11-20T08:00:00.000Z", agent: true as const };
     // The run started again, whose record says when it started once it writes it.
     const again = { pid: 42, startedAt: "", agent: true as const };
+    // Each run's door names it, as the run's own record does.
+    const doorOf = (run: typeof first) => ({ pid: run.pid, startedAt: run.startedAt });
+    await command.open(doorOf(first)).settled();
     const links: HomeLink[] = [];
     const at = besideShell(command.doorDir, {
       starts: true,
@@ -1322,7 +1322,6 @@ describe("the window beside a command's first mate", () => {
       records: { running: true, run: first, lastStop: null },
       ownedRun: (status) => ownedRunOf(status),
       links,
-      dialMs: 20,
     });
     await at.shell.start();
     await expect
@@ -1344,7 +1343,7 @@ describe("the window beside a command's first mate", () => {
     // starting again and offers neither a second Restart it nor Start it here.
     at.command.records = { running: null, run: null, lastStop: null };
     await command.stop();
-    await command.open().settled();
+    await command.open(doorOf(first)).settled();
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(at.shell.thisMac()).toMatchObject({
@@ -1354,11 +1353,9 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.startHere()).toBe(false);
     expect(at.shell.followsAdded()).toEqual(starting);
     // The run started again writes its record before the window has heard the run replaced drop,
-    // and the starter answers. The welcome on the connection still open was handled after that
-    // run started by its own record, but its dial began before it: the run replaced answered that
-    // dial, so it counts for nothing.
-    const dialed = links.at(-1)?.connection()?.dialedAt ?? 0;
-    again.startedAt = new Date(dialed + 1).toISOString();
+    // and the starter answers. The welcome on the connection still open came through the door of
+    // the run replaced, which named it, however late it was handled, so it counts for nothing.
+    again.startedAt = new Date().toISOString();
     at.command.records = { running: true, run: again, lastStop: null };
     settle(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1370,7 +1367,7 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.followsAdded()).toEqual(starting);
     // The run started again welcomes the window while its records cannot be read: still nothing.
     at.command.records = { running: null, run: null, lastStop: null };
-    await command.open().settled();
+    await command.open(doorOf(again)).settled();
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(3);
     expect(at.shell.followsAdded()).toEqual(starting);
     // The records come back naming it, after one more reading that names no run: that reading
@@ -1405,8 +1402,8 @@ describe("the window beside a command's first mate", () => {
       channel === "inf:own-window:here"
         ? new Promise((resolve) => heres.push(() => resolve({ ok: true })))
         : answer?.(channel as never, args as never)) as never);
-    await command.open().settled();
     const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
     const at = besideShell(command.doorDir, {
       starts: true,
       readyMs: 2_000,
@@ -1432,7 +1429,7 @@ describe("the window beside a command's first mate", () => {
     await command.stop();
     const again = { pid: 42, startedAt: new Date().toISOString(), agent: true as const };
     at.command.records = { running: true, run: again, lastStop: null };
-    await command.open().settled();
+    await command.open({ pid: again.pid, startedAt: again.startedAt }).settled();
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
     // Past the wait for its answers, the notice still says the first mate is starting again.
     await new Promise((resolve) => setTimeout(resolve, 400));
@@ -1573,6 +1570,121 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
     expect(at.shell.restartCommand()).toBe(true);
+  });
+
+  // The review of INF-5409: a first mate that welcomed the window and never answered is silent for
+  // its own run alone. Where another run holds the folder once the wait is over, while the first
+  // run's connection is still open, that other run is not called silent and nothing offers to end
+  // it.
+  it("calls no run silent that took the folder while another run's welcome waited for its answers", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(1);
+    const again = {
+      pid: 42,
+      startedAt: new Date(Date.now() + 1).toISOString(),
+      agent: true as const,
+    };
+    at.command.records = { running: true, run: again, lastStop: null };
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(at.shell.thisMac()).not.toHaveProperty("command");
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.shell.startHere()).toBe(false);
+    expect(at.starter.restart).not.toHaveBeenCalled();
+    expect(at.starter.stop).not.toHaveBeenCalled();
+  });
+
+  // The review of INF-5409: the notice that a first mate does not answer is about the run that
+  // timed out, so Start it here ends that run by force, never one that took the folder since.
+  it("ends only the run its notice says does not answer on Start it here", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    const again = {
+      pid: 42,
+      startedAt: new Date(Date.now() + 1).toISOString(),
+      agent: true as const,
+    };
+    at.command.records = { running: true, run: again, lastStop: null };
+    expect(at.shell.startHere()).toBe(true);
+    await expect
+      .poll(() => at.starter.stop.mock.calls)
+      .toEqual([[{ forget: false, force: { pid: first.pid } }]]);
+  });
+
+  // The review of INF-5409: a first mate that answers its only welcome's first request late, while
+  // Restart it is under way, is back on that same connection: a restart that did not happen leaves
+  // it as it is, and the window stops counting it as silent.
+  it("keeps a run that answered on its first connection while a refused Restart it was under way", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    /** The window's first request at each welcome, answered once let go. */
+    const heres: (() => void)[] = [];
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise((resolve) => heres.push(() => resolve({ ok: true })))
+        : answer?.(channel as never, args as never)) as never);
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    let settle: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    expect(at.starter.restart.mock.calls).toEqual([[{ pid: first.pid }]]);
+    heres[0]?.();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    settle(false);
+    // Past two readings of the records, a second apart, each longer than the wait for its answers,
+    // nothing says it is silent again.
+    await new Promise((resolve) => setTimeout(resolve, 2_100));
+    expect(at.shell.thisMac()).not.toHaveProperty("command");
+    expect(command.asked("inf:own-window:here")).toHaveLength(1);
+    expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
   });
 
   // The review of INF-5409: records that cannot be read say nothing of a command started outside

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-find-quick-step-reveal",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Find in a card scrolls to the match you step to, even when you step quickly",
+      "body": "Stepping to the next match twice in quick succession, just as the card changed, such as right after opening Find or as a new message arrived, could open the folded section holding the match and still leave it out of sight. Find now brings the match into sight every time.",
+      "noPicture": "The card looks as it did before; what changed is whether a quick step scrolls to its match, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -99,7 +99,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
    It copies four entries at once: each top-level entry, each entry of `worktrees/`, `crewmates/`, `fleet/` and `work/`, and each spare working copy of the warm pool, `worktree-pool/<project>/<slot>` (`copyUnits`, `src/core/folderMove/copy.ts`).
    The Mac's copier runs with `-v`, naming each entry it copies, so the window counts the copy as it goes.
    Each attempt builds in a folder of its own, because a Mac's copier outlives an app that was stopped hard and keeps writing where it was told.
-   Chromium's locks and caches, `worktree-trash` and `task-channel` stay behind (`LEFT_BEHIND`, `src/core/folderMove/tree.ts`), and so do sockets and pipes.
+   Chromium's locks and caches, `worktree-trash`, `task-channel` and the word copies' `word-profiles` stay behind (`LEFT_BEHIND`, `src/core/folderMove/tree.ts`), and so do sockets and pipes; a `word-profiles` folder already in the new folder is handed to the copy as it goes into place, as the installer's channel marker is, so a copy still using a profile finds it.
    In `work/`, what a live run, its service manager or a controller may still write while the copy is made stays behind too: Electron's own `chromium/`, `service.log`, `work.log`, the route and its lock, `running.lock`, the display's key, `worktree-trash` and `task-channel` (`WORK_LEFT_BEHIND`); the next run makes each again.
 5. It checks the copy file by file: the same names, kinds, sizes, permissions and link targets.
    A file the disk cloned shares its source's bytes, so the same modification time, to the nanosecond, proves it unchanged since the clone.

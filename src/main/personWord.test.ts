@@ -1,5 +1,6 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { AccessAsk, AccessRun } from "@core/storage/ownerOnly";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
@@ -8,13 +9,21 @@ import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askPersonWord,
   OPEN_ONCE_CLOSED,
+  ownProfilesFolder,
   PERSON_WORD_ARG,
   personWordArg,
   personWordBox,
   wordLauncher,
   wordProfilePrivate,
 } from "./personWord";
-import { readReply, replyLine, WORD_BUTTONS } from "./personWordArg";
+import {
+  claimWordProfile,
+  readReply,
+  replyLine,
+  WORD_BUTTONS,
+  WORD_OWNER_FILE,
+  WORD_TEMP_DIR,
+} from "./personWordArg";
 
 /**
  * The review of INF-5409: a window launch refused the folder's lock never sees Electron become
@@ -132,8 +141,75 @@ describe("a refused launch's word to the person", () => {
     expect(wordProfilePrivate("darwin", null)).toBe(true);
     expect(wordProfilePrivate("linux", null)).toBe(true);
     expect(wordProfilePrivate("win32", { refused: null })).toBe(true);
-    // A Windows data folder refused, or never judged, leaves the temporary folder unjudged too.
+    // A Windows data folder refused, or never judged, makes no profile in it.
     expect(wordProfilePrivate("win32", { refused: { kind: "unsafe" } })).toBe(false);
     expect(wordProfilePrivate("win32", null)).toBe(false);
+  });
+
+  it("has the copy name itself in the profile it was started with, and only there", () => {
+    const profiles = scratchDir("person-word-claim-");
+    const profile = join(profiles, "infinitary-word-one");
+    // Electron makes the profile as the copy starts; the copy names itself and its temporary folder.
+    mkdirSync(profile);
+    expect(claimWordProfile(["/app", `--user-data-dir=${profile}`])).toBe(true);
+    expect(readFileSync(join(profile, WORD_OWNER_FILE), "utf8")).toBe(String(process.pid));
+    expect(existsSync(join(profile, WORD_TEMP_DIR))).toBe(true);
+    // Never twice, nor over a file it did not make, nor for a profile not of a word, nor none.
+    expect(claimWordProfile(["/app", `--user-data-dir=${profile}`])).toBe(false);
+    expect(claimWordProfile(["/app", `--user-data-dir=${join(profiles, "other")}`])).toBe(false);
+    expect(existsSync(join(profiles, "other"))).toBe(false);
+    expect(claimWordProfile(["/app"])).toBe(false);
+    // A profile it cannot name itself in: one inside a plain file.
+    writeFileSync(join(profiles, "file"), "");
+    expect(
+      claimWordProfile(["/app", `--user-data-dir=${join(profiles, "file", "infinitary-word-x")}`]),
+    ).toBe(false);
+  });
+
+  it("keeps a Windows profiles' folder only with an owner-only access list of its own", async () => {
+    const user = "S-1-5-21-1-2-3-1001";
+    const group = "S-1-5-21-1-2-3-513";
+    const other = "S-1-5-21-9-9-9-1002";
+    const answering = (sddl: string): AccessRun & { asks: AccessAsk[] } => {
+      const asks: AccessAsk[] = [];
+      return Object.assign(
+        async (ask: AccessAsk) => {
+          asks.push(ask);
+          return {
+            user,
+            set: ask.set.map((each) => ({ path: each.path, error: null })),
+            read: ask.read.map((path) => ({ path, sddl, error: null })),
+          };
+        },
+        { asks },
+      );
+    };
+    const root = () => join(scratchDir("person-word-windows-"), "word-profiles");
+    const own = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+    const ownRoot = root();
+    expect(await ownProfilesFolder(ownRoot, "win32", own)).toBe(true);
+    expect(own.asks[0]?.read).toEqual([ownRoot]);
+    // A folder already there that another account owns is never taken as private.
+    expect(
+      await ownProfilesFolder(
+        root(),
+        "win32",
+        answering(`O:${other}G:${group}D:PAI(A;OICI;FA;;;${other})`),
+      ),
+    ).toBe(false);
+    // Nor one Windows could not be asked about.
+    const unread: AccessRun = async () => {
+      throw new Error("no PowerShell");
+    };
+    expect(await ownProfilesFolder(root(), "win32", unread)).toBe(false);
+    // Nor a link to a folder elsewhere, which is never asked about.
+    if (process.platform !== "win32") {
+      const linked = root();
+      mkdirSync(join(linked, ".."), { recursive: true });
+      symlinkSync(scratchDir("person-word-elsewhere-"), linked);
+      const asked = answering(`O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})`);
+      expect(await ownProfilesFolder(linked, "win32", asked)).toBe(false);
+      expect(asked.asks).toEqual([]);
+    }
   });
 });

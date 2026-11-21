@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+
 /** A word a window launch refused the folder's lock says to the person (./personWord.ts). */
 export type PersonWord = "dock" | "once-closed";
 
@@ -66,12 +69,41 @@ export function endWithRequester(input: NodeJS.ReadableStream, end: () => void):
 /**
  * Whether the copy's throwaway profile may be made in the data folder's folder for them
  * (`WORD_PROFILES_DIR`): anywhere but Windows, whose modes keep it this account's alone; on Windows
- * only once the data folder was kept private (`keepDataFolderPrivate`), whose access list it takes.
- * A launch that never judged it, or whose data folder was refused, makes none.
+ * only once the data folder was kept private (`keepDataFolderPrivate`), as that folder is then given
+ * an owner-only access list of its own. A launch that never judged it, or whose data folder was
+ * refused, makes none and touches nothing in it.
  */
 export function wordProfilePrivate(
   platform: NodeJS.Platform,
   privacy: { readonly refused: unknown } | null,
 ): boolean {
   return platform !== "win32" || (privacy !== null && privacy.refused === null);
+}
+
+/** What names a copy's throwaway profile, a folder in the profiles' folder (`WORD_PROFILES_DIR`). */
+export const WORD_PROFILE_PREFIX = "infinitary-word-";
+/** The file in a profile naming the one copy that uses it, by its process number alone. */
+export const WORD_OWNER_FILE = "infinitary-word.pid";
+/** The copy's own temporary folder, inside its profile (`TEMP` and `TMP` name it). */
+export const WORD_TEMP_DIR = "temp";
+const PROFILE_SWITCH = "--user-data-dir=";
+
+/**
+ * The copy's first act, before anything else it runs: names itself in the profile it was started
+ * with, which Electron made as the copy started and nothing else uses, and makes its temporary
+ * folder there. False where it was started with no profile of ours or could not name itself, as a
+ * copy that then shows nothing and says so; a profile it never named is one a later launch leaves.
+ */
+export function claimWordProfile(argv: readonly string[]): boolean {
+  const profile = argv.find((arg) => arg.startsWith(PROFILE_SWITCH))?.slice(PROFILE_SWITCH.length);
+  if (!profile || !basename(profile).startsWith(WORD_PROFILE_PREFIX)) return false;
+  try {
+    mkdirSync(profile, { recursive: true, mode: 0o700 });
+    // Only a file it made itself: never one already there, nor through a link.
+    writeFileSync(join(profile, WORD_OWNER_FILE), String(process.pid), { flag: "wx", mode: 0o600 });
+    mkdirSync(join(profile, WORD_TEMP_DIR), { recursive: true, mode: 0o700 });
+    return true;
+  } catch {
+    return false;
+  }
 }

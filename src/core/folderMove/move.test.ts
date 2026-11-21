@@ -31,9 +31,10 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { seedProject } from "../workspace/seedProject";
 import { copyTree } from "./copy";
-import { dueMove, type FolderMove, stagedFolderFor, stagedFolders } from "./due";
+import { dueMove, type FolderMove, holdsSavedWork, stagedFolderFor, stagedFolders } from "./due";
 import { type MoveDeps, type MoveItem, runMove, stageMove } from "./move";
 import { readMoveRecord, writeMoveRecord } from "./record";
+import { WORD_PROFILES_DIR } from "./tree";
 
 // Integration budget (docs/test-cohorts.md): real git, the system's copier,
 // SQLite, a vite build and the Electron binary on scratch folders; the slowest
@@ -223,9 +224,19 @@ describe("the one-time move of a data folder", () => {
       n: 0,
     });
     bare.close();
-    // An installer already wrote the new app's channel marker, and nothing else.
+    // An installer already wrote the new app's channel marker, and a refused launch's word copy
+    // still uses its profile there: neither is saved work. The older folder's profiles, an empty
+    // folder of them included, are not brought.
     mkdirSync(to);
     writeFileSync(join(to, "update-channel.json"), '{"schemaVersion":1,"channel":"alpha"}\n');
+    const inUse = join(to, WORD_PROFILES_DIR, "infinitary-word-live");
+    mkdirSync(inUse, { recursive: true });
+    writeFileSync(join(inUse, "infinitary-word.pid"), String(process.pid));
+    expect(holdsSavedWork(to)).toBe(false);
+    mkdirSync(join(from, WORD_PROFILES_DIR, "infinitary-word-old"), { recursive: true });
+    const emptyProfiles = scratchDir("fm-folder-move-empty-profiles-");
+    mkdirSync(join(emptyProfiles, WORD_PROFILES_DIR));
+    expect(holdsSavedWork(emptyProfiles)).toBe(false);
 
     const phases: string[] = [];
     const outcome = await runMove(world.move, {
@@ -237,6 +248,9 @@ describe("the one-time move of a data folder", () => {
 
     expect(outcome).toEqual({ kind: "moved", startAtLogin: true });
     expect(phases).toEqual(["checking", "copying", "verifying", "finishing"]);
+    // The profile in use stays where its copy finds it; the older folder's stays behind.
+    expect(readFileSync(join(inUse, "infinitary-word.pid"), "utf8")).toBe(String(process.pid));
+    expect(readdirSync(join(to, WORD_PROFILES_DIR))).toEqual(["infinitary-word-live"]);
     // The work, and the paths into it.
     expect(
       rows(

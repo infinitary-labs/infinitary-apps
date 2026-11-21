@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -10,10 +10,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { clearPrivateTemp } from "@core/storage/ownerOnly";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { askPersonWord } from "./personWord";
-import { PERSON_WORD_ARG } from "./personWordArg";
+import { PERSON_WORD_ARG, WORD_OWNER_FILE, WORD_TEMP_DIR } from "./personWordArg";
 
 /**
  * The review of INF-5409: a refused window launch hears the person's answer from a copy of the
@@ -36,7 +37,7 @@ const NODE_SOURCE = [
 ];
 const sourceUrl = (file: string) => JSON.stringify(pathToFileURL(join(__dirname, file)).href);
 
-/** A stand-in copy: its mode is its first word, its profile the one the requester made for it. */
+/** A stand-in copy: its mode is its first word, its profile the one its requester named for it. */
 function copyProgram(): string {
   const file = join(scratchDir("person-word-copy-"), "copy.mts");
   writeFileSync(
@@ -44,11 +45,12 @@ function copyProgram(): string {
     `
     import { existsSync, mkdirSync, chmodSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
-    import { endWithRequester, replyLine } from ${sourceUrl("personWordArg.ts")};
+    import { claimWordProfile, endWithRequester, replyLine } from ${sourceUrl("personWordArg.ts")};
     const [mode, marks] = process.argv.slice(2);
     const profile = process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice(16) ?? "";
     const say = (text, code = 0) => process.stdout.write(text, () => process.exit(code));
-    if (mode === "late") {
+    if (!claimWordProfile(process.argv)) say(replyLine("unshown"));
+    else if (mode === "late") {
       // The reply in two pieces, the last just before the copy ends.
       process.stdout.write("pressed:");
       setTimeout(() => say("1\\n"), 300);
@@ -70,6 +72,11 @@ function copyProgram(): string {
       // requester's going ends it, and then only once the test lets it, so its profile can be seen
       // kept while it still runs.
       if (process.platform !== "win32") process.on("SIGTERM", () => {});
+      // Never outliving the run that started it, whatever the test does.
+      setTimeout(() => process.exit(0), 30_000);
+      // A temporary file it still uses, where its requester said its temporary files go.
+      writeFileSync(join(process.env.TEMP, "in-use"), "");
+      writeFileSync(join(marks, "temp"), process.env.TEMP);
       writeFileSync(join(marks, "pid"), String(process.pid));
       endWithRequester(process.stdin, () => {
         writeFileSync(join(marks, "requester-gone"), "");
@@ -112,6 +119,14 @@ const wordProfiles = (dir: string) =>
 
 /** A profiles' folder of this test's own. */
 const profilesFolder = () => join(scratchDir("person-word-profiles-"), "word-profiles");
+
+/** Lets a waiting copy end, and waits until it has, should a check before that have failed. */
+async function release(marks: string): Promise<void> {
+  writeFileSync(join(marks, "release"), "");
+  if (!existsSync(join(marks, "pid"))) return;
+  const copy = Number(readFileSync(join(marks, "pid"), "utf8"));
+  await until(() => !alive(copy), "the copy's end");
+}
 
 /** The number of a process that has ended: a real one, started and waited for. */
 async function endedPid(): Promise<number> {
@@ -220,25 +235,33 @@ describe("a refused launch's copy that shows a word", () => {
       profiles,
       signal: taken.signal,
     });
-    await until(() => existsSync(join(marks, "pid")), "the copy's start");
-    const copy = Number(readFileSync(join(marks, "pid"), "utf8"));
-    taken.abort();
-    expect(await asked).toBeNull();
-    if (process.platform !== "win32") {
-      // The copy ignores the ordinary end it was sent, as one whose end failed: its closed input
-      // reaches it, and its profile stays while it still runs.
-      await until(() => existsSync(join(marks, "requester-gone")), "the copy hearing it");
-      expect(alive(copy)).toBe(true);
-      expect(wordProfiles(profiles)).toHaveLength(1);
+    try {
+      await until(() => existsSync(join(marks, "pid")), "the copy's start");
+      const copy = Number(readFileSync(join(marks, "pid"), "utf8"));
+      taken.abort();
+      expect(await asked).toBeNull();
+      if (process.platform !== "win32") {
+        // The copy ignores the ordinary end it was sent, as one whose end failed: its closed input
+        // reaches it, and its profile stays while it still runs.
+        await until(() => existsSync(join(marks, "requester-gone")), "the copy hearing it");
+        expect(alive(copy)).toBe(true);
+        expect(wordProfiles(profiles)).toHaveLength(1);
+      }
+      writeFileSync(join(marks, "release"), "");
+      await until(() => !alive(copy), "the copy's end");
+      await until(() => wordProfiles(profiles).length === 0, "the profile's removal");
+    } finally {
+      taken.abort();
+      await release(marks);
     }
-    writeFileSync(join(marks, "release"), "");
-    await until(() => !alive(copy), "the copy's end");
-    await until(() => wordProfiles(profiles).length === 0, "the profile's removal");
   });
 
-  it("ends the copy when the launch that asked for it dies, and a later ask removes its profile", async () => {
+  it("ends the copy when the launch that asked for it dies, keeps its files through the next holder's clearing, and a later ask removes its profile", async () => {
     const profiles = profilesFolder();
     const marks = scratchDir("person-word-marks-");
+    // The temporary folder the requester itself was given, which the launch holding the folder
+    // after it clears at its start (`clearPrivateTemp`).
+    const requesterTemp = scratchDir("person-word-private-temp-");
     const program = copyProgram();
     const requesterFile = join(scratchDir("person-word-requester-"), "requester.mts");
     writeFileSync(
@@ -256,6 +279,8 @@ describe("a refused launch's copy that shows a word", () => {
       env: {
         PATH: process.env.PATH ?? "",
         SystemRoot: process.env.SystemRoot ?? "",
+        TEMP: requesterTemp,
+        TMP: requesterTemp,
         PROFILES: profiles,
         LAUNCHER: JSON.stringify(launcher(program, "wait", marks)),
       },
@@ -274,53 +299,64 @@ describe("a refused launch's copy that shows a word", () => {
       requester.kill("SIGKILL");
       await requesterEnded;
       await until(() => existsSync(join(marks, "requester-gone")), "the copy hearing it");
+      // Its temporary files are in its own profile, and the next holder's clearing leaves them.
+      const temp = readFileSync(join(marks, "temp"), "utf8");
+      const [named] = wordProfiles(profiles);
+      expect(temp).toBe(join(profiles, named ?? "", WORD_TEMP_DIR));
+      await clearPrivateTemp(requesterTemp);
+      expect(existsSync(join(temp, "in-use"))).toBe(true);
       // Nobody is left to remove its profile, and while the copy still runs a later ask keeps it.
       expect(alive(copy)).toBe(true);
+      expect(readFileSync(join(profiles, named ?? "", WORD_OWNER_FILE), "utf8")).toBe(String(copy));
       await later();
-      expect(wordProfiles(profiles)).toHaveLength(1);
+      expect(wordProfiles(profiles)).toEqual([named]);
       // Once the copy has ended, the next ask removes it.
       writeFileSync(join(marks, "release"), "");
       await until(() => !alive(copy), "the copy's end");
       await later();
       expect(wordProfiles(profiles)).toEqual([]);
     } finally {
-      writeFileSync(join(marks, "release"), "");
       if (requester.exitCode === null && requester.signalCode === null) {
         requester.kill("SIGKILL");
         await requesterEnded;
       }
+      await release(marks);
     }
   });
 
-  it("removes only profiles whose copy, or launch where no copy started, has positively ended", async () => {
+  it("removes only profiles whose copy named itself and has positively ended", async () => {
     const profiles = profilesFolder();
     mkdirSync(profiles, { recursive: true, mode: 0o700 });
     const ended = await endedPid();
-    const owner = "infinitary-word.pid";
     const profile = (name: string, said?: string) => {
       mkdirSync(join(profiles, name));
-      if (said !== undefined) writeFileSync(join(profiles, name, owner), said);
+      if (said !== undefined) writeFileSync(join(profiles, name, WORD_OWNER_FILE), said);
     };
-    // A launch that died before its copy started, and a copy that ended after its launch died.
-    profile("infinitary-word-early", String(ended));
-    profile("infinitary-word-ended", `${ended} ${ended}`);
-    // A copy still running (this test's own process) whose launch has gone, and a launch still
-    // running whose copy has not started.
-    profile("infinitary-word-live-copy", `${ended} ${process.pid}`);
-    profile("infinitary-word-live-launch", String(process.pid));
-    // One still being made, one unreadable, one too long to be an owner file of ours, and one
-    // whose owner file is a folder.
-    profile("infinitary-word-making");
+    // A copy that ended after the launch that asked for it died.
+    profile("infinitary-word-ended", String(ended));
+    // A copy still running (this test's own process) whose launch has gone, and one that has not
+    // named itself yet, as a copy just starting, or never will, as one ended before it could.
+    profile("infinitary-word-live", String(process.pid));
+    profile("infinitary-word-unnamed");
+    // Owner files not in the copy's own words: garbled, padded, two numbers, too long, a folder.
     profile("infinitary-word-garbled", "not a number");
-    profile("infinitary-word-long", `${" ".repeat(80)}${ended}`);
+    profile("infinitary-word-padded", `${ended}\n`);
+    profile("infinitary-word-two", `${ended} ${ended}`);
+    profile("infinitary-word-long", `${"0".repeat(80)}${ended}`);
     profile("infinitary-word-folder");
-    mkdirSync(join(profiles, "infinitary-word-folder", owner));
+    mkdirSync(join(profiles, "infinitary-word-folder", WORD_OWNER_FILE));
     profile("other-folder", String(ended));
-    // A link to a folder elsewhere, named as a profile, which is never followed.
+    // Where links and pipes exist: a link to a folder elsewhere named as a profile, never followed,
+    // and an owner file that is a pipe nothing writes, never waited on.
     const elsewhere = scratchDir("person-word-elsewhere-");
-    writeFileSync(join(elsewhere, owner), String(ended));
-    const linked = process.platform !== "win32";
-    if (linked) symlinkSync(elsewhere, join(profiles, "infinitary-word-link"));
+    writeFileSync(join(elsewhere, WORD_OWNER_FILE), String(ended));
+    const posix = process.platform !== "win32";
+    if (posix) {
+      symlinkSync(elsewhere, join(profiles, "infinitary-word-link"));
+      profile("infinitary-word-pipe");
+      const made = spawnSync("mkfifo", [join(profiles, "infinitary-word-pipe", WORD_OWNER_FILE)]);
+      expect(made.status).toBe(0);
+    }
     const marks = scratchDir("person-word-marks-");
     expect(
       await askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles }),
@@ -329,24 +365,26 @@ describe("a refused launch's copy that shows a word", () => {
       [
         "infinitary-word-folder",
         "infinitary-word-garbled",
-        ...(linked ? ["infinitary-word-link"] : []),
-        "infinitary-word-live-copy",
-        "infinitary-word-live-launch",
+        "infinitary-word-live",
         "infinitary-word-long",
-        "infinitary-word-making",
+        "infinitary-word-padded",
+        "infinitary-word-two",
+        "infinitary-word-unnamed",
+        ...(posix ? ["infinitary-word-link", "infinitary-word-pipe"] : []),
         "other-folder",
       ].sort(),
     );
-    expect(readdirSync(elsewhere)).toEqual([owner]);
+    expect(readdirSync(elsewhere)).toEqual([WORD_OWNER_FILE]);
   });
 
-  it("names the word and a throwaway profile in its folder to the copy", async () => {
+  it("names the word, a throwaway profile in its folder and temporary files there to the copy", async () => {
     const marks = scratchDir("person-word-marks-");
     const file = join(scratchDir("person-word-copy-"), "args.mjs");
     writeFileSync(
       file,
       `import { writeFileSync } from "node:fs";
       writeFileSync(${JSON.stringify(join(marks, "args"))}, JSON.stringify(process.argv.slice(2)));
+      writeFileSync(${JSON.stringify(join(marks, "env"))}, JSON.stringify([process.env.TEMP, process.env.TMP]));
       process.stdout.write("pressed:0\\n", () => process.exit(0));`,
     );
     const profiles = profilesFolder();
@@ -358,6 +396,10 @@ describe("a refused launch's copy that shows a word", () => {
     ).toBe(0);
     const args: string[] = JSON.parse(readFileSync(join(marks, "args"), "utf8"));
     expect(args[0]).toBe(`${PERSON_WORD_ARG}=once-closed`);
-    expect(args[1]?.startsWith(`--user-data-dir=${join(profiles, "infinitary-word-")}`)).toBe(true);
+    const profile = args[1]?.slice("--user-data-dir=".length) ?? "";
+    expect(profile.startsWith(join(profiles, "infinitary-word-"))).toBe(true);
+    // Its temporary files go in that profile, never where this launch's own go.
+    const temp = join(profile, WORD_TEMP_DIR);
+    expect(JSON.parse(readFileSync(join(marks, "env"), "utf8"))).toEqual([temp, temp]);
   });
 });

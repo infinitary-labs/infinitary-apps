@@ -1,28 +1,36 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
+  openSync,
   readdirSync,
-  readFileSync,
+  readSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
+import { type AccessRun, keepOwnerOnly, powerShellAccess } from "@core/storage/ownerOnly";
 import { readLinuxInstallation } from "@core/update/linuxInstall";
 import * as m from "@shared/i18n/messages.generated";
 import { languageOverride, startLanguage } from "@shared/i18n/start";
 import type { MessageBoxOptions } from "electron";
 import {
+  claimWordProfile,
   endWithRequester,
   PERSON_WORD_ARG,
   type PersonReply,
   type PersonWord,
   readReply,
   replyLine,
+  WORD_OWNER_FILE,
+  WORD_PROFILE_PREFIX,
+  WORD_TEMP_DIR,
 } from "./personWordArg";
 
 /*
@@ -106,13 +114,19 @@ export function personWordBox(word: PersonWord, preferred: readonly string[], pa
 
 /**
  * The copy that shows one word: it keeps out of the Dock, so the Infinitary the word names there is
- * the only one to click, and ends with the launch that asked for it (`endWithRequester`). Once
+ * the only one to click, names itself in its profile (`claimWordProfile`), and ends with the launch
+ * that asked for it (`endWithRequester`). Once
  * Electron is ready it shows the box in front of whatever the person uses now and writes the button
  * pressed, or that the box could not be shown, and ends.
  */
 export async function showPersonWord(word: PersonWord): Promise<void> {
   const { app, dialog } = await import("electron");
   if (hostPlatform() === "darwin") app.setActivationPolicy("accessory");
+  // Named as its profile's one user before anything else it does, or it shows nothing.
+  if (!claimWordProfile(process.argv)) {
+    process.stdout.write(replyLine("unshown"), () => app.exit(0));
+    return;
+  }
   endWithRequester(process.stdin, () => app.exit(0));
   await app.whenReady();
   const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
@@ -126,30 +140,28 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
   process.stdout.write(replyLine(reply), () => app.exit(0));
 }
 
-/**
- * The folder in the data folder that holds the copies' throwaway profiles, and only them: a folder of
- * this account's alone, apart from the temporary folder a holder clears at its start
- * (`clearPrivateTemp`) and from one other accounts share, so a profile is never taken from under a
- * copy still using it and reclaiming touches nothing another program made.
- */
-export const WORD_PROFILES_DIR = "word-profiles";
-/** The file in a profile naming the launch that made it and, once started, its copy. */
-const OWNER_FILE = "infinitary-word.pid";
-const PROFILE_PREFIX = "infinitary-word-";
-/** Two process numbers and a space: anything longer is no owner file of ours. */
-const OWNER_FILE_BYTES = 64;
+export { WORD_PROFILES_DIR } from "@core/folderMove/tree";
+
+/** Its process number and nothing else: anything longer is no owner file of ours. */
+const OWNER_FILE_BYTES = 16;
 
 /**
- * Makes the profiles' folder and says whether it is this account's alone: a real folder, not a link,
- * and away from Windows owned by this account with no access for anyone else (a wider one of its own
- * is narrowed). On Windows it takes the data folder's owner-only access list (`wordProfilePrivate`).
+ * Makes the profiles' folder and says whether it is this account's alone: a real folder, not a link;
+ * away from Windows owned by this account with no access for anyone else (a wider mode of its own is
+ * narrowed); on Windows with an owner-only access list of its own (`keepOwnerOnly`), whatever list
+ * a folder already there was given.
  */
-function ownProfilesFolder(root: string): boolean {
+export async function ownProfilesFolder(
+  root: string,
+  platform: NodeJS.Platform,
+  access: AccessRun = powerShellAccess,
+): Promise<boolean> {
   try {
     mkdirSync(root, { recursive: true, mode: 0o700 });
     const folder = lstatSync(root);
     if (!folder.isDirectory() || folder.isSymbolicLink()) return false;
-    if (hostPlatform() === "win32") return true;
+    if (platform === "win32")
+      return (await keepOwnerOnly([root], access)).kept[0]?.kind === "owner-only";
     if (folder.uid !== process.getuid?.()) return false;
     if ((folder.mode & 0o077) !== 0) chmodSync(root, 0o700);
     return (lstatSync(root).mode & 0o077) === 0;
@@ -160,33 +172,51 @@ function ownProfilesFolder(root: string): boolean {
 }
 
 /**
- * Removes the throwaway profiles in the profiles' folder whose launch died before it could, as one
- * ended by force: only a profile whose owner file names a copy that has positively ended (no process
- * with its number), or, where its copy never started, a launch that has. A profile with no such file,
- * a file that is not a small plain file, or an owner still running or whose number another program
- * took since, is left as it is.
+ * The copy a profile's owner file names (`claimWordProfile`): read from the file it opened - a plain
+ * file, never through a link nor waiting on a pipe, of no more than a process number - and only its
+ * exact number; anything else, or no file, is no owner.
+ */
+function profileOwner(profile: string): number | null {
+  let fd: number | undefined;
+  try {
+    fd = openSync(
+      join(profile, WORD_OWNER_FILE),
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
+    const kept = fstatSync(fd);
+    if (!kept.isFile() || kept.size > OWNER_FILE_BYTES) return null;
+    const bytes = Buffer.alloc(OWNER_FILE_BYTES + 1);
+    const said = bytes.toString("utf8", 0, readSync(fd, bytes, 0, bytes.length, 0));
+    return /^[1-9][0-9]{0,9}$/.test(said) ? Number(said) : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+/**
+ * Removes the throwaway profiles in the profiles' folder whose copy has positively ended (no process
+ * with its number) with no launch left to remove them, as one ended by force. A profile whose copy
+ * never named itself, whose owner file is not one of ours, or whose copy still runs or whose number
+ * another program took since, is left as it is.
  */
 function reclaimWordProfiles(root: string): void {
   let names: string[];
   try {
-    names = readdirSync(root).filter((name) => name.startsWith(PROFILE_PREFIX));
+    names = readdirSync(root).filter((name) => name.startsWith(WORD_PROFILE_PREFIX));
   } catch {
     return;
   }
   for (const name of names) {
     const profile = join(root, name);
-    let owner: number | undefined;
     try {
       if (!lstatSync(profile).isDirectory()) continue;
-      const file = join(profile, OWNER_FILE);
-      const kept = lstatSync(file);
-      if (!kept.isFile() || kept.size > OWNER_FILE_BYTES) continue;
-      // The copy where it started, or else the launch that made the profile.
-      owner = Number(readFileSync(file, "utf8").trim().split(" ").at(-1));
     } catch {
       continue;
     }
-    if (!Number.isInteger(owner) || owner <= 0 || !processGone(owner)) continue;
+    const owner = profileOwner(profile);
+    if (owner === null || !processGone(owner)) continue;
     try {
       rmSync(profile, { recursive: true, force: true });
     } catch (error) {
@@ -208,16 +238,17 @@ function processGone(pid: number): boolean {
 /**
  * Shows a word through a copy of this program (`showPersonWord`) and gives its reply (`readReply`)
  * once the copy has ended and said all it had: null where the word was taken away (`signal`),
- * which ends that copy and its box, and unshown where the copy could not be made, started or show
- * its box, or where its profile has no private folder to go in (`profiles` null, as
- * `wordProfilePrivate` decides, or one not this account's alone), which then makes none. The copy's
- * input stays open while this launch lives, so the copy ends with it too. Its throwaway profile, in
- * `profiles` (`WORD_PROFILES_DIR`), names this launch from its making and the copy once it started,
- * and goes once the copy has ended - by this launch, or by a later one's ask where this launch died
- * first - and a profile that cannot go changes no reply. `launcher` starts this app as it was
- * started (`wordLauncher`).
+ * which ends that copy and its box, and unshown where the copy could not be started or show its box,
+ * or where its profile has no private folder to go in (`profiles` null, as `wordProfilePrivate`
+ * decides, or one not this account's alone), which then starts none. The copy's input stays open
+ * while this launch lives, so the copy ends with it too. This launch only names the copy's
+ * throwaway profile, in `profiles` (`WORD_PROFILES_DIR`), with its temporary folder inside it; the
+ * copy, the one process to use it, makes it and names itself there as it starts
+ * (`claimWordProfile`). It goes once the copy has ended - by this launch, or by a later one's ask
+ * where this launch died first - and a profile that cannot go changes no reply. `launcher` starts
+ * this app as it was started (`wordLauncher`).
  */
-export function askPersonWord(
+export async function askPersonWord(
   word: PersonWord,
   options: {
     launcher: { execPath: string; args: readonly string[] };
@@ -226,8 +257,12 @@ export function askPersonWord(
   },
 ): Promise<PersonReply | null> {
   const { signal, profiles } = options;
-  if (signal?.aborted) return Promise.resolve(null);
-  if (profiles === null || !ownProfilesFolder(profiles)) return Promise.resolve("unshown");
+  if (signal?.aborted) return null;
+  if (profiles === null || !(await ownProfilesFolder(profiles, hostPlatform()))) return "unshown";
+  if (signal?.aborted) return null;
+  reclaimWordProfiles(profiles);
+  const profile = join(profiles, `${WORD_PROFILE_PREFIX}${randomUUID()}`);
+  const temp = join(profile, WORD_TEMP_DIR);
   return new Promise((done) => {
     let settled = false;
     let takeAway = () => {};
@@ -237,10 +272,8 @@ export function askPersonWord(
       signal?.removeEventListener("abort", takeAway);
       done(reply);
     };
-    let profile: string | null = null;
     // Only once the copy has ended, or never started.
     const cleanUp = () => {
-      if (profile === null) return;
       try {
         rmSync(profile, { recursive: true, force: true });
       } catch (error) {
@@ -249,29 +282,16 @@ export function askPersonWord(
     };
     let copy: ChildProcess;
     try {
-      reclaimWordProfiles(profiles);
-      profile = mkdtempSync(join(profiles, PROFILE_PREFIX));
-      // Named from its making: a later launch removes it once this launch has gone, should no copy
-      // have started.
-      writeFileSync(join(profile, OWNER_FILE), String(process.pid));
       copy = spawn(
         options.launcher.execPath,
         [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
-        { env: hostEnv(), stdio: ["pipe", "pipe", "ignore"] },
+        // Temporary files of its own, apart from the folder a later holder clears at its start.
+        { env: { ...hostEnv(), TEMP: temp, TMP: temp }, stdio: ["pipe", "pipe", "ignore"] },
       );
     } catch (error) {
       console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
-      cleanUp();
       settle("unshown");
       return;
-    }
-    // The copy's number is known as it starts, before anything else runs here: from now its own
-    // end, not this launch's, lets a later launch remove the profile.
-    try {
-      if (copy.pid !== undefined)
-        writeFileSync(join(profile, OWNER_FILE), `${process.pid} ${copy.pid}`);
-    } catch (error) {
-      console.warn(`[app] could not name a word's copy: ${(error as Error).message}`);
     }
     let started = false;
     copy.once("spawn", () => {

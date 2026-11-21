@@ -1078,7 +1078,7 @@ describe("reopening after a work computer restarts, when the task's model left e
     const record = home.tasks.get(taskId);
     if (!record) throw new Error("no task record");
 
-    // X
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
     expect(asked.map((entry) => entry.channel)).not.toContain("inf:session:delete-outside");
     answer.open();
     await steered;
@@ -1351,6 +1351,50 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(next?.body.model).toBe(SOL.id);
     expect(said(next)).toContain("Anything else?");
     expect(said(next)).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 18 findings 1 and 3: an older computer's cleanup that
+  // comes while the task's next open is still being prepared here, before it
+  // asks that computer, leaves that open alone: it opens once the cleanup has
+  // answered, and its words reach the model once without the removed words.
+  it("leaves an open still being prepared alone during an older computer's cleanup", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older-preparing";
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "Carried on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    home.supervisor.placedLetGo(taskId);
+    // The next open is held here, before it asks that computer anything.
+    const prepared = gate();
+    const placed = home.placed as unknown as { open: (...args: unknown[]) => Promise<unknown> };
+    const open = placed.open.bind(home.placed);
+    const preparing = vi.spyOn(placed, "open").mockImplementation(async (...args) => {
+      await prepared.held;
+      return open(...args);
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => preparing.mock.calls.length).toBe(1);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    // Nothing this Mac held was let go: the open being prepared keeps its task.
+    expect(letGo).not.toHaveBeenCalled();
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    prepared.open();
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => said(request).includes("Carry on."))).toEqual([true]);
+    expect(said(sent[0])).not.toContain(SECRET);
+    expect(filesHolding(here, SECRET)).toEqual([]);
   });
 });
 

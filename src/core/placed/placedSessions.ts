@@ -1649,13 +1649,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
     // An open there still unanswered could give this Mac a conversation the cleanup lets go.
     if (placed.asking > 0 || placed.adopting || placed.cleaning) return "waiting";
-    // An older computer opens the conversation again by itself, unchecked: this Mac never
-    // reattaches to what it opens (`refusedThere`), and lets its own go first, once its turn is over.
+    // An older computer reopens it unchecked: never reattached to (`refusedThere`), let go first.
     const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
     const refused = this.refusedHeld(placed.task);
     if (older) this.refuseHeld(placed.task, true);
-    // Only at once: a release left for a turn's end would wake its words before the cleanup.
-    if (older && !heldSession(placed)?.isStreaming()) this.host?.letGo?.(placed.task, true);
+    // Only a session held, only at once: one left for a turn's end would wake its words first.
+    const live = heldSession(placed);
+    if (older && live && !live.isStreaming()) this.host?.letGo?.(placed.task, true);
     if (older && heldSession(placed)) return this.refuseHeld(placed.task, refused), "waiting";
     // Opens there wait for its answer, and words to it for the reopen it asks too.
     let cleaned: (open: boolean | Promise<boolean>) => void = () => {};

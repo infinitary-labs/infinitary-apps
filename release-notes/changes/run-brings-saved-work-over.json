@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "run-brings-saved-work-over",
+      "kind": "fix",
+      "area": "updates",
+      "title": "Infinitary started by a command brings your saved work over itself",
+      "body": "When a command starts Infinitary with no window and finds saved work from Firstmate 3000, it now brings that work over in the terminal, saying each step, instead of asking you to open its window first. An older copy still running with no window is asked to save and stop, and it is ended only if you type yes.",
+      "noPicture": "The change is in the lines a terminal shows when a command starts Infinitary, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,14 +1,16 @@
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
+import { isatty } from "node:tty";
 import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
 import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
-import { dueMove } from "@core/folderMove/due";
-import { olderRunAgent } from "@core/folderMove/takeOver";
+import { dueMove, type FolderMove } from "@core/folderMove/due";
+import type { MoveDeps } from "@core/folderMove/move";
+import { olderRunAgent, type TakeOverDeps } from "@core/folderMove/takeOver";
 import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { handBackgroundOver } from "@core/helper/moveWork";
@@ -66,6 +68,7 @@ import { frameLibPins } from "./frames/frameLibFiles";
 import { FrameMountRegistry } from "./frames/frameMounts";
 import { handleFrameProtocol } from "./frames/frameProtocol";
 import { handOverProfileDir, runHandOver } from "./handOver";
+import type { HandOverNames } from "./handOverPage";
 import {
   createElectronHost,
   type ElectronHostOptions,
@@ -98,6 +101,7 @@ import {
   windowProfileDir,
 } from "./runCommand";
 import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
+import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
 import { bundleOf, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
@@ -128,7 +132,8 @@ import { followWindowSize } from "./windowSize";
 import { appWindows, confirmationWindow, mainWindowOpen, markMainWindow } from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
-import { workContext } from "./workContext";
+import { windowsStdin } from "./windowsStdin";
+import { type WorkContext, workContext } from "./workContext";
 
 /**
  * The Electron host (daemon study D1): the window, the security lockdown,
@@ -149,6 +154,142 @@ if (hostPlatform() === "win32") app.setAppUserModelId(windowsAppUserModelId(isRe
 /** The app a data folder belongs to, by the name a person knows it (`@shared/codeNames`). */
 function appNameOfFolder(dir: string): string {
   return APP_IDENTITIES[spellingOfUserDataFolder(basename(dir)) ?? "fm"].app.release;
+}
+
+/** The two apps of the one-time move, by the names a person knows them. */
+function handOverNames(move: FolderMove): HandOverNames {
+  return { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) };
+}
+
+/**
+ * What the one-time move's hand-over reaches, the window's and a run's
+ * alike: the move itself, the take-over from an older copy with no window
+ * still holding the older folder, its background agent let go first
+ * (src/core/folderMove/takeOver.ts), and once the work is in, the older
+ * agent's hand-over to this app's label, as the work run's move hands it
+ * over, so its file starts nothing on the frozen older folder.
+ */
+function handOverReach(
+  move: FolderMove,
+  work: WorkContext,
+): {
+  deps: Pick<MoveDeps, "platform" | "claudeConfigDir" | "hostname">;
+  takeOver: TakeOverDeps;
+  handBackground?: () => Promise<unknown>;
+} {
+  const serviceManager = work.serviceManager;
+  // The older copy's names follow the folder it moves from, never where
+  // this computer's work happens to be (`folderSpelling` names this app's
+  // own folder whenever its work is not still in the older one).
+  const olderSpelling = spellingOfUserDataFolder(basename(move.from)) ?? "fm";
+  // The start entry a run of the older copy may have, let go before a forced end.
+  const olderRun = olderRunAgent({
+    spelling: olderSpelling,
+    flavor: work.place.flavor,
+    platform: hostPlatform(),
+    homeDir: homedir(),
+    unitsDir: userUnitsDir(process.env, homedir()),
+    dataDir: move.from,
+  });
+  const olderBackground = serviceManager && {
+    flavor: work.place.flavor,
+    dataDir: join(move.from, "work"),
+    spelling: olderSpelling,
+    homeDir: homedir(),
+    uid: process.getuid?.() ?? userInfo().uid,
+    ...serviceManager,
+  };
+  return {
+    deps: {
+      platform: hostPlatform(),
+      claudeConfigDir: defaultClaudeConfigDir(),
+      hostname: hostname(),
+    },
+    takeOver: {
+      platform: hostPlatform(),
+      hostname: hostname(),
+      ...(olderBackground
+        ? {
+            unloadAgent: (service) => pauseInBackground(olderBackground, service),
+            resumeAgent: (service) => resumeInBackground(olderBackground, service),
+          }
+        : {}),
+      ...(olderRun ? { runAgent: olderRun } : {}),
+    },
+    ...(serviceManager
+      ? {
+          handBackground: async () => {
+            const dataDir = join(move.to, "work");
+            const { workLog } = await import("@core/helper/run");
+            return handBackgroundOver(dataDir, {
+              spelling: work.place.spelling,
+              flavor: work.place.flavor,
+              background: (dir, spelling) => ({
+                flavor: work.place.flavor,
+                dataDir: dir,
+                spelling,
+                homeDir: homedir(),
+                uid: process.getuid?.() ?? userInfo().uid,
+                ...serviceManager,
+              }),
+              launcher: work.launcher,
+              env: work.backgroundEnv,
+              log: workLog(dataDir),
+            });
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * Turns start at login on for this app once the work is in, as the older
+ * app had it, and forgets the older app's own entry, which would start the
+ * same program again. A development run's rehearsal leaves this computer's
+ * login items alone.
+ */
+function carryStartAtLogin(move: FolderMove): void {
+  if (isDev) return;
+  startAtLoginFor(basename(move.to)).set(true);
+  forgetAutostart(basename(move.from));
+}
+
+/**
+ * The one-time move for a run a command started (docs/run.md, "Before it
+ * starts"): in the terminal, before Electron is ready, so the run goes on
+ * from this app's own folder once the work is in. A stop the run is asked
+ * for meanwhile ends the hand-over as it ends the move, with nothing changed
+ * once the copy is not yet checked; the older copy is ended only on a yes
+ * typed at a terminal.
+ */
+async function handOverInRun(move: FolderMove, work: WorkContext): Promise<RunHandOver> {
+  const stop = new AbortController();
+  const onStop = () => stop.abort();
+  for (const signal of STOP_SIGNALS) process.on(signal, onStop);
+  // Only a person at a terminal can answer; a run a service manager started has none.
+  const ask = (lines: readonly string[], prompt: string) => {
+    const input = hostPlatform() === "win32" ? windowsStdin() : process.stdin;
+    const question = terminalQuestion({
+      input,
+      output: process.stdout,
+      interrupted: onStop,
+      signal: stop.signal,
+    });
+    return question(lines, prompt).finally(() => input.pause());
+  };
+  try {
+    return await runHandOverInTerminal(move, {
+      names: handOverNames(move),
+      ...handOverReach(move, work),
+      say: (lines) => process.stdout.write(`${lines.join("\n")}\n`),
+      ...(isatty(0) ? { ask } : {}),
+      signal: stop.signal,
+      // Login items are set once the app is ready.
+      startAtLogin: () => void app.whenReady().then(() => carryStartAtLogin(move)),
+    });
+  } finally {
+    for (const signal of STOP_SIGNALS) process.off(signal, onStop);
+  }
 }
 
 // This desktop's conventions (design skill readme, "Linux desktop
@@ -365,7 +506,7 @@ export async function startApp(
   // it moves Firstmate 3000's folder of its flavor. An isolated or switched
   // folder never moves. While a move is due, Chromium runs on a
   // throwaway profile beside the folders (./handOver.ts).
-  const move =
+  let move =
     userDataChoice.kind === "flavor"
       ? dueMove({
           appData: app.getPath("appData"),
@@ -373,6 +514,21 @@ export async function startApp(
           flavor: userDataChoice.flavor,
         })
       : null;
+  // A run hands over in its terminal before Chromium opens either folder,
+  // taking over from an older copy with no window that still holds the
+  // older one, and then goes on from its own (./runHandOver.ts).
+  if (move && windowless) {
+    const handed = await handOverInRun(move, workContext());
+    if (handed.kind === "ended") {
+      const { end } = handed;
+      // A stop ends cleanly, as a run's stop does; anything else ends as a start that failed.
+      if (end.reason === "signal")
+        process.stdout.write(`${end.lines.join("\n")}\n`, () => app.exit(end.exitCode));
+      else endRun(end.exitCode, end.lines);
+      return;
+    }
+    move = null;
+  }
   if (move) {
     app.setPath("userData", handOverProfileDir(move.to));
   } else if (userDataChoice.kind !== "switch") {
@@ -386,12 +542,6 @@ export async function startApp(
 
   let ownDisplay = false;
   if (windowless) {
-    // The one-time move asks its person in a window of its own, so a run
-    // leaves it to the window.
-    if (move) {
-      endRun(1, RUN_WORDS.handOver);
-      return;
-    }
     // On Linux a run draws its hidden pages - a task's browser, a card's
     // demo checked before it goes up - on a display of its own, which
     // outlives any desktop session, as the work mode does (./ownDisplay.ts).
@@ -752,81 +902,11 @@ export async function startApp(
         }
       }
       if (move) {
-        const serviceManager = work.serviceManager;
-        // The older copy's names follow the folder it moves from, never where
-        // this computer's work happens to be (`folderSpelling` names this app's
-        // own folder whenever its work is not still in the older one).
-        const olderSpelling = spellingOfUserDataFolder(basename(move.from)) ?? "fm";
-        // The start entry a run of the older copy may have, let go before Stop it now ends it.
-        const olderRun = olderRunAgent({
-          spelling: olderSpelling,
-          flavor: work.place.flavor,
-          platform: hostPlatform(),
-          homeDir: homedir(),
-          unitsDir: userUnitsDir(process.env, homedir()),
-          dataDir: move.from,
-        });
-        const olderBackground = serviceManager && {
-          flavor: work.place.flavor,
-          dataDir: join(move.from, "work"),
-          spelling: olderSpelling,
-          homeDir: homedir(),
-          uid: process.getuid?.() ?? userInfo().uid,
-          ...serviceManager,
-        };
         await runHandOver(move, {
-          names: { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) },
+          names: handOverNames(move),
           hidden: hideWindow,
-          deps: {
-            platform: hostPlatform(),
-            claudeConfigDir: defaultClaudeConfigDir(),
-            hostname: hostname(),
-          },
-          // An older copy still running with no window is asked to stop,
-          // its background agent let go first (src/core/folderMove/takeOver.ts).
-          takeOver: {
-            platform: hostPlatform(),
-            hostname: hostname(),
-            ...(olderBackground
-              ? {
-                  unloadAgent: (service) => pauseInBackground(olderBackground, service),
-                  resumeAgent: (service) => resumeInBackground(olderBackground, service),
-                }
-              : {}),
-            ...(olderRun ? { runAgent: olderRun } : {}),
-          },
-          // The older agent goes once the work is in, as the work run's move
-          // hands it over, so its file starts nothing on the frozen older folder.
-          ...(serviceManager
-            ? {
-                handBackground: async () => {
-                  const dataDir = join(move.to, "work");
-                  const { workLog } = await import("@core/helper/run");
-                  return handBackgroundOver(dataDir, {
-                    spelling: work.place.spelling,
-                    flavor: work.place.flavor,
-                    background: (dir, spelling) => ({
-                      flavor: work.place.flavor,
-                      dataDir: dir,
-                      spelling,
-                      homeDir: homedir(),
-                      uid: process.getuid?.() ?? userInfo().uid,
-                      ...serviceManager,
-                    }),
-                    launcher: work.launcher,
-                    env: work.backgroundEnv,
-                    log: workLog(dataDir),
-                  });
-                },
-              }
-            : {}),
-          startAtLogin: () => {
-            // A development run's rehearsal leaves this computer's login items alone.
-            if (isDev) return;
-            startAtLoginFor(basename(move.to)).set(true);
-            // The older app's own entry would start the same program again.
-            forgetAutostart(basename(move.from));
-          },
+          ...handOverReach(move, work),
+          startAtLogin: () => carryStartAtLogin(move),
           relaunch: () => {
             app.relaunch();
             app.quit();

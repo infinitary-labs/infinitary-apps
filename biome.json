@@ -488,6 +488,7 @@
         "!src/main/host/claudeKeychainAccess.integration.test.ts",
         "!src/main/host/keychainProcess.integration.test.ts",
         "!src/main/faultSignals.integration.test.ts",
+        "!src/main/runHandOver.integration.test.ts",
         "!tests/bench-attempt.test.ts",
         "!tests/eval-auth-turn-taking.test.ts",
         "!tests/account-eval.test.ts",

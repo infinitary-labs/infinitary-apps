@@ -27863,6 +27863,516 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quit`;
   }
+  function handoverRunBothFolders(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `وجد ${to} عملًا محفوظًا في مكانين: في مجلده الخاص وفي مجلد ${from}. افتح ${to} بنافذته مرة واحدة لتختار العمل الذي يفتحه، ثم شغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `${to} hat an zwei Orten gespeicherte Arbeit gefunden: in seinem eigenen Ordner und in dem von ${from}. Öffne ${to} einmal mit seinem Fenster, um die Arbeit zu wählen, die es öffnet, und führ diesen Befehl dann erneut aus.`;
+      case "es":
+        return `${to} encontró trabajo guardado en dos lugares: en su propia carpeta y en la de ${from}. Abre ${to} con su ventana una vez para elegir el trabajo que abre y luego vuelve a ejecutar este comando.`;
+      case "fr":
+        return `${to} a trouvé du travail enregistré à deux endroits : dans son propre dossier et dans celui de ${from}. Ouvrez ${to} une fois avec sa fenêtre pour choisir le travail qu’il ouvre, puis relancez cette commande.`;
+      case "ja":
+        return `${to} は2か所で保存した作業を見つけました。自分のフォルダと ${from} のフォルダです。${to} をウインドウで一度開いて開く作業を選んでから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${to}이(가) 두 곳에서 저장된 작업을 찾았어요. 자체 폴더와 ${from}의 폴더예요. ${to}을(를) 창으로 한 번 열어 열 작업을 선택한 다음, 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${to} encontrou trabalho salvo em dois lugares: na própria pasta e na do ${from}. Abra o ${to} com a janela uma vez para escolher o trabalho que ele abre e depois execute este comando de novo.`;
+      case "zh-Hans":
+        return `${to} 在两个地方找到了保存的工作：它自己的文件夹和 ${from} 的文件夹。请用窗口打开一次 ${to}，选择它要打开的工作，然后再次运行此命令。`;
+      case "zh-Hant":
+        return `${to} 在兩個地方找到儲存的工作：它自己的資料夾和 ${from} 的資料夾。請用視窗開啟一次 ${to}，選擇它要開啟的工作，然後再次執行此指令。`;
+      case "en-XA":
+        return `[${to} ƒöûñð šáṽéð ŵöŕķ îñ ţŵö þļáçéš, îñ îţš öŵñ ƒöļðéŕ áñð îñ ${from}'š. Öþéñ ${to} ŵîţĥ îţš ŵîñðöŵ öñçé ţö çĥööšé ţĥé ŵöŕķ îţ öþéñš, ţĥéñ ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ found saved work in two places, in its own folder and in ‬${from}‮'s. Open ‬${to}‮ with its window once to choose the work it opens, then run this again.‬`;
+    }
+    return `${to} found saved work in two places, in its own folder and in ${from}'s. Open ${to} with its window once to choose the work it opens, then run this again.`;
+  }
+  function handoverRunBusy(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينقل ${to} عملك المحفوظ بالفعل. شغّل هذا الأمر مرة أخرى بعد انتهاء هذا النقل.`;
+      case "de":
+        return `${to} verschiebt deine gespeicherte Arbeit bereits. Führ diesen Befehl erneut aus, sobald das Verschieben fertig ist.`;
+      case "es":
+        return `${to} ya está moviendo tu trabajo guardado. Vuelve a ejecutar este comando cuando termine ese traslado.`;
+      case "fr":
+        return `${to} déplace déjà votre travail enregistré. Relancez cette commande une fois ce déplacement terminé.`;
+      case "ja":
+        return `${to} がすでに保存した作業を移動しています。その移動が終わってから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${to}이(가) 이미 저장된 작업을 옮기고 있어요. 그 이동이 끝나면 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${to} já está movendo seu trabalho salvo. Execute este comando de novo quando essa transferência terminar.`;
+      case "zh-Hans":
+        return `${to} 已在移动你保存的工作。等这次移动完成后，再次运行此命令。`;
+      case "zh-Hant":
+        return `${to} 已在移動你儲存的工作。等這次移動完成後，再次執行此指令。`;
+      case "en-XA":
+        return `[${to} îš áļŕéáðý ɱöṽîñĝ ýöûŕ šáṽéð ŵöŕķ. Ŕûñ ţĥîš áĝáîñ öñçé ţĥáţ ɱöṽé ĥáš ƒîñîšĥéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ is already moving your saved work. Run this again once that move has finished.‬`;
+    }
+    return `${to} is already moving your saved work. Run this again once that move has finished.`;
+  }
+  function handoverRunChecking() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ التحقق من النسخة ملفًا ملفًا.`;
+      case "de":
+        return `Die Kopie wird Datei für Datei geprüft.`;
+      case "es":
+        return `Comprobando la copia, archivo por archivo.`;
+      case "fr":
+        return `Vérification de la copie, fichier par fichier.`;
+      case "ja":
+        return `コピーをファイルごとに確認しています。`;
+      case "ko":
+        return `사본을 파일별로 확인하는 중이에요.`;
+      case "pt-BR":
+        return `Verificando a cópia, arquivo por arquivo.`;
+      case "zh-Hans":
+        return `正在逐个文件检查副本。`;
+      case "zh-Hant":
+        return `正在逐一檢查副本中的檔案。`;
+      case "en-XA":
+        return `[Çĥéçķîñĝ ţĥé çöþý, ƒîļé ƀý ƒîļé. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Checking the copy, file by file.‬`;
+    }
+    return `Checking the copy, file by file.`;
+  }
+  function handoverRunContinueLater(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلى أن يتم التحقق من النسخة، يوقف Ctrl-C النقل دون تغيير أي شيء، ويبدأ النقل من جديد في المرة التالية التي يعمل فيها ${to}.`;
+      case "de":
+        return `Bis die Kopie geprüft ist, stoppt Ctrl-C das Verschieben, ohne etwas zu ändern, und es beginnt beim nächsten Start von ${to} erneut.`;
+      case "es":
+        return `Hasta que se compruebe la copia, Ctrl-C detiene el traslado sin cambiar nada, y vuelve a empezar la próxima vez que se ejecute ${to}.`;
+      case "fr":
+        return `Tant que la copie n’a pas été vérifiée, Ctrl-C arrête le déplacement sans rien modifier, et il reprend au prochain lancement de ${to}.`;
+      case "ja":
+        return `コピーの確認が終わるまでは、Ctrl-C で移動を止めても何も変わりません。次に ${to} を実行したときに、移動をやり直します。`;
+      case "ko":
+        return `사본 확인이 끝나기 전까지는 Ctrl-C로 이동을 멈춰도 아무것도 바뀌지 않으며, 다음에 ${to}을(를) 실행할 때 다시 시작해요.`;
+      case "pt-BR":
+        return `Até a cópia ser verificada, Ctrl-C interrompe a transferência sem alterar nada, e ela começa de novo na próxima vez que o ${to} rodar.`;
+      case "zh-Hans":
+        return `在副本检查完成之前，按 Ctrl-C 会停止移动且不做任何更改；下次运行 ${to} 时会重新开始。`;
+      case "zh-Hant":
+        return `在副本檢查完成之前，按 Ctrl-C 會停止移動且不做任何變更；下次執行 ${to} 時會重新開始。`;
+      case "en-XA":
+        return `[Ûñţîļ ţĥé çöþý ĥáš ƀééñ çĥéçķéð, Çţŕļ-Ç šţöþš ţĥé ɱöṽé ŵîţĥ ñöţĥîñĝ çĥáñĝéð, áñð îţ šţáŕţš áĝáîñ ţĥé ñéẋţ ţîɱé ${to} ŕûñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Until the copy has been checked, Ctrl-C stops the move with nothing changed, and it starts again the next time ‬${to}‮ runs.‬`;
+    }
+    return `Until the copy has been checked, Ctrl-C stops the move with nothing changed, and it starts again the next time ${to} runs.`;
+  }
+  function handoverRunCopying(input2) {
+    const size = input2.size;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ نسخ عملك المحفوظ: ${size}.`;
+      case "de":
+        return `Deine gespeicherte Arbeit wird kopiert: ${size}.`;
+      case "es":
+        return `Copiando tu trabajo guardado: ${size}.`;
+      case "fr":
+        return `Copie de votre travail enregistré : ${size}.`;
+      case "ja":
+        return `保存した作業をコピーしています（${size}）。`;
+      case "ko":
+        return `저장된 작업을 복사하는 중이에요(${size}).`;
+      case "pt-BR":
+        return `Copiando seu trabalho salvo: ${size}.`;
+      case "zh-Hans":
+        return `正在复制你保存的工作：${size}。`;
+      case "zh-Hant":
+        return `正在複製你儲存的工作：${size}。`;
+      case "en-XA":
+        return `[Çöþýîñĝ ýöûŕ šáṽéð ŵöŕķ: ${size}. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copying your saved work: ‬${size}‮.‬`;
+    }
+    return `Copying your saved work: ${size}.`;
+  }
+  function handoverRunFailed(input2) {
+    const detail = input2.detail;
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على ${to} نقل عملك المحفوظ: ${detail}. لم يتغير شيء، ومجلد ${from} كما كان. شغّل هذا الأمر مرة أخرى لتحاول من جديد.`;
+      case "de":
+        return `${to} konnte deine gespeicherte Arbeit nicht verschieben: ${detail}. Es wurde nichts geändert, und der Ordner von ${from} ist wie zuvor. Führ diesen Befehl erneut aus, um es noch einmal zu versuchen.`;
+      case "es":
+        return `${to} no pudo mover tu trabajo guardado: ${detail}. No se ha cambiado nada y la carpeta de ${from} sigue como estaba. Vuelve a ejecutar este comando para intentarlo otra vez.`;
+      case "fr":
+        return `${to} n’a pas pu déplacer votre travail enregistré : ${detail}. Rien n’a été modifié, et le dossier de ${from} est tel qu’il était. Relancez cette commande pour réessayer.`;
+      case "ja":
+        return `${to} は保存した作業を移動できませんでした：${detail}。何も変更していません。${from} のフォルダは元のままです。もう一度試すには、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${to}이(가) 저장된 작업을 옮기지 못했어요: ${detail}. 아무것도 바뀌지 않았고 ${from}의 폴더는 그대로예요. 다시 시도하려면 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${to} não conseguiu mover seu trabalho salvo: ${detail}. Nada foi alterado, e a pasta do ${from} está como estava. Execute este comando de novo para tentar outra vez.`;
+      case "zh-Hans":
+        return `${to} 未能移动你保存的工作：${detail}。没有做任何更改，${from} 的文件夹保持原样。再次运行此命令即可重试。`;
+      case "zh-Hant":
+        return `${to} 無法移動你儲存的工作：${detail}。沒有做任何變更，${from} 的資料夾保持原樣。再次執行此指令即可重試。`;
+      case "en-XA":
+        return `[${to} çöûļð ñöţ ɱöṽé ýöûŕ šáṽéð ŵöŕķ: ${detail}. Ñöţĥîñĝ ĥáš ƀééñ çĥáñĝéð, áñð ${from}'š ƒöļðéŕ îš áš îţ ŵáš. Ŕûñ ţĥîš áĝáîñ ţö ţŕý öñçé ɱöŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ could not move your saved work: ‬${detail}‮. Nothing has been changed, and ‬${from}‮'s folder is as it was. Run this again to try once more.‬`;
+    }
+    return `${to} could not move your saved work: ${detail}. Nothing has been changed, and ${from}'s folder is as it was. Run this again to try once more.`;
+  }
+  function handoverRunLeftRunning(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستمر ${from} في العمل، ولم يتغير شيء. شغّل هذا الأمر مرة أخرى بعد أن يتوقف.`;
+      case "de":
+        return `${from} läuft weiter, und es wurde nichts geändert. Führ diesen Befehl erneut aus, sobald es gestoppt hat.`;
+      case "es":
+        return `${from} sigue ejecutándose y no se ha cambiado nada. Vuelve a ejecutar este comando cuando se haya detenido.`;
+      case "fr":
+        return `${from} continue de tourner, et rien n’a été modifié. Relancez cette commande une fois qu’il s’est arrêté.`;
+      case "ja":
+        return `${from} は動き続けています。何も変更していません。停止してから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${from}은(는) 계속 실행 중이고, 아무것도 바뀌지 않았어요. 중지된 다음 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${from} continua rodando, e nada foi alterado. Execute este comando de novo depois que ele parar.`;
+      case "zh-Hans":
+        return `${from} 仍在运行，没有做任何更改。等它停止后，再次运行此命令。`;
+      case "zh-Hant":
+        return `${from} 仍在執行，沒有做任何變更。等它停止後，再次執行此指令。`;
+      case "en-XA":
+        return `[${from} ķééþš ŕûññîñĝ, áñð ñöţĥîñĝ ĥáš ƀééñ çĥáñĝéð. Ŕûñ ţĥîš áĝáîñ öñçé îţ ĥáš šţöþþéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ keeps running, and nothing has been changed. Run this again once it has stopped.‬`;
+    }
+    return `${from} keeps running, and nothing has been changed. Run this again once it has stopped.`;
+  }
+  function handoverRunMoved(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أصبح عملك المحفوظ الآن في ${to}.`;
+      case "de":
+        return `Deine gespeicherte Arbeit ist jetzt in ${to}.`;
+      case "es":
+        return `Tu trabajo guardado ya está en ${to}.`;
+      case "fr":
+        return `Votre travail enregistré est maintenant dans ${to}.`;
+      case "ja":
+        return `保存した作業は ${to} に移りました。`;
+      case "ko":
+        return `저장된 작업이 이제 ${to}에 있어요.`;
+      case "pt-BR":
+        return `Seu trabalho salvo agora está no ${to}.`;
+      case "zh-Hans":
+        return `你保存的工作现在已在 ${to} 中。`;
+      case "zh-Hant":
+        return `你儲存的工作現在已在 ${to} 中。`;
+      case "en-XA":
+        return `[Ýöûŕ šáṽéð ŵöŕķ îš îñ ${to} ñöŵ. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your saved work is in ‬${to}‮ now.‬`;
+    }
+    return `Your saved work is in ${to} now.`;
+  }
+  function handoverRunMoving(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ نقل عملك المحفوظ من ${from} إلى ${to}. يبقى مجلد ${from} كما كان، نسخةً للاستعادة.`;
+      case "de":
+        return `Deine gespeicherte Arbeit wird von ${from} nach ${to} verschoben. Der Ordner von ${from} bleibt, wie er war, als Kopie zur Wiederherstellung.`;
+      case "es":
+        return `Moviendo tu trabajo guardado de ${from} a ${to}. La carpeta de ${from} se queda como estaba, como copia de recuperación.`;
+      case "fr":
+        return `Déplacement de votre travail enregistré de ${from} vers ${to}. Le dossier de ${from} reste tel qu’il était, comme copie de récupération.`;
+      case "ja":
+        return `保存した作業を ${from} から ${to} に移動しています。${from} のフォルダは復元用のコピーとして元のまま残ります。`;
+      case "ko":
+        return `저장된 작업을 ${from}에서 ${to}(으)로 옮기는 중이에요. ${from}의 폴더는 복구용 사본으로 그대로 남아요.`;
+      case "pt-BR":
+        return `Movendo seu trabalho salvo do ${from} para o ${to}. A pasta do ${from} fica como estava, como cópia de recuperação.`;
+      case "zh-Hans":
+        return `正在把你保存的工作从 ${from} 移到 ${to}。${from} 的文件夹保持原样，作为恢复副本。`;
+      case "zh-Hant":
+        return `正在把你儲存的工作從 ${from} 移到 ${to}。${from} 的資料夾保持原樣，作為復原副本。`;
+      case "en-XA":
+        return `[Ṁöṽîñĝ ýöûŕ šáṽéð ŵöŕķ ƒŕöɱ ${from} ţö ${to}. ${from}'š ƒöļðéŕ šţáýš áš îţ ŵáš, áš á ŕéçöṽéŕý çöþý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Moving your saved work from ‬${from}‮ to ‬${to}‮. ‬${from}‮'s folder stays as it was, as a recovery copy.‬`;
+    }
+    return `Moving your saved work from ${from} to ${to}. ${from}'s folder stays as it was, as a recovery copy.`;
+  }
+  function handoverRunNoSpace(input2) {
+    const free = input2.free;
+    const needed = input2.needed;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد مساحة كافية لنقل عملك المحفوظ: يحتاج النقل إلى نحو ${needed} من المساحة الحرة، وفي هذا الحاسوب ${free}. وفّر مساحة، ثم شغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `Es ist nicht genug Platz, um deine gespeicherte Arbeit zu verschieben: Es werden etwa ${needed} freier Speicher gebraucht, und dieser Computer hat ${free}. Schaff Platz und führ diesen Befehl dann erneut aus.`;
+      case "es":
+        return `No hay espacio suficiente para mover tu trabajo guardado: necesita unos ${needed} libres y esta computadora tiene ${free}. Libera espacio y luego vuelve a ejecutar este comando.`;
+      case "fr":
+        return `Il n’y a pas assez de place pour déplacer votre travail enregistré : il faut environ ${needed} d’espace libre, et cet ordinateur a ${free}. Libérez de la place, puis relancez cette commande.`;
+      case "ja":
+        return `保存した作業を移動するための空き容量が足りません。約 ${needed} の空きが必要ですが、このコンピューターの空きは ${free} です。空き容量を増やしてから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `저장된 작업을 옮길 공간이 부족해요. 약 ${needed}의 여유 공간이 필요한데 이 컴퓨터에는 ${free}이(가) 있어요. 공간을 확보한 다음 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `Não há espaço suficiente para mover seu trabalho salvo: são necessários cerca de ${needed} livres, e este computador tem ${free}. Libere espaço e depois execute este comando de novo.`;
+      case "zh-Hans":
+        return `空间不足，无法移动你保存的工作：大约需要 ${needed} 可用空间，而这台电脑只有 ${free}。腾出空间后，再次运行此命令。`;
+      case "zh-Hant":
+        return `空間不足，無法移動你儲存的工作：大約需要 ${needed} 可用空間，而這台電腦只有 ${free}。騰出空間後，再次執行此指令。`;
+      case "en-XA":
+        return `[Ţĥéŕé îš ñöţ éñöûĝĥ ŕööɱ ţö ɱöṽé ýöûŕ šáṽéð ŵöŕķ: îţ ñééðš áƀöûţ ${needed} ƒŕéé, áñð ţĥîš çöɱþûţéŕ ĥáš ${free}. Ṁáķé ŕööɱ, ţĥéñ ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮There is not enough room to move your saved work: it needs about ‬${needed}‮ free, and this computer has ‬${free}‮. Make room, then run this again.‬`;
+    }
+    return `There is not enough room to move your saved work: it needs about ${needed} free, and this computer has ${free}. Make room, then run this again.`;
+  }
+  function handoverRunNoTerminal(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب ${to} منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. لم يتغير شيء. لإيقافه الآن، شغّل هذا الأمر مرة أخرى في الطرفية.`;
+      case "de":
+        return `${to} hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Es wurde nichts geändert. Um es jetzt zu stoppen, führ diesen Befehl erneut in einem Terminal aus.`;
+      case "es":
+        return `${to} le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. No se ha cambiado nada. Para detenerlo ahora, vuelve a ejecutar este comando en una terminal.`;
+      case "fr":
+        return `${to} lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. Rien n’a été modifié. Pour l’arrêter maintenant, relancez cette commande dans un terminal.`;
+      case "ja":
+        return `${to} は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。何も変更していません。今すぐ停止するには、ターミナルでこのコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${to}이(가) 저장하고 중지하도록 요청했지만 저장된 작업을 아직 열어 두고 있어요. 아무것도 바뀌지 않았어요. 지금 중지하려면 터미널에서 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${to} pediu que ele salvasse e parasse, e ele ainda mantém seu trabalho salvo aberto. Nada foi alterado. Para pará-lo agora, execute este comando de novo em um terminal.`;
+      case "zh-Hans":
+        return `${to} 已请它保存并停止，但它仍占用着你保存的工作。没有做任何更改。如需立即停止它，请在终端中再次运行此命令。`;
+      case "zh-Hant":
+        return `${to} 已請它儲存並停止，但它仍佔用著你儲存的工作。沒有做任何變更。如需立即停止它，請在終端機中再次執行此指令。`;
+      case "en-XA":
+        return `[${to} ášķéð îţ ţö šáṽé áñð šţöþ, áñð îţ šţîļļ ĥöļðš ýöûŕ šáṽéð ŵöŕķ. Ñöţĥîñĝ ĥáš ƀééñ çĥáñĝéð. Ţö šţöþ îţ ñöŵ, ŕûñ ţĥîš áĝáîñ îñ á ţéŕɱîñáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ asked it to save and stop, and it still holds your saved work. Nothing has been changed. To stop it now, run this again in a terminal.‬`;
+    }
+    return `${to} asked it to save and stop, and it still holds your saved work. Nothing has been changed. To stop it now, run this again in a terminal.`;
+  }
+  function handoverRunProgress(input2) {
+    const percent = input2.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتمل ${percent}.`;
+      case "de":
+        return `${percent} erledigt.`;
+      case "es":
+        return `${percent} completado.`;
+      case "fr":
+        return `${percent} effectué.`;
+      case "ja":
+        return `${percent}完了。`;
+      case "ko":
+        return `${percent} 완료.`;
+      case "pt-BR":
+        return `${percent} concluído.`;
+      case "zh-Hans":
+        return `已完成 ${percent}。`;
+      case "zh-Hant":
+        return `已完成 ${percent}。`;
+      case "en-XA":
+        return `[${percent} ðöñé. ~~]`;
+      case "ar-XB":
+        return `${percent}‮ done.‬`;
+    }
+    return `${percent} done.`;
+  }
+  function handoverRunStillOpen(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يزال ${from} مفتوحًا هنا، ويُبقي عملك المحفوظ مفتوحًا. أنهِ ${from}، ثم شغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `${from} ist hier noch geöffnet und hält deine gespeicherte Arbeit. Beende ${from} und führ diesen Befehl dann erneut aus.`;
+      case "es":
+        return `${from} sigue abierto aquí y tiene abierto tu trabajo guardado. Sal de ${from} y luego vuelve a ejecutar este comando.`;
+      case "fr":
+        return `${from} est encore ouvert ici et garde votre travail enregistré ouvert. Quittez ${from}, puis relancez cette commande.`;
+      case "ja":
+        return `${from} がまだ開いていて、保存した作業を開いたままです。${from} を終了してから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${from}이(가) 여기에서 아직 열려 있고 저장된 작업을 열어 두고 있어요. ${from}을(를) 종료한 다음 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${from} ainda está aberto aqui e mantém seu trabalho salvo aberto. Encerre o ${from} e depois execute este comando de novo.`;
+      case "zh-Hans":
+        return `${from} 仍在这里打开着，并占用着你保存的工作。请退出 ${from}，然后再次运行此命令。`;
+      case "zh-Hant":
+        return `${from} 仍在這裡開啟著，並佔用著你儲存的工作。請結束 ${from}，然後再次執行此指令。`;
+      case "en-XA":
+        return `[${from} îš šţîļļ öþéñ ĥéŕé, áñð îţ ĥöļðš ýöûŕ šáṽéð ŵöŕķ. Ǫûîţ ${from}, ţĥéñ ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ is still open here, and it holds your saved work. Quit ‬${from}‮, then run this again.‬`;
+    }
+    return `${from} is still open here, and it holds your saved work. Quit ${from}, then run this again.`;
+  }
+  function handoverRunStillWorking(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يزال ${from} يشغّل عملًا لحاسوب آخر هنا، وعملك المحفوظ مفتوح. انتظر حتى يتوقف، أو أعد تشغيل هذا الحاسوب، ثم شغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `${from} führt hier noch Arbeit für einen anderen Computer aus, mit deiner gespeicherten Arbeit geöffnet. Warte, bis es stoppt, oder starte diesen Computer neu, und führ diesen Befehl dann erneut aus.`;
+      case "es":
+        return `${from} sigue ejecutando trabajo para otra computadora aquí, con tu trabajo guardado abierto. Espera a que se detenga o reinicia esta computadora, y luego vuelve a ejecutar este comando.`;
+      case "fr":
+        return `${from} exécute encore ici du travail pour un autre ordinateur, avec votre travail enregistré ouvert. Attendez qu’il s’arrête ou redémarrez cet ordinateur, puis relancez cette commande.`;
+      case "ja":
+        return `${from} がこのコンピューターで別のコンピューターの作業をまだ実行していて、保存した作業を開いたままです。停止するまで待つか、このコンピューターを再起動してから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${from}이(가) 여기에서 다른 컴퓨터의 작업을 아직 실행 중이고 저장된 작업을 열어 두고 있어요. 중지될 때까지 기다리거나 이 컴퓨터를 재시동한 다음 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${from} ainda está executando trabalho para outro computador aqui, com seu trabalho salvo aberto. Espere ele parar ou reinicie este computador e depois execute este comando de novo.`;
+      case "zh-Hans":
+        return `${from} 仍在这里为另一台电脑运行工作，并占用着你保存的工作。请等它停止，或重新启动这台电脑，然后再次运行此命令。`;
+      case "zh-Hant":
+        return `${from} 仍在這裡為另一台電腦執行工作，並佔用著你儲存的工作。請等它停止，或重新啟動這台電腦，然後再次執行此指令。`;
+      case "en-XA":
+        return `[${from} îš šţîļļ ŕûññîñĝ ŵöŕķ ƒöŕ áñöţĥéŕ çöɱþûţéŕ ĥéŕé, ŵîţĥ ýöûŕ šáṽéð ŵöŕķ öþéñ. Ŵáîţ ƒöŕ îţ ţö šţöþ, öŕ ŕéšţáŕţ ţĥîš çöɱþûţéŕ, ţĥéñ ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${from}‮ is still running work for another computer here, with your saved work open. Wait for it to stop, or restart this computer, then run this again.‬`;
+    }
+    return `${from} is still running work for another computer here, with your saved work open. Wait for it to stop, or restart this computer, then run this again.`;
+  }
+  function handoverRunStopPrompt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب yes لإيقافه الآن:`;
+      case "de":
+        return `Schreib yes, um es jetzt zu stoppen:`;
+      case "es":
+        return `Escribe yes para detenerlo ahora:`;
+      case "fr":
+        return `Tapez yes pour l’arrêter maintenant :`;
+      case "ja":
+        return `今すぐ停止するには yes と入力してください：`;
+      case "ko":
+        return `지금 중지하려면 yes를 입력하세요:`;
+      case "pt-BR":
+        return `Digite yes para pará-lo agora:`;
+      case "zh-Hans":
+        return `输入 yes 立即停止它：`;
+      case "zh-Hant":
+        return `輸入 yes 立即停止它：`;
+      case "en-XA":
+        return `[Ţýþé ýéš ţö šţöþ îţ ñöŵ: ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Type yes to stop it now:‬`;
+    }
+    return `Type yes to stop it now:`;
+  }
+  function handoverRunUnfinished(input2) {
+    const detail = input2.detail;
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على ${to} إكمال نقل عملك المحفوظ: ${detail}. عملك المحفوظ في أمان: مجلد ${from} كما كان. شغّل هذا الأمر مرة أخرى لإكمال النقل.`;
+      case "de":
+        return `${to} konnte das Verschieben deiner gespeicherten Arbeit nicht abschließen: ${detail}. Deine gespeicherte Arbeit ist sicher: Der Ordner von ${from} ist wie zuvor. Führ diesen Befehl erneut aus, um das Verschieben abzuschließen.`;
+      case "es":
+        return `${to} no pudo terminar de mover tu trabajo guardado: ${detail}. Tu trabajo guardado está a salvo: la carpeta de ${from} sigue como estaba. Vuelve a ejecutar este comando para terminar el traslado.`;
+      case "fr":
+        return `${to} n’a pas pu terminer le déplacement de votre travail enregistré : ${detail}. Votre travail enregistré est en sécurité : le dossier de ${from} est tel qu’il était. Relancez cette commande pour terminer le déplacement.`;
+      case "ja":
+        return `${to} は保存した作業の移動を完了できませんでした：${detail}。保存した作業は無事です。${from} のフォルダは元のままです。移動を完了するには、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `${to}이(가) 저장된 작업 이동을 마치지 못했어요: ${detail}. 저장된 작업은 안전해요. ${from}의 폴더는 그대로예요. 이동을 마치려면 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `O ${to} não conseguiu terminar de mover seu trabalho salvo: ${detail}. Seu trabalho salvo está seguro: a pasta do ${from} está como estava. Execute este comando de novo para terminar a transferência.`;
+      case "zh-Hans":
+        return `${to} 未能完成移动你保存的工作：${detail}。你保存的工作是安全的：${from} 的文件夹保持原样。再次运行此命令即可完成移动。`;
+      case "zh-Hant":
+        return `${to} 無法完成移動你儲存的工作：${detail}。你儲存的工作很安全：${from} 的資料夾保持原樣。再次執行此指令即可完成移動。`;
+      case "en-XA":
+        return `[${to} çöûļð ñöţ ƒîñîšĥ ɱöṽîñĝ ýöûŕ šáṽéð ŵöŕķ: ${detail}. Ýöûŕ šáṽéð ŵöŕķ îš šáƒé: ${from}'š ƒöļðéŕ îš áš îţ ŵáš. Ŕûñ ţĥîš áĝáîñ ţö ƒîñîšĥ ţĥé ɱöṽé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ could not finish moving your saved work: ‬${detail}‮. Your saved work is safe: ‬${from}‮'s folder is as it was. Run this again to finish the move.‬`;
+    }
+    return `${to} could not finish moving your saved work: ${detail}. Your saved work is safe: ${from}'s folder is as it was. Run this again to finish the move.`;
+  }
+  function handoverRunUnsupported(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع هذا الإصدار من ${to} فتح عملك المحفوظ: لقد حفظه إصدار أحدث من ${from}. حدّث ${to}، ثم شغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `Diese Version von ${to} kann deine gespeicherte Arbeit nicht öffnen: Eine neuere Version von ${from} hat sie gespeichert. Aktualisiere ${to} und führ diesen Befehl dann erneut aus.`;
+      case "es":
+        return `Esta versión de ${to} no puede abrir tu trabajo guardado: lo guardó una versión más reciente de ${from}. Actualiza ${to} y luego vuelve a ejecutar este comando.`;
+      case "fr":
+        return `Cette version de ${to} ne peut pas ouvrir votre travail enregistré : une version plus récente de ${from} l’a enregistré. Mettez à jour ${to}, puis relancez cette commande.`;
+      case "ja":
+        return `このバージョンの ${to} では保存した作業を開けません。新しいバージョンの ${from} が保存したためです。${to} をアップデートしてから、このコマンドをもう一度実行してください。`;
+      case "ko":
+        return `이 버전의 ${to}에서는 저장된 작업을 열 수 없어요. 더 새로운 버전의 ${from}이(가) 저장했기 때문이에요. ${to}을(를) 업데이트한 다음 이 명령을 다시 실행하세요.`;
+      case "pt-BR":
+        return `Esta versão do ${to} não consegue abrir seu trabalho salvo: uma versão mais nova do ${from} o salvou. Atualize o ${to} e depois execute este comando de novo.`;
+      case "zh-Hans":
+        return `此版本的 ${to} 无法打开你保存的工作：它是由更新版本的 ${from} 保存的。请更新 ${to}，然后再次运行此命令。`;
+      case "zh-Hant":
+        return `此版本的 ${to} 無法開啟你儲存的工作：它是由較新版本的 ${from} 儲存的。請更新 ${to}，然後再次執行此指令。`;
+      case "en-XA":
+        return `[Ţĥîš ṽéŕšîöñ öƒ ${to} çáññöţ öþéñ ýöûŕ šáṽéð ŵöŕķ: á ñéŵéŕ ṽéŕšîöñ öƒ ${from} šáṽéð îţ. Ûþðáţé ${to}, ţĥéñ ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This version of ‬${to}‮ cannot open your saved work: a newer version of ‬${from}‮ saved it. Update ‬${to}‮, then run this again.‬`;
+    }
+    return `This version of ${to} cannot open your saved work: a newer version of ${from} saved it. Update ${to}, then run this again.`;
+  }
+  function handoverRunWontStop(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب ${to} منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. لم يتغير شيء. إيقافه الآن يُنهيه فورًا دون انتظار أن يحفظ.`;
+      case "de":
+        return `${to} hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Es wurde nichts geändert. Wenn du es jetzt stoppst, wird es sofort beendet, ohne zu warten, bis es gespeichert hat.`;
+      case "es":
+        return `${to} le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. No se ha cambiado nada. Detenerlo ahora lo cierra al instante, sin esperar a que guarde.`;
+      case "fr":
+        return `${to} lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. Rien n’a été modifié. L’arrêter maintenant le ferme aussitôt, sans attendre qu’il enregistre.`;
+      case "ja":
+        return `${to} は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。何も変更していません。今すぐ停止すると、保存を待たずにすぐ終了させます。`;
+      case "ko":
+        return `${to}이(가) 저장하고 중지하도록 요청했지만 저장된 작업을 아직 열어 두고 있어요. 아무것도 바뀌지 않았어요. 지금 중지하면 저장을 기다리지 않고 바로 종료해요.`;
+      case "pt-BR":
+        return `O ${to} pediu que ele salvasse e parasse, e ele ainda mantém seu trabalho salvo aberto. Nada foi alterado. Pará-lo agora o encerra na hora, sem esperar que ele salve.`;
+      case "zh-Hans":
+        return `${to} 已请它保存并停止，但它仍占用着你保存的工作。没有做任何更改。立即停止会直接结束它，不再等待它保存。`;
+      case "zh-Hant":
+        return `${to} 已請它儲存並停止，但它仍佔用著你儲存的工作。沒有做任何變更。立即停止會直接結束它，不再等待它儲存。`;
+      case "en-XA":
+        return `[${to} ášķéð îţ ţö šáṽé áñð šţöþ, áñð îţ šţîļļ ĥöļðš ýöûŕ šáṽéð ŵöŕķ. Ñöţĥîñĝ ĥáš ƀééñ çĥáñĝéð. Šţöþþîñĝ îţ ñöŵ éñðš îţ áţ öñçé, ŵîţĥöûţ ŵáîţîñĝ ƒöŕ îţ ţö šáṽé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ asked it to save and stop, and it still holds your saved work. Nothing has been changed. Stopping it now ends it at once, without waiting for it to save.‬`;
+    }
+    return `${to} asked it to save and stop, and it still holds your saved work. Nothing has been changed. Stopping it now ends it at once, without waiting for it to save.`;
+  }
   function handoverStopNow() {
     switch (currentLanguage()) {
       case "ar":
@@ -85590,6 +86100,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     fileReady,
     fileReadyAnnounce,
     handoverQuit,
+    handoverRunBothFolders,
+    handoverRunBusy,
+    handoverRunChecking,
+    handoverRunContinueLater,
+    handoverRunCopying,
+    handoverRunFailed,
+    handoverRunLeftRunning,
+    handoverRunMoved,
+    handoverRunMoving,
+    handoverRunNoSpace,
+    handoverRunNoTerminal,
+    handoverRunProgress,
+    handoverRunStillOpen,
+    handoverRunStillWorking,
+    handoverRunStopPrompt,
+    handoverRunUnfinished,
+    handoverRunUnsupported,
+    handoverRunWontStop,
     handoverStopNow,
     handoverStoppingText,
     handoverStoppingTitle,
@@ -88329,6 +88857,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "fileReady": [],
     "fileReadyAnnounce": ["name"],
     "handoverQuit": [],
+    "handoverRunBothFolders": ["from", "to"],
+    "handoverRunBusy": ["to"],
+    "handoverRunChecking": [],
+    "handoverRunContinueLater": ["to"],
+    "handoverRunCopying": ["size"],
+    "handoverRunFailed": ["detail", "from", "to"],
+    "handoverRunLeftRunning": ["from"],
+    "handoverRunMoved": ["to"],
+    "handoverRunMoving": ["from", "to"],
+    "handoverRunNoSpace": ["free", "needed"],
+    "handoverRunNoTerminal": ["to"],
+    "handoverRunProgress": ["percent"],
+    "handoverRunStillOpen": ["from"],
+    "handoverRunStillWorking": ["from"],
+    "handoverRunStopPrompt": [],
+    "handoverRunUnfinished": ["detail", "from", "to"],
+    "handoverRunUnsupported": ["from", "to"],
+    "handoverRunWontStop": ["to"],
     "handoverStopNow": [],
     "handoverStoppingText": ["from", "to"],
     "handoverStoppingTitle": ["from"],

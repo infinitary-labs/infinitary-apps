@@ -3647,6 +3647,12 @@
 "taskTabCards" = "Cards";
 "taskTabCrewmate" = "Crewmate";
 "taskTabInfo" = "Info";
+"taskWaitChainUntil" = "Waiting on %2$@ · %1$@ waits until %3$@";
+"taskWaitChainUpdate" = "Waiting on %2$@ · %1$@ waits for an app update";
+"taskWaitChainVia" = "Waiting on %2$@ · which waits on %1$@";
+"taskWaitOn" = "Waiting on %1$@";
+"taskWaitOnUntil" = "Waiting on %1$@ · it waits until %2$@";
+"taskWaitOnUpdate" = "Waiting on %1$@ · it waits for an app update";
 "trayOpen" = "Open Infinitary";
 "trayQuit" = "Quit Infinitary";
 "uiButtonPending" = "Working...";

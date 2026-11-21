@@ -1780,13 +1780,15 @@ export class IdleLadder {
   /**
    * The event a started task's hold waited for came (INF-5145 part 2): its
    * rule's run ends the hold it names, as its time would, with the events
-   * in the steer. A hold already ended, or one a later hold replaced, is
-   * left alone. True when the hold ended.
+   * in the steer; with no `ref`, the app update the hold names was
+   * installed (INF-5578 finding 4). A hold already ended, or one a later
+   * hold replaced, is left alone. True when the hold ended.
    */
-  endHoldOnEvent(taskId: string, ref: string, events: string): boolean {
+  endHoldOnEvent(taskId: string, ref: string | undefined, events: string): boolean {
     const record = this.host.tasks.get(taskId);
     const gate = record?.gate;
-    if (record?.status !== "active" || gate?.kind !== "at-time" || gate.ref !== ref) return false;
+    const named = ref === undefined ? gate?.update !== undefined : gate?.ref === ref;
+    if (record?.status !== "active" || gate?.kind !== "at-time" || !named) return false;
     this.endTimedWait(taskId, gate, this.host.now(), events);
     return true;
   }

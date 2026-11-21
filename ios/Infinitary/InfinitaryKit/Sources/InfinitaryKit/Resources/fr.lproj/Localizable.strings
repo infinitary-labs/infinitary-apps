@@ -3647,6 +3647,12 @@
 "taskTabCards" = "Cartes";
 "taskTabCrewmate" = "Équipier";
 "taskTabInfo" = "Infos";
+"taskWaitChainUntil" = "Attend %2$@ · %1$@ attend jusqu’à %3$@";
+"taskWaitChainUpdate" = "Attend %2$@ · %1$@ attend une mise à jour de l’app";
+"taskWaitChainVia" = "Attend %2$@ · qui attend %1$@";
+"taskWaitOn" = "Attend %1$@";
+"taskWaitOnUntil" = "Attend %1$@ · qui attend jusqu’à %2$@";
+"taskWaitOnUpdate" = "Attend %1$@ · qui attend une mise à jour de l’app";
 "trayOpen" = "Ouvrir Infinitary";
 "trayQuit" = "Quitter Infinitary";
 "uiButtonPending" = "En cours...";

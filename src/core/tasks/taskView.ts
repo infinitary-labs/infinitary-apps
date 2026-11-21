@@ -17,6 +17,7 @@ import { reportHeadline } from "./recordActivity";
 import type { TaskProtocolOptions } from "./taskProtocolOptions";
 import { TaskService } from "./taskService";
 import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
+import { waitChainOf } from "./waitChain";
 
 /**
  * One row's view as the task protocol reads it (`TaskProtocol`,
@@ -234,6 +235,8 @@ export function viewOf(
   });
   const startHolding =
     record.status === "open" && waiting.length !== holding.length ? waiting : holding;
+  const reviewOf = record.kind === "work" ? reviewBuilderOf(record) : null;
+  const waitChain = waitChainIn(options, record, graph, holding);
   const waitSince =
     startHolding === holding
       ? blockedSince
@@ -290,9 +293,7 @@ export function viewOf(
     key: record.key,
     projectId: record.projectId,
     parentId: record.parentId,
-    ...(record.kind === "work"
-      ? { reviewOf: reviewBuilderOf(record), executionDeviceId: record.deviceId }
-      : {}),
+    ...(record.kind === "work" ? { reviewOf, executionDeviceId: record.deviceId } : {}),
     ...(record.shape?.program ? { program: true as const } : {}),
     ...(place ? { place } : {}),
     ...computerMove,
@@ -331,6 +332,7 @@ export function viewOf(
     },
     blockedBy: holding.map((blocker) => blocker.key || blocker.id),
     ...(Object.keys(blockedSince).length > 0 ? { blockedSince } : {}),
+    ...(waitChain ? { waitChain } : {}),
     blocks: (graph.blockingOf.get(record.id) ?? []).map((blocked) => blocked.key || blocked.id),
     children: graph.children.get(record.id) ?? { total: 0, closed: 0 },
     assignee: record.assignee,
@@ -446,6 +448,34 @@ function projectView(
 }
 
 // ---- a row's marks ------------------------------------------------------
+
+/**
+ * Where the row's wait on other work stops (`waitChainOf`), read from the
+ * graph in hand: the board's row cache asks it of every kept row, since a
+ * hold or a wait several links away moves it with no write to the row.
+ */
+export function waitChainIn(
+  options: Pick<TaskProtocolOptions, "tasks">,
+  record: TaskRecord,
+  graph: Pick<Graph, "byId" | "blockersOf">,
+  holding?: readonly TaskRecord[],
+): TaskView["waitChain"] {
+  if (record.status !== "active") return undefined;
+  const holdingOf = (task: TaskRecord) =>
+    holdingWaits({
+      record: task,
+      blockers: graph.blockersOf.get(task.id) ?? [],
+      tasks: graph.byId,
+      baseline: standingDependencyWaits(graph.byId, task.delivery, options.tasks),
+    });
+  const reviewOf = record.kind === "work" ? reviewBuilderOf(record) : null;
+  return waitChainOf({
+    record,
+    holding: holding ?? holdingOf(record),
+    holdingOf,
+    reviewed: reviewOf ? graph.byId.get(reviewOf) : undefined,
+  });
+}
 
 export function reviewBuilderOf(record: TaskRecord): string | null {
   return record.shape?.kind === "review" && record.shape.kind_source === "host:review"

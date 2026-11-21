@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import * as m from "./i18n/messages.generated.ts";
 import {
   STARTED_BACKLOG_REASON,
   type TaskStatusInput,
   taskStatusLabel,
   taskStatusOf,
+  waitRecordedTime,
 } from "./taskPresentation";
 
 const base: TaskStatusInput = {
@@ -17,6 +19,66 @@ const base: TaskStatusInput = {
 };
 const read = (changes: Partial<TaskStatusInput>) => taskStatusOf({ ...base, ...changes });
 describe("one task status", () => {
+  // INF-5578 finding 4: a passed review read "No continuing work" for a day
+  // while its change waited on a task held for an app update. The row names
+  // where its wait stops and until when, from the view's typed chain.
+  it("names where a started task's wait stops, and that task's hold", () => {
+    const now = Date.UTC(2026, 10, 20, 21, 0);
+    const until = Date.UTC(2026, 10, 21, 20, 0);
+    const review = {
+      status: "active",
+      activity: "idle",
+      workPosture: { state: "idle", reason: "inactive" },
+    } as const;
+    const reason = (changes: Partial<TaskStatusInput>) =>
+      taskStatusOf({ ...base, ...review, ...changes }, now).reason;
+    // The review: its change, and the held task that change waits on.
+    expect(reason({ waitChain: { on: "INF-5278", end: "INF-5277", until } })).toBe(
+      m.taskWaitChainUntil({ on: "INF-5278", end: "INF-5277", time: waitRecordedTime(until, now) }),
+    );
+    expect(reason({ waitChain: { on: "INF-5278", end: "INF-5277", update: true } })).toBe(
+      m.taskWaitChainUpdate({ on: "INF-5278", end: "INF-5277" }),
+    );
+    expect(reason({ waitChain: { on: "INF-5278", end: "INF-5277" } })).toBe(
+      m.taskWaitChainVia({ on: "INF-5278", end: "INF-5277" }),
+    );
+    expect(reason({ waitChain: { on: "INF-5278" } })).toBe(m.taskWaitOn({ on: "INF-5278" }));
+    // The change itself, waiting on the held task by its own blocks link.
+    const dependency = { state: "idle", reason: "dependency" } as const;
+    expect(
+      reason({
+        workPosture: dependency,
+        blockedBy: ["INF-5277"],
+        waitChain: { on: "INF-5277", until },
+      }),
+    ).toBe(m.taskWaitOnUntil({ on: "INF-5277", time: waitRecordedTime(until, now) }));
+    expect(
+      reason({
+        workPosture: dependency,
+        blockedBy: ["INF-5277"],
+        waitChain: { on: "INF-5277", update: true },
+      }),
+    ).toBe(m.taskWaitOnUpdate({ on: "INF-5277" }));
+    // A row working, or failing at its provider, keeps its own words.
+    expect(
+      taskStatusOf(
+        {
+          ...base,
+          status: "active",
+          activity: "running",
+          workPosture: { state: "active", reason: "turn" },
+          waitChain: { on: "INF-5278" },
+        },
+        now,
+      ).reason,
+    ).toBe("");
+    expect(
+      reason({
+        workPosture: { state: "idle", reason: "inactive", atProvider: "stuck" },
+        waitChain: { on: "INF-5278" },
+      }),
+    ).not.toBe(m.taskWaitOn({ on: "INF-5278" }));
+  });
   // INF-2062: started work back in the backlog reads as Backlog, marked started, since it went.
   it("reads started work in the backlog as Backlog, marked started, with its wait", () => {
     const parked = read({ status: "active", activity: "idle", backlogSince: 9 });

@@ -3647,6 +3647,12 @@
 "taskTabCards" = "卡片";
 "taskTabCrewmate" = "船员";
 "taskTabInfo" = "信息";
+"taskWaitChainUntil" = "正在等待 %2$@ · %1$@ 等到 %3$@";
+"taskWaitChainUpdate" = "正在等待 %2$@ · %1$@ 在等待应用更新";
+"taskWaitChainVia" = "正在等待 %2$@ · 它在等待 %1$@";
+"taskWaitOn" = "正在等待 %1$@";
+"taskWaitOnUntil" = "正在等待 %1$@ · 它等到 %2$@";
+"taskWaitOnUpdate" = "正在等待 %1$@ · 它在等待应用更新";
 "trayOpen" = "打开 Infinitary";
 "trayQuit" = "退出 Infinitary";
 "uiButtonPending" = "处理中...";

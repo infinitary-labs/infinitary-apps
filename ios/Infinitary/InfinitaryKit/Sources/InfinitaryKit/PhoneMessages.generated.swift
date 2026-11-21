@@ -3795,6 +3795,12 @@ public enum PhoneMessages {
     public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
     public static func `taskTabCrewmate`() -> String { PhoneWords.format("taskTabCrewmate", []) }
     public static func `taskTabInfo`() -> String { PhoneWords.format("taskTabInfo", []) }
+    public static func `taskWaitChainUntil`(`end`: String, `on`: String, `time`: String) -> String { PhoneWords.format("taskWaitChainUntil", [`end`, `on`, `time`]) }
+    public static func `taskWaitChainUpdate`(`end`: String, `on`: String) -> String { PhoneWords.format("taskWaitChainUpdate", [`end`, `on`]) }
+    public static func `taskWaitChainVia`(`end`: String, `on`: String) -> String { PhoneWords.format("taskWaitChainVia", [`end`, `on`]) }
+    public static func `taskWaitOn`(`on`: String) -> String { PhoneWords.format("taskWaitOn", [`on`]) }
+    public static func `taskWaitOnUntil`(`on`: String, `time`: String) -> String { PhoneWords.format("taskWaitOnUntil", [`on`, `time`]) }
+    public static func `taskWaitOnUpdate`(`on`: String) -> String { PhoneWords.format("taskWaitOnUpdate", [`on`]) }
     public static func `trayOpen`() -> String { PhoneWords.format("trayOpen", []) }
     public static func `trayQuit`() -> String { PhoneWords.format("trayQuit", []) }
     public static func `uiButtonPending`() -> String { PhoneWords.format("uiButtonPending", []) }
@@ -7774,6 +7780,12 @@ extension PhoneWords {
         "taskTabCards": [],
         "taskTabCrewmate": [],
         "taskTabInfo": [],
+        "taskWaitChainUntil": ["end", "on", "time"],
+        "taskWaitChainUpdate": ["end", "on"],
+        "taskWaitChainVia": ["end", "on"],
+        "taskWaitOn": ["on"],
+        "taskWaitOnUntil": ["on", "time"],
+        "taskWaitOnUpdate": ["on"],
         "trayOpen": [],
         "trayQuit": [],
         "uiButtonPending": [],

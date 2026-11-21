@@ -62,6 +62,7 @@ export {
   type TaskStatusReading,
   taskStatusLabel,
   taskStatusOf,
+  waitChainWords,
   waitRecordedTime,
 } from "@shared/taskPresentation";
 export { taskWaitSummary } from "@shared/taskWaits";

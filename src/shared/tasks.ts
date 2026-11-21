@@ -398,6 +398,22 @@ export const taskViewSchema = z.object({
    * home. A recorded wait's time, never when the crewmate stopped working.
    */
   blockedSince: z.record(z.string(), z.number()).optional(),
+  /**
+   * Where a started task's wait on other work stops (INF-5578 finding 4):
+   * the one task it waits on (`on`) - a lone wait in `blockedBy`, or the
+   * change a review waits for - and, following each task's own lone wait,
+   * the last task in that line (`end`, absent when it is `on` itself), with
+   * that task's hold: when it ends (`until`), and whether it waits for an
+   * app update (`update`). Absent with no lone wait, and on an older home.
+   */
+  waitChain: z
+    .object({
+      on: z.string(),
+      end: z.string().optional(),
+      until: z.number().optional(),
+      update: z.literal(true).optional(),
+    })
+    .optional(),
   /** Keys of the tasks waiting on this one. */
   blocks: z.array(z.string()),
   /**

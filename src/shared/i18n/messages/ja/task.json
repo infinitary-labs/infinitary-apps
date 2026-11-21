@@ -21,5 +21,11 @@
   "taskTabActivity": "アクティビティ",
   "taskTabCards": "カード",
   "taskTabCrewmate": "乗組員",
-  "taskTabInfo": "情報"
+  "taskTabInfo": "情報",
+  "taskWaitChainUntil": "{on} 待ち · {end} は {time} まで待機",
+  "taskWaitChainUpdate": "{on} 待ち · {end} はアプリのアップデート待ち",
+  "taskWaitChainVia": "{on} 待ち · その先は {end} 待ち",
+  "taskWaitOn": "{on} 待ち",
+  "taskWaitOnUntil": "{on} 待ち · {time} まで待機",
+  "taskWaitOnUpdate": "{on} 待ち · アプリのアップデート待ち"
 }

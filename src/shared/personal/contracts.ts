@@ -246,6 +246,13 @@ export type PanelTaskRow = {
    * is absent, and so is the whole field on an older home.
    */
   blockedSince?: Record<string, number>;
+  /**
+   * Started work waiting on one task: that task's key (`on`), the last task
+   * in its line of waits when another (`end`), and that last task's hold -
+   * when it ends (`until`, epoch ms) or that it waits for an app update.
+   * Absent otherwise, and on an older home.
+   */
+  waitChain?: { on: string; end?: string; until?: number; update?: true };
   /** The home’s dated start-wait line, also read by the first mate. */
   queueWait?: { line: string; since?: number };
   /**

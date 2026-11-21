@@ -21,5 +21,11 @@
   "taskTabActivity": "النشاط",
   "taskTabCards": "البطاقات",
   "taskTabCrewmate": "فرد الطاقم",
-  "taskTabInfo": "معلومات"
+  "taskTabInfo": "معلومات",
+  "taskWaitChainUntil": "بانتظار {on} · {end} ينتظر حتى {time}",
+  "taskWaitChainUpdate": "بانتظار {on} · {end} ينتظر تحديث التطبيق",
+  "taskWaitChainVia": "بانتظار {on} · الذي ينتظر {end}",
+  "taskWaitOn": "بانتظار {on}",
+  "taskWaitOnUntil": "بانتظار {on} · الذي ينتظر حتى {time}",
+  "taskWaitOnUpdate": "بانتظار {on} · الذي ينتظر تحديث التطبيق"
 }

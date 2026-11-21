@@ -40421,6 +40421,27 @@
                     "type": "number"
                   }
                 },
+                "waitChain": {
+                  "type": "object",
+                  "properties": {
+                    "on": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    },
+                    "until": {
+                      "type": "number"
+                    },
+                    "update": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "on"
+                  ]
+                },
                 "blocks": {
                   "type": "array",
                   "items": {
@@ -42197,6 +42218,27 @@
             "additionalProperties": {
               "type": "number"
             }
+          },
+          "waitChain": {
+            "type": "object",
+            "properties": {
+              "on": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              },
+              "until": {
+                "type": "number"
+              },
+              "update": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "on"
+            ]
           },
           "blocks": {
             "type": "array",
@@ -47300,6 +47342,27 @@
                 "type": "number"
               }
             },
+            "waitChain": {
+              "type": "object",
+              "properties": {
+                "on": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "until": {
+                  "type": "number"
+                },
+                "update": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "on"
+              ]
+            },
             "blocks": {
               "type": "array",
               "items": {
@@ -48991,6 +49054,27 @@
               "additionalProperties": {
                 "type": "number"
               }
+            },
+            "waitChain": {
+              "type": "object",
+              "properties": {
+                "on": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "until": {
+                  "type": "number"
+                },
+                "update": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "on"
+              ]
             },
             "blocks": {
               "type": "array",
@@ -90667,6 +90751,27 @@
                     "type": "number"
                   }
                 },
+                "waitChain": {
+                  "type": "object",
+                  "properties": {
+                    "on": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    },
+                    "until": {
+                      "type": "number"
+                    },
+                    "update": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "on"
+                  ]
+                },
                 "blocks": {
                   "type": "array",
                   "items": {
@@ -92408,6 +92513,27 @@
                   "additionalProperties": {
                     "type": "number"
                   }
+                },
+                "waitChain": {
+                  "type": "object",
+                  "properties": {
+                    "on": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    },
+                    "until": {
+                      "type": "number"
+                    },
+                    "update": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "on"
+                  ]
                 },
                 "blocks": {
                   "type": "array",

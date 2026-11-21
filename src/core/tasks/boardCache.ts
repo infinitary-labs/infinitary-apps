@@ -21,6 +21,7 @@ import {
   replaced,
   tiersOf,
   viewOf,
+  waitChainIn,
 } from "./taskView";
 
 /**
@@ -280,7 +281,9 @@ export function refresh(
     cache.childCounts,
     cards,
   );
-  // The kept rows whose card facts moved, or whose live facts moved after a host fact did.
+  // The kept rows whose card facts moved, whose wait now stops elsewhere (a
+  // hold or a wait several links away, INF-5578), or whose live facts moved
+  // after a host fact did.
   for (const id of shown) {
     if (rebuild.has(id)) continue;
     const cached = cache.views.get(id);
@@ -288,6 +291,8 @@ export function refresh(
     if (
       !cached ||
       cached.cards !== cardFactsOf(record, graph) ||
+      (touched.length > 0 &&
+        !sameWaitChain(cached.view.waitChain, waitChainIn(reads.options, record, graph))) ||
       (reads.recheckFacts() && cached.facts !== factsKey(reads.liveFacts(record)))
     )
       rebuild.add(id);
@@ -373,6 +378,10 @@ function readEnds(
   for (const record of reads.options.tasks.getMany([...ends].filter((id) => !records.has(id))))
     records.set(record.id, record);
   for (const id of [...records.keys()]) if (!shown.has(id) && !ends.has(id)) records.delete(id);
+}
+
+function sameWaitChain(a: TaskView["waitChain"], b: TaskView["waitChain"]): boolean {
+  return a?.on === b?.on && a?.end === b?.end && a?.until === b?.until && a?.update === b?.update;
 }
 
 function cachedView(

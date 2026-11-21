@@ -1,13 +1,23 @@
+import { compareSemver } from "@shared/semver";
 import { cutText } from "@shared/textCut";
 import type { ScheduleRecord, ScheduleSpec } from "../storage/scheduleStore";
-import type { TaskRecord } from "../storage/taskRecords";
+import type { AppUpdateWait, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 
 /** The event a hold ends sooner on, as a put-off's event names it (`PutOffUntil`). */
 export type HoldEvent = { integration: string; event: string; filter?: Record<string, string> };
 
-/** A hold as the first mate gives it: its latest time, its reason, and an event that ends it sooner. */
-export type HoldInput = { until: number; reason: string; onEvent?: HoldEvent };
+/**
+ * A hold as the first mate gives it: its latest time, its reason, an event
+ * that ends it sooner, and an app update that ends it sooner - the version
+ * it waits for, or with none named the next newer one.
+ */
+export type HoldInput = {
+  until: number;
+  reason: string;
+  onEvent?: HoldEvent;
+  onUpdate?: { version?: string };
+};
 
 /**
  * Automation as a hold reaches it (docs/automation.md, "A rule that ends a
@@ -35,7 +45,12 @@ type HoldRulesHost = {
   tasks: TaskService;
   /** End the hold whose gate names the rule, with the events that came (`IdleLadder.endHoldOnEvent`). */
   endHold(taskId: string, ruleId: string, events: string): boolean;
+  /** End the task's hold on an app update, saying what was installed (`IdleLadder.endHoldOnEvent`). */
+  endUpdateHold(taskId: string, installed: string): boolean;
 };
+
+/** The key a computer's version is kept under: its device id, or this Mac's. */
+const THIS_MAC = "";
 
 /** A task's hold and the end of its last turn: what a newer move changes, and a pin does not. */
 function lastMove(task: TaskRecord | undefined): string {
@@ -55,6 +70,8 @@ export class HoldRules {
   private rules: HoldRuleScheduler | undefined;
   /** Rules still taking their place, which no gate names yet. */
   private readonly arming = new Set<string>();
+  /** The app version each computer last said it runs, this Mac's under `THIS_MAC` (`appRan`). */
+  private readonly running = new Map<string, string>();
 
   constructor(private readonly host: HoldRulesHost) {
     host.tasks.onChange((change) => {
@@ -82,7 +99,14 @@ export class HoldRules {
    */
   async hold(taskId: string, hold: HoldInput | null): Promise<{ ok: boolean; text: string }> {
     const turns = this.host.tasks.turns;
-    if (hold === null || !hold.onEvent) return turns.hold(taskId, hold && { ...hold });
+    if (hold === null) return turns.hold(taskId, null);
+    const waited = hold.onUpdate ? this.updateWait(taskId, hold.onUpdate.version) : undefined;
+    if (waited && "refusal" in waited) return { ok: false, text: waited.refusal };
+    const update = waited ? { update: waited.update } : {};
+    if (!hold.onEvent) {
+      const held = turns.hold(taskId, { until: hold.until, reason: hold.reason, ...update });
+      return held.ok && waited ? { ok: true, text: `${held.text} ${waited.ends}` } : held;
+    }
     const rules = this.rules;
     if (!rules)
       return { ok: false, text: "Automation is not running, so no event can end a hold." };
@@ -131,12 +155,12 @@ export class HoldRules {
     const now = turns.holdRefusal(taskId, hold) ?? moved;
     const held =
       placed && !now
-        ? turns.hold(taskId, { until: hold.until, reason: hold.reason, ref: rule.id })
+        ? turns.hold(taskId, { until: hold.until, reason: hold.reason, ref: rule.id, ...update })
         : undefined;
     if (held?.ok)
       return {
         ok: true,
-        text: `${held.text} The event ${spec.event} from ${spec.integration} ends it sooner, once, with what arrived.`,
+        text: `${held.text} The event ${spec.event} from ${spec.integration} ends it sooner, once, with what arrived.${waited ? ` ${waited.ends}` : ""}`,
       };
     rules.cancel(rule.id);
     if (held) return held;
@@ -147,6 +171,62 @@ export class HoldRules {
         ? `${spec.event} from ${spec.integration} came while its watch started, so ${name} is not held for it; any hold it had stands.`
         : `${spec.integration} could not start watching for ${spec.event}, so nothing would end the hold sooner; ${name} is not held for it, and any hold it had stands. Hold it again, or without on_event.`,
     };
+  }
+
+  /**
+   * The app update a hold waits for (INF-5578 finding 4), on the computer
+   * the task runs on: the version named, or with none the next one newer
+   * than the version that computer runs now. Refused when nothing could
+   * tell that update: no version named and none heard from that computer,
+   * a version that is not one, or one that computer already runs.
+   */
+  private updateWait(
+    taskId: string,
+    version: string | undefined,
+  ): { update: AppUpdateWait; ends: string } | { refusal: string } {
+    const device = this.host.tasks.get(taskId)?.deviceId ?? null;
+    const from = this.running.get(device ?? THIS_MAC);
+    const named = version?.trim() || undefined;
+    const where = device ? "the computer it runs on" : "this Mac";
+    if (named !== undefined && compareSemver(named, named) === null)
+      return {
+        refusal: `on_update.version takes an app version, such as 0.8.5-alpha.7; "${named}" is not one.`,
+      };
+    if (named !== undefined && from !== undefined && (compareSemver(from, named) ?? -1) >= 0)
+      return {
+        refusal: `The app on ${where} already runs ${from}, at or past ${named}, so that update is installed; nothing changed.`,
+      };
+    if (named === undefined && from === undefined)
+      return {
+        refusal: `The app version on ${where} is not known now, so nothing would tell its update; name the version it waits for in on_update.version, or hold without on_update. Nothing changed.`,
+      };
+    return {
+      update: {
+        device,
+        ...(from !== undefined ? { from } : {}),
+        ...(named ? { version: named } : {}),
+      },
+      ends: `It ends sooner, with one steer, once the app on ${where} runs ${named ?? `a version newer than ${from}`}.`,
+    };
+  }
+
+  /**
+   * A computer said which app version it runs: this Mac's own at each
+   * start (`device` null), and each computer that runs work at each
+   * welcome. Each started task held for an update there that this version
+   * meets is woken, its hold ended (INF-5578 finding 4).
+   */
+  appRan(device: string | null, version: string): void {
+    this.running.set(device ?? THIS_MAC, version);
+    for (const record of this.host.tasks.listActive()) {
+      const update = record.gate?.update;
+      if (record.gate?.kind !== "at-time" || !update || update.device !== device) continue;
+      if (!updateInstalled(update, version)) continue;
+      this.host.endUpdateHold(
+        record.id,
+        `Infinitary ${version} is installed on ${device ? "the computer this task runs on" : "this Mac"}`,
+      );
+    }
   }
 
   /** A hold's rule ran: end the hold it names, if it still stands. */
@@ -171,4 +251,10 @@ export class HoldRules {
       if (!stands) rules.cancel(rule.id);
     }
   }
+}
+
+/** Whether the version a computer now runs is the update a hold waits for. */
+export function updateInstalled(update: AppUpdateWait, version: string): boolean {
+  if (update.version !== undefined) return (compareSemver(version, update.version) ?? -1) >= 0;
+  return update.from !== undefined && (compareSemver(version, update.from) ?? -1) > 0;
 }

@@ -95,6 +95,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
+  answerLaunch,
   commandHolding,
   followInstalledProgram,
   keepsStarterBesideGrant,
@@ -568,9 +569,17 @@ export async function startApp(
     app.setPath("userData", userDataChoice.dir);
   }
   const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
-  // pnpm dev on the person's own data folder: a run from source with nothing isolating it.
-  const sourceOnOwnData = !app.isPackaged && userDataChoice.kind === "flavor";
-  // The e2e that launches from source without an isolated dir still keeps
+  // An isolated run is started from outside, which starts it again; only a person's app starts
+  // itself again. A development one notes the words it would start with in the file
+  // `INFINITARY_RELAUNCH_NOTE` names, so a journey starts what it asked for
+  // (tests/e2e/window-starts-run.spec.ts).
+  const relaunchNote =
+    isDev && isolatedUserDataDir ? settingFrom(process.env, "RELAUNCH_NOTE") : undefined;
+  const relaunchWith = (args: string[], execPath?: string) => {
+    if (!isolatedUserDataDir) app.relaunch({ args, ...(execPath ? { execPath } : {}) });
+    else if (relaunchNote) writeFileSync(relaunchNote, JSON.stringify(args));
+  };
+  // The e2e that launches the dev flavor without an isolated dir still keeps
   // its window hidden (captain directive: e2e runs are windowless).
   const hideWindow =
     Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
@@ -757,7 +766,7 @@ export async function startApp(
       console.warn(
         `[app] Start it here found the folder held by ${kind === "free" ? "nothing now" : `a ${kind}`}`,
       );
-      if (kind !== "window" && !isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
+      if (kind !== "window") relaunchWith(process.argv.slice(1));
       app.quit();
     } else app.quit();
   } else {
@@ -835,13 +844,10 @@ export async function startApp(
         word: options.agent,
         label: runLabelOf(work.place.flavor),
       });
-      // Restart it is offered over this run only once a force stop can end it (`watchRunForce`).
-      let forceReady = () => {};
-      const recovers = byAgent
-        ? new Promise<void>((resolve) => {
-            forceReady = resolve;
-          })
-        : undefined;
+      // Restart it is offered over this run only while a force stop can end it (`watchRunForce`):
+      // on Windows only with the birth a wake goes through, without which a frozen run stays frozen.
+      const birth = byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null;
+      let noteRecovers: (can: boolean) => void = () => {};
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -855,8 +861,12 @@ export async function startApp(
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
         byAgent,
-        byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null,
-        recovers,
+        birth,
+        byAgent && (hostPlatform() !== "win32" || birth !== null)
+          ? (note) => {
+              noteRecovers = note;
+            }
+          : undefined,
       );
       leaveRun = (end) => {
         try {
@@ -919,7 +929,9 @@ export async function startApp(
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
       // Only a run this app's own agent started is ever asked so; one started by hand reads nothing.
       const stopForceWatch = byAgent
-        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString(), undefined, forceReady)
+        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString(), undefined, (can) =>
+            noteRecovers(can),
+          )
         : () => {};
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
@@ -932,25 +944,34 @@ export async function startApp(
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }
+    // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
+    const asked = new Set<string>();
     app.on("second-instance", (_event, _argv, _cwd, additionalData) => {
       if (windowless) return;
-      // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
-      const asked = windowAnswerAsked(additionalData);
-      if (asked)
-        try {
-          writeFileSync(join(app.getPath("userData"), windowAnswerFile(asked)), "", {
-            mode: 0o600,
-          });
-        } catch (error) {
-          console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
-        }
-      const win = appWindows()[0];
-      if (win) {
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      } else if (desktop.closeToIcon) {
-        reopen();
-      }
+      answerLaunch(windowAnswerAsked(additionalData), {
+        asked,
+        bringForward: () => {
+          const win = appWindows()[0];
+          if (win) {
+            if (win.isMinimized()) win.restore();
+            win.focus();
+          } else if (keepsWorkingClosed) {
+            // Closing the last window left the app working, as on a Mac: a second launch opens it again.
+            reopen();
+          }
+        },
+        shown: () => appWindows().length > 0,
+        whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
+        answer: (word) => {
+          try {
+            writeFileSync(join(app.getPath("userData"), windowAnswerFile(word)), "", {
+              mode: 0o600,
+            });
+          } catch (error) {
+            console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
+          }
+        },
+      });
     });
 
     // No window may ever attach a <webview> or open a child window
@@ -1387,21 +1408,14 @@ export async function startApp(
           for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
         },
         relaunch: (how) => {
-          // An isolated run is started from outside, which starts it again;
-          // only a person's app starts itself again.
-          if (!isolatedUserDataDir) {
-            // Start it here is asked for one start: no later one carries it on.
-            const args = process.argv
-              .slice(1)
-              .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
-            if (how?.startHere) args.push(START_HERE_ARG);
-            if (how?.startHere && how.letGoJob) args.push(LET_GO_JOB_ARG);
-            app.relaunch({
-              args,
-              // A window following a replaced AppImage starts from the new file.
-              ...(besideRun && process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : {}),
-            });
-          }
+          // Start it here is asked for one start: no later one carries it on.
+          const args = process.argv
+            .slice(1)
+            .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
+          if (how?.startHere) args.push(START_HERE_ARG);
+          if (how?.startHere && how.letGoJob) args.push(LET_GO_JOB_ARG);
+          // A window following a replaced AppImage starts from the new file.
+          relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined);
           app.quit();
         },
         // A page the first mate would open for this view opens here, where

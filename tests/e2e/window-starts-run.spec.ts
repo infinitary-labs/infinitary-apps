@@ -296,7 +296,7 @@ test("Restart it ends a command that does not answer and the window joins the on
     } finally {
       await opened.close();
     }
-    process.kill(first, "SIGSTOP");
+    expect(await standIn.signal(LABEL, "SIGSTOP", first)).toBe("sent");
 
     // Section: the window opened again says its first mate is not answering, and Restart it restarts it.
     opened = await open();
@@ -311,14 +311,16 @@ test("Restart it ends a command that does not answer and the window joins the on
       const restart = noticeOver(page).getByRole("button", { name: COMMAND_NOTICE_WORDS.restart });
       await pressKey(restart, "Enter");
       await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
-      await expect.poll(() => alive(first)).toBe(false);
+      // The frozen run ended, by its supervisor's own record of its exit.
+      expect(standIn.exits(LABEL)).toEqual([null]);
       await expect(shownCard(page, CARD_TITLE)).toBeVisible({ timeout: 60_000 });
       await expect(noticeOver(page)).toHaveCount(0);
       expect(commandPid(userDataDir)).toBe(standIn.runs(LABEL)[1]);
     } finally {
       await opened.close();
-      // A frozen command acts on no polite stop: one Restart it did not end goes by force.
-      if (alive(first)) process.kill(first, "SIGKILL");
+      // A frozen command acts on no polite stop: one Restart it did not end goes by force, through
+      // its supervisor, only while it is still that run.
+      await standIn.signal(LABEL, "SIGKILL", first);
     }
   } finally {
     await provider.close();
@@ -333,14 +335,25 @@ test("Restart it ends a command that does not answer and the window joins the on
  * noted it yet; the card is usable, and the service manager starts and stops nothing more. Data:
  * the throwaway data folder above, its command frozen with SIGSTOP, a one-second answer wait, and
  * a file the development build's command waits on before it notes that it holds the folder. An
- * isolated window never starts itself again, so the journey starts each start that Start it here
- * asks for. Completion: the service manager's record of each run and exit, the command's note,
- * the folder's lock, the start's own end and what it said, and the card with no notice.
+ * isolated window never starts itself again: the development build notes the start it asks for in
+ * a file, and the journey starts that. The frozen run is signalled only through the supervisor that
+ * started it, while it is still that run. Completion: the service manager's record of each run,
+ * exit and start or stop asked of it, the command's note, the folder's lock, the start's own end
+ * and what it said, the window's ownership of the command, and the card with no notice.
  */
 test("Start it here ends a command that does not answer and opens beside the one its job started again", async () => {
   test.setTimeout(300_000);
   const provider = await startMockProvider();
   const hold = join(scratchDir("infinitary-window-starts-run-hold-"), "hold");
+  const relaunchNote = join(scratchDir("infinitary-window-starts-run-relaunch-"), "relaunch.json");
+  /** The words of Start it here in the start the app last asked for, which the journey starts. */
+  const askedStart = () => {
+    const words = (JSON.parse(readFileSync(relaunchNote, "utf8")) as string[]).filter(
+      (arg) => arg === START_HERE_ARG || arg === LET_GO_JOB_ARG,
+    );
+    rmSync(relaunchNote, { force: true });
+    return words;
+  };
   let waiting: ReturnType<typeof spawn> | null = null;
   try {
     const userDataDir = seededDataDir(provider.port);
@@ -351,6 +364,7 @@ test("Start it here ends a command that does not answer and opens beside the one
       INFINITARY_WINDOW_STARTS_RUN: "1",
       INFINITARY_RUN_ANSWER_WAIT_MS: "1000",
       INFINITARY_RUN_NOTE_HOLD: hold,
+      INFINITARY_RELAUNCH_NOTE: relaunchNote,
     };
     const open = (args: string[] = []) => launchApp({ userDataDir, homeDir, env, args });
     const gone = join(standIn.dir, "state", `${LABEL}.gone`);
@@ -366,7 +380,7 @@ test("Start it here ends a command that does not answer and opens beside the one
     } finally {
       await opened.close();
     }
-    process.kill(first, "SIGSTOP");
+    expect(await standIn.signal(LABEL, "SIGSTOP", first)).toBe("sent");
 
     // Section: Start it here ends the frozen command by force; the window starts again, which an
     // isolated window does by ending, and the job starts the command again.
@@ -385,17 +399,24 @@ test("Start it here ends a command that does not answer and opens beside the one
       });
       await pressKey(startHere, "Enter");
       await windowEnded;
+      // The frozen run ended before any cleanup, by its supervisor's own record of its exit.
+      await expect.poll(() => standIn?.exits(LABEL), { timeout: 60_000 }).toEqual([null]);
     } finally {
       await opened.close();
-      if (alive(first)) process.kill(first, "SIGKILL");
+      await standIn.signal(LABEL, "SIGKILL", first);
     }
-    await expect.poll(() => alive(first), { timeout: 60_000 }).toBe(false);
     await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
     const [, second] = standIn.runs(LABEL) as [number, number];
+    // Ended by force, the run asked its service manager for nothing, and the window asked to
+    // start again here, letting the job go.
+    const managerAsks = standIn.asks();
+    const restartedWith = askedStart();
+    expect(restartedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
 
-    // Section: started again with the command's note already there, the app opens beside it.
+    // Section: started again with the command's note already there, the app opens beside it,
+    // as its own.
     await expect.poll(noted, { timeout: 60_000 }).toBe(second);
-    opened = await open([START_HERE_ARG, LET_GO_JOB_ARG]);
+    opened = await open(restartedWith);
     try {
       const { page } = opened;
       await showCard(page, CARD_TITLE);
@@ -403,9 +424,15 @@ test("Start it here ends a command that does not answer and opens beside the one
       expect(await page.evaluate(() => window.infinitary.devices.thisMac())).toMatchObject({
         byCommand: true,
       });
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
     } finally {
       await opened.close();
     }
+    expect(standIn.asks()).toEqual(managerAsks);
     expect(standIn.runs(LABEL)).toEqual([first, second]);
     expect(standIn.exits(LABEL)).toEqual([null]);
     expect(standIn.running(LABEL)).toBe(true);
@@ -416,7 +443,7 @@ test("Start it here ends a command that does not answer and opens beside the one
     // not noted it yet, the start waits with no window, past a stopped run's wait, never taking
     // that command for a window; once the command notes it, the start ends to start again.
     writeFileSync(hold, "");
-    process.kill(second, "SIGKILL");
+    expect(await standIn.signal(LABEL, "SIGKILL", second)).toBe("sent");
     await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(3);
     const [, , third] = standIn.runs(LABEL) as [number, number, number];
     await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(third);
@@ -449,16 +476,27 @@ test("Start it here ends a command that does not answer and opens beside the one
     await expect.poll(noted, { timeout: 60_000 }).toBe(third);
     await ended;
     expect(said).toContain("[app] Start it here found the folder held by a run");
+    const startedWith = askedStart();
+    expect(startedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
 
-    // Section: the start that one asked for opens beside the command the job started again.
-    opened = await open([START_HERE_ARG, LET_GO_JOB_ARG]);
+    // Section: the start that one asked for opens beside the command the job started again, as
+    // its own.
+    opened = await open(startedWith);
     try {
       const { page } = opened;
       await showCard(page, CARD_TITLE);
       await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
     } finally {
       await opened.close();
     }
+    // The run the journey ended was started again by its job alone: nothing asked the service
+    // manager to start or stop anything.
+    expect(standIn.asks()).toEqual(managerAsks);
     expect(standIn.runs(LABEL)).toEqual([first, second, third]);
     expect(standIn.exits(LABEL)).toEqual([null, null]);
     expect(standIn.running(LABEL)).toBe(true);

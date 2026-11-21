@@ -171,4 +171,59 @@ describe("Start it here over a silent command", () => {
     expect(at.starter.stop.mock.calls).toEqual([[force]]);
     expect(at.starter.restart).not.toHaveBeenCalled();
   });
+  // The review of INF-5409: the window never starts again on its own while a recovery it sent can
+  // still act. A command back on a replaced program waits for Restart it to settle, and for Start
+  // it here, whose own start again carries the run's end to the window that follows.
+  it("starts again on a replaced program only once Restart it settled", async () => {
+    const command = silentRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    let restarted: (outcome: "restarted") => void = () => {};
+    at.starter.restart.mockImplementation(() => new Promise((resolve) => (restarted = resolve)));
+    expect(at.shell.restartCommand()).toBe(true);
+    await expect.poll(() => at.starter.restart.mock.calls.length).toBe(1);
+    // The command comes back on a new program while the stop is still waited for.
+    at.command.programReplaced = true;
+    await command.stop();
+    command.run.dispatch.mockImplementation(command.answer as never);
+    await command.open().settled();
+    await new Promise((resolve) => setTimeout(resolve, 1_300));
+    expect(at.relaunch).not.toHaveBeenCalled();
+    restarted("restarted");
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[undefined]]);
+  });
+
+  it("starts here, not on its own, when the command came back on a replaced program during Start it here", async () => {
+    const command = silentRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      stopWaitMs: 300,
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    let stopped: (ended: "ended") => void = () => {};
+    at.starter.stop.mockImplementation(() => new Promise((resolve) => (stopped = resolve)));
+    expect(at.shell.startHere()).toBe(true);
+    await expect.poll(() => at.starter.stop.mock.calls.length).toBe(1);
+    at.command.programReplaced = true;
+    await command.stop();
+    command.run.dispatch.mockImplementation(command.answer as never);
+    await command.open().settled();
+    await new Promise((resolve) => setTimeout(resolve, 1_300));
+    expect(at.relaunch).not.toHaveBeenCalled();
+    at.command.records = { running: false, run: null, lastStop: null };
+    stopped("ended");
+    await expect
+      .poll(() => at.relaunch.mock.calls)
+      .toEqual([[{ startHere: true, letGoJob: true }]]);
+  });
 });

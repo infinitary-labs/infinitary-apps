@@ -24,7 +24,6 @@ import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { serviceLabel } from "../../src/core/helper/background";
-import { processAlive } from "../../src/core/helper/lock";
 import { type RunAgentContext, stopRunAgent } from "../../src/core/helper/runAgent";
 import {
   endRunByForce,
@@ -468,9 +467,9 @@ test("the Windows installer installs for this person, offers Git, starts the com
     // A run whose whole process is suspended, as a fully frozen first mate's (the review of
     // INF-5409), through the force stop Restart it and Start it here ask (`stopRunAgent`'s
     // force): the starter lets the run go on only through a handle to the program whose birth its
-    // record keeps, which Windows itself reads (`readWindowsTable`). A record naming another birth
-    // leaves the run suspended and the stop is withdrawn; the run's own birth lets it go on, and it
-    // ends itself. A disposable program stands in for the run, heartbeating while it runs.
+    // record keeps, which Windows itself reads (`readWindowsTable`), and reads the run by that birth
+    // too. A record naming another birth is no run of the stop: nothing is asked or woken and the
+    // run stays suspended; the run's own birth lets it go on, and it ends itself. A disposable program stands in for the run, heartbeating while it runs.
     await suspendedRunForce();
 
     // Task Scheduler's own answer for this task, which a refused removal reads before it lets
@@ -1071,12 +1070,15 @@ async function suspendedRunForce(): Promise<void> {
       uid: 0,
       unitsDir: folder,
       env: {},
-      processes: { alive: processAlive, forceWaitMs: 2_000 },
+      // The production reading of the run, by the birth its record keeps.
+      processes: { forceWaitMs: 2_000 },
     } as unknown as RunAgentContext;
     const run0 = { pid, startedAt };
 
+    // A record whose birth is not the program under the number: no run of this stop, so nothing is
+    // asked or woken, and the program stays suspended.
     record("win:1");
-    expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("withdrawn");
+    expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("untouched");
     expect(stillRunning([pid])).toEqual([pid]);
     expect(beat()).toBe(suspendedAt);
 

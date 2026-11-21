@@ -458,7 +458,8 @@ function recordedRun(
  * its process and start (`endRunByForce`), which no other program reads, so
  * a program that took its number and a run its job started again both keep
  * going, and nothing is asked of the service manager. Untouched for any
- * other run, and where the stop could not be asked; otherwise as
+ * other run, a number another program already holds at the press included,
+ * and where the stop could not be asked; otherwise as
  * `endRunByForce` answers (`AgentRunEnd`).
  */
 async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
@@ -467,6 +468,10 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
   const wake =
     context.processes?.wake ?? ((named, birth) => wakeRun(context.dataDir, named, birth));
   const alive = context.processes?.alive ?? runAlive;
+  // A program already under the number that is not the run, as its birth shows on Windows, is no
+  // run of this stop: nothing is asked or started, so the stop's own wait later tells only the
+  // named run's end, never that mismatch, as an exit.
+  if (!alive(run.pid, recorded.birth)) return "untouched";
   const ended = await endRunByForce(
     context.dataDir,
     run,

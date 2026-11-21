@@ -6,6 +6,7 @@ import { RUN_STOP_FOR_FILE } from "@core/helper/windowsTask";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
+  answerLaunch,
   askLoginShellEarly,
   commandHolding,
   followInstalledProgram,
@@ -181,11 +182,47 @@ describe("a window opened beside a run", () => {
   // shows of itself, never from silence: a run notes that it holds the folder, a window answers
   // the launch's ask, a holder that ends lets the lock go. One that shows none of these, as a run
   // stopped before it noted itself, is waited for however long that lasts, and the lock is asked
-  // for again only once the holder its link names changes, so a window is not shown at every look.
+  // for again only once the holder its link names changes, so a window is not shown at every look;
+  // a holder no link names, as Windows' own lock, is asked again after a while, with the same word.
+  // The review of INF-5409: a window answers a Start it here launch's ask only once one of its
+  // windows is there to take over. A Mac app kept working after its last window closed opens it
+  // again and answers once it is made; an ask it already took brings nothing forward again.
+  it("answers a launch's ask only once a window is there, opening one again on a Mac", () => {
+    const word = "0123456789abcdef";
+    const made: (() => void)[] = [];
+    let windows = 0;
+    const seen = { forward: 0, answers: [] as string[] };
+    const window = {
+      asked: new Set<string>(),
+      bringForward: () => {
+        seen.forward += 1;
+      },
+      shown: () => windows > 0,
+      whenMade: (then: () => void) => void made.push(then),
+      answer: (asked: string) => void seen.answers.push(asked),
+    };
+    // Its last window closed: the launch's ask opens one again and waits for it.
+    answerLaunch(word, window);
+    expect(seen).toEqual({ forward: 1, answers: [] });
+    // A hidden page made first is no window of its own: it keeps waiting.
+    made.shift()?.();
+    expect(seen.answers).toEqual([]);
+    windows = 1;
+    made.shift()?.();
+    expect(seen).toEqual({ forward: 1, answers: [word] });
+    // The launch asks again while the lock names no holder: nothing comes forward again.
+    answerLaunch(word, window);
+    expect(seen).toEqual({ forward: 1, answers: [word] });
+    expect(made).toEqual([]);
+    // A launch with no ask still brings the window forward.
+    answerLaunch(null, window);
+    expect(seen).toEqual({ forward: 2, answers: [word] });
+  });
+
   it("tells a run, a window and a lock let go apart from what each shows, and waits on a silent holder", async () => {
-    const look = (shown: { running?: () => boolean; answered?: () => boolean }) => {
+    const look = (shown: { running?: () => boolean; answered?: () => boolean }, named = true) => {
       const asks: number[] = [];
-      let holder: number | null = 4242;
+      let holder: number | null | undefined = named ? 4242 : undefined;
       const kind = lockHolderKind({
         running: shown.running ?? (() => false),
         answered: shown.answered ?? (() => false),
@@ -194,7 +231,7 @@ describe("a window opened beside a run", () => {
           asks.push(Date.now());
           return holder === null;
         },
-        askEveryMs: 60_000,
+        askEveryMs: 100,
         everyMs: 20,
       });
       return { kind, asks, leave: () => (holder = null) };
@@ -211,7 +248,8 @@ describe("a window opened beside a run", () => {
     expect(await window.kind).toBe("window");
     expect(window.asks).toEqual([]);
 
-    // Silent well past a stopped run's old wait: still waited for, asked nothing, never a window.
+    // Silent well past the wait between asks: a holder its link names unchanged is only watched,
+    // asked nothing and never taken for a window.
     const silent = look({});
     let settled: string | null = null;
     void silent.kind.then((kind) => (settled = kind));
@@ -222,34 +260,44 @@ describe("a window opened beside a run", () => {
     silent.leave();
     expect(await silent.kind).toBe("free");
     expect(silent.asks).toHaveLength(1);
+
+    // No link names the holder: the lock is asked for again after each wait until it is let go.
+    const unnamed = look({}, false);
+    let free = false;
+    void unnamed.kind.then(() => (free = true));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(free).toBe(false);
+    expect(unnamed.asks.length).toBeGreaterThanOrEqual(2);
+    unnamed.leave();
+    expect(await unnamed.kind).toBe("free");
   });
 
-  // The review of INF-5409: Restart it is offered over a run only once a force stop can end it. The
-  // run notes that it holds the folder at once, with its agent's mark, and that it can be ended by
-  // force only once its own reading and helper run; a run that ended first never says so.
-  it("notes that a force stop can end the run only once it can", async () => {
+  // The review of INF-5409: Restart it is offered over a run only while a force stop can end it.
+  // The run notes that it holds the folder at once, with its agent's mark, that it can be ended by
+  // force only once its own reading and helper work, and no longer once either stopped; a run that
+  // ended first never says so.
+  it("notes that a force stop can end the run only while it can", () => {
     const note = (dataDir: string) => JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
     const dataDir = scratchDir("infinitary-run-recovers-");
-    let ready = () => {};
-    const recovers = new Promise<void>((resolve) => {
-      ready = resolve;
+    let ready: (can: boolean) => void = () => {};
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, null, (set) => {
+      ready = set;
     });
-    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, null, recovers);
     expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true });
     expect(note(dataDir).recovers).toBeUndefined();
-    ready();
-    await recovers;
+    ready(true);
     expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true, recovers: true });
+    ready(false);
+    expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true });
+    expect(note(dataDir).recovers).toBeUndefined();
 
     const ended = scratchDir("infinitary-run-recovers-");
-    let late = () => {};
-    const lateReady = new Promise<void>((resolve) => {
-      late = resolve;
+    let late: (can: boolean) => void = () => {};
+    const finish = markRunning(ended, 4242, new Date(), undefined, true, null, (set) => {
+      late = set;
     });
-    const finish = markRunning(ended, 4242, new Date(), undefined, true, null, lateReady);
     finish();
-    late();
-    await lateReady;
+    late(true);
     expect(() => note(ended)).toThrow();
   });
 

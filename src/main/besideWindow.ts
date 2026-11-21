@@ -187,6 +187,8 @@ export class BesideWindow {
   private recovering = false;
   /** Whether the notice Start it here is stopping a run under was the window's own. */
   private recoveringByWindow = false;
+  /** The app was to start again on its own while a recovery could still act: it does once that settled. */
+  private relaunchDeferred = false;
   /** Reads the records again while they say nothing of whose run a silent one is (`notAnswering`). */
   private ownerTimer: ReturnType<typeof setInterval> | null = null;
   /** When this window last started the command, until that one welcomes it. */
@@ -284,7 +286,7 @@ export class BesideWindow {
       },
       // A door that no longer takes its key: starting again reads the door anew.
       onLost: () => {
-        if (!this.closed) options.relaunch();
+        this.relaunchOnItsOwn();
       },
       onWelcome: () => this.back(),
       onBack: () => options.linkBack(),
@@ -486,6 +488,7 @@ export class BesideWindow {
       restart.settled = true;
       restart.refused = outcome !== "restarted";
       if (this.closed || this.restart !== restart) return;
+      if (this.relaunchAfterRecovery()) return;
       const status = this.options.beside.status();
       // Nothing was ended or started: the run named is not one its agent started that still runs,
       // or its program could not be shown to be that run. The window stands as before the press.
@@ -942,10 +945,42 @@ export class BesideWindow {
     // never joins it again in place of starting here, and its notice offers Start it here again.
     if (target && !this.letGo(this.options.beside.status(), target)) {
       this.recovering = false;
+      if (this.relaunchAfterRecovery()) return;
       this.show(this.wanted);
       return;
     }
     this.options.relaunch({ startHere: true, ...(forced ? { letGoJob: true } : {}) });
+  }
+
+  /** Whether Restart it or Start it here sent a stop or start that can still act. */
+  private recoveryPending(): boolean {
+    return this.restart?.settled === false || this.recovering;
+  }
+
+  /**
+   * Starts the app again on its own - a door that no longer takes the key,
+   * the command back on a replaced program - but never while a recovery
+   * this window sent can still act: the stop would outlive the window that
+   * waits on it, and on Windows the start it defers to the run's end would
+   * be lost. It starts again once that recovery settled
+   * (`relaunchAfterRecovery`). True when it started again now.
+   */
+  private relaunchOnItsOwn(): boolean {
+    if (this.closed) return false;
+    if (this.recoveryPending()) {
+      this.relaunchDeferred = true;
+      return false;
+    }
+    this.options.relaunch();
+    return true;
+  }
+
+  /** The start again `relaunchOnItsOwn` put off, once no recovery can act any more. True when it started again. */
+  private relaunchAfterRecovery(): boolean {
+    if (!this.relaunchDeferred || this.closed || this.recoveryPending()) return false;
+    this.relaunchDeferred = false;
+    this.options.relaunch();
+    return true;
   }
 
   /** Whether `run` let the folder go, by a reading of the records that says so: another, or none, holds it. */
@@ -981,11 +1016,9 @@ export class BesideWindow {
     const under = this.shown !== null || this.startsOver;
     this.startsOver = false;
     this.show(null);
-    // The command came back on a new copy of the program: this window follows it.
-    if (this.options.beside.programReplaced()) {
-      this.options.relaunch();
-      return;
-    }
+    // The command came back on a new copy of the program: this window follows it, once a recovery
+    // it sent can no longer act.
+    if (this.options.beside.programReplaced() && this.relaunchOnItsOwn()) return;
     // A window that stood under the notice starts over, on the command that came back.
     if (under) this.options.restartWindows();
     this.joined = joinedRun(this.options.beside.status()) ?? this.joined;
@@ -1164,6 +1197,10 @@ export class BesideWindow {
     const status = beside.status();
     if (this.moved && status.running === false) {
       this.stopReading();
+      if (this.recoveryPending()) {
+        this.relaunchDeferred = true;
+        return;
+      }
       this.closed = true;
       this.options.relaunch();
       return;

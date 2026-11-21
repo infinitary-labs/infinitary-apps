@@ -192,7 +192,9 @@ export type RunEnd = Pick<RunStop, "reason" | "exitCode" | "lines">;
  * unless the run has ended: a Mac's Keychain is read by a utility process,
  * which waits for the app to be ready, and the app is ready only once the
  * start that writes this note has returned (./index.ts). Whether a force
- * stop can end the run (`recovers`) is added the same way once it can.
+ * stop can end the run (`recovers`) is added the same way once it can, and
+ * taken away again should that stop being so: `recovers` is handed the
+ * setter its reading calls (`watchRunForce`'s `ready`).
  */
 export function markRunning(
   dataDir: string,
@@ -201,7 +203,7 @@ export function markRunning(
   environment?: RunEnvironment | Promise<RunEnvironment>,
   agent = false,
   birth?: string | null,
-  recovers?: Promise<void>,
+  recovers?: (note: (can: boolean) => void) => void,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
   let marker: RunMarker = {
@@ -222,12 +224,13 @@ export function markRunning(
       () => {},
     );
   else if (environment) marker = { ...marker, environment };
-  void recovers?.then(() => {
-    if (ended) return;
-    marker = { ...marker, recovers: true };
+  writeRunRecord(path, marker);
+  recovers?.((can) => {
+    if (ended || (marker.recovers === true) === can) return;
+    const { recovers: _was, ...rest } = marker;
+    marker = can ? { ...rest, recovers: true } : rest;
     writeRunRecord(path, marker);
   });
-  writeRunRecord(path, marker);
   return (end = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] }) => {
     if (ended) return;
     ended = true;
@@ -326,6 +329,36 @@ export function windowAnswerAsked(data: unknown): string | null {
 }
 
 /**
+ * What the window that holds the folder's lock does at a second launch: it
+ * brings a window forward - focusing one, or opening one again where the app
+ * outlived its last, as on a Mac - and answers a launch's ask
+ * (`windowAnswerAsked`) only once one of its windows is there, never from a
+ * program showing none. An ask it already took brings nothing forward again.
+ */
+export function answerLaunch(
+  word: string | null,
+  window: {
+    /** The words this window was already asked. */
+    asked: Set<string>;
+    /** Brings a window forward, opening one again where the app keeps working closed. */
+    bringForward: () => void;
+    /** Whether one of the app's own windows is there. */
+    shown: () => boolean;
+    /** Calls `then` once another window is made. */
+    whenMade: (then: () => void) => void;
+    /** Writes the answer (`windowAnswerFile`). */
+    answer: (word: string) => void;
+  },
+): void {
+  if (word !== null && window.asked.has(word)) return;
+  if (word !== null) window.asked.add(word);
+  window.bringForward();
+  if (word === null) return;
+  const once = () => (window.shown() ? window.answer(word) : window.whenMade(once));
+  once();
+}
+
+/**
  * Who holds the single-instance lock a launch was refused, for Start it
  * here, from what each holder shows of itself and never from silence: `run`
  * once a command notes that it holds the folder; `window` once the window
@@ -336,7 +369,11 @@ export function windowAnswerAsked(data: unknown): string | null {
  * for as long as it takes, so the launch never quits with no window to take
  * over. Asking for the lock again is a second launch to its holder, which a
  * window shows itself on, so it is asked only once the holder its link names
- * changes, or after `askEveryMs` where no link names it.
+ * changes, the lock let go of included, and never again of a holder it names
+ * unchanged, which is only watched; only where no link names a holder (as
+ * Windows' own lock) is it asked again after `askEveryMs`, with the same
+ * word, which a window that was asked once answers without coming forward
+ * again (`app.ts`).
  */
 export async function lockHolderKind(options: {
   running: () => boolean;
@@ -352,7 +389,7 @@ export async function lockHolderKind(options: {
     if (options.running()) return "run";
     if (options.answered()) return "window";
     const holder = options.holder();
-    if (holder !== seen || Date.now() >= next) {
+    if (holder !== seen || (typeof holder !== "number" && Date.now() >= next)) {
       seen = holder;
       next = Date.now() + options.askEveryMs;
       if (options.lockFree()) return "free";

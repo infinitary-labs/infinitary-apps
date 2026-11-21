@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { closeSync, constants, mkdirSync, openSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -67,15 +67,22 @@ async function started(child: ChildProcess): Promise<ChildProcess> {
 /**
  * A run whose main thread is stuck, reading force stops for `startedAt`
  * beside it once it says ready; with `helper`, also the pipe and shell that
- * let it go on, as `watchRunForce` starts them; with `sibling`, a program it
- * starts in its own process group, whose number it says; with `program`, a
- * reading of its own in place of the run's.
+ * let it go on, as `watchRunForce` starts them, and whether that helper said
+ * it is ready; with `sibling`, a program it starts in its own process group,
+ * whose number it says; with `program`, a reading of its own in place of the
+ * run's; with `path`, the search path its helper finds its programs on.
  */
 async function stuckRun(
   dataDir: string,
   startedAt: string,
-  options: { helper?: boolean; sibling?: boolean; every?: number; program?: string } = {},
-): Promise<{ run: ChildProcess; pid: number; sibling: number | null }> {
+  options: {
+    helper?: boolean;
+    sibling?: boolean;
+    every?: number;
+    program?: string;
+    path?: string;
+  } = {},
+): Promise<{ run: ChildProcess; pid: number; sibling: number | null; helperReady: boolean }> {
   const program = `
     const { Worker } = require("node:worker_threads");
     const { spawn, spawnSync } = require("node:child_process");
@@ -86,18 +93,29 @@ async function stuckRun(
       eval: true,
       workerData: { dir: process.env.DIR, startedAt: process.env.STARTED, every: Number(process.env.EVERY) },
     });
+    let helperReady = false;
+    let say = (fn) => setTimeout(fn, 300);
     if (process.env.HELPER) {
       const pipe = join(process.env.DIR, process.env.PIPE.replace("wake-0-", "wake-" + process.pid + "-"));
       spawnSync("mkfifo", ["-m", "600", pipe]);
       fs.openSync(pipe, fs.constants.O_RDWR);
-      spawn("/bin/sh", ["-c", process.env.HELPER, "sh", pipe, String(process.pid), process.env.NEEDLE.replace("PID", String(process.pid)), process.env.DIR], { stdio: "ignore" });
+      const helper = spawn("/bin/sh", ["-c", process.env.HELPER, "sh", pipe, String(process.pid), process.env.NEEDLE.replace("PID", String(process.pid)), process.env.DIR], { stdio: ["ignore", "pipe", "ignore"] });
+      say = (fn) => {
+        const fallback = setTimeout(fn, 5000);
+        helper.stdout.on("data", (data) => {
+          if (helperReady || !String(data).includes("ready")) return;
+          helperReady = true;
+          clearTimeout(fallback);
+          fn();
+        });
+      };
     }
-    const sibling = process.env.SIBLING ? spawn("sleep", ["30"], { stdio: "ignore" }).pid : "";
-    setTimeout(() => process.stdout.write("ready " + sibling + "\\n", () => { for (;;) {} }), 300);
+    const sibling = process.env.SIBLING ? spawn("sleep", ["30"], { stdio: "ignore" }).pid : 0;
+    say(() => process.stdout.write("ready " + sibling + " " + (helperReady ? 1 : 0) + "\\n", () => { for (;;) {} }));
   `;
   const run = spawn(process.execPath, ["-e", program], {
     env: {
-      PATH: process.env.PATH ?? "",
+      PATH: options.path ?? process.env.PATH ?? "",
       WATCH: options.program ?? RUN_FORCE_WATCH_SOURCE,
       DIR: join(dataDir, RUN_FORCE_DIR),
       STARTED: startedAt,
@@ -119,8 +137,14 @@ async function stuckRun(
     run.stdout?.once("data", (data: Buffer) => resolve(String(data)));
     run.once("exit", () => reject(new Error("the run ended before it was ready")));
   });
-  const sibling = Number(said.trim().split(" ")[1]);
-  return { run, pid: ownedPid(run), sibling: sibling > 0 ? sibling : null };
+  const [, siblingSaid, helperSaid] = said.trim().split(" ");
+  const sibling = Number(siblingSaid);
+  return {
+    run,
+    pid: ownedPid(run),
+    sibling: sibling > 0 ? sibling : null,
+    helperReady: helperSaid === "1",
+  };
 }
 
 function exited(child: ChildProcess): Promise<NodeJS.Signals | null> {
@@ -206,11 +230,13 @@ describe("a run that does not answer, ended by force", () => {
     "lets a stopped run alone go on through its own helper and ends it",
     async () => {
       const dataDir = scratchDir("run-force-");
-      const { run, pid, sibling } = await stuckRun(dataDir, STARTED, {
+      const { run, pid, sibling, helperReady } = await stuckRun(dataDir, STARTED, {
         helper: true,
         sibling: true,
       });
       if (sibling === null) throw new Error("the run did not start its sibling");
+      // The helper says it is ready only once it holds the pipe and found the run leading its group.
+      expect(helperReady).toBe(true);
       const bystander = await started(spawn("sleep", ["30"], { stdio: "ignore", detached: true }));
       const other = ownedPid(bystander);
       try {
@@ -257,6 +283,76 @@ describe("a run that does not answer, ended by force", () => {
       writeStop(dataDir, "last-second", { pid, startedAt: STARTED, until: second + 950 });
       wakeRun(dataDir, { pid, startedAt: STARTED });
       await pause(500);
+      expect(stopped(pid)).toBe(true);
+    },
+  );
+
+  // A helper whose run does not lead its own process group could signal another program under the
+  // group's number, so it says nothing and ends: a run that starts it never says it can be ended by
+  // force.
+  it.skipIf(!POSIX)(
+    "says nothing ready from a helper whose run does not lead its group",
+    async () => {
+      const dir = join(scratchDir("run-force-"), RUN_FORCE_DIR);
+      mkdirSync(dir, { recursive: true });
+      const pipe = join(dir, runForceWakeFile(process.pid, STARTED));
+      expect(spawnSync("mkfifo", ["-m", "600", pipe]).status).toBe(0);
+      const held = openSync(pipe, constants.O_RDWR);
+      try {
+        const helper = await started(
+          spawn(
+            "/bin/sh",
+            ["-c", RUN_FORCE_WAKE_SOURCE, "sh", pipe, "1", runForceNeedle(1, STARTED), dir],
+            { stdio: ["ignore", "pipe", "ignore"] },
+          ),
+        );
+        let said = "";
+        helper.stdout?.on("data", (data: Buffer) => {
+          said += String(data);
+        });
+        await exited(helper);
+        expect(said).toBe("");
+      } finally {
+        closeSync(held);
+      }
+    },
+  );
+
+  // A run gone after committing its stop, while another program holds its number (stood in by a
+  // reading that says the number is alive): its own pipe, which only it and its helper held, is let
+  // go, so the stop is called ended, not waited on for as long as that other program runs.
+  it.skipIf(!POSIX)(
+    "calls a committed run ended once its pipe is let go, though its number is taken",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const { run, pid } = await stuckRun(dataDir, STARTED, { helper: true });
+      const gone = exited(run);
+      expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, () => true, 2_000)).toBe(
+        "ended",
+      );
+      await endedByForce(gone, pid);
+    },
+  );
+
+  // A helper held up between finding a stop and letting its run go on, past the stop's time (stood
+  // in by a search path whose reading of a file takes longer than the stop has left): it reads the
+  // time again just before the signal, so a run stopped on purpose stays stopped.
+  it.skipIf(!POSIX)(
+    "lets nothing go on for a stop whose time passed while the helper read it",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const cat = spawnSync("sh", ["-c", "command -v cat"], { encoding: "utf8" }).stdout.trim();
+      const slow = scratchDir("run-force-path-");
+      writeFileSync(join(slow, "cat"), `#!/bin/sh\nsleep 2.5\nexec ${cat} "$@"\n`, { mode: 0o755 });
+      const { pid } = await stuckRun(dataDir, STARTED, {
+        helper: true,
+        path: `${slow}:${process.env.PATH ?? ""}`,
+      });
+      process.kill(pid, "SIGSTOP");
+      await expect.poll(() => stopped(pid)).toBe(true);
+      writeStop(dataDir, "slow", { pid, startedAt: STARTED, until: Date.now() + 2_000 });
+      wakeRun(dataDir, { pid, startedAt: STARTED });
+      await pause(3_500);
       expect(stopped(pid)).toBe(true);
     },
   );

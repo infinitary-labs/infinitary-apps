@@ -823,6 +823,23 @@ describe("the command the window starts, on Windows", () => {
     expect(programs.processes.alive(NAMED.pid)).toBe(true);
     expect(forceStopsLeft(context.dataDir)).toEqual([]);
   });
+
+  // The review of INF-5409: another program already holds the named run's number at the press, as
+  // its birth shows. That is no run of this stop, never an exit the stop saw: nothing is asked of
+  // it, woken or started, and both buttons stand as before.
+  it("asks and starts nothing where another program already holds the named run's number", async () => {
+    const { context, asked, programs } = windows();
+    await startRunAgent(context);
+    recordRun(context, NAMED, true, "133800000000000000");
+    programs.run(NAMED.pid, NAMED.startedAt, "133800000000500000");
+    asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("untouched");
+    expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("untouched");
+    expect(asked).toEqual([]);
+    expect(programs.woken).toEqual([]);
+    expect(programs.processes.alive(NAMED.pid)).toBe(true);
+    expect(forceStopsLeft(context.dataDir)).toEqual([]);
+  });
 });
 
 /** The force stops left in a data folder, pending or claimed. */

@@ -111,14 +111,18 @@ export type EffectParam =
       kind: "open";
       target: "settings" | "subscriptions" | "projects" | "browser";
       sign_in?: string;
+      folder?: boolean;
     };
 
 export function agentEffect(effect: EffectParam): AgentEffect {
   if (effect.kind === "open") {
+    if (effect.folder && effect.target !== "projects")
+      throw new Error("folder true goes with target projects: it makes a Choose folder button.");
     return {
       kind: "open",
       target: effect.target,
       ...(effect.sign_in ? { signIn: effect.sign_in } : {}),
+      ...(effect.folder ? { folder: true as const } : {}),
     };
   }
   if (effect.kind === "merge") {
@@ -367,6 +371,16 @@ const openEffectParam = Type.Object({
 });
 
 /**
+ * The Firstmate's open effect: the same, and `folder` on `projects` for a
+ * Choose folder button (docs/fleet.md, "A folder that is not there"). Its
+ * words ride the actions parameter.
+ */
+const firstmateOpenEffectParam = Type.Object({
+  ...openEffectParam.properties,
+  folder: Type.Optional(Type.Boolean()),
+});
+
+/**
  * The open effect a crewmate whose task has its own browser may also
  * declare: its browser's view, with the captain in control, on a card that
  * asks for his help (`browser_handoff`).
@@ -452,9 +466,10 @@ const sharedCardParams = {
   operation_id: Type.Optional(Type.String()),
   answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
   actions: Type.Optional(
-    Type.Array(actionParam(Type.Union([mergeEffectParam, settleEffectParam, openEffectParam])), {
-      description: CARD_PARAMS.actions,
-    }),
+    Type.Array(
+      actionParam(Type.Union([mergeEffectParam, settleEffectParam, firstmateOpenEffectParam])),
+      { description: CARD_PARAMS.actions },
+    ),
   ),
 };
 

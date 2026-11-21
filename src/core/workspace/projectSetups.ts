@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { type Card, type CardAnswer, FIRSTMATE_CARD_META } from "@shared/cards";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { type DeviceView, deviceRunsWork } from "@shared/devices";
@@ -9,6 +10,7 @@ import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD } from "@shared/placement";
 import {
   SETUP_CARD_FIELDS as FIELDS,
   type ProjectSetupOffer,
+  type ProjectSetupProposal,
   projectSetupOfferSchema,
   projectSetupProposalSchema,
   setupSettingsWords,
@@ -18,6 +20,7 @@ import {
   BATCH_HOST_REFUSAL,
   BATCHES_OFF_REFUSAL,
   deliveryChoices,
+  type FolderOffer,
   opensPullRequest,
   type RepoPolicyPatch,
   type RepoSetupCheck,
@@ -35,6 +38,7 @@ import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
 import { escapeCardText } from "../orchestrator/cardText";
 import type { WakeFacts } from "../orchestrator/wakes";
+import { type LocatedProject, locateProject } from "./projectLocator";
 import type { RepoRegistry } from "./repoRegistry";
 
 /**
@@ -55,13 +59,15 @@ import type { RepoRegistry } from "./repoRegistry";
 export type ProjectSetupFacts = Extract<WakeFacts, { kind: "project-setup" }>;
 
 export type ProjectSetupsOptions = {
-  repos: Pick<RepoRegistry, "check" | "batchesOffered">;
+  repos: Pick<RepoRegistry, "check" | "batchesOffered" | "list">;
   /** Every device on the list; the card offers the computers that run work. */
   devices: () => readonly DeviceView[];
   raiseCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => void;
   /** Tells the Firstmate how the captain answered, once. */
   tell: (facts: ProjectSetupFacts) => void;
   broadcast: (event: FmEvent) => void;
+  /** The folder a relative or `~` path reads from; os.homedir() unless a test names one. */
+  home?: string;
 };
 
 /** The card's id for one project: asking again for it revises the one card. */
@@ -98,8 +104,15 @@ export class ProjectSetups {
       work,
       ...asked
     } = projectSetupProposalSchema.parse(raw);
+    // A relative path reads from the home folder, as the captain would say it
+    // (docs/fleet.md, "A folder that is not there").
+    const home = this.options.home ?? homedir();
     const spec: RepoSetupSpec =
-      asked.kind === "adopt" ? { ...asked, path: resolve(expandHome(asked.path)) } : asked;
+      asked.kind === "adopt"
+        ? { ...asked, path: resolve(home, expandHome(asked.path, home)) }
+        : asked;
+    if (spec.kind === "adopt" && !isFolder(spec.path))
+      throw new Error(this.missingFolder(spec.path, home));
     const checked = await this.options.repos.check(spec);
     if ("existing" in checked) {
       if (checked.existing.kind === "personal")
@@ -108,6 +121,34 @@ export class ProjectSetups {
         text: `${checked.existing.name} is already one of the captain's projects (repo_id ${checked.existing.id}), so no setup card went up. To put it in another project, use project-move.`,
       };
     }
+    return this.raise(spec, checked, { delivery, autonomy, rigor, runsOn: runsOnAsk, work });
+  }
+
+  /**
+   * A folder the captain dropped on the main message box (docs/composer.md,
+   * "Files"): its setup card with today's defaults, or the project it already
+   * is. The first mate never asked, so it hears nothing of the answer.
+   */
+  async offerFolder(path: string): Promise<FolderOffer> {
+    const spec: RepoSetupSpec = { kind: "adopt", path: resolve(path) };
+    const checked = await this.options.repos.check(spec);
+    if ("existing" in checked) {
+      if (checked.existing.kind === "personal")
+        throw new Error("Your personal workspace is already managed and cannot be added here.");
+      return { kind: "already", name: checked.existing.name };
+    }
+    const { cardId } = this.raise(spec, checked, {}, true);
+    return { kind: "card", cardId };
+  }
+
+  /** Puts up the setup card for what the check read, with the suggestions asked. */
+  private raise(
+    spec: RepoSetupSpec,
+    checked: Exclude<RepoSetupCheck, { existing: RepoView }>,
+    asks: Pick<ProjectSetupProposal, "delivery" | "autonomy" | "rigor" | "runsOn" | "work">,
+    dropped = false,
+  ): { text: string; cardId: string } {
+    const { delivery, autonomy, rigor, runsOn: runsOnAsk, work } = asks;
     if (opensPullRequest(delivery) && !checked.origin)
       throw new Error(
         "This project is kept on this computer. Use Local merge until it lives somewhere else.",
@@ -147,6 +188,7 @@ export class ProjectSetups {
         runsOn: runsOn === undefined ? (checked.origin ? AUTOMATIC_COMPUTER : null) : runsOn,
       },
       ...(work ? { work } : {}),
+      ...(dropped ? { dropped: true as const } : {}),
     };
     const cardId = setupCardId(spec);
     this.options.raiseCard(setupCard(cardId, offer, checked, computers));
@@ -178,7 +220,7 @@ export class ProjectSetups {
     try {
       const result = await dispatch("inf:repos:setup", [spec]);
       if (!result.created) {
-        this.options.tell({
+        this.tell(offer, {
           kind: "project-setup",
           outcome: "already",
           name: result.repo.name,
@@ -213,7 +255,7 @@ export class ProjectSetups {
         unsaved.push(errorText(error));
       }
     }
-    this.options.tell({
+    this.tell(offer, {
       kind: "project-setup",
       outcome: "added",
       name: repo.name,
@@ -229,7 +271,24 @@ export class ProjectSetups {
   /** The captain's explicit Not now; putting the card aside never calls this. */
   decline(arg: string | undefined): void {
     const offer = readOffer(arg);
-    if (offer) this.options.tell({ kind: "project-setup", outcome: "not-now", name: offer.name });
+    if (offer) this.tell(offer, { kind: "project-setup", outcome: "not-now", name: offer.name });
+  }
+
+  /** Tells the first mate how the captain answered a card it asked for; a dropped folder's it never asked. */
+  private tell(offer: ProjectSetupOffer, facts: ProjectSetupFacts): void {
+    if (!offer.dropped) this.options.tell(facts);
+  }
+
+  /**
+   * The refusal of a folder that is not there: the folders the locator finds
+   * for its last part, and the card to ask the captain on (docs/fleet.md,
+   * "A folder that is not there").
+   */
+  private missingFolder(path: string, home: string): string {
+    const managed = this.options.repos
+      .list()
+      .map((repo) => ({ id: repo.id, name: repo.name, path: repo.path }));
+    return missingFolderWords(path, locateProject(basename(path), { managed, home }));
   }
 
   private couldNotAdd(offer: ProjectSetupOffer, error: unknown): void {
@@ -239,7 +298,7 @@ export class ProjectSetups {
       type: "firstmate_note",
       text: `Could not add ${offer.name}: ${text}`,
     });
-    this.options.tell({
+    this.tell(offer, {
       kind: "project-setup",
       outcome: "failed",
       name: offer.name,
@@ -257,8 +316,34 @@ function readOffer(arg: string | undefined): ProjectSetupOffer | undefined {
   }
 }
 
-function expandHome(path: string): string {
-  return path === "~" ? homedir() : path.startsWith("~/") ? join(homedir(), path.slice(2)) : path;
+function expandHome(path: string, home: string): string {
+  return path === "~" ? home : path.startsWith("~/") ? join(home, path.slice(2)) : path;
+}
+
+// i18n-exempt: a tool answer served to the first mate, not shown to a person
+const CHOOSE_FOLDER_WORDS =
+  "a Choose folder action (effect kind open, target projects, folder true), which opens the system's folder picker on the captain's computer and adds the folder they pick as a project";
+
+/** The refusal of a folder that is not there, naming the folders of a similar name. */
+// i18n-exempt: a tool answer served to the first mate, not shown to a person
+const missingFolderWords = (path: string, found: readonly LocatedProject[]): string =>
+  found.length === 0
+    ? `No folder exists at ${path}, and no folder with a similar name was found. Ask the captain on one decision card with ${CHOOSE_FOLDER_WORDS}.`
+    : [
+        `No folder exists at ${path}. These folders have a similar name:`,
+        ...found.map(
+          (folder) =>
+            `- ${folder.path}${folder.repoId ? ` (already one of the captain's projects, repo_id ${folder.repoId})` : ""}`,
+        ),
+        `Ask the captain on one decision card: offer each folder they may have meant as an action, and ${CHOOSE_FOLDER_WORDS}. Propose the folder they choose with project-setup.`,
+      ].join("\n");
+
+function isFolder(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function errorText(error: unknown): string {
@@ -397,9 +482,11 @@ function setupCard(
     title: into ? WORDS.titleInto(offer.name, into.name) : WORDS.title(offer.name),
     meta: FIRSTMATE_CARD_META,
     body: [
-      into
-        ? `<p>Your first mate asks to add the repository <b>${escapeCardText(offer.name)}</b> to your project <b>${escapeCardText(into.name)}</b>. Its tasks take the key ${escapeCardText(into.key)}. Nothing changes until you click ${WORDS.addInto}.</p>`
-        : `<p>Your first mate asks to add <b>${escapeCardText(offer.name)}</b> to your projects. Nothing changes until you click ${WORDS.add}.</p>`,
+      offer.dropped
+        ? `<p>You dropped <b>${escapeCardText(offer.name)}</b> on the message box. Nothing changes until you click ${WORDS.add}.</p>`
+        : into
+          ? `<p>Your first mate asks to add the repository <b>${escapeCardText(offer.name)}</b> to your project <b>${escapeCardText(into.name)}</b>. Its tasks take the key ${escapeCardText(into.key)}. Nothing changes until you click ${WORDS.addInto}.</p>`
+          : `<p>Your first mate asks to add <b>${escapeCardText(offer.name)}</b> to your projects. Nothing changes until you click ${WORDS.add}.</p>`,
       work,
       `<div class="inf-facts">${facts.join("")}</div>`,
       startsGit,

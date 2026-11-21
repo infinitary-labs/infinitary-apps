@@ -171,7 +171,8 @@ export type AttachmentRef = z.infer<typeof attachmentRefSchema>;
 export const droppedPathSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("regular"), path: z.string().min(1).max(4096) }),
   z.object({ kind: z.literal("no-path") }),
-  z.object({ kind: z.literal("folder") }),
+  /** A folder, with its path: the main message box offers it as a project (docs/composer.md, "Files"). */
+  z.object({ kind: z.literal("folder"), path: z.string().min(1).max(4096).optional() }),
   z.object({ kind: z.literal("shortcut") }),
   z.object({ kind: z.literal("other") }),
 ]);

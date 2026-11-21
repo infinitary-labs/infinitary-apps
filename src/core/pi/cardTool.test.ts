@@ -786,6 +786,35 @@ it('carries a crewmate\'s request that the captain take its browser over (docs/t
   ).toContain("only that task's crewmate may ask the captain to take over");
 });
 
+// docs/fleet.md, "A folder that is not there": the first mate's Choose folder button.
+it("carries the first mate's folder flag on an open effect to projects, and refuses it elsewhere", async () => {
+  const onCard = vi.fn((_card: EmittedCard) => "card-fm-1");
+  const tool = piToolOf(
+    createEmitCardTool(onCard, undefined, { role: "firstmate" }),
+  ) as unknown as AnyTool;
+  const ask = (target: string) => ({
+    title: "Which folder is meter?",
+    body: "<p>No folder exists at ~/code/meter.</p>",
+    actions: [
+      { id: "not-now", label: "Not now" },
+      {
+        id: "choose",
+        label: "Choose folder",
+        default: true,
+        effect: { kind: "open", target, folder: true },
+      },
+    ],
+  });
+  await tool.execute("t1", ask("projects"));
+  expect(onCard.mock.calls[0]?.[0]?.actions?.[1]).toMatchObject({
+    effect: { kind: "open", target: "projects", folder: true },
+  });
+  await expect(tool.execute("t2", ask("settings"))).rejects.toThrow(
+    "folder true goes with target projects",
+  );
+  expect(onCard).toHaveBeenCalledOnce();
+});
+
 // INF-1849 piece 2: the crewmate's word that a saved sign-in did not sign its page in.
 it("carries saved_failed inside browser_handoff, and browser_sign_in beside it, to the declared handoff", async () => {
   const onCard = vi.fn((_card: DeclaredCardInput) => "card-1");

@@ -143,6 +143,88 @@ describe("card action receipts", () => {
     }
   });
 
+  // docs/fleet.md, "A folder that is not there": the first mate's Choose
+  // folder button adds the folder picked before its click goes, so the first
+  // mate hears the click once the project is on the list.
+  it("adds the folder a Choose folder button picks before sending its click", async () => {
+    const choose = card({
+      id: "which-folder",
+      status: "ready",
+      body: "No folder exists at ~/code/meter. Which folder did you mean?",
+      actions: [
+        {
+          id: "choose",
+          label: "Choose folder",
+          default: true,
+          effect: { kind: "open", target: "projects", folder: true },
+        },
+        { id: "not-now", label: "Not now" },
+      ],
+    });
+    const meter = "/Users/someone/github/octo/meter";
+    const sent: string[] = [];
+    const chooseFolder = vi.fn(async (): Promise<string | null> => null);
+    const setup = vi.fn(async (spec: { path: string }) => {
+      sent.push(`setup ${spec.path}`);
+      return { repo: { id: "repo-meter", name: "meter" }, created: true };
+    });
+    const act = vi.fn(async () => {
+      sent.push("click");
+      return { effect: { kind: "open", target: "projects", folder: true } };
+    });
+    vi.stubGlobal("window", {
+      infinitary: { cards: { act }, app: { chooseFolder }, repos: { setup } },
+    });
+    useShellStore.setState({ cards: [choose], cardIndex: 0, records: [] });
+
+    // Cancel in the picker sends nothing and keeps the card.
+    await useShellStore.getState().actOnCard("which-folder", "choose");
+    expect(sent).toEqual([]);
+    expect(useShellStore.getState()).toMatchObject({
+      cards: [choose],
+      pendingCardActions: {},
+      cardActionErrors: {},
+    });
+
+    // A refused folder shows on the card and sends nothing.
+    chooseFolder.mockResolvedValueOnce(meter);
+    setup.mockRejectedValueOnce(new Error(`${meter} is already inside the fleet root.`));
+    await useShellStore.getState().actOnCard("which-folder", "choose");
+    expect(sent).toEqual([]);
+    expect(useShellStore.getState().cardActionErrors).toEqual({
+      "which-folder": `${meter} is already inside the fleet root.`,
+    });
+
+    // A pick is added, then the click goes, and the window stays where it is.
+    chooseFolder.mockResolvedValueOnce(meter);
+    await useShellStore.getState().actOnCard("which-folder", "choose");
+    expect(setup).toHaveBeenLastCalledWith({ kind: "adopt", path: meter });
+    expect(sent).toEqual([`setup ${meter}`, "click"]);
+    expect(useShellStore.getState().view).not.toBe("settings");
+
+    // A view would show its own computer's folders: it opens Settings -> Projects instead.
+    useShellStore.setState({
+      cards: [choose],
+      thisMac: {
+        role: "view",
+        name: "MacBook Pro",
+        address: "192.168.1.20",
+        joinedAt: 0,
+        contact: "in-reach",
+        readOnly: null,
+        heardAt: 0,
+        caughtUp: 0,
+      },
+    });
+    chooseFolder.mockClear();
+    await useShellStore.getState().actOnCard("which-folder", "choose");
+    expect(chooseFolder).not.toHaveBeenCalled();
+    expect(useShellStore.getState()).toMatchObject({
+      view: "settings",
+      settingsSection: "projects",
+    });
+  });
+
   it("routes a connect or remove card into Devices with what to do on arrival", async () => {
     for (const [effect, arrival] of [
       [{ kind: "open", target: "devices", make: "link" }, { make: "link" }],

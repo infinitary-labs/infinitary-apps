@@ -19,6 +19,17 @@ The first mate then hears once, as an `[fm-op]` `project-setup` wake: added with
 Putting the setup card aside leaves its offer and operation row pending and sends no setup outcome.
 That wake skips the inbox's coalescing window, so the first mate answers the click at once (`docs/inbox.md`).
 Settings' own Add project adds at once and shows no card.
+A folder dropped on the main message box puts up the same card with today's defaults, opening with the folder the captain dropped instead of the first mate's ask (`ProjectSetups.offerFolder`, `docs/composer.md` "Files"); the first mate never asked, so it hears nothing of that card's answer.
+
+## A folder that is not there
+
+An `adopt` path reads from the home folder unless it is absolute, and `~` is the home folder, so "projects/meter" means the folder the captain would say.
+A proposal for a folder that is not there is refused before anything is checked or carded.
+The refusal names the folders `locateProject` finds for the path's last part (`src/core/workspace/projectLocator.ts`), each already a project with its id, and tells the first mate to ask on one decision card offering each folder the captain may have meant and a Choose folder action.
+A Choose folder action is an open effect with target `projects` and `folder: true` (`openEffectSchema`, `src/shared/cards.ts`).
+In a window on the first mate's own computer its click opens the system's folder picker and adds the folder picked as Settings -> Projects does (`pickProjectFolder`, `src/renderer/src/app/projectFolder.ts`), and only then sends the click, so the first mate hears it once the project is on the list.
+Cancel keeps the card up and sends nothing, and a refusal shows on the card.
+A view, or a window from before the flag, opens Settings -> Projects instead, as an open effect with target `projects` always did.
 
 ## Adding a repository to a project
 

@@ -31,6 +31,9 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:automation:kept-forget":
     "Takes a kept job whose remove did not finish off the list on the captain's click in Settings, running nothing",
   "inf:converse": "Conversation, not an app setting",
+  // i18n-exempt: an inventory reason the channel parity test reads, never shown
+  "inf:repos:offer-folder":
+    "A folder the captain dropped on the message box puts up the project setup card; nothing is added until their Add project click there",
   "inf:cards:act": CARD_CLICKS,
   "inf:cards:close": CARD_CLICKS,
   "inf:cards:note-done": CARD_CLICKS,

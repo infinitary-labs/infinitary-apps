@@ -1,9 +1,11 @@
 import { writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { WELCOME_CHAPTERS, WELCOME_STARTERS, WELCOME_TITLE, WELCOME_WORDS } from "@shared/welcome";
 import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunGateWords";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
 import { expectClaudeConnected } from "./claudeAccount";
 import { claudeSeatRequests, NO_CLAUDE_LOGIN_USER, otherSeatRequests } from "./claudeSeat";
@@ -14,6 +16,7 @@ import {
   holdPastTheHold,
 } from "./dictation";
 import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
+import { frameGesturesDecided } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   atRest,
@@ -503,8 +506,50 @@ test("the welcome shows one part per press by keys in both themes at the minimum
         await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
       }
     });
+    // Its presses are decided only once the app's grace frames are over;
+    // until then a later real press into the frame could still take them.
+    await frameGesturesDecided(page);
     await expect(prompt).toBeFocused();
     await expect(prompt).toHaveValue("my own words");
+  });
+
+  await test.step("the folder starter opens the system's folder picker by keys and adds the folder chosen", async () => {
+    const folderStarter = WELCOME_STARTERS[2];
+    const button = frame.getByRole("button", { name: folderStarter.label });
+    const status = shownCard(page, WELCOME_TITLE).locator("[data-card-status]");
+    /** The system's folder picker, stood in: the folder it answers, or a cancel. */
+    const standInPicker = (path: string | null) =>
+      app.evaluate(({ dialog }, chosen) => {
+        dialog.showOpenDialog = (async () =>
+          chosen
+            ? { canceled: false, filePaths: [chosen] }
+            : { canceled: true, filePaths: [] }) as typeof dialog.showOpenDialog;
+      }, path);
+    const projects = () => page.evaluate(() => window.infinitary.repos.list());
+    const before = await projects();
+    // Cancel in the picker changes nothing: no project, no words, the draft kept.
+    await standInPicker(null);
+    await press(button);
+    await expect(prompt).toHaveValue("my own words");
+    await expect(status).toHaveCount(0);
+    expect(await projects()).toEqual(before);
+    // A folder chosen is added and named under the title, with focus in the box.
+    const folder = scratchDir("infinitary-welcome-folder-");
+    await standInPicker(folder);
+    await press(button);
+    await expect(status).toBeVisible();
+    const added = (await projects()).find((repo) => !before.some((had) => had.id === repo.id));
+    if (!added) throw new Error("the folder starter added no project");
+    expect(added.path.endsWith(basename(folder))).toBe(true);
+    await expect(status).toHaveText(m.welcomeFolderAddedGit({ name: added.name }));
+    await expect(prompt).toBeFocused();
+    await expect(prompt).toHaveValue("my own words");
+    await expect(shownCard(page, WELCOME_TITLE)).toBeVisible();
+    expect((await page.evaluate(() => window.infinitary.app.firstRun())).firstTurnAt).toBeNull();
+    // The same folder again is named as already one of the projects.
+    await press(button);
+    await expect(status).toHaveText(m.welcomeFolderAlreadyAdded({ name: added.name }));
+    expect(await projects()).toHaveLength(before.length + 1);
   });
 });
 

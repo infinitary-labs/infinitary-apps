@@ -554,6 +554,8 @@ const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {
   "actions[].effect<open>.target": "target settings|subscriptions|projects",
   "actions[].effect<open>.sign_in":
     "sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it",
+  "actions[].effect<open>.folder":
+    "folder true with target projects makes a Choose folder button, adding the folder the captain picks as a project",
 };
 
 describe("what the Claude client serves the Firstmate equals the source (contract v4.13)", () => {

@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "Não foi possível adicionar essa pasta como projeto.",
+  "composerFolderProject": "Essa pasta já é um dos seus projetos.",
   "composerLines": {
     "plural": "count",
     "one": "{count} linha",

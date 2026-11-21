@@ -214,6 +214,26 @@ describe("giving a batch to an input", () => {
     expect(odd.log.notices).toEqual(["file-folder"]);
   });
 
+  // docs/composer.md, "Files": a folder dropped on the main input of the
+  // first mate's own computer offers itself as a project; anywhere else it
+  // keeps its notice.
+  it("offers a dropped folder as a project only where the input adds folders and takes paths", async () => {
+    const host = hostOf({ meter: { kind: "folder", path: "/Users/me/github/octo/meter" } });
+    const offered: string[] = [];
+    const main = destination({ addFolder: (path) => offered.push(path) });
+    await giveFiles(main.dest, [file("meter", "")], host);
+    expect(offered).toEqual(["/Users/me/github/octo/meter"]);
+    expect(main.log.notices).toEqual([]);
+    expect(main.log.paths).toEqual([]);
+    const reply = destination({ key: "card-1" });
+    await giveFiles(reply.dest, [file("meter", "")], host);
+    expect(reply.log.notices).toEqual(["file-folder"]);
+    const view = destination({ takesPaths: () => false, addFolder: (path) => offered.push(path) });
+    await giveFiles(view.dest, [file("meter", "")], host);
+    expect(view.log.notices).toEqual(["file-folder"]);
+    expect(offered).toEqual(["/Users/me/github/octo/meter"]);
+  });
+
   it("leaves everything alone when the input takes no files", async () => {
     const { dest, log } = destination({ accepts: () => false });
     await giveFiles(dest, [file("n.txt", "hi")], hostOf({}));

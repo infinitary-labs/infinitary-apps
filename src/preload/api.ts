@@ -213,6 +213,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     },
     repos: {
       setup: (spec) => readableRequest("inf:repos:setup", () => invoke("inf:repos:setup", spec)),
+      offerFolder: (path) => invoke("inf:repos:offer-folder", path),
       removal: (repoId) => invoke("inf:repos:removal", repoId),
       remove: (repoId) =>
         readableRequest("inf:repos:remove", () => invoke("inf:repos:remove", repoId)),

@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "رموز, تكلفة, دولارات, تقدير";
 "commandWhatsNewShow" = "عرض ما الجديد";
 "commandWhatsNewShowWords" = "إصدار, ملاحظات, تغييرات, نسخة";
+"composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
+"composerFolderProject" = "هذا المجلد من مشاريعك بالفعل.";
 "composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "أعود إليك بالإجابات والخيارات في بطاقات مثل هذه.";
 "welcomeEnd" = "هذا كل شيء. للبدء، اضغط إحدى عبارات البدء أدناه.";
 "welcomeFigure" = "نافذتك، جزء مع كل ضغطة: مربع الرسالة، وبطاقة، والنشاط، والمهام";
+"welcomeFolderAdded" = "أُضيف %1$@ مشروعًا. اكتب في مربع الرسالة ما تريد إنجازه فيه.";
+"welcomeFolderAddedGit" = "أُضيف %1$@ مشروعًا، وبدأ git في المجلد بإيداع أول فارغ. اكتب في مربع الرسالة ما تريد إنجازه فيه.";
+"welcomeFolderAlreadyAdded" = "%1$@ من مشاريعك بالفعل. اكتب في مربع الرسالة ما تريد إنجازه فيه.";
 "welcomeLabelActivity" = "النشاط";
 "welcomeLabelBox" = "مربع الرسالة";
 "welcomeLabelTasks" = "المهام";

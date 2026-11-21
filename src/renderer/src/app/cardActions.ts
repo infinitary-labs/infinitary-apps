@@ -33,6 +33,7 @@ import { readBringPicks } from "../cards/SecretBringPicks";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
 import { takePictures } from "./composer";
+import { pickProjectFolder } from "./projectFolder";
 import { savedCardAnswers } from "./savedCardAnswers";
 import { withoutKey } from "./stack";
 import { readCardsAgain } from "./stackActions";
@@ -290,6 +291,16 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
       try {
+        // A Choose folder button (docs/fleet.md, "A folder that is not
+        // there"): on the first mate's own computer the pick is added before
+        // the choice is sent, so the card's author hears it once the project
+        // is there. A cancel sends nothing and the card stays; a refusal
+        // shows on the card. A view opens Settings -> Projects instead.
+        const folderButton =
+          source === "chrome" &&
+          chosen?.effect?.kind === "open" &&
+          chosen.effect.folder === true &&
+          !isView(thisMac);
         let sent = value;
         let sentAnswers: CardAnswer[] | undefined;
         if (collect) {
@@ -326,6 +337,11 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
             sentAnswers = answers;
             sent = { answers: sentAnswers };
           }
+        }
+        if (folderButton) {
+          const pick = await pickProjectFolder();
+          if (pick.kind === "cancelled") return;
+          if (pick.kind === "refused") throw new Error(pick.text);
         }
         const { effect, refusal } = await window.infinitary.cards.act(
           cardId,
@@ -381,7 +397,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
               generation: browser.generation,
             });
           }
-        } else if (effect?.kind === "open") {
+        } else if (effect?.kind === "open" && !folderButton) {
           set({
             view: "settings",
             ...(effect.target !== "settings" ? { settingsSection: openedSection(effect) } : {}),

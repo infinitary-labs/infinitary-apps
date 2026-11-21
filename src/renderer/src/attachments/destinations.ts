@@ -1,4 +1,5 @@
 import { pathInsertion } from "@shared/attachments";
+import { offerDroppedFolder } from "../app/projectFolder";
 import { useShellStore } from "../app/store";
 import { typePathsInto } from "../design/core/ComposerField";
 import { isView } from "../devices/viewWords";
@@ -33,6 +34,10 @@ export function mainDestination(
       const draft = store().inputText;
       store().setInputText(draft + pathInsertion(draft, draft.length, draft.length, paths));
     },
+    addFolder: (path) =>
+      void offerDroppedFolder(path).then((notice) => {
+        if (notice) store().showComposerNotice(notice);
+      }),
   };
 }
 

@@ -126,6 +126,7 @@ import type {
   RemoteLoginUpdateOptions,
 } from "./remoteLogin";
 import type {
+  FolderOffer,
   ProjectsFolderView,
   RepoMoveResult,
   RepoMoveTarget,
@@ -328,6 +329,8 @@ export type FirstmateApi = {
   };
   repos: {
     setup: (spec: RepoSetupSpec) => Promise<RepoSetupResult>;
+    /** A folder dropped on the main message box: its setup card goes up, or the project it already is. */
+    offerFolder: (path: string) => Promise<FolderOffer>;
     /** The tasks still on a project; any of them blocks `remove`. */
     removal: (repoId: string) => Promise<RepoRemoval>;
     /** Takes the project off the list; its folder stays. Refused while tasks are on it. */

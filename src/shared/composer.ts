@@ -20,6 +20,8 @@ export type ComposerNotice =
   | "file-too-big"
   | "file-unreadable"
   | "file-folder"
+  | "folder-project"
+  | "folder-not-project"
   | "file-shortcut"
   | "file-not-local"
   | "file-other-mac"
@@ -31,6 +33,14 @@ export const COMPOSER_NOTICE_WORDS: Record<ComposerNotice, string> = {
   "file-too-big": "That text is over 5 MB.",
   "file-unreadable": "That file could not be read, so it was not added.",
   "file-folder": "Folders cannot be added. Drop the files inside it instead.",
+  // A folder dropped on the main message box offers itself as a project
+  // (docs/composer.md, "Files"): one already on the list, or one refused.
+  get "folder-project"() {
+    return m.composerFolderProject();
+  },
+  get "folder-not-project"() {
+    return m.composerFolderNotProject();
+  },
   "file-shortcut": "That is a shortcut. Drop the file it points to instead.",
   "file-not-local":
     "That file has no place on this computer, so there is no path to add. Save it first, then drop it.",

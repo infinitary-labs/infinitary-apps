@@ -1600,6 +1600,7 @@ const actionLines = {
     }),
     done: (v) => `account ${v.accountId} ${v.on ? "keeps going" : "stops"} on credits`,
   },
+  ...savedResetLines,
   "account-disconnect": {
     area: "intelligence",
     tier: "own-words",
@@ -1906,7 +1907,6 @@ const actionLines = {
   },
   ...handoverLines,
   ...showLines,
-  ...savedResetLines,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
 /** The value an action accepts, as its line's schema reads it (unknown where a line is built generically). */

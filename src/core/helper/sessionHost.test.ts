@@ -432,6 +432,38 @@ describe("a conversation held on a computer that runs work", () => {
     expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
   });
 
+  // INF-5438 round 9 finding 6: a held conversation asked for one model that
+  // runs another is not what the same open gets back: it opens again.
+  it("opens again when the held conversation runs another model than the same open asks", async () => {
+    const at = await placed();
+    await at.open();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: never) => Promise<{ modelRef(): unknown }> } } };
+      }
+    ).options.factories.pi;
+    const open = factory.open.bind(factory);
+    let drifts = true;
+    vi.spyOn(factory, "open").mockImplementation(async (spec) => {
+      const session = await open(spec);
+      if (drifts) {
+        drifts = false;
+        // The runtime could not serve the model asked and runs the first one.
+        session.modelRef = () => ({ provider: PROVIDER, id: MODEL });
+      }
+      return session;
+    });
+    const other = { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL } };
+    const drifted = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:2`, task: TASK, spec: other },
+    ]);
+    expect(drifted.state?.model).toEqual({ provider: PROVIDER, id: MODEL });
+    const again = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:3`, task: TASK, spec: other },
+    ]);
+    expect(again.state?.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
+  });
+
   // INF-5438 finding 1: an open asked only to reattach never creates or
   // replaces a conversation there; it answers that a new one is needed, so
   // the home routes first (`reattach-only-open.md`).

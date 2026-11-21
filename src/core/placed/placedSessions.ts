@@ -173,7 +173,7 @@ export type PlacedSessionsOptions = {
    * could not (`DeviceSignIns.refresh`): before a turn there that met a
    * cut-off ends here, so the turn ends held.
    */
-  refreshSignIns?: (deviceId: string) => Promise<void>;
+  refreshSignIns?: (deviceId: string) => Promise<boolean>;
   /**
    * Whether Firstmate on a computer runs work for another Firstmate now, as
    * this Mac's own SSH connection to it found (`runsForAnotherFirstmate`):
@@ -1224,8 +1224,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       return false;
     };
     const opened = this.specForReopen(placed);
-    // Adopted on another model than it asked, no spec was confirmed: it takes
-    // no words, and the task's next turn opens one through the ordinary resume.
+    // Adopted on another model than it asked, it takes no words: the next turn resumes anew.
     if (!opened) {
       placed.reopening = Promise.resolve(false);
       letGo();
@@ -1253,6 +1252,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ask: async (spec) => openAnswerSchema.parse(await ask(spec)),
       route: (attach) => this.host?.reopenModel?.(placed.task, deviceId, attach),
       letGo,
+      creating: () => this.refuseHeld(placed.task, true),
     });
     // True once the conversation is open there for this session's words.
     const reopening: Promise<boolean> = asking

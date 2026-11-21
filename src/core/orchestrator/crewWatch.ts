@@ -23,7 +23,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { retireLeftoverBranches } from "./leftoverBranches";
 import { MainCheckWatcher } from "./mainCheckWake";
 import { RunWatcher } from "./runWatch";
-import { ModelWaitError } from "./taskMoves";
+import { ModelWaitError, NotAcceptedError } from "./taskMoves";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
 import { laneText, laneTurnText, renderWake, type WakeBody } from "./wakes";
@@ -498,6 +498,13 @@ export class CrewWatch {
       // Waiting for a model is no refused delivery: the rows go back
       // unspent, and the lane holds until a model can take it.
       if (caught instanceof ModelWaitError) {
+        this.core.options.inbox.reparkUndelivered(ids);
+        this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
+        return;
+      }
+      // A conversation that opened but was not accepted took no words: the
+      // rows go back unspent, and the next pass opens again.
+      if (caught instanceof NotAcceptedError) {
         this.core.options.inbox.reparkUndelivered(ids);
         this.core.restarts.recordRestartOutcome(taskId, "waiting", caught.message);
         return;

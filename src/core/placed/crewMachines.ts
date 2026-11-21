@@ -390,7 +390,8 @@ export type CrewMachines = {
    * models a task that runs there is routed among, and the account there
    * for each model and each provider (docs/helper.md, "Its own sign-ins").
    * Never this Mac's sign-ins. `fresh` asks the computer again first, so an
-   * open is accepted on what it serves now, not a report a change outran.
+   * open is accepted on what it serves now, not a report a change outran,
+   * and throws when it did not answer.
    */
   served(machine: string, fresh?: boolean): Promise<ComputerPool>;
   /**

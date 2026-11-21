@@ -1366,6 +1366,36 @@ it("sends no words to a conversation created for a named model that opens on ano
   await relaunched.disposeAll();
 });
 
+// INF-5438 round 9 finding 3: a conversation created for a named model that
+// says no model at all is not taken as the one asked, and takes no words.
+it("sends no words to a conversation created for a named model that says no model", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project on sol"),
+    shape: { override_model_id: offeringKey(sol) },
+  });
+  await tick();
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.disposeAll();
+  const specs: CrewmateSpec[] = [];
+  const unsaid = fakeCrewmate({ model: undefined });
+  expect(unsaid.modelRef()).toBeUndefined();
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => unsaid),
+    { specs, router: h.router as unknown as Router },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(specs[0]?.model).toEqual(sol);
+  expect(unsaid.promptCalls).toEqual([]);
+  await relaunched.disposeAll();
+});
+
 // INF-5438 round 8 finding 6: a replacement whose conversation could not be
 // created there passes that model over, unspent, and the next model routing
 // picks takes the words once.
@@ -1396,6 +1426,63 @@ it("opens the next model routing picks when a replacement's conversation cannot 
   expect([first, second].sort()).toEqual([luna.id, terra.id].sort());
   expect(opened.map((session) => session.promptCalls)).toEqual([["carry on"]]);
   expect(routedModels(h, taskId)).toEqual([sol.id, second]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 9 finding 5: a replacement whose conversation cannot be
+// created on one account here is tried on a sibling account on the same model.
+it("tries a sibling account on the same model when a replacement cannot open on the first", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+  const pool: AccountPool = {
+    list: (providerId) =>
+      [
+        { id: "acct-codex", providerId: "openai-codex", label: "personal", enabled: true },
+        { id: "acct-codex-work", providerId: "openai-codex", label: "work", enabled: true },
+      ].filter((account) => !providerId || account.providerId === providerId),
+    pinnedAccount: () => undefined,
+    connectedSync: () => true,
+    withheldReason: () => undefined,
+    markSelected: vi.fn(),
+  };
+  const selector = new AccountSelector({
+    pool,
+    quota: { latest: () => undefined },
+    flagshipAccountId: () => null,
+    decisions: new DecisionStore(h.db),
+  });
+  const accounts: AccountAttachment = {
+    selectForSpawn: (task, provider, crew) => selector.selectForSpawn(task, provider, crew),
+    pickForSpawn: (task, provider, crew) => selector.pickForSpawn(task, provider, crew),
+    reselectForResume: (task, held) => selector.reselectForResume(task, held),
+    labelOf: (id) => selector.labelOf(id),
+  };
+  const specs: CrewmateSpec[] = [];
+  const tried: (string | undefined)[] = [];
+  const opened: ReturnType<typeof fakeCrewmate>[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async (spec) => {
+      tried.push(spec.binding.accountId);
+      if (tried.length === 1) throw new Error("This account cannot open that model.");
+      const session = fakeCrewmate({ model: terra });
+      opened.push(session);
+      return session;
+    }),
+    { specs, router: h.router as unknown as Router, accounts },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(specs.map((spec) => spec.model?.id)).toEqual([terra.id, terra.id]);
+  expect(tried).toHaveLength(2);
+  expect(new Set(tried)).toEqual(new Set(["acct-codex", "acct-codex-work"]));
+  expect(opened.map((session) => session.promptCalls)).toEqual([["carry on"]]);
+  expect(h.tasks.get(taskId)?.accountId).toBe(tried[1]);
+  expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
   expect(reroutedNotes(h, taskId)).toHaveLength(1);
   await relaunched.disposeAll();
 });

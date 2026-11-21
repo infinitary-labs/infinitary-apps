@@ -6,16 +6,16 @@ import { isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
+import { parseOfferingKey } from "@shared/modelSlots";
 import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/personalSet";
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
 import { isFolderRepair, levelDefaultReasoning } from "@shared/routingPolicy";
-import { DeviceOutOfReachError } from "../connection/connection";
-import { ComputerBehindError } from "../connection/contractChanges";
+import { ComputerRefusedError } from "../connection/connection";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { NeedsNewConversation } from "../placed/crewMachines";
+import { sameModel } from "../placed/placedSpecs";
 import { crewRunbookText } from "../runbooks/runbooks";
 import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID, type ModelSession, type SessionSpec } from "../session/session";
@@ -42,7 +42,7 @@ import {
 import type { ResumeAccount } from "./crewSupervisorOptions";
 import { CrewTurn } from "./crewTurn";
 import { describeStatus } from "./settleService";
-import { ModelWaitError } from "./taskMoves";
+import { ModelWaitError, NotAcceptedError } from "./taskMoves";
 import { conversationRestartWake } from "./turnWakes";
 
 /**
@@ -804,6 +804,12 @@ export class CrewSessions {
             ...(rerouted.quick ? { quick: true } : {}),
           }
         : this.reopenedOn(record);
+    // A conversation opened anew, not reattached to live where it runs.
+    const creation = !move && !reattaching && !attach;
+    // One opened anew on a computer that runs work is marked refused there
+    // before it is asked, so a quit or a failure before it is accepted
+    // leaves nothing the next open reattaches to (`refusedThere`).
+    if (creation) this.core.moves.refuseOpened(record.id, machine);
     // Register before opening the session: a resumed provider can carry on
     // with work of its own the moment it is back.
     this.core.tasks.set(record.id, task);
@@ -832,13 +838,14 @@ export class CrewSessions {
         return this.openResumed(taskId, move, restart, true);
       // A routed open that surely opened nothing - it failed here, or its
       // computer answered that it could not - passes that model and account
-      // over, and routes among the rest with no delivery spent; one whose
-      // computer went before it answered may have opened, so it fails.
+      // over, and routes among the rest with no delivery spent. Any other
+      // may have opened there - its computer went before it answered, or its
+      // answer could not be read - so it fails, and what it may hold stays
+      // refused until an open there is accepted.
       if (
         rerouted &&
         !superseded() &&
-        !(caught instanceof DeviceOutOfReachError) &&
-        !(caught instanceof ComputerBehindError)
+        (machine === LOCAL_MACHINE_ID || caught instanceof ComputerRefusedError)
       ) {
         rerouted.passOver();
         return this.openResumed(taskId, move, restart, known);
@@ -853,8 +860,6 @@ export class CrewSessions {
       task.session = session;
       this.disposeSession(task);
     };
-    // A conversation opened anew, not reattached to live where it runs.
-    const creation = !move && !reattaching && !attach;
     let verdict: "committed" | "stale" | "again" | "elsewhere";
     try {
       if (rerouted) {
@@ -867,7 +872,7 @@ export class CrewSessions {
           ...(model ? { model } : {}),
           ...(account ? { account } : {}),
         });
-      } else if (creation && !onModelAsked(session.modelRef(), asked.model)) {
+      } else if (creation && !sameModel(session.modelRef(), asked.model)) {
         // One opened anew on another model than it asked takes no words.
         this.core.moves.refuseOpened(record.id, machine);
         verdict = "elsewhere";
@@ -879,17 +884,21 @@ export class CrewSessions {
         verdict = "again";
       } else verdict = "committed";
     } catch (caught) {
+      // A check that could not finish accepted nothing: no words went.
       refuse();
-      throw caught;
+      if (caught instanceof ModelWaitError || caught instanceof NotAcceptedError) throw caught;
+      throw new NotAcceptedError(caught instanceof Error ? caught.message : String(caught), {
+        cause: caught,
+      });
     }
     if (verdict !== "committed") {
       refuse();
       if (verdict === "again") return this.openResumed(taskId, move, restart, known);
-      throw new Error(
-        verdict === "elsewhere"
-          ? "This task's conversation opened on another model than it asked, so it takes no words."
-          : "This task's crewmate was let go while its conversation opened.",
-      );
+      if (verdict === "elsewhere")
+        throw new NotAcceptedError(
+          "This task's conversation opened on another model than it asked, so it takes no words.",
+        );
+      throw new Error("This task's crewmate was let go while its conversation opened.");
     }
     task.session = session;
     this.endIfLetGo(task);
@@ -1436,15 +1445,4 @@ export class CrewSessions {
 /** Why a task on a subscription this build no longer offers cannot be resumed. */
 export function retiredResumeText(taskId: string): string {
   return `Task ${taskId} ran on a subscription Infinitary no longer offers, so its session cannot be resumed. Spawn a follow-up crewmate instead.`;
-}
-
-/**
- * Whether a conversation opened on the model asked: one that says no model,
- * or an open that asked for none, is taken as asked.
- */
-function onModelAsked(
-  model: { provider: string; id: string } | undefined,
-  asked: { provider: string; id: string } | undefined,
-): boolean {
-  return !model || !asked || offeringKey(model) === offeringKey(asked);
 }

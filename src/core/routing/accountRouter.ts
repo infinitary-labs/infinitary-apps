@@ -117,7 +117,7 @@ export class AccountSelector {
   async pickForSpawn(
     taskId: string,
     piProviderId: string,
-    crew?: { model: string },
+    crew?: { model: string; passing?: readonly string[] },
   ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const placed = await this.options.placedWork?.prepare(
       this.options.quota.latest()?.providers ?? [],
@@ -184,10 +184,13 @@ export class AccountSelector {
 
   private decide(
     piProviderId: string,
-    crew: { model: string } | undefined,
+    crew: { model: string; passing?: readonly string[] } | undefined,
     placed: PlacedWorkData | undefined,
   ) {
-    const candidates = this.candidatesFor(piProviderId, crew?.model, placed);
+    // An account that already failed to open the model is passed over.
+    const candidates = this.candidatesFor(piProviderId, crew?.model, placed).filter(
+      (row) => !crew?.passing?.includes(row.accountId),
+    );
     if (candidates.length === 0) return undefined;
     const pinned = this.options.pool.pinnedAccount(piProviderId);
     const flagship = this.options.flagshipAccountId();

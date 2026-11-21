@@ -29,9 +29,10 @@ export type PlacedAccountsOptions = {
   signIns?: (deviceId: string) => Promise<ComputerSignIns | null>;
   /**
    * Asks a computer its sign-ins again (`DeviceSignIns.refresh`), so what it
-   * says next was written after everything heard from it before.
+   * says next was written after everything heard from it before: true only
+   * when it answered.
    */
-  refreshSignIns?: (deviceId: string) => Promise<void>;
+  refreshSignIns?: (deviceId: string) => Promise<boolean>;
   /**
    * The same, read now without asking (`DeviceSignIns.lastSaid`): a cut-off
    * it names on the account a task there is bound to holds that task.
@@ -65,7 +66,16 @@ export class PlacedAccounts
   }
 
   async served(machine: string, fresh = false): Promise<ComputerPool> {
-    if (fresh) await this.options.refreshSignIns?.(machine).catch(() => undefined);
+    // A fresh read is what that computer answers now, never what it said
+    // before: one that did not answer confirms nothing.
+    if (
+      fresh &&
+      this.options.refreshSignIns &&
+      (await this.options.refreshSignIns(machine).catch(() => false)) !== true
+    )
+      throw new Error(
+        `${this.options.placeOf(machine).who} did not say what it serves now, so nothing opened there is taken yet.`,
+      );
     const signIns = (await this.options.signIns?.(machine)) ?? null;
     const who = this.options.placeOf(machine).who;
     const models = this.options.catalogModels?.() ?? [];

@@ -2,9 +2,10 @@ import { type AccountView, standingCutOff } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
 import { servedModelKey } from "@shared/quota";
+import { allowanceSpent } from "@shared/quotaSignals";
 import { type ComputerSignIns, type DeviceSignIns, signInPlace } from "@shared/signIns";
-import type { QuotaCatalogModel } from "../quota/auth";
-import { buildModelsCatalog } from "../quota/catalog";
+import { type QuotaCatalogModel, quotaEntryForPiProvider } from "../quota/auth";
+import { buildModelsCatalog, effectiveFromProvider } from "../quota/catalog";
 import type { RoutingPool } from "./router";
 
 /**
@@ -31,17 +32,25 @@ export type ComputerPool = RoutingPool & {
 /**
  * Whether an account a computer bound serves the model there now: one that
  * lists it, or, from a computer too old to list what it serves, the
- * account there that serves its provider. No account serves nothing.
+ * account there that serves its provider, and whose own allowance there,
+ * as that computer measured it, is not spent. No account serves nothing.
  */
 export function servesOnComputer(
   pool: ComputerPool,
   account: string | undefined,
   model: { provider: string; id: string },
+  nowMs: number,
 ): boolean {
   if (account === undefined) return false;
-  return pool.servedBy
+  const listed = pool.servedBy
     ? pool.servedBy.get(`${model.provider}/${model.id}`)?.has(account) === true
     : pool.accounts.get(model.provider) === account;
+  if (!listed) return false;
+  const quotaId = quotaEntryForPiProvider(model.provider)?.quotaId;
+  const reading = pool.readings?.find(
+    (row) => row.accountId === account && row.provider === quotaId,
+  );
+  return !allowanceSpent(effectiveFromProvider(reading, nowMs, model.id));
 }
 
 /**

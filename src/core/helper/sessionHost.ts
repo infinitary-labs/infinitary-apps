@@ -1012,61 +1012,61 @@ export class SessionHost {
         bounds: { request: { retries: spec.retries ?? RETRIES } },
       };
       const session = await factory.open(sessionSpec);
-      if (this.stopped) {
-        session.dispose();
-        throw new Error("This computer is stopping.");
-      }
-      held.session = session;
-      held.opened = {
-        tools: spec.tools,
-        instructions: spec.instructions,
-        sourceContext: sourceFacts,
-        browser: spec.browser === true,
-        integrations: spec.integrations === true,
-        load: spec.load === true,
-        stops: spec.stops === true,
-        files: spec.files === true,
-        secrets: spec.secrets === true,
-      };
-      held.spec = spec;
-      held.personal = personal?.held;
-      held.backend = binding.backend;
-      held.account = this.options.accounts?.of(binding);
-      held.renewal = session.takeRenewal() ?? held.heldRenewal;
-      held.heldRenewal = undefined;
-      held.unsubscribe = await followCompletions(
-        session,
-        (event) => {
-          // Work was admitted on this home's major, which includes folds:
-          // its crewmate's directions go again.
-          if (event.type === "context_compacted") {
-            this.record(held, { type: "context_compacted" });
-            return;
-          }
-          // A cut-off is a fact about the account that served the turn: this
-          // computer's own, kept in its own store and never the home's.
-          if (event.type === "turn_failed" && event.cutOff && held.account)
-            this.options.accounts?.noteCutOff(held.account, event.cutOff);
-          if (event.type === "background_work_changed") {
-            // The home hears the count, as before; the tasks stay here.
-            this.record(held, { type: "background_work_changed", count: event.count });
-            // A client that ended (`count` unknown) took what it ran with it.
-            if (event.count === undefined) this.clientEnded(held);
-            else this.keepClientTasks(held, event.tasks ?? []);
-            return;
-          }
-          this.record(held, event);
-        },
-        this.now,
-        // The work major includes owner-only completed-operation observations.
-        true,
-        join(folders.root, "completions.sqlite"),
-      );
-      if (this.stopped) {
-        await held.unsubscribe();
-        held.unsubscribe = null;
-        session.dispose();
-        throw new Error("This computer is stopping.");
+      // An open that fails once its conversation began holds nothing: the
+      // home hears a refusal only for an open that left nothing new here.
+      try {
+        if (this.stopped) throw new Error("This computer is stopping.");
+        held.session = session;
+        held.opened = {
+          tools: spec.tools,
+          instructions: spec.instructions,
+          sourceContext: sourceFacts,
+          browser: spec.browser === true,
+          integrations: spec.integrations === true,
+          load: spec.load === true,
+          stops: spec.stops === true,
+          files: spec.files === true,
+          secrets: spec.secrets === true,
+        };
+        held.spec = spec;
+        held.personal = personal?.held;
+        held.backend = binding.backend;
+        held.account = this.options.accounts?.of(binding);
+        held.renewal = session.takeRenewal() ?? held.heldRenewal;
+        held.heldRenewal = undefined;
+        held.unsubscribe = await followCompletions(
+          session,
+          (event) => {
+            // Work was admitted on this home's major, which includes folds:
+            // its crewmate's directions go again.
+            if (event.type === "context_compacted") {
+              this.record(held, { type: "context_compacted" });
+              return;
+            }
+            // A cut-off is a fact about the account that served the turn: this
+            // computer's own, kept in its own store and never the home's.
+            if (event.type === "turn_failed" && event.cutOff && held.account)
+              this.options.accounts?.noteCutOff(held.account, event.cutOff);
+            if (event.type === "background_work_changed") {
+              // The home hears the count, as before; the tasks stay here.
+              this.record(held, { type: "background_work_changed", count: event.count });
+              // A client that ended (`count` unknown) took what it ran with it.
+              if (event.count === undefined) this.clientEnded(held);
+              else this.keepClientTasks(held, event.tasks ?? []);
+              return;
+            }
+            this.record(held, event);
+          },
+          this.now,
+          // The work major includes owner-only completed-operation observations.
+          true,
+          join(folders.root, "completions.sqlite"),
+        );
+        if (this.stopped) throw new Error("This computer is stopping.");
+      } catch (caught) {
+        if (held.session === session) await this.releaseConversation(held);
+        else session.dispose();
+        throw caught;
       }
       this.recordJobs(held, true);
     })();
@@ -1080,8 +1080,8 @@ export class SessionHost {
   }
 
   /**
-   * Whether this open names tools, instructions or a model the held
-   * conversation was not opened with, or an account of this computer's other
+   * Whether this open names tools or instructions the held conversation was
+   * not opened with, a model it does not run, or an account of this computer's other
    * than the one it is bound to: the home routed it again off a model that
    * left every level, or off an account that does not serve it (docs/routing.md),
    * and an idle conversation opens again on the new one. Without
@@ -1095,13 +1095,17 @@ export class SessionHost {
   ): boolean {
     const opened = held.opened;
     if (!opened) return false;
-    const model = (asked: PlacedSpec | undefined) =>
-      asked?.model ? `${asked.model.provider}/${asked.model.id}` : "";
+    const key = (model: { provider: string; id: string } | undefined) =>
+      model ? `${model.provider}/${model.id}` : "";
+    // The model the held conversation runs, as it says, never only the one
+    // it was asked for, when a model is asked; and the account it is bound
+    // to, or none.
+    const running = spec.model ? (held.session?.modelRef() ?? held.spec?.model) : held.spec?.model;
     return (
       (withModel &&
-        (model(held.spec) !== model(spec) ||
-          (spec.binding.accountId !== undefined &&
-            held.account !== undefined &&
+        (key(running) !== key(spec.model) ||
+          (this.options.accounts !== undefined &&
+            spec.binding.accountId !== undefined &&
             spec.binding.accountId !== held.account))) ||
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||

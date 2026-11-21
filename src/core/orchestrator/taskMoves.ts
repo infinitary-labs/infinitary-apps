@@ -101,6 +101,13 @@ export type RerouteOutcome = "committed" | "stale" | "again";
  */
 export class ModelWaitError extends Error {}
 
+/**
+ * A conversation opened but was not accepted - it opened on another model
+ * than it asked, or its check could not finish - so it took no words and
+ * was let go: no delivery happened, and the next open tries again.
+ */
+export class NotAcceptedError extends Error {}
+
 /** Why a reopen waits while this Mac's accounts have not said what they serve. */
 const UNREAD_ACCOUNTS_WAIT =
   // i18n-exempt: an internal outcome and error; no person reads it.
@@ -562,7 +569,8 @@ export class TaskMoves {
     const router = this.options.router;
     if (!router || !this.mayRouteAgain(taskId)) return true;
     const local = machine === LOCAL_MACHINE_ID;
-    const pool = local ? undefined : await this.options.machines?.served(machine);
+    // What serves there now, asked after the open, never an earlier report.
+    const pool = local ? undefined : await this.options.machines?.served(machine, true);
     if (!local && !pool) return true;
     const routed = router.servedChoice(taskId);
     if (!routed || routed.named) return true;
@@ -704,7 +712,7 @@ export class TaskMoves {
       let found = look();
       while (found) {
         const { to } = found;
-        const pick = local && !custom ? await this.pickAccount(taskId, to) : undefined;
+        const pick = local && !custom ? await this.pickAccount(taskId, to, failed) : undefined;
         if (stale()) return "stale";
         // What Settings holds now, after the account was chosen: a level that
         // took the old model back keeps it, and a replacement that left its
@@ -771,7 +779,8 @@ export class TaskMoves {
             const onModel =
               opened.model !== undefined && offeringKey(opened.model) === offeringKey(to);
             const eligible = pool
-              ? serving !== undefined && servesOnComputer(serving, opened.account, to)
+              ? serving !== undefined &&
+                servesOnComputer(serving, opened.account, to, this.host.now())
               : servesHere();
             if (!onModel || !eligible) {
               // The pair is passed over - the whole model when it opened on
@@ -928,12 +937,21 @@ export class TaskMoves {
   private async pickAccount(
     taskId: string,
     model: { provider: string; id: string },
+    failed?: ReadonlySet<string>,
   ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const accounts = this.options.accounts;
     const none = () => {};
     if (!accounts) return { record: none, selected: none };
+    // An account that already failed to open this model is passed over (provider/id@account).
+    const prefix = `${offeringKey(model)}@`;
+    const passing = [...(failed ?? [])]
+      .filter((pair) => pair.startsWith(prefix))
+      .map((pair) => pair.slice(prefix.length));
     if (accounts.pickForSpawn)
-      return accounts.pickForSpawn(taskId, model.provider, { model: model.id });
+      return accounts.pickForSpawn(taskId, model.provider, {
+        model: model.id,
+        ...(passing.length > 0 ? { passing } : {}),
+      });
     const accountId = await accounts.selectForSpawn(taskId, model.provider, { model: model.id });
     return { ...(accountId ? { accountId } : {}), record: none, selected: none };
   }

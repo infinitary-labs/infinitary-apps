@@ -1,7 +1,7 @@
 import type { AccountView } from "@shared/accounts";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it } from "vitest";
-import { computerBoardModels, computerPool, heldThere } from "./computerPool";
+import { computerBoardModels, computerPool, heldThere, servesOnComputer } from "./computerPool";
 import { route } from "./routingEngine";
 
 /**
@@ -168,6 +168,37 @@ describe("computerPool", () => {
     expect(sol?.effectivePercentRemaining).toBe(0);
     // Unread is unknown, never zero.
     expect(grok?.effectivePercentRemaining).toBeUndefined();
+  });
+
+  // INF-5438 round 9 finding 8: the account a computer bound must have its
+  // own allowance left there, not only list the model.
+  it("reads a bound account whose allowance there is spent as serving nothing now", () => {
+    const reading = (accountId: string, percentRemaining: number) => ({
+      provider: "codex",
+      label: "Codex",
+      accountId,
+      status: "ok" as const,
+      stale: false,
+      windows: [{ id: "five_hour", label: "5h", percentRemaining }],
+    });
+    const pool = computerPool(
+      "Mac mini",
+      said([account("acct_spent", "openai-codex"), account("acct_left", "openai-codex")], {
+        generatedAt: new Date(NOW).toISOString(),
+        fetchedAt: NOW,
+        providers: [reading("acct_spent", 0), reading("acct_left", 60)],
+      }),
+      CATALOG,
+      NOW,
+    );
+    const sol = { provider: "openai-codex", id: "gpt-6-sol" };
+    // Both list GPT-6 Sol there.
+    const listed = {
+      ...pool,
+      servedBy: new Map([["openai-codex/gpt-6-sol", new Set(["acct_spent", "acct_left"])]]),
+    };
+    expect(servesOnComputer(listed, "acct_spent", sol, NOW)).toBe(false);
+    expect(servesOnComputer(listed, "acct_left", sol, NOW)).toBe(true);
   });
 
   it("serves nothing for a computer that has said nothing", () => {

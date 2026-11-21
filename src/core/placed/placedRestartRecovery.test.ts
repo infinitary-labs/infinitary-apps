@@ -16,6 +16,7 @@ import {
   THIS_MAC_ON_NEWER_CODEX,
   world,
 } from "../../../tests/helpers/placedWorld";
+import { DeviceOutOfReachError } from "../connection/connection";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
 import { crewmatePlacedDir } from "../paths";
@@ -419,6 +420,121 @@ describe("reopening after a work computer restarts, when the task's model left e
     expect(opens).not.toContain(true);
     expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([STARTER.id]);
     expect(home.supervisor.moves.refusedThere(taskId)).toBe(false);
+  });
+
+  // INF-5438 round 9 findings 1 and 9: this Mac quits while the move to
+  // GPT-6 Sol waits to commit, after that computer opened the conversation.
+  // The open was marked refused before it was asked, so the next open there
+  // never reattaches to it unchecked: it opens anew, is accepted, and only
+  // then takes words.
+  it("never reattaches to a conversation opened before this Mac quit, until an open there is accepted", async () => {
+    const at = await codexThere();
+    const taskId = "t-quit-before-accept";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const first = at.home();
+    starterLeft(first);
+    const committing = vi.fn();
+    const moves = first.supervisor.moves;
+    const route = moves.routeAgainIfLeft.bind(moves);
+    // The first move's check never finishes before this Mac quits.
+    vi.spyOn(moves, "routeAgainIfLeft").mockImplementation(async (...asked) => {
+      const routed = await route(...asked);
+      if (typeof routed !== "object") return routed;
+      return {
+        ...routed,
+        commit: async () => {
+          committing();
+          return new Promise<never>(() => {});
+        },
+      };
+    });
+    const requests = api.requests.length;
+    void first.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => committing.mock.calls.length).toBe(1);
+    expect(first.supervisor.moves.refusedThere(taskId)).toBe(true);
+
+    // Every open the next start of this Mac asks there, from before it listens.
+    const opens: boolean[] = [];
+    let refusedAtStart: boolean | undefined;
+    await at.restartHome(undefined, (next) => {
+      refusedAtStart = next.supervisor.moves.refusedThere(taskId);
+      const ask = next.devices.ask.bind(next.devices);
+      vi.spyOn(next.devices, "ask").mockImplementation((device, channel, args) => {
+        if (channel === "inf:session:open") {
+          const [open] = args as [{ spec: { reattach?: boolean } }];
+          opens.push(open.spec.reattach === true);
+        }
+        return ask(device, channel, args);
+      });
+    });
+    expect(refusedAtStart).toBe(true);
+    await at.inReach(taskId);
+    const home = at.home();
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(opens.length).toBeGreaterThan(0);
+    expect(opens).not.toContain(true);
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(home.supervisor.moves.refusedThere(taskId)).toBe(false);
+  });
+
+  // INF-5438 round 9 findings 4, 7 and 9: the move's check cannot read what
+  // that computer serves now, because it goes out of reach as it is asked.
+  // The conversation takes no words, the order goes back with no attempt
+  // spent, and the next pass opens again and delivers it once.
+  it("gives an order back unspent when the check of a reopened conversation cannot finish", async () => {
+    const at = await codexThere();
+    const taskId = "t-unchecked";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    let failing = true;
+    let unread = 0;
+    let armed = false;
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      // Asked what it serves once the conversation opened, it does not answer.
+      if (channel === "inf:sign-ins:list" && armed) {
+        armed = false;
+        unread += 1;
+        throw new DeviceOutOfReachError();
+      }
+      const answer = await ask(device, channel, args);
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      if (channel === "inf:session:open" && open.spec?.model?.id === SOL.id && failing)
+        armed = open.spec.reattach !== true;
+      return answer;
+    });
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => unread).toBeGreaterThanOrEqual(1);
+    const order = () => home.inbox.allFor(taskId).find((row) => row.text === "Carry on.");
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    expect(unread).toBeGreaterThanOrEqual(2);
+    expect(order()).toMatchObject({ deliveredAt: null, attempts: 0 });
+    expect(api.requests.length).toBe(requests);
+
+    failing = false;
+    await home.supervisor.watch.sweepTaskLane(taskId, Date.now());
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    const sent = api.requests.slice(requests);
+    expect(sent.map((request) => request.body.model)).toEqual([SOL.id]);
+    expect(said(sent[0])).toContain("Carry on.");
+    expect(rerouted(home, taskId)).toHaveLength(1);
   });
 
   // INF-5438 round 7 findings 8 and 12: a reopen whose open is not accepted

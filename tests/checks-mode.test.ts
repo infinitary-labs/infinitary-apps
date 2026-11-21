@@ -63,7 +63,7 @@ describe("where the heavy checks run", () => {
       "journeys.yml",
     );
     expect(ciModeRefusal("phone", env, process.cwd(), args)).toContain("phone.yml");
-    expect(ciModeRefusal("typecheck", env, process.cwd(), args)).toContain("typecheck-lint-build");
+    expect(ciModeRefusal("typecheck", env, process.cwd(), args)).toContain("code-checks");
   });
   it("runs them here by default", () => {
     const { run } = computer();
@@ -92,7 +92,7 @@ describe("where the heavy checks run", () => {
     for (const script of ["typecheck", "check", "lint", "lint:adherence"]) {
       const result = run(scripts[script] ?? "");
       expect(result.status, script).toBe(1);
-      expect(result.stderr, script).toContain("typecheck-lint-build");
+      expect(result.stderr, script).toContain("code-checks");
       expect(result.stderr, script).toContain("ci.yml/dispatches");
       expect(result.stdout + result.stderr, script).not.toMatch(/Checked \d+ files|tsrs/);
     }
@@ -103,7 +103,7 @@ describe("where the heavy checks run", () => {
     const { run } = computer("ci");
     const result = run(scripts["check:changed"] ?? "");
     expect(result.stdout).toMatch(/check:changed: \d+ changed file/);
-    expect(result.stderr).not.toContain("typecheck-lint-build");
+    expect(result.stderr).not.toContain("code-checks");
     expect(result.status, result.stdout + result.stderr).toBe(0);
   });
 

@@ -24,23 +24,21 @@ describe("PR CI leaves edited-unit rounds to local proof", () => {
     // INF-2915's plan leaves one pull request job: the startup fixtures leave
     // the pull request and the critical path runs inside the build check;
     // it runs no unit cohort.
-    expect(selected("pull_request")).toEqual(["typecheck-lint-build"]);
+    // INF-5577's review split that job into three side by side.
+    expect(selected("pull_request")).toEqual(["build", "code-checks", "reached-tests"]);
   });
 
-  it("selects only the code and build job for a request that does not ask for the sweep", () => {
-    expect(selected("workflow_dispatch", false)).toEqual(["typecheck-lint-build"]);
+  it("selects only the code and build jobs for a request that does not ask for the sweep", () => {
+    expect(selected("workflow_dispatch", false)).toEqual(["build", "code-checks"]);
   });
 
-  it.each(["push", "workflow_dispatch"])(
-    "preserves full ordinary cohorts on %s, without repeat jobs",
-    (event) => {
-      expect(selected(event)).toEqual([
-        "integration-tests",
-        "probe-tests",
-        "typecheck-lint-build",
-        "unit-tests",
-      ]);
-      expect(jobs["integration-tests"]?.strategy?.matrix?.shard).toEqual([1, 2]);
-    },
-  );
+  it.each([
+    ["push", ["reached-tests"]],
+    ["workflow_dispatch", []],
+  ])("preserves full ordinary cohorts on %s, without repeat jobs", (event, reached) => {
+    expect(selected(event)).toEqual(
+      ["build", "code-checks", "integration-tests", "probe-tests", ...reached, "unit-tests"].sort(),
+    );
+    expect(jobs["integration-tests"]?.strategy?.matrix?.shard).toEqual([1, 2]);
+  });
 });

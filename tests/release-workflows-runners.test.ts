@@ -444,9 +444,10 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The app journeys a request or a sweep runs on Linux, which may overflow to a
     // compute Mac's arm64 Linux guest when no PC place is free.
     journeys: ["source-journeys.yml:source-desktop"],
-    // INF-2915's plan: the pull request's one job runs the critical path,
-    // which needs a desktop, so this kind names only a PC queue.
-    typecheck: ["ci.yml:typecheck-lint-build"],
+    // The branch check's three jobs (INF-5577's review): its build job runs
+    // the critical path, which needs a desktop, so this kind names a queue
+    // of desktop-ready Linux places.
+    typecheck: ["ci.yml:code-checks", "ci.yml:reached-tests", "ci.yml:build"],
   };
   const queued = new Set<string>();
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };

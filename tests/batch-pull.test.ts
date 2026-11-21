@@ -179,8 +179,15 @@ describe("batch-pull-request.yml", () => {
   // whose changes each ran that check already, runs the batch's checks alone.
   it("leaves the change's own check to each change's pushed branch", () => {
     const ci = workflow("ci.yml");
-    const change = (github: Record<string, unknown>) =>
-      workflowValue(String(ci.jobs["typecheck-lint-build"]?.if), { github });
+    // The change's check is three jobs side by side (INF-5577's review),
+    // which start or skip together.
+    const change = (github: Record<string, unknown>) => {
+      const starts = ["code-checks", "reached-tests", "build"].map((id) =>
+        workflowValue(String(ci.jobs[id]?.if), { github }),
+      );
+      expect(new Set(starts).size, JSON.stringify(github)).toBe(1);
+      return starts[0];
+    };
     // Every pull request runs the batch's checks or the change's check. A
     // fork's pull request never starts the batch's checks; it runs the
     // change's check on GitHub's own machines (docs/public-ci.md, "Outside

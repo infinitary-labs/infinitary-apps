@@ -197,6 +197,61 @@ describe("PhonePushes", () => {
     },
   );
 
+  // INF-5275's plan, piece 2: a computer the phone is not showing learns a
+  // renewed grant from the letter the phone left; the refused card goes once
+  // more under it, and only once.
+  it.each([403, 410])(
+    "sends a card refused with %i once more after a newer letter, under the renewed registration",
+    async (status) => {
+      const old = registration();
+      const renewed = { ...registration(), key: old.key };
+      let targets = [{ deviceId: PHONE, registration: old }];
+      const posts: { grant: string; sealed: string }[] = [];
+      const refusedGrants = new Set([old.grant]);
+      const read: string[] = [];
+      let letterRenews = true;
+      const pushes = new PhonePushes({
+        targets: () => targets,
+        forget: () => {
+          targets = [];
+        },
+        refused: async (deviceId) => {
+          read.push(deviceId);
+          if (letterRenews) targets = [{ deviceId: PHONE, registration: renewed }];
+          return letterRenews;
+        },
+        relay: "https://relay.test/v1/push",
+        fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
+          const request = phonePushRelayRequestSchema.parse(JSON.parse(String(init?.body)));
+          posts.push(request);
+          return new Response(null, { status: refusedGrants.has(request.grant) ? status : 204 });
+        }) as typeof fetch,
+        onProblem: () => {},
+      });
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(read).toEqual([PHONE]);
+      expect(posts.map((post) => post.grant)).toEqual([old.grant, renewed.grant]);
+      const [first, again] = posts.map((post) => openAsThePhone(old.key, post.sealed));
+      expect(again).toEqual(first);
+
+      // The card sent once more is refused too: it is not sent a third time.
+      targets = [{ deviceId: PHONE, registration: old }];
+      refusedGrants.add(renewed.grant);
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(posts.slice(2).map((post) => post.grant)).toEqual([old.grant, renewed.grant]);
+      expect(read).toEqual([PHONE, PHONE, PHONE]);
+
+      // With no newer letter, nothing goes again.
+      letterRenews = false;
+      targets = [{ deviceId: PHONE, registration: old }];
+      pushes.send(NOTICE);
+      await pushes.settled();
+      expect(posts).toHaveLength(5);
+    },
+  );
+
   it("says a refused or unreachable relay in one line with no card words", async () => {
     const problems: string[] = [];
     const refusing = new PhonePushes({

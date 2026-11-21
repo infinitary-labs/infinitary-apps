@@ -1661,7 +1661,11 @@ export async function createServices(
     decisions,
     eventScreenOffer,
     corrections,
-    stopLivenessSweep: () => clearInterval(livenessInterval),
+    stopLivenessSweep: () => {
+      clearInterval(livenessInterval);
+      // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
+      notifier.stop();
+    },
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,
     tasks,

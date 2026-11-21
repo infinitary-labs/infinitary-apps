@@ -66,6 +66,7 @@ import {
 import { SHOWN_ENTRY, showCard, shownCard } from "./stack";
 import {
   canvasReading,
+  clickOnPage,
   closeSite,
   onPage,
   pageFillsView,
@@ -560,24 +561,49 @@ test("the captain points at a task's running page by keys and by pointer, and it
       expect(await pageSays(app, watchedUrl, "out")).toBe("");
     });
 
-    await test.step("on a browser the captain holds, the note says its picture shows the page to the crewmate", async () => {
+    await test.step("on a browser the captain holds, a press with Point at on marks the page's button and never presses it, and the note says its picture shows the page to the crewmate", async () => {
       ready = true;
       await expect(browser).toHaveAttribute("data-browser-state", "nobody", { timeout: 60_000 });
+      // The crewmate pressed Send as its turn ended. From here the page counts each press on that button.
+      await onPage(
+        app,
+        watchedUrl,
+        `(() => {
+          const out = document.getElementById("out");
+          let presses = 0;
+          out.textContent = "0";
+          document.getElementById("send").addEventListener("click", () => {
+            presses += 1;
+            out.textContent = String(presses);
+          });
+        })()`,
+      );
       await browser.getByRole("button", { name: TAKE_CONTROL_LABEL }).click();
       await expect(browser).toHaveAttribute("data-browser-state", "captain");
       await pointAt.click();
       await expect(layer).toBeVisible();
       await atRest(page, layer);
       const drawn = (await layer.boundingBox()) as Rect;
-      await page.mouse.move(drawn.x + drawn.width / 2, drawn.y + drawn.height / 2);
+      // The press that marked the button while watching, now that the captain's presses reach the page.
+      await page.mouse.move(
+        drawn.x + (aimed.middle.x * drawn.width) / picture.width,
+        drawn.y + (aimed.middle.y * drawn.height) / picture.height,
+      );
       await page.mouse.down();
       await page.mouse.up();
       await expect(pop.locator("[data-note-page-shows]")).toHaveText(PAGE_NOTE_SHOWS);
-      // Put away unwritten, the note is not kept and nothing was sent for it.
+      // The press marked the held picture: the page's button was not pressed.
+      expect(await pageSays(app, watchedUrl, "out")).toBe("0");
+      // Put away unwritten, the note is not kept and nothing was sent for it; Point at ends with it.
       await untilFocused(comment);
       await pressKey(comment, "Escape");
       await expect(pop).toHaveCount(0);
+      await expect(layer).toHaveCount(0);
       await expect(queued).toHaveAttribute("data-crew-notes", "0");
+      // With Point at off, the captain's press on the same button is the first the page counts.
+      // The page takes his presses in the order he made them, so the one that made the mark never reached it.
+      await clickOnPage(app, page, task.id, watchedUrl, "send");
+      await expect.poll(() => pageSays(app, watchedUrl, "out")).toBe("1");
       await browser.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
       await expect(browser).not.toHaveAttribute("data-browser-state", "captain");
     });

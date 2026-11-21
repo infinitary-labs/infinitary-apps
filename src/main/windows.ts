@@ -30,6 +30,26 @@ export function openMainWindows(): BrowserWindow[] {
   return BrowserWindow.getAllWindows().filter((win) => mainWindows.has(win) && !win.isDestroyed());
 }
 
+const refusalWindows = new WeakSet<BrowserWindow>();
+
+/**
+ * Marks a standalone refusal a person sees in place of the main window
+ * (./savedDataRefusal.ts), never one held hidden for a capture.
+ */
+export function markRefusalWindow(win: BrowserWindow): void {
+  refusalWindows.add(win);
+}
+
+/**
+ * The windows a person uses now: the main windows, and a refusal shown in
+ * their place (`markRefusalWindow`), which a second launch brings forward.
+ */
+export function personWindows(): BrowserWindow[] {
+  return BrowserWindow.getAllWindows().filter(
+    (win) => (mainWindows.has(win) || refusalWindows.has(win)) && !win.isDestroyed(),
+  );
+}
+
 /** Whether a main window is open now: one that installs the keys Keyboard settings shows. */
 export function mainWindowOpen(): boolean {
   return openMainWindows().length > 0;

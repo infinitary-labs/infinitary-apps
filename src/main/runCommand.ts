@@ -411,6 +411,25 @@ export function answerLaunch(
   once();
 }
 
+/** A window a second launch brings forward (`bringWindowForward`). */
+export type ForwardWindow = { isMinimized(): boolean; restore(): void; focus(): void };
+
+/**
+ * Brings forward the first of the windows a person uses, restoring it where
+ * it was minimized, a refusal shown in the main window's place included; with
+ * none, opens one again where the app keeps working closed (`reopen`).
+ */
+export function bringWindowForward(
+  windows: readonly ForwardWindow[],
+  reopen: (() => void) | null,
+): void {
+  const win = windows[0];
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  } else reopen?.();
+}
+
 /**
  * Writes the answer a window gives a launch's ask (`windowAnswerFile`) and
  * keeps it among `written` with the launch that asked (`windowAnswerAsker`),
@@ -498,22 +517,22 @@ export function commandPipeHeld(path: string): Promise<boolean | null> {
 }
 
 /**
- * The words a program runs with, read from the system by its process: on
- * Linux exactly, from `/proc`; on a Mac from `ps`, only where they start
- * with this program's own path (`execPath`), which tells that path from the
- * words after it however many spaces it holds. Null where they cannot be
- * read, and on Windows.
+ * The words a program runs with, read from the system by its process, and
+ * whether they are exactly its own: on Linux exactly, from `/proc`; on a Mac
+ * from `ps`, which joins them with spaces, so a word holding a space comes
+ * back as several, read only where they start with this program's own path
+ * (`execPath`). Null where they cannot be read, and on Windows.
  */
 export async function programWords(
   pid: number,
   platform: string = hostPlatform(),
   execPath: string = process.execPath,
-): Promise<string[] | null> {
+): Promise<ProgramWords | null> {
   try {
     if (platform === "linux") {
       const words = (await readFile(`/proc/${pid}/cmdline`, "utf8")).split("\0");
       if (words.at(-1) === "") words.pop();
-      return words.length > 0 ? words : null;
+      return words.length > 0 ? { words, exact: true } : null;
     }
     if (platform !== "darwin") return null;
     const { stdout } = await promisify(execFile)(
@@ -525,11 +544,15 @@ export async function programWords(
         timeout: RESOURCE_READ_TIMEOUT_MS,
       },
     );
-    return wordsAfterProgram(stdout.trim(), execPath);
+    const words = wordsAfterProgram(stdout.trim(), execPath);
+    return words === null ? null : { words, exact: false };
   } catch {
     return null;
   }
 }
+
+/** A program's words (`programWords`), and whether each is exactly one of its own or may be part of one. */
+export type ProgramWords = { words: string[]; exact: boolean };
 
 /** A Mac's `ps` line of a program's words, split after this program's own path; null for another program's. */
 export function wordsAfterProgram(line: string, execPath: string): string[] | null {
@@ -538,52 +561,70 @@ export function wordsAfterProgram(line: string, execPath: string): string[] | nu
 }
 
 /**
+ * Whether a program of this app runs as a window rather than a command, by
+ * its words (`programWords`) read as a launch reads its own (`runCommand`):
+ * exactly read, a command is one they start as `run`, and any other is a
+ * window. Split at spaces, a word that is part of another may look like
+ * `run`, but a real `run` always stays a word of its own, so only words
+ * with no `run` among them tell a window; any other is not known.
+ */
+export function windowByWords(
+  read: ProgramWords | null,
+  defaultApp: boolean = Boolean(process.defaultApp),
+): boolean | null {
+  if (read === null) return null;
+  if (read.exact) return runCommand(read.words, defaultApp) === null;
+  return read.words.slice(1).includes("run") ? null : true;
+}
+
+/**
  * Whether the program holding the folder's lock is a window rather than a
- * command, from what it runs as: on a Mac or Linux, the words it runs with
- * (`programWords`), since a command always runs with `run` among them,
- * whatever its version, and a window never does; on a Windows PC, whose
- * lock names no holder, whether a command holds its pipe
- * (`commandPipeHeld`). Null where that cannot be read, so it is not known.
- * A window is a program the launch's ask reached, which brings a window
- * forward itself (`answerLaunch`), as every version's does.
+ * command, from what it runs as: on a Mac or Linux by its words
+ * (`windowByWords`); on a Windows PC, whose lock names no holder, a command
+ * holding its pipe is no window (`commandPipeHeld`), and a holder with none
+ * is not known, since a command from before that pipe, or one that could not
+ * hold it, holds none either. Null where it is not known. A window is a
+ * program the launch's ask reached, which brings a window forward itself
+ * (`answerLaunch`), as every version's does.
  */
 export async function holderIsWindow(
   pid: number | undefined,
   read: {
-    words?: (pid: number) => Promise<string[] | null>;
+    words?: (pid: number) => Promise<ProgramWords | null>;
     /** On a Windows PC: whether a command holds its pipe. */
     commandPipe?: () => Promise<boolean | null>;
   } = {},
 ): Promise<boolean | null> {
-  if (read.commandPipe) {
-    const held = await read.commandPipe();
-    return held === null ? null : !held;
-  }
+  if (read.commandPipe) return (await read.commandPipe()) === true ? false : null;
   if (pid === undefined) return null;
-  const words = await (read.words ?? programWords)(pid);
-  return words === null ? null : !words.slice(1).includes("run");
+  return windowByWords(await (read.words ?? programWords)(pid));
 }
 
 /**
  * Who holds the single-instance lock a window launch was refused, from what
- * each holder shows of itself and never from silence: `run` once a command
- * notes that it holds the folder; `window` once the window holding the lock
- * answered the launch's ask (`windowAnswerFile`), which a run never does, or
- * once the holder the ask reached shows it is no command (`windowHolder`,
- * `holderIsWindow`), a window from before that answer included, which
- * brought its window forward at the ask; `free` once the lock can be taken,
- * as when the holder ended before it noted anything. A holder that shows
- * none of these, as a command stopped before it noted itself, is waited for
- * as long as it takes, so the launch never quits with no window to take
- * over. Asking for the lock is a second launch to its holder, which a window
+ * each holder shows of itself and never from silence: `window` once the
+ * window holding the lock answered the launch's ask (`windowAnswerFile`),
+ * which a run never does, even where a run took the folder since, so a
+ * window the person quit after it answered stays quit; `run` once a command
+ * notes that it holds the folder; `window` too once the holder the ask
+ * reached shows it is no command (`windowHolder`, `holderIsWindow`), a
+ * window from before that answer included, which brought its window forward
+ * at the ask; `free` once the lock can be taken with no answer there, as
+ * when the holder ended before it noted anything. A holder that shows none
+ * of these, as a command stopped before it noted itself, is waited for as
+ * long as it takes, so the launch never quits with no window to take over.
+ * Asking for the lock is a second launch to its holder, which a window
  * brings itself forward on, so a holder is asked once: the one the launch's
  * own ask reached, and once more only each time the holder seen changes,
- * the lock let go of included, before anything it shows is taken, so the
- * window that takes over is always one that was asked. A holder seen
- * unchanged is only watched, never asked again, so nothing is brought
- * forward twice. What it runs as is read once, and again a while later
- * (`askEveryMs`) only where it could not be told, or where the lock names no
- * holder, which may have changed unseen.
+ * before anything it shows is taken, so the window that takes over is
+ * always one that was asked. A lock read free is asked for at each look,
+ * since no holder is there to bring forward. Where the lock names no holder
+ * (Windows), a holder that shows something other than it showed before,
+ * as a command's pipe gone, is one that changed unseen, and is asked once
+ * too. A holder seen unchanged is only watched, never asked again, so
+ * nothing is brought forward twice. What it runs as is read once, and again
+ * a while later (`readEveryMs`) only where it could not be told, or where
+ * the lock names no holder.
  */
 export async function lockHolderKind(options: {
   running: () => boolean;
@@ -594,32 +635,44 @@ export async function lockHolderKind(options: {
   /** Whether the holder is a window, by what it runs as; null where not known. */
   windowHolder: (holder: number | undefined) => Promise<boolean | null>;
   lockFree: () => boolean;
-  askEveryMs: number;
+  readEveryMs: number;
   everyMs?: number;
 }): Promise<"run" | "free" | "window"> {
+  // Asks for the lock: taken, it is free unless a window answered meanwhile and then let it go.
+  const ask = () => (options.lockFree() ? (options.answered() ? "window" : "free") : null);
   let seen = options.asked;
   let read: number | null | undefined = null;
+  let shown: boolean | null | undefined;
   let readAgain = 0;
   for (;;) {
-    if (options.running()) return "run";
     if (options.answered()) return "window";
+    if (options.running()) return "run";
     const holder = options.holder();
-    if (holder !== seen) {
+    if (holder !== seen || holder === null) {
       // A holder the launch's ask did not reach, or the lock let go: asked once, before anything
       // else, so it brings its window forward if it is one.
       seen = holder;
       read = null;
-      if (options.lockFree()) return "free";
-    } else if (holder !== null && (holder !== read || Date.now() >= readAgain)) {
+      shown = undefined;
+      const kind = ask();
+      if (kind) return kind;
+    } else if (holder !== read || Date.now() >= readAgain) {
       const window = await options.windowHolder(holder);
       // Only while that same holder still holds the lock: what was read of one that let it go
       // since tells nothing of the next, which is asked first.
-      if (window === true && options.holder() === holder) return "window";
-      read = holder;
-      readAgain =
-        window === null || holder === undefined
-          ? Date.now() + options.askEveryMs
-          : Number.POSITIVE_INFINITY;
+      if (options.holder() === holder) {
+        if (window === true) return "window";
+        if (holder === undefined && read === undefined && window !== shown) {
+          const kind = ask();
+          if (kind) return kind;
+        }
+        read = holder;
+        shown = window;
+        readAgain =
+          window === null || holder === undefined
+            ? Date.now() + options.readEveryMs
+            : Number.POSITIVE_INFINITY;
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, options.everyMs ?? 250));
   }

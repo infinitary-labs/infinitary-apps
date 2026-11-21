@@ -1,8 +1,15 @@
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { RUN_FORCE_DIR } from "../../src/core/helper/runForce";
+import { RUN_STOP_FILE } from "../../src/core/helper/windowsTask";
 import { describeCapture } from "../../src/core/hostEnv";
 import { writeLoginShellStub } from "../../src/core/loginShellStub";
+import { openDatabase } from "../../src/core/storage/db";
+import {
+  SAVED_DATA_REFUSAL_MESSAGE,
+  SAVED_DATA_REFUSAL_TITLE,
+} from "../../src/core/storage/savedDataCompatibility";
 import {
   RUN_LAST_STOP,
   RUN_MARKER,
@@ -12,6 +19,8 @@ import {
   type RunStop,
 } from "../../src/main/runCommand";
 import { readRunSettings } from "../../src/main/runSettings";
+import { runLabelOf } from "../../src/shared/codeNames";
+import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
 import { readSavedData } from "./savedData";
@@ -139,6 +148,27 @@ test("a settings file a run cannot use ends it with 78 and why, kept as its last
     JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
   ).toMatchObject({ reason: "start-failed", exitCode: RUN_SETTINGS_EXIT, lines: words });
   expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
+});
+
+// The review of INF-5409: a run its own agent started reads a stop or force stop asked of it only
+// once its folder and saved data are accepted. On saved data from a newer version it ends with
+// the refusal, leaving a stop left in the folder unread and making no folder of force stops.
+test("a run on saved data from a newer version ends with its refusal and recovers nothing on the folder", async () => {
+  const userDataDir = scratchDir("infinitary-run-command-");
+  const db = openDatabase(userDataDir);
+  recordNewerMigration(db);
+  db.close();
+  const stop = join(userDataDir, RUN_STOP_FILE);
+  const asked = `${JSON.stringify({ at: new Date().toISOString() })}\n`;
+  // e2e-fixture: input -- the stop a window leaves for a run, which a refusing run must leave unread
+  writeFileSync(stop, asked);
+  const ran = run(await runEnv(userDataDir), ["--agent", runLabelOf("dev")]);
+  expect(await ran.exited, ran.error()).toBe(1);
+  expect(said(ran.error())).toEqual(
+    RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: SAVED_DATA_REFUSAL_MESSAGE }),
+  );
+  expect(readFileSync(stop, "utf8")).toBe(asked);
+  expect(existsSync(join(userDataDir, RUN_FORCE_DIR))).toBe(false);
 });
 
 test("words after run say how to use it and exit 2", async () => {

@@ -96,6 +96,7 @@ import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   answerLaunch,
+  bringWindowForward,
   clearWindowAnswers,
   commandHolding,
   commandPipe,
@@ -163,6 +164,7 @@ import {
   mainWindowOpen,
   markMainWindow,
   openMainWindows,
+  personWindows,
 } from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
@@ -786,8 +788,9 @@ export async function startApp(
     // that holds the lock answers and focuses itself, and this launch quits, as it does once the
     // holder its ask reached shows it is no command by what it runs as (`holderIsWindow`): a window
     // from before that answer, which brought its window forward at the ask as every version does.
-    // A holder that shows nothing yet is waited for, never taken for a window, and never asked
-    // again unless it changes. An ordinary launch waits the same way, for a run known to hold
+    // A holder that shows nothing yet, as one with no command's pipe on Windows, is waited for,
+    // never taken for a window, and never asked again unless it changes. An answer wins over a
+    // run's note and a lock taken, so a window the person quit after it answered stays quit. An ordinary launch waits the same way, for a run known to hold
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
@@ -802,7 +805,8 @@ export async function startApp(
             onWindows ? { commandPipe: () => commandPipeHeld(commandPipe(dataDir)) } : {},
           ),
         lockFree: () => app.requestSingleInstanceLock(lockAsk),
-        askEveryMs: STOPPED_RUN_WAIT_MS,
+        // A pipe is read again each second, so a command's pipe gone is seen and its next holder asked.
+        readEveryMs: onWindows ? 1_000 : STOPPED_RUN_WAIT_MS,
       });
       rmSync(answer, { force: true });
       console.warn(
@@ -817,6 +821,8 @@ export async function startApp(
     // a run clears it once it noted that it holds the folder (below), in the
     // same step as it took the lock.
     if (privacy?.temp && !besideRun && !windowless) await clearPrivateTemp(privacy.temp);
+    // What a launch on an accepted folder recovers once it is known to open there (`recover`, below).
+    const recoveries: (() => void)[] = [];
     // Start it here over a run that did not answer ended that run alone and asked its service
     // manager nothing, so its job may start the run again (`stopRunAgent`'s force). Now that this
     // window holds the folder, whatever that job runs is a start the folder refuses, so the job is
@@ -824,22 +830,24 @@ export async function startApp(
     // Only after a force stop of the agent's own run, and only on the folder's own lock: never during
     // a folder move, whose lock is a throwaway profile's. A job that refuses to let go is reported;
     // the window goes on as this computer's first mate either way.
-    // Never on a folder this launch refuses, which it opens nothing on (`dataFolderRefusal`).
+    // Only once the folder was accepted, saved data included, which a refused launch opens nothing
+    // on (`recover`, below).
     if (
       startsHere &&
       process.argv.includes(LET_GO_JOB_ARG) &&
       !besideRun &&
       !move &&
-      app.getPath("userData") === dataDir &&
-      !dataFolderRefusal(dataDir, privacy)
+      app.getPath("userData") === dataDir
     )
-      commandStarter(starterOptions)
-        ?.stop({ forget: false, run: null })
-        .catch((error: unknown) => {
-          console.warn(
-            `[app] the background job did not stop starting its run: ${(error as Error).message}`,
-          );
-        });
+      recoveries.push(() =>
+        commandStarter(starterOptions)
+          ?.stop({ forget: false, run: null })
+          .catch((error: unknown) => {
+            console.warn(
+              `[app] the background job did not stop starting its run: ${(error as Error).message}`,
+            );
+          }),
+      );
     // A run notes that it holds the folder, for a window opened beside it,
     // and stops cleanly on a signal (below).
     let stopRun: () => void = () => {};
@@ -957,31 +965,34 @@ export async function startApp(
       // everywhere, a stop for this run alone is asked so, by its process and
       // start, since a signal's process number may have passed to another.
       // A stop asked of another run by its process leaves this one going.
-      watchRunStop(
-        app.getPath("userData"),
-        runStartedAt,
-        () => {
-          if (stopping) return;
-          runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
-          stopRun();
-        },
-        undefined,
-        { pid: process.pid, startedAt: runStartedAt.toISOString() },
-        hostPlatform() === "win32",
+      recoveries.push(() =>
+        watchRunStop(
+          app.getPath("userData"),
+          runStartedAt,
+          () => {
+            if (stopping) return;
+            runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
+            stopRun();
+          },
+          undefined,
+          { pid: process.pid, startedAt: runStartedAt.toISOString() },
+          hostPlatform() === "win32",
+        ),
       );
       // Restart it and Start it here end a run that does not answer by asking it to end itself, by
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
       // Only a run this app's own agent started is ever asked so; one started by hand reads nothing,
       // and nor does a run on a folder it refuses, which ends below with nothing started on it.
-      const stopForceWatch =
-        byAgent && !dataFolderRefusal(dataDir, privacy)
-          ? watchRunForce(
-              app.getPath("userData"),
-              runStartedAt.toISOString(),
-              undefined,
-              (can, pipes) => noteRecovers(can, pipes),
-            )
-          : () => {};
+      let stopForceWatch = () => {};
+      if (byAgent)
+        recoveries.push(() => {
+          stopForceWatch = watchRunForce(
+            app.getPath("userData"),
+            runStartedAt.toISOString(),
+            undefined,
+            (can, pipes) => noteRecovers(can, pipes),
+          );
+        });
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
@@ -1005,18 +1016,11 @@ export async function startApp(
       const asker = windowAnswerAsker(additionalData);
       answerLaunch(windowAnswerAsked(additionalData), {
         asked,
-        bringForward: () => {
-          // A window the person uses, never a hidden helper such as a panel's capture.
-          const win = openMainWindows()[0];
-          if (win) {
-            if (win.isMinimized()) win.restore();
-            win.focus();
-          } else if (keepsWorkingClosed) {
-            // Closing the last window left the app working, as on a Mac: a second launch opens it again.
-            reopen();
-          }
-        },
-        shown: () => openMainWindows().length > 0,
+        // A window the person uses, a refusal shown in its place included, never a hidden helper such
+        // as a panel's capture; with none, where closing the last window left the app working, as on
+        // a Mac, a second launch opens it again.
+        bringForward: () => bringWindowForward(personWindows(), keepsWorkingClosed ? reopen : null),
+        shown: () => personWindows().length > 0,
         whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
         answer: (word) => {
           try {
@@ -1569,6 +1573,10 @@ export async function startApp(
         endRun(1, RUN_WORDS.controls);
         return;
       }
+      // Only now, the folder and its saved data accepted, does a launch recover anything on it: a
+      // run reads a stop or force stop asked of it, and Start it here lets the job go. A refused
+      // launch ends above with the folder's job and stop and recovery files as they were.
+      for (const recover of recoveries.splice(0)) recover();
       // The language the captain chose in Settings → Appearance, or the
       // computer's own: the menus, the tray, the dialogs and the crew follow
       // each change (docs/i18n.md, "The language choice"), and a window

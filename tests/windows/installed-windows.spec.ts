@@ -42,7 +42,7 @@ import { helperWords } from "../../src/core/helper/words";
 import { readWindowsTable, resumeWindowsRun } from "../../src/core/placed/windowsProcesses";
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
-import { RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
+import { commandPipe, commandPipeHeld, RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
 import { BOOT_WORDS } from "../../src/main/startAtBoot";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
 import { windowsAppUserModelId } from "../../src/main/windowsStartup";
@@ -402,12 +402,17 @@ test("the Windows installer installs for this person, offers Git, starts the com
     }
     const window = await windowOpened();
     await expectRunning("off");
+    // The installed command holds its pipe on this PC's own named pipes, by the folder it runs on,
+    // which a window launch refused the lock tells a command by (the review of INF-5409); it goes
+    // with the command.
+    expect(await commandPipeHeld(commandPipe(dataDir))).toBe(true);
     keepTask("task-from-window.json");
     if (evidence) screenshot(join(evidence, "window-beside-command.png"));
     // Closing the window leaves the command and its first mate running.
     await closeWindow(window);
     expect(runProcesses().length).toBe(1);
     await stopRun();
+    expect(await commandPipeHeld(commandPipe(dataDir))).toBe(false);
 
     // `infinitary start-at-boot` turns the sign-in trigger on and starts it now.
     const set = execFileSync(executable, ["start-at-boot"], { encoding: "utf8" });

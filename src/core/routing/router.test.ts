@@ -897,7 +897,7 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
   });
 
   // INF-5478's plan, piece 2: a crew task kept going on credits is work that
-  // waits on a spent allowance, so a saved reset may come before credits.
+  // waits on a spent allowance, so a saved reset is weighed then; credits serve it until the reset lands.
   it("names the provider a committed decision keeps going on credits, only once committed", () => {
     const db = openInMemoryDatabase();
     const credits: [string[], string | undefined][] = [];

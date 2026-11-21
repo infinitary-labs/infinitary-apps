@@ -259,7 +259,8 @@ With it on, Infinitary may use one of the account's saved resets without a click
 Accounts with allowance left come first.
 A saved reset is weighed as work starts on credits, not before it: an account that keeps going on credits serves that work until the question ends, the reset is used and a new reading shows the allowance back.
 
-- The moment is a committed crew decision that waits or drops a level on the account's spent allowance (`RoutePreview.spentAt`), or that keeps going on its credits (`RoutePreview.creditsAt`), and the first mate's ladder once no sibling account has room and its account keeps going on credits (`savedResetsSpent` in `FirstmateSeat`), which serves the turn on credits at once and does not wait for the question.
+- The moment is a committed crew decision that waits or drops a level on the account's spent allowance (`RoutePreview.spentAt`), or that keeps going on its credits (`RoutePreview.creditsAt`), and the first mate's ladder once no sibling account has room (`savedResetsSpent` in `FirstmateSeat`).
+  There the seat either serves the turn on credits at once, when its account keeps going on credits, without waiting for the question, or pauses on the spent allowance until a higher reading resumes it.
 - Whether a reset beats waiting for the refill is a judgment, so the `saved-reset` decision use asks it as a choice between use and wait (`AutoSavedResets` in `src/core/codex/autoSavedResets.ts`; `docs/decision-models.md`, "The uses").
   Its facts are the account's plan, how much of each allowance is left and how many hours until it refills, how many saved resets it holds and how many apply now, and which work waits.
 - It is asked once per spent allowance of an account, like `creditsOffers`; a reading that shows the allowance back above zero lets it be asked again the next time the account is spent.

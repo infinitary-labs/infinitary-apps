@@ -20,7 +20,7 @@ export const savedResetLines = {
       on: z.boolean(),
       deviceId: z.string().min(1).max(64).optional(),
     }),
-    line: "Turn a Codex account's Use saved resets on their own on or off by id, only on typed captain words: when work waits on its spent allowance and no account at that level has room, Infinitary may use one of its saved resets without a click, before credits. Turning it on needs Codex signed in to the account; when it is not, the refusal says to turn it on from the account's row in Settings. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
+    line: "Turn a Codex account's Use saved resets on their own on or off by id, only on typed captain words: when work waits on its spent allowance and no account at that level has room, Infinitary may use one of its saved resets without a click; when the account keeps going on credits, credits may serve that work until the reset lands. Turning it on needs Codex signed in to the account; when it is not, the refusal says to turn it on from the account's row in Settings. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
     toRequest: (v) =>
       v.deviceId ? [v.accountId, v.on, { deviceId: v.deviceId }] : [v.accountId, v.on],
     readValue: (c) => ({

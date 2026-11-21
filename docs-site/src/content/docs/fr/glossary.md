@@ -42,7 +42,7 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#where-a-task-stands).
 ### Lot {#batch}
 
 Pour un projet dont les changements partent en **demandes de tirage groupées**, une demande de tirage qui réunit vos changements approuvés, un commit pour chacun, et qui fusionne une fois ses vérifications réussies.
-Un changement qui attend son lot affiche « lot » dans Tâches.
+Un changement qui attend son lot affiche « groupe » dans Tâches.
 Voir [Projets](/fr/projects/#how-changes-reach-your-project).
 
 ### Branche {#branch}
@@ -179,7 +179,7 @@ Voir [Cartes et décisions](/fr/cards-and-decisions/#notes-and-decisions).
 
 ## O {#o}
 
-### Injoignable {#out-of-reach}
+### Hors de portée {#out-of-reach}
 
 Se dit d’un ordinateur ou d’un téléphone qu’Infinitary ne peut pas joindre pour l’instant, par exemple parce qu’il est en veille, qu’Infinitary y est fermé ou qu’il est sur un autre réseau.
 Le travail qui en a besoin attend son retour.
@@ -284,7 +284,7 @@ Voir [Abonnements et allocation](/fr/subscriptions-and-quota/).
 
 ### Prendre le relais {#take-over}
 
-Démarrer votre second sur un ordinateur qui en garde une copie, pendant que l’ordinateur où il vit est injoignable.
+Démarrer votre second sur un ordinateur qui en garde une copie, pendant que l’ordinateur où il vit est hors de portée.
 Seul votre clic le lance.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/#take-over).
 

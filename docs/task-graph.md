@@ -84,6 +84,7 @@ Where the host reads the part's version - its review commission, its merge card 
 Its review, line count and story then read its own difference against the moved version, and a re-review after a passed review lines up its own commits against that version.
 A merge card, whether shown with `show_merge_card` or `emit_card`, at a version that does not hold the newest approved version under it is refused in the batch line's own words (`LEFT_OUT_WORDS.behindBase`), since the batch would leave it out; a version this computer cannot read is left to the batch line.
 A kept approval's repair onto that version names it as `newBase`, and its paths are compared against the version of the part under it that the approved head was built on, the newest of that part's pushed versions the approved head holds (docs/delivery-rigor.md, "A kept merge approval").
+An independent assessment of such a repair is briefed from that same version, worked out when the host commissions it.
 
 ## Gates on active rows
 

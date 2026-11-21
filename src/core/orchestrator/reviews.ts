@@ -23,7 +23,7 @@ import type { RouteResult } from "../routing/router";
 import type { MergeRepairAssessment, TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
-import { followBase } from "./baseFollow";
+import { approvedChangeBase, followBase, recordedBases } from "./baseFollow";
 import type { CardService } from "./cardService";
 import { briefCarriesPictures } from "./crewBrief";
 import type { TaskRuntime } from "./crewRuntime";
@@ -302,6 +302,19 @@ export class Reviews {
         });
 
         const delivery = builder.delivery;
+        // A part repaired onto the newest approved version of the part under it is read from
+        // the version it was approved on, as its paths were (docs/task-graph.md).
+        const recorded = recordedBases(this.options.tasks, builder, undecided.newBase);
+        const found =
+          recorded && builder.repoDir
+            ? await approvedChangeBase(
+                builder.repoDir,
+                authorization.approvedHead,
+                undecided.newBase,
+                recorded,
+              ).catch(() => undefined)
+            : undefined;
+        const approvedBase = found && recorded?.includes(found) ? found : undefined;
         brief = renderRepairAssessmentBrief({
           builderTitle: builder.title,
           change: `${delivery?.changeLabel ?? `#${authorization.target.prNumber}`}${
@@ -312,6 +325,7 @@ export class Reviews {
           fromHead: undecided.fromHead,
           toHead: undecided.toHead,
           newBase: undecided.newBase,
+          ...(approvedBase ? { approvedBase } : {}),
           paths: undecided.paths ?? { approved: [], repaired: undecided.changedPaths },
           evidence: undecided.evidence,
           validation: undecided.validation,

@@ -5,7 +5,7 @@ import { type Forge, type ForgeChange, isSignInForgeFailure } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import { git } from "../workspace/git";
 import { readChangeReading } from "../workspace/workspaceService";
-import { followBase, newestBase } from "./baseFollow";
+import { approvedChangeBase, followBase, recordedBases } from "./baseFollow";
 import type { ChangeChecks } from "./changeChecks";
 import {
   type ChangeContext,
@@ -242,7 +242,7 @@ export class CheckChangeTool {
       if ("said" in located) return located.said;
       const { record, dir } = located;
       const approvedHead = record.delivery?.mergeAuthorization?.approvedHead;
-      const recordedBases = this.recordedBases(record, conflictRepair.newBase);
+      const recorded = recordedBases(this.options.tasks, record, conflictRepair.newBase);
       await this.context.branchHome(record);
       const facts: LineageFacts =
         !approvedHead || !dir
@@ -252,7 +252,7 @@ export class CheckChangeTool {
               fromHead: conflictRepair.fromHead,
               toHead: conflictRepair.toHead,
               newBase: conflictRepair.newBase,
-              ...(recordedBases ? { recordedBases } : {}),
+              ...(recorded ? { recordedBases: recorded } : {}),
             }).catch(
               (caught: unknown): LineageFacts => ({
                 known: false,
@@ -294,21 +294,6 @@ export class CheckChangeTool {
       run.merged !== undefined && run.merged.pull.number === kept?.target.prNumber;
     const keptLine = kept && !mergedUnder ? keptApprovalLine(kept) : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
-  }
-
-  /**
-   * The versions of the part a task was built on, newest first, when a
-   * repair names that part's newest approved version as its new base
-   * (docs/task-graph.md, "Following the part under it"): the approved
-   * change's own base is the first of them its approved head builds on.
-   */
-  private recordedBases(record: TaskRecord, newBase: string): string[] | undefined {
-    const base = newestBase(this.options.tasks, record);
-    if (!base || base.newest !== newBase.trim()) return undefined;
-    const pushed = (this.options.tasks.changeFor(base.task.id)?.versions ?? [])
-      .map((version) => version.head)
-      .reverse();
-    return [...new Set([base.from, ...pushed])];
   }
 
   /**
@@ -545,13 +530,7 @@ export async function lineageFacts(dir: string, question: LineageQuestion): Prom
       .map((line) => line.trim())
       .filter(Boolean);
   // A part built on another part's approved version is read from the version it was approved on.
-  let approvedBase: string | undefined;
-  for (const sha of question.recordedBases ?? [])
-    if ((await commit(sha)) && (await ancestor(sha, approvedHead))) {
-      approvedBase = sha;
-      break;
-    }
-  approvedBase ??= await git(dir, ["merge-base", approvedHead, newBase]);
+  const approvedBase = await approvedChangeBase(dir, approvedHead, newBase, question.recordedBases);
   // The branch is already home. Store both versions' readings with the
   // repair so a kept merge compares stored facts and does not read again.
   const [approvedReading, repairedReading] = await Promise.all([

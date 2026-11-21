@@ -8,8 +8,9 @@ import { LEFT_OUT_WORDS } from "../batches/combine";
 import { openInMemoryDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { followBase } from "./baseFollow";
+import { approvedChangeBase, followBase, recordedBases } from "./baseFollow";
 import { lineageFacts } from "./checkChangeTool";
+import { renderRepairAssessmentBrief } from "./intentBrief";
 import { unaccountedPaths } from "./mergeAuthorization";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -175,5 +176,33 @@ describe("following the part under it", () => {
     const unread = await lineageFacts(facts.repo, question);
     if (!unread.known) throw new Error(unread.why);
     expect(unaccountedPaths(unread, [])).toEqual(["export.ts"]);
+  });
+
+  // The captain's answer on the review's question: the repair's independent assessment
+  // starts from the version the part was approved on, worked out when it is commissioned.
+  it("briefs a repair's assessment with the approved change read from the version the part was built on", async () => {
+    const facts = chain();
+    const { tasks, later } = setup(facts);
+    const recorded = recordedBases(tasks, tasks.get(later.id)!, facts.newer);
+    expect(recorded).toEqual([facts.first]);
+    expect(recordedBases(tasks, tasks.get(later.id)!, facts.second)).toBeUndefined();
+    const approvedBase = await approvedChangeBase(facts.repo, facts.second, facts.newer, recorded);
+    expect(approvedBase).toBe(facts.first);
+    const brief = renderRepairAssessmentBrief({
+      builderTitle: "Show the export in the panel",
+      change: "the change",
+      approvedHead: facts.second,
+      fromHead: facts.second,
+      toHead: facts.replayed,
+      newBase: facts.newer,
+      approvedBase,
+      paths: { approved: ["panel.ts"], repaired: ["panel.ts"] },
+      evidence: "replayed onto the repaired export",
+      validation: "the unit tests",
+    });
+    // The command the assessor runs reads only the part's own file.
+    expect(brief).toContain(`git diff ${facts.first} ${facts.second}`);
+    expect(run(facts.repo, "diff", "--name-only", approvedBase, facts.second)).toBe("panel.ts");
+    expect(brief).not.toContain("git merge-base");
   });
 });

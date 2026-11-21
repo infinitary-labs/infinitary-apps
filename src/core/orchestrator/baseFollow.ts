@@ -71,3 +71,38 @@ async function holds(repoDir: string, head: string, ancestor: string): Promise<b
     () => false,
   );
 }
+
+/**
+ * The versions of the part a task was built on, newest first, when a repair
+ * names that part's newest approved version as its new base
+ * (docs/task-graph.md, "Following the part under it"): the task's recorded
+ * base, then the part's pushed versions. Undefined for any other new base.
+ */
+export function recordedBases(
+  tasks: TaskService,
+  record: TaskRecord,
+  newBase: string,
+): string[] | undefined {
+  const base = newestBase(tasks, record);
+  if (!base || base.newest !== newBase.trim()) return undefined;
+  const pushed = (tasks.changeFor(base.task.id)?.versions ?? [])
+    .map((version) => version.head)
+    .reverse();
+  return [...new Set([base.from, ...pushed])];
+}
+
+/**
+ * The version an approved change was built on, which its own difference is
+ * read from: the first of `recorded` the approved head builds on, for a part
+ * built on another part's approved version, else where the approved head and
+ * `newBase` meet.
+ */
+export async function approvedChangeBase(
+  repoDir: string,
+  approvedHead: string,
+  newBase: string,
+  recorded: readonly string[] = [],
+): Promise<string> {
+  for (const sha of recorded) if (await holds(repoDir, approvedHead, sha)) return sha;
+  return git(repoDir, ["merge-base", approvedHead, newBase]);
+}

@@ -49,8 +49,8 @@ type HoldRulesHost = {
   endUpdateHold(taskId: string, installed: string): boolean;
 };
 
-/** The key a computer's version is kept under: its device id, or this Mac's. */
-const THIS_MAC = "";
+/** The key a computer's version is kept under: its device id, or the home computer's. */
+const HOME_COMPUTER = "";
 
 /** A task's hold and the end of its last turn: what a newer move changes, and a pin does not. */
 function lastMove(task: TaskRecord | undefined): string {
@@ -70,7 +70,7 @@ export class HoldRules {
   private rules: HoldRuleScheduler | undefined;
   /** Rules still taking their place, which no gate names yet. */
   private readonly arming = new Set<string>();
-  /** The app version each computer last said it runs, this Mac's under `THIS_MAC` (`appRan`). */
+  /** The app version each computer last said it runs, the home computer's under `HOME_COMPUTER` (`appRan`). */
   private readonly running = new Map<string, string>();
 
   constructor(private readonly host: HoldRulesHost) {
@@ -185,19 +185,23 @@ export class HoldRules {
     version: string | undefined,
   ): { update: AppUpdateWait; ends: string } | { refusal: string } {
     const device = this.host.tasks.get(taskId)?.deviceId ?? null;
-    const from = this.running.get(device ?? THIS_MAC);
+    const from = this.running.get(device ?? HOME_COMPUTER);
     const named = version?.trim() || undefined;
-    const where = device ? "the computer it runs on" : "this Mac";
+    // i18n-exempt: a tool answer served to the first mate, not shown to a person
+    const where = device ? "the computer it runs on" : "this computer";
     if (named !== undefined && compareSemver(named, named) === null)
       return {
+        // i18n-exempt: a tool answer served to the first mate, not shown to a person
         refusal: `on_update.version takes an app version, such as 0.8.5-alpha.7; "${named}" is not one.`,
       };
     if (named !== undefined && from !== undefined && (compareSemver(from, named) ?? -1) >= 0)
       return {
+        // i18n-exempt: a tool answer served to the first mate, not shown to a person
         refusal: `The app on ${where} already runs ${from}, at or past ${named}, so that update is installed; nothing changed.`,
       };
     if (named === undefined && from === undefined)
       return {
+        // i18n-exempt: a tool answer served to the first mate, not shown to a person
         refusal: `The app version on ${where} is not known now, so nothing would tell its update; name the version it waits for in on_update.version, or hold without on_update. Nothing changed.`,
       };
     return {
@@ -206,25 +210,27 @@ export class HoldRules {
         ...(from !== undefined ? { from } : {}),
         ...(named ? { version: named } : {}),
       },
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
       ends: `It ends sooner, with one steer, once the app on ${where} runs ${named ?? `a version newer than ${from}`}.`,
     };
   }
 
   /**
-   * A computer said which app version it runs: this Mac's own at each
+   * A computer said which app version it runs: the home computer's own at each
    * start (`device` null), and each computer that runs work at each
    * welcome. Each started task held for an update there that this version
    * meets is woken, its hold ended (INF-5578 finding 4).
    */
   appRan(device: string | null, version: string): void {
-    this.running.set(device ?? THIS_MAC, version);
+    this.running.set(device ?? HOME_COMPUTER, version);
     for (const record of this.host.tasks.listActive()) {
       const update = record.gate?.update;
       if (record.gate?.kind !== "at-time" || !update || update.device !== device) continue;
       if (!updateInstalled(update, version)) continue;
       this.host.endUpdateHold(
         record.id,
-        `Infinitary ${version} is installed on ${device ? "the computer this task runs on" : "this Mac"}`,
+        // i18n-exempt: a steer served to the crewmate, not shown to a person
+        `Infinitary ${version} is installed on ${device ? "the computer this task runs on" : "this computer"}`,
       );
     }
   }

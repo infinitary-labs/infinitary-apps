@@ -725,6 +725,10 @@
   display: block;
   white-space: nowrap;
 }
+/* Where a line of waits stops wraps: a long key never widens the column (INF-5578 finding 4). */
+.fm-board-wait-event[data-board-wait-chain] {
+  white-space: normal;
+}
 .fm-board-tile:not([data-board-row]) .fm-board-tile-status[data-board-structured-wait] {
   -webkit-line-clamp: 2;
 }

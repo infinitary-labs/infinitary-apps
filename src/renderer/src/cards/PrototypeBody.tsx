@@ -49,6 +49,7 @@ import { describeFocus, openFrameLink } from "../plugins/frames/frameLink";
 import { dismissEmptyAnnotation, syncAnnotation, useAnnotationBridge } from "./annotationBridge";
 import { CARD_BODY_WORDS } from "./cardBodyWords";
 import { closeCardFindFrom } from "./cardFind";
+import { useDraftFill } from "./draftFill";
 import { DrawnAtWidth } from "./drawnAtWidth";
 import { ExpandPartContext } from "./expandPart";
 import {
@@ -917,6 +918,7 @@ function SrcdocCardBody(props: SrcdocProps) {
     shown,
   );
   useCollect(props.collectRef, controllerRef, frameRef);
+  useDraftFill(props.form ? props.cardId : undefined, controllerRef);
   useQuestions(props.questionRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
   useAnnotationBridge(
@@ -1077,6 +1079,7 @@ function ScriptedCardBody(props: SrcdocProps) {
     documentKey,
   );
   useCollect(props.collectRef, controllerRef, frameRef);
+  useDraftFill(props.form ? props.cardId : undefined, controllerRef);
   useQuestions(props.questionRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
   useAnnotationBridge(

@@ -562,6 +562,73 @@ it("tells the window it replays from the welcome until the replay's last push, a
   expect(said.at(-1)).toEqual({ replaying: false, caughtUp: 1 });
 });
 
+// INF-5446's review: a card's unsent draft goes by live frames, which no welcome
+// replays, so the window reads drafts again at every return of the link - even
+// one inside the link's grace, which changes no state.
+it("tells the window each return of the link, replayed or not, even one that changes no state", () => {
+  let link: HomeLinkOptions | undefined;
+  const said: (number | undefined)[] = [];
+  const state: HomeLinkState = {
+    contact: "in-reach",
+    access: "full",
+    homeVersion: PROTOCOL_VERSION,
+    homeChanges: [],
+    name: null,
+    takesWork: null,
+    onHomeMac: null,
+    heardAt: null,
+    removed: false,
+  };
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-link-back-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: () => {},
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: (thisMac) => {
+      if (thisMac.role === "view") said.push(thisMac.linkBack);
+    },
+    onRemoved: () => {},
+    // No update action is used here.
+    updates: {} as UpdateChecker,
+    link: (options) => {
+      link = options;
+      return {
+        start: () => {},
+        state: () => state,
+        invoke: (async () => null) as never,
+        leave: async () => true,
+        close: () => {},
+      };
+    },
+  });
+  views.push(view);
+  // As the link welcomes: the state is said only when it changed.
+  const welcome = (catchUp: "replay" | "reload", stateChanged: boolean) => {
+    link?.onWelcoming?.(catchUp, 0);
+    if (stateChanged) link?.onState?.(state);
+    link?.onCaughtUp?.(catchUp);
+  };
+  welcome("reload", true);
+  expect(said.at(-1)).toBeUndefined();
+  welcome("replay", false);
+  expect(said.at(-1)).toBe(1);
+  const told = said.length;
+  welcome("replay", true);
+  expect(said.slice(told)).toEqual([2]);
+});
+
 // INF-4835 piece 3 (captain: "Fold them into one row by itself, keeping the one
 // that runs work"): a Mac's window asks its home to fold its row once, and only
 // of a home that has the fold.

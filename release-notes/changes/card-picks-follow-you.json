@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-picks-follow-you",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Answers you start on a card follow you to your other computers",
+      "body": "When you pick answers on a card, type in its field or add notes and leave it unfinished, your other computers' windows show the same picks and words a moment later, and they are still there after a restart. Nothing is sent until you press a button or send a reply, and they go away once the card is answered.",
+      "noPicture": "The card looks the same in every window; what changes is that a pick made in one window appears in the other.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

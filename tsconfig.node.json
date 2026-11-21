@@ -135,6 +135,7 @@
     // Numbers the e2e specs read from their owner: the frame watchdog's pace
     // and misses, and the knowledge graph's camera steps.
     "src/renderer/src/plugins/frames/frameController.ts",
+    "src/renderer/src/app/draftSync.ts",
     "src/renderer/src/plugins/frames/frameLink.ts",
     "src/panels/knowledge/graph.ts"
   ],

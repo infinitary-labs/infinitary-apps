@@ -999,6 +999,18 @@ export class FrameController {
   }
 
   /**
+   * Another window's change to the card's draft (docs/card-authoring.md,
+   * "Unsent picks follow you"): the bridge applies the answers by name to the
+   * body on screen. False for a mount that watches no form, a read-only
+   * body, or a document not yet born, which takes the draft at its birth.
+   */
+  fill(answers: CardAnswer[]): boolean {
+    if (this.disposed || !this.ready || !this.spec.form || this.spec.form.readOnly) return false;
+    this.port.post({ fm: V, type: "fill", answers });
+    return true;
+  }
+
+  /**
    * The host just gave the frame focus back (docs/keyboard.md, "Cards and
    * frames"): the document's element that last had focus takes it again,
    * with its caret. Nothing for a document not yet born.

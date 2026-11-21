@@ -108,6 +108,8 @@ export class LocalWindow {
         // The computers' live readings, outside the numbering.
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload, false);
+        // An open card's draft another window changed, outside the numbering.
+        if (channel === "inf:cards:draft") options.broadcast("inf:cards:draft", payload, false);
       },
       onCaughtUp: (catchUp) => {
         // A new connection: the first mate forgot every watch with the last one.

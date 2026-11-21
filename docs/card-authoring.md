@@ -819,8 +819,9 @@ The card lint (`preansweredRefusal` in `src/core/pi/cardLint.ts`) holds the firs
 It groups and reads `required` the way the bridge does: by name, a disabled control is no question, and one required control makes its question required.
 Optional questions, text fields, notes and previews pass that rule; `unmarkedSkippableQuestions` refuses an optional radio or select question that arrives unanswered and marks no option, read the same way.
 
-A body may also stage a JSON snapshot under a name with `inf.stage(name, value)` (`undefined` unstages it): a preview's tuned look, say.
+A body may also stage a JSON snapshot under a name with `inf.stage(name, value, apply)` (`undefined` unstages it): a preview's tuned look, say.
 It joins the answers as one more question, always `changed`, and is worded as JSON.
+`apply`, which a preview gives so a setting from elsewhere can reach it, takes a parsed snapshot and sets the preview's own controls to it, as if the captain had set them; the controls then stage the setting again as they always do, and only what they stage is sent.
 
 The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` in `src/renderer/src/app/stage/StackedCard.tsx`):
 
@@ -844,7 +845,7 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
 - The same `collect` reply carries the question definitions the fresh reading saw - each name's prompt, kind, options with their labels and the authored proposal - which the core records beside the choice and never words into the wake (`docs/card-evidence.md`).
 - Picks are shell draft state, saved in the window's own storage on that computer until the card closes, so a restart or a reopened window gives them back (INF-2710: the captain chose "Keep picks across restarts", reversing their Q4 A).
   `savedCardAnswers.ts` mirrors the shell's readings and the stack's retirement of a closed card; storage that is missing, full or unreadable returns the card as written - unpicked, its recommendations tagged.
-  The reply draft in the card's field stays in renderer memory, and a restart loses it.
+  The first mate's computer also keeps each open card's draft for every window, as "Unsent picks follow you" below says.
 - Minus puts a decision, permission request or pending note aside without sending, discarding picks or answering its question.
   The same card returns with its current draft; no close-confirmation popover appears.
   Preview settings and written replies stay drafts until an explicit send or choice.
@@ -927,8 +928,36 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.
 - **Closing, revisions and past cards.**
   Putting a decision away retains its unsent field and picks without asking a question.
-  A revision keeps the words, because they belong to the card's id; a restart loses them, as it loses picks.
+  A revision keeps the words, because they belong to the card's id; a restart keeps them where the first mate's computer keeps drafts ("Unsent picks follow you").
   A past card shows the words that went with its choice as one quiet line under its dimmed buttons ("Sent with your choice:", `PAST_CARD_WORDS_LEAD`), and nothing when none went.
+
+### Unsent picks follow you
+
+The first mate's computer keeps each open card's unsent draft - the body's picks by question, the words in the card's own field and its queued notes - for every window that shows the card, the window on that computer included (INF-5446, the captain's ask: answers selected on a card show up on other devices too, like when the card is not finished).
+A pick or the field's words in one window show in the others a moment later, and they are still there after either computer restarts.
+Nothing in a draft is sent to anyone until the captain presses a button or sends a reply; no agent, published view, card record or export reads it.
+
+- `CardDrafts` (`src/core/orchestrator/cardDrafts.ts`) is the one writer of `card_drafts`, one row per part: `answer:<name>`, `words` or `notes`, each with the draft revision that last changed it.
+  The table's triggers delete a card's draft in the same write that resolves or removes the card, and a change for a card that is no longer open is refused (`closed`), so a draft never comes back after the card closes.
+  A draft belongs to one opening of its card (`lifecycle`, the card's `lifecycleId`; none for a card written before openings were kept): a change that names another opening than the card's own is refused as closed, and a window takes no draft of another opening.
+  A window drops the picks, words and notes it holds for a card whose opening changed, while it ran or since it last saved the card's draft, before the card's body draws, so the reopened card starts with none.
+  A change whose answers would pass what a press may send, in size (`CARD_ANSWERS_MAX_BYTES`) or in questions (`CARD_MAX_ANSWERS`), is refused whole (`too-large`); the window sends it again only once it changes, and the card's other changes still go.
+- A window reads every draft (`inf:cards:drafts`) once its stack has loaded, at each welcome, every return of its link included, and whenever its stack holds a card or an opening it did not hold before, and takes a live frame that came while that reading was on its way when the frame is newer.
+  It takes no draft of a card its stack does not hold yet, since it cannot tell that draft's opening is the card's; the reading when the card arrives brings it.
+  It sends what the captain changed (`inf:cards:draft`) once they pause for `DRAFT_QUIET_MS`, so words typed into the field never go key by key, even when a request comes back or a welcome arrives mid-pause; one request per card is in flight at a time, the newest change waiting behind it (`src/renderer/src/app/draftSync.ts`).
+  A change undone while the one before it is on its way still goes, since the draft will hold the earlier change.
+- Each change names the revision the window last took (`since`): a part another window changed after that keeps the newer value, and every other part takes the window's.
+  A part changed here and not yet sent is never overwritten by another window's change; it goes next and is the later change.
+  The answer to a change names each part it passed over because another window changed it after `since` (`passed`), so the window never reads another window's equal value as its own change having gone.
+  A part changed while the first mate's computer is out of reach instead keeps the revision the window had then, through any answer that comes back meanwhile, unless that answer took this window's own value of the part; the window saves each part not yet sent, with the revision it goes against, the revision it last took and the card's opening, in its own storage beside its saved picks, so that pick goes on return, or after this window's restart, unless another window changed the same question meanwhile.
+- Every accepted change goes to every window as a live frame on `inf:cards:draft`, outside the journal (`docs/connection.md`, "Live pushes"), only to a window whose hello lists the `card-drafts` change.
+- Another window's picks reach a body already on screen through the bridge's `fill` message, which sets each choice by name at once, even one that holds focus; a body born later takes them from the shell's draft, as a revision does.
+  A change to a question being typed in - a text field or a Something else field holding focus in a focused window - waits until focus leaves it, and then shows only if the captain typed nothing there since it arrived; a later change replaces the one waiting, even one back to what the question shows.
+  A preview's staged setting, live or at a birth (after a restart too), goes through the `apply` the preview staged it with, and a press sends only what the preview stages back, so it sends what the preview shows.
+  While the captain types in one of the preview's own text fields, a live setting waits like a typed question, and any words typed there after it arrived drop it, even where the preview stages them only later.
+  A preview that staged a setting with no `apply`, or whose `apply` refuses or fails on it, keeps what it shows and sends (`src/shared/plugins/frameFormScript.ts`).
+  Another window's words wait the same way while this window's field holds focus in a focused window, and whatever waits goes when the card leaves the window.
+- A window whose home lacks the `card-drafts` change keeps its picks and words to itself, as before.
 
 ## An answer task's card is its deliverable
 
@@ -1066,9 +1095,9 @@ The sequences document's plan line says so, and the first mate core sends the as
 Those two sentences are the only places the word prototype reaches the first mate; `CARD_AUTHORING` speaks of a preview.
 
 A playable preview is a decision body that draws the thing being chosen with its own controls ("The preview is the decision" above).
-Its settings ride a hidden named field or `inf.stage(name, value)` as a compact JSON snapshot with stable names and units.
+Its settings ride a hidden named field or `inf.stage(name, value, apply)` as a compact JSON snapshot with stable names and units; `apply` sets the preview's controls to a snapshot from another window or a restart ("Unsent picks follow you").
 The 4,096 UTF-8 bytes named in the authoring instructions are an authoring budget for that snapshot, not a limit shared with the other answers.
-Controls update the preview and the renderer's draft only: no author turn and no durable submission, and an unsent draft outlives a restart on that computer like any pick.
+Controls update the preview and the card's unsent draft only: no author turn and no submission; the draft is kept on the first mate's computer and shown in every window like any pick ("Unsent picks follow you"), until a press or reply submits it.
 The footer choices and author-directed replies submit the current settings.
 A preview ships nothing: its author's scratch stays private in its working copy, and the author revises the same card as feedback arrives.
 It closes like every plan card, with **Approve and build**, **Save and defer** and **Abandon** ("The handoff" below).

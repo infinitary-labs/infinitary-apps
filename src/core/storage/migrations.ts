@@ -1471,6 +1471,29 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX IF NOT EXISTS schedules_task ON schedules(task_id) WHERE task_id IS NOT NULL",
     );
   },
+  // INF-5446 (docs/card-authoring.md, "Unsent picks follow you"): each open
+  // card's unsent draft, one row per part - a body question's answer
+  // (`answer:<name>`), the words in the card's own field (`words`) or its
+  // queued notes (`notes`) - with the draft revision that last changed it.
+  // Empty on every existing install. `CardDrafts` is the only writer; no
+  // agent, published view or export reads it. The two triggers delete a
+  // card's draft in the same write that resolves or removes the card.
+  // Dropping the triggers and the table reverses it.
+  // i18n-exempt: SQL, never shown
+  `
+  CREATE TABLE IF NOT EXISTS card_drafts (
+    card_id TEXT NOT NULL,
+    part TEXT NOT NULL,
+    value_json TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    PRIMARY KEY (card_id, part)
+  ) WITHOUT ROWID;
+  CREATE TRIGGER IF NOT EXISTS card_drafts_resolved AFTER UPDATE OF resolved_at ON cards
+    WHEN NEW.resolved_at IS NOT NULL
+    BEGIN DELETE FROM card_drafts WHERE card_id = NEW.id; END;
+  CREATE TRIGGER IF NOT EXISTS card_drafts_removed AFTER DELETE ON cards
+    BEGIN DELETE FROM card_drafts WHERE card_id = OLD.id; END;
+  `,
 ];
 
 /**

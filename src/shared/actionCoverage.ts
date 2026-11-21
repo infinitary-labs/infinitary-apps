@@ -5,6 +5,9 @@ import type { CoreInvokeChannel } from "./ipc";
 const WORK_REQUEST =
   "A crewmate's own work, asked by the computer that runs it; not an app setting";
 
+/** The captain's own clicks and picks on a card. */
+const CARD_CLICKS = "Captain card clicks";
+
 /** Operations which are not app settings, with the reason they stay outside the table. */
 export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:secrets:entry":
@@ -28,9 +31,9 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:automation:kept-forget":
     "Takes a kept job whose remove did not finish off the list on the captain's click in Settings, running nothing",
   "inf:converse": "Conversation, not an app setting",
-  "inf:cards:act": "Captain card clicks",
-  "inf:cards:close": "Captain card clicks",
-  "inf:cards:note-done": "Captain card clicks",
+  "inf:cards:act": CARD_CLICKS,
+  "inf:cards:close": CARD_CLICKS,
+  "inf:cards:note-done": CARD_CLICKS,
   "inf:cards:minimize":
     "Captain-only saved card presentation; the first mate may restore through show-card, never minimize",
   "inf:cards:show-past":
@@ -38,6 +41,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:cards:open-page":
     "The captain's click on a card's page from its task's project; it opens the task's browser and sets nothing",
   "inf:cards:reply": "Conversation, not an app setting",
+  // The captain's unsent picks, words and notes on a card, kept for every window until a press or reply sends them.
+  "inf:cards:draft": CARD_CLICKS,
   "inf:task:steer":
     "The captain's own line in a task's Crewmate tab; conversation, not an app setting",
   "inf:task:interrupt": "The captain's own key or click in a task's Crewmate tab; nothing is set",

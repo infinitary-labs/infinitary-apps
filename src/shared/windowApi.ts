@@ -8,6 +8,7 @@ import type {
   AutomationSpec,
 } from "./automation";
 import type { BatchAnswer } from "./batches";
+import type { CardDraft, CardDraftChange, CardDraftChanged } from "./cardDrafts";
 import type {
   CardFileSaved,
   CardFilesSaved,
@@ -585,6 +586,13 @@ export type FirstmateApi = {
     seenUpdate: (cardId: string, lifecycleId: string, updateId: string) => Promise<{ ok: true }>;
     /** The card's thread (cards-as-threads phase 1), oldest message first. */
     thread: (cardId: string) => Promise<CardThread>;
+    /**
+     * Every open card's unsent draft (docs/card-authoring.md, "Unsent picks
+     * follow you"), read at each welcome; absent on an older preload.
+     */
+    drafts?: () => Promise<CardDraft[]>;
+    /** What this window changed in one card's draft since it last heard it at `change.since`. */
+    draft?: (cardId: string, change: CardDraftChange) => Promise<CardDraftChanged>;
     /** The card a click on its notification asked this window to open, once; null for none. */
     takeNotified: () => Promise<{ cardId: string | null }>;
     /** A click on a card's notification: take which card with `takeNotified`. */
@@ -640,6 +648,8 @@ export type FirstmateApi = {
       submission?: CardSubmission,
     ) => Promise<CardThread>;
     onThread: (listener: (thread: CardThread) => void) => () => void;
+    /** A card's draft another window changed (`inf:cards:draft`). */
+    onDraft?: (listener: (draft: CardDraft) => void) => () => void;
   };
   events: {
     on: (listener: (event: FmEvent) => void) => () => void;

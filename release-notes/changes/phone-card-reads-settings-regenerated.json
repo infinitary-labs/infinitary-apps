@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-reads-settings-regenerated",
+      "reason": "Regenerates the phone's bundled card script and contract so a crewmate card's live reads on iPhone and iPad include the app-settings read that panels already have; the generated files were left out of step when the two changes were combined."
+    }
+  ]
+}

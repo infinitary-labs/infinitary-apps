@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: تحديث Infinitary وإزالته
 description: كيف يحصل كل نوع من التثبيت على نسخة مستقرة جديدة، وكيف تزيل Infinitary مع الإبقاء على عملك المحفوظ.
 ---
@@ -87,3 +87,15 @@ brew update && brew upgrade --cask infinitary-labs/tap/infinitary
   أما ملف AppImage فاحذف الملف.
 
 يبقى عملك المحفوظ في `~/Library/Application Support/infinitary` على Mac، وفي `~/.config/infinitary` على Linux.
+
+### ما يحذف عملك المحفوظ {#what-deletes-your-saved-work}
+
+هذه تحذف ذلك المجلد، ويذهب معه ما احتفظ به Infinitary هناك:
+
+- `brew uninstall --zap`.
+- تطبيق إزالة يزيل أيضًا ملفات دعم التطبيق.
+- نقل المجلد نفسه إلى سلة المهملات، أو حذفه.
+
+على حاسوب يشغّل العمل لحاسوب آخر، يحمل ذلك المجلد مفتاح الحاسوب الخاص، ونسخ العمل، وملفات مهامه.
+من دونه، ينضم الحاسوب مجددًا كإدخال جديد، ويبقى العمل الذي لم يُحضره ضائعًا.
+راجع [حاسوب مُدرج مرتين](/ar/troubleshooting/#a-computer-is-listed-twice).

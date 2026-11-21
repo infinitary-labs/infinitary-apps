@@ -125,6 +125,38 @@ describe("the working copies a computer that runs work keeps", () => {
     expect(copies.list()).toEqual(["t-one", "t-two"]);
   });
 
+  // A task saved a stand-in name with a plain `git config` in its working
+  // copy, which writes the clone every task shares; later tasks' commits,
+  // and the batch merge after them, carried that name to the project's main.
+  it("keeps a name one task saved in the shared clone off every other task's commits", async () => {
+    const { origin } = await project();
+    const { copies } = computer();
+    const owner = join(scratchDir("infinitary-copies-owner-"), "gitconfig");
+    writeFileSync(owner, "[user]\n\tname = Captain\n\temail = captain@example.test\n");
+    const as = { env: { GIT_CONFIG_GLOBAL: owner } };
+    const nameOn = async (dir: string) => {
+      writeFileSync(join(dir, `${Math.random()}.txt`), "work\n");
+      await git(dir, ["add", "-A"], as);
+      await git(dir, ["commit", "-q", "-m", "chore: work"], as);
+      return git(dir, ["log", "-1", "--format=%an <%ae> | %cn <%ce>"], as);
+    };
+
+    const stray = await copies.prepare("t-stray", { origin });
+    await git(stray.dir, ["config", "user.email", "x@x"]);
+    await git(stray.dir, ["config", "user.name", "x"]);
+    const next = await copies.prepare("t-next", { origin });
+    expect(await nameOn(next.dir)).toBe(
+      "Captain <captain@example.test> | Captain <captain@example.test>",
+    );
+
+    await git(stray.dir, ["config", "user.name", "x"]);
+    await git(stray.dir, ["config", "author.email", "x@x"]);
+    await copies.prepare("t-next", { origin });
+    expect(await nameOn(next.dir)).toBe(
+      "Captain <captain@example.test> | Captain <captain@example.test>",
+    );
+  });
+
   // INF-4195's plan: the home sends the branch its record holds, and the
   // computer makes, reads and moves the task's work on that name.
   it("makes a task's working copy on the branch the home names, and moves its work on that name", async () => {

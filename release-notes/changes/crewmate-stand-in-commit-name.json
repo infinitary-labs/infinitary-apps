@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-stand-in-commit-name",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Your commits keep your own name when crewmates work on another computer",
+      "body": "When a crewmate on a computer that runs work saved a stand-in commit name, later crewmates' commits there, and the merged changes on your project, could carry that name instead of yours. The computer now drops any saved name before each crewmate starts, so commits take your own name again.",
+      "noPicture": "This changes the name on commits in your project's history, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

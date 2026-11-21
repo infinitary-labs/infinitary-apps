@@ -358,6 +358,6 @@ describe("a refused launch's copy that shows a word", () => {
     ).toBe(0);
     const args: string[] = JSON.parse(readFileSync(join(marks, "args"), "utf8"));
     expect(args[0]).toBe(`${PERSON_WORD_ARG}=once-closed`);
-    expect(args[1].startsWith(`--user-data-dir=${join(profiles, "infinitary-word-")}`)).toBe(true);
+    expect(args[1]?.startsWith(`--user-data-dir=${join(profiles, "infinitary-word-")}`)).toBe(true);
   });
 });

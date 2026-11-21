@@ -736,9 +736,10 @@ test("Start it here on a folder joined to another computer opens the view and as
 });
 
 // The review of INF-5409: a launch refused the folder's lock by a window from before windows
-// answered a launch tells it by what it runs as and ends, starting nothing. On a Mac it asks that
-// window once to reopen and, with no window's answer to confirm it, tells the person to click
-// Infinitary in the Dock, in the language a launch speaks at its start: English for a German
+// answered a launch tells it by what it runs as and ends, starting nothing. On a Mac it sends that
+// window nothing, since macOS reaches one process of several only with the person's consent to
+// control the app, so that window hears no reopen; with no window's answer to confirm it, the launch
+// tells the person to click Infinitary in the Dock, in the language a launch speaks at its start: English for a German
 // computer that chose nothing, and a pseudo-language as itself; a check's hidden launch says those words in its output
 // instead of showing them. The older window keeps the folder and its first mate. Only a Mac has a
 // Dock to name; elsewhere the launch quits at once, as for any window.
@@ -759,6 +760,14 @@ test("a launch refused by a window that answers no launch ends, telling the pers
     });
     try {
       await showCard(older.page, CARD_TITLE);
+      // What reaches the older window from macOS: a reopen, as a click in the Dock sends, counted.
+      await older.app.evaluate(({ app }) => {
+        const counted = globalThis as { reopens?: number };
+        counted.reopens = 0;
+        app.on("activate", () => {
+          counted.reopens = (counted.reopens ?? 0) + 1;
+        });
+      });
       for (const computer of ["de", "en-XA"]) {
         launch = spawn(
           electronPath as unknown as string,
@@ -792,6 +801,7 @@ test("a launch refused by a window that answers no launch ends, telling the pers
       }
       expect(older.app.process().exitCode).toBeNull();
       expect(profileHolder(userDataDir)).toBe(older.app.process().pid);
+      expect(await older.app.evaluate(() => (globalThis as { reopens?: number }).reopens)).toBe(0);
       await showCard(older.page, CARD_TITLE);
     } finally {
       await older.close();

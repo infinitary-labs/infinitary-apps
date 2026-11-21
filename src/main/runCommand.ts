@@ -653,7 +653,10 @@ export async function lockHolderKind(options: {
   onUnknown?: () => void;
   /** The holder told to be a window by what it runs as, when the result is `window` for that. */
   onWindow?: (holder: number | undefined) => void;
-}): Promise<"run" | "free" | "window"> {
+  /** Ends the watch: nothing is read, asked or told after it, and the result is `stopped`. */
+  signal?: AbortSignal;
+}): Promise<"run" | "free" | "window" | "stopped"> {
+  const stopped = () => options.signal?.aborted === true;
   // Asks for the lock: taken, it is free unless a window answered meanwhile and then let it go.
   const ask = () => (options.lockFree() ? (options.answered() ? "window" : "free") : null);
   let seen = options.asked;
@@ -671,6 +674,7 @@ export async function lockHolderKind(options: {
     options.onUnknown?.();
   };
   for (;;) {
+    if (stopped()) return "stopped";
     if (options.answered()) return "window";
     if (options.running()) return "run";
     const holder = options.holder();
@@ -691,6 +695,7 @@ export async function lockHolderKind(options: {
       if (kind) return kind;
     } else if (holder !== read || Date.now() >= readAgain) {
       const window = await options.windowHolder(holder);
+      if (stopped()) return "stopped";
       // Only while that same holder still holds the lock: what was read of one that let it go
       // since tells nothing of the next, which is asked first.
       if (options.holder() === holder) {

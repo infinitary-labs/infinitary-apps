@@ -1,8 +1,6 @@
 import { execFile } from "node:child_process";
 import { dirname } from "node:path";
-import { promisify } from "node:util";
 import { hostEnv } from "@core/hostEnv";
-import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 
 /**
  * Clicking Infinitary while only its command runs (docs/run.md, "Opened
@@ -75,86 +73,52 @@ export function openWindowOnReopen(options: {
  */
 export const TOLD_THE_PERSON = "[app] told the person:";
 
-/** macOS's own open, asking the running app at `bundle` to reopen as a click in the Dock does; whether macOS took it. */
-export function askReopen(bundle: string): Promise<boolean> {
-  return new Promise((done) =>
-    execFile(
-      "/usr/bin/open",
-      ["-a", bundle],
-      { env: hostEnv(), timeout: RESOURCE_READ_TIMEOUT_MS },
-      (error) => done(!error),
-    ),
-  );
-}
+/** What a word to the person needs of Electron and the launch (`tellThePerson`). */
+export type PersonWords<
+  Box extends { signal?: AbortSignal; cancelId?: number },
+  Parent extends { destroy: () => void } = { destroy: () => void },
+> = {
+  /** Electron ready and the launch's start language set. */
+  ready: () => Promise<void>;
+  /** A check's hidden launch, which says its words in its output instead. */
+  hidden: boolean;
+  say: (box: Box) => void;
+  /** A window of the word's own for a word the launch may take away, where the platform needs one. */
+  parent: (box: Box) => Parent | null;
+  focus: () => void;
+  show: (box: Box, parent: Parent | null) => Promise<number>;
+};
 
 /**
- * The process numbers of every program a Mac's `ps` lists as running from
- * this app's own executable, the launch itself included; null where they
- * cannot be read.
+ * A word to the person, in the language a launch speaks at its start, in front of whatever they use
+ * now; its words are made once that language is set (`words`). One no longer wanted by then, null or
+ * already taken away (`signal`), is never made: no window, focus or word, and null. A check's hidden
+ * launch says it in its output instead: null. A word that cannot be shown, or its window made, is
+ * answered as dismissed (`cancelId`).
  */
-export async function copiesOf(execPath: string): Promise<number[] | null> {
-  try {
-    const { stdout } = await promisify(execFile)("/bin/ps", ["-axww", "-o", "pid=,args="], {
-      env: hostEnv({ LC_ALL: "C" }),
-      encoding: "utf8",
-      timeout: RESOURCE_READ_TIMEOUT_MS,
-      maxBuffer: 16 * 1024 * 1024,
-    });
-    return copiesListed(stdout, execPath);
-  } catch {
+export async function tellThePerson<
+  Box extends { signal?: AbortSignal; cancelId?: number },
+  Parent extends { destroy: () => void },
+>(words: () => Box | null, person: PersonWords<Box, Parent>): Promise<number | null> {
+  await person.ready();
+  const box = words();
+  if (box === null || box.signal?.aborted) return null;
+  if (person.hidden) {
+    person.say(box);
     return null;
   }
-}
-
-/** The process numbers a Mac's `ps -o pid=,args=` lists as running from `execPath`. */
-export function copiesListed(listed: string, execPath: string): number[] {
-  return listed.split("\n").flatMap((line) => {
-    const read = /^\s*(\d+) (.*)$/.exec(line);
-    const args = read?.[2] ?? "";
-    return read && (args === execPath || args.startsWith(`${execPath} `)) ? [Number(read[1])] : [];
-  });
-}
-
-/**
- * A launch refused the folder's lock by a window from before the launch's
- * ask had an answer, told only by what it runs as (`holderIsWindow`), on a
- * Mac (docs/run.md, "Opened while it runs"): that older window brings itself
- * forward on the ask while it has a window, but one whose last window was
- * closed keeps running in the Dock and opens nothing. The launch asks the
- * holder it told by its words once to reopen, as a click in the Dock does,
- * through macOS's own open of its bundle (`askReopen`), which every version
- * opens its window on; a holder is told by its words only where it runs this
- * same program, so the bundle asked is its own. macOS sends that open to a
- * running copy of the bundle and starts none while one runs, as this launch
- * itself does, so it never opens a copy the person quit; it cannot be sent to
- * one process of several without the person's consent to control the app, so
- * it is asked only while the holder is the one copy running besides this
- * launch (`soleRecipient`), and otherwise not asked at all. macOS taking the ask confirms
- * nothing of a window, so only a window's answer confirms it (`confirmed`),
- * read at every end, whatever macOS said; `gone` where that holder no longer
- * holds the lock, before the ask or once it was made, as a window the person
- * quit; `unconfirmed` otherwise, including where it cannot be asked, macOS
- * refused it, or it reached this launch instead, for the launch to tell the
- * person to click Infinitary in the Dock.
- */
-export async function reopenOlderWindow(options: {
-  bundle: string | null;
-  holderAlive: () => boolean;
-  answered: () => boolean;
-  /** Whether the holder is the one copy of this program running besides this launch. */
-  soleRecipient: () => Promise<boolean>;
-  ask?: (bundle: string) => Promise<boolean>;
-}): Promise<"confirmed" | "gone" | "unconfirmed"> {
-  const end = () =>
-    options.answered()
-      ? ("confirmed" as const)
-      : options.holderAlive()
-        ? ("unconfirmed" as const)
-        : ("gone" as const);
-  if (!options.holderAlive() || options.bundle === null) return end();
-  if (!(await options.soleRecipient()) || !options.holderAlive()) return end();
-  await (options.ask ?? askReopen)(options.bundle);
-  return end();
+  let parent: Parent | null = null;
+  try {
+    parent = person.parent(box);
+    if (box.signal?.aborted) return null;
+    person.focus();
+    return await person.show(box, parent);
+  } catch (error) {
+    console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
+    return box.cancelId ?? 0;
+  } finally {
+    parent?.destroy();
+  }
 }
 
 /**
@@ -162,34 +126,43 @@ export async function reopenOlderWindow(options: {
  * it (`lockHolderKind`): a window's answer wins, even one that came after the
  * holder was read, read again before each step, and so does the person's word
  * to leave a holder that showed nothing open (`left`). A window told only by
- * what it runs as, on a Mac, is asked once to reopen (`reopenOlderWindow`),
- * and the person is told to click it in the Dock unless a window's answer
- * confirms it. The launch starts again beside a run and on a free folder; where
- * the window it asked to reopen ended meanwhile, as one the person quit, it
- * starts nothing on a folder left free, so a window quit stays quit, and on a
- * folder another program took (`occupied`) it ends nothing either: `follow`,
- * for the launch to watch that holder as any other. It quits otherwise. The
- * holder's kind, for the launch's log.
+ * what it runs as, on a Mac, is a window from before that answer which may
+ * have closed its last window and opened none at the ask; macOS cannot be
+ * asked to reopen that one process without the person's consent to control
+ * the app, and its open of the bundle may reach another copy or start one, so
+ * the launch sends nothing and tells the person to click Infinitary in the
+ * Dock (`tellDock`) while that holder still holds the folder (`holderAlive`).
+ * The word is taken away once a window answers or that holder lets the folder
+ * go, and how it ended is read afterwards, as before it: an answer ends the
+ * launch; that holder gone with the folder left free starts nothing, so a
+ * window quit stays quit; gone with another program on the folder
+ * (`occupied`) ends nothing either: `follow`, for the launch to watch that
+ * holder as any other. The launch starts again beside a run and on a free
+ * folder, and quits otherwise. The holder's kind, for the launch's log.
  */
 export async function endRefusedLaunch(options: {
   found: "run" | "free" | "window" | "left";
   answered: () => boolean;
+  /** Whether the window told by what it runs as still holds the folder. */
+  holderAlive: () => boolean;
   /** Whether a program holds the folder now, or a run notes it does. */
   occupied: () => boolean;
   platform: string;
-  reopen: () => Promise<"confirmed" | "gone" | "unconfirmed">;
   tellDock: () => Promise<void>;
   relaunch: () => void;
   quit: () => void;
 }): Promise<"run" | "free" | "window" | "follow"> {
   const answeredFirst = options.answered();
   const kind = answeredFirst || options.found === "left" ? "window" : options.found;
-  const reopened =
-    kind === "window" && options.found !== "left" && !answeredFirst && options.platform === "darwin"
-      ? await options.reopen()
-      : null;
-  if (reopened === "unconfirmed" && !options.answered()) await options.tellDock();
-  if (reopened === "gone" && !options.answered() && options.occupied()) return "follow";
+  if (
+    kind === "window" &&
+    options.found !== "left" &&
+    !answeredFirst &&
+    options.platform === "darwin"
+  ) {
+    if (options.holderAlive()) await options.tellDock();
+    if (!options.answered() && !options.holderAlive() && options.occupied()) return "follow";
+  }
   if (kind !== "window" && !options.answered()) options.relaunch();
   options.quit();
   return kind;

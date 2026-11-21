@@ -503,6 +503,59 @@ describe("a window opened beside a run", () => {
     ).toBe("window");
   });
 
+  // The review of INF-5409: the person's word to leave a holder that showed nothing ends the watch
+  // while a read of that holder is outstanding: once it comes back nothing more is asked or told,
+  // so the folder is never taken and the holder never asked again. A watch ended before it starts
+  // reads nothing at all.
+  it("asks and tells nothing once the watch ends, even mid-read", async () => {
+    const asks: string[] = [];
+    let reading: (shown: boolean | null) => void = () => {};
+    const leave = new AbortController();
+    const watch = lockHolderKind({
+      running: () => false,
+      answered: () => false,
+      holder: () => 4242,
+      asked: 4242,
+      windowHolder: () =>
+        new Promise<boolean | null>((resolve) => {
+          asks.push("read");
+          reading = resolve;
+        }),
+      lockFree: () => {
+        asks.push("lock");
+        return true;
+      },
+      readEveryMs: 10,
+      everyMs: 5,
+      signal: leave.signal,
+      onUnknown: () => asks.push("told"),
+      onWindow: () => asks.push("window"),
+    });
+    await vi.waitFor(() => expect(asks).toEqual(["read"]));
+    leave.abort();
+    reading(true);
+    expect(await watch).toBe("stopped");
+    expect(asks).toEqual(["read"]);
+    const ended = new AbortController();
+    ended.abort();
+    expect(
+      await lockHolderKind({
+        running: () => true,
+        answered: () => true,
+        holder: () => null,
+        asked: 4242,
+        windowHolder: async () => true,
+        lockFree: () => {
+          asks.push("lock");
+          return true;
+        },
+        readEveryMs: 10,
+        signal: ended.signal,
+      }),
+    ).toBe("stopped");
+    expect(asks).toEqual(["read"]);
+  });
+
   // The review of INF-5409: a window from before windows answered a launch's ask (as one still open
   // across an update) brings itself forward at the ask and never answers. Silence is no evidence of
   // a window: the holder is taken for one only by the words it runs with, which never hold `run`,

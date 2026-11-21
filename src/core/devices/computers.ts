@@ -1297,7 +1297,7 @@ export class Computers {
   /**
    * Update on the row of an app behind this computer's version: that app,
    * connected now, catches up and starts again as soon as it has the
-   * version. False when no app of that computer is connected, or the one
+   * version and no words are left unsent there. False when no app of that computer is connected, or the one
    * there is from before.
    */
   updateApp(deviceId: string): boolean {

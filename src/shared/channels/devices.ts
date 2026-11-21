@@ -334,7 +334,7 @@ export const deviceChannels = {
   // "Following the home's version"; `app-follows-home`): it tells the home
   // each step of catching up, asked only as a view, which names the device;
   // and the row's Update asks that app, over its own connection, to catch up
-  // and start again now. Update answers whether an app of that computer was
+  // now and start again once no words are left unsent there. Update answers whether an app of that computer was
   // connected to ask.
   "inf:devices:app-follow": {
     effect: "change",

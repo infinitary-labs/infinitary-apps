@@ -23,7 +23,8 @@ import { showCard, shownCard } from "./stack";
  * src/main/host/macUpdateStandIn.ts), so nothing is downloaded or replaced
  * and its install never answers, as a release quitting to start again would
  * not. The first mate's computer runs this build's version. A window here
- * is never in front, so only words not yet sent keep the app in use.
+ * is never in front unless a test says it came there, so otherwise only
+ * words not yet sent keep the app in use.
  */
 
 const HOME = "Mac mini";
@@ -108,6 +109,16 @@ async function tabTo(page: Page, target: Locator): Promise<void> {
   throw new Error("Tab never reached the control");
 }
 
+/**
+ * Someone came to the app's window there: it is in front, so the app is in
+ * use whatever its words, and only a press of Update app starts it again.
+ */
+async function inFront(view: LaunchedApp): Promise<void> {
+  await view.app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.emit("focus");
+  });
+}
+
 /** Words typed here and not sent, while the first mate's computer is away. */
 async function wordsLeft(page: Page): Promise<void> {
   const input = promptInput(page);
@@ -171,11 +182,13 @@ test("an app on another computer gets the first mate's computer's version by its
     await step(row, "restarting", m.devicesAppRestarting({ version }));
     await installing(installs, version, 2);
 
-    // Words unsent again: Update app on the row, by keys, keeps them, and starts it once they are gone.
+    // Someone at its window, words unsent again: nobody-uses-it can no longer start it, so
+    // only Update app on the row, by keys, does - keeping the words, and once they are gone.
     await view.close();
     await home.close();
     view = await launchApp({ userDataDir: viewDir, env: viewEnv(installs) });
     opened.push(view);
+    await inFront(view);
     await wordsLeft(view.page);
     home = await homeAgain();
     opened.push(home);

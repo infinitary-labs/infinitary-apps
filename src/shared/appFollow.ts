@@ -17,7 +17,8 @@ export const APP_FOLLOWS_HOME = "app-follows-home";
 /**
  * Where the app stands in catching up with the home:
  * - `getting`: it downloads the home's version; `percent` says how far.
- * - `waiting`: it has the home's version and waits until nobody there uses it.
+ * - `waiting`: it has the home's version and waits until nobody there uses it,
+ *   or, once the row's Update was pressed, until no words are left unsent there.
  * - `restarting`: it starts again on the home's version.
  * - `cannot`: it cannot install the home's version by itself; `reason` says why.
  * - `failed`: getting or installing it did not go through; `problem` says what happened.

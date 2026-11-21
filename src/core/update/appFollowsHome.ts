@@ -47,7 +47,10 @@ export class AppFollowsHome {
    * them or with the connection.
    */
   private now = false;
-  /** The home's version, ready to install, while it waits for nobody to use this app. */
+  /**
+   * The home's version, ready to install, while it waits for nobody to use
+   * this app, or, once the row's Update was pressed, for no words left unsent.
+   */
   private waiting: string | null = null;
   /** The last step told, so a moving download tells only what changed. */
   private told: string | null = null;

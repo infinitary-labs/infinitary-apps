@@ -450,7 +450,7 @@ export class ViewBackend {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
         // The first mate's computer is going to sleep: Take over says so.
         if (channel === HOME_GOODBYE_LIVE) this.taking?.heardGoodbye();
-        // Update app on this app's row there: catch up and start again now.
+        // Update app on this app's row there: catch up now, and start again once no words are left unsent.
         if (channel === APP_UPDATE_LIVE) {
           const ask = appUpdateAskSchema.safeParse(payload);
           if (ask.success && ask.data.deviceId === options.record.grant.deviceId)

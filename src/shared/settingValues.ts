@@ -1,7 +1,7 @@
 import type { CostLimit } from "./costLimit";
 import {
   type Appearance,
-  ambientStyleOf,
+  ambientStyleIn,
   DEFAULT_AMBIENT_VOLUME,
   DEFAULT_APPEARANCE,
   type ShellPreferences,
@@ -29,7 +29,12 @@ export const crewModelNamesValue = (c: unknown) => ({
 export const ambientMusicValue = (c: unknown) => ({
   on: look(c).ambientMusic ?? false,
   volume: look(c).ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
-  style: ambientStyleOf(look(c).ambientStyle),
+  style: ambientStyleIn(look(c).ambientStyle, look(c).ambientOwnStyles),
+});
+/** A person's own ambient styles, and which style plays. */
+export const ambientOwnStylesValue = (c: unknown) => ({
+  saved: look(c).ambientOwnStyles ?? [],
+  playing: ambientStyleIn(look(c).ambientStyle, look(c).ambientOwnStyles),
 });
 /** A saved pause of the music, which a panel reads beside the music's own value. */
 export const ambientPausedValue = (c: unknown) => ({ paused: look(c).ambientPaused ?? false });

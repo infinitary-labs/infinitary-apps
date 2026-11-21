@@ -3127,6 +3127,13 @@
 "settingsSoundAmbientMusic" = "環境音樂";
 "settingsSoundAmbientMusicDescription" = "在你的電腦上邊播放邊程序化生成的舒緩音樂，因此從不循環。它隨船員的工作變化，有事等你時會輕聲提示。";
 "settingsSoundHeading" = "聲音";
+"settingsSoundOwn" = "你自己的音樂";
+"settingsSoundOwnDescribe" = "描述你自己的";
+"settingsSoundOwnDescription" = "描述你想聽的音樂，你的大副會把它寫成一種用應用程式內建樂器演奏的風格，列在「你的」下面。";
+"settingsSoundOwnDraft" = "為我寫一段自己的環境音樂：";
+"settingsSoundOwnNoWords" = "你的大副為你寫的風格。";
+"settingsSoundOwnRemove" = "移除";
+"settingsSoundOwnRemoveNamed" = "移除 %1$@";
 "settingsSoundPauseWhenAway" = "離開時暫停";
 "settingsSoundPauseWhenAwayDescription" = "螢幕關閉或鎖定時暫停，以免音樂讓你的電腦無法睡眠；你回來後繼續播放。";
 "settingsSoundStyle" = "風格";
@@ -3140,6 +3147,7 @@
 "settingsSoundStyleGroupNautical" = "航海";
 "settingsSoundStyleGroupPirate" = "海盜";
 "settingsSoundStyleGroupSpace" = "太空";
+"settingsSoundStyleGroupYours" = "你的";
 "settingsSoundStyleHarborDawn" = "港口黎明";
 "settingsSoundStyleHarborDawnDescription" = "緩慢而莊重：柔和的銅管、豎琴和船鐘，伴著輕柔的海浪聲。";
 "settingsSoundStyleIslandMorning" = "海島清晨";

@@ -11,6 +11,7 @@ export const AMBIENT_MUSIC = contractChange("ambient-music");
 export const AMBIENT_PAUSE = contractChange("ambient-pause");
 export const AMBIENT_STYLE = contractChange("ambient-style");
 export const AMBIENT_AWAY = contractChange("ambient-away");
+export const AMBIENT_OWN_STYLES = contractChange("ambient-own-styles");
 
 /**
  * The panel read `settings.current` (`settings-current.md`). A view without

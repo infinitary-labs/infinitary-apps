@@ -226,6 +226,50 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(t.cards().some((card) => card.id === "card-fm-no-headroom")).toBe(false);
   });
 
+  // INF-5478's plan, piece 2 (docs/quota.md, "Saved resets on their own"):
+  // accounts with allowance left come first; a seat on credits with no such
+  // sibling weighs a saved reset and serves the turn on credits meanwhile.
+  it("weighs a saved reset as a seat on credits serves the turn, and none while a sibling has room", async () => {
+    const weighed: string[] = [];
+    const t = setupWithFlagship({
+      accounts: [
+        {
+          id: "acct_a",
+          providerId: "openai-codex",
+          label: "Personal",
+          enabled: true,
+          keepGoingOnCredits: true,
+        },
+        { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
+      ],
+      savedResetsSpent: (accountId) => weighed.push(accountId),
+    });
+    t.setHeadroom("acct_a", 60);
+    t.setHeadroom("acct_b", 0);
+    await t.agent.converse("first");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+    expect(weighed).toEqual([]);
+
+    // Personal is spent and Work #2 has no room: the reset is weighed, and the turn is served on credits at once.
+    t.setHeadroom("acct_a", 0);
+    await t.agent.converse("second");
+    await tick();
+    expect(weighed).toEqual(["acct_a"]);
+    expect(t.specs).toHaveLength(1);
+    expect((t.sessions[0] as FakeSession).prompts.at(-1)).toContain("second");
+    expect(t.cards().some((card) => card.id === "card-fm-no-headroom")).toBe(false);
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    // Work #2 has room again: the seat moves there, and nothing more is weighed.
+    t.setHeadroom("acct_b", 40);
+    await t.agent.converse("third");
+    await tick();
+    expect(t.settings.getFirstmateAccount()).toBe("acct_b");
+    expect(weighed).toEqual(["acct_a"]);
+  });
+
   // INF-5369 piece 6 (docs/quota.md, "Saved resets"), and INF-5478's
   // accepted plan piece 1 (docs/codex-client.md): a button uses it.
   it("says on the spent-allowance card when a saved reset would refill the account now, with a link to its usage page and a button that uses it", async () => {

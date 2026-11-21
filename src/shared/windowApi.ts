@@ -987,6 +987,15 @@ export type FirstmateApi = {
       accountId: string,
       options?: UseSavedResetOptions,
     ) => Promise<SavedResetResult>;
+    /**
+     * Use saved resets on their own, on or off (docs/quota.md); turning it
+     * on with `signIn` lets Codex sign in to the account first.
+     */
+    setUseSavedResets: (
+      accountId: string,
+      on: boolean,
+      options?: UseSavedResetOptions,
+    ) => Promise<{ ok: true }>;
   };
   /**
    * The app's own sign-ins where projects live (git integration PR 1.2):

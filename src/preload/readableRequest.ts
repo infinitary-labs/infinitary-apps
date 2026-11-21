@@ -117,6 +117,7 @@ export const REQUEST_COPY = {
   // Every refusal of a saved reset is already a whole sentence in the
   // person's language; only an empty one falls back to the sign-in's words.
   "inf:accounts:use-saved-reset": { fallback: SIGN_IN_FALLBACK, prefix: "" },
+  "inf:accounts:use-saved-resets": { fallback: SIGN_IN_FALLBACK, prefix: "" },
   "inf:settings:routing:set": {
     fallback: "Could not save routing. Please try again.",
     prefix: "Could not save routing: ",

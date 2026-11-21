@@ -250,5 +250,6 @@
   "cardThreadWrittenBy": "{label} 작성",
   "cardThreadWrittenByAfterClose": "{label} 작성, 카드가 닫힌 뒤",
   "cardTradeoffTable": "장단점을 표로 보기",
-  "cardUseSavedReset": "저장된 재설정 사용"
+  "cardUseSavedReset": "저장된 재설정 사용",
+  "cardUseSavedResets": "저장된 재설정 자동 사용"
 }

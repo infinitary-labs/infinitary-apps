@@ -725,6 +725,12 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
             ? invoke("inf:accounts:keep-going", accountId, on, deviceId)
             : invoke("inf:accounts:keep-going", accountId, on),
         ),
+      setUseSavedResets: (accountId, on, options) =>
+        readableRequest("inf:accounts:use-saved-resets", () =>
+          options
+            ? invoke("inf:accounts:use-saved-resets", accountId, on, options)
+            : invoke("inf:accounts:use-saved-resets", accountId, on),
+        ),
       redeemSavedReset: (accountId, options) =>
         readableRequest("inf:accounts:use-saved-reset", () =>
           options

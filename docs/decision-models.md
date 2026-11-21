@@ -170,12 +170,12 @@ They hang off the frozen `window.infinitary.models` namespace; the top-level key
 Each entry has a kind:
 
 - `always-on`: Infinitary needs it to work; its switch shows on and locked (task classification).
-- `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction, the computer question and the reviewer question).
+- `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction, the computer question, the reviewer question and the saved-reset question).
 - `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once (the event screen and the reader check, below).
 
 The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
 `DecisionModels.decide` refuses a use that is off, or that the answering Jev or OpenRouter approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
-Six uses are listed:
+Seven uses are listed:
 
 - `kind`, task classification ("The first consumer").
 - `reply-checks`, "Optional reply checks" below.
@@ -187,6 +187,8 @@ Six uses are listed:
   Its disclosure names what leaves: each event's summary, such as an email's sender and subject, which anyone who can email the person writes.
 - `card-reader`, Reader check on cards: four readings of a crewmate's card once it is up, told to its author as facts (`docs/card-authoring.md`, "The reader check").
   It needs the person's OK because it asks four questions on every crewmate card, which on the person's own models costs a few seconds and some allowance each time.
+- `saved-reset`, Use a saved reset or wait: when work waits on a Codex account whose Use saved resets on their own is on, and no account at that level has room, the question reads the account's plan, each allowance's percent left and hours until it refills, its saved resets and which work waits, and answers `use` or `wait`; an abstention waits (`docs/quota.md`, "Saved resets on their own").
+  It is asked once per spent allowance and only for an account whose switch the person turned on, and its facts are allowance numbers, so it is on by default like the reviewer question.
 
 A program's `ask()` is not a use: it asks for JSON in a shape it chooses, which a decision model cannot be relied on to give, so `ProgramQuestions` asks the person's own models apart from this list (`docs/programs.md`).
 

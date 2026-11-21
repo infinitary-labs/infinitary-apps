@@ -1339,6 +1339,11 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   The use runs as a sign-in does here, under its own sign-in id: Codex's sign-in link and its paste-back prompt cross to the home and show under the account's row, and the end is a `signed-in` step carrying what the use came to (`savedReset`), or a failed step with this computer's words.
   The home says the outcome in its feed and asks this computer to read its allowance again; removing the account here signs Codex out and deletes its Codex home with the account's folder.
   A computer without the change shows the item dimmed in its row's menu, with a note to update Infinitary there first.
+- **Saved resets on their own, saved here.**
+  A Codex account here carries its own Use saved resets on their own switch (`docs/quota.md`, "Saved resets on their own"), saved in this computer's own store; the home turns it with the `inf:sign-ins:use-saved-resets` order, sent only to a computer that lists the `auto-saved-resets` change (`DeviceSignIns.setUseSavedResets`).
+  Turning it on runs as a sign-in does here when Codex needs one, and ends `signed-in` once the switch is saved.
+  Turning it off is saved and answered at once, with no steps; a refusal or a failed turn-off stays under the account's row at the home.
+  The home decides when to use a reset and sends the same `inf:sign-ins:use-saved-reset` order a click does.
 - **Prefer, rename and pause, saved here.**
   The home turns an account's crew preference, its name and its pause with the `inf:sign-ins:pin`, `rename` and `set-enabled` orders, sent only to a computer that lists the `computer-account-settings` change (`DeviceSignIns.setAccount`, its `accountSettings` view).
   This computer refuses an account it does not hold, saves each in its own store with the same `AccountVault` calls the home uses for its own, and tells the home its sign-ins whole; the home keeps none of them.

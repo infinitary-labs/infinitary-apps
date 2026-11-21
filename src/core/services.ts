@@ -35,7 +35,13 @@ import { primeClaudeExecutable } from "./claude/claudeCli";
 import { claudeCostReportingAllowed } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { createClaudeSessionFactory } from "./claude/session";
-import { SavedResets, savedResetReach, signOutCodexHome } from "./codex/savedResets";
+import { AutoSavedResets } from "./codex/autoSavedResets";
+import {
+  SavedResets,
+  savedResetReach,
+  signOutCodexHome,
+  takesSavedReset,
+} from "./codex/savedResets";
 import type { CoreServices } from "./coreServices";
 import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
 import { startHomeDecisions } from "./decisions/homeDecisions";
@@ -564,6 +570,9 @@ export async function createServices(
   // The crew's run-out card, once per spent allowance of an account (docs/quota.md
   // "Keep going on credits"); wired once the card stack exists.
   let onSpentAt: (piProviders: string[], deviceId?: string) => void = () => {};
+  // Use saved resets on their own (docs/quota.md); wired with the saved-reset use.
+  let onCreditsAt: (piProviders: string[], deviceId?: string) => void = () => {};
+  let savedResetsSpent: (accountId: string) => void = () => {};
   let setKeepGoingOnCredits: CoreServices["setKeepGoingOnCredits"] = async () => {};
   // Using a saved Codex reset (docs/codex-client.md); wired once the computers' sign-ins exist.
   let savedResets: SavedResets | undefined;
@@ -572,6 +581,7 @@ export async function createServices(
   // The routing pool, the slot record and the router (routing/homeRouting.ts).
   const homeRouting = startHomeRouting({
     onSpentAt: (piProviders, deviceId) => onSpentAt(piProviders, deviceId),
+    onCreditsAt: (piProviders, deviceId) => onCreditsAt(piProviders, deviceId),
     standIns,
     settings,
     vault,
@@ -1346,6 +1356,11 @@ export async function createServices(
       if (!savedResets) throw new Error("Infinitary is still starting.");
       return savedResets.use(accountId, options);
     },
+    setUseSavedResets: (accountId, on, options) => {
+      if (!savedResets) throw new Error("Infinitary is still starting.");
+      return savedResets.setUseSavedResets(accountId, on, options);
+    },
+    savedResetsSpent: (accountId) => savedResetsSpent(accountId),
     broadcastEvent,
     sessionFactories,
     localSeat,
@@ -1502,6 +1517,23 @@ export async function createServices(
     latest: () => quota.latest(),
     noteHere: (snapshot) => homeQuota.noteCredits(snapshot),
     computers: deviceSignIns,
+    offersAutoResets: (accountId, deviceId) => {
+      if (!deviceId) {
+        const account = vault.get(accountId);
+        return (
+          Boolean(account && takesSavedReset(account.providerId)) &&
+          !vault.usesSavedResets(accountId)
+        );
+      }
+      const account = deviceSignIns
+        .lastSaid(deviceId)
+        ?.accounts.find((entry) => entry.id === accountId);
+      return (
+        deviceSignIns.takesAutoSavedResets(deviceId) &&
+        Boolean(account && takesSavedReset(account.providerId)) &&
+        account?.useSavedResets !== true
+      );
+    },
     cards: supervisor.cards.hostCards,
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
     now: Date.now,
@@ -1516,6 +1548,8 @@ export async function createServices(
         deviceSignIns.redeemSavedReset(deviceId, accountId, signIn),
       accountOf: (deviceId, accountId) =>
         deviceSignIns.lastSaid(deviceId)?.accounts.find((account) => account.id === accountId),
+      setUseSavedResets: (deviceId, accountId, on, signIn) =>
+        deviceSignIns.setUseSavedResets(deviceId, accountId, on, signIn),
     },
     note: (fact) => broadcastEvent({ type: "firstmate_note", ...saidLine(fact) }),
     recheck: () => void quota.refresh("demand"),
@@ -1525,13 +1559,45 @@ export async function createServices(
         "saved-reset-used",
       ),
   });
-  onSpentAt = (piProviders, deviceId) => creditsCards.spentAt(piProviders, deviceId);
-  onDeviceCredits = (deviceId) => creditsCards.readThere(deviceId);
+  const autoSavedResets = new AutoSavedResets({
+    models: decisions,
+    switchOn: (accountId, deviceId) =>
+      deviceId
+        ? deviceSignIns
+            .lastSaid(deviceId)
+            ?.accounts.some((account) => account.id === accountId && account.useSavedResets) ===
+          true
+        : vault.usesSavedResets(accountId),
+    latest: (deviceId) =>
+      deviceId ? (deviceSignIns.lastSaid(deviceId)?.quota ?? undefined) : quota.latest(),
+    canUse: (deviceId) =>
+      deviceSignIns.canUseSavedReset(deviceId) && deviceSignIns.takesAutoSavedResets(deviceId),
+    use: (accountId, deviceId) =>
+      savedResets
+        ? savedResets.use(accountId, { ...(deviceId ? { deviceId } : {}), auto: true })
+        : Promise.reject(new Error("Infinitary is still starting.")),
+    note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    now: Date.now,
+  });
+  onSpentAt = (piProviders, deviceId) => {
+    creditsCards.spentAt(piProviders, deviceId);
+    // i18n-exempt: a fact served to the decision model, not shown to a person
+    void autoSavedResets.spentAt(piProviders, "crew task", deviceId);
+  };
+  onCreditsAt = (piProviders, deviceId) =>
+    // i18n-exempt: a fact served to the decision model, not shown to a person
+    void autoSavedResets.spentAt(piProviders, "crew task", deviceId);
+  savedResetsSpent = (accountId) => void autoSavedResets.spentHere(accountId);
+  onDeviceCredits = (deviceId) => {
+    creditsCards.readThere(deviceId);
+    autoSavedResets.read(deviceId);
+  };
   onQuotaRefreshed = () => {
     const snapshot = quota.latest();
     // The terminal needs_reauth card, only from proof (homeQuota.ts).
     if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor.cards);
     creditsCards.readHere(snapshot);
+    autoSavedResets.read();
     firstmate.onQuotaRefreshed();
     // A refresh may clear a quota-reset gate (R1).
     void supervisor.watch.sweepGates(ticker.now());
@@ -1648,6 +1714,10 @@ export async function createServices(
     redeemSavedReset: (accountId, options) => {
       if (!savedResets) throw new Error("Infinitary is still starting.");
       return savedResets.use(accountId, options);
+    },
+    setUseSavedResets: (accountId, on, options) => {
+      if (!savedResets) throw new Error("Infinitary is still starting.");
+      return savedResets.setUseSavedResets(accountId, on, options);
     },
     codexSignedIn: (accountId) => vault.codexSignedIn(accountId),
     flagship,

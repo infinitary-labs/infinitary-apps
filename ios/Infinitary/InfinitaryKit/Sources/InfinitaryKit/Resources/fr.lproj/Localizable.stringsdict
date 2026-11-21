@@ -39,6 +39,24 @@
       <string>Une réinitialisation enregistrée de %1$@ a été utilisée. Il en reste %2$ld.</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsedAuto</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Infinitary a utilisé une réinitialisation enregistrée de %1$@ pour que le travail en attente continue. Il en reste %2$ld.</string>
+      <key>many</key>
+      <string>Infinitary a utilisé une réinitialisation enregistrée de %1$@ pour que le travail en attente continue. Il en reste %2$ld.</string>
+      <key>other</key>
+      <string>Infinitary a utilisé une réinitialisation enregistrée de %1$@ pour que le travail en attente continue. Il en reste %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

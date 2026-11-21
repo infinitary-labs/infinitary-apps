@@ -135,6 +135,8 @@ export type FirstmateHooks = {
   keepGoingOnCredits?: (accountId: string) => void;
   /** A card's "Use a saved reset", by the account's key (`FirstmateAgentOptions.redeemSavedReset`). */
   redeemSavedReset?: (accountKey: string) => "ran" | "sign-in";
+  /** A run-out card's "Use saved resets on their own" (`FirstmateAgentOptions.turnOnSavedResets`). */
+  turnOnSavedResets?: (accountKey: string) => "ran" | "sign-in";
   /** The notice's "Ask again": the captain's message sent once more as a new turn. */
   askAgain?: (askId: string) => void;
   /** Watchdog pass over the Firstmate's own turn, on the shared tick (P4). */

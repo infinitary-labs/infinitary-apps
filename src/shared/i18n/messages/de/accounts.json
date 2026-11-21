@@ -218,5 +218,12 @@
     "one": "Einen gespeicherten Reset von {account} eingelöst. Es bleibt {count}.",
     "other": "Einen gespeicherten Reset von {account} eingelöst. Es bleiben {count}."
   },
-  "accountsSavedResetUsedChecking": "Einen gespeicherten Reset von {account} eingelöst. Infinitary prüft sein Kontingent erneut."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "one": "Infinitary hat einen gespeicherten Reset von {account} eingelöst, damit wartende Arbeit weitergeht. Es bleibt {count}.",
+    "other": "Infinitary hat einen gespeicherten Reset von {account} eingelöst, damit wartende Arbeit weitergeht. Es bleiben {count}."
+  },
+  "accountsSavedResetUsedAutoChecking": "Infinitary hat einen gespeicherten Reset von {account} eingelöst, damit wartende Arbeit weitergeht. Es prüft das Kontingent erneut.",
+  "accountsSavedResetUsedChecking": "Einen gespeicherten Reset von {account} eingelöst. Infinitary prüft sein Kontingent erneut.",
+  "accountsUseSavedResetsSignInFirst": "Codex ist noch nicht bei {account} angemeldet, daher bleibt „Gespeicherte Resets selbst einlösen“ aus. Schalte es in den Einstellungen bei der Zeile des Kontos ein, um Codex anzumelden."
 }

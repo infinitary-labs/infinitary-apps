@@ -215,7 +215,10 @@ public enum PhoneMessages {
     public static func `accountsSavedResetUnclear`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUnclear", [`account`]) }
     public static func `accountsSavedResetUnverified`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUnverified", [`account`]) }
     public static func `accountsSavedResetUsed`(`account`: String, `count`: Int) -> String { PhoneWords.format("accountsSavedResetUsed", [`account`, `count`]) }
+    public static func `accountsSavedResetUsedAuto`(`account`: String, `count`: Int) -> String { PhoneWords.format("accountsSavedResetUsedAuto", [`account`, `count`]) }
+    public static func `accountsSavedResetUsedAutoChecking`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUsedAutoChecking", [`account`]) }
     public static func `accountsSavedResetUsedChecking`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUsedChecking", [`account`]) }
+    public static func `accountsUseSavedResetsSignInFirst`(`account`: String) -> String { PhoneWords.format("accountsUseSavedResetsSignInFirst", [`account`]) }
     public static func `activityPanelLinesLabel`() -> String { PhoneWords.format("activityPanelLinesLabel", []) }
     public static func `attachCancelled`(`name`: String) -> String { PhoneWords.format("attachCancelled", [`name`]) }
     public static func `automationEventsSkipped`() -> String { PhoneWords.format("automationEventsSkipped", []) }
@@ -497,6 +500,7 @@ public enum PhoneMessages {
     public static func `cardThreadWrittenByAfterClose`(`label`: String) -> String { PhoneWords.format("cardThreadWrittenByAfterClose", [`label`]) }
     public static func `cardTradeoffTable`() -> String { PhoneWords.format("cardTradeoffTable", []) }
     public static func `cardUseSavedReset`() -> String { PhoneWords.format("cardUseSavedReset", []) }
+    public static func `cardUseSavedResets`() -> String { PhoneWords.format("cardUseSavedResets", []) }
     public static func `closeYourFirstMate`(`sentence`: String) -> String { PhoneWords.format("closeYourFirstMate", [`sentence`]) }
     public static func `closedDropped`(`key`: String) -> String { PhoneWords.format("closedDropped", [`key`]) }
     public static func `closedFinished`(`key`: String) -> String { PhoneWords.format("closedFinished", [`key`]) }
@@ -2545,6 +2549,8 @@ public enum PhoneMessages {
     public static func `settingsCostLimitSwitchLabel`() -> String { PhoneWords.format("settingsCostLimitSwitchLabel", []) }
     public static func `settingsCostLimitTitle`() -> String { PhoneWords.format("settingsCostLimitTitle", []) }
     public static func `settingsDecisionUseKindReads`() -> String { PhoneWords.format("settingsDecisionUseKindReads", []) }
+    public static func `settingsDecisionUseSavedResetName`() -> String { PhoneWords.format("settingsDecisionUseSavedResetName", []) }
+    public static func `settingsDecisionUseSavedResetReads`() -> String { PhoneWords.format("settingsDecisionUseSavedResetReads", []) }
     public static func `settingsDecisionsActions`() -> String { PhoneWords.format("settingsDecisionsActions", []) }
     public static func `settingsDecisionsAnswerWith`(`model`: String) -> String { PhoneWords.format("settingsDecisionsAnswerWith", [`model`]) }
     public static func `settingsDecisionsAuto`() -> String { PhoneWords.format("settingsDecisionsAuto", []) }
@@ -3420,8 +3426,11 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsMenuResume`() -> String { PhoneWords.format("settingsSubscriptionsMenuResume", []) }
     public static func `settingsSubscriptionsMenuStopKeepingGoing`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopKeepingGoing", []) }
     public static func `settingsSubscriptionsMenuStopPreferring`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopPreferring", []) }
+    public static func `settingsSubscriptionsMenuStopUsingResets`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopUsingResets", []) }
     public static func `settingsSubscriptionsMenuUseReset`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseReset", []) }
     public static func `settingsSubscriptionsMenuUseResetDetail`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseResetDetail", []) }
+    public static func `settingsSubscriptionsMenuUseResets`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseResets", []) }
+    public static func `settingsSubscriptionsMenuUseResetsDetail`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseResetsDetail", []) }
     public static func `settingsSubscriptionsNoReader`() -> String { PhoneWords.format("settingsSubscriptionsNoReader", []) }
     public static func `settingsSubscriptionsNoReaderKey`(`apiKey`: String) -> String { PhoneWords.format("settingsSubscriptionsNoReaderKey", [`apiKey`]) }
     public static func `settingsSubscriptionsNotChosenYet`() -> String { PhoneWords.format("settingsSubscriptionsNotChosenYet", []) }
@@ -4149,7 +4158,10 @@ extension PhoneWords {
         "accountsSavedResetUnclear": ["account"],
         "accountsSavedResetUnverified": ["account"],
         "accountsSavedResetUsed": ["account", "count"],
+        "accountsSavedResetUsedAuto": ["account", "count"],
+        "accountsSavedResetUsedAutoChecking": ["account"],
         "accountsSavedResetUsedChecking": ["account"],
+        "accountsUseSavedResetsSignInFirst": ["account"],
         "activityPanelLinesLabel": [],
         "attachCancelled": ["name"],
         "automationEventsSkipped": [],
@@ -4431,6 +4443,7 @@ extension PhoneWords {
         "cardThreadWrittenByAfterClose": ["label"],
         "cardTradeoffTable": [],
         "cardUseSavedReset": [],
+        "cardUseSavedResets": [],
         "closeYourFirstMate": ["sentence"],
         "closedDropped": ["key"],
         "closedFinished": ["key"],
@@ -6479,6 +6492,8 @@ extension PhoneWords {
         "settingsCostLimitSwitchLabel": [],
         "settingsCostLimitTitle": [],
         "settingsDecisionUseKindReads": [],
+        "settingsDecisionUseSavedResetName": [],
+        "settingsDecisionUseSavedResetReads": [],
         "settingsDecisionsActions": [],
         "settingsDecisionsAnswerWith": ["model"],
         "settingsDecisionsAuto": [],
@@ -7354,8 +7369,11 @@ extension PhoneWords {
         "settingsSubscriptionsMenuResume": [],
         "settingsSubscriptionsMenuStopKeepingGoing": [],
         "settingsSubscriptionsMenuStopPreferring": [],
+        "settingsSubscriptionsMenuStopUsingResets": [],
         "settingsSubscriptionsMenuUseReset": [],
         "settingsSubscriptionsMenuUseResetDetail": [],
+        "settingsSubscriptionsMenuUseResets": [],
+        "settingsSubscriptionsMenuUseResetsDetail": [],
         "settingsSubscriptionsNoReader": [],
         "settingsSubscriptionsNoReaderKey": ["apiKey"],
         "settingsSubscriptionsNotChosenYet": [],
@@ -7873,6 +7891,7 @@ extension PhoneWords {
     static let counts: [String: String] = [
         "accountsCustomApiListed": "count",
         "accountsSavedResetUsed": "count",
+        "accountsSavedResetUsedAuto": "count",
         "automationPanelActiveCount": "count",
         "automationPanelKeptCount": "count",
         "automationPanelPausedCount": "count",

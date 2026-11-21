@@ -280,5 +280,6 @@
   "cardThreadWrittenBy": "Escrita por {label}",
   "cardThreadWrittenByAfterClose": "Escrita por {label} después de cerrarse la tarjeta",
   "cardTradeoffTable": "La comparación en una tabla",
-  "cardUseSavedReset": "Usar un restablecimiento guardado"
+  "cardUseSavedReset": "Usar un restablecimiento guardado",
+  "cardUseSavedResets": "Usar restablecimientos guardados por sí solo"
 }

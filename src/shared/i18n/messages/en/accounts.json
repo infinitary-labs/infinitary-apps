@@ -218,5 +218,12 @@
     "one": "Used a saved reset on {account}. It has {count} left.",
     "other": "Used a saved reset on {account}. It has {count} left."
   },
-  "accountsSavedResetUsedChecking": "Used a saved reset on {account}. Infinitary is checking its allowance again."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "one": "Infinitary used a saved reset on {account} so waiting work could continue. It has {count} left.",
+    "other": "Infinitary used a saved reset on {account} so waiting work could continue. It has {count} left."
+  },
+  "accountsSavedResetUsedAutoChecking": "Infinitary used a saved reset on {account} so waiting work could continue. It is checking the allowance again.",
+  "accountsSavedResetUsedChecking": "Used a saved reset on {account}. Infinitary is checking its allowance again.",
+  "accountsUseSavedResetsSignInFirst": "Codex is not signed in to {account} yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in."
 }

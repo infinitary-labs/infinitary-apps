@@ -125,6 +125,13 @@ export type AccountRecord = {
    */
   keepGoingOnCredits?: boolean;
   /**
+   * Use saved resets on their own (docs/quota.md "Saved resets on their
+   * own"): with work waiting on the account's spent Codex allowance,
+   * Infinitary may use one of its saved resets without a click. Absent is
+   * off, as on a row written before it existed.
+   */
+  useSavedResets?: boolean;
+  /**
    * The attempt to use one of the account's saved Codex resets that Codex
    * has not answered clearly yet (docs/codex-client.md): its key is sent
    * again on the next try, so a lost answer never uses a second reset.
@@ -331,6 +338,7 @@ export class AccountVault {
           connected: status.connected,
           pinned: this.registry.pins[account.providerId] === account.id,
           ...(account.keepGoingOnCredits === true ? { keepGoingOnCredits: true } : {}),
+          ...(account.useSavedResets === true ? { useSavedResets: true } : {}),
           createdAt: account.createdAt,
           ...(account.lastConnectedAt ? { lastConnectedAt: account.lastConnectedAt } : {}),
           ...(status.identity?.label ? { identity: status.identity.label } : {}),
@@ -1252,6 +1260,25 @@ export class AccountVault {
     if (on) account.keepGoingOnCredits = true;
     else delete account.keepGoingOnCredits;
     this.saveRegistry();
+  }
+
+  /**
+   * Use saved resets on their own, on or off (docs/quota.md "Saved resets
+   * on their own"): only a Codex account takes it.
+   */
+  setUseSavedResets(accountId: string, on: boolean): void {
+    const account = this.requireRegistryAccount(accountId);
+    if (on && allowanceProviderOf(account.providerId) !== "codex") {
+      throw new Error("Only a Codex account can use saved resets on its own.");
+    }
+    if (on) account.useSavedResets = true;
+    else delete account.useSavedResets;
+    this.saveRegistry();
+  }
+
+  /** Whether the account's Use saved resets on their own switch is on. */
+  usesSavedResets(accountId: string): boolean {
+    return this.get(accountId)?.useSavedResets === true;
   }
 
   /**

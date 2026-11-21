@@ -256,6 +256,27 @@ export function keepGoingItem(
 }
 
 /**
+ * The row's Use saved resets on their own item (docs/quota.md "Saved resets
+ * on their own"): a switch for each Codex account, off until turned on;
+ * `off` dims it, saying why, while that computer cannot take it yet.
+ */
+export function autoResetsItem(
+  account: AccountView,
+  onSelect: () => void,
+  off?: string,
+): RowMenuItem {
+  return {
+    id: "use-saved-resets",
+    label: account.useSavedResets
+      ? m.settingsSubscriptionsMenuStopUsingResets()
+      : m.settingsSubscriptionsMenuUseResets(),
+    detail: off ?? m.settingsSubscriptionsMenuUseResetsDetail(),
+    ...(off ? { disabled: true } : {}),
+    onSelect,
+  };
+}
+
+/**
  * The row's Use a saved reset item (docs/quota.md "Saved resets"): offered
  * while the account's reading says a saved reset would take effect now;
  * `off` dims it, saying why, while that computer cannot take it yet.
@@ -342,6 +363,7 @@ export function AccountRow({
   onTogglePin,
   onKeepGoing,
   onUseSavedReset,
+  onUseSavedResets,
   onSetEnabled,
   onDisconnect,
   onSignIn,
@@ -368,6 +390,8 @@ export function AccountRow({
   onKeepGoing?: () => void;
   /** Uses one of its saved resets through Codex (docs/codex-client.md); absent where the row offers none. */
   onUseSavedReset?: () => void;
+  /** Turns its Use saved resets on their own switch (docs/quota.md); absent where the row offers none. */
+  onUseSavedResets?: () => void;
   onSetEnabled: (enabled: boolean) => void;
   onDisconnect: () => void;
   onSignIn: () => void;
@@ -420,6 +444,7 @@ export function AccountRow({
     ...(prefer ? [prefer] : []),
     ...(onKeepGoing ? [keepGoingItem(account, quotaRow, onKeepGoing)] : []),
     ...(reset ? [reset] : []),
+    ...(onUseSavedResets ? [autoResetsItem(account, onUseSavedResets)] : []),
     ...settings,
     ...(hasModels
       ? [
@@ -903,6 +928,46 @@ export function SubscriptionsTab() {
     [clearAuthFlow, ended],
   );
 
+  /**
+   * Turns this Mac's own account's Use saved resets on their own on or off
+   * (docs/quota.md). Turning it on lets Codex sign in on the row first when
+   * it must, as a saved reset's use does; a refusal stays under the row.
+   */
+  const toggleAutoResets = useCallback(
+    (account: AccountView) => {
+      if (account.useSavedResets) {
+        void window.infinitary.accounts
+          .setUseSavedResets(account.id, false)
+          .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
+          .finally(() => void refresh());
+        return;
+      }
+      setBusyAccount(account.id);
+      setSignInEnded(null);
+      cancelled.current = false;
+      forgetSignInNotice(account.providerId);
+      void window.infinitary.accounts
+        .setUseSavedResets(account.id, true, { signIn: true })
+        .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
+        .finally(() => {
+          setBusyAccount(null);
+          clearAuthFlow(account.providerId);
+          void refresh();
+        });
+    },
+    [clearAuthFlow, ended, refresh],
+  );
+
+  // A run-out card's Use saved resets on their own lands here with this Mac's account.
+  const pendingUseSavedResets = useShellStore((s) => s.pendingUseSavedResets);
+  useEffect(() => {
+    if (!pendingUseSavedResets || pendingUseSavedResets.includes("@")) return;
+    const account = accounts.find((row) => row.id === pendingUseSavedResets);
+    if (!account) return;
+    useShellStore.getState().clearPendingUseSavedResets();
+    if (!account.useSavedResets) toggleAutoResets(account);
+  }, [pendingUseSavedResets, accounts, toggleAutoResets]);
+
   // A card's Use a saved reset lands here with this Mac's account to use.
   const pendingUseSavedReset = useShellStore((s) => s.pendingUseSavedReset);
   useEffect(() => {
@@ -1176,6 +1241,9 @@ export function SubscriptionsTab() {
                   onTogglePin={() => togglePin(account)}
                   {...(offersKeepGoing(account) ? { onKeepGoing: () => keepGoing(account) } : {})}
                   onUseSavedReset={() => applySavedReset(account)}
+                  {...(allowanceProviderOf(account.providerId) === "codex"
+                    ? { onUseSavedResets: () => toggleAutoResets(account) }
+                    : {})}
                   onSetEnabled={(enabled) => setEnabled(account, enabled)}
                   onDisconnect={() => disconnect(account)}
                   onSignIn={() => signIn(account)}
@@ -1282,6 +1350,15 @@ export function SubscriptionsTab() {
                     : null;
                   return reset ? [reset] : [];
                 })(),
+                ...(row.autoResets
+                  ? [
+                      autoResetsItem(
+                        row.account,
+                        row.autoResets.onSelect,
+                        row.autoResets.updateNote,
+                      ),
+                    ]
+                  : []),
                 ...settings,
                 { separator: true },
                 ...row.menu,

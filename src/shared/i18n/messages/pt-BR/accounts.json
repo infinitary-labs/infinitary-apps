@@ -220,5 +220,13 @@
     "many": "Uma redefinição salva de {account} foi usada. Restam {count}.",
     "other": "Uma redefinição salva de {account} foi usada. Restam {count}."
   },
-  "accountsSavedResetUsedChecking": "Uma redefinição salva de {account} foi usada. O Infinitary está lendo a franquia de novo."
+  "accountsSavedResetUsedAuto": {
+    "plural": "count",
+    "one": "O Infinitary usou uma redefinição salva de {account} para o trabalho em espera continuar. Resta {count}.",
+    "many": "O Infinitary usou uma redefinição salva de {account} para o trabalho em espera continuar. Restam {count}.",
+    "other": "O Infinitary usou uma redefinição salva de {account} para o trabalho em espera continuar. Restam {count}."
+  },
+  "accountsSavedResetUsedAutoChecking": "O Infinitary usou uma redefinição salva de {account} para o trabalho em espera continuar. Ele está lendo a franquia de novo.",
+  "accountsSavedResetUsedChecking": "Uma redefinição salva de {account} foi usada. O Infinitary está lendo a franquia de novo.",
+  "accountsUseSavedResetsSignInFirst": "O Codex ainda não fez login em {account}, então “Usar redefinições salvas por conta própria” continua desligado. Ligue na linha da conta nas configurações para fazer login no Codex."
 }

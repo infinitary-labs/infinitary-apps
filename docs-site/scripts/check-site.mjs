@@ -248,12 +248,27 @@ try {
   };
   const tabs = await Promise.all(Array.from({ length: SIDE_BY_SIDE }, async () => watch(await context.newPage())));
   const page = tabs[0];
-  /** Runs each item through a tab of its own, SIDE_BY_SIDE at a time. */
-  const sideBySide = async (items, visit) => {
+  /**
+   * Runs each item through a tab of its own, SIDE_BY_SIDE at a time. With fresh, each item opens
+   * in a new tab, closed after, instead of one of the tabs that walk page after page.
+   */
+  const sideBySide = async (items, visit, { fresh = false } = {}) => {
     let next = 0;
     await Promise.all(
-      tabs.map(async (tab) => {
-        while (next < items.length) await visit(tab, items[next++]);
+      tabs.map(async (walker) => {
+        while (next < items.length) {
+          const item = items[next++];
+          if (!fresh) {
+            await visit(walker, item);
+            continue;
+          }
+          const tab = watch(await context.newPage());
+          try {
+            await visit(tab, item);
+          } finally {
+            await tab.close();
+          }
+        }
       }),
     );
   };
@@ -322,6 +337,8 @@ try {
   // Chromium on a busy computer can stop drawing without ever having had idle time, and
   // nothing then asks it to draw again, as a visitor's pointer would: the box never comes.
   // Waiting on animation frames keeps the page drawing, so the idle time comes.
+  // Each search opens in a fresh tab: a tab that walked the pages above keeps them in its
+  // browser's memory, and on a busy computer such a tab sometimes never gets that idle time.
   const searchWords = new Map();
   await sideBySide(LANGUAGES, async (tab, language) => {
     const word = searchWord(language);
@@ -354,7 +371,7 @@ try {
     } catch {
       fail(`Searching for "${word}" on ${language.prefix} found nothing`);
     }
-  });
+  }, { fresh: true });
   const englishSearch = pagefindEnglish();
   for (const [tag, words] of searchWords) {
     if (tag === SOURCE_LANGUAGE) continue;

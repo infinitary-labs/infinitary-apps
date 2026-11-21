@@ -11,7 +11,12 @@ import { ownWindowChannels, ownWindowPushes } from "./channels/ownWindow";
 import { panelChannels } from "./channels/panels";
 import { secretsChannels } from "./channels/secrets";
 import { settingsChannels } from "./channels/settings";
-import { shellChannels, windowFenceSchema, windowStateSchema } from "./channels/shell";
+import {
+  presenceSchema,
+  shellChannels,
+  windowFenceSchema,
+  windowStateSchema,
+} from "./channels/shell";
 import { signInChannels } from "./channels/signIns";
 import { talkChannels } from "./channels/talk";
 import { taskChannels } from "./channels/tasks";
@@ -395,6 +400,8 @@ export const pushContract = {
   "inf:keyboard:next": { payload: nextKeysSchema, surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
+  // Someone came back to this computer or left it (src/main/presence.ts).
+  "inf:window:presence": { payload: presenceSchema, surface: "host" },
   // The fence the window asked for, behind every push it was sent before it.
   "inf:window:fence": { payload: windowFenceSchema, surface: "host" },
   // One picture of a watched task's page, to whoever watches it alone: a

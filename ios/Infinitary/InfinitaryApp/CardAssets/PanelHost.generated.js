@@ -67896,6 +67896,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sound`;
   }
+  function settingsSoundPauseWhenAway() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف مؤقت عند ابتعادك`;
+      case "de":
+        return `Pausieren, wenn du weg bist`;
+      case "es":
+        return `Pausar cuando no estés`;
+      case "fr":
+        return `Mettre en pause en votre absence`;
+      case "ja":
+        return `離席中は一時停止`;
+      case "ko":
+        return `자리를 비우면 일시 정지`;
+      case "pt-BR":
+        return `Pausar quando você sair`;
+      case "zh-Hans":
+        return `离开时暂停`;
+      case "zh-Hant":
+        return `離開時暫停`;
+      case "en-XA":
+        return `[Þáûšé ŵĥéñ ýöû’ŕé áŵáý ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pause when you’re away‬`;
+    }
+    return `Pause when you’re away`;
+  }
+  function settingsSoundPauseWhenAwayDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تتوقف الموسيقى مؤقتًا ما دامت شاشتك مطفأة أو مقفلة، حتى لا تُبقي حاسوبك مستيقظًا، ثم تعود عند رجوعك.`;
+      case "de":
+        return `Pausiert, solange dein Bildschirm aus oder gesperrt ist, damit die Musik deinen Computer nicht wach hält, und spielt weiter, sobald du zurück bist.`;
+      case "es":
+        return `Se pausa mientras tu pantalla está apagada o bloqueada, para que la música no mantenga despierta tu computadora, y vuelve a sonar cuando regresas.`;
+      case "fr":
+        return `Se met en pause tant que votre écran est éteint ou verrouillé, pour que la musique ne garde pas votre ordinateur éveillé, et reprend à votre retour.`;
+      case "ja":
+        return `画面がオフまたはロックされている間は一時停止するので、音楽のせいでコンピューターがスリープできなくなることはありません。戻ると再び再生します。`;
+      case "ko":
+        return `화면이 꺼지거나 잠겨 있는 동안 일시 정지해, 음악 때문에 컴퓨터가 잠자기에 들지 못하는 일이 없어요. 돌아오면 다시 재생해요.`;
+      case "pt-BR":
+        return `Pausa enquanto sua tela está desligada ou bloqueada, para que a música não mantenha seu computador acordado, e volta a tocar quando você retorna.`;
+      case "zh-Hans":
+        return `屏幕关闭或锁定时暂停，以免音乐让你的电脑无法睡眠；你回来后继续播放。`;
+      case "zh-Hant":
+        return `螢幕關閉或鎖定時暫停，以免音樂讓你的電腦無法睡眠；你回來後繼續播放。`;
+      case "en-XA":
+        return `[Þáûšéš ŵĥîļé ýöûŕ šçŕééñ îš öƒƒ öŕ ļöçķéð, šö ţĥé ɱûšîç ðöéšñ’ţ ķééþ ýöûŕ çöɱþûţéŕ áŵáķé, áñð þļáýš áĝáîñ ŵĥéñ ýöû’ŕé ƀáçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pauses while your screen is off or locked, so the music doesn’t keep your computer awake, and plays again when you’re back.‬`;
+    }
+    return `Pauses while your screen is off or locked, so the music doesn’t keep your computer awake, and plays again when you’re back.`;
+  }
   function settingsSoundStyle() {
     switch (currentLanguage()) {
       case "ar":
@@ -86955,6 +87009,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSoundAmbientMusic,
     settingsSoundAmbientMusicDescription,
     settingsSoundHeading,
+    settingsSoundPauseWhenAway,
+    settingsSoundPauseWhenAwayDescription,
     settingsSoundStyle,
     settingsSoundStyleColdSleep,
     settingsSoundStyleColdSleepDescription,
@@ -89694,6 +89750,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSoundAmbientMusic": [],
     "settingsSoundAmbientMusicDescription": [],
     "settingsSoundHeading": [],
+    "settingsSoundPauseWhenAway": [],
+    "settingsSoundPauseWhenAwayDescription": [],
     "settingsSoundStyle": [],
     "settingsSoundStyleColdSleep": [],
     "settingsSoundStyleColdSleepDescription": [],

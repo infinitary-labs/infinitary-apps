@@ -3017,6 +3017,8 @@
 "settingsSoundAmbientMusic" = "앰비언트 음악";
 "settingsSoundAmbientMusicDescription" = "이 컴퓨터에서 재생하는 동안 절차적으로 생성하는 잔잔한 음악이라 반복되지 않아요. 선원들의 작업을 따라 바뀌고, 선장님을 기다리는 일이 있으면 차임이 울려요.";
 "settingsSoundHeading" = "사운드";
+"settingsSoundPauseWhenAway" = "자리를 비우면 일시 정지";
+"settingsSoundPauseWhenAwayDescription" = "화면이 꺼지거나 잠겨 있는 동안 일시 정지해, 음악 때문에 컴퓨터가 잠자기에 들지 못하는 일이 없어요. 돌아오면 다시 재생해요.";
 "settingsSoundStyle" = "스타일";
 "settingsSoundStyleColdSleep" = "냉동 수면";
 "settingsSoundStyleColdSleepDescription" = "피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동 위에서 흐릅니다.";

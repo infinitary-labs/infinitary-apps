@@ -76,6 +76,7 @@ import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
 import {
+  AMBIENT_AWAY,
   AMBIENT_MUSIC,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
@@ -683,6 +684,7 @@ function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_MUSIC) ? [] : ["ambientMusic", "ambientVolume"]),
     ...(listsChange(hello.changes, AMBIENT_PAUSE) ? [] : ["ambientPaused"]),
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
+    ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
   ];
 }
 

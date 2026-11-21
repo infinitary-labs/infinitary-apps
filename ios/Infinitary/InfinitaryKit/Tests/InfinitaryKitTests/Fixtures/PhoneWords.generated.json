@@ -2334,6 +2334,8 @@
   {"said":{"m":"settingsSoundAmbientMusic"},"words":"Ambient music"},
   {"said":{"m":"settingsSoundAmbientMusicDescription"},"words":"Calm music, procedurally generated on your computer as it plays, so it never loops. It follows the crew and chimes when something waits for you."},
   {"said":{"m":"settingsSoundHeading"},"words":"Sound"},
+  {"said":{"m":"settingsSoundPauseWhenAway"},"words":"Pause when you’re away"},
+  {"said":{"m":"settingsSoundPauseWhenAwayDescription"},"words":"Pauses while your screen is off or locked, so the music doesn’t keep your computer awake, and plays again when you’re back."},
   {"said":{"m":"settingsSoundStyle"},"words":"Style"},
   {"said":{"m":"settingsSoundStyleColdSleep"},"words":"Cold sleep"},
   {"said":{"m":"settingsSoundStyleColdSleepDescription"},"words":"Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat."},

@@ -3015,6 +3015,8 @@
 "settingsSoundAmbientMusic" = "Musique d’ambiance";
 "settingsSoundAmbientMusicDescription" = "Une musique apaisante, générée de façon procédurale sur votre ordinateur au fil de l’écoute, si bien qu’elle ne tourne jamais en boucle. La musique suit l’équipage et sonne un carillon quand quelque chose vous attend.";
 "settingsSoundHeading" = "Son";
+"settingsSoundPauseWhenAway" = "Mettre en pause en votre absence";
+"settingsSoundPauseWhenAwayDescription" = "Se met en pause tant que votre écran est éteint ou verrouillé, pour que la musique ne garde pas votre ordinateur éveillé, et reprend à votre retour.";
 "settingsSoundStyle" = "Style";
 "settingsSoundStyleColdSleep" = "Sommeil cryogénique";
 "settingsSoundStyleColdSleepDescription" = "Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave et un battement de cœur lent.";

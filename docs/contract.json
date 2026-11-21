@@ -48570,6 +48570,9 @@
           "ambientPaused": {
             "type": "boolean"
           },
+          "ambientPlaysWhenAway": {
+            "type": "boolean"
+          },
           "ambientVolume": {
             "type": "integer",
             "minimum": 0,
@@ -48688,6 +48691,9 @@
               "ambientPaused": {
                 "type": "boolean"
               },
+              "ambientPlaysWhenAway": {
+                "type": "boolean"
+              },
               "ambientVolume": {
                 "type": "integer",
                 "minimum": 0,
@@ -48803,6 +48809,9 @@
             "type": "boolean"
           },
           "ambientPaused": {
+            "type": "boolean"
+          },
+          "ambientPlaysWhenAway": {
             "type": "boolean"
           },
           "ambientVolume": {
@@ -49427,6 +49436,9 @@
                 "type": "boolean"
               },
               "ambientPaused": {
+                "type": "boolean"
+              },
+              "ambientPlaysWhenAway": {
                 "type": "boolean"
               },
               "ambientVolume": {
@@ -84234,6 +84246,9 @@
                 "type": "boolean"
               },
               "ambientPaused": {
+                "type": "boolean"
+              },
+              "ambientPlaysWhenAway": {
                 "type": "boolean"
               },
               "ambientVolume": {

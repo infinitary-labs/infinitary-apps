@@ -58,6 +58,26 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().ambientStyle).toBe("a-newer-style");
   });
 
+  // INF-5528's answer, the captain's choice: the music pauses while nobody
+  // is at the computer unless Keep playing was chosen, kept in its own row
+  // so an older build still reads the switch and volume.
+  it("keeps playing while away only in its own row, and only while chosen", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "dark", ambientMusic: true, ambientVolume: 65 });
+    const readRow = (key: string) =>
+      db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+    const music = readRow("ambient-music");
+    expect(new SettingsStore(db).getAppearance().ambientPlaysWhenAway).toBeUndefined();
+    settings.setAppearance({ theme: "dark", ambientPlaysWhenAway: true });
+    expect(readRow("ambient-music")).toEqual(music);
+    settings.setAppearance({ theme: "light" });
+    expect(new SettingsStore(db).getAppearance().ambientPlaysWhenAway).toBe(true);
+    settings.setAppearance({ theme: "light", ambientPlaysWhenAway: false });
+    expect(readRow("ambient-away-plays")).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().ambientPlaysWhenAway).toBeUndefined();
+  });
+
   it("persists an OpenRouter decision pick and versioned consent without a credential", () => {
     const settings = store();
     const decisions = {

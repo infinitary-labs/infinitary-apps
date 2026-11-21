@@ -1072,6 +1072,8 @@
   "settingsSoundAmbientMusic": "环境音乐",
   "settingsSoundAmbientMusicDescription": "在你的电脑上边播放边程序化生成的舒缓音乐，因此从不循环。它随船员的工作变化，有事等你时会轻声提示。",
   "settingsSoundHeading": "声音",
+  "settingsSoundPauseWhenAway": "离开时暂停",
+  "settingsSoundPauseWhenAwayDescription": "屏幕关闭或锁定时暂停，以免音乐让你的电脑无法睡眠；你回来后继续播放。",
   "settingsSoundStyle": "风格",
   "settingsSoundStyleColdSleep": "冷冻休眠",
   "settingsSoundStyleColdSleepDescription": "以钢琴为主：空旷寒冷的房间里，柔和的毛毡钢琴伴着低沉的持续音和缓慢的心跳。",

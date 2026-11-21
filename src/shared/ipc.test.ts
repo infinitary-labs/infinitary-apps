@@ -306,6 +306,8 @@ describe("ipc contract", () => {
       "inf:window:control",
       // The window's fence, pushed back behind every push sent before it.
       "inf:window:fence",
+      // Whether someone is at this computer, for the ambient music (src/main/presence.ts).
+      "inf:window:presence",
       "inf:window:state",
     ]);
     const corePush = new Set<string>(CORE_PUSH_CHANNELS);
@@ -324,6 +326,7 @@ describe("ipc contract", () => {
       "inf:keyboard:reminders",
       "inf:keyboard:next",
       "inf:window:state",
+      "inf:window:presence",
       "inf:window:fence",
     ]);
   });

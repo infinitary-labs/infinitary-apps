@@ -225,6 +225,9 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<Record<CoreInvokeChannel, Record<s
       "The language the window and the crew's words to the captain use, chosen by the captain in Settings → Appearance",
     ambientPaused:
       "Playback state set by the captain’s ambient music control, not the enable switch",
+    // i18n-exempt: a coverage reason for the crew's check, never shown
+    ambientPlaysWhenAway:
+      "Whether the ambient music pauses while nobody is at the computer, switched by the captain in Settings → Appearance",
     usageUnit:
       "A view choice inside Settings → Usage, switched there or by Switch Usage units in command search",
   },

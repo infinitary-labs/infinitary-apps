@@ -3015,6 +3015,8 @@
 "settingsSoundAmbientMusic" = "アンビエント音楽";
 "settingsSoundAmbientMusicDescription" = "あなたのコンピューターで再生しながらプロシージャル生成する穏やかな音楽なので、ループしません。乗組員の動きに合わせて変わり、あなたを待つものがあるとチャイムが鳴ります。";
 "settingsSoundHeading" = "サウンド";
+"settingsSoundPauseWhenAway" = "離席中は一時停止";
+"settingsSoundPauseWhenAwayDescription" = "画面がオフまたはロックされている間は一時停止するので、音楽のせいでコンピューターがスリープできなくなることはありません。戻ると再び再生します。";
 "settingsSoundStyle" = "スタイル";
 "settingsSoundStyleColdSleep" = "冷凍睡眠";
 "settingsSoundStyleColdSleepDescription" = "ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動の上で鳴ります。";

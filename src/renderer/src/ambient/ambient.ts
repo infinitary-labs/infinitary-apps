@@ -3,11 +3,13 @@
 // following the crew.
 // It hushes while voice input listens, since the microphone would hear it,
 // and while a card's sound clip or a demo recording with sound plays, then
-// comes back.
+// comes back. While nobody is at the computer it stops as the pause button
+// does, closing its audio so the computer may sleep, and starts again once
+// someone is back, unless the captain chose to keep it playing.
 //
 // The window says where it stands on the document, `data-ambient-music`:
-// `off`, `paused`, `playing`, or `hushed`; and, while its player runs, the
-// style it plays, `data-ambient-style`.
+// `off`, `paused`, `away`, `playing`, or `hushed`; and, while its player
+// runs, the style it plays, `data-ambient-style`.
 
 import { ambientStyleOf } from "@shared/preferences";
 import { useShellStore } from "../app/store";
@@ -16,6 +18,7 @@ import { workingCrew } from "../character/crew/crewSignal";
 import { onCharacterCue } from "../character/emoteSignal";
 import { crewLevel } from "./composer";
 import { AmbientPlayer } from "./player";
+import { followPresence, usePresence } from "./presence";
 import { STYLES } from "./styles/catalog";
 
 /** How often the scheduler looks ahead, in ms. */
@@ -53,17 +56,28 @@ function shouldHush(): boolean {
   return useShellStore.getState().recording || sound.playing || sound.demo;
 }
 
+/**
+ * Whether it waits for someone to come back: nobody is at the computer and
+ * the captain did not choose to keep it playing. Unlike the pause button's,
+ * this pause is never saved.
+ */
+function waitsForSomeone(): boolean {
+  return usePresence.getState().away && !useShellStore.getState().ambientPlaysWhenAway;
+}
+
 /** Marks where it stands: `playing` or `hushed` only once its audio runs, else `off`. */
 function mark(): void {
   const { ambientMusic, ambientPaused } = useShellStore.getState();
   document.documentElement.dataset.ambientMusic =
     ambientMusic && ambientPaused
       ? "paused"
-      : playing?.ctx.state !== "running"
-        ? "off"
-        : playing.hushed
-          ? "hushed"
-          : "playing";
+      : ambientMusic && waitsForSomeone()
+        ? "away"
+        : playing?.ctx.state !== "running"
+          ? "off"
+          : playing.hushed
+            ? "hushed"
+            : "playing";
 }
 
 /** Reads four bands of the music only, from bass to the chimes. */
@@ -133,7 +147,9 @@ function end(): void {
 export function followAmbientMusic(): void {
   const follow = () => {
     const { ambientMusic, ambientPaused, ambientVolume, ambientStyle } = useShellStore.getState();
-    if (!ambientMusic || ambientPaused) return end();
+    // Nobody here: close the audio as the pause button does, since a silent
+    // hush still holds the computer awake (docs/ambient-music.md).
+    if (!ambientMusic || ambientPaused || waitsForSomeone()) return end();
     if (!playing) return begin(ambientVolume / 100, ambientStyle);
     const hush = shouldHush();
     if (hush !== playing.hushed) {
@@ -155,6 +171,7 @@ export function followAmbientMusic(): void {
     if (
       state.ambientMusic !== previous.ambientMusic ||
       state.ambientPaused !== previous.ambientPaused ||
+      state.ambientPlaysWhenAway !== previous.ambientPlaysWhenAway ||
       state.recording !== previous.recording
     )
       follow();
@@ -162,6 +179,10 @@ export function followAmbientMusic(): void {
   useCardSound.subscribe((state, previous) => {
     if (state.playing !== previous.playing || state.demo !== previous.demo) follow();
   });
+  usePresence.subscribe((state, previous) => {
+    if (state.away !== previous.away) follow();
+  });
+  followPresence();
   // The notice pulse's and the celebrate emote's moments.
   onCharacterCue((cue) => {
     if (!playing || playing.hushed || playing.ctx.state !== "running") return;

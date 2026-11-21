@@ -3015,6 +3015,8 @@
 "settingsSoundAmbientMusic" = "環境音樂";
 "settingsSoundAmbientMusicDescription" = "在你的電腦上邊播放邊程序化生成的舒緩音樂，因此從不循環。它隨船員的工作變化，有事等你時會輕聲提示。";
 "settingsSoundHeading" = "聲音";
+"settingsSoundPauseWhenAway" = "離開時暫停";
+"settingsSoundPauseWhenAwayDescription" = "螢幕關閉或鎖定時暫停，以免音樂讓你的電腦無法睡眠；你回來後繼續播放。";
 "settingsSoundStyle" = "風格";
 "settingsSoundStyleColdSleep" = "冷凍休眠";
 "settingsSoundStyleColdSleepDescription" = "以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音和緩慢的心跳。";

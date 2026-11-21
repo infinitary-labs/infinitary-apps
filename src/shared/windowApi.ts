@@ -26,7 +26,7 @@ import type {
   TaskLifecycleOp,
   TaskMoveFrom,
 } from "./cards";
-import type { WindowControl, WindowState } from "./channels/shell";
+import type { Presence, WindowControl, WindowState } from "./channels/shell";
 import type { AppCostLimitView, CostLimit } from "./costLimit";
 import type { CrewSpeed } from "./crewSpeed";
 import type { CrewPicture, CrewResultText, CrewSendResult } from "./crewTranscript";
@@ -236,6 +236,9 @@ export type FirstmateApi = {
     controlWindow: (control: WindowControl) => Promise<WindowState>;
     windowState: () => Promise<WindowState>;
     onWindowState: (listener: (state: WindowState) => void) => () => void;
+    /** Whether someone is at this computer (docs/ambient-music.md), and each change to it. */
+    presence: () => Promise<Presence>;
+    onPresence: (listener: (presence: Presence) => void) => () => void;
     /**
      * Resolves once every push sent to this window before it has arrived.
      * Chromium can hand the window an answer ahead of a push sent before it;

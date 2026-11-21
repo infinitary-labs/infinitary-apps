@@ -81,6 +81,7 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
+import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
@@ -230,6 +231,7 @@ function createMainWindow(
   followRendererRecovery(win.webContents);
   followWindowSize(win, shell.preferences);
   if (desktop.windowControls === "app") followWindowState(win);
+  followPresence(win);
   const { panel: panelCommand, ...pageCommands } = shellCommands(win);
   followWindowCommands(
     win,

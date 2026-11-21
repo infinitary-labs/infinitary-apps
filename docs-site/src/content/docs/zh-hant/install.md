@@ -45,5 +45,5 @@ iPhone 和 iPad 版的 Infinitary 目前以私人 TestFlight 提供。
 請把大副設定在一台盡量保持開機的電腦上。
 你的其他裝置需要大副醒著才能使用。
 
-日後要更新或移除 Infinitary，請參閱[更新和移除 Infinitary](/zh-hant/update-and-remove/)。
+日後要更新或移除 Infinitary，請參閱[更新與移除 Infinitary](/zh-hant/update-and-remove/)。
 如果有東西無法運作，請參閱[取得協助](/zh-hant/get-help/)。

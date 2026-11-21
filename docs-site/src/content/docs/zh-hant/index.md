@@ -37,5 +37,5 @@ Infinitary 在你的電腦上執行，使用你已經有的 AI 訂閱方案。
 - [安裝 Infinitary](/zh-hant/install/)
 - [第一次啟動](/zh-hant/first-launch/)
 - [你的第一項任務](/zh-hant/your-first-task/)
-- [你可以要求什麼](/zh-hant/what-you-can-ask-for/)
+- [你可以請它做什麼](/zh-hant/what-you-can-ask-for/)
 - [取得協助](/zh-hant/get-help/)

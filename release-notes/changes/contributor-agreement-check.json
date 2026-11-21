@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "contributor-agreement-check",
+      "reason": "Internal: the project adds its Contributor License Agreement, a pull request template box and a check that records each outside contributor's acceptance; nothing in the app changes."
+    }
+  ]
+}

@@ -115,6 +115,11 @@ export class DeviceSignIns {
   private readonly running = new Map<string, Running>();
   /** Each saved-reset use waiting for its end, by its flow's id. */
   private readonly uses = new Map<string, (step: Extract<SignInStep, { kind: "ended" }>) => void>();
+  /** Each Use saved resets on their own switch turning on there, waiting for its end: it uses no reset. */
+  private readonly switching = new Map<
+    string,
+    (step: Extract<SignInStep, { kind: "ended" }>) => void
+  >();
   private readonly reading = new Map<string, Promise<boolean>>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
@@ -569,8 +574,20 @@ export class DeviceSignIns {
     if (!this.options.work.inReach(deviceId))
       throw new Error(`${who} is out of reach, so nothing was sent.`);
     const signInId = randomBytes(16).toString("base64url");
+    // Turning it off signs nothing in: that computer saves it and answers, with no flow under the row.
+    if (!on) {
+      try {
+        await this.options.work.ask(deviceId, "inf:sign-ins:use-saved-resets", [
+          { signInId, accountId, on, signIn: false },
+        ]);
+      } catch (error) {
+        throw reachable(error, who);
+      }
+      await this.refresh(deviceId);
+      return { ok: true };
+    }
     const ended = new Promise<Extract<SignInStep, { kind: "ended" }>>((resolve) =>
-      this.uses.set(signInId, resolve),
+      this.switching.set(signInId, resolve),
     );
     this.begin({
       signInId,
@@ -915,10 +932,13 @@ export class DeviceSignIns {
     else this.running.set(signInId, { ...identity, phase: "ended", ended: step });
     this.tell(signInId, running, step);
     const use = this.uses.get(signInId);
+    const turned = this.switching.get(signInId);
     this.uses.delete(signInId);
+    this.switching.delete(signInId);
     use?.(step);
-    // A saved reset used there signed nothing new in; its own line says what it came to.
-    if (step.outcome === "signed-in" && !use)
+    turned?.(step);
+    // A saved reset used, or the switch turned on, there signed nothing new in; each says what it came to.
+    if (step.outcome === "signed-in" && !use && !turned)
       this.options.broadcastEvent({
         type: "device_signed_in",
         deviceId: running.deviceId,

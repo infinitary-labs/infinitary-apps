@@ -336,6 +336,12 @@ export class SignInHost {
         const reach = this.options.savedResets;
         if (!reach) throw new Error("This computer cannot use a saved reset.");
         const { vault } = this.options.accounts;
+        // Turning it off signs nothing in: it is saved and answered here, with no flow.
+        if (!turn.on) {
+          await setOwnUseSavedResets(vault, reach, turn.accountId, false, undefined);
+          await this.report();
+          return { ok: true };
+        }
         // Asked again: it is already running.
         if (this.running.has(turn.signInId)) return { ok: true };
         this.run(

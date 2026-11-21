@@ -276,6 +276,75 @@ describe("a computer's sign-ins view", () => {
       signIns.dispose();
     }
   });
+  // INF-5484's review: turning Use saved resets on their own on or off there uses no reset, so it never gets a use's words.
+  it("turns a computer's switch on as a sign-in, and off with no flow under the row", async () => {
+    const ask = vi.fn(async (_deviceId: string, channel: string, _args: unknown[]) =>
+      channel === "inf:sign-ins:list"
+        ? {
+            providers: [],
+            accounts: [
+              {
+                id: "acct-codex",
+                providerId: "openai-codex",
+                kind: "subscription_oauth",
+                label: "Work",
+                enabled: true,
+                connected: true,
+                pinned: false,
+                createdAt: 1,
+              },
+            ],
+            quota: null,
+          }
+        : { ok: true },
+    );
+    let contactOf: ((contact: WorkDeviceContact) => void) | undefined;
+    const signIns = new DeviceSignIns({
+      devices: () => [MINI],
+      work: {
+        ask,
+        onWorkDevice: (listener) => {
+          contactOf = listener;
+          return () => {};
+        },
+        inReach: () => true,
+        version: () => ({
+          contract: PROTOCOL_VERSION,
+          takesWork: true,
+          changes: ["use-saved-reset", "auto-saved-resets"],
+        }),
+      },
+      emit: () => {},
+      broadcastEvent: () => {},
+    });
+    const orders = () =>
+      ask.mock.calls.filter(([, channel]) => channel === "inf:sign-ins:use-saved-resets");
+    try {
+      await signIns.refresh(MINI.id);
+      // Off: that computer saves it and answers, and no flow shows under the row.
+      await expect(signIns.setUseSavedResets(MINI.id, "acct-codex", false, false)).resolves.toEqual(
+        { ok: true },
+      );
+      expect(orders()).toHaveLength(1);
+      expect(orders()[0]?.[2]).toEqual([expect.objectContaining({ on: false, signIn: false })]);
+      expect(signIns.view()[0]?.flows ?? []).toEqual([]);
+
+      // On, and contact drops: it ends as a sign-in does, never with a reset use's unknown outcome.
+      const turning = signIns.setUseSavedResets(MINI.id, "acct-codex", true, true);
+      await vi.waitFor(() => expect(orders()).toHaveLength(2));
+      contactOf?.({ deviceId: MINI.id, contact: "in-reach" });
+      const failure = await turning.then(
+        () => undefined,
+        (error: unknown) => (error instanceof Error ? error.message : String(error)),
+      );
+      expect(failure).toBe(
+        "Mac mini reconnected, so the earlier sign-in stopped. Try signing in again.",
+      );
+      expect(failure).not.toBe(m.accountsSavedResetUnclear({ account: "Codex · Work" }));
+    } finally {
+      signIns.dispose();
+    }
+  });
   // INF-4280's audit, fixes 1 and 3: an older computer cannot take the new orders, so the home never sends them.
   it("sends account settings and an allowance read only to a computer that lists the change", async () => {
     const changes: string[] = [];

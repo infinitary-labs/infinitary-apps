@@ -300,6 +300,8 @@ try {
   });
 
   // Every link that stays on this site leads to a page, and a #heading to a heading on it.
+  // Each linked page opens once for all the headings linked on it: opening it once per heading
+  // loaded the same pages hundreds of times in the same few tabs.
   const headingLinks = new Map();
   for (const { from, href } of links) {
     if (href === null || /^(mailto:|tel:)/.test(href)) continue;
@@ -312,17 +314,20 @@ try {
       continue;
     }
     if (url.hash && file.endsWith(".html")) {
-      const target = `${url.pathname}${url.hash}`;
-      if (!headingLinks.has(target)) headingLinks.set(target, []);
-      headingLinks.get(target).push({ from, href, pathname: url.pathname, hash: url.hash });
+      if (!headingLinks.has(url.pathname)) headingLinks.set(url.pathname, new Map());
+      const linked = headingLinks.get(url.pathname);
+      if (!linked.has(url.hash)) linked.set(url.hash, []);
+      linked.get(url.hash).push({ from, href });
     }
   }
-  await sideBySide([...headingLinks.values()], async (tab, refs) => {
-    const { pathname, hash } = refs[0];
+  await sideBySide([...headingLinks], async (tab, [pathname, linked]) => {
     await tab.goto(origin + pathname, { waitUntil: "load" });
-    const id = decodeURIComponent(hash.slice(1));
-    if (!(await tab.evaluate((target) => document.getElementById(target) !== null, id))) {
-      for (const { from, href } of refs) fail(`${from} links to ${href}, but that page has no ${hash}`);
+    const missing = await tab.evaluate(
+      (hashes) => hashes.filter((hash) => document.getElementById(decodeURIComponent(hash.slice(1))) === null),
+      [...linked.keys()],
+    );
+    for (const hash of missing) {
+      for (const { from, href } of linked.get(hash)) fail(`${from} links to ${href}, but that page has no ${hash}`);
     }
   });
 

@@ -1,0 +1,97 @@
+{
+  "batchesPanelAfter": "após #{number}",
+  "batchesPanelAnswer": "Responder em Ajustes",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "one": "Lote #{number} · {count} alteração",
+    "many": "Lote #{number} · {count} alterações",
+    "other": "Lote #{number} · {count} alterações"
+  },
+  "batchesPanelChecking": "verificando há {duration}",
+  "batchesPanelChecksFull": "Verificações: {passed} passaram, {failed} falharam, {running} em execução, lidas às {time}",
+  "batchesPanelChecksPassed": "{passed} de {total} verificações passaram",
+  "batchesPanelChecksUnread": "verificações ainda não lidas",
+  "batchesPanelClosed": "fechado",
+  "batchesPanelClosedNumber": "#{number} fechado",
+  "batchesPanelColumnBatch": "Lote",
+  "batchesPanelColumnChanges": "Alterações",
+  "batchesPanelColumnEnded": "Terminou",
+  "batchesPanelColumnFormed": "Formado",
+  "batchesPanelColumnHeld": "Vezes retido",
+  "batchesPanelColumnTook": "Duração",
+  "batchesPanelCombining": "combinando",
+  "batchesPanelEmpty": "Nenhum lote neste projeto",
+  "batchesPanelEndedTook": "{time} · levou {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "one": "{count} falhou: {first}",
+    "many": "{count} falharam, a primeira {first}",
+    "other": "{count} falharam, a primeira {first}"
+  },
+  "batchesPanelFailedNames": "Verificações que falharam: {names}",
+  "batchesPanelFix": "correção {keys}",
+  "batchesPanelHeld": "retido há {duration}",
+  "batchesPanelHoldChecks": "Retido desde as {time}: as verificações falharam",
+  "batchesPanelHoldMergeWay": "Retido desde as {time}: os ajustes de mesclagem do seu projeto recusam esta forma de mesclar",
+  "batchesPanelHoldRefused": "Retido desde as {time}: a mesclagem foi recusada ({detail})",
+  "batchesPanelHoldRules": "Retido desde as {time}: as regras de branch do seu projeto recusam a mesclagem",
+  "batchesPanelHours": "{hours} h {minutes} min",
+  "batchesPanelInQueue": "na fila de mesclagem",
+  "batchesPanelLastDay": "Último dia",
+  "batchesPanelLeftOut": "de fora",
+  "batchesPanelLeftOutAhead": "{reason} (após {key})",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "one": "{count} de fora",
+    "many": "{count} de fora",
+    "other": "{count} de fora"
+  },
+  "batchesPanelListLabel": "Alterações esperando e de fora",
+  "batchesPanelMembersLabel": "Alterações neste lote",
+  "batchesPanelMerged": "mesclado",
+  "batchesPanelMergedNumber": "#{number} mesclado",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "one": "{count} min",
+    "many": "{count} min",
+    "other": "{count} min"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "one": "+{count} a mais",
+    "many": "+{count} a mais",
+    "other": "+{count} a mais"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "one": "Novo lote · {count} alteração",
+    "many": "Novo lote · {count} alterações",
+    "other": "Novo lote · {count} alterações"
+  },
+  "batchesPanelNext": "próximo às {time}",
+  "batchesPanelOpening": "abrindo",
+  "batchesPanelStateChecking": "Verificando desde as {time}",
+  "batchesPanelStateCombining": "Combinando as alterações de novo sobre o branch principal mais recente",
+  "batchesPanelStateOpening": "Abrindo a solicitação de pull do lote",
+  "batchesPanelStateQueue": "Passou nas verificações e espera na fila de mesclagem do seu projeto",
+  "batchesPanelTitle": "Lotes",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "one": "{count} alteração esperando",
+    "many": "{count} alterações esperando",
+    "other": "{count} alterações esperando"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "one": "{count} esperando",
+    "many": "{count} esperando",
+    "other": "{count} esperando"
+  },
+  "batchesPanelWaitingHeading": "esperando",
+  "batchesPanelWaitsAfter": "Espera {key} ser mesclada primeiro",
+  "batchesPanelWaitsBatch": "Entra no lote depois do #{number}",
+  "batchesPanelWaitsFix": "Entra no lote retido como sua correção",
+  "batchesPanelWaitsGap": "Entra no próximo lote às {time}",
+  "batchesPanelWaitsNow": "Entra no próximo lote",
+  "batchesReadWords": "seus lotes de alterações aprovadas"
+}

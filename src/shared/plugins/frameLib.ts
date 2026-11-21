@@ -48,8 +48,32 @@ export const FRAME_LIB_HOST_MODULES: Readonly<Record<HostModuleKey, string>> = {
  * `builtin/<id>/` - its `panel.mjs`, its card views and every file they
  * reach - pinned like the rest. The ids are the folders' names.
  */
-export const BUILTIN_FRAME_PANELS = ["activity", "automation", "knowledge", "now"] as const;
+export const BUILTIN_FRAME_PANELS = [
+  "activity",
+  "automation",
+  "knowledge",
+  "now",
+  "batches-panel",
+] as const;
 export type BuiltinFramePanel = (typeof BUILTIN_FRAME_PANELS)[number];
+
+/**
+ * The app's own panels that a built-in runbook shows (docs/runbooks.md,
+ * "Panels"): each one a folder of its runbook, `resources/runbooks/<runbook>/<folder>/`,
+ * compiled with the app like the folders under `src/panels/`, under the id
+ * `runbookPanelId` gives it, `<runbook>-<folder>`.
+ */
+export const RUNBOOK_FRAME_PANELS: Readonly<
+  Partial<Record<BuiltinFramePanel, { runbook: string; folder: string }>>
+> = {
+  "batches-panel": { runbook: "batches", folder: "panel" },
+};
+
+/** Where an app panel's folder is in the project: `src/panels/<id>/`, or its runbook's folder. */
+export function builtinPanelSource(id: BuiltinFramePanel): string {
+  const runbook = RUNBOOK_FRAME_PANELS[id];
+  return runbook ? `resources/runbooks/${runbook.runbook}/${runbook.folder}` : `src/panels/${id}`;
+}
 
 /** Where an app panel's folder is compiled to in the lib. */
 export function builtinPanelDir(id: BuiltinFramePanel): string {

@@ -1,0 +1,81 @@
+{
+  "batchesPanelAfter": "排在 #{number} 之后",
+  "batchesPanelAnswer": "在设置中回答",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "other": "第 #{number} 批 · {count} 个改动"
+  },
+  "batchesPanelChecking": "检查中 {duration}",
+  "batchesPanelChecksFull": "检查：{passed} 项已通过，{failed} 项未通过，{running} 项正在运行，读取于 {time}",
+  "batchesPanelChecksPassed": "{total} 项检查中已通过 {passed} 项",
+  "batchesPanelChecksUnread": "尚未读取检查",
+  "batchesPanelClosed": "已关闭",
+  "batchesPanelClosedNumber": "#{number} 已关闭",
+  "batchesPanelColumnBatch": "批次",
+  "batchesPanelColumnChanges": "改动",
+  "batchesPanelColumnEnded": "结束",
+  "batchesPanelColumnFormed": "组成",
+  "batchesPanelColumnHeld": "暂缓次数",
+  "batchesPanelColumnTook": "用时",
+  "batchesPanelCombining": "合成中",
+  "batchesPanelEmpty": "这个项目没有批量拉取请求",
+  "batchesPanelEndedTook": "{time} · 用时 {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "other": "{count} 项未通过，首个：{first}"
+  },
+  "batchesPanelFailedNames": "未通过的检查：{names}",
+  "batchesPanelFix": "修复：{keys}",
+  "batchesPanelHeld": "已暂缓 {duration}",
+  "batchesPanelHoldChecks": "自 {time} 起暂缓：检查未通过",
+  "batchesPanelHoldMergeWay": "自 {time} 起暂缓：项目的合并设置不允许这种合并方式",
+  "batchesPanelHoldRefused": "自 {time} 起暂缓：合并被拒绝（{detail}）",
+  "batchesPanelHoldRules": "自 {time} 起暂缓：项目的分支规则拒绝了合并",
+  "batchesPanelHours": "{hours} 小时 {minutes} 分",
+  "batchesPanelInQueue": "在合并队列中",
+  "batchesPanelLastDay": "最近一天",
+  "batchesPanelLeftOut": "未纳入",
+  "batchesPanelLeftOutAhead": "{reason}（在 {key} 之后）",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "other": "{count} 个未纳入"
+  },
+  "batchesPanelListLabel": "等待中和未纳入的改动",
+  "batchesPanelMembersLabel": "这批改动",
+  "batchesPanelMerged": "已合并",
+  "batchesPanelMergedNumber": "#{number} 已合并",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "other": "{count} 分钟"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "other": "+{count} 个"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "other": "新一批 · {count} 个改动"
+  },
+  "batchesPanelNext": "下一批 {time}",
+  "batchesPanelOpening": "创建中",
+  "batchesPanelStateChecking": "自 {time} 起检查中",
+  "batchesPanelStateCombining": "正在最新的主分支上重新合成这些改动",
+  "batchesPanelStateOpening": "正在创建这批改动的拉取请求",
+  "batchesPanelStateQueue": "检查已通过，正在项目的合并队列中等待",
+  "batchesPanelTitle": "批量拉取请求",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "other": "{count} 个改动等待中"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "other": "{count} 个等待中"
+  },
+  "batchesPanelWaitingHeading": "等待中",
+  "batchesPanelWaitsAfter": "等 {key} 先合并",
+  "batchesPanelWaitsBatch": "加入 #{number} 之后的那一批",
+  "batchesPanelWaitsFix": "作为修复加入暂缓的这批改动",
+  "batchesPanelWaitsGap": "{time} 加入下一批改动",
+  "batchesPanelWaitsNow": "加入下一批改动",
+  "batchesReadWords": "你已批准改动的批量拉取请求"
+}

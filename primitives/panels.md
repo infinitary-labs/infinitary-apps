@@ -4,7 +4,7 @@ A panel is one folder shape (`panel.tsx` taking `PanelProps`, a `manifest.json`,
 
 ## Intended use
 
-Give the captain a lasting view beside the stage: the app's own Tasks, Activity, Knowledge and Automation, a panel a crewmate builds in the personal workspace, or a panel added from elsewhere.
+Give the captain a lasting view beside the stage: the app's own Tasks, Activity, Knowledge and Automation, a built-in runbook's panel such as Batches, a panel a crewmate builds in the personal workspace, or a panel added from elsewhere.
 Every panel is the same plugin shape, and the source decides the privilege: the app's own, the captain's own ("yours"), or installed from elsewhere.
 A panel reads app data through declared reads ([live-reads.md](live-reads.md)), keeps its own state in its store slice, may put up cards on the main stack, and is drawn inside host chrome it never renders itself.
 How a panel looks is not this page's business: visual rules stay in the design skill ([`../.claude/skills/infinitary-design/`](../.claude/skills/infinitary-design/)), and the panel library is that skill's components exported from `src/renderer/src/design/index.ts` as `@infinitary/ui`.
@@ -12,7 +12,7 @@ How a panel looks is not this page's business: visual rules stay in the design s
 ## When to use it, and when not
 
 Use a panel for a view that stays on screen and updates as the facts change.
-Do not add a hard-coded rail, sidebar or React-only dock for a new view: the rails draw registered side panels, and the app's own panels are ordinary panel folders under `src/panels/`.
+Do not add a hard-coded rail, sidebar or React-only dock for a new view: the rails draw registered side panels, and the app's own panels are ordinary panel folders under `src/panels/` or in a built-in runbook's folder.
 Do not add a new card kind, settings tab or panel by editing a switch: a contribution is a manifest entry plus a binding through `registerPlugin`.
 Do not give a panel its own fetch of app data, its own poll, or `window.infinitary`: declare reads, and use `server.ts` only for the captain's own panel's background work.
 Do not give a panel its own sign-in, key or host list for a service outside your projects: it names the integrations it uses in its manifest and reaches them through `integrations` ([integrations.md](integrations.md)).
@@ -26,7 +26,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 - The compiler: `compilePersonalModule` and `PersonalCompileError` in [`../src/core/personal/compiler.ts`](../src/core/personal/compiler.ts).
 - The contract a panel is written against: `PanelProps`, `ServerContext` and `PersonalManifest` in [`../src/shared/personal/contracts.ts`](../src/shared/personal/contracts.ts) (type-only; it generates the workspace's `infinitary-env.d.ts`); the manifest schema and `PLUGIN_HOST_SUPPORT` in [`../src/shared/personal/manifest.ts`](../src/shared/personal/manifest.ts).
 - Mounting: `PersonalPlugins` in [`../src/renderer/src/personal/personalPlugins.ts`](../src/renderer/src/personal/personalPlugins.ts) (every source, in a frame through `FramedPanelBody`) and the frame realm in [`../src/renderer/src/frameRealm/`](../src/renderer/src/frameRealm/) (`framePanelProps`), mounted by `FrameMountRegistry.mountPanel`.
-- The app's own folders: `APP_PANEL_FOLDERS` in [`../src/shared/surfaces.ts`](../src/shared/surfaces.ts).
+- The app's own folders: `APP_PANEL_FOLDERS` in [`../src/shared/surfaces.ts`](../src/shared/surfaces.ts), under `src/panels/` or, for a built-in runbook's panel, its folder from `builtinPanelSource` and `RUNBOOK_FRAME_PANELS` in [`../src/shared/plugins/frameLib.ts`](../src/shared/plugins/frameLib.ts).
 - Installing panels and guidance runbooks: `PluginInstaller` and `checkPluginTree` in [`../src/core/plugins/pluginInstaller.ts`](../src/core/plugins/pluginInstaller.ts), with `PluginRecords` the one writer of the `plugins` table.
 - The store: `PersonalStore` over `plugin_kv` in [`../src/core/personal/personalStore.ts`](../src/core/personal/personalStore.ts).
 - The switch: `ShellPreferencesService.setPersonalPanels` in [`../src/core/preferences/shellPreferences.ts`](../src/core/preferences/shellPreferences.ts); safe mode in [`../src/core/personal/safeMode.ts`](../src/core/personal/safeMode.ts).
@@ -82,6 +82,7 @@ The install name check is wider on purpose: every workspace folder name is taken
 ## Uses
 
 - The app's own Tasks, Activity, Knowledge and Automation panels are ordinary folders under `src/panels/`, compiled into the frame lib and registered first-party.
+- A built-in runbook's panels, such as the Batched pull requests runbook's Batches panel, are compiled into the frame lib the same way and shown while their runbook is on ([runbooks](../docs/runbooks.md), "Built-in panels").
 - Panels the captain asks for, built by a crewmate in the personal workspace and checked with `lint_panel`, `place_panel` and `capture_panel` (`src/core/pi/panelTools.ts`).
 - Panels added from elsewhere by talking (`install_plugin`), contained in the frame realm.
 - The task board is the Tasks panel's card `board` ([task board](../docs/task-board.md)).

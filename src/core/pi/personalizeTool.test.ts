@@ -2,6 +2,7 @@ import { rmSync } from "node:fs";
 import type { FmEvent } from "@shared/events";
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
 import { DEFAULT_LAYOUT, type Layout } from "@shared/preferences";
+import { type AppPanelGates, runbookGatesOf } from "@shared/surfaces";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
@@ -452,6 +453,33 @@ describe("the your-surfaces section", () => {
       ["activity", "app", { x: "left", y: "bottom" }, 2, 2],
       ["now", "app", { x: "right", y: "bottom" }, 1, 1],
     ]);
+  });
+
+  // docs/runbooks.md, "Built-in panels": the Batches panel shows only while the
+  // Batched pull requests runbook is on, and a copy that replaces the
+  // built-in shows its own panel under the same id.
+  it("lists a built-in runbook's panel only while that built-in is on, and frees its id for a copy", () => {
+    const builtinOn = runbookGatesOf([{ id: "batches", source: "builtin", enabled: true }]);
+    const copyOn = runbookGatesOf([
+      { id: "batches", source: "builtin", enabled: false },
+      { id: "batches", source: "personal", enabled: true },
+    ]);
+    expect(builtinOn).toEqual({ "runbook-batches": true });
+    expect(copyOn).toEqual({ "runbook-batches": false });
+    const copy = {
+      extensions: [{ ...extension("batches-panel", "Batches"), source: "installed" as const }],
+    };
+    const surface = (gates: AppPanelGates) =>
+      listSurfaces(DEFAULT_LAYOUT, copy, { ...STABLE, ...gates })
+        .filter((entry) => entry.id === "batches-panel")
+        .map((entry) => [entry.kind, entry.place !== undefined]);
+    // On: the app's own panel holds the id and its place; a panel claiming it has none.
+    expect(surface(builtinOn)).toEqual([
+      ["app", true],
+      ["installed", false],
+    ]);
+    // A copy on turns the built-in off: only the copy's panel, on the rails.
+    expect(surface(copyOn)).toEqual([["installed", true]]);
   });
 
   it("lists the Knowledge panel only where the build keeps knowledge", () => {

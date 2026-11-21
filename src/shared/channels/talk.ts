@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { batchAnswerSchema } from "../batches";
+import { batchAnswerSchema, batchesViewSchema } from "../batches";
 import { cardNotesSchema } from "../cardNotes";
 import {
   CARD_REPLY_MAX_CHARS,
@@ -286,6 +286,15 @@ export const talkChannels = {
     reach: "views",
     request: z.tuple([z.string().min(1), batchAnswerSchema]),
     response: okSchema,
+  },
+  // The Batches panel's read (docs/forge.md, "The Batches panel"): each
+  // batched project's line, open batch, changes left out and last day.
+  "inf:batches:list": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: batchesViewSchema,
   },
   // Where new projects go (Settings -> Projects): the folder clone and init
   // create their directories in. Null puts it back to the app's own fleet

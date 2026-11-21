@@ -14,7 +14,7 @@ import {
   type PersonalPanels,
   type ShellPreferences,
 } from "@shared/preferences";
-import { type AppPanelGates, BUILTIN_SURFACES, builtinSurfacesFor } from "@shared/surfaces";
+import { APP_PANEL_FOLDERS, type AppPanelGates, builtinSurfacesFor } from "@shared/surfaces";
 import { Type } from "typebox";
 import {
   appPanelHiddenLine,
@@ -116,7 +116,13 @@ export function listSurfaces(
     panelSlot(arrangement, id) ?? { slot: preferred, index: Number.POSITIVE_INFINITY };
   // The window refuses a personal panel that takes an app panel's id, so it
   // has no place on the rails: it shows where it asked to be, with no place.
-  const appIds = new Set(BUILTIN_SURFACES.map((entry) => entry.id));
+  // A built-in runbook's panel whose runbook is off leaves its id to a copy of
+  // that runbook, whose own copy of the panel takes it (docs/runbooks.md, "Panels").
+  const appIds = new Set(
+    APP_PANEL_FOLDERS.filter(
+      (folder) => !folder.gate?.startsWith("runbook-") || gates[folder.gate] === true,
+    ).map((folder) => folder.id as string),
+  );
   const unplaced = (slot: SidePanelPlacement) => ({ slot, index: Number.POSITIVE_INFINITY });
   const views = [
     {

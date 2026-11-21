@@ -265,6 +265,9 @@ export const READ_WORDS: Record<string, string> = {
   "forge.changes": "your pull requests",
   "automation.list": "your automations and when they run",
   "automation.kept": "the jobs kept running after their task closed",
+  get "batches.list"() {
+    return m.batchesReadWords();
+  },
   "knowledge.collections": "what your crew learned, counted by collection",
   "knowledge.graph": "how the ideas your crew learned connect",
   "knowledge.concepts": "the ideas your crew learned",

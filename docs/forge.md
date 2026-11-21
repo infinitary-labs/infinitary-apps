@@ -1226,6 +1226,34 @@ While a change waits in line under a gap, its batch check says when the next bat
 
 Evidence: `src/core/batches/line.test.ts` and `batches.test.ts` ("the batch gap"), and the journey `tests/e2e/batch-gap.spec.ts`, which sets it by keys.
 
+### The Batches panel
+
+The Batched pull requests runbook carries a panel of its own, Batches, in its folder `resources/runbooks/batches/panel/` (`"panels": ["panel"]` in its `runbook.json`), shown on the right rail while the runbook is on ("Built-in panels" in `docs/runbooks.md`).
+It only points: nothing in it merges, answers or moves a change.
+It reads `batches.list` and `tasks.board`, and shows only the focused project's repositories while the project focus is on one (`docs/project-focus.md`).
+
+`batches.list` (`batchesView`, `src/core/batches/view.ts`) answers each project repository on batched pull requests, or whose record still holds something, from the app's own record alone: its line with why each change waits, its open batch with its state, hold, members, declared fixes and checks, the changes left out and why, and the batches that ended in the last day.
+Nothing in it asks where the project lives.
+The open batch's checks are the reading the batch pass already made at its version, kept in memory (`Batches.checksReading`) and pushed with its own `batch_checks` event only when the counts change; a batch that ends, or a restart, drops it, and the panel then says the checks are not read yet.
+The record keeps each batch that merged or closed as `BatchRecord.finished` - its number, link, members, when it formed and ended, its outcome and how many times it held (`finishedWith`, `src/core/batches/line.ts`) - and the view lists only those that ended in the last day (`FINISHED_BATCH_KEPT_MS`, `finishedWithin`).
+An older entry stays saved until the next batch ends, which drops it.
+`batches.list` is read again on each change to a batch record (`repo_batch`), each new checks reading (`batch_checks`), a project set up, configured or removed, and once a minute, so a batch leaves Last day a day after it ended.
+
+Collapsed, the panel's header says the open batch's state and how long it has held it ("held 4m", "checking 49m") and how many changes wait and are left out.
+Open, it shows:
+
+- the open batch: a dot for its state, its number and size, its checks as a bar with how many passed, the failed checks by name, the declared fix's key, its members as task chips (six, then "+N more"), and Answer in Settings while it holds;
+- one row for the changes waiting, and why;
+- a row for each change left out, with why;
+- Last day, closed until opened, with each batch that ended.
+
+A chip opens its task, and Answer in Settings opens the held batch in Settings → Projects with focus on it.
+Its rows and chips are one Tab stop, inside which the arrows, Home and End move; the Last day toggle is a second Tab stop, and F6 reaches the panel as any panel.
+Its header button and the command Show your batches put up its wide details card (`cards/details.tsx`), the same groups in full words - the state with its time, the checks counts and when they were read, each change and why it waits or was left out - and a table of the last day's batches: batch, changes, formed, ended, how long it took and times held.
+The panel has no link to the batch's pull request, since a panel's frame opens no links; Answer in Settings reaches the button that opens it.
+
+Evidence: `src/core/batches/view.test.ts`, `line.test.ts` ("a batch that ended"), `batches.test.ts` ("the open batch's checks reading"), and the journey `tests/e2e/batch-panel.spec.ts`, which walks the panel and its details card by keys on a disposable GitHub.
+
 ## A project that still carries the team queue's files
 
 Earlier versions of Infinitary shipped a team queue: a workflow the project carried, which tested approved pull requests together and answered a commit status named `infinitary/queue`.

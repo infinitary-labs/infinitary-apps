@@ -1,0 +1,603 @@
+---
+title: Teclado
+description: Cada comando que puedes ejecutar desde el teclado en Infinitary, y sus teclas en cada preajuste en una Mac y en Linux.
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Todo en Infinitary funciona desde el teclado.
+Tab se mueve entre los controles, y las flechas se mueven dentro de una lista.
+
+## Búsqueda de comandos {#command-search}
+
+Presiona <kbd>⌘K</kbd> en una Mac, o <kbd>Ctrl+K</kbd> en Linux, para abrir la búsqueda de comandos.
+Escribe unas palabras, elige un comando con las flechas y presiona Enter.
+Cada comando de esta página está ahí, con su tecla al lado, incluidos los que no tienen tecla.
+
+## Preajustes {#presets}
+
+Infinitary trae conjuntos de teclas llamados preajustes: Vim, Emacs, VS Code, Tmux, Legacy.
+Una instalación nueva empieza con Vim.
+Legacy solo se ofrece si usabas Infinitary antes de que existieran los preajustes.
+Elige un preajuste en **Configuración**, en **Teclado**.
+
+## Cambiar una tecla {#change-a-key}
+
+En **Configuración**, en **Teclado**, cada comando tiene **Grabar**, **Quitar** y **Restablecer**.
+Presiona **Grabar**, luego las teclas que quieras y luego Enter para guardarlas.
+Si otro comando ya usa esas teclas, Infinitary te dice cuál antes de que cambie nada.
+
+## Cada comando y sus teclas {#every-command-and-its-keys}
+
+Un guion significa que el comando todavía no tiene tecla: ejecútalo desde la búsqueda de comandos o asígnale una tecla propia.
+Dos teclas con un espacio entre ellas se presionan una después de la otra.
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**En cualquier lugar de la ventana**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Buscar comandos | <kbd>&#58;</kbd> cuando no estás escribiendo, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> cuando no estás escribiendo, <kbd>Ctrl+K</kbd> |
+| Ir al mensaje principal | <kbd>I</kbd> cuando no estás escribiendo, <kbd>⌘L</kbd> | <kbd>I</kbd> cuando no estás escribiendo, <kbd>Ctrl+L</kbd> |
+| Ir a la respuesta de la tarjeta | <kbd>R</kbd> cuando no estás escribiendo, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+L</kbd> |
+| Ir al cuerpo de la tarjeta | <kbd>G C</kbd> cuando no estás escribiendo | <kbd>G C</kbd> cuando no estás escribiendo |
+| Ir a los botones de la tarjeta | <kbd>G A</kbd> cuando no estás escribiendo | <kbd>G A</kbd> cuando no estás escribiendo |
+| Presionar la opción recomendada | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Presionar la segunda opción | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Presionar la tercera opción | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Presionar la cuarta opción | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Ir a la siguiente parte de la ventana | <kbd>⌃W W</kbd> cuando no estás escribiendo, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Ir a la parte anterior de la ventana | <kbd>⌃W P</kbd> cuando no estás escribiendo, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Ir a la parte de la ventana de la izquierda | <kbd>⌃W H</kbd> cuando no estás escribiendo, <kbd>⌃H</kbd> cuando no estás escribiendo | — |
+| Ir a la parte de la ventana de abajo | <kbd>⌃W J</kbd> cuando no estás escribiendo, <kbd>⌃J</kbd> cuando no estás escribiendo | — |
+| Ir a la parte de la ventana de arriba | <kbd>⌃W K</kbd> cuando no estás escribiendo, <kbd>⌃K</kbd> cuando no estás escribiendo | — |
+| Ir a la parte de la ventana de la derecha | <kbd>⌃W L</kbd> cuando no estás escribiendo, <kbd>⌃L</kbd> cuando no estás escribiendo | — |
+| Mover a la izquierda | <kbd>H</kbd> cuando no estás escribiendo | <kbd>H</kbd> cuando no estás escribiendo |
+| Mover hacia abajo | <kbd>J</kbd> cuando no estás escribiendo, <kbd>⌃N</kbd> | <kbd>J</kbd> cuando no estás escribiendo |
+| Mover hacia arriba | <kbd>K</kbd> cuando no estás escribiendo, <kbd>⌃P</kbd> | <kbd>K</kbd> cuando no estás escribiendo |
+| Mover a la derecha | <kbd>L</kbd> cuando no estás escribiendo | <kbd>L</kbd> cuando no estás escribiendo |
+| Ir al principio | <kbd>G G</kbd> cuando no estás escribiendo | <kbd>G G</kbd> cuando no estás escribiendo |
+| Ir al final | <kbd>⇧G</kbd> cuando no estás escribiendo | <kbd>Shift+G</kbd> cuando no estás escribiendo |
+| Subir una página | <kbd>⌃U</kbd> cuando no estás escribiendo, <kbd>⌃B</kbd> cuando no estás escribiendo | — |
+| Bajar una página | <kbd>⌃D</kbd> cuando no estás escribiendo, <kbd>⌃F</kbd> cuando no estás escribiendo | — |
+| Cancelar | <kbd>⌃&#91;</kbd> | — |
+| Computadoras de trabajo anteriores | — | — |
+| Computadoras de trabajo siguientes | — | — |
+| Centrarse en un proyecto | <kbd>G P</kbd> cuando no estás escribiendo, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+P</kbd> |
+| Mostrar todos los proyectos | — | — |
+| Mostrar la tarjeta anterior | <kbd>⇧H</kbd> cuando no estás escribiendo, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Mostrar la tarjeta siguiente | <kbd>⇧L</kbd> cuando no estás escribiendo, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Mostrar la siguiente tarjeta nueva | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Apartar la tarjeta | <kbd>Q</kbd> cuando no estás escribiendo, <kbd>⌃W C</kbd> cuando no estás escribiendo, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+M</kbd> |
+| Apartar todas las tarjetas o traerlas de vuelta | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Presionar Hecho o Entendido en la nota | — | — |
+| Rechazar todas las opciones de la tarjeta | — | — |
+| Maximizar o restaurar la tarjeta | <kbd>⌃W O</kbd> cuando no estás escribiendo | — |
+| Buscar en esta tarjeta | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Buscar la siguiente coincidencia | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Buscar la coincidencia anterior | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Ir a la siguiente zona revisada | <kbd>&#93; C</kbd> cuando no estás escribiendo | <kbd>&#93; C</kbd> cuando no estás escribiendo |
+| Ir a la siguiente pregunta | <kbd>&#125;</kbd> cuando no estás escribiendo, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> cuando no estás escribiendo, <kbd>Ctrl+J</kbd> |
+| Ir a la pregunta anterior | <kbd>&#123;</kbd> cuando no estás escribiendo, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+J</kbd> |
+| Ir a la siguiente pregunta sin responder | — | — |
+| Señalar una parte de la tarjeta | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Mostrar u ocultar el hilo de la tarjeta | <kbd>Z A</kbd> cuando no estás escribiendo, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> cuando no estás escribiendo, <kbd>Ctrl+&#92;</kbd> |
+| Ir a los mensajes nuevos del hilo | — | — |
+| Reproducir o pausar el sonido de la tarjeta | — | — |
+| Mostrar información | — | — |
+| Mostrar tarjetas | — | — |
+| Mostrar actividad | — | — |
+| Mostrar tripulante | — | — |
+| Tomar o devolver el control del navegador | — | — |
+| Ir a la página del navegador | — | — |
+| Volver a la tarjeta | — | — |
+| Mover la tarea a otra computadora | — | — |
+| Cerrar la tarea como hecha | — | — |
+| Mostrar navegador | — | — |
+| Pestaña siguiente | <kbd>G T</kbd> cuando no estás escribiendo, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> cuando no estás escribiendo |
+| Pestaña anterior | <kbd>G ⇧T</kbd> cuando no estás escribiendo, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> cuando no estás escribiendo |
+| Find a task | <kbd>&#47;</kbd> cuando no estás escribiendo, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> cuando no estás escribiendo, <kbd>⌘B</kbd> | <kbd>G B</kbd> cuando no estás escribiendo, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Abrir Configuración | <kbd>G S</kbd> cuando no estás escribiendo, <kbd>⌘,</kbd> | <kbd>G S</kbd> cuando no estás escribiendo, <kbd>Ctrl+,</kbd> |
+| Abrir la configuración del teclado | <kbd>&#63;</kbd> cuando no estás escribiendo | <kbd>&#63;</kbd> cuando no estás escribiendo |
+| Organizar paneles | — | — |
+| Mostrar la actualización disponible | — | — |
+| Actualizar más tarde | — | — |
+| Buscar actualizaciones | — | — |
+| Actualizar la computadora del primer oficial | — | — |
+| Mostrar las novedades | — | — |
+| Abrir la respuesta del primer oficial | — | — |
+| Abrir Manuales | — | — |
+| Abrir tu carpeta de manuales | — | — |
+| Abrir Uso | — | — |
+| Abrir Automatización | — | — |
+| Abrir Integraciones | — | — |
+| Pausar todas las automatizaciones | — | — |
+| Reproducir o pausar la música ambiental | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Cambiar las unidades de Uso | — | — |
+| Volver a consultar la asignación | — | — |
+| Agrandar todo | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Achicar todo | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Volver al tamaño habitual | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**En el mensaje principal y en la respuesta de una tarjeta**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Borrar hasta el inicio de la línea | <kbd>⌃U</kbd> | — |
+| Borrar hasta el final de la línea | <kbd>⌃K</kbd> | — |
+| Borrar la palabra antes del cursor | <kbd>⌃W</kbd> | — |
+| Recuperar lo último que se borró | <kbd>⌃Y</kbd> | — |
+
+**En el mensaje principal**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Recuperar el último mensaje enviado | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**En cualquier lugar de la ventana**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Buscar comandos | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| Ir al mensaje principal | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> cuando no estás escribiendo, <kbd>Ctrl+L</kbd> |
+| Ir a la respuesta de la tarjeta | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Ir al cuerpo de la tarjeta | — | — |
+| Ir a los botones de la tarjeta | — | — |
+| Presionar la opción recomendada | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Presionar la segunda opción | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Presionar la tercera opción | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Presionar la cuarta opción | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Ir a la siguiente parte de la ventana | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> cuando no estás escribiendo, <kbd>F6</kbd> |
+| Ir a la parte anterior de la ventana | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Ir a la parte de la ventana de la izquierda | — | — |
+| Ir a la parte de la ventana de abajo | — | — |
+| Ir a la parte de la ventana de arriba | — | — |
+| Ir a la parte de la ventana de la derecha | — | — |
+| Mover a la izquierda | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| Mover hacia abajo | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| Mover hacia arriba | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| Mover a la derecha | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| Ir al principio | <kbd>&#60;</kbd> cuando no estás escribiendo | <kbd>&#60;</kbd> cuando no estás escribiendo |
+| Ir al final | <kbd>&#62;</kbd> cuando no estás escribiendo | <kbd>&#62;</kbd> cuando no estás escribiendo |
+| Subir una página | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| Bajar una página | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> cuando no estás escribiendo |
+| Cancelar | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| Computadoras de trabajo anteriores | — | — |
+| Computadoras de trabajo siguientes | — | — |
+| Centrarse en un proyecto | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+P</kbd> |
+| Mostrar todos los proyectos | — | — |
+| Mostrar la tarjeta anterior | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Mostrar la tarjeta siguiente | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Mostrar la siguiente tarjeta nueva | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Apartar la tarjeta | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> cuando no estás escribiendo, <kbd>Ctrl+X K</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+M</kbd> |
+| Apartar todas las tarjetas o traerlas de vuelta | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Presionar Hecho o Entendido en la nota | — | — |
+| Rechazar todas las opciones de la tarjeta | — | — |
+| Maximizar o restaurar la tarjeta | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> cuando no estás escribiendo |
+| Buscar en esta tarjeta | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| Buscar la siguiente coincidencia | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| Buscar la coincidencia anterior | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| Ir a la siguiente zona revisada | — | — |
+| Ir a la siguiente pregunta | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> cuando no estás escribiendo, <kbd>Ctrl+J</kbd> |
+| Ir a la pregunta anterior | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+J</kbd> |
+| Ir a la siguiente pregunta sin responder | — | — |
+| Señalar una parte de la tarjeta | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Mostrar u ocultar el hilo de la tarjeta | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Ir a los mensajes nuevos del hilo | — | — |
+| Reproducir o pausar el sonido de la tarjeta | — | — |
+| Mostrar información | — | — |
+| Mostrar tarjetas | — | — |
+| Mostrar actividad | — | — |
+| Mostrar tripulante | — | — |
+| Tomar o devolver el control del navegador | — | — |
+| Ir a la página del navegador | — | — |
+| Volver a la tarjeta | — | — |
+| Mover la tarea a otra computadora | — | — |
+| Cerrar la tarea como hecha | — | — |
+| Mostrar navegador | — | — |
+| Pestaña siguiente | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| Pestaña anterior | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> cuando no estás escribiendo, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> cuando no estás escribiendo |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Abrir Configuración | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Abrir la configuración del teclado | <kbd>⌃H B</kbd> cuando no estás escribiendo | <kbd>Ctrl+H B</kbd> cuando no estás escribiendo |
+| Organizar paneles | — | — |
+| Mostrar la actualización disponible | — | — |
+| Actualizar más tarde | — | — |
+| Buscar actualizaciones | — | — |
+| Actualizar la computadora del primer oficial | — | — |
+| Mostrar las novedades | <kbd>⌃H N</kbd> cuando no estás escribiendo | <kbd>Ctrl+H N</kbd> cuando no estás escribiendo |
+| Abrir la respuesta del primer oficial | — | — |
+| Abrir Manuales | — | — |
+| Abrir tu carpeta de manuales | — | — |
+| Abrir Uso | — | — |
+| Abrir Automatización | — | — |
+| Abrir Integraciones | — | — |
+| Pausar todas las automatizaciones | — | — |
+| Reproducir o pausar la música ambiental | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Cambiar las unidades de Uso | — | — |
+| Volver a consultar la asignación | — | — |
+| Agrandar todo | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> cuando no estás escribiendo, <kbd>Ctrl+X Ctrl+=</kbd> cuando no estás escribiendo, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Achicar todo | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> cuando no estás escribiendo, <kbd>Ctrl+Minus</kbd> |
+| Volver al tamaño habitual | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> cuando no estás escribiendo, <kbd>Ctrl+0</kbd> |
+
+**En el mensaje principal y en la respuesta de una tarjeta**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Borrar hasta el inicio de la línea | <kbd>⌃U</kbd> | — |
+| Borrar hasta el final de la línea | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| Borrar la palabra antes del cursor | <kbd>⌃W</kbd> | — |
+| Recuperar lo último que se borró | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**En el mensaje principal**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Recuperar el último mensaje enviado | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**En cualquier lugar de la ventana**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Buscar comandos | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| Ir al mensaje principal | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Ir a la respuesta de la tarjeta | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Ir al cuerpo de la tarjeta | — | — |
+| Ir a los botones de la tarjeta | — | — |
+| Presionar la opción recomendada | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Presionar la segunda opción | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Presionar la tercera opción | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Presionar la cuarta opción | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Ir a la siguiente parte de la ventana | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Ir a la parte anterior de la ventana | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Ir a la parte de la ventana de la izquierda | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| Ir a la parte de la ventana de abajo | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| Ir a la parte de la ventana de arriba | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| Ir a la parte de la ventana de la derecha | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| Mover a la izquierda | — | — |
+| Mover hacia abajo | — | — |
+| Mover hacia arriba | — | — |
+| Mover a la derecha | — | — |
+| Ir al principio | — | — |
+| Ir al final | — | — |
+| Subir una página | — | — |
+| Bajar una página | — | — |
+| Cancelar | — | — |
+| Computadoras de trabajo anteriores | — | — |
+| Computadoras de trabajo siguientes | — | — |
+| Centrarse en un proyecto | <kbd>⌃R</kbd> | — |
+| Mostrar todos los proyectos | — | — |
+| Mostrar la tarjeta anterior | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Mostrar la tarjeta siguiente | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Mostrar la siguiente tarjeta nueva | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Apartar la tarjeta | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Apartar todas las tarjetas o traerlas de vuelta | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Presionar Hecho o Entendido en la nota | — | — |
+| Rechazar todas las opciones de la tarjeta | — | — |
+| Maximizar o restaurar la tarjeta | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| Buscar en esta tarjeta | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Buscar la siguiente coincidencia | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Buscar la coincidencia anterior | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Ir a la siguiente zona revisada | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| Ir a la siguiente pregunta | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| Ir a la pregunta anterior | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| Ir a la siguiente pregunta sin responder | — | — |
+| Señalar una parte de la tarjeta | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Mostrar u ocultar el hilo de la tarjeta | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Ir a los mensajes nuevos del hilo | — | — |
+| Reproducir o pausar el sonido de la tarjeta | — | — |
+| Mostrar información | — | — |
+| Mostrar tarjetas | — | — |
+| Mostrar actividad | — | — |
+| Mostrar tripulante | <kbd>⌃&#96;</kbd> | — |
+| Tomar o devolver el control del navegador | — | — |
+| Ir a la página del navegador | — | — |
+| Volver a la tarjeta | — | — |
+| Mover la tarea a otra computadora | — | — |
+| Cerrar la tarea como hecha | — | — |
+| Mostrar navegador | — | — |
+| Pestaña siguiente | <kbd>⌃⇥</kbd> | — |
+| Pestaña anterior | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Abrir Configuración | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Abrir la configuración del teclado | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| Organizar paneles | — | — |
+| Mostrar la actualización disponible | — | — |
+| Actualizar más tarde | — | — |
+| Buscar actualizaciones | — | — |
+| Actualizar la computadora del primer oficial | — | — |
+| Mostrar las novedades | — | — |
+| Abrir la respuesta del primer oficial | — | — |
+| Abrir Manuales | — | — |
+| Abrir tu carpeta de manuales | — | — |
+| Abrir Uso | — | — |
+| Abrir Automatización | — | — |
+| Abrir Integraciones | — | — |
+| Pausar todas las automatizaciones | — | — |
+| Reproducir o pausar la música ambiental | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Cambiar las unidades de Uso | — | — |
+| Volver a consultar la asignación | — | — |
+| Agrandar todo | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Achicar todo | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Volver al tamaño habitual | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**En el mensaje principal y en la respuesta de una tarjeta**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Borrar hasta el inicio de la línea | <kbd>⌃U</kbd> | — |
+| Borrar hasta el final de la línea | <kbd>⌃K</kbd> | — |
+| Borrar la palabra antes del cursor | <kbd>⌃W</kbd> | — |
+| Recuperar lo último que se borró | <kbd>⌃Y</kbd> | — |
+
+**En el mensaje principal**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Recuperar el último mensaje enviado | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**En cualquier lugar de la ventana**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Buscar comandos | <kbd>&#58;</kbd> cuando no estás escribiendo, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> cuando no estás escribiendo, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| Ir al mensaje principal | <kbd>I</kbd> cuando no estás escribiendo, <kbd>⌘L</kbd> | <kbd>I</kbd> cuando no estás escribiendo, <kbd>Ctrl+L</kbd> |
+| Ir a la respuesta de la tarjeta | <kbd>R</kbd> cuando no estás escribiendo, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+L</kbd> |
+| Ir al cuerpo de la tarjeta | <kbd>G C</kbd> cuando no estás escribiendo, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> cuando no estás escribiendo, <kbd>Ctrl+B &#91;</kbd> |
+| Ir a los botones de la tarjeta | <kbd>G A</kbd> cuando no estás escribiendo | <kbd>G A</kbd> cuando no estás escribiendo |
+| Presionar la opción recomendada | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Presionar la segunda opción | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Presionar la tercera opción | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Presionar la cuarta opción | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Ir a la siguiente parte de la ventana | <kbd>⌃W W</kbd> cuando no estás escribiendo, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| Ir a la parte anterior de la ventana | <kbd>⌃W P</kbd> cuando no estás escribiendo, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Ir a la parte de la ventana de la izquierda | <kbd>⌃W H</kbd> cuando no estás escribiendo, <kbd>⌃H</kbd> cuando no estás escribiendo, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| Ir a la parte de la ventana de abajo | <kbd>⌃W J</kbd> cuando no estás escribiendo, <kbd>⌃J</kbd> cuando no estás escribiendo, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| Ir a la parte de la ventana de arriba | <kbd>⌃W K</kbd> cuando no estás escribiendo, <kbd>⌃K</kbd> cuando no estás escribiendo, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| Ir a la parte de la ventana de la derecha | <kbd>⌃W L</kbd> cuando no estás escribiendo, <kbd>⌃L</kbd> cuando no estás escribiendo, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| Mover a la izquierda | <kbd>H</kbd> cuando no estás escribiendo | <kbd>H</kbd> cuando no estás escribiendo |
+| Mover hacia abajo | <kbd>J</kbd> cuando no estás escribiendo, <kbd>⌃N</kbd> | <kbd>J</kbd> cuando no estás escribiendo |
+| Mover hacia arriba | <kbd>K</kbd> cuando no estás escribiendo, <kbd>⌃P</kbd> | <kbd>K</kbd> cuando no estás escribiendo |
+| Mover a la derecha | <kbd>L</kbd> cuando no estás escribiendo | <kbd>L</kbd> cuando no estás escribiendo |
+| Ir al principio | <kbd>G G</kbd> cuando no estás escribiendo | <kbd>G G</kbd> cuando no estás escribiendo |
+| Ir al final | <kbd>⇧G</kbd> cuando no estás escribiendo | <kbd>Shift+G</kbd> cuando no estás escribiendo |
+| Subir una página | <kbd>⌃U</kbd> cuando no estás escribiendo | — |
+| Bajar una página | <kbd>⌃D</kbd> cuando no estás escribiendo, <kbd>⌃F</kbd> cuando no estás escribiendo | — |
+| Cancelar | <kbd>⌃&#91;</kbd> | — |
+| Computadoras de trabajo anteriores | — | — |
+| Computadoras de trabajo siguientes | — | — |
+| Centrarse en un proyecto | <kbd>G P</kbd> cuando no estás escribiendo, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> cuando no estás escribiendo, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| Mostrar todos los proyectos | — | — |
+| Mostrar la tarjeta anterior | <kbd>⇧H</kbd> cuando no estás escribiendo, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> cuando no estás escribiendo, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Mostrar la tarjeta siguiente | <kbd>⇧L</kbd> cuando no estás escribiendo, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> cuando no estás escribiendo, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Mostrar la siguiente tarjeta nueva | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Apartar la tarjeta | <kbd>Q</kbd> cuando no estás escribiendo, <kbd>⌃W C</kbd> cuando no estás escribiendo, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> cuando no estás escribiendo, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Apartar todas las tarjetas o traerlas de vuelta | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Presionar Hecho o Entendido en la nota | — | — |
+| Rechazar todas las opciones de la tarjeta | — | — |
+| Maximizar o restaurar la tarjeta | <kbd>⌃W O</kbd> cuando no estás escribiendo, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| Buscar en esta tarjeta | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Buscar la siguiente coincidencia | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Buscar la coincidencia anterior | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Ir a la siguiente zona revisada | <kbd>&#93; C</kbd> cuando no estás escribiendo | <kbd>&#93; C</kbd> cuando no estás escribiendo |
+| Ir a la siguiente pregunta | <kbd>&#125;</kbd> cuando no estás escribiendo, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> cuando no estás escribiendo, <kbd>Ctrl+J</kbd> |
+| Ir a la pregunta anterior | <kbd>&#123;</kbd> cuando no estás escribiendo, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+J</kbd> |
+| Ir a la siguiente pregunta sin responder | — | — |
+| Señalar una parte de la tarjeta | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Mostrar u ocultar el hilo de la tarjeta | <kbd>Z A</kbd> cuando no estás escribiendo, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> cuando no estás escribiendo, <kbd>Ctrl+&#92;</kbd> |
+| Ir a los mensajes nuevos del hilo | — | — |
+| Reproducir o pausar el sonido de la tarjeta | — | — |
+| Mostrar información | — | — |
+| Mostrar tarjetas | — | — |
+| Mostrar actividad | — | — |
+| Mostrar tripulante | — | — |
+| Tomar o devolver el control del navegador | — | — |
+| Ir a la página del navegador | — | — |
+| Volver a la tarjeta | — | — |
+| Mover la tarea a otra computadora | — | — |
+| Cerrar la tarea como hecha | — | — |
+| Mostrar navegador | — | — |
+| Pestaña siguiente | <kbd>G T</kbd> cuando no estás escribiendo, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> cuando no estás escribiendo |
+| Pestaña anterior | <kbd>G ⇧T</kbd> cuando no estás escribiendo, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> cuando no estás escribiendo |
+| Find a task | <kbd>&#47;</kbd> cuando no estás escribiendo, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> cuando no estás escribiendo, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> cuando no estás escribiendo, <kbd>⌘B</kbd> | <kbd>G B</kbd> cuando no estás escribiendo |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Abrir Configuración | <kbd>G S</kbd> cuando no estás escribiendo, <kbd>⌘,</kbd> | <kbd>G S</kbd> cuando no estás escribiendo, <kbd>Ctrl+,</kbd> |
+| Abrir la configuración del teclado | <kbd>&#63;</kbd> cuando no estás escribiendo, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> cuando no estás escribiendo, <kbd>Ctrl+B &#63;</kbd> |
+| Organizar paneles | — | — |
+| Mostrar la actualización disponible | — | — |
+| Actualizar más tarde | — | — |
+| Buscar actualizaciones | — | — |
+| Actualizar la computadora del primer oficial | — | — |
+| Mostrar las novedades | — | — |
+| Abrir la respuesta del primer oficial | — | — |
+| Abrir Manuales | — | — |
+| Abrir tu carpeta de manuales | — | — |
+| Abrir Uso | — | — |
+| Abrir Automatización | — | — |
+| Abrir Integraciones | — | — |
+| Pausar todas las automatizaciones | — | — |
+| Reproducir o pausar la música ambiental | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Cambiar las unidades de Uso | — | — |
+| Volver a consultar la asignación | — | — |
+| Agrandar todo | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Achicar todo | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Volver al tamaño habitual | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**En el mensaje principal y en la respuesta de una tarjeta**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Borrar hasta el inicio de la línea | <kbd>⌃U</kbd> | — |
+| Borrar hasta el final de la línea | <kbd>⌃K</kbd> | — |
+| Borrar la palabra antes del cursor | <kbd>⌃W</kbd> | — |
+| Recuperar lo último que se borró | <kbd>⌃Y</kbd> | — |
+
+**En el mensaje principal**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Recuperar el último mensaje enviado | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**En cualquier lugar de la ventana**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Buscar comandos | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| Ir al mensaje principal | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Ir a la respuesta de la tarjeta | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Ir al cuerpo de la tarjeta | — | — |
+| Ir a los botones de la tarjeta | — | — |
+| Presionar la opción recomendada | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Presionar la segunda opción | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Presionar la tercera opción | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Presionar la cuarta opción | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Ir a la siguiente parte de la ventana | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Ir a la parte anterior de la ventana | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Ir a la parte de la ventana de la izquierda | — | — |
+| Ir a la parte de la ventana de abajo | — | — |
+| Ir a la parte de la ventana de arriba | — | — |
+| Ir a la parte de la ventana de la derecha | — | — |
+| Mover a la izquierda | — | — |
+| Mover hacia abajo | — | — |
+| Mover hacia arriba | — | — |
+| Mover a la derecha | — | — |
+| Ir al principio | — | — |
+| Ir al final | — | — |
+| Subir una página | — | — |
+| Bajar una página | — | — |
+| Cancelar | — | — |
+| Computadoras de trabajo anteriores | — | — |
+| Computadoras de trabajo siguientes | — | — |
+| Centrarse en un proyecto | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| Mostrar todos los proyectos | — | — |
+| Mostrar la tarjeta anterior | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Mostrar la tarjeta siguiente | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Mostrar la siguiente tarjeta nueva | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Apartar la tarjeta | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| Apartar todas las tarjetas o traerlas de vuelta | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Presionar Hecho o Entendido en la nota | — | — |
+| Rechazar todas las opciones de la tarjeta | — | — |
+| Maximizar o restaurar la tarjeta | — | — |
+| Buscar en esta tarjeta | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Buscar la siguiente coincidencia | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Buscar la coincidencia anterior | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Ir a la siguiente zona revisada | — | — |
+| Ir a la siguiente pregunta | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| Ir a la pregunta anterior | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| Ir a la siguiente pregunta sin responder | — | — |
+| Señalar una parte de la tarjeta | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Mostrar u ocultar el hilo de la tarjeta | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Ir a los mensajes nuevos del hilo | — | — |
+| Reproducir o pausar el sonido de la tarjeta | — | — |
+| Mostrar información | — | — |
+| Mostrar tarjetas | — | — |
+| Mostrar actividad | — | — |
+| Mostrar tripulante | — | — |
+| Tomar o devolver el control del navegador | — | — |
+| Ir a la página del navegador | — | — |
+| Volver a la tarjeta | — | — |
+| Mover la tarea a otra computadora | — | — |
+| Cerrar la tarea como hecha | — | — |
+| Mostrar navegador | — | — |
+| Pestaña siguiente | — | — |
+| Pestaña anterior | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Abrir Configuración | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Abrir la configuración del teclado | — | — |
+| Organizar paneles | — | — |
+| Mostrar la actualización disponible | — | — |
+| Actualizar más tarde | — | — |
+| Buscar actualizaciones | — | — |
+| Actualizar la computadora del primer oficial | — | — |
+| Mostrar las novedades | — | — |
+| Abrir la respuesta del primer oficial | — | — |
+| Abrir Manuales | — | — |
+| Abrir tu carpeta de manuales | — | — |
+| Abrir Uso | — | — |
+| Abrir Automatización | — | — |
+| Abrir Integraciones | — | — |
+| Pausar todas las automatizaciones | — | — |
+| Reproducir o pausar la música ambiental | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Cambiar las unidades de Uso | — | — |
+| Volver a consultar la asignación | — | — |
+| Agrandar todo | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Achicar todo | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Volver al tamaño habitual | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**En el mensaje principal y en la respuesta de una tarjeta**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Borrar hasta el inicio de la línea | <kbd>⌃U</kbd> | — |
+| Borrar hasta el final de la línea | <kbd>⌃K</kbd> | — |
+| Borrar la palabra antes del cursor | <kbd>⌃W</kbd> | — |
+| Recuperar lo último que se borró | <kbd>⌃Y</kbd> | — |
+
+**En el mensaje principal**
+
+| Comando | Mac | Linux |
+| --- | --- | --- |
+| Recuperar el último mensaje enviado | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

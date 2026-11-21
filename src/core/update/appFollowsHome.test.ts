@@ -137,6 +137,27 @@ describe("an app following the version of the computer it controls", () => {
     expect(a.told.at(-1)).toMatchObject({ step: "restarting" });
   });
 
+  it("holds Update app pressed while the version already waits, until the words left there are sent", async () => {
+    const a = app();
+    a.type();
+    a.follows.connected();
+    await a.settle();
+    await a.ready({ ok: true });
+    expect(a.told.map((report) => report.step)).toEqual(["getting", "waiting"]);
+    // The row shows Update app on that waiting step: the press installs nothing over the words.
+    a.follows.askedNow();
+    await a.settle();
+    expect(a.install).not.toHaveBeenCalled();
+    expect(a.told.at(-1)).toMatchObject({ step: "waiting" });
+    // The words are sent, and a window is still in front: the press still holds.
+    a.send();
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install).toHaveBeenCalledTimes(1);
+    expect(a.install.mock.calls[0]?.[0]).toBe("0.8.4-alpha.649");
+    expect(a.told.at(-1)).toMatchObject({ step: "restarting" });
+  });
+
   it("keeps the Update app press when its install kept the app running, and starts again once asked again", async () => {
     const a = app();
     a.install.mockImplementationOnce(async () => ({

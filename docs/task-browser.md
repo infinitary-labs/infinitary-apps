@@ -419,7 +419,7 @@ By keys, the arrows step through what the page's outline names, lighting each th
 
 `TaskBrowsers.places` reads what the outline names once, when Point at holds the picture, through the read the crewmate's own outline takes (`pagePlaces`, `src/core/browser/places.ts`): each thing on screen by its role, its name and the box the window shows it in, at most `TASK_BROWSER_PLACES_MAX` of them.
 It reads names only: no value typed into the page and nothing inside a typed field or an editable part.
-The answer also carries the page's address and title as the crewmate's own reads give them, so where the browser may hold a sign-in the address loses its query and fragment and a key in a name or the title reads hidden.
+The answer also carries the page's address and title as the crewmate's own reads give them, so where the browser may hold a sign-in the address loses its query and fragment and a key in the address, a name or the title reads hidden.
 Nothing is recorded by the read, and a mark waits for it, so a note never leaves without the name the read could give.
 The read is a core request every view may ask (`inf:browser:places`), and a view on another computer marks the picture it already has.
 
@@ -686,6 +686,7 @@ The captain reads and drives it from the home as the captain does one here (`Pla
   The click on that offer, the crewmate's mark that it failed, the Settings list, the rule, Remove and Remove all are orders to that computer (`inf:task-browser:use-sign-in`, `inf:task-browser:sign-in-failed`, `inf:task-browser:sign-ins`, `inf:task-browser:sign-in-rule`, `inf:task-browser:sign-in-remove`, `inf:task-browser:sign-in-remove-all`), answered there by the same rules.
   A computer without the change keeps no sign-in for later tasks, and its browsers start signed out; one with it refuses the retired copy orders in words.
 - Point at's outline read is an order to that computer (`inf:task-browser:places`), asked only of one that lists the `card-note-places` change; without it the home answers that the outline could not be read, and a mark still carries its place and its picture with no name under it and no stepping by keys.
+  Only the read gives the page's address and title as the crewmate's own reads do, so a note made without it names the page's site alone.
 - The home's quit leaves a browser there running with its crewmate's turn; that computer's quit or restart ends it, and the home reads that it has none once that computer is back.
 
 ## The page itself

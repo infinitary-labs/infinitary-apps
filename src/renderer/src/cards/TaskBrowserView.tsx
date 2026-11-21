@@ -1210,11 +1210,7 @@ export function TaskBrowserView({
               )}
             </div>
             {pointOffered && (
-              <PagePointAtButton
-                point={point}
-                page={{ url: fact.url, title: fact.title }}
-                off={offWords ?? undefined}
-              />
+              <PagePointAtButton point={point} site={fact.site} off={offWords ?? undefined} />
             )}
             <span
               data-browser-control-button=""

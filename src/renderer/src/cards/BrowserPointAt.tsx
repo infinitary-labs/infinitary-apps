@@ -61,29 +61,20 @@ export type HeldPage = {
   size: PictureSize;
   /** In the held picture's own pixels; none until the outline is read, or where it cannot be. */
   places: TaskBrowserPlace[];
-  /** The page's address and title as its crewmate's own reads give them. */
+  /**
+   * The page's address and title as its crewmate's own reads give them: only the outline's read
+   * answers those, so where it cannot the note names the page's site alone.
+   */
   page: { url: string; title: string };
 };
-
-/** An address with no query or fragment: what a note names until the outline read says more. */
-function bare(url: string): string {
-  try {
-    const parsed = new URL(url);
-    parsed.search = "";
-    parsed.hash = "";
-    return parsed.href;
-  } catch {
-    return "";
-  }
-}
 
 export type PagePointAt = {
   held: HeldPage | null;
   on: boolean;
   tool: MarkTool;
   setTool: (tool: MarkTool) => void;
-  /** Holds the picture shown now; false when the view has none yet. */
-  start: (page: { url: string; title: string }) => boolean;
+  /** Holds the picture shown now, of the page on this site; false when the view has none yet. */
+  start: (site: string) => boolean;
   end: () => void;
   /** The held page with its outline, once the one read of it has answered. */
   read: () => Promise<HeldPage | null>;
@@ -101,7 +92,7 @@ export function usePagePointAt(taskId: string, watch: WatchedPage): PagePointAt 
   }, [watch]);
 
   const start = useCallback(
-    (page: { url: string; title: string }) => {
+    (site: string) => {
       const frame = watch.hold(true);
       if (!frame) {
         watch.hold(false);
@@ -111,7 +102,7 @@ export function usePagePointAt(taskId: string, watch: WatchedPage): PagePointAt 
         src: `data:image/jpeg;base64,${frame.data}`,
         size: { width: frame.width, height: frame.height },
         places: [],
-        page: { url: bare(page.url).slice(0, 2_048), title: page.title.slice(0, 240) },
+        page: { url: site.slice(0, 2_048), title: "" },
       };
       setHeld(first);
       const read = window.infinitary.browser
@@ -181,12 +172,12 @@ const RESTING: React.CSSProperties = { flexShrink: 0 };
 /** Point at in the Browser tab's row, with its two tools while it is on. */
 export function PagePointAtButton({
   point,
-  page,
+  site,
   off,
 }: {
   point: PagePointAt;
-  /** The page shown now, as the view reads it. */
-  page: { url: string; title: string };
+  /** The site of the page shown now, as the view names it. */
+  site: string;
   /** Why it cannot be pressed now, in words: changes are off. */
   off?: string | undefined;
 }) {
@@ -231,7 +222,7 @@ export function PagePointAtButton({
         onClick={() => {
           if (off !== undefined) return;
           if (point.on) point.end();
-          else point.start(page);
+          else point.start(site);
         }}
         style={point.on ? PRESSED : RESTING}
       >
@@ -420,7 +411,7 @@ export function PagePointAtLayer({
     };
     rememberMarked(owner, note, {
       src: held.src,
-      alt: whole.page.title,
+      alt: whole.page.title || whole.page.url,
       width: size.width,
       height: size.height,
       ...(shows ? { shows: true as const } : {}),

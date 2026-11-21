@@ -60,7 +60,8 @@ describe("what Point at reads of a task's page", () => {
     // An invented key in GitHub's personal token format, built here so no file holds one whole.
     const key = ["github", "pat", "11FIXTURE0INVENTED0NOT0A0KEY0000000"].join("_");
     expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });
-    page.current = "https://aurora.example/bookings?session=s3cret#top";
+    // The key is in the address's path too, where taking off the query leaves it.
+    page.current = `https://aurora.example/tokens/${key}/bookings?session=s3cret#top`;
     page.pageTitle = `Token ${key}`;
     page.nodeList = shownForm(page).map((node) =>
       node.role === "button" ? { ...node, name: `Copy ${key}` } : node,
@@ -69,7 +70,7 @@ describe("what Point at reads of a task's page", () => {
     const read = await browsers.places("t1");
     expect(read).toMatchObject({
       ok: true,
-      url: "https://aurora.example/bookings",
+      url: `https://aurora.example/tokens/${KEY_HIDDEN}/bookings`,
       title: `Token ${KEY_HIDDEN}`,
     });
     expect(read.ok && read.places.at(-1)?.name).toBe(`Copy ${KEY_HIDDEN}`);

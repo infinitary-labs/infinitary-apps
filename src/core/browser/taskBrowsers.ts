@@ -48,6 +48,7 @@ import {
   signedIn,
   siteNamed,
   siteOf,
+  titleOf,
 } from "./browserRecord";
 import { browserCommand } from "./commandWords";
 import {
@@ -774,15 +775,13 @@ export class TaskBrowsers {
     try {
       const nodes = await browser.current.page.nodes();
       const size = { width: browser.size.width, height: browser.size.height };
-      const hidden = signedIn(browser);
-      const url = addressOf(browser, browser.current);
-      const title = browser.current.page.title().trim();
       return {
         ok: true,
         ...size,
-        url: (hidden ? bareAddress(url) : url).slice(0, 2_048),
-        title: (hidden ? hideKeys(title) : title).slice(0, 240),
-        places: pagePlaces(nodes, size, { hideKeys: hidden }),
+        // The address and title as the crewmate's own reads give them (`shown`, `titleOf`).
+        url: shown(browser, addressOf(browser, browser.current)).slice(0, 2_048),
+        title: titleOf(browser, browser.current).slice(0, 240),
+        places: pagePlaces(nodes, size, { hideKeys: signedIn(browser) }),
       };
     } catch {
       return { ok: false };

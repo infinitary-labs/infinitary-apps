@@ -496,6 +496,8 @@
 "closedReleased" = "أُصدرت %1$@";
 "commandAllowanceRecheck" = "إعادة التحقق من الرصيد";
 "commandAllowanceRecheckWords" = "رصيد, حصة, تحديث, استخدام, حد, حساب, تبديل";
+"commandAmbientStyle" = "اختيار الموسيقى الهادئة";
+"commandAmbientStyleWords" = "موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير";
 "commandAmbientToggle" = "تشغيل الموسيقى الهادئة أو إيقافها مؤقتًا";
 "commandAmbientToggleWords" = "موسيقى, lofi, صوت, أجواء, إيقاف";
 "commandAutomationPauseAll" = "إيقاف كل عمليات الأتمتة مؤقتًا";
@@ -3529,6 +3531,7 @@
 "shellAmbientPause" = "إيقاف الموسيقى المحيطية مؤقتًا";
 "shellAmbientPlay" = "تشغيل الموسيقى المحيطية";
 "shellAmbientQuiet" = "هدوء أثناء حديثك";
+"shellAmbientStyleNamed" = "النمط: %1$@";
 "shellCardFoldPanels" = "طي اللوحات";
 "shellCardMateAnswering" = "نائب القبطان يجيب في هذه البطاقة";
 "shellCardNotesFirst" = "أرسل الملاحظات كرد أولًا";

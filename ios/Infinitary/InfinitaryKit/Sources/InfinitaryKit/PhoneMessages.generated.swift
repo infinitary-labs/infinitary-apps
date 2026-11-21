@@ -536,6 +536,8 @@ public enum PhoneMessages {
     public static func `closedReleased`(`key`: String) -> String { PhoneWords.format("closedReleased", [`key`]) }
     public static func `commandAllowanceRecheck`() -> String { PhoneWords.format("commandAllowanceRecheck", []) }
     public static func `commandAllowanceRecheckWords`() -> String { PhoneWords.format("commandAllowanceRecheckWords", []) }
+    public static func `commandAmbientStyle`() -> String { PhoneWords.format("commandAmbientStyle", []) }
+    public static func `commandAmbientStyleWords`() -> String { PhoneWords.format("commandAmbientStyleWords", []) }
     public static func `commandAmbientToggle`() -> String { PhoneWords.format("commandAmbientToggle", []) }
     public static func `commandAmbientToggleWords`() -> String { PhoneWords.format("commandAmbientToggleWords", []) }
     public static func `commandAutomationPauseAll`() -> String { PhoneWords.format("commandAutomationPauseAll", []) }
@@ -3671,6 +3673,7 @@ public enum PhoneMessages {
     public static func `shellAmbientPause`() -> String { PhoneWords.format("shellAmbientPause", []) }
     public static func `shellAmbientPlay`() -> String { PhoneWords.format("shellAmbientPlay", []) }
     public static func `shellAmbientQuiet`() -> String { PhoneWords.format("shellAmbientQuiet", []) }
+    public static func `shellAmbientStyleNamed`(`name`: String) -> String { PhoneWords.format("shellAmbientStyleNamed", [`name`]) }
     public static func `shellCardFoldPanels`() -> String { PhoneWords.format("shellCardFoldPanels", []) }
     public static func `shellCardMateAnswering`() -> String { PhoneWords.format("shellCardMateAnswering", []) }
     public static func `shellCardNotesFirst`() -> String { PhoneWords.format("shellCardNotesFirst", []) }
@@ -4507,6 +4510,8 @@ extension PhoneWords {
         "closedReleased": ["key"],
         "commandAllowanceRecheck": [],
         "commandAllowanceRecheckWords": [],
+        "commandAmbientStyle": [],
+        "commandAmbientStyleWords": [],
         "commandAmbientToggle": [],
         "commandAmbientToggleWords": [],
         "commandAutomationPauseAll": [],
@@ -7642,6 +7647,7 @@ extension PhoneWords {
         "shellAmbientPause": [],
         "shellAmbientPlay": [],
         "shellAmbientQuiet": [],
+        "shellAmbientStyleNamed": ["name"],
         "shellCardFoldPanels": [],
         "shellCardMateAnswering": [],
         "shellCardNotesFirst": [],

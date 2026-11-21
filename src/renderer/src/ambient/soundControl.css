@@ -57,7 +57,7 @@
   align-items: center;
   gap: var(--space-2);
   height: 28px;
-  padding-inline: var(--space-2);
+  padding-inline: 3px var(--space-2);
   border: 1px solid var(--line-1);
   border-radius: var(--radius-pill);
   background: var(--bg-2);
@@ -65,12 +65,12 @@
   font: var(--text-xs) var(--font-mono);
 }
 
-.ambient-volume-pill span {
+.ambient-volume-percent {
   min-inline-size: 4ch;
   text-align: end;
 }
 
-.ambient-volume-pill input {
+.ambient-volume-pill > input {
   appearance: none;
   width: 64px;
   height: 20px;
@@ -104,4 +104,192 @@
   margin-block-start: -3px;
   border-radius: var(--radius-pill);
   background: var(--accent);
+}
+
+/* The playing style's name, first in the pill; it opens the style list. */
+.ambient-style-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-inline-size: 150px;
+  height: 22px;
+  padding-inline: 9px 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fg-1);
+  font: 500 var(--text-sm) / 1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ambient-style-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ambient-style-name svg {
+  flex: none;
+  color: var(--fg-3);
+}
+
+.ambient-style-name:hover,
+.ambient-style-name[aria-expanded="true"] {
+  background: var(--bg-3);
+}
+
+.ambient-pill-rule {
+  inline-size: 1px;
+  block-size: 14px;
+  background: var(--line-1);
+}
+
+/* Under the pill, its end at the pill's end; the 4 px above it is part of
+   the list, so the pointer's way down never crosses a drag point. */
+.ambient-style-list {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  inline-size: 288px;
+  max-block-size: calc(100vh - 60px);
+  padding: 4px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--bg-2);
+  box-shadow: var(--shadow-2);
+  -webkit-app-region: no-drag;
+  transform-origin: top right;
+  animation: ambient-list-grow var(--dur-quick) var(--ease-out);
+}
+
+[dir="rtl"] .ambient-style-list {
+  transform-origin: top left;
+}
+
+.ambient-style-list::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 100%;
+  block-size: 4px;
+}
+
+@keyframes ambient-list-grow {
+  from {
+    opacity: 0;
+    scale: var(--scale-pop);
+  }
+}
+
+.ambient-style-groups {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.ambient-style-group {
+  display: flex;
+}
+
+.ambient-style-kind {
+  flex: none;
+  inline-size: 74px;
+  padding: 8px 0 0 8px;
+  color: var(--fg-3);
+  font: 500 var(--text-xs) / 1.2 var(--font-ui);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.ambient-style-rows {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ambient-style-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  inline-size: 100%;
+  block-size: 28px;
+  flex: none;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+  font: var(--text-sm) / 1 var(--font-ui);
+  text-align: start;
+  cursor: pointer;
+}
+
+.ambient-style-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ambient-style-row:hover {
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+
+.ambient-style-row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+
+.ambient-style-row[aria-checked="true"] {
+  color: var(--fg-1);
+}
+
+.ambient-style-on {
+  flex: none;
+  color: var(--accent);
+  visibility: hidden;
+}
+
+.ambient-style-row[aria-checked="true"] .ambient-style-on {
+  visibility: visible;
+}
+
+[data-ambient-control][data-paused] .ambient-style-on {
+  color: var(--fg-3);
+}
+
+.ambient-style-describe[aria-disabled="true"] {
+  color: var(--fg-3);
+  cursor: default;
+}
+
+.ambient-style-rule {
+  flex: none;
+  block-size: 1px;
+  margin: 4px 2px;
+  background: var(--line-1);
+}
+
+.ambient-style-foot {
+  flex: none;
+  display: -webkit-box;
+  min-block-size: 32px;
+  margin: 0;
+  padding: 2px 10px 4px;
+  overflow: hidden;
+  color: var(--fg-3);
+  font: var(--text-xs) / 1.45 var(--font-ui);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }

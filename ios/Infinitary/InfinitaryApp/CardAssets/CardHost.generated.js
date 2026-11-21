@@ -19524,6 +19524,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `quota, refresh, usage, limit, account, switch`;
   }
+  function commandAmbientStyle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختيار الموسيقى الهادئة`;
+      case "de":
+        return `Ambient-Musik auswählen`;
+      case "es":
+        return `Elegir la música ambiental`;
+      case "fr":
+        return `Choisir la musique d’ambiance`;
+      case "ja":
+        return `アンビエント音楽を選ぶ`;
+      case "ko":
+        return `앰비언트 음악 고르기`;
+      case "pt-BR":
+        return `Escolher a música ambiente`;
+      case "zh-Hans":
+        return `选择环境音乐`;
+      case "zh-Hant":
+        return `選擇環境音樂`;
+      case "en-XA":
+        return `[Çĥööšé áɱƀîéñţ ɱûšîç ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Choose ambient music‬`;
+    }
+    return `Choose ambient music`;
+  }
+  function commandAmbientStyleWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير`;
+      case "de":
+        return `Musik, Stil, Lofi, Klang, Ambiente, wählen, ändern`;
+      case "es":
+        return `música, estilo, lofi, sonido, ambiente, elegir, cambiar`;
+      case "fr":
+        return `musique, style, lofi, son, ambiance, choisir, changer`;
+      case "ja":
+        return `音楽, スタイル, ローファイ, サウンド, 環境音, 選ぶ, 変更`;
+      case "ko":
+        return `음악, 스타일, 로파이, 소리, 분위기, 고르기, 바꾸기`;
+      case "pt-BR":
+        return `música, estilo, lofi, som, ambiente, escolher, trocar`;
+      case "zh-Hans":
+        return `音乐, 风格, lofi, 声音, 氛围, 选择, 更换`;
+      case "zh-Hant":
+        return `音樂, 風格, lofi, 聲音, 氛圍, 選擇, 更換`;
+      case "en-XA":
+        return `[ɱûšîç, šţýļé, ļöƒî, šöûñð, áɱƀîéñçé, þîçķ, çĥáñĝé ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮music, style, lofi, sound, ambience, pick, change‬`;
+    }
+    return `music, style, lofi, sound, ambience, pick, change`;
+  }
   function commandAmbientToggle() {
     switch (currentLanguage()) {
       case "ar":
@@ -81463,6 +81517,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quiet while you talk`;
   }
+  function shellAmbientStyleNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `النمط: ${name}`;
+      case "de":
+        return `Stil: ${name}`;
+      case "es":
+        return `Estilo: ${name}`;
+      case "fr":
+        return `Style : ${name}`;
+      case "ja":
+        return `スタイル: ${name}`;
+      case "ko":
+        return `스타일: ${name}`;
+      case "pt-BR":
+        return `Estilo: ${name}`;
+      case "zh-Hans":
+        return `风格：${name}`;
+      case "zh-Hant":
+        return `風格：${name}`;
+      case "en-XA":
+        return `[Šţýļé: ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Style: ‬${name}`;
+    }
+    return `Style: ${name}`;
+  }
   function shellCardFoldPanels() {
     switch (currentLanguage()) {
       case "ar":
@@ -90493,6 +90575,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     closedReleased,
     commandAllowanceRecheck,
     commandAllowanceRecheckWords,
+    commandAmbientStyle,
+    commandAmbientStyleWords,
     commandAmbientToggle,
     commandAmbientToggleWords,
     commandAutomationPauseAll,
@@ -92626,6 +92710,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellAmbientPause,
     shellAmbientPlay,
     shellAmbientQuiet,
+    shellAmbientStyleNamed,
     shellCardFoldPanels,
     shellCardMateAnswering,
     shellCardNotesFirst,
@@ -93396,6 +93481,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "closedReleased": ["key"],
     "commandAllowanceRecheck": [],
     "commandAllowanceRecheckWords": [],
+    "commandAmbientStyle": [],
+    "commandAmbientStyleWords": [],
     "commandAmbientToggle": [],
     "commandAmbientToggleWords": [],
     "commandAutomationPauseAll": [],
@@ -95529,6 +95616,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellAmbientPause": [],
     "shellAmbientPlay": [],
     "shellAmbientQuiet": [],
+    "shellAmbientStyleNamed": ["name"],
     "shellCardFoldPanels": [],
     "shellCardMateAnswering": [],
     "shellCardNotesFirst": [],
@@ -101786,6 +101874,21 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [{ key: "p", meta: true, alt: true }],
       get searchWords() {
         return searchWords(commandAmbientToggleWords());
+      }
+    },
+    // The sound button's style list (docs/ambient-music.md), open on the
+    // chosen style; it turns the music on first if it was off. No default key.
+    "ambient.style": {
+      get label() {
+        return commandAmbientStyle();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "view",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandAmbientStyleWords());
       }
     },
     // Tokens or estimated dollars, everywhere in Usage at once; it opens

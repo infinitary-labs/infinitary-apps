@@ -496,6 +496,8 @@
 "closedReleased" = "%1$@ publicada";
 "commandAllowanceRecheck" = "Volver a consultar la asignación";
 "commandAllowanceRecheckWords" = "asignación, actualizar, uso, límite, cuenta, cambiar";
+"commandAmbientStyle" = "Elegir la música ambiental";
+"commandAmbientStyleWords" = "música, estilo, lofi, sonido, ambiente, elegir, cambiar";
 "commandAmbientToggle" = "Reproducir o pausar la música ambiental";
 "commandAmbientToggleWords" = "música, lofi, sonido, ambiente, detener";
 "commandAutomationPauseAll" = "Pausar todas las automatizaciones";
@@ -3529,6 +3531,7 @@
 "shellAmbientPause" = "Pausar música ambiental";
 "shellAmbientPlay" = "Reproducir música ambiental";
 "shellAmbientQuiet" = "En silencio mientras hablas";
+"shellAmbientStyleNamed" = "Estilo: %1$@";
 "shellCardFoldPanels" = "Plegar paneles";
 "shellCardMateAnswering" = "Tu primer oficial está respondiendo en esta tarjeta";
 "shellCardNotesFirst" = "Primero envía las notas como respuesta";

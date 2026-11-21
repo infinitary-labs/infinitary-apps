@@ -496,6 +496,8 @@
 "closedReleased" = "%1$@ released";
 "commandAllowanceRecheck" = "Recheck allowance";
 "commandAllowanceRecheckWords" = "quota, refresh, usage, limit, account, switch";
+"commandAmbientStyle" = "Choose ambient music";
+"commandAmbientStyleWords" = "music, style, lofi, sound, ambience, pick, change";
 "commandAmbientToggle" = "Play or pause ambient music";
 "commandAmbientToggleWords" = "music, lofi, sound, ambience, stop";
 "commandAutomationPauseAll" = "Pause all automations";
@@ -3529,6 +3531,7 @@
 "shellAmbientPause" = "Pause ambient music";
 "shellAmbientPlay" = "Play ambient music";
 "shellAmbientQuiet" = "Quiet while you talk";
+"shellAmbientStyleNamed" = "Style: %1$@";
 "shellCardFoldPanels" = "Fold panels";
 "shellCardMateAnswering" = "Your first mate is answering on this card";
 "shellCardNotesFirst" = "Send the notes as a reply first";

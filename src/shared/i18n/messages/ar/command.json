@@ -1,6 +1,8 @@
 {
   "commandAllowanceRecheck": "إعادة التحقق من الرصيد",
   "commandAllowanceRecheckWords": "رصيد, حصة, تحديث, استخدام, حد, حساب, تبديل",
+  "commandAmbientStyle": "اختيار الموسيقى الهادئة",
+  "commandAmbientStyleWords": "موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير",
   "commandAmbientToggle": "تشغيل الموسيقى الهادئة أو إيقافها مؤقتًا",
   "commandAmbientToggleWords": "موسيقى, lofi, صوت, أجواء, إيقاف",
   "commandAutomationPauseAll": "إيقاف كل عمليات الأتمتة مؤقتًا",

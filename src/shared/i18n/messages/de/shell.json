@@ -2,6 +2,7 @@
   "shellAmbientPause": "Hintergrundmusik pausieren",
   "shellAmbientPlay": "Hintergrundmusik abspielen",
   "shellAmbientQuiet": "Leise, während du sprichst",
+  "shellAmbientStyleNamed": "Stil: {name}",
   "shellCardFoldPanels": "Panels einklappen",
   "shellCardMateAnswering": "Dein erster Offizier antwortet auf dieser Karte",
   "shellCardNotesFirst": "Sende die Notizen zuerst als Antwort",

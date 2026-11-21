@@ -69,6 +69,14 @@ async function run(argv: string[], reply?: (op: string) => BrowserReply) {
 describe("infinitary-browser-axi's commands", () => {
   it.for([
     [["open", "http://127.0.0.1:5555/"], "navigate", { url: "http://127.0.0.1:5555/" }],
+    [
+      ["open", "http://127.0.0.1:5555/", "--start", "pnpm dev --port 5555", "--within", "90"],
+      "navigate",
+      {
+        url: "http://127.0.0.1:5555/",
+        start: { command: "pnpm dev --port 5555", withinSeconds: 90 },
+      },
+    ],
     [["back"], "navigate", { go: "back" }],
     [["forward"], "navigate", { go: "forward" }],
     [["reload"], "navigate", { go: "reload" }],
@@ -130,6 +138,11 @@ describe("infinitary-browser-axi's commands", () => {
 
   it.for([
     ["open"],
+    ["open", "http://127.0.0.1:5555/", "--start", "pnpm dev"],
+    ["open", "http://127.0.0.1:5555/", "--within", "30"],
+    ["open", "http://127.0.0.1:5555/", "--start", "pnpm dev", "--within", "0"],
+    ["open", "http://127.0.0.1:5555/", "--start", "pnpm dev", "--within", "soon"],
+    ["open", "http://127.0.0.1:5555/", "--start", " ", "--within", "30"],
     ["click"],
     ["click", "e5"],
     ["drag", "@g3:e1"],

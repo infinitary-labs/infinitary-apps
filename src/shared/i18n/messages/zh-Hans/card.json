@@ -61,6 +61,7 @@
   "cardBrowserStop": "停止浏览器",
   "cardBrowserSurface": "任务浏览器",
   "cardBrowserUnansweredAsked": "{site} 没有响应，已请船员重新启动它。它一响应，页面就会显示在这里。",
+  "cardBrowserUnansweredStarting": "{site} 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。",
   "cardBrowserUnansweredWorking": "{site} 没有响应，船员正在工作。它一响应，页面就会显示在这里。",
   "cardBrowserWord": "浏览器",
   "cardCrewmateLog": "船员的笔记",

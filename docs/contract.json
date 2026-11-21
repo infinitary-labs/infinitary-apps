@@ -44497,6 +44497,10 @@
                     "type": "boolean",
                     "const": true
                   },
+                  "starting": {
+                    "type": "boolean",
+                    "const": true
+                  },
                   "session": {
                     "type": "string"
                   },
@@ -75424,6 +75428,10 @@
                             "type": "boolean",
                             "const": true
                           },
+                          "starting": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -75875,6 +75883,37 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 512
+                      },
+                      "start": {
+                        "type": "object",
+                        "properties": {
+                          "command": {
+                            "type": "string"
+                          },
+                          "exit": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ranOut": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "log": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "command",
+                          "log"
+                        ]
                       }
                     },
                     "required": [
@@ -97338,6 +97377,10 @@
                             ]
                           },
                           "unanswered": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "starting": {
                             "type": "boolean",
                             "const": true
                           },

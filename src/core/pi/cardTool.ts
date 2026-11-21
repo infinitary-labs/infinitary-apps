@@ -637,7 +637,7 @@ const crewmateCardParams = Type.Object({
 const BROWSER_BUTTON_DESCRIPTION = [
   `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
   "It only opens the view: it never answers or closes the card, and it changes no merge.",
-  `It needs this task's browser, opened with ${browserCommand("open <url>")}. If that browser has stopped, the captain's press opens it again at its page; if nothing answers at a page this computer serves, you are woken once.`,
+  `It needs this task's browser, opened with ${browserCommand("open <url>")}. If that browser has stopped, the captain's press opens it again at its page. For a page this computer serves, open it with --start '<command>' --within <seconds> so Infinitary starts its server itself when nothing answers there; without one, or when that fails, you are woken once.`,
 ].join(" ");
 
 /**

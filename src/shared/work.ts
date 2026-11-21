@@ -1125,6 +1125,15 @@ export const workRequests = {
           site: z.string(),
           url: z.string(),
           once: z.string().min(1).max(512),
+          // The saved start that ran there and how it failed (`page-start.md`).
+          start: z
+            .object({
+              command: z.string(),
+              exit: z.number().int().nullable().optional(),
+              ranOut: z.literal(true).optional(),
+              log: z.string(),
+            })
+            .optional(),
         }),
         z.object({
           kind: z.literal("sign-in"),

@@ -11,6 +11,7 @@ import {
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
 import { keptPagesIn } from "../browser/keptPages";
+import { PageStarts } from "../browser/pageStarts";
 import { type BrowserFrameSink, type CrewmateBrowser, TaskBrowsers } from "../browser/taskBrowsers";
 import { WebSignIns } from "../browser/webSignIns";
 import { contractChange, listsChange } from "../connection/contractChanges";
@@ -138,7 +139,13 @@ export class ComputerBrowsers {
         this.event(task, { kind: "unanswered", ...unanswered });
       },
       // A stopped page is kept in its task's folder here, beside its stops.
-      ...(options.taskFolder ? { kept: keptPagesIn(options.taskFolder) } : {}),
+      // A page's saved start beside it, run here when nothing answers there.
+      ...(options.taskFolder
+        ? {
+            kept: keptPagesIn(options.taskFolder),
+            starts: new PageStarts({ folderOf: options.taskFolder }),
+          }
+        : {}),
       ...(options.signInsDir ? { signIns: new WebSignIns(options.signInsDir) } : {}),
       // The home's private sites list, included by every admitted work peer
       // and lent as each page opens; out of reach keeps the last read (none at first).
@@ -422,7 +429,13 @@ export class ComputerBrowsers {
 type BrowserOrderEvent =
   | { kind: "note"; text: string }
   | { kind: "returned"; site: string; after?: string; saved?: true; once: string }
-  | { kind: "unanswered"; site: string; url: string; once: string };
+  | {
+      kind: "unanswered";
+      site: string;
+      url: string;
+      once: string;
+      start?: { command: string; exit?: number | null; ranOut?: true; log: string };
+    };
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

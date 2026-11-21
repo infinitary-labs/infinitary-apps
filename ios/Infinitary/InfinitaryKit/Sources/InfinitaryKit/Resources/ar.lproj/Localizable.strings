@@ -270,6 +270,7 @@
 "cardBrowserStop" = "إيقاف المتصفح";
 "cardBrowserSurface" = "متصفح المهمة";
 "cardBrowserUnansweredAsked" = "لا شيء يستجيب على %1$@، لذا طُلب من فرد الطاقم تشغيله من جديد. ستظهر الصفحة هنا حين يستجيب.";
+"cardBrowserUnansweredStarting" = "لا شيء يستجيب على %1$@، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserUnansweredWorking" = "لا شيء يستجيب على %1$@، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserWord" = "المتصفح";
 "cardCrewmateLog" = "محادثة فرد الطاقم";

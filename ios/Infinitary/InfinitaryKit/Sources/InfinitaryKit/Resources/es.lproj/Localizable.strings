@@ -270,6 +270,7 @@
 "cardBrowserStop" = "Detener el navegador";
 "cardBrowserSurface" = "Navegador de la tarea";
 "cardBrowserUnansweredAsked" = "Nada responde en %1$@, así que se pidió al tripulante que lo vuelva a iniciar. La página aparecerá aquí en cuanto responda.";
+"cardBrowserUnansweredStarting" = "Nada responde en %1$@, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.";
 "cardBrowserUnansweredWorking" = "Nada responde en %1$@ y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.";
 "cardBrowserWord" = "Navegador";
 "cardCrewmateLog" = "Las notas del tripulante";

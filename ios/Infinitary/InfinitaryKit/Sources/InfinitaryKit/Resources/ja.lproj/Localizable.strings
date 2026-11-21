@@ -270,6 +270,7 @@
 "cardBrowserStop" = "ブラウザを停止";
 "cardBrowserSurface" = "タスクのブラウザ";
 "cardBrowserUnansweredAsked" = "%1$@ が応答しないため、乗組員に再起動を依頼しました。応答するとページがここに表示されます。";
+"cardBrowserUnansweredStarting" = "%1$@ が応答しないため、Infinitary が再起動しています。応答するとページがここに表示されます。";
 "cardBrowserUnansweredWorking" = "%1$@ が応答しません。乗組員は現在作業中です。応答するとページがここに表示されます。";
 "cardBrowserWord" = "ブラウザ";
 "cardCrewmateLog" = "乗組員のノート";

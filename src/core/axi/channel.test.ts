@@ -156,6 +156,29 @@ function shell(
 }
 
 describe("the task channel and the infinitary-browser-axi launcher", () => {
+  it("hands a saved start the folder its command's shell was in", async () => {
+    const channel = await openChannel();
+    const mine = standIn("Mine");
+    const granted = channel.grant("task-a", { browser: mine });
+    const folder = scratchDir("infinitary-axi-start-folder-");
+    const opened = await shell(
+      granted,
+      ["open", "http://127.0.0.1:5555/", "--start", "pnpm dev", "--within", "45"],
+      {},
+      `cd ${JSON.stringify(folder)} && infinitary-browser-axi`,
+    );
+    expect(opened.exitCode).toBe(0);
+    expect(mine.calls).toEqual([
+      {
+        op: "navigate",
+        input: {
+          url: "http://127.0.0.1:5555/",
+          start: { command: "pnpm dev", withinSeconds: 45, cwd: folder },
+        },
+      },
+    ]);
+  });
+
   it("reaches only the browser its key names, with the key never on a command line or in the environment", async () => {
     const channel = await openChannel();
     const mine = standIn("Mine");

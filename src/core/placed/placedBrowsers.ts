@@ -157,7 +157,12 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         });
         return;
       case "unanswered":
-        this.options.onUnanswered?.(task, { site: event.site, url: event.url, once: event.once });
+        this.options.onUnanswered?.(task, {
+          site: event.site,
+          url: event.url,
+          once: event.once,
+          ...(event.start ? { start: event.start } : {}),
+        });
         return;
       case "sign-in":
         // A retired copy from an older computer: nothing on this Mac keeps one.

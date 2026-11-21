@@ -785,7 +785,33 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "The captain opened your task's page in its browser at http://localhost:5173/settings and is waiting there, but nothing answers at localhost:5173: a connection to it was refused on the computer that runs this task, so the program that served it has stopped. If the captain should still see it, start it again, running it in the background so it outlives your command, and open http://localhost:5173/settings again with `infinitary-browser-axi open <url>`; the captain's view shows the page once it loads. You are told this once for this outage.",
+        "The captain opened your task's page in its browser at http://localhost:5173/settings and is waiting there, but nothing answers at localhost:5173: a connection to it was refused on the computer that runs this task, so the program that served it has stopped. If the captain should still see it, start it again, running it in the background so it outlives your command, and open http://localhost:5173/settings again with `infinitary-browser-axi open <url>`, or with `infinitary-browser-axi open <url> --start '<command>' --within <seconds>` so Infinitary starts it itself next time; the captain's view shows the page once it loads. You are told this once for this outage.",
+    },
+    {
+      name: "the start the crewmate saved exited before anything answered",
+      wake: {
+        facts: {
+          kind: "page-unanswered",
+          site: "localhost:5173",
+          url: "http://localhost:5173/settings",
+          start: { command: "pnpm dev", exit: 1, log: "/tasks/t1/temp/page-start.log" },
+        },
+      },
+      words:
+        "The captain opened your task's page in its browser at http://localhost:5173/settings and is waiting there, but nothing answers at localhost:5173: a connection to it was refused on the computer that runs this task, so the program that served it has stopped. Infinitary ran the --start command you saved for it, `pnpm dev`, but it exited (code 1) before anything answered; its output is in /tasks/t1/temp/page-start.log. If the captain should still see it, start it again, running it in the background so it outlives your command, and open http://localhost:5173/settings again with `infinitary-browser-axi open <url>`, or with `infinitary-browser-axi open <url> --start '<command>' --within <seconds>` so Infinitary starts it itself next time; the captain's view shows the page once it loads. You are told this once for this outage.",
+    },
+    {
+      name: "the start the crewmate saved ran out of time",
+      wake: {
+        facts: {
+          kind: "page-unanswered",
+          site: "localhost:5173",
+          url: "http://localhost:5173/settings",
+          start: { command: "pnpm dev", ranOut: true, log: "/tasks/t1/temp/page-start.log" },
+        },
+      },
+      words:
+        "The captain opened your task's page in its browser at http://localhost:5173/settings and is waiting there, but nothing answers at localhost:5173: a connection to it was refused on the computer that runs this task, so the program that served it has stopped. Infinitary ran the --start command you saved for it, `pnpm dev`, but nothing answered within the seconds you gave, so it stopped it; its output is in /tasks/t1/temp/page-start.log. If the captain should still see it, start it again, running it in the background so it outlives your command, and open http://localhost:5173/settings again with `infinitary-browser-axi open <url>`, or with `infinitary-browser-axi open <url> --start '<command>' --within <seconds>` so Infinitary starts it itself next time; the captain's view shows the page once it loads. You are told this once for this outage.",
     },
   ],
   "repair-assessed": [

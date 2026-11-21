@@ -409,6 +409,21 @@ At each check during an outage the host tells the card stack (`TaskBrowsersOptio
 Once its task closed there is no wake; while a turn of its crewmate runs the wake still goes, and its lane hands it to the crewmate at its next chance.
 The view says so in the line under its row ahead of a stale card's words: `Nothing answers at <site>, so its crewmate was asked to start it again.` or, while its crewmate is working, `Nothing answers at <site>, and its crewmate is working now.`, each followed by `The page shows here once it answers.`; the page shows by itself once the crewmate opens it again.
 
+### Starting a page again
+
+A crewmate may save the command that starts its page with `open <url> --start '<command>' --within <seconds>`, for an address this computer serves (`PageStarts`, `src/core/browser/pageStarts.ts`).
+`--within` goes with `--start`, a whole number of seconds the build may take to answer; it is the crewmate's number, and the host adds no default and no ceiling of its own.
+`--start` for any other address is refused in words, and nothing is kept.
+The host keeps the command, the folder the command's shell was in, the page's origin and the wait in one owner-only file, `page-start.json`, in the task's own folder on the computer that runs its browser, beside its kept page; one for each task, the newest replacing the last, removed at the task's close, and never part of a card or of a fact a view or phone reads.
+At that open, if the address answers, the start is only kept; if nothing answers, the host runs it at once and opens the page once it answers, and the answer says which happened.
+The host runs it with the person's environment (`hostEnv`), below the window's priority (`atUtilityQos`), in the kept folder, in a process group of its own that counts to the task, with its output in `temp/page-start.log` in the task's folder.
+It is not a crewmate's job: its exit wakes nobody by itself, and it is no proof of life for the idle ladder.
+The task's shell is not laid over it, since that shell is lent to a crewmate's conversation and a restart may have none, so a start command cannot reach the task's own commands.
+When a check during an outage finds a start kept for that origin, the host runs it instead of waking the crewmate: the open fact carries `starting` beside `unanswered`, the view's line reads `Nothing answers at <site>, so Infinitary is starting it again. The page shows here once it answers.`, and the page loads once the address answers, with no model asked.
+When the program exits before the address answers, or the wait runs out (the host then stops it), the outage's one wake goes to the crewmate with the command, its exit code or that the wait ran out, and the log's path, and the view says the crewmate was asked; the same outage runs it no more.
+A build the host started stops when its task's browser stops, for any reason, at the task's close and when Infinitary quits; the host never stops a program it did not start, and it cannot tell whose program answers at an address, so if anything answers, the page loads and nothing is started.
+On a computer that runs work the start is kept and run there, and the failure travels with the `unanswered` event (`page-start.md`); a computer on an older build refuses the flag, and its crewmate starts its server itself.
+
 ### The crewmate beside the page
 
 With no card docked, a crewmate's browser shows a folded Crewmate line under the page, with its latest words or report headline when available.
@@ -832,6 +847,8 @@ It also holds a listed name and a name under a listed suffix tunnelling to their
 `docs/axi-commands.md` ("Tests") holds the command, its channel and its process; `crewmateTaskTools.test.ts` that no crewmate is served a browser tool, and `cardActions.browser.test.ts` that a task on this Mac gets its own browser's command and prompt line and an app without one gives none.
 `taskBrowsers.view.test.ts` also holds the captain's side: the fact and its action line, pictures to a watcher, the idle stop held while watched, Stop browser and Open again.
 It also holds a page kept with its task: a page open at the quit read as stopped by it after the restart and opened again there, a stopped page's reason kept and forgotten at the task's close; and a page nothing answers at: one wake name for each outage, ended once the address answers, and only an address the crewmate opened on this computer checked.
+`taskBrowsers.starts.test.ts` holds a page's saved start against a stand-in: the open with `--start` keeping it and running it when nothing answers, only keeping it when something does, its failure's words, its refusal off this computer; the captain's press running it instead of waking the crewmate and loading the page once it answers, a failure waking the crewmate once with how it failed, and the build stopped with the browser, forgotten at the close and stopped at the quit.
+`pageStarts.integration.test.ts` runs a start through a real shell: the owner-only kept file read again by a new run, a loopback server in the saved folder answering and stopped on request, a start that exits first with its code, and a wait that runs out stopping its group.
 `cardActions.browser.test.ts` holds the `page-unanswered` wake, once for an outage and queued while a turn runs, `wakes.words.crewmate.test.ts` its words, and `CardAttachment.test.tsx` that the press opens a stopped browser again only while it may be opened again, and a quit's line on the strip.
 It also holds the maximized view's room: the page, its pictures and its photographs at the room and back at 1280 by 800 on restore or when that view stops watching, no size from a view that does not watch, the newest room laid out at once while a command loads, never between a click finding its control and pressing it, and a browser, a second page and Open again opening at the room.
 `taskFacts.test.ts`, `TaskFacts.test.tsx` and `stackActions.test.ts` hold who is driving, the record's Browser line and the view's place on the stack.

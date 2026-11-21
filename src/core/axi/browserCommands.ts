@@ -239,6 +239,8 @@ function command(
 }
 
 const NO_RULES: readonly string[] = [];
+// i18n-exempt: a command's usage, read in the crewmate's shell
+const OPEN_SPEC = "open <url> [--start <command> --within <seconds>]";
 const OPEN_RULES = [BROWSER_RULES.signIn];
 const SCROLL_DIRECTIONS = ["up", "down", "top", "bottom"] as const;
 type ScrollDirection = (typeof SCROLL_DIRECTIONS)[number];
@@ -257,14 +259,38 @@ async function ask<Op extends BrowserOp>(
 /** The table, command by command (docs/axi-commands.md has it as a list). */
 export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   open: command(
-    "open <url>",
-    `Open a public website over https, a private site the captain allowed (over https or http, by its name), or a page a project serves on ${HERE.this} (localhost, 127.0.0.1, a name ending in .localhost), and show its outline. A fresh browser has nothing signed in. A private-network address, an unlisted private site, other plain http, a certificate error and a site's sign-in box are refused.`,
+    OPEN_SPEC,
+    `Open a public website over https, a private site the captain allowed (over https or http, by its name), or a page a project serves on ${HERE.this} (localhost, 127.0.0.1, a name ending in .localhost), and show its outline. A fresh browser has nothing signed in. A private-network address, an unlisted private site, other plain http, a certificate error and a site's sign-in box are refused. For a page a project serves on ${HERE.this}, --start saves the command that starts its server and --within how many seconds it may take to answer: when the captain opens the page and nothing answers there, Infinitary runs it in this folder and asks you only if it fails, and if nothing answers now it runs it at once. A program it starts stops with this browser and needs no registered stop.`,
     async (args, browser) => {
       const url = args.positional[0];
       if (!url || args.positional.length > 1)
-        invalid("open needs one address", usage("open", "open <url>"));
-      return ask(browser, "open", "navigate", { url }, OPEN_RULES);
+        invalid("open needs one address", usage("open", OPEN_SPEC));
+      const start = args.flags["--start"];
+      const within = args.flags["--within"];
+      if (start === undefined && within === undefined)
+        return ask(browser, "open", "navigate", { url }, OPEN_RULES);
+      if (typeof start !== "string" || !start.trim())
+        // i18n-exempt: a command refusal read in the crewmate's shell
+        invalid(
+          "--within goes with --start, the command that starts the page",
+          usage("open", OPEN_SPEC),
+        );
+      const seconds = typeof within === "string" && /^\d+$/.test(within) ? Number(within) : 0;
+      if (!Number.isSafeInteger(seconds) || seconds < 1)
+        // i18n-exempt: a command refusal read in the crewmate's shell
+        invalid(
+          "--start needs --within, how many seconds the page may take to answer, a whole number from 1",
+          usage("open", OPEN_SPEC),
+        );
+      return ask(
+        browser,
+        "open",
+        "navigate",
+        { url, start: { command: start, withinSeconds: seconds } },
+        OPEN_RULES,
+      );
     },
+    { "--start": "value", "--within": "value" },
   ),
   back: command("back", "Go back a page.", async (args, browser) => {
     none(args, "back", "back");

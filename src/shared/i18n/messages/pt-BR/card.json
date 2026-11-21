@@ -69,6 +69,7 @@
   "cardBrowserStop": "Parar o navegador",
   "cardBrowserSurface": "Navegador da tarefa",
   "cardBrowserUnansweredAsked": "Nada responde em {site}, então o tripulante foi chamado para iniciá-lo de novo. A página aparece aqui assim que responder.",
+  "cardBrowserUnansweredStarting": "Nada responde em {site}, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.",
   "cardBrowserUnansweredWorking": "Nada responde em {site}, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.",
   "cardBrowserWord": "Navegador",
   "cardCrewmateLog": "A sessão do tripulante",

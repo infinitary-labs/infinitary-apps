@@ -270,6 +270,7 @@
 "cardBrowserStop" = "Browser stoppen";
 "cardBrowserSurface" = "Aufgabenbrowser";
 "cardBrowserUnansweredAsked" = "Unter %1$@ antwortet nichts, deshalb wurde das Crewmitglied gebeten, es neu zu starten. Die Seite erscheint hier, sobald es antwortet.";
+"cardBrowserUnansweredStarting" = "Unter %1$@ antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.";
 "cardBrowserUnansweredWorking" = "Unter %1$@ antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.";
 "cardBrowserWord" = "Browser";
 "cardCrewmateLog" = "Die Notizen des Crewmitglieds";

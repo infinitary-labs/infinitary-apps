@@ -12,6 +12,7 @@ import type { ShellGroups } from "../placed/shellGroups";
 import type { TaskService } from "../tasks/taskService";
 import { browserLookup } from "./connectionGuard";
 import { keptPagesIn } from "./keptPages";
+import { PageStarts } from "./pageStarts";
 import { PrivateSites } from "./privateSites";
 import { TaskBrowsers } from "./taskBrowsers";
 import { WebSignIns } from "./webSignIns";
@@ -59,6 +60,8 @@ export function startTaskBrowsers(options: {
       cardStack()?.cardActions.pageUnanswered(taskId, unanswered),
     // A stopped page is kept in its task's folder, so a restart can open it again.
     kept: keptPagesIn((taskId) => join(paths.crewmatesDir, taskId)),
+    // A page's saved start, beside it, run when nothing answers there.
+    starts: new PageStarts({ folderOf: (taskId) => join(paths.crewmatesDir, taskId) }),
     // The signed-in sites this Mac keeps (docs/task-browser.md, "Signed-in sites").
     signIns: webSignIns,
     privateSites: () => privateSites.list(),

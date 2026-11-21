@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-sync-arabic-docs-and-prompt-test",
+      "reason": "Keeps the Arabic guides and prompt contract test in sync with changes already noted. No app behavior changes."
+    }
+  ]
+}

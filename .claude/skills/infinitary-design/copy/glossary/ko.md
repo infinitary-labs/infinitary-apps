@@ -70,6 +70,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | header (a request header) | 헤더 | Only in the custom API form, where the person types header names |
 | held (a batch that stopped) | 보류 | 보류됨, 보류 중; 일시 정지 stays for what a person pauses |
 | hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
+| How to get it (an ask for a secret) | 받는 방법 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated |
 | inspector | 상세 보기 | Avoids 검사, which is the checks |
 | Integrations | 연동 | |
@@ -135,6 +136,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | risk | 위험도 | low / medium / high are 낮음 / 중간 / 높음 |
 | Runbooks | 런북 | |
 | Runs on | 실행 위치 | |
+| Save secret / Don't save (an ask for a secret) | 비밀 정보 저장 / 저장 안 함 | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | 저장된 재설정 | ChatGPT's saved resets for Codex, counted with 개; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | Secrets | 비밀 정보 | |
 | send back (a change out of a batch) | 돌려보내다 | 이유와 함께 돌려보내기 |

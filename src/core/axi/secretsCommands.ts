@@ -1,6 +1,6 @@
 import { AxiError } from "axi-sdk-js";
 import type { SecretAskAnswer } from "../secrets/asks";
-import { type SecretAskInput, validSecretAsk } from "../secrets/asks";
+import { type SecretAskInput, secretAskHowProblem, validSecretAsk } from "../secrets/asks";
 import {
   type SecretBringRequest,
   type SecretBringStatus,
@@ -153,14 +153,15 @@ const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
   },
   ask: {
     usage:
-      "ask --name '<name>' [--place '<place>'] --reason '<why>' --id <ask> | ask --replace <reference> --reason '<why>' --id <ask> | ask --secrets '<JSON list>' --reason '<why>' --id <ask>",
+      "ask --name '<name>' [--place '<place>'] [--how '<HTML>'] --reason '<why>' --id <ask> | ask --replace <reference> [--how '<HTML>'] --reason '<why>' --id <ask> | ask --secrets '<JSON list>' [--how '<HTML>'] --reason '<why>' --id <ask>",
     description:
-      'Ask the captain to keep a secret, by name, place and reason, never a value: Infinitary draws its own field for them. --replace names one already kept that stopped working. --secrets asks for several on one card, as [{"name":"...","place":"...","replace":"..."}]. Answers at once; whether it was kept, and each reference, reach your inbox once. Cancel a waiting ask with cancel <ask>.',
+      'Ask the captain to keep a secret, by name and reason, never a value: Infinitary draws its own field for them. Keep the name short ("Bitbucket API token"). --place is only a short label that tells two secrets of one name apart, such as staging or production, never where to get it. --how is how the captain gets it when they must make or find it themselves: an HTML fragment you design, drawn on the card under "How to get it", such as an <ol> of steps, a <ul class="inf-grid"> of exact scope names in <code>, a <table>, or <details> for what most need not read. Make it the clearest layout for this case. It may use only text, headings, paragraphs, lists, tables, details, code, kbd, mark and links (classes inf-mono, inf-muted, inf-row, inf-grid, inf-panel): no script, style, form field or picture. Each link is a full https:// address with that address as its text. --replace names one already kept that stopped working. --secrets asks for several on one card, as [{"name":"...","place":"...","replace":"..."}], with one --how for all of them. Answers at once; whether it was kept, and each reference, reach your inbox once. Cancel a waiting ask with cancel <ask>.',
     flags: {
       "--name": "value",
       "--place": "value",
       "--replace": "value",
       "--secrets": "value",
+      "--how": "value",
       "--reason": "value",
       "--id": "value",
     },
@@ -183,7 +184,16 @@ const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
         const place = one("--place");
         secrets = [{ name: one("--name"), ...(place !== undefined ? { place } : {}) }];
       }
-      const input = { id: one("--id"), reason: one("--reason"), secrets } as SecretAskInput;
+      const how = one("--how");
+      const input = {
+        id: one("--id"),
+        reason: one("--reason"),
+        secrets,
+        ...(how !== undefined ? { how } : {}),
+      } as SecretAskInput;
+      // A refused how-to says why, so the asker can fix it; nothing is asked.
+      const problem = how !== undefined ? secretAskHowProblem(input) : undefined;
+      if (problem) throw new AxiError(`Nothing was asked. ${problem}`, "VALIDATION_ERROR");
       if (!validSecretAsk(input)) invalid();
       return call(connection, "ask", "secrets.ask", input);
     },

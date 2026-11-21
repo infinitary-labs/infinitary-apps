@@ -40412,6 +40412,250 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Save encrypted Secrets archive`;
   }
+  function secretsAskAskedFirstMate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبه نائب القبطان، بكلماته.`;
+      case "de":
+        return `Vom ersten Offizier erbeten, in seinen eigenen Worten.`;
+      case "es":
+        return `Lo pidió el primer oficial, con sus propias palabras.`;
+      case "fr":
+        return `Demandé par le second, dans ses propres mots.`;
+      case "ja":
+        return `一等航海士が、自分の言葉で頼んでいます。`;
+      case "ko":
+        return `일등항해사가 직접 쓴 말로 요청했어요.`;
+      case "pt-BR":
+        return `Pedido pelo imediato, com as próprias palavras.`;
+      case "zh-Hans":
+        return `由大副用自己的话提出。`;
+      case "zh-Hant":
+        return `由大副用自己的話提出。`;
+      case "en-XA":
+        return `[Åšķéð ƀý ţĥé ƒîŕšţ ɱáţé, îñ îţš öŵñ ŵöŕðš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Asked by the first mate, in its own words.‬`;
+    }
+    return `Asked by the first mate, in its own words.`;
+  }
+  function secretsAskAskedTask(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبه فرد الطاقم في «${task}»، بكلماته.`;
+      case "de":
+        return `Vom Crewmitglied an „${task}“ erbeten, in seinen eigenen Worten.`;
+      case "es":
+        return `Lo pidió el tripulante de «${task}», con sus propias palabras.`;
+      case "fr":
+        return `Demandé par l’équipier de « ${task} », dans ses propres mots.`;
+      case "ja":
+        return `「${task}」の乗組員が、自分の言葉で頼んでいます。`;
+      case "ko":
+        return `“${task}”의 선원이 직접 쓴 말로 요청했어요.`;
+      case "pt-BR":
+        return `Pedido pelo tripulante de “${task}”, com as próprias palavras.`;
+      case "zh-Hans":
+        return `由“${task}”的船员用自己的话提出。`;
+      case "zh-Hant":
+        return `由「${task}」的船員用自己的話提出。`;
+      case "en-XA":
+        return `[Åšķéð ƀý ţĥé çŕéŵɱáţé öñ “${task}”, îñ îţš öŵñ ŵöŕðš. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Asked by the crewmate on “‬${task}‮”, in its own words.‬`;
+    }
+    return `Asked by the crewmate on “${task}”, in its own words.`;
+  }
+  function secretsAskByCrewmate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتبه فرد الطاقم. تحقّق من كل عنوان قبل أن تسجّل الدخول.`;
+      case "de":
+        return `Vom Crewmitglied geschrieben. Prüfe jede Adresse, bevor du dich anmeldest.`;
+      case "es":
+        return `Lo escribió el tripulante. Revisa cada dirección antes de iniciar sesión.`;
+      case "fr":
+        return `Écrit par l’équipier. Vérifiez chaque adresse avant de vous connecter.`;
+      case "ja":
+        return `乗組員が書いた手順です。サインインする前に、各アドレスを確認してください。`;
+      case "ko":
+        return `선원이 쓴 내용이에요. 로그인하기 전에 각 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Escrito pelo tripulante. Confira cada endereço antes de entrar.`;
+      case "zh-Hans":
+        return `由船员编写。登录前请核对每个地址。`;
+      case "zh-Hant":
+        return `由船員撰寫。登入前請核對每個網址。`;
+      case "en-XA":
+        return `[Ŵŕîţţéñ ƀý ţĥé çŕéŵɱáţé. Çĥéçķ éáçĥ áððŕéšš ƀéƒöŕé ýöû šîĝñ îñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Written by the crewmate. Check each address before you sign in.‬`;
+    }
+    return `Written by the crewmate. Check each address before you sign in.`;
+  }
+  function secretsAskByFirstMate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتبه نائب القبطان. تحقّق من كل عنوان قبل أن تسجّل الدخول.`;
+      case "de":
+        return `Vom ersten Offizier geschrieben. Prüfe jede Adresse, bevor du dich anmeldest.`;
+      case "es":
+        return `Lo escribió el primer oficial. Revisa cada dirección antes de iniciar sesión.`;
+      case "fr":
+        return `Écrit par le second. Vérifiez chaque adresse avant de vous connecter.`;
+      case "ja":
+        return `一等航海士が書いた手順です。サインインする前に、各アドレスを確認してください。`;
+      case "ko":
+        return `일등항해사가 쓴 내용이에요. 로그인하기 전에 각 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Escrito pelo imediato. Confira cada endereço antes de entrar.`;
+      case "zh-Hans":
+        return `由大副编写。登录前请核对每个地址。`;
+      case "zh-Hant":
+        return `由大副撰寫。登入前請核對每個網址。`;
+      case "en-XA":
+        return `[Ŵŕîţţéñ ƀý ţĥé ƒîŕšţ ɱáţé. Çĥéçķ éáçĥ áððŕéšš ƀéƒöŕé ýöû šîĝñ îñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Written by the first mate. Check each address before you sign in.‬`;
+    }
+    return `Written by the first mate. Check each address before you sign in.`;
+  }
+  function secretsAskClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُغلقت المهمة التي طلبت، لذا لم يُحفظ شيء.`;
+      case "de":
+        return `Die Aufgabe, die gefragt hat, ist geschlossen, daher wurde nichts gespeichert.`;
+      case "es":
+        return `La tarea que lo pidió se cerró, así que no se guardó nada.`;
+      case "fr":
+        return `La tâche qui a demandé est fermée, donc rien n’a été enregistré.`;
+      case "ja":
+        return `頼んだタスクが閉じられたため、何も保存されませんでした。`;
+      case "ko":
+        return `요청한 작업이 닫혀서 아무것도 저장되지 않았어요.`;
+      case "pt-BR":
+        return `A tarefa que pediu foi fechada, então nada foi salvo.`;
+      case "zh-Hans":
+        return `提出请求的任务已关闭，因此没有保存任何内容。`;
+      case "zh-Hant":
+        return `提出請求的任務已關閉，因此沒有儲存任何內容。`;
+      case "en-XA":
+        return `[Ţĥé ţášķ ţĥáţ ášķéð ĥáš çļöšéð, šö ñöţĥîñĝ ŵáš šáṽéð. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The task that asked has closed, so nothing was saved.‬`;
+    }
+    return `The task that asked has closed, so nothing was saved.`;
+  }
+  function secretsAskDontSave() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عدم الحفظ`;
+      case "de":
+        return `Nicht speichern`;
+      case "es":
+        return `No guardar`;
+      case "fr":
+        return `Ne pas enregistrer`;
+      case "ja":
+        return `保存しない`;
+      case "ko":
+        return `저장 안 함`;
+      case "pt-BR":
+        return `Não salvar`;
+      case "zh-Hans":
+        return `不保存`;
+      case "zh-Hant":
+        return `不儲存`;
+      case "en-XA":
+        return `[Ðöñ'ţ šáṽé ~~~~]`;
+      case "ar-XB":
+        return `‮Don't save‬`;
+    }
+    return `Don't save`;
+  }
+  function secretsAskElsewhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يظهر حقل هنا؟ أجب عن هذه البطاقة في Infinitary على حاسوب نائب القبطان، أو حدِّث Infinitary على هذا الحاسوب.`;
+      case "de":
+        return `Hier ist kein Feld zu sehen? Beantworte diese Karte in Infinitary auf dem Computer deines ersten Offiziers, oder aktualisiere Infinitary auf diesem.`;
+      case "es":
+        return `¿No ves ningún campo aquí? Responde esta tarjeta en Infinitary en la computadora del primer oficial, o actualiza Infinitary en esta.`;
+      case "fr":
+        return `Aucun champ ici ? Répondez à cette carte dans Infinitary sur l’ordinateur du second, ou mettez Infinitary à jour sur celui-ci.`;
+      case "ja":
+        return `ここに入力欄が表示されませんか？一等航海士のコンピュータの Infinitary でこのカードに答えるか、このコンピュータの Infinitary を更新してください。`;
+      case "ko":
+        return `여기에 입력란이 보이지 않나요? 일등항해사의 컴퓨터에 있는 Infinitary에서 이 카드에 답하거나, 이 컴퓨터의 Infinitary를 업데이트하세요.`;
+      case "pt-BR":
+        return `Nenhum campo aparece aqui? Responda este cartão no Infinitary no computador do imediato, ou atualize o Infinitary neste.`;
+      case "zh-Hans":
+        return `这里没有输入框？请在大副所在电脑上的 Infinitary 中回答这张卡片，或在这台电脑上更新 Infinitary。`;
+      case "zh-Hant":
+        return `這裡沒有輸入欄位？請在大副所在電腦上的 Infinitary 回答這張卡片，或在這台電腦上更新 Infinitary。`;
+      case "en-XA":
+        return `[Ñö ƒîéļð šĥöŵš ĥéŕé? Åñšŵéŕ ţĥîš çáŕð îñ Îñƒîñîţáŕý öñ ţĥé ƒîŕšţ ɱáţé'š çöɱþûţéŕ, öŕ ûþðáţé Îñƒîñîţáŕý öñ ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.‬`;
+    }
+    return `No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.`;
+  }
+  function secretsAskEmpty() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب قيمة في كل حقل قبل الحفظ.`;
+      case "de":
+        return `Gib in jedes Feld einen Wert ein, bevor du speicherst.`;
+      case "es":
+        return `Escribe un valor en cada campo antes de guardar.`;
+      case "fr":
+        return `Saisissez une valeur dans chaque champ avant d’enregistrer.`;
+      case "ja":
+        return `保存する前に、すべての欄に値を入力してください。`;
+      case "ko":
+        return `저장하기 전에 모든 입력란에 값을 입력하세요.`;
+      case "pt-BR":
+        return `Digite um valor em cada campo antes de salvar.`;
+      case "zh-Hans":
+        return `保存前请在每个输入框中填写值。`;
+      case "zh-Hant":
+        return `儲存前請在每個欄位中輸入值。`;
+      case "en-XA":
+        return `[Ţýþé á ṽáļûé îñ éṽéŕý ƒîéļð ƀéƒöŕé šáṽîñĝ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Type a value in every field before saving.‬`;
+    }
+    return `Type a value in every field before saving.`;
+  }
+  function secretsAskEnded() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتهى هذا الطلب لسر.`;
+      case "de":
+        return `Diese Anfrage nach einem Geheimnis ist beendet.`;
+      case "es":
+        return `Esta solicitud de un secreto terminó.`;
+      case "fr":
+        return `Cette demande de secret est terminée.`;
+      case "ja":
+        return `このシークレットの依頼は終了しました。`;
+      case "ko":
+        return `이 비밀 정보 요청이 끝났어요.`;
+      case "pt-BR":
+        return `Este pedido de segredo terminou.`;
+      case "zh-Hans":
+        return `这次机密请求已结束。`;
+      case "zh-Hant":
+        return `這次機密請求已結束。`;
+      case "en-XA":
+        return `[Ţĥîš ŕéǫûéšţ ƒöŕ á šéçŕéţ éñðéð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This request for a secret ended.‬`;
+    }
+    return `This request for a secret ended.`;
+  }
   function secretsAskFields() {
     switch (currentLanguage()) {
       case "ar":
@@ -40439,32 +40683,714 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Type each secret`;
   }
-  function secretsAskNote() {
+  function secretsAskGone() {
     switch (currentLanguage()) {
       case "ar":
-        return `تذهب كل قيمة مباشرةً إلى الأسرار. لا يعرضها Infinitary مرة أخرى، ولا يحصل عليها نائب القبطان ولا الطاقم.`;
+        return `لم تعد هذه البطاقة تطلب شيئًا. لم يُحفظ شيء.`;
       case "de":
-        return `Jeder Wert geht direkt in Geheimnisse. Infinitary zeigt ihn nie wieder, und weder der erste Offizier noch die Crew bekommt ihn.`;
+        return `Diese Karte fragt nicht mehr. Nichts wurde gespeichert.`;
       case "es":
-        return `Cada valor va directamente a Secretos. Infinitary no vuelve a mostrarlo, y ni el primer oficial ni la tripulación lo reciben.`;
+        return `Esta tarjeta ya no pide nada. No se guardó nada.`;
       case "fr":
-        return `Chaque valeur va directement dans Secrets. Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.`;
+        return `Cette carte ne demande plus rien. Rien n’a été enregistré.`;
       case "ja":
-        return `各値はそのままシークレットに保管されます。Infinitary が再び表示することはなく、一等航海士にも乗組員にも渡りません。`;
+        return `このカードはもう頼んでいません。何も保存されませんでした。`;
       case "ko":
-        return `각 값은 바로 비밀 정보에 보관됩니다. Infinitary는 이 값을 다시 보여 주지 않으며, 일등항해사와 선원들도 받지 않습니다.`;
+        return `이 카드는 더 이상 요청하지 않아요. 아무것도 저장되지 않았어요.`;
       case "pt-BR":
-        return `Cada valor vai direto para Segredos. O Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.`;
+        return `Este cartão não pede mais nada. Nada foi salvo.`;
       case "zh-Hans":
-        return `每个值都直接存入机密。Infinitary 不会再显示它，大副和船员们也拿不到它。`;
+        return `这张卡片已不再请求。没有保存任何内容。`;
       case "zh-Hant":
-        return `每個值都直接存入機密。Infinitary 不會再顯示它，大副和船員也拿不到它。`;
+        return `這張卡片已不再請求。沒有儲存任何內容。`;
       case "en-XA":
-        return `[Éáçĥ ṽáļûé ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš. Îñƒîñîţáŕý ñéṽéŕ šĥöŵš îţ áĝáîñ, áñð ñéîţĥéŕ ţĥé ƒîŕšţ ɱáţé ñöŕ ţĥé çŕéŵ ĝéţš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ţĥîš çáŕð ñö ļöñĝéŕ ášķš. Ñöţĥîñĝ ŵáš šáṽéð. ~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.‬`;
+        return `‮This card no longer asks. Nothing was saved.‬`;
     }
-    return `Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.`;
+    return `This card no longer asks. Nothing was saved.`;
+  }
+  function secretsAskHowMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كيف تحصل عليها`;
+      case "de":
+        return `So bekommst du sie`;
+      case "es":
+        return `Cómo conseguirlos`;
+      case "fr":
+        return `Comment les obtenir`;
+      case "ja":
+        return `入手方法`;
+      case "ko":
+        return `받는 방법`;
+      case "pt-BR":
+        return `Como obter cada um`;
+      case "zh-Hans":
+        return `获取方法`;
+      case "zh-Hant":
+        return `取得方法`;
+      case "en-XA":
+        return `[Ĥöŵ ţö ĝéţ ţĥéɱ ~~~~~]`;
+      case "ar-XB":
+        return `‮How to get them‬`;
+    }
+    return `How to get them`;
+  }
+  function secretsAskHowOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كيف تحصل عليه`;
+      case "de":
+        return `So bekommst du es`;
+      case "es":
+        return `Cómo conseguirlo`;
+      case "fr":
+        return `Comment l’obtenir`;
+      case "ja":
+        return `入手方法`;
+      case "ko":
+        return `받는 방법`;
+      case "pt-BR":
+        return `Como obter`;
+      case "zh-Hans":
+        return `获取方法`;
+      case "zh-Hant":
+        return `取得方法`;
+      case "en-XA":
+        return `[Ĥöŵ ţö ĝéţ îţ ~~~~~]`;
+      case "ar-XB":
+        return `‮How to get it‬`;
+    }
+    return `How to get it`;
+  }
+  function secretsAskLocked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تخزين الأسرار مقفل. افتح قفله، ثم احفظ مرة أخرى.`;
+      case "de":
+        return `Der Speicher für Geheimnisse ist gesperrt. Entsperre ihn und speichere dann erneut.`;
+      case "es":
+        return `El almacén de Secretos está bloqueado. Desbloquéalo y vuelve a guardar.`;
+      case "fr":
+        return `Le stockage de Secrets est verrouillé. Déverrouillez-le, puis enregistrez à nouveau.`;
+      case "ja":
+        return `シークレットの保管場所がロックされています。ロックを解除してから、もう一度保存してください。`;
+      case "ko":
+        return `비밀 정보 저장소가 잠겨 있어요. 잠금을 해제한 다음 다시 저장하세요.`;
+      case "pt-BR":
+        return `O armazenamento de Segredos está bloqueado. Desbloqueie e salve de novo.`;
+      case "zh-Hans":
+        return `机密存储已锁定。请先解锁，再重新保存。`;
+      case "zh-Hant":
+        return `機密儲存區已鎖定。請先解鎖，再重新儲存。`;
+      case "en-XA":
+        return `[Šéçŕéţš šţöŕáĝé îš ļöçķéð. Ûñļöçķ îţ, ţĥéñ šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets storage is locked. Unlock it, then save again.‬`;
+    }
+    return `Secrets storage is locked. Unlock it, then save again.`;
+  }
+  function secretsAskNoteMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يذهب كلٌّ منها مباشرةً إلى الأسرار ولا يُعرض مرة أخرى. يحصل نائب القبطان والطاقم على أسمائها، لا على قيمها أبدًا، وكل استخدام يسألك كما من قبل.`;
+      case "de":
+        return `Jedes geht direkt in Geheimnisse und wird nie wieder gezeigt. Dein erster Offizier und deine Crew bekommen ihre Namen, nie die Werte, und jede Nutzung fragt dich weiterhin.`;
+      case "es":
+        return `Cada uno va directamente a Secretos y no vuelve a mostrarse. Tu primer oficial y tu tripulación reciben sus nombres, nunca los valores, y cada uso te lo sigue preguntando.`;
+      case "fr":
+        return `Chacun va directement dans Secrets et n’est plus jamais affiché. Votre second et votre équipage reçoivent leurs noms, jamais leurs valeurs, et chaque utilisation vous est encore demandée.`;
+      case "ja":
+        return `各値はそのままシークレットに保存され、二度と表示されません。一等航海士と乗組員には名前だけが渡り、値は渡りません。使うたびに、引き続きあなたに確認します。`;
+      case "ko":
+        return `각각 바로 비밀 정보에 저장되고 다시 표시되지 않아요. 일등항해사와 선원들은 이름만 받고 값은 받지 않으며, 사용할 때마다 계속 물어봐요.`;
+      case "pt-BR":
+        return `Cada um vai direto para Segredos e nunca é mostrado de novo. Seu imediato e sua tripulação recebem os nomes, nunca os valores, e cada uso ainda pergunta a você.`;
+      case "zh-Hans":
+        return `每个都会直接存入机密，之后不再显示。大副和船员们只拿到名称，拿不到值，每次使用仍会问你。`;
+      case "zh-Hant":
+        return `每個都會直接存入機密，之後不再顯示。大副和船員只拿到名稱，拿不到值，每次使用仍會詢問你。`;
+      case "en-XA":
+        return `[Éáçĥ ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš áñð îš ñéṽéŕ šĥöŵñ áĝáîñ. Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ĝéţ ţĥéîŕ ñáɱéš, ñéṽéŕ ţĥé ṽáļûéš, áñð éáçĥ ûšé šţîļļ ášķš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each goes straight into Secrets and is never shown again. Your first mate and crew get their names, never the values, and each use still asks you.‬`;
+    }
+    return `Each goes straight into Secrets and is never shown again. Your first mate and crew get their names, never the values, and each use still asks you.`;
+  }
+  function secretsAskNoteOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يذهب مباشرةً إلى الأسرار ولا يُعرض مرة أخرى. يحصل نائب القبطان والطاقم على اسمه، لا على قيمته أبدًا، وكل استخدام يسألك كما من قبل.`;
+      case "de":
+        return `Es geht direkt in Geheimnisse und wird nie wieder gezeigt. Dein erster Offizier und deine Crew bekommen seinen Namen, nie den Wert, und jede Nutzung fragt dich weiterhin.`;
+      case "es":
+        return `Va directamente a Secretos y no vuelve a mostrarse. Tu primer oficial y tu tripulación reciben su nombre, nunca el valor, y cada uso te lo sigue preguntando.`;
+      case "fr":
+        return `Il va directement dans Secrets et n’est plus jamais affiché. Votre second et votre équipage reçoivent son nom, jamais sa valeur, et chaque utilisation vous est encore demandée.`;
+      case "ja":
+        return `値はそのままシークレットに保存され、二度と表示されません。一等航海士と乗組員には名前だけが渡り、値は渡りません。使うたびに、引き続きあなたに確認します。`;
+      case "ko":
+        return `바로 비밀 정보에 저장되고 다시 표시되지 않아요. 일등항해사와 선원들은 이름만 받고 값은 받지 않으며, 사용할 때마다 계속 물어봐요.`;
+      case "pt-BR":
+        return `Ele vai direto para Segredos e nunca é mostrado de novo. Seu imediato e sua tripulação recebem o nome dele, nunca o valor, e cada uso ainda pergunta a você.`;
+      case "zh-Hans":
+        return `它会直接存入机密，之后不再显示。大副和船员们只拿到它的名称，拿不到值，每次使用仍会问你。`;
+      case "zh-Hant":
+        return `它會直接存入機密，之後不再顯示。大副和船員只拿到它的名稱，拿不到值，每次使用仍會詢問你。`;
+      case "en-XA":
+        return `[Îţ ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš áñð îš ñéṽéŕ šĥöŵñ áĝáîñ. Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ĝéţ îţš ñáɱé, ñéṽéŕ ţĥé ṽáļûé, áñð éáçĥ ûšé šţîļļ ášķš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It goes straight into Secrets and is never shown again. Your first mate and crew get its name, never the value, and each use still asks you.‬`;
+    }
+    return `It goes straight into Secrets and is never shown again. Your first mate and crew get its name, never the value, and each use still asks you.`;
+  }
+  function secretsAskPlace(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `المكان: ${place}`;
+      case "de":
+        return `Ort: ${place}`;
+      case "es":
+        return `Lugar: ${place}`;
+      case "fr":
+        return `Emplacement : ${place}`;
+      case "ja":
+        return `場所: ${place}`;
+      case "ko":
+        return `장소: ${place}`;
+      case "pt-BR":
+        return `Local: ${place}`;
+      case "zh-Hans":
+        return `位置：${place}`;
+      case "zh-Hant":
+        return `位置：${place}`;
+      case "en-XA":
+        return `[Þļáçé: ${place} ~~~]`;
+      case "ar-XB":
+        return `‮Place: ‬${place}`;
+    }
+    return `Place: ${place}`;
+  }
+  function secretsAskPlaceholder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصق القيمة أو اكتبها`;
+      case "de":
+        return `Wert einfügen oder eintippen`;
+      case "es":
+        return `Pega o escribe el valor`;
+      case "fr":
+        return `Collez ou saisissez la valeur`;
+      case "ja":
+        return `値を貼り付けるか入力`;
+      case "ko":
+        return `값을 붙여넣거나 입력하세요`;
+      case "pt-BR":
+        return `Cole ou digite o valor`;
+      case "zh-Hans":
+        return `粘贴或输入值`;
+      case "zh-Hant":
+        return `貼上或輸入值`;
+      case "en-XA":
+        return `[Þášţé öŕ ţýþé ţĥé ṽáļûé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paste or type the value‬`;
+    }
+    return `Paste or type the value`;
+  }
+  function secretsAskRecovery() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتاج تخزين الأسرار إلى استرداد قبل أن يحفظ أي شيء. افتح الإعدادات ← الأسرار لترى الخيارات.`;
+      case "de":
+        return `Der Speicher für Geheimnisse muss wiederhergestellt werden, bevor er etwas speichern kann. Öffne Einstellungen → Geheimnisse, um die Möglichkeiten zu sehen.`;
+      case "es":
+        return `El almacén de Secretos necesita recuperarse antes de poder guardar nada. Abre Ajustes → Secretos para ver las opciones.`;
+      case "fr":
+        return `Le stockage de Secrets doit être récupéré avant de pouvoir enregistrer quoi que ce soit. Ouvrez Réglages → Secrets pour voir les options.`;
+      case "ja":
+        return `シークレットの保管場所は、何かを保存する前に復旧が必要です。設定 → シークレットを開いて、方法を確認してください。`;
+      case "ko":
+        return `비밀 정보 저장소는 무엇이든 저장하기 전에 복구가 필요해요. 설정 → 비밀 정보를 열어 방법을 확인하세요.`;
+      case "pt-BR":
+        return `O armazenamento de Segredos precisa de recuperação antes de salvar qualquer coisa. Abra Ajustes → Segredos para ver as opções.`;
+      case "zh-Hans":
+        return `机密存储需要先恢复才能保存内容。打开设置 → 机密查看可选做法。`;
+      case "zh-Hant":
+        return `機密儲存區需要先復原才能儲存內容。打開設定 → 機密查看可用做法。`;
+      case "en-XA":
+        return `[Šéçŕéţš šţöŕáĝé ñééðš ŕéçöṽéŕý ƀéƒöŕé îţ çáñ šáṽé áñýţĥîñĝ. Öþéñ Šéţţîñĝš → Šéçŕéţš ţö šéé ţĥé öþţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets storage needs recovery before it can save anything. Open Settings → Secrets to see the options.‬`;
+    }
+    return `Secrets storage needs recovery before it can save anything. Open Settings → Secrets to see the options.`;
+  }
+  function secretsAskReplaceMany(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `هل تستبدل ${count} سر؟`;
+          case "one":
+            return `هل تستبدل سرًا واحدًا؟`;
+          case "two":
+            return `هل تستبدل سرّين؟`;
+          case "few":
+            return `هل تستبدل ${count} أسرار؟`;
+          case "many":
+            return `هل تستبدل ${count} سرًا؟`;
+          default:
+            return `هل تستبدل ${count} سر؟`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Geheimnis ersetzen?`;
+          default:
+            return `${count} Geheimnisse ersetzen?`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `¿Reemplazar ${count} secreto?`;
+          case "many":
+            return `¿Reemplazar ${count} secretos?`;
+          default:
+            return `¿Reemplazar ${count} secretos?`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Remplacer ${count} secret ?`;
+          case "many":
+            return `Remplacer ${count} secrets ?`;
+          default:
+            return `Remplacer ${count} secrets ?`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のシークレットを置き換えますか？`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `비밀 정보 ${count}개를 바꿀까요?`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Substituir ${count} segredo?`;
+          case "many":
+            return `Substituir ${count} segredos?`;
+          default:
+            return `Substituir ${count} segredos?`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `替换 ${count} 个机密？`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `取代 ${count} 個機密？`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ŕéþļáçé ${count} šéçŕéţ? ~~~~~~]`;
+          default:
+            return `[Ŕéþļáçé ${count} šéçŕéţš? ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Replace ‬${count}‮ secret?‬`;
+          default:
+            return `‮Replace ‬${count}‮ secrets?‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Replace ${count} secret?`;
+      default:
+        return `Replace ${count} secrets?`;
+    }
+  }
+  function secretsAskReplaceOne(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تستبدل ${name} في الأسرار؟`;
+      case "de":
+        return `${name} in Geheimnisse ersetzen?`;
+      case "es":
+        return `¿Reemplazar ${name} en Secretos?`;
+      case "fr":
+        return `Remplacer ${name} dans Secrets ?`;
+      case "ja":
+        return `シークレットの ${name} を置き換えますか？`;
+      case "ko":
+        return `비밀 정보의 ${name}을(를) 바꿀까요?`;
+      case "pt-BR":
+        return `Substituir ${name} em Segredos?`;
+      case "zh-Hans":
+        return `替换机密中的 ${name}？`;
+      case "zh-Hant":
+        return `取代機密中的 ${name}？`;
+      case "en-XA":
+        return `[Ŕéþļáçé ${name} îñ Šéçŕéţš? ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replace ‬${name}‮ in Secrets?‬`;
+    }
+    return `Replace ${name} in Secrets?`;
+  }
+  function secretsAskReplaceTwo(input2) {
+    const first = input2.first;
+    const second = input2.second;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تستبدل ${first} و${second} في الأسرار؟`;
+      case "de":
+        return `${first} und ${second} in Geheimnisse ersetzen?`;
+      case "es":
+        return `¿Reemplazar ${first} y ${second} en Secretos?`;
+      case "fr":
+        return `Remplacer ${first} et ${second} dans Secrets ?`;
+      case "ja":
+        return `シークレットの ${first} と ${second} を置き換えますか？`;
+      case "ko":
+        return `비밀 정보의 ${first}, ${second}을(를) 바꿀까요?`;
+      case "pt-BR":
+        return `Substituir ${first} e ${second} em Segredos?`;
+      case "zh-Hans":
+        return `替换机密中的 ${first} 和 ${second}？`;
+      case "zh-Hant":
+        return `取代機密中的 ${first} 和 ${second}？`;
+      case "en-XA":
+        return `[Ŕéþļáçé ${first} áñð ${second} îñ Šéçŕéţš? ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replace ‬${first}‮ and ‬${second}‮ in Secrets?‬`;
+    }
+    return `Replace ${first} and ${second} in Secrets?`;
+  }
+  function secretsAskReplaces(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستبدل النسخة ${version2}`;
+      case "de":
+        return `Ersetzt Version ${version2}`;
+      case "es":
+        return `Reemplaza la versión ${version2}`;
+      case "fr":
+        return `Remplace la version ${version2}`;
+      case "ja":
+        return `バージョン ${version2} を置き換えます`;
+      case "ko":
+        return `버전 ${version2}을(를) 바꿉니다`;
+      case "pt-BR":
+        return `Substitui a versão ${version2}`;
+      case "zh-Hans":
+        return `替换版本 ${version2}`;
+      case "zh-Hant":
+        return `取代版本 ${version2}`;
+      case "en-XA":
+        return `[Ŕéþļáçéš ṽéŕšîöñ ${version2} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Replaces version ‬${version2}`;
+    }
+    return `Replaces version ${version2}`;
+  }
+  function secretsAskSaveMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ الأسرار`;
+      case "de":
+        return `Geheimnisse speichern`;
+      case "es":
+        return `Guardar secretos`;
+      case "fr":
+        return `Enregistrer les secrets`;
+      case "ja":
+        return `シークレットを保存`;
+      case "ko":
+        return `비밀 정보 저장`;
+      case "pt-BR":
+        return `Salvar segredos`;
+      case "zh-Hans":
+        return `保存机密`;
+      case "zh-Hant":
+        return `儲存機密`;
+      case "en-XA":
+        return `[Šáṽé šéçŕéţš ~~~~]`;
+      case "ar-XB":
+        return `‮Save secrets‬`;
+    }
+    return `Save secrets`;
+  }
+  function secretsAskSaveOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ السر`;
+      case "de":
+        return `Geheimnis speichern`;
+      case "es":
+        return `Guardar secreto`;
+      case "fr":
+        return `Enregistrer le secret`;
+      case "ja":
+        return `シークレットを保存`;
+      case "ko":
+        return `비밀 정보 저장`;
+      case "pt-BR":
+        return `Salvar segredo`;
+      case "zh-Hans":
+        return `保存机密`;
+      case "zh-Hant":
+        return `儲存機密`;
+      case "en-XA":
+        return `[Šáṽé šéçŕéţ ~~~~]`;
+      case "ar-XB":
+        return `‮Save secret‬`;
+    }
+    return `Save secret`;
+  }
+  function secretsAskStale() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيّر هذا السر منذ أن طلبته البطاقة. تذكر البطاقة الآن نسخته الحالية.`;
+      case "de":
+        return `Dieses Geheimnis hat sich geändert, seit die Karte gefragt hat. Die Karte nennt jetzt seine aktuelle Version.`;
+      case "es":
+        return `Este secreto cambió desde que la tarjeta lo pidió. La tarjeta ahora indica su versión actual.`;
+      case "fr":
+        return `Ce secret a changé depuis la demande de la carte. La carte indique maintenant sa version actuelle.`;
+      case "ja":
+        return `カードが頼んだ後に、このシークレットが変更されました。カードには現在のバージョンが表示されています。`;
+      case "ko":
+        return `카드가 요청한 뒤로 이 비밀 정보가 바뀌었어요. 이제 카드에 현재 버전이 표시돼요.`;
+      case "pt-BR":
+        return `Este segredo mudou desde que o cartão pediu. O cartão agora mostra a versão atual.`;
+      case "zh-Hans":
+        return `卡片提出请求后，这个机密有了变化。卡片现在显示它的当前版本。`;
+      case "zh-Hant":
+        return `卡片提出請求後，這個機密有了變化。卡片現在顯示它的目前版本。`;
+      case "en-XA":
+        return `[Ţĥîš šéçŕéţ çĥáñĝéð šîñçé ţĥé çáŕð ášķéð. Ţĥé çáŕð ñöŵ ñáɱéš îţš çûŕŕéñţ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This secret changed since the card asked. The card now names its current version.‬`;
+    }
+    return `This secret changed since the card asked. The card now names its current version.`;
+  }
+  function secretsAskTitleMany(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `هل تضيف ${count} سر؟`;
+          case "one":
+            return `هل تضيف سرًا واحدًا؟`;
+          case "two":
+            return `هل تضيف سرّين؟`;
+          case "few":
+            return `هل تضيف ${count} أسرار؟`;
+          case "many":
+            return `هل تضيف ${count} سرًا؟`;
+          default:
+            return `هل تضيف ${count} سر؟`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Geheimnis hinzufügen?`;
+          default:
+            return `${count} Geheimnisse hinzufügen?`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `¿Añadir ${count} secreto?`;
+          case "many":
+            return `¿Añadir ${count} secretos?`;
+          default:
+            return `¿Añadir ${count} secretos?`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ajouter ${count} secret ?`;
+          case "many":
+            return `Ajouter ${count} secrets ?`;
+          default:
+            return `Ajouter ${count} secrets ?`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のシークレットを追加しますか？`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `비밀 정보 ${count}개를 추가할까요?`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Adicionar ${count} segredo?`;
+          case "many":
+            return `Adicionar ${count} segredos?`;
+          default:
+            return `Adicionar ${count} segredos?`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加 ${count} 个机密？`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增 ${count} 個機密？`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åðð ${count} šéçŕéţ? ~~~~]`;
+          default:
+            return `[Åðð ${count} šéçŕéţš? ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Add ‬${count}‮ secret?‬`;
+          default:
+            return `‮Add ‬${count}‮ secrets?‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Add ${count} secret?`;
+      default:
+        return `Add ${count} secrets?`;
+    }
+  }
+  function secretsAskTitleOne(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تضيف ${name} إلى الأسرار؟`;
+      case "de":
+        return `${name} zu Geheimnisse hinzufügen?`;
+      case "es":
+        return `¿Añadir ${name} a Secretos?`;
+      case "fr":
+        return `Ajouter ${name} à Secrets ?`;
+      case "ja":
+        return `${name} をシークレットに追加しますか？`;
+      case "ko":
+        return `${name}을(를) 비밀 정보에 추가할까요?`;
+      case "pt-BR":
+        return `Adicionar ${name} a Segredos?`;
+      case "zh-Hans":
+        return `将 ${name} 添加到机密？`;
+      case "zh-Hant":
+        return `將 ${name} 新增到機密？`;
+      case "en-XA":
+        return `[Åðð ${name} ţö Šéçŕéţš? ~~~~~~]`;
+      case "ar-XB":
+        return `‮Add ‬${name}‮ to Secrets?‬`;
+    }
+    return `Add ${name} to Secrets?`;
+  }
+  function secretsAskTitleTwo(input2) {
+    const first = input2.first;
+    const second = input2.second;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تضيف ${first} و${second} إلى الأسرار؟`;
+      case "de":
+        return `${first} und ${second} zu Geheimnisse hinzufügen?`;
+      case "es":
+        return `¿Añadir ${first} y ${second} a Secretos?`;
+      case "fr":
+        return `Ajouter ${first} et ${second} à Secrets ?`;
+      case "ja":
+        return `${first} と ${second} をシークレットに追加しますか？`;
+      case "ko":
+        return `${first}, ${second}을(를) 비밀 정보에 추가할까요?`;
+      case "pt-BR":
+        return `Adicionar ${first} e ${second} a Segredos?`;
+      case "zh-Hans":
+        return `将 ${first} 和 ${second} 添加到机密？`;
+      case "zh-Hant":
+        return `將 ${first} 和 ${second} 新增到機密？`;
+      case "en-XA":
+        return `[Åðð ${first} áñð ${second} ţö Šéçŕéţš? ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add ‬${first}‮ and ‬${second}‮ to Secrets?‬`;
+    }
+    return `Add ${first} and ${second} to Secrets?`;
+  }
+  function secretsAskUnavailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على الأسرار حفظ هذا الآن. لم يُحفظ شيء؛ جرّب «حفظ» مرة أخرى.`;
+      case "de":
+        return `Geheimnisse konnte das gerade nicht speichern. Nichts wurde gespeichert; versuche es mit Speichern erneut.`;
+      case "es":
+        return `Secretos no pudo guardar esto ahora. No se guardó nada; vuelve a intentar Guardar.`;
+      case "fr":
+        return `Secrets n’a pas pu enregistrer cela pour l’instant. Rien n’a été enregistré ; réessayez Enregistrer.`;
+      case "ja":
+        return `シークレットは今これを保存できませんでした。何も保存されていません。もう一度「保存」を押してください。`;
+      case "ko":
+        return `비밀 정보가 지금은 이것을 저장하지 못했어요. 아무것도 저장되지 않았어요. 저장을 다시 눌러 보세요.`;
+      case "pt-BR":
+        return `Segredos não conseguiu salvar isso agora. Nada foi salvo; tente Salvar de novo.`;
+      case "zh-Hans":
+        return `机密暂时无法保存它。没有保存任何内容；请再试一次保存。`;
+      case "zh-Hant":
+        return `機密暫時無法儲存它。沒有儲存任何內容；請再試一次儲存。`;
+      case "en-XA":
+        return `[Šéçŕéţš çöûļð ñöţ šáṽé ţĥîš ñöŵ. Ñöţĥîñĝ ŵáš šáṽéð; ţŕý Šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets could not save this now. Nothing was saved; try Save again.‬`;
+    }
+    return `Secrets could not save this now. Nothing was saved; try Save again.`;
+  }
+  function secretsAskUnlock() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح القفل`;
+      case "de":
+        return `Entsperren`;
+      case "es":
+        return `Desbloquear`;
+      case "fr":
+        return `Déverrouiller`;
+      case "ja":
+        return `ロック解除`;
+      case "ko":
+        return `잠금 해제`;
+      case "pt-BR":
+        return `Desbloquear`;
+      case "zh-Hans":
+        return `解锁`;
+      case "zh-Hant":
+        return `解鎖`;
+      case "en-XA":
+        return `[Ûñļöçķ ~~]`;
+      case "ar-XB":
+        return `‮Unlock‬`;
+    }
+    return `Unlock`;
   }
   function secretsBringCannotEmpty() {
     switch (currentLanguage()) {
@@ -88142,8 +89068,37 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     secretsArchiveOpenTitle,
     secretsArchiveSaveMessage,
     secretsArchiveSaveTitle,
+    secretsAskAskedFirstMate,
+    secretsAskAskedTask,
+    secretsAskByCrewmate,
+    secretsAskByFirstMate,
+    secretsAskClosed,
+    secretsAskDontSave,
+    secretsAskElsewhere,
+    secretsAskEmpty,
+    secretsAskEnded,
     secretsAskFields,
-    secretsAskNote,
+    secretsAskGone,
+    secretsAskHowMany,
+    secretsAskHowOne,
+    secretsAskLocked,
+    secretsAskNoteMany,
+    secretsAskNoteOne,
+    secretsAskPlace,
+    secretsAskPlaceholder,
+    secretsAskRecovery,
+    secretsAskReplaceMany,
+    secretsAskReplaceOne,
+    secretsAskReplaceTwo,
+    secretsAskReplaces,
+    secretsAskSaveMany,
+    secretsAskSaveOne,
+    secretsAskStale,
+    secretsAskTitleMany,
+    secretsAskTitleOne,
+    secretsAskTitleTwo,
+    secretsAskUnavailable,
+    secretsAskUnlock,
     secretsBringCannotEmpty,
     secretsBringCannotNotText,
     secretsBringCannotTooLarge,
@@ -90960,8 +91915,37 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "secretsArchiveOpenTitle": [],
     "secretsArchiveSaveMessage": [],
     "secretsArchiveSaveTitle": [],
+    "secretsAskAskedFirstMate": [],
+    "secretsAskAskedTask": ["task"],
+    "secretsAskByCrewmate": [],
+    "secretsAskByFirstMate": [],
+    "secretsAskClosed": [],
+    "secretsAskDontSave": [],
+    "secretsAskElsewhere": [],
+    "secretsAskEmpty": [],
+    "secretsAskEnded": [],
     "secretsAskFields": [],
-    "secretsAskNote": [],
+    "secretsAskGone": [],
+    "secretsAskHowMany": [],
+    "secretsAskHowOne": [],
+    "secretsAskLocked": [],
+    "secretsAskNoteMany": [],
+    "secretsAskNoteOne": [],
+    "secretsAskPlace": ["place"],
+    "secretsAskPlaceholder": [],
+    "secretsAskRecovery": [],
+    "secretsAskReplaceMany": ["count"],
+    "secretsAskReplaceOne": ["name"],
+    "secretsAskReplaceTwo": ["first", "second"],
+    "secretsAskReplaces": ["version"],
+    "secretsAskSaveMany": [],
+    "secretsAskSaveOne": [],
+    "secretsAskStale": [],
+    "secretsAskTitleMany": ["count"],
+    "secretsAskTitleOne": ["name"],
+    "secretsAskTitleTwo": ["first", "second"],
+    "secretsAskUnavailable": [],
+    "secretsAskUnlock": [],
     "secretsBringCannotEmpty": [],
     "secretsBringCannotNotText": [],
     "secretsBringCannotTooLarge": [],

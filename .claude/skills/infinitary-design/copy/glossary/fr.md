@@ -68,6 +68,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | header (a request's) | en-tête | Masculine: "un en-tête". |
 | held (a batch that stopped) | retenu | "Lot retenu", "Retenu depuis {since}"; the same verb as "la retient" on a merge a rule holds. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
+| How to get it (an ask for a secret) | Comment l’obtenir | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | Intelligence | Intelligence | |
 | issue (where the project lives) | ticket | |
@@ -124,6 +125,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | rigor levels: Quick, Default, Careful | Rapide, Par défaut, Minutieux | The rigor label reads "Soin : {care}". |
 | run (of an automation) | exécution | "Prochaine exécution", "Dernière exécution"; the verb is "s’exécuter". |
 | runbooks | procédures | The Settings section "Procédures". |
+| Save secret / Don't save (an ask for a secret) | Enregistrer le secret / Ne pas enregistrer | The ask card's buttons; never the word for keep. |
 | saved reset (a provider's, refills the allowance) | réinitialisation enregistrée | ChatGPT's saved resets for Codex; Infinitary uses one only when the person chooses Use a saved reset, through Codex. |
 | send back (a change out of a batch) | renvoyer | "Renvoyer avec un motif". |
 | server, address (a custom API's) | serveur, adresse | Said only where English names the person's own server and its address. |

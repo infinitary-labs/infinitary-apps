@@ -2283,6 +2283,54 @@
       <string>على حاسوبك، يكرر هذه القراءة نفسها فقط، حتى %1$ld مرة. يمكنك إيقافها في الإعدادات ← الأسرار.</string>
     </dict>
   </dict>
+  <key>secretsAskReplaceMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>هل تستبدل %1$ld سر؟</string>
+      <key>one</key>
+      <string>هل تستبدل سرًا واحدًا؟</string>
+      <key>two</key>
+      <string>هل تستبدل سرّين؟</string>
+      <key>few</key>
+      <string>هل تستبدل %1$ld أسرار؟</string>
+      <key>many</key>
+      <string>هل تستبدل %1$ld سرًا؟</string>
+      <key>other</key>
+      <string>هل تستبدل %1$ld سر؟</string>
+    </dict>
+  </dict>
+  <key>secretsAskTitleMany</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>هل تضيف %1$ld سر؟</string>
+      <key>one</key>
+      <string>هل تضيف سرًا واحدًا؟</string>
+      <key>two</key>
+      <string>هل تضيف سرّين؟</string>
+      <key>few</key>
+      <string>هل تضيف %1$ld أسرار؟</string>
+      <key>many</key>
+      <string>هل تضيف %1$ld سرًا؟</string>
+      <key>other</key>
+      <string>هل تضيف %1$ld سر؟</string>
+    </dict>
+  </dict>
   <key>settingsAccountsCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

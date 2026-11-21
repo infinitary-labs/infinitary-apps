@@ -7,6 +7,7 @@ import {
   type SecretKeepOffer,
 } from "@shared/secrets";
 import { secretAskBody, secretAskCardId, secretAskTitle } from "./askCard";
+import { secretAskHow } from "./askHow";
 import {
   type KeptSecret,
   type SecretAskAnswer,
@@ -128,11 +129,14 @@ export class SecretAsks {
       else fields.push({ id: `s${fields.length + 1}`, name, place });
     }
     if (fields.length === 0) return { ask: copied.id, state: "kept", secrets: already };
+    // Checked by `validSecretAsk` above; the card draws it again from its parsed elements.
+    const how = copied.how === undefined ? undefined : secretAskHow(copied.how);
     const ask: WaitingSecretAsk = {
       key,
       task,
       id: copied.id,
       reason: copied.reason.trim(),
+      ...(how && "html" in how ? { how: how.html } : {}),
       at: this.host.now(),
       fields,
       already,
@@ -175,12 +179,12 @@ export class SecretAsks {
   }
 
   /**
-   * Infinitary's own card for one ask. Keep in Secrets carries the fields
-   * the window draws (`SecretKeepOffer`) and its id is a pass only `keep`
-   * spends, with the values; Don't keep is an ordinary one-time pass.
-   * `trouble` puts why the card changed above the rows, with Unlock when
-   * storage is locked and this computer can unlock it. A Keep's own trouble
-   * is `answered`: Keep's answer already says it in the window or phone that
+   * Infinitary's own card for one ask. Save secret carries the fields the
+   * window draws (`SecretKeepOffer`) and its id is a pass only `keep`
+   * spends, with the values; Don't save is an ordinary one-time pass.
+   * `trouble` puts why the card changed above the reason, with Unlock when
+   * storage is locked and this computer can unlock it. A Save's own trouble
+   * is `answered`: Save's answer already says it in the window or phone that
    * pressed it, so the body does not say it again.
    */
   private raiseAsk(
@@ -226,14 +230,14 @@ export class SecretAsks {
     const taskTitle = ask.task ? (this.host.options.taskTitle?.(ask.task) ?? null) : null;
     this.host.options.raise({
       id: this.askCardId(ask),
-      title: secretAskTitle(ask, taskTitle),
-      body: secretAskBody(ask, trouble && !answered ? words[trouble] : undefined),
+      title: secretAskTitle(ask),
+      body: secretAskBody(ask, taskTitle, trouble && !answered ? words[trouble] : undefined),
       meta: FIRSTMATE_CARD_META,
       ...(ask.task ? { taskId: ask.task } : {}),
       actions: [
         {
           id: dont,
-          label: words.dontKeep,
+          label: words.dontSave,
           variant: "ghost" as const,
           declines: true,
           effect: { kind: "host" as const, op: "secrets-decision" as const, arg: dont },
@@ -250,7 +254,7 @@ export class SecretAsks {
           : []),
         {
           id: keep,
-          label: words.keep,
+          label: words.save(ask.fields.length > 1),
           default: true,
           variant: "primary" as const,
           effect: {
@@ -270,7 +274,7 @@ export class SecretAsks {
     const group = `ask-${key}`;
     for (const [id, offer] of this.host.offers)
       if (offer.group === group) this.host.offers.delete(id);
-    this.host.options.withdraw(this.askCardId(ask), "This ask to keep a secret ended.");
+    this.host.options.withdraw(this.askCardId(ask), SECRET_ASK_CARD_WORDS.ended);
     if (tell) this.host.options.asked?.(ask.task, ended);
     this.host.options.changed();
   }

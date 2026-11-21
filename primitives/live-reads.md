@@ -51,8 +51,8 @@ Views are derived, so they are re-created rather than altered: every migration a
 ## Authority
 
 Reads are read-only; no read changes state.
-Access is declared, and the host enforces it: a plugin manifest's `capabilities.reads`, a panel `manifest.json`'s `reads` (a subset of `PANEL_READ_NAMES`), and the `sql` grant naming the views a query may reach.
-The grant is added by the host from the manifest (`ReadGrant`, passed to `toRequest`), never by the subscriber, whose args are strict.
+Access is declared, and the host enforces it: a plugin manifest's `capabilities.reads`, a panel `manifest.json`'s `reads` (a subset of `PANEL_READ_NAMES`), a crewmate card's `reads` and `sql` on `emit_card` (the same subset and published views, checked when the card is emitted and granted only while it is open), and the `sql` grant naming the views a query may reach.
+The grant is added by the host from the manifest or the card's saved lists (`ReadGrant`, passed to `toRequest`), never by the subscriber, whose args are strict.
 An undeclared read throws at the call in one wording for both realms (`undeclaredReadMessage`), and a frame's undeclared read is refused as `read_not_declared`.
 The catalog deliberately has no card-content read (a plugin must not read other emitters' cards) and nothing account- or auth-shaped; no published view carries an account id or a path.
 
@@ -60,6 +60,7 @@ The catalog deliberately has no card-content read (a plugin must not read other 
 
 - Panels declare reads and receive them as `PanelProps.reads` ([panels.md](panels.md)).
 - Frames (card bodies, Observe, framed panels) subscribe over the bridge's `inf.subscribe` ([cards-and-consent.md](cards-and-consent.md) for the card side).
+  A crewmate's card mounts with the reads and views it declared while it is open, through the same `frameReads` shaping a framed panel uses; an ended or past card mounts with none ([the UI plugin system](../docs/ui-plugins.md), "A card's reads").
 - Paired views and a home on another computer reach the same channels by their declared `reach` ([connection](../docs/connection.md)).
 - The task record's facts come from their one writer ([tasks.md](tasks.md)); a read only projects them.
 
@@ -80,6 +81,7 @@ Unknown values stay unknown in a read and in a view column (a count nobody recor
 - The task card's Crewmate tab reads `tasks.crewmate` and `tasks.crewmate.live` (`src/renderer/src/cards/CrewmateView.tsx`).
 - The Knowledge browser reads the `knowledge.*` entries ([knowledge](../docs/knowledge.md), "The reads").
 - Personal panels query `v_usage_v1` through `sql`, taught by the seeded `usage` skill with the `token-watch` fixture.
+- A crewmate's card reads what its `emit_card` declared while it is open ([`../tests/e2e/card-live-reads.spec.ts`](../tests/e2e/card-live-reads.spec.ts)).
 
 ## Checks
 
@@ -91,7 +93,7 @@ Unknown values stay unknown in a read and in a view column (a count nobody recor
 
 ## Where the detail lives
 
-- [The UI plugin system](../docs/ui-plugins.md): "The read catalog, v0", "The record, through SQL (plugin data surface, Phase B)".
+- [The UI plugin system](../docs/ui-plugins.md): "The read catalog, v0", "The record, through SQL (plugin data surface, Phase B)", "A card's reads".
 - [Writing panels](../docs/personal-panels.md): "The app's own data: the reads a panel declares".
 - [The task record](../docs/task-record.md): "Ready waiting is a presentation projection".
 - [Knowledge](../docs/knowledge.md): "The reads"; [running work for another Mac](../docs/helper.md): "Shared live readings".

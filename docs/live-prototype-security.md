@@ -76,7 +76,10 @@ What changed is where a script-bearing body is served, not what the frame may do
 
 The captain's ask: let cards read what the first mate, Settings and custom panels read, through the same interface and no new one.
 What a card's script may reach grows by exactly what a custom panel's manifest may name: reads from `PANEL_READ_NAMES` and published views through the `sql` read.
-The sandbox tokens, every CSP directive, the bridge and `FRAME_BRIDGE_SHA256` are unchanged; the frame's network stays closed, so a read's answer reaches only the card's own document and the captain's eyes.
+The sandbox tokens, every CSP directive, the bridge and `FRAME_BRIDGE_SHA256` are unchanged, and the frame's network stays closed.
+A read's answer can still leave the frame by one path: the card's script may raise one of its declared actions that carries no effect, with a value of up to 4 KB and no click, while the card is shown (`inf.action`, source `frame` in `src/core/orchestrator/cardActions.ts`), and its crewmate is told what the script chose.
+INF-5531's approved plan accepted that path, as a panel's own code has it: a crewmate's card is trusted like a panel a crewmate builds, the listed reads are tasks, pull requests and knowledge a crewmate mostly reads already or low-stakes facts such as allowances and computer load, and no published view carries an account id or a path.
+Such an action runs no effect and authorizes nothing (script-triggered actions authorize nothing, `primitives/cards-and-consent.md`).
 
 - Who may declare.
   Only a crewmate's `emit_card` offers `reads` and `sql`; the first mate's cards and the host's stay static.

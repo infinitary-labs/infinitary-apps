@@ -37,6 +37,24 @@ Approve a run only when the change leaves `.github/` alone, and read any change 
 Apply the same rule before a contributor's change enters a batch, which runs on the project's own machines with its secrets.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
 
+### The contributor agreement check
+
+An outside pull request merges only once its author accepted the Contributor License Agreement (`CLA.md`, `CONTRIBUTING.md`).
+`contributor-agreement.yml` sets the commit status "Contributor License Agreement" on each pull request's newest commit, which a branch rule on `main` requires once the project is public (`scripts/contributor-agreement.mjs`):
+
+- a pull request from one of the project's own branches, a task's or a batch's, passes at once;
+- an outside one passes when its author's numeric GitHub id accepted the version named on `CLA.md`'s "Version" line;
+- otherwise the author's ticked template box or reply with the agreement's sentence writes one entry to the record and passes, while anyone else's reply changes nothing;
+- until then it fails and leaves one comment saying how to accept.
+
+The record is a locked issue of the project titled "Contributor License Agreement record", opened by a maintainer; each entry is a comment the Actions token writes there, naming the login, numeric id, pull request, the box or reply, the version and the time, and the check reads back only those comments.
+The Actions token comments on a locked issue with its issue write access, and no one outside the project's collaborators can.
+Without the issue the check fails on every outside pull request and names what is missing.
+
+It is the one job an outside pull request starts that writes, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
+It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue and status writes, and runs on GitHub's hosted Ubuntu.
+`tests/contributor-agreement.test.ts` holds each of these.
+
 ## Release environments
 
 At the destination, configure branch rules allowing only `main` on `desktop-release`, `mac-installer-signing`, `ios-release` and `docs-site`, and on `windows-signing` if Windows signing is enabled.

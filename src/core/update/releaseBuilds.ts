@@ -1,4 +1,4 @@
-import type { UpdateChannel } from "@shared/update";
+import type { UpdateChannel } from "@shared/updateChannel";
 import { z } from "zod";
 import {
   buildsUrlOf,

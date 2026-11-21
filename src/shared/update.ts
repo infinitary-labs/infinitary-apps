@@ -1,13 +1,9 @@
 import { z } from "zod";
+import { updateChannelSchema } from "./updateChannel";
 import { UPDATE_PROBLEMS } from "./updateWords";
 
-/**
- * Which updates an installation is offered (docs/alpha.md "Update
- * channels"): the installed cask remembers it, independently of the
- * version running.
- */
-export const updateChannelSchema = z.enum(["stable", "alpha"]);
-export type UpdateChannel = z.infer<typeof updateChannelSchema>;
+/** Which updates an installation is offered, in a module of its own the release's feed writer loads. */
+export { type UpdateChannel, updateChannelSchema } from "./updateChannel";
 
 /**
  * What the crew's work is doing around this computer's own update

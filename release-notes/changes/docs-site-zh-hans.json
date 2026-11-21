@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-zh-hans",
+      "reason": "Publishes the documentation site in Simplified Chinese; nothing in the app changes."
+    }
+  ]
+}

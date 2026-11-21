@@ -4,6 +4,9 @@
   "dialogCancel": "إلغاء",
   "dialogChoose": "اختيار",
   "dialogExport": "تصدير",
+  "dialogLeaveIt": "اتركه كما هو",
+  "dialogOnceClosedDetail": "استخدم نافذته. إذا لم تظهر أي نافذة، فقد يكون لا يزال ينهي عمله، ويمكنك فتح Infinitary هنا بعد إغلاقه.",
   "dialogOpenInDock": "Infinitary مفتوح بالفعل.",
-  "dialogOpenInDockDetail": "انقر على Infinitary في شريط Dock لإظهار نافذته."
+  "dialogOpenInDockDetail": "انقر على Infinitary في شريط Dock لإظهار نافذته.",
+  "dialogOpenOnceClosed": "افتحه هنا بعد إغلاقه"
 }

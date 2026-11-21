@@ -833,8 +833,11 @@
 "dialogCancel" = "Cancelar";
 "dialogChoose" = "Escolher";
 "dialogExport" = "Exportar";
+"dialogLeaveIt" = "Deixar assim";
+"dialogOnceClosedDetail" = "Use a janela dele. Se nenhuma janela apareceu, ele ainda pode estar terminando o trabalho, e você pode abrir o Infinitary aqui quando ele fechar.";
 "dialogOpenInDock" = "O Infinitary já está aberto.";
 "dialogOpenInDockDetail" = "Clique no Infinitary no Dock para mostrar a janela dele.";
+"dialogOpenOnceClosed" = "Abrir aqui quando fechar";
 "feedAnswered" = "Respondida";
 "feedAnsweredWith" = "Respondida: %1$@";
 "feedAsksFirst" = "pergunta antes";

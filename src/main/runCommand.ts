@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, readlink } from "node:fs/promises";
 import { connect, createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { runIdentity } from "@core/helper/runAgent";
 import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
@@ -521,7 +521,11 @@ export function commandPipeHeld(path: string): Promise<boolean | null> {
  * whether they are exactly its own: on Linux exactly, from `/proc`; on a Mac
  * from `ps`, which joins them with spaces, so a word holding a space comes
  * back as several, read only where they start with this program's own path
- * (`execPath`). Null where they cannot be read, and on Windows.
+ * (`execPath`). Null where they cannot be read, and on Windows. On Linux,
+ * also null for a program not started as this one is, by its file's name
+ * (`/proc`'s `exe`): a source Electron beside the packaged app reads its words
+ * another way (`windowByWords`), and an AppImage runs each launch from its
+ * own folder under the same name.
  */
 export async function programWords(
   pid: number,
@@ -530,6 +534,7 @@ export async function programWords(
 ): Promise<ProgramWords | null> {
   try {
     if (platform === "linux") {
+      if (basename(await readlink(`/proc/${pid}/exe`)) !== basename(execPath)) return null;
       const words = (await readFile(`/proc/${pid}/cmdline`, "utf8")).split("\0");
       if (words.at(-1) === "") words.pop();
       return words.length > 0 ? { words, exact: true } : null;
@@ -637,6 +642,11 @@ export async function lockHolderKind(options: {
   lockFree: () => boolean;
   readEveryMs: number;
   everyMs?: number;
+  /**
+   * Once, when a holder read again still shows nothing, as an older window on a Windows PC, which
+   * answers nothing and holds no pipe: the launch may ask the person what to do when it closes.
+   */
+  onUnknown?: () => void;
 }): Promise<"run" | "free" | "window"> {
   // Asks for the lock: taken, it is free unless a window answered meanwhile and then let it go.
   const ask = () => (options.lockFree() ? (options.answered() ? "window" : "free") : null);
@@ -644,6 +654,7 @@ export async function lockHolderKind(options: {
   let read: number | null | undefined = null;
   let shown: boolean | null | undefined;
   let readAgain = 0;
+  let unknownTold = false;
   for (;;) {
     if (options.answered()) return "window";
     if (options.running()) return "run";
@@ -662,6 +673,10 @@ export async function lockHolderKind(options: {
       // since tells nothing of the next, which is asked first.
       if (options.holder() === holder) {
         if (window === true) return "window";
+        if (window === null && read === holder && shown === null && !unknownTold) {
+          unknownTold = true;
+          options.onUnknown?.();
+        }
         if (holder === undefined && read === undefined && window !== shown) {
           const kind = ask();
           if (kind) return kind;

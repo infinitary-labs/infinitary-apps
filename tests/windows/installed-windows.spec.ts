@@ -408,9 +408,26 @@ test("the Windows installer installs for this person, offers Git, starts the com
     expect(await commandPipeHeld(commandPipe(dataDir))).toBe(true);
     keepTask("task-from-window.json");
     if (evidence) screenshot(join(evidence, "window-beside-command.png"));
+    // A second launch while that window holds the folder (the review of INF-5409): refused
+    // Electron's own lock on this PC, it is answered by that window and ends without starting the
+    // app again, so the one window stays the only one and the person's later close of it stays.
+    // A launch that started the app again would have done so before it ended.
+    const windows = () => {
+      const commands = new Set(runProcesses().map((run) => run.pid));
+      return topAppProcesses()
+        .map((app) => app.pid)
+        .filter((pid) => !commands.has(pid));
+    };
+    const second = spawn(executable, [], { stdio: "ignore" });
+    const secondEnd = await new Promise<number | null>((resolve) =>
+      second.once("exit", (code) => resolve(code)),
+    );
+    expect(secondEnd).toBe(0);
+    expect(windows()).toEqual([window]);
     // Closing the window leaves the command and its first mate running.
     await closeWindow(window);
     expect(runProcesses().length).toBe(1);
+    expect(windows()).toEqual([]);
     await stopRun();
     expect(await commandPipeHeld(commandPipe(dataDir))).toBe(false);
 

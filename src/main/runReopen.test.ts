@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
-import { bundleOf, openWindowOnReopen, reopenOlderWindow } from "./runReopen";
+import { holderIsWindow, lockHolderKind } from "./runCommand";
+import { bundleOf, endRefusedLaunch, openWindowOnReopen, reopenOlderWindow } from "./runReopen";
 
 /**
  * The captain's words on INF-4113: "The real fix: the background program
@@ -134,5 +135,110 @@ describe("a launch beside an older Mac window", () => {
       }),
     ).toBe("gone");
     expect(macos.asked).toEqual([]);
+  });
+  // The review of INF-5409: the whole handoff to an older window that answers nothing, whose last
+  // window was closed, so the launch's ask opened nothing. The launch tells it by what it runs as,
+  // asks it once to reopen through macOS's open, which reaches that window's own reopen handler,
+  // and ends without starting again; refused, the person is told to click it in the Dock.
+  it("hands a launch to an older window with no window open, which reopens it, and ends", async () => {
+    const olderWindow = (opensOnReopen: boolean) => {
+      const events = new EventEmitter();
+      const windows: string[] = [];
+      // Every version opens its window on macOS's reopen; an older one answers no launch's ask.
+      events.on("activate", () => windows.push("window"));
+      return {
+        windows,
+        ask: async (to: string) => {
+          if (!opensOnReopen) return false;
+          expect(to).toBe(bundle);
+          events.emit("activate");
+          return true;
+        },
+      };
+    };
+    const refusedLaunch = async (older: ReturnType<typeof olderWindow>, alive = true) => {
+      const ended: string[] = [];
+      const found = await lockHolderKind({
+        running: () => false,
+        answered: () => false,
+        holder: () => 4242,
+        asked: 4242,
+        windowHolder: (holder) =>
+          holderIsWindow(holder, {
+            words: async () => ({
+              words: ["/Applications/Infinitary.app/Contents/MacOS/Infinitary"],
+              exact: false,
+            }),
+          }),
+        lockFree: () => false,
+        readEveryMs: 50,
+        everyMs: 10,
+      });
+      const kind = await endRefusedLaunch({
+        found,
+        answered: false,
+        platform: "darwin",
+        reopen: () =>
+          reopenOlderWindow({
+            bundle,
+            holderAlive: () => alive,
+            reachedSelf: () => false,
+            ask: older.ask,
+          }),
+        tellDock: async () => {
+          ended.push("told to click it in the Dock");
+        },
+        relaunch: () => ended.push("started again"),
+        quit: () => ended.push("quit"),
+      });
+      return { kind, ended };
+    };
+
+    const reopening = olderWindow(true);
+    expect(await refusedLaunch(reopening)).toEqual({ kind: "window", ended: ["quit"] });
+    expect(reopening.windows).toEqual(["window"]);
+
+    const refusing = olderWindow(false);
+    expect(await refusedLaunch(refusing)).toEqual({
+      kind: "window",
+      ended: ["told to click it in the Dock", "quit"],
+    });
+    expect(refusing.windows).toEqual([]);
+
+    // The window ended meanwhile: nothing asked, and the launch starts again on the folder.
+    const ended = olderWindow(true);
+    expect(await refusedLaunch(ended, false)).toEqual({
+      kind: "window",
+      ended: ["started again", "quit"],
+    });
+    expect(ended.windows).toEqual([]);
+  });
+
+  it("ends as a window answered or the person chose, whatever was read before", async () => {
+    const end = async (found: "run" | "free" | "window" | "left", answered: boolean) => {
+      const ended: string[] = [];
+      const kind = await endRefusedLaunch({
+        found,
+        answered,
+        platform: "darwin",
+        reopen: async () => {
+          ended.push("asked to reopen");
+          return "asked";
+        },
+        tellDock: async () => {
+          ended.push("told to click it in the Dock");
+        },
+        relaunch: () => ended.push("started again"),
+        quit: () => ended.push("quit"),
+      });
+      return { kind, ended };
+    };
+    // A window that answered after a run was read, and quit: the launch does not start it again.
+    expect(await end("run", true)).toEqual({ kind: "window", ended: ["quit"] });
+    expect(await end("free", true)).toEqual({ kind: "window", ended: ["quit"] });
+    // The person left a holder that showed nothing open: nothing asked, nothing started.
+    expect(await end("left", false)).toEqual({ kind: "window", ended: ["quit"] });
+    expect(await end("run", false)).toEqual({ kind: "run", ended: ["started again", "quit"] });
+    expect(await end("free", false)).toEqual({ kind: "free", ended: ["started again", "quit"] });
   });
 });

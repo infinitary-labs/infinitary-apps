@@ -29524,6 +29524,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Export`;
   }
+  function dialogLeaveIt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اتركه كما هو`;
+      case "de":
+        return `So lassen`;
+      case "es":
+        return `Dejarlo así`;
+      case "fr":
+        return `Laisser ainsi`;
+      case "ja":
+        return `そのままにする`;
+      case "ko":
+        return `그대로 두기`;
+      case "pt-BR":
+        return `Deixar assim`;
+      case "zh-Hans":
+        return `保持不变`;
+      case "zh-Hant":
+        return `保持不變`;
+      case "en-XA":
+        return `[Ļéáṽé îţ ~~~]`;
+      case "ar-XB":
+        return `‮Leave it‬`;
+    }
+    return `Leave it`;
+  }
+  function dialogOnceClosedDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم نافذته. إذا لم تظهر أي نافذة، فقد يكون لا يزال ينهي عمله، ويمكنك فتح Infinitary هنا بعد إغلاقه.`;
+      case "de":
+        return `Nutze sein Fenster. Wenn kein Fenster nach vorn kam, beendet es vielleicht noch seine Arbeit, und du kannst Infinitary hier öffnen, sobald es geschlossen ist.`;
+      case "es":
+        return `Usa su ventana. Si no apareció ninguna ventana, puede que aún esté terminando su trabajo, y puedes abrir Infinitary aquí cuando se cierre.`;
+      case "fr":
+        return `Utilisez sa fenêtre. Si aucune fenêtre n’est apparue, il termine peut-être encore son travail, et vous pouvez ouvrir Infinitary ici une fois qu’il sera fermé.`;
+      case "ja":
+        return `そのウインドウを使ってください。ウインドウが前面に出てこない場合は、まだ作業を終えている途中かもしれません。閉じたあとに、ここで Infinitary を開けます。`;
+      case "ko":
+        return `해당 창을 사용하세요. 창이 앞으로 나오지 않았다면 아직 작업을 마무리하는 중일 수 있으며, 닫힌 후 여기에서 Infinitary를 열 수 있습니다.`;
+      case "pt-BR":
+        return `Use a janela dele. Se nenhuma janela apareceu, ele ainda pode estar terminando o trabalho, e você pode abrir o Infinitary aqui quando ele fechar.`;
+      case "zh-Hans":
+        return `请使用它的窗口。如果没有窗口出现，它可能仍在完成工作；它关闭后，你可以在这里打开 Infinitary。`;
+      case "zh-Hant":
+        return `請使用它的視窗。如果沒有視窗出現，它可能仍在完成工作；它關閉後，你可以在這裡開啟 Infinitary。`;
+      case "en-XA":
+        return `[Ûšé îţš ŵîñðöŵ. Îƒ ñö ŵîñðöŵ çáɱé ƒöŕŵáŕð, îţ ɱáý šţîļļ ƀé ƒîñîšĥîñĝ îţš ŵöŕķ, áñð ýöû çáñ öþéñ Îñƒîñîţáŕý ĥéŕé öñçé îţ çļöšéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use its window. If no window came forward, it may still be finishing its work, and you can open Infinitary here once it closes.‬`;
+    }
+    return `Use its window. If no window came forward, it may still be finishing its work, and you can open Infinitary here once it closes.`;
+  }
   function dialogOpenInDock() {
     switch (currentLanguage()) {
       case "ar":
@@ -29577,6 +29631,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Click Infinitary in the Dock to show its window.‬`;
     }
     return `Click Infinitary in the Dock to show its window.`;
+  }
+  function dialogOpenOnceClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتحه هنا بعد إغلاقه`;
+      case "de":
+        return `Hier öffnen, sobald es geschlossen ist`;
+      case "es":
+        return `Abrir aquí cuando se cierre`;
+      case "fr":
+        return `Ouvrir ici une fois fermé`;
+      case "ja":
+        return `閉じたらここで開く`;
+      case "ko":
+        return `닫히면 여기에서 열기`;
+      case "pt-BR":
+        return `Abrir aqui quando fechar`;
+      case "zh-Hans":
+        return `关闭后在这里打开`;
+      case "zh-Hant":
+        return `關閉後在這裡開啟`;
+      case "en-XA":
+        return `[Öþéñ ĥéŕé öñçé îţ çļöšéš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open here once it closes‬`;
+    }
+    return `Open here once it closes`;
   }
   function feedAnswered() {
     switch (currentLanguage()) {
@@ -95114,8 +95195,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     dialogCancel,
     dialogChoose,
     dialogExport,
+    dialogLeaveIt,
+    dialogOnceClosedDetail,
     dialogOpenInDock,
     dialogOpenInDockDetail,
+    dialogOpenOnceClosed,
     feedAnswered,
     feedAnsweredWith,
     feedAsksFirst,
@@ -98164,8 +98248,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "dialogCancel": [],
     "dialogChoose": [],
     "dialogExport": [],
+    "dialogLeaveIt": [],
+    "dialogOnceClosedDetail": [],
     "dialogOpenInDock": [],
     "dialogOpenInDockDetail": [],
+    "dialogOpenOnceClosed": [],
     "feedAnswered": [],
     "feedAnsweredWith": ["answer"],
     "feedAsksFirst": [],

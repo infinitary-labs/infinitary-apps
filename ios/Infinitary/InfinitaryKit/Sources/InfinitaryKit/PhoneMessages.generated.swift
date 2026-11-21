@@ -882,8 +882,11 @@ public enum PhoneMessages {
     public static func `dialogCancel`() -> String { PhoneWords.format("dialogCancel", []) }
     public static func `dialogChoose`() -> String { PhoneWords.format("dialogChoose", []) }
     public static func `dialogExport`() -> String { PhoneWords.format("dialogExport", []) }
+    public static func `dialogLeaveIt`() -> String { PhoneWords.format("dialogLeaveIt", []) }
+    public static func `dialogOnceClosedDetail`() -> String { PhoneWords.format("dialogOnceClosedDetail", []) }
     public static func `dialogOpenInDock`() -> String { PhoneWords.format("dialogOpenInDock", []) }
     public static func `dialogOpenInDockDetail`() -> String { PhoneWords.format("dialogOpenInDockDetail", []) }
+    public static func `dialogOpenOnceClosed`() -> String { PhoneWords.format("dialogOpenOnceClosed", []) }
     public static func `feedAnswered`() -> String { PhoneWords.format("feedAnswered", []) }
     public static func `feedAnsweredWith`(`answer`: String) -> String { PhoneWords.format("feedAnsweredWith", [`answer`]) }
     public static func `feedAsksFirst`() -> String { PhoneWords.format("feedAsksFirst", []) }
@@ -5000,8 +5003,11 @@ extension PhoneWords {
         "dialogCancel": [],
         "dialogChoose": [],
         "dialogExport": [],
+        "dialogLeaveIt": [],
+        "dialogOnceClosedDetail": [],
         "dialogOpenInDock": [],
         "dialogOpenInDockDetail": [],
+        "dialogOpenOnceClosed": [],
         "feedAnswered": [],
         "feedAnsweredWith": ["answer"],
         "feedAsksFirst": [],

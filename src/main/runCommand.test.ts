@@ -25,6 +25,7 @@ import {
   ownedRunOf,
   type ProgramWords,
   programIdentity,
+  programWords,
   RUN_MARKER,
   runCommand,
   runningByCommand,
@@ -621,6 +622,19 @@ describe("a window opened beside a run", () => {
     expect(await holderIsWindow(undefined, { words: async () => split([exe]) })).toBeNull();
   });
 
+  // The review of INF-5409: on Linux a holder's words are read exactly, but read as this launch's
+  // own; a program started another way, as a source Electron beside the packaged app, reads them
+  // another way, so its words tell nothing and it is left not known.
+  it.runIf(process.platform === "linux")(
+    "reads a Linux holder's words only where it runs from a program of this one's name",
+    async () => {
+      const own = await programWords(process.pid, "linux", process.execPath);
+      expect(own?.exact).toBe(true);
+      expect(own?.words.length).toBeGreaterThan(0);
+      expect(await programWords(process.pid, "linux", "/opt/infinitary/infinitary")).toBeNull();
+    },
+  );
+
   // The review of INF-5409: on a Windows PC, whose lock names no holder, a command holds a pipe of
   // its own from before it asks for the lock until it ends, so a window launch refused the lock
   // waits on a command that has not noted itself. A holder with no such pipe is not known, since a
@@ -633,6 +647,7 @@ describe("a window opened beside a run", () => {
     const look = (shows: { running?: () => boolean; answered?: () => boolean } = {}) => {
       const asks: number[] = [];
       const reads: number[] = [];
+      const unknowns: number[] = [];
       let holder: null | undefined;
       const kind = lockHolderKind({
         running: shows.running ?? (() => false),
@@ -649,10 +664,11 @@ describe("a window opened beside a run", () => {
         },
         readEveryMs: 60,
         everyMs: 20,
+        onUnknown: () => unknowns.push(Date.now()),
       });
       let settled: string | null = null;
       void kind.then((value) => (settled = value));
-      return { kind, asks, reads, settled: () => settled, leave: () => (holder = null) };
+      return { kind, asks, reads, unknowns, settled: () => settled, leave: () => (holder = null) };
     };
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -665,6 +681,7 @@ describe("a window opened beside a run", () => {
     expect(command.settled()).toBeNull();
     expect(command.reads.length).toBeGreaterThanOrEqual(2);
     expect(command.asks).toEqual([]);
+    expect(command.unknowns).toEqual([]);
     noted = true;
     expect(await command.kind).toBe("run");
 
@@ -683,11 +700,14 @@ describe("a window opened beside a run", () => {
     expect(await handover.kind).toBe("window");
 
     // No pipe from the start: a window from before windows answered, or a command from before the
-    // pipe. Waited for and asked nothing, until the lock is let go.
+    // pipe. Waited for and asked nothing, until the lock is let go; the launch is told once that
+    // the holder still shows nothing, so it may ask the person what to do when it closes.
     const silent = look();
     await wait(400);
     expect(silent.settled()).toBeNull();
     expect(silent.asks).toEqual([]);
+    expect(silent.reads.length).toBeGreaterThanOrEqual(3);
+    expect(silent.unknowns).toHaveLength(1);
     silent.leave();
     expect(await silent.kind).toBe("free");
     expect(silent.asks).toHaveLength(1);

@@ -103,3 +103,36 @@ export async function reopenOlderWindow(options: {
   const taken = await (options.ask ?? askReopen)(options.bundle);
   return taken && !options.reachedSelf() ? "asked" : "unconfirmed";
 }
+
+/**
+ * How a window launch refused the folder's lock ends, once it read who holds
+ * it (`lockHolderKind`): a window's answer wins, even one that came after the
+ * holder was read, and so does the person's word to leave a holder that
+ * showed nothing open (`left`). A window told only by what it runs as, on a
+ * Mac, is asked once to reopen (`reopenOlderWindow`), and the person is told
+ * to click it in the Dock where that is not confirmed. The launch starts
+ * again beside a run, on a free folder, or where that window ended
+ * meanwhile, and quits either way. The holder's kind, for the launch's log.
+ */
+export async function endRefusedLaunch(options: {
+  found: "run" | "free" | "window" | "left";
+  answered: boolean;
+  platform: string;
+  reopen: () => Promise<"asked" | "gone" | "unconfirmed">;
+  tellDock: () => Promise<void>;
+  relaunch: () => void;
+  quit: () => void;
+}): Promise<"run" | "free" | "window"> {
+  const kind = options.answered || options.found === "left" ? "window" : options.found;
+  const reopened =
+    kind === "window" &&
+    options.found !== "left" &&
+    !options.answered &&
+    options.platform === "darwin"
+      ? await options.reopen()
+      : null;
+  if (reopened === "unconfirmed") await options.tellDock();
+  if (kind !== "window" || reopened === "gone") options.relaunch();
+  options.quit();
+  return kind;
+}

@@ -715,6 +715,8 @@ export class Shell {
 
   /** Stops whatever this app is running, for a quit. */
   async dispose(): Promise<void> {
+    // A start still going on finishes first, so its first mate is stopped too.
+    await this.homing;
     await this.switching;
     const mode = this.mode;
     this.mode = null;

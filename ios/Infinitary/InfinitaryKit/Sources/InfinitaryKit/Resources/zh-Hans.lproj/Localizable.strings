@@ -833,8 +833,11 @@
 "dialogCancel" = "取消";
 "dialogChoose" = "选择";
 "dialogExport" = "导出";
+"dialogLeaveIt" = "保持不变";
+"dialogOnceClosedDetail" = "请使用它的窗口。如果没有窗口出现，它可能仍在完成工作；它关闭后，你可以在这里打开 Infinitary。";
 "dialogOpenInDock" = "Infinitary 已经打开。";
 "dialogOpenInDockDetail" = "点按程序坞中的 Infinitary 以显示它的窗口。";
+"dialogOpenOnceClosed" = "关闭后在这里打开";
 "feedAnswered" = "已回答";
 "feedAnsweredWith" = "已回答：%1$@";
 "feedAsksFirst" = "先询问";

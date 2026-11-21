@@ -4,6 +4,9 @@
   "dialogCancel": "取消",
   "dialogChoose": "選擇",
   "dialogExport": "匯出",
+  "dialogLeaveIt": "保持不變",
+  "dialogOnceClosedDetail": "請使用它的視窗。如果沒有視窗出現，它可能仍在完成工作；它關閉後，你可以在這裡開啟 Infinitary。",
   "dialogOpenInDock": "Infinitary 已經開啟。",
-  "dialogOpenInDockDetail": "按一下 Dock 中的 Infinitary 以顯示它的視窗。"
+  "dialogOpenInDockDetail": "按一下 Dock 中的 Infinitary 以顯示它的視窗。",
+  "dialogOpenOnceClosed": "關閉後在這裡開啟"
 }

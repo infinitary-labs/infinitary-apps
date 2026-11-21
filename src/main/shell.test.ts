@@ -782,6 +782,35 @@ describe("the app as a view of another Mac", () => {
  * A Mac that both controls Firstmate on another and runs its work (docs/view.md, "A Mac that
  * runs work"): one device on that Mac's list, whose window and work keep the same grant.
  */
+// A run asked to stop while its first mate is still starting (docs/run.md, "Quit and Stop") quits
+// cleanly: its core and connection stop as a quit stops them, never left running as the app ends.
+describe("a quit while this computer's own first mate starts", () => {
+  it("stops that first mate once it started, before the quit goes on", async () => {
+    const mini = shell(undefined, undefined, { headless: true });
+    let started: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    mini.startCore.mockImplementationOnce(async () => {
+      await held;
+      return mini.own.core;
+    });
+    const starting = mini.shell.start();
+    await mini.until(() => mini.startCore.mock.calls.length === 1);
+    let disposed = false;
+    const disposing = mini.shell.dispose().then(() => {
+      disposed = true;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(disposed).toBe(false);
+    started();
+    await starting;
+    await disposing;
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    expect(mini.closeConnection).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("a Mac that controls another and runs its work", () => {
   const workDir = () => join(scratchDir("infinitary-shell-work-"), "work");
   const sam = { name: "sam", uid: 501 };

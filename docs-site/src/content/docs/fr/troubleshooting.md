@@ -1,5 +1,5 @@
 ---
-source: 554ab0e4646c3cc7
+source: 797265acca38baf9
 title: Dépannage
 description: Les problèmes courants dans Infinitary, les mots que l’app affiche pour chacun et ce qu’il faut faire.
 ---
@@ -69,7 +69,7 @@ Ou encore : « Infinitary est fermé sur » cet ordinateur.
 2. Placez les deux ordinateurs sur le même réseau, ou sur le même réseau privé.
 3. Dans Réglages → **Appareils**, appuyez sur **Réessayer** sur sa ligne.
 
-Si un ordinateur que vous avez ajouté par son adresse a une nouvelle adresse, appuyez sur **Changer l’adresse** sur sa ligne.
+Si un ordinateur que vous avez ajouté par son adresse a une nouvelle adresse, ouvrez son menu, les trois points sur sa ligne, et choisissez **Changer l’adresse**.
 Sur un Mac, macOS peut tenir Infinitary à l’écart du réseau local jusqu’à ce que quelqu’un devant ce Mac l’autorise.
 Sa ligne propose alors plutôt **L’ajouter par son adresse**.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/).

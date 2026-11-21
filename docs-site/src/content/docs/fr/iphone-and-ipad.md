@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone et iPad
 description: Demandez une invitation TestFlight privée pour Infinitary sur iPhone et iPad, puis rejoignez votre ordinateur pour lire les cartes et envoyer des messages.
 ---
@@ -80,7 +80,7 @@ Le téléphone ne vous signale une nouvelle carte que pendant que l’app est ou
 
 Pour ne plus afficher votre ordinateur, touchez le bouton de l’ordinateur à droite de la barre du haut du téléphone et choisissez **Quitter** suivi du nom de votre ordinateur.
 Le téléphone oublie l’ordinateur.
-Sur votre ordinateur, **Retirer** sur la ligne du téléphone dans Réglages → **Appareils** le coupe aussitôt.
+Sur votre ordinateur, **Retirer** dans le menu du téléphone dans Réglages → **Appareils**, les trois points sur sa ligne, le coupe aussitôt.
 Pour rejoindre de nouveau, créez un nouveau lien.
 
 Voir aussi [Vos autres ordinateurs](/fr/your-other-computers/).

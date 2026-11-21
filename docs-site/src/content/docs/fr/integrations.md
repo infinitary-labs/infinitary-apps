@@ -1,5 +1,5 @@
 ---
-source: 23f230a7454bad9c
+source: 48dd73d5a1c0ec46
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -40,9 +40,8 @@ Voir [Projets](/fr/projects/#your-github-gitlab-or-bitbucket-sign-in) pour savoi
 - **GitLab** : vous vous connectez dans votre navigateur ou collez une clé, sur gitlab.com ou sur votre propre serveur GitLab.
 - **GitHub Enterprise** : vous créez une clé sur votre propre serveur et la collez ici.
 - **Bitbucket** : vous créez un jeton d’API sur votre compte Atlassian et le collez ici, pour bitbucket.org.
-  Sa ligne affiche le compte auquel vous êtes connecté ; elle n’a pas encore d’actions pour votre second et votre équipage.
 
-Chaque ligne GitHub, GitLab et GitHub Enterprise a deux actions : l’une qui lit, et l’autre qui modifie quelque chose, comme **Modifier quelque chose sur GitHub**.
+Chaque ligne a deux actions : l’une qui lit, et l’autre qui modifie quelque chose, comme **Modifier quelque chose sur GitHub**.
 Ce sont elles que votre second et votre équipage utilisent pour chercher des informations ou agir là-bas au-delà du travail propre à une tâche.
 La branche d’une tâche, sa demande de tirage, ses vérifications et sa fusion suivent plutôt les réglages de votre projet.
 

@@ -1,5 +1,5 @@
 ---
-source: ba3356bfe003be79
+source: 7c4d9925493d8861
 title: Projets
 description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -51,6 +51,8 @@ Le formulaire de clé nomme les autorisations à cocher sur la page d’Atlassia
 Vos projets Bitbucket sont listés à partir des espaces de travail dont vous faites partie ; s’il y en a beaucoup, certains peuvent ne pas avoir été vérifiés, et la liste le signale.
 Les changements d’un projet Bitbucket sont proposés en demandes de tirage, comme sur GitHub et GitLab ; un projet ajouté avant cela fonctionne de la même façon dès sa prochaine tâche.
 La description d’une demande de tirage Bitbucket porte le récit sous forme de texte, et ses images restent sur la carte.
+Un projet Bitbucket peut aussi choisir les demandes de tirage groupées, et ses fusions suivent les stratégies et la file de fusion de sa branche principale sur bitbucket.org.
+Sur un projet Bitbucket, votre équipage peut aussi lire les pipelines du projet et le journal d’une étape, déposer un fichier de version dans ses Downloads et se réveiller à chaque nouveau commentaire sur sa demande de tirage, comme sur GitHub et GitLab ; Bitbucket ne propose pas de télécharger les artefacts d’un pipeline.
 Votre connexion reste sur cet ordinateur.
 
 Si une connexion cesse de fonctionner, une carte vous demande de vous reconnecter.

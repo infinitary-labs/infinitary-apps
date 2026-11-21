@@ -1,5 +1,5 @@
 ---
-source: 1311a517163799dd
+source: d29b96f163790a41
 title: Vos autres ordinateurs
 description: Ajoutez vos autres ordinateurs pour piloter votre second depuis n’importe lequel d’entre eux, leur confier le travail de vos projets et garder une copie capable de prendre le relais.
 ---
@@ -57,7 +57,7 @@ Chaque ordinateur garde ses propres Apparence, Clavier et Panneaux.
 Les autres sections des Réglages se lisent et se changent sur l’ordinateur où vit votre second.
 
 Pour arrêter, ouvrez Réglages → **Appareils** sur cet ordinateur et appuyez sur **Quitter**.
-Pour couper un ordinateur de l’ordinateur où vit votre second, appuyez sur **Retirer** sur sa ligne.
+Pour couper un ordinateur de l’ordinateur où vit votre second, ouvrez son menu, les trois points sur sa ligne, et choisissez **Retirer**.
 Un ordinateur qui ne fait que piloter votre second a besoin d’un nouveau lien pour revenir.
 
 ## Un ordinateur qui exécute le travail {#a-computer-that-runs-work}
@@ -90,7 +90,7 @@ Chaque copie ajoute une ligne à l’Activité de la tâche, qui nomme le fichie
 
 ## Déplacer votre second {#move-your-first-mate}
 
-Sur la ligne d’un ordinateur qui exécute le travail, **Déplacer votre second ici** y déplace votre second.
+Dans le menu d’un ordinateur qui exécute le travail, les trois points sur sa ligne, **Déplacer votre second ici** y déplace votre second.
 Une liste montre d’abord tout ce qui fait obstacle.
 Les [Secrets](/fr/secrets/) restent sur l’ordinateur qu’il quitte, et vous vous reconnectez là-bas à vos abonnements.
 
@@ -100,7 +100,7 @@ Un ordinateur qui exécute le travail peut garder une copie à jour de la fiche 
 Si l’ordinateur où vit votre second est alors perdu, ou longtemps hors de portée, cet ordinateur peut [prendre le relais](#take-over).
 
 1. Sur l’ordinateur où vit votre second, ouvrez Réglages → **Appareils** et choisissez l’autre ordinateur.
-2. Appuyez sur **Garder une copie ici** sur sa ligne.
+2. Ouvrez son menu, les trois points sur sa ligne, et choisissez **Garder une copie ici**.
 
 Il prend une copie complète, puis chaque changement qu’enregistre votre second.
 Sa ligne indique où en est la copie, comme **Copie à jour** ou **Copie en rattrapage · 3 modifications**, et, tant qu’il est hors de portée, **Copie de** suivi d’une heure.
@@ -112,7 +112,7 @@ Cet ordinateur ne l’ouvre jamais tant qu’il ne prend pas le relais.
 
 - Quand il prend le relais, chaque projet est de nouveau cloné depuis l’endroit où il est hébergé.
   Un projet gardé uniquement sur l’ordinateur perdu y démarre vide.
-- **Prêt à prendre le relais**, sur sa ligne, liste ce dont cet ordinateur aurait encore besoin, comme sa propre connexion à chaque abonnement qu’utilise votre second, et à l’endroit où vos projets sont hébergés.
+- **Prêt à prendre le relais**, dans son menu, liste ce dont cet ordinateur aurait encore besoin, comme sa propre connexion à chaque abonnement qu’utilise votre second, et à l’endroit où vos projets sont hébergés.
   Un bouton pour chacun, comme **Se connecter à GitHub là-bas**, lance cette connexion depuis cette fenêtre.
 - **Y garder les Secrets**, dans la même liste, garde vos Secrets avec la copie une fois que vous confirmez sur cet ordinateur lui-même.
   Voir [Secrets](/fr/secrets/#when-your-first-mate-moves).

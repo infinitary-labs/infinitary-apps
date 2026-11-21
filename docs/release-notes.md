@@ -142,6 +142,8 @@ It refuses a change whose commits add no file under `release-notes/changes/` dec
 Editing a note another change added does not count; the change still adds its own file.
 The same step runs the part of `validate` that needs no git history over the real ledger (`ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases also fails on its own change rather than at the next alpha.
 `tests/release-notes-ledger.test.ts` runs that part again with main's unit tests.
+A branch built on a held batch's version skips that step (`docs/testing.md`, "A pushed branch"), so the batch's own run reads its note instead: `batch-checks.yml`'s `notes` job runs `node scripts/release-notes.ts batch --base <the main version the batch left>` with full history on the batch's version.
+It refuses a batch with any commit since that version, one per change, that no note or exclusion covers, as `check` counts it for the alpha, and runs `ledgerProblems` the same way, so a held batch's fix with no note of its own fails the batch before it merges.
 
 A development or end-to-end build carries a placeholder (`generate --dev`) with an empty pictures folder that never passes `verify-package`; the app reads it as notes unavailable.
 `docs/alpha.md` covers the dispatch inputs and rehearsal.

@@ -17,11 +17,14 @@ name: ci
 # A change here is a pushed task branch with no pull request of its own
 # (docs/forge.md, "Batches of your own"), so each push of a task's branch,
 # named inf/* by the naming runbook's words or fm/task-* from before, starts
-# this job, measured from the commit the branch left main at, or from the
-# newest batch version it is built on (docs/testing.md, "A pushed branch"). A pull request runs the same job on
-# its merge commit: another person's, or a task's own from before it. A batch
-# pull request skips it, since batch-pull-request.yml runs the swept batch on
-# that version.
+# this job, measured from the commit the branch left main at. A branch built
+# on a batch's version, as a held batch's repair is, skips every step after
+# finding that version and passes in about a minute: the batch's own run
+# checks it with every change beside it once it joins, the release notes
+# included (docs/testing.md, "A pushed branch"). A pull request runs the same
+# job on its merge commit: another person's, or a task's own from before it.
+# A batch pull request skips it, since batch-pull-request.yml runs the swept
+# batch on that version.
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
 # runs the same commands in verify.yml's linux-checks lane and its Linux test
 # groups, every probe included.
@@ -69,7 +72,8 @@ concurrency:
   cancel-in-progress: true
 
 # The retained job runs on every pushed task branch and pull request,
-# including release notes. Full sweeps run only on a request: a push and a
+# including release notes, and stops after its base step on a branch built
+# on a batch's version. Full sweeps run only on a request: a push and a
 # pull request name no sweep, so those jobs skip at the job boundary.
 # Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
 # tests): a stuck test or wait ends sooner, by its own cap of at most 10
@@ -91,59 +95,79 @@ jobs:
           # paths and reader steps. A pushed branch has no merge commit, so it
           # fetches every commit to find the one it left main at.
           fetch-depth: ${{ github.event_name != 'push' && 2 || 0 }}
-      - uses: ./.github/actions/pnpm
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 24
-          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       # Where the change starts, for the notes, paths, reader and critical-path
       # steps: the base parent of a pull request's merge commit, and for a
       # pushed branch the commit it left main at, so main's newer commits are
       # never read as the branch's own changes. A pushed branch built on a
       # batch's version, as a held batch's repair is, starts at the newest
-      # such version instead, so its check tests only the repair, not every
-      # change of the batch (INF-5379's plan, piece 2; docs/testing.md, "A
-      # pushed branch"). The full checkout fetches every batch branch.
+      # such version instead (INF-5379's plan, piece 2) and names it as the
+      # step's `batch` output. Every later step skips on it, so the check
+      # passes in about a minute: the batch's own run checks the branch with
+      # every change beside it once it joins, its release notes and phone
+      # contract flag included (batch-checks.yml's notes job; docs/testing.md,
+      # "A pushed branch"). The full checkout fetches every batch branch; a
+      # pull request's fetches none, so it never skips. Plain git, so it
+      # runs before anything is set up.
       - name: Find the change's base
+        id: base
         if: ${{ github.event_name != 'workflow_dispatch' }}
         env:
           FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
         run: |
-          base=$(git merge-base "$FROM" HEAD)
+          left=$(git merge-base "$FROM" HEAD)
+          base=$left
           for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
             if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
               base=$batch
             fi
           done
           echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
+          if [ "$base" != "$left" ]; then
+            echo "batch=$base" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Checked in the batch::This branch is built on the batch version $base, so the batch's own run checks it with every change beside it once it joins, and this check skips its other steps."
+          fi
+      - uses: ./.github/actions/pnpm
+        if: ${{ steps.base.outputs.batch == '' }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: ${{ steps.base.outputs.batch == '' }}
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       # A change adds its release note or exclusion and the ledger stays
       # consistent (docs/release-notes.md "The release check"). Plain Node, no
       # install, under a second, so a miss fails here instead of at the alpha.
       - name: Release notes
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/release-notes.ts change --base "$CHANGE_BASE"
       # A change that moves the contract's major or view floor is flagged
       # with the phone build the next alpha waits for (docs/testing.md, "What
       # a task branch requests"; INF-4500). Plain Node, never fails.
       - name: Phone contract flag
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/phone-contract-flag.ts --base "$CHANGE_BASE"
       # What this version runs beyond its code checks (INF-2915's plan):
       # build=false when every changed path is a test, docs, a release note
       # or the phone app; browser=true, every browser test, when one is the
-      # renderer or its browser tests. Plain Node, no install.
+      # renderer or its browser tests. Plain Node, no install. Skipped, it
+      # says neither, so the build, the browser tests and the critical path
+      # skip too.
       - name: Changed paths
         id: paths
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/pr-paths.ts --base "$CHANGE_BASE"
       - uses: ./.github/actions/node-headers
+        if: ${{ steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/electron-download
+        if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm install --frozen-lockfile
+        if: ${{ steps.base.outputs.batch == '' }}
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm typecheck
+        if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm check
+        if: ${{ steps.base.outputs.batch == '' }}
       # The adherence lint caught nothing on 372 pull request runs (INF-2915's
       # plan), so it runs on a request, as main's check does, and before each
       # push in pnpm check:changed, never on a pull request or a pushed branch.
@@ -154,9 +178,9 @@ jobs:
       # one, such as tests/run-temp-root.test.ts (the integration groups
       # install it too).
       - uses: ./.github/actions/browser-chromium
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
       - uses: ./.github/actions/linux-test-tools
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
       # Each edited test file, and the unedited unit, integration and
       # browser tests that import or read each changed file, run once here
       # (scripts/unit-reach.ts directUnitReach), so a break the crewmate's
@@ -169,7 +193,7 @@ jobs:
       # several Vitest runs one after another, each with fresh workers, so an
       # in-memory worker's memory stays inside this runner's (INF-4163).
       - name: Unit, integration and browser tests that read a changed file
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run
         timeout-minutes: 30
       # The browser layer (docs/testing.md, "The browser layer"): every

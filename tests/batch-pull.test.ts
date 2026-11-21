@@ -87,6 +87,7 @@ const passedRun: Scenario = {
     sweep: { result: "success" },
     "critical-path": { result: "success" },
     startup: { result: "success" },
+    notes: { result: "success" },
     "linux-tests": { result: "success" },
     failures: { result: "skipped" },
     "confirm-later": { result: "skipped" },
@@ -110,6 +111,7 @@ const confirmedRun: Scenario = {
     sweep: { result: "failure" },
     "critical-path": { result: "success" },
     startup: { result: "success" },
+    notes: { result: "success" },
     "linux-tests": { result: "failure" },
     failures: {
       result: "success",
@@ -322,6 +324,12 @@ describe("batch-checks.yml", () => {
     expect(
       ends({ ...confirmedRun.needs, "windows-paths": windows, windows: { result: "failure" } }),
     ).toBe(false);
+    // A held batch's repair skips the release notes check on its own branch
+    // (ci.yml), so the batch passes only with its own notes job, which no
+    // confirm of test files stands in for.
+    for (const needs of [passedRun.needs, confirmedRun.needs])
+      for (const result of ["failure", "skipped", "cancelled"])
+        expect(ends({ ...needs, notes: { result } }), result).toBe(false);
     expect(runJobNames("batch-pull-request.yml", passedRun).at(-1)).toBe(PASSED);
     expect(runJobNames("batch-pull-request.yml", confirmedRun)).toEqual(
       expect.arrayContaining([
@@ -988,6 +996,7 @@ describe("the batch's verdict and the alpha's proof, as they stood with the firs
       sweep: { result: resultOf(ended, "Merge batch · Desktop checks / ") },
       "critical-path": { result: resultOf(ended, "Merge batch · Critical-path journey / ") },
       startup: { result: resultOf(ended, "Merge batch · Linux startup / ") },
+      notes: { result: resultOf(ended, "Merge batch · Release notes ") },
       "linux-tests": {
         result: cancelled.includes(unit)
           ? "cancelled"

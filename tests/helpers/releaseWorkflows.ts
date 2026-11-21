@@ -194,6 +194,9 @@ export function ciJobs(
   // What the paths step of a pull request or a pushed branch decided
   // (scripts/pr-paths.ts); a request runs no paths step.
   paths: { build: boolean; browser: boolean } = { build: true, browser: true },
+  // The batch version the base step of a pushed branch built on one names,
+  // as a held batch's repair is; empty for every other branch.
+  batch = "",
 ): { id: string; name: string; runs: string[] }[] {
   const ci = loadCi();
   const repository = "infinitary-labs/infinitary-apps";
@@ -204,11 +207,18 @@ export function ciJobs(
   };
   const steps =
     eventName !== "workflow_dispatch"
-      ? {
-          paths: { outputs: { build: String(paths.build), browser: String(paths.browser) } },
-          "critical-path": { outcome: paths.build ? "success" : "skipped" },
-        }
-      : { paths: { outputs: {} }, "critical-path": { outcome: "skipped" } };
+      ? batch
+        ? {
+            base: { outputs: { batch } },
+            paths: { outputs: {} },
+            "critical-path": { outcome: "skipped" },
+          }
+        : {
+            base: { outputs: {} },
+            paths: { outputs: { build: String(paths.build), browser: String(paths.browser) } },
+            "critical-path": { outcome: paths.build ? "success" : "skipped" },
+          }
+      : { base: { outputs: {} }, paths: { outputs: {} }, "critical-path": { outcome: "skipped" } };
   // A request asks for the sweep through ci.yml's `sweep` input.
   const inputs = { sweep };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {

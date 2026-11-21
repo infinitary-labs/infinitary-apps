@@ -1,10 +1,12 @@
 import {
   existsSync,
   linkSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -219,7 +221,9 @@ describe("a refused launch's word to the person", () => {
     expect(touched(own)).toContain(kept);
     // Reserved at the name by its own mark, naming that folder, linked there once the folder was
     // private and marked.
-    expect(readFileSync(ownRoot, "utf8")).toBe(wordProfilesMark(kept.slice(ownRoot.length + 1)));
+    expect(readFileSync(ownRoot, "utf8")).toBe(
+      wordProfilesMark(kept.slice(ownRoot.length + 1), lstatSync(kept, { bigint: true })),
+    );
     expect(readdirSync(kept)).toEqual([WORD_PROFILES_RESERVED]);
     // Found again by a later launch, which reads the reservation and its folder and sets nothing.
     const again = answering(ownList);
@@ -234,13 +238,19 @@ describe("a refused launch's word to the person", () => {
       const folder = (await ownProfilesFolder(name, "win32", answering(ownList)))?.path ?? "";
       return { name, folder };
     };
-    const shared = await reserved();
-    const inherited = answering(ownList, (path) =>
-      path === shared.folder ? `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})` : ownList,
-    );
-    const instead = (await ownProfilesFolder(shared.name, "win32", inherited))?.path ?? "";
-    expect(instead.startsWith(`${shared.name}-2.`)).toBe(true);
-    expect(sets(inherited)).not.toContain(shared.folder);
+    // Owner-only lists that hand nothing of this account's down to what a copy makes in the folder,
+    // or only one level down, would leave its profiles the creating process's default list.
+    for (const list of [
+      `O:${user}G:${group}D:AI(A;OICI;FA;;;${user})`,
+      `O:${user}G:${group}D:PAI(A;;FA;;;${user})`,
+      `O:${user}G:${group}D:PAI(A;OICINP;FA;;;${user})`,
+    ]) {
+      const shared = await reserved();
+      const inherited = answering(ownList, (path) => (path === shared.folder ? list : ownList));
+      const instead = (await ownProfilesFolder(shared.name, "win32", inherited))?.path ?? "";
+      expect(instead.startsWith(`${shared.name}-2.`)).toBe(true);
+      expect(sets(inherited)).not.toContain(shared.folder);
+    }
     const planted = await reserved();
     const foreignMark = answering(ownList, (path) =>
       path === planted.name
@@ -261,6 +271,21 @@ describe("a refused launch's word to the person", () => {
     const looked = answering(ownList);
     expect((await ownProfilesFolder(copied.name, "win32", looked))?.path).toBe(copied.folder);
     expect(touched(looked)).not.toContain(`${copied.name}.0-copy`);
+    // A folder put back at the reserved folder's path holding the same mark is not the folder the
+    // mark was written in: it is not read, and the next name is reserved.
+    const restored = await reserved();
+    renameSync(restored.folder, `${restored.folder}-was`);
+    mkdirSync(restored.folder);
+    linkSync(
+      join(`${restored.folder}-was`, WORD_PROFILES_RESERVED),
+      join(restored.folder, WORD_PROFILES_RESERVED),
+    );
+    writeFileSync(join(restored.folder, "theirs"), "");
+    const putBack = answering(ownList);
+    const beside = (await ownProfilesFolder(restored.name, "win32", putBack))?.path ?? "";
+    expect(beside.startsWith(`${restored.name}-2.`)).toBe(true);
+    expect(touched(putBack)).not.toContain(restored.folder);
+    expect(readdirSync(restored.folder).sort()).toEqual([WORD_PROFILES_RESERVED, "theirs"]);
     const swapped = await reserved();
     const swapping = answering(ownList, (path) => {
       if (path === swapped.folder) {

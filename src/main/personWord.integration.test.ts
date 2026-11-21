@@ -10,6 +10,7 @@ import {
   readFileSync,
   readlinkSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -148,16 +149,19 @@ const profilesFolder = () =>
   join(realpathSync(scratchDir("person-word-profiles-")), "word-profiles");
 
 /** A mark as the app writes one, naming a folder no test made. */
-const someMark = () => wordProfilesMark(randomUUID());
+const someMark = () => wordProfilesMark(randomUUID(), { dev: 1n, ino: 1n, birthtimeNs: 0n });
 
 /**
  * The profiles' folder a name reserves: the folder beside it its mark names, whose own mark is the
  * very file at the name, by device and number read whole.
  */
 function keptAt(root: string): string {
-  const id = wordProfilesMarked(readFileSync(root, "utf8"));
-  if (id === null) throw new Error("no profiles' folder is reserved there");
-  const folder = `${root}.${id}`;
+  const said = wordProfilesMarked(readFileSync(root, "utf8"));
+  if (said === null) throw new Error("no profiles' folder is reserved there");
+  const folder = `${root}.${said.id}`;
+  const made = lstatSync(folder, { bigint: true });
+  if (made.dev !== said.dev || made.ino !== said.ino || made.birthtimeNs !== said.birthtimeNs)
+    throw new Error("the mark names another folder than the one at its path");
   const mark = lstatSync(root, { bigint: true });
   const inside = lstatSync(join(folder, WORD_PROFILES_RESERVED), { bigint: true });
   if (inside.dev !== mark.dev || inside.ino !== mark.ino)
@@ -354,7 +358,7 @@ describe("a refused launch's copy that shows a word", () => {
       const found = profilesFolder();
       const said = someMark();
       writeFileSync(found, said, { mode: 0o600 });
-      const beside = `${found}.${wordProfilesMarked(said)}`;
+      const beside = `${found}.${wordProfilesMarked(said)?.id}`;
       if (copied) {
         mkdirSync(beside, { mode: 0o700 });
         writeFileSync(join(beside, WORD_PROFILES_RESERVED), said);
@@ -367,6 +371,40 @@ describe("a refused launch's copy that shows a word", () => {
       expect(readdirSync(keptAt(`${found}-2`))).toEqual([WORD_PROFILES_RESERVED]);
     }
   });
+
+  it.skipIf(process.platform === "win32")(
+    "leaves a reservation whose folder was put back at its path, or whose mark others may write",
+    async () => {
+      const marks = scratchDir("person-word-marks-");
+      const ask = (root: string) =>
+        askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles: root });
+      // A folder put back at the reserved folder's path holding the same mark, as a restore that
+      // keeps hard links would leave it: not the folder the mark was written in, so it is neither
+      // used nor read for ended profiles, and the next name is reserved.
+      const restored = profilesFolder();
+      expect(await ask(restored)).toBe(0);
+      const kept = keptAt(restored);
+      renameSync(kept, `${kept}-was`);
+      mkdirSync(kept, { mode: 0o700 });
+      linkSync(join(`${kept}-was`, WORD_PROFILES_RESERVED), join(kept, WORD_PROFILES_RESERVED));
+      mkdirSync(join(kept, "infinitary-word-theirs"));
+      writeFileSync(join(kept, "infinitary-word-theirs", WORD_OWNER_FILE), `${await endedPid()}\n`);
+      expect(await ask(restored)).toBe(0);
+      expect(readdirSync(kept).sort()).toEqual([WORD_PROFILES_RESERVED, "infinitary-word-theirs"]);
+      expect(readdirSync(join(kept, "infinitary-word-theirs"))).toEqual([WORD_OWNER_FILE]);
+      expect(readdirSync(keptAt(`${restored}-2`))).toEqual([WORD_PROFILES_RESERVED]);
+      // A mark another account may write through its name is no longer one only this account could
+      // have written: it is left as it is, and the next name is reserved.
+      const writable = profilesFolder();
+      expect(await ask(writable)).toBe(0);
+      const folder = keptAt(writable);
+      chmodSync(writable, 0o622);
+      expect(await ask(writable)).toBe(0);
+      expect(statSync(writable).mode & 0o777).toBe(0o622);
+      expect(readdirSync(folder)).toEqual([WORD_PROFILES_RESERVED]);
+      expect(readdirSync(keptAt(`${writable}-2`))).toEqual([WORD_PROFILES_RESERVED]);
+    },
+  );
 
   it.runIf(process.platform === "darwin")(
     "leaves a Mac reservation whose folder or mark an access list opens to others",
@@ -433,7 +471,10 @@ describe("a refused launch's copy that shows a word", () => {
       const ended = `${root}.${id}`;
       mkdirSync(ended, { mode: 0o700 });
       if (left !== null)
-        writeFileSync(join(ended, WORD_PROFILES_RESERVED), wordProfilesMark(id).slice(0, -2));
+        writeFileSync(
+          join(ended, WORD_PROFILES_RESERVED),
+          wordProfilesMark(id, lstatSync(ended, { bigint: true })).slice(0, -2),
+        );
       const names = readdirSync(ended);
       const before = statSync(ended);
       const marks = scratchDir("person-word-marks-");

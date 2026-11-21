@@ -311,9 +311,11 @@ async function keepProfilesFolder(
  * What `name` holds: nothing (`free`), this app's whole reservation, read without changing it, and
  * the folder it reserves, or anything else (`not-ours`). A reservation is a plain file only this
  * account could have written saying the mark whole (`markedHere`), which names the one folder it
- * marks (`name.<id>`, `wordProfilesMarked`); that folder is a real folder, not a link, this
+ * marks (`name.<id>`, `wordProfilesMarked`) and which folder that was when it was written; that
+ * folder is a real folder, not a link, still that very folder by device, number and birth, this
  * account's alone (`aloneNow`), and holds that very file - by device and number - as its mark. No
- * other folder is looked at, so a copy of the folder that kept its link is never taken for it, and
+ * other folder is looked at, so neither a copy of the folder that kept its link nor a folder put
+ * back at its name since is ever taken for it, and
  * the name, the folder and its mark are all read again once all of that is read.
  */
 async function reservedAt(
@@ -326,11 +328,17 @@ async function reservedAt(
   if (!named.isFile()) return "not-ours";
   const mark = await markedHere(name, platform, access);
   if (mark === null) return "not-ours";
-  const path = `${name}.${mark.id}`;
+  const path = `${name}.${mark.said.id}`;
   const markPath = join(path, WORD_PROFILES_RESERVED);
   const found = entryOf(path);
   const inside = entryOf(markPath);
-  if (found === null || !found.isDirectory() || inside === null || !sameEntry(inside, mark.file))
+  if (
+    found === null ||
+    !found.isDirectory() ||
+    !sameMade(found, mark.said) ||
+    inside === null ||
+    !sameEntry(inside, mark.file)
+  )
     return "not-ours";
   if (!(await aloneNow(path, found, platform, access))) return "not-ours";
   const still = entryOf(path);
@@ -349,7 +357,8 @@ async function reservedAt(
 /**
  * Makes a profiles' folder under a name of its own beside `name` (`name.<id>`), this account's
  * alone - made with no access for anyone else, or on Windows given an owner-only access list of its
- * own (`keepOwnerOnly`) - and only then marked whole with its own name (`wordProfilesMark`); null
+ * own (`keepOwnerOnly`) - and only then marked whole with its own name and which folder it is
+ * (`wordProfilesMark`); null
  * where it cannot be, the folder then removed again only while still the same, empty folder
  * (`dropIfEmpty`). Its mark is made new, never one already there, and is known by the file it
  * opened, so a mark that could not be finished is removed only while it is still that file.
@@ -377,7 +386,7 @@ async function makeProfilesFolder(
   try {
     fd = openSync(markPath, "wx", 0o600);
     mark = fstatSync(fd, { bigint: true });
-    const text = Buffer.from(wordProfilesMark(id));
+    const text = Buffer.from(wordProfilesMark(id, folder.made));
     for (let wrote = 0; wrote < text.length; )
       wrote += writeSync(fd, text, wrote, text.length - wrote);
     closeSync(fd);
@@ -423,7 +432,9 @@ function dropIfEmpty(path: string, made: Entry): void {
 /**
  * Whether a folder already there is this account's alone, read without changing it: away from
  * Windows by its owner and modes, and on a Mac with no access list entry allowing anything
- * (`macAllows`), which the modes do not show.
+ * (`macAllows`), which the modes do not show; on Windows by an owner-only access list of its own
+ * that also hands this account's own access down to every folder and file made in it at any depth
+ * (`handsDownToOthers`), so what a copy makes there never takes the creating process's default list.
  */
 async function aloneNow(
   path: string,
@@ -439,13 +450,17 @@ async function aloneNow(
   if (entryOf(join(path, UNFINISHED_MARK)) !== null) return false;
   const answer = await access({ set: [], read: [path] });
   const sddl = answer.read[0]?.sddl;
-  return !!sddl && ownerOnlyVerdict(readAccessList(sddl), answer.user) === "owner-only";
+  if (!sddl) return false;
+  const list = readAccessList(sddl);
+  return (
+    ownerOnlyVerdict(list, answer.user) === "owner-only" && !handsDownToOthers(list, answer.user)
+  );
 }
 
 /**
  * The file at `path` and the folder it marks where it holds a mark whole (`wordProfilesMarked`),
  * read to its end (`readSmallFile`), and only this account could have written it: away from Windows
- * one it owns, on a Mac with no access list entry allowing anything (`macAllows`), on Windows one
+ * one it owns that no other account may write, on a Mac with no access list entry allowing anything (`macAllows`), on Windows one
  * whose own access list, read whole without changing it, lets no other ordinary account in
  * (`onlyOwnerReaches`); null otherwise.
  */
@@ -453,18 +468,19 @@ async function markedHere(
   path: string,
   platform: NodeJS.Platform,
   access: AccessRun,
-): Promise<{ file: Entry; id: string } | null> {
+): Promise<{ file: Entry; said: NonNullable<ReturnType<typeof wordProfilesMarked>> } | null> {
   const mark = readSmallFile(path, WORD_PROFILES_MARK_BYTES);
-  const id = mark === null ? null : wordProfilesMarked(mark.text);
-  if (mark === null || id === null) return null;
+  const said = mark === null ? null : wordProfilesMarked(mark.text);
+  if (mark === null || said === null) return null;
   if (platform !== "win32") {
-    if (mark.file.uid !== BigInt(process.getuid?.() ?? -1)) return null;
-    return platform === "darwin" && (await macAllows([path])) ? null : { file: mark.file, id };
+    if (mark.file.uid !== BigInt(process.getuid?.() ?? -1) || (mark.file.mode & 0o022n) !== 0n)
+      return null;
+    return platform === "darwin" && (await macAllows([path])) ? null : { file: mark.file, said };
   }
   const answer = await access({ set: [], read: [path] });
   const sddl = answer.read[0]?.sddl;
   return sddl && onlyOwnerReaches(readAccessList(sddl), answer.user)
-    ? { file: mark.file, id }
+    ? { file: mark.file, said }
     : null;
 }
 
@@ -507,7 +523,8 @@ function removeIfSame(path: string, made: Entry): void {
 }
 
 /** A folder this launch made or read, still the same: its device, number and birth. */
-const sameMade = (a: Entry, b: Entry) => sameEntry(a, b) && a.birthtimeNs === b.birthtimeNs;
+const sameMade = (a: Entry, b: { dev: bigint; ino: bigint; birthtimeNs: bigint }) =>
+  sameEntry(a, b) && a.birthtimeNs === b.birthtimeNs;
 
 /** Which entry a path is, by device and number, read whole: the same only while nothing replaced it. */
 const sameEntry = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) =>

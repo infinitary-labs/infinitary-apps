@@ -145,6 +145,19 @@ describe("reading a folder's access list", () => {
     expect(ownerOnlyVerdict(readAccessList(conditional), USER)).toBe("unread");
     // A drive with no list is read whole: it has none, which is a different answer.
     expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
+    // No access list section at all, or the no-list word where the list is more than it, is not
+    // Windows saying the folder has no list.
+    expect(ownerOnlyVerdict(readAccessList(`O:${USER}G:${GROUP}`), USER)).toBe("unread");
+    expect(
+      ownerOnlyVerdict(
+        readAccessList(`O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(A;OICI;FA;;;${OTHER})`),
+        USER,
+      ),
+    ).toBe("unread");
+    // The word only in what follows the list leaves the list itself to be judged.
+    const audited = `${IN_PROFILE}S:(AU;SA;FA;;;WD)`;
+    expect(readAccessList(audited).entries).toHaveLength(3);
+    expect(readAccessList(`${audited}D:NO_ACCESS_CONTROL`).entries).toHaveLength(3);
   });
 
   it("finds a folder that hands another account access to what is made in it", () => {
@@ -158,6 +171,17 @@ describe("reading a folder's access list", () => {
     expect(handsDownToOthers(readAccessList(nothingDown), USER)).toBe(true);
     const filesOnly = `O:${USER}G:${GROUP}D:P(A;OI;FA;;;${USER})`;
     expect(handsDownToOthers(readAccessList(filesOnly), USER)).toBe(true);
+    // Some entry passing to new folders is not this account's own passing to every folder and file
+    // made at any depth: another's deny, folders only, or one level only.
+    for (const flags of ["CI", "OICINP"])
+      expect(
+        handsDownToOthers(readAccessList(`O:${USER}G:${GROUP}D:P(A;${flags};FA;;;${USER})`), USER),
+      ).toBe(true);
+    const denyDown = `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;;FA;;;${USER})`;
+    expect(handsDownToOthers(readAccessList(denyDown), USER)).toBe(true);
+    // The list the app writes hands this account's own down everywhere.
+    const written = `O:${USER}G:${GROUP}${ownerOnlyAccessList(readAccessList(AT_DRIVE_TOP), USER)}`;
+    expect(handsDownToOthers(readAccessList(written), USER)).toBe(false);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {
@@ -263,23 +287,30 @@ describe("the data folder on Windows", () => {
   });
 
   it("changes nothing on a data folder whose list it could not read whole, keeping its denies", async () => {
-    // A deny another tool set, then a conditional entry this reading does not take apart.
-    const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
-    const temp = join(scratchDir("fm-owner-only-"), "Temp");
-    await mkdir(dataDir, { recursive: true });
-    const partial = `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(XA;;FA;;;${USER};(x))`;
-    const pc = windows({ [dataDir]: partial, [temp]: IN_PROFILE });
-    const privacy = await keepDataFolderPrivate({
-      platform: "win32",
-      dataDir,
-      env: {},
-      tempDir: temp,
-      run: pc.run,
-    });
-    expect(pc.asks.every((ask) => ask.set.length === 0)).toBe(true);
-    expect(pc.folders[dataDir]).toBe(partial);
-    expect(await readdir(dataDir)).toEqual([]);
-    expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNCHECKED_FOLDER_TITLE);
+    for (const partial of [
+      // A deny another tool set, then a conditional entry this reading does not take apart.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(XA;;FA;;;${USER};(x))`,
+      // An owner read, and no access list section at all.
+      `O:${USER}G:${GROUP}`,
+      // The no-list word, with entries after it: not Windows saying the folder has no list.
+      `O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(D;OICI;WD;;;${OTHER})`,
+    ]) {
+      const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
+      const temp = join(scratchDir("fm-owner-only-"), "Temp");
+      await mkdir(dataDir, { recursive: true });
+      const pc = windows({ [dataDir]: partial, [temp]: IN_PROFILE });
+      const privacy = await keepDataFolderPrivate({
+        platform: "win32",
+        dataDir,
+        env: {},
+        tempDir: temp,
+        run: pc.run,
+      });
+      expect(pc.asks.every((ask) => ask.set.length === 0)).toBe(true);
+      expect(pc.folders[dataDir]).toBe(partial);
+      expect(await readdir(dataDir)).toEqual([]);
+      expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNCHECKED_FOLDER_TITLE);
+    }
   });
 
   it("says Windows could not check the folder when it cannot be asked, or could not finish", async () => {

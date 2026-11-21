@@ -625,7 +625,10 @@ describe("the one-time move of a data folder", () => {
     const folder = `${name}.${id}`;
     const mark = join(folder, WORD_PROFILES_RESERVED);
     mkdirSync(folder, { mode: 0o700 });
-    writeFileSync(mark, wordProfilesMark(id), { flag: "wx", mode: 0o600 });
+    writeFileSync(mark, wordProfilesMark(id, lstatSync(folder, { bigint: true })), {
+      flag: "wx",
+      mode: 0o600,
+    });
     linkSync(mark, name);
     const profile = join(folder, "infinitary-word-live");
     const temp = join(profile, "temp");
@@ -643,7 +646,15 @@ describe("the one-time move of a data folder", () => {
     return {
       stillThere: () => {
         // The later lookup: the name's mark names the same folder, whose own mark is that file.
-        expect(wordProfilesMarked(readFileSync(name, "utf8"))).toBe(id);
+        // The name's mark names the same folder, still that very folder at its path.
+        const said = wordProfilesMarked(readFileSync(name, "utf8"));
+        expect(said?.id).toBe(id);
+        const made = lstatSync(folder, { bigint: true });
+        expect([said?.dev, said?.ino, said?.birthtimeNs]).toEqual([
+          made.dev,
+          made.ino,
+          made.birthtimeNs,
+        ]);
         expect(identity(join(`${name}.${id}`, WORD_PROFILES_RESERVED))).toEqual(identity(name));
         expect([name, folder, profile, temp].map(identity)).toEqual(before);
         const now = statSync(record, { bigint: true });

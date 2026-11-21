@@ -84,22 +84,31 @@ function ownerKeeps(owner: string | null, user: string): boolean {
 }
 
 /**
- * Reads a security descriptor string's owner (`O:`) and access list (`D:`). A list not read to its
- * end - one holding an entry this reading does not take apart, as a conditional entry with its own
- * brackets - or a descriptor with no owner reads as not whole (`whole`), which every judgment
- * refuses and nothing repairs, never as the entries before it nor as a folder with no list.
+ * A security descriptor string as Windows writes one, taken apart in order: its owner (`O:`), its
+ * group (`G:`), its access list (`D:`) - either `NO_ACCESS_CONTROL`, the one way Windows says a
+ * folder has no list, or its flags and entries - and anything of its audit list (`S:`) after.
+ */
+const DESCRIPTOR =
+  /^O:([^:()]+?)(?:G:[^:()]+?)?D:(?:(NO_ACCESS_CONTROL)|([A-Z]*)((?:\([^()]*\))*))(?:S:.*)?$/s;
+
+/**
+ * Reads a security descriptor string's owner (`O:`) and access list (`D:`), taken apart in order
+ * (`DESCRIPTOR`). Only the list's own `NO_ACCESS_CONTROL` says a folder has no list. Anything
+ * else - no owner, no access list at all, a list not read to its end (one holding an entry this
+ * reading does not take apart, as a conditional entry with its own brackets), or text out of that
+ * order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
+ * the entries it did read nor as a folder with no list.
  */
 export function readAccessList(sddl: string): AccessList {
-  const owner = /O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
-  const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
-  const whole = owner !== null;
-  if (!dacl || /D:NO_ACCESS_CONTROL/.test(sddl))
-    return { owner, entries: null, protected: false, whole };
-  const rest = sddl.slice(dacl.index + dacl[0].length);
-  if (rest !== "" && !rest.startsWith("S:"))
+  const read = DESCRIPTOR.exec(sddl);
+  if (!read) {
+    const owner = /^O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
     return { owner, entries: null, protected: false, whole: false };
-  const flags = dacl[1] ?? "";
-  const entries = [...(dacl[2] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
+  }
+  const owner = read[1] ?? null;
+  if (read[2]) return { owner, entries: null, protected: false, whole: true };
+  const flags = read[3] ?? "";
+  const entries = [...(read[4] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
     const fields = (match[1] ?? "").split(";");
     return {
       type: fields[0] ?? "",
@@ -109,7 +118,7 @@ export function readAccessList(sddl: string): AccessList {
       text: match[0],
     };
   });
-  return { owner, entries, protected: flags.includes("P"), whole };
+  return { owner, entries, protected: flags.includes("P"), whole: true };
 }
 
 /** An entry that lets an account in: allow, object allow and the callback forms of them. */
@@ -156,16 +165,26 @@ export function othersCanChange(list: AccessList, user: string): boolean {
 }
 
 /**
- * Whether a folder made in this one could be reached by another ordinary account before its own
- * list is set: an entry that passes to new folders or files (`CI`, `OI`) allowing an account
- * besides this one, Windows and the administrators; no entry at all that passes to new folders,
- * where Windows gives a new folder the creating process's default list instead of one this list
- * decides; no list, or one not read whole. A folder made where only this account's and those
- * accounts' entries are handed down is this account's from its making.
+ * Whether a folder or file made in this one, or anywhere below it, could be reached by another
+ * ordinary account or take a list this one does not decide: an entry that passes to new folders or
+ * files (`CI`, `OI`) allowing an account besides this one, Windows and the administrators; no plain
+ * allow entry for this account that passes to both new folders and new files at every depth (`OI`
+ * and `CI`, without `NP`), where Windows could give what is made the creating process's default
+ * list instead; no list, or one not read whole. What is made where only this account's and those
+ * accounts' entries are handed down, this account's own among them, is this account's from its
+ * making.
  */
 export function handsDownToOthers(list: AccessList, user: string): boolean {
   if (list.entries === null || !list.whole || !ownerKeeps(list.owner, user)) return true;
-  if (!list.entries.some((entry) => entry.flags.includes("CI"))) return true;
+  const handsOwnDown = list.entries.some(
+    (entry) =>
+      entry.type === "A" &&
+      entry.flags.includes("OI") &&
+      entry.flags.includes("CI") &&
+      !entry.flags.includes("NP") &&
+      accountNumber(entry.account) === user,
+  );
+  if (!handsOwnDown) return true;
   return list.entries.some(
     (entry) =>
       allows(entry) &&

@@ -1,5 +1,5 @@
 ---
-source: 7c4d9925493d8861
+source: 023b6be0be6240d0
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -48,6 +48,9 @@ Para GitHub, escribes un código en la página de GitHub en tu navegador.
 Para GitLab, puedes iniciar sesión en tu navegador o pegar una clave, en gitlab.com o en tu propio servidor de GitLab.
 Para Bitbucket, creas un token de API en tu cuenta de Atlassian y lo pegas, para proyectos en bitbucket.org.
 El formulario de la clave nombra los permisos que debes marcar en la página de Atlassian.
+Para tu propio servidor de Bitbucket Data Center, versión 8.19 o posterior, escribes su dirección y pegas un token de acceso HTTP con los permisos Project read y Repository write.
+Los cambios de un proyecto de Data Center se ofrecen como solicitudes de incorporación de cambios, y la fusión se hace solo en la versión que aprobaste: si alguien inserta cambios mientras tanto, no se fusiona nada y la tarea lo dice.
+En Data Center todavía no están las solicitudes de incorporación de cambios por lotes, las bifurcaciones ni el acceso propio de la tripulación al servidor.
 Tus proyectos de Bitbucket se enumeran a partir de los espacios de trabajo a los que perteneces; con muchos, puede que algunos no se hayan revisado, y la lista lo dice.
 Los cambios de un proyecto de Bitbucket se ofrecen como solicitudes de incorporación de cambios, igual que en GitHub y GitLab; un proyecto que agregaste antes de esto funciona igual a partir de su próxima tarea.
 La descripción de una solicitud de incorporación de cambios de Bitbucket lleva la historia como texto, y sus imágenes se quedan en la tarjeta.

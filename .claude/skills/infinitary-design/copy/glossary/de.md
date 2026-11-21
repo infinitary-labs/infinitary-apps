@@ -120,6 +120,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Reasoning | Denkaufwand | |
 | rebase merges, merge commits (the host's settings) | Rebase-Merges, Merge-Commits | Named only as the settings where the project lives, as GitHub's German docs say them; the app's own action stays "auf den neuesten Stand bringen". |
 | record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
+| relay (Infinitary's push relay) | Relay von Infinitary | Neuter ("das Relay"); it passes sealed notifications and notes it cannot read; a sealed note is "versiegelte Nachricht". |
 | Remove (a device) | Entfernen | |
 | report | Bericht, berichten | |
 | repository (one of a project's) | Repository | Neuter, plural Repositorys; "Ein Repository hinzufügen", "2 Repositorys". Names one of a project's repositories; what work belongs to stays Projekt. |

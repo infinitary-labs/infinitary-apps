@@ -122,6 +122,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | rebase merges, merge commits (the host's settings) | 리베이스 병합, 병합 커밋 | Named only as the settings where the project lives; the app's own action stays 최신 상태로 맞추다 |
 | rebase, conflict | (not used) | 최신 상태로 맞추다 and 겹치다 instead |
 | record (a Usage record) | 기록 | "{priced} of {records} records priced" is 기록 {records}개 중 {priced}개에 가격 있음 |
+| relay (Infinitary's push relay) | Infinitary 중계 서버 | It passes sealed notifications and notes it cannot read; a sealed note is 봉인된 메모. |
 | release / released | 릴리스 / 릴리스됨 | |
 | remote, origin, upstream | (not used) | 프로젝트가 있는 곳 instead |
 | Remove (a device) | 제거 | |

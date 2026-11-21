@@ -1,5 +1,5 @@
 ---
-source: 4b256578ba14e5e2
+source: a8120adef7569dc8
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -30,6 +30,17 @@ Wenn die Kamera nicht erlaubt ist, füg stattdessen den Link ein.
 
 Dein Telefon und dein Computer müssen im selben Netzwerk sein: im selben WLAN oder, wenn du unterwegs bist, im selben privaten Netzwerk.
 Verbinde dich nur mit deinem eigenen Computer.
+
+## Mehr als ein Computer {#more-than-one-computer}
+
+Dein Telefon kann mehr als einen Computer behalten, etwa einen zu Hause und einen bei der Arbeit, und zeigt jeweils einen.
+Um einen weiteren hinzuzufügen, tipp rechts in der oberen Leiste des Telefons auf die Computer-Taste und wähl **Weiteren Computer hinzufügen**, dann scann seinen Code, füg seinen Link ein oder verbinde dich über seine Adresse.
+Der Computer, den du gerade angezeigt hast, bleibt behalten.
+
+Wenn du mehr als einen behältst, nennt die Computer-Taste den angezeigten Computer.
+Ihr Blatt listet deine anderen Computer auf und markiert jeden, der von deinem jetzigen Ort aus antwortet, etwa wenn dein Telefon im Netzwerk oder im privaten Netzwerk dieses Computers ist.
+Tipp auf einen oder drück mit einer Tastatur Return darauf, um ihn anzuzeigen.
+Das Telefon wechselt nie von selbst: Es bleibt bei deiner Wahl, bis du einen anderen wählst.
 
 ## Was es zeigt {#what-it-shows}
 
@@ -74,12 +85,16 @@ Siehe [Infinitary aktualisieren und entfernen](/de/update-and-remove/#your-other
 Das Telefon braucht deinen Computer wach und mit geöffnetem Infinitary.
 Wenn es ihn nicht erreicht, sagt es: „Dein Computer ist außer Reichweite. Prüfe, ob Infinitary geöffnet ist und beide Geräte im selben Netzwerk sind.“
 
-Das Telefon meldet dir eine neue Karte nur, solange die App geöffnet ist.
+Mit eingeschalteten Mitteilungen zeigt dein Telefon für jede neue Karte eine Mitteilung, auch wenn Infinitary dort geschlossen ist.
+Wenn du mehr als einen Computer behältst, sendet jeder seine eigenen, und die Mitteilung nennt den Computer, von dem sie kommt; tippst du darauf, zeigt das Telefon diesen Computer und öffnet die Karte.
+Jeder Computer sendet sie weiter, während du einen anderen anzeigst: Dein Telefon hinterlässt ihm über das Relay von Infinitary eine versiegelte Nachricht, sobald seine Mitteilungsberechtigung erneuert wird, und nur dieser Computer kann sie lesen.
 
 ## Verlassen oder entfernen {#leave-or-remove}
 
 Um deinen Computer nicht mehr anzuzeigen, tipp rechts in der oberen Leiste des Telefons auf die Computer-Taste und wähl **Verlassen** mit dem Namen deines Computers.
-Das Telefon vergisst den Computer.
+Das Telefon vergisst diesen Computer und seine Mitteilungen und hinterlässt ihm eine versiegelte Nachricht, damit er innerhalb eines Tages aufhört, sie zu senden, auch wenn er außer Reichweite ist.
+Wenn er außer Reichweite ist, macht **Vergessen** dasselbe nur auf dem Telefon.
+Deine anderen behaltenen Computer bleiben: Der zuletzt angezeigte erscheint als Nächstes, und wenn keiner übrig ist, begrüßt dich das Telefon wie beim ersten Mal.
 Auf deinem Computer trennt **Entfernen** im Menü des Telefons unter Einstellungen → **Geräte**, den drei Punkten in seiner Zeile, es sofort.
 Um dich erneut zu verbinden, erstelle einen neuen Link.
 

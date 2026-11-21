@@ -28,6 +28,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | built in place | feito no local | |
 | captain | capitão | The usual word a ship's crew uses; masculine default form, see Register; lowercase in the middle of a sentence, also as a form of address. |
 | card | cartão | |
+| Chat (card button) | Chat | The button is shown in English in every language; pages name it as shown. |
 | claim (a recorded relationship) | afirmação | "Afirmação registrada". |
 | clone | clonar | "clonado", never "copiado". |
 | command search | busca de comandos | |
@@ -40,6 +41,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |
 | credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | tripulação | |
+| crew's browser (a task's own browser) | navegador da tripulação | |
 | crewmate | tripulante | Masculine by default ("o tripulante"). |
 | custom API | API personalizada | Feminine: "uma API personalizada". |
 | decision record | registro de decisões | What Contribution sends; "anonimizados" for redacted. |
@@ -85,12 +87,14 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | out of reach | fora de alcance | |
 | panel | painel | |
 | passcode (iOS) | código | iOS says "Face ID e Código". |
+| personal context (Knowledge) | contexto pessoal | |
 | phone | celular | The Brazilian everyday word. |
 | picture | imagem | |
 | plan | plano | |
 | PR #N | PR #N | Stays as it is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simples, Dificuldade | How hard the task is, never a reasoning word. |
 | preset (keyboard) | predefinição | As in Apple's Brazilian Portuguese. |
+| private sites; signed-in sites | sites privados; sites com login | Settings → Secrets and the browser page use the same words. |
 | project | projeto | |
 | prompt (an automation's) | pedido | What the first mate is told on a schedule, as in "Pedido da tarefa". |
 | provider | provedor | |
@@ -106,6 +110,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Reasoning | Raciocínio | |
 | rebase merges, merge commits (the host's settings) | mesclagens com rebase, commits de mesclagem | Named only as the settings where the project lives, as GitHub's Portuguese docs say them; the app's own action stays "atualizar". |
 | released (a task's close) | publicada | Closed through an outside release process. |
+| Remote Login (macOS's own name) | Login Remoto | macOS's own Brazilian Portuguese name in Sharing. |
 | remote, origin (avoided) | onde o projeto fica | |
 | Remove / Leave (a device) | Remover / Sair | |
 | repo (avoided) | projeto | |
@@ -131,7 +136,9 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | stop | parar | |
 | story (a change's) | história | |
 | subscription | assinatura | |
+| switch (a setting's on/off control) | botão | Never "chave", which already means a key. |
 | tab | aba | |
+| Take control / Return control (browser) | Assumir o controle / Devolver o controle | Matches the command "Assumir ou devolver o controle do navegador". |
 | task | tarefa | Feminine, so feed lines agree: "Iniciada", "Concluída", "Mesclada". |
 | task board / its lanes | quadro de tarefas / Aguardando você, Backlog, Na fila, Trabalhando, Concluídas · 7 d | |
 | Text size; Text Size, Control Center (iOS's own names) | Tamanho do texto; Tamanho do Texto, Central de Controle | iOS's own Portuguese names for the control. |

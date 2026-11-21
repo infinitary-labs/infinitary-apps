@@ -183,7 +183,7 @@ A view older than major 16 whose hello does not list the change is sent each as 
 
 An open card's unsent draft is live too (`card-drafts`, `docs/card-authoring.md` "Unsent picks follow you"): each change the home took goes on `inf:cards:draft` as a `live` frame, the card's whole draft.
 A window reads every draft again at each welcome (`inf:cards:drafts`), so a frame it missed while out of reach leaves nothing behind.
-A device whose hello does not list the change, a phone among them, is sent none.
+A device whose hello does not list the change is sent none; the phone lists it (`docs/ios.md`, "Unsent picks on the phone").
 
 ## Closing
 

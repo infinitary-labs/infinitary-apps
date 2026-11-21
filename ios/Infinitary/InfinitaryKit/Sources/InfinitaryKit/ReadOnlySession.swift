@@ -70,7 +70,10 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var board: PhoneBoard?
     public private(set) var lastTurn: PhoneLastTurn?
     /// INF-2553: the home's own snapshots, never edited; the shown values above are these with `intents` folded over.
-    @ObservationIgnored private var syncedCards: [PhoneCard] = []
+    @ObservationIgnored private var syncedCards: [PhoneCard] = [] {
+        // INF-5445 piece 2: a card or opening the phone did not hold before may have a draft it never read.
+        didSet { if cardDrafts.cards(syncedCards) { readDrafts() } }
+    }
     @ObservationIgnored private var syncedThreads: [String: PhoneJSON] = [:]
     @ObservationIgnored private var syncedBoard: PhoneBoard?
     @ObservationIgnored private var syncedTurn: PhoneLastTurn?
@@ -129,6 +132,11 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The home reads a skipped question's answer marked skipped (`card-answer-skipped`, INF-4425); one that does not reads
     /// answers strictly, so a click and a reply leave the mark out there.
     public private(set) var homeReadsSkips = false
+    /// INF-5445 piece 2: each open card's unsent picks, the words in its field and its queued notes, which follow the
+    /// captain between the phone and every other screen through a computer whose welcome lists `card-drafts`
+    /// (docs/ios.md, "Unsent picks on the phone"); a computer without it leaves them on this phone, in memory, as before.
+    @ObservationIgnored public private(set) var cardDrafts: PhoneCardDrafts!
+    @ObservationIgnored private var homeKeepsDrafts = false
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
@@ -713,7 +721,24 @@ public struct PhoneNotice: Equatable, Sendable {
         lastTurn = PhoneIntentFold.lastTurn(syncedTurn, ledger.intents)
     }
 
-    public init(mac: JoinedMac, phone: PhoneIdentity) { self.mac = mac; self.phone = phone }
+    public init(mac: JoinedMac, phone: PhoneIdentity) {
+        self.mac = mac; self.phone = phone
+        cardDrafts = PhoneCardDrafts(
+            send: { [weak self] cardID, change in
+                guard let self else { throw PhoneError.unavailable }
+                return try await self.ask(.draft, [.string(cardID), change])
+            },
+            canSend: { [weak self] in self?.homeKeepsDrafts == true && self?.canChange == true })
+    }
+
+    /// Reads every open card's draft, once the cards are read at each welcome and whenever a card or opening arrives.
+    private func readDrafts() {
+        guard homeKeepsDrafts, contact == "in-reach" else { return }
+        Task { [weak self] in
+            guard let value = try? await self?.ask(.drafts, []), let self, self.homeKeepsDrafts else { return }
+            self.cardDrafts.welcome(value.list.compactMap(PhoneCardDraft.init))
+        }
+    }
 
     /// INF-2668: the captain's patience, two missed heartbeats. In reach may stay this long on a quiet connection.
     nonisolated static let patience: Duration = .seconds(20)
@@ -1037,7 +1062,7 @@ public struct PhoneNotice: Equatable, Sendable {
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"],
             "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
-                        PhoneContract.cardAnswerSkipped]]
+                        PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         // Its own version, as Settings shows it, which the computer's Devices lists.
         if let version = PhoneAppVersion.forHello(Bundle.main.infoDictionary) { hello["appVersion"] = version }
@@ -1165,6 +1190,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesSignInReturn = folded || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
             homeLeavesClosed = folded || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
             homeReadsSkips = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnswerSkipped)
+            homeKeepsDrafts = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardDrafts)
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
@@ -1351,6 +1377,11 @@ public struct PhoneNotice: Equatable, Sendable {
             markReady(channel)
             if dirty.remove(channel) != nil { try await refresh(channel, on: socket) }
         case "live":
+            // INF-5445 piece 2: another screen changed a card's draft. A frame missed while away is read at the next welcome.
+            if frame["channel"] as? String == "inf:cards:draft", let payload = frame["payload"],
+               let value = try? PhoneJSON.read(payload), let draft = PhoneCardDraft(value) {
+                cardDrafts.heard(draft)
+            }
             // The first mate moved: keep where the new home answers, then end this connection and dial there.
             if frame["channel"] as? String == PhoneHomeMove.movedChannel,
                let followed = PhoneHomeMove.followed(mac, payload: frame["payload"]) {
@@ -1381,7 +1412,7 @@ public struct PhoneNotice: Equatable, Sendable {
         if reached { reachRoute() }
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
-        if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage(); onReached?()
+        if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage(); onReached?(); readDrafts()
             if let id = openOnReach { openOnReach = nil; openCard(id) }
         }
         settleCatchUp()

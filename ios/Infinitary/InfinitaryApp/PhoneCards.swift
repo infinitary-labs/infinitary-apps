@@ -12,10 +12,6 @@ struct PhoneCards<Content: View>: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @State private var selected: String?
     @State private var past: PhoneCard?
-    @State private var drafts: [String: PhoneJSON] = [:]
-    @State private var replies: [String: String] = [:]
-    /// INF-3296's phone piece: each card's notes waiting for its reply, kept with its draft while the row pages.
-    @State private var notes: [String: [PhoneJSON]] = [:]
     @State private var previousIDs: [String] = []
     @State private var sent = 0
     /// INF-2565, the captain: "i don't think we should auto flip". A revision gives the card a new offer, so its pane is
@@ -170,10 +166,11 @@ struct PhoneCards<Content: View>: View {
                         .modifier(PhoneCardRowPlace(row: row, slot: place.slot))
                 } else {
                 PhoneCardPane(card: card, session: session, bodies: card.isPast ? nil : bodies,
-                    fill: card.isPast ? card.value["answers"] : drafts[card.id] ?? .array([]),
-                    reply: Binding(get: { replies[card.id] ?? "" }, set: { replies[card.id] = $0 }),
-                    notes: Binding(get: { notes[card.id] ?? [] }, set: { notes[card.id] = $0.isEmpty ? nil : $0 }),
-                    onReading: { drafts[card.id] = $0["answers"] },
+                    // INF-5445 piece 2: each card's picks, the words in its field and its queued notes are the card's draft,
+                    // which the session shares with every other screen (docs/ios.md, "Unsent picks on the phone").
+                    fill: card.isPast ? card.value["answers"] : session.cardDrafts.fill(card.id),
+                    reply: Binding(get: { session.cardDrafts.words[card.id] ?? "" }, set: { session.cardDrafts.type(card.id, words: $0) }),
+                    notes: Binding(get: { session.cardDrafts.notes[card.id] ?? [] }, set: { session.cardDrafts.note(card.id, notes: $0) }),
                     onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
                     onSent: { sent += 1 },
@@ -208,7 +205,7 @@ struct PhoneCards<Content: View>: View {
     /// INF-3460: the body of a card beside the shown one, loading behind its edge with its fact strip.
     @ViewBuilder private func loading(_ card: PhoneCard) -> some View {
         if !card.isPast && card.panelEntryID == nil {
-            let page = bodies.body(card) { PhoneCardPane.bodyHost(card, session, drafts[card.id] ?? .array([])) }
+            let page = bodies.body(card) { PhoneCardPane.bodyHost(card, session, session.cardDrafts.fill(card.id)) }
             PhoneCardRowLoading(page: page, strip: page.facts.flatMap { bodies.strip(card, facts: $0, session: session) }, row: row)
         }
     }
@@ -577,7 +574,6 @@ private struct PhoneCardPane: View {
     @Binding var reply: String
     /// INF-3296's phone piece: the notes waiting for this card's reply.
     @Binding var notes: [PhoneJSON]
-    let onReading: (PhoneJSON) -> Void
     let onSeen: () -> Void
     let onHide: () -> Void
     let onSent: () -> Void
@@ -677,11 +673,11 @@ private struct PhoneCardPane: View {
     enum CardSide { case face, back }
 
     init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>, notes: Binding<[PhoneJSON]>,
-         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
+         onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
          row: PhoneCardRow, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
          side: Binding<PhoneCardSide>) {
         self.card = card; self.session = session; _reply = reply; _notes = notes
-        self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
+        self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
         self.shown = shown; self.visible = visible; self.replyLeaves = replyLeaves
         self.row = row; self.onTask = onTask; self.onDraft = onDraft
         self.bodies = bodies
@@ -697,7 +693,14 @@ private struct PhoneCardPane: View {
         // The body links the key of every task the phone holds, the card's own task's included, as the Mac's does,
         // so a card never links some keys and leaves others as text.
         let keys = (session.board?.tasks ?? []).map(\.key)
-        return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
+        let host = CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
+        // INF-5445 piece 2: every body, the ones loaded beside the shown card included, reads its answers into the card's
+        // draft and takes another screen's picks while it is open.
+        if !card.isPast {
+            host.onReading = { session.cardDrafts.read(card.id, answers: $0["answers"]) }
+            host.detachDraft = session.cardDrafts.attach(card.id) { [weak host] in host?.fill($0) ?? false }
+        }
+        return host
     }
     private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
         if card.isPast { return card.value["messages"].list }
@@ -826,8 +829,13 @@ private struct PhoneCardPane: View {
         .onChange(of: shown && (replyFocus != nil || noteFocus || host.typing), initial: shown) { was, focused in
             if shown || was { messageContext.replyFocused = focused }
         }
+        // Another screen's words wait while this card's field is typed in, so they never move the caret.
+        .onChange(of: replyFocus != nil) { _, typing in if !card.isPast { session.cardDrafts.typing(card.id, typing) } }
         .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil; pointAt = false; pick = nil } }
-        .onDisappear { if shown && (replyFocus != nil || noteFocus || host.typing) { messageContext.replyFocused = false } }
+        .onDisappear {
+            if shown && (replyFocus != nil || noteFocus || host.typing) { messageContext.replyFocused = false }
+            if replyFocus != nil && !card.isPast { session.cardDrafts.typing(card.id, false) }
+        }
         // INF-3460: a body the row kept loaded beside the shown card has drawn already, so a card opened from the count's
         // menu shows drawn and its first drawing never comes to mark it read.
         .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) }; markSeen() }
@@ -1237,7 +1245,8 @@ private struct PhoneCardPane: View {
                     Text(PhoneMessages.phoneCardsRetryNote()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }
                 Button(PhoneMessages.phoneCommonRetry()) {
-                    let fill = host.reading["answers"]; host.close(); problem = nil
+                    // The draft holds the failed body's last reading and any pick another screen made since.
+                    let fill = card.isPast ? host.reading["answers"] : session.cardDrafts.fill(card.id); host.close(); problem = nil
                     host = Self.bodyHost(card, session, fill, heightLag: CardWebHost.retriedHeightLag)
                     bodies?.replace(card, with: host)
                     connectHost(); retry += 1
@@ -1798,7 +1807,7 @@ private struct PhoneCardPane: View {
         }
     }
     private func connectHost() {
-        host.onReading = onReading; host.onDrawn = { markSeen(); syncNotes() }
+        host.onDrawn = { markSeen(); syncNotes() }
         host.annotates = takesNotes && shown
         host.onAnnotate = { note, box in
             guard takesNotes, shown, !host.changing else { syncNotes(); return }

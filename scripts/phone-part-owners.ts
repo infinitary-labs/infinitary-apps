@@ -74,6 +74,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRecordRules.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneWords.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ReadOnlySession.swift",
+    // INF-5445 piece 2: every card's draft, which the session reads at each welcome and every card on Home writes.
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneCardDrafts.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneDraftSync.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/Resources/",
     // The last turn's whole-word cut, which every part's message box draws (MessageComposer.swift).
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/WholeWords.swift",

@@ -124,7 +124,7 @@ The offline readers do exactly that (W1 S11): the one session reader (`src/core/
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Prospective provenance (R2, `docs/provenance-capture.md`) is the write side of the offline exporters and adds no table or service.
   Every input the host serves the first mate is FRAMED by `src/shared/servedFrame.ts` - segments opening with U+2063 `FIRSTMATE_OP: v1 <kind> [<origin>]: `, the mark stripped from bodies - so any reader splits on the mark and never on `[fm-op]`/`[user]` text (Observe, the extractor, the replay engine all do; a parked captain turn rides inbox ref `captain-turn` and drains as a `user` segment).

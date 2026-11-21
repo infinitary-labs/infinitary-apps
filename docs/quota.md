@@ -5,7 +5,7 @@ The account broker and credential health are `docs/architecture.md` §16.
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Quota reliability (captain escalation 2026-09-04, investigation report `fm3000-quota-visibility-diag-s1`).
   The sensor's job is to be honest about what it established, and to recover from routine expiry without a sign-in.

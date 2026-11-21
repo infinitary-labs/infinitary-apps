@@ -35,8 +35,16 @@ export type LimitRests = "record" | "outside fact" | "consent" | "physical limit
 export type LimitEntry = { rests: LimitRests; way: string };
 
 /** The code the ledger reads: the host's, never the window's drawing or a test, and the phone check's command
- * deadlines (INF-5387's plan, piece 1), each of which rests on recorded times. */
-export const LIMIT_ROOTS = ["src/core", "src/shared", "src/main", "src/preload", "scripts/phone-deadlines.ts"] as const;
+ * deadlines (INF-5387's plan, piece 1), each of which rests on recorded times, and the size check's two lines
+ * on AGENTS.md, the captain's picks. */
+export const LIMIT_ROOTS = [
+  "src/core",
+  "src/shared",
+  "src/main",
+  "src/preload",
+  "scripts/phone-deadlines.ts",
+  "scripts/agent-memory.ts",
+] as const;
 
 /** A name is a limit's when one of its words, split at `_`, is one of these. */
 export const LIMIT_WORDS = ["MAX", "MIN", "CAP", "LIMIT", "LIMITS", "BUDGET", "CEILING", "FLOOR"];
@@ -47,6 +55,18 @@ const physical = (way: string): LimitEntry => ({ rests: "physical limit", way })
 
 /** Each limit that rests on a fact, consent or a physical limit, by file, with its way out. */
 export const LIMITS: Record<string, Record<string, LimitEntry>> = {
+  // The captain's two lines for AGENTS.md (docs/testing.md, "The size check on AGENTS.md"),
+  // over a trimmed file of 75 lines and about 1,050 words.
+  "scripts/agent-memory.ts": {
+    AGENTS_WORD_CEILING: {
+      rests: "consent",
+      way: "pnpm check refuses the change; move detail to the page that owns it, or raise the number in a change that says why",
+    },
+    AGENTS_WARNING_WORD_LIMIT: {
+      rests: "consent",
+      way: "a run on main fails and starts one trim task, holding nothing; raise the number in a change that says why",
+    },
+  },
   "scripts/phone-deadlines.ts": {
     PHONE_COMMAND_BUDGET_MS: record(
       "the command is ended and its processes and simulator kept in hung-*.txt; the check fails naming it, retries nothing, and its failed job is requested again",

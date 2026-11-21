@@ -118,7 +118,7 @@ See `docs/dispatch-extractor.md`.
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The corpus export (PoC-2 capture C4, `scripts/export-corpus.ts`, `docs/corpus-export.md`) is the one command that packages the capture for an eval/training run: `supervision_outcomes` (C1 provenance + C3's confirmed-miss label) joined to `cards`/`tasks` (with WI-14's duplicate label), plus C5's dispatch records - it CALLS the C5 extractor, never re-implements it - and, the same way, G1's `supervision-turns.jsonl` (`scripts/extract-supervision-turns.ts`, `docs/supervision-extractor.md`: a pre-S7c archive reader only, joining historical inputs by R2 decision id, else by `(task_id, wake, at)`, retaining rows without transcripts and explaining misses, with a `task_id='fleet'` warning for the historical taskless-wake coverage gap) and R2's `decided`/`steered`/`interrupted` rows verbatim as `decisions.jsonl`.
   `redactDeep` blanks any key ending in `session`, so a record never names a field `session`.

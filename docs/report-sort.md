@@ -437,7 +437,7 @@ Its ledger rows live in `decisions`; Observe does not open the retired session, 
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The whose-turn rule (S7c, captain call C7 A "heuristics only", 2026-09-20; `docs/report-sort.md` is the one home; `src/core/orchestrator/reportSort.ts` + `CrewTurns.sortReport` and `CrewWatch.reconcileIdle`).
   A crewmate's report is sorted in CODE from typed state at its call site, never by reading its prose: (0) the captain wrote the newest message in one of the task's card threads - the crewmate's turn, above the card branch because the captain has spoken since that card went up - no wake; (1) an open DECISION card for the task is the captain's turn - a note never holds it, since `cardWord` derives the word from the actions alone - no wake; (2) filings this turn wake; (3) a running job, rows pending on the task's lane or a `pendingSettle` is the crewmate's turn - no wake; (4) none of those and the host can see ALL of this backend's work: nobody's turn, wake NOW with the report's own words; (5) it cannot: wake now too (INF-11), the rule's name keeping that the host could not tell.

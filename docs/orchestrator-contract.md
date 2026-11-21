@@ -6,7 +6,7 @@ Card authoring is `docs/card-authoring.md`; threads are `docs/card-threads.md`.
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Contract revisions live in `src/core/prompts/contract-revisions/`, one file each; `FIRSTMATE_CONTRACT_VERSION` counts them, and that folder's README keeps the ledger through 4.72.
   The first mate persona's pin lists 23 typed tools (`FIRSTMATE_TOOLS` in `src/core/session/tools.ts`, which `scripts/generate-self-source.mjs` reads and its test holds to the live tools), and the seat also serves `emote`, so a seat serves 24 - no bash, no read/ls/grep/find.

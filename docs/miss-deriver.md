@@ -85,7 +85,7 @@ The schema under test is the real one; only the rows are fixtures.
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - `flag_missed_escalation` (PoC-2 capture C3, `src/core/pi/supervisionTools.ts`) is the only path from "you should have told me about that" to a durable label: under-escalation is otherwise unobservable, because a routine verdict is one feed line and no captain contact.
   It stamps migration 16's nullable `missed_escalation`/`missed_note`/`missed_at` on the task's newest routine `supervision_outcomes` row (or a named `#id` from `supervision_log`), write-once, `routine`-only, and captain-turn gated by the same wake stamp `remember` uses - the label's value is that the captain confirmed it, so the agent cannot manufacture one on a scheduled or supervision wake.

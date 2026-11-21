@@ -280,7 +280,7 @@ Motion is a status dot, not a spinner on every row.
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Observe (Settings → Observe) is gated on `app.isPackaged === false`, an alpha version, or `INFINITARY_DEV_OBSERVE=1`, never a user-facing setting.
   It reads existing session JSONL + `usage_events`; see `docs/dev-observe.md`.

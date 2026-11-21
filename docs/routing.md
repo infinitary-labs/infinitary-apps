@@ -129,7 +129,7 @@ The first mate's tools still take the saved values; its models list heads each l
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The routing redesign (captain decisions A/B/C, 2026-09-01; Three boundaries now sit around the ladder in `routingEngine.route()`, and each has a single home:
  - **Capability** (`src/core/routing/capability.ts`): a candidate's def is resolved BEFORE it is chosen (`src/core/pi/modelCapability.ts` reads it out of the same runtimes the session will use, so it is the `withHonestReasoning`-corrected def) and skipped with a recorded reason when it cannot carry the turn - images (the task's pictures, "Pictures" above) or context.

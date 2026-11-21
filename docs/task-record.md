@@ -646,7 +646,7 @@ The same Now follows `working` in the thread of a crewmate's card the captain re
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The task record (task-system design P0, captain decisions D2/D5/D6; spec `fm-homes/mini-default/data/fm3000-task-system-design-s1/report.md`): a task is a RECORD, not a runtime handle.
   `src/core/tasks/taskService.ts` is the ONE writer over `tasks` / `task_events` / `task_links` (migrations 17-19) - every state change commits in one transaction with the timeline event that explains it; nothing else writes those tables, and tests seed rows through `seedTask` (`src/core/tasks/seedTask.ts`), never raw SQL.

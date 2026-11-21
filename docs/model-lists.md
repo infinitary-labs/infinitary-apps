@@ -230,7 +230,7 @@ Specified in the design skill, `components/quota/ModelsBoard.prompt.md`:
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Every `ModelRuntime` is created by `src/core/pi/modelRuntime.ts`, never `ModelRuntime.create` directly: it owns the live pi.dev catalog policy and its proven static fallback (`docs/architecture.md` §16.3).
   It creates the runtime OFFLINE (bundled catalog plus the store's last overlay) and runs the pi.dev refresh in the background, so start-up never waits on pi.dev (lean model lists, `docs/model-lists.md`).

@@ -198,6 +198,16 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
   {
+    file: "agent-memory.yml",
+    trigger: "Main push",
+    scenario: { github: { event_name: "push" } },
+  },
+  {
+    file: "agent-memory.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+  {
     file: "republish-casks.yml",
     trigger: "Main push",
     scenario: {

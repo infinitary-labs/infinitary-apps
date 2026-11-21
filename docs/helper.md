@@ -689,6 +689,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 ## The home's side
 
 `PlacedSessions` (`src/core/placed/placedSessions.ts`) is the home's half, composed in `createServices` as `services.placed`; it reaches the computers only through `WorkDevices`, which the shell attaches to the connection (`docs/devices.md`).
+It is the one writer of a task's `crewmates/<task>/placed/` folder at the home, through its `PlacedLedger`.
 Its parts sit beside it in `src/core/placed/`: what the crew reads of the computers (`CrewMachines`, `crewMachines.ts`), the callbacks it answers (`placedCallbacks.ts`), what it keeps of them (`PlacedLedger`, `placedLedger.ts`), this Mac's copy of a record there (`RecordCopy`, `recordCopy.ts`), and each computer's own accounts (`PlacedAccounts`, `placedAccounts.ts`).
 
 - **Where a task runs.**

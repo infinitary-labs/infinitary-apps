@@ -362,7 +362,7 @@ Loaded then, the compile froze the test's clock for seconds inside a timed wait 
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - E2E runs are hermetic and windowless: `tests/e2e/launch.ts` gives each app a throwaway userData and HOME (`INFINITARY_USER_DATA_DIR` keeps the window hidden - captain directive; `INFINITARY_HIDE_WINDOW=1` does the same for an unpackaged launch without one) and passes that same directory as `--user-data-dir`.
   Playwright's electron loader calls `app.whenReady()` before the main script's `setPath`, so without the switch every parallel electron shares `~/Library/Application Support/Electron` and a peer can SIGTERM a process that has not opened its singleton socket yet (verify run 35928921757, `first-launch.spec.ts`).

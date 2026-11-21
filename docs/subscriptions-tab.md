@@ -35,7 +35,7 @@ The login-item interface is boxed because login items are shared OS state; all o
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The Subscriptions tab is the Instruments direction (captain's pick from the three-way prototype review, 2026-09-05; spec and evidence in the mini's `fm3000-subscriptions-ux-proto-s1/report.md`, handoff section): ONE flat list of accounts in catalog order then age - status dot, provider, label + plan/identity, every window as a `QuotaMicroMeter` with the row's one verdict, actions behind a `RowMenu` kebab - providers with no account are chips in the "Add account" foot, and Models is a disclosure expanded by default.
   Claude's row follows the current identity from the shared store reader, including when that reading arrives with its allowance, and has no Rename action; other providers retain their account labels and Rename.

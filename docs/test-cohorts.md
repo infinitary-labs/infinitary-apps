@@ -359,7 +359,7 @@ pnpm exec vitest run --project integration --testTimeout=180000 --reporter=json 
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Test cohorts (captain's A1, 2026-09-24; `docs/test-cohorts.md` is the one home): vitest runs three cohorts in five projects - `pure` (`src/shared`, one shared module cache), `unit`/`unit-isolated` (in memory, vitest's 5 s default) and `integration` (real git, pnpm and child processes: eight workers on Mac, four elsewhere, after the other two, each file stating a budget sized to its measured work), whose probes run as `probe` after it.
   The integration list is ONE list, the exclusions of biome.json's unit-cohort override: that override runs `tests/lint/unit-cohort.grit` (no `child_process` or `timers/promises` import in a unit test, and none of the product's spawn-only modules, `workspace/git`, `sql/forkChildProcess`, `devices/ssh`, `devices/relay` and `devices/dnsSd`; type-only imports pass) and `vitest.config.ts` reads the same list.

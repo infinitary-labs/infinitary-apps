@@ -294,7 +294,7 @@ Task refs in tool text are keys; ids stay the join column.
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The task graph (R1 on the record; task-system P2, `docs/task-graph.md`): `open` rows wait on a gate (`quota-reset | at-time | captain`), on `blocks` links, or on request (`start_policy`).
   The R1 sweep IS the ready query now (`TaskStore.listReady`: open work, unheld, when-ready, every blocker `done`; on-request rows never dispatch on their own) and runs on the tick, after ANY close, after any graph change, on quota refresh, and at boot.

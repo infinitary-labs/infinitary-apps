@@ -1168,7 +1168,7 @@ Save and defer has no recording yet, so the approval-handoff evaluation's `save-
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Card rule (product): a card is allowed only when work cannot move forward without a captain decision or the captain cannot move forward without seeing that fact; forbid all progress, CI-wait, and status cards (they belong in the feed).
   A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the checks' state, a review, the captain's override, the project, the proposed change, its lines and a care level other than Default as the fact strip (`SettleFacts.strip`, v2.0 ruling D4, a status line since INF-3709's plan), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).

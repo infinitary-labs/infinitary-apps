@@ -559,6 +559,7 @@ Without such a build the phone job fails, and the release job neither signs nor 
 Every stable is a published alpha rebuilt as stable (captain, FI3-424): the same code, tested as the alpha, never whatever main holds.
 Builds are not byte-for-byte repeatable, so "the same code" means the alpha's commit and lockfile with its stable version.
 A promotion opens no pull request (captain, FI3-1057).
+The captain's words "promote the current alpha" start one, and its crewmate first has the captain pick the stable's three highlights on a card.
 
 A release crewmate sends `"return_run_details": true` with its GitHub dispatch; an accepted answer with `workflow_run_id` starts the app's minute watch automatically.
 It confirms the run's version through `github_read` and ends its turn when the answer says the watch stands.

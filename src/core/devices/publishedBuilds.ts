@@ -15,16 +15,9 @@ import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { DeviceChip } from "@shared/devices";
+import { BUILDS_FILE, BUILDS_URL, parseBuilds } from "../update/releaseBuilds";
 import { PUBLIC_RELEASE_NAMES, publicBuildsUrl } from "../update/releaseSource";
-import {
-  BUILDS_FILE,
-  BUILDS_URL,
-  buildDownloadUrl,
-  INFINITARY_TAP,
-  parseBuilds,
-  publicTagFor,
-  TAP_REPO,
-} from "../update/updateChannels";
+import { buildDownloadUrl, INFINITARY_TAP, publicTagFor, TAP_REPO } from "../update/updateChannels";
 import { LINUX_APP_FILE } from "./farSystems";
 
 /**

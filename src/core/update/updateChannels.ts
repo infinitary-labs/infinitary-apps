@@ -10,9 +10,11 @@ import { z } from "zod";
  * offered. This module owns the closed facts both sides of the channel
  * contract share: the installer-owned subscription marker the app reads,
  * the public tags and cask names of each channel, and the published update
- * targets file with its validation. The cask and target writer that
- * produce these files (`tapPublication.ts`) is built against the same
- * definitions.
+ * targets file with its validation. The builds file Linux and Windows read
+ * is `releaseBuilds.ts`, kept apart so a change to it alone does not hold an
+ * alpha for the signed installer check (scripts/desktop-build.ts). The cask
+ * and target writer that produce these files (`tapPublication.ts`) is built
+ * against the same definitions.
  */
 
 /**
@@ -90,12 +92,12 @@ export function upgradeCommandFor(channel: UpdateChannel, tap: TapNames = TAP): 
 }
 
 /** The public tap's release page of a tag. */
-function releasePageOf(tag: string, tap: TapNames): string {
+export function releasePageOf(tag: string, tap: TapNames): string {
   return tap.releasePage ?? `https://github.com/${tap.repo}/releases/tag/${tag}`;
 }
 
 /** Where every asset of a tag's public tap release downloads from. */
-function downloadPrefixOf(tag: string, tap: TapNames): string {
+export function downloadPrefixOf(tag: string, tap: TapNames): string {
   return tap.downloadBase
     ? `${tap.downloadBase}releases/${tag}/`
     : `https://github.com/${tap.repo}/releases/download/${tag}/`;
@@ -236,8 +238,8 @@ export function resolveUpdateChannel(
 export const UPDATE_TARGETS_FILE = TAP.targetsFile;
 export const UPDATE_TARGETS_URL = targetsUrlOf(TAP);
 
-const SHA256 = /^[0-9a-f]{64}$/;
-const GIT_COMMIT = /^[0-9a-f]{40}$/;
+export const SHA256 = /^[0-9a-f]{64}$/;
+export const GIT_COMMIT = /^[0-9a-f]{40}$/;
 const ZIP_ASSET = /^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/;
 
 export const updateTargetSchema = z
@@ -374,177 +376,6 @@ export function parseUpdateTargets(payload: unknown, tap: TapNames = TAP): Updat
     return null;
   }
   return parsed.data;
-}
-
-// --- The builds, keyed by system and chip -----------------------------------
-
-/**
- * The file on the public tap naming, for each channel, the version it
- * offers and every build of that version, keyed by system, chip and kind
- * (docs/alpha.md "Builds by system and chip"). It is written in the same tap
- * commit as the targets file, after every download was fetched back and
- * verified, so the two never disagree on a channel's version; the targets
- * file stays exactly what installed Macs parse. A Linux installation reads
- * this one.
- */
-export const BUILDS_FILE = TAP.buildsFile;
-export const BUILDS_URL = buildsUrlOf(TAP);
-
-/** The Windows installer's kind under `windows`, then its chip (docs/alpha.md "Updates on Windows"). */
-export const WINDOWS_INSTALLER = "exe";
-
-/** How each Linux build installs (docs/linux-packages.md). */
-export const LINUX_PACKAGES = ["deb", "rpm", "appimage", "arch", "nix"] as const;
-export type LinuxPackage = (typeof LINUX_PACKAGES)[number];
-
-export function isLinuxPackage(value: string): value is LinuxPackage {
-  return (LINUX_PACKAGES as readonly string[]).includes(value);
-}
-
-/** The file each kind of build a release publishes is, by its asset name's ending. */
-const BUILD_ASSET: Record<string, RegExp> = {
-  zip: /\.zip$/,
-  dmg: /\.dmg$/,
-  deb: /\.deb$/,
-  rpm: /\.rpm$/,
-  appimage: /\.AppImage$/,
-  arch: /\.PKGBUILD$/,
-  nix: /\.nix$/,
-  exe: /\.exe$/,
-};
-
-/**
- * Kinds that are the same bytes whichever channel offers them. An Arch
- * recipe or a Nix package names its channel's package, so a stable version
- * handed to alpha carries alpha's own recipe.
- */
-const CHANNEL_NEUTRAL = new Set(["zip", "dmg", "deb", "rpm", "appimage", "exe"]);
-
-const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const BUILD_KEY = z.string().regex(/^[a-z0-9]+$/);
-
-export const buildDownloadSchema = z.object({
-  /** An asset of this version's release on the public tap. */
-  url: z.string(),
-  sha256: z.string().regex(SHA256),
-});
-export type BuildDownload = z.infer<typeof buildDownloadSchema>;
-
-/**
- * One channel's version and its builds. Unknown keys are dropped rather
- * than refused, so a later system, chip or kind - or a later field - adds to
- * the file without an installed app refusing it.
- */
-export const channelBuildsSchema = z.object({
-  version: z.string(),
-  releaseUrl: z.string(),
-  sourceCommit: z.string().regex(GIT_COMMIT),
-  /** System (`macos`, `linux`, `windows`), then chip (`arm64`, `x64`), then kind. */
-  systems: z.record(BUILD_KEY, z.record(BUILD_KEY, z.record(BUILD_KEY, buildDownloadSchema))),
-});
-export type ChannelBuilds = z.infer<typeof channelBuildsSchema>;
-
-export const buildsFileSchema = z.object({
-  schemaVersion: z.literal(1),
-  channels: z.object({
-    stable: channelBuildsSchema.optional(),
-    alpha: channelBuildsSchema.optional(),
-  }),
-});
-export type BuildsFile = z.infer<typeof buildsFileSchema>;
-
-function eachDownload(
-  entry: ChannelBuilds,
-): { system: string; chip: string; kind: string; download: BuildDownload }[] {
-  return Object.entries(entry.systems).flatMap(([system, chips]) =>
-    Object.entries(chips).flatMap(([chip, kinds]) =>
-      Object.entries(kinds).map(([kind, download]) => ({ system, chip, kind, download })),
-    ),
-  );
-}
-
-/**
- * Why a channel's builds are not ones the app may offer, or null. The
- * version is one the channel carries, the release page is that version's
- * release on the public tap, and every download is an asset of that
- * release whose name ends as its kind's file does.
- */
-export function channelBuildsProblem(
-  channel: UpdateChannel,
-  entry: ChannelBuilds,
-  tap: TapNames = TAP,
-): string | null {
-  const versionProblem = channelVersionProblem(channel, entry.version);
-  if (versionProblem) return versionProblem;
-  const tag = publicTagFor(entry.version, tap) as string;
-  if (entry.releaseUrl !== releasePageOf(tag, tap)) {
-    return `${channel} builds' release page is not the tap's ${tag} release`;
-  }
-  const prefix = downloadPrefixOf(tag, tap);
-  for (const { system, chip, kind, download } of eachDownload(entry)) {
-    const name = download.url.startsWith(prefix) ? download.url.slice(prefix.length) : "";
-    const ending = BUILD_ASSET[kind];
-    if (!ASSET_NAME.test(name) || (ending && !ending.test(name))) {
-      return `${channel} ${system} ${chip} ${kind} download ${download.url} is not a ${kind} asset under ${prefix}`;
-    }
-  }
-  return null;
-}
-
-/**
- * Reads a builds payload, or null when anything it carries is invalid:
- * the schema, either channel's builds, or a version both channels name
- * whose release, source or channel-neutral bytes disagree. A valid file
- * without a channel, a system or a chip offers that installation nothing.
- */
-export function parseBuilds(payload: unknown, tap: TapNames = TAP): BuildsFile | null {
-  const parsed = buildsFileSchema.safeParse(payload);
-  if (!parsed.success) return null;
-  const { stable, alpha } = parsed.data.channels;
-  if (stable && channelBuildsProblem("stable", stable, tap)) return null;
-  if (alpha && channelBuildsProblem("alpha", alpha, tap)) return null;
-  if (stable && alpha && stable.version === alpha.version) {
-    if (stable.releaseUrl !== alpha.releaseUrl || stable.sourceCommit !== alpha.sourceCommit) {
-      return null;
-    }
-    for (const [one, other] of [
-      [stable, alpha],
-      [alpha, stable],
-    ] as const) {
-      for (const { system, chip, kind, download } of eachDownload(one)) {
-        if (!CHANNEL_NEUTRAL.has(kind)) continue;
-        const same = other.systems[system]?.[chip]?.[kind];
-        if (same?.url !== download.url || same.sha256 !== download.sha256) return null;
-      }
-    }
-  }
-  return parsed.data;
-}
-
-/** What one installation is offered: its channel's version and its own build of it, if any. */
-export type BuildOffer = {
-  version: string;
-  releaseUrl: string;
-  download: BuildDownload | null;
-};
-
-/**
- * The channel's offer for a system, chip and kind, or null when the file
- * names nothing for the channel. A channel whose version has no build for
- * this installation still names its version and release page.
- */
-export function buildOfferFor(
-  builds: BuildsFile,
-  channel: UpdateChannel,
-  where: { system: string; chip: string; kind: string },
-): BuildOffer | null {
-  const entry = builds.channels[channel];
-  if (!entry) return null;
-  return {
-    version: entry.version,
-    releaseUrl: entry.releaseUrl,
-    download: entry.systems[where.system]?.[where.chip]?.[where.kind] ?? null,
-  };
 }
 
 /** The tap-release download of a version's asset; the publication's own address for it. */

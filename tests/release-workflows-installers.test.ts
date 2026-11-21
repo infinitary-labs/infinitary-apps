@@ -77,6 +77,7 @@ describe("the cask republication workflow", () => {
         "scripts/tap-publication.ts",
         "src/core/update/tapPublication.ts",
         "src/core/update/updateChannels.ts",
+        "src/core/update/releaseBuilds.ts",
       ]),
     );
     for (const path of workflow.on.push?.paths ?? []) {

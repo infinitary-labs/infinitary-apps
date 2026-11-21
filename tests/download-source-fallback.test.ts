@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PublishedBuilds } from "../src/core/devices/publishedBuilds";
+import { BUILDS_URL } from "../src/core/update/releaseBuilds";
 import { publicBuildsUrl, releaseSource } from "../src/core/update/releaseSource";
-import { BUILDS_URL, buildDownloadUrl, buildUpdateTarget } from "../src/core/update/updateChannels";
+import { buildDownloadUrl, buildUpdateTarget } from "../src/core/update/updateChannels";
 import { createUpdateChecker } from "../src/core/update/updateChecker";
 import { scratchDir } from "./helpers/scratchDirs";
 

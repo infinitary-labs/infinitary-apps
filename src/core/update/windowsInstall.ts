@@ -7,7 +7,8 @@ import type { UpdateChannel } from "@shared/update";
 import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { powerShellWord } from "../devices/joinCommand";
 import { windowsPowerShell } from "../storage/ownerOnly";
-import { type BuildDownload, UPDATE_CHANNEL_MARKER } from "./updateChannels";
+import type { BuildDownload } from "./releaseBuilds";
+import { UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import {
   downloadChecked,
   readChannelMarker,

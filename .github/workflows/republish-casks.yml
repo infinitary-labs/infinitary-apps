@@ -35,6 +35,7 @@ on:
       - src/core/update/macInstallation.ts
       - packaging/mac-installation.json
       - src/core/update/updateChannels.ts
+      - src/core/update/releaseBuilds.ts
       - src/shared/userDataFolders.ts
   workflow_dispatch:
     inputs:

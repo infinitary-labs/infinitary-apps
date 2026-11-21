@@ -43,6 +43,7 @@ import Observation
 
     /// The card's body read its answers.
     public func read(_ cardID: String, answers reading: PhoneJSON) {
+        guard answers[cardID] != reading else { return }
         let before = local(cardID)
         answers[cardID] = reading
         sync.changed(cardID, before: before, after: local(cardID))
@@ -50,15 +51,19 @@ import Observation
 
     /// The captain changed the words in the card's field.
     public func type(_ cardID: String, words typed: String) {
+        let typed = typed.isEmpty ? nil : typed
+        guard words[cardID] != typed else { return }
         let before = local(cardID)
-        words[cardID] = typed.isEmpty ? nil : typed
+        words[cardID] = typed
         sync.changed(cardID, before: before, after: local(cardID))
     }
 
     /// The captain queued, edited or removed a note, or a reply took them.
     public func note(_ cardID: String, notes queued: [PhoneJSON]) {
+        let queued = queued.isEmpty ? nil : queued
+        guard notes[cardID] != queued else { return }
         let before = local(cardID)
-        notes[cardID] = queued.isEmpty ? nil : queued
+        notes[cardID] = queued
         sync.changed(cardID, before: before, after: local(cardID))
     }
 
@@ -68,7 +73,7 @@ import Observation
         if holds { typing.insert(cardID); return }
         typing.remove(cardID)
         guard let waiting = waitingWords.removeValue(forKey: cardID), words[cardID] == waiting.over else { return }
-        words[cardID] = waiting.words.isEmpty ? nil : waiting.words
+        set(\.words, cardID, waiting.words.isEmpty ? nil : waiting.words)
     }
 
     /// A body on screen for the card, which takes another screen's answers while it shows; call the returned closure
@@ -121,12 +126,18 @@ import Observation
             // A body on screen takes them at once and reads them back; a body born later starts with them.
             var filled = false
             for fill in (bodies[cardID] ?? [:]).values where fill(.array(taken)) { filled = true }
-            if !filled { answers[cardID] = .array(PhoneDraftSync.withDraftAnswers(answers[cardID]?.list ?? [], taken)) }
+            if !filled { set(\.answers, cardID, .array(PhoneDraftSync.withDraftAnswers(answers[cardID]?.list ?? [], taken))) }
         }
         if let given = parts.words {
             if typing.contains(cardID) { waitingWords[cardID] = (given, words[cardID]) }
-            else { waitingWords[cardID] = nil; words[cardID] = given.isEmpty ? nil : given }
+            else { waitingWords[cardID] = nil; set(\.words, cardID, given.isEmpty ? nil : given) }
         }
-        if let given = parts.notes { notes[cardID] = given.isEmpty ? nil : given }
+        if let given = parts.notes { set(\.notes, cardID, given.isEmpty ? nil : given) }
+    }
+
+    /// Writes one card's part only when it changes: every write redraws each screen that reads the drafts.
+    private func set<Value: Equatable>(_ part: ReferenceWritableKeyPath<PhoneCardDrafts, [String: Value]>, _ cardID: String,
+                                       _ value: Value?) {
+        if self[keyPath: part][cardID] != value { self[keyPath: part][cardID] = value }
     }
 }

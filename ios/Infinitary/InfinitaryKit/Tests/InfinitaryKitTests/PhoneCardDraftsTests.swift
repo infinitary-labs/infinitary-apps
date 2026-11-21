@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 @testable import InfinitaryKit
 
@@ -36,6 +37,12 @@ import Testing
             await settle()
         }
         func settle() async { for _ in 0..<20 { await Task.yield() } }
+    }
+
+    /// Whether a write reached what the cards view reads.
+    final class Rewritten: @unchecked Sendable {
+        private(set) var happened = false
+        func set() { happened = true }
     }
 
     static func draft(_ card: String, revision: Int, answers: [PhoneJSON] = [], words: String = "", notes: [PhoneJSON] = [])
@@ -77,6 +84,26 @@ import Testing
         #expect(home.sent.first?.change["words"] == .string("Ship it"))
         #expect(home.sent.first?.change["since"] == .number(0))
         #expect(home.sent.first?.change["lifecycle"] == .string("open-1"))
+    }
+
+    /// The computer's answer to the phone's own change carries that change back; the phone already shows it, so the
+    /// answer neither refills the body on screen nor rewrites the card's words, which would redraw the card mid-scroll.
+    @Test func theComputerKeepingThePhonesOwnChangeRedrawsNothing() async {
+        let home = await joined()
+        var filled: [PhoneJSON] = []
+        let detach = home.drafts.attach("card-1") { filled.append($0); return true }
+        home.answer = { card, change in
+            .object(["draft": Self.draft(card, revision: 1, answers: change["answers"].list, words: change["words"].text ?? "").json])
+        }
+        home.drafts.read("card-1", answers: .array([Self.answer("size", "large")]))
+        home.drafts.type("card-1", words: "Ship it")
+        let rewritten = Rewritten()
+        withObservationTracking { _ = home.drafts.words; _ = home.drafts.answers } onChange: { rewritten.set() }
+        await home.pause()
+        #expect(home.sent.count == 1)
+        #expect(filled.isEmpty)
+        #expect(!rewritten.happened)
+        detach()
     }
 
     @Test func aPickMadeOutOfReachGoesOnReturnAgainstTheRevisionItWasMadeAt() async {

@@ -3,23 +3,12 @@ import type { ActionLine } from "./actions";
 import { choosableLanguages } from "./i18n/start";
 import type { KeyReminders } from "./keyReminders";
 import {
-  AMBIENT_STYLES,
-  type AmbientStyle,
   type Appearance,
-  ambientVolumeSchema,
-  DEFAULT_AMBIENT_STYLE,
-  DEFAULT_AMBIENT_VOLUME,
   defaultCardSizeSchema,
   uiSizeSchema,
   washStrengthSchema,
 } from "./preferences";
-import {
-  ambientMusicValue,
-  ambientPausedValue,
-  crewModelNamesValue,
-  sizeValue,
-  washValue,
-} from "./settingValues";
+import { crewModelNamesValue, sizeValue, washValue } from "./settingValues";
 import { usageUnitSchema } from "./usage";
 
 /**
@@ -68,6 +57,19 @@ export const appearanceLines = {
     toRequest: (v, current) => [{ ...(current as Appearance), showCrewModelNames: v.visible }],
     readValue: crewModelNamesValue,
     done: (v) => `crew model names ${v.visible ? "shown" : "hidden"}`,
+  },
+  "ambient-away": {
+    fields: ["ambientPlaysWhenAway"],
+    area: "appearance",
+    tier: "asked",
+    change: "inf:settings:appearance:set",
+    current: "inf:settings:appearance:get",
+    value: z.strictObject({ pause: z.boolean() }),
+    // i18n-exempt: served to the first mate, a model, never shown
+    line: "Pause when you're away, when asked: with pause true the ambient music pauses while nobody is at the computer and plays again once someone is back (the default); pause false keeps it playing. Only a Mac or a Windows PC notices nobody is there: on Linux the music never pauses for this, whatever the switch says, so never tell a Linux user it does.",
+    toRequest: (v, current) => [{ ...(current as Appearance), ambientPlaysWhenAway: !v.pause }],
+    readValue: (current) => ({ pause: (current as Appearance).ambientPlaysWhenAway !== true }),
+    done: (v) => `ambient music ${v.pause ? "pauses" : "plays"} while you're away`,
   },
   "card-size": {
     // Keep cards maximized turned on or off forgets the last maximize (cardsMaximized).

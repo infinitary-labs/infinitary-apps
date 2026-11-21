@@ -66,19 +66,6 @@ export const ambientLines = {
     done: (v) =>
       `ambient music ${v.on ? (v.paused ? "paused" : "on") : "off"}, volume ${v.volume}%${v.style ? `, style ${v.style}` : ""}`,
   },
-  "ambient-away": {
-    fields: ["ambientPlaysWhenAway"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ pause: z.boolean() }),
-    // i18n-exempt: served to the first mate, a model, never shown
-    line: "Pause when you're away, when asked: with pause true the ambient music pauses while nobody is at the computer and plays again once someone is back (the default); pause false keeps it playing. Only a Mac or a Windows PC notices nobody is there: on Linux the music never pauses for this, whatever the switch says, so never tell a Linux user it does.",
-    toRequest: (v, current) => [{ ...(current as Appearance), ambientPlaysWhenAway: !v.pause }],
-    readValue: (current) => ({ pause: (current as Appearance).ambientPlaysWhenAway !== true }),
-    done: (v) => `ambient music ${v.pause ? "pauses" : "plays"} while you're away`,
-  },
   // A person's own ambient styles (docs/ambient-music.md, "Your own styles").
   // The style is settings the app checks here, never code; the window
   // balances its loudness, so a level written here is only a starting mix.

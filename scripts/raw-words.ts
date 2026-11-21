@@ -936,12 +936,8 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/renderer/src/devices/viewWords.ts": 28,
   "src/shared/actions.ts": 205,
   "src/shared/afterMerge.ts": 5,
-<<<<<<< HEAD
   "src/shared/ambientActions.ts": 4,
-  "src/shared/appearanceActions.ts": 11,
-=======
-  "src/shared/appearanceActions.ts": 12,
->>>>>>> 0cb8c960fa (feat(firstmate): switch Pause when you're away through the action catalog)
+  "src/shared/appearanceActions.ts": 10,
   "src/shared/appParts.ts": 1,
   "src/shared/attachments.ts": 1,
   "src/shared/authFailure.ts": 4,

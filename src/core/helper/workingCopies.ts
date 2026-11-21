@@ -9,8 +9,8 @@ import {
   readSync,
   writeSync,
 } from "node:fs";
-import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
 import { forgeOf, type KnownForgeHost } from "@shared/forge";
 import {
   type BundledRef,
@@ -245,6 +245,7 @@ export class WorkingCopies {
                 "The working copy's fetch and push do not use the approved project route.",
               );
           }
+          await this.forgetSavedNames(existing.repoDir);
           return { dir: existing.cwd, branch: existing.branch, cloned: false };
         }
       }
@@ -253,6 +254,7 @@ export class WorkingCopies {
         : project
           ? await this.clone(project.origin)
           : undefined;
+      if (repo) await this.forgetSavedNames(repo.dir);
       // Ordinary projectless work starts from the home's seeded workspace.
       // A review instead uses its builder's local repository and exact commit.
       const startAt = !base && !project && seed ? await this.seededBase(seed) : undefined;
@@ -356,6 +358,29 @@ export class WorkingCopies {
         return { outcome: "failed", ms: 0, error: "no working copy is here for this task" };
       return this.workspace.installDependencies(this.dir(task));
     });
+  }
+
+  /**
+   * Drops a commit name saved in one of this computer's own clones. Every
+   * working copy of a clone reads the clone's settings, so a name one task
+   * saved there with a plain `git config user.name` would sign every later
+   * task's commits, and the batch merge carries a branch's name to the
+   * project's main. The app saves no name in `repos/`, so any it finds there
+   * came from a task; each commit then takes this computer's own name. A
+   * repository outside `repos/`, such as the default workspace, keeps its own.
+   */
+  private async forgetSavedNames(repoDir: string): Promise<void> {
+    const within = relative(await realpath(this.reposDir), await realpath(repoDir));
+    if (!within || within.startsWith("..") || isAbsolute(within)) return;
+    const saved = await git(repoDir, [
+      "config",
+      "--local",
+      "--name-only",
+      "--get-regexp",
+      "^(user|author|committer)\\.(name|email)$",
+    ]).catch(() => "");
+    for (const key of new Set(saved.split("\n").filter(Boolean)))
+      await git(repoDir, ["config", "--local", "--unset-all", key]);
   }
 
   /**

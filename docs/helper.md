@@ -813,6 +813,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   A project is cloned here once, the first time the home gives this computer a task in it: a bare repository in `repos/`, named for its origin, that fetches only the default branch `origin` declares.
   It is made under a temporary name and takes its own only once whole, so a failed clone leaves nothing behind.
   Its git answers GitHub with this computer's own sign-in in `forges/` when it has one (above, "Running"); a GitHub refusal reads as GitHub's sign-in being needed (`forgeAuthRequired`), and git never waits on a terminal.
+  The app saves no commit name in a clone, so each time it prepares a working copy it drops any `user`, `author` or `committer` name or email a task saved there (`forgetSavedNames`): every working copy reads its clone's settings, so a stand-in name one task saved with a plain `git config` would otherwise sign every later task's commits, and the batch merge would carry it to the project's main.
 - **The working copy.**
   `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on the branch this computer already marks as the task's, else the branch the request names (`branch`, the task record's, or the name the home chose for a new task, `docs/architecture.md`, "A task's branch"), `fm/task-<task>` without one, marked as the task's, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
   Asked again it answers the working copy that is there.

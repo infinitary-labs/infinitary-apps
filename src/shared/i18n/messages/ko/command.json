@@ -108,6 +108,8 @@
   "commandNoticeWindowStopped": "일등항해사와 선원들이 중지됐어요. 여기서 시작하면 다시 시작해요.",
   "commandNoticeWindowUpdated": "일등항해사가 업데이트를 위해 종료된 뒤 다시 시작하지 않았어요. 여기서 시작하면 다시 시작해요.",
   "commandNoticeWindowUpdating": "일등항해사가 새 버전으로 다시 시작하고 있어요. 이 창은 기다리고 있어요.",
+  "commandPanelBatchesPanelOpen": "일괄 끌어오기 요청 보기",
+  "commandPanelBatchesPanelOpenWords": "일괄, 병합, 끌어오기 요청, 보류, 대기 중",
   "commandPanelKnowledgeOpen": "지식 열기",
   "commandPanelKnowledgeOpenWords": "개념, 발견, 그래프, 배운 것, 근거, 지침, 노트",
   "commandPanelNowBoard": "작업 보드 열기",

@@ -603,6 +603,8 @@
 "commandNoticeWindowStopped" = "Your first mate and crew were stopped. Start it here to start them again.";
 "commandNoticeWindowUpdated" = "Your first mate ended for its update and has not started again. Start it here to start it again.";
 "commandNoticeWindowUpdating" = "Your first mate is starting again on its new version. This window waits for it.";
+"commandPanelBatchesPanelOpen" = "Show your batches";
+"commandPanelBatchesPanelOpenWords" = "batch, merge, pull, request, held, waiting";
 "commandPanelKnowledgeOpen" = "Open Knowledge";
 "commandPanelKnowledgeOpenWords" = "concepts, findings, graph, learned, evidence, directions, notes";
 "commandPanelNowBoard" = "Open task board";

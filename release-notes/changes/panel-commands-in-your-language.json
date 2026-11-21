@@ -3,8 +3,8 @@
     {
       "id": "panel-commands-in-your-language",
       "kind": "improvement",
-      "title": "Task and Knowledge commands in your language",
-      "body": "When Infinitary speaks a language other than English, command search and Settings → Keyboard now show the Tasks and Knowledge panels' commands, such as Find a task, Open task board and Open Knowledge, in that language. Command search still finds them by their English names too.",
+      "title": "Task, Knowledge and Batches commands in your language",
+      "body": "When Infinitary speaks a language other than English, command search and Settings → Keyboard now show the Tasks, Knowledge and Batches panels' commands, such as Find a task, Open task board, Open Knowledge and Show your batches, in that language. Command search still finds them by their English names too.",
       "area": "settings",
       "picture": {
         "dark": "panel-commands-in-your-language-dark.webp",

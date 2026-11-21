@@ -51,4 +51,8 @@ export const APP_PANEL_COMMAND_WORDS: Readonly<
     label: m.commandPanelKnowledgeOpen,
     words: m.commandPanelKnowledgeOpenWords,
   },
+  "panel:batches-panel/open": {
+    label: m.commandPanelBatchesPanelOpen,
+    words: m.commandPanelBatchesPanelOpenWords,
+  },
 };

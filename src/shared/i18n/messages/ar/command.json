@@ -108,6 +108,8 @@
   "commandNoticeWindowStopped": "أُوقف نائب القبطان والطاقم. ابدأه هنا لتبدأهم من جديد.",
   "commandNoticeWindowUpdated": "انتهى نائب القبطان من أجل تحديثه ولم يبدأ من جديد. ابدأه هنا ليبدأ من جديد.",
   "commandNoticeWindowUpdating": "يبدأ نائب القبطان من جديد بنسخته الجديدة. هذه النافذة تنتظره.",
+  "commandPanelBatchesPanelOpen": "عرض دفعاتك",
+  "commandPanelBatchesPanelOpenWords": "دفعة, دمج, طلب سحب, معلّقة, منتظرة",
   "commandPanelKnowledgeOpen": "فتح المعرفة",
   "commandPanelKnowledgeOpenWords": "مفاهيم, نتائج, المخطط, ما تعلّمه, الأدلة, توجيهات, ملاحظات",
   "commandPanelNowBoard": "فتح لوح المهام",

@@ -603,6 +603,8 @@
 "commandNoticeWindowStopped" = "一等航海士と乗組員は停止しました。ここで開始すると、もう一度開始します。";
 "commandNoticeWindowUpdated" = "一等航海士はアップデートのために終了し、まだ開始していません。ここで開始すると、もう一度開始します。";
 "commandNoticeWindowUpdating" = "一等航海士が新しいバージョンでもう一度開始しています。このウインドウは開始を待っています。";
+"commandPanelBatchesPanelOpen" = "一括プルリクエストを表示";
+"commandPanelBatchesPanelOpenWords" = "一括, マージ, プルリクエスト, 保留中, 待機中";
 "commandPanelKnowledgeOpen" = "ナレッジを開く";
 "commandPanelKnowledgeOpenWords" = "概念, 知見, グラフ, 学んだこと, 根拠, 方針, ノート";
 "commandPanelNowBoard" = "タスクボードを開く";

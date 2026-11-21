@@ -603,6 +603,8 @@
 "commandNoticeWindowStopped" = "Seu imediato e a tripulação foram parados. Inicie-o aqui para iniciá-los de novo.";
 "commandNoticeWindowUpdated" = "Seu imediato foi encerrado para a atualização e não iniciou de novo. Inicie-o aqui para iniciá-lo de novo.";
 "commandNoticeWindowUpdating" = "Seu imediato está iniciando de novo na nova versão. Esta janela espera por ele.";
+"commandPanelBatchesPanelOpen" = "Mostrar seus lotes";
+"commandPanelBatchesPanelOpenWords" = "lote, mesclar, solicitação de pull, retido, esperando";
 "commandPanelKnowledgeOpen" = "Abrir Conhecimento";
 "commandPanelKnowledgeOpenWords" = "conceitos, constatações, grafo, aprendido, evidências, diretrizes, notas";
 "commandPanelNowBoard" = "Abrir o quadro de tarefas";

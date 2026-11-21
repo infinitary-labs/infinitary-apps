@@ -643,6 +643,8 @@ public enum PhoneMessages {
     public static func `commandNoticeWindowStopped`() -> String { PhoneWords.format("commandNoticeWindowStopped", []) }
     public static func `commandNoticeWindowUpdated`() -> String { PhoneWords.format("commandNoticeWindowUpdated", []) }
     public static func `commandNoticeWindowUpdating`() -> String { PhoneWords.format("commandNoticeWindowUpdating", []) }
+    public static func `commandPanelBatchesPanelOpen`() -> String { PhoneWords.format("commandPanelBatchesPanelOpen", []) }
+    public static func `commandPanelBatchesPanelOpenWords`() -> String { PhoneWords.format("commandPanelBatchesPanelOpenWords", []) }
     public static func `commandPanelKnowledgeOpen`() -> String { PhoneWords.format("commandPanelKnowledgeOpen", []) }
     public static func `commandPanelKnowledgeOpenWords`() -> String { PhoneWords.format("commandPanelKnowledgeOpenWords", []) }
     public static func `commandPanelNowBoard`() -> String { PhoneWords.format("commandPanelNowBoard", []) }
@@ -4633,6 +4635,8 @@ extension PhoneWords {
         "commandNoticeWindowStopped": [],
         "commandNoticeWindowUpdated": [],
         "commandNoticeWindowUpdating": [],
+        "commandPanelBatchesPanelOpen": [],
+        "commandPanelBatchesPanelOpenWords": [],
         "commandPanelKnowledgeOpen": [],
         "commandPanelKnowledgeOpenWords": [],
         "commandPanelNowBoard": [],

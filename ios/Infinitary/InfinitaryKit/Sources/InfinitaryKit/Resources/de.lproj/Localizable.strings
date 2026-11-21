@@ -603,6 +603,8 @@
 "commandNoticeWindowStopped" = "Dein erster Offizier und deine Crew wurden gestoppt. Starte ihn hier, um sie wieder zu starten.";
 "commandNoticeWindowUpdated" = "Dein erster Offizier wurde für sein Update beendet und ist nicht wieder gestartet. Starte ihn hier, um ihn wieder zu starten.";
 "commandNoticeWindowUpdating" = "Dein erster Offizier startet mit seiner neuen Version neu. Dieses Fenster wartet auf ihn.";
+"commandPanelBatchesPanelOpen" = "Deine Bündel anzeigen";
+"commandPanelBatchesPanelOpenWords" = "Bündel, zusammenführen, Pull Request, angehalten, wartend";
 "commandPanelKnowledgeOpen" = "Wissen öffnen";
 "commandPanelKnowledgeOpenWords" = "Begriffe, Erkenntnisse, Graph, gelernt, Belege, Vorgaben, Notizen";
 "commandPanelNowBoard" = "Aufgabenboard öffnen";

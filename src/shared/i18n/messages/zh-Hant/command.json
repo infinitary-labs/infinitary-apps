@@ -108,6 +108,8 @@
   "commandNoticeWindowStopped": "你的大副和船員已停止。在這裡開始它，即可讓他們重新開始。",
   "commandNoticeWindowUpdated": "你的大副為了更新而結束，尚未重新開始。在這裡開始它，即可讓它重新開始。",
   "commandNoticeWindowUpdating": "你的大副正在以新版本重新開始。這個視窗在等它。",
+  "commandPanelBatchesPanelOpen": "顯示你的批次",
+  "commandPanelBatchesPanelOpenWords": "批次, 合併, pull request, 暫緩, 等待中",
   "commandPanelKnowledgeOpen": "開啟知識",
   "commandPanelKnowledgeOpenWords": "概念, 發現, 圖譜, 學到, 證據, 指引, 筆記",
   "commandPanelNowBoard": "開啟任務看板",

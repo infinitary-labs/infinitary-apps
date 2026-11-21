@@ -603,6 +603,8 @@
 "commandNoticeWindowStopped" = "Votre second et l’équipage ont été arrêtés. Démarrez-le ici pour les redémarrer.";
 "commandNoticeWindowUpdated" = "Votre second s’est arrêté pour sa mise à jour et n’a pas redémarré. Démarrez-le ici pour le redémarrer.";
 "commandNoticeWindowUpdating" = "Votre second redémarre sur sa nouvelle version. Cette fenêtre l’attend.";
+"commandPanelBatchesPanelOpen" = "Afficher vos lots";
+"commandPanelBatchesPanelOpenWords" = "lot, fusionner, demande de tirage, retenu, en attente";
 "commandPanelKnowledgeOpen" = "Ouvrir Connaissances";
 "commandPanelKnowledgeOpenWords" = "concepts, constats, graphe, appris, éléments, consignes, notes";
 "commandPanelNowBoard" = "Ouvrir le tableau des tâches";

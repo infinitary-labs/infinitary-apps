@@ -647,6 +647,8 @@
   {"said":{"m":"commandNoticeWindowStopped"},"words":"Your first mate and crew were stopped. Start it here to start them again."},
   {"said":{"m":"commandNoticeWindowUpdated"},"words":"Your first mate ended for its update and has not started again. Start it here to start it again."},
   {"said":{"m":"commandNoticeWindowUpdating"},"words":"Your first mate is starting again on its new version. This window waits for it."},
+  {"said":{"m":"commandPanelBatchesPanelOpen"},"words":"Show your batches"},
+  {"said":{"m":"commandPanelBatchesPanelOpenWords"},"words":"batch, merge, pull, request, held, waiting"},
   {"said":{"m":"commandPanelKnowledgeOpen"},"words":"Open Knowledge"},
   {"said":{"m":"commandPanelKnowledgeOpenWords"},"words":"concepts, findings, graph, learned, evidence, directions, notes"},
   {"said":{"m":"commandPanelNowBoard"},"words":"Open task board"},

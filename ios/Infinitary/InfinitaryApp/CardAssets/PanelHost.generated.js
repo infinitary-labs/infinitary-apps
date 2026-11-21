@@ -22476,6 +22476,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your first mate is starting again on its new version. This window waits for it.`;
   }
+  function commandPanelBatchesPanelOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض دفعاتك`;
+      case "de":
+        return `Deine Bündel anzeigen`;
+      case "es":
+        return `Mostrar tus lotes`;
+      case "fr":
+        return `Afficher vos lots`;
+      case "ja":
+        return `一括プルリクエストを表示`;
+      case "ko":
+        return `일괄 끌어오기 요청 보기`;
+      case "pt-BR":
+        return `Mostrar seus lotes`;
+      case "zh-Hans":
+        return `显示批量拉取请求`;
+      case "zh-Hant":
+        return `顯示你的批次`;
+      case "en-XA":
+        return `[Šĥöŵ ýöûŕ ƀáţçĥéš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show your batches‬`;
+    }
+    return `Show your batches`;
+  }
+  function commandPanelBatchesPanelOpenWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دفعة, دمج, طلب سحب, معلّقة, منتظرة`;
+      case "de":
+        return `Bündel, zusammenführen, Pull Request, angehalten, wartend`;
+      case "es":
+        return `lote, fusionar, solicitud de incorporación de cambios, retenido, en espera`;
+      case "fr":
+        return `lot, fusionner, demande de tirage, retenu, en attente`;
+      case "ja":
+        return `一括, マージ, プルリクエスト, 保留中, 待機中`;
+      case "ko":
+        return `일괄, 병합, 끌어오기 요청, 보류, 대기 중`;
+      case "pt-BR":
+        return `lote, mesclar, solicitação de pull, retido, esperando`;
+      case "zh-Hans":
+        return `批量, 合并, 拉取请求, 暂缓, 等待中`;
+      case "zh-Hant":
+        return `批次, 合併, pull request, 暫緩, 等待中`;
+      case "en-XA":
+        return `[ƀáţçĥ, ɱéŕĝé, þûļļ, ŕéǫûéšţ, ĥéļð, ŵáîţîñĝ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮batch, merge, pull, request, held, waiting‬`;
+    }
+    return `batch, merge, pull, request, held, waiting`;
+  }
   function commandPanelKnowledgeOpen() {
     switch (currentLanguage()) {
       case "ar":
@@ -91176,6 +91230,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandNoticeWindowStopped,
     commandNoticeWindowUpdated,
     commandNoticeWindowUpdating,
+    commandPanelBatchesPanelOpen,
+    commandPanelBatchesPanelOpenWords,
     commandPanelKnowledgeOpen,
     commandPanelKnowledgeOpenWords,
     commandPanelNowBoard,
@@ -94098,6 +94154,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandNoticeWindowStopped": [],
     "commandNoticeWindowUpdated": [],
     "commandNoticeWindowUpdating": [],
+    "commandPanelBatchesPanelOpen": [],
+    "commandPanelBatchesPanelOpenWords": [],
     "commandPanelKnowledgeOpen": [],
     "commandPanelKnowledgeOpenWords": [],
     "commandPanelNowBoard": [],

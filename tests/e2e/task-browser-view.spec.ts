@@ -493,7 +493,7 @@ test("the captain points at a task's running page by keys and by pointer, and it
         await page.keyboard.press("Enter");
         await expect(pop).toBeVisible();
         // The popover shows the picture that will go; watching, it shows the crewmate nothing new.
-        await expect(pop.locator("[data-note-page-picture] img")).toBeVisible();
+        await expect(pop.locator("[data-note-page-picture] [data-marked-copy]")).toBeVisible();
         await expect(pop.locator("[data-note-page-shows]")).toHaveCount(0);
         await untilFocused(comment);
         await typeInto(comment, KEYS_NOTE);

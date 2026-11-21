@@ -60,6 +60,7 @@ Codex's device-code sign-in is not used.
 
 A use of this computer's own account runs here; an account on a computer that runs work is used on that computer, with its own Codex CLI and its own Codex home, through the `inf:sign-ins:use-saved-reset` order (`docs/helper.md`, "Its own sign-ins").
 The home shows that use under the account's row beside any sign-in there: neither cancels the other, since Codex may be spending the reset, and a second use of the same account while one runs is refused.
+Cancel under the row asks that computer to stop and keeps the use until that computer says how it ended, and a reconnect while it runs ends it as not known whether a reset was used, since trying again asks about the same reset.
 A computer without the change, or out of reach, is offered no Use a saved reset on its run-out card, and a press that reaches its row anyway ends under the account's row saying why (`DeviceSignIns.redeemSavedReset`).
 The window asks with `inf:accounts:use-saved-reset` (`accounts.redeemSavedReset`), the first mate with the `account-use-reset` catalog line, and a card with the `use-saved-reset` host operation (`docs/quota.md`, "Saved resets").
 

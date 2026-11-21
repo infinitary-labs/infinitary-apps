@@ -3,6 +3,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it, vi } from "vitest";
+import type { WorkDeviceContact } from "../connection/connection";
 import { DeviceSignIns } from "./deviceSignIns";
 
 /**
@@ -153,11 +154,15 @@ describe("a computer's sign-ins view", () => {
           }
         : { ok: true },
     );
+    let contactOf: ((contact: WorkDeviceContact) => void) | undefined;
     const signIns = new DeviceSignIns({
       devices: () => [MINI],
       work: {
         ask,
-        onWorkDevice: () => () => {},
+        onWorkDevice: (listener) => {
+          contactOf = listener;
+          return () => {};
+        },
         inReach: () => true,
         version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes: [...changes] }),
       },
@@ -237,6 +242,36 @@ describe("a computer's sign-ins view", () => {
         step: { kind: "ended", outcome: "failed", error: "Codex is not signed in there." },
       });
       await expect(failed).rejects.toThrow("Codex is not signed in there.");
+
+      // Cancel under the row asks that computer to stop, and the use stays until its own end arrives.
+      const orders = () =>
+        ask.mock.calls.filter(([, channel]) => channel === "inf:sign-ins:use-saved-reset");
+      const stopped = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
+      await vi.waitFor(() => expect(orders()).toHaveLength(3));
+      const [, , [third]] = orders().at(-1) as [string, string, [{ signInId: string }]];
+      await signIns.cancel(third.signInId);
+      expect(ask).toHaveBeenCalledWith(MINI.id, "inf:sign-ins:cancel", [
+        { signInId: third.signInId },
+      ]);
+      expect(signIns.view()[0]?.flows).toContainEqual(
+        expect.objectContaining({ signInId: third.signInId, phase: "running" }),
+      );
+      signIns.step(MINI.id, {
+        signInId: third.signInId,
+        step: {
+          kind: "ended",
+          outcome: "signed-in",
+          accountId: "acct-codex",
+          savedReset: { outcome: "used", left: 0 },
+        },
+      });
+      await expect(stopped).resolves.toEqual({ outcome: "used", left: 0 });
+
+      // A reconnect while it runs says its outcome is unknown, never that it stopped.
+      const lost = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
+      await vi.waitFor(() => expect(orders()).toHaveLength(4));
+      contactOf?.({ deviceId: MINI.id, contact: "in-reach" });
+      await expect(lost).rejects.toThrow(m.accountsSavedResetUnclear({ account: "Codex · Work" }));
     } finally {
       signIns.dispose();
     }

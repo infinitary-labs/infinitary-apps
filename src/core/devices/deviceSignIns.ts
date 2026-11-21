@@ -503,6 +503,18 @@ export class DeviceSignIns {
     throw new Error(step.error ?? `The saved reset on ${who} stopped before it ended.`);
   }
 
+  /** A flow's account as words name it ("Codex · Work"), from that computer's rows. */
+  private accountWordsOf(running: {
+    deviceId: string;
+    providerId: string;
+    accountId?: string;
+  }): string {
+    const account = this.said
+      .get(running.deviceId)
+      ?.signIns?.accounts.find((entry) => entry.id === running.accountId);
+    return accountWords(account ?? { providerId: running.providerId, label: "" });
+  }
+
   /** A use refused before it was sent, its reason left under the account's row as its end. */
   private refusedUse(
     deviceId: string,
@@ -661,7 +673,8 @@ export class DeviceSignIns {
       this.push();
       return { ok: true };
     }
-    this.end(signInId, { kind: "ended", outcome: "cancelled" });
+    // A saved reset's use may be spending the reset there: it stays until that computer says how it ended.
+    if (!this.uses.has(signInId)) this.end(signInId, { kind: "ended", outcome: "cancelled" });
     try {
       await this.options.work.ask(running.deviceId, "inf:sign-ins:cancel", [{ signInId }]);
     } catch {
@@ -757,8 +770,10 @@ export class DeviceSignIns {
         this.end(signInId, {
           kind: "ended",
           outcome: "failed",
-          error:
-            contact.contact === "gone"
+          // A saved reset's use there may have spent the reset: its outcome is unknown, and trying again asks about the same one.
+          error: this.uses.has(signInId)
+            ? m.accountsSavedResetUnclear({ account: this.accountWordsOf(running) })
+            : contact.contact === "gone"
               ? `${this.who(contact.deviceId)} went out of reach, so the sign-in stopped.`
               : `${this.who(contact.deviceId)} reconnected, so the earlier sign-in stopped. Try signing in again.`,
         });

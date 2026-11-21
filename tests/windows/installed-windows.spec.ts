@@ -1016,14 +1016,17 @@ function closeProcessTree(pid: number): void {
 async function suspendedRunForce(): Promise<void> {
   const folder = scratchDir("infinitary-installed-force-");
   const heartbeat = join(folder, "heartbeat");
+  const reading = join(folder, "reading");
   const startedAt = new Date().toISOString();
+  // The run notes its reading's own word that it read the folder, as the run's note says it can be
+  // ended by force only once that reading says so.
   const program = `
     const { Worker } = require("node:worker_threads");
     const { writeFileSync } = require("node:fs");
     new Worker(process.env.WATCH, {
       eval: true,
       workerData: { dir: process.env.DIR, startedAt: process.env.STARTED, every: 100 },
-    });
+    }).on("message", (word) => { if (word === "reading") writeFileSync(process.env.READING, ""); });
     setInterval(() => writeFileSync(process.env.BEAT, String(Date.now())), 100);
   `;
   mkdirSync(join(folder, RUN_FORCE_DIR), { recursive: true });
@@ -1035,11 +1038,13 @@ async function suspendedRunForce(): Promise<void> {
       DIR: join(folder, RUN_FORCE_DIR),
       STARTED: startedAt,
       BEAT: heartbeat,
+      READING: reading,
     },
   });
   const pid = run.pid ?? -1;
   try {
     await expect.poll(() => existsSync(heartbeat), { timeout: 30_000 }).toBe(true);
+    await expect.poll(() => existsSync(reading), { timeout: 30_000 }).toBe(true);
     const birth = readWindowsTable()?.find((row) => row.pid === pid)?.started;
     expect(birth).toMatch(/^win:/);
     const kernel32 = koffi.load("kernel32.dll");
@@ -1061,7 +1066,7 @@ async function suspendedRunForce(): Promise<void> {
     const record = (recorded: string) =>
       writeFileSync(
         join(folder, RUN_RECORD_FILE),
-        `${JSON.stringify({ pid, startedAt, agent: true, birth: recorded })}\n`,
+        `${JSON.stringify({ pid, startedAt, agent: true, recovers: true, birth: recorded })}\n`,
       );
     const context = {
       label: "infinitary-force-check",
@@ -1075,8 +1080,9 @@ async function suspendedRunForce(): Promise<void> {
     } as unknown as RunAgentContext;
     const run0 = { pid, startedAt };
 
-    // A record whose birth is not the program under the number: no run of this stop, so nothing is
-    // asked or woken, and the program stays suspended.
+    // A record that says a force stop can end the run, as the run's own does once its reading said
+    // so, but whose birth is not the program under the number: no run of this stop, so nothing is
+    // asked or woken, and the program stays suspended. Only the birth differs from the case below.
     record("win:1");
     expect(await stopRunAgent(context, { forget: false, force: run0 })).toBe("untouched");
     expect(stillRunning([pid])).toEqual([pid]);

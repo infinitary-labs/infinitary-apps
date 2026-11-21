@@ -56,7 +56,10 @@ function signalRun(label, signal, gen) {
   try { renameSync(ask + ".ask", ask + ".withdrawn"); return running(label) ? "timeout" : "gone"; } catch {}
   return answer(200) ?? "timeout";
 }
-const runsOf = (label) => existsSync(join(STATE, label + ".runs")) ? readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean) : [];
+const recordOf = (label, kind) => existsSync(join(STATE, label + "." + kind)) ? readFileSync(join(STATE, label + "." + kind), "utf8").split("\n").filter(Boolean) : [];
+const runsOf = (label) => recordOf(label, "runs");
+// A run its supervisor started and never saw exit: with that supervisor gone, nothing can stop it.
+const outstanding = (label) => !running(label) && runsOf(label).length > recordOf(label, "exits").length;
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const xml = (text) => text.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 function plistJob(file) {
@@ -124,9 +127,11 @@ function restartFirst(label) {
   for (let i = 0; i < 600 && !(runsOf(label).length > before.length && alive(Number(runsOf(label)[before.length]))); i++) spawnSync("sleep", ["0.05"]);
 }
 // Stops the job through its supervisor, as bootout and systemctl stop do, and says it is unloaded
-// only once that supervisor has exited: a stop that did not end it in time fails (code 1).
+// only once that supervisor has exited: a stop that did not end it in time fails (code 1), as does
+// one whose supervisor died before a run it started was seen to exit.
 function end(label) {
   restartFirst(label);
+  if (outstanding(label)) return 1;
   if (!running(label)) { writeFileSync(goneFile(label), ""); return 3; }
   const supervisor = Number(readFileSync(pidFile(label), "utf8"));
   const said = signalRun(label, "stop", null);
@@ -266,7 +271,10 @@ export type ServiceManagerStandIn = {
   state: (label: string, pid: number) => Promise<SupervisorAnswer>;
   /** Every start or stop it was asked for, by its words, in order; readings are left out. */
   asks: () => string[];
-  /** Ends every supervisor and its job, through each supervisor; throws naming any still running. */
+  /**
+   * Ends every supervisor and its job, through each supervisor; throws naming any still running, or
+   * any run whose supervisor ended before seeing it exit.
+   */
   stopAll: () => void;
 };
 
@@ -356,12 +364,15 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
     },
     stopAll: () => {
       const labels = readdirSync(state)
-        .filter((name) => name.endsWith(".pid"))
-        .map((name) => name.slice(0, -".pid".length))
-        .filter(running);
-      const asks = labels.map((label) => ask(label, "teardown", null));
+        .filter((name) => name.endsWith(".runs"))
+        .map((name) => name.slice(0, -".runs".length));
+      const asks = labels.filter(running).map((label) => ask(label, "teardown", null));
       for (let i = 0; i < 200 && labels.some(running); i++) pause(50);
-      const left = labels.filter(running);
+      // Still running, or a run its supervisor started and never saw exit, as where that supervisor
+      // died first: nothing here signals its saved number, so the run may still be there.
+      const left = labels.filter(
+        (label) => running(label) || lines(label, "runs").length > lines(label, "exits").length,
+      );
       // An ask no supervisor took is taken back, so nothing acts on it after the journey.
       for (const file of asks)
         try {
@@ -369,7 +380,13 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
         } catch {}
       if (left.length > 0)
         throw new Error(
-          `the stand-in service manager did not stop ${left.map((label) => `${label} (supervisor ${supervisor(label)})`).join(", ")}`,
+          `the stand-in service manager did not stop ${left
+            .map((label) =>
+              running(label)
+                ? `${label} (supervisor ${supervisor(label)})`
+                : `${label} (run ${lines(label, "runs").at(-1)}, its supervisor gone before it exited)`,
+            )
+            .join(", ")}`,
         );
     },
   };

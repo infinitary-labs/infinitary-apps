@@ -87,6 +87,11 @@ export type RunAgentContext = {
     forceWaitMs?: number;
     /** Lets a suspended run go on to read its force stop (`wakeRun`). */
     wake?: (run: RunInstance, birth?: string) => void;
+    /**
+     * On a Mac or Linux, the run's own pipe in the folder of force stops: whether it is there
+     * (`runPipeThere`) and whether a program holds it.
+     */
+    pipe?: { there: (run: RunInstance) => boolean; held: (run: RunInstance) => boolean };
   };
 } & RunManager;
 
@@ -475,7 +480,7 @@ function recordedRun(
 async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
   // Its pipe is found before its record is read: a run that took the folder since clears it only
   // once it noted itself, so a pipe found while the record still names this run is its own.
-  const piped = runPipeThere(context.dataDir, run);
+  const piped = context.processes?.pipe?.there(run) ?? runPipeThere(context.dataDir, run);
   const recorded = recordedRun(context, run);
   // Read as the stop is asked, never from the notice the window drew: a run whose reading or helper
   // stopped since says no longer that a force stop can end it, and is asked nothing.
@@ -492,6 +497,7 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
     context.processes?.forceWaitMs,
     () => wake(run, recorded.birth),
     piped,
+    context.processes?.pipe ? () => context.processes?.pipe?.held(run) ?? false : undefined,
   );
   return ended === "unasked" ? "untouched" : ended;
 }
@@ -502,7 +508,7 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
  * that took the number after the run ended is not waited for. Where Windows
  * cannot say, the run is taken to run.
  */
-function runAlive(pid: number, birth?: string): boolean {
+export function runAlive(pid: number, birth?: string): boolean {
   if (!processAlive(pid)) return false;
   return !birth || !hostPlatformProfile().windows || windowsRunHolds(pid, birth) !== false;
 }

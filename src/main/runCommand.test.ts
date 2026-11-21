@@ -176,6 +176,24 @@ describe("a window opened beside a run", () => {
     markRunning(empty, 4242, new Date("2026-10-25T17:00:00Z"), undefined, false);
     symlinkSync(`${hostname()}-4242`, join(empty, "SingletonLock"));
     expect([none.running, keepsStarterBesideGrant(none, true)]).toEqual([false, true]);
+    // The review of INF-5409: on Windows, whose lock names no holder, an agent's run that ended
+    // without taking its note away, its number taken since by another program while a window holds
+    // the folder, is told by the birth its note keeps (stood in by a reading that says which birth
+    // holds the number now): no command holds the folder, and none is the agent's. A note from an
+    // earlier run keeps no birth and is read by its number alone, as before.
+    const stale = scratchDir("infinitary-run-stale-");
+    markRunning(stale, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, "win:1");
+    symlinkSync(`${hostname()}-4242`, join(stale, "SingletonLock"));
+    const reused = (pid: number, birth?: string) => pid === 4242 && (!birth || birth === "win:2");
+    expect(commandHolding(stale, reused)).toEqual({ running: false, owned: null });
+    expect(commandHolding(stale, (pid, birth) => pid === 4242 && birth === "win:1")).toEqual({
+      running: true,
+      owned: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+    });
+    const earlier = scratchDir("infinitary-run-earlier-");
+    markRunning(earlier, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
+    symlinkSync(`${hostname()}-4242`, join(earlier, "SingletonLock"));
+    expect(commandHolding(earlier, reused).running).toBe(true);
   });
 
   // The review of INF-5409: Start it here refused the lock reads who holds it from what the holder

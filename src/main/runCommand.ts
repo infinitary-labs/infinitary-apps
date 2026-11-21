@@ -1,5 +1,6 @@
 import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { runAlive } from "@core/helper/runAgent";
 import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
 import { captureLoginPath } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
@@ -264,7 +265,7 @@ function writeRunRecord(path: string, value: RunMarker | RunStop): void {
  */
 export function runningByCommand(
   dataDir: string,
-  alive: (pid: number) => boolean = processAlive,
+  alive: (pid: number, birth?: string) => boolean = runAlive,
 ): boolean {
   return commandHolding(dataDir, alive).running;
 }
@@ -272,11 +273,15 @@ export function runningByCommand(
 /**
  * Whether a command holds the folder (`runningByCommand`) and, from the same
  * reading of its note, whether this app's own agent started it
- * (`ownedRun`): one reading, so the two never describe different runs.
+ * (`ownedRun`): one reading, so the two never describe different runs. On
+ * Windows, whose lock names no holder, a note that keeps the run's birth is
+ * read by it (`runAlive`), so a program that took the number of a run that
+ * ended without taking its note away is no command; a note from an earlier
+ * run keeps no birth and is read by its number alone, as before.
  */
 export function commandHolding(
   dataDir: string,
-  alive: (pid: number) => boolean = processAlive,
+  alive: (pid: number, birth?: string) => boolean = runAlive,
 ): { running: boolean; owned: OwnedRun | null } {
   let marker: unknown;
   try {
@@ -285,7 +290,13 @@ export function commandHolding(
     return { running: false, owned: null };
   }
   const pid = (marker as Partial<RunMarker> | null)?.pid;
-  if (typeof pid !== "number" || pid <= 0 || !alive(pid)) return { running: false, owned: null };
+  const birth = (marker as Partial<RunMarker> | null)?.birth;
+  if (
+    typeof pid !== "number" ||
+    pid <= 0 ||
+    !alive(pid, typeof birth === "string" ? birth : undefined)
+  )
+    return { running: false, owned: null };
   const holder = lockHolder(dataDir);
   if (holder !== undefined && holder !== pid) return { running: false, owned: null };
   const parsed = RunMarkerSchema.safeParse(marker);

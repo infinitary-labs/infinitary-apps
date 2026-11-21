@@ -79,6 +79,14 @@ function recordRun(
   );
 }
 
+/**
+ * What a force stop answers for a number another program holds at the press: on a Mac or Linux
+ * host the named run's own pipe is not there, so nothing is asked (`untouched`); on a Windows host,
+ * which keeps no pipe, with no birth recorded to tell them apart, the stop is written and lasts
+ * unread (`failed`).
+ */
+const TAKEN_NUMBER = process.platform === "win32" ? "failed" : "untouched";
+
 /** The run a notice names, and others that may hold the folder by the time a button acts. */
 const NAMED: Run = { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" };
 /** The same process number taken by another run since: another start. */
@@ -96,15 +104,21 @@ const REPLACEMENT: Run = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
  */
 function programTable(asked: string[][], dataDir: () => string) {
   const table = new Map<number, { startedAt: string | null; birth?: string }>();
+  // Each run makes its own pipe in the folder of force stops, as `watchRunForce` does on a Mac or
+  // Linux, and holds it while it runs: by its process and start, left there once it ends.
+  const pipes = new Set<string>();
+  const ended = (pid: number) => table.delete(pid);
   const programs = {
     /**
      * A program runs under `pid`: a run that knows itself by `startedAt`, or another program (null),
      * born at `birth` where Windows keeps one.
      */
-    run: (pid: number, startedAt: string | null, birth?: string) =>
-      table.set(pid, { startedAt, ...(birth ? { birth } : {}) }),
+    run: (pid: number, startedAt: string | null, birth?: string) => {
+      table.set(pid, { startedAt, ...(birth ? { birth } : {}) });
+      if (startedAt !== null) pipes.add(`${pid}-${startedAt}`);
+    },
     /** The program under `pid` ends on its own. */
-    gone: (pid: number) => table.delete(pid),
+    gone: (pid: number) => ended(pid),
     /** What happens as a run ends, before anything reads again. */
     onEnd: undefined as ((pid: number) => void) | undefined,
     /** Whether the runs read no force stop, as one stuck past its own thread or from before it. */
@@ -126,6 +140,10 @@ function programTable(asked: string[][], dataDir: () => string) {
       wake: (run: Run, birth?: string) => {
         programs.woken.push([run.pid, birth]);
         programs.frozen = false;
+      },
+      pipe: {
+        there: (run: Run) => pipes.has(`${run.pid}-${run.startedAt}`),
+        held: (run: Run) => table.get(run.pid)?.startedAt === run.startedAt,
       },
     },
   };
@@ -153,7 +171,7 @@ function programTable(asked: string[][], dataDir: () => string) {
       const taken = file.replace(/\.json$/, ".taken");
       renameSync(file, taken);
       renameSync(taken, taken.replace(/\.taken$/, ".ended"));
-      table.delete(pid);
+      ended(pid);
       asked.push(["end", String(pid)]);
       programs.onEnd?.(pid);
     }
@@ -426,8 +444,8 @@ describe("the command the window starts, on a Mac", () => {
   // by hand, or another run there, is no run of the notice's, and nothing is asked at all.
   it("ends nothing but the named run its agent started, and starts nothing beside one that lasts", async () => {
     for (const [record, agent, holder, deaf, outcome] of [
-      [NAMED, true, null, false, "failed"],
-      [NAMED, true, REUSED.startedAt, false, "failed"],
+      [NAMED, true, null, false, TAKEN_NUMBER],
+      [NAMED, true, REUSED.startedAt, false, TAKEN_NUMBER],
       [NAMED, true, NAMED.startedAt, true, "failed"],
       [NAMED, false, NAMED.startedAt, false, "untouched"],
       [REUSED, true, REUSED.startedAt, false, "untouched"],
@@ -625,7 +643,7 @@ describe("the command the window starts, on Linux", () => {
       const other = linux();
       recordRun(other.context, NAMED, true);
       other.programs.run(NAMED.pid, holder);
-      expect(await restartRunAgent(other.context, NAMED)).toBe("failed");
+      expect(await restartRunAgent(other.context, NAMED)).toBe(TAKEN_NUMBER);
       await stopRunAgent(other.context, { forget: false, force: NAMED });
       expect(other.asked).toEqual([]);
       expect(other.programs.processes.alive(NAMED.pid)).toBe(true);
@@ -801,7 +819,7 @@ describe("the command the window starts, on Windows", () => {
   // hand or another run there is no run of the notice's, and the task is asked nothing.
   it("ends nothing on Restart it or Start it here but the named run", async () => {
     for (const [record, agent, holder, deaf, outcome] of [
-      [NAMED, true, REUSED.startedAt, false, "failed"],
+      [NAMED, true, REUSED.startedAt, false, TAKEN_NUMBER],
       [NAMED, true, NAMED.startedAt, true, "failed"],
       [NAMED, false, NAMED.startedAt, false, "untouched"],
       [REUSED, true, REUSED.startedAt, false, "untouched"],

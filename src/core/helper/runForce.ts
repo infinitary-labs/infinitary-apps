@@ -53,8 +53,10 @@ export const RUN_FORCE_DIR = "run-force";
  * the stop is committed by moving it on to `.ended`, which again only one
  * of this reading and a withdrawal past its time can do, and this process
  * ends by force at once; past it, the stop is declined and nothing acts. A
- * stop naming another run is never moved. It says "reading" to the run once
- * its reading is in place and has read the folder once.
+ * stop naming another run is never moved. It says "reading" to the run at
+ * its first reading of the folder that succeeds, and "lost" at its first that
+ * fails, at the start or after one that read it, and "reading" again once one
+ * reads it again: only while its readings succeed can a stop reach it.
  */
 const FORCE_WATCH = `
 const { parentPort, workerData } = require("node:worker_threads");
@@ -69,13 +71,20 @@ const read = (path) => {
     return null;
   }
 };
+let reads = null;
+const said = (now) => {
+  if (reads === now) return;
+  reads = now;
+  parentPort.postMessage(now ? "reading" : "lost");
+};
 const scan = () => {
   let names;
   try {
     names = readdirSync(dir);
   } catch {
-    return;
+    return said(false);
   }
+  said(true);
   for (const name of names) {
     if (!name.endsWith(".json")) continue;
     const pending = join(dir, name);
@@ -105,7 +114,6 @@ const scan = () => {
 };
 setInterval(scan, every);
 scan();
-parentPort.postMessage("reading");
 `;
 
 /**
@@ -169,7 +177,8 @@ export function runForceWakeFile(pid: number, startedAt: string): string {
  * ended so (`markRunning`'s `recovers`). A reading or helper that cannot
  * start, or fails or ends before the run does, ends only itself: `ready` is
  * never called with true, or is called with false once it was, so the run
- * no longer says so. The run goes on, and a force stop asked of it is
+ * no longer says so; a reading that fails to read the folder calls it with
+ * false too, and with true again once it reads it again. The run goes on, and a force stop asked of it is
  * withdrawn when its wait is over.
  */
 export function watchRunForce(
@@ -199,16 +208,33 @@ export function watchRunForce(
     if (said) ready(false);
   };
   try {
+    // The folder is there before the reading starts, on every platform, so a first reading finds it.
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+  } catch (error) {
+    // i18n-exempt: the run's own log, never shown to a person.
+    console.warn(`[run] could not make the folder of force stops: ${(error as Error).message}`);
+  }
+  try {
     worker = new Worker(FORCE_WATCH, { eval: true, workerData: { dir, startedAt, every } });
     // i18n-exempt: the run's own log, never shown to a person.
     worker.on("error", (error) => lost(`stopped reading force stops: ${(error as Error).message}`));
     // i18n-exempt: the run's own log, never shown to a person.
     worker.on("exit", () => lost("stopped reading force stops"));
-    // Ready once the reading itself says it is in place, never only once its thread came online.
-    worker.on("message", (said: unknown) => {
-      if (said !== "reading") return;
-      online = true;
-      settled();
+    // Ready once the reading itself says it read the folder, never only once its thread came
+    // online; no longer while its readings fail, and again once one succeeds.
+    worker.on("message", (word: unknown) => {
+      if (word === "reading") {
+        online = true;
+        settled();
+      } else if (word === "lost" && online) {
+        online = false;
+        // i18n-exempt: the run's own log, never shown to a person.
+        console.warn("[run] cannot read the folder of force stops");
+        if (said) {
+          said = false;
+          ready(false);
+        }
+      }
     });
     worker.unref();
   } catch (error) {
@@ -224,7 +250,6 @@ export function watchRunForce(
   };
   if (worker && !hostPlatformProfile().windows) {
     try {
-      mkdirSync(dir, { recursive: true, mode: 0o700 });
       // Only the run that holds the folder starts a helper: an earlier run's pipe is its own no more.
       for (const name of readdirSync(dir))
         if (name.startsWith("wake-")) rmSync(join(dir, name), { force: true });
@@ -357,7 +382,10 @@ const WAKE_EVERY_MS = 1_000;
  * ask is told as the stop's end. Its pipe is found before then (`piped`,
  * `runPipeThere`), by an asker before it reads the run's record, since a run
  * that took the folder since clears an earlier run's pipe only once it
- * noted itself: a pipe found and gone since is the run gone too.
+ * noted itself: a pipe found and gone since is the run gone too. A run that
+ * says a force stop can end it holds its pipe, so on a Mac or Linux a run
+ * whose pipe was not found is asked nothing either, whatever holds its
+ * number now. `held`, for a test, stands in for whether a program holds it.
  * The attempt's files go once its end is known, and one that cannot be
  * removed changes nothing of what it answers.
  */
@@ -368,14 +396,18 @@ export async function endRunByForce(
   waitMs: number = STOPPED_RUN_WAIT_MS,
   wake: () => void = () => {},
   piped: boolean = runPipeThere(dataDir, run),
+  held?: () => boolean,
 ): Promise<ForceEnd> {
   const dir = join(dataDir, RUN_FORCE_DIR);
   // On a Mac or Linux the run and its helper hold the run's own pipe open while either runs, and no
   // other program ever holds it: a pipe nobody holds, or gone since it was found, is the run gone,
   // whoever has its number now.
+  // A run that says a force stop can end it holds its pipe there: one not found is no proof the
+  // named run is still there, so nothing is asked of whatever holds its number.
   const pipe = join(dir, runForceWakeFile(run.pid, run.startedAt));
-  const watched = !hostPlatformProfile().windows && piped;
-  const runs = (pid: number) => alive(pid) && (!watched || pipeHeld(pipe));
+  const posix = !hostPlatformProfile().windows;
+  if (posix && !piped) return "unasked";
+  const runs = (pid: number) => alive(pid) && (!posix || (held ? held() : pipeHeld(pipe)));
   if (!runs(run.pid)) return "unasked";
   const attempt = join(dir, `${process.pid}-${randomBytes(8).toString("hex")}`);
   const until = Date.now() + waitMs;

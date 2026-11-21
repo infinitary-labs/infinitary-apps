@@ -46,12 +46,21 @@ function namedWork(userDataDir: string): { INFINITARY_HELPER_DATA_DIR: string } 
 
 test.afterEach(() => {
   const testInfo = test.info();
-  standIn?.stopAll();
-  endCommands();
-  // A failed run keeps the service manager's records and each command's output with its results.
-  if (standIn && testInfo.status !== testInfo.expectedStatus)
-    cpSync(standIn.dir, testInfo.outputPath("service-manager"), { recursive: true });
+  const kept = standIn;
   standIn = null;
+  // Each cleanup runs whatever another's fails, and the first failure is the one the run reports.
+  const failures: unknown[] = [];
+  for (const step of [() => kept?.stopAll(), endCommands])
+    try {
+      step();
+    } catch (error) {
+      failures.push(error);
+    }
+  // A failed run, or one whose service manager did not stop, keeps that manager's records and each
+  // command's output with its results.
+  if (kept && (failures.length > 0 || testInfo.status !== testInfo.expectedStatus))
+    cpSync(kept.dir, testInfo.outputPath("service-manager"), { recursive: true });
+  if (failures.length > 0) throw failures[0];
 });
 
 /** The command that holds the data folder now, by the note it keeps there. */

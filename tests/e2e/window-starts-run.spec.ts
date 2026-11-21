@@ -61,11 +61,19 @@ const CARD_TITLE = "A card the first mate in its own program shows";
 let standIn: ServiceManagerStandIn | null = null;
 test.afterEach(() => {
   const testInfo = test.info();
-  standIn?.stopAll();
-  // A failed run keeps the service manager's records and each command's output with its results.
-  if (standIn && testInfo.status !== testInfo.expectedStatus)
-    cpSync(standIn.dir, testInfo.outputPath("service-manager"), { recursive: true });
+  const kept = standIn;
   standIn = null;
+  let failure: unknown = null;
+  try {
+    kept?.stopAll();
+  } catch (error) {
+    failure = error;
+  }
+  // A failed run, or one whose service manager did not stop, keeps that manager's records and each
+  // command's output with its results.
+  if (kept && (failure !== null || testInfo.status !== testInfo.expectedStatus))
+    cpSync(kept.dir, testInfo.outputPath("service-manager"), { recursive: true });
+  if (failure !== null) throw failure;
 });
 
 function seededDataDir(port: number): string {

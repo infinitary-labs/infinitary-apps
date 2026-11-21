@@ -2759,6 +2759,8 @@ public enum PhoneMessages {
     public static func `settingsForgeConnecting`() -> String { PhoneWords.format("settingsForgeConnecting", []) }
     public static func `settingsForgeDeviceRole`() -> String { PhoneWords.format("settingsForgeDeviceRole", []) }
     public static func `settingsForgeEnterCode`(`host`: String) -> String { PhoneWords.format("settingsForgeEnterCode", [`host`]) }
+    public static func `settingsForgeKeyDataCenterScopes`() -> String { PhoneWords.format("settingsForgeKeyDataCenterScopes", []) }
+    public static func `settingsForgeKeyNotDataCenter`(`host`: String) -> String { PhoneWords.format("settingsForgeKeyNotDataCenter", [`host`]) }
     public static func `settingsForgeMakeKey`(`host`: String) -> String { PhoneWords.format("settingsForgeMakeKey", [`host`]) }
     public static func `settingsForgeNewCode`() -> String { PhoneWords.format("settingsForgeNewCode", []) }
     public static func `settingsForgeNotSignedIn`(`host`: String) -> String { PhoneWords.format("settingsForgeNotSignedIn", [`host`]) }
@@ -6573,6 +6575,8 @@ extension PhoneWords {
         "settingsForgeConnecting": [],
         "settingsForgeDeviceRole": [],
         "settingsForgeEnterCode": ["host"],
+        "settingsForgeKeyDataCenterScopes": [],
+        "settingsForgeKeyNotDataCenter": ["host"],
         "settingsForgeMakeKey": ["host"],
         "settingsForgeNewCode": [],
         "settingsForgeNotSignedIn": ["host"],

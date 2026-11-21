@@ -2644,6 +2644,8 @@
 "settingsForgeConnecting" = "正在連線…";
 "settingsForgeDeviceRole" = "複製並推送自己的工作";
 "settingsForgeEnterCode" = "在 %1$@ 上輸入這組代碼：";
+"settingsForgeKeyDataCenterScopes" = "為權杖授予 Project read 和 Repository write 權限。";
+"settingsForgeKeyNotDataCenter" = "%1$@ 沒有像 Bitbucket Data Center 8.19 或更新版本那樣回應。請檢查位址。";
 "settingsForgeMakeKey" = "在 %1$@ 上產生金鑰";
 "settingsForgeNewCode" = "取得新代碼";
 "settingsForgeNotSignedIn" = "尚未登入 %1$@";

@@ -10,6 +10,7 @@ import { changeRequestHost } from "@shared/forgeKinds";
 import type { RepoView } from "@shared/repos";
 import type { Forge, ForgeLocation } from "./forge";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
+import { bitbucketDataCenterBaseFor } from "./providers/bitbucket/dataCenterClient";
 import { createBitbucketServer } from "./providers/bitbucket/signIn";
 import { githubApiBaseFor, githubApiBaseUrl } from "./providers/github/githubForge";
 import {
@@ -176,9 +177,10 @@ export function forgeSignInProviders(options: {
  * with a key made there (`docs/forge.md`, "Hosts on your own server"):
  * GitHub Enterprise and GitLab, with each kind's API address, sign-in
  * check and git user name. GitLab also names its public host and offers
- * browser sign-in with a per-host Application ID. Bitbucket is its public
- * host alone, bitbucket.org, by API token (`docs/forge.md`, "Bitbucket
- * sign-in and projects").
+ * browser sign-in with a per-host Application ID. Bitbucket signs in by
+ * token: an API token at bitbucket.org (`docs/forge.md`, "Bitbucket
+ * sign-in and projects"), an HTTP access token at a Bitbucket Data Center
+ * server (`docs/forge.md`, "Bitbucket Data Center").
  * The home and a computer that runs work both offer them (`docs/forge.md`,
  * "A computer's own sign-in").
  */
@@ -197,7 +199,10 @@ export function forgeSignInServers(options: {
       apiBaseFor: (host) => gitlabApiBaseFor(host, options),
       oauthBaseFor: (host) => gitlabOAuthBaseFor(host, options),
     }),
-    createBitbucketServer({ apiBaseFor: (host) => bitbucketApiBaseFor(host, options) }),
+    createBitbucketServer({
+      apiBaseFor: (host) => bitbucketApiBaseFor(host, options),
+      dataCenterBaseFor: (host) => bitbucketDataCenterBaseFor(host, options),
+    }),
   ];
 }
 
@@ -219,7 +224,8 @@ export type {
  * every GitHub Enterprise host - is the REST `GitHubForge` with the app's
  * own sign-in for that host (PR 1.2), and GitLab - gitlab.com and every self-hosted
  * server - is the REST `GitLabForge` with the app's own sign-in, and
- * Bitbucket - bitbucket.org - is the REST `BitbucketForge`. A kind with no
+ * Bitbucket is the REST `BitbucketForge` on bitbucket.org and the REST
+ * `DataCenterForge` on a Bitbucket Data Center server. A kind with no
  * binding is a plain Git host.
  */
 export type ForgeBindings = Partial<Record<ForgeKind, (location: ForgeLocation) => Forge>>;
@@ -271,8 +277,8 @@ export function forgeLocationOf(repo: ForgeRepo): ForgeLocation {
 /**
  * The forge for a repository. A project with no host (or no repository at
  * all) is kept on this Mac; a kind with a binding is its implementation
- * (GitHub or GitLab, on its public host or the person's own server, and
- * Bitbucket on bitbucket.org); a plain Git host sends its work up as a
+ * (GitHub, GitLab or Bitbucket, on its public host or the person's own
+ * server); a plain Git host sends its work up as a
  * branch.
  */
 export function createForgeResolver(

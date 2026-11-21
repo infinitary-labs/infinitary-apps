@@ -2644,6 +2644,8 @@
 "settingsForgeConnecting" = "接続中...";
 "settingsForgeDeviceRole" = "自分の作業をクローンしてプッシュ";
 "settingsForgeEnterCode" = "%1$@ でこのコードを入力してください：";
+"settingsForgeKeyDataCenterScopes" = "トークンに Project read と Repository write の権限を付与します。";
+"settingsForgeKeyNotDataCenter" = "%1$@ は Bitbucket Data Center 8.19 以降として応答しませんでした。アドレスを確認してください。";
 "settingsForgeMakeKey" = "%1$@ でキーを作成";
 "settingsForgeNewCode" = "新しいコードを取得";
 "settingsForgeNotSignedIn" = "%1$@ にサインインしていません";

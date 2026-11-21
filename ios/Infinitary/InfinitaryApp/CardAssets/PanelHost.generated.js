@@ -57063,6 +57063,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Enter this code on ${host}:`;
   }
+  function settingsForgeKeyDataCenterScopes() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `امنح الرمز صلاحيتي Project read وRepository write.`;
+      case "de":
+        return `Gib dem Token die Berechtigungen Project read und Repository write.`;
+      case "es":
+        return `Dale al token los permisos Project read y Repository write.`;
+      case "fr":
+        return `Donnez au jeton les autorisations Project read et Repository write.`;
+      case "ja":
+        return `トークンに Project read と Repository write の権限を付与します。`;
+      case "ko":
+        return `토큰에 Project read 및 Repository write 권한을 주세요.`;
+      case "pt-BR":
+        return `Dê ao token as permissões Project read e Repository write.`;
+      case "zh-Hans":
+        return `为令牌授予 Project read 和 Repository write 权限。`;
+      case "zh-Hant":
+        return `為權杖授予 Project read 和 Repository write 權限。`;
+      case "en-XA":
+        return `[Ĝîṽé ţĥé ţöķéñ Þŕöĵéçţ ŕéáð áñð Ŕéþöšîţöŕý ŵŕîţé þéŕɱîššîöñš. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Give the token Project read and Repository write permissions.‬`;
+    }
+    return `Give the token Project read and Repository write permissions.`;
+  }
+  function settingsForgeKeyNotDataCenter(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يستجب ${host} كما يستجيب Bitbucket Data Center 8.19 أو أحدث. تحقّق من العنوان.`;
+      case "de":
+        return `${host} hat nicht wie Bitbucket Data Center 8.19 oder neuer geantwortet. Prüf die Adresse.`;
+      case "es":
+        return `${host} no respondió como Bitbucket Data Center 8.19 o posterior. Revisa la dirección.`;
+      case "fr":
+        return `${host} n’a pas répondu comme Bitbucket Data Center 8.19 ou plus récent. Vérifiez l’adresse.`;
+      case "ja":
+        return `${host} は Bitbucket Data Center 8.19 以降として応答しませんでした。アドレスを確認してください。`;
+      case "ko":
+        return `${host}이(가) Bitbucket Data Center 8.19 이상처럼 응답하지 않았어요. 주소를 확인하세요.`;
+      case "pt-BR":
+        return `${host} não respondeu como o Bitbucket Data Center 8.19 ou mais recente. Confira o endereço.`;
+      case "zh-Hans":
+        return `${host} 没有像 Bitbucket Data Center 8.19 或更新版本那样响应。请检查地址。`;
+      case "zh-Hant":
+        return `${host} 沒有像 Bitbucket Data Center 8.19 或更新版本那樣回應。請檢查位址。`;
+      case "en-XA":
+        return `[${host} ðîð ñöţ áñšŵéŕ áš Ɓîţƀûçķéţ Ðáţá Çéñţéŕ 8.19 öŕ ñéŵéŕ ðöéš. Çĥéçķ ţĥé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ did not answer as Bitbucket Data Center 8.19 or newer does. Check the address.‬`;
+    }
+    return `${host} did not answer as Bitbucket Data Center 8.19 or newer does. Check the address.`;
+  }
   function settingsForgeMakeKey(input2) {
     const host = input2.host;
     switch (currentLanguage()) {
@@ -88708,6 +88763,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsForgeConnecting,
     settingsForgeDeviceRole,
     settingsForgeEnterCode,
+    settingsForgeKeyDataCenterScopes,
+    settingsForgeKeyNotDataCenter,
     settingsForgeMakeKey,
     settingsForgeNewCode,
     settingsForgeNotSignedIn,
@@ -91519,6 +91576,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsForgeConnecting": [],
     "settingsForgeDeviceRole": [],
     "settingsForgeEnterCode": ["host"],
+    "settingsForgeKeyDataCenterScopes": [],
+    "settingsForgeKeyNotDataCenter": ["host"],
     "settingsForgeMakeKey": ["host"],
     "settingsForgeNewCode": [],
     "settingsForgeNotSignedIn": ["host"],

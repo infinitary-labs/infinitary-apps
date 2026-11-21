@@ -2644,6 +2644,8 @@
 "settingsForgeConnecting" = "Connecting...";
 "settingsForgeDeviceRole" = "clones and pushes its own work";
 "settingsForgeEnterCode" = "Enter this code on %1$@:";
+"settingsForgeKeyDataCenterScopes" = "Give the token Project read and Repository write permissions.";
+"settingsForgeKeyNotDataCenter" = "%1$@ did not answer as Bitbucket Data Center 8.19 or newer does. Check the address.";
 "settingsForgeMakeKey" = "Make a key on %1$@";
 "settingsForgeNewCode" = "Get a new code";
 "settingsForgeNotSignedIn" = "not signed in to %1$@";

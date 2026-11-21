@@ -601,6 +601,8 @@
   "settingsForgeConnecting": "接続中...",
   "settingsForgeDeviceRole": "自分の作業をクローンしてプッシュ",
   "settingsForgeEnterCode": "{host} でこのコードを入力してください：",
+  "settingsForgeKeyDataCenterScopes": "トークンに Project read と Repository write の権限を付与します。",
+  "settingsForgeKeyNotDataCenter": "{host} は Bitbucket Data Center 8.19 以降として応答しませんでした。アドレスを確認してください。",
   "settingsForgeMakeKey": "{host} でキーを作成",
   "settingsForgeNewCode": "新しいコードを取得",
   "settingsForgeNotSignedIn": "{host} にサインインしていません",

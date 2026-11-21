@@ -2644,6 +2644,8 @@
 "settingsForgeConnecting" = "正在连接...";
 "settingsForgeDeviceRole" = "克隆并推送自己的工作";
 "settingsForgeEnterCode" = "在 %1$@ 上输入此代码：";
+"settingsForgeKeyDataCenterScopes" = "为令牌授予 Project read 和 Repository write 权限。";
+"settingsForgeKeyNotDataCenter" = "%1$@ 没有像 Bitbucket Data Center 8.19 或更新版本那样响应。请检查地址。";
 "settingsForgeMakeKey" = "在 %1$@ 上生成密钥";
 "settingsForgeNewCode" = "获取新代码";
 "settingsForgeNotSignedIn" = "未登录 %1$@";

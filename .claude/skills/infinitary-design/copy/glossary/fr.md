@@ -113,6 +113,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Reasoning | Raisonnement | |
 | rebase merges, merge commits (the host's settings) | fusion par rebasage (rebase), commits de fusion | Named only as the settings where the project lives, with "rebase" beside it because that settings page is in English; the app's own action stays "mettre à jour". |
 | rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
+| relay (Infinitary's push relay) | relais d’Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "note scellée". |
 | released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
 | remote, origin (never said) | là où le projet est hébergé | |
 | Remove (a device) | Retirer | |

@@ -110,6 +110,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | reading (of the allowance) | leitura, ler | "a última leitura está desatualizada", "lendo…". |
 | Reasoning | Raciocínio | |
 | rebase merges, merge commits (the host's settings) | mesclagens com rebase, commits de mesclagem | Named only as the settings where the project lives, as GitHub's Portuguese docs say them; the app's own action stays "atualizar". |
+| relay (Infinitary's push relay) | retransmissor do Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "bilhete lacrado". |
 | released (a task's close) | publicada | Closed through an outside release process. |
 | Remote Login (macOS's own name) | Login Remoto | macOS's own Brazilian Portuguese name in Sharing. |
 | remote, origin (avoided) | onde o projeto fica | |

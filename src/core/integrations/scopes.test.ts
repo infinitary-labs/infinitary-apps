@@ -56,6 +56,26 @@ describe("Allow for the rest of this task's place (INF-2993)", () => {
     );
   });
 
+  // The Bitbucket row's actions (its plan's piece 4): one repository by its workspace and slug.
+  it("names a Bitbucket repository by its workspace and slug, in lower case", () => {
+    const bitbucket = forgeScope("bitbucket");
+    expect(
+      bitbucket({
+        method: "POST",
+        path: "/repositories/Field-Team/Field-Notes/pullrequests/7/comments",
+      }),
+    ).toEqual({
+      key: "POST /repositories/field-team/field-notes",
+      words: "POST requests to field-team/field-notes",
+    });
+    expect(bitbucket({ method: "GET", path: "/workspaces/field-team/pullrequests/abc" }).key).toBe(
+      "GET /workspaces/field-team/pullrequests/abc",
+    );
+    expect(
+      bitbucket({ method: "POST", path: "/repositories/field-team/%2e%2e/other/issues" }).key,
+    ).toBe("POST /repositories/field-team/%2e%2e/other/issues");
+  });
+
   it("names a calendar with whom it notifies, and a message by its recipients in any order", () => {
     expect(calendarScope({ event: {} })).toEqual(
       calendarScope({ calendar: "primary", send_updates: "none" }),

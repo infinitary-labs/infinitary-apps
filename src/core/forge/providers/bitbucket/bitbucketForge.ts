@@ -5,6 +5,8 @@ import type { ForgeProject } from "@shared/forges";
 import type { PresentationDestination } from "@shared/presentationDestination";
 import type { NamingRule } from "@shared/runbooks";
 import { requireNamed } from "../../../workspace/naming";
+import type { ForgeApi } from "../../api";
+import type { ForgePullComment } from "../../forge";
 import {
   checkTimes,
   type Forge,
@@ -23,8 +25,16 @@ import {
   isFullCommitId,
   type MergeAnswer,
 } from "../../forge";
+import {
+  BITBUCKET_PAGE_PARAM,
+  bitbucketReleaseUpload,
+  nextBitbucketPagePath,
+  parseBitbucketApiRequest,
+} from "./api";
 import { BitbucketClient, type BitbucketOptions, BitbucketRefusal } from "./client";
+import { readBitbucketPullComments } from "./comments";
 import { BitbucketProjects } from "./projects";
+import { BitbucketWorkflows } from "./workflows";
 
 /**
  * Bitbucket Cloud over its REST API (`docs/forge.md`, "Bitbucket pull
@@ -41,9 +51,11 @@ import { BitbucketProjects } from "./projects";
  * commits by a short id, so every version the app keeps is read back as
  * the full commit id.
  *
- * A contributor's fork, batches, Bitbucket's own merge queue and the
- * crew's raw API reach come later; this forge refuses a fork's merge and
- * answers no gateway.
+ * The crew reaches Bitbucket's REST API through the gateway (`api`, its
+ * policy in `./api.ts`), reads Pipelines through `workflows`, and the
+ * comment and main-failure wakes read through `pullComments` and
+ * `branchChecks`. A contributor's fork, batches and Bitbucket's own merge
+ * queue come later; this forge refuses a fork's merge.
  */
 
 export type BitbucketForgeOptions = BitbucketOptions & {
@@ -72,7 +84,6 @@ type PullRequestJson = {
   source?: Endpoint;
   destination?: Endpoint;
   merge_commit?: { hash?: string } | null;
-  updated_on?: string;
   links?: { html?: { href?: string } };
 };
 
@@ -99,6 +110,9 @@ type MergeabilityJson = {
 /** Bitbucket's largest page of a list read. */
 const PAGE_LENGTH = 100;
 
+/** The page size Bitbucket answers a list with when the read names none. */
+const BITBUCKET_DEFAULT_PAGE_LENGTH = 10;
+
 export class BitbucketForge implements Forge {
   readonly kind = "bitbucket" as const;
   readonly host: string;
@@ -109,8 +123,14 @@ export class BitbucketForge implements Forge {
   readonly mergeNamesNoVersion = true as const;
   /** A Bitbucket repository is always `workspace/name`: nothing nests. */
   readonly nestedNamespace = false;
+  /** The gateway's raw call under Bitbucket's policy for this repository. */
+  readonly api: ForgeApi;
+  /** Bitbucket Pipelines, read for the crewmate's evidence tools. */
+  readonly workflows: BitbucketWorkflows;
   private readonly client: BitbucketClient;
   private readonly projects: BitbucketProjects;
+  /** The signed-in account's `account_id`, read once for this forge. */
+  private viewer: Promise<string> | undefined;
 
   constructor(
     readonly location: ForgeLocation,
@@ -120,6 +140,24 @@ export class BitbucketForge implements Forge {
     this.place = forgePlace({ kind: "bitbucket", host: this.host }) ?? this.host;
     this.client = new BitbucketClient(this.host, options);
     this.projects = new BitbucketProjects(this.host, options);
+    this.workflows = new BitbucketWorkflows(
+      this.client,
+      () => this.repositoryPath(),
+      () =>
+        `https://${this.host}/${encodeURIComponent(location.owner ?? "")}/${encodeURIComponent(location.name ?? "")}`,
+    );
+    const project =
+      location.owner && location.name ? { owner: location.owner, name: location.name } : null;
+    this.api = {
+      place: this.place,
+      defaultPerPage: BITBUCKET_DEFAULT_PAGE_LENGTH,
+      pageParam: BITBUCKET_PAGE_PARAM,
+      route: (method, raw, bodyBytes) => parseBitbucketApiRequest(method, raw, project, bodyBytes),
+      nextPath: (link) => nextBitbucketPagePath(link, options.apiBaseUrl, project),
+      call: (method, path, body) => this.client.call(method, path, body),
+      releaseUpload: (raw) => bitbucketReleaseUpload(raw, project),
+      upload: (route, file) => this.client.upload(route.path, file),
+    };
   }
 
   listProjects(): Promise<ForgeProject[]> {
@@ -211,6 +249,29 @@ export class BitbucketForge implements Forge {
       "opening the pull request",
     );
     return this.changeOf(opened.body as PullRequestJson);
+  }
+
+  /** The main branch's head and the build statuses on it, for the main-failure wake. */
+  async branchChecks(): Promise<{ sha: string; checks: ForgeChecks }> {
+    const branch = await this.defaultBranch();
+    const sha = await this.branchHead(branch);
+    return { sha, checks: await this.checks({ branch, headSha: sha, url: null }) };
+  }
+
+  /** The pull request's comments changed since `since`, for the comment wake. */
+  async pullComments(
+    number: number,
+    since?: string,
+    seen?: ReadonlySet<number>,
+  ): Promise<ForgePullComment[]> {
+    return readBitbucketPullComments(
+      (path) => this.read(path),
+      this.repositoryPath(),
+      number,
+      () => this.viewerAccount(),
+      since,
+      seen,
+    );
   }
 
   async branchHead(branch: string): Promise<string> {
@@ -493,7 +554,10 @@ export class BitbucketForge implements Forge {
       state: open ? "open" : "closed",
       merged,
       ...(mergedSha ? { mergedSha } : {}),
-      ...(request.updated_on ? { updatedAt: request.updated_on } : {}),
+      // No updatedAt: Bitbucket's `updated_on` stays put when someone
+      // comments (measured on bitbucket.org), and the comment wake skips its
+      // reading while a pull request's last-changed time is unchanged
+      // (`docs/forge.md`, "Comments on a pull request").
       headSha: await this.headOf(request),
       base: request.destination?.branch?.name ?? "",
       ...(request.source?.branch?.name ? { branch: request.source.branch.name } : {}),
@@ -640,6 +704,21 @@ export class BitbucketForge implements Forge {
     // settles no merge and confirms none (INF-5193).
     if (!request || request.id !== id) throw unreadableError(this.place, `pull request #${id}`);
     return request;
+  }
+
+  /** The signed-in account's `account_id`; a failed read is asked again next time. */
+  private viewerAccount(): Promise<string> {
+    this.viewer ??= this.read<{ account_id?: unknown } | null>("/user?fields=account_id").then(
+      (user) => {
+        if (typeof user?.account_id !== "string" || !user.account_id)
+          throw unreadableError(this.place, "the signed-in account");
+        return user.account_id;
+      },
+    );
+    this.viewer.catch(() => {
+      this.viewer = undefined;
+    });
+    return this.viewer;
   }
 
   private async read<T>(path: string): Promise<T> {

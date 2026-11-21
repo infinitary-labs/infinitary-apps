@@ -57,6 +57,21 @@ const WRITE_GRAMMAR: Record<RawApiKind, WriteGrammar> = {
       return undefined;
     },
   },
+  bitbucket: {
+    merges: (rest) => /^pullrequests\/\d+\/merge(?:\/|$)/.test(rest),
+    branchOf: async ({ rest, data, query, readDefault, refuse }) => {
+      // The repository's own write names its main branch in `mainbranch`.
+      if (rest === "" && "mainbranch" in data) refuse();
+      if (/^refs\/branches\/.+/.test(rest)) return rest.slice("refs/branches/".length);
+      if (rest === "refs/branches" && typeof data.name === "string") return data.name;
+      // A commit through `src` lands on the branch it names, or the main branch.
+      if (rest === "src") {
+        const branchInput = data.branch ?? query.get("branch");
+        return typeof branchInput === "string" ? branchInput : await readDefault();
+      }
+      return undefined;
+    },
+  },
 };
 
 /**

@@ -42,9 +42,10 @@ function bare(path: string): string {
 }
 
 /**
- * A REST call through a forge's sign-in (GitHub, GitHub Enterprise or
- * GitLab): the method plus the repository (`/repos/{owner}/{repo}`, in
- * lower case) or the GitLab project (`/projects/{id}`). A path outside one,
+ * A REST call through a forge's sign-in (GitHub, GitHub Enterprise, GitLab
+ * or Bitbucket): the method plus the repository (`/repos/{owner}/{repo}`,
+ * or Bitbucket's `/repositories/{workspace}/{repo}`, in lower case) or the
+ * GitLab project (`/projects/{id}`). A path outside one,
  * or one with a segment that could leave it, is its own place, exactly as
  * written without its query.
  */
@@ -60,6 +61,12 @@ export function forgeScope(kind: RawApiKind): (input: unknown) => IntegrationSco
   };
 }
 
+/** A repository's scope by its owner and name, under the root its host names repositories by. */
+function repositoryScope(method: string, root: string, repository: string): IntegrationScope {
+  const place = repository.toLowerCase();
+  return { key: `${method} /${root}/${place}`, words: `${method} requests to ${place}` };
+}
+
 /** Each kind's own place in a REST path: a repository, or a project by its id. */
 const FORGE_PLACES: Record<
   RawApiKind,
@@ -72,8 +79,7 @@ const FORGE_PLACES: Record<
   github: {
     of: ([root, first, second], method) => {
       if (root !== "repos" || !first || !second) return undefined;
-      const place = `${first}/${second}`.toLowerCase();
-      return { key: `${method} /repos/${place}`, words: `${method} requests to ${place}` };
+      return repositoryScope(method, "repos", `${first}/${second}`);
     },
   },
   gitlab: {
@@ -88,6 +94,12 @@ const FORGE_PLACES: Record<
         // An id that does not decode is named as written.
       }
       return { key: `${method} /projects/${id}`, words: `${method} requests to project ${name}` };
+    },
+  },
+  bitbucket: {
+    of: ([root, first, second], method) => {
+      if (root !== "repositories" || !first || !second) return undefined;
+      return repositoryScope(method, "repositories", `${first}/${second}`);
     },
   },
 };

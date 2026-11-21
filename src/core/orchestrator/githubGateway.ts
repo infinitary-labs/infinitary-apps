@@ -85,10 +85,6 @@ const SEAT_CALLS = "seat:firstmate";
  */
 const LOOK_CALLS = "look:automation";
 
-/** A GitHub write that sends a comment, a reply to a line comment or a review on a pull request. */
-const COMMENT_WRITE =
-  /^(?:issues\/\d+\/comments|pulls\/\d+\/comments(?:\/\d+\/replies)?|pulls\/\d+\/reviews)$/;
-
 /**
  * A panel's calls (docs/integrations.md, "Panels"): a panel is no task and
  * no seat, so its calls spend no allowance; the action's own rule and the
@@ -266,20 +262,21 @@ export class GithubGatewayService {
     if (route.write) throw new ForgeError("refused", "github_read sends GET or HEAD only.");
     let path = route.path;
     let served: number | undefined;
+    const pageParam = api.pageParam ?? "per_page";
     for (;;) {
       try {
         const response = await this.send(caller, api, route.method, path);
-        const asked = new URLSearchParams(route.path.split("?")[1]).get("per_page");
+        const asked = new URLSearchParams(route.path.split("?")[1]).get(pageParam);
         const paged =
           served === undefined
             ? []
             : [
-                `The answer ${asked === null ? "at the default page size" : `at per_page=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at per_page=${served}; nextPath continues at that size.`,
+                `The answer ${asked === null ? "at the default page size" : `at ${pageParam}=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at ${pageParam}=${served}; nextPath continues at that size.`,
               ];
         return render(response, api, paged);
       } catch (caught) {
         if (!(caught instanceof OversizedAnswer) || route.method !== "GET") throw caught;
-        const smaller = smallerPage(path, caught, api.defaultPerPage);
+        const smaller = smallerPage(path, caught, api.defaultPerPage, pageParam);
         if ("refused" in smaller)
           throw new ForgeError("refused", `${caught.message} ${smaller.refused}`);
         path = api.route("GET", smaller.path).path;
@@ -540,13 +537,14 @@ export class GithubGatewayService {
     const description = KIND_REST[kind].description;
     const named = description.path.exec(rest);
     // GitLab also reads a field from the query string (INF-290 F1), so either place names it.
-    const field = description.field;
     const query = new URLSearchParams(route.path.split("?")[1] ?? "");
     if (
       route.method === description.method &&
       named &&
       guarded.includes(Number(named[1])) &&
-      ((body !== null && typeof body === "object" && field in body) || query.has(field))
+      description.fields.some(
+        (field) => (body !== null && typeof body === "object" && field in body) || query.has(field),
+      )
     )
       throw new ForgeError(
         "refused",
@@ -606,8 +604,8 @@ export class GithubGatewayService {
     const raw = rawApiKind(ask.kind);
     const numbered = raw ? KIND_REST[raw].numberedProject : undefined;
     const byNumber =
-      numbered && target.via === "project" && numbered.test(ask.path)
-        ? " If it is your own project, name it by its URL-encoded path instead, and the write goes at once."
+      numbered && target.via === "project" && numbered.path.test(ask.path)
+        ? ` If it is your own project, ${numbered.hint}, and the write goes at once.`
         : "";
     return [
       `Not sent: ${why}. Kept as ask ${ask.id}: ${ask.method} ${ask.path} on ${ask.place}.${byNumber}`,
@@ -855,8 +853,15 @@ export class GithubGatewayService {
    * wakes it about its own words, which appear under the same sign-in as the
    * person's own (docs/forge.md, "Comments on a pull request").
    */
-  private noteSentComment(taskId: string, rest: string, response: ForgeApiResponse): void {
-    if (!COMMENT_WRITE.test(rest.split("?")[0] ?? "")) return;
+  private noteSentComment(
+    taskId: string,
+    forge: Forge,
+    rest: string,
+    response: ForgeApiResponse,
+  ): void {
+    const kind = rawApiKind(forge.kind);
+    const write = kind ? KIND_REST[kind].commentWrite : undefined;
+    if (!write?.test((rest.split("?")[0] ?? "").replace(/\/+$/, ""))) return;
     let id: unknown;
     try {
       id = responseObject(response).id;
@@ -877,9 +882,10 @@ export class GithubGatewayService {
     response: ForgeApiResponse,
     dispatched?: DispatchBaseline,
   ): Promise<string> {
-    if (response.status < 300 && target.forge.kind === "github" && route.method === "POST")
+    if (response.status < 300 && route.method === "POST")
       this.noteSentComment(
         taskId,
+        target.forge,
         route.rest.split("/").map(decodeURIComponent).join("/"),
         response,
       );
@@ -899,7 +905,8 @@ export class GithubGatewayService {
       try {
         const body = responseObject(response);
         if (dispatch) runId = body.workflow_run_id;
-        else if (pipeline) runId = body.id;
+        else if (pipeline)
+          runId = body[KIND_REST[rawApiKind(target.forge.kind) ?? "github"].startedRun ?? "id"];
         else {
           const run = rest.match(/^(?:actions\/runs|pipelines)\/(\d+)\//);
           if (run) runId = Number(run[1]);
@@ -1073,6 +1080,9 @@ function render(response: ForgeApiResponse, api: ForgeApi, said: string[] = []):
     response.status === 403 && response.rateLimit?.remaining === 0
       ? "The hourly allowance is spent; retry after the reset time."
       : undefined,
+    // Bitbucket answers a spent hourly allowance with a 429.
+    // i18n-exempt: a note in the gateway answer served to the crewmate
+    response.status === 429 ? "The hourly allowance is spent; retry later." : undefined,
     removed.links ? DOWNLOAD_TOKEN_NOTE : undefined,
     removed.fields ? CLONE_TOKEN_NOTE : undefined,
   ].filter((note) => note !== undefined);
@@ -1143,41 +1153,70 @@ function isDispatch(forge: Forge, rest: string): boolean {
   return forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
 }
 
-/** A pipeline start, such as GitLab's, by its path under the project. */
+/** A pipeline start, such as GitLab's or Bitbucket's, by its path under the project. */
 function isPipelineStart(forge: Forge, rest: string): boolean {
   const kind = rawApiKind(forge.kind);
-  return kind !== undefined && KIND_REST[kind].startsPipeline === rest;
+  return kind !== undefined && KIND_REST[kind].startsPipeline === rest.replace(/\/+$/, "");
 }
 
 /**
  * Each kind's own REST paths the gateway reads: where a change is opened,
- * where a pipeline starts, whether a retry answers with its run, and how a
- * project is named by its number rather than its path.
+ * where a pipeline starts and which field of its answer is the run's number,
+ * whether a retry answers with its run, which write sends a comment on a
+ * change, and how a project is named by an id rather than its path.
  */
 const KIND_REST: Record<
   RawApiKind,
   {
     opensChange: string;
-    /** The call that rewrites a change's description: its path, method and field. */
-    description: { path: RegExp; method: "PATCH" | "PUT"; field: string };
+    /** The call that rewrites a change's description: its path, method and the fields that carry it. */
+    description: { path: RegExp; method: "PATCH" | "PUT"; fields: string[] };
     startsPipeline?: string;
+    /** The field of a pipeline start's answer that is the run's number; `id` when absent. */
+    startedRun?: string;
     retryNamesRun: boolean;
-    numberedProject?: RegExp;
+    /** A write that sends a comment, a reply or a review on a change, kept so its own words never wake it. */
+    commentWrite?: RegExp;
+    numberedProject?: { path: RegExp; hint: string };
   }
 > = {
   github: {
     opensChange: "pulls",
     // GitHub's issues route is an alias for a pull request's description.
-    description: { path: /^(?:pulls|issues)\/(\d+)$/, method: "PATCH", field: "body" },
+    description: { path: /^(?:pulls|issues)\/(\d+)$/, method: "PATCH", fields: ["body"] },
     retryNamesRun: false,
+    commentWrite:
+      /^(?:issues\/\d+\/comments|pulls\/\d+\/comments(?:\/\d+\/replies)?|pulls\/\d+\/reviews)$/,
   },
   gitlab: {
     opensChange: "merge_requests",
     // GitLab's issues are their own, never a merge request's description.
-    description: { path: /^merge_requests\/(\d+)$/, method: "PUT", field: "description" },
+    description: { path: /^merge_requests\/(\d+)$/, method: "PUT", fields: ["description"] },
     startsPipeline: "pipeline",
     retryNamesRun: true,
-    numberedProject: /^\/projects\/\d+(?:\/|$)/,
+    numberedProject: {
+      path: /^\/projects\/\d+(?:\/|$)/,
+      hint: "name it by its URL-encoded path instead",
+    },
+  },
+  bitbucket: {
+    opensChange: "pullrequests",
+    // Bitbucket keeps a pull request's description in `description` and its `summary`.
+    description: {
+      path: /^pullrequests\/(\d+)$/,
+      method: "PUT",
+      fields: ["description", "summary"],
+    },
+    // Bitbucket offers no rerun: a run is a new pipeline, numbered by its build number.
+    startsPipeline: "pipelines",
+    startedRun: "build_number",
+    retryNamesRun: false,
+    commentWrite: /^pullrequests\/\d+\/comments$/,
+    numberedProject: {
+      path: /^\/repositories\/(?:%7B|\{)/i,
+      // i18n-exempt: served to the crewmate in the kept ask's answer
+      hint: "name it by its workspace and repository slugs instead of an id in braces",
+    },
   },
 };
 

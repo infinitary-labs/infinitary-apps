@@ -578,8 +578,13 @@ export interface Forge {
    * The pull request's comments, line comments and reviews changed at or
    * after `since` (the host's own time), or every one without it (docs/forge.md,
    * "Comments on a pull request"). Absent on a host the app reads no comments on.
+   * A comment in `seen`, already read by an earlier reading, may be left out.
    */
-  pullComments?(number: number, since?: string): Promise<ForgePullComment[]>;
+  pullComments?(
+    number: number,
+    since?: string,
+    seen?: ReadonlySet<number>,
+  ): Promise<ForgePullComment[]>;
   /** The files one commit changes, for handing a batch's line comment to its change. */
   commitFiles?(sha: string): Promise<string[]>;
   /**

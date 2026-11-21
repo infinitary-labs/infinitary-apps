@@ -85,8 +85,7 @@ const ACTIONS: readonly IntegrationActionSpec[] = [
 /**
  * Each kind's own REST API in the actions' words, and whether its runs are
  * the events an Automation rule looks at: GitHub's runs API, which GitLab's
- * pipelines are not. Bitbucket's row shows its sign-in's health and offers
- * no actions yet (`docs/integrations.md`, "Bitbucket").
+ * pipelines are not, nor Bitbucket's (`docs/integrations.md`, "Bitbucket").
  */
 const KIND_API: Record<
   SignInKind,
@@ -101,13 +100,31 @@ const KIND_API: Record<
   },
   gitlab: {
     description: (action) =>
-      action.name === "read"
-        ? "GET or HEAD one relative GitLab REST API path (the part after /api/v4), such as /projects?membership=true or /user. JSON only; nextPath reads the next page."
-        : "POST, PATCH, PUT or DELETE one relative GitLab REST API path, with body as JSON text. The integration approval rule decides when it runs. Merges and default-branch moves require the merge card.",
+      restDescription(action, "GitLab", "/api/v4", "/projects?membership=true"),
     runEvents: false,
   },
-  bitbucket: null,
+  bitbucket: {
+    description: (action) =>
+      // i18n-exempt: the product's name
+      restDescription(action, "Bitbucket Cloud", "/2.0", "/repositories/{workspace}?role=member"),
+    runEvents: false,
+  },
 };
+
+/**
+ * A host's own REST API action in one sentence shape, by its name, the part
+ * of the address its paths follow and an example list.
+ */
+function restDescription(
+  action: IntegrationActionSpec,
+  name: string,
+  after: string,
+  example: string,
+): string {
+  return action.name === "read"
+    ? `GET or HEAD one relative ${name} REST API path (the part after ${after}), such as ${example} or /user. JSON only; nextPath reads the next page.`
+    : `POST, PATCH, PUT or DELETE one relative ${name} REST API path, with body as JSON text. The integration approval rule decides when it runs. Merges and default-branch moves require the merge card.`;
+}
 
 export function githubIntegration(
   options: GithubIntegrationOptions,
@@ -122,7 +139,7 @@ export function githubIntegration(
   const { host, id, name, label, kind } = target;
   const api = KIND_API[kind];
   // Allow for the rest of this task covers one kind of request to one repository or project.
-  const scope = api && kind !== "bitbucket" ? forgeScope(kind) : undefined;
+  const scope = api ? forgeScope(kind) : undefined;
   const actions =
     api && scope
       ? ACTIONS.map((action) => ({

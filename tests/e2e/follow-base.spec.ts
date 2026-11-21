@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { LEFT_OUT_WORDS } from "../../src/core/batches/combine";
 import { candidateHead } from "../../src/core/orchestrator/mergeAuthorization";
 import { openDatabase } from "../../src/core/storage/db";
@@ -11,12 +11,23 @@ import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import {
+  expectRecordBody,
+  hideRecord,
+  pressRow,
+  recordBar,
+  recordBarButton,
+  recordCard,
+} from "./rails";
 import { readSavedData } from "./savedData";
 import {
   BRING_FIRST_UP_TO_DATE,
   type ChainPart,
+  CLOSED_REPORT,
+  CLOSED_UNDER,
   chainTask,
   chainTitle,
+  closedSteer,
   FOLLOWED,
   followBase,
   followBasePrompt,
@@ -29,34 +40,16 @@ import { pressKey } from "./windowKeys";
 const PASSED = [{ name: "unit-tests", status: "completed", conclusion: "success" }];
 const RUNNING = [{ name: "unit-tests", status: "in_progress", conclusion: null }];
 
+/** The chain of three parts, started, and what a section reads of it. */
+type Chain = Awaited<ReturnType<typeof startChain>>;
+
 /**
- * INF-5269's plan, part 3, the captain's "Approve and build": a part that
- * started on the approved version of the part under it follows that part.
- * When the part under it is approved at a newer version, the part is told
- * once, with both versions and how to replay only its own commits. Under
- * the captain's kept approval, its repair onto that newer version is
- * accepted with only its own paths compared, and the approval stays. Without
- * an approval, a merge card at a version that does not hold the newer
- * version is refused in the batch line's words, and the card at the
- * replayed version goes up and moves its recorded base. The parts still
- * merge in order, each as one commit of its own difference.
- *
- * Real git supplies the crewmates' commits, rebases and the app's own
- * combine and push; a disposable GitHub serves a project on batched pull
- * requests, each pushed branch's passing check and the batch pull requests
- * the app opens, and records each merge, moving the project's default
- * branch as GitHub does. The crewmates' moves are scripted
- * (`scenarios/followBase.ts`); the first part's move starts from the
- * journey's own words in its Crewmate tab, after the journey moves the
- * default branch. One journey: each section needs the one before it.
- * Completion signals are the host's own records: the tasks' recorded
- * bases and approvals, the steers in the crewmates' requests, the merges and
- * the default branch's commits. Requires desktop Electron and local git; no
- * real sign-in or shared pull request.
+ * A disposable GitHub serving a project on batched pull requests, the app
+ * launched on it, and the first mate's start of the chain: the first part
+ * started and the second and third filed behind it.
  */
-test("a chained part follows the newer approved version of the part under it", async () => {
-  test.setTimeout(8 * 60_000);
-  const userDataDir = scratchDir("infinitary-follow-base-");
+async function startChain(prefix: string) {
+  const userDataDir = scratchDir(prefix);
   const { repoDir } = seedRepo(userDataDir);
   const git = (...args: string[]) =>
     execFileSync("git", ["-C", repoDir, ...args], { stdio: "pipe" })
@@ -152,7 +145,85 @@ test("a chained part follows the newer approved version of the part under it", a
     const first = await idOf("first");
     const second = await idOf("second");
     const third = await idOf("third");
+    return {
+      launched,
+      github,
+      git,
+      repoDir,
+      page,
+      cardTitles,
+      saved,
+      builtOn,
+      approvedAt,
+      approve,
+      heard,
+      moved,
+      first,
+      second,
+      third,
+    };
+  } catch (caught) {
+    await launched.close();
+    await github.close();
+    throw caught;
+  }
+}
 
+/** Run a section on a started chain, closing the app and the disposable GitHub after it. */
+async function onChain(prefix: string, section: (chain: Chain) => Promise<void>) {
+  const chain = await startChain(prefix);
+  try {
+    await section(chain);
+  } finally {
+    await chain.launched.close();
+    await chain.github.close();
+  }
+}
+
+/**
+ * INF-5269's plan, part 3, the captain's "Approve and build": a part that
+ * started on the approved version of the part under it follows that part.
+ * When the part under it is approved at a newer version, the part is told
+ * once, with both versions and how to replay only its own commits. Under
+ * the captain's kept approval, its repair onto that newer version is
+ * accepted with only its own paths compared, and the approval stays. Without
+ * an approval, a merge card at a version that does not hold the newer
+ * version is refused in the batch line's words, and the card at the
+ * replayed version goes up and moves its recorded base. The parts still
+ * merge in order, each as one commit of its own difference.
+ *
+ * Real git supplies the crewmates' commits, rebases and the app's own
+ * combine and push; a disposable GitHub serves a project on batched pull
+ * requests, each pushed branch's passing check and the batch pull requests
+ * the app opens, and records each merge, moving the project's default
+ * branch as GitHub does. The crewmates' moves are scripted
+ * (`scenarios/followBase.ts`); the first part's move starts from the
+ * journey's own words in its Crewmate tab, after the journey moves the
+ * default branch. One journey: each section needs the one before it.
+ * Completion signals are the host's own records: the tasks' recorded
+ * bases and approvals, the steers in the crewmates' requests, the merges and
+ * the default branch's commits. Requires desktop Electron and local git; no
+ * real sign-in or shared pull request.
+ */
+test("a chained part follows the newer approved version of the part under it", async () => {
+  test.setTimeout(8 * 60_000);
+  await onChain("infinitary-follow-base-", async (chain) => {
+    const {
+      github,
+      git,
+      repoDir,
+      page,
+      cardTitles,
+      saved,
+      builtOn,
+      approvedAt,
+      approve,
+      heard,
+      moved,
+      first,
+      second,
+      third,
+    } = chain;
     // The captain approves the first part; the second starts on it, and the third on the second.
     await approve("first");
     const firstApproved = approvedAt(first) ?? "";
@@ -232,8 +303,61 @@ test("a chained part follows the newer approved version of the part under it", a
     expect(git("show", "--name-only", "--format=", "main")).toBe("third.txt");
     expect(git("show", "--name-only", "--format=", "main~1")).toBe("second.txt");
     expect(git("show", "--name-only", "--format=", "main~2")).toBe("first.txt");
-  } finally {
-    await launched.close();
-    await github.close();
-  }
+  });
+});
+
+/** Chromium drops native clicks into a hidden window's sandboxed frames. */
+async function openRecord(page: Page, key: string, id: string): Promise<void> {
+  await pressRow(page, key);
+  await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
+  await expect(recordCard(page)).toHaveCSS("opacity", "1");
+  await expectRecordBody(page);
+}
+
+/**
+ * INF-5269's plan, part 3: a part that started on the approved version of
+ * the part under it is told once when that part closes without merging.
+ * The captain drops the first part from its record while its approved
+ * change waits in the batch line; the second part, building on that
+ * approved version, hears the closed-unmerged steer once, naming the first
+ * part and the version it builds on, instead of the closed dependency's
+ * steer, and reports. Completion signals are the host's records: the first
+ * part's close, the steers in the crewmate's requests and its report.
+ */
+test("a chained part is told once when the part under it closes without merging", async () => {
+  test.setTimeout(6 * 60_000);
+  await onChain("infinitary-follow-base-closed-", async (chain) => {
+    const { page, cardTitles, saved, builtOn, approvedAt, approve, heard, first, second } = chain;
+    // The captain approves the first part; the second starts on its approved version.
+    await approve("first");
+    const firstApproved = approvedAt(first) ?? "";
+    await expect.poll(() => builtOn(second), { timeout: 60_000 }).toBe(firstApproved);
+    await expect.poll(cardTitles, { timeout: 120_000 }).toContain(chainTitle("second"));
+    const told = closedSteer(
+      {
+        key: saved(first)?.key || first,
+        title: chainTask("meterlab", "first"),
+        head: firstApproved,
+      },
+      "dropped",
+    );
+    expect(heard(told)).toBe(0);
+
+    // told-closed: the captain drops the first part from its record.
+    await openRecord(page, saved(first)?.key ?? "", first);
+    await recordBarButton(page, "end").click();
+    await expect(recordBar(page)).toHaveAttribute("data-record-footer", "confirm");
+    await recordBarButton(page, "next").click();
+    await expect.poll(() => saved(first)?.status, { timeout: 30_000 }).toBe("dropped");
+    if ((await recordCard(page).count()) > 0) {
+      await hideRecord(page).click();
+      await expect(recordCard(page)).toHaveCount(0);
+    }
+    // The second part hears it once, and reports instead of building on.
+    await expect
+      .poll(() => heard(CLOSED_REPORT("second")), { timeout: 120_000 })
+      .toBeGreaterThan(0);
+    expect(heard(told)).toBe(1);
+    expect(heard(CLOSED_UNDER)).toBe(1);
+  });
 });

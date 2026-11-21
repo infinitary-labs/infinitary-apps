@@ -28,6 +28,9 @@ import { mergeShellCall, mergeShellTurn } from "./mergeShell";
  *   it declares that repair onto the newer version; without one (the third
  *   part) it first offers its merge card at the old version, which the host
  *   refuses, then shows a new story and merge card at the replayed version.
+ * - A part told that the part under it closed without merging (the
+ *   `base-closed-unmerged` steer) reports to the first mate and builds
+ *   nothing more.
  * Nothing here merges: the journey presses each card, and the app combines
  * the approved changes.
  */
@@ -54,6 +57,10 @@ export const chainCardId = (part: ChainPart) => `merge-${part}-part`;
 export const FOLLOWED = (part: ChainPart) =>
   `the ${part} part follows the part under it and its merge card is up.`;
 
+/** A part's report once it heard the part under it closed without merging, after the scenario's marker. */
+export const CLOSED_REPORT = (part: ChainPart) =>
+  `the ${part} part builds on work that closed without merging; the first mate decides.`;
+
 /** The journey's words to the first part's crewmate: the default branch moved. */
 export const BRING_FIRST_UP_TO_DATE = `${FOLLOW_BASE_MARKER}: the default branch moved, bring the first part up to date`;
 
@@ -78,6 +85,22 @@ function movedVersions(text: string): { to: string; from: string } | undefined {
   const found = new RegExp(`([0-9a-f]{40})${escaped}([0-9a-f]{40})`).exec(text);
   return found ? { to: found[1] as string, from: found[2] as string } : undefined;
 }
+
+/** The closed-unmerged steer's words, from their owner: the part under a part, `base`, closed. */
+export const closedSteer = (
+  base: { key: string; title: string; head: string; newer?: string },
+  closed: "done" | "dropped",
+) => DELIVERY_WORDS["base-closed-unmerged"]({ kind: "base-closed-unmerged", base, closed }, {});
+
+/** Stands for the closed part's version in the steer's words. */
+const HEAD = "\u0000head\u0000";
+const CLOSED_SAMPLE = closedSteer({ key: "", title: "", head: HEAD }, "dropped");
+
+/** The steer's words just before the version the branch builds on, which only that steer says. */
+export const CLOSED_UNDER = CLOSED_SAMPLE.slice(
+  CLOSED_SAMPLE.indexOf("(dropped)") + "(dropped)".length,
+  CLOSED_SAMPLE.indexOf(HEAD),
+);
 
 export const followBase: Scenario =
   () =>
@@ -105,11 +128,13 @@ function chainMove(body: string, firstmate: boolean): ScenarioAnswer | undefined
   const part = ownPart(body);
   // The base-moved steer names the newer version and the one the branch builds on.
   const moved = movedVersions(user);
-  const steps = moved
-    ? followSteps(body, part, results, moved.to, moved.from)
-    : user.includes(BRING_FIRST_UP_TO_DATE)
-      ? upToDateSteps(body, user, results)
-      : buildSteps(body, part, results);
+  const steps = user.includes(CLOSED_UNDER)
+    ? [report(CLOSED_REPORT(part))]
+    : moved
+      ? followSteps(body, part, results, moved.to, moved.from)
+      : user.includes(BRING_FIRST_UP_TO_DATE)
+        ? upToDateSteps(body, user, results)
+        : buildSteps(body, part, results);
   const next = steps[results.length];
   return next ? { calls: [next] } : { text: "Ready." };
 }

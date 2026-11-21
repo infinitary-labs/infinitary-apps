@@ -9,7 +9,8 @@ extension PhoneJourney {
     /// would. A simulated push runs no notification part (Xcode's known limit), so the notification keeps the relay's own
     /// words; `PhonePushTests` owns opening the sealed card, its title and the card it names. Completion: the home keeps
     /// the phone's registration, the notification arrives with the relay's words, its tap brings Infinitary back, and after
-    /// a reconnect the welcome hands the held grant again with no new relay ask and no second question.
+    /// a reconnect the welcome hands the held grant again with no new relay ask and no second question. With the grant the
+    /// phone leaves the computer a letter in its box at the stand-in relay (INF-5275); `PhonePushTests` owns what it says.
     func testCardPushes() async throws {
         let standIn = try await home("push-state", method: "GET")
         let relay = try XCTUnwrap(standIn["relay"] as? String)
@@ -36,6 +37,10 @@ extension PhoneJourney {
         let registered = try await home("push-registered", budget: 90)
         XCTAssertEqual(registered["registered"] as? Bool, true, "\(registered)")
         XCTAssertEqual(registered["asks"] as? Int, 1, "One ask of the relay for one push address")
+        // INF-5275: with the grant it left its computer a sealed letter, in the box only that computer's key names.
+        let lettered = try await home("push-lettered", budget: 60)
+        XCTAssertEqual(lettered["lettered"] as? Bool, true, "\(lettered)")
+        XCTAssertEqual(lettered["letters"] as? Int, 1, "One letter for one computer: \(lettered)")
 
         // Settings → Devices says notifications are on.
         tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)

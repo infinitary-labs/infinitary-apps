@@ -7,11 +7,14 @@
  */
 import type { CardNote } from "@shared/cardNotes";
 import { type Card, choiceCarriedRecordSchema, withAnythingElse } from "@shared/cards";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
+  SETTLE_DISCARD,
+  SETTLE_MERGE,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -19,6 +22,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { initAttachmentsDir } from "../attachments";
 import { initOverflowDir } from "../overflow";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
+import { CARRIED_OUT_WORDS } from "../prompts/choiceCarried";
 import { bindTool } from "../session/tools";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { CrewmateSpec } from "./crewSession";
@@ -272,5 +276,48 @@ describe("a card button carries what waits in the card's field", () => {
     expect(heard.text).toContain("panic: the window closed before it drew");
     expect(heard.text).toContain("Use the wider column here");
     expect(heard.images).toEqual([expect.objectContaining({ data: PIXEL })]);
+  });
+  it("tells the first mate once what went with a crewmate merge card's Merge", async () => {
+    prepared();
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    (h.workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Ship the settings page",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(h.supervisor.facts, "taskAutonomy").mockReturnValue(false);
+    h.specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The settings page is ready to merge",
+      body: completionBody("<p>The settings page uses two columns.</p>"),
+      actions: [
+        { id: "land", label: "Merge", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = h.cards().find((card) => card.title.includes("ready to merge")) as Card;
+    const before = h.ops.length;
+    h.supervisor.cardActions.act(
+      settle.id,
+      "merge",
+      "chrome",
+      fieldValue("Merge after the release"),
+    );
+    await tick();
+    expect(h.workspace.landTaskWork).toHaveBeenCalled();
+    const told = h.ops.slice(before).filter((line) => line.includes(CARRIED_OUT_WORDS));
+    expect(told).toHaveLength(1);
+    expect(told[0]).toContain("Merge after the release");
+    expect(told[0]).toContain("Use the wider column here");
+    expect(told[0]).toContain("[attached: 1 picture: screen.png]");
+    expect(crewmate.steer).not.toHaveBeenCalled();
   });
 });

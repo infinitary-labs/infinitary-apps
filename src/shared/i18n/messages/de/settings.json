@@ -1191,6 +1191,8 @@
   "settingsSubscriptionsMenuResume": "Fortsetzen",
   "settingsSubscriptionsMenuStopKeepingGoing": "Kein Guthaben mehr ausgeben",
   "settingsSubscriptionsMenuStopPreferring": "Nicht mehr für Crew-Arbeit bevorzugen",
+  "settingsSubscriptionsMenuUseReset": "Gespeicherten Reset einlösen",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex meldet sich an und löst den ein, der zuerst abläuft",
   "settingsSubscriptionsNoReader": "Infinitary liest das Kontingent dieses Anbieters nicht.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} gesetzt · Infinitary liest das Kontingent dieses Anbieters nicht.",
   "settingsSubscriptionsNotChosenYet": "Noch nicht gewählt",

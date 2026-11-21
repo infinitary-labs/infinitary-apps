@@ -3,7 +3,7 @@ import { join } from "node:path";
 import * as m from "@shared/i18n/messages.generated";
 import { type QuotaProviderView, type QuotaSnapshotView, SAVED_RESETS_PAGE } from "@shared/quota";
 import { describe, expect, it } from "vitest";
-import { creditsOfferCard } from "../orchestrator/hostCards";
+import { creditsOfferCard, redeemSavedResetAction } from "../orchestrator/hostCards";
 import { selectAccount } from "../routing/accountPolicy";
 import { route } from "../routing/routingEngine";
 import { buildModelsCatalog, limitingResetOf, markCredits } from "./catalog";
@@ -278,7 +278,7 @@ describe("the crew's run-out card", () => {
     expect(none([codexRow("Work", 100, { has_credits: false })], false)).toEqual([]);
   });
 
-  // INF-5369 piece 6 (docs/quota.md, "Saved resets"): shown, never used.
+  // INF-5369 piece 6 (docs/quota.md, "Saved resets"), and INF-5478's plan piece 1, which uses one.
   it("says a saved reset that would refill the account now, with a link to its usage page, and none that would not yet", () => {
     const resets = body.rate_limit_reset_credits as Record<string, number>;
     const applies = codexRow("Work", 100, {}, NOW, {
@@ -297,9 +297,32 @@ describe("the crew's run-out card", () => {
       m.cardSavedResetsNow({ account: "Codex · Work", count: resets.available_count as number }),
     );
     expect(card.body).toContain(`<a href="${SAVED_RESETS_PAGE.codex}"`);
-    // Shown only: the card's one choice stays Keep going on credits.
+    // INF-5478's plan, piece 1: Keep going on credits stays first, and Use a saved reset joins it.
     const { savedResets: _shown, ...plain } = offer as CreditsOffer;
-    expect(card.actions).toEqual(creditsOfferCard(plain).actions);
+    expect(card.actions).toEqual([
+      ...creditsOfferCard(plain).actions,
+      redeemSavedResetAction("Work", false),
+    ]);
+
+    // Without credits, the saved reset alone raises the card, as its one choice.
+    const [resetOnly] = creditsOffers(
+      snapshotOf(
+        [
+          codexRow("Work", 100, { has_credits: false }, NOW, {
+            applicable_available_count: resets.available_count,
+          }),
+        ],
+        false,
+      ),
+      ["openai-codex"],
+      new Set(),
+      off,
+      NOW,
+    );
+    expect(resetOnly?.credits).toBeUndefined();
+    expect(creditsOfferCard(resetOnly as CreditsOffer).actions).toEqual([
+      redeemSavedResetAction("Work", true),
+    ]);
 
     // The live reading's saved reset does not apply yet: the card says nothing of it.
     const [notYet] = creditsOffers(

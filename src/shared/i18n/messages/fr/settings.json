@@ -1215,6 +1215,8 @@
   "settingsSubscriptionsMenuResume": "Reprendre",
   "settingsSubscriptionsMenuStopKeepingGoing": "Arrêter de dépenser des crédits",
   "settingsSubscriptionsMenuStopPreferring": "Ne plus privilégier pour le travail de l’équipage",
+  "settingsSubscriptionsMenuUseReset": "Utiliser une réinitialisation enregistrée",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex se connecte et utilise celle qui expire en premier",
   "settingsSubscriptionsNoReader": "Infinitary ne lit pas l’allocation de ce fournisseur.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} définie · Infinitary ne lit pas l’allocation de ce fournisseur.",
   "settingsSubscriptionsNotChosenYet": "Pas encore choisi",

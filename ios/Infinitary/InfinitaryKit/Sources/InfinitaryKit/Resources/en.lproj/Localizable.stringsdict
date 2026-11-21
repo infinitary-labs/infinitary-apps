@@ -19,6 +19,22 @@
       <string>This server lists %1$ld models. Pick the ones you would like to use:</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Used a saved reset on %1$@. It has %2$ld left.</string>
+      <key>other</key>
+      <string>Used a saved reset on %1$@. It has %2$ld left.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

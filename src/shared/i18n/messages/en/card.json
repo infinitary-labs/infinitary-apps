@@ -203,6 +203,8 @@
   "cardRevisionLinksUnavailable": "Change links unavailable",
   "cardRevisionMore": "{count} more",
   "cardRevisionShowFewer": "Show fewer",
+  "cardSavedResetCrewWaits": "Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
+  "cardSavedResetCrewWaitsThere": "Crew work {where} drops to a weaker model or waits until its allowance resets, unless you use a saved reset.",
   "cardSavedResetsNow": {
     "plural": "count",
     "one": "{account} has a saved reset you can use now to refill its allowance.",
@@ -259,5 +261,6 @@
   "cardThreadWorking": "working",
   "cardThreadWrittenAfterClose": "Written after the card closed",
   "cardThreadWrittenBy": "Written by {label}",
-  "cardThreadWrittenByAfterClose": "Written by {label}, after the card closed"
+  "cardThreadWrittenByAfterClose": "Written by {label}, after the card closed",
+  "cardUseSavedReset": "Use a saved reset"
 }

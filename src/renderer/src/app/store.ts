@@ -108,6 +108,11 @@ type ShellCore = {
   /** One-step restore: Subscriptions starts sign-in for this account. */
   pendingRestoreAccountId: string | null;
   /**
+   * A card's Use a saved reset that needs Codex to sign in first: the
+   * account's row starts the use on arrival, by the account's key.
+   */
+  pendingUseSavedReset: string | null;
+  /**
    * A sign-in where projects live to start on arrival (git integration PR
    * 1.2): Projects starts the host's sign-in, so the code is on screen.
    */
@@ -185,6 +190,7 @@ type ShellCore = {
   clearSettingsSection: () => void;
   clearSettingsItem: () => void;
   clearPendingRestore: () => void;
+  clearPendingUseSavedReset: () => void;
   clearPendingForgeSignIn: () => void;
   clearPendingDeviceArrival: () => void;
   clearPendingDeviceSignIn: () => void;
@@ -286,6 +292,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   settingsSection: null,
   settingsItem: null,
   pendingRestoreAccountId: null,
+  pendingUseSavedReset: null,
   pendingForgeSignIn: null,
   pendingDeviceArrival: null,
   pendingPrivateSite: null,
@@ -505,6 +512,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   clearSettingsSection: () => set({ settingsSection: null }),
   clearSettingsItem: () => set({ settingsItem: null }),
   clearPendingRestore: () => set({ pendingRestoreAccountId: null }),
+  clearPendingUseSavedReset: () => set({ pendingUseSavedReset: null }),
   clearPendingForgeSignIn: () => set({ pendingForgeSignIn: null }),
   clearPendingDeviceArrival: () => set({ pendingDeviceArrival: null }),
   clearPendingDeviceSignIn: () => set({ pendingDeviceSignIn: null }),

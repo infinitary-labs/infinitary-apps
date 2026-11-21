@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "subscriptions",
       "title": "See a saved Codex reset when your allowance runs out",
-      "body": "When ChatGPT gives your Codex account saved resets, its Subscriptions row says how many it holds. When the allowance runs out and a saved reset would refill it now, the card says so and links to ChatGPT's usage page, where you use it. Infinitary never uses a reset itself.",
+      "body": "When ChatGPT gives your Codex account saved resets, its Subscriptions row says how many it holds. When the allowance runs out and a saved reset would refill it now, the card says so and links to ChatGPT's usage page, where you use it.",
       "picture": {
         "dark": "saved-codex-reset-dark.webp",
         "light": "saved-codex-reset-light.webp",

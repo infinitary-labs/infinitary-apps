@@ -238,12 +238,18 @@ The Codex usage reading's `rate_limit_reset_credits` carries how many the accoun
 A reading without a count is unknown, never zero, and the row then carries no `savedResets`.
 OpenAI's own Codex client reads only the held count, so what decides whether a reset applies now is the provider's, read from the applicable count as sent: a reading may hold one that does not apply yet.
 It is a fact beside the windows, like credits: it never raises a window, and routing, the account pick and the first mate's pause read nothing from it.
-Infinitary never uses a reset; the captain uses one on the provider's page (`SAVED_RESETS_PAGE`, `https://chatgpt.com/settings/usage` for Codex).
+Infinitary uses one only when the captain chooses Use a saved reset, and then through the Codex CLI the person installed, never by calling ChatGPT itself (`docs/codex-client.md`); the provider's own page (`SAVED_RESETS_PAGE`, `https://chatgpt.com/settings/usage` for Codex) stays the other way.
 
 - The Subscriptions row says the held count in one line under its meters, with the site where one is used (`savedResetsLine` in `src/renderer/src/settings/subscriptionsWords.ts`); none held, or an unknown count, says nothing.
-- When the first mate's account runs out and a saved reset applies now (`savedResetsNow`), the spent-allowance card (`card-fm-no-headroom`) says so in its body, naming the account as its row does, with a link to the provider's usage page beside the sentence (`savedResetsWords` in `src/core/orchestrator/hostCards.ts`, `Flagship.savedResetsNow`).
-- The crew's run-out card for an account with credits says the same (`creditsOffers`); an account with no credits to offer raises no crew card, so its saved reset shows on its row and the first mate's card only.
-- The link sits in the card's body rather than among its buttons: a body link opens in the browser from every view, while a new button would be a host operation an older view could not read.
+- While a saved reset applies now (`savedResetsNow`), the row's menu offers Use a saved reset (`savedResetItem` in `src/renderer/src/settings/SubscriptionsTab.tsx`), on this computer's accounts and on each computer that runs work's own (`docs/helper.md`, "Its own sign-ins").
+- When the first mate's account runs out and a saved reset applies now, the spent-allowance card (`card-fm-no-headroom`) says so in its body, naming the account as its row does, with a link to the provider's usage page beside the sentence (`savedResetsWords` in `src/core/orchestrator/hostCards.ts`, `Flagship.savedResetsNow`), and adds a Use a saved reset button after Keep going on credits (`redeemSavedResetAction`).
+- The crew's run-out card rises for an account with credits or with a saved reset that applies now (`creditsOffers`): it says the same sentence and adds the same button, first when the account has no credits to offer.
+- The button is the `use-saved-reset` host operation, carrying the account's key (`<accountId>@<deviceId>` for a computer that runs work).
+  For this computer's account that Codex is already signed in to, the click uses the reset at once; otherwise it opens Settings → Intelligence, whose row starts the use with Codex's sign-in (`pendingUseSavedReset`).
+- The catalog line `account-use-reset` (`inf:accounts:use-saved-reset`) is at the own-words tier: the first mate uses a reset only on the captain's typed words, and only for an account Codex is already signed in to; any other is refused with words that say to choose Use a saved reset on the account's row.
+- What the use came to is one feed line naming the account: used, with how many are left when Codex says; nothing to reset, since no allowance it covers was spent; or none left (`savedResetLine` in `src/core/codex/savedResets.ts`).
+  After a use the allowance is read again at once (`demand`), and the account's crew run-out card is taken down.
+- A home sends the button only to a view that lists `use-saved-reset` among its contract changes, and leaves it off every card it pushes or answers to an older view (`readsSavedReset`, `withoutUnreadActions` in `src/core/connection/taskAllow.ts`); that view keeps the body's link to the provider's page.
 
 ## Amazon Bedrock refusals
 

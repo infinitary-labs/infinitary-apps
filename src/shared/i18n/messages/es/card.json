@@ -214,6 +214,8 @@
   "cardRevisionLinksUnavailable": "Enlaces de cambios no disponibles",
   "cardRevisionMore": "{count} más",
   "cardRevisionShowFewer": "Mostrar menos",
+  "cardSavedResetCrewWaits": "El trabajo de la tripulación pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
+  "cardSavedResetCrewWaitsThere": "El trabajo de la tripulación {where} pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.",
   "cardSavedResetsNow": {
     "plural": "count",
     "one": "{account} tiene un restablecimiento guardado que puedes usar ahora para renovar su asignación.",
@@ -274,5 +276,6 @@
   "cardThreadWorking": "trabajando",
   "cardThreadWrittenAfterClose": "Escrita después de cerrarse la tarjeta",
   "cardThreadWrittenBy": "Escrita por {label}",
-  "cardThreadWrittenByAfterClose": "Escrita por {label} después de cerrarse la tarjeta"
+  "cardThreadWrittenByAfterClose": "Escrita por {label} después de cerrarse la tarjeta",
+  "cardUseSavedReset": "Usar un restablecimiento guardado"
 }

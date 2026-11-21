@@ -195,5 +195,26 @@
   "accountsCustomApiUnreachable": "{host} に接続できませんでした。起動しているか、同じネットワークにいるかを確認してください。",
   "accountsCustomApiUseFix": "{address} を使う",
   "accountsCustomApiUseForFirstMate": "一等航海士に {model} を使う",
-  "accountsCustomApiUseModel": "{model} を使う"
+  "accountsCustomApiUseModel": "{model} を使う",
+  "accountsSavedResetBusy": "Infinitary はすでに {account} で保存済みのリセットを使っています。終わるまでお待ちください。",
+  "accountsSavedResetCodexStopped": "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。",
+  "accountsSavedResetNoCodex": "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex {floor} 以降が必要です。Codex をインストールするか、{site} でリセットを使ってください。",
+  "accountsSavedResetNoneLeft": "{account} には使える保存済みのリセットが残っていません。",
+  "accountsSavedResetNothing": "{account} には保存済みのリセットで回復できる使い切った利用枠がないため、リセットは使っていません。",
+  "accountsSavedResetOldCodex": "このコンピュータの Codex は {version} です。保存済みのリセットを使うには {floor} 以降が必要です。Codex を更新するか、{site} でリセットを使ってください。",
+  "accountsSavedResetOtherAccount": "Codex が {account} とは別の ChatGPT アカウントにサインインしたため、Infinitary はリセットを使わず Codex をサインアウトしました。同じアカウントでもう一度試してください。",
+  "accountsSavedResetPasteAgain": "そのアドレスにはサインインのコードがありません。ページが最後に表示したアドレスをそのまま貼り付けてください。",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "ブラウザが別のコンピュータにある場合は、サインイン後にそのページが最後に表示したアドレスを貼り付けてください。",
+  "accountsSavedResetSignInAgain": "Codex が {account} の利用枠を読み取れなかったため、リセットは使っていません。繰り返し起きる場合は、設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。",
+  "accountsSavedResetSignInFailed": "Codex はサインインできませんでした。",
+  "accountsSavedResetSignInFirst": "Codex はまだ {account} にサインインしていないため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がサインインします。",
+  "accountsSavedResetSignInNotice": "ブラウザで {account} の ChatGPT アカウントにサインインすると、Codex が保存済みのリセットを使えます。",
+  "accountsSavedResetUnclear": "{account} のリセットが使われたかどうか、Codex から返事がありませんでした。もう一度試すと同じリセットについて確認し、2 回分目を使うことはありません。",
+  "accountsSavedResetUnverified": "Codex が {account} と同じ ChatGPT アカウントにサインインしていることを Infinitary が確認できなかったため、リセットは使っていません。",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "other": "{account} の保存済みのリセットを使いました。残りは {count} 回分です。"
+  },
+  "accountsSavedResetUsedChecking": "{account} の保存済みのリセットを使いました。Infinitary が利用枠を読み取り直しています。"
 }

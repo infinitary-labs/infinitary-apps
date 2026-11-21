@@ -1,7 +1,9 @@
 import { type DeviceSsh, type DeviceView, reachFrom } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it, vi } from "vitest";
+import type { WorkDeviceContact } from "../connection/connection";
 import { DeviceSignIns } from "./deviceSignIns";
 
 /**
@@ -123,6 +125,153 @@ describe("a computer's sign-ins view", () => {
       expect(ask.mock.calls.filter(([, channel]) => channel === "inf:sign-ins:keep-going")).toEqual(
         [[MINI.id, "inf:sign-ins:keep-going", [{ accountId: "acct-codex", on: true }]]],
       );
+    } finally {
+      signIns.dispose();
+    }
+  });
+  // INF-5478's plan, piece 1: a computer's own Codex account's saved reset is
+  // used there, never by the home, and only on a computer that takes the order.
+  it("uses a computer's own saved reset there only when it lists the change, and answers with what it came to", async () => {
+    const changes: string[] = [];
+    const broadcast = vi.fn();
+    const ask = vi.fn(async (_deviceId: string, channel: string, _args: unknown[]) =>
+      channel === "inf:sign-ins:list"
+        ? {
+            providers: [],
+            accounts: [
+              {
+                id: "acct-codex",
+                providerId: "openai-codex",
+                kind: "subscription_oauth",
+                label: "Work",
+                enabled: true,
+                connected: true,
+                pinned: false,
+                createdAt: 1,
+              },
+            ],
+            quota: null,
+          }
+        : { ok: true },
+    );
+    let contactOf: ((contact: WorkDeviceContact) => void) | undefined;
+    const signIns = new DeviceSignIns({
+      devices: () => [MINI],
+      work: {
+        ask,
+        onWorkDevice: (listener) => {
+          contactOf = listener;
+          return () => {};
+        },
+        inReach: () => true,
+        version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes: [...changes] }),
+      },
+      emit: () => {},
+      broadcastEvent: broadcast,
+    });
+    try {
+      await signIns.refresh(MINI.id);
+      expect(signIns.view()[0]?.savedReset).toBeUndefined();
+      await expect(signIns.redeemSavedReset(MINI.id, "acct-codex", true)).rejects.toThrow(
+        "Update Infinitary on Mac mini to use a saved reset there.",
+      );
+      expect(ask.mock.calls.map(([, channel]) => channel)).not.toContain(
+        "inf:sign-ins:use-saved-reset",
+      );
+      // Its reason stays under the account's row, where a card's press lands.
+      expect(signIns.view()[0]?.flows).toEqual([
+        expect.objectContaining({
+          accountId: "acct-codex",
+          ended: expect.objectContaining({
+            outcome: "failed",
+            error: "Update Infinitary on Mac mini to use a saved reset there.",
+          }),
+        }),
+      ]);
+      changes.push("use-saved-reset");
+      expect(signIns.view()[0]?.savedReset).toBe(true);
+      const used = signIns.redeemSavedReset(MINI.id, "acct-codex", true);
+      await vi.waitFor(() =>
+        expect(ask.mock.calls.some(([, c]) => c === "inf:sign-ins:use-saved-reset")).toBe(true),
+      );
+      const [, , [order]] = ask.mock.calls.find(
+        ([, channel]) => channel === "inf:sign-ins:use-saved-reset",
+      ) as [string, string, [{ signInId: string; accountId: string; signIn: boolean }]];
+      expect(order).toMatchObject({ accountId: "acct-codex", signIn: true });
+      // Its sign-in shows under the account's row while it runs, in place of the refusal.
+      expect(signIns.view()[0]?.flows).toEqual([
+        expect.objectContaining({ signInId: order.signInId, accountId: "acct-codex" }),
+      ]);
+      // A second press while it runs is refused, and sends nothing.
+      await expect(signIns.redeemSavedReset(MINI.id, "acct-codex", true)).rejects.toThrow(
+        m.accountsSavedResetBusy({ account: "Codex · Work" }),
+      );
+      // A sign-in started there meanwhile runs beside it and cancels nothing.
+      await signIns.start(MINI.id, "anthropic-claude", "oauth");
+      expect(ask.mock.calls.map(([, channel]) => channel)).not.toContain("inf:sign-ins:cancel");
+      expect(ask.mock.calls.filter(([, c]) => c === "inf:sign-ins:use-saved-reset")).toHaveLength(
+        1,
+      );
+      signIns.step(MINI.id, {
+        signInId: order.signInId,
+        step: {
+          kind: "ended",
+          outcome: "signed-in",
+          accountId: "acct-codex",
+          savedReset: { outcome: "used", left: 1 },
+        },
+      });
+      await expect(used).resolves.toEqual({ outcome: "used", left: 1 });
+      // Nothing new was signed in, so no signed-in line: the use's own line says what it came to.
+      expect(broadcast).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: "device_signed_in" }),
+      );
+
+      // A use that failed there says that computer's words.
+      const failed = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
+      await vi.waitFor(() =>
+        expect(ask.mock.calls.filter(([, c]) => c === "inf:sign-ins:use-saved-reset")).toHaveLength(
+          2,
+        ),
+      );
+      const [, , [second]] = ask.mock.calls
+        .filter(([, channel]) => channel === "inf:sign-ins:use-saved-reset")
+        .at(-1) as [string, string, [{ signInId: string }]];
+      signIns.step(MINI.id, {
+        signInId: second.signInId,
+        step: { kind: "ended", outcome: "failed", error: "Codex is not signed in there." },
+      });
+      await expect(failed).rejects.toThrow("Codex is not signed in there.");
+
+      // Cancel under the row asks that computer to stop, and the use stays until its own end arrives.
+      const orders = () =>
+        ask.mock.calls.filter(([, channel]) => channel === "inf:sign-ins:use-saved-reset");
+      const stopped = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
+      await vi.waitFor(() => expect(orders()).toHaveLength(3));
+      const [, , [third]] = orders().at(-1) as [string, string, [{ signInId: string }]];
+      await signIns.cancel(third.signInId);
+      expect(ask).toHaveBeenCalledWith(MINI.id, "inf:sign-ins:cancel", [
+        { signInId: third.signInId },
+      ]);
+      expect(signIns.view()[0]?.flows).toContainEqual(
+        expect.objectContaining({ signInId: third.signInId, phase: "running" }),
+      );
+      signIns.step(MINI.id, {
+        signInId: third.signInId,
+        step: {
+          kind: "ended",
+          outcome: "signed-in",
+          accountId: "acct-codex",
+          savedReset: { outcome: "used", left: 0 },
+        },
+      });
+      await expect(stopped).resolves.toEqual({ outcome: "used", left: 0 });
+
+      // A reconnect while it runs says its outcome is unknown, never that it stopped.
+      const lost = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
+      await vi.waitFor(() => expect(orders()).toHaveLength(4));
+      contactOf?.({ deviceId: MINI.id, contact: "in-reach" });
+      await expect(lost).rejects.toThrow(m.accountsSavedResetUnclear({ account: "Codex · Work" }));
     } finally {
       signIns.dispose();
     }

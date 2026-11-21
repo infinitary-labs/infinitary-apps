@@ -158,6 +158,12 @@ export class HostOps {
       case "keep-going-on-credits":
         if (effect.arg) this.core.hooks().keepGoingOnCredits?.(effect.arg);
         return {};
+      case "use-saved-reset": {
+        if (!effect.arg) return {};
+        // Codex must sign in first: the shell lands on the account's row, which starts it there.
+        if (this.core.hooks().redeemSavedReset?.(effect.arg) === "ran") return {};
+        return { effect: { kind: "open", target: "subscriptions", useSavedReset: effect.arg } };
+      }
       case "restore-account":
         // The shell lands on Subscriptions with the account to re-sign.
         return {

@@ -142,6 +142,7 @@ import type {
 import type { ComputerResourcesView } from "./resources";
 import type { RunbookView } from "./runbooks";
 import type { KeptOutsideData, OutsideDataDeleted } from "./savedOutsideData";
+import type { SavedResetResult, UseSavedResetOptions } from "./savedResets";
 import type { SecretBringAnswer, SecretBringInput } from "./secretBring";
 import type {
   SecretAction,
@@ -978,6 +979,14 @@ export type FirstmateApi = {
     /** Keep going on credits once the allowance is spent (docs/quota.md), on or off. */
     /** With `deviceId`, the account is that computer that runs work's own. */
     keepGoing: (accountId: string, on: boolean, deviceId?: string) => Promise<{ ok: true }>;
+    /**
+     * Uses one of a Codex account's saved resets through the Codex CLI
+     * (docs/codex-client.md); with `signIn`, Codex may sign in first.
+     */
+    redeemSavedReset: (
+      accountId: string,
+      options?: UseSavedResetOptions,
+    ) => Promise<SavedResetResult>;
   };
   /**
    * The app's own sign-ins where projects live (git integration PR 1.2):

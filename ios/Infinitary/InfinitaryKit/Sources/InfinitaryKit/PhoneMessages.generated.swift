@@ -198,6 +198,24 @@ public enum PhoneMessages {
     public static func `accountsCustomApiUseFix`(`address`: String) -> String { PhoneWords.format("accountsCustomApiUseFix", [`address`]) }
     public static func `accountsCustomApiUseForFirstMate`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseForFirstMate", [`model`]) }
     public static func `accountsCustomApiUseModel`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseModel", [`model`]) }
+    public static func `accountsSavedResetBusy`(`account`: String) -> String { PhoneWords.format("accountsSavedResetBusy", [`account`]) }
+    public static func `accountsSavedResetCodexStopped`() -> String { PhoneWords.format("accountsSavedResetCodexStopped", []) }
+    public static func `accountsSavedResetNoCodex`(`floor`: String, `site`: String) -> String { PhoneWords.format("accountsSavedResetNoCodex", [`floor`, `site`]) }
+    public static func `accountsSavedResetNoneLeft`(`account`: String) -> String { PhoneWords.format("accountsSavedResetNoneLeft", [`account`]) }
+    public static func `accountsSavedResetNothing`(`account`: String) -> String { PhoneWords.format("accountsSavedResetNothing", [`account`]) }
+    public static func `accountsSavedResetOldCodex`(`floor`: String, `site`: String, `version`: String) -> String { PhoneWords.format("accountsSavedResetOldCodex", [`floor`, `site`, `version`]) }
+    public static func `accountsSavedResetOtherAccount`(`account`: String) -> String { PhoneWords.format("accountsSavedResetOtherAccount", [`account`]) }
+    public static func `accountsSavedResetPasteAgain`() -> String { PhoneWords.format("accountsSavedResetPasteAgain", []) }
+    public static func `accountsSavedResetPastePlaceholder`() -> String { PhoneWords.format("accountsSavedResetPastePlaceholder", []) }
+    public static func `accountsSavedResetPastePrompt`() -> String { PhoneWords.format("accountsSavedResetPastePrompt", []) }
+    public static func `accountsSavedResetSignInAgain`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInAgain", [`account`]) }
+    public static func `accountsSavedResetSignInFailed`() -> String { PhoneWords.format("accountsSavedResetSignInFailed", []) }
+    public static func `accountsSavedResetSignInFirst`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInFirst", [`account`]) }
+    public static func `accountsSavedResetSignInNotice`(`account`: String) -> String { PhoneWords.format("accountsSavedResetSignInNotice", [`account`]) }
+    public static func `accountsSavedResetUnclear`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUnclear", [`account`]) }
+    public static func `accountsSavedResetUnverified`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUnverified", [`account`]) }
+    public static func `accountsSavedResetUsed`(`account`: String, `count`: Int) -> String { PhoneWords.format("accountsSavedResetUsed", [`account`, `count`]) }
+    public static func `accountsSavedResetUsedChecking`(`account`: String) -> String { PhoneWords.format("accountsSavedResetUsedChecking", [`account`]) }
     public static func `activityPanelLinesLabel`() -> String { PhoneWords.format("activityPanelLinesLabel", []) }
     public static func `attachCancelled`(`name`: String) -> String { PhoneWords.format("attachCancelled", [`name`]) }
     public static func `automationEventsSkipped`() -> String { PhoneWords.format("automationEventsSkipped", []) }
@@ -377,6 +395,8 @@ public enum PhoneMessages {
     public static func `cardRevisionLinksUnavailable`() -> String { PhoneWords.format("cardRevisionLinksUnavailable", []) }
     public static func `cardRevisionMore`(`count`: String) -> String { PhoneWords.format("cardRevisionMore", [`count`]) }
     public static func `cardRevisionShowFewer`() -> String { PhoneWords.format("cardRevisionShowFewer", []) }
+    public static func `cardSavedResetCrewWaits`() -> String { PhoneWords.format("cardSavedResetCrewWaits", []) }
+    public static func `cardSavedResetCrewWaitsThere`(`where`: String) -> String { PhoneWords.format("cardSavedResetCrewWaitsThere", [`where`]) }
     public static func `cardSavedResetsNow`(`account`: String, `count`: Int) -> String { PhoneWords.format("cardSavedResetsNow", [`account`, `count`]) }
     public static func `cardSavedResetsOpenPage`(`site`: String) -> String { PhoneWords.format("cardSavedResetsOpenPage", [`site`]) }
     public static func `cardSinceSeenApproved`(`when`: String) -> String { PhoneWords.format("cardSinceSeenApproved", [`when`]) }
@@ -418,6 +438,7 @@ public enum PhoneMessages {
     public static func `cardThreadWrittenAfterClose`() -> String { PhoneWords.format("cardThreadWrittenAfterClose", []) }
     public static func `cardThreadWrittenBy`(`label`: String) -> String { PhoneWords.format("cardThreadWrittenBy", [`label`]) }
     public static func `cardThreadWrittenByAfterClose`(`label`: String) -> String { PhoneWords.format("cardThreadWrittenByAfterClose", [`label`]) }
+    public static func `cardUseSavedReset`() -> String { PhoneWords.format("cardUseSavedReset", []) }
     public static func `closeYourFirstMate`(`sentence`: String) -> String { PhoneWords.format("closeYourFirstMate", [`sentence`]) }
     public static func `closedDropped`(`key`: String) -> String { PhoneWords.format("closedDropped", [`key`]) }
     public static func `closedFinished`(`key`: String) -> String { PhoneWords.format("closedFinished", [`key`]) }
@@ -3275,6 +3296,8 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsMenuResume`() -> String { PhoneWords.format("settingsSubscriptionsMenuResume", []) }
     public static func `settingsSubscriptionsMenuStopKeepingGoing`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopKeepingGoing", []) }
     public static func `settingsSubscriptionsMenuStopPreferring`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopPreferring", []) }
+    public static func `settingsSubscriptionsMenuUseReset`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseReset", []) }
+    public static func `settingsSubscriptionsMenuUseResetDetail`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseResetDetail", []) }
     public static func `settingsSubscriptionsNoReader`() -> String { PhoneWords.format("settingsSubscriptionsNoReader", []) }
     public static func `settingsSubscriptionsNoReaderKey`(`apiKey`: String) -> String { PhoneWords.format("settingsSubscriptionsNoReaderKey", [`apiKey`]) }
     public static func `settingsSubscriptionsNotChosenYet`() -> String { PhoneWords.format("settingsSubscriptionsNotChosenYet", []) }
@@ -3985,6 +4008,24 @@ extension PhoneWords {
         "accountsCustomApiUseFix": ["address"],
         "accountsCustomApiUseForFirstMate": ["model"],
         "accountsCustomApiUseModel": ["model"],
+        "accountsSavedResetBusy": ["account"],
+        "accountsSavedResetCodexStopped": [],
+        "accountsSavedResetNoCodex": ["floor", "site"],
+        "accountsSavedResetNoneLeft": ["account"],
+        "accountsSavedResetNothing": ["account"],
+        "accountsSavedResetOldCodex": ["floor", "site", "version"],
+        "accountsSavedResetOtherAccount": ["account"],
+        "accountsSavedResetPasteAgain": [],
+        "accountsSavedResetPastePlaceholder": [],
+        "accountsSavedResetPastePrompt": [],
+        "accountsSavedResetSignInAgain": ["account"],
+        "accountsSavedResetSignInFailed": [],
+        "accountsSavedResetSignInFirst": ["account"],
+        "accountsSavedResetSignInNotice": ["account"],
+        "accountsSavedResetUnclear": ["account"],
+        "accountsSavedResetUnverified": ["account"],
+        "accountsSavedResetUsed": ["account", "count"],
+        "accountsSavedResetUsedChecking": ["account"],
         "activityPanelLinesLabel": [],
         "attachCancelled": ["name"],
         "automationEventsSkipped": [],
@@ -4164,6 +4205,8 @@ extension PhoneWords {
         "cardRevisionLinksUnavailable": [],
         "cardRevisionMore": ["count"],
         "cardRevisionShowFewer": [],
+        "cardSavedResetCrewWaits": [],
+        "cardSavedResetCrewWaitsThere": ["where"],
         "cardSavedResetsNow": ["account", "count"],
         "cardSavedResetsOpenPage": ["site"],
         "cardSinceSeenApproved": ["when"],
@@ -4205,6 +4248,7 @@ extension PhoneWords {
         "cardThreadWrittenAfterClose": [],
         "cardThreadWrittenBy": ["label"],
         "cardThreadWrittenByAfterClose": ["label"],
+        "cardUseSavedReset": [],
         "closeYourFirstMate": ["sentence"],
         "closedDropped": ["key"],
         "closedFinished": ["key"],
@@ -7062,6 +7106,8 @@ extension PhoneWords {
         "settingsSubscriptionsMenuResume": [],
         "settingsSubscriptionsMenuStopKeepingGoing": [],
         "settingsSubscriptionsMenuStopPreferring": [],
+        "settingsSubscriptionsMenuUseReset": [],
+        "settingsSubscriptionsMenuUseResetDetail": [],
         "settingsSubscriptionsNoReader": [],
         "settingsSubscriptionsNoReaderKey": ["apiKey"],
         "settingsSubscriptionsNotChosenYet": [],
@@ -7578,6 +7624,7 @@ extension PhoneWords {
     /// The fill whose count picks each plural message's form.
     static let counts: [String: String] = [
         "accountsCustomApiListed": "count",
+        "accountsSavedResetUsed": "count",
         "automationPanelActiveCount": "count",
         "automationPanelKeptCount": "count",
         "automationPanelPausedCount": "count",

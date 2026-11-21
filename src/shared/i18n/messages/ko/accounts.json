@@ -195,5 +195,26 @@
   "accountsCustomApiUnreachable": "{host}에 연결할 수 없었어요. 서버가 실행 중인지, 그 네트워크에 연결되어 있는지 확인하세요.",
   "accountsCustomApiUseFix": "{address} 사용",
   "accountsCustomApiUseForFirstMate": "일등항해사에 {model} 사용",
-  "accountsCustomApiUseModel": "{model} 사용"
+  "accountsCustomApiUseModel": "{model} 사용",
+  "accountsSavedResetBusy": "Infinitary가 이미 {account}에서 저장된 재설정을 사용하고 있어요. 끝날 때까지 기다리세요.",
+  "accountsSavedResetCodexStopped": "Codex가 무엇이든 사용하기 전에 응답을 멈춰서 저장된 재설정은 사용되지 않았습니다. 다시 시도하세요.",
+  "accountsSavedResetNoCodex": "Infinitary에서 저장된 재설정을 사용하려면 이 컴퓨터에 Codex {floor} 이상이 필요해요. Codex를 설치하거나 {site}에서 재설정을 사용하세요.",
+  "accountsSavedResetNoneLeft": "{account}에는 사용할 저장된 재설정이 남아 있지 않아요.",
+  "accountsSavedResetNothing": "{account}에는 저장된 재설정으로 채울 소진된 사용량이 없어 재설정을 사용하지 않았어요.",
+  "accountsSavedResetOldCodex": "이 컴퓨터의 Codex는 {version}이에요. 저장된 재설정을 사용하려면 {floor} 이상이 필요해요. Codex를 업데이트하거나 {site}에서 재설정을 사용하세요.",
+  "accountsSavedResetOtherAccount": "Codex가 {account}와 다른 ChatGPT 계정에 로그인해서 Infinitary가 재설정을 사용하지 않고 Codex를 로그아웃했어요. 같은 계정으로 다시 시도하세요.",
+  "accountsSavedResetPasteAgain": "그 주소에는 로그인 코드가 없어요. 페이지가 마지막으로 보여 준 주소 전체를 붙여 넣으세요.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "브라우저가 다른 컴퓨터에 있다면 로그인한 뒤 페이지가 마지막으로 보여 준 주소를 붙여 넣으세요.",
+  "accountsSavedResetSignInAgain": "Codex가 {account}의 사용량을 읽지 못해 재설정을 사용하지 않았어요. 계속 그러면 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.",
+  "accountsSavedResetSignInFailed": "Codex가 로그인하지 못했어요.",
+  "accountsSavedResetSignInFirst": "Codex가 아직 {account}에 로그인하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 로그인하세요.",
+  "accountsSavedResetSignInNotice": "브라우저에서 {account}의 ChatGPT 계정에 로그인하면 Codex가 저장된 재설정을 사용할 수 있어요.",
+  "accountsSavedResetUnclear": "{account}의 재설정이 사용됐는지 Codex가 알려 주지 않았어요. 다시 시도하면 같은 재설정을 확인하며 두 번째 재설정은 사용하지 않아요.",
+  "accountsSavedResetUnverified": "Codex가 {account}와 같은 ChatGPT 계정에 로그인했는지 Infinitary가 확인하지 못해 재설정을 사용하지 않았어요.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "other": "{account}의 저장된 재설정을 사용했어요. {count}개 남았어요."
+  },
+  "accountsSavedResetUsedChecking": "{account}의 저장된 재설정을 사용했어요. Infinitary가 사용량을 다시 확인하고 있어요."
 }

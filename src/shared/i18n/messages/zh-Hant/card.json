@@ -192,6 +192,8 @@
   "cardRevisionLinksUnavailable": "無法使用變更連結",
   "cardRevisionMore": "還有 {count} 個",
   "cardRevisionShowFewer": "顯示較少",
+  "cardSavedResetCrewWaits": "除非你使用一次已儲存的重設，否則船員的工作會改用較弱的模型，或等到額度重設。",
+  "cardSavedResetCrewWaitsThere": "除非你使用一次已儲存的重設，否則{where}的船員工作會改用較弱的模型，或等到額度重設。",
   "cardSavedResetsNow": {
     "plural": "count",
     "other": "{account} 有 {count} 次已儲存的重設可以立即使用，用來恢復額度。"
@@ -244,5 +246,6 @@
   "cardThreadWorking": "處理中",
   "cardThreadWrittenAfterClose": "於卡片關閉後撰寫",
   "cardThreadWrittenBy": "由 {label} 撰寫",
-  "cardThreadWrittenByAfterClose": "由 {label} 撰寫，於卡片關閉後"
+  "cardThreadWrittenByAfterClose": "由 {label} 撰寫，於卡片關閉後",
+  "cardUseSavedReset": "使用已儲存的重設"
 }

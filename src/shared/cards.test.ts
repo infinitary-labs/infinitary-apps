@@ -12,15 +12,14 @@ import {
   HOST_OPS,
   isPlayableBody,
   isPreviewBody,
-  legacyActionEffect,
   MERGE_CLOSES_WORDS,
-  migrateLegacyActions,
   opensSettings,
   splitMergeClosesLine,
   splitSettleFacts,
   takesTaskFacts,
   withMergeClosesLine,
 } from "./cards";
+import { legacyActionEffect, migrateLegacyActions } from "./legacyCardActions";
 
 /**
  * One card shape (cards/tasks/agents P1, ruling D1 a): no kind on the wire,

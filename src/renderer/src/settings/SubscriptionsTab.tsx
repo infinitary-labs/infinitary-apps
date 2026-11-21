@@ -10,6 +10,7 @@ import {
   type QuotaProviderView,
   type QuotaSnapshotView,
   type RoutingSettings,
+  savedResetsNow,
 } from "@shared/quota";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -255,6 +256,26 @@ export function keepGoingItem(
 }
 
 /**
+ * The row's Use a saved reset item (docs/quota.md "Saved resets"): offered
+ * while the account's reading says a saved reset would take effect now;
+ * `off` dims it, saying why, while that computer cannot take it yet.
+ */
+export function savedResetItem(
+  quotaRow: QuotaProviderView | undefined,
+  onSelect: () => void,
+  off?: string,
+): RowMenuItem | null {
+  if (savedResetsNow(quotaRow) === undefined) return null;
+  return {
+    id: "use-saved-reset",
+    label: m.settingsSubscriptionsMenuUseReset(),
+    detail: off ?? m.settingsSubscriptionsMenuUseResetDetail(),
+    ...(off ? { disabled: true } : {}),
+    onSelect,
+  };
+}
+
+/**
  * Prefer for crew work, Rename (never for Claude, which follows its own
  * identity) and Pause or Resume, in that order: one account's own settings,
  * the same on this Mac and on a computer that runs work. `off` dims each,
@@ -320,6 +341,7 @@ export function AccountRow({
   onCancelRename,
   onTogglePin,
   onKeepGoing,
+  onUseSavedReset,
   onSetEnabled,
   onDisconnect,
   onSignIn,
@@ -344,6 +366,8 @@ export function AccountRow({
   onTogglePin: () => void;
   /** Turns its Keep going on credits switch (docs/quota.md); absent where the row offers none. */
   onKeepGoing?: () => void;
+  /** Uses one of its saved resets through Codex (docs/codex-client.md); absent where the row offers none. */
+  onUseSavedReset?: () => void;
   onSetEnabled: (enabled: boolean) => void;
   onDisconnect: () => void;
   onSignIn: () => void;
@@ -391,9 +415,11 @@ export function AccountRow({
     onStartRename,
     onSetEnabled,
   });
+  const reset = onUseSavedReset ? savedResetItem(quotaRow, onUseSavedReset) : null;
   const items: RowMenuItem[] = menu ?? [
     ...(prefer ? [prefer] : []),
     ...(onKeepGoing ? [keepGoingItem(account, quotaRow, onKeepGoing)] : []),
+    ...(reset ? [reset] : []),
     ...settings,
     ...(hasModels
       ? [
@@ -853,6 +879,40 @@ export function SubscriptionsTab() {
     [refresh, clearAuthFlow, ended],
   );
 
+  /**
+   * Uses one saved reset of this Mac's own account (docs/codex-client.md):
+   * Codex signs in on the row first when it must, through the same link
+   * and paste-back a sign-in shows; a refusal stays under the row, and the
+   * feed says what it came to.
+   */
+  const applySavedReset = useCallback(
+    (account: AccountView) => {
+      setBusyAccount(account.id);
+      setSignInEnded(null);
+      cancelled.current = false;
+      forgetSignInNotice(account.providerId);
+      void window.infinitary.accounts
+        .redeemSavedReset(account.id, { signIn: true })
+        .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
+        .finally(() => {
+          setBusyAccount(null);
+          clearAuthFlow(account.providerId);
+          askSensorNow(setSnapshot);
+        });
+    },
+    [clearAuthFlow, ended],
+  );
+
+  // A card's Use a saved reset lands here with this Mac's account to use.
+  const pendingUseSavedReset = useShellStore((s) => s.pendingUseSavedReset);
+  useEffect(() => {
+    if (!pendingUseSavedReset || pendingUseSavedReset.includes("@")) return;
+    const account = accounts.find((row) => row.id === pendingUseSavedReset);
+    if (!account) return;
+    useShellStore.getState().clearPendingUseSavedReset();
+    applySavedReset(account);
+  }, [pendingUseSavedReset, accounts, applySavedReset]);
+
   const pendingRestoreAccountId = useShellStore((s) => s.pendingRestoreAccountId);
   useEffect(() => {
     if (!pendingRestoreAccountId) return;
@@ -1115,6 +1175,7 @@ export function SubscriptionsTab() {
                   onCancelRename={() => setRenamingId(null)}
                   onTogglePin={() => togglePin(account)}
                   {...(offersKeepGoing(account) ? { onKeepGoing: () => keepGoing(account) } : {})}
+                  onUseSavedReset={() => applySavedReset(account)}
                   onSetEnabled={(enabled) => setEnabled(account, enabled)}
                   onDisconnect={() => disconnect(account)}
                   onSignIn={() => signIn(account)}
@@ -1211,6 +1272,16 @@ export function SubscriptionsTab() {
                       },
                     ]
                   : []),
+                ...(() => {
+                  const reset = row.savedReset
+                    ? savedResetItem(
+                        row.quotaRow,
+                        row.savedReset.onSelect,
+                        row.savedReset.updateNote,
+                      )
+                    : null;
+                  return reset ? [reset] : [];
+                })(),
                 ...settings,
                 { separator: true },
                 ...row.menu,

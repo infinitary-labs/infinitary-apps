@@ -109,6 +109,8 @@ export type ComputerAccountsOptions = {
   onModels?: () => void;
   log?: (line: string) => void;
   now?: () => number;
+  /** Signs Codex out of an account's Codex home before the account is removed (`AccountVaultOptions.signOutCodex`). */
+  signOutCodex?: (home: string) => Promise<void>;
 };
 
 export async function startComputerAccounts(
@@ -153,6 +155,7 @@ export async function startComputerAccounts(
       ...(options.claudeList ? { claudeList: options.claudeList } : {}),
       http: options.http,
       rail: "home",
+      ...(options.signOutCodex ? { signOutCodex: options.signOutCodex } : {}),
       ...(options.onModels ? { onSettled: options.onModels } : {}),
       ...(options.log ? { log: options.log } : {}),
     },

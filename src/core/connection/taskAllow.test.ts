@@ -309,3 +309,46 @@ it("sends Bring into Secrets only to views that list the bring, and shows the ot
   expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
   for (const view of [phone, current]) await view.close();
 });
+
+// INF-5478's plan, piece 1: a card's Use a saved reset lands an older view
+// on the account's row, which does not start the use there, so the home
+// sends the button only to a view that lists `use-saved-reset`; every other
+// button on the card still goes.
+it("sends a card's Use a saved reset only to views that list its change", async () => {
+  const card = cardSchema.parse({
+    ...firstmatePauseCard("card-firstmate-paused", {
+      pause: "no_headroom",
+      body: "<p>Codex has used up its allowance until 9:00 PM.</p>",
+      accountId: "codex-work",
+      providerName: "Codex",
+      savedResets: true,
+    }),
+    createdAt: 1000,
+  });
+  const ids = (value: unknown) =>
+    (value as { actions: { id: string }[] }).actions.map((action) => action.id);
+  expect(ids(card)).toContain("use-saved-reset");
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:cards:list") return [card];
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
+  const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+  const current = await connectClient(grant, {
+    protocolVersion: PROTOCOL_VERSION,
+    changes: ["use-saved-reset"],
+  });
+  const without = ids(card).filter((id) => id !== "use-saved-reset");
+  expect(ids((await old.invoke("inf:cards:list", []))[0])).toEqual(without);
+  expect(ids((await phone.invoke("inf:cards:list", []))[0])).toEqual(without);
+  expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+  at.events.emit("inf:cards", [card]);
+  expect(
+    ids(((await old.push((push) => push.channel === "inf:cards")).payload as unknown[])[0]),
+  ).toEqual(without);
+  expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+  for (const view of [old, phone, current]) await view.close();
+});

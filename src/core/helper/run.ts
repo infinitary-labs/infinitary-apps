@@ -437,6 +437,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           tell: (channel, args) => link.invoke(channel, args),
           log,
           ...(options.keychain ? { keychain: options.keychain } : {}),
+          ...(options.appVersion ? { appVersion: options.appVersion } : {}),
         }),
       )
       .then((held) => {

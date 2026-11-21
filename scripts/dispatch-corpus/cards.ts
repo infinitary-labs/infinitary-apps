@@ -6,7 +6,7 @@
  */
 
 import { LEGACY_CLOSE_CONTROL_IDS } from "../../src/shared/cardLeave.ts";
-import { migrateLegacyActions } from "../../src/shared/cards.ts";
+import { migrateLegacyActions } from "../../src/shared/legacyCardActions.ts";
 import type { CardRow } from "./fleetTables.ts";
 
 type JsonRecord = Record<string, unknown>;

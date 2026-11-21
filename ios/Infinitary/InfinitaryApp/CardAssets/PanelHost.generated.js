@@ -10439,6 +10439,575 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use ${model}`;
   }
+  function accountsSavedResetBusy(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم Infinitary إعادة تعيين محفوظة على ${account} بالفعل. انتظر حتى ينتهي.`;
+      case "de":
+        return `Infinitary löst bereits einen gespeicherten Reset für ${account} ein. Warte, bis es fertig ist.`;
+      case "es":
+        return `Infinitary ya está usando un restablecimiento guardado en ${account}. Espera a que termine.`;
+      case "fr":
+        return `Infinitary utilise déjà une réinitialisation enregistrée sur ${account}. Attendez qu’elle se termine.`;
+      case "ja":
+        return `Infinitary はすでに ${account} で保存済みのリセットを使っています。終わるまでお待ちください。`;
+      case "ko":
+        return `Infinitary가 이미 ${account}에서 저장된 재설정을 사용하고 있어요. 끝날 때까지 기다리세요.`;
+      case "pt-BR":
+        return `O Infinitary já está usando uma redefinição salva em ${account}. Espere terminar.`;
+      case "zh-Hans":
+        return `Infinitary 已在 ${account} 上使用已保存的重置。请等待它完成。`;
+      case "zh-Hant":
+        return `Infinitary 已在 ${account} 上使用已儲存的重設。請等待它完成。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš áļŕéáðý ûšîñĝ á šáṽéð ŕéšéţ öñ ${account}. Ŵáîţ ƒöŕ îţ ţö ƒîñîšĥ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is already using a saved reset on ‬${account}‮. Wait for it to finish.‬`;
+    }
+    return `Infinitary is already using a saved reset on ${account}. Wait for it to finish.`;
+  }
+  function accountsSavedResetCodexStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف Codex عن الرد قبل أن يستخدم أي شيء، لذلك لم تُستخدم أي إعادة تعيين محفوظة. حاول مرة أخرى.`;
+      case "de":
+        return `Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.`;
+      case "es":
+        return `Codex dejó de responder antes de usar nada, así que no se usó ningún reinicio guardado. Inténtalo de nuevo.`;
+      case "fr":
+        return `Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.`;
+      case "ja":
+        return `Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。`;
+      case "ko":
+        return `Codex가 무엇이든 사용하기 전에 응답을 멈춰서 저장된 재설정은 사용되지 않았습니다. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Codex parou de responder antes de usar qualquer coisa, então nenhuma redefinição salva foi usada. Tente de novo.`;
+      case "zh-Hans":
+        return `Codex 在使用任何内容之前停止了响应，因此没有使用已保存的重置。请重试。`;
+      case "zh-Hant":
+        return `Codex 在使用任何內容之前停止了回應，因此沒有使用已儲存的重設。請再試一次。`;
+      case "en-XA":
+        return `[Çöðéẋ šţöþþéð áñšŵéŕîñĝ ƀéƒöŕé îţ ûšéð áñýţĥîñĝ, šö ñö šáṽéð ŕéšéţ ŵáš ûšéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex stopped answering before it used anything, so no saved reset was used. Try again.‬`;
+    }
+    return `Codex stopped answering before it used anything, so no saved reset was used. Try again.`;
+  }
+  function accountsSavedResetNoCodex(input2) {
+    const floor = input2.floor;
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لاستخدام إعادة تعيين محفوظة من Infinitary يحتاج هذا الحاسوب إلى Codex ${floor} أو أحدث. ثبّت Codex، أو استخدم إعادة التعيين على ${site}.`;
+      case "de":
+        return `Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex ${floor} oder neuer. Installiere Codex oder löse den Reset auf ${site} ein.`;
+      case "es":
+        return `Para usar un restablecimiento guardado desde Infinitary, este equipo necesita Codex ${floor} o posterior. Instala Codex o usa el restablecimiento en ${site}.`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex ${floor} ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur ${site}.`;
+      case "ja":
+        return `Infinitary から保存済みのリセットを使うには、このコンピュータに Codex ${floor} 以降が必要です。Codex をインストールするか、${site} でリセットを使ってください。`;
+      case "ko":
+        return `Infinitary에서 저장된 재설정을 사용하려면 이 컴퓨터에 Codex ${floor} 이상이 필요해요. Codex를 설치하거나 ${site}에서 재설정을 사용하세요.`;
+      case "pt-BR":
+        return `Para usar uma redefinição salva pelo Infinitary, este computador precisa do Codex ${floor} ou mais recente. Instale o Codex ou use a redefinição em ${site}.`;
+      case "zh-Hans":
+        return `要在 Infinitary 中使用已保存的重置，这台电脑需要 Codex ${floor} 或更高版本。请安装 Codex，或在 ${site} 使用重置。`;
+      case "zh-Hant":
+        return `要在 Infinitary 中使用已儲存的重設，這台電腦需要 Codex ${floor} 或更新版本。請安裝 Codex，或在 ${site} 使用重設。`;
+      case "en-XA":
+        return `[Ûšîñĝ á šáṽéð ŕéšéţ ƒŕöɱ Îñƒîñîţáŕý ñééðš Çöðéẋ ${floor} öŕ ļáţéŕ öñ ţĥîš çöɱþûţéŕ. Îñšţáļļ Çöðéẋ, öŕ ûšé ţĥé ŕéšéţ öñ ${site}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Using a saved reset from Infinitary needs Codex ‬${floor}‮ or later on this computer. Install Codex, or use the reset on ‬${site}‮.‬`;
+    }
+    return `Using a saved reset from Infinitary needs Codex ${floor} or later on this computer. Install Codex, or use the reset on ${site}.`;
+  }
+  function accountsSavedResetNoneLeft(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتبقَّ لدى ${account} أي إعادة تعيين محفوظة لاستخدامها.`;
+      case "de":
+        return `${account} hat keinen gespeicherten Reset mehr zum Einlösen.`;
+      case "es":
+        return `${account} no tiene más restablecimientos guardados para usar.`;
+      case "fr":
+        return `${account} n’a plus de réinitialisation enregistrée à utiliser.`;
+      case "ja":
+        return `${account} には使える保存済みのリセットが残っていません。`;
+      case "ko":
+        return `${account}에는 사용할 저장된 재설정이 남아 있지 않아요.`;
+      case "pt-BR":
+        return `${account} não tem mais redefinições salvas para usar.`;
+      case "zh-Hans":
+        return `${account} 没有剩余可用的已保存的重置。`;
+      case "zh-Hant":
+        return `${account} 沒有剩餘可用的已儲存的重設。`;
+      case "en-XA":
+        return `[${account} ĥáš ñö šáṽéð ŕéšéţ ļéƒţ ţö ûšé. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${account}‮ has no saved reset left to use.‬`;
+    }
+    return `${account} has no saved reset left to use.`;
+  }
+  function accountsSavedResetNothing(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس لدى ${account} رصيد مستنفد تغطيه إعادة تعيين محفوظة، لذا لم تُستخدم أي إعادة تعيين.`;
+      case "de":
+        return `${account} hat kein verbrauchtes Kontingent, das ein gespeicherter Reset abdeckt, daher wurde kein Reset eingelöst.`;
+      case "es":
+        return `${account} no tiene asignación agotada que cubra un restablecimiento guardado, así que no se usó ninguno.`;
+      case "fr":
+        return `${account} n’a aucune allocation épuisée que couvre une réinitialisation enregistrée, donc aucune n’a été utilisée.`;
+      case "ja":
+        return `${account} には保存済みのリセットで回復できる使い切った利用枠がないため、リセットは使っていません。`;
+      case "ko":
+        return `${account}에는 저장된 재설정으로 채울 소진된 사용량이 없어 재설정을 사용하지 않았어요.`;
+      case "pt-BR":
+        return `${account} não tem franquia esgotada que uma redefinição salva cubra, então nenhuma foi usada.`;
+      case "zh-Hans":
+        return `${account} 没有已用尽、可由已保存的重置恢复的额度，因此没有使用重置。`;
+      case "zh-Hant":
+        return `${account} 沒有已用盡、可由已儲存的重設恢復的額度，因此沒有使用重設。`;
+      case "en-XA":
+        return `[${account} ĥáš ñö šþéñţ áļļöŵáñçé á šáṽéð ŕéšéţ çöṽéŕš, šö ñö ŕéšéţ ŵáš ûšéð. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${account}‮ has no spent allowance a saved reset covers, so no reset was used.‬`;
+    }
+    return `${account} has no spent allowance a saved reset covers, so no reset was used.`;
+  }
+  function accountsSavedResetOldCodex(input2) {
+    const floor = input2.floor;
+    const site = input2.site;
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `على هذا الحاسوب Codex ${version2}، واستخدام إعادة تعيين محفوظة يحتاج إلى ${floor} أو أحدث. حدّث Codex، أو استخدم إعادة التعيين على ${site}.`;
+      case "de":
+        return `Dieser Computer hat Codex ${version2}; zum Einlösen eines gespeicherten Resets braucht es ${floor} oder neuer. Aktualisiere Codex oder löse den Reset auf ${site} ein.`;
+      case "es":
+        return `Este equipo tiene Codex ${version2} y para usar un restablecimiento guardado se necesita ${floor} o posterior. Actualiza Codex o usa el restablecimiento en ${site}.`;
+      case "fr":
+        return `Cet ordinateur a Codex ${version2}, et utiliser une réinitialisation enregistrée demande ${floor} ou plus récent. Mettez Codex à jour, ou utilisez la réinitialisation sur ${site}.`;
+      case "ja":
+        return `このコンピュータの Codex は ${version2} です。保存済みのリセットを使うには ${floor} 以降が必要です。Codex を更新するか、${site} でリセットを使ってください。`;
+      case "ko":
+        return `이 컴퓨터의 Codex는 ${version2}이에요. 저장된 재설정을 사용하려면 ${floor} 이상이 필요해요. Codex를 업데이트하거나 ${site}에서 재설정을 사용하세요.`;
+      case "pt-BR":
+        return `Este computador tem o Codex ${version2}, e usar uma redefinição salva precisa do ${floor} ou mais recente. Atualize o Codex ou use a redefinição em ${site}.`;
+      case "zh-Hans":
+        return `这台电脑上的 Codex 是 ${version2}，使用已保存的重置需要 ${floor} 或更高版本。请更新 Codex，或在 ${site} 使用重置。`;
+      case "zh-Hant":
+        return `這台電腦上的 Codex 是 ${version2}，使用已儲存的重設需要 ${floor} 或更新版本。請更新 Codex，或在 ${site} 使用重設。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ ĥáš Çöðéẋ ${version2}, áñð ûšîñĝ á šáṽéð ŕéšéţ ñééðš ${floor} öŕ ļáţéŕ. Ûþðáţé Çöðéẋ, öŕ ûšé ţĥé ŕéšéţ öñ ${site}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer has Codex ‬${version2}‮, and using a saved reset needs ‬${floor}‮ or later. Update Codex, or use the reset on ‬${site}‮.‬`;
+    }
+    return `This computer has Codex ${version2}, and using a saved reset needs ${floor} or later. Update Codex, or use the reset on ${site}.`;
+  }
+  function accountsSavedResetOtherAccount(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `سجّل Codex الدخول إلى حساب ChatGPT مختلف عن ${account}، لذا لم يستخدم Infinitary أي إعادة تعيين وسجّل خروج Codex. حاول مرة أخرى بالحساب نفسه.`;
+      case "de":
+        return `Codex hat sich bei einem anderen ChatGPT-Konto als ${account} angemeldet, daher hat Infinitary keinen Reset eingelöst und Codex abgemeldet. Versuche es noch einmal und melde dich beim selben Konto an.`;
+      case "es":
+        return `Codex inició sesión en una cuenta de ChatGPT distinta de ${account}, así que Infinitary no usó ningún restablecimiento y cerró la sesión de Codex. Vuelve a intentarlo con la misma cuenta.`;
+      case "fr":
+        return `Codex s’est connecté à un autre compte ChatGPT que ${account}, donc Infinitary n’a utilisé aucune réinitialisation et a déconnecté Codex. Réessayez en vous connectant au même compte.`;
+      case "ja":
+        return `Codex が ${account} とは別の ChatGPT アカウントにサインインしたため、Infinitary はリセットを使わず Codex をサインアウトしました。同じアカウントでもう一度試してください。`;
+      case "ko":
+        return `Codex가 ${account}와 다른 ChatGPT 계정에 로그인해서 Infinitary가 재설정을 사용하지 않고 Codex를 로그아웃했어요. 같은 계정으로 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Codex fez login em uma conta do ChatGPT diferente de ${account}, então o Infinitary não usou nenhuma redefinição e desconectou o Codex. Tente de novo com a mesma conta.`;
+      case "zh-Hans":
+        return `Codex 登录的 ChatGPT 账户与 ${account} 不同，因此 Infinitary 没有使用重置，并已让 Codex 退出登录。请用同一个账户再试一次。`;
+      case "zh-Hant":
+        return `Codex 登入的 ChatGPT 帳號與 ${account} 不同，因此 Infinitary 沒有使用重設，並已讓 Codex 登出。請用同一個帳號再試一次。`;
+      case "en-XA":
+        return `[Çöðéẋ šîĝñéð îñ ţö á ðîƒƒéŕéñţ ÇĥáţĜÞŢ áççöûñţ ţĥáñ ${account}, šö Îñƒîñîţáŕý ûšéð ñö ŕéšéţ áñð šîĝñéð Çöðéẋ öûţ. Ţŕý áĝáîñ áñð šîĝñ îñ ţö ţĥé šáɱé áççöûñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex signed in to a different ChatGPT account than ‬${account}‮, so Infinitary used no reset and signed Codex out. Try again and sign in to the same account.‬`;
+    }
+    return `Codex signed in to a different ChatGPT account than ${account}, so Infinitary used no reset and signed Codex out. Try again and sign in to the same account.`;
+  }
+  function accountsSavedResetPasteAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يحتوي هذا العنوان على رمز تسجيل الدخول. الصق العنوان كاملًا الذي انتهت إليه الصفحة.`;
+      case "de":
+        return `Diese Adresse enthält keinen Anmeldecode. Füge die ganze Adresse ein, bei der die Seite gelandet ist.`;
+      case "es":
+        return `Esa dirección no tiene código de inicio de sesión. Pega la dirección completa en la que terminó la página.`;
+      case "fr":
+        return `Cette adresse ne contient pas de code de connexion. Collez l’adresse complète où la page s’est arrêtée.`;
+      case "ja":
+        return `そのアドレスにはサインインのコードがありません。ページが最後に表示したアドレスをそのまま貼り付けてください。`;
+      case "ko":
+        return `그 주소에는 로그인 코드가 없어요. 페이지가 마지막으로 보여 준 주소 전체를 붙여 넣으세요.`;
+      case "pt-BR":
+        return `Esse endereço não tem código de login. Cole o endereço completo em que a página parou.`;
+      case "zh-Hans":
+        return `该地址中没有登录代码。请粘贴页面最终停留的完整地址。`;
+      case "zh-Hant":
+        return `該網址中沒有登入代碼。請貼上頁面最後停留的完整網址。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš ĥáš ñö šîĝñ-îñ çöðé. Þášţé ţĥé ŵĥöļé áððŕéšš ţĥé þáĝé éñðéð öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address has no sign-in code. Paste the whole address the page ended on.‬`;
+    }
+    return `That address has no sign-in code. Paste the whole address the page ended on.`;
+  }
+  function accountsSavedResetPastePlaceholder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "de":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "es":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "fr":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "ja":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "ko":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "pt-BR":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "zh-Hans":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "zh-Hant":
+        return `http://localhost:1455/auth/callback?code=…`;
+      case "en-XA":
+        return `[ĥţţþ://ļöçáļĥöšţ:1455/áûţĥ/çáļļƀáçķ?çöðé=… ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮http://localhost:1455/auth/callback?code=…‬`;
+    }
+    return `http://localhost:1455/auth/callback?code=…`;
+  }
+  function accountsSavedResetPastePrompt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إذا كان متصفحك على حاسوب آخر، فالصق العنوان الذي انتهت إليه صفحته بعد تسجيل الدخول.`;
+      case "de":
+        return `Wenn dein Browser auf einem anderen Computer ist, füge die Adresse ein, bei der seine Seite nach der Anmeldung gelandet ist.`;
+      case "es":
+        return `Si tu navegador está en otro equipo, pega la dirección en la que terminó su página después de iniciar sesión.`;
+      case "fr":
+        return `Si votre navigateur est sur un autre ordinateur, collez l’adresse où sa page s’est arrêtée après la connexion.`;
+      case "ja":
+        return `ブラウザが別のコンピュータにある場合は、サインイン後にそのページが最後に表示したアドレスを貼り付けてください。`;
+      case "ko":
+        return `브라우저가 다른 컴퓨터에 있다면 로그인한 뒤 페이지가 마지막으로 보여 준 주소를 붙여 넣으세요.`;
+      case "pt-BR":
+        return `Se o navegador estiver em outro computador, cole o endereço em que a página parou depois do login.`;
+      case "zh-Hans":
+        return `如果浏览器在另一台电脑上，请粘贴登录后页面最终停留的地址。`;
+      case "zh-Hant":
+        return `如果瀏覽器在另一台電腦上，請貼上登入後頁面最後停留的網址。`;
+      case "en-XA":
+        return `[Îƒ ýöûŕ ƀŕöŵšéŕ îš öñ áñöţĥéŕ çöɱþûţéŕ, þášţé ţĥé áððŕéšš îţš þáĝé éñðéð öñ áƒţéŕ ýöû šîĝñéð îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮If your browser is on another computer, paste the address its page ended on after you signed in.‬`;
+    }
+    return `If your browser is on another computer, paste the address its page ended on after you signed in.`;
+  }
+  function accountsSavedResetSignInAgain(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتمكن Codex من قراءة رصيد ${account}، لذا لم تُستخدم أي إعادة تعيين. إذا تكرر ذلك، فاختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول مرة أخرى.`;
+      case "de":
+        return `Codex konnte das Kontingent von ${account} nicht lesen, daher wurde kein Reset eingelöst. Wenn das wieder passiert, wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex erneut anzumelden.`;
+      case "es":
+        return `Codex no pudo leer la asignación de ${account}, así que no se usó ningún restablecimiento. Si sigue pasando, elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para volver a iniciar sesión en Codex.`;
+      case "fr":
+        return `Codex n’a pas pu lire l’allocation de ${account}, donc aucune réinitialisation n’a été utilisée. Si cela se reproduit, choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour reconnecter Codex.`;
+      case "ja":
+        return `Codex が ${account} の利用枠を読み取れなかったため、リセットは使っていません。繰り返し起きる場合は、設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がもう一度サインインします。`;
+      case "ko":
+        return `Codex가 ${account}의 사용량을 읽지 못해 재설정을 사용하지 않았어요. 계속 그러면 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 다시 로그인하세요.`;
+      case "pt-BR":
+        return `O Codex não conseguiu ler a franquia de ${account}, então nenhuma redefinição foi usada. Se continuar acontecendo, escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex de novo.`;
+      case "zh-Hans":
+        return `Codex 无法读取 ${account} 的额度，因此没有使用重置。如果反复出现，请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 重新登录。`;
+      case "zh-Hant":
+        return `Codex 無法讀取 ${account} 的額度，因此沒有使用重設。如果反覆發生，請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 重新登入。`;
+      case "en-XA":
+        return `[Çöðéẋ çöûļð ñöţ ŕéáð ţĥé áļļöŵáñçé öƒ ${account}, šö ñö ŕéšéţ ŵáš ûšéð. Îƒ ţĥîš ķééþš ĥáþþéñîñĝ, çĥööšé Ûšé á šáṽéð ŕéšéţ öñ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex could not read the allowance of ‬${account}‮, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.‬`;
+    }
+    return `Codex could not read the allowance of ${account}, so no reset was used. If this keeps happening, choose Use a saved reset on the account's row in Settings to sign Codex in again.`;
+  }
+  function accountsSavedResetSignInFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Codex تسجيل الدخول.`;
+      case "de":
+        return `Codex konnte sich nicht anmelden.`;
+      case "es":
+        return `Codex no pudo iniciar sesión.`;
+      case "fr":
+        return `Codex n’a pas pu se connecter.`;
+      case "ja":
+        return `Codex はサインインできませんでした。`;
+      case "ko":
+        return `Codex가 로그인하지 못했어요.`;
+      case "pt-BR":
+        return `O Codex não conseguiu fazer login.`;
+      case "zh-Hans":
+        return `Codex 无法登录。`;
+      case "zh-Hant":
+        return `Codex 無法登入。`;
+      case "en-XA":
+        return `[Çöðéẋ çöûļð ñöţ šîĝñ îñ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex could not sign in.‬`;
+    }
+    return `Codex could not sign in.`;
+  }
+  function accountsSavedResetSignInFirst(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يسجّل Codex الدخول إلى ${account} بعد، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول.`;
+      case "de":
+        return `Codex ist noch nicht bei ${account} angemeldet, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex anzumelden.`;
+      case "es":
+        return `Codex todavía no inició sesión en ${account}, así que no se usó ningún restablecimiento. Elige «Usar un restablecimiento guardado» en la fila de la cuenta en Ajustes para iniciar sesión en Codex.`;
+      case "fr":
+        return `Codex n’est pas encore connecté à ${account}, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour connecter Codex.`;
+      case "ja":
+        return `Codex はまだ ${account} にサインインしていないため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がサインインします。`;
+      case "ko":
+        return `Codex가 아직 ${account}에 로그인하지 않아 재설정을 사용하지 않았어요. 설정에서 계정 행의 ‘저장된 재설정 사용’을 선택해 Codex에 로그인하세요.`;
+      case "pt-BR":
+        return `O Codex ainda não fez login em ${account}, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex.`;
+      case "zh-Hans":
+        return `Codex 尚未登录 ${account}，因此没有使用重置。请在设置中该账户那一行选择“使用已保存的重置”，让 Codex 登录。`;
+      case "zh-Hant":
+        return `Codex 尚未登入 ${account}，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 登入。`;
+      case "en-XA":
+        return `[Çöðéẋ îš ñöţ šîĝñéð îñ ţö ${account} ýéţ, šö ñö ŕéšéţ ŵáš ûšéð. Çĥööšé Ûšé á šáṽéð ŕéšéţ öñ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex is not signed in to ‬${account}‮ yet, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in.‬`;
+    }
+    return `Codex is not signed in to ${account} yet, so no reset was used. Choose Use a saved reset on the account's row in Settings to sign Codex in.`;
+  }
+  function accountsSavedResetSignInNotice(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `سجّل الدخول إلى حساب ChatGPT الخاص بـ ${account} في متصفحك، ليتمكن Codex من استخدام إعادة التعيين المحفوظة.`;
+      case "de":
+        return `Melde dich im Browser beim ChatGPT-Konto von ${account} an, damit Codex seinen gespeicherten Reset einlösen kann.`;
+      case "es":
+        return `Inicia sesión en la cuenta de ChatGPT de ${account} en tu navegador para que Codex pueda usar su restablecimiento guardado.`;
+      case "fr":
+        return `Connectez-vous au compte ChatGPT de ${account} dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.`;
+      case "ja":
+        return `ブラウザで ${account} の ChatGPT アカウントにサインインすると、Codex が保存済みのリセットを使えます。`;
+      case "ko":
+        return `브라우저에서 ${account}의 ChatGPT 계정에 로그인하면 Codex가 저장된 재설정을 사용할 수 있어요.`;
+      case "pt-BR":
+        return `Faça login na conta do ChatGPT de ${account} no navegador, para o Codex poder usar a redefinição salva.`;
+      case "zh-Hans":
+        return `请在浏览器中登录 ${account} 的 ChatGPT 账户，以便 Codex 使用它已保存的重置。`;
+      case "zh-Hant":
+        return `請在瀏覽器中登入 ${account} 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。`;
+      case "en-XA":
+        return `[Šîĝñ îñ ţö ţĥé ÇĥáţĜÞŢ áççöûñţ öƒ ${account} îñ ýöûŕ ƀŕöŵšéŕ, šö Çöðéẋ çáñ ûšé îţš šáṽéð ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sign in to the ChatGPT account of ‬${account}‮ in your browser, so Codex can use its saved reset.‬`;
+    }
+    return `Sign in to the ChatGPT account of ${account} in your browser, so Codex can use its saved reset.`;
+  }
+  function accountsSavedResetUnclear(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يوضّح Codex ما إذا استُخدمت إعادة تعيين لـ ${account}. المحاولة مرة أخرى تسأل عن إعادة التعيين نفسها ولا تستخدم ثانية أبدًا.`;
+      case "de":
+        return `Codex hat nicht gesagt, ob ein Reset von ${account} eingelöst wurde. Ein neuer Versuch fragt nach demselben Reset und löst nie einen zweiten ein.`;
+      case "es":
+        return `Codex no dijo si se usó un restablecimiento de ${account}. Volver a intentarlo pregunta por el mismo restablecimiento y nunca usa un segundo.`;
+      case "fr":
+        return `Codex n’a pas dit si une réinitialisation de ${account} a été utilisée. Réessayer porte sur la même réinitialisation et n’en utilise jamais une deuxième.`;
+      case "ja":
+        return `${account} のリセットが使われたかどうか、Codex から返事がありませんでした。もう一度試すと同じリセットについて確認し、2 回分目を使うことはありません。`;
+      case "ko":
+        return `${account}의 재설정이 사용됐는지 Codex가 알려 주지 않았어요. 다시 시도하면 같은 재설정을 확인하며 두 번째 재설정은 사용하지 않아요.`;
+      case "pt-BR":
+        return `O Codex não disse se uma redefinição de ${account} foi usada. Tentar de novo pergunta pela mesma redefinição e nunca usa uma segunda.`;
+      case "zh-Hans":
+        return `Codex 没有说明 ${account} 的重置是否已使用。再试一次只会查询同一次重置，绝不会使用第二次。`;
+      case "zh-Hant":
+        return `Codex 沒有說明 ${account} 的重設是否已使用。再試一次只會查詢同一次重設，絕不會使用第二次。`;
+      case "en-XA":
+        return `[Çöðéẋ ðîð ñöţ šáý ŵĥéţĥéŕ á ŕéšéţ öƒ ${account} ŵáš ûšéð. Ţŕýîñĝ áĝáîñ ášķš áƀöûţ ţĥé šáɱé ŕéšéţ áñð ñéṽéŕ ûšéš á šéçöñð öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex did not say whether a reset of ‬${account}‮ was used. Trying again asks about the same reset and never uses a second one.‬`;
+    }
+    return `Codex did not say whether a reset of ${account} was used. Trying again asks about the same reset and never uses a second one.`;
+  }
+  function accountsSavedResetUnverified(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary التأكد من أن Codex سجّل الدخول إلى حساب ChatGPT نفسه الخاص بـ ${account}، لذا لم تُستخدم أي إعادة تعيين.`;
+      case "de":
+        return `Infinitary konnte nicht bestätigen, dass Codex beim selben ChatGPT-Konto wie ${account} angemeldet ist, daher wurde kein Reset eingelöst.`;
+      case "es":
+        return `Infinitary no pudo confirmar que Codex inició sesión en la misma cuenta de ChatGPT que ${account}, así que no se usó ningún restablecimiento.`;
+      case "fr":
+        return `Infinitary n’a pas pu confirmer que Codex est connecté au même compte ChatGPT que ${account}, donc aucune réinitialisation n’a été utilisée.`;
+      case "ja":
+        return `Codex が ${account} と同じ ChatGPT アカウントにサインインしていることを Infinitary が確認できなかったため、リセットは使っていません。`;
+      case "ko":
+        return `Codex가 ${account}와 같은 ChatGPT 계정에 로그인했는지 Infinitary가 확인하지 못해 재설정을 사용하지 않았어요.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu confirmar que o Codex fez login na mesma conta do ChatGPT que ${account}, então nenhuma redefinição foi usada.`;
+      case "zh-Hans":
+        return `Infinitary 无法确认 Codex 登录的是与 ${account} 相同的 ChatGPT 账户，因此没有使用重置。`;
+      case "zh-Hant":
+        return `Infinitary 無法確認 Codex 登入的是與 ${account} 相同的 ChatGPT 帳號，因此沒有使用重設。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ çöñƒîŕɱ ţĥáţ Çöðéẋ îš šîĝñéð îñ ţö ţĥé šáɱé ÇĥáţĜÞŢ áççöûñţ áš ${account}, šö ñö ŕéšéţ ŵáš ûšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not confirm that Codex is signed in to the same ChatGPT account as ‬${account}‮, so no reset was used.‬`;
+    }
+    return `Infinitary could not confirm that Codex is signed in to the same ChatGPT account as ${account}, so no reset was used.`;
+  }
+  function accountsSavedResetUsed(input2) {
+    const account = input2.account;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. لم يتبقَّ أي منها.`;
+          case "one":
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. تبقّت واحدة.`;
+          case "two":
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. تبقّت اثنتان.`;
+          case "few":
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. تبقّت ${count}.`;
+          case "many":
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. تبقّت ${count}.`;
+          default:
+            return `استُخدمت إعادة تعيين محفوظة لـ ${account}. تبقّت ${count}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Einen gespeicherten Reset von ${account} eingelöst. Es bleibt ${count}.`;
+          default:
+            return `Einen gespeicherten Reset von ${account} eingelöst. Es bleiben ${count}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Se usó un restablecimiento guardado de ${account}. Queda ${count}.`;
+          case "many":
+            return `Se usó un restablecimiento guardado de ${account}. Quedan ${count}.`;
+          default:
+            return `Se usó un restablecimiento guardado de ${account}. Quedan ${count}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Une réinitialisation enregistrée de ${account} a été utilisée. Il en reste ${count}.`;
+          case "many":
+            return `Une réinitialisation enregistrée de ${account} a été utilisée. Il en reste ${count}.`;
+          default:
+            return `Une réinitialisation enregistrée de ${account} a été utilisée. Il en reste ${count}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account} の保存済みのリセットを使いました。残りは ${count} 回分です。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${account}의 저장된 재설정을 사용했어요. ${count}개 남았어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Uma redefinição salva de ${account} foi usada. Resta ${count}.`;
+          case "many":
+            return `Uma redefinição salva de ${account} foi usada. Restam ${count}.`;
+          default:
+            return `Uma redefinição salva de ${account} foi usada. Restam ${count}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已使用 ${account} 的一次已保存的重置，还剩 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已使用 ${account} 的一次已儲存的重設，還剩 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ûšéð á šáṽéð ŕéšéţ öñ ${account}. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~]`;
+          default:
+            return `[Ûšéð á šáṽéð ŕéšéţ öñ ${account}. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Used a saved reset on ‬${account}‮. It has ‬${count}‮ left.‬`;
+          default:
+            return `‮Used a saved reset on ‬${account}‮. It has ‬${count}‮ left.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Used a saved reset on ${account}. It has ${count} left.`;
+      default:
+        return `Used a saved reset on ${account}. It has ${count} left.`;
+    }
+  }
+  function accountsSavedResetUsedChecking(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استُخدمت إعادة تعيين محفوظة لـ ${account}. يعيد Infinitary التحقق من رصيده.`;
+      case "de":
+        return `Einen gespeicherten Reset von ${account} eingelöst. Infinitary prüft sein Kontingent erneut.`;
+      case "es":
+        return `Se usó un restablecimiento guardado de ${account}. Infinitary vuelve a consultar su asignación.`;
+      case "fr":
+        return `Une réinitialisation enregistrée de ${account} a été utilisée. Infinitary revérifie son allocation.`;
+      case "ja":
+        return `${account} の保存済みのリセットを使いました。Infinitary が利用枠を読み取り直しています。`;
+      case "ko":
+        return `${account}의 저장된 재설정을 사용했어요. Infinitary가 사용량을 다시 확인하고 있어요.`;
+      case "pt-BR":
+        return `Uma redefinição salva de ${account} foi usada. O Infinitary está lendo a franquia de novo.`;
+      case "zh-Hans":
+        return `已使用 ${account} 的一次已保存的重置。Infinitary 正在重新检查它的额度。`;
+      case "zh-Hant":
+        return `已使用 ${account} 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。`;
+      case "en-XA":
+        return `[Ûšéð á šáṽéð ŕéšéţ öñ ${account}. Îñƒîñîţáŕý îš çĥéçķîñĝ îţš áļļöŵáñçé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Used a saved reset on ‬${account}‮. Infinitary is checking its allowance again.‬`;
+    }
+    return `Used a saved reset on ${account}. Infinitary is checking its allowance again.`;
+  }
   function attachCancelled(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -15891,6 +16460,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardSavedResetCrewWaits() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينتقل عمل الطاقم إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.`;
+      case "de":
+        return `Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.`;
+      case "es":
+        return `El trabajo de la tripulación pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.`;
+      case "fr":
+        return `Le travail de l’équipage passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.`;
+      case "ja":
+        return `保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
+      case "ko":
+        return `저장된 재설정을 사용하지 않으면 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
+      case "pt-BR":
+        return `O trabalho da tripulação passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.`;
+      case "zh-Hans":
+        return `除非你使用一次已保存的重置，否则船员的工作会改用较弱的模型，或等到额度重置。`;
+      case "zh-Hant":
+        return `除非你使用一次已儲存的重設，否則船員的工作會改用較弱的模型，或等到額度重設。`;
+      case "en-XA":
+        return `[Çŕéŵ ŵöŕķ ðŕöþš ţö á ŵéáķéŕ ɱöðéļ öŕ ŵáîţš ûñţîļ îţš áļļöŵáñçé ŕéšéţš, ûñļéšš ýöû ûšé á šáṽéð ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.‬`;
+    }
+    return `Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset.`;
+  }
+  function cardSavedResetCrewWaitsThere(input2) {
+    const where = input2.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينتقل عمل الطاقم ${where} إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.`;
+      case "de":
+        return `Crew-Arbeit ${where} wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.`;
+      case "es":
+        return `El trabajo de la tripulación ${where} pasa a un modelo más débil o espera hasta que se restablezca su asignación, a menos que uses un restablecimiento guardado.`;
+      case "fr":
+        return `Le travail de l’équipage ${where} passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.`;
+      case "ja":
+        return `保存済みのリセットを使わない限り、${where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
+      case "ko":
+        return `저장된 재설정을 사용하지 않으면 ${where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
+      case "pt-BR":
+        return `O trabalho da tripulação ${where} passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.`;
+      case "zh-Hans":
+        return `除非你使用一次已保存的重置，否则${where}的船员工作会改用较弱的模型，或等到额度重置。`;
+      case "zh-Hant":
+        return `除非你使用一次已儲存的重設，否則${where}的船員工作會改用較弱的模型，或等到額度重設。`;
+      case "en-XA":
+        return `[Çŕéŵ ŵöŕķ ${where} ðŕöþš ţö á ŵéáķéŕ ɱöðéļ öŕ ŵáîţš ûñţîļ îţš áļļöŵáñçé ŕéšéţš, ûñļéšš ýöû ûšé á šáṽéð ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Crew work ‬${where}‮ drops to a weaker model or waits until its allowance resets, unless you use a saved reset.‬`;
+    }
+    return `Crew work ${where} drops to a weaker model or waits until its allowance resets, unless you use a saved reset.`;
+  }
   function cardSavedResetsNow(input2) {
     const account = input2.account;
     const count = formatNumber(input2.count);
@@ -17281,6 +17905,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Written by ‬${label}‮, after the card closed‬`;
     }
     return `Written by ${label}, after the card closed`;
+  }
+  function cardUseSavedReset() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم إعادة تعيين محفوظة`;
+      case "de":
+        return `Gespeicherten Reset einlösen`;
+      case "es":
+        return `Usar un restablecimiento guardado`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée`;
+      case "ja":
+        return `保存済みのリセットを使う`;
+      case "ko":
+        return `저장된 재설정 사용`;
+      case "pt-BR":
+        return `Usar uma redefinição salva`;
+      case "zh-Hans":
+        return `使用已保存的重置`;
+      case "zh-Hant":
+        return `使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé á šáṽéð ŕéšéţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Use a saved reset‬`;
+    }
+    return `Use a saved reset`;
   }
   function closeYourFirstMate(input2) {
     const sentence = input2.sentence;
@@ -71648,6 +72299,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Stop preferring for crew work`;
   }
+  function settingsSubscriptionsMenuUseReset() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم إعادة تعيين محفوظة`;
+      case "de":
+        return `Gespeicherten Reset einlösen`;
+      case "es":
+        return `Usar un restablecimiento guardado`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée`;
+      case "ja":
+        return `保存済みのリセットを使う`;
+      case "ko":
+        return `저장된 재설정 사용`;
+      case "pt-BR":
+        return `Usar uma redefinição salva`;
+      case "zh-Hans":
+        return `使用已保存的重置`;
+      case "zh-Hant":
+        return `使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé á šáṽéð ŕéšéţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Use a saved reset‬`;
+    }
+    return `Use a saved reset`;
+  }
+  function settingsSubscriptionsMenuUseResetDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يسجّل Codex الدخول ويستخدم الأقرب انتهاءً`;
+      case "de":
+        return `Codex meldet sich an und löst den ein, der zuerst abläuft`;
+      case "es":
+        return `Codex inicia sesión y usa el que vence primero`;
+      case "fr":
+        return `Codex se connecte et utilise celle qui expire en premier`;
+      case "ja":
+        return `Codex がサインインし、期限が最も近いものを使います`;
+      case "ko":
+        return `Codex가 로그인해 가장 먼저 만료되는 재설정을 사용해요`;
+      case "pt-BR":
+        return `O Codex faz login e usa a que vence primeiro`;
+      case "zh-Hans":
+        return `Codex 登录后使用最先到期的那一次`;
+      case "zh-Hant":
+        return `Codex 登入後使用最先到期的那一次`;
+      case "en-XA":
+        return `[Çöðéẋ šîĝñš îñ áñð ûšéš ţĥé öñé ţĥáţ éẋþîŕéš ƒîŕšţ ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex signs in and uses the one that expires first‬`;
+    }
+    return `Codex signs in and uses the one that expires first`;
+  }
   function settingsSubscriptionsNoReader() {
     switch (currentLanguage()) {
       case "ar":
@@ -86260,6 +86965,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseFix,
     accountsCustomApiUseForFirstMate,
     accountsCustomApiUseModel,
+    accountsSavedResetBusy,
+    accountsSavedResetCodexStopped,
+    accountsSavedResetNoCodex,
+    accountsSavedResetNoneLeft,
+    accountsSavedResetNothing,
+    accountsSavedResetOldCodex,
+    accountsSavedResetOtherAccount,
+    accountsSavedResetPasteAgain,
+    accountsSavedResetPastePlaceholder,
+    accountsSavedResetPastePrompt,
+    accountsSavedResetSignInAgain,
+    accountsSavedResetSignInFailed,
+    accountsSavedResetSignInFirst,
+    accountsSavedResetSignInNotice,
+    accountsSavedResetUnclear,
+    accountsSavedResetUnverified,
+    accountsSavedResetUsed,
+    accountsSavedResetUsedChecking,
     attachCancelled,
     automationEventsSkipped,
     automationRunAlsoSkipped,
@@ -86430,6 +87153,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
+    cardSavedResetCrewWaits,
+    cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
     cardSavedResetsOpenPage,
     cardSinceSeenApproved,
@@ -86471,6 +87196,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenAfterClose,
     cardThreadWrittenBy,
     cardThreadWrittenByAfterClose,
+    cardUseSavedReset,
     closeYourFirstMate,
     closedDropped,
     closedFinished,
@@ -88337,6 +89063,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsMenuResume,
     settingsSubscriptionsMenuStopKeepingGoing,
     settingsSubscriptionsMenuStopPreferring,
+    settingsSubscriptionsMenuUseReset,
+    settingsSubscriptionsMenuUseResetDetail,
     settingsSubscriptionsNoReader,
     settingsSubscriptionsNoReaderKey,
     settingsSubscriptionsNotChosenYet,
@@ -89044,6 +89772,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseFix": ["address"],
     "accountsCustomApiUseForFirstMate": ["model"],
     "accountsCustomApiUseModel": ["model"],
+    "accountsSavedResetBusy": ["account"],
+    "accountsSavedResetCodexStopped": [],
+    "accountsSavedResetNoCodex": ["floor", "site"],
+    "accountsSavedResetNoneLeft": ["account"],
+    "accountsSavedResetNothing": ["account"],
+    "accountsSavedResetOldCodex": ["floor", "site", "version"],
+    "accountsSavedResetOtherAccount": ["account"],
+    "accountsSavedResetPasteAgain": [],
+    "accountsSavedResetPastePlaceholder": [],
+    "accountsSavedResetPastePrompt": [],
+    "accountsSavedResetSignInAgain": ["account"],
+    "accountsSavedResetSignInFailed": [],
+    "accountsSavedResetSignInFirst": ["account"],
+    "accountsSavedResetSignInNotice": ["account"],
+    "accountsSavedResetUnclear": ["account"],
+    "accountsSavedResetUnverified": ["account"],
+    "accountsSavedResetUsed": ["account", "count"],
+    "accountsSavedResetUsedChecking": ["account"],
     "attachCancelled": ["name"],
     "automationEventsSkipped": [],
     "automationRunAlsoSkipped": ["count"],
@@ -89214,6 +89960,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
+    "cardSavedResetCrewWaits": [],
+    "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],
     "cardSavedResetsOpenPage": ["site"],
     "cardSinceSeenApproved": ["when"],
@@ -89255,6 +90003,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenAfterClose": [],
     "cardThreadWrittenBy": ["label"],
     "cardThreadWrittenByAfterClose": ["label"],
+    "cardUseSavedReset": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
     "closedFinished": ["key"],
@@ -91121,6 +91870,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsMenuResume": [],
     "settingsSubscriptionsMenuStopKeepingGoing": [],
     "settingsSubscriptionsMenuStopPreferring": [],
+    "settingsSubscriptionsMenuUseReset": [],
+    "settingsSubscriptionsMenuUseResetDetail": [],
     "settingsSubscriptionsNoReader": [],
     "settingsSubscriptionsNoReaderKey": ["apiKey"],
     "settingsSubscriptionsNotChosenYet": [],
@@ -93670,6 +94421,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "retry-firstmate",
     "try-again",
     "keep-going-on-credits",
+    "use-saved-reset",
     "add-plugin",
     "decline-plugin",
     "apply-project-change",
@@ -94507,6 +95259,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       cardId: string()
     }).optional(),
     restoreAccountId: string().optional(),
+    /**
+     * Settings -> Intelligence uses one saved Codex reset of this account on
+     * arrival, by its key (`accountKey`), with Codex signing in on its row
+     * first (docs/codex-client.md; the contract change `use-saved-reset`).
+     */
+    useSavedReset: string().optional(),
     /** The host whose sign-in Settings -> Projects starts on arrival. */
     signIn: string().optional(),
     /** Settings -> Devices makes a link, or a command, on arrival. */
@@ -100469,6 +101227,14 @@ ${FRAME_KEYBOARD_SCRIPT}
     pins: array(modelPinSchema),
     dormantPins: array(modelPinSchema).optional()
   });
+  const savedResetResultSchema = object({
+    outcome: _enum(["used", "nothing-to-reset", "none-left"]),
+    left: number().int().nonnegative().optional()
+  });
+  strictObject({
+    deviceId: string().min(1).max(64).optional(),
+    signIn: boolean().optional()
+  });
   const signInIdSchema = string().regex(/^[A-Za-z0-9_-]{1,64}$/);
   const SIGN_IN_ANSWER_MAX_CHARS = 16384;
   const okSchema = object({ ok: literal(true) });
@@ -100579,6 +101345,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       outcome: _enum(["signed-in", "failed", "cancelled", "signs-in-there"]),
       /** The account it signed in, on that computer. */
       accountId: string().optional(),
+      /**
+       * What using one of the account's saved Codex resets came to
+       * (`inf:sign-ins:use-saved-reset`), on a use that ended with a clear
+       * answer; its outcome is then `signed-in`, which an older view reads as
+       * a flow that ended as asked.
+       */
+      savedReset: savedResetResultSchema.optional(),
       /** Why it failed, in the provider's or the computer's words. */
       error: string().optional()
     })
@@ -100741,6 +101514,22 @@ ${FRAME_KEYBOARD_SCRIPT}
       ])
     },
     /**
+     * Uses one of that computer's own Codex accounts' saved resets there
+     * (docs/codex-client.md), from the contract change `use-saved-reset`. It
+     * answers once it has started; with `signIn`, Codex may sign in to the
+     * account, its link and paste-back prompt coming as `inf:work:sign-in`
+     * steps, and the end is a `signed-in` step carrying `savedReset`.
+     */
+    "inf:sign-ins:use-saved-reset": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          accountId: string().min(1).max(256),
+          signIn: boolean()
+        })
+      ])
+    },
+    /**
      * Reads every account's allowance there now, rather than at its next
      * tick (`computer-account-settings`); the reading reaches the home as
      * that computer's sign-ins, whole, and this answers once it is read.
@@ -100813,6 +101602,11 @@ ${FRAME_KEYBOARD_SCRIPT}
      * means it does not, so those items stay dim.
      */
     accountSettings: boolean().optional(),
+    /**
+     * It uses its own Codex accounts' saved resets there (the contract change
+     * `use-saved-reset`). Absent means it does not, so the item is not offered.
+     */
+    savedReset: boolean().optional(),
     /** Active sign-ins and failures awaiting Done; absent on an older home. */
     flows: array(deviceSignInFlowSchema).optional()
   });

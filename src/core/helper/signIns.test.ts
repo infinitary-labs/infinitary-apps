@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
 import { BITBUCKET, GITHUB_ENTERPRISE, GITLAB } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import { parseInvokeRequest } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -10,6 +11,7 @@ import { type DeviceSignInEvent, returnsToLoopback, type SignInStep } from "@sha
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { standInCodex } from "../../../tests/helpers/codexAppServer";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { NO_BROWSER } from "../claude/claudeCli";
 import {
@@ -19,6 +21,7 @@ import {
 } from "../claude/claudeModelCatalog";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { acquireSessionLease } from "../claude/claudeStoreLease";
+import { accountWords } from "../codex/savedResets";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import { DeviceSignIns } from "../devices/deviceSignIns";
 import { dialHome } from "../devices/dial";
@@ -394,6 +397,8 @@ async function joined(
     dial?: StartHelperOptions["dial"];
     /** Computer-originated steps, before the real connection sends them home. */
     onStep?: (signInId: string, step: SignInStep) => void;
+    /** The Codex CLI there; none by default, so no test starts the real one. */
+    codex?: ReturnType<typeof standInCodex>;
   } = {},
 ) {
   const homeDir = scratchDir("infinitary-signins-home-");
@@ -492,6 +497,16 @@ async function joined(
     signIns: (start) => {
       held = startSignIns({
         ...start,
+        codex: options.codex
+          ? {
+              check: async () => ({
+                state: "ready",
+                executable: "/usr/local/bin/codex",
+                version: "0.155.1",
+              }),
+              start: options.codex.start,
+            }
+          : { check: async () => ({ state: "missing" }) },
         tell: (channel, args) => {
           if (channel === "inf:work:sign-in") {
             const [request] = parseInvokeRequest(channel, args);
@@ -617,6 +632,8 @@ async function joined(
     allowance,
     claude,
     steps,
+    /** Every sign-in the home heard a step of, in order. */
+    signInIds: () => [...new Set(pushes.map((event) => event.signInId))],
     ended,
     prompt,
     group,
@@ -855,6 +872,49 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     await expect(world.signIns.keepGoing(world.deviceId, "acct_elsewhere", true)).rejects.toThrow(
       "Builder has no account with that id.",
     );
+  });
+
+  // INF-5478's plan, piece 1: a computer's own Codex account's saved reset is
+  // used there, by that computer's Codex, with its sign-in's link at home.
+  it("uses a computer's own saved Codex reset there, Codex's sign-in link shown at home, and reads its allowance again", async () => {
+    standInProviders();
+    // Codex there keeps no sign-in for the account yet; the Codex account id matches the computer's own sign-in's.
+    const codex = standInCodex({ signedIn: false, accountId: "acct-standin" });
+    const world = await joined({ codex });
+    await signInToCodex(world);
+    const account = await vi.waitFor(() => {
+      const found = world
+        .group()
+        ?.signIns?.accounts.find((row) => row.providerId === "openai-codex");
+      if (!found) throw new Error("not yet");
+      return found;
+    });
+    expect(world.group()?.savedReset).toBe(true);
+    const reads = world.allowance.asked.length;
+
+    // Without a sign-in asked for, it is refused there and nothing is used.
+    await expect(world.signIns.redeemSavedReset(world.deviceId, account.id, false)).rejects.toThrow(
+      m.accountsSavedResetSignInFirst({ account: accountWords(account) }),
+    );
+    expect(codex.methods()).not.toContain("account/rateLimitResetCredit/consume");
+
+    const used = world.signIns.redeemSavedReset(world.deviceId, account.id, true);
+    await expect(used).resolves.toEqual({ outcome: "used", left: 1 });
+    // Codex's own sign-in link reached the home as a step of the account's flow.
+    expect(
+      world
+        .signInIds()
+        .flatMap((id) => world.steps(id))
+        .some(
+          (step) =>
+            step.kind === "notice" && step.notice.url?.startsWith("https://auth.openai.com/"),
+        ),
+    ).toBe(true);
+    // Codex ran there, with its home in the account's own folder on that computer.
+    expect(codex.homes.every((home) => home?.startsWith(world.dataDir))).toBe(true);
+    expect(codex.homes.every((home) => home?.includes(account.id))).toBe(true);
+    // Its allowance is read there again, and that reading reaches the home.
+    await expect.poll(() => world.allowance.asked.length).toBeGreaterThan(reads);
   });
 
   // INF-4280's audit, fix 1: a computer's own account is renamed, paused and preferred from its home.

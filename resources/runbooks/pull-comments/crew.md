@@ -7,7 +7,7 @@ Act only on your own pull request, a batch's pull request that carries your chan
 
 Sort each comment the way the independent review sorts a finding:
 - auto-fix: a defect safely fixable without discussing the author's intent, such as correctness, error handling, security, performance or mechanical code quality; a point people using the change would notice whose fix is small and wins or ties under every heading against the code as it is; or one a project rule, the approved plan or the captain's words already answer for this very case, not by reading a general goal onto a case it did not name.
-- ask-user: a point where every way forward gives something up under some heading, one whose only winning fix is medium or larger, one that would undo a deliberate choice even if it looks wrong, one only the captain can approve (asked as one yes or no), and whenever you are in doubt.
+- ask-user: a point where every way forward gives something up under some heading, one whose only winning fix is medium or larger, one that would undo a deliberate choice even if it looks wrong, one that changes what gets built beyond this change, one only the captain can approve (asked as one yes or no), and whenever you are in doubt.
 - no-op: a note, a question you can answer from the code, praise, a point already handled, or one minor either way.
 
 A heading names a quality of the whole product the captain wants more of, in one or two words that would fit an unrelated change, such as user experience, security, reliability, maintainability or ship fast; the detail of this change goes in the words under it.

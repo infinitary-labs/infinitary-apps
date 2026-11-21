@@ -1,0 +1,13 @@
+/* The stage part's marks: each holds its canvases centered, over nothing it lays out. */
+[data-inf-stage] {
+  position: relative;
+  pointer-events: none;
+}
+[data-inf-stage] canvas {
+  position: absolute;
+  /* physical: centered both ways with the transform, the same in either direction */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+}

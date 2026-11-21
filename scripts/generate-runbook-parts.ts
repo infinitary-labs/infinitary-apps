@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transformWithEsbuild } from "vite";
+import { build, transformWithEsbuild } from "vite";
 import { staleGeneratedFile } from "./github-errors.ts";
 
 // A card part a runbook ships is copied into a card body, whose size is capped. Its code - the
@@ -68,6 +68,37 @@ for (const part of parts) {
     part.page,
     `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>${part.source}</title>\n<style>${tokens}${PAGE_STYLE}</style>\n</head>\n<body>\n${text}</body>\n</html>\n`,
   ]);
+}
+
+// The app's own parts, which no runbook ships and only the app's own cards name
+// (`APP_ONLY_PARTS`, src/shared/appParts.ts): each is bundled from its entry with
+// what it imports, so a part such as the stage draws with the app's own code.
+const appOnlyParts = [
+  {
+    name: "stage",
+    entry: "../src/renderer/src/character/stage/cardStagePart.ts",
+    style: "../src/renderer/src/character/stage/cardStage.css",
+  },
+];
+for (const part of appOnlyParts) {
+  const result = await build({
+    configFile: false,
+    logLevel: "error",
+    resolve: { alias: { "@shared": fileURLToPath(new URL("../src/shared", import.meta.url)) } },
+    build: {
+      write: false,
+      minify: true,
+      target: "es2022",
+      lib: { entry: fileURLToPath(new URL(part.entry, import.meta.url)), name: "InfinitaryPart", formats: ["iife"] },
+    },
+  });
+  const chunk = Array.isArray(result) ? result[0]?.output[0] : undefined;
+  if (chunk?.type !== "chunk") throw new Error(`${part.name}: the bundle produced no script.`);
+  const js = chunk.code.trim();
+  const css = await minified(readFileSync(new URL(part.style, import.meta.url), "utf8"), `${part.name}.css`, "css");
+  if (/<\/(script|style)|<!--|-->/i.test(js + css))
+    throw new Error(`${part.name}: a closing tag or a comment mark inside the bundled part.`);
+  appParts[part.name] = { style: css, script: js };
 }
 
 outputs.push([APP_PARTS, `${JSON.stringify(appParts, null, 2)}\n`]);

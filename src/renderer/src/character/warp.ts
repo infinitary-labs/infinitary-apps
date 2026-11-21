@@ -17,7 +17,7 @@ import { band, clamp01, easeInOut, noise1, pulse, TAU } from "./face";
 //
 // All three share one timeline - spool up, jump, cruise, exit, settle - and
 // one envelope. The first mate's own pose (spin, scale, squint, the sphere)
-// is drawn by Firstmate.tsx from the helpers here; the backdrop (stars, the
+// is drawn by firstmatePainter.ts from the helpers here; the backdrop (stars, the
 // tunnel, the hourglass, the jump and exit rings) is painted on the crew's
 // far canvas (./crew/CrewOrbit.tsx), so it reaches the crew's 560 px square
 // and passes behind the character; the crew's own moves are ./crew/warp.ts.

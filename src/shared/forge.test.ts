@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { forgeOf, forgePlace, hasChangeRequests, hostOfAddress, kindOfHost } from "./forge";
+import {
+  branchComparePage,
+  forgeOf,
+  forgePlace,
+  hasChangeRequests,
+  hostOfAddress,
+  kindOfHost,
+} from "./forge";
+import { changePageUrl } from "./forgeKinds";
+import { hostTakesBatches } from "./repos";
 
 describe("forgeOf", () => {
   it("reads a project with no origin as living only on this Mac", () => {
@@ -116,6 +125,43 @@ describe("a host on the person's own server", () => {
     }
     expect(hostOfAddress("")).toBeNull();
     expect(hostOfAddress("/Users/me/meter")).toBeNull();
+  });
+});
+
+describe("a Bitbucket Data Center server", () => {
+  const known = [{ host: "bitbucket.example.com", kind: "bitbucket" as const }];
+
+  it("links a pull request on the server's own project and repository pages, never Cloud's", () => {
+    const https = forgeOf("https://bitbucket.example.com/scm/prj/app.git", known);
+    expect(https).toEqual({
+      kind: "bitbucket",
+      host: "bitbucket.example.com",
+      owner: "scm/prj",
+      name: "app",
+    });
+    expect(changePageUrl("bitbucket", "bitbucket.example.com", "scm/prj/app", 7)).toBe(
+      "https://bitbucket.example.com/projects/PRJ/repos/app/pull-requests/7",
+    );
+    expect(changePageUrl("bitbucket", "bitbucket.example.com", "~jane.doe/notes", 2)).toBe(
+      "https://bitbucket.example.com/users/jane.doe/repos/notes/pull-requests/2",
+    );
+    expect(changePageUrl("bitbucket", "bitbucket.org", "team/app", 7)).toBe(
+      "https://bitbucket.org/team/app/pull-requests/7",
+    );
+  });
+
+  it("offers no compare page and no batches until they are built for it", () => {
+    const where = {
+      kind: "bitbucket" as const,
+      owner: "scm/prj",
+      name: "app",
+      base: "main",
+      branch: "x",
+    };
+    expect(branchComparePage({ ...where, host: "bitbucket.example.com" })).toBeNull();
+    expect(branchComparePage({ ...where, host: "bitbucket.org" })).not.toBeNull();
+    expect(hostTakesBatches({ kind: "bitbucket", name: "bitbucket.example.com" })).toBe(false);
+    expect(hostTakesBatches({ kind: "bitbucket", name: "bitbucket.org" })).toBe(true);
   });
 });
 

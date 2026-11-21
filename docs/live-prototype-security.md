@@ -65,12 +65,30 @@ What changed is where a script-bearing body is served, not what the frame may do
   The sandbox tokens, every CSP directive and the hashes are unchanged; the bridge gained one host message, `activate`, and a `held` flag on `resize`, and `FRAME_BRIDGE_SHA256` moved with it.
   A prepared page runs none of the card's own code, so a prepared card can make no sound, run no timer and ask nothing of the host before it is shown.
 - What a script can reach.
-  The same as the bridge: `inf.action(id, value)` for the card's declared ids (undeclared ids refused, values bounded), `inf.onTheme`, `inf.subscribe` against an empty read declaration (always `read_not_declared`), `inf.fetch` (refused, no grant), resize, link, picture, task-key and draft notifications - minus the card's effect-bearing actions, which are never declared to the frame.
+  The same as the bridge: `inf.action(id, value)` for the card's declared ids (undeclared ids refused, values bounded), `inf.onTheme`, `inf.subscribe` against the reads its crewmate declared while the card is open, and an empty declaration otherwise (always `read_not_declared`; Live reads on a crewmate's card, below), `inf.fetch` (refused, no grant), resize, link, picture, task-key and draft notifications - minus the card's effect-bearing actions, which are never declared to the frame.
 - Words for the message box (FI3-1164).
   A `data-inf-draft` button's press posts the `draft` message: one line of at most 500 characters, from the document the frame shows.
   The window takes it only from the card on screen whose frame holds its focus - the captain's own click or key, which a script cannot give - and only while the message box is not held, then puts the words at the start of the box with the caret after them.
   It sends nothing: the worst a body can do is put words in front of the captain, who reads them in the box before anything leaves, as with text the captain pastes.
   No `window.infinitary`, no parent DOM, no storage, no network, no top-level navigation, no popups, no forms.
+
+## Live reads on a crewmate's card (INF-5531)
+
+The captain's ask: let cards read what the first mate, Settings and custom panels read, through the same interface and no new one.
+What a card's script may reach grows by exactly what a custom panel's manifest may name: reads from `PANEL_READ_NAMES` and published views through the `sql` read.
+The sandbox tokens, every CSP directive, the bridge and `FRAME_BRIDGE_SHA256` are unchanged; the frame's network stays closed, so a read's answer reaches only the card's own document and the captain's eyes.
+
+- Who may declare.
+  Only a crewmate's `emit_card` offers `reads` and `sql`; the first mate's cards and the host's stay static.
+  The home checks every name against the panels' list and the published views at emit and refuses any other, so a card can never name a read a custom panel could not (account ids, paths, settings, memories and cards themselves stay unpublished, as the record's SQL section says in `docs/ui-plugins.md`).
+- Where the grant comes from.
+  The window passes the card's saved lists to its frame as that mount's declared reads and `ReadGrant`, the same seam a personal panel's mount uses (`frameReads`); the script never supplies a grant, and the executor adds the views to each `sql` request as it does for a panel.
+- How long it lasts.
+  Only while the card is open, the captain's answer: an ended card and a past card mount with no reads, and a mounted frame whose card closes or whose revision drops a read loses that subscription at once, its script hearing `read_not_declared`.
+- What it costs.
+  Each subscription counts against the mount's `FRAME_MAX_SUBSCRIPTIONS` and the executor's coalescing, as a panel's does; a card held until shown runs no script, so it subscribes to nothing before the captain sees it.
+- Other surfaces.
+  An older desktop view reads the card with both lists removed; a phone shows the body without live reads until its own change.
 
 ## Project fonts in previews (INF-128)
 

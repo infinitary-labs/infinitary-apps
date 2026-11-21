@@ -415,6 +415,10 @@ export class FrameController {
   private disposed = false;
   private inFlight = 0;
   private readonly subscriptions = new Map<number, () => void>();
+  /** The read each live subscription names, so a declaration that drops it ends it. */
+  private readonly subscribedReads = new Map<number, string>();
+  /** Subscriptions the host ended because their read is no longer declared. */
+  private readonly revoked = new Set<number>();
   private watchdog: unknown = null;
   private pingSeq = 0;
   /**
@@ -473,9 +477,33 @@ export class FrameController {
     return this.subscriptions.size;
   }
 
-  /** The latest declaration; a card's actions can change between renders. */
+  /**
+   * The latest declaration; a card's actions can change between renders. A
+   * read the new declaration no longer names, or a `sql` read whose views
+   * changed, ends at once (a card revised without it, or a card that
+   * closed): the frame's `onError` hears why, and it keeps what it drew.
+   */
   update(spec: Partial<FrameMountSpec>): void {
+    const views = viewsOf(this.spec.grant);
     this.spec = { ...this.spec, ...spec };
+    const viewsMoved = viewsOf(this.spec.grant) !== views;
+    for (const [sub, read] of this.subscribedReads) {
+      if (this.spec.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
+      this.subscriptions.get(sub)?.();
+      this.subscriptions.delete(sub);
+      this.subscribedReads.delete(sub);
+      this.revoked.add(sub);
+      this.port.post({
+        fm: V,
+        type: "data",
+        sub,
+        error: {
+          code: "read_not_declared",
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
+          message: `"${read}" is no longer a read this frame may use`,
+        },
+      });
+    }
   }
 
   setTheme(theme: FrameTheme): void {
@@ -1267,6 +1295,11 @@ export class FrameController {
         this.subscribe(asker, request);
         return;
       case "unsubscribe": {
+        // One the host ended already: the frame's own stop is answered as done.
+        if (this.revoked.delete(request.sub)) {
+          this.respond(asker);
+          return;
+        }
         const stop = this.subscriptions.get(request.sub);
         if (!stop) {
           // i18n-exempt: not shown (a console line, or an error for the panel's code)
@@ -1274,6 +1307,7 @@ export class FrameController {
           return;
         }
         this.subscriptions.delete(request.sub);
+        this.subscribedReads.delete(request.sub);
         stop();
         this.respond(asker);
         return;
@@ -1407,6 +1441,7 @@ export class FrameController {
       return;
     }
     this.subscriptions.set(sub, stop);
+    this.subscribedReads.set(sub, request.read);
     this.respond(asker);
   }
 
@@ -1497,7 +1532,14 @@ export class FrameController {
   private dropSubscriptions(): void {
     for (const stop of this.subscriptions.values()) stop();
     this.subscriptions.clear();
+    this.subscribedReads.clear();
+    this.revoked.clear();
   }
+}
+
+/** A grant's views as one comparable key. */
+function viewsOf(grant: ReadGrant | undefined): string {
+  return (grant?.sql ?? []).join(",");
 }
 
 /**

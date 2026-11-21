@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-live-reads",
+      "kind": "feature",
+      "area": "cards",
+      "title": "A crewmate's card can show live numbers while it is open",
+      "body": "A crewmate's card can now read the same live information your custom panels read, such as your plan's allowance or the task board, and redraw as it changes. It reads only what its crewmate named, and only while the card is open. A closed card keeps what it last showed. This works in the desktop app; the iPhone and iPad app shows these cards without live updates for now.",
+      "noPicture": "What such a card draws is its crewmate's own; the change is that its drawing stays current, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -91397,6 +91397,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     page: notePageSchema.optional()
   });
   const cardNotesSchema = array(cardNoteSchema);
+  const cardReadsSchema = array(string().min(1).max(64)).max(64);
+  const cardViewsSchema = array(string().min(1).max(64)).max(64);
+  const cardLiveReadsShape = {
+    reads: cardReadsSchema.optional(),
+    sql: cardViewsSchema.optional()
+  };
+  const CARD_WIDTHS = ["regular", "wide", "full"];
+  const cardWidthSchema = _enum(CARD_WIDTHS);
   const cardEndedSchema = object({
     /** Who ended it: the card's crewmate or the first mate. */
     by: _enum(["crewmate", "firstmate"]),
@@ -91780,8 +91788,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))) return true;
     return card.risk !== void 0 && card.actions.length === 0;
   }
-  const CARD_WIDTHS = ["regular", "wide", "full"];
-  const cardWidthSchema = _enum(CARD_WIDTHS);
   const cardAwaitingSchema = _enum(["answer", "close-out"]);
   const CARD_CHANGE_MARKS_MAX = 512;
   const cardChangesSchema = strictObject({
@@ -91977,6 +91983,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * labeled door to its task's browser. Absent on every other card.
      */
     attachment: liveAttachmentSchema.optional(),
+    /** The live reads its crewmate declared (`cards.live_reads_json`; cardReads.ts). */
+    ...cardLiveReadsShape,
     /**
      * A merge card's risk assessment (`cards.risk_json`; docs/card-authoring.md
      * "The risk chart"): the levels and lines its crewmate declared, which the chrome draws as a
@@ -92322,6 +92330,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     files: array(cardFileSchema).optional(),
     width: cardWidthSchema.optional(),
     attachment: liveAttachmentSchema.optional(),
+    ...cardLiveReadsShape,
     risk: riskAssessmentSchema.optional(),
     asking: literal(true).optional(),
     designOnly: literal(true).optional(),

@@ -93479,6 +93479,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     page: notePageSchema.optional()
   });
   const cardNotesSchema = array(cardNoteSchema);
+  const cardReadsSchema = array(string().min(1).max(64)).max(64);
+  const cardViewsSchema = array(string().min(1).max(64)).max(64);
+  const cardLiveReadsShape = {
+    reads: cardReadsSchema.optional(),
+    sql: cardViewsSchema.optional()
+  };
+  const CARD_WIDTHS = ["regular", "wide", "full"];
+  const cardWidthSchema = _enum(CARD_WIDTHS);
   const cardEndedSchema = object({
     /** Who ended it: the card's crewmate or the first mate. */
     by: _enum(["crewmate", "firstmate"]),
@@ -93858,8 +93866,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const riskAssessmentSchema = object({
     declared: riskDeclarationSchema
   });
-  const CARD_WIDTHS = ["regular", "wide", "full"];
-  const cardWidthSchema = _enum(CARD_WIDTHS);
   const cardAwaitingSchema = _enum(["answer", "close-out"]);
   const CARD_CHANGE_MARKS_MAX = 512;
   const cardChangesSchema = strictObject({
@@ -94058,6 +94064,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * labeled door to its task's browser. Absent on every other card.
      */
     attachment: liveAttachmentSchema.optional(),
+    /** The live reads its crewmate declared (`cards.live_reads_json`; cardReads.ts). */
+    ...cardLiveReadsShape,
     /**
      * A merge card's risk assessment (`cards.risk_json`; docs/card-authoring.md
      * "The risk chart"): the levels and lines its crewmate declared, which the chrome draws as a
@@ -94400,6 +94408,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     files: array(cardFileSchema).optional(),
     width: cardWidthSchema.optional(),
     attachment: liveAttachmentSchema.optional(),
+    ...cardLiveReadsShape,
     risk: riskAssessmentSchema.optional(),
     asking: literal(true).optional(),
     designOnly: literal(true).optional(),
@@ -105564,6 +105573,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     disposed = false;
     inFlight = 0;
     subscriptions = /* @__PURE__ */ new Map();
+    /** The read each live subscription names, so a declaration that drops it ends it. */
+    subscribedReads = /* @__PURE__ */ new Map();
+    /** Subscriptions the host ended because their read is no longer declared. */
+    revoked = /* @__PURE__ */ new Set();
     watchdog = null;
     pingSeq = 0;
     /**
@@ -105600,9 +105613,33 @@ ${FRAME_KEYBOARD_SCRIPT}
     get subscriptionCount() {
       return this.subscriptions.size;
     }
-    /** The latest declaration; a card's actions can change between renders. */
+    /**
+     * The latest declaration; a card's actions can change between renders. A
+     * read the new declaration no longer names, or a `sql` read whose views
+     * changed, ends at once (a card revised without it, or a card that
+     * closed): the frame's `onError` hears why, and it keeps what it drew.
+     */
     update(spec) {
+      const views = viewsOf(this.spec.grant);
       this.spec = { ...this.spec, ...spec };
+      const viewsMoved = viewsOf(this.spec.grant) !== views;
+      for (const [sub, read] of this.subscribedReads) {
+        if (this.spec.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
+        this.subscriptions.get(sub)?.();
+        this.subscriptions.delete(sub);
+        this.subscribedReads.delete(sub);
+        this.revoked.add(sub);
+        this.port.post({
+          fm: V,
+          type: "data",
+          sub,
+          error: {
+            code: "read_not_declared",
+            // i18n-exempt: not shown (a console line, or an error for the panel's code)
+            message: `"${read}" is no longer a read this frame may use`
+          }
+        });
+      }
     }
     setTheme(theme) {
       this.theme = theme;
@@ -106276,12 +106313,17 @@ ${FRAME_KEYBOARD_SCRIPT}
           this.subscribe(asker, request);
           return;
         case "unsubscribe": {
+          if (this.revoked.delete(request.sub)) {
+            this.respond(asker);
+            return;
+          }
           const stop = this.subscriptions.get(request.sub);
           if (!stop) {
             this.refuse(asker, "subscription_unknown", `no subscription ${request.sub}`);
             return;
           }
           this.subscriptions.delete(request.sub);
+          this.subscribedReads.delete(request.sub);
           stop();
           this.respond(asker);
           return;
@@ -106408,6 +106450,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         return;
       }
       this.subscriptions.set(sub, stop);
+      this.subscribedReads.set(sub, request.read);
       this.respond(asker);
     }
     async action(asker, request) {
@@ -106479,7 +106522,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     dropSubscriptions() {
       for (const stop of this.subscriptions.values()) stop();
       this.subscriptions.clear();
+      this.subscribedReads.clear();
+      this.revoked.clear();
     }
+  }
+  function viewsOf(grant) {
+    return (grant?.sql ?? []).join(",");
   }
   function plainAnswer(answer) {
     if (answer === void 0) return void 0;

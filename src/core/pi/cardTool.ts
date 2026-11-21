@@ -6,6 +6,8 @@ import {
   type CardPicture,
   LIVE_ATTACHMENT_LABEL_MAX,
 } from "@shared/cards";
+import type { SqlViewName } from "@shared/personal/contracts";
+import { PANEL_READ_NAMES } from "@shared/personal/manifest";
 import type { PutOffUntil } from "@shared/putOff";
 import { type RequiredAction, requiredActionsSchema } from "@shared/requiredActions";
 import {
@@ -15,6 +17,7 @@ import {
   type RiskDeclaration,
   riskDeclarationSchema,
 } from "@shared/risk";
+import { isPublishedView, SQL_VIEWS } from "@shared/sql";
 import { TASK_BROWSER_REQUEST_MAX, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { cutText } from "@shared/textCut";
 import { type Static, type TSchema, Type } from "typebox";
@@ -257,6 +260,13 @@ export type EmittedCard = {
    * the card.
    */
   browserPage?: string;
+  /**
+   * The live reads and views a crewmate's card body may use while the card
+   * is open (`reads`, `sql`; docs/ui-plugins.md "A card's reads"), checked
+   * against the panels' list (`cardReadsOf`).
+   */
+  reads?: string[];
+  sql?: SqlViewName[];
   /**
    * A request that the captain take over the crewmate's task browser
    * (`browser_handoff`, only on a task that has one): the host pauses the
@@ -565,9 +575,46 @@ export const CARD_FILES_PARAM = [
   "Never give a path instead, especially on another computer or in temporary or evidence folders. Revisions pass files again; the list replaces the card's.",
 ].join(" ");
 
+/** Why a card naming a read or view it may not have is refused. */
+function cardReadsRefusal(what: string): CardRefusedError {
+  return new CardRefusedError(`Card refused: ${what}`, "shape", what);
+}
+
+/**
+ * A crewmate card's declared reads and views, checked: each read one a
+ * custom panel may name (`PANEL_READ_NAMES`), each view one this version
+ * publishes, each named once in the order given. Refused in words that name
+ * what to drop.
+ */
+export function cardReadsOf(
+  reads: readonly string[] | undefined,
+  sql: readonly string[] | undefined,
+): { reads?: string[]; sql?: SqlViewName[] } {
+  const named = [...new Set((reads ?? []).map((read) => read.trim()).filter(Boolean))];
+  const unknownRead = named.find((read) => !(PANEL_READ_NAMES as readonly string[]).includes(read));
+  if (unknownRead !== undefined)
+    throw cardReadsRefusal(
+      // i18n-exempt: a refusal served only to the crewmate's model
+      `reads names "${unknownRead}", which is not a read a card may use: name only ${PANEL_READ_NAMES.join(", ")}, and emit it again.`,
+    );
+  const views = [...new Set((sql ?? []).map((view) => view.trim()).filter(Boolean))];
+  const unknownView = views.find((view) => !isPublishedView(view));
+  if (unknownView !== undefined)
+    throw cardReadsRefusal(
+      // i18n-exempt: a refusal served only to the crewmate's model
+      `sql names "${unknownView}", which is not a view this version publishes: name only ${SQL_VIEWS.join(", ")}, and emit it again.`,
+    );
+  return {
+    ...(named.length ? { reads: named } : {}),
+    ...(views.length ? { sql: views as SqlViewName[] } : {}),
+  };
+}
+
 const crewmateCardParams = Type.Object({
   ...sharedCardParams,
   files: Type.Optional(Type.Array(Type.String(), { description: CARD_FILES_PARAM })),
+  reads: Type.Optional(Type.Array(Type.String(), { description: CARD_PARAMS.reads })),
+  sql: Type.Optional(Type.Array(Type.String(), { description: CARD_PARAMS.sql })),
   // INF-2884: a revision's reply that names no captain message is refused
   // while one waits, unless it is marked a progress note.
   interim: Type.Optional(Type.Boolean({ description: CARD_PARAMS.interim })),
@@ -800,6 +847,8 @@ function savedStoryRefusedFields(params: EmitCardParams, note = false): string[]
         "browser_page",
         "browser_sign_in",
         "files",
+        "reads",
+        "sql",
         "asking",
         "design_only",
         "continues",
@@ -972,6 +1021,8 @@ async function emitCard(
       RISK_MISSING_REFUSAL,
     );
   }
+  // Only a crewmate's schema offers live reads; the first mate's cards stay static.
+  const live = firstmate ? {} : cardReadsOf(params.reads, params.sql);
   // Pictures are markup (card pictures, phase 2): every <img> naming a
   // working-copy path is verified, copied under the task and rewritten
   // before the lint reads the card, so the lint never sees a path.
@@ -983,6 +1034,7 @@ async function emitCard(
     body,
     ...(pictures.length ? { pictures } : {}),
     ...(files.length ? { files } : {}),
+    ...live,
     actions: (params.actions ?? []).map(emittedAction),
     ...(id ? { id } : {}),
     ...(params.width ? { width: params.width } : {}),

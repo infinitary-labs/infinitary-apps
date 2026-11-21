@@ -438,6 +438,19 @@ A personal panel runs `reads.subscribe("sql", { sql, params }, listener)`; a `se
 The authoring guide is the seeded `usage` skill (`resources/personal-workspace/skills/usage/`), with `tests/fixtures/personal-skills/token-watch` as its fixture.
 The typed reads stay for now; retiring them, one at a time once their consumers read the views, is a follow-up.
 
+## A card's reads (INF-5531)
+
+A crewmate's card reads live app data through the same interface a custom panel uses: the read catalog, the executor and bridge v2's `inf.subscribe`, with no verb of its own.
+Its crewmate names what the body's script may read in `emit_card`'s `reads` (names from a custom panel's list, `PANEL_READ_NAMES`) and `sql` (published views, as a panel manifest's `sql` names them).
+The home checks both when the card is emitted (`cardReadsOf` in `src/core/pi/cardTool.ts`) and refuses a name outside those lists in words that name what to drop; `buildCard` keeps only names this home lists, so a card a newer computer that runs work sent keeps what this home can grant.
+The first mate's `emit_card` has neither parameter: its cards and the host's stay static.
+The card keeps both on its row (`cards.live_reads_json`), and a revision passes them again, as it passes its actions.
+
+The window grants them only while the card is open: the stack passes a card's reads to its body (`PrototypeBody`'s `cardFrameSpec`, through `frameReads` in `src/shared/reads.ts`, the same helper a personal panel's mount uses), and an ended card or a past card passes none.
+When a card's declaration changes under a mounted frame - the card closed, or a revision dropped a read or changed its views - the frame controller ends each subscription the new declaration no longer grants and tells the script's `onError` with `read_not_declared`; the body keeps what it last drew.
+An older desktop view reads a card without the two fields (`liveReads` in `src/core/connection/cardCompatibility.ts`, the `card-live-reads` contract change); a phone shows the body without live reads for now.
+The security review is `docs/live-prototype-security.md`, "Live reads on a crewmate's card".
+
 ## The one plugin vehicle (Phase A)
 
 

@@ -88,6 +88,19 @@ export type ReadGrant = {
   sql?: readonly string[];
 };
 
+/**
+ * What a frame may subscribe to and the grant the host adds, from the reads
+ * and views a panel's manifest or a crewmate's card declared: declaring a
+ * view is what lets it name the `sql` read, which runs under those views.
+ * One shaping for every frame that declares them.
+ */
+export function frameReads(
+  reads: readonly string[],
+  views: readonly string[],
+): { reads: string[]; grant: ReadGrant } {
+  return { reads: [...reads, ...(views.length ? ["sql"] : [])], grant: { sql: [...views] } };
+}
+
 export type ReadEntry<C extends CoreInvokeChannel, A extends z.ZodType> = {
   channel: C;
   /** What a subscriber may pass; strict, so a stray key is a refusal. */

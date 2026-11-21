@@ -355,6 +355,69 @@ describe("FrameController", () => {
     expect(posted.at(-1)).toMatchObject({ id: 2, ok: false, error: { code: "bad_args" } });
   });
 
+  // INF-5531 piece 1 (the captain's "only while the card is open"): a card
+  // whose author ended it, or revised it without a read, stops updating at
+  // once; what it drew stays, and the reads it still declares carry on.
+  it("ends a subscription its new declaration no longer grants, and keeps the rest", async () => {
+    const api = fakeApi({
+      "quota.snapshot": { accounts: [] },
+      sql: { columns: ["n"], rows: [{ n: 3 }], truncated: false, elapsedMs: 1 },
+    });
+    const { controller, posted } = harness(
+      { pluginId: "host", reads: ["quota.snapshot", "sql"], grant: { sql: ["v_tasks_v1"] } },
+      undefined,
+      api,
+    );
+    controller.receive({
+      fm: 2,
+      type: "request",
+      id: 1,
+      verb: "subscribe",
+      sub: 1,
+      read: "quota.snapshot",
+    });
+    controller.receive({
+      fm: 2,
+      type: "request",
+      id: 2,
+      verb: "subscribe",
+      sub: 2,
+      read: "sql",
+      args: { sql: "SELECT COUNT(*) AS n FROM v_tasks_v1" },
+    });
+    await flush();
+    expect(controller.subscriptionCount).toBe(2);
+    // The same declaration handed again on a render ends nothing.
+    controller.update({ reads: ["quota.snapshot", "sql"], grant: { sql: ["v_tasks_v1"] } });
+    expect(controller.subscriptionCount).toBe(2);
+    const sent = posted.length;
+    controller.update({ reads: ["sql"], grant: { sql: ["v_tasks_v1"] } });
+    expect(controller.subscriptionCount).toBe(1);
+    expect(posted.slice(sent)).toEqual([
+      {
+        fm: 2,
+        type: "data",
+        sub: 1,
+        error: {
+          code: "read_not_declared",
+          message: '"quota.snapshot" is no longer a read this frame may use',
+        },
+      },
+    ]);
+    // Other views end the sql read, whose grant was taken when it began.
+    controller.update({ reads: ["sql"], grant: { sql: ["v_usage_v1"] } });
+    expect(controller.subscriptionCount).toBe(0);
+    expect(posted.at(-1)).toMatchObject({
+      type: "data",
+      sub: 2,
+      error: { code: "read_not_declared" },
+    });
+    // The frame's own stop of an ended subscription is answered as done.
+    controller.receive({ fm: 2, type: "request", id: 3, verb: "unsubscribe", sub: 1 });
+    expect(posted.at(-1)).toEqual({ fm: 2, type: "response", id: 3, ok: true });
+    controller.dispose();
+  });
+
   it("refuses a read the plugin did not declare, an unknown read, and bad args", async () => {
     const { controller, posted } = harness();
     controller.receive({

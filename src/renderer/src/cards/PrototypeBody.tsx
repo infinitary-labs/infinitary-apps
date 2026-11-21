@@ -21,6 +21,7 @@ import type {
 } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import { type FrameMount, type FrameTheme, frameTitle } from "@shared/plugins/frameDocument";
+import { frameReads } from "@shared/reads";
 import { appBodyOf } from "@shared/welcome";
 import {
   useCallback,
@@ -131,6 +132,15 @@ type BodyProps = {
    * (`bridgeActionIds`).
    */
   declaredActionIds: string[];
+  /**
+   * The live reads and views the open card declared (`Card.reads`,
+   * `Card.sql`; docs/ui-plugins.md "A card's reads"): what this body's own
+   * script may subscribe to through `inf.subscribe`, granted as a panel's
+   * manifest is. Absent on a past card, a closed one and a copy, which stay
+   * as their author wrote them.
+   */
+  reads?: readonly string[];
+  sql?: readonly string[];
   /** The size the card is shown at: the document's `data-width`. */
   width?: CardWidth;
   /**
@@ -540,7 +550,8 @@ function cardFrameSpec(
   };
   return {
     pluginId: "host",
-    reads: [],
+    // The same catalog, executor and grant a panel's frame reads through.
+    ...frameReads(props.reads ?? [], props.sql ?? []),
     actions: props.declaredActionIds,
     // Only the data files this body names, as the host kept them.
     data: new Set(cardDataNames(props.body)),

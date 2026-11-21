@@ -13934,6 +13934,24 @@
                 }
               ]
             },
+            "reads": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "sql": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
             "risk": {
               "type": "object",
               "properties": {
@@ -15381,6 +15399,24 @@
                     ]
                   }
                 ]
+              },
+              "reads": {
+                "maxItems": 64,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "sql": {
+                "maxItems": 64,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
               },
               "risk": {
                 "type": "object",
@@ -65811,6 +65847,24 @@
                   "browserPage": {
                     "type": "string"
                   },
+                  "reads": {
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "sql": {
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
                   "allows": {
                     "type": "object",
                     "properties": {
@@ -79773,6 +79827,24 @@
                   ]
                 }
               ]
+            },
+            "reads": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "sql": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
             },
             "risk": {
               "type": "object",

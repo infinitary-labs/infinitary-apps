@@ -1146,16 +1146,29 @@ export async function startApp(
         stopping = true;
         app.quit();
       };
-      for (const signal of STOP_SIGNALS)
-        process.on(signal, () => {
-          if (stopping) return;
-          runEnd = {
-            reason: "signal",
-            exitCode: 0,
-            lines: [`Infinitary stopped after ${signal}.`],
-          };
-          stopRun();
-        });
+      const onStopSignal = (signal: (typeof STOP_SIGNALS)[number]) => () => {
+        if (stopping) return;
+        runEnd = {
+          reason: "signal",
+          exitCode: 0,
+          lines: [`Infinitary stopped after ${signal}.`],
+        };
+        stopRun();
+      };
+      const stopListeners = STOP_SIGNALS.map((signal) => [signal, onStopSignal(signal)] as const);
+      for (const [signal, listener] of stopListeners) process.on(signal, listener);
+      // Once ready, Electron puts its own handler for these signals in the system's place, which
+      // quits as a quit does: a run on a Mac never heard its stop as a stop, and one asked while its
+      // first mate started ended as if it controlled another computer. Node asks the system for a
+      // signal again only when its first listener comes, so every listener (signal-exit's too) is
+      // taken off and put back, in its order, after Electron's: the signal comes here again.
+      void app.whenReady().then(() => {
+        for (const [signal] of stopListeners) {
+          const listeners = process.listeners(signal) as (() => void)[];
+          process.removeAllListeners(signal);
+          for (const listener of listeners) process.on(signal, listener);
+        }
+      });
       // Windows ends a program another one signals with no clean stop, so a
       // stop is asked through the data folder there (docs/run.md, "On Windows");
       // everywhere, a stop for this run alone is asked so, by its process and

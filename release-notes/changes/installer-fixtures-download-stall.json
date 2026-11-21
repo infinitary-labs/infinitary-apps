@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-fixtures-download-stall",
+      "reason": "The Mac install check's download of its signed copies now uses a version of GitHub's download action that fetches a stalled transfer again and fails instead of passing with files missing; this is release checking only, so nothing a person sees changes."
+    }
+  ]
+}

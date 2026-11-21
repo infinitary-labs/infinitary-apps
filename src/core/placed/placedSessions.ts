@@ -257,6 +257,8 @@ type Placed = {
   adopting: Promise<void> | undefined;
   /** When that opening began. */
   adoptingSince: number | undefined;
+  /** Opens asked there and not yet answered. */
+  asking: number;
   /**
    * An open there again (`reopen`) under way, which a prompt or steer waits
    * for: true once that computer confirmed the conversation open.
@@ -1294,10 +1296,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /** Asks that computer to open `spec`, its answer read as one outcome (`openOutcome`). */
   private async askOpen(deviceId: string, task: string, spec: PlacedSpec) {
-    const answer = await this.options.devices.ask(deviceId, "inf:session:open", [
-      { orderId: `open:${task}:${this.options.now()}`, task, spec },
-    ]);
-    return openOutcome(openAnswerSchema.parse(answer), spec);
+    const placed = this.load(task, deviceId);
+    placed.asking += 1;
+    try {
+      const answer = await this.options.devices.ask(deviceId, "inf:session:open", [
+        { orderId: `open:${task}:${this.options.now()}`, task, spec },
+      ]);
+      return openOutcome(openAnswerSchema.parse(answer), spec);
+    } finally {
+      placed.asking -= 1;
+    }
   }
 
   /** Lets each of the computer's caught-up tasks go on, and says its work caught up. */
@@ -1622,8 +1630,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * file of the record it changed whole, with any of this Mac's copy that
    * still holds some. `files` are files from outside due in its hand-over
    * folder there, which that computer removes first. A computer out of
-   * reach, or without the change, follows on a later pass; one no longer on
-   * the list leaves this Mac's copy to the caller (`gone`).
+   * reach, or without the change, follows on a later pass, as does an open
+   * there still unanswered; one no longer on the list leaves this Mac's copy
+   * to the caller (`gone`). This Mac opens the conversation again, routed,
+   * or, on an older computer that opens it by itself, lets its own go first.
    */
   async deleteOutside(
     record: TaskRecord,
@@ -1640,10 +1650,15 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
     if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
-    // An older computer opens the conversation again by itself before it answers, which this
-    // Mac cannot check before it may take words: its cleanup waits for its update.
-    if (!this.listsChange(deviceId, REATTACH_ONLY_OPEN)) return { computer, until: "update" };
-    const session = heldSession(placed);
+    // An open there still unanswered could give this Mac a conversation the cleanup lets go.
+    if (placed.asking > 0 || placed.adopting) return "waiting";
+    // An older computer opens the conversation again by itself, unchecked: this Mac lets its own
+    // go first, so the next words open one there that is checked as new, whatever it answers.
+    const older = !this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    if (older && heldSession(placed)) {
+      if (heldSession(placed)?.isStreaming()) return "waiting";
+      this.host?.letGo?.(placed.task);
+    }
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
@@ -1655,7 +1670,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             legacy: due.legacy,
             ...(files.length > 0 ? { files: [...files] } : {}),
             // The home opens it again after routing it (`reattach-only-open.md`).
-            holdReopen: true,
+            ...(older ? {} : { holdReopen: true }),
           },
         ]),
       );
@@ -1664,13 +1679,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw caught;
     }
     if (answer.status === "waiting") return "waiting";
-    if (answer.reopen && session) {
-      // Let go of there for this Mac to open again, routed first.
+    // The session held once it answered, which may have opened while it was asked.
+    const session = older ? undefined : heldSession(placed);
+    // Let go of there, or not opened again by itself: this Mac opens it again, routed first.
+    if (session && (answer.reopen || answer.status === "changed"))
       void this.reopen(placed, session, deviceId);
-    } else if (answer.status === "changed" && session) {
-      // It did not open there again by itself.
-      void this.reopen(placed, session, deviceId);
-    }
     // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
     const names = new Set(answer.files);
     const recordDir = placed.record.dir;
@@ -1888,6 +1901,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       session: undefined,
       adopting: undefined,
       adoptingSince: undefined,
+      asking: 0,
       reopening: undefined,
       said: undefined,
       reopenOwed: false,

@@ -1,3 +1,6 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fenced } from "@shared/outsideData";
 import { describe, expect, it, vi } from "vitest";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import type { PlacedHome } from "../../../tests/helpers/placedHome";
@@ -19,7 +22,7 @@ import {
 import { DeviceOutOfReachError } from "../connection/connection";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
-import { crewmatePlacedDir } from "../paths";
+import { crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { PlacedLedger } from "./placedLedger";
 
 // Captain's lost-turn regression: after a work computer quits mid-turn,
@@ -1006,39 +1009,132 @@ describe("reopening after a work computer restarts, when the task's model left e
     });
   });
 
-  // INF-5438 round 6 finding 5 and round 13 findings 1 and 2: an older
-  // computer opens a conversation again by itself after it removes words from
-  // outside, before this Mac can check it, and its answer may say no state
-  // even when it opened one; it is asked no cleanup until it updates.
-  it("asks an older computer no cleanup, which would open a conversation this Mac cannot check", async () => {
+  // INF-5438 round 14 findings 1, 2 and 4: an older computer opens a
+  // conversation again by itself after it removes words from outside, so
+  // this Mac lets its own go first and the next words open one that is
+  // checked as new; its record and this Mac's copy both lose the words.
+  it("lets its conversation go before an older computer's cleanup, so both copies lose the words and the next ones open it checked", async () => {
     const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
     const at = await world(undefined, { changes: older });
     const taskId = "t-older";
-    model([{ text: "Started." }]);
+    model([{ text: `Read: ${fenced(SECRET, OLD_READ)}` }, { text: "It was answered." }]);
     await at.start(taskId);
     const home = at.home();
     await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    const there = at.folders(taskId).sessions;
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    const asked = recordAsks(home);
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
     const record = home.tasks.get(taskId);
     if (!record) throw new Error("no task record");
-    const orders: string[] = [];
-    const ask = home.devices.ask.bind(home.devices);
-    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
-      orders.push(channel);
-      return ask(device, channel, args);
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    // This Mac let its conversation go before it asked, and asked no hold it cannot read.
+    expect(letGo).toHaveBeenCalledWith(taskId);
+    const cleanup = asked.find((ask) => ask.channel === "inf:session:delete-outside");
+    expect(cleanup?.args).not.toHaveProperty("0.holdReopen");
+    expect(filesHolding(there, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    expect(filesHolding(here, DUE_NOTE)).not.toEqual([]);
+
+    // The next words open a conversation there, checked as new, which reads the note.
+    await home.supervisor.steer.steerCrewmate(taskId, "What did it say?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("It was answered.");
+    expect(said(api.requests.at(-1))).toContain(DUE_NOTE);
+    expect(said(api.requests.at(-1))).not.toContain(SECRET);
+  });
+
+  // INF-5438 round 14 findings 2 and 4: an open there still unanswered when a
+  // cleanup comes due could give this Mac a conversation the cleanup lets go,
+  // so the cleanup waits for it; the next pass lets go of the conversation
+  // this Mac then holds and opens it again routed, so after the captain took
+  // the starter off its level the next words reach GPT-6 Sol, without the words.
+  it("waits for an open there before a cleanup, then opens the conversation it let go routed", async () => {
+    const at = await codexThere();
+    const taskId = "t-clean";
+    model([
+      { text: `Read: ${fenced(SECRET, OLD_READ)}` },
+      { text: "Carried on." },
+      { text: "On GPT-6 Sol." },
+    ]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const here = crewmateSessionsDir(home.paths, taskId);
+    await expect.poll(() => filesHolding(here, SECRET)).not.toEqual([]);
+    // The task's next open there waits for its answer.
+    const answer = gate();
+    let opens = 0;
+    const asked = recordAsks(home, async (channel) => {
+      if (channel === "inf:session:open" && opens++ === 0) await answer.held;
     });
-    // Gmail answers read over 30 days ago are due.
-    const due = {
-      kinds: [
-        { label: "Gmail", until: Date.now() - 30 * 86_400_000, note: "[removed after 30 days]" },
-      ],
-      legacy: [],
-    };
-    // Its model is still held at a level: the cleanup waits all the same.
-    expect(home.supervisor.moves.mayRouteAgain(taskId)).toBe(false);
-    expect(await home.placed.deleteOutside(record, due)).toEqual({
-      computer: expect.any(String),
-      until: "update",
-    });
-    expect(orders).not.toContain("inf:session:delete-outside");
+    home.supervisor.placedLetGo(taskId);
+    // The steer opens the conversation there again, and waits for it.
+    const steered = home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => opens).toBe(1);
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("waiting");
+    expect(asked.map((entry) => entry.channel)).not.toContain("inf:session:delete-outside");
+    answer.open();
+    await steered;
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on.");
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+
+    starterLeft(home);
+    expect(await home.placed.deleteOutside(record, DUE)).toBe("changed");
+    expect(filesHolding(at.folders(taskId).sessions, SECRET)).toEqual([]);
+    expect(filesHolding(here, SECRET)).toEqual([]);
+    await expect.poll(() => home.decisions.latestRouting(taskId)?.model).toBe(SOL.id);
+    await home.supervisor.steer.steerCrewmate(taskId, "And now?", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain(DUE_NOTE);
+    expect(said(api.requests.at(-1))).not.toContain(SECRET);
   });
 });
+
+/** Words read from Gmail long ago, fenced as an integration answers them, and the pass that removes them. */
+const SECRET = "Lena's invoice number is 2214";
+const OLD_READ = {
+  label: "google-data",
+  value: "0123456789abcdef",
+  at: Date.now() - 40 * 86_400_000,
+};
+const DUE_NOTE = "[removed after 30 days]";
+const DUE = {
+  kinds: [{ label: "google-data", until: Date.now() - 30 * 86_400_000, note: DUE_NOTE }],
+  legacy: [],
+};
+
+/** Each order this Mac asks of that computer from now on. */
+function recordAsks(
+  home: PlacedHome,
+  answered: (channel: string) => Promise<void> = async () => {},
+): { channel: string; args: unknown }[] {
+  const asked: { channel: string; args: unknown }[] = [];
+  const ask = home.devices.ask.bind(home.devices);
+  vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+    asked.push({ channel, args });
+    const result = await ask(device, channel, args);
+    await answered(channel);
+    return result;
+  });
+  return asked;
+}
+
+/** The files under `root` that hold `text`. */
+function filesHolding(root: string, text: string): string[] {
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.isFile() && readFileSync(path, "utf8").includes(text)) found.push(path);
+    }
+  };
+  if (existsSync(root)) walk(root);
+  return found;
+}

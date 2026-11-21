@@ -60,7 +60,6 @@ import { ProtectedSecrets } from "../secrets/protected";
 import { SecretsSettings } from "../secrets/settings";
 import { seedTask } from "../tasks/seedTask";
 import { KEEP_AS_ANOTHER_USER } from "../tasks/taskStops";
-import { REATTACH_ONLY_OPEN } from "./crewMachines";
 
 /**
  * A task that runs on a computer that runs work (`tests/helpers/placedWorld.ts`):
@@ -921,10 +920,8 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
   });
 
   it("replaces what it read there and in this Mac's copy on the captain's delete, counts it, and its next turn reads the note", async () => {
-    // The current work major includes deletion without the retired minor name;
-    // the computer lists only that it can hold its reopen for the home, which
-    // an older one is asked no cleanup without (docs/helper.md).
-    const { at, home, outsideData, there, here, calls } = await readThere([REATTACH_ONLY_OPEN]);
+    // The current work major includes deletion without the retired minor name.
+    const { at, home, outsideData, there, here, calls } = await readThere([]);
 
     expect(await outsideData.deleteNow()).toEqual({ conversations: 1, waiting: 0 });
     // Replaced on the computer, in this Mac's copy of its record and in the

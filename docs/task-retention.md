@@ -201,10 +201,12 @@ A reader that follows a file by its offset starts over when the file was replace
 
 A crewmate's conversation on a computer that runs work is replaced there, by that computer (`inf:session:delete-outside`, `PlacedSessions.deleteOutside`; [Helper](helper.md#words-from-outside)).
 That computer reads its record under `tasks/<taskId>/sessions/` and its own Claude client's files for it, only between turns and with nothing of its client's own running, and answers `waiting` otherwise.
-A conversation open there is let go of before its files are written and opened again from them, so none of the words stays in its memory either.
+A conversation open there is let go of before its files are written, so none of the words stays in its memory either.
+This Mac then opens it again, routed first, on a computer that can be asked to hold that open (`reattach-only-open.md`); an older one opens it again by itself from its files, so this Mac lets go of its own session for it before asking, and the next words open it through an ordinary open, checked as new.
+While an open of that conversation there is still unanswered, this Mac asks nothing and the conversation is cleaned on a later sweep.
 This Mac then copies each file that computer changed whole into its own copy of the record, written beside it and renamed into place once whole, and with them any file of its copy that still holds due words, so a pass a drop cut short is finished on the next.
 The answers this Mac kept for that conversation's callbacks (`crewmates/<taskId>/placed/calls.jsonl`) are replaced here first, whatever that computer can do.
-A computer out of reach or on another contract major is asked again on a later sweep.
+A computer out of reach or on another contract major is asked again on a later sweep: its own record, and this Mac's copy of it, keep the words until then, since this Mac's copy follows that record by where each file ends and can only take it whole once that computer has replaced them; the answers kept for its callbacks go at once.
 A computer no longer on the list has nothing more to copy, so this Mac's copy is replaced here, as a task of its own is.
 
 It does not reach what an agent wrote in its own words, such as a report, a card, a note or a file it made; those stay until the task is deleted.

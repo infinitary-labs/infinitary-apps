@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: 更新與移除 Infinitary
 description: 每種安裝方式如何取得新的穩定版，以及如何移除 Infinitary 並保留你保存的工作。
 ---
@@ -87,3 +87,15 @@ Homebrew 替換 Infinitary 時會先結束它，所以完成後請再打開 Infi
   如果是 AppImage，刪除檔案即可。
 
 你保存的工作在 Mac 上位於 `~/Library/Application Support/infinitary`，在 Linux 上位於 `~/.config/infinitary`。
+
+### 哪些情況會刪除你保存的工作 {#what-deletes-your-saved-work}
+
+以下這些會刪除那個資料夾，Infinitary 存放在那裡的東西也會一起消失：
+
+- `brew uninstall --zap`。
+- 也會移除 App 支援檔案的解除安裝 App。
+- 把資料夾本身移到垃圾桶，或刪除它。
+
+在替另一台電腦執行工作的電腦上，那個資料夾存放著這台電腦自己的金鑰、它的工作副本和它的任務檔案。
+少了它，這台電腦再次加入時會成為一個新的項目，它還沒帶回去的工作就會遺失。
+請看 [同一台電腦列出了兩次](/zh-hant/troubleshooting/#a-computer-is-listed-twice)。

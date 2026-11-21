@@ -1,5 +1,5 @@
 ---
-source: 9ced91a9d5bca6c2
+source: 67e6220319b54d48
 title: 哪些東西會離開你的電腦
 description: Infinitary 會傳送什麼、傳到哪裡，以及唯一一個會傳東西給我們的開關。
 ---
@@ -20,7 +20,7 @@ Infinitary 在你的電腦上執行，透過你已經有的訂閱方案運作。
 ## 你的專案會送到它所在的地方 {#your-projects-go-where-they-live}
 
 船員在你電腦上的專案工作副本裡工作。
-當一項任務以 pull request 提出時，它的分支會推送到專案所在處，例如 GitHub 或 GitLab，pull request 也會在那裡開啟。
+當一項任務以 pull request 提出時，它的分支會推送到專案所在處，例如 GitHub、GitLab 或 Bitbucket，pull request 也會在那裡開啟。
 只放在這台電腦上的專案，就只會留在這台電腦上。
 
 船員準備工作副本或執行任務時，可能會擷取專案需要的東西，就像你手動做的那樣。

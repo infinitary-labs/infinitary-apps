@@ -474,6 +474,19 @@ describe("a Data Center pull request's page", () => {
     const page = `https://${HOST}/projects/FLD/repos/field-notes/pull-requests/1`;
     expect(requestLinkAtRepo(repo(`https://${HOST}/scm/fld/field-notes.git`), page)).toBe(true);
     expect(requestLinkAtRepo(repo(`ssh://git@${HOST}:7999/fld/field-notes.git`), page)).toBe(true);
+    // The server's own links may name it over http or with www., as forgeOf reads any address.
+    expect(
+      requestLinkAtRepo(
+        repo(`https://${HOST}/scm/fld/field-notes.git`),
+        `http://www.${HOST}/projects/FLD/repos/field-notes/pull-requests/1`,
+      ),
+    ).toBe(true);
+    expect(
+      requestLinkAtRepo(
+        repo(`https://${HOST}/scm/fld/field-notes.git`),
+        `https://elsewhere.example.com/projects/FLD/repos/field-notes/pull-requests/1`,
+      ),
+    ).toBe(false);
     expect(requestLinkAtRepo(repo(`https://${HOST}/scm/fld/other-notes.git`), page)).toBe(false);
     expect(requestLinkAtRepo(repo(`https://${HOST}/scm/abc/field-notes.git`), page)).toBe(false);
   });

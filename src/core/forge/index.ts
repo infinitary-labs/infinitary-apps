@@ -259,13 +259,14 @@ export function requestLinkAtRepo(repo: ForgeRepo, link: string | undefined): bo
   // Center's `projects/KEY/repos/slug` for `scm/key/slug`) is matched on
   // the page the repository's own address names.
   const here = forgeOf(repo.origin);
-  const server = serverFactsAt(repo.host?.kind, here.host);
-  if (server && here.host && here.owner && here.name)
-    return (
-      parent.toLowerCase() ===
-      `https://${here.host}/${server.projectPage(here.owner, here.name)}`.toLowerCase()
-    );
   const { host, owner, name } = forgeOf(parent);
+  const server = serverFactsAt(repo.host?.kind, here.host);
+  if (server && here.owner && here.name)
+    return (
+      !!host &&
+      host === here.host &&
+      `${owner}/${name}`.toLowerCase() === server.projectPage(here.owner, here.name).toLowerCase()
+    );
   return !!host && !!owner && !!name && requestAtRepo(repo, { host, owner, name });
 }
 

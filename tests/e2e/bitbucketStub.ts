@@ -17,7 +17,8 @@ import { join } from "node:path";
  * It answers the way Bitbucket does (docs/e2e-contracts.md, "Keep
  * fixtures truthful"): the account for the one token it accepts and a
  * 401 for any other, Bitbucket's answer to a revoked token; the account's workspaces; each workspace's repositories,
- * newest first, paged by an absolute `next` link on the same API; and one
+ * newest first, paged by an absolute `next` link on the same API; the
+ * account's write permission on each of those repositories; and one
  * repository by `workspace/name`, with a 404 for any other.
  *
  * For the project the journeys deliver to (`BITBUCKET_STUB_PROJECT`) it
@@ -524,6 +525,26 @@ export async function startBitbucketStub() {
         values: WORKSPACES.map((slug) => ({
           type: "workspace_access",
           workspace: { type: "workspace", slug, name: slug },
+        })),
+      });
+      return;
+    }
+    // The signed-in person writes every repository of the workspaces they belong to.
+    const permissions = /^\/user\/workspaces\/([^/]+)\/permissions\/repositories$/.exec(path);
+    if (method === "GET" && permissions) {
+      const workspace = decodeURIComponent(permissions[1] ?? "");
+      const named = /^repository\.full_name="(.*)"$/.exec(url.searchParams.get("q") ?? "")?.[1];
+      const rows = (REPOSITORIES[workspace] ?? [])
+        .flat()
+        .filter((row) => named === undefined || `${workspace}/${row.name}` === named);
+      send(200, {
+        pagelen: 100,
+        page: 1,
+        size: rows.length,
+        values: rows.map((row) => ({
+          type: "repository_permission",
+          permission: "write",
+          repository: { type: "repository", full_name: `${workspace}/${row.name}` },
         })),
       });
       return;

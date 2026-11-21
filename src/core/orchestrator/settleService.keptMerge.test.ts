@@ -661,7 +661,9 @@ it.each([
     ]);
     // The retry the second run armed while the first held the task runs once.
     await new Promise((resolve) => setImmediate(resolve));
-    // The first run and that retry's run, each trying an approval at most once.
+    // Every approval was tried, and each of the first run and that retry's
+    // run tried an approval at most once.
+    expect(attempts).toBeGreaterThanOrEqual(others.length + 1);
     expect(attempts).toBeLessThanOrEqual(2 * (others.length + 1));
     expect(approvalOf(world)?.status).toBe("standing");
   },

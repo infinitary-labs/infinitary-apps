@@ -58,6 +58,38 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().ambientStyle).toBe("a-newer-style");
   });
 
+  // INF-5541's approved plan: a person's own styles live in their own row,
+  // so an older build never meets them, a save that leaves them out keeps
+  // them, and removing the last one removes the row.
+  it("keeps a person's own ambient styles in their own row", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "dark", ambientMusic: true, ambientVolume: 65 });
+    const readRow = (key: string) =>
+      db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+    const music = readRow("ambient-music");
+    const warm = {
+      id: "own-warm-sleep",
+      name: "Warm sleep",
+      words: "Like Cold sleep, but warmer and a little faster, in a major key, with no heartbeat",
+      like: "cold-sleep" as const,
+      bpm: 60,
+      key: "G" as const,
+      scale: "lydian" as const,
+      mix: { kick: -60 },
+    };
+    settings.setAppearance({ theme: "dark", ambientOwnStyles: [warm], ambientStyle: warm.id });
+    expect(readRow("ambient-music")).toEqual(music);
+    settings.setAppearance({ theme: "light" });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      ambientStyle: warm.id,
+      ambientOwnStyles: [warm],
+    });
+    settings.setAppearance({ theme: "light", ambientOwnStyles: [] });
+    expect(readRow("ambient-own-styles")).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().ambientOwnStyles).toBeUndefined();
+  });
+
   // INF-5528's answer, the captain's choice: the music pauses while nobody
   // is at the computer unless Keep playing was chosen, kept in its own row
   // so an older build still reads the switch and volume.

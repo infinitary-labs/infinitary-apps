@@ -1,7 +1,8 @@
 // The ambient music's player (docs/ambient-music.md): turns a style's bars
 // into sound with Web Audio. No recorded samples: every note is an
 // oscillator, and the only noise is the reverb's tail and, under a sea
-// style, the soft wash of waves.
+// style, the soft wash of waves, or, under a person's own style that asks
+// for them, soft rain and wind.
 //
 // It takes any audio context, so the same code plays live in the window
 // (./ambient.ts) and renders offline for a check.
@@ -53,6 +54,14 @@ const FULL = 0.9;
 const GLOW_STRETCH = 1.6;
 /** How loud a sea style's wash of waves plays: the captain's soft waves, 40% of the wash's own level. */
 const WAVES = 0.4 * 0.3;
+/**
+ * How loud a person's own style's rain plays at its fullest, before the
+ * style's own amount: about -32.5 LUFS alone, 2 dB above the sea's waves
+ * (-34.5), so it stays a wash under the music.
+ */
+const RAIN = 0.16;
+/** How loud its wind plays at its fullest: as loud alone as the rain. */
+const WIND = 0.26;
 
 /**
  * A voice: the instrument that plays it, the bus it goes to, its preset,
@@ -115,6 +124,9 @@ export type Sound = {
   tilt?: number;
   /** A sea style plays a soft wash of waves under the music. */
   sea?: boolean;
+  /** A person's own style may play soft rain and wind under the music, each 0..1. */
+  rain?: number;
+  wind?: number;
   voices: Record<string, Voice>;
 };
 
@@ -158,6 +170,76 @@ function impulse(ctx: BaseAudioContext, seed: number, seconds: number): AudioBuf
   return buffer;
 }
 
+/** Crossfades a looping buffer's last samples into its first, so the seam is not heard. */
+function easeSeam(data: Float32Array, seam: number): void {
+  const length = data.length;
+  for (let i = 0; i < seam; i += 1) {
+    const w = i / seam;
+    data[i] = (data[i] as number) * w + (data[length - seam + i] as number) * (1 - w);
+  }
+}
+
+/**
+ * Eight seconds of soft rain that loops, written as rain sounds rather than
+ * as static: a pink bed, the hush of distant rain, and about 140 drops a
+ * second on each side, most of them faint. A drop is either a soft tap, a
+ * burst of noise rounded off by its own small filter, or the short rising
+ * ring a drop makes landing in water, at a pitch of its own.
+ */
+function rainfall(ctx: BaseAudioContext, seed: number): { buffer: AudioBuffer; loopEnd: number } {
+  const rate = ctx.sampleRate;
+  const length = Math.floor(rate * 8);
+  const seam = 2400;
+  const buffer = ctx.createBuffer(2, length, rate);
+  let a = (seed ^ 0x2c1b3c6d) | 0;
+  const random = () => {
+    a = (Math.imul(a, 1664525) + 1013904223) | 0;
+    return (a >>> 0) / 4294967296;
+  };
+  const drops = Math.round(8 * 140);
+  for (let channel = 0; channel < 2; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    // Pink noise (Paul Kellet's three-pole filter): the hush.
+    let b0 = 0;
+    let b1 = 0;
+    let b2 = 0;
+    for (let i = 0; i < length; i += 1) {
+      const white = random() * 2 - 1;
+      b0 = 0.99765 * b0 + white * 0.099046;
+      b1 = 0.963 * b1 + white * 0.2965164;
+      b2 = 0.57 * b2 + white * 1.0526913;
+      data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.06;
+    }
+    for (let n = 0; n < drops; n += 1) {
+      const at = Math.floor(random() * length);
+      const strength = random() ** 3;
+      if (random() < 0.3) {
+        const pitch = 1300 + random() * 2600;
+        const tau = (0.003 + random() * 0.007) * rate;
+        const span = Math.floor(tau * 5);
+        let phase = 0;
+        for (let j = 0; j < span; j += 1) {
+          phase += (2 * Math.PI * pitch * (1 + (0.5 * j) / span)) / rate;
+          const k = (at + j) % length;
+          data[k] = (data[k] as number) + strength * 0.35 * Math.sin(phase) * Math.exp(-j / tau);
+        }
+      } else {
+        const tau = (0.001 + random() * 0.004) * rate;
+        const span = Math.floor(tau * 5);
+        const round = 0.12 + random() * 0.45;
+        let tap = 0;
+        for (let j = 0; j < span; j += 1) {
+          tap += (random() * 2 - 1 - tap) * round;
+          const k = (at + j) % length;
+          data[k] = (data[k] as number) + strength * 0.8 * tap * Math.exp(-j / tau);
+        }
+      }
+    }
+    easeSeam(data, seam);
+  }
+  return { buffer, loopEnd: (length - seam) / rate };
+}
+
 /** Three seconds of soft, dark noise that loops: the sea's wash. */
 function wash(ctx: BaseAudioContext, seed: number): { buffer: AudioBuffer; loopEnd: number } {
   const length = Math.floor(ctx.sampleRate * 3);
@@ -172,11 +254,7 @@ function wash(ctx: BaseAudioContext, seed: number): { buffer: AudioBuffer; loopE
       low += ((a >>> 0) / 2147483648 - 1 - low) * 0.25;
       data[i] = low;
     }
-    // Ease the loop's seam.
-    for (let i = 0; i < seam; i += 1) {
-      const w = i / seam;
-      data[i] = (data[i] as number) * w + (data[length - seam + i] as number) * (1 - w);
-    }
+    easeSeam(data, seam);
   }
   return { buffer, loopEnd: (length - seam) / ctx.sampleRate };
 }
@@ -219,6 +297,8 @@ export class AmbientPlayer {
       volume?: number;
       destination?: AudioNode;
       analyser?: AnalyserNode;
+      /** Only this bus sounds, with no waves, rain or wind: how the app measures a layer's loudness. */
+      solo?: Bus;
     } = {},
   ) {
     this.composer = new Composer(style, seed);
@@ -290,7 +370,8 @@ export class AmbientPlayer {
     for (const name of [...LAYERS, "cue"] as const) {
       const [lowpass, toReverb, toEcho] = style.buses[name] ?? BUS_DEFAULTS[name];
       const input = keep(ctx.createGain());
-      input.gain.value = 10 ** ((style.gains[name] ?? 0) / 20);
+      input.gain.value =
+        options.solo && options.solo !== name ? 0 : 10 ** ((style.gains[name] ?? 0) / 20);
       const level = keep(ctx.createGain());
       level.gain.value = name === "cue" ? 0.9 : 0;
       const filter = keep(ctx.createBiquadFilter());
@@ -384,7 +465,7 @@ export class AmbientPlayer {
     }
 
     // The sea's wash, the one sound made of noise, under a sea style alone.
-    if (style.sea) {
+    if (style.sea && !options.solo) {
       const { buffer, loopEnd } = wash(ctx, seed);
       const source = keep(ctx.createBufferSource());
       source.buffer = buffer;
@@ -409,6 +490,96 @@ export class AmbientPlayer {
       source.start(this.start);
       this.waves = { low, wave };
     }
+    if (!options.solo) {
+      if (style.rain) this.rain(style.rain, seed, keep);
+      if (style.wind) this.wind(style.wind, seed, keep);
+    }
+  }
+
+  /**
+   * Soft rain: kept between 250 Hz and 4.2 kHz, so it patters without
+   * hiss, its level drifting a little as rain does.
+   */
+  private rain(
+    amount: number,
+    seed: number,
+    keep: <T extends AudioNode>(node: T, ...more: AudioNode[]) => T,
+  ): void {
+    const ctx = this.ctx;
+    const { buffer, loopEnd } = rainfall(ctx, seed);
+    const source = keep(ctx.createBufferSource());
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopEnd = loopEnd;
+    const high = keep(ctx.createBiquadFilter());
+    high.type = "highpass";
+    high.frequency.value = 250;
+    const low = keep(ctx.createBiquadFilter());
+    low.type = "lowpass";
+    low.frequency.value = 4200;
+    low.Q.value = 0.5;
+    const level = keep(ctx.createGain());
+    level.gain.value = 0;
+    level.gain.setTargetAtTime(RAIN * amount, this.start, 1);
+    const drift = keep(ctx.createOscillator());
+    drift.frequency.value = 0.09;
+    const depth = keep(ctx.createGain());
+    depth.gain.value = RAIN * amount * 0.2;
+    drift.connect(depth).connect(level.gain);
+    source.connect(high).connect(low).connect(level).connect(this.mix);
+    const send = keep(ctx.createGain());
+    send.gain.value = 0.3;
+    level.connect(send).connect(this.reverb);
+    source.start(this.start);
+    drift.start(this.start);
+  }
+
+  /**
+   * Soft wind: dark noise through one band that slowly moves between about
+   * 200 Hz and 900 Hz, rising and falling in gusts tens of seconds apart.
+   */
+  private wind(
+    amount: number,
+    seed: number,
+    keep: <T extends AudioNode>(node: T, ...more: AudioNode[]) => T,
+  ): void {
+    const ctx = this.ctx;
+    const { buffer, loopEnd } = wash(ctx, seed ^ 0x68e31da4);
+    const source = keep(ctx.createBufferSource());
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopEnd = loopEnd;
+    const band = keep(ctx.createBiquadFilter());
+    band.type = "bandpass";
+    band.frequency.value = 480;
+    band.Q.value = 1.1;
+    for (const [hz, deep] of [
+      [0.043, 220],
+      [0.11, 90],
+    ] as const) {
+      const sweep = keep(ctx.createOscillator());
+      sweep.frequency.value = hz;
+      const depth = keep(ctx.createGain());
+      depth.gain.value = deep;
+      sweep.connect(depth).connect(band.frequency);
+      sweep.start(this.start);
+    }
+    const gust = keep(ctx.createGain());
+    gust.gain.value = 0.6;
+    const gusts = keep(ctx.createOscillator());
+    gusts.frequency.value = 0.061;
+    const gustDepth = keep(ctx.createGain());
+    gustDepth.gain.value = 0.4;
+    gusts.connect(gustDepth).connect(gust.gain);
+    gusts.start(this.start);
+    const level = keep(ctx.createGain());
+    level.gain.value = 0;
+    level.gain.setTargetAtTime(WIND * amount, this.start, 1.5);
+    source.connect(band).connect(gust).connect(level).connect(this.mix);
+    const send = keep(ctx.createGain());
+    send.gain.value = 0.35;
+    level.connect(send).connect(this.reverb);
+    source.start(this.start);
   }
 
   /** Sets how loud it plays, 0..1, over a moment. */

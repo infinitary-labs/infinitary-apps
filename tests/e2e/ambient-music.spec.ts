@@ -1,10 +1,21 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import { ACTIONS } from "../../src/shared/actions";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { DEFAULT_AMBIENT_STYLE, DEFAULT_AMBIENT_VOLUME } from "../../src/shared/preferences";
 import { pointsAlong, windowDragAt } from "./dragRegions";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { atRest } from "./layout";
+import { promptInput } from "./prompt";
+import { feedLine } from "./rails";
 import { readSavedData } from "./savedData";
+import {
+  AMBIENT_OWN_PROMPT,
+  AMBIENT_SLOWER_PROMPT,
+  ambientOwn,
+  LOFI_SLOWER,
+  LOFI_STYLE,
+} from "./scenarios/ambientOwn";
 import { settingRow } from "./settings";
 import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
@@ -195,6 +206,83 @@ test("the ambient music plays Star cruise first and keeps the style picked in Se
     await expect.poll(() => playingStyle(launched.page)).toBe("harbor-dawn");
   } finally {
     await launched.close();
+  }
+});
+
+function savedOwnStyles(userDataDir: string) {
+  return readSavedData(userDataDir, (db) => {
+    const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("ambient-own-styles") as
+      | { value: string }
+      | undefined;
+    return row ? (JSON.parse(row.value) as { styles: { id: string; bpm?: number }[] }).styles : [];
+  });
+}
+
+// INF-5541's approved plan: asked for music of the person's own, the first
+// mate saves it as a style and it plays in the same reply; Settings shows
+// it chosen under Yours with the person's words; asked to change it, the
+// same style changes; Remove, reached by keys, brings back the default; and
+// Describe your own starts the ask in the message box.
+// Data: a fresh profile and the plan's own lofi style. Completion: the
+// player's playing style and the saved row. Prerequisites: Electron and the
+// built renderer; no network.
+test("the first mate writes the person's own style, and Settings lists and removes it", async () => {
+  const { page, close, userDataDir } = await launchApp({
+    withMockProvider: true,
+    scenarios: [ambientOwn],
+  });
+  const id = "own-late-shift";
+  try {
+    await askFirstmate(page, AMBIENT_OWN_PROMPT);
+    await expect(
+      feedLine(page, ACTIONS["ambient-own-style"].done({ saved: [LOFI_STYLE] })),
+    ).toBeVisible({ timeout: 30_000 });
+    // The window measures a new style's loudness before it first plays it.
+    await expect.poll(() => playingStyle(page), { timeout: 60_000 }).toBe(id);
+    await expect.poll(() => player(page)).toBe("playing");
+
+    await askFirstmate(page, AMBIENT_SLOWER_PROMPT);
+    await expect
+      .poll(() => savedOwnStyles(userDataDir))
+      .toEqual([expect.objectContaining({ id, bpm: LOFI_SLOWER.bpm })]);
+    await expect.poll(() => playingStyle(page), { timeout: 60_000 }).toBe(id);
+
+    await settings(page).click();
+    await appearance(page).click();
+    const style = settingRow(page, "ambient-style").getByRole("combobox", {
+      name: m.settingsSoundStyle(),
+    });
+    await expect(style).toHaveValue(id);
+    await expect(settingRow(page, "ambient-style")).toContainText(LOFI_STYLE.words);
+    await expect(
+      style.locator(`optgroup[label="${m.settingsSoundStyleGroupYours()}"] option`),
+    ).toHaveText([LOFI_STYLE.name]);
+
+    const remove = settingRow(page, "ambient-own").getByRole("button", {
+      name: m.settingsSoundOwnRemove(),
+      exact: true,
+    });
+    const describe = settingRow(page, "ambient-own").getByRole("button", {
+      name: m.settingsSoundOwnDescribe(),
+      exact: true,
+    });
+    await focusOn(style, { focusVisible: true });
+    await pressKey(style, "Tab");
+    await expect(remove).toBeFocused();
+    await pressKey(remove, "Enter");
+    await expect.poll(() => playingStyle(page)).toBe(DEFAULT_AMBIENT_STYLE);
+    await expect(style).toHaveValue(DEFAULT_AMBIENT_STYLE);
+    await expect(remove).toHaveCount(0);
+    await expect.poll(() => savedOwnStyles(userDataDir)).toEqual([]);
+
+    await focusOn(style, { focusVisible: true });
+    await pressKey(style, "Tab");
+    await expect(describe).toBeFocused();
+    await pressKey(describe, "Enter");
+    await expect(promptInput(page)).toBeFocused();
+    await expect(promptInput(page)).toHaveValue(m.settingsSoundOwnDraft());
+  } finally {
+    await close();
   }
 });
 

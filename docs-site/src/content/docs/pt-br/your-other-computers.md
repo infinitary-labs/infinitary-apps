@@ -1,5 +1,5 @@
 ---
-source: 1311a517163799dd
+source: d29b96f163790a41
 title: Seus outros computadores
 description: Adicione seus outros computadores para controlar seu imediato de qualquer um deles, deixar que eles rodem o trabalho dos seus projetos e manter uma cópia que possa assumir.
 ---
@@ -57,7 +57,7 @@ Cada computador mantém sua própria Aparência, seu Teclado e seus Painéis.
 As outras seções dos Ajustes são lidas e alteradas no computador onde seu imediato mora.
 
 Para parar, abra Ajustes → **Dispositivos** nesse computador e pressione **Sair**.
-Para desligar um computador do computador onde seu imediato mora, pressione **Remover** na linha dele.
+Para desligar um computador do computador onde seu imediato mora, abra o menu dele, os três pontos na linha dele, e escolha **Remover**.
 Um computador que só controla seu imediato precisa de um novo link para voltar.
 
 ## Um computador que roda trabalho {#a-computer-that-runs-work}
@@ -90,7 +90,7 @@ Cada cópia acrescenta uma linha à Atividade da tarefa, com o nome do arquivo e
 
 ## Mudar seu imediato de computador {#move-your-first-mate}
 
-Na linha de um computador que roda trabalho, **Mudar seu imediato para cá** leva seu imediato para lá.
+No menu de um computador que roda trabalho, os três pontos na linha dele, **Mudar seu imediato para cá** leva seu imediato para lá.
 Uma lista mostra antes qualquer coisa que esteja no caminho.
 Os [Segredos](/pt-br/secrets/) ficam no computador que ele deixa, e você faz login de novo nas suas assinaturas lá.
 
@@ -100,7 +100,7 @@ Um computador que roda trabalho pode manter uma cópia ao vivo do registro do se
 Se o computador onde seu imediato mora se perder, ou ficar fora de alcance por muito tempo, esse computador pode [assumir](#take-over).
 
 1. No computador onde seu imediato mora, abra Ajustes → **Dispositivos** e escolha o outro computador.
-2. Pressione **Manter uma cópia aqui** na linha dele.
+2. Abra o menu dele, os três pontos na linha dele, e escolha **Manter uma cópia aqui**.
 
 Ele faz uma cópia completa e depois recebe cada mudança que seu imediato salva.
 A linha dele diz em que ponto a cópia está, como **Cópia em dia** ou **Cópia se atualizando · 3 mudanças**, e, enquanto ele estiver fora de alcance, **Cópia das** e um horário.
@@ -112,7 +112,7 @@ Sozinha, a cópia não guarda nenhum dos seus projetos, logins ou Segredos:
 
 - Quando ele assume, cada projeto é clonado de novo de onde o projeto fica.
   Um projeto guardado só no computador que se perdeu começa vazio lá.
-- **Pronto para assumir**, na linha dele, lista o que esse computador ainda precisaria, como um login próprio em cada assinatura que seu imediato usa e onde seus projetos ficam.
+- **Pronto para assumir**, no menu dele, lista o que esse computador ainda precisaria, como um login próprio em cada assinatura que seu imediato usa e onde seus projetos ficam.
   Um botão para cada um, como **Fazer login em GitHub lá**, começa esse login a partir desta janela.
 - **Guardar os Segredos lá**, na mesma lista, mantém seus Segredos com a cópia assim que você confirma nesse próprio computador.
   Veja [Segredos](/pt-br/secrets/#when-your-first-mate-moves).

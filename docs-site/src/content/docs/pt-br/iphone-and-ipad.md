@@ -1,5 +1,5 @@
 ---
-source: 82ba2f8c184a953c
+source: 4b256578ba14e5e2
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -80,7 +80,7 @@ O celular avisa sobre um novo cartão só enquanto o app está aberto.
 
 Para parar de mostrar seu computador, toque no botão do computador à direita da barra superior do celular e escolha **Sair de** seguido do nome do seu computador.
 O celular esquece o computador.
-No seu computador, **Remover** na linha do celular em Ajustes → **Dispositivos** o desconecta na hora.
+No seu computador, **Remover** no menu do celular em Ajustes → **Dispositivos**, os três pontos na linha dele, o desconecta na hora.
 Para se conectar de novo, crie um novo link.
 
 Veja também [Seus outros computadores](/pt-br/your-other-computers/).

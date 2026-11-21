@@ -1,5 +1,5 @@
 ---
-source: 86ec7e76bee97816
+source: 7c4d9925493d8861
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -49,7 +49,10 @@ No GitLab, você pode fazer login no navegador ou colar uma chave, no gitlab.com
 No Bitbucket, você cria um token de API na sua conta da Atlassian e cola, para projetos no bitbucket.org.
 O formulário da chave diz quais escopos marcar na página da Atlassian.
 Seus projetos do Bitbucket são listados a partir dos espaços de trabalho de que você faz parte; com muitos, alguns podem não ter sido verificados, e a lista avisa.
-Por enquanto, as mudanças de um projeto do Bitbucket são oferecidas como um branch, não como uma solicitação de pull.
+As mudanças de um projeto do Bitbucket são oferecidas como solicitações de pull, como no GitHub e no GitLab; um projeto que você adicionou antes disso funciona do mesmo jeito a partir da próxima tarefa.
+A descrição de uma solicitação de pull do Bitbucket traz a história como texto, e as imagens dela ficam no cartão.
+Um projeto do Bitbucket também pode escolher solicitações de pull em lote, e as mesclagens dele seguem as estratégias e a fila de mesclagem que o branch principal dele tem no bitbucket.org.
+Em um projeto do Bitbucket, sua tripulação também pode ler os pipelines do projeto e o log de uma etapa, colocar um arquivo de versão em Downloads e acordar com novos comentários na solicitação de pull dele, como no GitHub e no GitLab; o Bitbucket não oferece download dos artefatos de um pipeline.
 Seu login fica neste computador.
 
 Se um login parar de funcionar, um cartão pede que você faça login de novo.
@@ -85,7 +88,7 @@ O Infinitary lembra do seu foco quando você o reinicia.
 Abra um projeto em **Ajustes → Projetos** para escolher como o trabalho terminado dele é mesclado.
 **Para onde vão as alterações** oferece:
 
-- **solicitações de pull**: cada mudança é oferecida como uma solicitação de pull no GitHub ou no GitLab.
+- **solicitações de pull**: cada mudança é oferecida como uma solicitação de pull no GitHub, no GitLab ou no Bitbucket.
 - **solicitações de pull em lote**: suas mudanças aprovadas são combinadas em uma única solicitação de pull em lote, com um commit para cada mudança, e mescladas assim que as verificações dela passam.
 - **mesclagem local**: a mudança é mesclada no projeto neste computador, sem solicitação de pull.
 

@@ -1,5 +1,5 @@
 ---
-source: 3e64699c942fc0e5
+source: 797265acca38baf9
 title: Solução de problemas
 description: Problemas comuns no Infinitary, as palavras que o app mostra para cada um e o que fazer.
 ---
@@ -69,10 +69,25 @@ Ou: “O Infinitary está fechado em” aquele computador.
 2. Coloque os dois computadores na mesma rede, ou na mesma rede privada.
 3. Em Ajustes → **Dispositivos**, pressione **Tentar de novo** na linha dele.
 
-Se um computador que você adicionou pelo endereço tiver um endereço novo, pressione **Mudar endereço** na linha dele.
+Se um computador que você adicionou pelo endereço tiver um endereço novo, abra o menu dele, os três pontos na linha dele, e escolha **Mudar endereço**.
 No Mac, o macOS pode impedir o Infinitary de usar a rede local até que alguém naquele Mac permita.
 A linha dele então oferece **Adicionar pelo endereço** no lugar.
 Veja [Seus outros computadores](/pt-br/your-other-computers/).
+
+## Um computador aparece duas vezes {#a-computer-is-listed-twice}
+
+Ajustes → **Dispositivos** mostra o mesmo nome duas vezes: uma linha ao alcance e outra fora de alcance, ainda com tarefas.
+Isso acontece quando um computador que roda trabalho entra de novo depois que o trabalho salvo dele foi excluído, ou depois que o Infinitary foi instalado do zero lá.
+A linha ao alcance diz “Uma entrada anterior com este nome e usuário está fora de alcance”.
+
+1. Na linha ao alcance, pressione **Continuar as tarefas dele aqui**.
+2. Leia o que continua e o que fica para trás, depois pressione **Continuar**.
+3. Cada tarefa continua a partir do último commit que o computador onde seu imediato mora trouxe.
+   A linha anterior sai da sua lista quando todas as tarefas tiverem mudado.
+
+Commits depois desse, edições sem commit e arquivos nas pastas antigas das tarefas ficam com a entrada antiga.
+Para uma linha fora de alcance sem correspondente, pressione **Mover as tarefas dele para…** e escolha um computador.
+Veja [O que exclui seu trabalho salvo](/pt-br/update-and-remove/#what-deletes-your-saved-work).
 
 ## A janela para de responder {#the-window-stops-answering}
 

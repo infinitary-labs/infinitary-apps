@@ -1,5 +1,5 @@
 ---
-source: 9ced91a9d5bca6c2
+source: 67e6220319b54d48
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -20,7 +20,7 @@ Seus logins ficam no seu computador.
 ## Seus projetos vão para onde eles ficam {#your-projects-go-where-they-live}
 
 Um tripulante trabalha em uma cópia de trabalho do seu projeto no seu computador.
-Quando uma tarefa é oferecida como solicitação de pull, o branch dela recebe um push para onde seu projeto fica, como o GitHub ou o GitLab, e a solicitação de pull é aberta lá.
+Quando uma tarefa é oferecida como solicitação de pull, o branch dela recebe um push para onde seu projeto fica, como o GitHub, o GitLab ou o Bitbucket, e a solicitação de pull é aberta lá.
 Um projeto guardado só neste computador fica só neste computador.
 
 Quando um tripulante prepara uma cópia de trabalho ou faz a tarefa dele, ele pode buscar o que seu projeto precisa, como você faria à mão.

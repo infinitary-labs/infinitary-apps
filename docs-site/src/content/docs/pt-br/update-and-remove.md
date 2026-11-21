@@ -1,5 +1,5 @@
 ---
-source: 409ca57ea4eacc5a
+source: 81c1b11c48b639fa
 title: Atualizar e remover o Infinitary
 description: Como cada tipo de instalação recebe uma nova versão estável e como remover o Infinitary mantendo seu trabalho salvo.
 ---
@@ -87,3 +87,15 @@ Se este computador roda trabalho para outro, aperte **Sair** em Ajustes → **Di
   Para um AppImage, exclua o arquivo.
 
 Seu trabalho salvo fica em `~/Library/Application Support/infinitary` no Mac e em `~/.config/infinitary` no Linux.
+
+### O que exclui seu trabalho salvo {#what-deletes-your-saved-work}
+
+Estes excluem essa pasta, e o que o Infinitary guardava nela vai junto:
+
+- `brew uninstall --zap`.
+- Um app desinstalador que também remove os arquivos de suporte de um app.
+- Mover a própria pasta para o Lixo, ou excluí-la.
+
+Em um computador que roda trabalho para outro, essa pasta guarda a chave do próprio computador, as cópias de trabalho dele e os arquivos das tarefas dele.
+Sem ela, o computador entra de novo como uma entrada nova, e o trabalho que ele ainda não tinha trazido fica perdido.
+Veja [Um computador aparece duas vezes](/pt-br/troubleshooting/#a-computer-is-listed-twice).

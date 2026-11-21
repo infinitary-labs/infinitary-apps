@@ -1,0 +1,603 @@
+---
+title: 키보드
+description: Infinitary에서 키보드로 실행할 수 있는 모든 명령과, Mac과 Linux의 각 프리셋에서 쓰는 키예요.
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Infinitary의 모든 기능은 키보드로 쓸 수 있어요.
+Tab은 컨트롤 사이를 이동하고, 화살표는 목록 안에서 이동해요.
+
+## 명령 검색 {#command-search}
+
+Mac에서는 <kbd>⌘K</kbd>, Linux에서는 <kbd>Ctrl+K</kbd>를 눌러 명령 검색을 열어요.
+몇 단어를 입력하고 화살표로 명령을 고른 다음 Enter를 눌러요.
+이 페이지의 모든 명령이 키와 함께 그곳에 있어요. 키가 없는 명령도 있어요.
+
+## 프리셋 {#presets}
+
+Infinitary에는 프리셋이라는 키 묶음이 있어요: Vim, Emacs, VS Code, Tmux, Legacy.
+새로 설치하면 Vim(으)로 시작해요.
+Legacy는 프리셋이 생기기 전부터 Infinitary를 쓰던 경우에만 보여요.
+프리셋은 **설정**의 **키보드**에서 골라요.
+
+## 키 바꾸기 {#change-a-key}
+
+**설정**의 **키보드**에서 모든 명령에 **기록**, **제거**, **재설정**이 있어요.
+**기록**을 누르고 원하는 키를 누른 다음 Enter를 눌러 저장해요.
+다른 명령이 이미 그 키를 쓰고 있으면, 무엇이든 바뀌기 전에 Infinitary가 어느 명령인지 알려 줘요.
+
+## 모든 명령과 키 {#every-command-and-its-keys}
+
+대시는 그 명령에 아직 키가 없다는 뜻이에요. 명령 검색에서 실행하거나 원하는 키를 정해 주세요.
+사이에 공백이 있는 두 키는 하나씩 차례로 눌러요.
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**창 어디서나**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 명령 검색 | <kbd>&#58;</kbd> 입력 중이 아닐 때, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+K</kbd> |
+| 메인 메시지 칸으로 이동 | <kbd>I</kbd> 입력 중이 아닐 때, <kbd>⌘L</kbd> | <kbd>I</kbd> 입력 중이 아닐 때, <kbd>Ctrl+L</kbd> |
+| 카드 답장으로 이동 | <kbd>R</kbd> 입력 중이 아닐 때, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+L</kbd> |
+| 카드 본문으로 이동 | <kbd>G C</kbd> 입력 중이 아닐 때 | <kbd>G C</kbd> 입력 중이 아닐 때 |
+| 카드 버튼으로 이동 | <kbd>G A</kbd> 입력 중이 아닐 때 | <kbd>G A</kbd> 입력 중이 아닐 때 |
+| 추천 선택지 누르기 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 두 번째 선택지 누르기 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 세 번째 선택지 누르기 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 네 번째 선택지 누르기 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 창의 다음 부분으로 이동 | <kbd>⌃W W</kbd> 입력 중이 아닐 때, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 창의 이전 부분으로 이동 | <kbd>⌃W P</kbd> 입력 중이 아닐 때, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 창의 왼쪽 부분으로 이동 | <kbd>⌃W H</kbd> 입력 중이 아닐 때, <kbd>⌃H</kbd> 입력 중이 아닐 때 | — |
+| 창의 아래 부분으로 이동 | <kbd>⌃W J</kbd> 입력 중이 아닐 때, <kbd>⌃J</kbd> 입력 중이 아닐 때 | — |
+| 창의 위 부분으로 이동 | <kbd>⌃W K</kbd> 입력 중이 아닐 때, <kbd>⌃K</kbd> 입력 중이 아닐 때 | — |
+| 창의 오른쪽 부분으로 이동 | <kbd>⌃W L</kbd> 입력 중이 아닐 때, <kbd>⌃L</kbd> 입력 중이 아닐 때 | — |
+| 왼쪽으로 이동 | <kbd>H</kbd> 입력 중이 아닐 때 | <kbd>H</kbd> 입력 중이 아닐 때 |
+| 아래로 이동 | <kbd>J</kbd> 입력 중이 아닐 때, <kbd>⌃N</kbd> | <kbd>J</kbd> 입력 중이 아닐 때 |
+| 위로 이동 | <kbd>K</kbd> 입력 중이 아닐 때, <kbd>⌃P</kbd> | <kbd>K</kbd> 입력 중이 아닐 때 |
+| 오른쪽으로 이동 | <kbd>L</kbd> 입력 중이 아닐 때 | <kbd>L</kbd> 입력 중이 아닐 때 |
+| 처음으로 이동 | <kbd>G G</kbd> 입력 중이 아닐 때 | <kbd>G G</kbd> 입력 중이 아닐 때 |
+| 끝으로 이동 | <kbd>⇧G</kbd> 입력 중이 아닐 때 | <kbd>Shift+G</kbd> 입력 중이 아닐 때 |
+| 한 페이지 위로 이동 | <kbd>⌃U</kbd> 입력 중이 아닐 때, <kbd>⌃B</kbd> 입력 중이 아닐 때 | — |
+| 한 페이지 아래로 이동 | <kbd>⌃D</kbd> 입력 중이 아닐 때, <kbd>⌃F</kbd> 입력 중이 아닐 때 | — |
+| 취소 | <kbd>⌃&#91;</kbd> | — |
+| 이전 작업 컴퓨터 | — | — |
+| 다음 작업 컴퓨터 | — | — |
+| 프로젝트에 집중 | <kbd>G P</kbd> 입력 중이 아닐 때, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+P</kbd> |
+| 모든 프로젝트 보기 | — | — |
+| 이전 카드 보기 | <kbd>⇧H</kbd> 입력 중이 아닐 때, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 다음 카드 보기 | <kbd>⇧L</kbd> 입력 중이 아닐 때, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 다음 새 카드 보기 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 카드 치워 두기 | <kbd>Q</kbd> 입력 중이 아닐 때, <kbd>⌃W C</kbd> 입력 중이 아닐 때, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+M</kbd> |
+| 모든 카드 치워 두기 또는 다시 꺼내기 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 알림의 완료 또는 확인 누르기 | — | — |
+| 카드의 모든 선택지 거절 | — | — |
+| 카드 최대화 또는 복원 | <kbd>⌃W O</kbd> 입력 중이 아닐 때 | — |
+| 이 카드에서 찾기 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 다음 일치 항목 찾기 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 이전 일치 항목 찾기 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 다음 수정된 부분으로 이동 | <kbd>&#93; C</kbd> 입력 중이 아닐 때 | <kbd>&#93; C</kbd> 입력 중이 아닐 때 |
+| 다음 질문으로 이동 | <kbd>&#125;</kbd> 입력 중이 아닐 때, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+J</kbd> |
+| 이전 질문으로 이동 | <kbd>&#123;</kbd> 입력 중이 아닐 때, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+J</kbd> |
+| 답하지 않은 다음 질문으로 이동 | — | — |
+| 카드의 한 부분 가리키기 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 카드 스레드 보기 또는 숨기기 | <kbd>Z A</kbd> 입력 중이 아닐 때, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 입력 중이 아닐 때, <kbd>Ctrl+&#92;</kbd> |
+| 스레드의 새 메시지로 이동 | — | — |
+| 카드의 소리 재생 또는 일시정지 | — | — |
+| 정보 보기 | — | — |
+| 카드 보기 | — | — |
+| 활동 보기 | — | — |
+| 선원 보기 | — | — |
+| 브라우저 제어 가져오기 또는 돌려주기 | — | — |
+| 브라우저 페이지로 이동 | — | — |
+| 카드로 돌아가기 | — | — |
+| 작업을 다른 컴퓨터로 옮기기 | — | — |
+| 작업을 완료로 닫기 | — | — |
+| 브라우저 보기 | — | — |
+| 다음 탭 | <kbd>G T</kbd> 입력 중이 아닐 때, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 입력 중이 아닐 때 |
+| 이전 탭 | <kbd>G ⇧T</kbd> 입력 중이 아닐 때, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 입력 중이 아닐 때 |
+| Find a task | <kbd>&#47;</kbd> 입력 중이 아닐 때, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> 입력 중이 아닐 때, <kbd>⌘B</kbd> | <kbd>G B</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 설정 열기 | <kbd>G S</kbd> 입력 중이 아닐 때, <kbd>⌘,</kbd> | <kbd>G S</kbd> 입력 중이 아닐 때, <kbd>Ctrl+,</kbd> |
+| 키보드 설정 열기 | <kbd>&#63;</kbd> 입력 중이 아닐 때 | <kbd>&#63;</kbd> 입력 중이 아닐 때 |
+| 패널 정리 | — | — |
+| 사용 가능한 업데이트 보기 | — | — |
+| 나중에 업데이트 | — | — |
+| 업데이트 확인 | — | — |
+| 일등항해사의 컴퓨터 업데이트 | — | — |
+| 새로운 기능 보기 | — | — |
+| 일등항해사의 답장 열기 | — | — |
+| 런북 열기 | — | — |
+| 런북 폴더 열기 | — | — |
+| 사용량 열기 | — | — |
+| 자동화 열기 | — | — |
+| 연동 열기 | — | — |
+| 모든 자동화 일시 정지 | — | — |
+| 앰비언트 음악 재생 또는 일시 정지 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 사용량 단위 바꾸기 | — | — |
+| 사용 한도 다시 확인 | — | — |
+| 모두 크게 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 모두 작게 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 원래 크기로 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**메인 메시지 칸과 카드 답장에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 줄 처음까지 지우기 | <kbd>⌃U</kbd> | — |
+| 줄 끝까지 지우기 | <kbd>⌃K</kbd> | — |
+| 커서 앞 단어 지우기 | <kbd>⌃W</kbd> | — |
+| 마지막으로 지운 내용 되돌리기 | <kbd>⌃Y</kbd> | — |
+
+**메인 메시지 칸에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 마지막으로 보낸 메시지 다시 불러오기 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**창 어디서나**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 명령 검색 | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| 메인 메시지 칸으로 이동 | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> 입력 중이 아닐 때, <kbd>Ctrl+L</kbd> |
+| 카드 답장으로 이동 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 카드 본문으로 이동 | — | — |
+| 카드 버튼으로 이동 | — | — |
+| 추천 선택지 누르기 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 두 번째 선택지 누르기 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 세 번째 선택지 누르기 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 네 번째 선택지 누르기 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 창의 다음 부분으로 이동 | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> 입력 중이 아닐 때, <kbd>F6</kbd> |
+| 창의 이전 부분으로 이동 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 창의 왼쪽 부분으로 이동 | — | — |
+| 창의 아래 부분으로 이동 | — | — |
+| 창의 위 부분으로 이동 | — | — |
+| 창의 오른쪽 부분으로 이동 | — | — |
+| 왼쪽으로 이동 | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| 아래로 이동 | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| 위로 이동 | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| 오른쪽으로 이동 | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| 처음으로 이동 | <kbd>&#60;</kbd> 입력 중이 아닐 때 | <kbd>&#60;</kbd> 입력 중이 아닐 때 |
+| 끝으로 이동 | <kbd>&#62;</kbd> 입력 중이 아닐 때 | <kbd>&#62;</kbd> 입력 중이 아닐 때 |
+| 한 페이지 위로 이동 | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| 한 페이지 아래로 이동 | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> 입력 중이 아닐 때 |
+| 취소 | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| 이전 작업 컴퓨터 | — | — |
+| 다음 작업 컴퓨터 | — | — |
+| 프로젝트에 집중 | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+P</kbd> |
+| 모든 프로젝트 보기 | — | — |
+| 이전 카드 보기 | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 다음 카드 보기 | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 다음 새 카드 보기 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 카드 치워 두기 | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> 입력 중이 아닐 때, <kbd>Ctrl+X K</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+M</kbd> |
+| 모든 카드 치워 두기 또는 다시 꺼내기 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 알림의 완료 또는 확인 누르기 | — | — |
+| 카드의 모든 선택지 거절 | — | — |
+| 카드 최대화 또는 복원 | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> 입력 중이 아닐 때 |
+| 이 카드에서 찾기 | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| 다음 일치 항목 찾기 | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| 이전 일치 항목 찾기 | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| 다음 수정된 부분으로 이동 | — | — |
+| 다음 질문으로 이동 | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> 입력 중이 아닐 때, <kbd>Ctrl+J</kbd> |
+| 이전 질문으로 이동 | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+J</kbd> |
+| 답하지 않은 다음 질문으로 이동 | — | — |
+| 카드의 한 부분 가리키기 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 카드 스레드 보기 또는 숨기기 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 스레드의 새 메시지로 이동 | — | — |
+| 카드의 소리 재생 또는 일시정지 | — | — |
+| 정보 보기 | — | — |
+| 카드 보기 | — | — |
+| 활동 보기 | — | — |
+| 선원 보기 | — | — |
+| 브라우저 제어 가져오기 또는 돌려주기 | — | — |
+| 브라우저 페이지로 이동 | — | — |
+| 카드로 돌아가기 | — | — |
+| 작업을 다른 컴퓨터로 옮기기 | — | — |
+| 작업을 완료로 닫기 | — | — |
+| 브라우저 보기 | — | — |
+| 다음 탭 | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| 이전 탭 | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> 입력 중이 아닐 때, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> 입력 중이 아닐 때 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 설정 열기 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 키보드 설정 열기 | <kbd>⌃H B</kbd> 입력 중이 아닐 때 | <kbd>Ctrl+H B</kbd> 입력 중이 아닐 때 |
+| 패널 정리 | — | — |
+| 사용 가능한 업데이트 보기 | — | — |
+| 나중에 업데이트 | — | — |
+| 업데이트 확인 | — | — |
+| 일등항해사의 컴퓨터 업데이트 | — | — |
+| 새로운 기능 보기 | <kbd>⌃H N</kbd> 입력 중이 아닐 때 | <kbd>Ctrl+H N</kbd> 입력 중이 아닐 때 |
+| 일등항해사의 답장 열기 | — | — |
+| 런북 열기 | — | — |
+| 런북 폴더 열기 | — | — |
+| 사용량 열기 | — | — |
+| 자동화 열기 | — | — |
+| 연동 열기 | — | — |
+| 모든 자동화 일시 정지 | — | — |
+| 앰비언트 음악 재생 또는 일시 정지 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 사용량 단위 바꾸기 | — | — |
+| 사용 한도 다시 확인 | — | — |
+| 모두 크게 | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> 입력 중이 아닐 때, <kbd>Ctrl+X Ctrl+=</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 모두 작게 | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Minus</kbd> |
+| 원래 크기로 | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> 입력 중이 아닐 때, <kbd>Ctrl+0</kbd> |
+
+**메인 메시지 칸과 카드 답장에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 줄 처음까지 지우기 | <kbd>⌃U</kbd> | — |
+| 줄 끝까지 지우기 | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| 커서 앞 단어 지우기 | <kbd>⌃W</kbd> | — |
+| 마지막으로 지운 내용 되돌리기 | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**메인 메시지 칸에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 마지막으로 보낸 메시지 다시 불러오기 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**창 어디서나**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 명령 검색 | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| 메인 메시지 칸으로 이동 | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| 카드 답장으로 이동 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 카드 본문으로 이동 | — | — |
+| 카드 버튼으로 이동 | — | — |
+| 추천 선택지 누르기 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 두 번째 선택지 누르기 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 세 번째 선택지 누르기 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 네 번째 선택지 누르기 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 창의 다음 부분으로 이동 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 창의 이전 부분으로 이동 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 창의 왼쪽 부분으로 이동 | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| 창의 아래 부분으로 이동 | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| 창의 위 부분으로 이동 | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| 창의 오른쪽 부분으로 이동 | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| 왼쪽으로 이동 | — | — |
+| 아래로 이동 | — | — |
+| 위로 이동 | — | — |
+| 오른쪽으로 이동 | — | — |
+| 처음으로 이동 | — | — |
+| 끝으로 이동 | — | — |
+| 한 페이지 위로 이동 | — | — |
+| 한 페이지 아래로 이동 | — | — |
+| 취소 | — | — |
+| 이전 작업 컴퓨터 | — | — |
+| 다음 작업 컴퓨터 | — | — |
+| 프로젝트에 집중 | <kbd>⌃R</kbd> | — |
+| 모든 프로젝트 보기 | — | — |
+| 이전 카드 보기 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 다음 카드 보기 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 다음 새 카드 보기 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 카드 치워 두기 | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| 모든 카드 치워 두기 또는 다시 꺼내기 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 알림의 완료 또는 확인 누르기 | — | — |
+| 카드의 모든 선택지 거절 | — | — |
+| 카드 최대화 또는 복원 | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| 이 카드에서 찾기 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 다음 일치 항목 찾기 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 이전 일치 항목 찾기 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 다음 수정된 부분으로 이동 | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| 다음 질문으로 이동 | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| 이전 질문으로 이동 | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| 답하지 않은 다음 질문으로 이동 | — | — |
+| 카드의 한 부분 가리키기 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 카드 스레드 보기 또는 숨기기 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 스레드의 새 메시지로 이동 | — | — |
+| 카드의 소리 재생 또는 일시정지 | — | — |
+| 정보 보기 | — | — |
+| 카드 보기 | — | — |
+| 활동 보기 | — | — |
+| 선원 보기 | <kbd>⌃&#96;</kbd> | — |
+| 브라우저 제어 가져오기 또는 돌려주기 | — | — |
+| 브라우저 페이지로 이동 | — | — |
+| 카드로 돌아가기 | — | — |
+| 작업을 다른 컴퓨터로 옮기기 | — | — |
+| 작업을 완료로 닫기 | — | — |
+| 브라우저 보기 | — | — |
+| 다음 탭 | <kbd>⌃⇥</kbd> | — |
+| 이전 탭 | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 설정 열기 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 키보드 설정 열기 | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| 패널 정리 | — | — |
+| 사용 가능한 업데이트 보기 | — | — |
+| 나중에 업데이트 | — | — |
+| 업데이트 확인 | — | — |
+| 일등항해사의 컴퓨터 업데이트 | — | — |
+| 새로운 기능 보기 | — | — |
+| 일등항해사의 답장 열기 | — | — |
+| 런북 열기 | — | — |
+| 런북 폴더 열기 | — | — |
+| 사용량 열기 | — | — |
+| 자동화 열기 | — | — |
+| 연동 열기 | — | — |
+| 모든 자동화 일시 정지 | — | — |
+| 앰비언트 음악 재생 또는 일시 정지 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 사용량 단위 바꾸기 | — | — |
+| 사용 한도 다시 확인 | — | — |
+| 모두 크게 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 모두 작게 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 원래 크기로 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**메인 메시지 칸과 카드 답장에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 줄 처음까지 지우기 | <kbd>⌃U</kbd> | — |
+| 줄 끝까지 지우기 | <kbd>⌃K</kbd> | — |
+| 커서 앞 단어 지우기 | <kbd>⌃W</kbd> | — |
+| 마지막으로 지운 내용 되돌리기 | <kbd>⌃Y</kbd> | — |
+
+**메인 메시지 칸에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 마지막으로 보낸 메시지 다시 불러오기 | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**창 어디서나**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 명령 검색 | <kbd>&#58;</kbd> 입력 중이 아닐 때, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| 메인 메시지 칸으로 이동 | <kbd>I</kbd> 입력 중이 아닐 때, <kbd>⌘L</kbd> | <kbd>I</kbd> 입력 중이 아닐 때, <kbd>Ctrl+L</kbd> |
+| 카드 답장으로 이동 | <kbd>R</kbd> 입력 중이 아닐 때, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+L</kbd> |
+| 카드 본문으로 이동 | <kbd>G C</kbd> 입력 중이 아닐 때, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B &#91;</kbd> |
+| 카드 버튼으로 이동 | <kbd>G A</kbd> 입력 중이 아닐 때 | <kbd>G A</kbd> 입력 중이 아닐 때 |
+| 추천 선택지 누르기 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 두 번째 선택지 누르기 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 세 번째 선택지 누르기 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 네 번째 선택지 누르기 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 창의 다음 부분으로 이동 | <kbd>⌃W W</kbd> 입력 중이 아닐 때, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| 창의 이전 부분으로 이동 | <kbd>⌃W P</kbd> 입력 중이 아닐 때, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 창의 왼쪽 부분으로 이동 | <kbd>⌃W H</kbd> 입력 중이 아닐 때, <kbd>⌃H</kbd> 입력 중이 아닐 때, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| 창의 아래 부분으로 이동 | <kbd>⌃W J</kbd> 입력 중이 아닐 때, <kbd>⌃J</kbd> 입력 중이 아닐 때, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| 창의 위 부분으로 이동 | <kbd>⌃W K</kbd> 입력 중이 아닐 때, <kbd>⌃K</kbd> 입력 중이 아닐 때, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| 창의 오른쪽 부분으로 이동 | <kbd>⌃W L</kbd> 입력 중이 아닐 때, <kbd>⌃L</kbd> 입력 중이 아닐 때, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| 왼쪽으로 이동 | <kbd>H</kbd> 입력 중이 아닐 때 | <kbd>H</kbd> 입력 중이 아닐 때 |
+| 아래로 이동 | <kbd>J</kbd> 입력 중이 아닐 때, <kbd>⌃N</kbd> | <kbd>J</kbd> 입력 중이 아닐 때 |
+| 위로 이동 | <kbd>K</kbd> 입력 중이 아닐 때, <kbd>⌃P</kbd> | <kbd>K</kbd> 입력 중이 아닐 때 |
+| 오른쪽으로 이동 | <kbd>L</kbd> 입력 중이 아닐 때 | <kbd>L</kbd> 입력 중이 아닐 때 |
+| 처음으로 이동 | <kbd>G G</kbd> 입력 중이 아닐 때 | <kbd>G G</kbd> 입력 중이 아닐 때 |
+| 끝으로 이동 | <kbd>⇧G</kbd> 입력 중이 아닐 때 | <kbd>Shift+G</kbd> 입력 중이 아닐 때 |
+| 한 페이지 위로 이동 | <kbd>⌃U</kbd> 입력 중이 아닐 때 | — |
+| 한 페이지 아래로 이동 | <kbd>⌃D</kbd> 입력 중이 아닐 때, <kbd>⌃F</kbd> 입력 중이 아닐 때 | — |
+| 취소 | <kbd>⌃&#91;</kbd> | — |
+| 이전 작업 컴퓨터 | — | — |
+| 다음 작업 컴퓨터 | — | — |
+| 프로젝트에 집중 | <kbd>G P</kbd> 입력 중이 아닐 때, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| 모든 프로젝트 보기 | — | — |
+| 이전 카드 보기 | <kbd>⇧H</kbd> 입력 중이 아닐 때, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 다음 카드 보기 | <kbd>⇧L</kbd> 입력 중이 아닐 때, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 다음 새 카드 보기 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 카드 치워 두기 | <kbd>Q</kbd> 입력 중이 아닐 때, <kbd>⌃W C</kbd> 입력 중이 아닐 때, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| 모든 카드 치워 두기 또는 다시 꺼내기 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 알림의 완료 또는 확인 누르기 | — | — |
+| 카드의 모든 선택지 거절 | — | — |
+| 카드 최대화 또는 복원 | <kbd>⌃W O</kbd> 입력 중이 아닐 때, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| 이 카드에서 찾기 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 다음 일치 항목 찾기 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 이전 일치 항목 찾기 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 다음 수정된 부분으로 이동 | <kbd>&#93; C</kbd> 입력 중이 아닐 때 | <kbd>&#93; C</kbd> 입력 중이 아닐 때 |
+| 다음 질문으로 이동 | <kbd>&#125;</kbd> 입력 중이 아닐 때, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+J</kbd> |
+| 이전 질문으로 이동 | <kbd>&#123;</kbd> 입력 중이 아닐 때, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+J</kbd> |
+| 답하지 않은 다음 질문으로 이동 | — | — |
+| 카드의 한 부분 가리키기 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 카드 스레드 보기 또는 숨기기 | <kbd>Z A</kbd> 입력 중이 아닐 때, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> 입력 중이 아닐 때, <kbd>Ctrl+&#92;</kbd> |
+| 스레드의 새 메시지로 이동 | — | — |
+| 카드의 소리 재생 또는 일시정지 | — | — |
+| 정보 보기 | — | — |
+| 카드 보기 | — | — |
+| 활동 보기 | — | — |
+| 선원 보기 | — | — |
+| 브라우저 제어 가져오기 또는 돌려주기 | — | — |
+| 브라우저 페이지로 이동 | — | — |
+| 카드로 돌아가기 | — | — |
+| 작업을 다른 컴퓨터로 옮기기 | — | — |
+| 작업을 완료로 닫기 | — | — |
+| 브라우저 보기 | — | — |
+| 다음 탭 | <kbd>G T</kbd> 입력 중이 아닐 때, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> 입력 중이 아닐 때 |
+| 이전 탭 | <kbd>G ⇧T</kbd> 입력 중이 아닐 때, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> 입력 중이 아닐 때 |
+| Find a task | <kbd>&#47;</kbd> 입력 중이 아닐 때, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> 입력 중이 아닐 때, <kbd>⌘B</kbd> | <kbd>G B</kbd> 입력 중이 아닐 때 |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 설정 열기 | <kbd>G S</kbd> 입력 중이 아닐 때, <kbd>⌘,</kbd> | <kbd>G S</kbd> 입력 중이 아닐 때, <kbd>Ctrl+,</kbd> |
+| 키보드 설정 열기 | <kbd>&#63;</kbd> 입력 중이 아닐 때, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> 입력 중이 아닐 때, <kbd>Ctrl+B &#63;</kbd> |
+| 패널 정리 | — | — |
+| 사용 가능한 업데이트 보기 | — | — |
+| 나중에 업데이트 | — | — |
+| 업데이트 확인 | — | — |
+| 일등항해사의 컴퓨터 업데이트 | — | — |
+| 새로운 기능 보기 | — | — |
+| 일등항해사의 답장 열기 | — | — |
+| 런북 열기 | — | — |
+| 런북 폴더 열기 | — | — |
+| 사용량 열기 | — | — |
+| 자동화 열기 | — | — |
+| 연동 열기 | — | — |
+| 모든 자동화 일시 정지 | — | — |
+| 앰비언트 음악 재생 또는 일시 정지 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 사용량 단위 바꾸기 | — | — |
+| 사용 한도 다시 확인 | — | — |
+| 모두 크게 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 모두 작게 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 원래 크기로 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**메인 메시지 칸과 카드 답장에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 줄 처음까지 지우기 | <kbd>⌃U</kbd> | — |
+| 줄 끝까지 지우기 | <kbd>⌃K</kbd> | — |
+| 커서 앞 단어 지우기 | <kbd>⌃W</kbd> | — |
+| 마지막으로 지운 내용 되돌리기 | <kbd>⌃Y</kbd> | — |
+
+**메인 메시지 칸에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 마지막으로 보낸 메시지 다시 불러오기 | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**창 어디서나**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 명령 검색 | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| 메인 메시지 칸으로 이동 | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| 카드 답장으로 이동 | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| 카드 본문으로 이동 | — | — |
+| 카드 버튼으로 이동 | — | — |
+| 추천 선택지 누르기 | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| 두 번째 선택지 누르기 | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| 세 번째 선택지 누르기 | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| 네 번째 선택지 누르기 | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| 창의 다음 부분으로 이동 | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| 창의 이전 부분으로 이동 | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| 창의 왼쪽 부분으로 이동 | — | — |
+| 창의 아래 부분으로 이동 | — | — |
+| 창의 위 부분으로 이동 | — | — |
+| 창의 오른쪽 부분으로 이동 | — | — |
+| 왼쪽으로 이동 | — | — |
+| 아래로 이동 | — | — |
+| 위로 이동 | — | — |
+| 오른쪽으로 이동 | — | — |
+| 처음으로 이동 | — | — |
+| 끝으로 이동 | — | — |
+| 한 페이지 위로 이동 | — | — |
+| 한 페이지 아래로 이동 | — | — |
+| 취소 | — | — |
+| 이전 작업 컴퓨터 | — | — |
+| 다음 작업 컴퓨터 | — | — |
+| 프로젝트에 집중 | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| 모든 프로젝트 보기 | — | — |
+| 이전 카드 보기 | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| 다음 카드 보기 | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| 다음 새 카드 보기 | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| 카드 치워 두기 | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| 모든 카드 치워 두기 또는 다시 꺼내기 | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| 알림의 완료 또는 확인 누르기 | — | — |
+| 카드의 모든 선택지 거절 | — | — |
+| 카드 최대화 또는 복원 | — | — |
+| 이 카드에서 찾기 | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| 다음 일치 항목 찾기 | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| 이전 일치 항목 찾기 | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| 다음 수정된 부분으로 이동 | — | — |
+| 다음 질문으로 이동 | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| 이전 질문으로 이동 | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| 답하지 않은 다음 질문으로 이동 | — | — |
+| 카드의 한 부분 가리키기 | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| 카드 스레드 보기 또는 숨기기 | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| 스레드의 새 메시지로 이동 | — | — |
+| 카드의 소리 재생 또는 일시정지 | — | — |
+| 정보 보기 | — | — |
+| 카드 보기 | — | — |
+| 활동 보기 | — | — |
+| 선원 보기 | — | — |
+| 브라우저 제어 가져오기 또는 돌려주기 | — | — |
+| 브라우저 페이지로 이동 | — | — |
+| 카드로 돌아가기 | — | — |
+| 작업을 다른 컴퓨터로 옮기기 | — | — |
+| 작업을 완료로 닫기 | — | — |
+| 브라우저 보기 | — | — |
+| 다음 탭 | — | — |
+| 이전 탭 | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| 설정 열기 | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| 키보드 설정 열기 | — | — |
+| 패널 정리 | — | — |
+| 사용 가능한 업데이트 보기 | — | — |
+| 나중에 업데이트 | — | — |
+| 업데이트 확인 | — | — |
+| 일등항해사의 컴퓨터 업데이트 | — | — |
+| 새로운 기능 보기 | — | — |
+| 일등항해사의 답장 열기 | — | — |
+| 런북 열기 | — | — |
+| 런북 폴더 열기 | — | — |
+| 사용량 열기 | — | — |
+| 자동화 열기 | — | — |
+| 연동 열기 | — | — |
+| 모든 자동화 일시 정지 | — | — |
+| 앰비언트 음악 재생 또는 일시 정지 | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| 사용량 단위 바꾸기 | — | — |
+| 사용 한도 다시 확인 | — | — |
+| 모두 크게 | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| 모두 작게 | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| 원래 크기로 | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**메인 메시지 칸과 카드 답장에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 줄 처음까지 지우기 | <kbd>⌃U</kbd> | — |
+| 줄 끝까지 지우기 | <kbd>⌃K</kbd> | — |
+| 커서 앞 단어 지우기 | <kbd>⌃W</kbd> | — |
+| 마지막으로 지운 내용 되돌리기 | <kbd>⌃Y</kbd> | — |
+
+**메인 메시지 칸에서**
+
+| 명령 | Mac | Linux |
+| --- | --- | --- |
+| 마지막으로 보낸 메시지 다시 불러오기 | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

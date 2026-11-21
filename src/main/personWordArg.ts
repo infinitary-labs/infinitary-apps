@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import { Worker } from "node:worker_threads";
+import { isWordProfileName } from "@shared/wordProfiles";
 
 /** A word a window launch refused the folder's lock says to the person (./personWord.ts). */
 export type PersonWord = "dock" | "once-closed";
@@ -99,7 +100,7 @@ process.kill(process.pid, "SIGKILL");
 `;
 
 /**
- * Whether the copy's profile may be kept in the data folder (`WORD_PROFILES`), where it is this
+ * Whether the copy's profile may be kept in the data folder (`wordProfileIn`), where it is this
  * account's alone: anywhere but Windows, where the launch makes it with no access for anyone else;
  * on Windows only once the data folder was kept private (`keepDataFolderPrivate`), whose owner-only
  * list Windows hands down to it. A launch that never judged it, or whose data folder was refused,
@@ -112,25 +113,19 @@ export function wordProfilePrivate(
   return platform !== "win32" || (privacy !== null && privacy.refused === null);
 }
 
-/**
- * The names in the data folder that may hold the profile a launch refused the folder's lock keeps
- * for the copy that shows the person a word (./personWord.ts, docs/run.md): the first, or the next
- * where something else is at a name.
- */
-export const WORD_PROFILES = ["word-profile", "word-profile-2", "word-profile-3"] as const;
 /** The copy's own temporary folder, inside its profile (`TEMP`, `TMP` and `TMPDIR` name it). */
 export const WORD_TEMP_DIR = "temp";
 const PROFILE_SWITCH = "--user-data-dir=";
 
 /**
  * The copy's first act, before anything else it runs: takes the profile it was started with, one
- * its launch keeps in the data folder (`WORD_PROFILES`), for itself alone (`hold`, Electron's own
+ * its launch keeps in the data folder (`isWordProfileName`), for itself alone (`hold`, Electron's own
  * lock on a profile, the one a window takes on its data folder), so two words shown at once never
  * share one. False where it was started with no profile of a word, or another copy holds it; the
  * copy then shows nothing and says so, and its launch says the word in its own output.
  */
 export function claimWordProfile(argv: readonly string[], hold: () => boolean): boolean {
   const profile = argv.find((arg) => arg.startsWith(PROFILE_SWITCH))?.slice(PROFILE_SWITCH.length);
-  if (!profile || !(WORD_PROFILES as readonly string[]).includes(basename(profile))) return false;
+  if (!profile || !isWordProfileName(basename(profile))) return false;
   return hold();
 }

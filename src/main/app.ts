@@ -95,6 +95,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import {
   askPersonWord,
   OPEN_ONCE_CLOSED,
+  oneWordAtATime,
   type PersonReply,
   type PersonWord,
   personWordBox,
@@ -822,10 +823,21 @@ export async function startApp(
         const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
         console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
       };
-      const tellPerson = async (
+      // One word at a time (`oneWordAtATime`): a word taken away answers only once its copy has
+      // ended and let the profile go (`askPersonWord`), so the next word waits for that, then asks
+      // again whether it is still wanted, and takes the profile itself rather than finding it held
+      // and showing nothing. Two launches refused at once still share it: the second's copy says it
+      // was not shown, and that launch says its word in its output.
+      const inTurn = oneWordAtATime();
+      const tellPerson = (
         word: PersonWord,
         signal?: AbortSignal,
         wanted: () => boolean = () => true,
+      ): Promise<PersonReply | null> => inTurn(() => tellPersonNow(word, signal, wanted));
+      const tellPersonNow = async (
+        word: PersonWord,
+        signal: AbortSignal | undefined,
+        wanted: () => boolean,
       ): Promise<PersonReply | null> => {
         if (signal?.aborted || !wanted()) return null;
         if (hideWindow) {

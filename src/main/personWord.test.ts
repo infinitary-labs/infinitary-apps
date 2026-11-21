@@ -7,20 +7,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askPersonWord,
+  keptToOwner,
   OPEN_ONCE_CLOSED,
+  oneWordAtATime,
   PERSON_WORD_ARG,
   personWordArg,
   personWordBox,
   wordLauncher,
   wordProfilePrivate,
 } from "./personWord";
-import {
-  claimWordProfile,
-  readReply,
-  replyLine,
-  WORD_BUTTONS,
-  WORD_PROFILES,
-} from "./personWordArg";
+import { claimWordProfile, readReply, replyLine, WORD_BUTTONS } from "./personWordArg";
 
 /**
  * The review of INF-5409: a window launch refused the folder's lock never sees Electron become
@@ -150,19 +146,71 @@ describe("a refused launch's word to the person", () => {
       held += 1;
       return free;
     };
-    for (const name of WORD_PROFILES) {
-      const profile = `--user-data-dir=${join(dataDir, name)}`;
-      expect(claimWordProfile(["/app", profile], hold(true))).toBe(true);
-      // Another copy holding it shows nothing: two words never share one profile.
-      expect(claimWordProfile(["/app", profile], hold(false))).toBe(false);
-    }
-    expect(held).toBe(WORD_PROFILES.length * 2);
+    const profile = `--user-data-dir=${join(dataDir, "word-profile-Ab12Cd")}`;
+    expect(claimWordProfile(["/app", profile], hold(true))).toBe(true);
+    // Another copy holding it shows nothing: two words never share one profile.
+    expect(claimWordProfile(["/app", profile], hold(false))).toBe(false);
+    expect(held).toBe(2);
     // A profile not of a word, or none, is never even held.
-    expect(claimWordProfile(["/app", `--user-data-dir=${dataDir}`], hold(true))).toBe(false);
-    expect(
-      claimWordProfile(["/app", `--user-data-dir=${join(dataDir, "other")}`], hold(true)),
-    ).toBe(false);
+    for (const other of [dataDir, join(dataDir, "other"), join(dataDir, "word-profile")])
+      expect(claimWordProfile(["/app", `--user-data-dir=${other}`], hold(true))).toBe(false);
     expect(claimWordProfile(["/app"], hold(true))).toBe(false);
-    expect(held).toBe(WORD_PROFILES.length * 2);
+    expect(held).toBe(2);
+  });
+
+  it("starts the next word only once the one before it, taken away, has answered", async () => {
+    const inTurn = oneWordAtATime();
+    let endFirst = () => {};
+    const order: string[] = [];
+    const first = inTurn(
+      () =>
+        new Promise<null>((resolve) => {
+          order.push("first shown");
+          endFirst = () => {
+            order.push("first ended");
+            resolve(null);
+          };
+        }),
+    );
+    const second = inTurn(async () => {
+      order.push("second shown");
+      return 0;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(order).toEqual(["first shown"]);
+    endFirst();
+    expect(await first).toBeNull();
+    expect(await second).toBe(0);
+    expect(order).toEqual(["first shown", "first ended", "second shown"]);
+    // One that failed still lets the next start.
+    const failed = inTurn(async () => {
+      throw new Error("no copy");
+    });
+    await expect(failed).rejects.toThrow("no copy");
+    expect(await inTurn(async () => "after")).toBe("after");
+  });
+
+  it("reads Windows' lists of a word's profile and its temporary folder by the order asked", async () => {
+    const user = "S-1-5-21-1-2-3-1001";
+    const kept = `O:${user}D:(A;OICIID;FA;;;${user})`;
+    const notHanded = `O:${user}D:P(A;;FA;;;${user})`;
+    const answer =
+      (...sddl: (string | null)[]) =>
+      async () => ({
+        user,
+        set: [],
+        // Printed back in another spelling: matched by order, never by path.
+        read: sddl.map((each, index) => ({ path: `X:\\${index}`, sddl: each, error: null })),
+      });
+    const paths = ["C:\\data\\word-profile-Ab12Cd", "C:\\data\\word-profile-Ab12Cd\\temp"];
+    expect(await keptToOwner(paths, "win32", answer(kept, kept))).toBe(true);
+    expect(await keptToOwner(paths, "win32", answer(kept, notHanded))).toBe(false);
+    expect(await keptToOwner(paths, "win32", answer(kept, null))).toBe(false);
+    expect(await keptToOwner(paths, "win32", answer(kept))).toBe(false);
+    expect(
+      await keptToOwner(paths, "win32", async () => {
+        throw new Error("PowerShell could not start");
+      }),
+    ).toBe(false);
   });
 });

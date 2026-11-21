@@ -35,6 +35,8 @@ export const MAC_UNIT_FILES = [
   "src/core/devices/computerUpdate.test.ts",
   // Native same-group fork/exec, macOS birth identities and receipt cancellation.
   "src/core/placed/loadLine.integration.test.ts",
+  // A word's profile refused by a real macOS access list its mode does not show (chmod +a, ls -le).
+  "src/main/personWord.integration.test.ts",
   // The run guard's real lsof readings, including unlinked scratch and /private/tmp.
   "tests/run-temp-root.test.ts",
   // A local phone gate's place in the load line: the gate needs Xcode on a Mac.

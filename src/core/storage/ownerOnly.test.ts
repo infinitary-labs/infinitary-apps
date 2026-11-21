@@ -15,6 +15,7 @@ import {
   clearPrivateTemp,
   keepDataFolderPrivate,
   keepOwnerOnly,
+  keepsToOwner,
   onlyOwnerReaches,
   ownerOnlyAccessList,
   ownerOnlyVerdict,
@@ -208,6 +209,32 @@ describe("reading a folder's access list", () => {
     const written = ownerOnlyAccessList(readAccessList(withCapability), USER);
     expect(written).toBe(`D:P(A;OICI;FA;;;${USER})(A;OICI;FA;;;${CAPABILITY})`);
     expect(ownerOnlyVerdict(readAccessList(`O:${USER}${written}`), USER)).toBe("owner-only");
+  });
+});
+
+describe("a folder the app made inside its private data folder", () => {
+  // The review of INF-5409: a word's profile and its temporary folder are used only where their
+  // own lists keep to this account and hand that down to what is made in them.
+  it("keeps to this account only where it lets no one else in and hands that down at every depth", () => {
+    const inherited = `O:${USER}G:${GROUP}D:(A;OICIID;FA;;;SY)(A;OICIID;FA;;;${USER})`;
+    expect(keepsToOwner(readAccessList(inherited), USER)).toBe(true);
+    // Its own entry only, handed to nothing made in it: Windows would make up a list for those.
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
+    // Handed down to folders but not files, or only to the next level.
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;CI;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
+    expect(
+      keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;OICINP;FA;;;${USER})`), USER),
+    ).toBe(false);
+    // Another account let in, a folder another account owns, and a reading not taken whole.
+    expect(keepsToOwner(readAccessList(AT_DRIVE_TOP), USER)).toBe(false);
+    expect(keepsToOwner(readAccessList(OTHERS_FOLDER), USER)).toBe(false);
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
   });
 });
 

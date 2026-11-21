@@ -242,6 +242,27 @@ export function onlyOwnerReaches(list: AccessList, user: string): boolean {
 }
 
 /**
+ * Whether a folder the app made inside its private data folder keeps to this account: read whole,
+ * its own, letting in no other ordinary account, and handing this account's entry down to the
+ * folders (`CI`) and files (`OI`) made in it at every depth (never stopping at the next, `NP`), so
+ * what is made there takes no list Windows would make up for it.
+ */
+export function keepsToOwner(list: AccessList, user: string): boolean {
+  return (
+    list.whole &&
+    onlyOwnerReaches(list, user) &&
+    (list.entries ?? []).some(
+      (entry) =>
+        allows(entry) &&
+        accountNumber(entry.account) === user &&
+        hasFlag(entry, "OI") &&
+        hasFlag(entry, "CI") &&
+        !hasFlag(entry, "NP"),
+    )
+  );
+}
+
+/**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
  * list is its own (protected) and lets in no other ordinary account, `unread`
  * when its descriptor was not read whole, which no set may replace, and

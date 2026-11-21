@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { BigIntStats, Dirent, Stats } from "node:fs";
 import { isAbsolute, join, sep } from "node:path";
+import { isWordState } from "@shared/wordProfiles";
 import { createReadStream, lstat, readdir, readlink } from "../plainFs";
 
 /**
@@ -55,9 +56,14 @@ export const WORK_LEFT_BEHIND: ReadonlySet<string> = new Set([
   "task-channel",
 ]);
 
-/** Whether the move leaves the entry at these parts of the path behind. */
+/**
+ * Whether the move leaves the entry at these parts of the path behind: what `LEFT_BEHIND` names, and
+ * the profile a launch keeps for the copy that shows the person a word, with its record
+ * (`isWordState`), which is never copied from the older folder; the app's own stays where it is.
+ */
 export function leftBehind(parts: readonly string[]): boolean {
-  if (parts.length === 1) return LEFT_BEHIND.has(parts[0] as string);
+  if (parts.length === 1)
+    return LEFT_BEHIND.has(parts[0] as string) || isWordState(parts[0] as string);
   return parts.length === 2 && parts[0] === "work" && WORK_LEFT_BEHIND.has(parts[1] as string);
 }
 

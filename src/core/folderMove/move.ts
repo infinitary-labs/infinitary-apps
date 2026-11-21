@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -10,7 +11,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
-import { folderHolder, processAlive } from "../helper/lock";
+import { folderHolder, holderAlive, processAlive } from "../helper/lock";
+import { isWordState } from "@shared/wordProfiles";
 import { assertSavedDataCompatible } from "../storage/db";
 import {
   acquireMoveLock,
@@ -550,13 +552,28 @@ function undoStage(staged: string, to: string, setAside: string | undefined): vo
  * Puts the staged copy in place of this app's folder in one rename. A folder
  * there with no saved work - an installer's channel marker and nothing else
  * - hands its entries to the staged copy first, so the marker the newer
- * install wrote is the one kept.
+ * install wrote is the one kept, as is the profile a launch keeps for the
+ * copy that shows the person a word, with its record (`isWordState`), moved
+ * whole and never deleted; one whose name the staged copy already holds, as
+ * work set aside holds its own record, keeps its own beside it.
  */
 function commit(staged: string, to: string): void {
   if (existsSync(to)) {
     for (const name of readdirSync(to)) {
       const entry = join(to, name);
       if (name === "update-channel.json") renameSync(entry, join(staged, name));
+      else if (isWordState(name))
+        // Work set aside and put back may hold a record of its own under the same name: that one
+        // stays the record, and this one is kept beside it under a name of its own.
+        renameSync(
+          entry,
+          join(
+            staged,
+            existsSync(join(staged, name))
+              ? `${name}.carried-${randomBytes(4).toString("hex")}`
+              : name,
+          ),
+        );
       else if (NOT_SAVED_WORK.has(name) || LEFT_BEHIND.has(name))
         rmSync(entry, { recursive: true, force: true });
       else throw new Error(`${name} appeared in ${to} during the move.`);

@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
+import { PAGE_UNANSWERED_OPENING } from "../../src/core/prompts/pageUnanswered";
 import { MAXIMIZE_LABEL, RESTORE_LABEL } from "../../src/renderer/src/design/cards/cardSizeWords";
 import { boxPlace } from "../../src/shared/cardNoteMarks";
 import {
@@ -38,7 +39,7 @@ import { type Rect, resizeWindow, within } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { providerMessages } from "./providerRequest";
+import { isTaskRequest, providerMessages } from "./providerRequest";
 import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
 import { newestPictures } from "./scenarios/pictureRetry";
 import {
@@ -56,6 +57,7 @@ import {
   MOCK_BROWSER_WATCH_REPORT_PREFIX,
   MOCK_PAGES_REPORT_PREFIX,
   MOCK_PAGES_SAID,
+  MOCK_UNANSWERED_REPORT,
   TASK_BROWSER_APPROVE_WORDS,
   TASK_BROWSER_CARD_MARKER,
   TASK_BROWSER_PAGES_MARKER,
@@ -812,6 +814,67 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       await expect(strip).toHaveAttribute("data-attachment-standing", "replaced");
       await shoot(page.locator(SHOWN_ENTRY), "card-replaced-dark.png");
       expect(await savedCard()).toMatchObject({ status: "ready" });
+    });
+
+    // INF-5474's plan, piece 1: one press brings a stopped page back, and when
+    // nothing answers at it the crewmate is asked once for that outage.
+    await test.step("once its build stops too, Try it opens the page again and asks the crewmate once", async () => {
+      const { port } = watched.address() as AddressInfo;
+      const wakes = () =>
+        (launched.mockProvider?.requestBodies() ?? [])
+          .filter((body) => isTaskRequest(body, title))
+          .map(
+            (body) =>
+              providerMessages(body).filter(
+                (message) =>
+                  message.role === "user" && message.text.startsWith(PAGE_UNANSWERED_OPENING),
+              ).length,
+          )
+          .reduce((most, count) => Math.max(most, count), 0);
+      await strip.getByRole("button", { name: MOCK_BROWSER_BUTTON }).click();
+      await view(page, task.id).locator('[aria-haspopup="menu"]').click();
+      await page.locator('[role="menu"] [data-menu-item="stop"]').click();
+      await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "stopped");
+      await view(page, task.id).getByRole("button", { name: "Hide" }).click();
+      await expect(cardRegion).toBeVisible();
+      // The build the page came from stops: nothing listens on its port now.
+      await closeSite(watched);
+      const tryIt = strip.getByRole("button", { name: MOCK_BROWSER_BUTTON });
+      await focusOn(tryIt);
+      await pressKey(tryIt, "Enter");
+      // The one press opened the stopped browser again, at its page.
+      await expect(view(page, task.id)).not.toHaveAttribute("data-browser-state", "stopped");
+      await expect(view(page, task.id).locator("[data-browser-notice]")).toHaveAttribute(
+        "data-browser-notice",
+        "unanswered",
+      );
+      expect((await detail())?.browser).toMatchObject({
+        state: "open",
+        url: watchedUrl,
+        unanswered: true,
+      });
+      await shoot(view(page, task.id), "view-unanswered-dark.png");
+      if (evidence) {
+        await heroShot(app, page, {
+          region: view(page, task.id),
+          name: "try-it-reopens-page",
+          ready: () => page.mouse.move(1, 1),
+        });
+      }
+      await expect
+        .poll(async () => (await detail())?.outcome ?? "", { timeout: 30_000 })
+        .toContain(MOCK_UNANSWERED_REPORT);
+      expect(wakes()).toBe(1);
+      // The build answers again: the next look ends the outage, and nobody is woken again.
+      await new Promise<void>((resolve) => watched.listen(port, "127.0.0.1", resolve));
+      await view(page, task.id).getByRole("button", { name: "Hide" }).click();
+      await strip.getByRole("button", { name: MOCK_BROWSER_BUTTON }).click();
+      await expect(view(page, task.id).locator("[data-browser-notice]")).not.toHaveAttribute(
+        "data-browser-notice",
+        "unanswered",
+      );
+      expect((await detail())?.browser).not.toHaveProperty("unanswered");
+      expect(wakes()).toBe(1);
     });
   } finally {
     await stopTaskBrowsers(page);

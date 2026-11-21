@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "A página em %1$@, como o navegador do tripulante a mostra";
 "cardBrowserPageYours" = "A página em %1$@, sob seu controle";
 "cardBrowserPageYoursOff" = "A página em %2$@, sob seu controle · %1$@";
+"cardBrowserQuitLead" = "Este navegador parou quando o Infinitary foi fechado.";
 "cardBrowserRecord" = "Registro da tarefa";
 "cardBrowserReload" = "Recarregar";
 "cardBrowserReport" = "Relatar um problema";
 "cardBrowserReturnWordsTooLong" = "As palavras do campo são longas demais para ir quando você devolver o controle. Encurte-as primeiro.";
 "cardBrowserStop" = "Parar o navegador";
 "cardBrowserSurface" = "Navegador da tarefa";
+"cardBrowserUnansweredAsked" = "Nada responde em %1$@, então o tripulante foi chamado para iniciá-lo de novo. A página aparece aqui assim que responder.";
+"cardBrowserUnansweredWorking" = "Nada responde em %1$@, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.";
 "cardBrowserWord" = "Navegador";
 "cardCrewmateLog" = "A sessão do tripulante";
 "cardCrewmateSendFailed" = "Não foi possível enviar esta linha agora.";
@@ -3459,6 +3462,7 @@
 "taskBrowserStoppedCrewmate" = "o tripulante o fechou";
 "taskBrowserStoppedGone" = "a página dele parou de funcionar";
 "taskBrowserStoppedIdle" = "parou após 30 minutos sem uso";
+"taskBrowserStoppedQuit" = "parou quando o Infinitary foi fechado";
 "taskBrowserStoppedTaskClosed" = "parou quando a tarefa foi encerrada";
 "taskGroupBacklog" = "backlog";
 "taskGroupLanded" = "concluídas · 7 d";

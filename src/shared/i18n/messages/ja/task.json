@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "乗組員が閉じました",
   "taskBrowserStoppedGone": "ページが動作しなくなりました",
   "taskBrowserStoppedIdle": "30分間使われず停止しました",
+  "taskBrowserStoppedQuit": "Infinitary の終了時に停止しました",
   "taskBrowserStoppedTaskClosed": "タスクの終了とともに停止しました",
   "taskGroupBacklog": "バックログ",
   "taskGroupLanded": "完了 · 7日",

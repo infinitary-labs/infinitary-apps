@@ -12203,6 +12203,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The page at ${site}, under your control · ${off}`;
   }
+  function cardBrowserQuitLead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف هذا المتصفح عند إغلاق Infinitary.`;
+      case "de":
+        return `Dieser Browser wurde beim Beenden von Infinitary gestoppt.`;
+      case "es":
+        return `Este navegador se detuvo al cerrarse Infinitary.`;
+      case "fr":
+        return `Ce navigateur s’est arrêté quand Infinitary a quitté.`;
+      case "ja":
+        return `このブラウザは Infinitary の終了時に停止しました。`;
+      case "ko":
+        return `이 브라우저는 Infinitary가 종료될 때 중지됐어요.`;
+      case "pt-BR":
+        return `Este navegador parou quando o Infinitary foi fechado.`;
+      case "zh-Hans":
+        return `此浏览器在 Infinitary 退出时已停止。`;
+      case "zh-Hant":
+        return `這個瀏覽器在 Infinitary 結束時已停止。`;
+      case "en-XA":
+        return `[Ţĥîš ƀŕöŵšéŕ šţöþþéð ŵĥéñ Îñƒîñîţáŕý ǫûîţ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This browser stopped when Infinitary quit.‬`;
+    }
+    return `This browser stopped when Infinitary quit.`;
+  }
   function cardBrowserRecord() {
     switch (currentLanguage()) {
       case "ar":
@@ -12364,6 +12391,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Task browser‬`;
     }
     return `Task browser`;
+  }
+  function cardBrowserUnansweredAsked(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء يستجيب على ${site}، لذا طُلب من فرد الطاقم تشغيله من جديد. ستظهر الصفحة هنا حين يستجيب.`;
+      case "de":
+        return `Unter ${site} antwortet nichts, deshalb wurde das Crewmitglied gebeten, es neu zu starten. Die Seite erscheint hier, sobald es antwortet.`;
+      case "es":
+        return `Nada responde en ${site}, así que se pidió al tripulante que lo vuelva a iniciar. La página aparecerá aquí en cuanto responda.`;
+      case "fr":
+        return `Rien ne répond sur ${site}, donc l’équipier a été invité à le relancer. La page s’affiche ici dès qu’il répond.`;
+      case "ja":
+        return `${site} が応答しないため、乗組員に再起動を依頼しました。応答するとページがここに表示されます。`;
+      case "ko":
+        return `${site}에서 응답이 없어 선원에게 다시 시작해 달라고 요청했어요. 응답하면 페이지가 여기에 표시돼요.`;
+      case "pt-BR":
+        return `Nada responde em ${site}, então o tripulante foi chamado para iniciá-lo de novo. A página aparece aqui assim que responder.`;
+      case "zh-Hans":
+        return `${site} 没有响应，已请船员重新启动它。它一响应，页面就会显示在这里。`;
+      case "zh-Hant":
+        return `${site} 沒有回應，已請船員重新啟動。它一回應，頁面就會顯示在這裡。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ áñšŵéŕš áţ ${site}, šö îţš çŕéŵɱáţé ŵáš ášķéð ţö šţáŕţ îţ áĝáîñ. Ţĥé þáĝé šĥöŵš ĥéŕé öñçé îţ áñšŵéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing answers at ‬${site}‮, so its crewmate was asked to start it again. The page shows here once it answers.‬`;
+    }
+    return `Nothing answers at ${site}, so its crewmate was asked to start it again. The page shows here once it answers.`;
+  }
+  function cardBrowserUnansweredWorking(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء يستجيب على ${site}، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.`;
+      case "de":
+        return `Unter ${site} antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.`;
+      case "es":
+        return `Nada responde en ${site} y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.`;
+      case "fr":
+        return `Rien ne répond sur ${site}, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.`;
+      case "ja":
+        return `${site} が応答しません。乗組員は現在作業中です。応答するとページがここに表示されます。`;
+      case "ko":
+        return `${site}에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.`;
+      case "pt-BR":
+        return `Nada responde em ${site}, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.`;
+      case "zh-Hans":
+        return `${site} 没有响应，船员正在工作。它一响应，页面就会显示在这里。`;
+      case "zh-Hant":
+        return `${site} 沒有回應，船員正在工作。它一回應，頁面就會顯示在這裡。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ áñšŵéŕš áţ ${site}, áñð îţš çŕéŵɱáţé îš ŵöŕķîñĝ ñöŵ. Ţĥé þáĝé šĥöŵš ĥéŕé öñçé îţ áñšŵéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing answers at ‬${site}‮, and its crewmate is working now. The page shows here once it answers.‬`;
+    }
+    return `Nothing answers at ${site}, and its crewmate is working now. The page shows here once it answers.`;
   }
   function cardBrowserWord() {
     switch (currentLanguage()) {
@@ -80296,6 +80379,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `stopped after 30 minutes unused`;
   }
+  function taskBrowserStoppedQuit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف عند إغلاق Infinitary`;
+      case "de":
+        return `beim Beenden von Infinitary gestoppt`;
+      case "es":
+        return `se detuvo al cerrarse Infinitary`;
+      case "fr":
+        return `arrêté quand Infinitary a quitté`;
+      case "ja":
+        return `Infinitary の終了時に停止しました`;
+      case "ko":
+        return `Infinitary가 종료될 때 중지됨`;
+      case "pt-BR":
+        return `parou quando o Infinitary foi fechado`;
+      case "zh-Hans":
+        return `Infinitary 退出时已停止`;
+      case "zh-Hant":
+        return `Infinitary 結束時已停止`;
+      case "en-XA":
+        return `[šţöþþéð ŵĥéñ Îñƒîñîţáŕý ǫûîţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮stopped when Infinitary quit‬`;
+    }
+    return `stopped when Infinitary quit`;
+  }
   function taskBrowserStoppedTaskClosed() {
     switch (currentLanguage()) {
       case "ar":
@@ -86148,12 +86258,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserPageWatching,
     cardBrowserPageYours,
     cardBrowserPageYoursOff,
+    cardBrowserQuitLead,
     cardBrowserRecord,
     cardBrowserReload,
     cardBrowserReport,
     cardBrowserReturnWordsTooLong,
     cardBrowserStop,
     cardBrowserSurface,
+    cardBrowserUnansweredAsked,
+    cardBrowserUnansweredWorking,
     cardBrowserWord,
     cardCrewmateLog,
     cardCrewmateSendFailed,
@@ -88483,6 +88596,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskBrowserStoppedCrewmate,
     taskBrowserStoppedGone,
     taskBrowserStoppedIdle,
+    taskBrowserStoppedQuit,
     taskBrowserStoppedTaskClosed,
     taskGroupBacklog,
     taskGroupLanded,
@@ -88926,12 +89040,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserPageWatching": ["site"],
     "cardBrowserPageYours": ["site"],
     "cardBrowserPageYoursOff": ["off", "site"],
+    "cardBrowserQuitLead": [],
     "cardBrowserRecord": [],
     "cardBrowserReload": [],
     "cardBrowserReport": [],
     "cardBrowserReturnWordsTooLong": [],
     "cardBrowserStop": [],
     "cardBrowserSurface": [],
+    "cardBrowserUnansweredAsked": ["site"],
+    "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
     "cardCrewmateLog": [],
     "cardCrewmateSendFailed": [],
@@ -91261,6 +91378,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskBrowserStoppedCrewmate": [],
     "taskBrowserStoppedGone": [],
     "taskBrowserStoppedIdle": [],
+    "taskBrowserStoppedQuit": [],
     "taskBrowserStoppedTaskClosed": [],
     "taskGroupBacklog": [],
     "taskGroupLanded": [],
@@ -103156,6 +103274,12 @@ ${FRAME_KEYBOARD_SCRIPT}
       ask: taskBrowserAskSchema.optional(),
       /** While the captain holds it, the passkey request it last told the site no to. */
       told: taskBrowserToldSchema.optional(),
+      /**
+       * Nothing answers at the loopback address its page is on: a connection
+       * to it was refused (docs/task-browser.md, "When nothing answers"). It
+       * stays until that address answers again.
+       */
+      unanswered: literal(true).optional(),
       ...browserIdentity
     }),
     object({
@@ -103165,6 +103289,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       url: string(),
       stopped: _enum(TASK_BROWSER_STOPS),
       at: number(),
+      /**
+       * It was open when Infinitary quit, read again after the restart from
+       * the page kept with its task (docs/task-browser.md, "After a
+       * restart"); its `stopped` is then `gone`, which a reader without this
+       * field shows.
+       */
+      quit: literal(true).optional(),
       ...browserIdentity
     })
   ]);

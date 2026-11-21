@@ -10,8 +10,10 @@ import {
 } from "@shared/workBrowsers";
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
+import { keptPagesIn } from "../browser/keptPages";
 import { type BrowserFrameSink, type CrewmateBrowser, TaskBrowsers } from "../browser/taskBrowsers";
 import { WebSignIns } from "../browser/webSignIns";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import type { TaskFiles } from "../files/taskFiles";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
 import type { TaskIntegrations } from "../integrations";
@@ -81,10 +83,15 @@ export type ComputerBrowsersOptions = {
   lookup?: GuardLookup;
   /** Where this computer keeps its list of signed-in sites; with none, it keeps none. */
   signInsDir?: string;
+  /** The contract changes the home listed, read when a browser has news only a newer home hears. */
+  homeChanges?: () => readonly string[] | null;
   log: (line: string) => void;
 };
 
 type Watching = { sink: BrowserFrameSink; unwatch: () => void };
+
+/** A home that hears a page nothing answers at (`page-unanswered.md`). */
+const PAGE_UNANSWERED = contractChange("page-unanswered");
 
 export class ComputerBrowsers {
   /** The tasks whose browser has said anything here: the facts the home asks for. */
@@ -122,6 +129,14 @@ export class ComputerBrowsers {
           ...(returned.saved ? { saved: true as const } : {}),
           once: returned.once,
         }),
+      // Nothing answers at a task's page: its crewmate's one wake, from a
+      // home that hears it (`page-unanswered.md`); an older one hears nothing.
+      onUnanswered: (task, unanswered) => {
+        if (!listsChange(options.homeChanges?.() ?? null, PAGE_UNANSWERED)) return;
+        this.event(task, { kind: "unanswered", ...unanswered });
+      },
+      // A stopped page is kept in its task's folder here, beside its stops.
+      ...(options.taskFolder ? { kept: keptPagesIn(options.taskFolder) } : {}),
       ...(options.signInsDir ? { signIns: new WebSignIns(options.signInsDir) } : {}),
       // The home's private sites list, included by every admitted work peer
       // and lent as each page opens; out of reach keeps the last read (none at first).
@@ -401,7 +416,8 @@ export class ComputerBrowsers {
 
 type BrowserOrderEvent =
   | { kind: "note"; text: string }
-  | { kind: "returned"; site: string; after?: string; saved?: true; once: string };
+  | { kind: "returned"; site: string; after?: string; saved?: true; once: string }
+  | { kind: "unanswered"; site: string; url: string; once: string };
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

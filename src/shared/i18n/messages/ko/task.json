@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "선원이 닫았어요",
   "taskBrowserStoppedGone": "페이지가 작동을 멈췄어요",
   "taskBrowserStoppedIdle": "30분간 쓰지 않아 중지됨",
+  "taskBrowserStoppedQuit": "Infinitary가 종료될 때 중지됨",
   "taskBrowserStoppedTaskClosed": "작업이 닫히면서 중지됨",
   "taskGroupBacklog": "백로그",
   "taskGroupLanded": "완료 · 7일",

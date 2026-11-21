@@ -345,7 +345,7 @@ What the view reads is the task's browser fact, which `tasks.detail` carries (`T
 Open, it names the site (the current page's host and port), the page's title and address, and what the crewmate did last in a few words - `typed into "Email"`, `clicked "Send"` - never what it typed.
 With two pages it also lists each page's own site and title, in the order they opened, and which is current (`pages`, `page`).
 Stopped, it names why (the captain, the crewmate, half an hour unused, the page stopping, the task closing) and the page it was on.
-Every command, page move and stop emits a `task_browser` event, which re-reads that task's detail; nothing about it is stored, so a restart forgets a stopped browser.
+Every command, page move and stop emits a `task_browser` event, which re-reads that task's detail; only a stopped browser's page is stored, with its task ("After a restart").
 
 Who is driving is read off the task's work posture, the same typed fact as the record's pill (`browserDriverOf`): the crewmate drives while its turn runs, and once the turn ends nobody does and the page stays as it was left.
 Back, Forward and Reload are shown and marked off while the captain watches, since navigation belongs to whoever has control and watching is not control ("Taking control" below): each stays a Tab stop whose label says who drives (`docs/keyboard.md`, "Facts shown on rest").
@@ -384,9 +384,29 @@ A revision without `browser_button` takes the door away, and the attachment is p
 
 The card's chrome draws the door between the body and the buttons (`CardAttachment`, `src/renderer/src/cards/`; the design skill's ResponseCard, "A live attachment"): the micro label, the site and who is driving or what stopped it, read off the task's detail as the record's Browser line reads them, and the label as a button.
 On a request card ("Asking for help") it draws no button.
-The click opens the task's browser view at the front of the stack and asks the core nothing, so it never answers the card, runs no effect and leaves its merge where it was; the body's frame never sees it, and the card docks beside the page ("A card beside the page").
+The click opens the task's browser view at the front of the stack, so it never answers the card, runs no effect and leaves its merge where it was; the body's frame never sees it, and the card docks beside the page ("A card beside the page").
+When the task's browser has stopped and may be opened again (`canOpenAgain`), and its task is open, the same click also asks what Open again asks (`inf:browser:reopen`, `pressReopens` in `CardAttachment.tsx`), so one press brings the page back; a refusal shows when the captain presses Open again in the view, and a view whose changes are off only opens the view.
 The view compares the door's browser with the task's (`attachmentStanding`): the same one, open or stopped, opens as the record's Open would; one that stopped and was followed by a newer one (`replaced`), or ended by the app's quit (`restarted`), opens with a line under the row saying so, above whatever the task's browser is now.
 The card's line says `this card's browser has stopped` in both cases.
+
+### After a restart
+
+A stopped browser's page is kept with its task (`KeptPages`, `src/core/browser/keptPages.ts`): one owner-only file, `browser.json`, in the task's own folder on the computer that runs its browser, beside its registered stops (`docs/leftover-programs.md`).
+It holds the stopped fact, with the address bare when the captain signed in, and the project folder its page served, if any.
+Each stop with a reason writes it; the app's quit writes each open browser's page as stopped by the quit (`quit: true`, with `stopped` read as `gone` by a reader without the field); a browser that opens removes it; the task's close removes it, so a closed task's build is never brought back.
+After a restart the first read of the task's browser reads the file as its stopped browser (`TaskBrowsers.endedOf`), with the session and generation it had, so a card from before the restart still names it and Open again, or a card's press, starts it there.
+The view then reads `This browser stopped when Infinitary quit.` or its earlier reason, with Open again, instead of `This task has no browser on this computer.`
+
+### When nothing answers
+
+A card's page is often a build its crewmate started on the task's computer, which may have stopped by the time the captain presses.
+Nothing answering is one typed fact: the host's own connection to the page's loopback address is refused (`probeLoopback`, `src/core/browser/pageAnswers.ts`), never anything the page says, and only for an address the task's crewmate opened, never a project folder the host serves itself.
+A timeout or any other failure reads as unknown and changes nothing.
+The host checks when Open again or a card's press opens the browser and loads its page, and when the first view starts watching an open browser.
+A refused connection starts one outage for the task, which its open fact carries as `unanswered` until a check after the crewmate's next open, move or reload finds the address answering.
+At each check during an outage the host tells the card stack (`TaskBrowsersOptions.onUnanswered`, `CardActions.pageUnanswered`), which steers the task's crewmate once through its durable inbox with a `page-unanswered` wake, named for the outage (`page-unanswered:<session>:<task>:<n>`): the address, and that the captain opened its page and waits there, with the next move left to the crewmate.
+While a turn of its crewmate runs, or once its task closed, there is no wake; a later check in the same outage may still send it.
+The view says so in the line under its row ahead of a stale card's words: `Nothing answers at <site>, so its crewmate was asked to start it again.` or, while its crewmate is working, `Nothing answers at <site>, and its crewmate is working now.`, each followed by `The page shows here once it answers.`; the page shows by itself once the crewmate opens it again.
 
 ### The crewmate beside the page
 
@@ -685,6 +705,7 @@ The captain reads and drives it from the home as the captain does one here (`Pla
 - Take control, the captain's input, Return control, Stop browser, Open again, a request card's pause and the task's close are orders to that computer (`browserOrders`, `src/shared/workBrowsers.ts`), answered there by the same rules.
   Out of reach, each is refused in words and nothing is done.
 - What that computer has the home do once - a line on the task's timeline, the crewmate's wake on a return - arrives as a work request that the conversation's ledger answers once (`inf:work:browser-event`, `docs/helper.md` "Holding a conversation").
+  Its stopped pages are kept in each task's folder there, and a page nothing answers at is checked there; the crewmate's wake for it arrives as the `unanswered` event, which that computer sends only to a home that lists the `page-unanswered` change, so an older home wakes nobody.
 - That computer keeps its own signed-in sites, in its own kept profile and its own `WebSignIns`, and nothing of a sign-in crosses between computers (`kept-sign-ins`, `src/shared/contract-changes/`).
   The captain signs in to its page through the view, its Return control carries the rule (`rule` on `inf:task-browser:return`), and a request card's offer is read off its fact.
   The click on that offer, the crewmate's mark that it failed, the Settings list, the rule, Remove and Remove all are orders to that computer (`inf:task-browser:use-sign-in`, `inf:task-browser:sign-in-failed`, `inf:task-browser:sign-ins`, `inf:task-browser:sign-in-rule`, `inf:task-browser:sign-in-remove`, `inf:task-browser:sign-in-remove-all`), answered there by the same rules.
@@ -809,6 +830,8 @@ It also holds a listed name and a name under a listed suffix tunnelling to their
 `taskBrowsers.keys.test.ts` holds a key the page shows after a handback reading as `[key hidden]` in a text line, a control's name and description, a full passage, the title and address, the pages list, a dialog, a refused choice's options, a link's address and the network list, never found by a search or a wait, refusing every picture, a link whose host looks like a key still read without its query, and a browser never handed back reading it as it is.
 `docs/axi-commands.md` ("Tests") holds the command, its channel and its process; `crewmateTaskTools.test.ts` that no crewmate is served a browser tool, and `cardActions.browser.test.ts` that a task on this Mac gets its own browser's command and prompt line and an app without one gives none.
 `taskBrowsers.view.test.ts` also holds the captain's side: the fact and its action line, pictures to a watcher, the idle stop held while watched, Stop browser and Open again.
+It also holds a page kept with its task: a page open at the quit read as stopped by it after the restart and opened again there, a stopped page's reason kept and forgotten at the task's close; and a page nothing answers at: one wake name for each outage, ended once the address answers, and only an address the crewmate opened on this computer checked.
+`cardActions.browser.test.ts` holds the `page-unanswered` wake, once for an outage and none while a turn runs, `wakes.words.crewmate.test.ts` its words, and `CardAttachment.test.tsx` that the press opens a stopped browser again only while it may be opened again, and a quit's line on the strip.
 It also holds the maximized view's room: the page, its pictures and its photographs at the room and back at 1280 by 800 on restore or when that view stops watching, no size from a view that does not watch, the newest room laid out at once while a command loads, never between a click finding its control and pressing it, and a browser, a second page and Open again opening at the room.
 `taskFacts.test.ts`, `TaskFacts.test.tsx` and `stackActions.test.ts` hold who is driving, the record's Browser line and the view's place on the stack.
 `tests/e2e/task-browser.spec.ts` drives a real task page through the hermetic app: a crewmate types and clicks by refs on a local sign-up page that counts only a real click, the page keeps its own site data across a reload, cannot reach the app, and is refused a picture from a public name that leads to this Mac - at the connection, by its guard - one over plain http and data from another server, the picture lands in the evidence folder at 1280 by 800, closing leaves no page behind, and the next task's browser starts empty.

@@ -263,6 +263,7 @@ export async function startConversations(options: {
           tell,
           ask: options.ask,
           log: (line) => log(`browser: ${line}`),
+          ...(options.homeChanges ? { homeChanges: options.homeChanges } : {}),
         }).catch((error: unknown) => {
           log(`no task channel, so no crewmate here has a browser: ${messageOf(error)}`);
           return undefined;

@@ -70,8 +70,10 @@ import {
 import { checkOpenable, decideRequest, originKey } from "./destinations";
 import { PageDiagnostics } from "./diagnostics";
 import { saveDownload } from "./evidenceFiles";
+import type { KeptPages } from "./keptPages";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
+import { type AnswerProbe, answerTarget, probeLoopback } from "./pageAnswers";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
@@ -210,6 +212,31 @@ export type TaskBrowsersOptions = {
   now?: () => number;
   /** Serves a project folder for a page the captain opens; the real loopback server when absent. */
   serve?: (folder: string) => Promise<ProjectServer>;
+  /**
+   * Where each task's stopped page is kept, so a restart reads it as a
+   * stopped browser Open again can start (docs/task-browser.md, "After a
+   * restart"); with none, a restart forgets it.
+   */
+  kept?: KeptPages;
+  /** Tries a loopback port, as this computer; the real connection attempt when absent. */
+  probe?: AnswerProbe;
+  /**
+   * Nothing answers at the loopback address the captain opened a task's
+   * page on, and he waits there (docs/task-browser.md, "When nothing
+   * answers"): its crewmate's one wake for that outage, named by `once`.
+   * Told at each check while the outage lasts; the inbox queues it once.
+   */
+  onUnanswered?: (taskId: string, unanswered: PageUnanswered) => void;
+};
+
+/** Nothing answers at a task's page: what its crewmate's one wake for that outage says. */
+export type PageUnanswered = {
+  /** The page's host and port. */
+  site: string;
+  /** The page's address, bare of its query and fragment. */
+  url: string;
+  /** This outage's own name: the run, the task and how many outages it has had. */
+  once: string;
 };
 
 /**
@@ -264,6 +291,15 @@ export class TaskBrowsers {
     string,
     Pick<ProjectServer, "folder" | "origin"> & { captains?: true }
   >();
+  /** The tasks whose kept page this run has read, or no longer needs to. */
+  private readonly restored = new Set<string>();
+  /**
+   * The loopback address nothing answered at, per task, until it answers
+   * again: one outage, with the name its crewmate's one wake carries.
+   */
+  private readonly outages = new Map<string, { origin: string; once: string }>();
+  /** How many outages this run has seen: each one's name follows. */
+  private outageCount = 0;
   /** How many browsers each task has had in this run: the next one's generation follows. */
   private readonly generations = new Map<string, number>();
   /**
@@ -390,7 +426,7 @@ export class TaskBrowsers {
   /** One task's browser as the captain reads it; absent while it never had one. */
   fact(taskId: string): TaskBrowserFact | undefined {
     const browser = this.browsers.get(taskId);
-    if (!browser) return this.ended.get(taskId);
+    if (!browser) return this.endedOf(taskId);
     const url = addressOf(browser, browser.current);
     const many = browser.pages.length > 1;
     return {
@@ -432,6 +468,9 @@ export class TaskBrowsers {
           }
         : {}),
       ...(browser.control === "captain" && browser.told ? { told: browser.told } : {}),
+      ...(this.outages.get(taskId)?.origin === answerTarget(this.pageAddress(browser))?.origin
+        ? { unanswered: true as const }
+        : {}),
       session: this.session,
       generation: browser.generation,
     };
@@ -465,6 +504,8 @@ export class TaskBrowsers {
       browser.cancelIdle?.();
       browser.cancelIdle = undefined;
       this.startWatching(taskId, browser);
+      // The captain looks at its page: whether anything answers there.
+      if (sinks.size === 1) void this.checkAnswers(taskId, browser, { wake: true });
     }
     let watching = true;
     return () => {
@@ -537,7 +578,9 @@ export class TaskBrowsers {
     const commands = this.commands;
     return {
       navigate: (input) =>
-        this.queues.run(taskId, async () => this.held(taskId) ?? commands.navigate(taskId, input)),
+        this.queues
+          .run(taskId, async () => this.held(taskId) ?? commands.navigate(taskId, input))
+          .finally(() => this.answeredAgain(taskId)),
       inspect: (input) =>
         this.queues.run(taskId, async () => this.held(taskId) ?? commands.inspect(taskId, input)),
       act: (input) =>
@@ -1124,18 +1167,47 @@ export class TaskBrowsers {
     if (this.browsers.get(taskId)?.captains && !options.gone) return;
     if (this.browsers.has(taskId)) this.stop(taskId, "task-closed");
     else {
-      const ended = this.ended.get(taskId);
+      const ended = this.endedOf(taskId);
       if (ended && ended.stopped !== "task-closed") {
-        this.ended.set(taskId, { ...ended, stopped: "task-closed" });
+        const { quit: _quit, ...rest } = ended;
+        this.ended.set(taskId, { ...rest, stopped: "task-closed" });
         this.options.onChange?.(taskId);
       }
     }
+    // A closed task's build is not brought back: nothing is kept for it.
+    this.restored.add(taskId);
+    this.options.kept?.remove(taskId);
+    this.outages.delete(taskId);
     this.stopped.delete(taskId);
   }
 
-  /** The app quits: every task browser goes. */
+  /**
+   * The app quits: every task browser goes. Each one's page is kept with its
+   * task, so after the restart it reads as stopped by the quit and Open
+   * again starts it there (docs/task-browser.md, "After a restart").
+   */
   closeAll(): void {
-    for (const taskId of [...this.browsers.keys()]) this.stop(taskId);
+    for (const [taskId, browser] of [...this.browsers]) {
+      const fact = this.fact(taskId);
+      if (fact) {
+        this.options.kept?.write(taskId, {
+          fact: {
+            state: "stopped",
+            site: fact.site,
+            url: signedIn(browser)
+              ? bareAddress(this.pageAddress(browser))
+              : this.pageAddress(browser),
+            stopped: "gone",
+            at: Date.now(),
+            quit: true,
+            session: this.session,
+            generation: browser.generation,
+          },
+          ...(browser.server ? { served: this.servedOf(browser) } : {}),
+        });
+      }
+      this.stop(taskId);
+    }
     const guard = this.keptGuard;
     this.keptGuard = undefined;
     void guard?.then((handle) => handle?.close());
@@ -1200,6 +1272,9 @@ export class TaskBrowsers {
     // A view maximized or restored while it opened: the page follows.
     if (!sameSize(browser.size, this.pageSize(taskId))) this.resizePages(taskId);
     this.ended.delete(taskId);
+    // An open browser is this run's to tell: the page kept from a stop goes.
+    this.restored.add(taskId);
+    this.options.kept?.remove(taskId);
     this.options.note?.(taskId, opened);
     // A view already watching this task sees the new page from its start.
     if (this.watchers.has(taskId)) this.startWatching(taskId, browser);
@@ -1559,13 +1634,7 @@ export class TaskBrowsers {
     browser.stopWatching = undefined;
     if (browser.server) {
       browser.server.close();
-      if (why) {
-        this.endedServers.set(taskId, {
-          folder: browser.server.folder,
-          origin: browser.server.origin,
-          ...(browser.captains ? { captains: true as const } : {}),
-        });
-      }
+      if (why) this.endedServers.set(taskId, this.servedOf(browser));
     } else if (why) this.endedServers.delete(taskId);
     // A second page first; the first page's close ends an empty context's
     // site data, while a kept page's close leaves the kept profile as it is.
@@ -1578,7 +1647,7 @@ export class TaskBrowsers {
     }
     browser.guard.close();
     if (why && fact) {
-      this.ended.set(taskId, {
+      const ended: Extract<TaskBrowserFact, { state: "stopped" }> = {
         state: "stopped",
         site: fact.site,
         // Open again starts fresh, so it carries nothing of a sign-in's address.
@@ -1587,9 +1656,107 @@ export class TaskBrowsers {
         at: Date.now(),
         session: this.session,
         generation: browser.generation,
-      });
+      };
+      this.ended.set(taskId, ended);
+      // Kept with the task, so a restart can still open it again; never once it closed.
+      if (why === "task-closed") this.options.kept?.remove(taskId);
+      else {
+        const served = this.endedServers.get(taskId);
+        this.options.kept?.write(taskId, { fact: ended, ...(served ? { served } : {}) });
+      }
       this.options.onChange?.(taskId);
     }
+  }
+
+  /** The project folder a browser's page serves, as Open again needs it. */
+  private servedOf(browser: Browser): Pick<ProjectServer, "folder" | "origin"> & {
+    captains?: true;
+  } {
+    const server = browser.server as ProjectServer;
+    return {
+      folder: server.folder,
+      origin: server.origin,
+      ...(browser.captains ? { captains: true as const } : {}),
+    };
+  }
+
+  /**
+   * A task's stopped browser: this run's, or the page kept with the task,
+   * read once per run after a restart (docs/task-browser.md, "After a
+   * restart").
+   */
+  private endedOf(taskId: string): Extract<TaskBrowserFact, { state: "stopped" }> | undefined {
+    const ended = this.ended.get(taskId);
+    if (ended || this.restored.has(taskId)) return ended;
+    this.restored.add(taskId);
+    const page = this.options.kept?.read(taskId);
+    if (!page || page.fact.stopped === "task-closed") return undefined;
+    this.ended.set(taskId, page.fact);
+    if (page.served) this.endedServers.set(taskId, page.served);
+    return page.fact;
+  }
+
+  /** The address a browser's current page is on, its last one while it shows an error page. */
+  private pageAddress(browser: Browser): string {
+    const entry = browser.current;
+    const shown = addressOf(browser, entry);
+    if (/^https?:/.test(shown)) return shown;
+    return entry.lastUrl ?? (entry === browser.pages[0] ? browser.firstUrl : shown);
+  }
+
+  /**
+   * Whether anything answers at the loopback address a task's page is on
+   * (docs/task-browser.md, "When nothing answers"): only an address its
+   * crewmate opened, never a project folder the host serves itself. A
+   * refused connection starts an outage and, with `wake`, tells its
+   * crewmate's wake; an answer ends it. Any other reading changes nothing.
+   */
+  private async checkAnswers(
+    taskId: string,
+    browser: Browser,
+    options: { wake: boolean },
+  ): Promise<void> {
+    const address = this.pageAddress(browser);
+    const target = answerTarget(address);
+    if (!target || !browser.origins.has(target.origin)) return;
+    if (browser.server && address.startsWith(`${browser.server.origin}/`)) return;
+    const reading = await (this.options.probe ?? probeLoopback)(target.host, target.port).catch(
+      () => "unknown" as const,
+    );
+    if (this.browsers.get(taskId) !== browser) return;
+    const outage = this.outages.get(taskId);
+    if (reading === "answered") {
+      if (outage) {
+        this.outages.delete(taskId);
+        this.options.onChange?.(taskId);
+      }
+      return;
+    }
+    if (reading !== "refused") return;
+    let current = outage;
+    if (!current || current.origin !== target.origin) {
+      this.outageCount += 1;
+      current = {
+        origin: target.origin,
+        once: `page-unanswered:${this.session}:${taskId}:${this.outageCount}`,
+      };
+      this.outages.set(taskId, current);
+      this.options.onChange?.(taskId);
+    }
+    if (options.wake) {
+      this.options.onUnanswered?.(taskId, {
+        site: siteOf(address),
+        url: bareAddress(address),
+        once: current.once,
+      });
+    }
+  }
+
+  /** A crewmate's command moved the page: an outage ends once its address answers again. */
+  private answeredAgain(taskId: string): void {
+    const browser = this.browsers.get(taskId);
+    if (!browser || !this.outages.has(taskId)) return;
+    void this.checkAnswers(taskId, browser, { wake: false });
   }
 
   /** Pictures of the task's current page to everyone watching it, once per page. */
@@ -1604,7 +1771,7 @@ export class TaskBrowsers {
 
   private async reopenNow(taskId: string): Promise<TaskBrowserCommandResult> {
     if (this.browsers.has(taskId)) return { ok: true };
-    const ended = this.ended.get(taskId);
+    const ended = this.endedOf(taskId);
     if (!ended || ended.stopped === "task-closed") {
       return { ok: false, text: "This task has no browser to open again." };
     }
@@ -1653,6 +1820,8 @@ export class TaskBrowsers {
     const outcome = await loadOwn(entry, entry.page.load(check.url.href));
     if (!outcome.ok) entry.moved = undefined;
     this.options.onChange?.(taskId);
+    // The captain waits at its page: whether anything answers there.
+    await this.checkAnswers(taskId, browser, { wake: true });
     return { ok: true };
   }
 

@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "Écrite après la fermeture de la carte";
 "cardThreadWrittenBy" = "Écrite par %1$@";
 "cardThreadWrittenByAfterClose" = "Écrite par %1$@, après la fermeture de la carte";
+"cardTradeoffTable" = "Le compromis sous forme de tableau";
 "cardUseSavedReset" = "Utiliser une réinitialisation enregistrée";
 "closeYourFirstMate" = "Votre second : « %1$@ »";
 "closedDropped" = "%1$@ écartée";

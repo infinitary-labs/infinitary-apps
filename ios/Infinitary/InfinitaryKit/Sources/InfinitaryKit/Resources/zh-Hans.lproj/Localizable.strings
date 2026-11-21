@@ -412,6 +412,7 @@
 "cardThreadWrittenAfterClose" = "写于卡片关闭之后";
 "cardThreadWrittenBy" = "由 %1$@ 撰写";
 "cardThreadWrittenByAfterClose" = "由 %1$@ 在卡片关闭后撰写";
+"cardTradeoffTable" = "以表格查看取舍";
 "cardUseSavedReset" = "使用已保存的重置";
 "closeYourFirstMate" = "你的大副：“%1$@”";
 "closedDropped" = "%1$@ 已放弃";

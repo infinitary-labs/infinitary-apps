@@ -9,6 +9,8 @@ enum PhoneSymbol: CaseIterable {
     case link, at, chevron, copy
     /// INF-3746: Point at's outline pointer, the Mac's own (`AnnotationControls.tsx`).
     case pointer
+    /// INF-5265: the computer sheet's Add another computer, Lucide's plus.
+    case plus
 
     @MainActor var image: Image { Image(uiImage: Self.images[self]!) }
 
@@ -64,6 +66,7 @@ enum PhoneSymbol: CaseIterable {
                 tail.addArc(withCenter: CGPoint(x: 12, y: 12), radius: 10, startAngle: 0, endAngle: atan2(8, 6), clockwise: false)
                 context.addPath(tail.cgPath); context.strokePath()
             case .chevron: points([(9, 6), (15, 12), (9, 18)])
+            case .plus: points([(5, 12), (19, 12)]); points([(12, 5), (12, 19)])
             case .pointer: points([(4, 4), (11.07, 21), (13.58, 13.61), (21, 11.07), (4, 4)])
             case .settings:
                 // Lucide's settings: a six-toothed wheel whose every corner is rounded at radius 2, around a hub.

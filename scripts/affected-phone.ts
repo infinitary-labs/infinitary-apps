@@ -56,6 +56,8 @@ const INPUTS = [
   "tests/helpers/phoneTakeOver.ts",
   // INF-4794: the test home's stand-in push relay, which the push part's pushes pass through.
   "tests/helpers/phonePushRelay.ts",
+  // INF-5265: the homes part's second computer, which the test home starts in a process of its own.
+  "tests/helpers/phoneSecondHome.ts", "tests/helpers/phoneSecondHomeProcess.ts",
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser or scripts/phone-test-home.ts, so they are not inputs. The chooser runs before the

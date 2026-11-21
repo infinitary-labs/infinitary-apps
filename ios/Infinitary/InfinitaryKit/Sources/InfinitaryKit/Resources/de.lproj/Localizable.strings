@@ -1380,6 +1380,9 @@
 "phoneComposerTooLong" = "Diese Nachricht ist zu lang. Kürze sie vor dem Senden.";
 "phoneComposerWorking" = "Arbeitet …";
 "phoneComposerYou" = "Du";
+"phoneComputerAddLine" = "Verbinde dich mit einem weiteren und behalte diesen.";
+"phoneComputerAddTitle" = "Weiteren Computer hinzufügen";
+"phoneComputerAnswers" = "Antwortet jetzt";
 "phoneComputerFirstMateHere" = "Dein erster Offizier lebt hier.";
 "phoneComputerForgetAsk" = "Diesen Computer vergessen?";
 "phoneComputerForgetButton" = "Diesen Computer vergessen";
@@ -1394,6 +1397,10 @@
 "phoneComputerLeaveExplain" = "Dieses Gerät zeigt ihn nicht mehr. Um zurückzukommen, scanne einen neuen Code.";
 "phoneComputerLeaveHeading" = "Verlassen";
 "phoneComputerLeaveWarning" = "Dieses Gerät vergisst den Computer. Um zurückzukommen, brauchst du einen neuen Link.";
+"phoneComputerLooking" = "Wird geprüft …";
+"phoneComputerNotAnswering" = "Antwortet von hier aus nicht";
+"phoneComputerOthersHeading" = "Deine anderen Computer";
+"phoneComputerShowHint" = "Zeigt diesen Computer";
 "phoneComputerTitle" = "Dein Computer";
 "phoneCrewSummaryOpenTask" = "Aufgabe öffnen";
 "phoneFormatDays" = "%1$@ T.";
@@ -1469,9 +1476,10 @@
 "phoneModelForgotDamaged" = "Infinitary hat eine beschädigte Verbindung vergessen. Verbinde dich mit einem neuen Link erneut mit deinem Computer.";
 "phoneModelKeepAddressFailed" = "Die neue Adresse dieses Computers konnte nicht gespeichert werden.";
 "phoneModelKeepFingerprintFailed" = "Der Fingerabdruck dieses Computers konnte nicht gespeichert werden. Versuch es erneut.";
-"phoneModelLeaveBeforeJoining" = "Verlasse oder vergiss deinen gespeicherten Computer, bevor du dich mit einem anderen verbindest.";
 "phoneModelReadSavedRetry" = "Der gespeicherte Computer dieses Telefons konnte nicht gelesen werden. Versuch es erneut.";
 "phoneModelReadSavedUnlock" = "Der gespeicherte Computer dieses Telefons konnte nicht gelesen werden. Entsperre dein Telefon und versuch es erneut.";
+"phoneModelRemovedShowingNext" = "%1$@ hat dieses Gerät entfernt. Dein nächster Computer wird angezeigt.";
+"phoneModelShowFailed" = "Konnte nicht zu diesem Computer wechseln. Versuche es erneut.";
 "phoneNoticeDismiss" = "Ausblenden";
 "phoneNoticeDismissHint" = "Blendet diesen Hinweis aus";
 "phoneNoticeLabel" = "%1$@: %2$@";

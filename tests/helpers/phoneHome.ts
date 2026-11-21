@@ -77,6 +77,7 @@ import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
+import { phoneSecondHome } from "./phoneSecondHome";
 import {
   PHONE_SETTINGS_SESSION_LATER,
   phoneSettingsState,
@@ -143,6 +144,8 @@ export async function startPhoneHome(
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
     // INF-4794: a push the stand-in relay hands the part's simulator, as Apple would deliver it.
     push?(payload: Record<string, unknown>): Promise<void>;
+    // INF-5265: the phone's own network going (false) or coming back (true), through the app's stand-in path monitor.
+    phonePath?(usable: boolean): Promise<void>;
     biometry?(step: "enroll" | "face-in-view" | "face-away"): Promise<void>;
     // INF-4241 piece 8: the Duo's hinge, read or moved once (scripts/phone-hinge.ts); absent on a device with none.
     hinge?(to?: "open" | "closed"): Promise<{ hinge: "open" | "closed" | null }>;
@@ -157,8 +160,10 @@ export async function startPhoneHome(
     ): Promise<PhoneKeyOutcome & { key: "tab" | "return" | "escape" }>;
   },
   // INF-3563: the Settings pages part's computer starts with accounts, projects, usage and automations to show.
-  options: { settings?: boolean } = {},
+  // INF-5265: a second computer beside it names itself (tests/helpers/phoneSecondHome.ts).
+  options: { settings?: boolean; name?: string } = {},
 ) {
+  const homeName = options.name ?? "Test Mac mini";
   const port = await claimedPort();
   process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
   process.env.INFINITARY_DNS_SD = standInDnsSd([]);
@@ -166,6 +171,18 @@ export async function startPhoneHome(
   const googleStandIn = await startPhoneGoogle();
   // INF-4794: the home's phone sender posts to a stand-in relay, which pushes to the part's simulator.
   const pushRelay = await startPhonePushRelay(controls?.push?.bind(controls));
+  // INF-5265: the key the phone handed this home, as a short digest, so a part compares two homes' keys and one home's
+  // key across a relaunch without reading the key.
+  const pushReading = () => {
+    const targets = core.services.devices.pushTargets();
+    return {
+      ...pushRelay.state(),
+      registered: targets.length > 0,
+      keys: targets.map((target) =>
+        createHash("sha256").update(target.registration.key).digest("hex").slice(0, 16),
+      ),
+    };
+  };
   process.env.INFINITARY_PUSH_RELAY_URL = pushRelay.url;
   const userData = join(root, "app");
   const paths = appPathsFor(userData);
@@ -176,6 +193,8 @@ export async function startPhoneHome(
   writeFileSync(paths.modelsPath, JSON.stringify(models));
   if (options.settings) seedPhoneSettings(root, userData);
   let secretConfirms = 0;
+  /** INF-5265: the cards `homes-card` made on this home. */
+  let homesCards = 0;
   // The invented token the stand-in calendar receives; no request leaves this process.
   const SECRET_TOKEN = "ya29.invented-phone-calendar-token";
   const secretSends: string[] = [];
@@ -622,7 +641,7 @@ export async function startPhoneHome(
       devices,
       port,
       address: [],
-      name: () => "Test Mac mini",
+      name: () => homeName,
       protocolVersion,
       ...(viewFloor !== undefined ? { viewFloor } : {}),
       // Major 16 folded these names in: a home before it listed them, and the phone still reads one by them.
@@ -651,8 +670,9 @@ export async function startPhoneHome(
     return connection;
   };
   let connection = connect();
+  const secondHome = phoneSecondHome();
   takeOver = phoneTakeOverControls({
-    ...{ devicesDir: paths.devicesDir, name: "Test Mac mini", userData },
+    ...{ devicesDir: paths.devicesDir, name: homeName, userData },
     ...{ offline: () => connection.close(), routes: () => connection.routes() },
     online: async () => {
       connection = connect();
@@ -2678,10 +2698,7 @@ export async function startPhoneHome(
           break;
         // INF-4794: the stand-in relay's asks and pushes, and whether this home keeps the phone's registration.
         case "GET push-state": {
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
-          };
+          result = pushReading();
           break;
         }
         // Waits up to a minute for the phone to hand a registration with the grant the stand-in relay pushed it.
@@ -2689,10 +2706,31 @@ export async function startPhoneHome(
           const deadline = Date.now() + 60_000;
           while (core.services.devices.pushTargets().length === 0 && Date.now() < deadline)
             await new Promise((resolve) => setTimeout(resolve, 250));
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
-          };
+          result = pushReading();
+          break;
+        }
+        // INF-5265: waits up to half a minute for this home to have sent its stand-in relay more sealed cards than
+        // `after`, the count a part read before (none when it names none).
+        case "POST push-sent": {
+          const text = await controlBody(request);
+          const after = text ? (JSON.parse(text) as { after: number }).after : 0;
+          const deadline = Date.now() + 30_000;
+          while (pushRelay.state().pushes <= after && Date.now() < deadline)
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          result = pushReading();
+          break;
+        }
+        // INF-5265: a new card on this home each time, which its phone sender seals for the phone's registration.
+        case "POST homes-card": {
+          homesCards += 1;
+          const title = `A card from this computer, number ${homesCards}`;
+          core.services.supervisor.addFirstmateCard({
+            id: `phone-homes-${homesCards}`,
+            title,
+            body: "<p>This computer has a new card for the phone.</p>",
+            actions: [{ id: "ok", label: "Got it", default: true }],
+          });
+          result = { title };
           break;
         }
         // INF-4794: the home lets go of the phone's registration, as it does when the phone hands null, so the
@@ -2700,10 +2738,46 @@ export async function startPhoneHome(
         case "POST push-cleared": {
           for (const target of core.services.devices.pushTargets())
             core.services.devices.setPush(target.deviceId, null);
-          result = {
-            ...pushRelay.state(),
-            registered: core.services.devices.pushTargets().length > 0,
+          result = pushReading();
+          break;
+        }
+        // INF-5265: the phone's own network goes or comes back while the app stays open (`{ "usable": boolean }`).
+        case "POST phone-path": {
+          if (!controls?.phonePath)
+            throw new Error("Only the owned simulator launcher can change the phone's network");
+          const { usable } = JSON.parse(await controlBody(request)) as { usable: boolean };
+          await controls.phonePath(usable);
+          result = { usable };
+          break;
+        }
+        // INF-5265: a second computer beside this one, which the phone joins with a link of its own.
+        case "POST second-home":
+          result = await secondHome.start();
+          break;
+        // INF-5265: a card push as the phone's notification part leaves it once it opened the sealed card, naming the
+        // card and the computer it came from; a simulated push runs no notification part, so this stands in for it.
+        case "POST push-opened": {
+          if (!controls?.push)
+            throw new Error("Only the owned simulator launcher can push to the phone");
+          const opened = JSON.parse(await controlBody(request)) as {
+            cardId: string;
+            computer: string;
+            title: string;
+            subtitle: string;
           };
+          await controls.push({
+            aps: {
+              alert: {
+                title: opened.title,
+                subtitle: opened.subtitle,
+                body: pushRelay.state().words,
+              },
+              sound: "default",
+            },
+            cardId: opened.cardId,
+            computer: opened.computer,
+          });
+          result = { ok: true };
           break;
         }
         case "POST disconnected": {
@@ -3363,6 +3437,7 @@ export async function startPhoneHome(
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await ssh?.stop();
       await takeOver.stop();
+      await secondHome.stop();
       unreach();
       await connection.close();
       unsubscribe("net.server.socket", countAttempt);

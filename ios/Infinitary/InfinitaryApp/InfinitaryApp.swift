@@ -57,6 +57,8 @@ struct PhoneView: View {
     @State private var addressing = false
     @State private var linkText = ""
     @State private var details = false
+    /// INF-5265: the way in the computer sheet's Add another computer picked, opened once that sheet has closed.
+    @State private var addWay: PhoneAddWay?
     @State private var settings = false
     @State private var keyboardVisible = false
 
@@ -106,23 +108,32 @@ struct PhoneView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         // The computer's name lives in its sheet, and VoiceOver hears the reach as words.
                         // INF-1328: a dot asks for attention, so it shows only while the computer is out of reach.
+                        // INF-5265: with more than one computer kept, the button names the one shown.
                         Button { details = true } label: {
-                            PhoneSymbol.computer.image
-                                .overlay(alignment: .topTrailing) {
-                                    if session.reach == "lost" {
-                                        Circle().fill(PhoneTheme.warning).frame(width: 7, height: 7).offset(x: 3, y: -3)
+                            HStack(spacing: PhoneTheme.space2) {
+                                PhoneSymbol.computer.image
+                                    .overlay(alignment: .topTrailing) {
+                                        if session.reach == "lost" {
+                                            Circle().fill(PhoneTheme.warning).frame(width: 7, height: 7).offset(x: 3, y: -3)
+                                        }
                                     }
+                                if model.kept.others.count > 0 {
+                                    Text(session.mac.name).font(PhoneFont.callout).lineLimit(1).truncationMode(.tail)
+                                        .frame(maxWidth: 120)
                                 }
+                            }
                         }
-                            .accessibilityLabel(PhoneMessages.phoneAppYourComputer()).accessibilityValue(session.reachLine)
+                            .accessibilityLabel(model.kept.others.isEmpty ? PhoneMessages.phoneAppYourComputer() : session.mac.name)
+                            .accessibilityValue(session.reachLine)
                             .accessibilityIdentifier("computer-details")
                             .keyboardShortcut("i", modifiers: .command)
                     }
                 }
             }
-            .sheet(isPresented: $details) {
+            .sheet(isPresented: $details, onDismiss: openAddWay) {
                 if let session = model.connection {
-                    PhoneComputerSheet(session: session, leave: { Task { await model.leave() } }, forget: { model.forgetMac() })
+                    PhoneComputerSheet(session: session, model: model, leave: { named in Task { await model.leave(named) } },
+                                       forget: { pin in model.forgetMac(pin) }, add: { way in addWay = way })
                 }
             }
             .sheet(isPresented: $settings) {
@@ -197,6 +208,17 @@ struct PhoneView: View {
         }
     }
 
+    /// Opens the way in picked under Add another computer, once the computer sheet has gone.
+    private func openAddWay() {
+        guard let way = addWay else { return }
+        addWay = nil
+        switch way {
+        case .scan: scanning = true
+        case .paste: pasting = true
+        case .address: addressing = true
+        }
+    }
+
     /// The join alert's title and button, naming the computer its link proposes.
     private var joinWords: (title: String, button: String) {
         guard let computer = model.proposal?.computer else {
@@ -268,7 +290,7 @@ struct PhoneView: View {
             // INF-4794: a notification for a card that left the stage goes too, and one for a card seen anywhere.
             .onChange(of: session.cards.filter { !session.hasSeen($0) }.map(\.id)) {
                 guard session.contact == "in-reach", let pushes = model.pushes else { return }
-                Task { await pushes.clear(stage: session.cards, seen: session.hasSeen) }
+                Task { await pushes.clear(stage: session.cards, seen: session.hasSeen, computer: session.mac.pin) }
             }
     }
 

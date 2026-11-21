@@ -42,14 +42,18 @@ An alert names the computer address reached through the link, with Cancel beside
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
+Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; with one computer kept its name is in its sheet, not the bar.
 The strip is Apple's segmented control of three or four icons, a house for Home, a checklist for Tasks, a pulse line for Activity and three stacked panes for Panels, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
 The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
+With more than one computer kept, the button names the computer shown after its glyph, in the callout size on one line cut with an ellipsis at 120 points, so the person always knows which computer they read; VoiceOver hears that name in place of Your computer.
 In reach the bar says nothing more, and VoiceOver hears "Live".
 Coming back after the words said out of reach, the line under the bar says "Catching up on what was missed" or "Catching up, reading everything again" until what was missed is shown, then goes.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and "since" the last-heard time, with its day when that was not today; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
+Under them, Your other computers lists each other kept computer as a row in the shared list shape, the computer glyph, its name and one line, Answers now with an accent dot before the glyph, Not answering from here, or Looking… while the phone checks; a tap shows it, and the phone never switches by itself.
+Leave, or Forget, follows them, and the last row, after it, is Add another computer with a plus glyph, which offers the first screen's three ways in, so a phone keeping one computer finds Leave where it always was at every Text Size.
+With other computers kept, the sheet opens with the first of them focused, and the arrows, Return and Space reach every row; a key pressed with Command held presses no row.
 The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
 A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.

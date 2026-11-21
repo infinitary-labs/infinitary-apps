@@ -1446,6 +1446,9 @@ public enum PhoneMessages {
     public static func `phoneComposerTooLong`() -> String { PhoneWords.format("phoneComposerTooLong", []) }
     public static func `phoneComposerWorking`() -> String { PhoneWords.format("phoneComposerWorking", []) }
     public static func `phoneComposerYou`() -> String { PhoneWords.format("phoneComposerYou", []) }
+    public static func `phoneComputerAddLine`() -> String { PhoneWords.format("phoneComputerAddLine", []) }
+    public static func `phoneComputerAddTitle`() -> String { PhoneWords.format("phoneComputerAddTitle", []) }
+    public static func `phoneComputerAnswers`() -> String { PhoneWords.format("phoneComputerAnswers", []) }
     public static func `phoneComputerFirstMateHere`() -> String { PhoneWords.format("phoneComputerFirstMateHere", []) }
     public static func `phoneComputerForgetAsk`() -> String { PhoneWords.format("phoneComputerForgetAsk", []) }
     public static func `phoneComputerForgetButton`() -> String { PhoneWords.format("phoneComputerForgetButton", []) }
@@ -1460,6 +1463,10 @@ public enum PhoneMessages {
     public static func `phoneComputerLeaveExplain`() -> String { PhoneWords.format("phoneComputerLeaveExplain", []) }
     public static func `phoneComputerLeaveHeading`() -> String { PhoneWords.format("phoneComputerLeaveHeading", []) }
     public static func `phoneComputerLeaveWarning`() -> String { PhoneWords.format("phoneComputerLeaveWarning", []) }
+    public static func `phoneComputerLooking`() -> String { PhoneWords.format("phoneComputerLooking", []) }
+    public static func `phoneComputerNotAnswering`() -> String { PhoneWords.format("phoneComputerNotAnswering", []) }
+    public static func `phoneComputerOthersHeading`() -> String { PhoneWords.format("phoneComputerOthersHeading", []) }
+    public static func `phoneComputerShowHint`() -> String { PhoneWords.format("phoneComputerShowHint", []) }
     public static func `phoneComputerTitle`() -> String { PhoneWords.format("phoneComputerTitle", []) }
     public static func `phoneCrewSummaryOpenTask`() -> String { PhoneWords.format("phoneCrewSummaryOpenTask", []) }
     public static func `phoneFormatDays`(`days`: String) -> String { PhoneWords.format("phoneFormatDays", [`days`]) }
@@ -1536,9 +1543,10 @@ public enum PhoneMessages {
     public static func `phoneModelForgotDamaged`() -> String { PhoneWords.format("phoneModelForgotDamaged", []) }
     public static func `phoneModelKeepAddressFailed`() -> String { PhoneWords.format("phoneModelKeepAddressFailed", []) }
     public static func `phoneModelKeepFingerprintFailed`() -> String { PhoneWords.format("phoneModelKeepFingerprintFailed", []) }
-    public static func `phoneModelLeaveBeforeJoining`() -> String { PhoneWords.format("phoneModelLeaveBeforeJoining", []) }
     public static func `phoneModelReadSavedRetry`() -> String { PhoneWords.format("phoneModelReadSavedRetry", []) }
     public static func `phoneModelReadSavedUnlock`() -> String { PhoneWords.format("phoneModelReadSavedUnlock", []) }
+    public static func `phoneModelRemovedShowingNext`(`computer`: String) -> String { PhoneWords.format("phoneModelRemovedShowingNext", [`computer`]) }
+    public static func `phoneModelShowFailed`() -> String { PhoneWords.format("phoneModelShowFailed", []) }
     public static func `phoneNoticeDismiss`() -> String { PhoneWords.format("phoneNoticeDismiss", []) }
     public static func `phoneNoticeDismissHint`() -> String { PhoneWords.format("phoneNoticeDismissHint", []) }
     public static func `phoneNoticeLabel`(`kind`: String, `title`: String) -> String { PhoneWords.format("phoneNoticeLabel", [`kind`, `title`]) }
@@ -5261,6 +5269,9 @@ extension PhoneWords {
         "phoneComposerTooLong": [],
         "phoneComposerWorking": [],
         "phoneComposerYou": [],
+        "phoneComputerAddLine": [],
+        "phoneComputerAddTitle": [],
+        "phoneComputerAnswers": [],
         "phoneComputerFirstMateHere": [],
         "phoneComputerForgetAsk": [],
         "phoneComputerForgetButton": [],
@@ -5275,6 +5286,10 @@ extension PhoneWords {
         "phoneComputerLeaveExplain": [],
         "phoneComputerLeaveHeading": [],
         "phoneComputerLeaveWarning": [],
+        "phoneComputerLooking": [],
+        "phoneComputerNotAnswering": [],
+        "phoneComputerOthersHeading": [],
+        "phoneComputerShowHint": [],
         "phoneComputerTitle": [],
         "phoneCrewSummaryOpenTask": [],
         "phoneFormatDays": ["days"],
@@ -5351,9 +5366,10 @@ extension PhoneWords {
         "phoneModelForgotDamaged": [],
         "phoneModelKeepAddressFailed": [],
         "phoneModelKeepFingerprintFailed": [],
-        "phoneModelLeaveBeforeJoining": [],
         "phoneModelReadSavedRetry": [],
         "phoneModelReadSavedUnlock": [],
+        "phoneModelRemovedShowingNext": ["computer"],
+        "phoneModelShowFailed": [],
         "phoneNoticeDismiss": [],
         "phoneNoticeDismissHint": [],
         "phoneNoticeLabel": ["kind", "title"],

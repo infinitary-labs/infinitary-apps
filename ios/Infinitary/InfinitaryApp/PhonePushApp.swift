@@ -51,17 +51,28 @@ import UserNotifications
     /// from its computer, where the in-app notice cannot show it (`PhonePush.showsInFront`).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        let card = notification.request.content.userInfo[PhonePush.cardKey] as? String
-        let shows = await MainActor.run { PhonePush.showsInFront(contact: self.model.connection?.contact, cardID: card) }
+        let info = notification.request.content.userInfo
+        let card = info[PhonePush.cardKey] as? String
+        let computer = info[PhonePushSeal.computerKey] as? String
+        // INF-5265: a card from a kept computer that is not shown always shows, since no stage shows it. Its computer is
+        // the one its tap goes by (`PhoneModel.keptOwner`): a card from a computer no longer kept, or from none known,
+        // shows nothing in front, as its tap opens nothing.
+        let shows = await MainActor.run {
+            let owner = self.model.keptOwner(computer)
+            return owner != nil && PhonePush.showsInFront(contact: self.model.connection?.contact, cardID: card,
+                                                          computer: owner, shown: self.model.kept.shown?.pin)
+        }
         return shows ? [.banner, .list, .sound] : []
     }
 
-    /// A tap opens Infinitary on that card, as the in-app pill's tap does.
+    /// A tap opens Infinitary on that card, as the in-app pill's tap does, showing its computer first (INF-5265).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
-        let card = response.notification.request.content.userInfo[PhonePush.cardKey] as? String
+        let info = response.notification.request.content.userInfo
+        let card = info[PhonePush.cardKey] as? String
+        let computer = info[PhonePushSeal.computerKey] as? String
         completionHandler()
-        if let card { Task { @MainActor in self.model.openCard(card) } }
+        if let card { Task { @MainActor in self.model.openCard(card, computer: computer) } }
     }
 }
 
@@ -101,15 +112,15 @@ extension PhonePushes {
                 }
                 return status
             },
-            load: { PhonePushStore.load() },
-            save: { PhonePushStore.save($0) },
+            load: { try PhonePushStore.read() },
+            save: { try PhonePushStore.save($0) },
             // iOS forgets its own answer when Infinitary is installed again; the person's Not now is kept here.
             askedPerson: { UserDefaults.standard.bool(forKey: asked) },
             noteAskedPerson: { UserDefaults.standard.set(true, forKey: asked) },
             delivered: {
                 await center.deliveredNotifications().map {
                     let shown = PhonePushSeal.shown($0.request.content.userInfo)
-                    return ($0.request.identifier, shown.cardID, shown.push)
+                    return ($0.request.identifier, shown.cardID, shown.push, shown.computer)
                 }
             },
             remove: { center.removeDeliveredNotifications(withIdentifiers: $0) },

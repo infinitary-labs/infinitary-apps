@@ -1,5 +1,5 @@
 {
-  "source": "Sealed by sealCardPush and sealWithdrawal in src/core/phonePush.ts, the computer's own sealing, under `key`.",
+  "source": "Sealed by sealCardPush and sealWithdrawal in src/core/phonePush.ts, the computer's own sealing: card, reply, otherKey, withdrawal and otherKeyWithdrawal under `key`'s computer or another, and second and secondWithdrawal under `secondKey`, a second computer's key.",
   "key": "oNs7mZhA3wzAypQhUqwm_RMYpEqs-gI0LeIgqHMlzdA",
   "card": {
     "sealed": "Ur-bq-Ez82sRol4-ANSAKW1HxgOsDM_b2qqD7mTHmBe7-t_3Tl1XbuArTorTP6ectrR3WjjkbcaiZIE_1-LTobuNWJpdaUZGqKhwohpMAJB6EaeWUAG3k4KzrPeh5_JR1oUA4o7pQzylBQ4StP1xRGB8RfXPyzbFhZ_FnSPBXXSFStYT3YbT6Io17kTxaNDg-kV5Bq0VWYmx9MCoVDA",
@@ -49,5 +49,31 @@
   },
   "otherKeyWithdrawal": {
     "sealed": "BBc4OugOzwLuiyqQJXmC5oDHqPLvk_x0ph9wk88ckIaO43MoLdftS2sq0B24opDX5wqc58OhVzfsOHEKlEd9exrx3CazJU8kYHhNkSSTin4DUyvGWQVdLJWMWHocDSS1TC3gCxCdTLcq0-B1HNjINqCyKPMZO6Wgv-UVyXEbHkUvKbNzBBCShcvFABaeHa6T2MFE-fX4ukm1P9hILu9TpXmq76mN2OOPBrp8rVKC5PighSQMxwoxVwpVeQTiiyOWIhtMNiGQvARRo4YJaFH7DJ5hxG-6EGFDRdmn"
+  },
+  "secondKey": "8CKlNdRKsHTorqUuVlUD-3wZg-dkEsZ-Tzn5pwhL3sE",
+  "second": {
+    "sealed": "PLR2fANuD1PdN60qwrHg-0zKlJheo8elqcklR79gePkuirAsx2b8LdIkGDIrnv0ah1p-jVBFhBncdOoh1LE_jgziqZztkAaD2WURzogoT8JsdP_aGfMmVkHp0a_fobNRto1FDXMEyWICL-DzR_EovFDPAyrX5mdODCLIbhtWYTDUWuziPvMZCagfaHqmdqyH1D1csznUVitDGmDP5qzLv8U2",
+    "opens": {
+      "v": 1,
+      "kind": "card",
+      "cardId": "card-41d6e0b2-export-retries",
+      "title": "Decision · billing",
+      "body": "Pick the export job's retry limit"
+    }
+  },
+  "secondWithdrawal": {
+    "sealed": "-zR2OftXoUR93wk_GujF7KDgem6pkdNjgM2iQyEhIntieqEb58WKmAjwy8m4jOjnuYPcQVCuvAHodXEdaINRAYhAihRl33NE9fspss0RcizvloKwODsjJlIA8uQWp-EYWvKa3C7OfkgIRBrM3RGUSl9h-WUp4J8jDzeyDJaLl92lJZQ",
+    "opens": {
+      "v": 1,
+      "kind": "withdraw",
+      "cards": [
+        {
+          "cardId": "card-41d6e0b2-export-retries",
+          "pushes": [
+            "Zr5dK2mWq8Tc"
+          ]
+        }
+      ]
+    }
   }
 }

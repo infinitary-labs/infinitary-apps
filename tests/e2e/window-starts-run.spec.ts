@@ -8,12 +8,17 @@ import { STOPPED_RUN_WAIT_MS } from "../../src/core/helper/lock";
 import { HOST_CARD_PRIORITY } from "../../src/core/orchestrator/hostCards";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { SAVED_DATA_REFUSAL_TITLE } from "../../src/core/storage/savedDataCompatibility";
 import { LET_GO_JOB_ARG, START_HERE_ARG } from "../../src/main/besideRun";
 import { RUN_MARKER, RunMarkerSchema, windowProfileDir } from "../../src/main/runCommand";
+import { TOLD_THE_PERSON } from "../../src/main/runReopen";
 import { COMMAND_STOP_WORDS } from "../../src/renderer/src/settings/commandStopWords";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { COMMAND_NOTICE_WORDS } from "../../src/shared/commandNotice";
+import { setCurrentLanguage } from "../../src/shared/i18n/current";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { claimedPort } from "../helpers/claimedPort";
+import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedMockModelCatalog } from "./accountFixtures";
 import {
@@ -39,6 +44,7 @@ import {
 } from "./serviceManagerStandIn";
 import { settingRow, settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -617,6 +623,122 @@ function profileHolder(dir: string): number {
  * Completion: the held step still open after Quit and after the reopen, the
  * task's state, and the report once the step is let go.
  */
+// The review of INF-5409: Start it here lets go of the agent's job only once its window opens its own
+// first mate on the folder. On saved data from a newer version it opens nothing there, so the job
+// its window registered is asked nothing and stays as it was.
+test("Start it here on saved data from a newer version asks the background job nothing", async () => {
+  test.setTimeout(240_000);
+  const provider = await startMockProvider();
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    standIn = serviceManagerStandIn(homeDir);
+    const env = { ...standIn.env, INFINITARY_WINDOW_STARTS_RUN: "1" };
+
+    // Section: the window registers the job, which starts the command; the window quits and the
+    // command is stopped through its supervisor, leaving the job registered.
+    let opened = await launchApp({ userDataDir, homeDir, env });
+    let first: number;
+    try {
+      await showCard(opened.page, CARD_TITLE);
+      first = commandPid(userDataDir);
+    } finally {
+      await opened.close();
+    }
+    expect(await standIn.signal(LABEL, "SIGTERM", first)).toBe("sent");
+    await expect.poll(() => standIn?.running(LABEL), { timeout: 60_000 }).toBe(false);
+    await expect.poll(() => existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
+
+    // Section: Start it here, letting go of the job, on saved data a newer version wrote.
+    const db = openDatabase(userDataDir);
+    recordNewerMigration(db);
+    db.close();
+    const managerAsks = standIn.asks();
+    opened = await launchApp({
+      userDataDir,
+      homeDir,
+      env,
+      args: [START_HERE_ARG, LET_GO_JOB_ARG],
+      shell: false,
+    });
+    try {
+      await expect(
+        opened.page.getByRole("heading", { name: SAVED_DATA_REFUSAL_TITLE }),
+      ).toBeVisible();
+    } finally {
+      await opened.close();
+    }
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first]);
+  } finally {
+    await provider.close();
+  }
+});
+
+// The review of INF-5409: a launch refused the folder's lock by a window from before windows
+// answered a launch tells it by what it runs as and ends, starting nothing. On a Mac it asks that
+// window once to reopen and, with no window's answer to confirm it, tells the person in their
+// language to click Infinitary in the Dock; a check's hidden launch says those words in its output
+// instead of showing them. The older window keeps the folder and its first mate. Only a Mac has a
+// Dock to name; elsewhere the launch quits at once, as for any window.
+test("a launch refused by a window that answers no launch ends, telling the person where it is", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
+  test.skip(process.platform !== "darwin", "only a Mac has a Dock to name");
+  test.setTimeout(180_000);
+  const provider = await startMockProvider();
+  let launch: ReturnType<typeof spawn> | null = null;
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    const older = await launchApp({
+      userDataDir,
+      homeDir,
+      env: { INFINITARY_ANSWERS_NO_LAUNCH: "1" },
+    });
+    try {
+      await showCard(older.page, CARD_TITLE);
+      launch = spawn(
+        electronPath as unknown as string,
+        [builtAppDir(), `--user-data-dir=${userDataDir}`],
+        {
+          env: {
+            ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+            INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+            INFINITARY_LANGUAGE: "de",
+          },
+          cwd: scratchDir("infinitary-window-starts-run-cwd-"),
+        },
+      );
+      let said = "";
+      launch.stdout?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      launch.stderr?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      const started = launch;
+      const code = await new Promise<number | null>((resolve) =>
+        started.once("exit", (exitCode) => resolve(exitCode)),
+      );
+      expect(code, said).toBe(0);
+      expect(said).toContain("[app] the launch found the folder held by a window");
+      setCurrentLanguage("de");
+      const dock = `${TOLD_THE_PERSON} ${m.dialogOpenInDock()} ${m.dialogOpenInDockDetail()}`;
+      setCurrentLanguage("en");
+      expect(said).toContain(dock);
+      expect(older.app.process().exitCode).toBeNull();
+      expect(profileHolder(userDataDir)).toBe(older.app.process().pid);
+      await showCard(older.page, CARD_TITLE);
+    } finally {
+      await older.close();
+    }
+  } finally {
+    if (launch && launch.exitCode === null && launch.signalCode === null) launch.kill("SIGKILL");
+    await provider.close();
+  }
+});
+
 test("a task keeps running while the window quits, and the window opened again finds it", async () => {
   test.setTimeout(240_000);
   const provider = await startMockProvider({ scenarios: [heldMoveTurn] });

@@ -390,7 +390,18 @@ test("the Windows installer installs for this person, offers Git, starts the com
     // mate: a command it started then could not have found Git.
     expect(runProcesses()).toEqual([]);
     expect(runTask(label)).toBe(null);
-    await closeWindow(await windowOpened());
+    const ownWindow = await windowOpened();
+    // A second launch while that window holds the data folder's own lock (the review of INF-5409):
+    // refused Electron's lock on this PC, it asks the window to answer through the lock itself,
+    // and the window's answer ends it, starting no command and no second window.
+    const refused = spawn(executable, [], { stdio: "ignore" });
+    expect(
+      await new Promise<number | null>((resolve) => refused.once("exit", (code) => resolve(code))),
+    ).toBe(0);
+    expect(topAppProcesses().map((app) => app.pid)).toEqual([ownWindow]);
+    expect(runProcesses()).toEqual([]);
+    expect(runTask(label)).toBe(null);
+    await closeWindow(ownWindow);
 
     // Opened again from the Start menu, the window registers the run's task,
     // its sign-in trigger off until Start at login turns it on, and asks

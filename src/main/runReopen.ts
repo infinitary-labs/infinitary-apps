@@ -67,6 +67,13 @@ export function openWindowOnReopen(options: {
   });
 }
 
+/**
+ * What a check's hidden launch says in its output before a word it would show the person, the
+ * word's own message and detail after it: a launch refused the folder's lock shows its words to no
+ * one there (docs/run.md, "Opened while it runs").
+ */
+export const TOLD_THE_PERSON = "[app] told the person:";
+
 /** macOS's own open, asking the running app at `bundle` to reopen as a click in the Dock does; whether macOS took it. */
 export function askReopen(bundle: string): Promise<boolean> {
   return new Promise((done) =>
@@ -84,24 +91,27 @@ export function askReopen(bundle: string): Promise<boolean> {
  * ask had an answer, told only by what it runs as (`holderIsWindow`), on a
  * Mac (docs/run.md, "Opened while it runs"): that older window brings itself
  * forward on the ask while it has a window, but one whose last window was
- * closed keeps running in the Dock and opens nothing. The launch asks it
- * once to reopen, as a click in the Dock does, through macOS's own open
- * (`askReopen`), which every version opens its window on. `asked` once macOS
- * took the ask; `gone` where the window ended meanwhile, so nothing is
- * asked and the folder may be free; `unconfirmed` where it cannot be asked,
- * macOS refused it, or it reached this launch instead (`reachedSelf`), for
- * the launch to tell the person to click Infinitary in the Dock.
+ * closed keeps running in the Dock and opens nothing. The launch asks the
+ * holder it read once to reopen, as a click in the Dock does, through macOS's
+ * own open (`askReopen`), which every version opens its window on. macOS
+ * taking the ask confirms nothing of a window, so only a window's answer
+ * confirms it (`confirmed`); `gone` where that holder no longer holds the
+ * lock, so nothing is asked and the folder may be free; `unconfirmed`
+ * otherwise, including where it cannot be asked, macOS refused it, or it
+ * reached this launch instead (`reachedSelf`), for the launch to tell the
+ * person to click Infinitary in the Dock.
  */
 export async function reopenOlderWindow(options: {
   bundle: string | null;
   holderAlive: () => boolean;
   reachedSelf: () => boolean;
+  answered: () => boolean;
   ask?: (bundle: string) => Promise<boolean>;
-}): Promise<"asked" | "gone" | "unconfirmed"> {
+}): Promise<"confirmed" | "gone" | "unconfirmed"> {
   if (!options.holderAlive()) return "gone";
   if (options.bundle === null) return "unconfirmed";
   const taken = await (options.ask ?? askReopen)(options.bundle);
-  return taken && !options.reachedSelf() ? "asked" : "unconfirmed";
+  return taken && !options.reachedSelf() && options.answered() ? "confirmed" : "unconfirmed";
 }
 
 /**
@@ -110,7 +120,7 @@ export async function reopenOlderWindow(options: {
  * holder was read, and so does the person's word to leave a holder that
  * showed nothing open (`left`). A window told only by what it runs as, on a
  * Mac, is asked once to reopen (`reopenOlderWindow`), and the person is told
- * to click it in the Dock where that is not confirmed. The launch starts
+ * to click it in the Dock unless a window's answer confirms it. The launch starts
  * again beside a run, on a free folder, or where that window ended
  * meanwhile, and quits either way. The holder's kind, for the launch's log.
  */
@@ -118,7 +128,7 @@ export async function endRefusedLaunch(options: {
   found: "run" | "free" | "window" | "left";
   answered: boolean;
   platform: string;
-  reopen: () => Promise<"asked" | "gone" | "unconfirmed">;
+  reopen: () => Promise<"confirmed" | "gone" | "unconfirmed">;
   tellDock: () => Promise<void>;
   relaunch: () => void;
   quit: () => void;

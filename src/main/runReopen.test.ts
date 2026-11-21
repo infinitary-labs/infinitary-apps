@@ -80,16 +80,29 @@ describe("a launch beside an older Mac window", () => {
     };
   };
 
-  it("asks the window once to reopen as the Dock does", async () => {
+  // The review of INF-5409: macOS taking the ask confirms no window, so only a window's answer does.
+  it("asks the window once to reopen as the Dock does, confirmed only by a window's answer", async () => {
     const macos = asker(true);
     const outcome = await reopenOlderWindow({
       bundle,
       holderAlive: () => true,
       reachedSelf: () => false,
+      answered: () => false,
       ask: macos.ask,
     });
-    expect(outcome).toBe("asked");
+    expect(outcome).toBe("unconfirmed");
     expect(macos.asked).toEqual(["/Applications/Infinitary.app"]);
+    const answering = asker(true);
+    expect(
+      await reopenOlderWindow({
+        bundle,
+        holderAlive: () => true,
+        reachedSelf: () => false,
+        answered: () => answering.asked.length > 0,
+        ask: answering.ask,
+      }),
+    ).toBe("confirmed");
+    expect(answering.asked).toHaveLength(1);
   });
 
   it("is unconfirmed where macOS refuses, the reopen reaches the launch itself, or there is no app to ask", async () => {
@@ -99,6 +112,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => true,
         reachedSelf: () => false,
+        answered: () => true,
         ask: refused.ask,
       }),
     ).toBe("unconfirmed");
@@ -109,6 +123,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => true,
         reachedSelf: () => true,
+        answered: () => true,
         ask: self.ask,
       }),
     ).toBe("unconfirmed");
@@ -118,6 +133,7 @@ describe("a launch beside an older Mac window", () => {
         bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
         holderAlive: () => true,
         reachedSelf: () => false,
+        answered: () => true,
         ask: none.ask,
       }),
     ).toBe("unconfirmed");
@@ -131,6 +147,7 @@ describe("a launch beside an older Mac window", () => {
         bundle,
         holderAlive: () => false,
         reachedSelf: () => false,
+        answered: () => false,
         ask: macos.ask,
       }),
     ).toBe("gone");
@@ -139,7 +156,8 @@ describe("a launch beside an older Mac window", () => {
   // The review of INF-5409: the whole handoff to an older window that answers nothing, whose last
   // window was closed, so the launch's ask opened nothing. The launch tells it by what it runs as,
   // asks it once to reopen through macOS's open, which reaches that window's own reopen handler,
-  // and ends without starting again; refused, the person is told to click it in the Dock.
+  // and ends without starting again; with no window's answer to confirm it, the person is told to
+  // click it in the Dock.
   it("hands a launch to an older window with no window open, which reopens it, and ends", async () => {
     const olderWindow = (opensOnReopen: boolean) => {
       const events = new EventEmitter();
@@ -183,6 +201,7 @@ describe("a launch beside an older Mac window", () => {
             bundle,
             holderAlive: () => alive,
             reachedSelf: () => false,
+            answered: () => false,
             ask: older.ask,
           }),
         tellDock: async () => {
@@ -195,7 +214,10 @@ describe("a launch beside an older Mac window", () => {
     };
 
     const reopening = olderWindow(true);
-    expect(await refusedLaunch(reopening)).toEqual({ kind: "window", ended: ["quit"] });
+    expect(await refusedLaunch(reopening)).toEqual({
+      kind: "window",
+      ended: ["told to click it in the Dock", "quit"],
+    });
     expect(reopening.windows).toEqual(["window"]);
 
     const refusing = olderWindow(false);
@@ -223,7 +245,7 @@ describe("a launch beside an older Mac window", () => {
         platform: "darwin",
         reopen: async () => {
           ended.push("asked to reopen");
-          return "asked";
+          return "confirmed";
         },
         tellDock: async () => {
           ended.push("told to click it in the Dock");

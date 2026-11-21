@@ -639,12 +639,15 @@ describe("a window opened beside a run", () => {
   // its own from before it asks for the lock until it ends, so a window launch refused the lock
   // waits on a command that has not noted itself. A holder with no such pipe is not known, since a
   // command from before that pipe holds none either: it is waited for, never taken for a window,
-  // until it answers, notes itself or lets the lock go. A pipe that goes while the lock stays held
-  // is a holder that changed unseen, asked once. Read through a real local socket.
+  // until it answers, notes itself or lets the lock go, and one that let it go after showing nothing
+  // is the person's to judge. A pipe that goes while the lock stays held is a holder that changed
+  // unseen, asked once. Read through a real local socket.
   it("tells a command on an unnamed lock by the pipe it holds, and takes no pipe for nothing known", async () => {
     const pipe = join(socketScratchDir("inf-pipe-"), "run.sock");
     expect(await commandPipeHeld(pipe)).toBe(false);
-    const look = (shows: { running?: () => boolean; answered?: () => boolean } = {}) => {
+    const look = (
+      shows: { running?: () => boolean; answered?: () => boolean; leavesAfterRead?: boolean } = {},
+    ) => {
       const asks: number[] = [];
       const reads: number[] = [];
       const unknowns: number[] = [];
@@ -654,9 +657,15 @@ describe("a window opened beside a run", () => {
         answered: shows.answered ?? (() => false),
         holder: () => holder,
         asked: undefined,
-        windowHolder: (named) => {
+        windowHolder: async (named) => {
           reads.push(Date.now());
-          return holderIsWindow(named, { commandPipe: () => commandPipeHeld(pipe) });
+          const shown = await holderIsWindow(named, { commandPipe: () => commandPipeHeld(pipe) });
+          // The holder lets the lock go once this read is taken, before the next look.
+          if (shows.leavesAfterRead)
+            setTimeout(() => {
+              holder = null;
+            }, 0);
+          return shown;
         },
         lockFree: () => {
           asks.push(Date.now());
@@ -711,6 +720,15 @@ describe("a window opened beside a run", () => {
     silent.leave();
     expect(await silent.kind).toBe("free");
     expect(silent.asks).toHaveLength(1);
+
+    // One that showed nothing and lets the lock go before its second read, as an older window the
+    // person quit: the launch is told before it acts on the folder free, as for one read twice.
+    const early = look({ leavesAfterRead: true });
+    let unknownsAtFree = -1;
+    void early.kind.then(() => (unknownsAtFree = early.unknowns.length));
+    expect(await early.kind).toBe("free");
+    expect(unknownsAtFree).toBe(1);
+    expect(early.reads).toHaveLength(1);
 
     // The pipe's name follows the folder, whatever its letters' case.
     expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));

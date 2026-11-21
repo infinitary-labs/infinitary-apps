@@ -644,7 +644,8 @@ export async function lockHolderKind(options: {
   everyMs?: number;
   /**
    * Once, when a holder read again still shows nothing, as an older window on a Windows PC, which
-   * answers nothing and holds no pipe: the launch may ask the person what to do when it closes.
+   * answers nothing and holds no pipe, or when one that showed nothing let the lock go before its
+   * second read: the launch may ask the person what to do when it closes, before acting on free.
    */
   onUnknown?: () => void;
 }): Promise<"run" | "free" | "window"> {
@@ -662,10 +663,17 @@ export async function lockHolderKind(options: {
     if (holder !== seen || holder === null) {
       // A holder the launch's ask did not reach, or the lock let go: asked once, before anything
       // else, so it brings its window forward if it is one.
+      // A holder that showed nothing and let the lock go is the person's to judge as one read
+      // twice is: an older window they quit on purpose and a command that ended look the same.
+      const unread = shown === null && read !== null;
       seen = holder;
       read = null;
       shown = undefined;
       const kind = ask();
+      if (kind === "free" && unread && !unknownTold) {
+        unknownTold = true;
+        options.onUnknown?.();
+      }
       if (kind) return kind;
     } else if (holder !== read || Date.now() >= readAgain) {
       const window = await options.windowHolder(holder);

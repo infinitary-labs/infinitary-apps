@@ -182,6 +182,26 @@ test("a run on saved data from a newer version ends with its refusal and recover
   expect(manager.asks()).toEqual([]);
 });
 
+// The review of INF-5409: a stop asked while a run's first mate starts is the run's end. The run
+// stops once that start is done with, as a quit stops it, keeps the stop as its reason, and ends
+// with 0; it starts no first mate after the stop. Held at the core's start by a development file.
+test("a stop signal while the first mate starts ends the run cleanly, with the stop as its reason", async () => {
+  const userDataDir = scratchDir("infinitary-run-command-");
+  const hold = join(scratchDir("infinitary-run-command-hold-"), "hold");
+  // e2e-fixture: input -- holds the run's core start back until the stop is asked
+  writeFileSync(hold, "");
+  const ran = run({ ...(await runEnv(userDataDir)), INFINITARY_RUN_START_HOLD: hold });
+  await expect.poll(() => existsSync(`${hold}.reached`)).toBe(true);
+  ran.child.kill("SIGTERM");
+  rmSync(hold);
+  expect(await ran.exited, ran.error()).toBe(0);
+  expect(ran.lines()).toEqual([RUN_WORDS.stopped]);
+  expect(
+    JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
+  ).toMatchObject({ reason: "signal", exitCode: 0 });
+  expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
+});
+
 test("words after run say how to use it and exit 2", async () => {
   const ran = run(await runEnv(scratchDir("infinitary-run-command-")), ["--anything"]);
   expect(await ran.exited).toBe(2);

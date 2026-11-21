@@ -192,6 +192,21 @@
 "accountsCustomApiUseFix" = "%1$@ verwenden";
 "accountsCustomApiUseForFirstMate" = "%1$@ für deinen ersten Offizier verwenden";
 "accountsCustomApiUseModel" = "%1$@ verwenden";
+"accountsSavedResetCodexStopped" = "Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.";
+"accountsSavedResetNoCodex" = "Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex %1$@ oder neuer. Installiere Codex oder löse den Reset auf %2$@ ein.";
+"accountsSavedResetNoneLeft" = "%1$@ hat keinen gespeicherten Reset mehr zum Einlösen.";
+"accountsSavedResetNothing" = "%1$@ hat kein verbrauchtes Kontingent, das ein gespeicherter Reset abdeckt, daher wurde kein Reset eingelöst.";
+"accountsSavedResetOldCodex" = "Dieser Computer hat Codex %3$@; zum Einlösen eines gespeicherten Resets braucht es %1$@ oder neuer. Aktualisiere Codex oder löse den Reset auf %2$@ ein.";
+"accountsSavedResetOtherAccount" = "Codex hat sich bei einem anderen ChatGPT-Konto als %1$@ angemeldet, daher hat Infinitary keinen Reset eingelöst und Codex abgemeldet. Versuche es noch einmal und melde dich beim selben Konto an.";
+"accountsSavedResetPasteAgain" = "Diese Adresse enthält keinen Anmeldecode. Füge die ganze Adresse ein, bei der die Seite gelandet ist.";
+"accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
+"accountsSavedResetPastePrompt" = "Wenn dein Browser auf einem anderen Computer ist, füge die Adresse ein, bei der seine Seite nach der Anmeldung gelandet ist.";
+"accountsSavedResetSignInFailed" = "Codex konnte sich nicht anmelden.";
+"accountsSavedResetSignInFirst" = "Codex ist noch nicht bei %1$@ angemeldet, daher wurde kein Reset eingelöst. Wähle in den Einstellungen bei der Zeile des Kontos „Gespeicherten Reset einlösen“, um Codex anzumelden.";
+"accountsSavedResetSignInNotice" = "Melde dich im Browser beim ChatGPT-Konto von %1$@ an, damit Codex seinen gespeicherten Reset einlösen kann.";
+"accountsSavedResetUnclear" = "Codex hat nicht gesagt, ob ein Reset von %1$@ eingelöst wurde. Ein neuer Versuch fragt nach demselben Reset und löst nie einen zweiten ein.";
+"accountsSavedResetUnverified" = "Infinitary konnte nicht bestätigen, dass Codex beim selben ChatGPT-Konto wie %1$@ angemeldet ist, daher wurde kein Reset eingelöst.";
+"accountsSavedResetUsedChecking" = "Einen gespeicherten Reset von %1$@ eingelöst. Infinitary prüft sein Kontingent erneut.";
 "activityPanelLinesLabel" = "Aktivitätszeilen";
 "attachCancelled" = "%1$@ abgebrochen";
 "automationEventsSkipped" = "Übersprungene Ereignisse";
@@ -343,6 +358,8 @@
 "cardRevisionLinksUnavailable" = "Änderungslinks nicht verfügbar";
 "cardRevisionMore" = "%1$@ weitere";
 "cardRevisionShowFewer" = "Weniger anzeigen";
+"cardSavedResetCrewWaits" = "Crew-Arbeit wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.";
+"cardSavedResetCrewWaitsThere" = "Crew-Arbeit %1$@ wechselt zu einem schwächeren Modell oder wartet, bis sein Kontingent zurückgesetzt wird, außer du löst einen gespeicherten Reset ein.";
 "cardSavedResetsOpenPage" = "Nutzungsseite auf %1$@ öffnen";
 "cardSinceSeenApproved" = "Du hast eine frühere Version genehmigt · %1$@";
 "cardSinceSeenChose" = "Du hast „%1$@“ gewählt · %2$@";
@@ -380,6 +397,7 @@
 "cardThreadWrittenAfterClose" = "Geschrieben, nachdem die Karte geschlossen wurde";
 "cardThreadWrittenBy" = "Geschrieben von %1$@";
 "cardThreadWrittenByAfterClose" = "Geschrieben von %1$@, nachdem die Karte geschlossen wurde";
+"cardUseSavedReset" = "Gespeicherten Reset einlösen";
 "closeYourFirstMate" = "Dein erster Offizier: „%1$@“";
 "closedDropped" = "%1$@ aufgegeben";
 "closedFinished" = "%1$@ abgeschlossen";
@@ -3085,6 +3103,8 @@
 "settingsSubscriptionsMenuResume" = "Fortsetzen";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Kein Guthaben mehr ausgeben";
 "settingsSubscriptionsMenuStopPreferring" = "Nicht mehr für Crew-Arbeit bevorzugen";
+"settingsSubscriptionsMenuUseReset" = "Gespeicherten Reset einlösen";
+"settingsSubscriptionsMenuUseResetDetail" = "Codex meldet sich an und löst den ein, der zuerst abläuft";
 "settingsSubscriptionsNoReader" = "Infinitary liest das Kontingent dieses Anbieters nicht.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ gesetzt · Infinitary liest das Kontingent dieses Anbieters nicht.";
 "settingsSubscriptionsNotChosenYet" = "Noch nicht gewählt";

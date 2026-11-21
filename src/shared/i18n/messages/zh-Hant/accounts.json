@@ -195,5 +195,24 @@
   "accountsCustomApiUnreachable": "連不上 {host}。請確認它正在執行，而且你在它所在的網路上。",
   "accountsCustomApiUseFix": "使用 {address}",
   "accountsCustomApiUseForFirstMate": "讓你的大副使用 {model}",
-  "accountsCustomApiUseModel": "使用 {model}"
+  "accountsCustomApiUseModel": "使用 {model}",
+  "accountsSavedResetCodexStopped": "Codex 在使用任何內容之前停止了回應，因此沒有使用已儲存的重設。請再試一次。",
+  "accountsSavedResetNoCodex": "要在 Infinitary 中使用已儲存的重設，這台電腦需要 Codex {floor} 或更新版本。請安裝 Codex，或在 {site} 使用重設。",
+  "accountsSavedResetNoneLeft": "{account} 沒有剩餘可用的已儲存的重設。",
+  "accountsSavedResetNothing": "{account} 沒有已用盡、可由已儲存的重設恢復的額度，因此沒有使用重設。",
+  "accountsSavedResetOldCodex": "這台電腦上的 Codex 是 {version}，使用已儲存的重設需要 {floor} 或更新版本。請更新 Codex，或在 {site} 使用重設。",
+  "accountsSavedResetOtherAccount": "Codex 登入的 ChatGPT 帳號與 {account} 不同，因此 Infinitary 沒有使用重設，並已讓 Codex 登出。請用同一個帳號再試一次。",
+  "accountsSavedResetPasteAgain": "該網址中沒有登入代碼。請貼上頁面最後停留的完整網址。",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "如果瀏覽器在另一台電腦上，請貼上登入後頁面最後停留的網址。",
+  "accountsSavedResetSignInFailed": "Codex 無法登入。",
+  "accountsSavedResetSignInFirst": "Codex 尚未登入 {account}，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 登入。",
+  "accountsSavedResetSignInNotice": "請在瀏覽器中登入 {account} 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。",
+  "accountsSavedResetUnclear": "Codex 沒有說明 {account} 的重設是否已使用。再試一次只會查詢同一次重設，絕不會使用第二次。",
+  "accountsSavedResetUnverified": "Infinitary 無法確認 Codex 登入的是與 {account} 相同的 ChatGPT 帳號，因此沒有使用重設。",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "other": "已使用 {account} 的一次已儲存的重設，還剩 {count} 次。"
+  },
+  "accountsSavedResetUsedChecking": "已使用 {account} 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。"
 }

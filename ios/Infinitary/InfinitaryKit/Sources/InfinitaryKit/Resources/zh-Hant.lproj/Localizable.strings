@@ -192,6 +192,21 @@
 "accountsCustomApiUseFix" = "使用 %1$@";
 "accountsCustomApiUseForFirstMate" = "讓你的大副使用 %1$@";
 "accountsCustomApiUseModel" = "使用 %1$@";
+"accountsSavedResetCodexStopped" = "Codex 在使用任何內容之前停止了回應，因此沒有使用已儲存的重設。請再試一次。";
+"accountsSavedResetNoCodex" = "要在 Infinitary 中使用已儲存的重設，這台電腦需要 Codex %1$@ 或更新版本。請安裝 Codex，或在 %2$@ 使用重設。";
+"accountsSavedResetNoneLeft" = "%1$@ 沒有剩餘可用的已儲存的重設。";
+"accountsSavedResetNothing" = "%1$@ 沒有已用盡、可由已儲存的重設恢復的額度，因此沒有使用重設。";
+"accountsSavedResetOldCodex" = "這台電腦上的 Codex 是 %3$@，使用已儲存的重設需要 %1$@ 或更新版本。請更新 Codex，或在 %2$@ 使用重設。";
+"accountsSavedResetOtherAccount" = "Codex 登入的 ChatGPT 帳號與 %1$@ 不同，因此 Infinitary 沒有使用重設，並已讓 Codex 登出。請用同一個帳號再試一次。";
+"accountsSavedResetPasteAgain" = "該網址中沒有登入代碼。請貼上頁面最後停留的完整網址。";
+"accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
+"accountsSavedResetPastePrompt" = "如果瀏覽器在另一台電腦上，請貼上登入後頁面最後停留的網址。";
+"accountsSavedResetSignInFailed" = "Codex 無法登入。";
+"accountsSavedResetSignInFirst" = "Codex 尚未登入 %1$@，因此沒有使用重設。請在設定中該帳號那一列選擇「使用已儲存的重設」，讓 Codex 登入。";
+"accountsSavedResetSignInNotice" = "請在瀏覽器中登入 %1$@ 的 ChatGPT 帳號，以便 Codex 使用它已儲存的重設。";
+"accountsSavedResetUnclear" = "Codex 沒有說明 %1$@ 的重設是否已使用。再試一次只會查詢同一次重設，絕不會使用第二次。";
+"accountsSavedResetUnverified" = "Infinitary 無法確認 Codex 登入的是與 %1$@ 相同的 ChatGPT 帳號，因此沒有使用重設。";
+"accountsSavedResetUsedChecking" = "已使用 %1$@ 的一次已儲存的重設。Infinitary 正在重新檢查它的額度。";
 "activityPanelLinesLabel" = "動態項目";
 "attachCancelled" = "已取消 %1$@";
 "automationEventsSkipped" = "已略過的事件";
@@ -343,6 +358,8 @@
 "cardRevisionLinksUnavailable" = "無法使用變更連結";
 "cardRevisionMore" = "還有 %1$@ 個";
 "cardRevisionShowFewer" = "顯示較少";
+"cardSavedResetCrewWaits" = "除非你使用一次已儲存的重設，否則船員的工作會改用較弱的模型，或等到額度重設。";
+"cardSavedResetCrewWaitsThere" = "除非你使用一次已儲存的重設，否則%1$@的船員工作會改用較弱的模型，或等到額度重設。";
 "cardSavedResetsOpenPage" = "在 %1$@ 開啟用量頁面";
 "cardSinceSeenApproved" = "你核准了較早的版本 · %1$@";
 "cardSinceSeenChose" = "你選擇了「%1$@」 · %2$@";
@@ -380,6 +397,7 @@
 "cardThreadWrittenAfterClose" = "於卡片關閉後撰寫";
 "cardThreadWrittenBy" = "由 %1$@ 撰寫";
 "cardThreadWrittenByAfterClose" = "由 %1$@ 撰寫，於卡片關閉後";
+"cardUseSavedReset" = "使用已儲存的重設";
 "closeYourFirstMate" = "你的大副：「%1$@」";
 "closedDropped" = "%1$@ 已放棄";
 "closedFinished" = "%1$@ 已完成";
@@ -3085,6 +3103,8 @@
 "settingsSubscriptionsMenuResume" = "繼續";
 "settingsSubscriptionsMenuStopKeepingGoing" = "停止花費點數";
 "settingsSubscriptionsMenuStopPreferring" = "不再優先用於船員工作";
+"settingsSubscriptionsMenuUseReset" = "使用已儲存的重設";
+"settingsSubscriptionsMenuUseResetDetail" = "Codex 登入後使用最先到期的那一次";
 "settingsSubscriptionsNoReader" = "Infinitary 不會讀取這個供應商的方案額度。";
 "settingsSubscriptionsNoReaderKey" = "已設定 %1$@ · Infinitary 不會讀取這個供應商的方案額度。";
 "settingsSubscriptionsNotChosenYet" = "尚未選擇";

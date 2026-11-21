@@ -1145,6 +1145,8 @@
   "settingsSubscriptionsMenuResume": "再開",
   "settingsSubscriptionsMenuStopKeepingGoing": "クレジットの使用をやめる",
   "settingsSubscriptionsMenuStopPreferring": "乗組員の作業での優先をやめる",
+  "settingsSubscriptionsMenuUseReset": "保存済みのリセットを使う",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex がサインインし、期限が最も近いものを使います",
   "settingsSubscriptionsNoReader": "Infinitary はこのプロバイダーの利用枠を読み取りません。",
   "settingsSubscriptionsNoReaderKey": "{apiKey} 設定済み · Infinitary はこのプロバイダーの利用枠を読み取りません。",
   "settingsSubscriptionsNotChosenYet": "未選択",

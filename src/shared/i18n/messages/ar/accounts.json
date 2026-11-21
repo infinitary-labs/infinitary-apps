@@ -200,5 +200,29 @@
   "accountsCustomApiUnreachable": "تعذّر الوصول إلى {host}. تحقّق من أنه يعمل وأنك على شبكته.",
   "accountsCustomApiUseFix": "استخدام {address}",
   "accountsCustomApiUseForFirstMate": "استخدام {model} لنائب القبطان",
-  "accountsCustomApiUseModel": "استخدام {model}"
+  "accountsCustomApiUseModel": "استخدام {model}",
+  "accountsSavedResetCodexStopped": "توقف Codex عن الرد قبل أن يستخدم أي شيء، لذلك لم تُستخدم أي إعادة تعيين محفوظة. حاول مرة أخرى.",
+  "accountsSavedResetNoCodex": "لاستخدام إعادة تعيين محفوظة من Infinitary يحتاج هذا الحاسوب إلى Codex {floor} أو أحدث. ثبّت Codex، أو استخدم إعادة التعيين على {site}.",
+  "accountsSavedResetNoneLeft": "لم يتبقَّ لدى {account} أي إعادة تعيين محفوظة لاستخدامها.",
+  "accountsSavedResetNothing": "ليس لدى {account} رصيد مستنفد تغطيه إعادة تعيين محفوظة، لذا لم تُستخدم أي إعادة تعيين.",
+  "accountsSavedResetOldCodex": "على هذا الحاسوب Codex {version}، واستخدام إعادة تعيين محفوظة يحتاج إلى {floor} أو أحدث. حدّث Codex، أو استخدم إعادة التعيين على {site}.",
+  "accountsSavedResetOtherAccount": "سجّل Codex الدخول إلى حساب ChatGPT مختلف عن {account}، لذا لم يستخدم Infinitary أي إعادة تعيين وسجّل خروج Codex. حاول مرة أخرى بالحساب نفسه.",
+  "accountsSavedResetPasteAgain": "لا يحتوي هذا العنوان على رمز تسجيل الدخول. الصق العنوان كاملًا الذي انتهت إليه الصفحة.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "إذا كان متصفحك على حاسوب آخر، فالصق العنوان الذي انتهت إليه صفحته بعد تسجيل الدخول.",
+  "accountsSavedResetSignInFailed": "تعذّر على Codex تسجيل الدخول.",
+  "accountsSavedResetSignInFirst": "لم يسجّل Codex الدخول إلى {account} بعد، لذا لم تُستخدم أي إعادة تعيين. اختر «استخدم إعادة تعيين محفوظة» في صف الحساب في الإعدادات ليسجّل Codex الدخول.",
+  "accountsSavedResetSignInNotice": "سجّل الدخول إلى حساب ChatGPT الخاص بـ {account} في متصفحك، ليتمكن Codex من استخدام إعادة التعيين المحفوظة.",
+  "accountsSavedResetUnclear": "لم يوضّح Codex ما إذا استُخدمت إعادة تعيين لـ {account}. المحاولة مرة أخرى تسأل عن إعادة التعيين نفسها ولا تستخدم ثانية أبدًا.",
+  "accountsSavedResetUnverified": "تعذّر على Infinitary التأكد من أن Codex سجّل الدخول إلى حساب ChatGPT نفسه الخاص بـ {account}، لذا لم تُستخدم أي إعادة تعيين.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "zero": "استُخدمت إعادة تعيين محفوظة لـ {account}. لم يتبقَّ أي منها.",
+    "one": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت واحدة.",
+    "two": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت اثنتان.",
+    "few": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت {count}.",
+    "many": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت {count}.",
+    "other": "استُخدمت إعادة تعيين محفوظة لـ {account}. تبقّت {count}."
+  },
+  "accountsSavedResetUsedChecking": "استُخدمت إعادة تعيين محفوظة لـ {account}. يعيد Infinitary التحقق من رصيده."
 }

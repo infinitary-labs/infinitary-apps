@@ -1189,6 +1189,8 @@
   "settingsSubscriptionsMenuResume": "Retomar",
   "settingsSubscriptionsMenuStopKeepingGoing": "Parar de gastar créditos",
   "settingsSubscriptionsMenuStopPreferring": "Deixar de preferir para o trabalho da tripulação",
+  "settingsSubscriptionsMenuUseReset": "Usar uma redefinição salva",
+  "settingsSubscriptionsMenuUseResetDetail": "O Codex faz login e usa a que vence primeiro",
   "settingsSubscriptionsNoReader": "O Infinitary não lê a franquia deste provedor.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} definida · O Infinitary não lê a franquia deste provedor.",
   "settingsSubscriptionsNotChosenYet": "Ainda não escolhida",

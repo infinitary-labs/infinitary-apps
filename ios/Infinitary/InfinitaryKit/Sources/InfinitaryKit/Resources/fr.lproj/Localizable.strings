@@ -192,6 +192,21 @@
 "accountsCustomApiUseFix" = "Utiliser %1$@";
 "accountsCustomApiUseForFirstMate" = "Utiliser %1$@ pour votre second";
 "accountsCustomApiUseModel" = "Utiliser %1$@";
+"accountsSavedResetCodexStopped" = "Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.";
+"accountsSavedResetNoCodex" = "Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex %1$@ ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur %2$@.";
+"accountsSavedResetNoneLeft" = "%1$@ n’a plus de réinitialisation enregistrée à utiliser.";
+"accountsSavedResetNothing" = "%1$@ n’a aucune allocation épuisée que couvre une réinitialisation enregistrée, donc aucune n’a été utilisée.";
+"accountsSavedResetOldCodex" = "Cet ordinateur a Codex %3$@, et utiliser une réinitialisation enregistrée demande %1$@ ou plus récent. Mettez Codex à jour, ou utilisez la réinitialisation sur %2$@.";
+"accountsSavedResetOtherAccount" = "Codex s’est connecté à un autre compte ChatGPT que %1$@, donc Infinitary n’a utilisé aucune réinitialisation et a déconnecté Codex. Réessayez en vous connectant au même compte.";
+"accountsSavedResetPasteAgain" = "Cette adresse ne contient pas de code de connexion. Collez l’adresse complète où la page s’est arrêtée.";
+"accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
+"accountsSavedResetPastePrompt" = "Si votre navigateur est sur un autre ordinateur, collez l’adresse où sa page s’est arrêtée après la connexion.";
+"accountsSavedResetSignInFailed" = "Codex n’a pas pu se connecter.";
+"accountsSavedResetSignInFirst" = "Codex n’est pas encore connecté à %1$@, donc aucune réinitialisation n’a été utilisée. Choisissez « Utiliser une réinitialisation enregistrée » sur la ligne du compte dans les réglages pour connecter Codex.";
+"accountsSavedResetSignInNotice" = "Connectez-vous au compte ChatGPT de %1$@ dans votre navigateur, pour que Codex puisse utiliser sa réinitialisation enregistrée.";
+"accountsSavedResetUnclear" = "Codex n’a pas dit si une réinitialisation de %1$@ a été utilisée. Réessayer porte sur la même réinitialisation et n’en utilise jamais une deuxième.";
+"accountsSavedResetUnverified" = "Infinitary n’a pas pu confirmer que Codex est connecté au même compte ChatGPT que %1$@, donc aucune réinitialisation n’a été utilisée.";
+"accountsSavedResetUsedChecking" = "Une réinitialisation enregistrée de %1$@ a été utilisée. Infinitary revérifie son allocation.";
 "activityPanelLinesLabel" = "Lignes d’activité";
 "attachCancelled" = "%1$@ annulé";
 "automationEventsSkipped" = "Événements ignorés";
@@ -343,6 +358,8 @@
 "cardRevisionLinksUnavailable" = "Liens de modification indisponibles";
 "cardRevisionMore" = "%1$@ de plus";
 "cardRevisionShowFewer" = "Afficher moins";
+"cardSavedResetCrewWaits" = "Le travail de l’équipage passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.";
+"cardSavedResetCrewWaitsThere" = "Le travail de l’équipage %1$@ passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.";
 "cardSavedResetsOpenPage" = "Ouvrir la page d’utilisation sur %1$@";
 "cardSinceSeenApproved" = "Vous avez approuvé une version précédente · %1$@";
 "cardSinceSeenChose" = "Vous avez choisi « %1$@ » · %2$@";
@@ -380,6 +397,7 @@
 "cardThreadWrittenAfterClose" = "Écrite après la fermeture de la carte";
 "cardThreadWrittenBy" = "Écrite par %1$@";
 "cardThreadWrittenByAfterClose" = "Écrite par %1$@, après la fermeture de la carte";
+"cardUseSavedReset" = "Utiliser une réinitialisation enregistrée";
 "closeYourFirstMate" = "Votre second : « %1$@ »";
 "closedDropped" = "%1$@ écartée";
 "closedFinished" = "%1$@ terminée";
@@ -3085,6 +3103,8 @@
 "settingsSubscriptionsMenuResume" = "Reprendre";
 "settingsSubscriptionsMenuStopKeepingGoing" = "Arrêter de dépenser des crédits";
 "settingsSubscriptionsMenuStopPreferring" = "Ne plus privilégier pour le travail de l’équipage";
+"settingsSubscriptionsMenuUseReset" = "Utiliser une réinitialisation enregistrée";
+"settingsSubscriptionsMenuUseResetDetail" = "Codex se connecte et utilise celle qui expire en premier";
 "settingsSubscriptionsNoReader" = "Infinitary ne lit pas l’allocation de ce fournisseur.";
 "settingsSubscriptionsNoReaderKey" = "%1$@ définie · Infinitary ne lit pas l’allocation de ce fournisseur.";
 "settingsSubscriptionsNotChosenYet" = "Pas encore choisi";

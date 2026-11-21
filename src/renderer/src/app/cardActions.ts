@@ -388,6 +388,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
             ...(effect.restoreAccountId
               ? { pendingRestoreAccountId: effect.restoreAccountId }
               : {}),
+            ...(effect.useSavedReset ? { pendingUseSavedReset: effect.useSavedReset } : {}),
             ...(effect.signIn ? { pendingForgeSignIn: effect.signIn } : {}),
             ...(effect.target === "devices" ? deviceArrival(effect) : {}),
             ...(effect.target === "settings" && effect.privateSite

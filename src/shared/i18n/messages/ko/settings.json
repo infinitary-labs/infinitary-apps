@@ -1139,6 +1139,8 @@
   "settingsSubscriptionsMenuResume": "재개",
   "settingsSubscriptionsMenuStopKeepingGoing": "크레딧 사용 그만하기",
   "settingsSubscriptionsMenuStopPreferring": "선원 작업에 우선 사용 그만하기",
+  "settingsSubscriptionsMenuUseReset": "저장된 재설정 사용",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex가 로그인해 가장 먼저 만료되는 재설정을 사용해요",
   "settingsSubscriptionsNoReader": "Infinitary는 이 제공자의 사용 한도를 읽지 않아요.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} 설정됨 · Infinitary는 이 제공자의 사용 한도를 읽지 않아요.",
   "settingsSubscriptionsNotChosenYet": "아직 고르지 않음",

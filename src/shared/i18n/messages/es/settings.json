@@ -1189,6 +1189,8 @@
   "settingsSubscriptionsMenuResume": "Reanudar",
   "settingsSubscriptionsMenuStopKeepingGoing": "Dejar de gastar créditos",
   "settingsSubscriptionsMenuStopPreferring": "Dejar de preferir para el trabajo de la tripulación",
+  "settingsSubscriptionsMenuUseReset": "Usar un restablecimiento guardado",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex inicia sesión y usa el que vence primero",
   "settingsSubscriptionsNoReader": "Infinitary no lee la asignación de este proveedor.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} configurada · Infinitary no lee la asignación de este proveedor.",
   "settingsSubscriptionsNotChosenYet": "Sin elegir todavía",

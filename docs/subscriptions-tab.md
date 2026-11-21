@@ -57,6 +57,10 @@ A Codex reading that says the account holds saved resets adds one more line unde
 A Claude or Codex row's menu holds "Keep going on credits", the account's switch (`docs/quota.md`, "Keep going on credits"), with "Only after every included allowance" under it; while the provider says its credits are off the item is dim and says so, such as "Extra usage is off on claude.ai".
 While the switch is on the item reads "Stop spending credits" and the credits line ends "keeps going on credits" in place of where to change it, so the line stays one line.
 The item is reached like every menu item, by Tab to the row's menu and the arrows inside it; it is a setting chosen now and then, so it adds no command.
+While a saved reset applies now, a Codex row's menu also holds "Use a saved reset", with "Codex signs in and uses the one that expires first" under it (`savedResetItem`, `docs/codex-client.md`).
+Choosing it runs the use on the row: Codex's sign-in, when it needs one, shows its link and asks for the address the browser ended on under the row as a sign-in does; a refusal stays under the row, and the feed says what the use came to.
+On a computer that runs work's own account the item is dim, with a note to update Infinitary there first, until that computer lists the `use-saved-reset` change.
+It is reached the same way and is chosen rarely, so it adds no command either; a card's Use a saved reset opens this tab and starts it on the account's row.
 An unknown runway has no verdict, while an already empty scope still reports empty now.
 `SubscriptionsTab.test.ts` owns verdict wording and boundaries; `tests/e2e/subscriptions-instruments.spec.ts` checks that the tab renders the scope projection from an isolated allowance snapshot.
 

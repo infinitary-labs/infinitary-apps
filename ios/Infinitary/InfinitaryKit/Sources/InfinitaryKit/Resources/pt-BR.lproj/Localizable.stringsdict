@@ -21,6 +21,24 @@
       <string>Este servidor lista %1$ld modelos. Escolha os que você quer usar:</string>
     </dict>
   </dict>
+  <key>accountsSavedResetUsed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Uma redefinição salva de %1$@ foi usada. Resta %2$ld.</string>
+      <key>many</key>
+      <string>Uma redefinição salva de %1$@ foi usada. Restam %2$ld.</string>
+      <key>other</key>
+      <string>Uma redefinição salva de %1$@ foi usada. Restam %2$ld.</string>
+    </dict>
+  </dict>
   <key>automationPanelActiveCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

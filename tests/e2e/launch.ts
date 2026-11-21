@@ -596,6 +596,12 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
             ),
           }
         : {}),
+      // Codex's CLI is the one the person installed too (docs/codex-client.md),
+      // and a developer's real one would spend a saved reset: every run names
+      // a path with nothing there unless the spec names its own stand-in.
+      ...(options.env?.INFINITARY_CODEX_CLI === undefined
+        ? { INFINITARY_CODEX_CLI: join(userDataDir, "no-codex-cli") }
+        : {}),
       ...options.env,
     },
   });

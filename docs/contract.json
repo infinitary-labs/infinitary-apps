@@ -10212,6 +10212,9 @@
             "accountSettings": {
               "type": "boolean"
             },
+            "savedReset": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -10388,6 +10391,27 @@
                               },
                               "accountId": {
                                 "type": "string"
+                              },
+                              "savedReset": {
+                                "type": "object",
+                                "properties": {
+                                  "outcome": {
+                                    "type": "string",
+                                    "enum": [
+                                      "used",
+                                      "nothing-to-reset",
+                                      "none-left"
+                                    ]
+                                  },
+                                  "left": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "outcome"
+                                ]
                               },
                               "error": {
                                 "type": "string"
@@ -13099,6 +13123,7 @@
                               "retry-firstmate",
                               "try-again",
                               "keep-going-on-credits",
+                              "use-saved-reset",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -13901,6 +13926,9 @@
               "restoreAccountId": {
                 "type": "string"
               },
+              "useSavedReset": {
+                "type": "string"
+              },
               "signIn": {
                 "type": "string"
               },
@@ -14543,6 +14571,7 @@
                                 "retry-firstmate",
                                 "try-again",
                                 "keep-going-on-credits",
+                                "use-saved-reset",
                                 "add-plugin",
                                 "decline-plugin",
                                 "apply-project-change",
@@ -22687,6 +22716,55 @@
         },
         "required": [
           "ok"
+        ]
+      }
+    },
+    "inf:accounts:use-saved-reset": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "deviceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "signIn": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "used",
+              "nothing-to-reset",
+              "none-left"
+            ]
+          },
+          "left": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "outcome"
         ]
       }
     },
@@ -63318,6 +63396,7 @@
                                     "retry-firstmate",
                                     "try-again",
                                     "keep-going-on-credits",
+                                    "use-saved-reset",
                                     "add-plugin",
                                     "decline-plugin",
                                     "apply-project-change",
@@ -74181,6 +74260,27 @@
                       "accountId": {
                         "type": "string"
                       },
+                      "savedReset": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "used",
+                              "nothing-to-reset",
+                              "none-left"
+                            ]
+                          },
+                          "left": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "outcome"
+                        ]
+                      },
                       "error": {
                         "type": "string"
                       }
@@ -77559,6 +77659,7 @@
                               "retry-firstmate",
                               "try-again",
                               "keep-going-on-credits",
+                              "use-saved-reset",
                               "add-plugin",
                               "decline-plugin",
                               "apply-project-change",
@@ -87074,6 +87175,9 @@
             "accountSettings": {
               "type": "boolean"
             },
+            "savedReset": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -87250,6 +87354,27 @@
                               },
                               "accountId": {
                                 "type": "string"
+                              },
+                              "savedReset": {
+                                "type": "object",
+                                "properties": {
+                                  "outcome": {
+                                    "type": "string",
+                                    "enum": [
+                                      "used",
+                                      "nothing-to-reset",
+                                      "none-left"
+                                    ]
+                                  },
+                                  "left": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "outcome"
+                                ]
                               },
                               "error": {
                                 "type": "string"
@@ -87438,6 +87563,27 @@
                   },
                   "accountId": {
                     "type": "string"
+                  },
+                  "savedReset": {
+                    "type": "object",
+                    "properties": {
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "used",
+                          "nothing-to-reset",
+                          "none-left"
+                        ]
+                      },
+                      "left": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "outcome"
+                    ]
                   },
                   "error": {
                     "type": "string"
@@ -94685,6 +94831,50 @@
               "required": [
                 "providerId",
                 "accountId"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:use-saved-reset": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "signInId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "signIn": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "signInId",
+                "accountId",
+                "signIn"
               ]
             }
           ],

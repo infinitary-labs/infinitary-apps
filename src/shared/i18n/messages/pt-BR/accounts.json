@@ -197,5 +197,26 @@
   "accountsCustomApiUnreachable": "Não foi possível acessar {host}. Verifique se ele está em execução e se você está na rede dele.",
   "accountsCustomApiUseFix": "Usar {address}",
   "accountsCustomApiUseForFirstMate": "Usar {model} para o seu imediato",
-  "accountsCustomApiUseModel": "Usar {model}"
+  "accountsCustomApiUseModel": "Usar {model}",
+  "accountsSavedResetCodexStopped": "O Codex parou de responder antes de usar qualquer coisa, então nenhuma redefinição salva foi usada. Tente de novo.",
+  "accountsSavedResetNoCodex": "Para usar uma redefinição salva pelo Infinitary, este computador precisa do Codex {floor} ou mais recente. Instale o Codex ou use a redefinição em {site}.",
+  "accountsSavedResetNoneLeft": "{account} não tem mais redefinições salvas para usar.",
+  "accountsSavedResetNothing": "{account} não tem franquia esgotada que uma redefinição salva cubra, então nenhuma foi usada.",
+  "accountsSavedResetOldCodex": "Este computador tem o Codex {version}, e usar uma redefinição salva precisa do {floor} ou mais recente. Atualize o Codex ou use a redefinição em {site}.",
+  "accountsSavedResetOtherAccount": "O Codex fez login em uma conta do ChatGPT diferente de {account}, então o Infinitary não usou nenhuma redefinição e desconectou o Codex. Tente de novo com a mesma conta.",
+  "accountsSavedResetPasteAgain": "Esse endereço não tem código de login. Cole o endereço completo em que a página parou.",
+  "accountsSavedResetPastePlaceholder": "http://localhost:1455/auth/callback?code=…",
+  "accountsSavedResetPastePrompt": "Se o navegador estiver em outro computador, cole o endereço em que a página parou depois do login.",
+  "accountsSavedResetSignInFailed": "O Codex não conseguiu fazer login.",
+  "accountsSavedResetSignInFirst": "O Codex ainda não fez login em {account}, então nenhuma redefinição foi usada. Escolha “Usar uma redefinição salva” na linha da conta nas configurações para fazer login no Codex.",
+  "accountsSavedResetSignInNotice": "Faça login na conta do ChatGPT de {account} no navegador, para o Codex poder usar a redefinição salva.",
+  "accountsSavedResetUnclear": "O Codex não disse se uma redefinição de {account} foi usada. Tentar de novo pergunta pela mesma redefinição e nunca usa uma segunda.",
+  "accountsSavedResetUnverified": "O Infinitary não conseguiu confirmar que o Codex fez login na mesma conta do ChatGPT que {account}, então nenhuma redefinição foi usada.",
+  "accountsSavedResetUsed": {
+    "plural": "count",
+    "one": "Uma redefinição salva de {account} foi usada. Resta {count}.",
+    "many": "Uma redefinição salva de {account} foi usada. Restam {count}.",
+    "other": "Uma redefinição salva de {account} foi usada. Restam {count}."
+  },
+  "accountsSavedResetUsedChecking": "Uma redefinição salva de {account} foi usada. O Infinitary está lendo a franquia de novo."
 }

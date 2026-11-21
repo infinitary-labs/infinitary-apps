@@ -179,6 +179,8 @@
   "cardRevisionLinksUnavailable": "변경 링크를 쓸 수 없음",
   "cardRevisionMore": "{count}개 더",
   "cardRevisionShowFewer": "적게 보기",
+  "cardSavedResetCrewWaits": "저장된 재설정을 사용하지 않으면 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
+  "cardSavedResetCrewWaitsThere": "저장된 재설정을 사용하지 않으면 {where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
   "cardSavedResetsNow": {
     "plural": "count",
     "other": "{account}에 지금 사용할 수 있는 저장된 재설정이 {count}개 있어 한도를 다시 채울 수 있어요."
@@ -231,5 +233,6 @@
   "cardThreadWorking": "작업 중",
   "cardThreadWrittenAfterClose": "카드가 닫힌 뒤 작성됨",
   "cardThreadWrittenBy": "{label} 작성",
-  "cardThreadWrittenByAfterClose": "{label} 작성, 카드가 닫힌 뒤"
+  "cardThreadWrittenByAfterClose": "{label} 작성, 카드가 닫힌 뒤",
+  "cardUseSavedReset": "저장된 재설정 사용"
 }

@@ -109,6 +109,12 @@
       "group": "Models and accounts"
     },
     {
+      "name": "codex",
+      "path": "src/core/codex",
+      "about": "Saved resets through the installed Codex CLI, and its sign-in for them",
+      "group": "Models and accounts"
+    },
+    {
       "name": "accounts",
       "path": "src/core/accounts",
       "about": "Whether each sign-in is healthy",
@@ -340,6 +346,10 @@
     {
       "name": "Claude client",
       "about": "The Claude Code the person installed"
+    },
+    {
+      "name": "Codex client",
+      "about": "The Codex CLI the person installed, used only for saved resets"
     },
     {
       "name": "git",
@@ -1577,6 +1587,31 @@
       "why": "runs Claude sessions and sign-ins"
     },
     {
+      "from": "codex",
+      "to": "claude",
+      "why": "compares client versions"
+    },
+    {
+      "from": "codex",
+      "to": "pi",
+      "why": "shows Codex's sign-in through the sign-in prompts"
+    },
+    {
+      "from": "codex",
+      "to": "quota",
+      "why": "reads the account's ChatGPT id"
+    },
+    {
+      "from": "codex",
+      "to": "shared",
+      "why": "reads saved-reset shapes and words"
+    },
+    {
+      "from": "codex",
+      "to": "Codex client",
+      "why": "uses a saved reset and signs Codex in for it"
+    },
+    {
       "from": "quota",
       "to": "model providers",
       "why": "reads allowances"
@@ -1710,6 +1745,11 @@
       "from": "helper",
       "to": "standby",
       "why": "keeps the copy and reaches the other copies on a computer that runs work"
+    },
+    {
+      "from": "helper",
+      "to": "codex",
+      "why": "uses its own accounts' saved resets"
     },
     {
       "from": "homeMove",

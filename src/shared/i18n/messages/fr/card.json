@@ -201,6 +201,8 @@
   "cardRevisionLinksUnavailable": "Liens de modification indisponibles",
   "cardRevisionMore": "{count} de plus",
   "cardRevisionShowFewer": "Afficher moins",
+  "cardSavedResetCrewWaits": "Le travail de l’équipage passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.",
+  "cardSavedResetCrewWaitsThere": "Le travail de l’équipage {where} passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.",
   "cardSavedResetsNow": {
     "plural": "count",
     "one": "{account} a une réinitialisation enregistrée que vous pouvez utiliser maintenant pour renouveler son allocation.",
@@ -261,5 +263,6 @@
   "cardThreadWorking": "en cours",
   "cardThreadWrittenAfterClose": "Écrite après la fermeture de la carte",
   "cardThreadWrittenBy": "Écrite par {label}",
-  "cardThreadWrittenByAfterClose": "Écrite par {label}, après la fermeture de la carte"
+  "cardThreadWrittenByAfterClose": "Écrite par {label}, après la fermeture de la carte",
+  "cardUseSavedReset": "Utiliser une réinitialisation enregistrée"
 }

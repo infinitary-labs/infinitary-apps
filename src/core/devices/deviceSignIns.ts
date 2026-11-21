@@ -12,6 +12,7 @@ import {
   isForgeHostName,
 } from "@shared/forges";
 import { catalogEntry } from "@shared/providers";
+import type { SavedResetResult } from "@shared/savedResets";
 import {
   type ComputerSignIns,
   computerSignInsSchema,
@@ -52,6 +53,8 @@ import type { WorkDevices } from "../placed/workDevices";
 
 /** A computer that takes Keep going on credits for its own accounts (`computer-keep-going.md`). */
 const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
+/** Using a computer's own account's saved Codex reset there (`use-saved-reset.md`). */
+const USE_SAVED_RESET = contractChange("use-saved-reset");
 /** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
 const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
 
@@ -106,6 +109,8 @@ export class DeviceSignIns {
 
   private readonly said = new Map<string, Said>();
   private readonly running = new Map<string, Running>();
+  /** Each saved-reset use waiting for its end, by its flow's id. */
+  private readonly uses = new Map<string, (step: Extract<SignInStep, { kind: "ended" }>) => void>();
   private readonly reading = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
@@ -129,6 +134,7 @@ export class DeviceSignIns {
         ...this.setupStatus.get(device.id),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         keepGoing: this.takesKeepGoing(device.id),
+        ...(this.takesSavedReset(device.id) ? { savedReset: true } : {}),
         accountSettings: this.takesAccountSettings(device.id),
         signIns: this.narrowed(said?.signIns ?? null),
         flows: [...this.running.values()]
@@ -427,6 +433,61 @@ export class DeviceSignIns {
     return { ok: true };
   }
 
+  /**
+   * Uses one saved Codex reset of that computer's own account there
+   * (docs/codex-client.md), and resolves with what it came to. With
+   * `signIn`, Codex there may sign in, its link and paste-back prompt shown
+   * under the account's row as a sign-in's are; a failure stays on the row.
+   */
+  async redeemSavedReset(
+    deviceId: string,
+    accountId: string,
+    signIn: boolean,
+  ): Promise<SavedResetResult> {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    if (!this.takesSavedReset(deviceId))
+      throw new Error(`Update Infinitary on ${who} to use a saved reset there.`);
+    const account = this.said
+      .get(deviceId)
+      ?.signIns?.accounts.find((entry) => entry.id === accountId);
+    if (!account)
+      throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    if (!this.options.work.inReach(deviceId))
+      throw new Error(`${who} is out of reach, so nothing was sent.`);
+    const signInId = randomBytes(16).toString("base64url");
+    const ended = new Promise<Extract<SignInStep, { kind: "ended" }>>((resolve) =>
+      this.uses.set(signInId, resolve),
+    );
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: account.providerId,
+      accountId,
+      target: "account",
+      phase: "running",
+    });
+    try {
+      await this.options.work.ask(deviceId, "inf:sign-ins:use-saved-reset", [
+        { signInId, accountId, signIn },
+      ]);
+    } catch (error) {
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, who).message,
+      });
+    }
+    const step = await ended;
+    if (step.savedReset) return step.savedReset;
+    throw new Error(step.error ?? `The saved reset on ${who} stopped before it ended.`);
+  }
+
+  /** Whether that computer takes `inf:sign-ins:use-saved-reset` (`use-saved-reset.md`). */
+  takesSavedReset(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, USE_SAVED_RESET);
+  }
+
   /** Whether that computer takes `inf:sign-ins:keep-going` (`computer-keep-going.md`). */
   takesKeepGoing(deviceId: string): boolean {
     return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_KEEP_GOING);
@@ -718,7 +779,11 @@ export class DeviceSignIns {
     if (step.outcome === "signed-in" || step.outcome === "cancelled") this.running.delete(signInId);
     else this.running.set(signInId, { ...identity, phase: "ended", ended: step });
     this.tell(signInId, running, step);
-    if (step.outcome === "signed-in")
+    const use = this.uses.get(signInId);
+    this.uses.delete(signInId);
+    use?.(step);
+    // A saved reset used there signed nothing new in; its own line says what it came to.
+    if (step.outcome === "signed-in" && !use)
       this.options.broadcastEvent({
         type: "device_signed_in",
         deviceId: running.deviceId,

@@ -4,12 +4,21 @@ import { firstmatePauseTitle } from "../../src/core/orchestrator/hostCards";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { SAVED_RESETS_PAGE } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
-import { CLAUDE_SEAT_ACCOUNT, CODEX_SEAT_ACCOUNT, launchClaudeSeat, say } from "./claudeSeat";
+import {
+  CLAUDE_SEAT_ACCOUNT,
+  CODEX_SEAT_ACCOUNT,
+  CODEX_SEAT_CHATGPT_ID,
+  launchClaudeSeat,
+  say,
+} from "./claudeSeat";
 import { cardBody } from "./frames";
+import { leaveSettings } from "./handoverCards";
 import type { LaunchedApp } from "./launch";
+import { writeMockCodexClient } from "./mockCodexClient";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
+import { feedLineOf } from "./rails";
 import { shownCard } from "./stack";
 import { starterFor } from "./starters";
 import { focusOn, pressKey } from "./windowKeys";
@@ -19,8 +28,10 @@ import { focusOn, pressKey } from "./windowKeys";
  * mate runs on Codex, whose allowance is spent while ChatGPT says the account
  * holds a saved reset that would refill it now. The spent-allowance card says
  * so, Enter on its link opens ChatGPT's usage page, where the captain uses
- * the reset, and the account's Subscriptions row says the count. Infinitary
- * uses none itself. The system browser is a recorder here.
+ * the reset, and the account's Subscriptions row says the count. The card's
+ * Use a saved reset (INF-5478's plan, piece 1; docs/codex-client.md) uses one
+ * through the Codex CLI, here a stand-in (`mockCodexClient.ts`), signing it
+ * in on the account's row first. The system browser is a recorder here.
  */
 
 /** The live Codex reading's saved resets (`tests/fixtures/quota-credits`), here applying now. */
@@ -32,8 +43,8 @@ const LIVE = JSON.parse(
 ) as { rate_limit_reset_credits: { available_count: number } };
 const HELD = LIVE.rate_limit_reset_credits.available_count;
 
-/** Both seats' allowance readings: Claude and Codex spent, Codex holding a saved reset that applies now. */
-function spentReadings(now: number): string {
+/** Both seats' allowance readings: Claude and Codex spent, Codex holding saved resets that apply now. */
+function spentReadings(now: number, held = HELD): string {
   const HOUR = 3600 * 1000;
   const row = (provider: string, label: string, accountId: string) => ({
     provider,
@@ -61,7 +72,7 @@ function spentReadings(now: number): string {
       row("claude", "Claude", CLAUDE_SEAT_ACCOUNT),
       {
         ...row("codex", "Codex", CODEX_SEAT_ACCOUNT),
-        savedResets: { available: HELD, applicable: HELD },
+        savedResets: { available: held, applicable: held },
       },
     ],
   });
@@ -124,6 +135,102 @@ test("a spent Codex seat's card says its saved reset and opens ChatGPT's usage p
     await expect(
       page.locator(`[data-account-row="${CODEX_SEAT_ACCOUNT}"] [data-saved-resets]`),
     ).toHaveText(m.settingsSubscriptionsSavedResets({ count: HELD, site: "chatgpt.com" }));
+  } finally {
+    await launched?.close();
+    await mock?.close();
+  }
+});
+
+/** The address a browser ends on once ChatGPT approves a sign-in whose page was `link`. */
+function browserEndsOn(link: string, code: string): string {
+  const asked = new URL(link);
+  const back = new URL(asked.searchParams.get("redirect_uri") ?? "");
+  back.search = new URLSearchParams({
+    code,
+    state: asked.searchParams.get("state") ?? "",
+  }).toString();
+  return back.toString();
+}
+
+test("Use a saved reset on a spent Codex seat's card signs Codex in on the account's row, by keys, and uses the reset that expires first", async () => {
+  test.setTimeout(3 * 60_000);
+  const now = Date.now();
+  const second = Math.floor(now / 1000);
+  // Two saved resets: the one granted later expires sooner, so it is the one used.
+  const codex = writeMockCodexClient(scratchDir("infinitary-saved-reset-codex-"), {
+    accountId: CODEX_SEAT_CHATGPT_ID,
+    available: 2,
+    credits: [
+      { id: "reset-later", status: "available", expiresAt: second + 20 * 86_400 },
+      { id: "reset-sooner", status: "available", expiresAt: second + 3 * 86_400 },
+    ],
+  });
+  let mock: MockProviderServer | undefined;
+  let launched: LaunchedApp | undefined;
+  try {
+    mock = await startMockProvider();
+    launched = await launchClaudeSeat({
+      mockProvider: mock,
+      withCodex: true,
+      env: {
+        INFINITARY_QUOTA_FIXTURE_DIR: spentReadings(now, 2),
+        INFINITARY_CODEX_CLI: codex.path,
+      },
+    });
+    const { page } = launched;
+    await recordOpens(launched);
+    const label = (await page.evaluate(() => window.infinitary.accounts.list())).find(
+      (account) => account.id === CODEX_SEAT_ACCOUNT,
+    )?.label;
+    await page.evaluate(
+      (id) => window.infinitary.settings.setFirstmateModel({ provider: "openai-codex", id }),
+      starterFor("openai-codex", "high"),
+    );
+    await say(page, "sound the channel");
+
+    const title = firstmatePauseTitle("no_headroom", "Codex");
+    await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
+    // Codex keeps no sign-in for the account yet, so Enter lands on its row, which starts the use there.
+    await pressKey(
+      shownCard(page, title).getByRole("button", { name: m.cardUseSavedReset(), exact: true }),
+      "Enter",
+    );
+    await expect(page.getByRole("tab", { name: "Intelligence", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // Codex's own ChatGPT sign-in page opens, and the row asks for the address it ends on.
+    await expect
+      .poll(async () => (await opened(launched as LaunchedApp)).at(-1) ?? "")
+      .toMatch(/^https:\/\/auth\.openai\.com\//);
+    const link = (await opened(launched)).at(-1) as string;
+    const paste = page.getByPlaceholder(m.accountsSavedResetPastePlaceholder());
+    await expect(paste).toBeVisible();
+    expect(codex.requests().map((request) => request.method)).not.toContain(
+      "account/rateLimitResetCredit/consume",
+    );
+    await paste.fill(browserEndsOn(link, "e2e-chatgpt-code-5483"));
+    await pressKey(paste, "Enter");
+
+    // The reset that expires first is used, once, and the feed says how many are left.
+    await expect
+      .poll(() =>
+        codex
+          .requests()
+          .some((request) => request.method === "account/rateLimitResetCredit/consume"),
+      )
+      .toBe(true);
+    await leaveSettings(page);
+    await expect(
+      feedLineOf(page, {
+        type: "firstmate_note",
+        text: m.accountsSavedResetUsed({ account: `Codex · ${label}`, count: 1 }),
+      }),
+    ).toBeVisible({ timeout: 30_000 });
+    const consumed = codex
+      .requests()
+      .filter((request) => request.method === "account/rateLimitResetCredit/consume");
+    expect(consumed.map((request) => request.params?.creditId)).toEqual(["reset-sooner"]);
   } finally {
     await launched?.close();
     await mock?.close();

@@ -14234,6 +14234,14 @@ ${events}` : prompt;
   function isSensedProvider(providerId) {
     return allowanceProviderOf(providerId) !== void 0;
   }
+  const savedResetResultSchema = object({
+    outcome: _enum(["used", "nothing-to-reset", "none-left"]),
+    left: number().int().nonnegative().optional()
+  });
+  strictObject({
+    deviceId: string().min(1).max(64).optional(),
+    signIn: boolean().optional()
+  });
   const signInIdSchema = string().regex(/^[A-Za-z0-9_-]{1,64}$/);
   const SIGN_IN_ANSWER_MAX_CHARS = 16384;
   const okSchema = object({ ok: literal(true) });
@@ -14344,6 +14352,13 @@ ${events}` : prompt;
       outcome: _enum(["signed-in", "failed", "cancelled", "signs-in-there"]),
       /** The account it signed in, on that computer. */
       accountId: string().optional(),
+      /**
+       * What using one of the account's saved Codex resets came to
+       * (`inf:sign-ins:use-saved-reset`), on a use that ended with a clear
+       * answer; its outcome is then `signed-in`, which an older view reads as
+       * a flow that ended as asked.
+       */
+      savedReset: savedResetResultSchema.optional(),
       /** Why it failed, in the provider's or the computer's words. */
       error: string().optional()
     })
@@ -14506,6 +14521,22 @@ ${events}` : prompt;
       ])
     },
     /**
+     * Uses one of that computer's own Codex accounts' saved resets there
+     * (docs/codex-client.md), from the contract change `use-saved-reset`. It
+     * answers once it has started; with `signIn`, Codex may sign in to the
+     * account, its link and paste-back prompt coming as `inf:work:sign-in`
+     * steps, and the end is a `signed-in` step carrying `savedReset`.
+     */
+    "inf:sign-ins:use-saved-reset": {
+      request: tuple([
+        object({
+          signInId: signInIdSchema,
+          accountId: string().min(1).max(256),
+          signIn: boolean()
+        })
+      ])
+    },
+    /**
      * Reads every account's allowance there now, rather than at its next
      * tick (`computer-account-settings`); the reading reaches the home as
      * that computer's sign-ins, whole, and this answers once it is read.
@@ -14578,6 +14609,11 @@ ${events}` : prompt;
      * means it does not, so those items stay dim.
      */
     accountSettings: boolean().optional(),
+    /**
+     * It uses its own Codex accounts' saved resets there (the contract change
+     * `use-saved-reset`). Absent means it does not, so the item is not offered.
+     */
+    savedReset: boolean().optional(),
     /** Active sign-ins and failures awaiting Done; absent on an older home. */
     flows: array(deviceSignInFlowSchema).optional()
   });

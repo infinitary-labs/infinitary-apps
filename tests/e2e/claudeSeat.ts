@@ -48,6 +48,9 @@ export const CLAUDE_SEAT_MODEL = {
   id: starterFor("anthropic-claude", "medium"),
 };
 
+/** The ChatGPT account the Codex seat's dummy sign-in names. */
+export const CODEX_SEAT_CHATGPT_ID = "acct-e2e-codex";
+
 /**
  * A dummy Codex sign-in, shaped like one: an unsigned token whose claims
  * name a ChatGPT account, which Codex's client reads before it sends. It
@@ -57,7 +60,7 @@ function fakeCodexToken(): string {
   const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return [
     part({ alg: "none", typ: "JWT" }),
-    part({ "https://api.openai.com/auth": { chatgpt_account_id: "acct-e2e-codex" } }),
+    part({ "https://api.openai.com/auth": { chatgpt_account_id: CODEX_SEAT_CHATGPT_ID } }),
     "e2e",
   ].join(".");
 }

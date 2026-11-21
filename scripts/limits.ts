@@ -591,6 +591,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/shared/remoteLogin.ts": {
     REMOTE_LOGIN_TIME_LIMIT_MS: physical("stopped in words naming 30 minutes; nothing changed there, ask again"),
   },
+  "src/shared/savedResets.ts": {
+    CODEX_SAVED_RESET_FLOOR: outside(
+      "the oldest Codex CLI whose app-server names each saved reset; an older one is refused in words that say to update Codex, or to use the reset on chatgpt.com",
+    ),
+  },
   "src/shared/signIns.ts": {
     SIGN_IN_ANSWER_MAX_CHARS: physical("none yet: the IPC refuses it and the window drops the error silently"),
     SERVED_MODELS_MAX: physical("past 2,000 the board's listed models go first, the rest drop"),

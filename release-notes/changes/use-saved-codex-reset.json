@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "use-saved-codex-reset",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Use a saved Codex reset with one click",
+      "body": "When your Codex allowance runs out and ChatGPT holds a saved reset for that account, the card and the account's Subscriptions row offer Use a saved reset. Infinitary asks the Codex app you installed, version 0.143 or later, to use the reset that expires first, then reads your allowance again so waiting work carries on. The first time, Codex asks you to sign in to that ChatGPT account. A used reset cannot be given back, so Infinitary uses one only when you choose it.",
+      "picture": {
+        "dark": "use-saved-codex-reset-dark.webp",
+        "light": "use-saved-codex-reset-light.webp",
+        "alt": "The first mate's used-up allowance card for Codex with a Use a saved reset button beside Recheck allowance"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -192,6 +192,21 @@
 "accountsCustomApiUseFix" = "%1$@ を使う";
 "accountsCustomApiUseForFirstMate" = "一等航海士に %1$@ を使う";
 "accountsCustomApiUseModel" = "%1$@ を使う";
+"accountsSavedResetCodexStopped" = "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。";
+"accountsSavedResetNoCodex" = "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex %1$@ 以降が必要です。Codex をインストールするか、%2$@ でリセットを使ってください。";
+"accountsSavedResetNoneLeft" = "%1$@ には使える保存済みのリセットが残っていません。";
+"accountsSavedResetNothing" = "%1$@ には保存済みのリセットで回復できる使い切った利用枠がないため、リセットは使っていません。";
+"accountsSavedResetOldCodex" = "このコンピュータの Codex は %3$@ です。保存済みのリセットを使うには %1$@ 以降が必要です。Codex を更新するか、%2$@ でリセットを使ってください。";
+"accountsSavedResetOtherAccount" = "Codex が %1$@ とは別の ChatGPT アカウントにサインインしたため、Infinitary はリセットを使わず Codex をサインアウトしました。同じアカウントでもう一度試してください。";
+"accountsSavedResetPasteAgain" = "そのアドレスにはサインインのコードがありません。ページが最後に表示したアドレスをそのまま貼り付けてください。";
+"accountsSavedResetPastePlaceholder" = "http://localhost:1455/auth/callback?code=…";
+"accountsSavedResetPastePrompt" = "ブラウザが別のコンピュータにある場合は、サインイン後にそのページが最後に表示したアドレスを貼り付けてください。";
+"accountsSavedResetSignInFailed" = "Codex はサインインできませんでした。";
+"accountsSavedResetSignInFirst" = "Codex はまだ %1$@ にサインインしていないため、リセットは使っていません。設定でこのアカウントの行の「保存済みのリセットを使う」を選ぶと、Codex がサインインします。";
+"accountsSavedResetSignInNotice" = "ブラウザで %1$@ の ChatGPT アカウントにサインインすると、Codex が保存済みのリセットを使えます。";
+"accountsSavedResetUnclear" = "%1$@ のリセットが使われたかどうか、Codex から返事がありませんでした。もう一度試すと同じリセットについて確認し、2 回分目を使うことはありません。";
+"accountsSavedResetUnverified" = "Codex が %1$@ と同じ ChatGPT アカウントにサインインしていることを Infinitary が確認できなかったため、リセットは使っていません。";
+"accountsSavedResetUsedChecking" = "%1$@ の保存済みのリセットを使いました。Infinitary が利用枠を読み取り直しています。";
 "activityPanelLinesLabel" = "アクティビティの行";
 "attachCancelled" = "%1$@ を取り消しました";
 "automationEventsSkipped" = "スキップしたイベント";
@@ -343,6 +358,8 @@
 "cardRevisionLinksUnavailable" = "変更箇所へのリンクは利用できません";
 "cardRevisionMore" = "ほか%1$@件";
 "cardRevisionShowFewer" = "表示を減らす";
+"cardSavedResetCrewWaits" = "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
+"cardSavedResetCrewWaitsThere" = "保存済みのリセットを使わない限り、%1$@の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
 "cardSavedResetsOpenPage" = "%1$@ の使用量ページを開く";
 "cardSinceSeenApproved" = "以前のバージョンを承認しました · %1$@";
 "cardSinceSeenChose" = "「%1$@」を選択しました · %2$@";
@@ -380,6 +397,7 @@
 "cardThreadWrittenAfterClose" = "カードを閉じた後に作成";
 "cardThreadWrittenBy" = "%1$@ が作成";
 "cardThreadWrittenByAfterClose" = "%1$@ が作成（カードを閉じた後）";
+"cardUseSavedReset" = "保存済みのリセットを使う";
 "closeYourFirstMate" = "一等航海士：「%1$@」";
 "closedDropped" = "%1$@ 取りやめ";
 "closedFinished" = "%1$@ 完了";
@@ -3085,6 +3103,8 @@
 "settingsSubscriptionsMenuResume" = "再開";
 "settingsSubscriptionsMenuStopKeepingGoing" = "クレジットの使用をやめる";
 "settingsSubscriptionsMenuStopPreferring" = "乗組員の作業での優先をやめる";
+"settingsSubscriptionsMenuUseReset" = "保存済みのリセットを使う";
+"settingsSubscriptionsMenuUseResetDetail" = "Codex がサインインし、期限が最も近いものを使います";
 "settingsSubscriptionsNoReader" = "Infinitary はこのプロバイダーの利用枠を読み取りません。";
 "settingsSubscriptionsNoReaderKey" = "%1$@ 設定済み · Infinitary はこのプロバイダーの利用枠を読み取りません。";
 "settingsSubscriptionsNotChosenYet" = "未選択";

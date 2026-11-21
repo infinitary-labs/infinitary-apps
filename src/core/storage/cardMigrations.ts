@@ -1,5 +1,6 @@
 import { LEGACY_CLOSE_CONTROL_IDS } from "@shared/cardLeave";
-import { type CardAction, migrateLegacyActions } from "@shared/cards";
+import type { CardAction } from "@shared/cards";
+import { migrateLegacyActions } from "@shared/legacyCardActions";
 import { addColumn } from "./addColumn";
 import type { AppDatabase } from "./db";
 

@@ -13,11 +13,8 @@ import { groupSpawnArgs } from "../../src/core/pi/crewTools.ts";
 import { legacyShapeFromDifficulty } from "../../src/core/routing/policy.ts";
 import type { LegacyTaskStatus } from "../../src/core/tasks/seedTask.ts";
 import { LEGACY_CLOSE_CONTROL_IDS } from "../../src/shared/cardLeave.ts";
-import {
-  type CardAction,
-  isPreviewBody,
-  migrateLegacyActions,
-} from "../../src/shared/cards.ts";
+import { type CardAction, isPreviewBody } from "../../src/shared/cards.ts";
+import { migrateLegacyActions } from "../../src/shared/legacyCardActions.ts";
 import type { IntelligenceBucket } from "../../src/shared/modelSlots.ts";
 import { type WorkShape, workShapeSchema } from "../../src/shared/routingPolicy.ts";
 import { stringColumn, type TableRow } from "../recorded-tables.ts";

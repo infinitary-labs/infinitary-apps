@@ -1145,6 +1145,8 @@
   "settingsSubscriptionsMenuResume": "恢复",
   "settingsSubscriptionsMenuStopKeepingGoing": "停止花费点数",
   "settingsSubscriptionsMenuStopPreferring": "不再优先用于船员工作",
+  "settingsSubscriptionsMenuUseReset": "使用已保存的重置",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex 登录后使用最先到期的那一次",
   "settingsSubscriptionsNoReader": "Infinitary 不读取这个服务商的额度。",
   "settingsSubscriptionsNoReaderKey": "{apiKey} 已设置 · Infinitary 不读取这个服务商的额度。",
   "settingsSubscriptionsNotChosenYet": "尚未选择",

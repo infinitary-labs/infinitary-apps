@@ -1167,6 +1167,8 @@
   "settingsSubscriptionsMenuResume": "Resume",
   "settingsSubscriptionsMenuStopKeepingGoing": "Stop spending credits",
   "settingsSubscriptionsMenuStopPreferring": "Stop preferring for crew work",
+  "settingsSubscriptionsMenuUseReset": "Use a saved reset",
+  "settingsSubscriptionsMenuUseResetDetail": "Codex signs in and uses the one that expires first",
   "settingsSubscriptionsNoReader": "Infinitary doesn't read the allowance for this provider.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} set · Infinitary doesn't read the allowance for this provider.",
   "settingsSubscriptionsNotChosenYet": "Not chosen yet",

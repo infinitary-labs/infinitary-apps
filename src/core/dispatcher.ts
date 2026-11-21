@@ -1177,6 +1177,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return view;
     },
 
+    // One saved Codex reset (docs/codex-client.md): with `signIn`, Codex may
+    // sign in through the same prompts and links a sign-in uses.
+    "inf:accounts:use-saved-reset": (accountId, options) => {
+      const where = options?.deviceId ? { deviceId: options.deviceId } : {};
+      return options?.signIn
+        ? stoppable((bridge) => services.redeemSavedReset(accountId, { ...where, bridge }))
+        : services.redeemSavedReset(accountId, where);
+    },
+
     ...accountHandlers(services, emit),
 
     // The sign-ins where projects live (git integration PR 1.2): the

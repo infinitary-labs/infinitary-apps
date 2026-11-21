@@ -1255,6 +1255,8 @@
   "settingsSubscriptionsMenuResume": "استئناف",
   "settingsSubscriptionsMenuStopKeepingGoing": "إيقاف إنفاق الاعتمادات",
   "settingsSubscriptionsMenuStopPreferring": "إيقاف التفضيل لعمل الطاقم",
+  "settingsSubscriptionsMenuUseReset": "استخدم إعادة تعيين محفوظة",
+  "settingsSubscriptionsMenuUseResetDetail": "يسجّل Codex الدخول ويستخدم الأقرب انتهاءً",
   "settingsSubscriptionsNoReader": "لا يقرأ Infinitary الرصيد لدى هذا المزوّد.",
   "settingsSubscriptionsNoReaderKey": "{apiKey} مضبوط · لا يقرأ Infinitary الرصيد لدى هذا المزوّد.",
   "settingsSubscriptionsNotChosenYet": "لم يُختر بعد",

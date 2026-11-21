@@ -2,7 +2,7 @@ import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import * as m from "@shared/i18n/messages.generated";
 import type { ProviderView } from "@shared/providers";
-import type { QuotaProviderView } from "@shared/quota";
+import { allowanceProviderOf, type QuotaProviderView } from "@shared/quota";
 import {
   type DeviceSignInFlow,
   type DeviceSignIns,
@@ -76,6 +76,12 @@ export type DeviceAccountRowProps = {
    * dim while that computer's Infinitary cannot take it yet.
    */
   keepGoing?: { onSelect: () => void; updateNote?: string };
+  /**
+   * Its Use a saved reset item, Codex using it on that computer
+   * (docs/codex-client.md): absent where its provider keeps none.
+   * `updateNote` says why it is dim while that computer cannot take it yet.
+   */
+  savedReset?: { onSelect: () => void; updateNote?: string };
   /**
    * Rename, Pause or Resume, and Prefer for crew work there, each saved on
    * that computer (docs/helper.md, "Its own sign-ins"). `updateNote` says
@@ -159,6 +165,19 @@ export function DeviceSignInGroups({
     useShellStore.getState().clearPendingDeviceSignIn();
     connect(device.deviceId, provider);
   }, [pending, groups, connect]);
+
+  // A card's Use a saved reset lands here with that computer's account (`accountId@deviceId`).
+  const pendingUse = useShellStore((s) => s.pendingUseSavedReset);
+  useEffect(() => {
+    const at = pendingUse?.lastIndexOf("@") ?? -1;
+    if (!pendingUse || at <= 0) return;
+    const deviceId = pendingUse.slice(at + 1);
+    const device = groups.find((entry) => entry.deviceId === deviceId);
+    if (!device) return;
+    useShellStore.getState().clearPendingUseSavedReset();
+    if (device.reach === "in-reach" && device.savedReset && device.flows)
+      applySavedReset(deviceId, pendingUse.slice(0, at));
+  }, [pendingUse, groups]);
 
   const answer = (flow: Flow, value: string | null) => {
     const { signInId, prompt } = flow;
@@ -264,6 +283,16 @@ export function DeviceSignInGroups({
                                   )
                                   .catch(() => {}),
                               ...(device.keepGoing
+                                ? {}
+                                : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
+                            },
+                          }
+                        : {}),
+                      ...(allowanceProviderOf(account.providerId) === "codex"
+                        ? {
+                            savedReset: {
+                              onSelect: () => applySavedReset(device.deviceId, account.id),
+                              ...(device.savedReset && device.flows
                                 ? {}
                                 : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
                             },
@@ -592,6 +621,18 @@ export function DeviceSignInAside({
  * lands where another Mac's sign-in does not wait, so the page cannot be
  * reached and its address is what to paste; another user here gets it itself.
  */
+/**
+ * Uses one saved reset of that computer's own account there
+ * (docs/codex-client.md). Codex there signs in on the row first when it
+ * must; a refusal stays under the row as the flow's end, and the feed says
+ * what it came to.
+ */
+function applySavedReset(deviceId: string, accountId: string): void {
+  void window.infinitary.accounts
+    .redeemSavedReset(accountId, { deviceId, signIn: true })
+    .catch(() => {});
+}
+
 function pasteBackLine(asked: "code" | "address", who: string, onThisMac: boolean): string {
   if (asked === "code") return m.settingsDevicesSignInsPasteBackCode();
   return onThisMac

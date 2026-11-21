@@ -1080,7 +1080,15 @@ export const workRequests = {
   "inf:work:browser": {
     effect: "change",
     request: z.tuple([
-      z.object({ task: placedTaskIdSchema, fact: taskBrowserFactSchema.nullable() }),
+      z.object({
+        task: placedTaskIdSchema,
+        fact: taskBrowserFactSchema.nullable(),
+        /**
+         * Its page is served there with no saved start (`page-start`), for
+         * emit_card's one line; never part of the fact a view reads.
+         */
+        unstarted: z.literal(true).optional(),
+      }),
     ]),
     response: doneSchema,
   },
@@ -1144,6 +1152,15 @@ export const workRequests = {
           site: z.string(),
           url: z.string(),
           once: z.string().min(1).max(512),
+          // The saved start that ran there and how it failed (`page-start.md`).
+          start: z
+            .object({
+              command: z.string(),
+              exit: z.number().int().nullable().optional(),
+              ranOut: z.literal(true).optional(),
+              log: z.string(),
+            })
+            .optional(),
         }),
         z.object({
           kind: z.literal("sign-in"),

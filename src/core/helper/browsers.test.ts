@@ -74,6 +74,8 @@ describe('a work computer after its restart (docs/task-browser.md, "After a rest
             url: "http://localhost:5173/settings",
             quit: true,
           }),
+          // A page this computer serves with no saved start: the home's emit_card says so.
+          unstarted: true,
         },
       ],
     });

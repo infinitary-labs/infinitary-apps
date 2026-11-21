@@ -480,6 +480,7 @@ export type PlacedBrowserSink = {
     deviceId: string,
     task: string,
     fact: InvokeRequest<"inf:work:browser">[0]["fact"],
+    unstarted?: true,
   ) => void;
   heardFrame: (task: string, frame: InvokeRequest<"inf:work:browser-frame">[0]["frame"]) => void;
   heardEvent: (

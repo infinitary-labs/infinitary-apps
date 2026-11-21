@@ -61,6 +61,7 @@
   "cardBrowserStop": "停止瀏覽器",
   "cardBrowserSurface": "任務瀏覽器",
   "cardBrowserUnansweredAsked": "{site} 沒有回應，已請船員重新啟動。它一回應，頁面就會顯示在這裡。",
+  "cardBrowserUnansweredStarting": "{site} 沒有回應，Infinitary 正在重新啟動它。它一回應，頁面就會顯示在這裡。",
   "cardBrowserUnansweredWorking": "{site} 沒有回應，船員正在工作。它一回應，頁面就會顯示在這裡。",
   "cardBrowserWord": "瀏覽器",
   "cardCrewmateLog": "船員的對話",

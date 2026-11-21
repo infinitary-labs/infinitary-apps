@@ -73,8 +73,10 @@ import { saveDownload } from "./evidenceFiles";
 import type { KeptPages } from "./keptPages";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
-import { type AnswerProbe, answerTarget, probeLoopback } from "./pageAnswers";
+import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { startAfterOpen, startBeforeOpen, startMissing } from "./pageStartSteps";
+import type { PageStart, PageStarts } from "./pageStarts";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
@@ -227,6 +229,15 @@ export type TaskBrowsersOptions = {
    * Told at each check while the outage lasts; the inbox queues it once.
    */
   onUnanswered?: (taskId: string, unanswered: PageUnanswered) => void;
+  /**
+   * The start commands crewmates saved with their pages, which the host
+   * runs when nothing answers there (docs/task-browser.md, "Starting a page
+   * again"); with none, `--start` is refused and only the crewmate is woken.
+   */
+  starts?: Pick<
+    PageStarts,
+    "keep" | "kept" | "starting" | "run" | "stopWithBrowser" | "turn" | "forget" | "stopAll"
+  >;
 };
 
 /** Nothing answers at a task's page: what its crewmate's one wake for that outage says. */
@@ -237,6 +248,8 @@ export type PageUnanswered = {
   url: string;
   /** This outage's own name: the run, the task and how many outages it has had. */
   once: string;
+  /** The saved start the host ran and how it failed: its exit code, or that its wait ran out. */
+  start?: { command: string; exit?: number | null; ranOut?: true; log: string };
 };
 
 /**
@@ -297,7 +310,7 @@ export class TaskBrowsers {
    * The loopback address nothing answered at, per task, until it answers
    * again: one outage, with the name its crewmate's one wake carries.
    */
-  private readonly outages = new Map<string, { origin: string; once: string }>();
+  private readonly outages = new Map<string, { origin: string; once: string; failed?: true }>();
   /** How many outages this run has seen: each one's name follows. */
   private outageCount = 0;
   /** How many browsers each task has had in this run: the next one's generation follows. */
@@ -468,7 +481,12 @@ export class TaskBrowsers {
           }
         : {}),
       ...(browser.control === "captain" && browser.told ? { told: browser.told } : {}),
-      ...(this.isUnanswered(taskId, browser) ? { unanswered: true as const } : {}),
+      ...(this.isUnanswered(taskId, browser)
+        ? {
+            unanswered: true as const,
+            ...(this.options.starts?.starting(taskId) ? { starting: true as const } : {}),
+          }
+        : {}),
       session: this.session,
       generation: browser.generation,
     };
@@ -575,10 +593,22 @@ export class TaskBrowsers {
   forTask(taskId: string): CrewmateBrowser {
     const commands = this.commands;
     return {
-      navigate: (input) =>
-        this.queues
-          .run(taskId, async () => this.held(taskId) ?? commands.navigate(taskId, input))
-          .finally(() => this.answeredAgain(taskId)),
+      navigate: async ({ start: asked, ...input }) => {
+        const { starts, probe } = this.options;
+        // A saved start runs before the queue: the captain's moves never wait behind a build.
+        const before =
+          asked && !this.held(taskId)
+            ? await startBeforeOpen({ taskId, url: input.url, asked, starts, probe })
+            : undefined;
+        if (before && "refused" in before) return refused(before.refused);
+        return this.queues
+          .run(taskId, async () => {
+            const answer = this.held(taskId) ?? (await commands.navigate(taskId, input));
+            const open = this.browsers.has(taskId);
+            return startAfterOpen(taskId, answer, before, open, this.options.starts);
+          })
+          .finally(() => this.answeredAgain(taskId));
+      },
       inspect: (input) =>
         this.queues.run(taskId, async () => this.held(taskId) ?? commands.inspect(taskId, input)),
       act: (input) =>
@@ -1158,8 +1188,21 @@ export class TaskBrowsers {
     this.options.onReturned?.(taskId, back.returned);
   }
 
+  /** A page this computer serves with no saved start for it: emit_card says so in one line. */
+  unstarted(taskId: string): boolean {
+    const served = this.browsers.get(taskId)?.server ?? this.endedServers.get(taskId);
+    return !served && startMissing(this.options.starts, taskId, this.fact(taskId)?.url);
+  }
+
+  /** A turn of the task's crewmate began or ended: a build the host started lives through it. */
+  turn(taskId: string, running: boolean): void {
+    this.options.starts?.turn(taskId, running, this.browsers.has(taskId));
+  }
+
   /** The task closed: its browser goes, with nothing kept and nothing to tell. */
   closeTask(taskId: string, options: { gone?: boolean } = {}): void {
+    // A closed task's build is never started again, and one the host started stops.
+    this.options.starts?.forget(taskId);
     // A page from the project the captain opened is his own: the task's
     // close leaves it running, and only the task's removal stops it.
     if (this.browsers.get(taskId)?.captains && !options.gone) return;
@@ -1206,6 +1249,7 @@ export class TaskBrowsers {
       }
       this.stop(taskId);
     }
+    this.options.starts?.stopAll();
     const guard = this.keptGuard;
     this.keptGuard = undefined;
     void guard?.then((handle) => handle?.close());
@@ -1627,6 +1671,8 @@ export class TaskBrowsers {
     if (!browser) return;
     const fact = why ? this.fact(taskId) : undefined;
     this.browsers.delete(taskId);
+    // A build the host started stops with its browser, after a running turn; a crewmate's own never does.
+    this.options.starts?.stopWithBrowser(taskId);
     browser.cancelIdle?.();
     browser.stopWatching?.();
     browser.stopWatching = undefined;
@@ -1731,7 +1777,7 @@ export class TaskBrowsers {
       return;
     }
     if (reading !== "refused") return;
-    let current = outage;
+    let current: { origin: string; once: string; failed?: true } | undefined = outage;
     if (!current || current.origin !== target.origin) {
       this.outageCount += 1;
       current = {
@@ -1741,13 +1787,66 @@ export class TaskBrowsers {
       this.outages.set(taskId, current);
       this.options.onChange?.(taskId);
     }
-    if (options.wake) {
+    if (!options.wake) return;
+    // A saved start runs first; its crewmate is woken only once it failed.
+    const start = current.failed ? undefined : this.options.starts?.kept(taskId, target.origin);
+    if (start) this.startPage(taskId, browser, start, target, current);
+    else {
       this.options.onUnanswered?.(taskId, {
         site: siteOf(address),
         url: bareAddress(address),
         once: current.once,
       });
     }
+  }
+
+  /**
+   * Run a task's saved start while the captain waits at its page
+   * (docs/task-browser.md, "Starting a page again"): the page loads again
+   * once its address answers; when the program exits first or its wait
+   * runs out, its crewmate gets the outage's one wake, with how it failed.
+   */
+  private startPage(
+    taskId: string,
+    browser: Browser,
+    start: PageStart,
+    target: AnswerTarget,
+    outage: { origin: string; once: string; failed?: true },
+  ): void {
+    const starts = this.options.starts as NonNullable<TaskBrowsersOptions["starts"]>;
+    const fresh = !starts.starting(taskId);
+    const address = this.pageAddress(browser);
+    void starts.run(taskId, start, target).then(async (outcome) => {
+      if (this.browsers.get(taskId) !== browser || outcome.kind === "stopped") return;
+      if (outcome.kind === "answered") {
+        // Only the press that started it loads the page again, and only one still on its origin.
+        if (!fresh) return;
+        await this.queues.run(taskId, async () => {
+          const now = this.pageAddress(browser);
+          if (this.browsers.get(taskId) !== browser) return;
+          if (answerTarget(now)?.origin !== outage.origin) return;
+          const entry = browser.current;
+          const loaded = await loadOwn(entry, entry.page.load(now));
+          if (!loaded.ok) entry.moved = undefined;
+        });
+        await this.checkAnswers(taskId, browser, { wake: false });
+        this.options.onChange?.(taskId);
+        return;
+      }
+      outage.failed = true;
+      this.options.onChange?.(taskId);
+      this.options.onUnanswered?.(taskId, {
+        site: siteOf(address),
+        url: bareAddress(address),
+        once: outage.once,
+        start: {
+          command: start.command,
+          ...(outcome.ranOut ? { ranOut: true as const } : { exit: outcome.exit ?? null }),
+          log: outcome.log,
+        },
+      });
+    });
+    if (fresh) this.options.onChange?.(taskId);
   }
 
   /** Whether the task's current page is on the origin of its running outage; no outage, no notice. */

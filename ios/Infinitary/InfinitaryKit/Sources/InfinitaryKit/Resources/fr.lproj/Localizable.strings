@@ -317,6 +317,7 @@
 "cardBrowserStop" = "Arrêter le navigateur";
 "cardBrowserSurface" = "Navigateur de la tâche";
 "cardBrowserUnansweredAsked" = "Rien ne répond sur %1$@, donc l’équipier a été invité à le relancer. La page s’affiche ici dès qu’il répond.";
+"cardBrowserUnansweredStarting" = "Rien ne répond sur %1$@, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.";
 "cardBrowserUnansweredWorking" = "Rien ne répond sur %1$@, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.";
 "cardBrowserWord" = "Navigateur";
 "cardCrewmateLog" = "La conversation de l’équipier";

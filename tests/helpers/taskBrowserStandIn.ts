@@ -348,6 +348,8 @@ export function harness(
     probe?: TaskBrowsersOptions["probe"];
     /** This run's name, so a test can start the browsers again after a restart. */
     session?: string;
+    /** The pages' saved starts; none, so `--start` is refused, when absent. */
+    starts?: TaskBrowsersOptions["starts"];
   } = {},
 ) {
   const pages: FakePage[] = [];
@@ -397,6 +399,7 @@ export function harness(
     // A unit test never reaches a real port: unknown changes nothing.
     probe: options.probe ?? (async () => "unknown"),
     ...(options.keptPages ? { kept: options.keptPages } : {}),
+    ...(options.starts ? { starts: options.starts } : {}),
     ...(options.session ? { session: options.session } : {}),
     ...(options.max !== undefined ? { max: options.max } : {}),
     ...(options.signIns ? { signIns: options.signIns } : {}),

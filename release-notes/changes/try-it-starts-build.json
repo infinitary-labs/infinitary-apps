@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "try-it-starts-build",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Try it starts a stopped build page again by itself",
+      "body": "A crewmate can now save the command that starts a page your project serves on this computer. When you press Try it and nothing answers there, Infinitary runs that command itself and shows the page once it answers, without asking the crewmate. The crewmate hears about it only if the command fails, and the program stops when the task's browser stops.",
+      "picture": {
+        "dark": "try-it-starts-build-dark.webp",
+        "light": "try-it-starts-build-light.webp",
+        "alt": "A task's browser opened from a card's Try it button, with a line under its row saying nothing answers at the page, so Infinitary is starting it again"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

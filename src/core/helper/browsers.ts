@@ -11,6 +11,7 @@ import {
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
 import { keptPagesIn } from "../browser/keptPages";
+import { PageStarts } from "../browser/pageStarts";
 import { type BrowserFrameSink, type CrewmateBrowser, TaskBrowsers } from "../browser/taskBrowsers";
 import { WebSignIns } from "../browser/webSignIns";
 import { contractChange, listsChange } from "../connection/contractChanges";
@@ -138,7 +139,13 @@ export class ComputerBrowsers {
         this.event(task, { kind: "unanswered", ...unanswered });
       },
       // A stopped page is kept in its task's folder here, beside its stops.
-      ...(options.taskFolder ? { kept: keptPagesIn(options.taskFolder) } : {}),
+      // A page's saved start beside it, run here when nothing answers there.
+      ...(options.taskFolder
+        ? {
+            kept: keptPagesIn(options.taskFolder),
+            starts: new PageStarts({ folderOf: options.taskFolder }),
+          }
+        : {}),
       ...(options.signInsDir ? { signIns: new WebSignIns(options.signInsDir) } : {}),
       // The home's private sites list, included by every admitted work peer
       // and lent as each page opens; out of reach keeps the last read (none at first).
@@ -246,7 +253,7 @@ export class ComputerBrowsers {
           facts: [...new Set([...this.known, ...(this.options.heldTasks?.() ?? [])])].flatMap(
             (task) => {
               const fact = browsers.fact(task);
-              return fact ? [{ task, fact }] : [];
+              return fact ? [{ task, fact, ...this.startFact(task) }] : [];
             },
           ),
         };
@@ -297,6 +304,11 @@ export class ComputerBrowsers {
       case "inf:task-browser:reopen": {
         const [{ task }] = request as BrowserOrderRequest<"inf:task-browser:reopen">;
         return browsers.reopen(task);
+      }
+      case "inf:task-browser:turn": {
+        const [{ task, running }] = request as BrowserOrderRequest<"inf:task-browser:turn">;
+        browsers.turn(task, running);
+        return { ok: true };
       }
       case "inf:task-browser:request": {
         const [{ task, request: asked }] =
@@ -385,6 +397,11 @@ export class ComputerBrowsers {
     send(frame);
   }
 
+  /** Its page is served here with no saved start: the home's emit_card says so in one line. */
+  private startFact(task: string): { unstarted?: true } {
+    return this.browsers.unstarted(task) ? { unstarted: true } : {};
+  }
+
   /** The browser's fact home, whole: one at a time per task, then once more if it changed meanwhile. */
   private tellFact(task: string): void {
     const telling = this.telling.get(task);
@@ -396,7 +413,9 @@ export class ComputerBrowsers {
     this.telling.set(task, state);
     const tell = (): void => {
       void this.options
-        .tell("inf:work:browser", [{ task, fact: this.browsers.fact(task) ?? null }])
+        .tell("inf:work:browser", [
+          { task, fact: this.browsers.fact(task) ?? null, ...this.startFact(task) },
+        ])
         .catch(() => undefined)
         .finally(() => {
           if (state.again && !this.closed) {
@@ -422,7 +441,13 @@ export class ComputerBrowsers {
 type BrowserOrderEvent =
   | { kind: "note"; text: string }
   | { kind: "returned"; site: string; after?: string; saved?: true; once: string }
-  | { kind: "unanswered"; site: string; url: string; once: string };
+  | {
+      kind: "unanswered";
+      site: string;
+      url: string;
+      once: string;
+      start?: { command: string; exit?: number | null; ranOut?: true; log: string };
+    };
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

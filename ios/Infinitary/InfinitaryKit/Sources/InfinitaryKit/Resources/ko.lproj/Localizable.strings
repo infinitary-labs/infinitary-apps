@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "%1$@ 페이지, 선원의 브라우저에 보이는 그대로";
 "cardBrowserPageYours" = "%1$@ 페이지, 내가 제어 중";
 "cardBrowserPageYoursOff" = "%2$@ 페이지, 내가 제어 중 · %1$@";
+"cardBrowserQuitLead" = "이 브라우저는 Infinitary가 종료될 때 중지됐어요.";
 "cardBrowserRecord" = "작업 기록";
 "cardBrowserReload" = "새로 고침";
 "cardBrowserReport" = "문제 신고";
 "cardBrowserReturnWordsTooLong" = "입력란의 글이 너무 길어 제어 돌려주기와 함께 보낼 수 없어요. 먼저 줄여 주세요.";
 "cardBrowserStop" = "브라우저 중지";
 "cardBrowserSurface" = "작업 브라우저";
+"cardBrowserUnansweredAsked" = "%1$@에서 응답이 없어 선원에게 다시 시작해 달라고 요청했어요. 응답하면 페이지가 여기에 표시돼요.";
+"cardBrowserUnansweredWorking" = "%1$@에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserWord" = "브라우저";
 "cardCrewmateLog" = "선원의 대화";
 "cardCrewmateSendFailed" = "지금은 이 줄을 보낼 수 없어요.";
@@ -3461,6 +3464,7 @@
 "taskBrowserStoppedCrewmate" = "선원이 닫았어요";
 "taskBrowserStoppedGone" = "페이지가 작동을 멈췄어요";
 "taskBrowserStoppedIdle" = "30분간 쓰지 않아 중지됨";
+"taskBrowserStoppedQuit" = "Infinitary가 종료될 때 중지됨";
 "taskBrowserStoppedTaskClosed" = "작업이 닫히면서 중지됨";
 "taskGroupBacklog" = "백로그";
 "taskGroupLanded" = "완료 · 7일";

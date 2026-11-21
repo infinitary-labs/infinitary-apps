@@ -1,8 +1,13 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { FakePage, flush, harness, openPopup } from "../../../tests/helpers/taskBrowserStandIn";
 import type { HostBrowserFrame, HostLoadOutcome } from "../host";
+import { KEPT_PAGE_FILE_NAME, keptPagesIn } from "./keptPages";
 import { REF_PATTERN, refusedRefWords } from "./outline";
+import type { AnswerReading } from "./pageAnswers";
 import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
 
 /**
@@ -158,6 +163,142 @@ describe("the captain's view of a task's browser", () => {
     await browser.navigate({ url: "http://localhost:5173/" });
     pages[1]?.opened.onGone("crashed");
     expect(browsers.fact("t1")).toMatchObject({ state: "stopped", stopped: "gone" });
+  });
+});
+
+describe('a stopped page kept with its task (docs/task-browser.md, "After a restart")', () => {
+  it("reads a page open at the quit as stopped by it after the restart, and opens it again there", async () => {
+    const folders = scratchDir("infinitary-kept-pages-");
+    const kept = keptPagesIn((taskId) => join(folders, taskId));
+    const before = harness({ keptPages: kept, session: "run-1" });
+    await before.browsers.forTask("t1").navigate({ url: "http://localhost:5173/settings" });
+    before.browsers.closeAll();
+    // The restart: a new run reads the page kept with the task.
+    const after = harness({ keptPages: kept, session: "run-2" });
+    expect(after.browsers.fact("t1")).toMatchObject({
+      state: "stopped",
+      site: "localhost:5173",
+      url: "http://localhost:5173/settings",
+      stopped: "gone",
+      quit: true,
+      session: "run-1",
+      generation: 1,
+    });
+    expect(await after.browsers.reopen("t1")).toEqual({ ok: true });
+    expect(after.pages[0]?.effects).toContain("load http://localhost:5173/settings");
+    expect(after.browsers.fact("t1")).toMatchObject({ state: "open", session: "run-2" });
+    expect(existsSync(join(folders, "t1", KEPT_PAGE_FILE_NAME))).toBe(false);
+  });
+
+  it("keeps a page that may hold the captain's sign-in without its query and fragment", async () => {
+    const folders = scratchDir("infinitary-kept-pages-");
+    const kept = keptPagesIn((taskId) => join(folders, taskId));
+    const before = harness({ keptPages: kept, session: "run-1" });
+    await before.browsers
+      .forTask("t1")
+      .navigate({ url: "http://localhost:5173/account?code=abc#token" });
+    // The captain signed in and handed the browser back: it may hold the sign-in now.
+    const handle = { session: before.browsers.session, generation: 1 };
+    await before.browsers.takeControl("t1", handle);
+    await before.browsers.returnControl("t1", handle);
+    before.browsers.closeAll();
+    const after = harness({ keptPages: kept, session: "run-2" });
+    expect(after.browsers.fact("t1")).toMatchObject({
+      state: "stopped",
+      url: "http://localhost:5173/account",
+      quit: true,
+    });
+  });
+
+  it("keeps a stopped browser's page and its reason, and forgets it once the task closes", async () => {
+    const folders = scratchDir("infinitary-kept-pages-");
+    const kept = keptPagesIn((taskId) => join(folders, taskId));
+    const before = harness({ keptPages: kept, session: "run-1" });
+    await before.browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
+    before.fire(TASK_BROWSER_IDLE_MS);
+    const after = harness({ keptPages: kept, session: "run-2" });
+    expect(after.browsers.fact("t1")).toMatchObject({ state: "stopped", stopped: "idle" });
+    expect(after.browsers.fact("t1")).not.toHaveProperty("quit");
+    after.browsers.closeTask("t1");
+    expect(after.browsers.fact("t1")).toMatchObject({ stopped: "task-closed" });
+    expect(await after.browsers.reopen("t1")).toEqual({
+      ok: false,
+      text: "This task has no browser to open again.",
+    });
+    expect(harness({ keptPages: kept, session: "run-3" }).browsers.fact("t1")).toBeUndefined();
+  });
+});
+
+describe('a page nothing answers at (docs/task-browser.md, "When nothing answers")', () => {
+  it("wakes the crewmate once for each outage, when the captain opens the page again", async () => {
+    let reading: AnswerReading = "answered";
+    const probed: string[] = [];
+    const { browsers, unanswered } = harness({
+      session: "run-1",
+      probe: async (host, port) => {
+        probed.push(`${host}:${port}`);
+        return reading;
+      },
+    });
+    const crewmate = browsers.forTask("t1");
+    await crewmate.navigate({ url: "http://localhost:5173/settings?tab=2" });
+    browsers.stopByCaptain("t1");
+    // The build stopped while the browser was stopped.
+    reading = "refused";
+    await browsers.reopen("t1");
+    expect(probed).toContain("localhost:5173");
+    expect(unanswered).toEqual([
+      {
+        taskId: "t1",
+        unanswered: {
+          site: "localhost:5173",
+          url: "http://localhost:5173/settings",
+          once: "page-unanswered:run-1:t1:1",
+        },
+      },
+    ]);
+    expect(browsers.fact("t1")).toMatchObject({ state: "open", unanswered: true });
+    // The captain looks again while it is still down: the same outage, the same name.
+    const unwatch = browsers.watch("t1", () => undefined);
+    await flush();
+    unwatch();
+    expect(unanswered.map((told) => told.unanswered.once)).toEqual([
+      "page-unanswered:run-1:t1:1",
+      "page-unanswered:run-1:t1:1",
+    ]);
+    // The crewmate starts it again and opens the page: the outage ends.
+    reading = "answered";
+    await crewmate.navigate({ url: "http://localhost:5173/settings" });
+    await flush();
+    expect(browsers.fact("t1")).not.toHaveProperty("unanswered");
+    // Down again later: a new outage, a new name.
+    reading = "refused";
+    browsers.watch("t1", () => undefined);
+    await flush();
+    expect(unanswered.at(-1)?.unanswered.once).toBe("page-unanswered:run-1:t1:2");
+  });
+
+  it("checks only an address the crewmate opened on this computer, and an unknown reading changes nothing", async () => {
+    const probed: string[] = [];
+    const { browsers, unanswered } = harness({
+      probe: async (host, port) => {
+        probed.push(`${host}:${port}`);
+        return "unknown";
+      },
+    });
+    await browsers.forTask("t1").navigate({ url: "https://example.com/" });
+    browsers.stopByCaptain("t1");
+    await browsers.reopen("t1");
+    expect(probed).toEqual([]);
+    // A page off this computer never reads as unanswered, with no outage to match.
+    expect(browsers.fact("t1")).toMatchObject({ state: "open" });
+    expect(browsers.fact("t1")).not.toHaveProperty("unanswered");
+    await browsers.forTask("t2").navigate({ url: "http://127.0.0.1:8080/" });
+    browsers.stopByCaptain("t2");
+    await browsers.reopen("t2");
+    expect(probed).toEqual(["127.0.0.1:8080"]);
+    expect(unanswered).toEqual([]);
+    expect(browsers.fact("t2")).not.toHaveProperty("unanswered");
   });
 });
 

@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "الصفحة على %1$@، كما يعرضها متصفح فرد الطاقم";
 "cardBrowserPageYours" = "الصفحة على %1$@، تحت تحكمك";
 "cardBrowserPageYoursOff" = "الصفحة على %2$@، تحت تحكمك · %1$@";
+"cardBrowserQuitLead" = "توقف هذا المتصفح عند إغلاق Infinitary.";
 "cardBrowserRecord" = "سجل المهمة";
 "cardBrowserReload" = "إعادة التحميل";
 "cardBrowserReport" = "الإبلاغ عن مشكلة";
 "cardBrowserReturnWordsTooLong" = "الكلمات في الحقل أطول من أن تُرسل مع إعادة التحكم. اختصرها أولًا.";
 "cardBrowserStop" = "إيقاف المتصفح";
 "cardBrowserSurface" = "متصفح المهمة";
+"cardBrowserUnansweredAsked" = "لا شيء يستجيب على %1$@، لذا طُلب من فرد الطاقم تشغيله من جديد. ستظهر الصفحة هنا حين يستجيب.";
+"cardBrowserUnansweredWorking" = "لا شيء يستجيب على %1$@، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserWord" = "المتصفح";
 "cardCrewmateLog" = "محادثة فرد الطاقم";
 "cardCrewmateSendFailed" = "تعذّر إرسال هذا السطر الآن.";
@@ -3459,6 +3462,7 @@
 "taskBrowserStoppedCrewmate" = "أغلقه فرد الطاقم";
 "taskBrowserStoppedGone" = "توقفت صفحته عن العمل";
 "taskBrowserStoppedIdle" = "أُوقف بعد 30 دقيقة دون استخدام";
+"taskBrowserStoppedQuit" = "توقف عند إغلاق Infinitary";
 "taskBrowserStoppedTaskClosed" = "أُوقف عند إغلاق المهمة";
 "taskGroupBacklog" = "المؤجلة";
 "taskGroupLanded" = "دُمجت · 7 أيام";

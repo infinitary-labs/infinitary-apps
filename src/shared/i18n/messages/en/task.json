@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "the crewmate closed it",
   "taskBrowserStoppedGone": "its page stopped working",
   "taskBrowserStoppedIdle": "stopped after 30 minutes unused",
+  "taskBrowserStoppedQuit": "stopped when Infinitary quit",
   "taskBrowserStoppedTaskClosed": "stopped when the task closed",
   "taskGroupBacklog": "backlog",
   "taskGroupLanded": "done · 7d",

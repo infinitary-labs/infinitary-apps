@@ -9,6 +9,7 @@
   "taskBrowserStoppedCrewmate": "das Crewmitglied hat ihn geschlossen",
   "taskBrowserStoppedGone": "seine Seite reagiert nicht mehr",
   "taskBrowserStoppedIdle": "nach 30 Minuten ohne Nutzung gestoppt",
+  "taskBrowserStoppedQuit": "beim Beenden von Infinitary gestoppt",
   "taskBrowserStoppedTaskClosed": "beim Schließen der Aufgabe gestoppt",
   "taskGroupBacklog": "Backlog",
   "taskGroupLanded": "erledigt · 7 T.",

@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
 import { canOpenAgain } from "@shared/taskBrowser";
 import { AxiChannel } from "../axi/channel";
@@ -10,6 +11,7 @@ import { HomeBrowsers, PlacedBrowsers, type PlacedBrowsersOptions } from "../pla
 import type { ShellGroups } from "../placed/shellGroups";
 import type { TaskService } from "../tasks/taskService";
 import { browserLookup } from "./connectionGuard";
+import { keptPagesIn } from "./keptPages";
 import { PrivateSites } from "./privateSites";
 import { TaskBrowsers } from "./taskBrowsers";
 import { WebSignIns } from "./webSignIns";
@@ -51,6 +53,12 @@ export function startTaskBrowsers(options: {
     // The captain's Return control is its crewmate's one wake, through
     // the task's durable lane (docs/task-browser.md, "Taking control").
     onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
+    // Nothing answers at the page the captain waits at: its crewmate's one
+    // wake for that outage (docs/task-browser.md, "When nothing answers").
+    onUnanswered: (taskId, unanswered) =>
+      cardStack()?.cardActions.pageUnanswered(taskId, unanswered),
+    // A stopped page is kept in its task's folder, so a restart can open it again.
+    kept: keptPagesIn((taskId) => join(paths.crewmatesDir, taskId)),
     // The signed-in sites this Mac keeps (docs/task-browser.md, "Signed-in sites").
     signIns: webSignIns,
     privateSites: () => privateSites.list(),
@@ -70,6 +78,8 @@ export function startTaskBrowsers(options: {
     note: (taskId, text) => tasks.note(taskId, text, { news: true }),
     onChange: (taskId) => broadcastEvent({ type: "task_browser", taskId }),
     onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
+    onUnanswered: (taskId, unanswered) =>
+      cardStack()?.cardActions.pageUnanswered(taskId, unanswered),
   });
   // A change takes effect at once in every open browser, here and on each computer that runs work.
   privateSites.onChange((sites) => {

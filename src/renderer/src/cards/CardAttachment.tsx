@@ -1,7 +1,7 @@
 import type { LiveAttachment } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { PAGE_ATTACHMENT_WORDS } from "@shared/projectPage";
-import { type AttachmentStanding, attachmentStanding } from "@shared/taskBrowser";
+import { type AttachmentStanding, attachmentStanding, canOpenAgain } from "@shared/taskBrowser";
 import { browserLineOf, type TaskBrowserLine } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { useEffect, useState } from "react";
@@ -52,6 +52,9 @@ function BrowserAttachment({
 }) {
   const { taskId, session, generation } = attachment;
   const [detail, setDetail] = useState<TaskDetail | null>(null);
+  // Opening a stopped browser again starts one on the first mate's computer:
+  // while changes there are off, the press only opens the view (docs/view.md).
+  const changesAreOff = useShellStore((s) => changesOff(s.thisMac) && isView(s.thisMac));
 
   useEffect(() => {
     setDetail(null);
@@ -66,11 +69,27 @@ function BrowserAttachment({
     <CardAttachmentStrip
       attachment={attachment}
       reading={attachmentReading(attachment, detail)}
-      onOpen={() =>
-        useShellStore.getState().openBrowserView(taskId, { cardId, session, generation })
-      }
+      onOpen={() => {
+        useShellStore.getState().openBrowserView(taskId, { cardId, session, generation });
+        if (pressReopens(detail, changesAreOff)) {
+          void window.infinitary.browser.reopen(taskId).catch(() => undefined);
+        }
+      }}
     />
   );
+}
+
+/**
+ * Whether the press also opens the task's stopped browser again, as the
+ * view's Open again would (docs/task-browser.md, "From a card"): only
+ * while it is stopped and may be opened again, never once its task closed
+ * or while changes on the first mate's computer are off. A refusal shows
+ * when the captain presses Open again in the view.
+ */
+export function pressReopens(detail: TaskDetail | null, changesAreOff: boolean): boolean {
+  const fact = detail?.browser;
+  if (changesAreOff || !fact || !canOpenAgain(fact)) return false;
+  return detail.status !== "done" && detail.status !== "dropped";
 }
 
 /** What the strip says: whether the card's browser is still the task's, and if so its line. */

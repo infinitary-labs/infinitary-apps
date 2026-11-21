@@ -245,12 +245,15 @@
 "cardBrowserPageWatching" = "The page at %1$@, as the crewmate's browser shows it";
 "cardBrowserPageYours" = "The page at %1$@, under your control";
 "cardBrowserPageYoursOff" = "The page at %2$@, under your control · %1$@";
+"cardBrowserQuitLead" = "This browser stopped when Infinitary quit.";
 "cardBrowserRecord" = "Task record";
 "cardBrowserReload" = "Reload";
 "cardBrowserReport" = "Report a problem";
 "cardBrowserReturnWordsTooLong" = "The words in the field are too long to go with Return control. Shorten them first.";
 "cardBrowserStop" = "Stop browser";
 "cardBrowserSurface" = "Task browser";
+"cardBrowserUnansweredAsked" = "Nothing answers at %1$@, so its crewmate was asked to start it again. The page shows here once it answers.";
+"cardBrowserUnansweredWorking" = "Nothing answers at %1$@, and its crewmate is working now. The page shows here once it answers.";
 "cardBrowserWord" = "Browser";
 "cardCrewmateLog" = "The crewmate's session";
 "cardCrewmateSendFailed" = "This line could not be sent right now.";
@@ -3459,6 +3462,7 @@
 "taskBrowserStoppedCrewmate" = "the crewmate closed it";
 "taskBrowserStoppedGone" = "its page stopped working";
 "taskBrowserStoppedIdle" = "stopped after 30 minutes unused";
+"taskBrowserStoppedQuit" = "stopped when Infinitary quit";
 "taskBrowserStoppedTaskClosed" = "stopped when the task closed";
 "taskGroupBacklog" = "backlog";
 "taskGroupLanded" = "done · 7d";

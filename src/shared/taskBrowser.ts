@@ -261,6 +261,12 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
     ask: taskBrowserAskSchema.optional(),
     /** While the captain holds it, the passkey request it last told the site no to. */
     told: taskBrowserToldSchema.optional(),
+    /**
+     * Nothing answers at the loopback address its page is on: a connection
+     * to it was refused (docs/task-browser.md, "When nothing answers"). It
+     * stays until that address answers again.
+     */
+    unanswered: z.literal(true).optional(),
     ...browserIdentity,
   }),
   z.object({
@@ -270,6 +276,13 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
     url: z.string(),
     stopped: z.enum(TASK_BROWSER_STOPS),
     at: z.number(),
+    /**
+     * It was open when Infinitary quit, read again after the restart from
+     * the page kept with its task (docs/task-browser.md, "After a
+     * restart"); its `stopped` is then `gone`, which a reader without this
+     * field shows.
+     */
+    quit: z.literal(true).optional(),
     ...browserIdentity,
   }),
 ]);
@@ -604,6 +617,32 @@ export const STOP_VIEW_WORDS: Record<TaskBrowserStop, { lead: string; detail: st
     detail: "Its pictures are in the task's record.",
   },
 };
+
+/** What stopped it, in the record's Browser line: Infinitary's quit when it was open then. */
+export function stopLineWords(fact: Extract<TaskBrowserFact, { state: "stopped" }>): string {
+  return fact.quit ? m.taskBrowserStoppedQuit() : STOP_LINE_WORDS[fact.stopped];
+}
+
+/** The view's sentence for a stopped browser and the line under it, a quit's included. */
+export function stopViewWords(fact: Extract<TaskBrowserFact, { state: "stopped" }>): {
+  lead: string;
+  detail: string;
+} {
+  return fact.quit
+    ? { lead: m.cardBrowserQuitLead(), detail: STOPPED_KEPT_WORDS }
+    : STOP_VIEW_WORDS[fact.stopped];
+}
+
+/**
+ * The view's line while nothing answers at its page's address
+ * (docs/task-browser.md, "When nothing answers"): its crewmate was asked to
+ * start it again, or is working now and was not asked.
+ */
+export function unansweredWords(site: string, driver: TaskBrowserDriver): string {
+  return driver === "crewmate"
+    ? m.cardBrowserUnansweredWorking({ site })
+    : m.cardBrowserUnansweredAsked({ site });
+}
 
 /**
  * How the browser a card's attachment names stands against the task's

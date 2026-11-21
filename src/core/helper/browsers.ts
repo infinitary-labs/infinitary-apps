@@ -73,6 +73,8 @@ export type ComputerBrowsersOptions = {
   leftBehind?: LeftBehindHere;
   /** A task's own folder here, which keeps its registered stops (docs/leftover-programs.md). */
   taskFolder?: (task: string) => string;
+  /** The tasks held here, whose page kept from a stop the home reads after this computer restarts. */
+  heldTasks?: () => readonly string[];
   /** The task's working copy here: the only folder its crewmate attaches a page's file from. */
   workingCopy?: (task: string) => string | undefined;
   /** Asked once, while the home is in reach, and never again (`HomeLink.invoke`). */
@@ -240,10 +242,13 @@ export class ComputerBrowsers {
     switch (channel) {
       case "inf:task-browser:facts":
         return {
-          facts: [...this.known].flatMap((task) => {
-            const fact = browsers.fact(task);
-            return fact ? [{ task, fact }] : [];
-          }),
+          // A restart here forgets which browsers spoke; a page kept with a held task still answers.
+          facts: [...new Set([...this.known, ...(this.options.heldTasks?.() ?? [])])].flatMap(
+            (task) => {
+              const fact = browsers.fact(task);
+              return fact ? [{ task, fact }] : [];
+            },
+          ),
         };
       case "inf:task-browser:watch": {
         const [{ task, watching }] = request as BrowserOrderRequest<"inf:task-browser:watch">;

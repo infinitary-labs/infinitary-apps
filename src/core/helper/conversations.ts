@@ -257,6 +257,7 @@ export async function startConversations(options: {
           ...(options.leftBehind ? { leftBehind: options.leftBehind } : {}),
           evidenceDir: (task) => tasks.folders(task).evidence,
           taskFolder: (task) => tasks.folders(task).root,
+          heldTasks: () => tasks.list().filter((task) => !tasks.state(task).closed),
           workingCopy: (task) => tasks.folders(task).work,
           // A command that reached this computer keeps its shell waiting for its answer.
           answering: (shell) => jobs.answering(shell),

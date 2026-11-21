@@ -468,9 +468,7 @@ export class TaskBrowsers {
           }
         : {}),
       ...(browser.control === "captain" && browser.told ? { told: browser.told } : {}),
-      ...(this.outages.get(taskId)?.origin === answerTarget(this.pageAddress(browser))?.origin
-        ? { unanswered: true as const }
-        : {}),
+      ...(this.isUnanswered(taskId, browser) ? { unanswered: true as const } : {}),
       session: this.session,
       generation: browser.generation,
     };
@@ -1750,6 +1748,14 @@ export class TaskBrowsers {
         once: current.once,
       });
     }
+  }
+
+  /** Whether the task's current page is on the origin of its running outage; no outage, no notice. */
+  private isUnanswered(taskId: string, browser: Browser): boolean {
+    const outage = this.outages.get(taskId);
+    return (
+      outage !== undefined && outage.origin === answerTarget(this.pageAddress(browser))?.origin
+    );
   }
 
   /** A crewmate's command moved the page: an outage ends once its address answers again. */

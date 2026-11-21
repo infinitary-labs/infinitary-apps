@@ -270,6 +270,9 @@ describe('a page nothing answers at (docs/task-browser.md, "When nothing answers
     browsers.stopByCaptain("t1");
     await browsers.reopen("t1");
     expect(probed).toEqual([]);
+    // A page off this computer never reads as unanswered, with no outage to match.
+    expect(browsers.fact("t1")).toMatchObject({ state: "open" });
+    expect(browsers.fact("t1")).not.toHaveProperty("unanswered");
     await browsers.forTask("t2").navigate({ url: "http://127.0.0.1:8080/" });
     browsers.stopByCaptain("t2");
     await browsers.reopen("t2");

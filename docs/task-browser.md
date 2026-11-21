@@ -395,6 +395,7 @@ A stopped browser's page is kept with its task (`KeptPages`, `src/core/browser/k
 It holds the stopped fact, with the address bare when the captain signed in, and the project folder its page served, if any.
 Each stop with a reason writes it; the app's quit writes each open browser's page as stopped by the quit (`quit: true`, with `stopped` read as `gone` by a reader without the field); a browser that opens removes it; the task's close removes it, so a closed task's build is never brought back.
 After a restart the first read of the task's browser reads the file as its stopped browser (`TaskBrowsers.endedOf`), with the session and generation it had, so a card from before the restart still names it and Open again, or a card's press, starts it there.
+A computer that runs work answers the home's facts for each task it holds, not only the browsers that spoke since its start (`heldTasks`, `src/core/helper/browsers.ts`), so its restart keeps the page too.
 The view then reads `This browser stopped when Infinitary quit.` or its earlier reason, with Open again, instead of `This task has no browser on this computer.`
 
 ### When nothing answers

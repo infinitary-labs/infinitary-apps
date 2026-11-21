@@ -24,9 +24,11 @@ describe("original captain input migration", () => {
       { name: "example.txt", text: "Attached examples are not captain instructions." },
     ]);
     const legacy = openDatabase(dir, CAPTAIN_TEXT_VERSION - 1);
-    // Today's card writer names the later `files_json` column, lent to the
-    // older schema here; its own migration leaves a column already there.
+    // Today's card writer names the later `files_json` and `live_reads_json`
+    // columns, lent to the older schema here; their own migrations leave a
+    // column already there.
     legacy.exec("ALTER TABLE cards ADD COLUMN files_json TEXT");
+    legacy.exec("ALTER TABLE cards ADD COLUMN live_reads_json TEXT");
     const at = Date.now();
     new CardStore(legacy).upsert({
       id: "source-card",

@@ -316,41 +316,30 @@ try {
     fail("An unknown address does not draw the site's own not-found page");
   }
 
-  // Search runs in the browser from the site's own files.
-  await page.goto(`${origin}/`, { waitUntil: "load" });
-  await page.locator("site-search button[data-open-modal]").first().click();
+  // Search runs in the browser from the site's own files, in each language from its own home page,
+  // and its window speaks that language: its result count, in either form, and clear button are not Pagefind's English.
   // Starlight builds the search box only when the browser next has idle time. Headless
   // Chromium on a busy computer can stop drawing without ever having had idle time, and
   // nothing then asks it to draw again, as a visitor's pointer would: the box never comes.
   // Waiting on animation frames keeps the page drawing, so the idle time comes.
-  const searchBox = await page
-    .waitForFunction(() => document.querySelector("site-search input") !== null, undefined, {
-      polling: "raf",
-      timeout: 30_000,
-    })
-    .then(
-      () => true,
-      () => false,
-    );
-  if (!searchBox) {
-    fail("Search never drew its search box");
-  } else {
-    await page.locator("site-search input").first().fill("Discord");
-    const result = page.locator(".pagefind-ui__result-link").first();
-    try {
-      await result.waitFor({ state: "visible", timeout: 10_000 });
-    } catch {
-      fail('Searching for "Discord" found nothing');
-    }
-  }
-
-  // Then in each language from its own home page,
-  // and its window speaks that language: its result count, in either form, and clear button are not Pagefind's English.
   const searchWords = new Map();
   await sideBySide(LANGUAGES, async (tab, language) => {
     const word = searchWord(language);
     await tab.goto(`${origin}${language.prefix}`, { waitUntil: "load" });
     await tab.locator("site-search button[data-open-modal]").first().click();
+    const searchBox = await tab
+      .waitForFunction(() => document.querySelector("site-search input") !== null, undefined, {
+        polling: "raf",
+        timeout: 30_000,
+      })
+      .then(
+        () => true,
+        () => false,
+      );
+    if (!searchBox) {
+      fail(`Search on ${language.prefix} never drew its search box`);
+      return;
+    }
     await tab.locator("site-search input").first().fill(word);
     const result = tab.locator(".pagefind-ui__result-link").first();
     try {

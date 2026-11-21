@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-check-language-search-frames",
+      "reason": "Internal: the docs site check keeps each language's home page drawing while it waits for Starlight's search box, which headless Chromium on a busy computer could otherwise never build; the app and the docs site are unchanged."
+    }
+  ]
+}

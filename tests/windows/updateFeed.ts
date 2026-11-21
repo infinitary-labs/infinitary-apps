@@ -4,13 +4,9 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:https";
 import { join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
+import { type BuildsFile, WINDOWS_INSTALLER } from "../../src/core/update/releaseBuilds";
 import { PUBLIC_RELEASE_NAMES, releaseSource } from "../../src/core/update/releaseSource";
-import {
-  type BuildsFile,
-  buildDownloadUrl,
-  releasesPageFor,
-  WINDOWS_INSTALLER,
-} from "../../src/core/update/updateChannels";
+import { buildDownloadUrl, releasesPageFor } from "../../src/core/update/updateChannels";
 import {
   installerName,
   UPDATE_FEED_BASE,

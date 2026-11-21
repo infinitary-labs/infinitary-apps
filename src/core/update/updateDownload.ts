@@ -6,11 +6,8 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import * as m from "@shared/i18n/messages.generated";
 import type { UpdateChannel } from "@shared/update";
-import {
-  type BuildDownload,
-  UPDATE_CHANNEL_MARKER,
-  type UpdateChannelMarker,
-} from "./updateChannels";
+import type { BuildDownload } from "./releaseBuilds";
+import { UPDATE_CHANNEL_MARKER, type UpdateChannelMarker } from "./updateChannels";
 
 /**
  * Why an update did not install, in words the update panel shows as they

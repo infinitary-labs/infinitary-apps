@@ -1016,6 +1016,11 @@ describe("the post-merge signed installer source", () => {
     expect(builder).toContain(from);
     return builder.replace(from, to);
   };
+  const editReal = (path: string, from: string, to: string) => {
+    const text = realFile(path);
+    expect(text).toContain(from);
+    return text.replace(from, to);
+  };
   function shipped(): { f: Fixture; base: string } {
     const { f } = released();
     f.git("tag", "-d", "v1.0.0");
@@ -1070,6 +1075,15 @@ describe("the post-merge signed installer source", () => {
         "tests/e2e/virtualMac.ts": "export {};",
       },
       "a test beside the update code": { "src/core/update/macUpdates.test.ts": "it" },
+      // The captain's split: alpha 0.8.5-alpha.6 ran the check only because a
+      // Windows installer download kind was added beside the Mac update code.
+      "a new Windows or Linux download kind": {
+        "src/core/update/releaseBuilds.ts": editReal(
+          "src/core/update/releaseBuilds.ts",
+          "  exe: /\\.exe$/,\n",
+          "  exe: /\\.exe$/,\n  msi: /\\.msi$/,\n",
+        ),
+      },
     };
     for (const [what, files] of Object.entries(skipped))
       expect(selectsFrom(f, base, files), what).toBe(false);
@@ -1080,6 +1094,13 @@ describe("the post-merge signed installer source", () => {
     const held: Record<string, Record<string, unknown>> = {
       "the Mac update driver": { "src/core/update/macUpdates.ts": "export const changed = 1;" },
       "the update file Mac shares": { "src/core/update/updateChecker.ts": "export {};" },
+      "the Mac update targets": {
+        "src/core/update/updateChannels.ts": editReal(
+          "src/core/update/updateChannels.ts",
+          "const ZIP_ASSET = /^[A-Za-z0-9][A-Za-z0-9._-]*\\.zip$/;",
+          "const ZIP_ASSET = /^[A-Za-z0-9][A-Za-z0-9._-]*\\.(zip|tar)$/;",
+        ),
+      },
       "the Mac update host": { "src/main/host/macUpdates.ts": "export {};" },
       "the update feed's settings": { "packaging/app-update.yml": "provider: generic" },
       "the updater library's version": {

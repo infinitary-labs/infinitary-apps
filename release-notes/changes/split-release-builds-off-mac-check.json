@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-release-builds-off-mac-check",
+      "reason": "Moves the Linux and Windows builds file code into its own module so an alpha whose only update change is there skips the five-copy Mac installer check; nothing a person sees changes."
+    }
+  ]
+}

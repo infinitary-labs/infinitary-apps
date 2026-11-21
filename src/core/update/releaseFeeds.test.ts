@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { parseUpdateInfo, resolveFiles } from "electron-updater/out/providers/Provider";
 import { describe, expect, it } from "vitest";
+import { parseBuilds } from "./releaseBuilds";
 import { macFeed, type ReleaseManifest, releaseFeedFiles } from "./releaseFeeds";
 import { PUBLIC_RELEASE_NAMES, releaseSource } from "./releaseSource";
 import type { Publication } from "./tapPublication";
-import { parseBuilds, parseUpdateTargets } from "./updateChannels";
+import { parseUpdateTargets } from "./updateChannels";
 
 // INF-640: feed publication preserves immutable bytes and each channel's forward-only target.
 // Real file digests stand in for artifact identity; this suite claims no signed-package verification.

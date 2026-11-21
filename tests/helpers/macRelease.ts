@@ -6,7 +6,8 @@ import { createServer } from "node:https";
 import { connect, type Socket } from "node:net";
 import { basename, join } from "node:path";
 import { RELEASE_REQUIREMENT } from "../../src/core/devices/remoteDownload";
-import { BUILDS_FILE, buildDownloadUrl, publicTagFor } from "../../src/core/update/updateChannels";
+import { BUILDS_FILE } from "../../src/core/update/releaseBuilds";
+import { buildDownloadUrl, publicTagFor } from "../../src/core/update/updateChannels";
 import { scratchDir } from "./scratchDirs";
 
 /** INF-322: a real zip, SHA-256 and HTTPS release, with no public connection.

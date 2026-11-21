@@ -141,7 +141,10 @@ describe("reading a folder's access list", () => {
     const ownerless = IN_PROFILE.replace(`O:${USER}`, "");
     expect(othersCanChange(readAccessList(ownerless), USER)).toBe(true);
     expect(onlyOwnerReaches(readAccessList(ownerless), USER)).toBe(false);
-    expect(ownerOnlyVerdict(readAccessList(ownerless), USER)).toBe("other-owner");
+    expect(ownerOnlyVerdict(readAccessList(ownerless), USER)).toBe("unread");
+    expect(ownerOnlyVerdict(readAccessList(conditional), USER)).toBe("unread");
+    // A drive with no list is read whole: it has none, which is a different answer.
+    expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
   });
 
   it("finds a folder that hands another account access to what is made in it", () => {
@@ -149,6 +152,12 @@ describe("reading a folder's access list", () => {
     // At the top of the drive every signed-in account gets rights over what another makes there.
     expect(handsDownToOthers(readAccessList(AT_DRIVE_TOP), USER)).toBe(true);
     expect(handsDownToOthers(readAccessList(NO_LIST), USER)).toBe(true);
+    // A list handing nothing down to new folders leaves a new folder the creating process's
+    // default list, which this list does not decide.
+    const nothingDown = `O:${USER}G:${GROUP}D:P(A;;FA;;;SY)(A;;FA;;;${USER})`;
+    expect(handsDownToOthers(readAccessList(nothingDown), USER)).toBe(true);
+    const filesOnly = `O:${USER}G:${GROUP}D:P(A;OI;FA;;;${USER})`;
+    expect(handsDownToOthers(readAccessList(filesOnly), USER)).toBe(true);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {
@@ -251,6 +260,26 @@ describe("the data folder on Windows", () => {
       run: windows({ [dataDir]: OTHERS_FOLDER, [temp]: IN_PROFILE }).run,
     });
     expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNSAFE_FOLDER_TITLE);
+  });
+
+  it("changes nothing on a data folder whose list it could not read whole, keeping its denies", async () => {
+    // A deny another tool set, then a conditional entry this reading does not take apart.
+    const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
+    const temp = join(scratchDir("fm-owner-only-"), "Temp");
+    await mkdir(dataDir, { recursive: true });
+    const partial = `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(XA;;FA;;;${USER};(x))`;
+    const pc = windows({ [dataDir]: partial, [temp]: IN_PROFILE });
+    const privacy = await keepDataFolderPrivate({
+      platform: "win32",
+      dataDir,
+      env: {},
+      tempDir: temp,
+      run: pc.run,
+    });
+    expect(pc.asks.every((ask) => ask.set.length === 0)).toBe(true);
+    expect(pc.folders[dataDir]).toBe(partial);
+    expect(await readdir(dataDir)).toEqual([]);
+    expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNCHECKED_FOLDER_TITLE);
   });
 
   it("says Windows could not check the folder when it cannot be asked, or could not finish", async () => {

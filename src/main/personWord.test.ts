@@ -1,9 +1,11 @@
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -30,9 +32,9 @@ import {
   replyLine,
   WORD_BUTTONS,
   WORD_OWNER_FILE,
-  WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
   WORD_TEMP_DIR,
+  wordProfilesMark,
 } from "./personWordArg";
 
 /**
@@ -215,8 +217,9 @@ describe("a refused launch's word to the person", () => {
     const kept = (await ownProfilesFolder(ownRoot, "win32", own))?.path ?? "";
     expect(kept.startsWith(`${ownRoot}.`)).toBe(true);
     expect(touched(own)).toContain(kept);
-    // Reserved at the name by its own mark, linked there once the folder was private and marked.
-    expect(readFileSync(ownRoot, "utf8")).toBe(WORD_PROFILES_MARK);
+    // Reserved at the name by its own mark, naming that folder, linked there once the folder was
+    // private and marked.
+    expect(readFileSync(ownRoot, "utf8")).toBe(wordProfilesMark(kept.slice(ownRoot.length + 1)));
     expect(readdirSync(kept)).toEqual([WORD_PROFILES_RESERVED]);
     // Found again by a later launch, which reads the reservation and its folder and sets nothing.
     const again = answering(ownList);
@@ -247,6 +250,29 @@ describe("a refused launch's word to the person", () => {
     const next = (await ownProfilesFolder(planted.name, "win32", foreignMark))?.path ?? "";
     expect(next.startsWith(`${planted.name}-2.`)).toBe(true);
     expect(sets(foreignMark)).not.toContain(planted.folder);
+    // A copy of the reserved folder beside it that kept the mark's link is never looked at, and a
+    // mark replaced inside the folder while Windows is read leaves the reservation not ours.
+    const copied = await reserved();
+    mkdirSync(`${copied.name}.0-copy`);
+    linkSync(
+      join(copied.folder, WORD_PROFILES_RESERVED),
+      join(`${copied.name}.0-copy`, WORD_PROFILES_RESERVED),
+    );
+    const looked = answering(ownList);
+    expect((await ownProfilesFolder(copied.name, "win32", looked))?.path).toBe(copied.folder);
+    expect(touched(looked)).not.toContain(`${copied.name}.0-copy`);
+    const swapped = await reserved();
+    const swapping = answering(ownList, (path) => {
+      if (path === swapped.folder) {
+        const inside = join(swapped.folder, WORD_PROFILES_RESERVED);
+        const text = readFileSync(inside, "utf8");
+        rmSync(inside);
+        writeFileSync(inside, text);
+      }
+      return ownList;
+    });
+    const past = (await ownProfilesFolder(swapped.name, "win32", swapping))?.path ?? "";
+    expect(past.startsWith(`${swapped.name}-2.`)).toBe(true);
     // Anything else at the name - a file saying something else, a folder of this account's that is
     // empty, or another account's - is never read into or changed, and the next name is reserved.
     const marked = root();
@@ -279,6 +305,9 @@ describe("a refused launch's word to the person", () => {
         `O:${user}G:${group}D:PAI(A;OICI;FA;;;${user})(XA;;FA;;;${user};(x))(A;OICI;0x1301bf;;;${other})`,
       ),
       inParent(`G:${group}D:PAI(A;OICI;FA;;;${user})`),
+      // A folder handing nothing down to new folders: Windows would give a new one the creating
+      // process's default list instead.
+      inParent(`O:${user}G:${group}D:PAI(A;;FA;;;${user})(A;OI;FA;;;${user})`),
     ]) {
       const exposed = root();
       const run = parent(exposed);
@@ -287,14 +316,17 @@ describe("a refused launch's word to the person", () => {
       expect(readdirSync(join(exposed, ".."))).toEqual([]);
     }
     // A folder made that cannot be made private, or whose mark cannot go in, is removed only
-    // while empty: what something else put in it meanwhile stays, and nothing is reserved.
-    for (const failing of ["private", "mark"]) {
+    // while empty: what something else put in it meanwhile, a folder or a file at the mark's name
+    // included, stays as it was, and nothing is reserved.
+    for (const failing of ["private", "mark", "mark-file"]) {
       const made = root();
       const fails: AccessRun = async (ask) => {
         const folder = ask.read.find((path) => path.startsWith(`${made}.`));
         if (folder && failing === "private") writeFileSync(join(folder, "theirs"), "");
         if (folder && failing === "mark")
           mkdirSync(join(folder, WORD_PROFILES_RESERVED), { recursive: true });
+        if (folder && failing === "mark-file")
+          writeFileSync(join(folder, WORD_PROFILES_RESERVED), "not this launch's\n");
         return {
           user,
           set: ask.set.map((each) => ({ path: each.path, error: "refused" })),
@@ -314,6 +346,10 @@ describe("a refused launch's word to the person", () => {
       expect(readdirSync(join(made, "..", left ?? ""))).toContain(
         failing === "private" ? "theirs" : WORD_PROFILES_RESERVED,
       );
+      if (failing === "mark-file")
+        expect(readFileSync(join(made, "..", left ?? "", WORD_PROFILES_RESERVED), "utf8")).toBe(
+          "not this launch's\n",
+        );
     }
     // A folder made that another account owns is never taken as private, nor reserved.
     const owned = root();

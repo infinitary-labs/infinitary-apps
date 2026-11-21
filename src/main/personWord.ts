@@ -1,6 +1,7 @@
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
+  type BigIntStats,
   closeSync,
   constants,
   fstatSync,
@@ -14,9 +15,8 @@ import {
   renameSync,
   rmdirSync,
   rmSync,
-  type Stats,
   unlinkSync,
-  writeFileSync,
+  writeSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
@@ -46,10 +46,12 @@ import {
   replyLine,
   WORD_OWNER_FILE,
   WORD_PROFILE_PREFIX,
-  WORD_PROFILES_MARK,
+  WORD_PROFILES_MARK_BYTES,
   WORD_PROFILES_RESERVED,
   WORD_REMOVING_PREFIX,
   WORD_TEMP_DIR,
+  wordProfilesMark,
+  wordProfilesMarked,
 } from "./personWordArg";
 
 /*
@@ -165,7 +167,13 @@ export { wordProfilesBeside } from "@core/folderMove/due";
 const OWNER_FILE_BYTES = 16;
 
 /** The profiles' folder a launch keeps its words' profiles in, and which folder it was. */
-export type ProfilesFolder = { path: string; made: Stats };
+export type ProfilesFolder = { path: string; made: Entry };
+
+/**
+ * What a path names, read with its device and file numbers whole: a file system's numbers can be
+ * larger than an ordinary number holds exactly, and two that round alike are no proof of one file.
+ */
+type Entry = BigIntStats;
 
 /**
  * The profiles' folder this app keeps for this account, or null where it has none it can trust; it
@@ -231,14 +239,14 @@ async function trustedParent(
     });
     return trusted ? real : null;
   }
-  const user = process.getuid?.();
+  const user = BigInt(process.getuid?.() ?? -1);
   const trusted = chain.every((path, index) => {
     const found = entryOf(path);
     if (found === null || !found.isDirectory() || found.isSymbolicLink()) return false;
-    if (index === 0) return found.uid === user && (found.mode & 0o022) === 0;
+    if (index === 0) return found.uid === user && (found.mode & 0o022n) === 0n;
     return (
-      (found.uid === user || found.uid === 0) &&
-      ((found.mode & 0o022) === 0 || (found.mode & 0o1000) !== 0)
+      (found.uid === user || found.uid === 0n) &&
+      ((found.mode & 0o022n) === 0n || (found.mode & 0o1000n) !== 0n)
     );
   });
   if (!trusted) return null;
@@ -279,8 +287,9 @@ async function keepProfilesFolder(
   if (found !== "free") return found;
   const made = await makeProfilesFolder(name, platform, access);
   if (made === null) return null;
+  const markPath = join(made.folder.path, WORD_PROFILES_RESERVED);
   try {
-    linkSync(join(made.folder.path, WORD_PROFILES_RESERVED), name);
+    linkSync(markPath, name);
   } catch (error) {
     dropMade(made);
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
@@ -288,17 +297,24 @@ async function keepProfilesFolder(
     return theirs === "free" ? null : theirs;
   }
   const linked = entryOf(name);
-  return linked !== null && sameEntry(linked, made.mark) && stillReserved(made.folder)
+  const inside = entryOf(markPath);
+  return linked !== null &&
+    inside !== null &&
+    sameEntry(linked, made.mark) &&
+    sameEntry(inside, made.mark) &&
+    stillReserved(made.folder)
     ? made.folder
     : null;
 }
 
 /**
  * What `name` holds: nothing (`free`), this app's whole reservation, read without changing it, and
- * the folder it reserves, or anything else (`not-ours`). A reservation is a plain file of this
- * account's saying the mark whole (`markedHere`) that is the very file - by device and number -
- * holding the mark in a folder beside it named for it (`name.<random>`), a real folder, not a link,
- * this account's alone (`aloneNow`), and both still the same once all of that is read.
+ * the folder it reserves, or anything else (`not-ours`). A reservation is a plain file only this
+ * account could have written saying the mark whole (`markedHere`), which names the one folder it
+ * marks (`name.<id>`, `wordProfilesMarked`); that folder is a real folder, not a link, this
+ * account's alone (`aloneNow`), and holds that very file - by device and number - as its mark. No
+ * other folder is looked at, so a copy of the folder that kept its link is never taken for it, and
+ * the name, the folder and its mark are all read again once all of that is read.
  */
 async function reservedAt(
   name: string,
@@ -310,63 +326,79 @@ async function reservedAt(
   if (!named.isFile()) return "not-ours";
   const mark = await markedHere(name, platform, access);
   if (mark === null) return "not-ours";
-  const prefix = `${basename(name)}.`;
-  for (const each of readdirSync(dirname(name))) {
-    if (!each.startsWith(prefix)) continue;
-    const path = join(dirname(name), each);
-    const found = entryOf(path);
-    if (found === null || !found.isDirectory()) continue;
-    const inside = entryOf(join(path, WORD_PROFILES_RESERVED));
-    if (inside === null || !sameEntry(inside, mark)) continue;
-    if (!(await aloneNow(path, found, platform, access))) return "not-ours";
-    const still = entryOf(path);
-    const pointer = entryOf(name);
-    if (still === null || !sameMade(still, found) || pointer === null) return "not-ours";
-    return sameEntry(pointer, mark) ? { path, made: found } : "not-ours";
-  }
-  return "not-ours";
+  const path = `${name}.${mark.id}`;
+  const markPath = join(path, WORD_PROFILES_RESERVED);
+  const found = entryOf(path);
+  const inside = entryOf(markPath);
+  if (found === null || !found.isDirectory() || inside === null || !sameEntry(inside, mark.file))
+    return "not-ours";
+  if (!(await aloneNow(path, found, platform, access))) return "not-ours";
+  const still = entryOf(path);
+  const stillInside = entryOf(markPath);
+  const pointer = entryOf(name);
+  const unchanged =
+    still !== null &&
+    sameMade(still, found) &&
+    stillInside !== null &&
+    sameEntry(stillInside, mark.file) &&
+    pointer !== null &&
+    sameEntry(pointer, mark.file);
+  return unchanged ? { path, made: found } : "not-ours";
 }
 
 /**
- * Makes a profiles' folder under a name of its own beside `name`, this account's alone - made with
- * no access for anyone else, or on Windows given an owner-only access list of its own
- * (`keepOwnerOnly`) - and only then marked whole; null where it cannot be, the folder then removed
- * again only while still the same, empty folder (`dropIfEmpty`).
+ * Makes a profiles' folder under a name of its own beside `name` (`name.<id>`), this account's
+ * alone - made with no access for anyone else, or on Windows given an owner-only access list of its
+ * own (`keepOwnerOnly`) - and only then marked whole with its own name (`wordProfilesMark`); null
+ * where it cannot be, the folder then removed again only while still the same, empty folder
+ * (`dropIfEmpty`). Its mark is made new, never one already there, and is known by the file it
+ * opened, so a mark that could not be finished is removed only while it is still that file.
  */
 async function makeProfilesFolder(
   name: string,
   platform: NodeJS.Platform,
   access: AccessRun,
-): Promise<{ folder: ProfilesFolder; mark: Stats } | null> {
-  const path = `${name}.${randomUUID()}`;
+): Promise<{ folder: ProfilesFolder; mark: Entry } | null> {
+  const id = randomUUID();
+  const path = `${name}.${id}`;
   mkdirSync(path, { mode: 0o700 });
-  const folder = { path, made: lstatSync(path) };
+  const folder = { path, made: lstatSync(path, { bigint: true }) };
   const alone =
     platform === "win32"
       ? (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only"
-      : folder.made.uid === process.getuid?.() && (folder.made.mode & 0o077) === 0;
+      : folder.made.uid === BigInt(process.getuid?.() ?? -1) && (folder.made.mode & 0o077n) === 0n;
   if (!alone || !stillReserved(folder)) {
     dropIfEmpty(path, folder.made);
     return null;
   }
   const markPath = join(path, WORD_PROFILES_RESERVED);
+  let mark: Entry | null = null;
+  let fd: number | undefined;
   try {
-    writeFileSync(markPath, WORD_PROFILES_MARK, { flag: "wx", mode: 0o600 });
-    return { folder, mark: lstatSync(markPath) };
+    fd = openSync(markPath, "wx", 0o600);
+    mark = fstatSync(fd, { bigint: true });
+    const text = Buffer.from(wordProfilesMark(id));
+    for (let wrote = 0; wrote < text.length; )
+      wrote += writeSync(fd, text, wrote, text.length - wrote);
+    closeSync(fd);
+    fd = undefined;
+    return { folder, mark };
   } catch (error) {
-    dropMade({ folder, mark: null });
+    if (fd !== undefined) closeSync(fd);
+    dropMade({ folder, mark });
     throw error;
   }
 }
 
 /**
- * Removes a profiles' folder this launch made and never reserved: its own mark, while still the
- * file it wrote, then the folder while still the same and empty, never more.
+ * Removes a profiles' folder this launch made and never reserved: its own mark, only while still
+ * the file it made (`mark`; none where it never knew which file that was), then the folder while
+ * still the same and empty, never more.
  */
-function dropMade(made: { folder: ProfilesFolder; mark: Stats | null }): void {
+function dropMade(made: { folder: ProfilesFolder; mark: Entry | null }): void {
   const markPath = join(made.folder.path, WORD_PROFILES_RESERVED);
   const mark = entryOf(markPath);
-  if (mark?.isFile() && (made.mark === null || sameEntry(mark, made.mark)))
+  if (made.mark !== null && mark?.isFile() && sameEntry(mark, made.mark))
     try {
       unlinkSync(markPath);
     } catch {
@@ -376,7 +408,7 @@ function dropMade(made: { folder: ProfilesFolder; mark: Stats | null }): void {
 }
 
 /** Removes a folder this launch made while it is still that folder and still empty, never more. */
-function dropIfEmpty(path: string, made: Stats): void {
+function dropIfEmpty(path: string, made: Entry): void {
   const now = entryOf(path);
   if (now === null || !now.isDirectory() || !sameMade(now, made)) return;
   try {
@@ -388,14 +420,22 @@ function dropIfEmpty(path: string, made: Stats): void {
   }
 }
 
-/** Whether a folder already there is this account's alone, read without changing it. */
+/**
+ * Whether a folder already there is this account's alone, read without changing it: away from
+ * Windows by its owner and modes, and on a Mac with no access list entry allowing anything
+ * (`macAllows`), which the modes do not show.
+ */
 async function aloneNow(
   path: string,
-  found: Stats,
+  found: Entry,
   platform: NodeJS.Platform,
   access: AccessRun,
 ): Promise<boolean> {
-  if (platform !== "win32") return found.uid === process.getuid?.() && (found.mode & 0o077) === 0;
+  if (platform !== "win32") {
+    if (found.uid !== BigInt(process.getuid?.() ?? -1) || (found.mode & 0o077n) !== 0n)
+      return false;
+    return platform !== "darwin" || !(await macAllows([path]));
+  }
   if (entryOf(join(path, UNFINISHED_MARK)) !== null) return false;
   const answer = await access({ set: [], read: [path] });
   const sddl = answer.read[0]?.sddl;
@@ -403,28 +443,36 @@ async function aloneNow(
 }
 
 /**
- * The file at `path` where it holds the mark whole, read to its end (`readSmallFile`), and only this
- * account could have written it: away from Windows one it owns, on Windows one whose own access
- * list, read whole without changing it, lets no other ordinary account in (`onlyOwnerReaches`);
- * null otherwise.
+ * The file at `path` and the folder it marks where it holds a mark whole (`wordProfilesMarked`),
+ * read to its end (`readSmallFile`), and only this account could have written it: away from Windows
+ * one it owns, on a Mac with no access list entry allowing anything (`macAllows`), on Windows one
+ * whose own access list, read whole without changing it, lets no other ordinary account in
+ * (`onlyOwnerReaches`); null otherwise.
  */
 async function markedHere(
   path: string,
   platform: NodeJS.Platform,
   access: AccessRun,
-): Promise<Stats | null> {
-  const mark = readSmallFile(path, Buffer.byteLength(WORD_PROFILES_MARK));
-  if (mark === null || mark.text !== WORD_PROFILES_MARK) return null;
-  if (platform !== "win32") return mark.file.uid === process.getuid?.() ? mark.file : null;
+): Promise<{ file: Entry; id: string } | null> {
+  const mark = readSmallFile(path, WORD_PROFILES_MARK_BYTES);
+  const id = mark === null ? null : wordProfilesMarked(mark.text);
+  if (mark === null || id === null) return null;
+  if (platform !== "win32") {
+    if (mark.file.uid !== BigInt(process.getuid?.() ?? -1)) return null;
+    return platform === "darwin" && (await macAllows([path])) ? null : { file: mark.file, id };
+  }
   const answer = await access({ set: [], read: [path] });
   const sddl = answer.read[0]?.sddl;
-  return sddl && onlyOwnerReaches(readAccessList(sddl), answer.user) ? mark.file : null;
+  return sddl && onlyOwnerReaches(readAccessList(sddl), answer.user)
+    ? { file: mark.file, id }
+    : null;
 }
 
 /** Whether the profiles' folder is still the one this launch reserved. */
 const stillReserved = (folder: ProfilesFolder) => {
   const now = entryOf(folder.path);
-  return now !== null && now.isDirectory() && sameMade(now, folder.made);
+  if (now === null) return false;
+  return now.isDirectory() && sameMade(now, folder.made);
 };
 
 /**
@@ -435,7 +483,7 @@ const stillReserved = (folder: ProfilesFolder) => {
  * Anything else it moved, or what of it could not be removed, stays at that name and is never put
  * back, where it could take the place of what came to its old name since.
  */
-function removeIfSame(path: string, made: Stats): void {
+function removeIfSame(path: string, made: Entry): void {
   const now = entryOf(path);
   if (now === null || !now.isDirectory() || !sameMade(now, made)) return;
   const aside = join(dirname(path), `${WORD_REMOVING_PREFIX}${randomUUID()}`);
@@ -459,14 +507,14 @@ function removeIfSame(path: string, made: Stats): void {
 }
 
 /** A folder this launch made or read, still the same: its device, number and birth. */
-const sameMade = (a: Stats, b: Stats) => sameEntry(a, b) && a.birthtimeMs === b.birthtimeMs;
+const sameMade = (a: Entry, b: Entry) => sameEntry(a, b) && a.birthtimeNs === b.birthtimeNs;
 
-/** Which entry a path is, by device and number: the same only while nothing replaced it. */
-const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: number }) =>
+/** Which entry a path is, by device and number, read whole: the same only while nothing replaced it. */
+const sameEntry = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) =>
   a.dev === b.dev && a.ino === b.ino;
 
 /** A profile's owner: the copy's number, and which file said it. */
-type Owner = { pid: number; dev: number; ino: number };
+type Owner = { pid: number; dev: bigint; ino: bigint };
 
 /**
  * The copy a profile's owner file names (`claimWordProfile`): its number and the line's end, and
@@ -484,23 +532,23 @@ function profileOwner(profile: string): Owner | null {
  * opened file is the one the path named and which reads to its end in no more than `most` bytes;
  * null for anything else or nothing there.
  */
-function readSmallFile(path: string, most: number): { text: string; file: Stats } | null {
+function readSmallFile(path: string, most: number): { text: string; file: Entry } | null {
   let fd: number | undefined;
   try {
     // Checked before it is opened, where opening cannot refuse a link itself, as on Windows.
-    const named = lstatSync(path);
-    if (!named.isFile() || named.size > most) return null;
+    const named = lstatSync(path, { bigint: true });
+    if (!named.isFile() || named.size > BigInt(most)) return null;
     fd = openSync(
       path,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
     );
-    const kept = fstatSync(fd);
-    if (!kept.isFile() || !sameEntry(kept, named) || kept.size > most) return null;
+    const kept = fstatSync(fd, { bigint: true });
+    if (!kept.isFile() || !sameEntry(kept, named) || kept.size > BigInt(most)) return null;
     const bytes = Buffer.alloc(most + 1);
     let read = 0;
     for (let got = 1; got > 0 && read < bytes.length; read += got)
       got = readSync(fd, bytes, read, bytes.length - read, read);
-    if (read !== kept.size) return null;
+    if (BigInt(read) !== kept.size) return null;
     return { text: bytes.toString("utf8", 0, read), file: kept };
   } catch {
     return null;
@@ -541,9 +589,9 @@ function reclaimWordProfiles(folder: ProfilesFolder): void {
 }
 
 /** What a path names, not following a link; null where nothing can be read there. */
-function entryOf(path: string): Stats | null {
+function entryOf(path: string): Entry | null {
   try {
-    return lstatSync(path);
+    return lstatSync(path, { bigint: true });
   } catch {
     return null;
   }
@@ -593,10 +641,10 @@ export async function askPersonWord(
   // Its profile and temporary folder are there before the copy runs, so its temporary files
   // have a place from its start; it names itself there before using either. Only the profile
   // this launch made goes, while its path still names it (`removeIfSame`).
-  let made: Stats;
+  let made: Entry;
   try {
     mkdirSync(profile, { mode: 0o700 });
-    made = lstatSync(profile);
+    made = lstatSync(profile, { bigint: true });
   } catch (error) {
     console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);
     return "unshown";

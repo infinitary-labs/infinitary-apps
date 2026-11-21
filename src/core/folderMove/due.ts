@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readdirSync, realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Spelling } from "@shared/codeNames";
@@ -39,6 +40,29 @@ export function stagedFolderFor(to: string, pid: number = process.pid): string {
 export function wordProfilesBeside(dataDir: string): string {
   return `${dataDir}-word-profiles`;
 }
+
+/**
+ * The profiles' folder's mark: a file this app writes whole in the folder it made, saying
+ * `wordProfilesMark` of that folder's own name and nothing else, once that folder is this account's
+ * alone; only then is the same file linked at the reserved name (`wordProfilesBeside`), which
+ * reserves it. Anything else at that name is someone else's, never changed, read into or used.
+ */
+export const WORD_PROFILES_RESERVED = ".infinitary-word-profiles";
+/**
+ * What the profiles' folder's mark says, whole: which folder it marks, the one named `<reserved
+ * name>.<id>` beside the reserved name, so the reservation names that one folder and no copy of it.
+ */
+export const wordProfilesMark = (id: string) => `infinitary-word-profiles:1 ${id}\n`;
+/** The folder a mark's whole text names (`wordProfilesMark`), or null for any other text. */
+export function wordProfilesMarked(text: string): string | null {
+  return (
+    /^infinitary-word-profiles:1 ([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\n$/.exec(
+      text,
+    )?.[1] ?? null
+  );
+}
+/** The longest whole mark. */
+export const WORD_PROFILES_MARK_BYTES = Buffer.byteLength(wordProfilesMark(randomUUID()));
 
 /** Every staged folder beside `to`, of any attempt. */
 export function stagedFolders(to: string): string[] {

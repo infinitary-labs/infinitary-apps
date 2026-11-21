@@ -1,10 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   chmodSync,
   closeSync,
   copyFileSync,
   existsSync,
   fstatSync,
+  linkSync,
   lstatSync,
   lutimesSync,
   mkdirSync,
@@ -40,7 +42,10 @@ import {
   type FolderMove,
   stagedFolderFor,
   stagedFolders,
+  WORD_PROFILES_RESERVED,
   wordProfilesBeside,
+  wordProfilesMark,
+  wordProfilesMarked,
 } from "./due";
 import { type MoveDeps, type MoveItem, runMove, stageMove } from "./move";
 import { readMoveRecord, writeMoveRecord } from "./record";
@@ -608,21 +613,42 @@ describe("the one-time move of a data folder", () => {
   // and only the checked copy's record names where it went; a launch killed mid-copy
   // leaves that folder named by nothing. The next launch puts it back and asks again.
   /**
-   * A word's copy's profile in use beside the app's folder (src/main/personWord.ts): a file the copy
-   * holds open, which must stay at the path the copy was given, whatever the move does.
+   * A word's copy's profile in use beside the app's folder (src/main/personWord.ts), laid out as the
+   * app reserves it: the profiles' folder `<name>.<id>` holding its mark, the same file linked at
+   * the reserved name, and in it the profile with its temporary folder and the owner file the copy
+   * holds open. Each check finds the profile again from the name, as a later ask does, and requires
+   * the same mark, folder, profile, open owner file and temporary folder, whatever the move did.
    */
   function liveWordProfile(to: string): { stillThere: () => void; close: () => void } {
-    const profile = join(wordProfilesBeside(to), "infinitary-word-live");
-    mkdirSync(join(profile, "temp"), { recursive: true });
+    const name = wordProfilesBeside(to);
+    const id = randomUUID();
+    const folder = `${name}.${id}`;
+    const mark = join(folder, WORD_PROFILES_RESERVED);
+    mkdirSync(folder, { mode: 0o700 });
+    writeFileSync(mark, wordProfilesMark(id), { flag: "wx", mode: 0o600 });
+    linkSync(mark, name);
+    const profile = join(folder, "infinitary-word-live");
+    const temp = join(profile, "temp");
+    mkdirSync(temp, { recursive: true });
+    writeFileSync(join(temp, "scratch"), "the copy's own\n");
     const record = join(profile, "infinitary-word.pid");
     writeFileSync(record, `${process.pid}\n`);
     const held = openSync(record, "r");
-    const kept = fstatSync(held);
+    const identity = (path: string) => {
+      const found = lstatSync(path, { bigint: true });
+      return [found.dev, found.ino];
+    };
+    const before = [name, folder, profile, temp].map(identity);
+    const kept = fstatSync(held, { bigint: true });
     return {
       stillThere: () => {
-        const now = statSync(record);
+        // The later lookup: the name's mark names the same folder, whose own mark is that file.
+        expect(wordProfilesMarked(readFileSync(name, "utf8"))).toBe(id);
+        expect(identity(join(`${name}.${id}`, WORD_PROFILES_RESERVED))).toEqual(identity(name));
+        expect([name, folder, profile, temp].map(identity)).toEqual(before);
+        const now = statSync(record, { bigint: true });
         expect([now.dev, now.ino]).toEqual([kept.dev, kept.ino]);
-        expect(existsSync(join(profile, "temp"))).toBe(true);
+        expect(readFileSync(join(temp, "scratch"), "utf8")).toBe("the copy's own\n");
         // The copy still reads the record it holds, through the move.
         const bytes = Buffer.alloc(32);
         expect(bytes.toString("utf8", 0, readSync(held, bytes, 0, 32, 0))).toBe(`${process.pid}\n`);

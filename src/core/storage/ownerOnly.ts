@@ -34,8 +34,13 @@ export type AccessEntry = {
 /** A folder's owner and access list, read from its security descriptor string. */
 export type AccessList = {
   readonly owner: string | null;
-  /** Null when the folder has no list at all, which lets everyone in. */
+  /** Null when the folder has no list at all, which lets everyone in, or none read whole. */
   readonly entries: readonly AccessEntry[] | null;
+  /**
+   * Whether the descriptor was read whole: its owner, and its list to its end or the list's
+   * absence. A reading that is not whole says nothing about the folder, so nothing is set on it.
+   */
+  readonly whole: boolean;
   /** Whether the list is protected from what the parent hands down (`P`). */
   readonly protected: boolean;
 };
@@ -81,14 +86,18 @@ function ownerKeeps(owner: string | null, user: string): boolean {
 /**
  * Reads a security descriptor string's owner (`O:`) and access list (`D:`). A list not read to its
  * end - one holding an entry this reading does not take apart, as a conditional entry with its own
- * brackets - reads as no list, which every judgment refuses, never as the entries before it.
+ * brackets - or a descriptor with no owner reads as not whole (`whole`), which every judgment
+ * refuses and nothing repairs, never as the entries before it nor as a folder with no list.
  */
 export function readAccessList(sddl: string): AccessList {
   const owner = /O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
   const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
-  if (!dacl || /D:NO_ACCESS_CONTROL/.test(sddl)) return { owner, entries: null, protected: false };
+  const whole = owner !== null;
+  if (!dacl || /D:NO_ACCESS_CONTROL/.test(sddl))
+    return { owner, entries: null, protected: false, whole };
   const rest = sddl.slice(dacl.index + dacl[0].length);
-  if (rest !== "" && !rest.startsWith("S:")) return { owner, entries: null, protected: false };
+  if (rest !== "" && !rest.startsWith("S:"))
+    return { owner, entries: null, protected: false, whole: false };
   const flags = dacl[1] ?? "";
   const entries = [...(dacl[2] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
     const fields = (match[1] ?? "").split(";");
@@ -100,7 +109,7 @@ export function readAccessList(sddl: string): AccessList {
       text: match[0],
     };
   });
-  return { owner, entries, protected: flags.includes("P") };
+  return { owner, entries, protected: flags.includes("P"), whole };
 }
 
 /** An entry that lets an account in: allow, object allow and the callback forms of them. */
@@ -147,13 +156,16 @@ export function othersCanChange(list: AccessList, user: string): boolean {
 }
 
 /**
- * Whether a folder hands another ordinary account any access to what is made in it: an entry that
- * passes to new folders or files (`CI`, `OI`) allowing an account besides this one, Windows and the
- * administrators, or no list, or one not read whole. A folder made where none is handed down is
- * this account's from its making, before its own list is set.
+ * Whether a folder made in this one could be reached by another ordinary account before its own
+ * list is set: an entry that passes to new folders or files (`CI`, `OI`) allowing an account
+ * besides this one, Windows and the administrators; no entry at all that passes to new folders,
+ * where Windows gives a new folder the creating process's default list instead of one this list
+ * decides; no list, or one not read whole. A folder made where only this account's and those
+ * accounts' entries are handed down is this account's from its making.
  */
 export function handsDownToOthers(list: AccessList, user: string): boolean {
-  if (list.entries === null || !ownerKeeps(list.owner, user)) return true;
+  if (list.entries === null || !list.whole || !ownerKeeps(list.owner, user)) return true;
+  if (!list.entries.some((entry) => entry.flags.includes("CI"))) return true;
   return list.entries.some(
     (entry) =>
       allows(entry) &&
@@ -164,12 +176,14 @@ export function handsDownToOthers(list: AccessList, user: string): boolean {
 
 /**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
- * list is its own (protected) and lets in no other ordinary account.
+ * list is its own (protected) and lets in no other ordinary account, `unread`
+ * when its descriptor was not read whole, which no set may replace.
  */
 export function ownerOnlyVerdict(
   list: AccessList,
   user: string,
-): "owner-only" | "no-list" | "other-owner" | "inherited" | "others" {
+): "owner-only" | "no-list" | "other-owner" | "inherited" | "others" | "unread" {
+  if (!list.whole) return "unread";
   if (list.entries === null) return "no-list";
   if (!ownerKeeps(list.owner, user)) return "other-owner";
   if (!onlyOwnerReaches(list, user)) return "others";

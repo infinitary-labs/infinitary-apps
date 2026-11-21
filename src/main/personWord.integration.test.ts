@@ -1,12 +1,16 @@
-import { spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  linkSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   readlinkSync,
   realpathSync,
+  rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -21,10 +25,11 @@ import { askPersonWord, ownProfilesFolder } from "./personWord";
 import {
   PERSON_WORD_ARG,
   WORD_OWNER_FILE,
-  WORD_PROFILES_MARK,
   WORD_PROFILES_RESERVED,
   WORD_REMOVING_PREFIX,
   WORD_TEMP_DIR,
+  wordProfilesMark,
+  wordProfilesMarked,
 } from "./personWordArg";
 
 /**
@@ -142,25 +147,22 @@ const wordProfiles = (dir: string) =>
 const profilesFolder = () =>
   join(realpathSync(scratchDir("person-word-profiles-")), "word-profiles");
 
+/** A mark as the app writes one, naming a folder no test made. */
+const someMark = () => wordProfilesMark(randomUUID());
+
 /**
- * The profiles' folder a name reserves: the folder beside it, named for it, whose mark is the very
- * file at the name.
+ * The profiles' folder a name reserves: the folder beside it its mark names, whose own mark is the
+ * very file at the name, by device and number read whole.
  */
 function keptAt(root: string): string {
-  const mark = statSync(root);
-  const holds = (name: string) => {
-    try {
-      const inside = statSync(join(dirname(root), name, WORD_PROFILES_RESERVED));
-      return inside.dev === mark.dev && inside.ino === mark.ino;
-    } catch {
-      return false;
-    }
-  };
-  const name = readdirSync(dirname(root)).find(
-    (each) => each.startsWith(`${basename(root)}.`) && holds(each),
-  );
-  if (name === undefined) throw new Error("no profiles' folder is reserved there");
-  return join(dirname(root), name);
+  const id = wordProfilesMarked(readFileSync(root, "utf8"));
+  if (id === null) throw new Error("no profiles' folder is reserved there");
+  const folder = `${root}.${id}`;
+  const mark = lstatSync(root, { bigint: true });
+  const inside = lstatSync(join(folder, WORD_PROFILES_RESERVED), { bigint: true });
+  if (inside.dev !== mark.dev || inside.ino !== mark.ino)
+    throw new Error("the name's mark is not the folder's own");
+  return folder;
 }
 
 /** The folders beside a name made for its reservation, reserved or not. */
@@ -308,14 +310,26 @@ describe("a refused launch's copy that shows a word", () => {
     const ask = (profiles: string) =>
       askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
     expect(await ask(made)).toBe(0);
-    expect(readFileSync(made, "utf8")).toBe(WORD_PROFILES_MARK);
-    expect(readdirSync(keptAt(made))).toEqual([WORD_PROFILES_RESERVED]);
+    const kept = keptAt(made);
+    expect(readdirSync(kept)).toEqual([WORD_PROFILES_RESERVED]);
     expect(await ask(made)).toBe(0);
     expect(foldersFor(made)).toHaveLength(1);
     expect(existsSync(`${made}-2`)).toBe(false);
+    // A copy of that folder beside it that kept its mark's link is never used for it, nor once the
+    // folder itself is gone.
+    const copy = `${made}.0-copy`;
+    mkdirSync(copy, { mode: 0o700 });
+    linkSync(join(kept, WORD_PROFILES_RESERVED), join(copy, WORD_PROFILES_RESERVED));
+    expect(await ask(made)).toBe(0);
+    expect(keptAt(made)).toBe(kept);
+    expect(readdirSync(copy)).toEqual([WORD_PROFILES_RESERVED]);
+    rmSync(kept, { recursive: true });
+    expect(await ask(made)).toBe(0);
+    expect(readdirSync(copy)).toEqual([WORD_PROFILES_RESERVED]);
+    expect(readdirSync(keptAt(`${made}-2`))).toEqual([WORD_PROFILES_RESERVED]);
     // A folder at that name the app never made - empty, holding a mark however it reads, or
     // holding another's work - never scanned, changed or used, and the next name is.
-    for (const said of [undefined, null, "", `${WORD_PROFILES_MARK}more`, "someone else's\n"]) {
+    for (const said of [undefined, null, "", `${someMark()}more`, "someone else's\n"]) {
       const found = profilesFolder();
       mkdirSync(found, { recursive: true, mode: 0o700 });
       if (typeof said === "string") writeFileSync(join(found, WORD_PROFILES_RESERVED), said);
@@ -334,24 +348,53 @@ describe("a refused launch's copy that shows a word", () => {
       expect([after.ino, after.mode]).toEqual([before.ino, before.mode]);
       expect(readdirSync(keptAt(`${found}-2`))).toEqual([WORD_PROFILES_RESERVED]);
     }
-    // A file at the name saying the mark that no folder beside it holds, or whose folder holds only
-    // a copy of it: no reservation of the app's, left as it is.
+    // A file at the name saying a mark whose folder is not there, or whose folder holds only a copy
+    // of it: no reservation of the app's, left as it is.
     for (const copied of [false, true]) {
       const found = profilesFolder();
-      writeFileSync(found, WORD_PROFILES_MARK, { mode: 0o600 });
-      const beside = `${found}.theirs`;
+      const said = someMark();
+      writeFileSync(found, said, { mode: 0o600 });
+      const beside = `${found}.${wordProfilesMarked(said)}`;
       if (copied) {
         mkdirSync(beside, { mode: 0o700 });
-        writeFileSync(join(beside, WORD_PROFILES_RESERVED), WORD_PROFILES_MARK);
+        writeFileSync(join(beside, WORD_PROFILES_RESERVED), said);
       }
       const before = statSync(found);
       expect(await ask(found)).toBe(0);
       expect(statSync(found).ino).toBe(before.ino);
-      expect(readFileSync(found, "utf8")).toBe(WORD_PROFILES_MARK);
+      expect(readFileSync(found, "utf8")).toBe(said);
       if (copied) expect(readdirSync(beside)).toEqual([WORD_PROFILES_RESERVED]);
       expect(readdirSync(keptAt(`${found}-2`))).toEqual([WORD_PROFILES_RESERVED]);
     }
   });
+
+  it.runIf(process.platform === "darwin")(
+    "leaves a Mac reservation whose folder or mark an access list opens to others",
+    async () => {
+      // Modes alone do not show a Mac access list entry: one that lets everyone read the reserved
+      // folder, or its mark, makes it no longer this account's alone, and the next name is used.
+      const marks = scratchDir("person-word-marks-");
+      for (const opened of ["folder", "mark"] as const) {
+        const root = profilesFolder();
+        const ask = () =>
+          askPersonWord("dock", {
+            launcher: launcher(copyProgram(), "zero", marks),
+            profiles: root,
+          });
+        expect(await ask()).toBe(0);
+        const kept = keptAt(root);
+        const target = opened === "folder" ? kept : root;
+        execFileSync("/bin/chmod", ["+a", "everyone allow read", target]);
+        const listed = () => execFileSync("/bin/ls", ["-lde", target], { encoding: "utf8" });
+        const before = listed();
+        expect(before).toMatch(/: .* allow /);
+        expect(await ask()).toBe(0);
+        expect(listed()).toBe(before);
+        expect(readdirSync(kept)).toEqual([WORD_PROFILES_RESERVED]);
+        expect(readdirSync(keptAt(`${root}-2`))).toEqual([WORD_PROFILES_RESERVED]);
+      }
+    },
+  );
 
   it("starts no copy where every name for its profiles' folder is taken", async () => {
     // Folders the app never made, holding another's files, or empty and this account's alone as
@@ -384,11 +427,13 @@ describe("a refused launch's copy that shows a word", () => {
   it("reserves the name itself after a launch ended part way, leaving that launch's folder as it was", async () => {
     // A launch ended before its link went in leaves only its own folder beside the name: empty, as
     // one ended before its mark, or with its mark cut short.
-    for (const left of [null, WORD_PROFILES_MARK.slice(0, 5)]) {
+    for (const left of [null, "cut"]) {
       const root = profilesFolder();
-      const ended = `${root}.ended`;
+      const id = randomUUID();
+      const ended = `${root}.${id}`;
       mkdirSync(ended, { mode: 0o700 });
-      if (left !== null) writeFileSync(join(ended, WORD_PROFILES_RESERVED), left);
+      if (left !== null)
+        writeFileSync(join(ended, WORD_PROFILES_RESERVED), wordProfilesMark(id).slice(0, -2));
       const names = readdirSync(ended);
       const before = statSync(ended);
       const marks = scratchDir("person-word-marks-");
@@ -398,7 +443,6 @@ describe("a refused launch's copy that shows a word", () => {
           profiles: root,
         }),
       ).toBe(0);
-      expect(readFileSync(root, "utf8")).toBe(WORD_PROFILES_MARK);
       expect(keptAt(root)).not.toBe(ended);
       expect(readdirSync(ended)).toEqual(names);
       expect(statSync(ended).ino).toBe(before.ino);

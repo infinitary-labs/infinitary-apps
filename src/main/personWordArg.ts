@@ -82,15 +82,12 @@ export function wordProfilePrivate(
 
 /** What names a copy's throwaway profile, a folder in the profiles' folder (`wordProfilesBeside`). */
 export const WORD_PROFILE_PREFIX = "infinitary-word-";
-/**
- * The profiles' folder's mark: a file this app writes whole in the folder it made, saying
- * `WORD_PROFILES_MARK` and nothing else, once that folder is this account's alone; only then is the
- * same file linked at the reserved name (`wordProfilesBeside`), which reserves it. Anything else at
- * that name is someone else's, never changed, read into or used.
- */
-export const WORD_PROFILES_RESERVED = ".infinitary-word-profiles";
-/** What the profiles' folder's mark says, whole. */
-export const WORD_PROFILES_MARK = "infinitary-word-profiles:1\n";
+export {
+  WORD_PROFILES_MARK_BYTES,
+  WORD_PROFILES_RESERVED,
+  wordProfilesMark,
+  wordProfilesMarked,
+} from "@core/folderMove/due";
 /**
  * What names a word's folder moved aside to be removed, in the folder it was in: never a profile's
  * name, so only the one remover that moved it reads it.

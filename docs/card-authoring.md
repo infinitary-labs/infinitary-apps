@@ -937,7 +937,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   Enter or Chat sends the field's words, files and pictures to the author as a reply (`docs/card-threads.md`); a reply carries the body's picks among its settings, never the words as an answer beside them.
   Any other button carries the trimmed words as one more answer, `{ name: "anything_else", values: [], changed: true, written }` (`withAnythingElse`), on the path every answer takes: the author's wake, the card row, the task's `card_resolved` event, the first mate's resolutions line and a basis brief.
   On a merge or discard the app runs the click and the first mate reads the words on the card's resolutions line, because the crewmate's task closes.
-  A note's own Done or Got it carries them the same way on `inf:cards:note-done`'s third argument, sent only when the field holds words; the core presses the note first and then sends the words as the captain's reply under it, to its author, or to the first mate when Done closed its task (`CardActions.replyWithNotePress`), because a reply waiting under the note would keep Done from closing the task.
+  A note's own Done or Got it carries them the same way on `inf:cards:note-done`'s third argument, sent only when the field holds something; the core presses the note first and then sends the words as the captain's reply under it, to its author, or to the first mate when Done closed its task (`CardActions.replyWithNotePress`), because a reply waiting under the note would keep Done from closing the task.
   An ended card's Close is the same button: its words go as the reply its field sends, then it closes.
   Its corner minus, which also reads Close, goes through that press while the field holds words, on the Mac and the phone.
   A press whose card is gone, or no longer a note, is refused when it carries words, so they stay in the field.
@@ -945,9 +945,20 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   A view refuses such a press itself, in plain words, while its home lacks the `note-done-words` change.
   The words never count in the footer's picks and never hold up the default; once the click is taken the field is empty.
   A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the field writes more.
-- **A file waits for a reply.**
-  A file or picture goes only as a reply: while one is attached the buttons are off, with "Send the file as a reply first" (`CARD_FILES_FIRST`) at the row's left and on each button, and a press does nothing.
-  A note's own button holds its press the same way while a file or a queued note waits, but stays pressable, so a press that closes an open note editor queues that note and takes nothing.
+- **Files, pictures and notes go with the press.**
+  The captain asked that attachments and queued notes in a card's field go along with a button's click, not only as a reply (INF-5608).
+  While a file, picture or queued note waits, every button stays lit and takes ⌘1 to ⌘4, and one line at the row's left names what goes with it ("Sent with your choice: 1 picture and 2 notes", `carriedWithChoiceWords`).
+  The press sends the choice, the words, the notes, the files and the pictures in one request: `inf:cards:act`'s chrome value, or `inf:cards:note-done`'s third argument, carries optional `notes`, `files` and `images` beside `answers` (`cardChromeValueSchema`, `src/shared/choiceCarried.ts`), each marked picture drawn at the press, at most four pictures in all and a reply's 4,000 characters of words.
+  On acceptance the field, its chips and its notes empty; on a refusal they all come back as they were.
+  The home keeps what went on the choice's `action` observation as `carried`: the notes, the files as an author reads them and its own copies of the pictures (`choiceCarriedRecordSchema`).
+  A crewmate's choice message reads the files, each note with where it points, and the pictures by name after its answers, with the pictures in its turn; a first mate card's choice turn reads the same, its pictures loaded from the row.
+  An answer task's closing choice keeps them on `card_resolved` too, so the first mate's closing notice carries them, and a builder built on that answer reads them after the answers in its basis section, with the pictures among its brief's own.
+  A reviewer's finding card hands them to the builder in its review hand-off; the captain's action that reopens a card sends them with the reply it writes.
+  Where no author hears the choice - a merge, a discard or an app card's own button the app carried out, or a card nobody reads - the first mate is told once, as a choice the app already carried out, with what went with it.
+  A note's Done, Got it or Close sends them as the reply under the note, as its words go.
+  A request's open-browser button answers nothing, so they stay in the field and Return control sends them as a reply first (INF-4587); a body script's own choice carries nothing from the field.
+  A note's own button and every choice stay pressable while a note editor is open, and the press that closes that editor only queues its note (`pressQueuedNote`).
+  A view asks its home's healthcheck: against a home that does not list `choice-attachments` the buttons stay off while a file, picture or note waits, with "Send the file as a reply first" (`CARD_FILES_FIRST`) or "Send the notes as a reply first" at the row's left and on each button, as before.
 - **The name.**
   `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.

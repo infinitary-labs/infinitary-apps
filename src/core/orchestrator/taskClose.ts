@@ -3,7 +3,7 @@ import {
   COMPLETION_CARD_HEADINGS,
   TIERED_STORY_HEADINGS,
 } from "@shared/cardHeadings";
-import type { Card } from "@shared/cards";
+import type { Card, ChoiceCarriedRecord } from "@shared/cards";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import { opensPullRequest } from "@shared/repos";
 import type { TaskDeliveryMode } from "@shared/tasks";
@@ -67,6 +67,8 @@ export type TaskClose = {
   feed?: boolean;
   /** A selected answer choice to queue after the close transaction commits. */
   answerHandoff?: AnswerTaskClosedPayload;
+  /** What else the captain's closing choice carried, which the first mate's notice brings along. */
+  answerCarried?: ChoiceCarriedRecord;
   /** Extra facts the close records on its timeline event. */
   data?: Record<string, unknown>;
   /**
@@ -421,7 +423,13 @@ export class TaskClosing {
             answerHandoffQueued =
               this.host.inbox.enqueueWake(
                 FIRSTMATE_RECIPIENT,
-                { facts: { kind: "answer-closed", handoff: close.answerHandoff } },
+                {
+                  facts: {
+                    kind: "answer-closed",
+                    handoff: close.answerHandoff,
+                    ...(close.answerCarried ? { carried: close.answerCarried } : {}),
+                  },
+                },
                 "agent",
                 taskId,
               ) !== null;

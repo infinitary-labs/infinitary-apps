@@ -459,6 +459,54 @@
       <string>· عبر %1$ld مهمة</string>
     </dict>
   </dict>
+  <key>cardCarriedNotes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld ملاحظة</string>
+      <key>one</key>
+      <string>ملاحظة واحدة</string>
+      <key>two</key>
+      <string>ملاحظتان</string>
+      <key>few</key>
+      <string>%1$ld ملاحظات</string>
+      <key>many</key>
+      <string>%1$ld ملاحظةً</string>
+      <key>other</key>
+      <string>%1$ld ملاحظة</string>
+    </dict>
+  </dict>
+  <key>cardCarriedPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld صورة</string>
+      <key>one</key>
+      <string>صورة واحدة</string>
+      <key>two</key>
+      <string>صورتان</string>
+      <key>few</key>
+      <string>%1$ld صور</string>
+      <key>many</key>
+      <string>%1$ld صورةً</string>
+      <key>other</key>
+      <string>%1$ld صورة</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

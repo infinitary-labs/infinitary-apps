@@ -68,6 +68,17 @@
   "cardBrowserUnansweredStarting": "Nothing answers at {site}, so Infinitary is starting it again. The page shows here once it answers.",
   "cardBrowserUnansweredWorking": "Nothing answers at {site}, and its crewmate is working now. The page shows here once it answers.",
   "cardBrowserWord": "Browser",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} note",
+    "other": "{count} notes"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} picture",
+    "other": "{count} pictures"
+  },
+  "cardCarriedWithChoice": "Sent with your choice: {items}",
   "cardConsentFrom": "From",
   "cardConsentFullDetails": "Full details",
   "cardConsentGuidanceOnly": "It supplies guidance, HTML parts and pictures, and runs nothing.",

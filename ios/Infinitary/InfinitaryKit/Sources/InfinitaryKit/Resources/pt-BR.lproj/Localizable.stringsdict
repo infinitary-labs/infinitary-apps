@@ -345,6 +345,42 @@
       <string>· por meio de %1$ld tarefas</string>
     </dict>
   </dict>
+  <key>cardCarriedNotes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld nota</string>
+      <key>many</key>
+      <string>%1$ld notas</string>
+      <key>other</key>
+      <string>%1$ld notas</string>
+    </dict>
+  </dict>
+  <key>cardCarriedPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld imagem</string>
+      <key>many</key>
+      <string>%1$ld imagens</string>
+      <key>other</key>
+      <string>%1$ld imagens</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

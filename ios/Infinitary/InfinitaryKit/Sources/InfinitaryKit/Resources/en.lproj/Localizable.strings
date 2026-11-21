@@ -322,6 +322,7 @@
 "cardBrowserUnansweredStarting" = "Nothing answers at %1$@, so Infinitary is starting it again. The page shows here once it answers.";
 "cardBrowserUnansweredWorking" = "Nothing answers at %1$@, and its crewmate is working now. The page shows here once it answers.";
 "cardBrowserWord" = "Browser";
+"cardCarriedWithChoice" = "Sent with your choice: %1$@";
 "cardConsentFrom" = "From";
 "cardConsentFullDetails" = "Full details";
 "cardConsentGuidanceOnly" = "It supplies guidance, HTML parts and pictures, and runs nothing.";

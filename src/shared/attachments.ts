@@ -1,5 +1,5 @@
-import { cutText } from "@shared/textCut";
 import { z } from "zod";
+import { cutText } from "./textCut.ts";
 
 /**
  * Files in the composer (`docs/composer.md`, "Files"). One home for what a

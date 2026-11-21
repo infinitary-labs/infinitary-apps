@@ -72,6 +72,19 @@
   "cardBrowserUnansweredStarting": "Nada responde en {site}, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.",
   "cardBrowserUnansweredWorking": "Nada responde en {site} y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.",
   "cardBrowserWord": "Navegador",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} nota",
+    "many": "{count} de notas",
+    "other": "{count} notas"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} imagen",
+    "many": "{count} de imágenes",
+    "other": "{count} imágenes"
+  },
+  "cardCarriedWithChoice": "Se envía con tu elección: {items}",
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Todos los detalles",
   "cardConsentGuidanceOnly": "Aporta guías, partes HTML e imágenes, y no ejecuta nada.",

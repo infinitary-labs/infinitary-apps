@@ -72,6 +72,19 @@
   "cardBrowserUnansweredStarting": "Rien ne répond sur {site}, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.",
   "cardBrowserUnansweredWorking": "Rien ne répond sur {site}, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.",
   "cardBrowserWord": "Navigateur",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} note",
+    "many": "{count} notes",
+    "other": "{count} notes"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} image",
+    "many": "{count} images",
+    "other": "{count} images"
+  },
+  "cardCarriedWithChoice": "Envoyé avec votre choix : {items}",
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Tous les détails",
   "cardConsentGuidanceOnly": "Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.",

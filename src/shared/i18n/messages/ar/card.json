@@ -84,6 +84,25 @@
   "cardBrowserUnansweredStarting": "لا شيء يستجيب على {site}، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.",
   "cardBrowserUnansweredWorking": "لا شيء يستجيب على {site}، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.",
   "cardBrowserWord": "المتصفح",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "zero": "{count} ملاحظة",
+    "one": "ملاحظة واحدة",
+    "two": "ملاحظتان",
+    "few": "{count} ملاحظات",
+    "many": "{count} ملاحظةً",
+    "other": "{count} ملاحظة"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "zero": "{count} صورة",
+    "one": "صورة واحدة",
+    "two": "صورتان",
+    "few": "{count} صور",
+    "many": "{count} صورةً",
+    "other": "{count} صورة"
+  },
+  "cardCarriedWithChoice": "يُرسل مع اختيارك: {items}",
   "cardConsentFrom": "من",
   "cardConsentFullDetails": "كل التفاصيل",
   "cardConsentGuidanceOnly": "يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.",

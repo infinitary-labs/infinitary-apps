@@ -322,6 +322,7 @@
 "cardBrowserUnansweredStarting" = "Rien ne répond sur %1$@, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.";
 "cardBrowserUnansweredWorking" = "Rien ne répond sur %1$@, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.";
 "cardBrowserWord" = "Navigateur";
+"cardCarriedWithChoice" = "Envoyé avec votre choix : %1$@";
 "cardConsentFrom" = "De";
 "cardConsentFullDetails" = "Tous les détails";
 "cardConsentGuidanceOnly" = "Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.";

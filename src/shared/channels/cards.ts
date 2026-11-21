@@ -82,7 +82,8 @@ export const cardChannels = {
   // answer task as answered, Got it reads the note. The second argument is
   // the shell's submission metadata, as on close; the third, sent only when
   // the card's field holds words, carries them as act's chrome value does
-  // (`{ answers }` with the `anything_else` answer, `note-done-words.md`).
+  // (`{ answers }` with the `anything_else` answer, `note-done-words.md`),
+  // with the field's notes, files and pictures (`choice-attachments.md`).
   "inf:cards:note-done": {
     effect: "change",
     surface: "core",

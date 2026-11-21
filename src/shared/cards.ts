@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { afterMergeShownListSchema } from "./afterMerge.ts";
+import { attachmentRefSchema } from "./attachments.ts";
 import {
   cardEffectSchema,
   deviceMakeSchema,
@@ -643,13 +644,6 @@ export function withAnythingElse(answers: readonly CardAnswer[], words: string):
 export function anythingElseOf(answers: readonly CardAnswer[] | undefined): string | undefined {
   return answers?.find((answer) => answer.name === ANYTHING_ELSE_ANSWER)?.written;
 }
-
-/**
- * What a footer click carries as `inf:cards:act`'s value: the answers, in one
- * envelope. A frame click's value stays the body's own.
- */
-export const cardChromeValueSchema = z.strictObject({ answers: cardAnswersSchema });
-export type CardChromeValue = z.infer<typeof cardChromeValueSchema>;
 
 /** Every agent-facing card read retains annotations, including a note-only reply. */
 export function cardMessageText(message: Pick<CardMessage, "text" | "notes">): string {
@@ -1604,6 +1598,22 @@ export const cardAvailabilityPayloadSchema = z.strictObject({
 });
 
 /**
+ * What the card's field sent with a choice besides its words, as the record
+ * keeps it (`choice-attachments.md`): the queued notes, the pasted files as
+ * the author read them (`withPastedFiles`), and the message's own copies of
+ * its pictures, marked ones included.
+ */
+export const choiceCarriedRecordSchema = z.strictObject({
+  notes: cardNotesSchema.optional(),
+  files: z
+    .string()
+    .max(64 * 1024)
+    .optional(),
+  pictures: z.array(attachmentRefSchema).max(TURN_IMAGES_MAX).optional(),
+});
+export type ChoiceCarriedRecord = z.infer<typeof choiceCarriedRecordSchema>;
+
+/**
  * One interaction with an offer's actions - closing or not - as the host
  * admitted it: the action's id and, when the offer declared it, its label
  * and effect; the committed answers; the question definitions the body
@@ -1634,6 +1644,8 @@ export const cardActionPayloadSchema = z.strictObject({
   interactionSource: z.enum(["shell", "host"]),
   /** What pressed the button, as the shell said; absent when it did not say or could not tell. */
   input: cardPressInputSchema.optional(),
+  /** What else the card's field sent with the choice (`choice-attachments.md`): its notes, files and pictures. */
+  carried: choiceCarriedRecordSchema.optional(),
 });
 
 /**

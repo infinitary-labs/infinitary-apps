@@ -351,8 +351,8 @@ export class CrewSupervisor {
         if (standingAuthorization(options.tasks.get(taskId)?.delivery)?.waiting?.on === "questions")
           this.settling.locks.retryWhenFree(taskId);
       },
-      closeAnsweredTask: (card, action, by) =>
-        this.settling.declared.closeAnsweredTask(card, action, by),
+      closeAnsweredTask: (card, action, by, carried) =>
+        this.settling.declared.closeAnsweredTask(card, action, by, carried),
       settleFacts: (taskId, part) => this.settleFacts.strip(taskId, part),
       mergeLabel: (card) => this.cardActions.mergeLabel(card),
       mergeAnyway: (card) => this.cardActions.mergeAnyway(card),
@@ -1533,11 +1533,12 @@ export class CrewSupervisor {
   pressNote(cardId: string, submission?: unknown, value?: unknown): void {
     // The words left in the card's field ride its one button; a press that
     // cannot take them is refused, so they stay in the field.
-    const words = this.cardActions.notePressWords(value);
+    // Its notes, files and pictures go with them (`choice-attachments.md`).
+    const words = this.cardActions.notePress(value);
     // An ended card's one button is Close, which tells nobody (INF-3071): its
     // words go as the reply its field already sends, before it closes.
     if (this.cards.ended.has(cardId)) {
-      if (words) this.cardActions.replyToCard(cardId, words);
+      if (words) this.cardActions.replyWithEndedClose(cardId, words);
       this.cards.ended.close(cardId);
       return;
     }

@@ -7,7 +7,7 @@ import {
   NOTE_GOT_IT_LABEL,
   noteDoneOf,
 } from "@shared/cardLeave";
-import type { CardRevisionLinks, TaskFactsPart } from "@shared/cards";
+import type { CardRevisionLinks, ChoiceCarriedRecord, TaskFactsPart } from "@shared/cards";
 import {
   type Card,
   type CardAnswer,
@@ -438,7 +438,14 @@ export class CardService {
     });
     this.drop(card.id);
     if (ends) this.ended.hold(card.id, kept);
-    const closedAnswer = this.recordResolution(card, action, by, answers, observation);
+    const closedAnswer = this.recordResolution(
+      card,
+      action,
+      by,
+      answers,
+      observation,
+      evidence?.carried,
+    );
     this.scheduleBroadcast();
     return closedAnswer;
   }
@@ -1346,6 +1353,7 @@ export class CardService {
     by: "captain" | "firstmate" | "crewmate" = "captain",
     answers?: CardAnswer[],
     observation?: string,
+    carried?: ChoiceCarriedRecord,
   ): boolean {
     const tasks = this.host.tasks;
     let closedAnswer = false;
@@ -1359,6 +1367,7 @@ export class CardService {
         actor: by,
         ...(answers ? { answers } : {}),
         ...(observation ? { observation } : {}),
+        ...(carried ? { carried } : {}),
       });
       return false;
     }
@@ -1374,12 +1383,13 @@ export class CardService {
         actor: by,
         ...(answers ? { answers } : {}),
         ...(observation ? { observation } : {}),
+        ...(carried ? { carried } : {}),
       });
       // This explicit resolution resynchronizes the captain gate, with
       // the action as its timeline reason. A real gate change restarts the
       // idle clock; putting a card aside never enters this path.
       this.syncGates(card);
-      if (!putOff) closedAnswer = this.host.closeAnsweredTask(card, action, by);
+      if (!putOff) closedAnswer = this.host.closeAnsweredTask(card, action, by, carried);
     }
     const row = tasks.capture.openCardTaskFor(card.id);
     if (!row || putOff) return closedAnswer;

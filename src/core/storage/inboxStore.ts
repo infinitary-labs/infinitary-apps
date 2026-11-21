@@ -868,7 +868,11 @@ export class InboxStore {
    */
   holdsUndeliveredChoice(recipient: string, cardId: string): boolean {
     return this.allFor(recipient).some((row) => {
-      const facts = row.facts as { kind?: unknown; card?: { id?: unknown } } | undefined;
+      type Facts = { kind?: unknown; card?: { id?: unknown }; guidance?: unknown };
+      let facts = row.facts as Facts | undefined;
+      // A crewmate's choice with pictures waits wrapped with their copies (`withAttachmentsKept`).
+      if (facts?.kind === "attachments-kept" && typeof facts.guidance === "object")
+        facts = facts.guidance as Facts;
       return facts?.kind === "card-choice" && facts.card?.id === cardId;
     });
   }

@@ -16,6 +16,7 @@ import {
   type CardObservationSource,
   type CardQuestion,
   type CardSubmission,
+  type ChoiceCarriedRecord,
   cardPressInputSchema,
   cardQuestionsBytes,
   cardQuestionsSchema,
@@ -49,6 +50,8 @@ export type CardInteractionEvidence = {
   frameValue?: string;
   context?: CardDecisionContext;
   contextGap?: "no-task" | "task-missing";
+  /** What else the card's field sent with the choice (`choice-attachments.md`). */
+  carried?: ChoiceCarriedRecord;
 };
 
 /** Why an offer came to exist, as its observation says. */
@@ -323,6 +326,7 @@ export class CardEvidence {
         ...(evidence?.contextGap ? { contextGap: evidence.contextGap } : {}),
         interactionSource: submission ? "shell" : "host",
         ...(submission?.input ? { input: submission.input } : {}),
+        ...(evidence?.carried ? { carried: evidence.carried } : {}),
       },
     });
     return kept ? id : undefined;

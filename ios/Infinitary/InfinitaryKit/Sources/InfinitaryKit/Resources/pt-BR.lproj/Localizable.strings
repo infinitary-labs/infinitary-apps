@@ -322,6 +322,7 @@
 "cardBrowserUnansweredStarting" = "Nada responde em %1$@, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.";
 "cardBrowserUnansweredWorking" = "Nada responde em %1$@, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.";
 "cardBrowserWord" = "Navegador";
+"cardCarriedWithChoice" = "Enviado com sua escolha: %1$@";
 "cardConsentFrom" = "De";
 "cardConsentFullDetails" = "Todos os detalhes";
 "cardConsentGuidanceOnly" = "Fornece orientações, partes HTML e imagens, e não executa nada.";

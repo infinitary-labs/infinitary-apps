@@ -14,6 +14,7 @@ import {
   MERGE_CLOSES_MARK,
   splitMergeClosesLine,
 } from "@shared/cards";
+import { carriedWithChoiceWords } from "@shared/choiceCarried";
 import * as m from "@shared/i18n/messages.generated";
 import { wordedCardText } from "@shared/i18n/said";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
@@ -34,6 +35,7 @@ import {
 import { createPortal } from "react-dom";
 import { AskedLine } from "../../cards/AskedLine";
 import { afterMergeStrip } from "../../cards/afterMergeStrip";
+import { pressQueuedNote } from "../../cards/annotationBridge";
 import { answersLine } from "../../cards/answersLine";
 import { bridgeActionIds } from "../../cards/bridgeActions";
 import { CardAttachment } from "../../cards/CardAttachment";
@@ -57,6 +59,7 @@ import { SecretAskFields } from "../../cards/SecretAskFields";
 import { SecretBringPicks } from "../../cards/SecretBringPicks";
 import { useBodyEntrance } from "../../cards/SurfaceReveal";
 import { CardTaskKey, KeyedText } from "../../cards/TaskKey";
+import { useChoiceAttachmentsHome } from "../../cards/useAnnotationHome";
 import { Button, ResponseCard } from "../../design";
 import { RiskChart, riskBodyInset, riskChartBox } from "../../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../../design/cards/riskRadar";
@@ -219,16 +222,18 @@ export function StackedCard({
   );
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
-  // A file, picture or queued note goes only as a reply: the choices wait until it has.
+  // A file, picture or queued note in the field goes with whichever button is pressed
+  // (`choice-attachments.md`); against a home without that change it goes only as a reply,
+  // and the choices wait until it has.
+  const carries = useChoiceAttachmentsHome();
   const noteCount = useShellStore((s) => s.replyNotes[card.id]?.length ?? 0);
   const notesFirst = noteCount > 0;
+  // Counted wherever the field is drawn, the thread beside the card included: a press takes them all.
+  const pictureCount = useShellStore((s) => s.replyImages[card.id]?.length ?? 0);
+  const fileCount = useShellStore((s) => s.replyPastes[card.id]?.length ?? 0);
   const pendingReplyWords = notesFirst ? m.shellCardNotesFirst() : CARD_FILES_FIRST;
-  const filesFirst = useShellStore(
-    (s) =>
-      notesFirst ||
-      (reply !== undefined &&
-        ((s.replyImages[card.id]?.length ?? 0) > 0 || (s.replyPastes[card.id]?.length ?? 0) > 0)),
-  );
+  const filesFirst =
+    !carries && (notesFirst || (reply !== undefined && (pictureCount > 0 || fileCount > 0)));
   const setCardAnswers = useShellStore((s) => s.setCardAnswers);
   const [showing, setShowing] = useState<"card" | "thread">("card");
   const bodyEntrance = useBodyEntrance();
@@ -354,6 +359,13 @@ export function StackedCard({
   // (INF-2794); a core from before it still sends only an answer's Done.
   const noteDone = !bare && card.actions.length === 0 ? card.noteDone : undefined;
   const pressNote = useShellStore((s) => s.pressNote);
+  // What a press would carry, named once beside the buttons.
+  const carriedLine =
+    carries && (card.actions.length > 0 || noteDone)
+      ? carriedWithChoiceWords({ pictures: pictureCount, files: fileCount, notes: noteCount })
+      : null;
+  // The line at the left, before the choices: the hold's or what goes with them.
+  const footLine = filesFirst || carriedLine !== null;
   const footer =
     card.actions.length > 0 || reply !== undefined || noteDone || notesFirst ? (
       <>
@@ -381,7 +393,7 @@ export function StackedCard({
           <span
             style={{
               alignSelf: "center",
-              marginInlineEnd: filesFirst ? undefined : "auto",
+              marginInlineEnd: footLine ? undefined : "auto",
               // The count's words stay level with the choices' text.
               marginBlock: "calc(-1 * var(--space-1))",
             }}
@@ -402,7 +414,7 @@ export function StackedCard({
             style={{
               alignSelf: "center",
               // The note that a file goes first follows it, at the left.
-              marginInlineEnd: filesFirst ? undefined : "auto",
+              marginInlineEnd: footLine ? undefined : "auto",
               fontFamily: "var(--font-mono)",
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
@@ -424,6 +436,20 @@ export function StackedCard({
             }}
           >
             {pendingReplyWords}
+          </span>
+        )}
+        {carriedLine !== null && (
+          <span
+            data-card-carried=""
+            role="status"
+            style={{
+              alignSelf: "center",
+              marginInlineEnd: "auto",
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-3)",
+            }}
+          >
+            {carriedLine}
           </span>
         )}
         {(groups.length > 0 ? groups : [{ key: "choices", actions: [] }]).map(
@@ -499,6 +525,8 @@ export function StackedCard({
                         void collect(true);
                         return;
                       }
+                      // A press that closed an open note's editor only queued it (INF-3786).
+                      if (pressQueuedNote()) return;
                       // What pressed it rides the click, read now (./pressInput).
                       const input = pressInputOf(event.nativeEvent, event.currentTarget);
                       void onAction(action.id, "chrome", undefined, collect, card, input);
@@ -523,8 +551,9 @@ export function StackedCard({
                   data-key-command={choiceKeys[0]?.["data-key-command"]}
                   pending={pending?.actionId === NOTE_DONE_ACTION_ID}
                   disabled={Boolean(pending)}
-                  // A file, picture or queued note goes as a reply first: the press is held, and the
-                  // button stays pressable so a press that queues an open note lands (INF-3786).
+                  // The button stays pressable so a press that queues an open note lands
+                  // (INF-3786); against an older home a file, picture or queued note goes as a
+                  // reply first, and the press is held.
                   off={offWords !== null}
                   note={
                     noticeCovers
@@ -533,7 +562,12 @@ export function StackedCard({
                   }
                   aria-description={offWords ?? undefined}
                   onClick={(event) => {
-                    if (useShellStore.getState().replyNotes[card.id]?.length || filesFirst) return;
+                    if (pressQueuedNote()) return;
+                    if (
+                      !carries &&
+                      (useShellStore.getState().replyNotes[card.id]?.length || filesFirst)
+                    )
+                      return;
                     void pressNote(
                       card.id,
                       card,

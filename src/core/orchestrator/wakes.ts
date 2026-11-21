@@ -427,7 +427,7 @@ export function withGuidanceMark(body: WakeBody, mark: number): TypedWake {
   };
 }
 
-/** The pictures a lane row's message keeps copies of, in order. */
+/** The pictures a lane row's message keeps copies of, in order: a choice's included. */
 export function rowAttachments(rows: readonly InboxRow[]): AttachmentRef[] {
   return rows.flatMap((row) => {
     let facts = row.facts;
@@ -438,6 +438,11 @@ export function rowAttachments(rows: readonly InboxRow[]): AttachmentRef[] {
       facts = facts.guidance;
     if (facts?.kind === "attachments-kept") return facts.attachments;
     if (facts?.kind === "captain-turn") return facts.attachments ?? [];
+    // A choice's own pictures ride the first mate's turn (`choice-attachments.md`); a
+    // crewmate's steer keeps its copies on the `attachments-kept` wrapper above.
+    if (facts?.kind === "card-choice" && facts.to === "firstmate")
+      return facts.choice.carried?.pictures ?? [];
+    if (facts?.kind === "answer-closed") return facts.carried?.pictures ?? [];
     return [];
   });
 }

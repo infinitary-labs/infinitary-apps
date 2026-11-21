@@ -64,6 +64,15 @@
   "cardBrowserUnansweredStarting": "{site} 沒有回應，Infinitary 正在重新啟動它。它一回應，頁面就會顯示在這裡。",
   "cardBrowserUnansweredWorking": "{site} 沒有回應，船員正在工作。它一回應，頁面就會顯示在這裡。",
   "cardBrowserWord": "瀏覽器",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "other": "{count} 則筆記"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "other": "{count} 張圖片"
+  },
+  "cardCarriedWithChoice": "隨你的選擇一起送出：{items}",
   "cardConsentFrom": "來自",
   "cardConsentFullDetails": "完整詳情",
   "cardConsentGuidanceOnly": "它提供指引、HTML 元件和圖片，不執行任何東西。",

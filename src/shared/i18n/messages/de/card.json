@@ -68,6 +68,17 @@
   "cardBrowserUnansweredStarting": "Unter {site} antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserUnansweredWorking": "Unter {site} antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserWord": "Browser",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} Notiz",
+    "other": "{count} Notizen"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} Bild",
+    "other": "{count} Bilder"
+  },
+  "cardCarriedWithChoice": "Wird mit Ihrer Auswahl gesendet: {items}",
   "cardConsentFrom": "Von",
   "cardConsentFullDetails": "Alle Details",
   "cardConsentGuidanceOnly": "Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.",

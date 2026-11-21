@@ -17,6 +17,7 @@ import { thisDesktop } from "../design/core/desktop";
 import { DictationMark } from "../design/voice/VoiceInput";
 import {
   focusPointAt,
+  markPressQueued,
   type NoteReveal,
   queueNote,
   removeNote,
@@ -325,6 +326,7 @@ export function AnnotationPopover({
       if (!own || own.contains(event.target as Node) || !own.contains(document.activeElement))
         return;
       settleAnnotation();
+      markPressQueued();
       requestAnimationFrame(() => {
         if (document.activeElement === document.body) focusPointAt(cardId);
       });

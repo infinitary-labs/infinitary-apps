@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { checkSnapshotState } from "../../src/shared/checkSnapshot";
 import {
   BITBUCKET,
   FORGE_SECTION_WORDS,
@@ -24,12 +25,22 @@ import {
   seedDataCenterSignIn,
   startDataCenterStub,
 } from "./bitbucketDataCenterStub";
+import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
+import { addedProjects } from "./projects";
+import { promptInput } from "./prompt";
 import { expandDock, noteLines, putInLine, taskKey } from "./rails";
-import { shownCard } from "./stack";
+import {
+  GITHUB_CHANGE_PROMPT_MARKER,
+  githubChange,
+  MOCK_GITHUB_CHANGE,
+  MOCK_GITHUB_CHANGE_CARD_TITLE,
+} from "./scenarios/githubChange";
+import { factsStrip, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -40,7 +51,10 @@ import { pressKey } from "./windowKeys";
  * real Settings and HTTP, where a refused token and a server older than
  * 8.19 are kept nowhere; and the captain's click on a pull request's card
  * merges it at the version the app read, while a push that lands in the
- * moment of the merge makes the server refuse it and nothing goes in.
+ * moment of the merge makes the server refuse it and nothing goes in. A
+ * crewmate opens its pull request on the server with its own tools, and the
+ * build statuses on the version it pushed read as the card's checks; a
+ * failed build merges nothing.
  *
  * The server is a local stand-in (`./bitbucketDataCenterStub.ts`) the app
  * reaches through its real sign-in and its real Data Center forge; no real
@@ -149,6 +163,7 @@ const READY_CARD_TITLE = "The pull request is ready";
  */
 async function seededMerge(
   arrange: (stub: DataCenterStub, push: (subject: string) => void) => void,
+  crewVerdict: "ready" | "red" = "ready",
 ) {
   const userDataDir = scratchDir("infinitary-bitbucket-dc-merge-");
   const taskId = "notestask";
@@ -205,8 +220,8 @@ async function seededMerge(
       declarations: [
         {
           headSha: approved,
-          verdict: "ready",
-          evidence: "The scripted crew judged the passed build status before the click.",
+          verdict: crewVerdict,
+          evidence: "The scripted crew judged the arranged build status before the click.",
           at: Date.now(),
         },
       ],
@@ -300,5 +315,124 @@ test("a push that lands while the server merges makes it refuse the older versio
     expect(existsSync(join(merge.worktreeDir, "sync.txt"))).toBe(true);
   } finally {
     await merge.close();
+  }
+});
+
+test("a failed build on a Data Center pull request merges nothing and leaves the task open", async () => {
+  const merge = await seededMerge((stub) => {
+    stub.setStatuses([
+      { key: "build", name: "Build", state: "SUCCESSFUL" },
+      { key: "test", name: "Tests", state: "FAILED" },
+    ]);
+  }, "red");
+  try {
+    const { page, key, detail, stub } = merge;
+    await expect.poll(async () => (await detail())?.delivery?.ci, { timeout: 20_000 }).toBe("red");
+    await expect(noteLines(page, key)).toHaveCount(1, { timeout: 20_000 });
+    expect(stub.merges()).toEqual([]);
+    expect(stub.requests().filter((request) => request.endsWith("/merge"))).not.toContain(
+      "POST /rest/api/latest/projects/FLD/repos/field-notes/pull-requests/1/merge",
+    );
+    await expect(putInLine(page, key)).toHaveCount(0);
+    expect(await detail()).toMatchObject({ status: "active", closedReason: null });
+  } finally {
+    await merge.close();
+  }
+});
+
+async function send(page: Page, text: string) {
+  const input = promptInput(page);
+  await input.click();
+  await input.fill(text);
+  await input.press("Enter");
+}
+
+test("a crewmate opens a pull request on a Data Center server, its build statuses read as the checks, and the captain's click merges that version", async () => {
+  const userDataDir = scratchDir("infinitary-bitbucket-dc-delivery-");
+  const bare = join(userDataDir, "field-notes-server.git");
+  git("init", "--bare", "--initial-branch=main", bare);
+  const dir = join(userDataDir, "field-notes");
+  git("init", "--initial-branch=main", dir);
+  git("-C", dir, "config", "user.name", "Test");
+  git("-C", dir, "config", "user.email", "test@localhost");
+  git("-C", dir, "commit", "--allow-empty", "-m", "chore: seed the notes");
+  git("-C", dir, "remote", "add", "origin", DATA_CENTER_ORIGIN);
+  // Every push reaches a bare repository on this computer, so the recorded address stays the server's.
+  git("-C", dir, "config", `url.${bare}.insteadOf`, DATA_CENTER_ORIGIN);
+  git("-C", dir, "push", "origin", "HEAD:refs/heads/main");
+  git("-C", dir, "fetch", "origin");
+  const db = openDatabase(userDataDir);
+  seedProject(db, {
+    id: "repo-notes",
+    path: dir,
+    name: "field-notes",
+    setupKind: "clone",
+    origin: DATA_CENTER_ORIGIN,
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+    addedAt: 1,
+  });
+  seedHostedOrigins(db, userDataDir);
+  db.close();
+  seedDataCenterSignIn(userDataDir);
+  const stub = await startDataCenterStub();
+  stub.gitOf({
+    head: (name) => git("-C", bare, "rev-parse", "--verify", `refs/heads/${name}`),
+    commit: (rev) => git("-C", bare, "rev-parse", "--verify", `${rev}^{commit}`),
+  });
+  const launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [githubChange],
+    userDataDir,
+    env: stub.env,
+  });
+  const evidence = process.env.INFINITARY_BITBUCKET_PICTURES;
+  try {
+    const { page } = launched;
+    await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+    await expect
+      .poll(async () => (await addedProjects(page))[0]?.host)
+      .toEqual({ kind: "bitbucket", name: DATA_CENTER_HOST });
+    const title = `field-notes ${GITHUB_CHANGE_PROMPT_MARKER}`;
+    await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+    const cardTitle = MOCK_GITHUB_CHANGE_CARD_TITLE;
+    const card = shownCard(page, cardTitle);
+    await expect(card).toBeVisible({ timeout: 45_000 });
+    const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+      (row) => row.title === title,
+    );
+    if (!task) throw new Error("The crewmate's task is missing");
+    const branch = task.repo?.branch ?? "";
+    const pushed = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
+    // One pull request from the task's branch, and the checks are the builds on the version pushed.
+    expect(stub.requests()).toContain(
+      "POST /rest/api/latest/projects/FLD/repos/field-notes/pull-requests",
+    );
+    expect(stub.requests()).toContain(`GET /rest/build-status/latest/commits/${pushed}`);
+    const webUrl = `https://${DATA_CENTER_HOST}/projects/FLD/repos/field-notes/pull-requests/1`;
+    const facts = factsStrip(cardBody(page, cardTitle));
+    await expect(facts.change.locator(`a[href="${webUrl}"]`)).toHaveText("#1");
+    const reading = task.delivery?.checks;
+    await expect(facts.checks).toContainText(
+      reading ? checkSnapshotState(reading) : "missing check reading",
+    );
+    expect(await page.evaluate((id) => window.infinitary.tasks.detail(id), task.id)).toMatchObject({
+      delivery: { changeLabel: "#1", prNumber: 1, prUrl: webUrl, ci: "green", headSha: pushed },
+    });
+    if (evidence) await regionShot(card, join(evidence, "dc-completion-card-after.png"));
+    // The captain's click: the merge names the version the app read, at the pushed head.
+    await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
+    await expect(putInLine(page, task.key)).toBeVisible({ timeout: 30_000 });
+    expect(stub.merges()).toEqual([
+      expect.objectContaining({ id: 1, version: 0, head: pushed, strategy: "squash" }),
+    ]);
+    expect(stub.merges()[0]?.message.startsWith(MOCK_GITHUB_CHANGE.title)).toBe(true);
+    await expect
+      .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), task.id))
+      .toMatchObject({ status: "done", closedReason: "merged" });
+  } finally {
+    await launched.close();
+    await stub.close();
   }
 });

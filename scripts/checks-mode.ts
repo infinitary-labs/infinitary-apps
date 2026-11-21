@@ -21,7 +21,7 @@ export type HeavyCheck = "journeys" | "phone" | "replay-gate" | "typecheck" | "l
 
 const DISPATCHES = "POST /repos/{owner}/{repo}/actions/workflows";
 const PULL_REQUEST_CHECKS =
-  "push your branch: its pull request's check \"Pull request · Code, build and affected unit tests (Linux)\" (ci.yml's typecheck-lint-build job) runs it. " +
+  "push your branch: its check \"Branch push · Code checks (Linux)\" (ci.yml's code-checks job) runs it. " +
   `Before a pull request exists, start ci.yml on your branch: ${DISPATCHES}/ci.yml/dispatches with {"ref":"<branch>"}.`;
 const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
   journeys: {

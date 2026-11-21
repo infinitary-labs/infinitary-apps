@@ -55,8 +55,7 @@ import XCTest
         window.rootViewController = UIHostingController(rootView: CardMediaView(presentation: presentation, session: session))
         window.makeKeyAndVisible()
 
-        // Drawn fitted first: the line shows at its own thickness, so WebKit has painted the page and set its fitted
-        // scale, which would otherwise undo a zoom made before it.
+        // Drawn fitted first: the line shows at its own thickness, so WebKit has painted the page at its fitted scale.
         let background = UIColor(PhoneTheme.background).resolvedColor(with: window.traitCollection)
         var loading = PhoneWaitDeadline(20)
         var found: WKWebView?
@@ -70,10 +69,9 @@ import XCTest
         let viewer = try XCTUnwrap(found)
         let scroll = viewer.scrollView
         // The reported route: the deepest pinch first, then out to about the captain's 3.6 times fitted.
-        scroll.setZoomScale(scroll.minimumZoomScale * CardMediaZoom.deepest, animated: false)
-        try await settle()
+        try await hold(viewer, at: scroll.minimumZoomScale * CardMediaZoom.deepest)
         let zoom: CGFloat = 3.6
-        scroll.setZoomScale(scroll.minimumZoomScale * zoom, animated: false)
+        try await hold(viewer, at: scroll.minimumZoomScale * zoom)
         // Centred on the line, at a column between the dots and the words.
         let fitted = viewer.bounds.width / 750
         let lineY = (viewer.bounds.height - 170 * fitted) / 2 + 70 * fitted
@@ -92,6 +90,30 @@ import XCTest
         XCTAssertEqual(scroll.zoomScale, scroll.minimumZoomScale * zoom, accuracy: 0.01, "The diagram stays zoomed")
         XCTAssertEqual(ink, own, accuracy: 0.5,
                        "The zoomed-out line carries \(ink) pixels of ink against its own \(own): a stretched fitted copy shows through")
+    }
+
+    /// Zooms in code to where a pinch would leave the diagram. Until the page has heard a zoom from the web view, each
+    /// frame it commits carries the page's own scale, and WebKit puts that scale back over a zoom set in code; a pinch is
+    /// spared, since WebKit leaves the zoom alone while fingers are down. Phone run 44849189521's iPad read zoom 1.0 for
+    /// 3.6 this way, with the fitted line's ink. So the zoom is set again whenever WebKit put the page's scale back, until
+    /// the page itself reads it (`visualViewport.scale`, asked in the app's own script world, since the viewer turns the
+    /// page's scripts off); from then on the page's frames carry the zoom.
+    private func hold(_ viewer: WKWebView, at scale: CGFloat) async throws {
+        let scroll = viewer.scrollView
+        scroll.setZoomScale(scale, animated: false)
+        var deadline = PhoneWaitDeadline(10)
+        var page: Double?
+        while true {
+            try await settle()
+            if abs(scroll.zoomScale - scale) > 0.001 {
+                scroll.setZoomScale(scale, animated: false)
+            } else {
+                page = try await viewer.callAsyncJavaScript("return visualViewport.scale", contentWorld: .defaultClient) as? Double
+                if let page, abs(page - Double(scale)) < 0.01, abs(scroll.zoomScale - scale) < 0.001 { return }
+            }
+            if deadline.expired() { break }
+        }
+        XCTFail("The page never took the zoom to \(scale): it reads \(page.map { "\($0)" } ?? "nothing"), the web view \(scroll.zoomScale)")
     }
 
     /// A few drawn frames, so the web view commits what the last zoom asked for.

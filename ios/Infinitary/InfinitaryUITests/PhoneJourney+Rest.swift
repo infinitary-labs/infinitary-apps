@@ -3,11 +3,11 @@ import XCTest
 /// The rest part (scripts/phone-test-plan.ts), which also runs every test no other part names: its tests and the steps
 /// only they take.
 extension PhoneJourney {
-    /// Part 4, the character and past choices: a real held turn, saved-sign-in and saved-answer choices, past-card context.
+    /// Part 4, the character and past choices: a real held turn with the crew scene inside it, saved-sign-in and
+    /// saved-answer choices, past-card context.
     func testCharacterAndPastChoices() async throws {
         try await launchJoined()
         try await verifyConversationCharacter()
-        try await verifyNativeCrewScene()
         try await verifyReviewedCardChoices()
         try await verifyPastMessageContext()
         try await verifyPhotoReadinessRecovery()
@@ -78,6 +78,7 @@ extension PhoneJourney {
 
     /// INF-1066: an already-running real turn survives a relaunch via its initial snapshot;
     /// an older home sends no unsupported reads and reports unknown until a real activity event.
+    /// The crew scene runs between the two, inside the same held turn (`verifyNativeCrewScene`).
     private func verifySceneContact() async throws {
         app.terminate()
         try await launchPhoneApp(app)
@@ -85,6 +86,11 @@ extension PhoneJourney {
         let character = app.otherElements["phone-character"]
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'working'"), object: character, timeout: 20), .completed)
         picture("native-scene-initial-busy")
+        // The first mate plays its idle fidgets, the warp among them, only while it is idle (CharacterMachine). A warp
+        // moves nothing for its first 0.18 s, so no wait for pace sees one coming: in phone run 44855050050 the iPad
+        // rest part found the crew at pace, a warp began, and the tap then landed where it swept the crewmate away.
+        // Working through this held turn, the first mate starts no warp while the scene's orbiting crew are tapped.
+        try await verifyNativeCrewScene()
 
         try await background()
         _ = try await home("scene-older-home")
@@ -126,6 +132,7 @@ extension PhoneJourney {
             .init(speedDegPerSec: try XCTUnwrap($0["speedDegPerSec"]), inclination: try XCTUnwrap($0["inclination"]), node: try XCTUnwrap($0["node"]))
         })
         let orbits = CrewOrbits(orbiting: Set(try XCTUnwrap(fixture["orbiting"] as? [String]).map { "crew-task-" + $0 }), pace: pace)
+        XCTAssertEqual(character.value as? String, "working", "The orbiting crew are tapped inside the held turn, so no warp starts")
         _ = try await home("capture-scene-start")
         tapOrbitingCrew(local, in: scene, orbits: orbits)
         XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
@@ -145,6 +152,7 @@ extension PhoneJourney {
                 closeCrewSummary()
             }
         }
+        XCTAssertEqual(character.value as? String, "working", "The held turn lasts through the orbiting taps")
         // A different computer remains a formation beside home, never a pager or a smaller version of every glyph.
         revealCrew(remote, in: scene)
         XCTAssertEqual(remote.value as? String, "Activity unknown")
@@ -305,11 +313,13 @@ extension PhoneJourney {
     }
 
     /// INF-1926, the captain's "standard sheet interaction": a tap above the sheet closes it, with no close mark.
+    /// The tap waits for the sheet to hold still, not the window: the scene shows above the sheet, and through the held
+    /// first mate turn it draws the first mate at work, so the window never holds still (phone run 44863171152's iPad).
     private func closeCrewSummary() {
         let preview = app.otherElements["crew-preview"], window = app.windows.firstMatch
         waitForSteadyTarget(preview)
         let screen = window.frame, top = (screen.minY + max(screen.minY, preview.frame.minY - 48)) / 2
-        tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (top - screen.minY) / screen.height)))
+        tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (top - screen.minY) / screen.height)), steady: preview)
         XCTAssertTrue(preview.waitForAbsence(timeout: 10), "The crew summary stayed open: \(app.debugDescription)")
     }
 
@@ -468,7 +478,8 @@ extension PhoneJourney {
     /// INF-2039: the first mate's warp fidget speeds the home crew up five to eleven times, and a crewmate trailing the
     /// target then reaches the point the tap aimed at before the touch lands, and opens its own sheet. So an orbiting
     /// crewmate's tap waits until every orbiting crewmate rides one of the orbits about the first mate at pace, then taps
-    /// it at once.
+    /// it at once. That wait cannot see a warp that begins after it, so the journey taps orbiting crew only inside a real
+    /// held turn, when the first mate plays no fidget at all (`verifySceneContact`).
     /// That wait comes before the look that finds the crewmate whole in view (`revealCrew`), never after it. Phone run
     /// 44645257220's iPhone rest part found the first crewmate whole in view and only then waited 5.9 s for the crew
     /// to ride at pace; the crewmate's own orbit carried it out of view meanwhile, and the tap went to its center then,

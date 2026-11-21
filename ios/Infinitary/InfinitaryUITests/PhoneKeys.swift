@@ -75,12 +75,14 @@ let englishPhone = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
 /// for the app's animations. A crewmate in the scene orbits on the display clock and never holds still; its taps pass
 /// `orbiting`, and revealCrew reads its frame against the scene's instead.
 /// INF-1735's single-press regression passes repeatDiscarded: false: even a proven discarded tap fails, never repeats.
+/// A tap at a point waits on the element the point is read against, or on `steady` when that element holds moving
+/// drawings the tap does not touch, such as a window behind a sheet.
 @MainActor func tapOnPhone(_ element: XCUIElement, orbiting: Bool = false, repeatDiscarded: Bool = true) {
     tapOnPhone("\(element)", steady: orbiting ? nil : element, repeatDiscarded: repeatDiscarded) { element.tap() }
 }
 
-@MainActor func tapOnPhone(_ point: XCUICoordinate, orbiting: Bool = false) {
-    tapOnPhone("\(point)", steady: orbiting ? nil : point.referencedElement) { point.tap() }
+@MainActor func tapOnPhone(_ point: XCUICoordinate, orbiting: Bool = false, steady: XCUIElement? = nil) {
+    tapOnPhone("\(point)", steady: orbiting ? nil : steady ?? point.referencedElement) { point.tap() }
 }
 
 @MainActor private func tapOnPhone(_ target: String, steady: XCUIElement?, repeatDiscarded: Bool = true, _ tap: () -> Void) {

@@ -10,8 +10,8 @@ import {
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-5183: where the simulator sent the one key the fold part pressed on the open Duo, read from backboardd's own
-// line for that press (tests/helpers/phoneKeyboard.ts). The observer's kept-log read replaces child_process.spawn
-// with owned streams, as tests/phone-keyboard.test.ts does.
+// line for that press (tests/helpers/phoneKeyboard.ts). The observer's subscription and kept-log read replace
+// child_process.spawn with owned streams, as tests/phone-keyboard.test.ts does.
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));
 vi.mock("node:child_process", () => ({ spawn }));
 
@@ -76,7 +76,7 @@ describe("open Duo key delivery witness", () => {
   });
 });
 
-describe("a key's outcome read from the owned simulator's kept log (INF-5183)", () => {
+describe("a key's outcome read from the owned simulator's log (INF-5183)", () => {
   const simulator = "53B86A21-6C98-4ADA-B450-3067365D6B8F";
   const pressed = {
     processImagePath: "/usr/libexec/backboardd",
@@ -85,11 +85,14 @@ describe("a key's outcome read from the owned simulator's kept log (INF-5183)", 
       "sequence starting with Keyboard event: <sq: 0x10e1f4310; (<keyboardFocus; display: 8AF25958-F0CD-4018-B5E2-12C18B2E53A7; pid: 94709; token: 0xA8B58429>)>",
   };
   const at = phoneLogMilliseconds(pressed.timestamp);
-  // An observer whose kept-log read does what `show` says with its stand-in child; a read ended by its signal fails
-  // as Node's own does, with the abort's error and then its close.
-  async function observer(show: (child: EventEmitter, stdout: PassThrough) => void) {
+  // An observer whose kept-log read does what `show` says with its stand-in child, given the subscription's own
+  // output too; a read ended by its signal fails as Node's own does, with the abort's error and then its close.
+  async function observer(
+    show: (child: EventEmitter, stdout: PassThrough, subscription: PassThrough) => void,
+  ) {
     const children = new Set<ChildProcess>();
     const reads: AbortSignal[] = [];
+    let subscription: PassThrough | undefined;
     spawn.mockImplementation((_command, args, options: { signal?: AbortSignal }) => {
       const stdout = new PassThrough();
       const stderr = new PassThrough();
@@ -105,6 +108,7 @@ describe("a key's outcome read from the owned simulator's kept log (INF-5183)", 
       });
       queueMicrotask(() => {
         if (args.includes("stream")) {
+          subscription = stdout;
           stdout.write("Filtering the log data using the registration predicate\n");
           return;
         }
@@ -114,7 +118,8 @@ describe("a key's outcome read from the owned simulator's kept log (INF-5183)", 
           child.emit("error", options.signal?.reason);
           child.emit("close", null);
         });
-        show(child, stdout);
+        if (!subscription) throw new Error("The observer reads its kept log only once subscribed");
+        show(child, stdout, subscription);
       });
       return child;
     });
@@ -136,6 +141,26 @@ describe("a key's outcome read from the owned simulator's kept log (INF-5183)", 
       keyboard.keyOutcome(94709, at - 400, at + 150, Date.now() + 60_000),
     ).resolves.toEqual({ outcome: "delivered", pid: 94709, proof: [pressed.eventMessage] });
     expect(reads.map((read) => read.aborted)).toEqual([false]);
+    await keyboard.close();
+    expect(children.size).toBe(0);
+  });
+  it("answers from the subscription's line for the press and ends the kept-log read that had not named it", async () => {
+    // Phone run 44860960513's open Duo fold part: the subscription held Escape's line 5 ms after the press, while
+    // the simulator started a dozen wallpaper extensions and ten seconds of kept-log reads passed without it.
+    const escapeLine = {
+      processImagePath: "/usr/libexec/backboardd",
+      timestamp: "2026-11-21 03:44:38.170022+0000",
+      eventMessage:
+        "sequence starting with Keyboard event: <sq: 0x11076c690; (<keyboardFocus; display: DEC42FA3-090D-4701-A12C-550A3072F2D7; pid: 11376; token: 0x701F3826>)>",
+    };
+    const pressedAt = phoneLogMilliseconds(escapeLine.timestamp);
+    const { keyboard, reads, children } = await observer((_child, _stdout, subscription) => {
+      subscription.write(`${JSON.stringify(escapeLine)}\n`);
+    });
+    await expect(
+      keyboard.keyOutcome(11376, pressedAt - 400, pressedAt + 900, Date.now() + 2_000),
+    ).resolves.toEqual({ outcome: "delivered", pid: 11376, proof: [escapeLine.eventMessage] });
+    expect(reads.map((read) => read.aborted)).toEqual([true]);
     await keyboard.close();
     expect(children.size).toBe(0);
   });

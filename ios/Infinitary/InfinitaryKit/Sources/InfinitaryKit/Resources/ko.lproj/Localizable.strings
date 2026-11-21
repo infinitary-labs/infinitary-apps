@@ -2447,16 +2447,16 @@
 "settingsDevicesRemoveWait" = "병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 %1$@이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.";
 "settingsDevicesRemoveWaitOn" = "%2$@의 병합되지 않은 작업이 아직 그곳에 있어요. 기다리면 %1$@이(가) 제거되기 전에 작업이 이 컴퓨터로 옮겨져요.";
 "settingsDevicesRemoveWhenBack" = "돌아오면 제거";
+"settingsDevicesRemovedOnceUpdatedLine" = "업데이트되면 제거돼요.";
+"settingsDevicesRemovedWhenBackLine" = "돌아오면 제거돼요.";
 "settingsDevicesRemoving" = "제거 중...";
 "settingsDevicesRemovingSetUp" = "Infinitary가 %1$@ 설정한 것을 제거하는 중…";
+"settingsDevicesRowActions" = "%1$@ 동작";
 "settingsDevicesRunningAs" = "%1$@(으)로 실행 중";
 "settingsDevicesRuns" = "%1$@ 실행";
 "settingsDevicesRunsNoProject" = "아직 실행하는 프로젝트 없음";
 "settingsDevicesRunsWhileLoggedIn" = "%1$@이(가) 로그인한 동안 작업만 실행";
 "settingsDevicesSeenNow" = "방금 확인됨";
-"settingsDevicesSeenRemovedOnceUpdated" = "새 작업을 받지 않음 · 업데이트되면 제거";
-"settingsDevicesSeenRemovedWhenBack" = "연락 닿지 않음 · 돌아오면 제거";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "연결 중 · 돌아오면 제거";
 "settingsDevicesSeenRestarted" = "이 컴퓨터가 다시 시작된 뒤로 로그인하지 않음";
 "settingsDevicesSeenSince" = "연락 닿지 않음 · 마지막 연결";
 "settingsDevicesSeenSinceWhen" = "%1$@부터 연락 닿지 않음";
@@ -2518,6 +2518,7 @@
 "settingsDevicesUpdateNamed" = "%1$@ 업데이트";
 "settingsDevicesUpdateOlder" = "이전 버전 설치";
 "settingsDevicesUpdateOlderNamed" = "%1$@에 이전 버전 설치";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "명령 복사";
 "settingsDevicesWaysCopyLink" = "링크 복사";
 "settingsDevicesWaysFoot" = "링크나 명령에는 모든 방법이 한꺼번에 들어 있어요. 다른 컴퓨터는 응답하는 방법을 쓰므로 여기서 고를 건 없어요.";

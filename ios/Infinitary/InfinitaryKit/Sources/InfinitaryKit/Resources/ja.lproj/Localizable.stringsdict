@@ -1501,6 +1501,20 @@
       <string>%1$ld件のタスク</string>
     </dict>
   </dict>
+  <key>settingsDevicesTasksWait</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld件のタスクが、戻るまで待機しています。</string>
+    </dict>
+  </dict>
   <key>settingsDevicesWayCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

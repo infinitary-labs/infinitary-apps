@@ -12,7 +12,7 @@ import { TAKE_OVER_WORDS } from "../../src/core/standby/words";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
-import { BUILDER, openDevices, selectDevice } from "./deviceFixtures";
+import { BUILDER, openDevices, rowAction, selectDevice } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import {
@@ -216,13 +216,15 @@ test("a copy's window takes over once the home is gone, bringing in the newer co
     for (const [id, name] of [
       [deviceId, "Mac Studio"],
       [miniId, "Mac mini"],
-    ] as const)
-      await pressKey(
-        (await rowOf(id)).getByRole("button", {
-          name: m.settingsDevicesStandbyKeepNamed({ device: name }),
-        }),
-        "Enter",
+    ] as const) {
+      await rowOf(id);
+      const keep = await rowAction(pro.page, id, "standby-keep");
+      await expect(keep).toHaveText(m.settingsDevicesStandbyKeep());
+      expect(await pro.page.getByRole("menu").getAttribute("aria-label")).toBe(
+        m.settingsDevicesRowActions({ device: name }),
       );
+      await pressKey(keep, "Enter");
+    }
     await saves(pro.page, 6);
     for (const id of [deviceId, miniId])
       await expect((await rowOf(id)).locator("[data-standby]")).toHaveAttribute(

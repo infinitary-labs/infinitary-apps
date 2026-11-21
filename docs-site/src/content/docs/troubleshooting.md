@@ -68,7 +68,7 @@ Or: "Infinitary is closed on" that computer.
 2. Put both computers on the same network, or the same private network.
 3. In Settings → **Devices**, press **Try again** on its row.
 
-If a computer you added by its address has a new address, press **Change address** on its row.
+If a computer you added by its address has a new address, open its menu, the three dots on its row, and choose **Change address**.
 On a Mac, macOS may hold Infinitary off the local network until someone at that Mac allows it.
 Its row then offers **Add it by its address** instead.
 See [Your other computers](/your-other-computers/).

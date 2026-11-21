@@ -7,8 +7,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { type DeviceView, deviceLabel } from "@shared/devices";
 import { deviceUpdateCardId } from "@shared/deviceUpdateNudge";
 import { remoteLoginWords } from "@shared/remoteLogin";
-import { sshConnectionWords } from "@shared/sshConnection";
 import electronPath from "electron";
+import { deviceState } from "../../src/renderer/src/settings/devicesWords";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { scratchDir } from "../helpers/scratchDirs";
 import { SSH_SERVER_AVAILABLE, startSshServer } from "../helpers/sshServer";
@@ -131,9 +131,14 @@ test("an update refused while a computer did not answer is not still said once i
     const row = await selectDevice(page, device.id);
     const sshState = async () =>
       (await page.evaluate(() => window.infinitary.devices.list()))[0]?.ssh;
-    const connected = sshConnectionWords.detail({ state: "connected" }, device);
+    /** The row says it is connected: its one status is the state of a computer in reach. */
+    const saysConnected = async () => {
+      const [view] = await page.evaluate(() => window.infinitary.devices.list());
+      if (!view?.inReach) return null;
+      return (await row.locator("[data-device-status]").textContent()) === deviceState(view).text;
+    };
     await expect.poll(sshState, { timeout: 60_000 }).toEqual({ state: "connected" });
-    await expect(row).toContainText(connected);
+    await expect.poll(saysConnected).toBe(true);
     const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
     await expect(update).toBeVisible();
     const problem = page.locator('[data-settings-error="devices"]');
@@ -156,7 +161,7 @@ test("an update refused while a computer did not answer is not still said once i
     await expect.poll(sshState, { timeout: 180_000, intervals: [1000] }).toEqual({
       state: "connected",
     });
-    await expect(row).toContainText(connected, { timeout: 30_000 });
+    await expect.poll(saysConnected, { timeout: 30_000 }).toBe(true);
 
     // The failing check: once the row says it is connected, the tab no longer says it could not be reached.
     await expect(

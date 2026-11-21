@@ -2447,16 +2447,16 @@
 "settingsDevicesRemoveWait" = "Son travail non fusionné est toujours là-bas. Patientez, et il vient sur cet ordinateur avant que %1$@ soit retiré.";
 "settingsDevicesRemoveWaitOn" = "Son travail non fusionné sur %2$@ est toujours là-bas. Patientez, et il vient sur cet ordinateur avant que %1$@ soit retiré.";
 "settingsDevicesRemoveWhenBack" = "Retirer à son retour";
+"settingsDevicesRemovedOnceUpdatedLine" = "Il est retiré une fois mis à jour.";
+"settingsDevicesRemovedWhenBackLine" = "Il est retiré à son retour.";
 "settingsDevicesRemoving" = "Retrait...";
 "settingsDevicesRemovingSetUp" = "Retrait de ce qu’Infinitary a installé %1$@…";
+"settingsDevicesRowActions" = "Actions de %1$@";
 "settingsDevicesRunningAs" = "sous l’utilisateur %1$@";
 "settingsDevicesRuns" = "Exécute %1$@";
 "settingsDevicesRunsNoProject" = "N’exécute encore aucun projet";
 "settingsDevicesRunsWhileLoggedIn" = "exécute seulement du travail, tant que %1$@ a une session ouverte";
 "settingsDevicesSeenNow" = "vu à l’instant";
-"settingsDevicesSeenRemovedOnceUpdated" = "ne prend plus de nouveau travail · retiré une fois mis à jour";
-"settingsDevicesSeenRemovedWhenBack" = "hors de portée · retiré à son retour";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "connexion en cours · retiré à son retour";
 "settingsDevicesSeenRestarted" = "aucune session ouverte depuis le redémarrage de cet ordinateur";
 "settingsDevicesSeenSince" = "hors de portée depuis";
 "settingsDevicesSeenSinceWhen" = "hors de portée depuis %1$@";
@@ -2518,6 +2518,7 @@
 "settingsDevicesUpdateNamed" = "Mettre à jour %1$@";
 "settingsDevicesUpdateOlder" = "Installer la version antérieure";
 "settingsDevicesUpdateOlderNamed" = "Installer la version antérieure sur %1$@";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Copier une commande";
 "settingsDevicesWaysCopyLink" = "Copier un lien";
 "settingsDevicesWaysFoot" = "Un lien ou une commande contient tous les moyens à la fois. L’autre ordinateur utilise celui qui répond, il n’y a donc rien à choisir ici.";

@@ -30,20 +30,33 @@ Start with home selected; show Preferred address before Local address when avail
 Only home displays a selected standby's saved takeover endpoints, with their provenance, never as a live status.
 The inspector uses the Projects list's box and the existing device row shape:
 - This computer, first and always: the name "This computer", the mono line "MacBook Pro · your first mate lives here", the summary "Runs notes · Signed in to Codex, Claude and GitHub", its task count, and no Remove.
-- Running as another user, right after This computer: the name "Running as Builder", the mono line "another user on this computer · runs work only, while Builder is logged in · seen just now".
-- A selected peer by its own name, drawn as text because the computer chose it: the mono line "a computer · joined today 14:06 · seen just now", or "a computer · sam@mini.local · seen just now" when it was added by its address; a phone's reads "a phone · joined today 14:06 · seen just now".
+- Running as another user, right after This computer: the name "Running as Builder", the mono line "another user on this computer · runs work only, while Builder is logged in".
+- A selected peer by its own name, drawn as text because the computer chose it: the mono line "a computer · joined today 14:06", or "a computer · sam@mini.local" when it was added by its address; a phone's reads "a phone · joined today 14:06".
 
 The summary line is "Runs website and api" or "Runs no project yet", then "Signed in to Codex, Claude and GitHub" or "No sign-ins yet".
 It leads with "Controlling your first mate now" while Infinitary is open on that computer.
 A Windows PC that joined from its window controls and runs work as a Mac does, and reads the same.
 On another version, its line ends "Install the newer Infinitary on that computer.", since no update reaches a Windows PC yet, and it has no Update button.
-On the right a mono state - "1 task" in `--accent`, "idle", "connecting" while its SSH connection is being made, or "out of reach" in `--warn` - then a small secondary Button "Remove".
-The dot is `ok` while the device answers, `idle` while its connection is being made (its state on the right reads "connecting"), and `warn` while it is out of reach.
-A row too narrow for its mono line beside its actions wraps it between its parts, so "seen just now" stays whole; only a part wider than the whole line, such as a long address, wraps inside itself.
-Out of reach, the mono line ends "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
+On the right one mono status - "1 task" in `--accent`, "idle", "connecting" while its SSH connection is being made, or "out of reach since 14:02" in `--warn` - then the row's ⋯ (below, "The row").
+The dot is `ok` while the device answers, `idle` while its connection is being made (its status reads "connecting"), and `warn` while it is out of reach.
+A mono line too long for the row wraps between its parts; only a part wider than the whole line, such as a long address, wraps inside itself.
+Out of reach, the status reads "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
+A phone or a Mac that only controls reads "seen just now" while it answers.
 The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three chips, "+ A computer", "+ A phone" and "+ Running as another user".
 A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current TestFlight-only availability.
 Every build shows all three chips, installed and development alike.
+
+**The row** (INF-5506's approved plan: "the calmest row, and each of these actions takes one more click to reach").
+Every device's row has the same shape, a head, plain facts, and strips:
+- The head: the dot, the name, one status on the right, and a ⋯ `RowMenu` whose label is "Mac mini actions".
+  The status is the one word for where it stands - its tasks, "idle", "connecting", "setting up", "no new work", or since when it is out of reach - and never repeats on the facts below.
+- The facts, inset under the name: the mono line that says what the device is and where, ending "Infinitary 0.8.4" when every copy on it runs this computer's version; the summary; any version line that is only a fact; where its copy stands; and the phone's approvals.
+- One strip per thing that needs the captain, each a `--text-sm` sentence with its one small secondary button on the right, over a 1px `--line-1` rule.
+  A strip in `--warn` says something is wrong; the rest read `--fg-1`.
+  The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Update" or "Install older version"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; and an app behind this computer's, with no button.
+The ⋯ holds the rare actions, in this order: "Change address", "Move your first mate here", "Keep a copy here" or "Ready to take over", then a separator and "Remove" in the danger tone.
+Each item stands only where the rules below offer it; a phone's ⋯ holds Remove alone, and a row with nothing to offer has no ⋯.
+The ⋯ is a Tab stop; Enter or Space opens it, the arrows walk its items, Escape closes it without touching a question open beside the row, and focus comes back to the ⋯ after a pick or when the question an item opened closes.
 
 **Approving secret uses** (INF-1690 piece 4, captain's pick: "In Devices, as a switch on the paired iPhone"; INF-4207 decision 8 adds a Mac "set up once on the home, like a phone").
 While Secrets are set up and open on this computer, the row of each phone, and of each Mac that controls this computer, adds, under its summary, the core `Switch` with its label "Approves secret uses" after it, then one `--text-sm --fg-2` line that says where it stands.
@@ -68,23 +81,23 @@ Allow this use on MacBook Pro, or on a phone or Mac set up to approve them."
 **Bringing a computer back.**
 A computer that runs work looks for this computer where its link or command said, so after this computer's address changes it stays out of reach until it hears where this computer is now (`AddAMac.prompt.md`, "Finding this computer again").
 Another user on this computer looks for it at the address a computer uses for itself, which a new network never moves, so only a change of where Infinitary listens on this computer itself strands it.
-When this computer's address changed since the computer was last in reach, its row adds one `--text-sm --fg-2` line under the summary, and the way back:
+When this computer's address changed since the computer was last in reach, its row adds one strip, and the way back:
 - another computer added by a command: "It still looks for this computer at its old address.
   A new command run there brings it back.", with a small secondary Button "Make a command", which opens the command panel for another computer.
 - another user on this computer: "It still looks for this computer at its old address.
   A new command run as Builder brings it back.", with "Make a command", which opens the command panel for another user.
 
-Back in reach, the line and the button go, and the row reads "seen just now" with what it ran before.
+Back in reach, the strip goes, and the row reads its tasks or "idle" with what it ran before.
 The line never stands while this computer is on no network: nothing reaches this computer then, wherever it looks.
 A computer added by its address never takes the line: this computer's own SSH connection follows this computer wherever it is (below, "Reached over your SSH").
 
 **Held on the local network** (captain's pick on FI3-1001).
 A computer added by a command runs its work in the background, and its work dials this computer itself.
 On the local network macOS holds that dial until someone at that computer allows Infinitary there, so a computer with no one at its screen joins and then never comes into reach.
-While a computer a command added has not reached this computer since it joined, and it looks for this computer at an address on the local network, its row adds one `--text-sm --fg-2` line under the summary: "It has not reached this computer since it joined. macOS lets Infinitary on Mac mini use your local network only once someone there allows it.
+While a computer a command added has not reached this computer since it joined, and it looks for this computer at an address on the local network, its row adds one strip: "It has not reached this computer since it joined. macOS lets Infinitary on Mac mini use your local network only once someone there allows it.
 Added by its address, this computer reaches it with your SSH key instead."
-Its mono line reads "a computer · joined today 14:06 · out of reach", with no time since, because it never was in reach.
-A small secondary "Add it by its address" stands before Remove.
+Its status reads "out of reach", with no time since, because it never was in reach.
+The strip's button is a small secondary "Add it by its address".
 It turns the row into one question in place, Change address's shape: "Where to reach Mac mini" over "The address you use with SSH for it, as sam.
 Remote Login must be on there.", a mono `Input` with the placeholder "sam@mini.local", a small primary "Add it" and a ghost "Cancel".
 Add it there is + A computer's "By its address": the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", and Mac mini stays the same computer on the list, reached over this computer's own SSH from then on (`AddAMac.prompt.md`, "Finding this computer again").
@@ -94,12 +107,12 @@ A computer whose command named an address this computer no longer has takes "Bri
 
 **A Mac that has not finished setting up** (the captain's ask on INF-4835: "Set it up again by itself, and say why when it still cannot").
 A Mac that joined with its window also runs its work in the background, and its window sets that work up again by itself at every connection to its home, the first of each launch included and never before a welcome.
-While its window is connected and its work cannot start, its row adds one `--text-sm --fg-2` line under the summary naming why, such as "Its work cannot start: Infinitary on iMac is not allowed to run in the background.
-On a Mac, turn it on there in System Settings › General › Login Items.", and a small secondary "Fix it" stands before Add it by its address and Remove.
+While its window is connected and its work cannot start, its row adds one strip naming why, such as "Its work cannot start: Infinitary on iMac is not allowed to run in the background.
+On a Mac, turn it on there in System Settings › General › Login Items.", with a small secondary "Fix it".
 Fix it asks that Mac's window to check its work again now; nothing else changes on the row until the window says what it found.
 The reasons are another first mate's work there, this first mate's work under another entry on the list, an earlier removal there not finished, the app opened from a disk image or its download folder, the background refused, no background to use, and a run that has not reached this computer.
-Held on the local network keeps its own line above instead of a second one saying the same, with Fix it before Add it by its address.
-While its work is starting the line reads "Its work on iMac is starting.", the state on the right reads "setting up" in `--fg-2`, and there is no Fix it.
+Held on the local network keeps its own strip beneath instead of a second one saying the same.
+While its work is starting the strip reads "Its work on iMac is starting.", the status reads "setting up" in `--fg-2`, and there is no Fix it.
 Once its work is in reach the line and the button go.
 
 The joining window says the same from its side, in the quiet strip under the input the voice and diagnostics notices wear (`voice/VoiceInput.prompt.md`, "Under the pill"): one `--text-sm --fg-2` line naming why, such as "This computer cannot run work for MacBook Pro: Infinitary is not allowed to run in the background.
@@ -109,10 +122,10 @@ Not now folds it into a quiet ghost line at the top bar's left, after the line t
 It stays folded while the window runs and the reason stays the same; a new reason, or a stop after the work ran, shows it whole again.
 
 **Reached over your SSH.**
-A computer added by its address is reached over this computer's own SSH connection while Infinitary runs here, and its row says where that connection stands in its mono line, after its address: "a computer · sam@mini.local · connected using SSH" only once its work said hello through it, "connecting using SSH…" before that, "reconnecting using SSH…" while this computer tries again by itself after a connection it had before, "connecting using SSH…" for every try of a computer never seen, whether a first attempt failed or it dropped before its first hello, "starts the next time sam logs in there" while nobody is logged in there as that user, and "could not start" when that user's session holds no background work, which no login mends.
-Its dot is `ok` while connected and `idle` while connecting or reconnecting.
+A computer added by its address is reached over this computer's own SSH connection while Infinitary runs here, and while it is out of reach its status says where that connection stands: "connecting using SSH…" before its work said hello through it, "reconnecting using SSH…" while this computer tries again by itself after a connection it had before, "connecting using SSH…" for every try of a computer never seen, whether a first attempt failed or it dropped before its first hello, "starts the next time sam logs in there" while nobody is logged in there as that user, and "could not start" when that user's session holds no background work, which no login mends.
+In reach through it, its status is its tasks or "idle", like any computer's; its dot is `ok` while connected and `idle` while connecting or reconnecting.
 The state reads "connecting" during a fresh attempt, then shows the SSH retry while this computer keeps trying; "out of reach" in `--warn` is for a device without contact or an active attempt.
-When only the captain can mend it, this computer stops trying: the mono line ends "out of reach since 14:02", the reason's two lines stand under the summary as one `--text-sm` line in `--warn` - "sam@mini.local does not answer as the computer this computer reached before.
+When only the captain can mend it, this computer stops trying: the status reads "out of reach since 14:02", and the reason's two lines stand as one strip in `--warn` - "sam@mini.local does not answer as the computer this computer reached before.
 If you did not set it up again, someone may be in between.
 Check it, then try again.", or a refused or locked key, a key the app that holds it did not approve ("Could not sign in to sam@mini.local.
 The app that holds your SSH key did not approve it.
@@ -122,9 +135,9 @@ The app that holds your SSH key is not open.
 Open that app, and this computer tries again when it wakes and every few minutes."), Remote Login that will not let the connection through, Infinitary gone there, or a computer that left your first mate ("sam@mini.local runs work for another first mate now.
 Remove Mac mini here.
 Nothing changes there for the other first mate.").
-A small secondary "Try again" stands first among its buttons, except on a computer that left your first mate, which offers only Remove.
+The strip's button is a small secondary "Try again", except on a computer that left your first mate, whose ⋯ offers only Remove.
 A computer that left your first mate is never said to reach another computer, or to be back later, and it has no Try again and no Change address.
-A ghost "Change address" stands on every other such row before Update and Remove.
+"Change address" is the first item in the ⋯ of every other computer added by its address.
 It turns the row into one question in place: "Where to reach Mac mini" over "The address you use with SSH for it now.
 This computer checks it is the same computer first.", a mono `Input` holding its address, a small primary "Change it" and a ghost "Cancel".
 While this computer looks there the summary reads "Reaching sam@studio.local with your SSH key…", with no state and no buttons; a refusal's two lines stand at the top of the tab, and the feed says "This computer reaches Mac mini at sam@studio.local now." once it is found.
@@ -137,7 +150,7 @@ There is no setting for SSH, no port and no dashboard of connections: the row is
 
 **Automatic startup on Linux.**
 A computer stays joined when Infinitary cannot set up automatic startup there.
-Its mono line ends “automatic startup not set up”, with “This setup does not start work at login.” under its summary.
+Its mono line ends “automatic startup not set up”, with “This setup does not start work at login.” as a strip with no button.
 An unreadable check reads “automatic startup not checked”, with “Infinitary could not check automatic startup here.”
 These facts are independent of reachability: an explicitly started worker can answer while automatic startup is not set up.
 A supported startup waiting for a verified inactive user manager keeps the existing next-login wording.
@@ -206,7 +219,7 @@ There is no code to scan beside a link until the iPhone app exists (captain's pi
   It is out of reach."
   ("It is connecting." while its connection is being made) over "Its unmerged work on website is still there.
   Wait, and it comes to this computer before Mac mini is removed.", with a secondary "Remove when it is back" and a danger "Remove now".
-  Waiting turns the mono line to "out of reach · removed when it is back" ("connecting · removed when it is back" for a computer whose connection is being made), with a ghost "Keep it" in place of Remove.
+  Waiting adds the first strip, "It is removed when it is back.", with a small secondary "Keep it", and Remove leaves the ⋯ until it is kept.
   "Remove now" leaves that work on the other computer, and Infinitary removes what it set up there when that computer is back.
 - A computer that left your first mate: "Remove Mac mini?
   It runs work for another first mate now." over "Its unmerged work on website stays there.
@@ -218,9 +231,9 @@ Only the captain's own click in this computer's window removes a device; the fir
 ### Joined again
 
 A computer that runs work and joined again under a new key - its saved work deleted, or Infinitary installed fresh - is a new row, and its earlier row stays out of reach with its tasks.
-Under the new row's summary, one `--text-sm --fg-2` line reads "An earlier entry with this name and user is out of reach, with 2 tasks waiting."
-("…, and projects still run on it." when only projects do), and a small secondary "Carry its tasks on here" stands with the row's buttons, its accessible name "Carry the earlier entry's tasks on to Mac mini".
-Any row out of reach that still holds a started task carries a small secondary "Move its tasks to…" before Remove, its accessible name "Move the tasks of Mac mini to another computer".
+The new row adds one strip: "An earlier entry with this name and user is out of reach, with 2 tasks waiting."
+("…, and projects still run on it." when only projects do), with a small secondary "Carry its tasks on here", its accessible name "Carry the earlier entry's tasks on to Mac mini".
+Any row out of reach that still holds a started task adds the strip "Its 2 tasks wait until it is back." with a small secondary "Move its tasks to…", its accessible name "Move the tasks of Mac mini to another computer".
 Either one turns the row it was pressed on into one question in place, like Remove's:
 
 - From the new row, "Its 2 tasks continue on Mac mini, each from the last commit this computer brought home." over "What only Mac mini holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there." and "Then Mac mini, out of reach, comes off your list, and its projects run on Mac mini."
@@ -233,7 +246,7 @@ After the yes the row out of reach reads "Moving its tasks to Mac mini…" and o
 A task the move refuses stands under the tab as the problem, one line each, and the row stays.
 
 **Moving your first mate** (INF-4207 piece 5, captain: "let me move my home from macbook to mac mini").
-A computer that runs work, in reach, on this computer's version and not being updated or removed, carries a small ghost "Move your first mate here" before Remove, its accessible name "Move your first mate to Mac mini".
+A computer that runs work, in reach, on this computer's version and not being updated or removed, offers "Move your first mate here" in its ⋯, before Remove.
 Shown only where the first mate lives, never in a window of another computer.
 It opens an aside under the row, the Ready list: the question "Move your first mate to Mac mini?" over one `--fg-2` sentence saying what happens ("Your first mate pauses for a moment while its whole record crosses, then runs on Mac mini.
 This computer then controls it and keeps running work, and your other devices follow on their own.").
@@ -250,12 +263,12 @@ Start it here starts the first mate on this computer again with its record as it
 Nothing moves the first mate by itself; only this click does.
 
 **Keeping a copy** (INF-4207 piece 7).
-A computer that runs work, not being removed, carries a small ghost "Keep a copy here" before Remove, its accessible name "Keep a copy of your first mate on Mac mini".
+A computer that runs work, not being removed, offers "Keep a copy here" in its ⋯, before Remove.
 Like Move, it is shown only where the first mate lives; a window of another computer shows only where each copy stands.
 The click names it at once: it takes one full copy of the first mate's record, then each change right after the first mate saves it, and never opens the copy itself.
 A computer that keeps a copy shows where its copy stands on a line of its own under its summary, `--text-sm --fg-2`: "Taking a full copy of your first mate" with a mono percentage, "Copy in sync", "Copy catching up · 12 changes", or, out of reach, "Copy from 9:05" with the copy's time ("No copy yet" before its first).
 One whose Infinitary is too old to keep a copy reads "Update Infinitary there to keep a copy" in `--warn`.
-Its "Keep a copy here" becomes a ghost "Ready to take over", its accessible name "Show whether Mac mini could take over your first mate".
+Its "Keep a copy here" becomes "Ready to take over" in the same place.
 It opens an aside under the row like the Ready list for a move: the question "Could Mac mini take over your first mate?" over one `--fg-2` sentence ("Mac mini keeps a live copy of your first mate's record and never opens it itself.
 This list says what it would still need to take over.").
 While that computer is checked the aside says "Checking Mac mini…".
@@ -296,12 +309,12 @@ A box lists the newest task feed lines this Mac saved after that copy, one row e
 A last `--fg-2` sentence says this Mac keeps its own record of that time set aside, and nothing opens it again.
 
 **Another version.**
-A computer that runs work, connected on another version of Infinitary than this computer's, says so on a line of its own under its summary, `--text-sm --fg-2`: "Has Infinitary 0.1.20, older than this computer's." or "Has Infinitary 0.1.31, newer than this computer's."
+A computer that runs work, connected on another version of Infinitary than this computer's, says so on a strip of its own: "Has Infinitary 0.1.20, older than this computer's." or "Has Infinitary 0.1.31, newer than this computer's."
 One too old to say its version reads "Has an older Infinitary than this computer."
 (or "a newer").
-While it still takes work its dot stays `ok`, its mono line reads "seen just now", and its state is its tasks or "idle".
-One that takes no new work adds "It takes no new work until it is updated." and the line turns `--warn`; its dot is `warn`, its state "no new work" in `--warn`, and its mono line still reads "seen just now", because it is in reach.
-A small secondary "Update" stands before Remove on every such row; on a computer with a newer Infinitary than this one it reads "Install older version", since it would take that computer back to this computer's version.
+While it still takes work its dot stays `ok`, and its status is its tasks or "idle".
+One that takes no new work adds "It takes no new work until it is updated." and the strip turns `--warn`; its dot is `warn`, and its status "no new work" in `--warn`.
+The strip's button is a small secondary "Update"; on a computer with a newer Infinitary than this one it reads "Install older version", since it would take that computer back to this computer's version.
 On Update from the row or the card, try the connection update first, then the saved address or current connection’s candidate if the worker needs a package update.
 The app's update by itself tries only the connection, and raises the card as soon as the worker comes back unchanged from that update without being sent a copy.
 Show any address, confirmation or approval question in an inset directly under that worker’s row.
@@ -315,16 +328,18 @@ Out of reach, a row says nothing of its version: this computer cannot tell it.
 Connected on another version, a row is in reach, so it never shows the old-address line or its way back ("Bringing a computer back").
 
 **Each copy's version.**
-Every row says the version each copy on it runs, while that copy is connected, on a line of its own under its summary, `--text-sm --fg-2`, after any "Another version" line.
+Every row says the version each copy on it runs, while that copy is connected.
+When every copy runs this computer's version, that is one mark at the end of the mono line, "Infinitary 0.8.4", and no sentence.
+Otherwise it is a line of its own among the facts, `--text-sm --fg-2`.
 The app open there comes first: "Its app has Infinitary 0.8.4, as this computer does.", or "Its app has Infinitary 0.8.3, older than this computer's."
 (or "newer").
 An app too old to say its version reads "Its app has an older Infinitary, too old to say its version."
-An app behind this computer's - older, or too old to say - turns the line `--warn`, so a copy left behind stands out.
-A computer whose work runs this computer's version adds "Its work runs Infinitary 0.8.4, as this computer does."; when its app does too, the line is one sentence, "Its app and its work run Infinitary 0.8.4, as this computer does."
+An app behind this computer's - older, or too old to say - turns the line into the last strip, in `--warn`, so a copy left behind stands out.
+A computer whose work runs this computer's version while its app does not adds "Its work runs Infinitary 0.8.4, as this computer does."
 A phone's app has versions of its own, never compared: "Its app has version 0.1.0 (212).", the version and build its own Settings shows.
 A copy out of reach or not open says nothing of its version, and while a computer updates the line gives way to the update's own.
 
-**Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no state and no Update or Remove until it is done (`AddAMac.prompt.md`).
+**Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Update or Remove until it is done (`AddAMac.prompt.md`).
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".
 For a Mac reached by its address, Add and Update first let it download this computer's published version itself, and so does Update for a Mac a command added, once it runs a version that takes the download.
 Its summary and the feed read "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size.
@@ -349,7 +364,7 @@ The row keeps its existing type, spacing, focus and disabled controls.
 Remove on a computer that takes no new work asks as for one out of reach, with its own first line: "Remove Mac mini?
 It takes no new work." over "Its unmerged work on website is still there.
 Update it, and its work comes to this computer before Mac mini is removed.", with a secondary "Remove once it is updated" and a danger "Remove now".
-Waiting turns its mono line to "takes no new work · removed once it is updated".
+Waiting adds the first strip, "It is removed once it is updated.", with "Keep it".
 
 **Addresses in the inspector.**
 Home shows Preferred address first when present, then Local address and Over the internet, each with a dot, one plain line and a mono state on the right.

@@ -2,11 +2,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { shellWord } from "@core/devices/joinCommand";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import type { DeviceView } from "@shared/devices";
 import type { WorkOutcome } from "@shared/remoteLogin";
 import electronPath from "electron";
 import { appPathsFor } from "../../src/core/paths";
+import type { RowAct } from "../../src/renderer/src/settings/DeviceRow";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -63,7 +64,35 @@ export async function selectDevice(page: Page, id: string) {
 }
 
 /**
- * This Mac's address changes: the app quits and starts again on the same
+ * Opens a device's ⋯ menu by keys, as a person on the keyboard does (design
+ * skill components/devices/DevicesTab, "The row"): Enter on its kebab, then
+ * the arrows down to the item for `act` (a `RowAct`: address, home-move,
+ * standby-ready, standby-keep or remove), which it returns focused for the
+ * caller's own key. The row must be drawn; `selectDevice` draws it.
+ */
+/** A device row's dot, whose `data-tone` is `ok` while the device is in reach. */
+export function reachDot(row: Locator): Locator {
+  return row.locator("[data-device-dot]");
+}
+
+export async function rowAction(page: Page, id: string, act: RowAct): Promise<Locator> {
+  const row = page.locator(`[data-device-row="${id}"]`);
+  await pressKey(row.locator('[aria-haspopup="menu"]'), "Enter");
+  const menu = page.getByRole("menu");
+  const item = menu.locator(`[data-menu-item="${act}"]`);
+  await expect(item).toBeVisible();
+  const items = await menu.getByRole("menuitem").count();
+  for (let step = 0; step < items; step += 1) {
+    if (await item.evaluate((node) => node === document.activeElement)) break;
+    await page.keyboard.press("ArrowDown");
+  }
+  await expect(item).toBeFocused();
+  return item;
+}
+
+/**
+ * This Mac's address changes:
+ the app quits and starts again on the same
  * data, answering at another port, where a link made now sends a device.
  */
 export async function moveThisMac(app: LaunchedApp, env: Record<string, string> = {}) {

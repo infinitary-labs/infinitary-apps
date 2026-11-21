@@ -5,6 +5,7 @@ import { JoinedHome } from "@core/devices/joinedHome";
 import { catalogRefreshesSettled } from "@core/pi/modelRuntime";
 import { expect, test } from "@playwright/test";
 import { deviceLabel, PAIRING_LINK_PREFIX, parsePairingLink } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import { COMPUTER } from "../../src/shared/deviceNames";
@@ -16,6 +17,8 @@ import {
   moveThisMac,
   openDevices,
   otherMacOverSsh,
+  reachDot,
+  rowAction,
   seedRemotePairing,
   selectDevice,
   workRuns,
@@ -57,9 +60,10 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     // Where this Mac's SSH connection to it stands, as the list says it.
     const ssh = async () =>
       (await app.page.evaluate(() => window.infinitary.devices.list()))[0]?.ssh;
-    const connected = sshConnectionWords.detail({ state: "connected" }, device);
     await expect.poll(ssh).toEqual({ state: "connected" });
-    await expect(row()).toContainText(connected);
+    // In reach over it: the dot says so, and the row names it by its address.
+    await expect(reachDot(row())).toHaveAttribute("data-tone", "ok");
+    await expect(row().locator("[data-device-identity]")).toContainText(sshd.address);
 
     // This Mac quits and starts again at another port, and that Mac answers unlike
     // the key Firstmate remembered: this Mac stops trying, and Devices says why, with Try again.
@@ -106,18 +110,15 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     );
     const card = await handoverCard(app.page, offer);
     await pressKey(card.getByRole("button", { name: offer.label, exact: true }), "Enter");
-    await expect(
-      row().getByRole("button", { name: `Change the address of ${label}`, exact: true }),
-    ).toBeVisible();
+    await expect(row()).toHaveAttribute("data-device-acts", /\baddress\b/);
     expect((await app.page.evaluate(() => window.infinitary.devices.list()))[0]?.remoteLogin).toBe(
       sshd.address,
     );
 
-    // Change address, from the keyboard: the same Mac under another name.
-    await pressKey(
-      row().getByRole("button", { name: `Change the address of ${label}`, exact: true }),
-      "Enter",
-    );
+    // Change address, from the keyboard through the row's ⋯ menu: the same Mac under another name.
+    const change = await rowAction(app.page, device.id, "address");
+    await expect(change).toHaveText(m.settingsDevicesChangeAddress());
+    await app.page.keyboard.press("Enter");
     const field = app.page.getByLabel(sshConnectionWords.changeAddress(device));
     await expect(field).toBeFocused();
     await field.fill(sshd.alias);
@@ -130,7 +131,8 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
       )
       .toBe(sshd.alias);
     await expect.poll(ssh, { timeout: 30_000 }).toEqual({ state: "connected" });
-    await expect(row()).toContainText(`${sshd.alias} · ${connected}`);
+    await expect(row().locator("[data-device-identity]")).toContainText(sshd.alias);
+    await expect(reachDot(row())).toHaveAttribute("data-tone", "ok");
 
     // Stopped again after another restart, Try again by name in command search.
     sshd.knownHosts("changed");
@@ -192,12 +194,10 @@ test("a Mac added by its address that leaves for another Firstmate: this Mac sto
     await expect(row.locator("[data-device-ssh-stopped]")).toHaveText(lines.join(" "));
     // It is not coming back, so Try again and Change address are not offered.
     await expect(row.getByRole("button", { name: `Try again to reach ${label}` })).toHaveCount(0);
-    await expect(row.getByRole("button", { name: `Change the address of ${label}` })).toHaveCount(
-      0,
-    );
+    await expect(row).not.toHaveAttribute("data-device-acts", /\baddress\b/);
 
     // Remove, from the keyboard: it is not coming back, so nothing waits for it.
-    await pressKey(row.getByRole("button", { name: `Remove ${label}`, exact: true }), "Enter");
+    await pressKey(await rowAction(app.page, device.id, "remove"), "Enter");
     const question = app.page.locator(`[data-device-removing="${device.id}"]`);
     await expect(question.getByRole("button")).toHaveText(["Keep it", "Remove now"]);
     await pressKey(question.getByRole("button", { name: "Remove now", exact: true }), "Enter");

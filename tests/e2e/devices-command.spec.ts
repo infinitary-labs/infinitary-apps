@@ -15,6 +15,7 @@ import {
   parsePairingLink,
 } from "@shared/devices";
 import { deviceUpdateBody, deviceUpdateCardId, deviceUpdateTitle } from "@shared/deviceUpdateNudge";
+import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import {
   DEVICE_ROW_WORDS,
@@ -32,6 +33,8 @@ import {
   linkInTab,
   moveThisMac,
   openDevices,
+  reachDot,
+  rowAction,
   selectDevice,
   workRuns,
 } from "./deviceFixtures";
@@ -130,7 +133,7 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     // Devices lists it with what it runs, its sign-ins, its tasks and when it was seen.
     const row = await selectDevice(page, deviceId);
     await expect(row).toContainText(deviceLabel(builder));
-    await expect(row).toContainText(SEEN_WORDS.now);
+    await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
     await expect(row).toContainText(DEVICE_ROW_WORDS.runsNoProject);
     await expect(row).toContainText(deviceState({ ...builder, inReach: true }).text);
     const { repo } = await page.evaluate(
@@ -147,14 +150,19 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
 
     // Out of reach, Remove asks whether to wait for it; waiting can be taken back.
     await helper.stop();
-    await expect(row).toContainText(SEEN_WORDS.since);
-    await row.getByRole("button", { name: "Remove Running as Builder", exact: true }).click();
+    await expect(row.locator("[data-device-status]")).toContainText(SEEN_WORDS.since);
+    await expect(row).toHaveAttribute("data-device-acts", /\bremove\b/);
+    await (await rowAction(page, deviceId, "remove")).click();
     const question = page.locator(`[data-device-removing="${deviceId}"]`);
     await expect(question).toContainText(removeLines({ ...builder, inReach: false })[0]);
     await question.getByRole("button", { name: "Remove when it is back", exact: true }).click();
-    await expect(row).toContainText(SEEN_WORDS.removedWhenBack);
-    await row.getByRole("button", { name: "Keep it", exact: true }).click();
-    await expect(row.getByRole("button", { name: "Remove Running as Builder" })).toBeVisible();
+    // Its wait is a strip of its own, and Remove leaves the menu until it is kept.
+    const removal = row.locator('[data-notice="removal"]');
+    await expect(removal).toContainText(m.settingsDevicesRemovedWhenBackLine());
+    await expect(row).not.toHaveAttribute("data-device-acts", /\bremove\b/);
+    await removal.getByRole("button", { name: "Keep it", exact: true }).click();
+    await expect(removal).toHaveCount(0);
+    await expect(row).toHaveAttribute("data-device-acts", /\bremove\b/);
 
     // A new command from here, run as that user, finds this Mac again as the
     // same computer, as it does once this Mac's address changed.
@@ -188,8 +196,8 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     await expect
       .poll(() => again.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
       .toBe("in-reach");
-    await expect(row).toContainText(SEEN_WORDS.now);
-    await row.getByRole("button", { name: "Remove Running as Builder", exact: true }).click();
+    await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
+    await (await rowAction(page, deviceId, "remove")).click();
     await expect(question).toContainText(removeLines({ ...builder, inReach: true })[0]);
     await question.getByRole("button", { name: "Remove", exact: true }).click();
     expect(await again.ended).toBe("removed");
@@ -282,7 +290,7 @@ test("this Mac's address changes: a computer added by a command says how it come
     await expect
       .poll(() => back.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
       .toBe("in-reach");
-    await expect(row).toContainText(SEEN_WORDS.now);
+    await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
     await expect(row.locator("[data-device-stranded]")).toHaveCount(0);
     expect(
       (await page.evaluate(() => window.infinitary.devices.list())).map(({ id }) => id),
@@ -357,7 +365,7 @@ test("a computer on another version of Firstmate: the app brings an older one to
     expect(await older.ended).toBe("updated");
     run({ appVersion: thisVersion });
     await expect(row).not.toHaveAttribute("data-other-version", /.+/);
-    await expect(row).toContainText(SEEN_WORDS.now);
+    await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
     // Its Update button, named as the row names it (`Update ${deviceLabel}`),
     // is gone on the same version; it comes back below for one too old.
     const update = row.getByRole("button", { name: `Update ${deviceLabel(builder)}`, exact: true });

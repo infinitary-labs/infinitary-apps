@@ -14,6 +14,7 @@ import {
   LINK_SAY,
   namesInWords,
   reachFrom,
+  sharedVersion,
   userDisplayName,
 } from "../../../shared/devices";
 import { PLATFORM_ATTRIBUTE } from "../../../shared/platform";
@@ -158,7 +159,7 @@ function onWindows(): boolean {
   return globalThis.document?.documentElement?.getAttribute(PLATFORM_ATTRIBUTE) === "win32";
 }
 
-/** Whether a device answers now, or since when it has not: the end of its mono line. */
+/** Whether a device answers now, or since when it has not: the status on its head. */
 export const SEEN_WORDS = {
   get now() {
     return m.settingsDevicesSeenNow();
@@ -174,15 +175,6 @@ export const SEEN_WORDS = {
   /** Followed by when it was last in reach: "out of reach since 14:02". */
   get since() {
     return m.settingsDevicesSeenSince();
-  },
-  get removedWhenBack() {
-    return m.settingsDevicesSeenRemovedWhenBack();
-  },
-  get removedWhenBackConnecting() {
-    return m.settingsDevicesSeenRemovedWhenBackConnecting();
-  },
-  get removedOnceUpdated() {
-    return m.settingsDevicesSeenRemovedOnceUpdated();
   },
   get restarted() {
     return m.settingsDevicesSeenRestarted();
@@ -267,12 +259,6 @@ export function joinedWhen(at: number, now: number): string {
 
 /** Whether a device answers now, or since when it has not. */
 function seenWords(device: DeviceView, now: number): string {
-  if (device.removal === "when-back")
-    return device.otherVersion
-      ? SEEN_WORDS.removedOnceUpdated
-      : deviceConnecting(device)
-        ? SEEN_WORDS.removedWhenBackConnecting
-        : SEEN_WORDS.removedWhenBack;
   // On another version it is connected, whether or not it takes work.
   if (device.inReach || device.otherVersion) return SEEN_WORDS.now;
   if (device.restartedSince) return SEEN_WORDS.restarted;
@@ -292,28 +278,31 @@ function whatDevice(device: DeviceView): string {
     : aDevice(device);
 }
 
-/** The mono line under a device's name: what it is, when it joined, and when it was last seen. */
-export function deviceDetail(device: DeviceView, now: number): string {
+/**
+ * The mono line under a device's name (design skill
+ * `components/devices/DevicesTab`, "The row"): what it is and where it is,
+ * then the version every copy on it shares with this computer. Where it
+ * stands is never on it: that is the status on the row's head
+ * (`deviceStatus`), said once.
+ */
+export function deviceIdentity(device: DeviceView, now: number): string {
+  const shared = sharedVersion(device);
+  const version = shared ? ` · ${m.settingsDevicesVersionMark({ version: shared })}` : "";
   const startup = automaticStartupOf(device);
-  if (startup === "unavailable" || startup === "unknown")
-    return `${whatDevice(device)} · ${device.remoteLogin ?? (device.user ? m.settingsDevicesRunningAs({ user: device.user }) : seenWords(device, now))} · ${automaticStartupWords[startup]}`;
-  // Reached over this Mac's own SSH, it is named by its address and that connection.
-  if (device.remoteLogin && device.ssh) {
-    const what =
-      device.onThisMac && device.user ? m.settingsDevicesAnotherUserHere() : whatDevice(device);
+  if (startup === "unavailable" || startup === "unknown") {
     const where =
-      device.removal === "when-back" || device.ssh.state === "stopped"
-        ? seenWords(device, now)
-        : sshConnectionWords.detail(device.ssh, device);
-    return `${what} · ${device.remoteLogin} · ${where}`;
+      device.remoteLogin ?? (device.user ? m.settingsDevicesRunningAs({ user: device.user }) : "");
+    return `${whatDevice(device)}${where ? ` · ${where}` : ""} · ${automaticStartupWords[startup]}${version}`;
   }
+  // Reached over this Mac's own SSH, it is named by its address.
+  if (device.remoteLogin && device.ssh && device.onThisMac && device.user)
+    return `${m.settingsDevicesAnotherUserHere()} · ${device.remoteLogin}${version}`;
   if (device.onThisMac && device.user) {
     const who = userDisplayName(device.user);
-    return `${m.settingsDevicesAnotherUserHere()} · ${m.settingsDevicesRunsWhileLoggedIn({ user: who })} · ${seenWords(device, now)}`;
+    return `${m.settingsDevicesAnotherUserHere()} · ${m.settingsDevicesRunsWhileLoggedIn({ user: who })}${version}`;
   }
   // A Mac added by its address is named by it (components/devices/DevicesTab).
-  if (device.remoteLogin)
-    return `${whatDevice(device)} · ${device.remoteLogin} · ${seenWords(device, now)}`;
+  if (device.remoteLogin) return `${whatDevice(device)} · ${device.remoteLogin}${version}`;
   const reached =
     device.reachedOn === "local"
       ? WAYS_WORDS.reachedLocal
@@ -321,7 +310,40 @@ export function deviceDetail(device: DeviceView, now: number): string {
         ? WAYS_WORDS.reachedPrivate
         : null;
   const joined = m.settingsDevicesJoined({ when: joinedWhen(device.pairedAt, now) });
-  return `${whatDevice(device)} · ${joined}${reached ? ` · ${reached}` : ""} · ${seenWords(device, now)}`;
+  return `${whatDevice(device)} · ${joined}${reached ? ` · ${reached}` : ""}${version}`;
+}
+
+/**
+ * The one status on a device's head, in its most exact words (design skill
+ * `components/devices/DevicesTab`, "The row"): a computer in reach says its
+ * tasks or idle, one on another version that takes no new work says so, and
+ * one out of reach says since when, or what its SSH connection does now. A
+ * phone or a Mac that only controls says whether it answers.
+ */
+export function deviceStatus(
+  device: DeviceView,
+  now: number,
+): { text: string; tone: "busy" | "idle" | "warn" } {
+  if (!deviceRunsWork(device.kind))
+    return device.inReach
+      ? { text: SEEN_WORDS.now, tone: "idle" }
+      : { text: seenWords(device, now), tone: "warn" };
+  const state = deviceState(device);
+  if (device.inReach || device.otherVersion || device.workSetup?.state === "starting") return state;
+  const reach = reachFrom(device);
+  if (reach === "connecting" || reach === "reconnecting" || deviceConnecting(device)) return state;
+  // Its SSH connection, where it says more than out of reach: starts at next login, could not
+  // start. A setup that starts no work at login never promises one (INF-1617).
+  const startup = automaticStartupOf(device);
+  if (
+    device.ssh &&
+    device.remoteLogin &&
+    device.ssh.state !== "stopped" &&
+    startup !== "unavailable" &&
+    startup !== "unknown"
+  )
+    return { text: sshConnectionWords.detail(device.ssh, device), tone: state.tone };
+  return { text: seenWords(device, now), tone: "warn" };
 }
 
 /** The names of what a computer is signed in to: its subscriptions, then where projects live. */

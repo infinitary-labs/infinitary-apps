@@ -2557,16 +2557,16 @@ public enum PhoneMessages {
     public static func `settingsDevicesRemoveWait`(`device`: String) -> String { PhoneWords.format("settingsDevicesRemoveWait", [`device`]) }
     public static func `settingsDevicesRemoveWaitOn`(`device`: String, `projects`: String) -> String { PhoneWords.format("settingsDevicesRemoveWaitOn", [`device`, `projects`]) }
     public static func `settingsDevicesRemoveWhenBack`() -> String { PhoneWords.format("settingsDevicesRemoveWhenBack", []) }
+    public static func `settingsDevicesRemovedOnceUpdatedLine`() -> String { PhoneWords.format("settingsDevicesRemovedOnceUpdatedLine", []) }
+    public static func `settingsDevicesRemovedWhenBackLine`() -> String { PhoneWords.format("settingsDevicesRemovedWhenBackLine", []) }
     public static func `settingsDevicesRemoving`() -> String { PhoneWords.format("settingsDevicesRemoving", []) }
     public static func `settingsDevicesRemovingSetUp`(`where`: String) -> String { PhoneWords.format("settingsDevicesRemovingSetUp", [`where`]) }
+    public static func `settingsDevicesRowActions`(`device`: String) -> String { PhoneWords.format("settingsDevicesRowActions", [`device`]) }
     public static func `settingsDevicesRunningAs`(`user`: String) -> String { PhoneWords.format("settingsDevicesRunningAs", [`user`]) }
     public static func `settingsDevicesRuns`(`projects`: String) -> String { PhoneWords.format("settingsDevicesRuns", [`projects`]) }
     public static func `settingsDevicesRunsNoProject`() -> String { PhoneWords.format("settingsDevicesRunsNoProject", []) }
     public static func `settingsDevicesRunsWhileLoggedIn`(`user`: String) -> String { PhoneWords.format("settingsDevicesRunsWhileLoggedIn", [`user`]) }
     public static func `settingsDevicesSeenNow`() -> String { PhoneWords.format("settingsDevicesSeenNow", []) }
-    public static func `settingsDevicesSeenRemovedOnceUpdated`() -> String { PhoneWords.format("settingsDevicesSeenRemovedOnceUpdated", []) }
-    public static func `settingsDevicesSeenRemovedWhenBack`() -> String { PhoneWords.format("settingsDevicesSeenRemovedWhenBack", []) }
-    public static func `settingsDevicesSeenRemovedWhenBackConnecting`() -> String { PhoneWords.format("settingsDevicesSeenRemovedWhenBackConnecting", []) }
     public static func `settingsDevicesSeenRestarted`() -> String { PhoneWords.format("settingsDevicesSeenRestarted", []) }
     public static func `settingsDevicesSeenSince`() -> String { PhoneWords.format("settingsDevicesSeenSince", []) }
     public static func `settingsDevicesSeenSinceWhen`(`when`: String) -> String { PhoneWords.format("settingsDevicesSeenSinceWhen", [`when`]) }
@@ -2622,6 +2622,7 @@ public enum PhoneMessages {
     public static func `settingsDevicesStrandedThere`() -> String { PhoneWords.format("settingsDevicesStrandedThere", []) }
     public static func `settingsDevicesTakeoverAddress`() -> String { PhoneWords.format("settingsDevicesTakeoverAddress", []) }
     public static func `settingsDevicesTasks`(`count`: Int) -> String { PhoneWords.format("settingsDevicesTasks", [`count`]) }
+    public static func `settingsDevicesTasksWait`(`count`: Int) -> String { PhoneWords.format("settingsDevicesTasksWait", [`count`]) }
     public static func `settingsDevicesTryAgain`() -> String { PhoneWords.format("settingsDevicesTryAgain", []) }
     public static func `settingsDevicesTryAgainFailed`() -> String { PhoneWords.format("settingsDevicesTryAgainFailed", []) }
     public static func `settingsDevicesTryAgainNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesTryAgainNamed", [`device`]) }
@@ -2630,6 +2631,7 @@ public enum PhoneMessages {
     public static func `settingsDevicesUpdateNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateNamed", [`device`]) }
     public static func `settingsDevicesUpdateOlder`() -> String { PhoneWords.format("settingsDevicesUpdateOlder", []) }
     public static func `settingsDevicesUpdateOlderNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateOlderNamed", [`device`]) }
+    public static func `settingsDevicesVersionMark`(`version`: String) -> String { PhoneWords.format("settingsDevicesVersionMark", [`version`]) }
     public static func `settingsDevicesWayCount`(`count`: Int) -> String { PhoneWords.format("settingsDevicesWayCount", [`count`]) }
     public static func `settingsDevicesWaysCopyCommand`() -> String { PhoneWords.format("settingsDevicesWaysCopyCommand", []) }
     public static func `settingsDevicesWaysCopyLink`() -> String { PhoneWords.format("settingsDevicesWaysCopyLink", []) }
@@ -6299,16 +6301,16 @@ extension PhoneWords {
         "settingsDevicesRemoveWait": ["device"],
         "settingsDevicesRemoveWaitOn": ["device", "projects"],
         "settingsDevicesRemoveWhenBack": [],
+        "settingsDevicesRemovedOnceUpdatedLine": [],
+        "settingsDevicesRemovedWhenBackLine": [],
         "settingsDevicesRemoving": [],
         "settingsDevicesRemovingSetUp": ["where"],
+        "settingsDevicesRowActions": ["device"],
         "settingsDevicesRunningAs": ["user"],
         "settingsDevicesRuns": ["projects"],
         "settingsDevicesRunsNoProject": [],
         "settingsDevicesRunsWhileLoggedIn": ["user"],
         "settingsDevicesSeenNow": [],
-        "settingsDevicesSeenRemovedOnceUpdated": [],
-        "settingsDevicesSeenRemovedWhenBack": [],
-        "settingsDevicesSeenRemovedWhenBackConnecting": [],
         "settingsDevicesSeenRestarted": [],
         "settingsDevicesSeenSince": [],
         "settingsDevicesSeenSinceWhen": ["when"],
@@ -6364,6 +6366,7 @@ extension PhoneWords {
         "settingsDevicesStrandedThere": [],
         "settingsDevicesTakeoverAddress": [],
         "settingsDevicesTasks": ["count"],
+        "settingsDevicesTasksWait": ["count"],
         "settingsDevicesTryAgain": [],
         "settingsDevicesTryAgainFailed": [],
         "settingsDevicesTryAgainNamed": ["device"],
@@ -6372,6 +6375,7 @@ extension PhoneWords {
         "settingsDevicesUpdateNamed": ["device"],
         "settingsDevicesUpdateOlder": [],
         "settingsDevicesUpdateOlderNamed": ["device"],
+        "settingsDevicesVersionMark": ["version"],
         "settingsDevicesWayCount": ["count"],
         "settingsDevicesWaysCopyCommand": [],
         "settingsDevicesWaysCopyLink": [],
@@ -7594,6 +7598,7 @@ extension PhoneWords {
         "settingsDevicesRemoveTasksStopOn": "count",
         "settingsDevicesStandbyCatchingUp": "count",
         "settingsDevicesTasks": "count",
+        "settingsDevicesTasksWait": "count",
         "settingsDevicesWayCount": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",

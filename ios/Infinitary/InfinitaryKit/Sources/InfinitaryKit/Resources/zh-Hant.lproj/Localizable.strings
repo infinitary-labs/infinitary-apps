@@ -2447,16 +2447,16 @@
 "settingsDevicesRemoveWait" = "它尚未合併的工作還在那裡。稍等一下，這些工作會在 %1$@ 移除前移到這台電腦。";
 "settingsDevicesRemoveWaitOn" = "它在 %2$@ 上尚未合併的工作還在那裡。稍等一下，這些工作會在 %1$@ 移除前移到這台電腦。";
 "settingsDevicesRemoveWhenBack" = "恢復連絡後移除";
+"settingsDevicesRemovedOnceUpdatedLine" = "它更新後會被移除。";
+"settingsDevicesRemovedWhenBackLine" = "它恢復連絡後會被移除。";
 "settingsDevicesRemoving" = "正在移除…";
 "settingsDevicesRemovingSetUp" = "正在移除 Infinitary %1$@ 設定的內容…";
+"settingsDevicesRowActions" = "%1$@ 的動作";
 "settingsDevicesRunningAs" = "以 %1$@ 身分執行";
 "settingsDevicesRuns" = "執行 %1$@";
 "settingsDevicesRunsNoProject" = "還沒有執行任何專案";
 "settingsDevicesRunsWhileLoggedIn" = "只執行工作，在 %1$@ 登入期間";
 "settingsDevicesSeenNow" = "剛剛還連絡得上";
-"settingsDevicesSeenRemovedOnceUpdated" = "不再接新工作 · 更新後移除";
-"settingsDevicesSeenRemovedWhenBack" = "連絡不上 · 恢復連絡後移除";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "連線中 · 恢復連絡後移除";
 "settingsDevicesSeenRestarted" = "這台電腦重新啟動後尚未登入";
 "settingsDevicesSeenSince" = "連絡不上的起始時間";
 "settingsDevicesSeenSinceWhen" = "從 %1$@ 起連絡不上";
@@ -2518,6 +2518,7 @@
 "settingsDevicesUpdateNamed" = "更新 %1$@";
 "settingsDevicesUpdateOlder" = "安裝舊版本";
 "settingsDevicesUpdateOlderNamed" = "在 %1$@ 上安裝舊版本";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "複製指令";
 "settingsDevicesWaysCopyLink" = "複製連結";
 "settingsDevicesWaysFoot" = "一個連結或指令會同時帶著所有方式。另一台電腦會使用有回應的那一種，所以這裡不需要選擇。";

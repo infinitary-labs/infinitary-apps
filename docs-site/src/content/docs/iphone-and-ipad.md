@@ -79,7 +79,7 @@ The phone tells you about a new card only while the app is open.
 
 To stop showing your computer, tap the computer button at the right of the phone's top bar and choose **Leave** with your computer's name.
 The phone forgets the computer.
-On your computer, **Remove** on the phone's row in Settings → **Devices** cuts it off at once.
+On your computer, **Remove** in the phone's menu in Settings → **Devices**, the three dots on its row, cuts it off at once.
 To join again, make a new link.
 
 See also [Your other computers](/your-other-computers/).

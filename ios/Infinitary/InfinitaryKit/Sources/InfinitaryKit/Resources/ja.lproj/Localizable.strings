@@ -2447,16 +2447,16 @@
 "settingsDevicesRemoveWait" = "マージされていない作業がまだそちらにあります。待つと、%1$@ が削除される前にこのコンピューターに移ります。";
 "settingsDevicesRemoveWaitOn" = "%2$@ のマージされていない作業がまだそちらにあります。待つと、%1$@ が削除される前にこのコンピューターに移ります。";
 "settingsDevicesRemoveWhenBack" = "戻ったら削除";
+"settingsDevicesRemovedOnceUpdatedLine" = "更新後に削除されます。";
+"settingsDevicesRemovedWhenBackLine" = "戻ったら削除されます。";
 "settingsDevicesRemoving" = "削除中...";
 "settingsDevicesRemovingSetUp" = "Infinitary が %1$@ 準備したものを削除しています…";
+"settingsDevicesRowActions" = "%1$@ の操作";
 "settingsDevicesRunningAs" = "%1$@ として実行中";
 "settingsDevicesRuns" = "%1$@ を実行";
 "settingsDevicesRunsNoProject" = "まだプロジェクトを実行していません";
 "settingsDevicesRunsWhileLoggedIn" = "%1$@ がログインしている間、作業だけを実行";
 "settingsDevicesSeenNow" = "たった今確認";
-"settingsDevicesSeenRemovedOnceUpdated" = "新しい作業は受けません · 更新後に削除";
-"settingsDevicesSeenRemovedWhenBack" = "連絡がつきません · 戻ったら削除";
-"settingsDevicesSeenRemovedWhenBackConnecting" = "接続中 · 戻ったら削除";
 "settingsDevicesSeenRestarted" = "このコンピューターの再起動後、まだログインしていません";
 "settingsDevicesSeenSince" = "連絡がつかなくなった時刻";
 "settingsDevicesSeenSinceWhen" = "%1$@ から連絡がつきません";
@@ -2518,6 +2518,7 @@
 "settingsDevicesUpdateNamed" = "%1$@ を更新";
 "settingsDevicesUpdateOlder" = "古いバージョンをインストール";
 "settingsDevicesUpdateOlderNamed" = "%1$@ に古いバージョンをインストール";
+"settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "コマンドをコピー";
 "settingsDevicesWaysCopyLink" = "リンクをコピー";
 "settingsDevicesWaysFoot" = "リンクやコマンドには、すべての方法が一度に含まれます。相手のコンピューターは応答した方法を使うので、ここで選ぶ必要はありません。";

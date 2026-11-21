@@ -16,7 +16,9 @@ import { COMMAND_STOP_WORDS } from "../../src/renderer/src/settings/commandStopW
 import { runLabelOf } from "../../src/shared/codeNames";
 import { COMMAND_NOTICE_WORDS } from "../../src/shared/commandNotice";
 import { setCurrentLanguage } from "../../src/shared/i18n/current";
+import { SOURCE_LANGUAGE } from "../../src/shared/i18n/languages";
 import * as m from "../../src/shared/i18n/messages.generated";
+import { defaultLanguage } from "../../src/shared/i18n/start";
 import { claimedPort } from "../helpers/claimedPort";
 import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -675,10 +677,69 @@ test("Start it here on saved data from a newer version asks the background job n
   }
 });
 
+// The review of INF-5409: Start it here lets go of the agent's job only once its window opens its own
+// first mate on the folder. A folder joined to a first mate on another computer opens as a view of
+// it and starts nothing here, so Start it here's words on that folder ask the job nothing: the view
+// becomes usable and the service manager is asked to stop nothing. Data: a home window and a
+// joined one, each on a throwaway folder, and a stand-in service manager for the joined one.
+test("Start it here on a folder joined to another computer opens the view and asks the background job nothing", async () => {
+  test.setTimeout(240_000);
+  const opened: LaunchedApp[] = [];
+  try {
+    const home = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Pro" } });
+    opened.push(home);
+    const invite = await home.page.evaluate(() =>
+      window.infinitary.devices.invite({ kind: "mac" }),
+    );
+    const userDataDir = scratchDir("infinitary-window-starts-run-joined-");
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    const name = { INFINITARY_DEVICE_NAME: "MacBook Air" };
+    const view = await launchApp({ userDataDir, homeDir, env: name });
+    opened.push(view);
+    // Joining starts the window over, so its answer may never return to this page.
+    await view.page.evaluate((link) => {
+      void window.infinitary.devices.join(link);
+    }, invite.link);
+    await expect(view.page.locator("[data-remote-control]")).toHaveAttribute(
+      "data-remote-control",
+      "in-reach",
+    );
+    await view.close();
+    opened.pop();
+
+    // Section: the joined folder opened with Start it here's words, by a window that would ask the
+    // service manager for a job of its own.
+    standIn = serviceManagerStandIn(homeDir);
+    const before = standIn.asks();
+    const again = await launchApp({
+      userDataDir,
+      homeDir,
+      env: { ...name, ...standIn.env, INFINITARY_WINDOW_STARTS_RUN: "1" },
+      args: [START_HERE_ARG, LET_GO_JOB_ARG],
+    });
+    opened.push(again);
+    await expect(again.page.locator("[data-remote-control]")).toHaveAttribute(
+      "data-remote-control",
+      "in-reach",
+    );
+    await again.close();
+    opened.pop();
+    // Whatever a view asks of its own, it asks no job to stop.
+    const stopped = standIn
+      .asks()
+      .slice(before.length)
+      .filter((ask) => /\b(bootout|stop)\b/.test(ask));
+    expect(stopped).toEqual([]);
+  } finally {
+    for (const app of opened.reverse()) await app.close();
+  }
+});
+
 // The review of INF-5409: a launch refused the folder's lock by a window from before windows
 // answered a launch tells it by what it runs as and ends, starting nothing. On a Mac it asks that
-// window once to reopen and, with no window's answer to confirm it, tells the person in their
-// language to click Infinitary in the Dock; a check's hidden launch says those words in its output
+// window once to reopen and, with no window's answer to confirm it, tells the person to click
+// Infinitary in the Dock, in the language a launch speaks at its start: English for a German
+// computer that chose nothing, and a pseudo-language as itself; a check's hidden launch says those words in its output
 // instead of showing them. The older window keeps the folder and its first mate. Only a Mac has a
 // Dock to name; elsewhere the launch quits at once, as for any window.
 test("a launch refused by a window that answers no launch ends, telling the person where it is", {
@@ -698,35 +759,37 @@ test("a launch refused by a window that answers no launch ends, telling the pers
     });
     try {
       await showCard(older.page, CARD_TITLE);
-      launch = spawn(
-        electronPath as unknown as string,
-        [builtAppDir(), `--user-data-dir=${userDataDir}`],
-        {
-          env: {
-            ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
-            INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
-            INFINITARY_LANGUAGE: "de",
+      for (const computer of ["de", "en-XA"]) {
+        launch = spawn(
+          electronPath as unknown as string,
+          [builtAppDir(), `--user-data-dir=${userDataDir}`],
+          {
+            env: {
+              ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+              INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+              INFINITARY_LANGUAGE: computer,
+            },
+            cwd: scratchDir("infinitary-window-starts-run-cwd-"),
           },
-          cwd: scratchDir("infinitary-window-starts-run-cwd-"),
-        },
-      );
-      let said = "";
-      launch.stdout?.on("data", (chunk) => {
-        said += String(chunk);
-      });
-      launch.stderr?.on("data", (chunk) => {
-        said += String(chunk);
-      });
-      const started = launch;
-      const code = await new Promise<number | null>((resolve) =>
-        started.once("exit", (exitCode) => resolve(exitCode)),
-      );
-      expect(code, said).toBe(0);
-      expect(said).toContain("[app] the launch found the folder held by a window");
-      setCurrentLanguage("de");
-      const dock = `${TOLD_THE_PERSON} ${m.dialogOpenInDock()} ${m.dialogOpenInDockDetail()}`;
-      setCurrentLanguage("en");
-      expect(said).toContain(dock);
+        );
+        let said = "";
+        launch.stdout?.on("data", (chunk) => {
+          said += String(chunk);
+        });
+        launch.stderr?.on("data", (chunk) => {
+          said += String(chunk);
+        });
+        const started = launch;
+        const code = await new Promise<number | null>((resolve) =>
+          started.once("exit", (exitCode) => resolve(exitCode)),
+        );
+        expect(code, said).toBe(0);
+        expect(said).toContain("[app] the launch found the folder held by a window");
+        setCurrentLanguage(defaultLanguage(computer));
+        const dock = `${TOLD_THE_PERSON} ${m.dialogOpenInDock()} ${m.dialogOpenInDockDetail()}`;
+        setCurrentLanguage(SOURCE_LANGUAGE);
+        expect(said, computer).toContain(dock);
+      }
       expect(older.app.process().exitCode).toBeNull();
       expect(profileHolder(userDataDir)).toBe(older.app.process().pid);
       await showCard(older.page, CARD_TITLE);

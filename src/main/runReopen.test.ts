@@ -86,7 +86,6 @@ describe("a launch beside an older Mac window", () => {
     const outcome = await reopenOlderWindow({
       bundle,
       holderAlive: () => true,
-      reachedSelf: () => false,
       answered: () => false,
       ask: macos.ask,
     });
@@ -97,7 +96,6 @@ describe("a launch beside an older Mac window", () => {
       await reopenOlderWindow({
         bundle,
         holderAlive: () => true,
-        reachedSelf: () => false,
         answered: () => answering.asked.length > 0,
         ask: answering.ask,
       }),
@@ -105,34 +103,32 @@ describe("a launch beside an older Mac window", () => {
     expect(answering.asked).toHaveLength(1);
   });
 
-  it("is unconfirmed where macOS refuses, the reopen reaches the launch itself, or there is no app to ask", async () => {
+  it("is unconfirmed where macOS refuses with no window's answer, or there is no app to ask", async () => {
     const refused = asker(false);
     expect(
       await reopenOlderWindow({
         bundle,
         holderAlive: () => true,
-        reachedSelf: () => false,
-        answered: () => true,
+        answered: () => false,
         ask: refused.ask,
       }),
     ).toBe("unconfirmed");
     expect(refused.asked).toHaveLength(1);
-    const self = asker(true);
+    // A window's answer confirms it whatever macOS said of the ask.
+    const answeredAnyway = asker(false);
     expect(
       await reopenOlderWindow({
         bundle,
         holderAlive: () => true,
-        reachedSelf: () => true,
-        answered: () => true,
-        ask: self.ask,
+        answered: () => answeredAnyway.asked.length > 0,
+        ask: answeredAnyway.ask,
       }),
-    ).toBe("unconfirmed");
+    ).toBe("confirmed");
     const none = asker(true);
     expect(
       await reopenOlderWindow({
         bundle: bundleOf("/repo/node_modules/electron/dist/electron"),
         holderAlive: () => true,
-        reachedSelf: () => false,
         answered: () => true,
         ask: none.ask,
       }),
@@ -146,12 +142,23 @@ describe("a launch beside an older Mac window", () => {
       await reopenOlderWindow({
         bundle,
         holderAlive: () => false,
-        reachedSelf: () => false,
         answered: () => false,
         ask: macos.ask,
       }),
     ).toBe("gone");
     expect(macos.asked).toEqual([]);
+    // One that lets the lock go at the ask, as a window the person quit, leaves the folder to be
+    // read afresh rather than a word to click it in the Dock.
+    const quitting = asker(true);
+    expect(
+      await reopenOlderWindow({
+        bundle,
+        holderAlive: () => quitting.asked.length === 0,
+        answered: () => false,
+        ask: quitting.ask,
+      }),
+    ).toBe("gone");
+    expect(quitting.asked).toHaveLength(1);
   });
   // The review of INF-5409: the whole handoff to an older window that answers nothing, whose last
   // window was closed, so the launch's ask opened nothing. The launch tells it by what it runs as,
@@ -176,6 +183,8 @@ describe("a launch beside an older Mac window", () => {
     };
     const refusedLaunch = async (older: ReturnType<typeof olderWindow>, alive = true) => {
       const ended: string[] = [];
+      // The holder told to be a window is the one asked to reopen.
+      let classified: number | undefined;
       const found = await lockHolderKind({
         running: () => false,
         answered: () => false,
@@ -191,7 +200,11 @@ describe("a launch beside an older Mac window", () => {
         lockFree: () => false,
         readEveryMs: 50,
         everyMs: 10,
+        onWindow: (holder) => {
+          classified = holder;
+        },
       });
+      expect(classified).toBe(4242);
       const kind = await endRefusedLaunch({
         found,
         answered: false,
@@ -199,8 +212,7 @@ describe("a launch beside an older Mac window", () => {
         reopen: () =>
           reopenOlderWindow({
             bundle,
-            holderAlive: () => alive,
-            reachedSelf: () => false,
+            holderAlive: () => alive && classified === 4242,
             answered: () => false,
             ask: older.ask,
           }),

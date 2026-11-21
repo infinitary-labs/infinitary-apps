@@ -646,7 +646,12 @@ describe("a window opened beside a run", () => {
     const pipe = join(socketScratchDir("inf-pipe-"), "run.sock");
     expect(await commandPipeHeld(pipe)).toBe(false);
     const look = (
-      shows: { running?: () => boolean; answered?: () => boolean; leavesAfterRead?: boolean } = {},
+      shows: {
+        running?: () => boolean;
+        answered?: () => boolean;
+        leavesAfterRead?: boolean;
+        leavesDuringRead?: boolean;
+      } = {},
     ) => {
       const asks: number[] = [];
       const reads: number[] = [];
@@ -659,6 +664,8 @@ describe("a window opened beside a run", () => {
         asked: undefined,
         windowHolder: async (named) => {
           reads.push(Date.now());
+          // The holder lets the lock go while this read is still on its way.
+          if (shows.leavesDuringRead) holder = null;
           const shown = await holderIsWindow(named, { commandPipe: () => commandPipeHeld(pipe) });
           // The holder lets the lock go once this read is taken, before the next look.
           if (shows.leavesAfterRead)
@@ -729,6 +736,28 @@ describe("a window opened beside a run", () => {
     expect(await early.kind).toBe("free");
     expect(unknownsAtFree).toBe(1);
     expect(early.reads).toHaveLength(1);
+
+    // One that lets the lock go before anything was read of it, or while its first read is on its
+    // way, was never shown to be a command: the launch is told before it acts on the folder free.
+    const unseen = look();
+    unseen.leave();
+    expect(await unseen.kind).toBe("free");
+    expect(unseen.unknowns).toHaveLength(1);
+    const midRead = look({ leavesDuringRead: true });
+    expect(await midRead.kind).toBe("free");
+    expect(midRead.reads).toHaveLength(1);
+    expect(midRead.unknowns).toHaveLength(1);
+
+    // A holder shown to be a command by its pipe that lets the lock go is no question.
+    letGo = holdCommandPipe(pipe);
+    await expect.poll(() => commandPipeHeld(pipe)).toBe(true);
+    const ended = look();
+    // A second read starts only once the first was taken.
+    await expect.poll(() => ended.reads.length).toBeGreaterThanOrEqual(2);
+    ended.leave();
+    letGo();
+    expect(await ended.kind).toBe("free");
+    expect(ended.unknowns).toEqual([]);
 
     // The pipe's name follows the folder, whatever its letters' case.
     expect(commandPipe("C:\\Users\\a\\Infinitary")).toBe(commandPipe("c:\\users\\A\\infinitary"));

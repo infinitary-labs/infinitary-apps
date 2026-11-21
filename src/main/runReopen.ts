@@ -95,23 +95,24 @@ export function askReopen(bundle: string): Promise<boolean> {
  * holder it read once to reopen, as a click in the Dock does, through macOS's
  * own open (`askReopen`), which every version opens its window on. macOS
  * taking the ask confirms nothing of a window, so only a window's answer
- * confirms it (`confirmed`); `gone` where that holder no longer holds the
- * lock, so nothing is asked and the folder may be free; `unconfirmed`
- * otherwise, including where it cannot be asked, macOS refused it, or it
- * reached this launch instead (`reachedSelf`), for the launch to tell the
- * person to click Infinitary in the Dock.
+ * confirms it (`confirmed`), whatever macOS said; `gone` where that holder
+ * no longer holds the lock, before the ask or once it was made, so the
+ * folder may be free for the launch started again to read afresh;
+ * `unconfirmed` otherwise, including where it cannot be asked, macOS refused
+ * it, or it reached this launch instead, for the launch to tell the person to
+ * click Infinitary in the Dock.
  */
 export async function reopenOlderWindow(options: {
   bundle: string | null;
   holderAlive: () => boolean;
-  reachedSelf: () => boolean;
   answered: () => boolean;
   ask?: (bundle: string) => Promise<boolean>;
 }): Promise<"confirmed" | "gone" | "unconfirmed"> {
   if (!options.holderAlive()) return "gone";
   if (options.bundle === null) return "unconfirmed";
-  const taken = await (options.ask ?? askReopen)(options.bundle);
-  return taken && !options.reachedSelf() && options.answered() ? "confirmed" : "unconfirmed";
+  await (options.ask ?? askReopen)(options.bundle);
+  if (options.answered()) return "confirmed";
+  return options.holderAlive() ? "unconfirmed" : "gone";
 }
 
 /**

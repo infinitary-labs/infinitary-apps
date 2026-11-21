@@ -815,50 +815,59 @@ export async function startApp(
     // the folder or a window, and starts again beside such a run.
     else if (answerAsk) {
       const answer = join(dataDir, windowAnswerFile(answerAsk));
-      // macOS's reopen reached this launch rather than the window it was meant for (`reopenOlderWindow`).
-      let activatedSelf = false;
-      app.once("activate", () => {
-        activatedSelf = true;
-      });
-      // A word to the person, in their language, in front of whatever they use now; its words are
-      // made once the language is set. Electron is ready only once this start returned to
-      // ./index.ts, so the handoff below runs after it and is never awaited here. A check's hidden
-      // launch shows none and says its words in its output instead, and a word that cannot be
-      // shown is none: null either way.
-      const tellPerson = async (
-        words: () => MessageBoxOptions,
-        parent?: BrowserWindow,
-      ): Promise<number | null> => {
+      // The handoff owns this launch's lifetime until it ends it: a window of its own closing, as
+      // the question's on a Mac, never quits the launch before it acts on the person's choice.
+      app.on("window-all-closed", () => {});
+      // A word to the person, in the language a launch speaks at its start, in front of whatever
+      // they use now; its words are made once that language is set. Electron is ready only once
+      // this start returned to ./index.ts, so the handoff below runs after it and is never awaited
+      // here. A check's hidden launch shows none and says its words in its output instead: null.
+      // A word that cannot be shown, or its window made, is answered as dismissed (`cancelId`).
+      // On a Mac a word that the launch may take away (`signal`) gets a window of its own, since
+      // macOS closes a message box on its signal only then.
+      const tellPerson = async (words: () => MessageBoxOptions): Promise<number | null> => {
         await app.whenReady();
-        setCurrentLanguage(
-          startLanguage(
-            app.getPreferredSystemLanguages(),
-            languageOverride(process.env, app.isPackaged),
-          ),
+        startLanguage(
+          app.getPreferredSystemLanguages(),
+          languageOverride(process.env, app.isPackaged),
         );
+        const box = words();
         if (hideWindow) {
-          const box = words();
           console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
           return null;
         }
-        app.focus({ steal: true });
+        let parent: BrowserWindow | null = null;
         try {
-          const box = words();
+          if (box.signal && hostPlatform() === "darwin") {
+            parent = new BrowserWindow({
+              show: false,
+              width: 520,
+              height: 260,
+              frame: false,
+              transparent: true,
+              hasShadow: false,
+              resizable: false,
+            });
+            parent.center();
+          }
+          app.focus({ steal: true });
           const { response } = parent
             ? await dialog.showMessageBox(parent, box)
             : await dialog.showMessageBox(box);
           return response;
         } catch (error) {
           console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
-          return null;
+          return box.cancelId ?? 0;
+        } finally {
+          if (parent && !parent.isDestroyed()) parent.destroy();
         }
       };
       void (async () => {
-        // A holder that still shows nothing on a second read, as an older window on a Windows PC
-        // that answers nothing and holds no pipe, or one that let the lock go after showing nothing,
-        // is never taken for a window, but the person is asked once whether to open here when it
-        // closes, so a window they then quit on purpose stays quit. A question not shown keeps the
-        // launch's own way: it opens here once the folder is free.
+        // A holder never shown to be a command that let the lock go, or one that still shows
+        // nothing on a second read, as an older window on a Windows PC that answers nothing and
+        // holds no pipe, is never taken for a window, but the person is asked once whether to open
+        // here when it closes, so a window they then quit on purpose stays quit. A question not
+        // shown keeps the launch's own way: it opens here once the folder is free.
         const shownWhy = new AbortController();
         let openOnceClosed: Promise<boolean> | null = null;
         let leftIt: () => void = () => {};
@@ -866,40 +875,21 @@ export async function startApp(
           leftIt = () => resolve("left");
         });
         const askOnceClosed = async () => {
-          // macOS closes a message box on its signal only when it has a window of its own.
-          const parent =
-            hostPlatform() === "darwin" && !hideWindow
-              ? await app.whenReady().then(
-                  () =>
-                    new BrowserWindow({
-                      show: false,
-                      width: 520,
-                      height: 260,
-                      frame: false,
-                      transparent: true,
-                      hasShadow: false,
-                      resizable: false,
-                    }),
-                )
-              : undefined;
-          parent?.center();
-          const response = await tellPerson(
-            () => ({
-              type: "info",
-              title: "Infinitary",
-              message: m.dialogOpenInDock(),
-              detail: m.dialogOnceClosedDetail(),
-              buttons: [m.dialogLeaveIt(), m.dialogOpenOnceClosed()],
-              defaultId: 0,
-              cancelId: 0,
-              signal: shownWhy.signal,
-            }),
-            parent,
-          );
-          parent?.destroy();
+          const response = await tellPerson(() => ({
+            type: "info",
+            title: "Infinitary",
+            message: m.dialogOpenInDock(),
+            detail: m.dialogOnceClosedDetail(),
+            buttons: [m.dialogLeaveIt(), m.dialogOpenOnceClosed()],
+            defaultId: 0,
+            cancelId: 0,
+            signal: shownWhy.signal,
+          }));
           if (response === 0 && !shownWhy.signal.aborted) leftIt();
           return response !== 0;
         };
+        // The window a launch told by what it runs as, the one it asks to reopen.
+        let classified: number | null | undefined;
         const read = await Promise.race([
           left,
           lockHolderKind({
@@ -918,21 +908,50 @@ export async function startApp(
             onUnknown: () => {
               openOnceClosed = askOnceClosed();
             },
+            onWindow: (holder) => {
+              classified = holder;
+            },
           }),
         ]);
         // The lock this launch took to read it free is let go before anything waits, so the person's
         // answer holds nothing and the launch started again reads the folder afresh.
         if (read === "free") app.releaseSingleInstanceLock();
-        // A lock let go while the question is up waits for the person's answer: a window quit on
-        // purpose and a command that ended look the same. A window or a run found answers it.
-        const found =
-          read === "free" && openOnceClosed !== null && !(await openOnceClosed) ? "left" : read;
+        // A lock let go while the question is up waits for the person's answer, since a window quit
+        // on purpose and a command that ended look the same, and the folder is watched meanwhile
+        // without holding it: a window's answer or a run found ends the question, and a holder that
+        // takes the folder is asked once, as the lock refusing this launch asks it. Open here starts
+        // the launch again, which reads the folder afresh.
+        let found: "run" | "free" | "window" | "left" = read;
+        if (read === "free" && openOnceClosed !== null) {
+          const asking: Promise<boolean> = openOnceClosed;
+          let answeredByPerson = false;
+          const watched = (async (): Promise<"run" | "window" | null> => {
+            let free = true;
+            while (!answeredByPerson) {
+              if (existsSync(answer)) return "window";
+              if (runningByCommand(dataDir)) return "run";
+              if (free) {
+                free = app.requestSingleInstanceLock(lockAsk);
+                if (free) app.releaseSingleInstanceLock();
+              }
+              await new Promise((resolve) => setTimeout(resolve, 250));
+            }
+            return null;
+          })();
+          found = await Promise.race([
+            asking.then((open) => {
+              answeredByPerson = true;
+              return open ? ("free" as const) : ("left" as const);
+            }),
+            watched.then((seen) => seen ?? ("free" as const)),
+          ]);
+          answeredByPerson = true;
+        }
         shownWhy.abort();
         // A window told only by what it runs as is one from before the answer: on a Mac it may have
-        // closed its last window and opened none at the ask, so the holder read is asked once to
+        // closed its last window and opened none at the ask, so that same holder is asked once to
         // reopen as a click in the Dock does, and the person is told to click it there unless a
         // window's answer confirms it.
-        const reopenFor = lockHolderNow();
         const kind = await endRefusedLaunch({
           found,
           answered: existsSync(answer),
@@ -940,8 +959,7 @@ export async function startApp(
           reopen: () =>
             reopenOlderWindow({
               bundle: app.isPackaged ? bundleOf(process.execPath) : null,
-              holderAlive: () => typeof reopenFor === "number" && lockHolderNow() === reopenFor,
-              reachedSelf: () => activatedSelf,
+              holderAlive: () => typeof classified === "number" && lockHolderNow() === classified,
               answered: () => existsSync(answer),
             }),
           tellDock: async () => {
@@ -1577,7 +1595,11 @@ export async function startApp(
             ...(windowless
               ? {
                   accepted: () => {
-                    for (const read of readers.splice(0)) read();
+                    // A stop the first reader found sets nothing more up, a force watch included.
+                    for (const read of readers.splice(0)) {
+                      if (stopping) break;
+                      read();
+                    }
                     if (stopping) throw new Error(RUN_START_STOPPED);
                   },
                 }
@@ -1585,6 +1607,14 @@ export async function startApp(
             computerLanguage: systemLanguage,
             ...(hooks?.onHomeMoved ? { onHomeMoved: hooks.onHomeMoved } : {}),
           });
+          // A development run may hold its started core back from the startup that disposes it
+          // while a file it names is there, so a journey stops it after its saved data was
+          // accepted (tests/e2e/run-command.spec.ts), marked reached as the start's hold is.
+          const startedHold =
+            windowless && isDev ? settingFrom(process.env, "RUN_STARTED_HOLD") : undefined;
+          if (startedHold && existsSync(startedHold)) writeFileSync(`${startedHold}.reached`, "");
+          while (startedHold && existsSync(startedHold))
+            await new Promise((resolve) => setTimeout(resolve, 100));
           capabilities.started?.(core);
           return core;
         },

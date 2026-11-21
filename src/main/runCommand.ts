@@ -644,10 +644,13 @@ export async function lockHolderKind(options: {
   everyMs?: number;
   /**
    * Once, when a holder read again still shows nothing, as an older window on a Windows PC, which
-   * answers nothing and holds no pipe, or when one that showed nothing let the lock go before its
-   * second read: the launch may ask the person what to do when it closes, before acting on free.
+   * answers nothing and holds no pipe, or when one never shown to be a command lets the lock go, as
+   * one read once or not yet: the launch may ask the person what to do when it closes, before acting
+   * on free. A holder shown to be a command that lets it go is no question.
    */
   onUnknown?: () => void;
+  /** The holder told to be a window by what it runs as, when the result is `window` for that. */
+  onWindow?: (holder: number | undefined) => void;
 }): Promise<"run" | "free" | "window"> {
   // Asks for the lock: taken, it is free unless a window answered meanwhile and then let it go.
   const ask = () => (options.lockFree() ? (options.answered() ? "window" : "free") : null);
@@ -656,6 +659,14 @@ export async function lockHolderKind(options: {
   let shown: boolean | null | undefined;
   let readAgain = 0;
   let unknownTold = false;
+  // Whether the holder now seen was never shown to be a command: one on a lock that names no
+  // holder (Windows) until its pipe is read, and any that a read showed nothing of.
+  let unresolved = options.asked === undefined;
+  const tellUnknown = () => {
+    if (unknownTold) return;
+    unknownTold = true;
+    options.onUnknown?.();
+  };
   for (;;) {
     if (options.answered()) return "window";
     if (options.running()) return "run";
@@ -663,34 +674,36 @@ export async function lockHolderKind(options: {
     if (holder !== seen || holder === null) {
       // A holder the launch's ask did not reach, or the lock let go: asked once, before anything
       // else, so it brings its window forward if it is one.
-      // A holder that showed nothing and let the lock go is the person's to judge as one read
-      // twice is: an older window they quit on purpose and a command that ended look the same.
-      const unread = shown === null && read !== null;
+      // A holder never shown to be a command that let the lock go is the person's to judge as one
+      // read twice is: an older window they quit on purpose and a command that ended look the same.
+      const unread = unresolved;
       seen = holder;
       read = null;
       shown = undefined;
+      unresolved = holder === undefined;
       const kind = ask();
-      if (kind === "free" && unread && !unknownTold) {
-        unknownTold = true;
-        options.onUnknown?.();
-      }
+      if (kind === "free" && unread) tellUnknown();
       if (kind) return kind;
     } else if (holder !== read || Date.now() >= readAgain) {
       const window = await options.windowHolder(holder);
       // Only while that same holder still holds the lock: what was read of one that let it go
       // since tells nothing of the next, which is asked first.
       if (options.holder() === holder) {
-        if (window === true) return "window";
-        if (window === null && read === holder && shown === null && !unknownTold) {
-          unknownTold = true;
-          options.onUnknown?.();
+        if (window === true) {
+          options.onWindow?.(holder);
+          return "window";
         }
+        if (window === null && read === holder && shown === null) tellUnknown();
         if (holder === undefined && read === undefined && window !== shown) {
+          // What the unnamed holder shows changed, so the one before it let go: free is judged by
+          // what that one was shown to be.
           const kind = ask();
+          if (kind === "free" && unresolved) tellUnknown();
           if (kind) return kind;
         }
         read = holder;
         shown = window;
+        unresolved = window !== false;
         readAgain =
           window === null || holder === undefined
             ? Date.now() + options.readEveryMs

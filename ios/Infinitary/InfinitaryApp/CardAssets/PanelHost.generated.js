@@ -101423,6 +101423,9 @@ ${FRAME_TAG_SCRIPT}
       element.removeAttribute("tabindex");
       element.removeAttribute("data-inf-picture");
       element.setAttribute("style", lookOf(from[i], from[i].namespaceURI === SVG_SPACE ? DRAWING_LOOK : DRAWING_WORDS_LOOK, families));
+      // A still the stage part drew over shows in the picture, since the live
+      // drawing beside it does not travel (docs/card-authoring.md, "The app's own stage").
+      if (from[i].hasAttribute("data-inf-stage-still")) element.style.removeProperty("display");
     }
     scripts.forEach(function (script) { script.remove(); });
     var box = drawing.viewBox && drawing.viewBox.baseVal;
@@ -102293,7 +102296,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-9Svlpmc0LO+7AgpXxlwuEeXRWXXHuEvWD/mORlGo8IU=";
+  const FRAME_BRIDGE_SHA256 = "sha256-3edeMCYzTwKYBkZtGnJQjvwleJ6ZJbLOPqx4hivNIhU=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

@@ -560,6 +560,7 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   Its motion is calm: the first mate drifts and blinks and the crew orbit and spin, with no greeting, fidget or turn toward the pointer.
   It follows the theme through `inf.onTheme`, draws only what is on screen, and under reduced motion draws one settled frame.
   Its reference sits inside a `<figure>`, so a card that names it stays prose (Scripting, above).
+  A drawing opened as a picture shows its stills, since the live drawing beside it does not travel with the copy (`framePictureScript.ts`).
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.

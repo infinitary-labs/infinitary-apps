@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "merge-link-filed-fact",
+      "reason": "A merge's link to the task it starts now saves whether the merge filed that task, so an existing task's \"You asked\" line no longer depends on the two times differing; a real merge never links a task in the millisecond it was filed, so only a fast test run could see the difference."
+    }
+  ]
+}

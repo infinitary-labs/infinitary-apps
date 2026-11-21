@@ -1,9 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
+import { readLinuxInstallation } from "@core/update/linuxInstall";
 import * as m from "@shared/i18n/messages.generated";
 import { languageOverride, startLanguage } from "@shared/i18n/start";
 import type { MessageBoxOptions } from "electron";
@@ -31,8 +32,37 @@ export {
   type PersonReply,
   type PersonWord,
   personWordArg,
-  wordLauncher,
+  wordProfilePrivate,
 } from "./personWordArg";
+
+/**
+ * How a launch starts the copy that shows a word: as it was itself started, the installed program
+ * with no arguments, or on Linux its AppImage file where it runs from one (`readLinuxInstallation`:
+ * the file and the folder its runtime mounted this program from), so the AppImage's own start runs
+ * again and an `APPIMAGE` this launch only inherited starts nothing else; a development run of
+ * Electron names the app's folder.
+ */
+export function wordLauncher(launch: {
+  packaged: boolean;
+  platform: NodeJS.Platform;
+  execPath: string;
+  appPath: string;
+  resourcesDir: string;
+  env: NodeJS.ProcessEnv;
+}): { execPath: string; args: string[] } {
+  if (!launch.packaged) return { execPath: launch.execPath, args: [launch.appPath] };
+  const own = { execPath: launch.execPath, args: [] };
+  if (launch.platform !== "linux") return own;
+  const installation = readLinuxInstallation({
+    chip: process.arch,
+    resourcesDir: launch.resourcesDir,
+    execPath: launch.execPath,
+    env: launch.env,
+  });
+  return installation.package === "appimage" && installation.appImage
+    ? { execPath: installation.appImage, args: [] }
+    : own;
+}
 
 /** The question's Open here, after its Leave it, the first and closing answer. */
 export const OPEN_ONCE_CLOSED = 1;
@@ -88,20 +118,71 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
   process.stdout.write(replyLine(reply), () => app.exit(0));
 }
 
+/** The file in a copy's profile naming the copy's process, which `reclaimWordProfiles` reads. */
+const COPY_PID_FILE = "infinitary-word-copy.pid";
+const PROFILE_PREFIX = "infinitary-word-";
+
+/**
+ * Removes the throwaway profiles of earlier copies whose launch died before it could, as one ended
+ * by force: only a profile naming a copy that has positively ended (no process with its number), so
+ * a profile still being made, or one whose copy lives or whose number another program took since,
+ * is left as it is.
+ */
+export function reclaimWordProfiles(temp: string): void {
+  let names: string[];
+  try {
+    names = readdirSync(temp).filter((name) => name.startsWith(PROFILE_PREFIX));
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    const profile = join(temp, name);
+    let pid: number;
+    try {
+      pid = Number(readFileSync(join(profile, COPY_PID_FILE), "utf8"));
+    } catch {
+      continue;
+    }
+    if (!Number.isInteger(pid) || pid <= 0 || !processGone(pid)) continue;
+    try {
+      rmSync(profile, { recursive: true, force: true });
+    } catch (error) {
+      console.warn(`[app] could not remove a word's profile: ${(error as Error).message}`);
+    }
+  }
+}
+
+/** True only where no process has this number; one this account may not signal still lives. */
+function processGone(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ESRCH";
+  }
+}
+
 /**
  * Shows a word through a copy of this program (`showPersonWord`) and gives its reply (`readReply`)
  * once the copy has ended and said all it had: null where the word was taken away (`signal`),
  * which ends that copy and its box, and unshown where the copy could not be made, started or show
- * its box. The copy's input stays open while this launch lives, so the copy ends with it too. Its
- * throwaway profile goes once the copy has ended, and a profile that cannot go changes no reply.
- * `launcher` starts this app as it was started (`wordLauncher`).
+ * its box, or where its profile could not be kept private (`privateTemp`, `wordProfilePrivate`),
+ * which then makes none. The copy's input stays open while this launch lives, so the copy ends
+ * with it too. Its throwaway profile goes once the copy has ended - by this launch, or by a later
+ * one's `reclaimWordProfiles` where this launch died first - and a profile that cannot go changes
+ * no reply. `launcher` starts this app as it was started (`wordLauncher`).
  */
 export function askPersonWord(
   word: PersonWord,
-  options: { launcher: { execPath: string; args: readonly string[] }; signal?: AbortSignal },
+  options: {
+    launcher: { execPath: string; args: readonly string[] };
+    privateTemp: boolean;
+    signal?: AbortSignal;
+  },
 ): Promise<PersonReply | null> {
   const { signal } = options;
   if (signal?.aborted) return Promise.resolve(null);
+  if (!options.privateTemp) return Promise.resolve("unshown");
   return new Promise((done) => {
     let settled = false;
     let takeAway = () => {};
@@ -112,6 +193,7 @@ export function askPersonWord(
       done(reply);
     };
     let profile: string | null = null;
+    // Only once the copy has ended, or never started.
     const cleanUp = () => {
       if (profile === null) return;
       try {
@@ -122,7 +204,9 @@ export function askPersonWord(
     };
     let copy: ChildProcess;
     try {
-      profile = mkdtempSync(join(tmpdir(), "infinitary-word-"));
+      const temp = tmpdir();
+      reclaimWordProfiles(temp);
+      profile = mkdtempSync(join(temp, PROFILE_PREFIX));
       copy = spawn(
         options.launcher.execPath,
         [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
@@ -134,6 +218,17 @@ export function askPersonWord(
       settle("unshown");
       return;
     }
+    let started = false;
+    copy.once("spawn", () => {
+      started = true;
+      // A later launch removes this profile once this copy has ended, should this launch die first.
+      try {
+        if (profile !== null && copy.pid !== undefined)
+          writeFileSync(join(profile, COPY_PID_FILE), String(copy.pid));
+      } catch (error) {
+        console.warn(`[app] could not name a word's copy: ${(error as Error).message}`);
+      }
+    });
     let said = "";
     takeAway = () => {
       // Closing its input ends the copy on its own, should this end not reach it.
@@ -148,15 +243,18 @@ export function askPersonWord(
     copy.stdout?.on("data", (chunk: string) => {
       said += chunk;
     });
-    copy.once("error", (error) => {
+    // A copy that never started settles here; an error once it runs, as an end that could not
+    // reach it, leaves it running and its profile in use, for its close to settle.
+    copy.on("error", (error) => {
       console.warn(`[app] could not show a word to the person: ${error.message}`);
+      if (started) return;
       cleanUp();
       settle("unshown");
     });
-    // Close, not exit: only once the copy's output is all read.
+    // Close, not exit: only once the copy's output is all read, or after a start that failed.
     copy.once("close", (code, ended) => {
       cleanUp();
-      settle(signal?.aborted ? null : readReply(said, code, ended));
+      settle(signal?.aborted ? null : readReply(word, said, code, ended));
     });
   });
 }

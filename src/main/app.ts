@@ -99,6 +99,7 @@ import {
   type PersonWord,
   personWordBox,
   wordLauncher,
+  wordProfilePrivate,
 } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
@@ -811,7 +812,8 @@ export async function startApp(
       // the lock before it was, so a copy of this program shows the word, and is ended when the word
       // is taken away. A word taken away or no longer wanted (`wanted`) is never shown. A check's
       // hidden launch shows none and says its words in its output instead, as a launch does whose
-      // copy could not show it, so a launch from a terminal still tells: null for the first.
+      // copy could not show it or that made none, its profile having nowhere private to go, so a
+      // launch from a terminal still tells: null for the first.
       const sayInOutput = (word: PersonWord) => {
         const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
         console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
@@ -829,10 +831,14 @@ export async function startApp(
         const reply = await askPersonWord(word, {
           launcher: wordLauncher({
             packaged: app.isPackaged,
+            platform: hostPlatform(),
             execPath: process.execPath,
             appPath: app.getAppPath(),
-            appImage: process.env.APPIMAGE,
+            resourcesDir: process.resourcesPath,
+            env: process.env,
           }),
+          // On Windows only where the data folder was kept private, its temporary folder with it.
+          privateTemp: wordProfilePrivate(hostPlatform(), privacy),
           signal,
         });
         if (reply === "unshown" && !signal?.aborted) sayInOutput(word);

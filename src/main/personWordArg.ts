@@ -1,6 +1,12 @@
 /** A word a window launch refused the folder's lock says to the person (./personWord.ts). */
 export type PersonWord = "dock" | "once-closed";
 
+/**
+ * How many buttons each word's box has (`personWordBox`): the Dock word's one, which Electron draws
+ * when a box names none, and the question's Leave it and Open here.
+ */
+export const WORD_BUTTONS: Readonly<Record<PersonWord, number>> = { dock: 1, "once-closed": 2 };
+
 /** What starts a program as the copy that shows one word. */
 export const PERSON_WORD_ARG = "--infinitary-person-word";
 
@@ -23,14 +29,20 @@ export function replyLine(reply: PersonReply): string {
 
 /**
  * The copy's reply from all it wrote and how it ended: a button only from a copy that ended on its
- * own with success and wrote exactly one button line, and unshown for anything else - a box it
- * could not show, a copy that crashed or was ended, or words that are not a reply - so nothing but
- * a press the person made counts as one.
+ * own with success and wrote exactly the line for one of its word's buttons (`replyLine`), and
+ * unshown for anything else - a box it could not show, a copy that crashed or was ended, or words
+ * its box could not have said - so nothing but a press the person made counts as one.
  */
-export function readReply(said: string, code: number | null, signal: string | null): PersonReply {
+export function readReply(
+  word: PersonWord,
+  said: string,
+  code: number | null,
+  signal: string | null,
+): PersonReply {
   if (code !== 0 || signal !== null) return "unshown";
-  const pressed = /^pressed:(\d+)\n$/.exec(said);
-  return pressed ? Number(pressed[1]) : "unshown";
+  for (let button = 0; button < WORD_BUTTONS[word]; button++)
+    if (said === replyLine(button)) return button;
+  return "unshown";
 }
 
 /**
@@ -52,16 +64,14 @@ export function endWithRequester(input: NodeJS.ReadableStream, end: () => void):
 }
 
 /**
- * How a launch starts the copy that shows a word: as it was itself started, the installed program
- * with no arguments, or its AppImage file where it runs from one, so the AppImage's own start runs
- * again; a development run of Electron names the app's folder.
+ * Whether the copy's throwaway profile may be made in this launch's temporary folder: anywhere but
+ * Windows, whose modes keep it private; on Windows only once the data folder was kept private
+ * (`keepDataFolderPrivate`), which also moved a temporary folder another account can read into it.
+ * A launch that never judged it, or whose data folder was refused, makes none.
  */
-export function wordLauncher(launch: {
-  packaged: boolean;
-  execPath: string;
-  appPath: string;
-  appImage?: string;
-}): { execPath: string; args: string[] } {
-  if (!launch.packaged) return { execPath: launch.execPath, args: [launch.appPath] };
-  return { execPath: launch.appImage || launch.execPath, args: [] };
+export function wordProfilePrivate(
+  platform: NodeJS.Platform,
+  privacy: { readonly refused: unknown } | null,
+): boolean {
+  return platform !== "win32" || (privacy !== null && privacy.refused === null);
 }

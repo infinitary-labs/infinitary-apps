@@ -16,8 +16,6 @@ export const MAC_UNIT_FILES = [
   "src/core/folderMove/copy.test.ts",
   "src/core/folderMove/move.test.ts",
   "tests/install-clones.test.ts",
-  // A word's profiles' folder refused where a Mac access list opens it to others.
-  "src/main/personWord.integration.test.ts",
   // macOS's second path to every folder on its data volume (/System/Volumes/Data).
   "src/core/files/fileReach.test.ts",
   // Real macOS tools: taskpolicy, nc, bundled git, and Mac remote commands.

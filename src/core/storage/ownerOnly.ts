@@ -242,65 +242,6 @@ export function onlyOwnerReaches(list: AccessList, user: string): boolean {
 }
 
 /**
- * Rights that let an account remove, rename or re-permit what a folder holds, or the folder
- * itself: delete, delete a child, change the list or owner, or all of them - judged on the number
- * the rights stand for (`rightsMask`), so two spellings of one right are judged alike.
- */
-const CHANGE_MASK = 0x10000 | 0x40 | 0x40000 | 0x80000 | 0x10000000;
-
-function letsChange(rights: string): boolean {
-  return ((rightsMask(rights) ?? CHANGE_MASK) & CHANGE_MASK) !== 0;
-}
-
-/**
- * Whether an account besides this one, Windows and the administrators could remove, rename or
- * re-permit what a folder holds, or the folder itself: an owner that is none of them nor a
- * Windows service, no list at all, or an entry on the folder itself (not one only handed down)
- * giving another account such a right. Reading or adding entries alone changes nothing there.
- */
-export function othersCanChange(list: AccessList, user: string): boolean {
-  if (list.entries === null) return true;
-  if (!ownerKeeps(list.owner, user) && !accountNumber(list.owner ?? "").startsWith("S-1-5-80-"))
-    return true;
-  return list.entries.some(
-    (entry) =>
-      allows(entry) &&
-      !hasFlag(entry, "IO") &&
-      !accountMayHold(entry.account, user) &&
-      letsChange(entry.rights),
-  );
-}
-
-/**
- * Whether a folder or file made in this one, or anywhere below it, could be reached by another
- * ordinary account or take a list this one does not decide: an entry that passes to new folders or
- * files (`CI`, `OI`) allowing an account besides this one, Windows and the administrators; no plain
- * allow entry for this account that passes to both new folders and new files at every depth (`OI`
- * and `CI`, without `NP`), where Windows could give what is made the creating process's default
- * list instead; no list, or one not read whole. What is made where only this account's and those
- * accounts' entries are handed down, this account's own among them, is this account's from its
- * making.
- */
-export function handsDownToOthers(list: AccessList, user: string): boolean {
-  if (list.entries === null || !list.whole || !ownerKeeps(list.owner, user)) return true;
-  const handsOwnDown = list.entries.some(
-    (entry) =>
-      entry.type === "A" &&
-      hasFlag(entry, "OI") &&
-      hasFlag(entry, "CI") &&
-      !hasFlag(entry, "NP") &&
-      accountNumber(entry.account) === user,
-  );
-  if (!handsOwnDown) return true;
-  return list.entries.some(
-    (entry) =>
-      allows(entry) &&
-      (hasFlag(entry, "CI") || hasFlag(entry, "OI")) &&
-      !accountMayHold(entry.account, user),
-  );
-}
-
-/**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
  * list is its own (protected) and lets in no other ordinary account, `unread`
  * when its descriptor was not read whole, which no set may replace, and

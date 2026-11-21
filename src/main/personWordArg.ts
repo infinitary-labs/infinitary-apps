@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import { Worker } from "node:worker_threads";
 
 /** A word a window launch refused the folder's lock says to the person (./personWord.ts). */
@@ -100,11 +99,11 @@ process.kill(process.pid, "SIGKILL");
 `;
 
 /**
- * Whether the copy's throwaway profile may be made in the folder for them beside the data folder
- * (`wordProfilesBeside`), which is given this account's access alone (`ownProfilesFolder`):
- * anywhere but Windows; on Windows only once the data folder was kept private
- * (`keepDataFolderPrivate`). A launch that never judged it, or whose data folder was refused, makes
- * none and touches nothing there.
+ * Whether the copy's profile may be kept in the data folder (`WORD_PROFILES`), where it is this
+ * account's alone: anywhere but Windows, where the launch makes it with no access for anyone else;
+ * on Windows only once the data folder was kept private (`keepDataFolderPrivate`), whose owner-only
+ * list Windows hands down to it. A launch that never judged it, or whose data folder was refused,
+ * makes none and touches nothing there.
  */
 export function wordProfilePrivate(
   platform: NodeJS.Platform,
@@ -113,41 +112,25 @@ export function wordProfilePrivate(
   return platform !== "win32" || (privacy !== null && privacy.refused === null);
 }
 
-/** What names a copy's throwaway profile, a folder in the profiles' folder (`wordProfilesBeside`). */
-export const WORD_PROFILE_PREFIX = "infinitary-word-";
-export {
-  WORD_PROFILES_MARK_BYTES,
-  WORD_PROFILES_RESERVED,
-  wordProfilesMark,
-  wordProfilesMarked,
-} from "@core/folderMove/due";
 /**
- * What names a word's folder moved aside to be removed, in the folder it was in: never a profile's
- * name, so only the one remover that moved it reads it.
+ * The names in the data folder that may hold the profile a launch refused the folder's lock keeps
+ * for the copy that shows the person a word (./personWord.ts, docs/run.md): the first, or the next
+ * where something else is at a name.
  */
-export const WORD_REMOVING_PREFIX = ".infinitary-word-removing-";
-/** The file in a profile naming the one copy that uses it: its process number and a line's end. */
-export const WORD_OWNER_FILE = "infinitary-word.pid";
-/** The copy's own temporary folder, inside its profile (`TEMP` and `TMP` name it). */
+export const WORD_PROFILES = ["word-profile", "word-profile-2", "word-profile-3"] as const;
+/** The copy's own temporary folder, inside its profile (`TEMP`, `TMP` and `TMPDIR` name it). */
 export const WORD_TEMP_DIR = "temp";
 const PROFILE_SWITCH = "--user-data-dir=";
 
 /**
- * The copy's first act, before anything else it runs: names itself in the profile it was started
- * with, which its launch made for it alone, with its temporary folder; the line's end says the
- * record was written whole. False where it was started with no profile of ours or could not name itself, as a
- * copy that then shows nothing and says so; a profile it never named is one a later launch leaves.
+ * The copy's first act, before anything else it runs: takes the profile it was started with, one
+ * its launch keeps in the data folder (`WORD_PROFILES`), for itself alone (`hold`, Electron's own
+ * lock on a profile, the one a window takes on its data folder), so two words shown at once never
+ * share one. False where it was started with no profile of a word, or another copy holds it; the
+ * copy then shows nothing and says so, and its launch says the word in its own output.
  */
-export function claimWordProfile(argv: readonly string[]): boolean {
+export function claimWordProfile(argv: readonly string[], hold: () => boolean): boolean {
   const profile = argv.find((arg) => arg.startsWith(PROFILE_SWITCH))?.slice(PROFILE_SWITCH.length);
-  if (!profile || !basename(profile).startsWith(WORD_PROFILE_PREFIX)) return false;
-  try {
-    mkdirSync(profile, { recursive: true, mode: 0o700 });
-    // Only a file it made itself: never one already there, nor through a link.
-    writeFileSync(join(profile, WORD_OWNER_FILE), `${process.pid}\n`, { flag: "wx", mode: 0o600 });
-    mkdirSync(join(profile, WORD_TEMP_DIR), { recursive: true, mode: 0o700 });
-    return true;
-  } catch {
-    return false;
-  }
+  if (!profile || !(WORD_PROFILES as readonly string[]).includes(basename(profile))) return false;
+  return hold();
 }

@@ -100,7 +100,6 @@ import {
   personWordBox,
   wordLauncher,
   wordProfilePrivate,
-  wordProfilesBeside,
 } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
@@ -842,12 +841,9 @@ export async function startApp(
             resourcesDir: process.resourcesPath,
             env: process.env,
           }),
-          // In the folder for them beside the data folder, away from the temporary folder its
-          // holder clears and from any folder move; on Windows only where the data folder was kept
-          // private.
-          profiles: wordProfilePrivate(hostPlatform(), privacy)
-            ? wordProfilesBeside(dataDir)
-            : null,
+          // Kept in the data folder, away from the temporary folder its holder clears; on Windows
+          // only where the data folder was kept private.
+          dataDir: wordProfilePrivate(hostPlatform(), privacy) ? dataDir : null,
           signal,
         });
         if (reply === "unshown" && !signal?.aborted) sayInOutput(word);

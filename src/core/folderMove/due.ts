@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { readdirSync, realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Spelling } from "@shared/codeNames";
@@ -28,60 +27,6 @@ export type FolderMove = { from: string; to: string };
 export function stagedFolderFor(to: string, pid: number = process.pid): string {
   return `${to}.moving-${pid}`;
 }
-
-/**
- * The name beside a data folder that reserves the folder holding the throwaway
- * profiles of the copies a launch refused the folder's lock starts to show the
- * person a word, a folder beside it named for it (src/main/personWord.ts,
- * docs/run.md): outside the data folder and every folder a move stages, sets
- * aside or brings, so a copy still using one keeps its path through any move,
- * and none of it is ever taken for saved work.
- */
-export function wordProfilesBeside(dataDir: string): string {
-  return `${dataDir}-word-profiles`;
-}
-
-/**
- * The profiles' folder's mark: a file this app writes whole in the folder it made, saying
- * `wordProfilesMark` of that folder's own name and nothing else, once that folder is this account's
- * alone; only then is the same file linked at the reserved name (`wordProfilesBeside`), which
- * reserves it. Anything else at that name is someone else's, never changed, read into or used.
- */
-export const WORD_PROFILES_RESERVED = ".infinitary-word-profiles";
-/**
- * What the profiles' folder's mark says, whole: which folder it marks, the one named `<reserved
- * name>.<id>` beside the reserved name, and which folder that was when the mark was written - its
- * device, number and birth, read whole - so the reservation names that one folder and no copy of
- * it, nor a folder put back at its name since.
- */
-export const wordProfilesMark = (
-  id: string,
-  folder: { dev: bigint; ino: bigint; birthtimeNs: bigint },
-) => `infinitary-word-profiles:2 ${id} ${folder.dev} ${folder.ino} ${folder.birthtimeNs}\n`;
-/** The folder a mark's whole text names (`wordProfilesMark`), or null for any other text. */
-export function wordProfilesMarked(
-  text: string,
-): { id: string; dev: bigint; ino: bigint; birthtimeNs: bigint } | null {
-  const said =
-    /^infinitary-word-profiles:2 ([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}) (0|[1-9][0-9]{0,19}) (0|[1-9][0-9]{0,19}) (0|[1-9][0-9]{0,29})\n$/.exec(
-      text,
-    );
-  if (!said) return null;
-  return {
-    id: said[1] as string,
-    dev: BigInt(said[2] as string),
-    ino: BigInt(said[3] as string),
-    birthtimeNs: BigInt(said[4] as string),
-  };
-}
-/** The longest whole mark. */
-export const WORD_PROFILES_MARK_BYTES = Buffer.byteLength(
-  wordProfilesMark(randomUUID(), {
-    dev: 10n ** 20n - 1n,
-    ino: 10n ** 20n - 1n,
-    birthtimeNs: 10n ** 30n - 1n,
-  }),
-);
 
 /** Every staged folder beside `to`, of any attempt. */
 export function stagedFolders(to: string): string[] {

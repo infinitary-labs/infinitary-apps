@@ -13,11 +13,9 @@ import {
   type AccessAsk,
   type AccessRun,
   clearPrivateTemp,
-  handsDownToOthers,
   keepDataFolderPrivate,
   keepOwnerOnly,
   onlyOwnerReaches,
-  othersCanChange,
   ownerOnlyAccessList,
   ownerOnlyVerdict,
   PRIVATE_TEMP_DIR,
@@ -119,18 +117,6 @@ describe("reading a folder's access list", () => {
     );
   });
 
-  it("finds who besides this account could move or replace what a folder holds", () => {
-    // The profile's own folders: only this account, Windows and the administrators.
-    expect(othersCanChange(readAccessList(IN_PROFILE), USER)).toBe(false);
-    expect(othersCanChange(readAccessList(OTHERS_FOLDER), USER)).toBe(true);
-    // At the top of the drive every signed-in account may change it; reading it, or a right only
-    // handed down to what others make there, changes nothing in it.
-    expect(othersCanChange(readAccessList(AT_DRIVE_TOP), USER)).toBe(true);
-    const readOnly = AT_DRIVE_TOP.replace("(A;ID;0x1301bf;;;AU)", "");
-    expect(othersCanChange(readAccessList(readOnly), USER)).toBe(false);
-    expect(othersCanChange(readAccessList(NO_LIST), USER)).toBe(true);
-  });
-
   it("refuses a reading it could not take whole, never judging the entries before the rest", () => {
     // A conditional entry carries brackets of its own; what follows it, here another account's
     // right to change the folder, would otherwise go unread.
@@ -139,11 +125,9 @@ describe("reading a folder's access list", () => {
       `(A;OICIID;FA;;;${USER})(XA;;FA;;;${USER};(x))(A;;0x1301bf;;;${OTHER})`,
     );
     expect(readAccessList(conditional).entries).toBeNull();
-    expect(othersCanChange(readAccessList(conditional), USER)).toBe(true);
     expect(onlyOwnerReaches(readAccessList(conditional), USER)).toBe(false);
     // No owner read is no owner that keeps the folder this account's.
     const ownerless = IN_PROFILE.replace(`O:${USER}`, "");
-    expect(othersCanChange(readAccessList(ownerless), USER)).toBe(true);
     expect(onlyOwnerReaches(readAccessList(ownerless), USER)).toBe(false);
     expect(ownerOnlyVerdict(readAccessList(ownerless), USER)).toBe("unread");
     expect(ownerOnlyVerdict(readAccessList(conditional), USER)).toBe("unread");
@@ -211,50 +195,12 @@ describe("reading a folder's access list", () => {
         `O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(OD;;WD;bf967aba-0de6-11d0-a285-00aa003049e2;;${OTHER})`,
       ).whole,
     ).toBe(true);
-    // Rights are judged by what they stand for, however written: all of a key's rights take in
-    // deleting and re-permitting.
-    for (const rights of ["KA", "0xF003F", "0x000f003f"])
-      expect(
-        othersCanChange(
-          readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;;${rights};;;${OTHER})`),
-          USER,
-        ),
-      ).toBe(true);
     // Nor is a list whose own flags are not Windows' (`P`, `AI`, `AR`).
     expect(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`).whole).toBe(false);
-    // Flags are read in their pairs: inheriting to folders and to files is not "inherit only".
-    const both = readAccessList(
-      `O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;CIOI;FA;;;${OTHER})`,
-    );
-    expect(othersCanChange(both, USER)).toBe(true);
     // The word only in what follows the list leaves the list itself to be judged.
     const audited = `${IN_PROFILE}S:(AU;SA;FA;;;WD)`;
     expect(readAccessList(audited).entries).toHaveLength(3);
     expect(readAccessList(`${audited}D:NO_ACCESS_CONTROL`).entries).toHaveLength(3);
-  });
-
-  it("finds a folder that hands another account access to what is made in it", () => {
-    expect(handsDownToOthers(readAccessList(IN_PROFILE), USER)).toBe(false);
-    // At the top of the drive every signed-in account gets rights over what another makes there.
-    expect(handsDownToOthers(readAccessList(AT_DRIVE_TOP), USER)).toBe(true);
-    expect(handsDownToOthers(readAccessList(NO_LIST), USER)).toBe(true);
-    // A list handing nothing down to new folders leaves a new folder the creating process's
-    // default list, which this list does not decide.
-    const nothingDown = `O:${USER}G:${GROUP}D:P(A;;FA;;;SY)(A;;FA;;;${USER})`;
-    expect(handsDownToOthers(readAccessList(nothingDown), USER)).toBe(true);
-    const filesOnly = `O:${USER}G:${GROUP}D:P(A;OI;FA;;;${USER})`;
-    expect(handsDownToOthers(readAccessList(filesOnly), USER)).toBe(true);
-    // Some entry passing to new folders is not this account's own passing to every folder and file
-    // made at any depth: another's deny, folders only, or one level only.
-    for (const flags of ["CI", "OICINP"])
-      expect(
-        handsDownToOthers(readAccessList(`O:${USER}G:${GROUP}D:P(A;${flags};FA;;;${USER})`), USER),
-      ).toBe(true);
-    const denyDown = `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;;FA;;;${USER})`;
-    expect(handsDownToOthers(readAccessList(denyDown), USER)).toBe(true);
-    // The list the app writes hands this account's own down everywhere.
-    const written = `O:${USER}G:${GROUP}${ownerOnlyAccessList(readAccessList(AT_DRIVE_TOP), USER)}`;
-    expect(handsDownToOthers(readAccessList(written), USER)).toBe(false);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {

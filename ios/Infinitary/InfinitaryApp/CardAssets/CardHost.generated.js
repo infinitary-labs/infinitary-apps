@@ -11152,6 +11152,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Every event`;
   }
+  function batchesReadWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دفعاتك من التغييرات المعتمدة`;
+      case "de":
+        return `deine Bündel freigegebener Änderungen`;
+      case "es":
+        return `tus lotes de cambios aprobados`;
+      case "fr":
+        return `vos lots de modifications approuvées`;
+      case "ja":
+        return `承認済みの変更をまとめた一括プルリクエスト`;
+      case "ko":
+        return `승인된 변경을 묶은 일괄 끌어오기 요청`;
+      case "pt-BR":
+        return `seus lotes de alterações aprovadas`;
+      case "zh-Hans":
+        return `你已批准改动的批量拉取请求`;
+      case "zh-Hant":
+        return `你已核准變更的批次`;
+      case "en-XA":
+        return `[ýöûŕ ƀáţçĥéš öƒ áþþŕöṽéð çĥáñĝéš ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮your batches of approved changes‬`;
+    }
+    return `your batches of approved changes`;
+  }
   function cardAfterMergeDoerCrewmate() {
     switch (currentLanguage()) {
       case "ar":
@@ -87173,6 +87200,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationWaitsFor,
     automationWaitsForNote,
     automationWaitsForPlaceholder,
+    batchesReadWords,
     cardAfterMergeDoerCrewmate,
     cardAfterMergeDoerFirstmate,
     cardAfterMergeLead,
@@ -89991,6 +90019,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationWaitsFor": [],
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],
+    "batchesReadWords": [],
     "cardAfterMergeDoerCrewmate": [],
     "cardAfterMergeDoerFirstmate": [],
     "cardAfterMergeLead": [],
@@ -98890,6 +98919,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "forge.changes",
     "automation.list",
     "automation.kept",
+    "batches.list",
     "knowledge.collections",
     "knowledge.graph",
     "knowledge.concepts",
@@ -99163,7 +99193,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     object({ ok: literal(true), result: unknown() }),
     object({ ok: literal(false), error: string() })
   ]);
-  const BUILTIN_FRAME_PANELS = ["activity", "automation", "knowledge", "now"];
+  const BUILTIN_FRAME_PANELS = [
+    "activity",
+    "automation",
+    "knowledge",
+    "now",
+    "batches-panel"
+  ];
   const FRAME_TEMPLATE_MAX_BYTES = 524288;
   const FRAME_TITLE_MAX = 120;
   function withoutClosingTag(tag) {

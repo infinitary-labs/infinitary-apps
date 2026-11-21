@@ -1,0 +1,81 @@
+{
+  "batchesPanelAfter": "#{number} の後",
+  "batchesPanelAnswer": "設定で回答",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "other": "一括プルリクエスト #{number} · 変更{count}件"
+  },
+  "batchesPanelChecking": "チェック中 {duration}",
+  "batchesPanelChecksFull": "チェック：合格 {passed}、失敗 {failed}、実行中 {running}（{time} 時点）",
+  "batchesPanelChecksPassed": "{total}件中{passed}件のチェックに合格",
+  "batchesPanelChecksUnread": "チェックをまだ読み取っていません",
+  "batchesPanelClosed": "クローズ",
+  "batchesPanelClosedNumber": "#{number} クローズ",
+  "batchesPanelColumnBatch": "一括プルリクエスト",
+  "batchesPanelColumnChanges": "変更",
+  "batchesPanelColumnEnded": "終了",
+  "batchesPanelColumnFormed": "作成",
+  "batchesPanelColumnHeld": "保留回数",
+  "batchesPanelColumnTook": "所要時間",
+  "batchesPanelCombining": "まとめ中",
+  "batchesPanelEmpty": "このプロジェクトに一括プルリクエストはありません",
+  "batchesPanelEndedTook": "{time} · 所要時間 {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "other": "{count}件失敗（最初：{first}）"
+  },
+  "batchesPanelFailedNames": "失敗したチェック：{names}",
+  "batchesPanelFix": "修正：{keys}",
+  "batchesPanelHeld": "保留中 {duration}",
+  "batchesPanelHoldChecks": "{time} から保留中：チェックに失敗しました",
+  "batchesPanelHoldMergeWay": "{time} から保留中：プロジェクトのマージ設定で、このマージ方法が許可されていません",
+  "batchesPanelHoldRefused": "{time} から保留中：マージが拒否されました（{detail}）",
+  "batchesPanelHoldRules": "{time} から保留中：プロジェクトのブランチルールによりマージが拒否されています",
+  "batchesPanelHours": "{hours}時間{minutes}分",
+  "batchesPanelInQueue": "マージキュー内",
+  "batchesPanelLastDay": "過去1日",
+  "batchesPanelLeftOut": "対象外",
+  "batchesPanelLeftOutAhead": "{reason}（{key} の後）",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "other": "{count}件が対象外"
+  },
+  "batchesPanelListLabel": "待機中と対象外の変更",
+  "batchesPanelMembersLabel": "この一括プルリクエストの変更",
+  "batchesPanelMerged": "マージ済み",
+  "batchesPanelMergedNumber": "#{number} マージ済み",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "other": "{count}分"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "other": "+{count}件"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "other": "新しい一括プルリクエスト · 変更{count}件"
+  },
+  "batchesPanelNext": "次は {time}",
+  "batchesPanelOpening": "作成中",
+  "batchesPanelStateChecking": "{time} からチェック中",
+  "batchesPanelStateCombining": "最新のメインブランチで変更をまとめ直しています",
+  "batchesPanelStateOpening": "一括プルリクエストを作成しています",
+  "batchesPanelStateQueue": "チェックに合格し、プロジェクトのマージキューで待機しています",
+  "batchesPanelTitle": "一括プルリクエスト",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "other": "{count}件の変更が待機中"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "other": "{count}件待機中"
+  },
+  "batchesPanelWaitingHeading": "待機中",
+  "batchesPanelWaitsAfter": "{key} が先にマージされるのを待っています",
+  "batchesPanelWaitsBatch": "#{number} の次の一括プルリクエストに入ります",
+  "batchesPanelWaitsFix": "保留中の一括プルリクエストに修正として入ります",
+  "batchesPanelWaitsGap": "{time} に次の一括プルリクエストに入ります",
+  "batchesPanelWaitsNow": "次の一括プルリクエストに入ります",
+  "batchesReadWords": "承認済みの変更をまとめた一括プルリクエスト"
+}

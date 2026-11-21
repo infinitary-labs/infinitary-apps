@@ -235,6 +235,61 @@ public enum PhoneMessages {
     public static func `automationWaitsFor`() -> String { PhoneWords.format("automationWaitsFor", []) }
     public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
     public static func `automationWaitsForPlaceholder`() -> String { PhoneWords.format("automationWaitsForPlaceholder", []) }
+    public static func `batchesPanelAfter`(`number`: String) -> String { PhoneWords.format("batchesPanelAfter", [`number`]) }
+    public static func `batchesPanelAnswer`() -> String { PhoneWords.format("batchesPanelAnswer", []) }
+    public static func `batchesPanelBatchTitle`(`count`: Int, `number`: String) -> String { PhoneWords.format("batchesPanelBatchTitle", [`count`, `number`]) }
+    public static func `batchesPanelChecking`(`duration`: String) -> String { PhoneWords.format("batchesPanelChecking", [`duration`]) }
+    public static func `batchesPanelChecksFull`(`failed`: String, `passed`: String, `running`: String, `time`: String) -> String { PhoneWords.format("batchesPanelChecksFull", [`failed`, `passed`, `running`, `time`]) }
+    public static func `batchesPanelChecksPassed`(`passed`: String, `total`: String) -> String { PhoneWords.format("batchesPanelChecksPassed", [`passed`, `total`]) }
+    public static func `batchesPanelChecksUnread`() -> String { PhoneWords.format("batchesPanelChecksUnread", []) }
+    public static func `batchesPanelClosed`() -> String { PhoneWords.format("batchesPanelClosed", []) }
+    public static func `batchesPanelClosedNumber`(`number`: String) -> String { PhoneWords.format("batchesPanelClosedNumber", [`number`]) }
+    public static func `batchesPanelColumnBatch`() -> String { PhoneWords.format("batchesPanelColumnBatch", []) }
+    public static func `batchesPanelColumnChanges`() -> String { PhoneWords.format("batchesPanelColumnChanges", []) }
+    public static func `batchesPanelColumnEnded`() -> String { PhoneWords.format("batchesPanelColumnEnded", []) }
+    public static func `batchesPanelColumnFormed`() -> String { PhoneWords.format("batchesPanelColumnFormed", []) }
+    public static func `batchesPanelColumnHeld`() -> String { PhoneWords.format("batchesPanelColumnHeld", []) }
+    public static func `batchesPanelColumnTook`() -> String { PhoneWords.format("batchesPanelColumnTook", []) }
+    public static func `batchesPanelCombining`() -> String { PhoneWords.format("batchesPanelCombining", []) }
+    public static func `batchesPanelEmpty`() -> String { PhoneWords.format("batchesPanelEmpty", []) }
+    public static func `batchesPanelEndedTook`(`time`: String, `took`: String) -> String { PhoneWords.format("batchesPanelEndedTook", [`time`, `took`]) }
+    public static func `batchesPanelFailed`(`count`: Int, `first`: String) -> String { PhoneWords.format("batchesPanelFailed", [`count`, `first`]) }
+    public static func `batchesPanelFailedNames`(`names`: String) -> String { PhoneWords.format("batchesPanelFailedNames", [`names`]) }
+    public static func `batchesPanelFix`(`keys`: String) -> String { PhoneWords.format("batchesPanelFix", [`keys`]) }
+    public static func `batchesPanelHeld`(`duration`: String) -> String { PhoneWords.format("batchesPanelHeld", [`duration`]) }
+    public static func `batchesPanelHoldChecks`(`time`: String) -> String { PhoneWords.format("batchesPanelHoldChecks", [`time`]) }
+    public static func `batchesPanelHoldMergeWay`(`time`: String) -> String { PhoneWords.format("batchesPanelHoldMergeWay", [`time`]) }
+    public static func `batchesPanelHoldRefused`(`detail`: String, `time`: String) -> String { PhoneWords.format("batchesPanelHoldRefused", [`detail`, `time`]) }
+    public static func `batchesPanelHoldRules`(`time`: String) -> String { PhoneWords.format("batchesPanelHoldRules", [`time`]) }
+    public static func `batchesPanelHours`(`hours`: String, `minutes`: String) -> String { PhoneWords.format("batchesPanelHours", [`hours`, `minutes`]) }
+    public static func `batchesPanelInQueue`() -> String { PhoneWords.format("batchesPanelInQueue", []) }
+    public static func `batchesPanelLastDay`() -> String { PhoneWords.format("batchesPanelLastDay", []) }
+    public static func `batchesPanelLeftOut`() -> String { PhoneWords.format("batchesPanelLeftOut", []) }
+    public static func `batchesPanelLeftOutAhead`(`key`: String, `reason`: String) -> String { PhoneWords.format("batchesPanelLeftOutAhead", [`key`, `reason`]) }
+    public static func `batchesPanelLeftOutCount`(`count`: Int) -> String { PhoneWords.format("batchesPanelLeftOutCount", [`count`]) }
+    public static func `batchesPanelListLabel`() -> String { PhoneWords.format("batchesPanelListLabel", []) }
+    public static func `batchesPanelMembersLabel`() -> String { PhoneWords.format("batchesPanelMembersLabel", []) }
+    public static func `batchesPanelMerged`() -> String { PhoneWords.format("batchesPanelMerged", []) }
+    public static func `batchesPanelMergedNumber`(`number`: String) -> String { PhoneWords.format("batchesPanelMergedNumber", [`number`]) }
+    public static func `batchesPanelMinutes`(`count`: Int) -> String { PhoneWords.format("batchesPanelMinutes", [`count`]) }
+    public static func `batchesPanelMore`(`count`: Int) -> String { PhoneWords.format("batchesPanelMore", [`count`]) }
+    public static func `batchesPanelNewBatchTitle`(`count`: Int) -> String { PhoneWords.format("batchesPanelNewBatchTitle", [`count`]) }
+    public static func `batchesPanelNext`(`time`: String) -> String { PhoneWords.format("batchesPanelNext", [`time`]) }
+    public static func `batchesPanelOpening`() -> String { PhoneWords.format("batchesPanelOpening", []) }
+    public static func `batchesPanelStateChecking`(`time`: String) -> String { PhoneWords.format("batchesPanelStateChecking", [`time`]) }
+    public static func `batchesPanelStateCombining`() -> String { PhoneWords.format("batchesPanelStateCombining", []) }
+    public static func `batchesPanelStateOpening`() -> String { PhoneWords.format("batchesPanelStateOpening", []) }
+    public static func `batchesPanelStateQueue`() -> String { PhoneWords.format("batchesPanelStateQueue", []) }
+    public static func `batchesPanelTitle`() -> String { PhoneWords.format("batchesPanelTitle", []) }
+    public static func `batchesPanelWaiting`(`count`: Int) -> String { PhoneWords.format("batchesPanelWaiting", [`count`]) }
+    public static func `batchesPanelWaitingCount`(`count`: Int) -> String { PhoneWords.format("batchesPanelWaitingCount", [`count`]) }
+    public static func `batchesPanelWaitingHeading`() -> String { PhoneWords.format("batchesPanelWaitingHeading", []) }
+    public static func `batchesPanelWaitsAfter`(`key`: String) -> String { PhoneWords.format("batchesPanelWaitsAfter", [`key`]) }
+    public static func `batchesPanelWaitsBatch`(`number`: String) -> String { PhoneWords.format("batchesPanelWaitsBatch", [`number`]) }
+    public static func `batchesPanelWaitsFix`() -> String { PhoneWords.format("batchesPanelWaitsFix", []) }
+    public static func `batchesPanelWaitsGap`(`time`: String) -> String { PhoneWords.format("batchesPanelWaitsGap", [`time`]) }
+    public static func `batchesPanelWaitsNow`() -> String { PhoneWords.format("batchesPanelWaitsNow", []) }
+    public static func `batchesReadWords`() -> String { PhoneWords.format("batchesReadWords", []) }
     public static func `cardAfterMergeDoerCrewmate`() -> String { PhoneWords.format("cardAfterMergeDoerCrewmate", []) }
     public static func `cardAfterMergeDoerFirstmate`() -> String { PhoneWords.format("cardAfterMergeDoerFirstmate", []) }
     public static func `cardAfterMergeLead`() -> String { PhoneWords.format("cardAfterMergeLead", []) }
@@ -4064,6 +4119,61 @@ extension PhoneWords {
         "automationWaitsFor": [],
         "automationWaitsForNote": [],
         "automationWaitsForPlaceholder": [],
+        "batchesPanelAfter": ["number"],
+        "batchesPanelAnswer": [],
+        "batchesPanelBatchTitle": ["count", "number"],
+        "batchesPanelChecking": ["duration"],
+        "batchesPanelChecksFull": ["failed", "passed", "running", "time"],
+        "batchesPanelChecksPassed": ["passed", "total"],
+        "batchesPanelChecksUnread": [],
+        "batchesPanelClosed": [],
+        "batchesPanelClosedNumber": ["number"],
+        "batchesPanelColumnBatch": [],
+        "batchesPanelColumnChanges": [],
+        "batchesPanelColumnEnded": [],
+        "batchesPanelColumnFormed": [],
+        "batchesPanelColumnHeld": [],
+        "batchesPanelColumnTook": [],
+        "batchesPanelCombining": [],
+        "batchesPanelEmpty": [],
+        "batchesPanelEndedTook": ["time", "took"],
+        "batchesPanelFailed": ["count", "first"],
+        "batchesPanelFailedNames": ["names"],
+        "batchesPanelFix": ["keys"],
+        "batchesPanelHeld": ["duration"],
+        "batchesPanelHoldChecks": ["time"],
+        "batchesPanelHoldMergeWay": ["time"],
+        "batchesPanelHoldRefused": ["detail", "time"],
+        "batchesPanelHoldRules": ["time"],
+        "batchesPanelHours": ["hours", "minutes"],
+        "batchesPanelInQueue": [],
+        "batchesPanelLastDay": [],
+        "batchesPanelLeftOut": [],
+        "batchesPanelLeftOutAhead": ["key", "reason"],
+        "batchesPanelLeftOutCount": ["count"],
+        "batchesPanelListLabel": [],
+        "batchesPanelMembersLabel": [],
+        "batchesPanelMerged": [],
+        "batchesPanelMergedNumber": ["number"],
+        "batchesPanelMinutes": ["count"],
+        "batchesPanelMore": ["count"],
+        "batchesPanelNewBatchTitle": ["count"],
+        "batchesPanelNext": ["time"],
+        "batchesPanelOpening": [],
+        "batchesPanelStateChecking": ["time"],
+        "batchesPanelStateCombining": [],
+        "batchesPanelStateOpening": [],
+        "batchesPanelStateQueue": [],
+        "batchesPanelTitle": [],
+        "batchesPanelWaiting": ["count"],
+        "batchesPanelWaitingCount": ["count"],
+        "batchesPanelWaitingHeading": [],
+        "batchesPanelWaitsAfter": ["key"],
+        "batchesPanelWaitsBatch": ["number"],
+        "batchesPanelWaitsFix": [],
+        "batchesPanelWaitsGap": ["time"],
+        "batchesPanelWaitsNow": [],
+        "batchesReadWords": [],
         "cardAfterMergeDoerCrewmate": [],
         "cardAfterMergeDoerFirstmate": [],
         "cardAfterMergeLead": [],
@@ -7667,6 +7777,14 @@ extension PhoneWords {
         "automationPanelKeptCount": "count",
         "automationPanelPausedCount": "count",
         "automationRunSkipped": "count",
+        "batchesPanelBatchTitle": "count",
+        "batchesPanelFailed": "count",
+        "batchesPanelLeftOutCount": "count",
+        "batchesPanelMinutes": "count",
+        "batchesPanelMore": "count",
+        "batchesPanelNewBatchTitle": "count",
+        "batchesPanelWaiting": "count",
+        "batchesPanelWaitingCount": "count",
         "cardAfterMergeWait": "count",
         "cardAnswersDefaults": "count",
         "cardAnswersToAnswer": "count",

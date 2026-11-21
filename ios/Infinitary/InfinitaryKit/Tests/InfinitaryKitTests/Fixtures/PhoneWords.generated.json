@@ -230,6 +230,7 @@
   {"said":{"m":"automationWaitsFor"},"words":"Only if"},
   {"said":{"m":"automationWaitsForNote"},"words":"Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history."},
   {"said":{"m":"automationWaitsForPlaceholder"},"words":"Every event"},
+  {"said":{"m":"batchesReadWords"},"words":"your batches of approved changes"},
   {"said":{"m":"cardAfterMergeDoerCrewmate"},"words":"A crewmate does this in a working copy"},
   {"said":{"m":"cardAfterMergeDoerFirstmate"},"words":"Your first mate does this in the app; no crewmate starts"},
   {"said":{"m":"cardAfterMergeLead"},"words":"After merging, the crew starts"},

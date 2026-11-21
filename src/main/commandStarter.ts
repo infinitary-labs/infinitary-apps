@@ -1,7 +1,6 @@
 import { homedir, userInfo } from "node:os";
 import { resolve } from "node:path";
 import {
-  type EndedRun,
   type RunAgentContext,
   type RunManager,
   restartRunAgent,
@@ -35,16 +34,22 @@ export type CommandStarter = {
   inPlace: () => boolean;
   /**
    * Lets the agent go, which stops its run; with `forget` no login starts it
-   * again, with `force` a run that does not answer is ended rather than asked,
+   * again, with `force` the run named, by its process and start, that does
+   * not answer is ended rather than asked, and nothing where another runs,
    * and with `run` a stop asked through the folder is for that process alone,
    * or with `run` null for none: the agent is let go and no stop is asked.
    */
-  stop: (options: { forget: boolean; force?: EndedRun; run?: RunInstance | null }) => Promise<void>;
+  stop: (options: {
+    forget: boolean;
+    force?: RunInstance;
+    run?: RunInstance | null;
+  }) => Promise<void>;
   /**
-   * Restart it: ends the run, the process its record names, by force and
-   * starts it again; false where it could not start again.
+   * Restart it: ends the run named, by its process and start, by force and
+   * starts it again; false where it could not start again, and where that
+   * run no longer runs or another holds the folder, ending nothing.
    */
-  restart: (run?: EndedRun) => Promise<boolean>;
+  restart: (run?: RunInstance) => Promise<boolean>;
 };
 
 /**

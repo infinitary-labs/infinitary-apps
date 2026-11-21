@@ -184,20 +184,22 @@ export class BesideWindow {
   private startedAt: number | null;
   /**
    * Restart it under way, until its own replacement is known or the run it
-   * replaces is known to survive (`settleRestart`): that run, read once;
-   * the window's start time before the press; whether its starter has
-   * answered, and refused; whether any first mate welcomed this window
-   * since; and the connection of the newest such welcome, with the run its
-   * local door named.
+   * replaces is known to survive (`settleRestart`): the run its notice
+   * names; the window's start time before the press; and whether its
+   * starter has answered, and refused.
    */
   private restart: {
     from: OwnedRun | null;
     startedBefore: number | null;
     settled: boolean;
     refused: boolean;
-    welcomed: boolean;
-    welcomedOn: HomeLinkConnection | null;
   } | null = null;
+  /**
+   * The connection of the newest welcome, with the run its local door
+   * named: a start or Restart it ends only once the run it started welcomed
+   * the window on the connection open now (`welcomedBy`).
+   */
+  private welcomedOn: HomeLinkConnection | null = null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
   /** Restart it ended a command that did not answer: the window waits under its notice for the one started again. */
@@ -228,8 +230,9 @@ export class BesideWindow {
   joinState(): { owned: OwnedRun | null } | "starting" | "outside" | "unknown" {
     const status = this.options.beside.status();
     if (!this.startsCommand) return status.running === true ? "outside" : "unknown";
-    // The same reading settles Restart it and names what a join stops.
+    // The same reading settles Restart it, or a start, and names what a join stops.
     this.settleRestart(status);
+    this.settleStart(status);
     if (this.startedAt !== null) return "starting";
     if (status.running === false) return { owned: null };
     if (status.running !== true) return "unknown";
@@ -427,17 +430,15 @@ export class BesideWindow {
     if (this.shown?.ending !== "not-answering" || !starter || this.restart?.settled === false)
       return false;
     const since = this.unansweredSince;
-    // The run this restart replaces: the one its notice says does not answer, read once where it
-    // named none. Its starter ends that one, and a welcome from it, reconnecting, is not the one
+    // The run this restart replaces: the one its notice says does not answer, by its process and
+    // start. Its starter ends that one alone, and a welcome from it, reconnecting, is not the one
     // started again.
-    const outgoing = this.unansweredRun ?? joinedRun(this.options.beside.status());
+    const outgoing = this.unansweredRun;
     const restart = {
       from: outgoing,
       startedBefore: this.startedAt,
       settled: false,
       refused: false,
-      welcomed: false,
-      welcomedOn: null,
     };
     this.restart = restart;
     this.restarting = true;
@@ -448,7 +449,7 @@ export class BesideWindow {
     this.show(this.restartingNotice());
     // The window hears the stopped command go, and dials the one started again.
     this.away();
-    void starter.restart(outgoing ? { pid: outgoing.pid } : {}).then((restarted) => {
+    void starter.restart(outgoing ?? undefined).then((restarted) => {
       restart.settled = true;
       restart.refused = !restarted;
       if (this.closed || this.restart !== restart) return;
@@ -716,14 +717,21 @@ export class BesideWindow {
     // Out of reach, or on another connection since this welcome, read() or that connection's own
     // welcome counts for the command that runs now.
     if (!this.window.inReach() || !on || this.window.connection()?.welcome !== on.welcome) return;
-    // The silence is the run behind this connection's, as its door named it: where another run
-    // holds the folder now, this one is leaving, and the one there gets a wait of its own.
+    // The silence is the run behind this connection's, as its door named it. A door that named
+    // none, as an earlier version's, says whose it is to nobody: no run is named silent from it,
+    // and whichever run holds the folder is read, and counted, on its own wait.
+    if (!on.run) {
+      this.away();
+      return;
+    }
+    // Where another run holds the folder now, this one is leaving, and the one there gets a wait
+    // of its own.
     const status = this.options.beside.status();
-    if (on.run && status.running === true && !sameRun(on.run, joinedRun(status))) return;
+    if (status.running === true && !sameRun(on.run, joinedRun(status))) return;
     console.warn("[shell] the command's first mate welcomed the window and has not answered it");
     // Counted from the welcome, so every later reading agrees it has not answered.
     this.unansweredSince = since;
-    this.unansweredRun = on.run ?? joinedRun(status);
+    this.unansweredRun = on.run;
     this.show(this.notAnswering());
   }
 
@@ -741,15 +749,6 @@ export class BesideWindow {
     };
   }
 
-  /**
-   * The command its notice says does not answer, by its process, for its
-   * starter to end by force: never another run that holds the folder since.
-   */
-  private unansweredProcess(): { pid?: number } {
-    const pid = (this.unansweredRun ?? this.options.beside.status().run)?.pid;
-    return pid === undefined ? {} : { pid };
-  }
-
   private answerWaitMs(): number {
     return this.options.beside.answerWaitMs ?? ANSWER_WAIT_MS;
   }
@@ -760,19 +759,20 @@ export class BesideWindow {
    * it with (it never acts on a polite stop), or as Stop stops one, and the
    * app starts again as this computer's own first
    * mate. The agent stays in place, so a later launch starts the command
-   * again as before; a command that cannot be stopped is joined again.
+   * again as before; a command that cannot be stopped is joined again. Only
+   * the run its notice names is stopped, by its process and start: another
+   * that holds the folder since, started by hand or again, keeps going.
    */
   private async stopUnanswered(): Promise<void> {
     const { starter, stopCommand } = this.options.beside;
-    if (starter)
-      await starter
-        .stop({ forget: false, force: this.unansweredProcess() })
-        .catch((error: unknown) => {
-          console.warn(
-            `[shell] could not stop the command that does not answer: ${(error as Error).message}`,
-          );
-        });
-    else stopCommand?.();
+    const target = this.unansweredRun;
+    if (target && starter)
+      await starter.stop({ forget: false, force: target }).catch((error: unknown) => {
+        console.warn(
+          `[shell] could not stop the command that does not answer: ${(error as Error).message}`,
+        );
+      });
+    else if (target) stopCommand?.(target);
     if (!this.closed) this.options.relaunch({ startHere: true });
   }
 
@@ -782,14 +782,12 @@ export class BesideWindow {
     this.stopReading();
     this.stoppedAt = null;
     this.unansweredSince = null;
-    // Beside Restart it, only its own replacement ends the wait, never the run it replaces: a
-    // welcome while the records name that run is its own, and counts for nothing.
-    if (this.restart) {
-      const status = this.options.beside.status();
-      this.restart.welcomed = true;
-      this.restart.welcomedOn = this.window.connection();
-      this.settleRestart(status);
-    } else this.startedAt = null;
+    // A start, or Restart it, ends only on a welcome from the run it started, through the door that
+    // run opened: never the run replaced, or one started by hand meanwhile.
+    this.welcomedOn = this.window.connection();
+    const status = this.options.beside.status();
+    this.settleRestart(status);
+    this.settleStart(status);
     this.restarting = false;
     const under = this.shown !== null || this.startsOver;
     this.startsOver = false;
@@ -805,9 +803,10 @@ export class BesideWindow {
     const reading = this.readTheirs().then((answered) => {
       // Only a first mate that answered is back; asks refused as its link dropped say nothing.
       if (!answered || this.reading !== reading) return answered;
-      // A later drop of this same command is counted anew.
+      // A later drop of this same command is counted anew, and one that answered is read no more.
       this.reading = null;
       this.unansweredSince = null;
+      if (this.window.inReach() && !this.moved) this.stopReading();
       // A first mate that answered after its notice went up, or after Restart it was pressed over
       // it, on this same connection: the window stops counting it and starts over on it.
       const under = this.wanted?.ending === "not-answering" || this.wanted?.ending === "restart";
@@ -875,24 +874,52 @@ export class BesideWindow {
   private settleRestart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
     const restart = this.restart;
     if (!restart?.settled || status.running !== true) return;
-    // Refused: the run replaced still runs, and joins again as before the press, or as after its
-    // first welcome where it welcomed this window meanwhile, since only it ran.
-    if (restart.refused && sameRun(status.run, restart.from)) {
+    // Refused: the run replaced still runs, or none was named and none ended, and joins again as
+    // before the press: a start of it
+    // still waiting ends once that same run welcomed the window (`settleStart`).
+    if (restart.refused && (restart.from === null || sameRun(status.run, restart.from))) {
       this.restart = null;
-      this.startedAt = restart.welcomed ? null : restart.startedBefore;
+      this.startedAt = restart.startedBefore;
+      this.settleStart(status);
       this.redraw(status);
       return;
     }
     const owned = this.options.beside.ownedRun?.(status) ?? null;
-    if (!owned || sameRun(owned, restart.from)) return;
-    // The welcome came on the connection open now, through the door that run opened: only that
-    // run's door admits the key the window dialed with, and the door named it.
-    const on = this.window.connection();
-    if (!restart.welcomedOn || on?.welcome !== restart.welcomedOn.welcome) return;
-    if (!sameRun(on.run, owned)) return;
+    if (!owned || sameRun(owned, restart.from) || !this.welcomedBy(owned)) return;
     this.restart = null;
     this.startedAt = null;
     this.redraw(status);
+  }
+
+  /**
+   * A start this window asked, Start it here or the window's own, ends once
+   * the run its own agent started welcomed the window on the connection open
+   * now, from one reading of the records: a run started by hand that
+   * welcomes and leaves meanwhile ends nothing. Read at each welcome and each
+   * join reading, so records unreadable at the welcome are read again once
+   * they recover.
+   */
+  private settleStart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
+    if (this.startedAt === null || this.restart) return;
+    const owned = this.options.beside.ownedRun?.(status) ?? null;
+    if (owned && this.welcomedBy(owned)) this.startedAt = null;
+  }
+
+  /**
+   * Whether `run` welcomed this window on the connection open now: the
+   * newest welcome came through the local door that run opened, which named
+   * it, and no other connection opened since. Only that run's door admits
+   * the key the window dialed with.
+   */
+  private welcomedBy(run: OwnedRun): boolean {
+    const on = this.window.connection();
+    const welcomed = this.welcomedOn;
+    return Boolean(
+      welcomed &&
+        on?.welcome === welcomed.welcome &&
+        sameRun(welcomed.run, run) &&
+        sameRun(on.run, run),
+    );
   }
 
   /** The first mate is out of reach: read whether its command still runs, until it is back. */

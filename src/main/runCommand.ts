@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { requestRunStop } from "@core/helper/windowsTask";
+import { RUN_RECORD_FILE, requestRunStop } from "@core/helper/windowsTask";
 import { captureLoginPath } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
@@ -158,7 +158,7 @@ export const RUN_UPDATED_EXIT = 75;
 export const RUN_SETTINGS_EXIT = 78;
 
 /** The file in the data folder that says a command runs Infinitary on it, and which process. */
-export const RUN_MARKER = "run.json";
+export const RUN_MARKER = RUN_RECORD_FILE;
 
 export const RUN_LAST_STOP = "run-last-stop.json";
 export const RunMarkerSchema = z.object({

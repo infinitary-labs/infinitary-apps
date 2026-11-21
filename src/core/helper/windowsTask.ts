@@ -436,6 +436,9 @@ export const RUN_STOP_FILE = "run-stop.json";
  */
 export const RUN_STOP_FOR_FILE = "run-stop-for.json";
 
+/** The run's own record in its data folder, which the window reads as the command's status. */
+export const RUN_RECORD_FILE = "run.json";
+
 /** One run on a data folder: its process and the start its own note keeps, so a reused process number is another run. */
 export type RunInstance = { pid: number; startedAt: string };
 

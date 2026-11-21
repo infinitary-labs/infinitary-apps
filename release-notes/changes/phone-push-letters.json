@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-push-letters",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Every computer on your iPhone keeps sending notifications",
+      "body": "Each computer your iPhone or iPad keeps now goes on sending notifications while you show another one, instead of stopping after a few days. Your phone leaves each computer a sealed note through Infinitary's relay whenever its notification permission renews, which only that computer can read. When you forget a computer, its note tells it to stop sending within a day, even while it is out of reach.",
+      "noPicture": "The phone and the computer pass these notes in the background; no view changes.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

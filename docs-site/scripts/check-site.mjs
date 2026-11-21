@@ -6,7 +6,7 @@
 // - a cookie,
 // - a link between pages, or to a heading, that leads nowhere,
 // - a picture that does not draw,
-// - search that finds nothing with the network limited to the site itself,
+// - search that draws no search box, or finds nothing, with the network limited to the site itself,
 // - the wordmark drawn in anything but the text color,
 // - a first visit that does not follow the visitor's system to dark or light
 //   (Starlight opens dark unless the system asks for light; Chromium cannot
@@ -169,12 +169,29 @@ try {
   // Search runs in the browser from the site's own files.
   await page.goto(`${origin}/`, { waitUntil: "load" });
   await page.locator("site-search button[data-open-modal]").first().click();
-  await page.locator("site-search input").first().fill("Discord");
-  const result = page.locator(".pagefind-ui__result-link").first();
-  try {
-    await result.waitFor({ state: "visible", timeout: 10_000 });
-  } catch {
-    fail('Searching for "Discord" found nothing');
+  // Starlight builds the search box only when the browser next has idle time. Headless
+  // Chromium on a busy computer can stop drawing without ever having had idle time, and
+  // nothing then asks it to draw again, as a visitor's pointer would: the box never comes.
+  // Waiting on animation frames keeps the page drawing, so the idle time comes.
+  const searchBox = await page
+    .waitForFunction(() => document.querySelector("site-search input") !== null, undefined, {
+      polling: "raf",
+      timeout: 30_000,
+    })
+    .then(
+      () => true,
+      () => false,
+    );
+  if (!searchBox) {
+    fail("Search never drew its search box");
+  } else {
+    await page.locator("site-search input").first().fill("Discord");
+    const result = page.locator(".pagefind-ui__result-link").first();
+    try {
+      await result.waitFor({ state: "visible", timeout: 10_000 });
+    } catch {
+      fail('Searching for "Discord" found nothing');
+    }
   }
 
   if ((await context.cookies()).length > 0) fail("The site stored a cookie");

@@ -1,12 +1,20 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
+import { hostPlatform } from "@core/platform";
 import * as m from "@shared/i18n/messages.generated";
 import { languageOverride, startLanguage } from "@shared/i18n/start";
 import type { MessageBoxOptions } from "electron";
-import { PERSON_WORD_ARG, type PersonWord } from "./personWordArg";
+import {
+  endWithRequester,
+  PERSON_WORD_ARG,
+  type PersonReply,
+  type PersonWord,
+  readReply,
+  replyLine,
+} from "./personWordArg";
 
 /*
  * A word a window launch refused the folder's lock says to the person
@@ -18,7 +26,16 @@ import { PERSON_WORD_ARG, type PersonWord } from "./personWordArg";
  * keeps its own throwaway profile, so it touches nothing of the folder.
  */
 
-export { PERSON_WORD_ARG, type PersonWord, personWordArg } from "./personWordArg";
+export {
+  PERSON_WORD_ARG,
+  type PersonReply,
+  type PersonWord,
+  personWordArg,
+  wordLauncher,
+} from "./personWordArg";
+
+/** The question's Open here, after its Leave it, the first and closing answer. */
+export const OPEN_ONCE_CLOSED = 1;
 
 /**
  * The box for a word, in the language a launch speaks at its start, before
@@ -50,67 +67,96 @@ export function personWordBox(word: PersonWord, preferred: readonly string[], pa
 }
 
 /**
- * The copy that shows one word: once Electron is ready it shows the box in
- * front of whatever the person uses now, writes the button pressed and ends.
- * A box that cannot be shown is answered as closed (`cancelId`).
+ * The copy that shows one word: it keeps out of the Dock, so the Infinitary the word names there is
+ * the only one to click, and ends with the launch that asked for it (`endWithRequester`). Once
+ * Electron is ready it shows the box in front of whatever the person uses now and writes the button
+ * pressed, or that the box could not be shown, and ends.
  */
 export async function showPersonWord(word: PersonWord): Promise<void> {
   const { app, dialog } = await import("electron");
+  if (hostPlatform() === "darwin") app.setActivationPolicy("accessory");
+  endWithRequester(process.stdin, () => app.exit(0));
   await app.whenReady();
   const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
-  let response = box.cancelId ?? 0;
+  let reply: PersonReply = "unshown";
   try {
     app.focus({ steal: true });
-    response = (await dialog.showMessageBox(box)).response;
+    reply = (await dialog.showMessageBox(box)).response;
   } catch (error) {
     console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
   }
-  process.stdout.write(`${response}\n`, () => app.exit(0));
+  process.stdout.write(replyLine(reply), () => app.exit(0));
 }
 
 /**
- * Shows a word through a copy of this program (`showPersonWord`) and gives
- * the button pressed: null where the word was taken away (`signal`), which
- * ends that copy and its box, and the box's closing answer where the copy
- * could not show it. `args` start this app: none for an installed app, the
- * app's folder for a development run of Electron.
+ * Shows a word through a copy of this program (`showPersonWord`) and gives its reply (`readReply`)
+ * once the copy has ended and said all it had: null where the word was taken away (`signal`),
+ * which ends that copy and its box, and unshown where the copy could not be made, started or show
+ * its box. The copy's input stays open while this launch lives, so the copy ends with it too. Its
+ * throwaway profile goes once the copy has ended, and a profile that cannot go changes no reply.
+ * `launcher` starts this app as it was started (`wordLauncher`).
  */
 export function askPersonWord(
   word: PersonWord,
-  options: { execPath: string; args: readonly string[]; signal?: AbortSignal },
-): Promise<number | null> {
-  if (options.signal?.aborted) return Promise.resolve(null);
-  const profile = mkdtempSync(join(tmpdir(), "infinitary-word-"));
-  // Leave it for the question, the one button of the Dock's word.
-  const closed = 0;
+  options: { launcher: { execPath: string; args: readonly string[] }; signal?: AbortSignal },
+): Promise<PersonReply | null> {
+  const { signal } = options;
+  if (signal?.aborted) return Promise.resolve(null);
   return new Promise((done) => {
-    let said = "";
-    let ended = false;
-    const copy = spawn(
-      options.execPath,
-      [...options.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
-      { env: hostEnv(), stdio: ["ignore", "pipe", "ignore"] },
-    );
-    const takeAway = () => copy.kill();
-    options.signal?.addEventListener("abort", takeAway, { once: true });
-    copy.stdout?.on("data", (chunk) => {
-      said += String(chunk);
-    });
-    const end = (answer: number | null) => {
-      if (ended) return;
-      ended = true;
-      options.signal?.removeEventListener("abort", takeAway);
-      rmSync(profile, { recursive: true, force: true });
-      done(answer);
+    let settled = false;
+    let takeAway = () => {};
+    const settle = (reply: PersonReply | null) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", takeAway);
+      done(reply);
     };
+    let profile: string | null = null;
+    const cleanUp = () => {
+      if (profile === null) return;
+      try {
+        rmSync(profile, { recursive: true, force: true });
+      } catch (error) {
+        console.warn(`[app] could not remove a word's profile: ${(error as Error).message}`);
+      }
+    };
+    let copy: ChildProcess;
+    try {
+      profile = mkdtempSync(join(tmpdir(), "infinitary-word-"));
+      copy = spawn(
+        options.launcher.execPath,
+        [...options.launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
+        { env: hostEnv(), stdio: ["pipe", "pipe", "ignore"] },
+      );
+    } catch (error) {
+      console.warn(`[app] could not show a word to the person: ${(error as Error).message}`);
+      cleanUp();
+      settle("unshown");
+      return;
+    }
+    let said = "";
+    takeAway = () => {
+      // Closing its input ends the copy on its own, should this end not reach it.
+      copy.stdin?.end();
+      if (!copy.kill()) console.warn("[app] could not end a word taken away; it ends on its own");
+      settle(null);
+    };
+    signal?.addEventListener("abort", takeAway, { once: true });
+    // A copy already gone leaves its input closed; writing nothing, the launch only holds it open.
+    copy.stdin?.on("error", () => {});
+    copy.stdout?.setEncoding("utf8");
+    copy.stdout?.on("data", (chunk: string) => {
+      said += chunk;
+    });
     copy.once("error", (error) => {
       console.warn(`[app] could not show a word to the person: ${error.message}`);
-      end(closed);
+      cleanUp();
+      settle("unshown");
     });
-    copy.once("exit", () => {
-      if (options.signal?.aborted) return end(null);
-      const pressed = Number.parseInt(said.trim(), 10);
-      end(Number.isInteger(pressed) ? pressed : closed);
+    // Close, not exit: only once the copy's output is all read.
+    copy.once("close", (code, ended) => {
+      cleanUp();
+      settle(signal?.aborted ? null : readReply(said, code, ended));
     });
   });
 }

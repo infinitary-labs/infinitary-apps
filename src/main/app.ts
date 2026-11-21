@@ -92,7 +92,14 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
-import { askPersonWord, type PersonWord, personWordBox } from "./personWord";
+import {
+  askPersonWord,
+  OPEN_ONCE_CLOSED,
+  type PersonReply,
+  type PersonWord,
+  personWordBox,
+  wordLauncher,
+} from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
@@ -803,23 +810,33 @@ export async function startApp(
       // A word to the person (`askPersonWord`): Electron never becomes ready in this launch, refused
       // the lock before it was, so a copy of this program shows the word, and is ended when the word
       // is taken away. A word taken away or no longer wanted (`wanted`) is never shown. A check's
-      // hidden launch shows none and says its words in its output instead: null.
-      const tellPerson = (
+      // hidden launch shows none and says its words in its output instead, as a launch does whose
+      // copy could not show it, so a launch from a terminal still tells: null for the first.
+      const sayInOutput = (word: PersonWord) => {
+        const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
+        console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
+      };
+      const tellPerson = async (
         word: PersonWord,
         signal?: AbortSignal,
         wanted: () => boolean = () => true,
-      ): Promise<number | null> => {
-        if (signal?.aborted || !wanted()) return Promise.resolve(null);
+      ): Promise<PersonReply | null> => {
+        if (signal?.aborted || !wanted()) return null;
         if (hideWindow) {
-          const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
-          console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
-          return Promise.resolve(null);
+          sayInOutput(word);
+          return null;
         }
-        return askPersonWord(word, {
-          execPath: process.execPath,
-          args: app.isPackaged ? [] : [app.getAppPath()],
+        const reply = await askPersonWord(word, {
+          launcher: wordLauncher({
+            packaged: app.isPackaged,
+            execPath: process.execPath,
+            appPath: app.getAppPath(),
+            appImage: process.env.APPIMAGE,
+          }),
           signal,
         });
+        if (reply === "unshown" && !signal?.aborted) sayInOutput(word);
+        return reply;
       };
       void (async () => {
         // A holder never shown to be a command that let the lock go, or one that still shows
@@ -835,9 +852,12 @@ export async function startApp(
         });
         const askOnceClosed = async () => {
           const why = shownWhy;
-          const response = await tellPerson("once-closed", why.signal);
-          if (response === 0 && !why.signal.aborted) leftIt();
-          return response !== 0;
+          // Only the person's Open here opens: their Leave it, and a question that could not be
+          // shown, leave the holder open; one not shown on purpose keeps the launch's own way.
+          const reply = await tellPerson("once-closed", why.signal);
+          const open = reply === OPEN_ONCE_CLOSED || reply === null;
+          if (!open && !why.signal.aborted) leftIt();
+          return open;
         };
         // The window a launch told by what it runs as, the one the person is told of.
         let classified: number | null | undefined;

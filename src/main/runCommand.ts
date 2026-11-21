@@ -696,6 +696,8 @@ export async function lockHolderKind(options: {
     } else if (holder !== read || Date.now() >= readAgain) {
       const window = await options.windowHolder(holder);
       if (stopped()) return "stopped";
+      // A window that answered during the read came forward itself: nothing more is asked or told.
+      if (options.answered()) return "window";
       // Only while that same holder still holds the lock: what was read of one that let it go
       // since tells nothing of the next, which is asked first.
       if (options.holder() === holder) {

@@ -507,6 +507,44 @@ describe("a window opened beside a run", () => {
   // while a read of that holder is outstanding: once it comes back nothing more is asked or told,
   // so the folder is never taken and the holder never asked again. A watch ended before it starts
   // reads nothing at all.
+  it("asks and tells nothing once a window answers during a read", async () => {
+    // A holder read once that showed nothing, read again: the second read would tell the person, and
+    // on a Windows PC an unnamed holder that now shows otherwise would be asked for the lock.
+    for (const [holder, second] of [
+      [4242, null],
+      [undefined, false],
+    ] as const) {
+      const asks: string[] = [];
+      let answered = false;
+      let reading: (shown: boolean | null) => void = () => {};
+      const watch = lockHolderKind({
+        running: () => false,
+        answered: () => answered,
+        holder: () => holder,
+        asked: holder,
+        windowHolder: () => {
+          asks.push("read");
+          if (asks.length === 1) return Promise.resolve(null);
+          return new Promise<boolean | null>((resolve) => {
+            reading = resolve;
+          });
+        },
+        lockFree: () => {
+          asks.push("lock");
+          return false;
+        },
+        readEveryMs: 10,
+        everyMs: 5,
+        onUnknown: () => asks.push("told"),
+      });
+      await vi.waitFor(() => expect(asks).toEqual(["read", "read"]));
+      answered = true;
+      reading(second);
+      expect(await watch).toBe("window");
+      expect(asks).toEqual(["read", "read"]);
+    }
+  });
+
   it("asks and tells nothing once the watch ends, even mid-read", async () => {
     const asks: string[] = [];
     let reading: (shown: boolean | null) => void = () => {};

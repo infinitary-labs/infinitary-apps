@@ -98958,7 +98958,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       taskId: string(),
       session: string(),
       generation: number().int().positive(),
-      cardId: string()
+      cardId: string(),
+      /**
+       * The card stays up unanswered, docked beside the page, so what the
+       * press carried from its field goes back there (`choice-attachments`).
+       */
+      docked: literal(true).optional()
     }).optional(),
     restoreAccountId: string().optional(),
     /**

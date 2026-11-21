@@ -1,3 +1,4 @@
+import type { CardNote } from "@shared/cardNotes";
 import {
   ANYTHING_ELSE_ANSWER,
   CARD_ANSWER_TEXT_MAX,
@@ -6,8 +7,33 @@ import {
 } from "@shared/cards";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ImageAttachment } from "../design";
 import { useShellStore } from "./store";
 import { card, DECIDE, gesture, resetShell } from "./storeTestKit";
+
+/** A note queued in a card's field, as point-at makes one. */
+const NOTE: CardNote = {
+  start: 0,
+  key: "p:0",
+  kind: "paragraph",
+  excerpt: "Choose.",
+  comment: "Use the work account",
+  line: 1,
+};
+/** A picture pasted into a card's field: the smallest real PNG, one transparent pixel. */
+const PICTURE: ImageAttachment = {
+  id: "picture-1",
+  preview: "",
+  name: "screen.png",
+  mimeType: "image/png",
+  data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HJ3AAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=",
+};
+/** A request card's open-browser effect, as the core answers it. */
+const OPENED = {
+  kind: "open",
+  target: "browser",
+  browser: { taskId: "t1", session: "run-1", generation: 2, cardId: "choice" },
+} as const;
 
 /** What the captain does on a card (./cardActions.ts): a choice's receipt and its effects. */
 
@@ -499,6 +525,37 @@ describe("card action receipts", () => {
     useShellStore.setState({ records: [], replyDrafts: {} });
   });
 
+  // INF-5608's review: a request's open-browser press carries the field like any button. A card
+  // that docks beside the page answered nothing, so its field gets back what it held; a card
+  // whose browser was gone is answered, and what went went with that answer.
+  it("carries the field with a request's open-browser press, and gives it back only when the card docks", async () => {
+    const ipc = request();
+    useShellStore.setState({ replyNotes: { choice: [NOTE] }, replyImages: { choice: [PICTURE] } });
+    const docked = useShellStore
+      .getState()
+      .actOnCard("choice", "sign-in", "chrome", undefined, async () => undefined);
+    await vi.waitFor(() => expect(ipc.act).toHaveBeenCalledTimes(1));
+    expect((ipc.act.mock.calls[0] as unknown[] | undefined)?.[3]).toMatchObject({
+      notes: [NOTE],
+      images: [{ mimeType: "image/png", data: PICTURE.data, name: "screen.png" }],
+    });
+    expect(useShellStore.getState().replyNotes.choice).toBeUndefined();
+    ipc.resolve({ effect: { ...OPENED, browser: { ...OPENED.browser, docked: true } } });
+    await docked;
+    expect(useShellStore.getState().replyNotes.choice).toEqual([NOTE]);
+    expect(useShellStore.getState().replyImages.choice).toEqual([PICTURE]);
+
+    const answered = useShellStore
+      .getState()
+      .actOnCard("choice", "sign-in", "chrome", undefined, async () => undefined);
+    await vi.waitFor(() => expect(ipc.act).toHaveBeenCalledTimes(2));
+    ipc.resolve({ effect: OPENED });
+    await answered;
+    expect(useShellStore.getState().replyNotes.choice).toBeUndefined();
+    expect(useShellStore.getState().replyImages.choice).toBeUndefined();
+    useShellStore.setState({ records: [] });
+  });
+
   it("keeps an unaccepted card with an honest error and enables a fresh attempt", async () => {
     const ipc = request();
     const first = useShellStore.getState().actOnCard("choice", "land");
@@ -830,5 +887,48 @@ describe("an ended card's corner", () => {
     useShellStore.getState().closeCard("ended");
     await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
     expect(noteDone).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-5608's review: an older home reads a press's value strictly and refuses notes, files or
+  // pictures in it, so a view of one sends only the words and closes as before.
+  it("against an older home, closes plainly and sends only the words, keeping the field's note", async () => {
+    const noteDone = vi.fn(async () => undefined);
+    const close = vi.fn(async () => undefined);
+    const healthcheck = vi.fn(async () => ({ changes: [] as string[] }));
+    vi.stubGlobal("window", { infinitary: { cards: { noteDone, close }, app: { healthcheck } } });
+    useShellStore.setState({
+      cards: [ended],
+      cardIndex: 0,
+      records: [],
+      replyNotes: { ended: [NOTE] },
+      thisMac: {
+        role: "view",
+        name: "MacBook Pro",
+        address: "192.168.1.20",
+        joinedAt: 0,
+        contact: "in-reach",
+        readOnly: null,
+        heardAt: 0,
+        caughtUp: 0,
+      },
+    });
+
+    useShellStore.getState().closeCard("ended");
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(noteDone).not.toHaveBeenCalled();
+
+    useShellStore.getState().setReplyDraft("ended", "Start it after the release");
+    await useShellStore.getState().pressNote("ended");
+    expect((noteDone.mock.calls[0] as unknown[] | undefined)?.[2]).toEqual({
+      answers: [
+        {
+          name: ANYTHING_ELSE_ANSWER,
+          values: [],
+          changed: true,
+          written: "Start it after the release",
+        },
+      ],
+    });
+    expect(useShellStore.getState().replyNotes.ended).toEqual([NOTE]);
   });
 });

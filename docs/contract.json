@@ -15194,6 +15194,10 @@
                   },
                   "cardId": {
                     "type": "string"
+                  },
+                  "docked": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [

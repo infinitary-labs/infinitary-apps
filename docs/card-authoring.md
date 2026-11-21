@@ -956,9 +956,10 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   A reviewer's finding card hands them to the builder in its review hand-off; the captain's action that reopens a card sends them with the reply it writes.
   Where no author hears the choice - a merge, a discard or an app card's own button the app carried out, or a card nobody reads - the first mate is told once, as a choice the app already carried out, with what went with it.
   A note's Done, Got it or Close sends them as the reply under the note, as its words go.
-  A request's open-browser button answers nothing, so they stay in the field and Return control sends them as a reply first (INF-4587); a body script's own choice carries nothing from the field.
+  A request's open-browser button that leaves the card docked beside the page answers nothing, so the field gets back what the press took and Return control sends them as a reply first (INF-4587); one whose browser is gone answers the card, and they go with that answer.
+  A body script's own choice carries nothing from the field.
   A note's own button and every choice stay pressable while a note editor is open, and the press that closes that editor only queues its note (`pressQueuedNote`).
-  A view asks its home's healthcheck: against a home that does not list `choice-attachments` the buttons stay off while a file, picture or note waits, with "Send the file as a reply first" (`CARD_FILES_FIRST`) or "Send the notes as a reply first" at the row's left and on each button, as before.
+  A view asks its home's healthcheck: against a home that does not list `choice-attachments` the buttons stay off while a file, picture or note waits, with "Send the file as a reply first" (`CARD_FILES_FIRST`) or "Send the notes as a reply first" at the row's left and on each button, as before, and any press there (an ended card's Close among them) sends only its words.
 - **The name.**
   `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.

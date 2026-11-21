@@ -1288,7 +1288,7 @@ export class CardActions {
       effect: {
         kind: "open",
         target: "browser",
-        browser: { taskId, ...handle, cardId: card.id },
+        browser: { taskId, ...handle, cardId: card.id, docked: true },
       },
     };
   }

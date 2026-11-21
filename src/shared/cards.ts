@@ -1391,6 +1391,11 @@ export const shellEffectSchema = z.object({
       session: z.string(),
       generation: z.number().int().positive(),
       cardId: z.string(),
+      /**
+       * The card stays up unanswered, docked beside the page, so what the
+       * press carried from its field goes back there (`choice-attachments`).
+       */
+      docked: z.literal(true).optional(),
     })
     .optional(),
   restoreAccountId: z.string().optional(),

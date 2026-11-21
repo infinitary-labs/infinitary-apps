@@ -21,6 +21,7 @@ import {
   TURN_IMAGES_MAX,
   withAnythingElse,
 } from "@shared/cards";
+import { homeTakesChoiceAttachments } from "@shared/choiceCarried";
 import {
   type ComposerNotice,
   composeTurnText,
@@ -183,6 +184,19 @@ export function leaveCard(
 type FieldHeld = { notes: CardNote[]; pastes: PastedText[]; images: ImageAttachment[] };
 
 export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
+  /**
+   * Whether this window's home takes a press that carries the field (`choice-attachments.md`):
+   * an older home reads the value strictly and refuses it, so against one nothing but the
+   * words goes and the rest stays in the field, as before. Only a view asks.
+   */
+  const homeCarries = async (): Promise<boolean> => {
+    if (!isView(get().thisMac)) return true;
+    try {
+      return homeTakesChoiceAttachments(true, (await window.infinitary.app.healthcheck()).changes);
+    } catch {
+      return false;
+    }
+  };
   const heldIn = (cardId: string): FieldHeld | undefined => {
     const s = get();
     const held = {
@@ -344,21 +358,20 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         await bringSecrets(cardId, actionId);
         return;
       }
-      // A footer press carries what waits in the card's field (`choice-attachments.md`), but a
-      // request's open-browser click answers nothing: it stays for Return control's reply.
-      const opensPage =
-        chosen?.effect?.kind === "open" &&
-        chosen.effect.target === "browser" &&
-        !chosen.effect.savedSignIn;
-      const held = source === "chrome" && collect && !opensPage ? heldIn(cardId) : undefined;
+      // A footer press carries what waits in the card's field (`choice-attachments.md`). A
+      // request's open-browser click that docks the card answers nothing, so what it took comes
+      // back below; one whose browser is gone answers the card, and it goes with that answer.
+      let held = source === "chrome" && collect ? heldIn(cardId) : undefined;
       if (held && !heldCanGo(cardId, held)) return;
-      const marked = held ? markedPictures(cardId, held.notes) : undefined;
       const request = { actionId };
       const submission = submissionFor(mounted, input);
       set((s) => ({
         pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
+      // The guard is up before the home is asked, so a second click waits.
+      if (held && !(await homeCarries())) held = undefined;
+      const marked = held ? markedPictures(cardId, held.notes) : undefined;
       if (held) takeHeld(cardId);
       let sentHeld = false;
       try {
@@ -429,8 +442,10 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         if (refusal) throw new Error(refusal);
         if (held) {
           sentHeld = true;
-          // The press left with its marked pictures: this window keeps none of them.
-          forgetMarked(cardId, []);
+          // A docked request answered nothing: the field keeps what it held for Return
+          // control's reply. Otherwise the press left with its marked pictures.
+          if (effect?.kind === "open" && effect.browser?.docked) restoreHeld(cardId, held);
+          else forgetMarked(cardId, []);
         }
         // A request's open-browser click answers nothing: the card stays,
         // docked beside the page, and the core's own list takes it down if it
@@ -539,11 +554,13 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       const card = get().cards.find((entry) => entry.id === cardId);
       // An ended card's minus is Close, like its button: words in the field go
       // with it, through the same press, rather than be lost.
-      if (
-        card?.ended &&
-        (withAnythingElse([], get().replyDrafts[cardId] ?? "").length > 0 || heldIn(cardId))
-      ) {
-        void get().pressNote(cardId, mounted);
+      const words = withAnythingElse([], get().replyDrafts[cardId] ?? "").length > 0;
+      if (card?.ended && (words || heldIn(cardId))) {
+        // Only a home that takes the field's notes, files and pictures gets them as a press.
+        void (async () =>
+          words || (await homeCarries())
+            ? get().pressNote(cardId, mounted)
+            : leaveCard(card, cardId, mounted))().catch(() => {});
         return;
       }
       void leaveCard(card, cardId, mounted).catch(() => {});
@@ -556,15 +573,16 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         }));
         return;
       }
-      // What else waits in the field goes too, as the reply under the note.
-      const held = heldIn(cardId);
+      // What else waits in the field goes too, as the reply under the note, to a home that takes it.
+      let held = heldIn(cardId);
       if (held && !heldCanGo(cardId, held)) return;
-      const marked = held ? markedPictures(cardId, held.notes) : undefined;
       const request = { actionId: NOTE_DONE_ACTION_ID };
       set((s) => ({
         pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
+      if (held && !(await homeCarries())) held = undefined;
+      const marked = held ? markedPictures(cardId, held.notes) : undefined;
       if (held) takeHeld(cardId);
       try {
         // The words in the card's one field ride the note's own button as they

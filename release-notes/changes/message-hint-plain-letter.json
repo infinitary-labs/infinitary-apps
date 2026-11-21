@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "message-hint-plain-letter",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "The message box's hint writes a plain letter key in lower case",
+      "body": "When something else has your keyboard, the empty message box now says \"press i to write a message\" for the Vim keys, instead of a capital I that looked like it needed Shift. A letter you press with no other key reads in lower case there, such as the m in ⌃X m for the Emacs keys.",
+      "picture": {
+        "dark": "message-hint-plain-letter-dark.webp",
+        "light": "message-hint-plain-letter-light.webp",
+        "alt": "The empty message box with a paperclip at its left and the hint \"press i to write a message\" in its middle"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -41,6 +41,15 @@ import { WorkSetupNotice } from "./WorkSetupNotice";
 const PROMPT_WIDTH = `min(${CARD_SIZES.regular}px, calc(100vw - var(--occupied-rail-left, 0px) - var(--occupied-rail-right, 0px) - 2 * var(--space-4)))`;
 
 /**
+ * A key hint as a sentence writes it: a letter pressed with no modifier, the
+ * one chord `chordLabel` draws as a lone capital, stays as it is typed
+ * (`press i`, `press ⌃X m`), since a capital in a sentence reads as Shift.
+ */
+function typedKeys(keys: string): string {
+  return keys.replace(/(?<=^| )[A-Z](?= |$)/g, (letter) => letter.toLowerCase());
+}
+
+/**
  * The input's hint - transcription status, the gated line, the return key,
  * the first-run hint, or the standard one - fullest form first, then the
  * shorter form a narrow input shows.
@@ -56,7 +65,7 @@ export function inputPlaceholder(input: {
   if (input.firstRun?.gateOpen)
     return [input.firstRun.freshCheck ? GATED_CHECK_PLACEHOLDER : GATED_PLACEHOLDER];
   if (input.returnToMessageKey)
-    return [m.shellPromptReturnToMessage({ key: input.returnToMessageKey })];
+    return [m.shellPromptReturnToMessage({ key: typedKeys(input.returnToMessageKey) })];
   const noVoice =
     input.voiceSupported === false ||
     input.dictation === null ||

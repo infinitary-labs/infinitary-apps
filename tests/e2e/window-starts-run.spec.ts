@@ -1,17 +1,37 @@
-import { cpSync, existsSync, readFileSync, readlinkSync, renameSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import {
+  cpSync,
+  existsSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
+import electronPath from "electron";
+import { STOPPED_RUN_WAIT_MS } from "../../src/core/helper/lock";
 import { HOST_CARD_PRIORITY } from "../../src/core/orchestrator/hostCards";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { LET_GO_JOB_ARG, START_HERE_ARG } from "../../src/main/besideRun";
 import { RUN_MARKER, RunMarkerSchema, windowProfileDir } from "../../src/main/runCommand";
 import { COMMAND_STOP_WORDS } from "../../src/renderer/src/settings/commandStopWords";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { COMMAND_NOTICE_WORDS } from "../../src/shared/commandNotice";
+import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedMockModelCatalog } from "./accountFixtures";
-import { type LaunchedApp, launchApp } from "./launch";
+import {
+  builtAppDir,
+  defaultClaudeStubDir,
+  hermeticEnv,
+  type LaunchedApp,
+  launchApp,
+} from "./launch";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import { mockModelsJson } from "./mockModels";
 import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -301,6 +321,153 @@ test("Restart it ends a command that does not answer and the window joins the on
       if (alive(first)) process.kill(first, "SIGKILL");
     }
   } finally {
+    await provider.close();
+  }
+});
+
+/**
+ * The review of INF-5409: Start it here over a command that does not answer ends it by force and
+ * starts the app again, while the agent's job starts the command again. Promised result: the app
+ * started again with Start it here opens beside the command the job started again, as its own,
+ * whether that command already noted that it holds the data folder or holds its lock and has not
+ * noted it yet; the card is usable, and the service manager starts and stops nothing more. Data:
+ * the throwaway data folder above, its command frozen with SIGSTOP, a one-second answer wait, and
+ * a file the development build's command waits on before it notes that it holds the folder. An
+ * isolated window never starts itself again, so the journey starts each start that Start it here
+ * asks for. Completion: the service manager's record of each run and exit, the command's note,
+ * the folder's lock, the start's own end and what it said, and the card with no notice.
+ */
+test("Start it here ends a command that does not answer and opens beside the one its job started again", async () => {
+  test.setTimeout(300_000);
+  const provider = await startMockProvider();
+  const hold = join(scratchDir("infinitary-window-starts-run-hold-"), "hold");
+  let waiting: ReturnType<typeof spawn> | null = null;
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    standIn = serviceManagerStandIn(homeDir);
+    const env = {
+      ...standIn.env,
+      INFINITARY_WINDOW_STARTS_RUN: "1",
+      INFINITARY_RUN_ANSWER_WAIT_MS: "1000",
+      INFINITARY_RUN_NOTE_HOLD: hold,
+    };
+    const open = (args: string[] = []) => launchApp({ userDataDir, homeDir, env, args });
+    const gone = join(standIn.dir, "state", `${LABEL}.gone`);
+    const noted = () =>
+      existsSync(join(userDataDir, RUN_MARKER)) ? commandPid(userDataDir) : null;
+
+    // Section: the window starts the command, then quits; the command is frozen.
+    let opened = await open();
+    let first: number;
+    try {
+      await showCard(opened.page, CARD_TITLE);
+      first = commandPid(userDataDir);
+    } finally {
+      await opened.close();
+    }
+    process.kill(first, "SIGSTOP");
+
+    // Section: Start it here ends the frozen command by force; the window starts again, which an
+    // isolated window does by ending, and the job starts the command again.
+    opened = await open();
+    try {
+      const { page } = opened;
+      const windowEnded = new Promise<void>((resolve) =>
+        opened.app.process().once("exit", () => resolve()),
+      );
+      await expect(noticeOver(page).getByRole("alertdialog")).toContainText(
+        COMMAND_NOTICE_WORDS.line({ state: "stopped", ending: "not-answering", byWindow: true }),
+        { timeout: 60_000 },
+      );
+      const startHere = noticeOver(page).getByRole("button", {
+        name: COMMAND_NOTICE_WORDS.startHere,
+      });
+      await pressKey(startHere, "Enter");
+      await windowEnded;
+    } finally {
+      await opened.close();
+      if (alive(first)) process.kill(first, "SIGKILL");
+    }
+    await expect.poll(() => alive(first), { timeout: 60_000 }).toBe(false);
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
+    const [, second] = standIn.runs(LABEL) as [number, number];
+
+    // Section: started again with the command's note already there, the app opens beside it.
+    await expect.poll(noted, { timeout: 60_000 }).toBe(second);
+    opened = await open([START_HERE_ARG, LET_GO_JOB_ARG]);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.thisMac())).toMatchObject({
+        byCommand: true,
+      });
+    } finally {
+      await opened.close();
+    }
+    expect(standIn.runs(LABEL)).toEqual([first, second]);
+    expect(standIn.exits(LABEL)).toEqual([null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(second);
+
+    // Section: started again while the command the job started holds the folder's lock and has
+    // not noted it yet, the start waits with no window, past a stopped run's wait, never taking
+    // that command for a window; once the command notes it, the start ends to start again.
+    writeFileSync(hold, "");
+    process.kill(second, "SIGKILL");
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(3);
+    const [, , third] = standIn.runs(LABEL) as [number, number, number];
+    await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(third);
+    expect(noted()).toBe(second);
+    waiting = spawn(
+      electronPath as unknown as string,
+      [builtAppDir(), `--user-data-dir=${userDataDir}`, START_HERE_ARG, LET_GO_JOB_ARG],
+      {
+        env: {
+          ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+          INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+          ...env,
+        },
+        cwd: scratchDir("infinitary-window-starts-run-cwd-"),
+      },
+    );
+    let said = "";
+    waiting.stdout?.on("data", (chunk) => {
+      said += String(chunk);
+    });
+    waiting.stderr?.on("data", (chunk) => {
+      said += String(chunk);
+    });
+    const started = waiting;
+    const ended = new Promise<void>((resolve) => started.once("exit", () => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, STOPPED_RUN_WAIT_MS + 2_000));
+    expect(started.exitCode).toBeNull();
+    expect(started.signalCode).toBeNull();
+    rmSync(hold, { force: true });
+    await expect.poll(noted, { timeout: 60_000 }).toBe(third);
+    await ended;
+    expect(said).toContain("[app] Start it here found the folder held by a run");
+
+    // Section: the start that one asked for opens beside the command the job started again.
+    opened = await open([START_HERE_ARG, LET_GO_JOB_ARG]);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+    } finally {
+      await opened.close();
+    }
+    expect(standIn.runs(LABEL)).toEqual([first, second, third]);
+    expect(standIn.exits(LABEL)).toEqual([null, null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(third);
+  } finally {
+    rmSync(hold, { force: true });
+    if (waiting && waiting.exitCode === null && waiting.signalCode === null)
+      waiting.kill("SIGKILL");
     await provider.close();
   }
 });

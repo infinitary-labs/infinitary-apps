@@ -36,10 +36,12 @@ import { RUN_STOP_READ_MS, type RunInstance } from "./windowsTask";
  * The folder of force stops: each attempt writes one file of its own,
  * `<attempt>.json`, naming its run by process and start with the end of its
  * wait, and only that attempt and the run it names move it on. Moved to
- * `<attempt>.taken`, the run has claimed it; `.declined`, the run claimed it
- * once its time was over and did not act; `.withdrawn`, the asker took it
- * back first. On a Mac or Linux the run's own pipe (`runForceWakeFile`) is
- * there too.
+ * `<attempt>.taken`, the run has claimed it and is reading its time;
+ * `.ended`, the run found it within its time and ends itself at once, the
+ * one move that commits it; `.declined`, the run claimed it once its time
+ * was over and did not act; `.withdrawn`, the asker took it back, pending
+ * or claimed, before the run committed it. On a Mac or Linux the run's own
+ * pipe (`runForceWakeFile`) is there too.
  */
 export const RUN_FORCE_DIR = "run-force";
 
@@ -48,8 +50,10 @@ export const RUN_FORCE_DIR = "run-force";
  * that names this process and the start it wrote of itself is claimed by
  * moving it to `.taken`, which only one of this reading and its asker's
  * withdrawal can do. The claimed stop's own time is then read: within it,
- * this process ends by force at once; past it, the stop is declined and
- * nothing acts. A stop naming another run is never moved.
+ * the stop is committed by moving it on to `.ended`, which again only one
+ * of this reading and a withdrawal past its time can do, and this process
+ * ends by force at once; past it, the stop is declined and nothing acts. A
+ * stop naming another run is never moved.
  */
 const FORCE_WATCH = `
 const { workerData } = require("node:worker_threads");
@@ -82,9 +86,14 @@ setInterval(() => {
       continue;
     }
     const request = read(taken);
-    // Within its time the claim stays as it is, so its asker reads it as the end it asked for:
-    // the process ends while this thread may still run a moment, and nothing after acts.
-    if (request && typeof request.until === "number" && Date.now() <= request.until) {
+    if (request && typeof request.until === "number" && Date.now() < request.until) {
+      // Committed only once moved on: an asker that withdrew the claim past its time moved it first.
+      try {
+        renameSync(taken, taken.slice(0, -".taken".length) + ".ended");
+      } catch {
+        continue;
+      }
+      // The process ends while this thread may still run a moment, and nothing after acts.
       process.kill(process.pid, "SIGKILL");
       return;
     }
@@ -100,10 +109,12 @@ setInterval(() => {
  * process group, which waits, costing nothing, on a pipe of the run's own
  * (`runForceWakeFile`) that an asker writes a line to once a force stop is
  * written: at each line, wherever a force stop names exactly this run, by
- * its process and start, and is still within its time, or the run has
- * claimed one and not yet acted on it, it lets the run's process alone go
- * on, so a run whose whole process is stopped, as a fully frozen first
- * mate's, reads the stop and ends itself. Another program in its group is
+ * its process and start, and is pending or claimed with the whole of the
+ * current second still within its time, or the run committed one and has
+ * not yet ended, it lets the run's process alone go on, so a run whose
+ * whole process is stopped, as a fully frozen first mate's, reads the stop
+ * and ends itself. A stop past its time, or in its last second, which the
+ * run would decline and its asker withdraws, lets nothing go on. Another program in its group is
  * never touched. The run's number cannot pass to another program while it
  * leads a process group with a member alive, and the helper is one, so the
  * signal reaches only the run; the helper does nothing unless the run leads
@@ -117,7 +128,7 @@ exec 3<"$1" || exit 0
 [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" = "$2" ] || exit 0
 while read -r _ <&3; do
   now=$(date +%s)
-  for f in "$4"/*.json "$4"/*.taken; do
+  for f in "$4"/*.json "$4"/*.taken "$4"/*.ended; do
     [ -f "$f" ] || continue
     c=$(cat "$f" 2>/dev/null) || continue
     case "$c" in "$3"*) ;; *) continue ;; esac
@@ -125,8 +136,8 @@ while read -r _ <&3; do
     t=\${t%\\}}
     case "$t" in ''|*[!0-9]*) continue ;; esac
     case "$f" in
-      *.taken) kill -CONT "$2" 2>/dev/null; break ;;
-      *) if [ "$((t / 1000))" -ge "$now" ]; then kill -CONT "$2" 2>/dev/null; break; fi ;;
+      *.ended) kill -CONT "$2" 2>/dev/null; break ;;
+      *) if [ "$(((now + 1) * 1000))" -le "$t" ]; then kill -CONT "$2" 2>/dev/null; break; fi ;;
     esac
   done
 done
@@ -144,31 +155,48 @@ export function runForceWakeFile(pid: number, startedAt: string): string {
  * Starts the run's own reading of force stops for `startedAt`, the start it
  * wrote of itself in its record, and on a Mac or Linux its helper that lets
  * a stopped run go on (`FORCE_WAKE`), on a pipe the run holds open. Answers
- * what ends them. A reading or helper that cannot start, or fails, ends only
- * itself: the run goes on, and a force stop asked of it is withdrawn when
+ * what ends them. `ready` is called once both run, the reading's thread
+ * online and, on a Mac or Linux, the helper started with its pipe: only
+ * then can a force stop end this run however stuck it is, so only then does
+ * the run say it can be ended so (`markRunning`'s `recovers`). A reading or
+ * helper that cannot start, or fails, ends only itself and never calls
+ * `ready`: the run goes on, and a force stop asked of it is withdrawn when
  * its wait is over.
  */
 export function watchRunForce(
   dataDir: string,
   startedAt: string,
   every: number = RUN_STOP_READ_MS,
+  ready: () => void = () => {},
 ): () => void {
   const dir = join(dataDir, RUN_FORCE_DIR);
   let worker: Worker | null = null;
+  let helper: ChildProcess | null = null;
+  let held: number | null = null;
+  let ended = false;
+  let online = false;
+  let helperUp = hostPlatformProfile().windows;
+  let failed = false;
+  const settled = () => {
+    if (online && helperUp && !failed && !ended) ready();
+  };
   try {
     worker = new Worker(FORCE_WATCH, { eval: true, workerData: { dir, startedAt, every } });
     worker.on("error", (error) => {
+      failed = true;
       console.warn(`[run] stopped reading force stops: ${(error as Error).message}`);
+    });
+    worker.once("online", () => {
+      online = true;
+      settled();
     });
     worker.unref();
   } catch (error) {
     console.warn(`[run] could not read force stops: ${(error as Error).message}`);
   }
-  let helper: ChildProcess | null = null;
-  let held: number | null = null;
-  let ended = false;
   const pipe = join(dir, runForceWakeFile(process.pid, startedAt));
   const helperFailed = (error: Error) => {
+    failed = true;
     console.warn(`[run] could not start the force helper: ${error.message}`);
   };
   if (worker && !hostPlatformProfile().windows) {
@@ -200,6 +228,10 @@ export function watchRunForce(
             { stdio: "ignore", env: hostEnv() },
           );
           helper.on("error", helperFailed);
+          helper.once("spawn", () => {
+            helperUp = true;
+            settled();
+          });
           helper.unref();
         } catch (error) {
           helperFailed(error as Error);
@@ -233,14 +265,14 @@ export const RUN_FORCE_WAKE_SOURCE = FORCE_WAKE;
 export const runForceNeedle = forceNeedle;
 
 /**
- * What a force stop did: `ended` once the run claimed it and no program runs
- * under the run's number, which only its own end leaves; `gone` where no
- * program runs under its number and the run never claimed it, or declined
- * it, so it ended on its own; `withdrawn` where one still does and the stop
- * never acts, taken back before the run claimed it or declined by the run
- * as claimed past its time; `unasked` where the stop could not be written.
- * A stop the run claimed and has not yet acted on is waited for until one of
- * these is known.
+ * What a force stop did: `ended` once the run committed it, finding it
+ * within its time, and the run is gone; `gone` where the run is gone and
+ * never committed it, pending, claimed and still reading its time, or
+ * declined, so nothing shows the stop ended it; `withdrawn` where the run
+ * still runs and the stop never acts, taken back pending or claimed once
+ * its time was over, or declined by the run; `unasked` where the stop could
+ * not be written. A stop the run committed is waited for until the run is
+ * gone.
  */
 export type ForceEnd = "ended" | "gone" | "withdrawn" | "unasked";
 
@@ -281,14 +313,17 @@ const WAKE_EVERY_MS = 1_000;
 
 /**
  * Asks `run` to end itself by force, and waits, for as long as a command
- * waits for a stopped run to let its folder go, until no program runs under
- * its number. The stop is this attempt's own file, carrying the end of that
- * wait, so another attempt's stop is never moved by this one, and one left
- * behind by an asker that quit is past its time and never acts. While it
- * waits, `wake` lets a suspended run go on to read it (`wakeRun`). A stop
- * the run did not claim in time is withdrawn; one it claimed is waited for
- * until the run ended or declined it. The attempt's files go once its end is
- * known, and one that cannot be removed changes nothing of what it answers.
+ * waits for a stopped run to let its folder go, until the run is gone, as
+ * `alive` reads that one run (on Windows by its process's birth, so a later
+ * program under its number is not it). The stop is this attempt's own file,
+ * carrying the end of that wait, so another attempt's stop is never moved by
+ * this one, and one left behind by an asker that quit is past its time and
+ * never acts. While the stop can still act, pending or claimed within its
+ * time, or committed, `wake` lets a suspended run go on to read it
+ * (`wakeRun`); past its time nothing is woken. A stop the run did not commit
+ * in time is withdrawn, pending or claimed; one it committed is waited for
+ * until the run is gone. The attempt's files go once its end is known, and
+ * one that cannot be removed changes nothing of what it answers.
  */
 export async function endRunByForce(
   dataDir: string,
@@ -310,7 +345,7 @@ export async function endRunByForce(
     return "unasked";
   }
   const outcome = await settle(attempt, run, alive, until, wake);
-  for (const end of [".json", ".taken", ".declined", ".withdrawn"])
+  for (const end of [".json", ".taken", ".ended", ".declined", ".withdrawn"])
     try {
       rmSync(`${attempt}${end}`, { force: true });
     } catch {
@@ -328,20 +363,27 @@ async function settle(
 ): Promise<Exclude<ForceEnd, "unasked">> {
   let woke = 0;
   for (;;) {
-    if (Date.now() >= woke + WAKE_EVERY_MS) {
+    // Only a stop the run committed, which it acts on at once, ended it: read once the run is gone.
+    if (!alive(run.pid)) return existsSync(`${attempt}.ended`) ? "ended" : "gone";
+    const committed = existsSync(`${attempt}.ended`);
+    if (existsSync(`${attempt}.declined`)) return "withdrawn";
+    if (!committed && Date.now() >= until) {
+      // Pending or claimed and not yet committed: whichever move comes first, this one or the run's
+      // commitment, decides, so a claim past its time never acts once taken back.
+      for (const from of [".json", ".taken"])
+        try {
+          renameSync(`${attempt}${from}`, `${attempt}.withdrawn`);
+          return "withdrawn";
+        } catch {}
+      // Committed meanwhile, or declined: read again.
+    } else if (
+      (committed || Date.now() + WAKE_EVERY_MS <= until) &&
+      Date.now() >= woke + WAKE_EVERY_MS
+    ) {
+      // A stop that can still act lets a suspended run go on to read it, as the helper does: while
+      // a whole second of its time is left, or once committed; one about to pass its time never.
       woke = Date.now();
       wake();
-    }
-    // Only a stop the run claimed and kept, which within its time it acts on at once, ended it.
-    if (!alive(run.pid)) return existsSync(`${attempt}.taken`) ? "ended" : "gone";
-    if (existsSync(`${attempt}.declined`)) return "withdrawn";
-    if (Date.now() >= until) {
-      try {
-        renameSync(`${attempt}.json`, `${attempt}.withdrawn`);
-        return "withdrawn";
-      } catch {
-        // Claimed by the run: within its time it ends at once, past it the run declines it.
-      }
     }
     await new Promise((resolve) => setTimeout(resolve, ENDED_READ_MS));
   }

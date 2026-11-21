@@ -428,6 +428,27 @@ export function ownWindowsBirth(): string | null {
 }
 
 /**
+ * Whether the program under `pid` is still the one born at `birth`: false
+ * once another program holds the number, null where Windows would not open
+ * it or read its birth, as for a number no program holds any more.
+ */
+export function windowsRunHolds(pid: number, birth: string): boolean | null {
+  try {
+    const native = system();
+    const process = native.openProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+    if (!process) return null;
+    try {
+      const born = birthOf(process);
+      return born === undefined ? null : born === birth;
+    } finally {
+      native.closeHandle(process);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Lets a suspended program go on, through a handle to the program whose
  * birth is `birth` (docs/run.md, "When the command does not answer"): the
  * handle holds that one program, so a later one that took its number is

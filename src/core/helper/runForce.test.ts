@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -237,18 +237,29 @@ describe("a run that does not answer, ended by force", () => {
     },
   );
 
-  // A force stop left by an asker that quit is past its time: waking the run on its pipe then
-  // lets nothing go on, so a run stopped on purpose stays stopped.
-  it.skipIf(!POSIX)("leaves a stopped run stopped for a stop past its time", async () => {
-    const dataDir = scratchDir("run-force-");
-    const { pid } = await stuckRun(dataDir, STARTED, { helper: true });
-    writeStop(dataDir, "stale", { pid, startedAt: STARTED, until: Date.now() - 1_000 });
-    process.kill(pid, "SIGSTOP");
-    await expect.poll(() => stopped(pid)).toBe(true);
-    wakeRun(dataDir, { pid, startedAt: STARTED });
-    await pause(1_000);
-    expect(stopped(pid)).toBe(true);
-  });
+  // A force stop left by an asker that quit is past its time, or passes it within the current
+  // second, which the helper reads only to the second: waking the run on its pipe then lets nothing
+  // go on, so a run stopped on purpose stays stopped.
+  it.skipIf(!POSIX)(
+    "leaves a stopped run stopped for a stop past its time or in its last second",
+    async () => {
+      const dataDir = scratchDir("run-force-");
+      const { pid } = await stuckRun(dataDir, STARTED, { helper: true });
+      process.kill(pid, "SIGSTOP");
+      await expect.poll(() => stopped(pid)).toBe(true);
+      writeStop(dataDir, "stale", { pid, startedAt: STARTED, until: Date.now() - 1_000 });
+      wakeRun(dataDir, { pid, startedAt: STARTED });
+      await pause(500);
+      expect(stopped(pid)).toBe(true);
+      // Early in a second, a stop whose time ends later in that same second.
+      while (Date.now() % 1_000 > 300) await pause(20);
+      const second = Math.floor(Date.now() / 1_000) * 1_000;
+      writeStop(dataDir, "last-second", { pid, startedAt: STARTED, until: second + 950 });
+      wakeRun(dataDir, { pid, startedAt: STARTED });
+      await pause(500);
+      expect(stopped(pid)).toBe(true);
+    },
+  );
 
   // A stopped run with no helper to let it go on cannot read in time: its stop is withdrawn when
   // the wait is over, and the run, going on again, never acts on it later.
@@ -258,10 +269,15 @@ describe("a run that does not answer, ended by force", () => {
       const dataDir = scratchDir("run-force-");
       const { run, pid } = await stuckRun(dataDir, STARTED);
       process.kill(pid, "SIGSTOP");
+      // Less than a second of its time is left from the start, so nothing is ever woken for it.
+      let woken = 0;
       try {
-        expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 500)).toBe(
-          "withdrawn",
-        );
+        expect(
+          await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 500, () => {
+            woken++;
+          }),
+        ).toBe("withdrawn");
+        expect(woken).toBe(0);
       } finally {
         process.kill(pid, "SIGCONT");
       }
@@ -298,21 +314,81 @@ describe("a run that does not answer, ended by force", () => {
     expect(run.signalCode).toBeNull();
   });
 
-  // A run that claimed its stop and has not acted on it, as one held up between its claim and its
-  // end: the stop is never called withdrawn or ended while that lasts, and once the run declines
-  // it, the attempt answers so and its files go.
-  it("waits on a stop the run claimed until the run declines it", async () => {
+  // A run held up between claiming its stop and committing it, past the stop's time: the asker takes
+  // the claim back, and the run, committing only by moving that same claim on, finds it gone and
+  // never acts. Nothing is called ended.
+  it("withdraws a claim the run has not committed once its time is over, and the run never acts on it", async () => {
     const dataDir = scratchDir("run-force-");
-    const claimsOnly = `
+    const heldUp = `
       const { workerData } = require("node:worker_threads");
       const { readdirSync, renameSync } = require("node:fs");
       const { join } = require("node:path");
       setInterval(() => {
-        for (const name of readdirSync(workerData.dir).filter((n) => n.endsWith(".json")))
-          renameSync(join(workerData.dir, name), join(workerData.dir, name.replace(/\\.json$/, ".taken")));
+        for (const name of readdirSync(workerData.dir).filter((n) => n.endsWith(".json"))) {
+          const taken = join(workerData.dir, name.replace(/\\.json$/, ".taken"));
+          renameSync(join(workerData.dir, name), taken);
+          setTimeout(() => {
+            try {
+              renameSync(taken, taken.replace(/\\.taken$/, ".ended"));
+            } catch {
+              return;
+            }
+            process.kill(process.pid, "SIGKILL");
+          }, 900);
+        }
       }, 50);
     `;
-    const { run, pid } = await stuckRun(dataDir, STARTED, { program: claimsOnly });
+    const { run, pid } = await stuckRun(dataDir, STARTED, { program: heldUp });
+    expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 300)).toBe(
+      "withdrawn",
+    );
+    await pause(1_200);
+    expect(run.exitCode).toBeNull();
+    expect(run.signalCode).toBeNull();
+    expect(left(dataDir)).toEqual([]);
+  });
+
+  // A run that claimed its stop and ended on its own before committing it was not ended by that
+  // stop: the attempt answers gone, which never lets a window retire the run's job.
+  it("answers gone for a run that ended after claiming its stop and before committing it", async () => {
+    const dataDir = scratchDir("run-force-");
+    const claimsThenLeaves = `
+      const { workerData } = require("node:worker_threads");
+      const { readdirSync, renameSync } = require("node:fs");
+      const { join } = require("node:path");
+      setInterval(() => {
+        for (const name of readdirSync(workerData.dir).filter((n) => n.endsWith(".json"))) {
+          renameSync(join(workerData.dir, name), join(workerData.dir, name.replace(/\\.json$/, ".taken")));
+          process.kill(process.pid, "SIGTERM");
+        }
+      }, 50);
+    `;
+    const { run, pid } = await stuckRun(dataDir, STARTED, { program: claimsThenLeaves });
+    const gone = exited(run);
+    expect(await endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 5_000)).toBe(
+      "gone",
+    );
+    if (POSIX) expect(await gone).toBe("SIGTERM");
+    expect(left(dataDir)).toEqual([]);
+  });
+
+  // A run that committed its stop is waited for, past the stop's time, until it is gone, and only
+  // then called ended: a commitment is never taken back.
+  it("waits on a stop the run committed until the run is gone, then calls it ended", async () => {
+    const dataDir = scratchDir("run-force-");
+    const commitsOnly = `
+      const { workerData } = require("node:worker_threads");
+      const { readdirSync, renameSync } = require("node:fs");
+      const { join } = require("node:path");
+      setInterval(() => {
+        for (const name of readdirSync(workerData.dir).filter((n) => n.endsWith(".json"))) {
+          const taken = join(workerData.dir, name.replace(/\\.json$/, ".taken"));
+          renameSync(join(workerData.dir, name), taken);
+          renameSync(taken, taken.replace(/\\.taken$/, ".ended"));
+        }
+      }, 50);
+    `;
+    const { run, pid } = await stuckRun(dataDir, STARTED, { program: commitsOnly });
     let answer: string | null = null;
     const asked = endRunByForce(dataDir, { pid, startedAt: STARTED }, processAlive, 300).then(
       (end) => {
@@ -320,16 +396,13 @@ describe("a run that does not answer, ended by force", () => {
         return end;
       },
     );
-    await pause(1_500);
+    await pause(1_000);
     expect(answer).toBeNull();
-    const [taken] = left(dataDir).filter((name) => name.endsWith(".taken"));
-    if (!taken) throw new Error("the run did not claim its stop");
-    renameSync(
-      join(dataDir, RUN_FORCE_DIR, taken),
-      join(dataDir, RUN_FORCE_DIR, taken.replace(/\.taken$/, ".declined")),
-    );
-    expect(await asked).toBe("withdrawn");
+    expect(left(dataDir).some((name) => name.endsWith(".ended"))).toBe(true);
+    const gone = exited(run);
+    run.kill("SIGKILL");
+    await gone;
+    expect(await asked).toBe("ended");
     expect(left(dataDir)).toEqual([]);
-    expect(run.exitCode).toBeNull();
   });
 });

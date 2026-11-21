@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -109,6 +111,8 @@ import {
   runningByCommand,
   runOptions,
   stopRunningCommand,
+  windowAnswerAsked,
+  windowAnswerFile,
   windowProfileDir,
 } from "./runCommand";
 import {
@@ -721,27 +725,39 @@ export async function startApp(
       startedHere: startedHere(dataDir),
     });
   if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
+  // Start it here asks a window that holds the lock to answer, which a run never does
+  // (`lockHolderKind`), so a refused launch knows a window is there before it quits.
+  const answerAsk = startsHere && !besideRun ? randomBytes(8).toString("hex") : null;
+  const lockAsk = answerAsk ? { windowAnswers: answerAsk } : undefined;
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
-  if (!app.requestSingleInstanceLock()) {
+  if (!app.requestSingleInstanceLock(lockAsk)) {
     if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
     // A run took the folder after this window read it, as the agent's job starting its run again
     // after Start it here's force stop: a run ignores a second launch, so this window starts again
     // and opens beside it, never quitting with no window and never starting or stopping that run.
     // A run notes that it holds the folder in the same step as it takes the lock, and one that
     // ends before then lets the lock go, which this window then starts again on as well; a window
-    // that holds the lock focuses itself instead, and this launch quits.
-    else if (
-      startsHere &&
-      !besideRun &&
-      (await lockHolderKind({
+    // that holds the lock answers and focuses itself, and this launch quits. A holder that shows
+    // neither is waited for, never taken for a window.
+    else if (answerAsk) {
+      const answer = join(dataDir, windowAnswerFile(answerAsk));
+      const kind = await lockHolderKind({
         running: () => runningByCommand(dataDir),
-        lockFree: () => app.requestSingleInstanceLock(),
-        waitMs: STOPPED_RUN_WAIT_MS,
-      })) !== "window"
-    ) {
-      if (!isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
+        answered: () => existsSync(answer),
+        holder: () => {
+          const pid = lockHolder(dataDir);
+          return typeof pid === "number" && !processAlive(pid) ? null : pid;
+        },
+        lockFree: () => app.requestSingleInstanceLock(lockAsk),
+        askEveryMs: STOPPED_RUN_WAIT_MS,
+      });
+      rmSync(answer, { force: true });
+      console.warn(
+        `[app] Start it here found the folder held by ${kind === "free" ? "nothing now" : `a ${kind}`}`,
+      );
+      if (kind !== "window" && !isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
       app.quit();
     } else app.quit();
   } else {
@@ -807,6 +823,11 @@ export async function startApp(
       // note is written now and takes the reading when it arrives, never
       // waited for here. Elsewhere there is no Keychain to read, and the
       // reading goes in at once, so a run that ends right away keeps it.
+      // A development run may hold its note back while a file it names is there, so a journey sees
+      // a run that holds the lock and has not noted it yet (tests/e2e/window-starts-run.spec.ts).
+      const noteHold = isDev ? settingFrom(process.env, "RUN_NOTE_HOLD") : undefined;
+      while (noteHold && existsSync(noteHold))
+        await new Promise((resolve) => setTimeout(resolve, 100));
       const runStartedAt = new Date();
       ownRun = { pid: process.pid, startedAt: runStartedAt.toISOString() };
       const byAgent = startedByAgent({
@@ -814,6 +835,13 @@ export async function startApp(
         word: options.agent,
         label: runLabelOf(work.place.flavor),
       });
+      // Restart it is offered over this run only once a force stop can end it (`watchRunForce`).
+      let forceReady = () => {};
+      const recovers = byAgent
+        ? new Promise<void>((resolve) => {
+            forceReady = resolve;
+          })
+        : undefined;
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -828,6 +856,7 @@ export async function startApp(
               }).then(observed),
         byAgent,
         byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null,
+        recovers,
       );
       leaveRun = (end) => {
         try {
@@ -890,7 +919,7 @@ export async function startApp(
       // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
       // Only a run this app's own agent started is ever asked so; one started by hand reads nothing.
       const stopForceWatch = byAgent
-        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString())
+        ? watchRunForce(app.getPath("userData"), runStartedAt.toISOString(), undefined, forceReady)
         : () => {};
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
@@ -903,8 +932,18 @@ export async function startApp(
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }
-    app.on("second-instance", () => {
+    app.on("second-instance", (_event, _argv, _cwd, additionalData) => {
       if (windowless) return;
+      // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
+      const asked = windowAnswerAsked(additionalData);
+      if (asked)
+        try {
+          writeFileSync(join(app.getPath("userData"), windowAnswerFile(asked)), "", {
+            mode: 0o600,
+          });
+        } catch (error) {
+          console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
+        }
       const win = appWindows()[0];
       if (win) {
         if (win.isMinimized()) win.restore();

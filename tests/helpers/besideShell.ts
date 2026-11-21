@@ -182,7 +182,10 @@ export function besideShell(
   const pushes: { channel: string; payload: unknown }[] = [];
   /** What the command's records say now, and which start entry is in place. */
   const command = {
-    records: options.records ?? ({ running: true, run: JOINED, lastStop: null } as Records),
+    // The run its agent started, whose own reading of force stops runs.
+    records:
+      options.records ??
+      ({ running: true, run: { ...JOINED, recovers: true }, lastStop: null } as Records),
     entry: options.entry ?? (null as StartEntry),
     programReplaced: options.programReplaced ?? false,
   };

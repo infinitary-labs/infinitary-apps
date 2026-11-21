@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { writePrivate } from "../devices/identity";
+import { windowsRunHolds } from "../placed/windowsProcesses";
+import { hostPlatformProfile } from "../platform";
 import {
   bootPlist,
   bootUnit,
@@ -77,7 +79,11 @@ export type RunAgentContext = {
    * suspended run is let go on to read it.
    */
   processes?: {
-    alive: (pid: number) => boolean;
+    /**
+     * Whether a program runs under `pid`; with `birth`, the run's recorded
+     * Windows birth, whether that same program still does.
+     */
+    alive: (pid: number, birth?: string) => boolean;
     forceWaitMs?: number;
     /** Lets a suspended run go on to read its force stop (`wakeRun`). */
     wake?: (run: RunInstance, birth?: string) => void;
@@ -460,14 +466,26 @@ async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<
   if (!recorded?.agent) return "untouched";
   const wake =
     context.processes?.wake ?? ((named, birth) => wakeRun(context.dataDir, named, birth));
+  const alive = context.processes?.alive ?? runAlive;
   const ended = await endRunByForce(
     context.dataDir,
     run,
-    context.processes?.alive ?? processAlive,
+    (pid) => alive(pid, recorded.birth),
     context.processes?.forceWaitMs,
     () => wake(run, recorded.birth),
   );
   return ended === "unasked" ? "untouched" : ended;
+}
+
+/**
+ * Whether the run under `pid` still runs: on Windows, with the birth its
+ * record keeps, only while that same program holds the number, so a program
+ * that took the number after the run ended is not waited for. Where Windows
+ * cannot say, the run is taken to run.
+ */
+function runAlive(pid: number, birth?: string): boolean {
+  if (!processAlive(pid)) return false;
+  return !birth || !hostPlatformProfile().windows || windowsRunHolds(pid, birth) !== false;
 }
 
 /**

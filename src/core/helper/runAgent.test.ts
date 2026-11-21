@@ -56,11 +56,11 @@ type StopAnswer = "refused" | "gone" | "unreadable" | "restarting";
 /** One run, by its process and the start its own record keeps. */
 type Run = { pid: number; startedAt: string };
 
-/** The run's own record in the data folder, as `<app> run` writes it, its agent's mark included. */
-function recordRun(context: RunAgentContext, run: Run, agent: boolean): void {
+/** The run's own record in the data folder, as `<app> run` writes it, its agent's mark and Windows birth included. */
+function recordRun(context: RunAgentContext, run: Run, agent: boolean, birth?: string): void {
   writeFileSync(
     join(context.dataDir, RUN_RECORD_FILE),
-    `${JSON.stringify({ ...run, ...(agent ? { agent } : {}) })}\n`,
+    `${JSON.stringify({ ...run, ...(agent ? { agent } : {}), ...(birth ? { birth } : {}) })}\n`,
   );
 }
 
@@ -80,31 +80,43 @@ const REPLACEMENT: Run = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
  * end is written down beside the service manager's asks.
  */
 function programTable(asked: string[][], dataDir: () => string) {
-  const table = new Map<number, { startedAt: string | null }>();
+  const table = new Map<number, { startedAt: string | null; birth?: string }>();
   const programs = {
-    /** A program runs under `pid`: a run that knows itself by `startedAt`, or another program (null). */
-    run: (pid: number, startedAt: string | null) => table.set(pid, { startedAt }),
+    /**
+     * A program runs under `pid`: a run that knows itself by `startedAt`, or another program (null),
+     * born at `birth` where Windows keeps one.
+     */
+    run: (pid: number, startedAt: string | null, birth?: string) =>
+      table.set(pid, { startedAt, ...(birth ? { birth } : {}) }),
     /** The program under `pid` ends on its own. */
     gone: (pid: number) => table.delete(pid),
     /** What happens as a run ends, before anything reads again. */
     onEnd: undefined as ((pid: number) => void) | undefined,
     /** Whether the runs read no force stop, as one stuck past its own thread or from before it. */
     deaf: false,
+    /** Whether the runs' whole processes are stopped, reading nothing until a force stop wakes them. */
+    frozen: false,
     /** Each run a force stop let go on, by its number and recorded birth: no real process is woken. */
     woken: [] as [number, string | undefined][],
     processes: {
-      alive: (pid: number) => {
+      // With a birth, only while the program born then holds the number, as Windows says.
+      alive: (pid: number, birth?: string) => {
         deliver();
-        return table.has(pid);
+        const program = table.get(pid);
+        return Boolean(
+          program && (!birth || program.birth === undefined || program.birth === birth),
+        );
       },
       forceWaitMs: 300,
       wake: (run: Run, birth?: string) => {
         programs.woken.push([run.pid, birth]);
+        programs.frozen = false;
       },
     },
   };
   // A run reads each force stop in the folder and claims one that names it, as its own thread does.
   const deliver = () => {
+    if (programs.frozen) return;
     const dir = join(dataDir(), RUN_FORCE_DIR);
     let names: string[];
     try {
@@ -122,8 +134,10 @@ function programTable(asked: string[][], dataDir: () => string) {
       }
       const pid = request.pid ?? -1;
       if (programs.deaf || table.get(pid)?.startedAt !== request.startedAt) continue;
-      // Claimed within its time, the stop stays claimed as the run ends by its own hand.
-      renameSync(file, file.replace(/\.json$/, ".taken"));
+      // Claimed, then committed within its time, as the run ends by its own hand.
+      const taken = file.replace(/\.json$/, ".taken");
+      renameSync(file, taken);
+      renameSync(taken, taken.replace(/\.taken$/, ".ended"));
       table.delete(pid);
       asked.push(["end", String(pid)]);
       programs.onEnd?.(pid);
@@ -335,9 +349,12 @@ describe("the command the window starts, on a Mac", () => {
   // named run ends itself, read by its own process and start, and launchd is asked only to start
   // the job on Restart it, which starts nothing where it already runs, and nothing on Start it here.
   it("has the named run its agent started end itself, then asks launchd only to start the job", async () => {
+    // Each run is wholly stopped until the button lets it go on.
     const restart = mac();
     recordRun(restart.context, NAMED, true);
     restart.programs.run(NAMED.pid, NAMED.startedAt);
+    restart.programs.frozen = true;
+    restart.programs.processes.forceWaitMs = 2_000;
     expect(await restartRunAgent(restart.context, NAMED)).toBe("restarted");
     expect(restart.asked).toEqual([
       ["end", String(NAMED.pid)],
@@ -347,6 +364,8 @@ describe("the command the window starts, on a Mac", () => {
     const startHere = mac();
     recordRun(startHere.context, NAMED, true);
     startHere.programs.run(NAMED.pid, NAMED.startedAt);
+    startHere.programs.frozen = true;
+    startHere.programs.processes.forceWaitMs = 2_000;
     await stopRunAgent(startHere.context, { forget: false, force: NAMED });
     expect(startHere.asked).toEqual([["end", String(NAMED.pid)]]);
     expect(startHere.programs.processes.alive(NAMED.pid)).toBe(false);
@@ -785,29 +804,23 @@ describe("the command the window starts, on Windows", () => {
     }
   });
 
-  // The review of INF-5409: the named run claimed its stop, and another program took its number as
-  // it went. While a program still runs under that number the run is never called ended, so the
-  // restart stays pending and the program there is never ended; once that number is free, the
-  // confirmed end starts the task once, which Task Scheduler never does by itself.
-  it("waits while a program that took the named run's number runs under it, then starts the task once", async () => {
+  // The review of INF-5409: the named run committed its stop, and another program took its number
+  // as it went. The run is read by the birth its record keeps, so the program there now, born
+  // later, is not it: the named run's own end starts the task once, which Task Scheduler never does
+  // by itself, while that other program keeps running and is never ended.
+  it("starts the task once the named run ended though another program took its number", async () => {
     const { context, asked, programs } = windows();
     await startRunAgent(context);
-    recordRun(context, NAMED, true);
-    programs.run(NAMED.pid, NAMED.startedAt);
-    programs.onEnd = (pid) => programs.run(pid, null);
+    recordRun(context, NAMED, true, "133800000000000000");
+    programs.run(NAMED.pid, NAMED.startedAt, "133800000000000000");
+    programs.onEnd = (pid) => programs.run(pid, null, "133800000000500000");
     asked.length = 0;
-    let outcome: string | null = null;
-    const restarting = restartRunAgent(context, NAMED).then((end) => {
-      outcome = end;
-      return end;
-    });
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-    expect(outcome).toBeNull();
-    expect(asked).toEqual([["end", String(NAMED.pid)]]);
+    expect(await restartRunAgent(context, NAMED)).toBe("restarted");
+    expect(asked).toEqual([
+      ["end", String(NAMED.pid)],
+      ["/Run", "/TN", LABEL],
+    ]);
     expect(programs.processes.alive(NAMED.pid)).toBe(true);
-    programs.gone(NAMED.pid);
-    expect(await restarting).toBe("restarted");
-    expect(asked.filter(([ask]) => ask === "/Run")).toHaveLength(1);
     expect(forceStopsLeft(context.dataDir)).toEqual([]);
   });
 });

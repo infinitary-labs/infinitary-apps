@@ -177,42 +177,80 @@ describe("a window opened beside a run", () => {
     expect([none.running, keepsStarterBesideGrant(none, true)]).toEqual([false, true]);
   });
 
-  // The review of INF-5409: Start it here refused the lock reads who holds it. A run notes that it
-  // holds the folder in the same step as it takes the lock, however late it takes it; a holder
-  // that ends before then lets the lock go; only a window does neither.
-  it("tells a run, a lock let go and a window apart for a launch refused the lock", async () => {
+  // The review of INF-5409: Start it here refused the lock reads who holds it from what the holder
+  // shows of itself, never from silence: a run notes that it holds the folder, a window answers
+  // the launch's ask, a holder that ends lets the lock go. One that shows none of these, as a run
+  // stopped before it noted itself, is waited for however long that lasts, and the lock is asked
+  // for again only once the holder its link names changes, so a window is not shown at every look.
+  it("tells a run, a window and a lock let go apart from what each shows, and waits on a silent holder", async () => {
+    const look = (shown: { running?: () => boolean; answered?: () => boolean }) => {
+      const asks: number[] = [];
+      let holder: number | null = 4242;
+      const kind = lockHolderKind({
+        running: shown.running ?? (() => false),
+        answered: shown.answered ?? (() => false),
+        holder: () => holder,
+        lockFree: () => {
+          asks.push(Date.now());
+          return holder === null;
+        },
+        askEveryMs: 60_000,
+        everyMs: 20,
+      });
+      return { kind, asks, leave: () => (holder = null) };
+    };
     let noted = false;
-    let free = false;
-    setTimeout(() => {
-      noted = true;
-    }, 300);
-    expect(
-      await lockHolderKind({
-        running: () => noted,
-        lockFree: () => false,
-        waitMs: 5_000,
-        everyMs: 20,
-      }),
-    ).toBe("run");
-    setTimeout(() => {
-      free = true;
-    }, 300);
-    expect(
-      await lockHolderKind({
-        running: () => false,
-        lockFree: () => free,
-        waitMs: 5_000,
-        everyMs: 20,
-      }),
-    ).toBe("free");
-    expect(
-      await lockHolderKind({
-        running: () => false,
-        lockFree: () => false,
-        waitMs: 200,
-        everyMs: 20,
-      }),
-    ).toBe("window");
+    setTimeout(() => (noted = true), 300);
+    const run = look({ running: () => noted });
+    expect(await run.kind).toBe("run");
+    expect(run.asks).toEqual([]);
+
+    let answered = false;
+    setTimeout(() => (answered = true), 300);
+    const window = look({ answered: () => answered });
+    expect(await window.kind).toBe("window");
+    expect(window.asks).toEqual([]);
+
+    // Silent well past a stopped run's old wait: still waited for, asked nothing, never a window.
+    const silent = look({});
+    let settled: string | null = null;
+    void silent.kind.then((kind) => (settled = kind));
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(settled).toBeNull();
+    expect(silent.asks).toEqual([]);
+    // The holder ends before noting anything: its link changes, the lock is asked for once and taken.
+    silent.leave();
+    expect(await silent.kind).toBe("free");
+    expect(silent.asks).toHaveLength(1);
+  });
+
+  // The review of INF-5409: Restart it is offered over a run only once a force stop can end it. The
+  // run notes that it holds the folder at once, with its agent's mark, and that it can be ended by
+  // force only once its own reading and helper run; a run that ended first never says so.
+  it("notes that a force stop can end the run only once it can", async () => {
+    const note = (dataDir: string) => JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"));
+    const dataDir = scratchDir("infinitary-run-recovers-");
+    let ready = () => {};
+    const recovers = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true, null, recovers);
+    expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true });
+    expect(note(dataDir).recovers).toBeUndefined();
+    ready();
+    await recovers;
+    expect(note(dataDir)).toMatchObject({ pid: 4242, agent: true, recovers: true });
+
+    const ended = scratchDir("infinitary-run-recovers-");
+    let late = () => {};
+    const lateReady = new Promise<void>((resolve) => {
+      late = resolve;
+    });
+    const finish = markRunning(ended, 4242, new Date(), undefined, true, null, lateReady);
+    finish();
+    late();
+    await lateReady;
+    expect(() => note(ended)).toThrow();
   });
 
   // The review of INF-5409: joining and following along stop only the run this window's starter

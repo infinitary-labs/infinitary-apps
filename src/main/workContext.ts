@@ -42,6 +42,7 @@ const DEVELOPMENT_STAND_INS = [
   "SCHTASKS",
   "CLAUDE_CLI",
   "SYSTEM_GIT",
+  "RUN_NOTE_HOLD",
 ] as const;
 const CARRIED_STAND_INS: readonly string[] = [
   ...DEVELOPMENT_STAND_INS.flatMap((name) => SETTING_PREFIXES.map((prefix) => `${prefix}${name}`)),

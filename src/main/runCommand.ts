@@ -164,6 +164,13 @@ export const RunMarkerSchema = z.object({
    * on where it was suspended. Absent elsewhere and from earlier runs.
    */
   birth: z.string().optional(),
+  /**
+   * The run's own reading of force stops runs, with, on a Mac or Linux, the
+   * helper that lets its stopped process go on (`watchRunForce`): only from
+   * then can Restart it end it however stuck it is, so only then is it
+   * offered. Absent until then and from earlier runs.
+   */
+  recovers: z.literal(true).optional(),
 });
 export type RunMarker = z.infer<typeof RunMarkerSchema>;
 export const RunStopSchema = RunMarkerSchema.extend({
@@ -184,7 +191,8 @@ export type RunEnd = Pick<RunStop, "reason" | "exitCode" | "lines">;
  * An environment still being read is added to the note once it arrives,
  * unless the run has ended: a Mac's Keychain is read by a utility process,
  * which waits for the app to be ready, and the app is ready only once the
- * start that writes this note has returned (./index.ts).
+ * start that writes this note has returned (./index.ts). Whether a force
+ * stop can end the run (`recovers`) is added the same way once it can.
  */
 export function markRunning(
   dataDir: string,
@@ -193,6 +201,7 @@ export function markRunning(
   environment?: RunEnvironment | Promise<RunEnvironment>,
   agent = false,
   birth?: string | null,
+  recovers?: Promise<void>,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
   let marker: RunMarker = {
@@ -213,6 +222,11 @@ export function markRunning(
       () => {},
     );
   else if (environment) marker = { ...marker, environment };
+  void recovers?.then(() => {
+    if (ended) return;
+    marker = { ...marker, recovers: true };
+    writeRunRecord(path, marker);
+  });
   writeRunRecord(path, marker);
   return (end = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] }) => {
     if (ended) return;
@@ -297,24 +311,52 @@ export function keepsStarterBesideGrant(
 }
 
 /**
+ * The file a window that holds the folder's lock writes in its data folder
+ * when a launch refused that lock asked it to answer (`windowAnswers`, the
+ * launch's own word for it): a run never answers, so only a window does.
+ */
+export function windowAnswerFile(word: string): string {
+  return `window-answer-${word}`;
+}
+
+/** Whether a launch's words to the lock's holder ask a window to answer, and with which word. */
+export function windowAnswerAsked(data: unknown): string | null {
+  const word = (data as { windowAnswers?: unknown } | null)?.windowAnswers;
+  return typeof word === "string" && /^[0-9a-f]{16}$/.test(word) ? word : null;
+}
+
+/**
  * Who holds the single-instance lock a launch was refused, for Start it
- * here: a run notes that it holds the folder in the same step as it takes
- * that lock, so `run` once a command notes it; `free` once the lock can be
- * taken, as when the holder ended before it noted anything; `window` where
- * neither comes within a stopped run's wait, which leaves only a window,
- * itself shown again by the launch.
+ * here, from what each holder shows of itself and never from silence: `run`
+ * once a command notes that it holds the folder; `window` once the window
+ * holding the lock answered the launch's ask (`windowAnswerFile`), which a
+ * run never does; `free` once the lock can be taken, as when the holder
+ * ended before it noted anything. A holder that shows neither, as a run
+ * stopped before it noted itself or whose note cannot be read, is waited
+ * for as long as it takes, so the launch never quits with no window to take
+ * over. Asking for the lock again is a second launch to its holder, which a
+ * window shows itself on, so it is asked only once the holder its link names
+ * changes, or after `askEveryMs` where no link names it.
  */
 export async function lockHolderKind(options: {
   running: () => boolean;
+  answered: () => boolean;
+  holder: () => number | null | undefined;
   lockFree: () => boolean;
-  waitMs: number;
+  askEveryMs: number;
   everyMs?: number;
 }): Promise<"run" | "free" | "window"> {
-  const until = Date.now() + options.waitMs;
+  let seen = options.holder();
+  let next = Date.now() + options.askEveryMs;
   for (;;) {
     if (options.running()) return "run";
-    if (options.lockFree()) return "free";
-    if (Date.now() >= until) return "window";
+    if (options.answered()) return "window";
+    const holder = options.holder();
+    if (holder !== seen || Date.now() >= next) {
+      seen = holder;
+      next = Date.now() + options.askEveryMs;
+      if (options.lockFree()) return "free";
+    }
     await new Promise((resolve) => setTimeout(resolve, options.everyMs ?? 250));
   }
 }

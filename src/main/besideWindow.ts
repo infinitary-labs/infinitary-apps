@@ -185,6 +185,8 @@ export class BesideWindow {
   private closed = false;
   /** Start it here is stopping a command that does not answer: nothing else is sent until the app starts again. */
   private recovering = false;
+  /** Whether the notice Start it here is stopping a run under was the window's own. */
+  private recoveringByWindow = false;
   /** Reads the records again while they say nothing of whose run a silent one is (`notAnswering`). */
   private ownerTimer: ReturnType<typeof setInterval> | null = null;
   /** When this window last started the command, until that one welcomes it. */
@@ -409,6 +411,7 @@ export class BesideWindow {
     if (this.shown.ending === "not-answering") {
       const byWindow = this.shown.byWindow === true;
       this.recovering = true;
+      this.recoveringByWindow = byWindow;
       this.show(this.wanted);
       void this.stopUnanswered(byWindow);
       return true;
@@ -809,21 +812,27 @@ export class BesideWindow {
    * The notice for a command that runs and has not answered in time. It is
    * the window's own (`byWindow`), offering Restart it and a Start it here
    * that ends the run by force, only where the silent run is the one the
-   * starter's own agent started, as the same reading of the records says:
-   * the starter's service manager can end and start again only that run.
-   * Any other, started by hand or behind a door that named no run, is
-   * stopped as Stop stops one, or not at all.
+   * starter's own agent started, as the same reading of the records says,
+   * and that run's note says a force stop can end it (`recovers`): the
+   * starter's service manager can end and start again only that run, and
+   * a run frozen before its own reading of force stops ran could never act
+   * on one. Any other, started by hand or behind a door that named no run,
+   * is stopped as Stop stops one, or not at all.
    */
   private notAnswering(
     status: Pick<RunStatus, "running" | "run" | "lastStop"> = this.options.beside.status(),
   ): CommandNotice {
-    const { starter, ownedRun } = this.options.beside;
-    const own =
-      starter !== undefined &&
+    const { starter } = this.options.beside;
+    const own = starter !== undefined && this.recoverable(status, this.unansweredRun);
+    // Records that cannot be read say nothing of whose run it is, and an owned run whose reading of
+    // force stops is not running yet cannot be ended so: they are read again until they say.
+    if (
+      starter &&
       this.unansweredRun !== null &&
-      sameRun(ownedRun?.(status) ?? null, this.unansweredRun);
-    // Records that cannot be read say nothing of whose run it is: they are read again until they say.
-    if (starter && this.unansweredRun !== null && status.running === null) this.ownerLater();
+      !own &&
+      this.ownerUnsettled(status, this.unansweredRun)
+    )
+      this.ownerLater();
     return {
       state: "stopped",
       ending: "not-answering",
@@ -833,12 +842,41 @@ export class BesideWindow {
     };
   }
 
+  /** Whether `run` is the starter's own agent's, by this reading, and its note says a force stop can end it. */
+  private recoverable(
+    status: Pick<RunStatus, "running" | "run" | "lastStop">,
+    run: OwnedRun | null,
+  ): boolean {
+    return (
+      run !== null &&
+      sameRun(this.options.beside.ownedRun?.(status) ?? null, run) &&
+      status.run?.recovers === true
+    );
+  }
+
+  /**
+   * Whether this reading cannot yet say whether `run` can be ended by force:
+   * the records cannot be read, or name it as the agent's own with its
+   * reading of force stops not yet running.
+   */
+  private ownerUnsettled(
+    status: Pick<RunStatus, "running" | "run" | "lastStop">,
+    run: OwnedRun | null,
+  ): boolean {
+    return (
+      status.running === null ||
+      (run !== null &&
+        sameRun(this.options.beside.ownedRun?.(status) ?? null, run) &&
+        status.run?.recovers !== true)
+    );
+  }
+
   /**
    * The notice that a run does not answer went up while its records could
    * not be read, so it could not say whether the starter's own agent started
-   * that run. Once they read again, the notice for that same run is drawn
-   * anew, with Restart it where the agent did; never for another run, which
-   * gets a wait of its own.
+   * that run, or while that run could not yet be ended by force. Once they
+   * say, the notice for that same run is drawn anew, with Restart it where
+   * it can; never for another run, which gets a wait of its own.
    */
   private ownerLater(): void {
     if (this.ownerTimer || this.closed) return;
@@ -849,7 +887,7 @@ export class BesideWindow {
         !this.closed &&
         this.wanted?.ending === "not-answering" &&
         sameRun(this.unansweredRun, target);
-      if (still && status.running === null) return;
+      if (still && this.ownerUnsettled(status, target)) return;
       this.stopOwnerLater();
       if (still) this.show(this.notAnswering(status));
     }, BESIDE_RUN_READ_MS);
@@ -1178,16 +1216,18 @@ export class BesideWindow {
   }
 
   private show(shown: CommandNotice | null): void {
-    // While Restart it's starter has not answered, or Start it here is stopping a silent run, no
-    // notice offers what it would refuse: Restart it again, or Start it here.
+    // While Restart it's starter has not answered, or Start it here is stopping a silent run, the
+    // stop may still end the run it names: whatever is asked for meanwhile, a welcome's or a late
+    // answer's no notice included, is kept for when it settles, and the waiting notice stays, with
+    // nothing that offers what it would refuse.
     const notice =
-      shown?.state === "stopped" && this.restart?.settled === false
+      this.restart?.settled === false
         ? this.restartingNotice()
-        : shown?.state === "stopped" && this.recovering
+        : this.recovering
           ? {
               state: "waiting" as const,
-              ending: shown.ending,
-              ...(shown.byWindow ? { byWindow: true as const } : {}),
+              ending: "not-answering" as const,
+              ...(this.recoveringByWindow ? { byWindow: true as const } : {}),
             }
           : shown;
     this.wanted = shown;

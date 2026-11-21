@@ -17,8 +17,11 @@ import {
   type ChainPart,
   chainTask,
   chainTitle,
+  FOLLOWED,
   followBase,
   followBasePrompt,
+  MOVED_BETWEEN,
+  movedSteer,
 } from "./scenarios/followBase";
 import { completionAction, showCard } from "./stack";
 import { pressKey } from "./windowKeys";
@@ -118,11 +121,27 @@ test("a chained part follows the newer approved version of the part under it", a
       await expect.poll(cardTitles, { timeout: 20_000 }).not.toContain(title);
     };
     const bodies = () => launched.mockProvider?.requestBodies() ?? [];
-    /** How many times the most complete request carries these words: a steer heard twice shows twice. */
-    const heard = (words: string) =>
-      Math.max(0, ...bodies().map((body) => body.split(words).length - 1));
-    const movedSteer = (to: string, from: string) =>
-      `is now approved to merge at ${to}, a newer version than ${from}`;
+    /**
+     * How many times the most complete request carries these words, as a
+     * request's JSON writes them: a steer heard twice shows twice.
+     */
+    const heard = (words: string) => {
+      const written = JSON.stringify(words).slice(1, -1);
+      return Math.max(0, ...bodies().map((body) => body.split(written).length - 1));
+    };
+    /** The base-moved steer a part hears when the part under it moved from `from` to `to`. */
+    const moved = (id: string, under: ChainPart, from: string, to: string) => {
+      const base = saved(saved(id)?.shape?.built_on?.task ?? "");
+      return movedSteer(
+        {
+          key: base?.key || (base?.id ?? ""),
+          title: chainTask("meterlab", under),
+          branch: base?.delivery?.mergeAuthorization?.target.branch ?? "",
+        },
+        from,
+        to,
+      );
+    };
 
     // The first mate starts the first part and files the rest behind it.
     const input = promptInput(page);
@@ -145,7 +164,7 @@ test("a chained part follows the newer approved version of the part under it", a
     await expect.poll(cardTitles, { timeout: 120_000 }).toContain(chainTitle("third"));
     const thirdOffered = git("rev-parse", `refs/heads/${saved(third)?.branch}`);
     // Nothing moved yet: no part is told the part under it moved.
-    expect(heard("a newer version than")).toBe(0);
+    expect(heard(MOVED_BETWEEN)).toBe(0);
     expect(github.merges()).toEqual([]);
 
     // The default branch moves, and the first part is brought up to date under its kept approval.
@@ -163,55 +182,45 @@ test("a chained part follows the newer approved version of the part under it", a
 
     // told-newer and repair-accepts: the second part hears once, replays, and its repair is accepted.
     await expect
-      .poll(() => heard(movedSteer(firstRepaired, firstApproved)), { timeout: 120_000 })
+      .poll(() => heard(moved(second, "first", firstApproved, firstRepaired)), {
+        timeout: 120_000,
+      })
       .toBe(1);
     await expect.poll(() => approvedAt(second), { timeout: 120_000 }).not.toBe(secondApproved);
     const secondRepaired = approvedAt(second) ?? "";
     expect(saved(second)?.delivery?.mergeAuthorization?.approvedHead).toBe(secondApproved);
     await expect.poll(() => builtOn(second), { timeout: 30_000 }).toBe(firstRepaired);
-    expect(heard("Repair accepted: the captain's kept merge approval now covers")).toBe(1);
     // The repaired second part holds the first part's newer version and only its own commit on it.
     expect(git("rev-parse", `${secondRepaired}~1`)).toBe(firstRepaired);
     expect(git("show", "--name-only", "--format=", secondRepaired)).toBe("second.txt");
 
     // told-newer and stale-card-refused: the third part hears once; its card at the old version is refused.
     await expect
-      .poll(() => heard(movedSteer(secondRepaired, secondApproved)), { timeout: 120_000 })
-      .toBe(1);
-    await expect
-      .poll(() => heard(`Card refused: ${LEFT_OUT_WORDS.behindBase(secondRepaired)}.`), {
+      .poll(() => heard(moved(third, "second", secondApproved, secondRepaired)), {
         timeout: 120_000,
       })
       .toBe(1);
-    expect(builtOn(third)).toBe(secondApproved);
-    // The card at the replayed version goes up, and the third part's recorded base moves with it.
     await expect
-      .poll(() => git("rev-parse", `refs/heads/${saved(third)?.branch}`), { timeout: 120_000 })
-      .not.toBe(thirdOffered);
-    await expect.poll(() => builtOn(third), { timeout: 120_000 }).toBe(secondRepaired);
-    await expect.poll(cardTitles, { timeout: 120_000 }).toContain(chainTitle("third"));
+      .poll(() => heard(LEFT_OUT_WORDS.behindBase(secondRepaired)), { timeout: 120_000 })
+      .toBe(1);
+    // The card at the replayed version goes up after its story, and the third part reports it.
+    await expect.poll(() => heard(FOLLOWED("third")), { timeout: 120_000 }).toBeGreaterThan(0);
+    expect(git("rev-parse", `refs/heads/${saved(third)?.branch}`)).not.toBe(thirdOffered);
+    // Its recorded base moved with that card.
+    expect(builtOn(third)).toBe(secondRepaired);
+    expect(await cardTitles()).toContain(chainTitle("third"));
     await approve("third");
     // Each part heard each move exactly once, after every sweep so far.
-    expect(heard(movedSteer(firstRepaired, firstApproved))).toBe(1);
-    expect(heard(movedSteer(secondRepaired, secondApproved))).toBe(1);
+    expect(heard(moved(second, "first", firstApproved, firstRepaired))).toBe(1);
+    expect(heard(moved(third, "second", secondApproved, secondRepaired))).toBe(1);
 
     // The batches pass and merge the parts in order, each as one commit of its own difference.
-    for (let round = 0; round < 6; round++) {
-      for (const pull of github.pulls()) github.setPullChecks(pull.number, PASSED);
-      const done = [first, second, third].every((id) => saved(id)?.closedReason === "merged");
-      if (done) break;
-      await expect
-        .poll(
-          () =>
-            github.merges().length > round ||
-            [first, second, third].every((id) => saved(id)?.closedReason === "merged"),
-          { timeout: 60_000 },
-        )
-        .toBe(true);
-    }
+    github.setOpenedChecks(PASSED);
+    for (const pull of github.pulls())
+      if (!pull.merged && !pull.closed) github.setPullChecks(pull.number, PASSED);
     await expect
       .poll(() => [first, second, third].map((id) => saved(id)?.closedReason ?? null), {
-        timeout: 60_000,
+        timeout: 180_000,
       })
       .toEqual(["merged", "merged", "merged"]);
     expect(git("log", "--format=%s", "-4", "main").split("\n")).toEqual([

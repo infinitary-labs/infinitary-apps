@@ -1,3 +1,4 @@
+import { DELIVERY_WORDS } from "../../../src/core/orchestrator/deliveryWakes";
 import { GUIDANCE_MARK_WORDS } from "../../../src/core/orchestrator/wakes";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import { type Scenario, type ScenarioAnswer, SPAWN_PROMPT_MARKER } from "../mockProvider";
@@ -49,8 +50,34 @@ export const chainTitle = (part: ChainPart) => `feat(${part}): add the ${part} p
 /** A part's merge card id, so a new version revises the card in place. */
 export const chainCardId = (part: ChainPart) => `merge-${part}-part`;
 
+/** A part's report once its card at the replayed version is up, after the scenario's marker. */
+export const FOLLOWED = (part: ChainPart) =>
+  `the ${part} part follows the part under it and its merge card is up.`;
+
 /** The journey's words to the first part's crewmate: the default branch moved. */
 export const BRING_FIRST_UP_TO_DATE = `${FOLLOW_BASE_MARKER}: the default branch moved, bring the first part up to date`;
+
+/** The base-moved steer's words, from their owner: a part's base moved from `from` to `to`. */
+export const movedSteer = (
+  base: { key: string; title: string; branch: string },
+  from: string,
+  to: string,
+) => DELIVERY_WORDS["base-moved"]({ kind: "base-moved", base, from, to }, {});
+
+/** Stands for the versions in the steer's words, so a reader finds the words between them. */
+const TO = "\u0000to\u0000";
+const FROM = "\u0000from\u0000";
+const SAMPLE = movedSteer({ key: "", title: "", branch: "" }, FROM, TO);
+
+/** The steer's words between the newer version and the one the branch builds on. */
+export const MOVED_BETWEEN = SAMPLE.slice(SAMPLE.indexOf(TO) + TO.length, SAMPLE.indexOf(FROM));
+
+/** The newer version and the one the branch builds on, as a base-moved steer names them. */
+function movedVersions(text: string): { to: string; from: string } | undefined {
+  const escaped = MOVED_BETWEEN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const found = new RegExp(`([0-9a-f]{40})${escaped}([0-9a-f]{40})`).exec(text);
+  return found ? { to: found[1] as string, from: found[2] as string } : undefined;
+}
 
 export const followBase: Scenario =
   () =>
@@ -77,11 +104,9 @@ function chainMove(body: string, firstmate: boolean): ScenarioAnswer | undefined
   if (firstmate) return firstmateMove(body, user, results);
   const part = ownPart(body);
   // The base-moved steer names the newer version and the one the branch builds on.
-  const moved = /approved to merge at ([0-9a-f]{40}), a newer version than ([0-9a-f]{40})/.exec(
-    user,
-  );
+  const moved = movedVersions(user);
   const steps = moved
-    ? followSteps(body, user, part, results, moved[1] as string, moved[2] as string)
+    ? followSteps(body, part, results, moved.to, moved.from)
     : user.includes(BRING_FIRST_UP_TO_DATE)
       ? upToDateSteps(body, user, results)
       : buildSteps(body, part, results);
@@ -184,19 +209,18 @@ function upToDateSteps(body: string, user: string, results: string[]): ScriptedC
 /** Replay only the part's own commits onto the newer version the steer names. */
 function followSteps(
   body: string,
-  user: string,
   part: ChainPart,
   results: string[],
   to: string,
   from: string,
 ): ScriptedCall[] {
-  // The replay the steer itself names, so the part follows the host's own words.
-  const replay = /, then (git rebase [^)]+)\)/.exec(user)?.[1] ?? "false";
+  // Replay only the part's own commits, those after `from`, onto `to`, keeping the old version.
+  const replay = `old=$(git rev-parse HEAD) && git reset -q --hard ${to} && git cherry-pick ${from}..$old`;
   if (part === "second") {
     // Under the captain's kept approval: declare the replay as a repair onto that version.
     const [old, replayed] = versions(results[0]);
     return [
-      mergeShellCall(body, `${replay} && git rev-parse ORIG_HEAD HEAD`),
+      mergeShellCall(body, `${replay} && git rev-parse $old HEAD`),
       {
         name: "check_change",
         args: {
@@ -221,7 +245,7 @@ function followSteps(
     mergeShellCall(body, `${replay} && git rev-parse HEAD`),
     // The story keeps its first base, the version the part started on.
     ...offerSteps(body, part, results, `${from} ${versions(results[1]).at(-1) ?? ""}`),
-    report(`the ${part} part follows the part under it and its merge card is up.`),
+    report(FOLLOWED(part)),
   ];
 }
 

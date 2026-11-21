@@ -11,7 +11,7 @@ import {
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
-import { type Forge, ForgeError, ForgeWriteError } from "../forge";
+import { type Forge, ForgeAllowanceSpent, ForgeError, ForgeWriteError } from "../forge";
 import { escapeCardText } from "../orchestrator/cardText";
 import type { TaskService } from "../tasks/taskService";
 import { clearManagedOriginPush, git, preserveWorktreeRemotes, setManagedOriginPush } from "./git";
@@ -236,7 +236,9 @@ export class ProjectContributions {
         } catch (error) {
           if (
             (error instanceof ForgeWriteError && error.outcome === "failed") ||
-            (error instanceof ForgeError && error.beforeSend)
+            (error instanceof ForgeError && error.beforeSend) ||
+            // A spent allowance is the host refusing before it did anything.
+            error instanceof ForgeAllowanceSpent
           ) {
             const retry = this.saveRoute(repo.id, { ...route, creationAttempted: false });
             this.offer(retry);

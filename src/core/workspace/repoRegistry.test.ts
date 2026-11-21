@@ -252,10 +252,10 @@ describe("RepoRegistry.setRunsOn", () => {
 
 /**
  * Batched pull requests (INF-2430 piece 2; review INF-2549): only a project
- * on a host where the app can open and merge a batch pull request (GitHub
- * and GitLab) takes them, so a new address is checked against the delivery
- * the project would have, whether the same patch chooses it or it was
- * chosen before.
+ * on a host where the app can open and merge a batch pull request (GitHub,
+ * GitLab and, since INF-5186 piece 5, Bitbucket) takes them, so a new
+ * address is checked against the delivery the project would have, whether
+ * the same patch chooses it or it was chosen before.
  */
 describe("RepoRegistry delivery through batched pull requests", () => {
   it("refuses an address that would leave a queue-pr project on a host that takes no batch pull request, in the same patch or later", async () => {
@@ -264,8 +264,9 @@ describe("RepoRegistry delivery through batched pull requests", () => {
     const github = "https://github.com/o/meter.git";
     const gitlab = "https://gitlab.com/o/meter.git";
     const bitbucket = "https://bitbucket.org/o/meter.git";
+    const plain = "https://git.example.com/o/meter.git";
     const refusal = BATCH_HOST_REFUSAL;
-    expect(() => registry.configure(repo.id, { delivery: "queue-pr", origin: bitbucket })).toThrow(
+    expect(() => registry.configure(repo.id, { delivery: "queue-pr", origin: plain })).toThrow(
       refusal,
     );
     expect(registry.get(repo.id)?.origin).toBeNull();
@@ -273,20 +274,22 @@ describe("RepoRegistry delivery through batched pull requests", () => {
       delivery: "queue-pr",
       host: { kind: "github" },
     });
-    // GitLab takes batch pull requests too: the project may move there.
+    // GitLab and Bitbucket take batch pull requests too: the project may move there.
     expect(registry.configure(repo.id, { origin: gitlab })).toMatchObject({
       delivery: "queue-pr",
       host: { kind: "gitlab" },
     });
-    expect(() => registry.configure(repo.id, { origin: bitbucket })).toThrow(refusal);
+    expect(registry.configure(repo.id, { origin: bitbucket })).toMatchObject({
+      delivery: "queue-pr",
+      host: { kind: "bitbucket" },
+    });
+    expect(() => registry.configure(repo.id, { origin: plain })).toThrow(refusal);
     expect(() => registry.configure(repo.id, { origin: null })).toThrow(refusal);
-    expect(registry.get(repo.id)).toMatchObject({ origin: gitlab, delivery: "queue-pr" });
-    expect(registry.configure(repo.id, { delivery: "direct-pr", origin: bitbucket })).toMatchObject(
-      {
-        delivery: "direct-pr",
-        host: { kind: "bitbucket" },
-      },
-    );
+    expect(registry.get(repo.id)).toMatchObject({ origin: bitbucket, delivery: "queue-pr" });
+    expect(registry.configure(repo.id, { delivery: "direct-pr", origin: plain })).toMatchObject({
+      delivery: "direct-pr",
+      host: { kind: "git" },
+    });
   });
 });
 

@@ -17,6 +17,8 @@
   "feedBatchHeldRefused": "{project}: {label} está retenido porque la fusión se rechazó donde se aloja el proyecto: {detail}",
   "feedBatchHeldRemoved": "{project}: {label} está retenido porque la fusión se rechazó donde se aloja el proyecto: {place} quitó la solicitud de incorporación de cambios de su cola de fusión sin fusionarla; su página allí explica por qué.",
   "feedBatchHeldRemovedHost": "{project}: {label} está retenido porque la fusión se rechazó donde se aloja el proyecto: el sitio que aloja el proyecto quitó la solicitud de incorporación de cambios de su cola de fusión sin fusionarla; su página allí explica por qué.",
+  "feedBatchHeldUnanswered": "{project}: {label} está retenido porque {place} no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.",
+  "feedBatchHeldUnansweredHost": "{project}: {label} está retenido porque el sitio que aloja el proyecto no confirmó la fusión y la solicitud de incorporación de cambios sigue abierta allí. No se volvió a enviar nada: Volver a intentar envía una fusión nueva.",
   "feedBatchHeldUnnamed": "{project}: {label} está retenido porque fallaron sus comprobaciones. Los cambios aprobados mientras tanto lo esperan.",
   "feedBatchMergedMany": {
     "plural": "count",

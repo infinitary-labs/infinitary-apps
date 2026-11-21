@@ -16,6 +16,8 @@
   "feedBatchHeldRefused": "{project}: {label} ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: {detail}",
   "feedBatchHeldRemoved": "{project}: {label} ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: {place} hat den Pull Request aus seiner Merge-Warteschlange genommen, ohne ihn zusammenzuführen; seine Seite dort sagt, warum.",
   "feedBatchHeldRemovedHost": "{project}: {label} ist angehalten, weil das Zusammenführen dort, wo das Projekt liegt, abgelehnt wurde: Der Host des Projekts hat den Pull Request aus seiner Merge-Warteschlange genommen, ohne ihn zusammenzuführen; seine Seite dort sagt, warum.",
+  "feedBatchHeldUnanswered": "{project}: {label} ist angehalten, weil {place} das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.",
+  "feedBatchHeldUnansweredHost": "{project}: {label} ist angehalten, weil der Host des Projekts das Zusammenführen nicht bestätigt hat und der Pull Request dort noch offen ist. Nichts wurde erneut gesendet: Erneut versuchen sendet ein neues Zusammenführen.",
   "feedBatchHeldUnnamed": "{project}: {label} ist angehalten, weil seine Überprüfungen fehlgeschlagen sind. Inzwischen bestätigte Änderungen warten darauf.",
   "feedBatchMergedMany": {
     "plural": "count",

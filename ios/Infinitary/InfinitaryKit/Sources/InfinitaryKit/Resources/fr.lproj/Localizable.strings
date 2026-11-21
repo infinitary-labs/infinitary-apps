@@ -694,6 +694,8 @@
 "feedBatchHeldRefused" = "%3$@ : %2$@ est retenu, car la fusion a été refusée là où le projet est hébergé : %1$@";
 "feedBatchHeldRemoved" = "%3$@ : %1$@ est retenu, car la fusion a été refusée là où le projet est hébergé : %2$@ a retiré la demande de tirage de sa file de fusion sans la fusionner ; sa page là-bas dit pourquoi.";
 "feedBatchHeldRemovedHost" = "%2$@ : %1$@ est retenu, car la fusion a été refusée là où le projet est hébergé : l’hébergeur du projet a retiré la demande de tirage de sa file de fusion sans la fusionner ; sa page là-bas dit pourquoi.";
+"feedBatchHeldUnanswered" = "%3$@ : %1$@ est retenu, car %2$@ n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.";
+"feedBatchHeldUnansweredHost" = "%2$@ : %1$@ est retenu, car l’hébergeur du projet n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.";
 "feedBatchHeldUnnamed" = "%2$@ : %1$@ est retenu, car ses vérifications ont échoué. Les modifications approuvées entre-temps l’attendent.";
 "feedBatchMergedOne" = "%2$@ : %1$@ a été fusionné.";
 "feedBatchNoStory" = "%2$@ : %1$@ est ouvert sans le récit de %3$@, qui n’a pas pu être ajouté à sa description. Il sera ajouté dès que possible.";

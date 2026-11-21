@@ -17,6 +17,8 @@
   "feedBatchHeldRefused": "{project} : {label} est retenu, car la fusion a été refusée là où le projet est hébergé : {detail}",
   "feedBatchHeldRemoved": "{project} : {label} est retenu, car la fusion a été refusée là où le projet est hébergé : {place} a retiré la demande de tirage de sa file de fusion sans la fusionner ; sa page là-bas dit pourquoi.",
   "feedBatchHeldRemovedHost": "{project} : {label} est retenu, car la fusion a été refusée là où le projet est hébergé : l’hébergeur du projet a retiré la demande de tirage de sa file de fusion sans la fusionner ; sa page là-bas dit pourquoi.",
+  "feedBatchHeldUnanswered": "{project} : {label} est retenu, car {place} n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.",
+  "feedBatchHeldUnansweredHost": "{project} : {label} est retenu, car l’hébergeur du projet n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.",
   "feedBatchHeldUnnamed": "{project} : {label} est retenu, car ses vérifications ont échoué. Les modifications approuvées entre-temps l’attendent.",
   "feedBatchMergedMany": {
     "plural": "count",

@@ -15,6 +15,8 @@
   "feedBatchHeldRefused": "{project}：プロジェクトの保管先でマージが拒否されたため、{label} は保留中です：{detail}",
   "feedBatchHeldRemoved": "{project}：プロジェクトの保管先でマージが拒否されたため、{label} は保留中です：{place} がプルリクエストをマージせずにマージキューから外しました。理由はそこのページにあります。",
   "feedBatchHeldRemovedHost": "{project}：プロジェクトの保管先でマージが拒否されたため、{label} は保留中です：プロジェクトのホストがプルリクエストをマージせずにマージキューから外しました。理由はそこのページにあります。",
+  "feedBatchHeldUnanswered": "{project}：{place} がマージを確認せず、プルリクエストはそこでまだ開いているため、{label} は保留中です。何も再送信していません。再試行すると新しいマージを送ります。",
+  "feedBatchHeldUnansweredHost": "{project}：プロジェクトのホストがマージを確認せず、プルリクエストはそこでまだ開いているため、{label} は保留中です。何も再送信していません。再試行すると新しいマージを送ります。",
   "feedBatchHeldUnnamed": "{project}：チェックが失敗したため、{label} は保留中です。その間に承認された変更は、これを待ちます。",
   "feedBatchMergedMany": {
     "plural": "count",

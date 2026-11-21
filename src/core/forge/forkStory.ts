@@ -7,7 +7,8 @@ import { presentationRegionMarkers } from "./presentation";
 
 /**
  * Where each kind keeps a change's comments, and how one is rewritten.
- * Bitbucket has none yet: a contributor's fork there comes later.
+ * Bitbucket has none yet: reviewing someone else's pull request from a fork
+ * there comes later.
  */
 const STORY_COMMENTS: Partial<
   Record<

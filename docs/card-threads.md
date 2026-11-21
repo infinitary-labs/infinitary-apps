@@ -603,11 +603,12 @@ A queued note's place follows the card's draft to every other window and across 
 The picture a mark was made on is remembered only by the window that marked it (`src/renderer/src/cards/markedPictures.ts`), and is never part of a draft.
 So a note that reached a window through the draft shows no small copy there, and a reply sent from that window carries no marked picture for it: its Pointed at line still gives the mark's number and place.
 A mark made while a note's words are past their limit, which only dictation writes, is not made: that note stays open to trim, as a pick on another part leaves it (`settleAnnotation`).
+The place of the note being written, marked again, is that note with the words written so far.
 
 The place and the page a note marks (`docs/task-browser.md`, "Pointing at a page") are the named contract change `card-note-places`.
 A view whose hello does not list it, the phone included, reads each such note folded into the line's words: its label, mark number, place and comment.
 
 `cardNoteMarks.test.ts` holds a mark's geometry as a pointer or the keys make it, and where each number is drawn.
 `tests/cardNotes.test.ts` holds the place's bounds, the numbering and the author's lines, and `cardCompatibility.test.ts` the fold for a view that reads no place.
-`tests/browser/card-picture-marks.test.tsx` marks a drawing by keys in the real viewer, opens the viewer from the queued note, reads the note of a replaced picture, and reads the pictures a reply carries: one per marked picture, at its own size, with its marks drawn in.
+`tests/browser/card-picture-marks.test.tsx` marks a drawing by keys in the real viewer, marks over the note being written, opens the viewer from the queued note, reads the note of a replaced picture, and reads the pictures a reply carries: one per marked picture, at its own size, with its marks drawn in.
 A journey in `tests/e2e/card-annotations.spec.ts` marks a card's picture by pointer and its drawing by keys, and reads the crewmate's side: each numbered place and one picture per marked picture.

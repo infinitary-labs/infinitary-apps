@@ -195,32 +195,11 @@ test("a chained part follows the newer approved version of the part under it", a
     expect(git("show", "--name-only", "--format=", secondRepaired)).toBe("second.txt");
 
     // told-newer and stale-card-refused: the third part hears once; its card at the old version is refused.
-    // DIAGNOSTIC (to be reverted): sample the main process's stack while waiting.
-    const samples: string[] = [];
-    const sampler = setInterval(() => {
-      void Promise.race([
-        launched.app.evaluate(() => {
-          Error.stackTraceLimit = 200;
-          return `${new Error("sample").stack}`;
-        }),
-        new Promise<string>((resolve) => setTimeout(() => resolve("(no answer in 10s)"), 10_000)),
-      ]).then((stack) => {
-        if (samples.length < 6) samples.push(stack);
-      });
-    }, 15_000);
-    try {
-      await expect
-        .poll(() => heard(moved(second, "second", secondApproved, secondRepaired)), {
-          timeout: 120_000,
-        })
-        .toBe(1);
-    } catch (caught) {
-      for (const [index, stack] of samples.entries())
-        console.log(`[diagnostic] main stack sample ${index}:\n${stack}`);
-      throw caught;
-    } finally {
-      clearInterval(sampler);
-    }
+    await expect
+      .poll(() => heard(moved(second, "second", secondApproved, secondRepaired)), {
+        timeout: 120_000,
+      })
+      .toBe(1);
     await expect
       .poll(() => heard(LEFT_OUT_WORDS.behindBase(secondRepaired)), { timeout: 120_000 })
       .toBe(1);

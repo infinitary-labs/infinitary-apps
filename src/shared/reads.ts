@@ -260,6 +260,28 @@ export const readCatalog = {
     description:
       "The jobs kept running past their task's close: each one's label, computer, account, task and last check.",
   }),
+  // The Batches panel (docs/forge.md, "The Batches panel"): the record moves
+  // on its own event, the checks reading on another, and a project coming,
+  // going or changing how its changes go moves which projects are listed.
+  // A task's key and title come with it; the minute's poll reads a renamed one.
+  "batches.list": entry({
+    channel: "inf:batches:list",
+    args: noArgs,
+    toRequest: () => [],
+    invalidate: {
+      events: (event) =>
+        event.type === "repo_batch" ||
+        event.type === "batch_checks" ||
+        event.type === "repo_setup" ||
+        event.type === "repo_configured" ||
+        event.type === "repo_unregistered",
+      // A finished batch leaves Last day a day after it ended, with no event.
+      pollMs: 60_000,
+    },
+    // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+    description:
+      "Each project on batched pull requests: the approved changes in line, the open batch with its checks, the changes left out and the batches that ended in the last day.",
+  }),
   // A delivery is handled when a Firstmate turn ends, which no feed line says.
   "automation.history": entry({
     channel: "inf:automation:history",

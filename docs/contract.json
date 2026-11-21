@@ -2430,6 +2430,11 @@
                         "head",
                         "checks"
                       ]
+                    },
+                    "holds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -2606,6 +2611,73 @@
                 },
                 "formed": {
                   "type": "number"
+                },
+                "finished": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "formed": {
+                        "type": "number"
+                      },
+                      "ended": {
+                        "type": "number"
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "merged",
+                          "closed"
+                        ]
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "title"
+                          ]
+                        }
+                      },
+                      "holds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "number",
+                      "formed",
+                      "ended",
+                      "outcome",
+                      "members",
+                      "holds"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -3279,6 +3351,11 @@
                           "head",
                           "checks"
                         ]
+                      },
+                      "holds": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -3455,6 +3532,73 @@
                   },
                   "formed": {
                     "type": "number"
+                  },
+                  "finished": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "formed": {
+                          "type": "number"
+                        },
+                        "ended": {
+                          "type": "number"
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "merged",
+                            "closed"
+                          ]
+                        },
+                        "members": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "taskId": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "taskId",
+                              "title"
+                            ]
+                          }
+                        },
+                        "holds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "number",
+                        "formed",
+                        "ended",
+                        "outcome",
+                        "members",
+                        "holds"
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -4458,6 +4602,11 @@
                       "head",
                       "checks"
                     ]
+                  },
+                  "holds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -4634,6 +4783,73 @@
               },
               "formed": {
                 "type": "number"
+              },
+              "finished": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formed": {
+                      "type": "number"
+                    },
+                    "ended": {
+                      "type": "number"
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "merged",
+                        "closed"
+                      ]
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "taskId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "taskId",
+                          "title"
+                        ]
+                      }
+                    },
+                    "holds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "number",
+                    "formed",
+                    "ended",
+                    "outcome",
+                    "members",
+                    "holds"
+                  ]
+                }
               }
             },
             "required": [
@@ -4770,6 +4986,440 @@
         },
         "required": [
           "ok"
+        ]
+      }
+    },
+    "inf:batches:list": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "repoId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "place": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "gap": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "nextBatchAt": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "line": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": "number"
+                      },
+                      "afterKey": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fix": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "key",
+                      "title",
+                      "at",
+                      "afterKey",
+                      "fix"
+                    ]
+                  }
+                },
+                "open": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "number": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "since": {
+                          "type": "number"
+                        },
+                        "members": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "taskId": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "taskId",
+                              "key",
+                              "title"
+                            ]
+                          }
+                        },
+                        "hold": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "checks",
+                                    "merge-way",
+                                    "rules"
+                                  ]
+                                },
+                                "at": {
+                                  "type": "number"
+                                },
+                                "checks": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "detail": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "reason",
+                                "at",
+                                "checks",
+                                "detail"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "queued": {
+                          "type": "boolean"
+                        },
+                        "stale": {
+                          "type": "boolean"
+                        },
+                        "fixKeys": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "checks": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "head": {
+                                  "type": "string"
+                                },
+                                "at": {
+                                  "type": "number"
+                                },
+                                "passed": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "failed": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "running": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "failedNames": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "head",
+                                "at",
+                                "passed",
+                                "failed",
+                                "running",
+                                "failedNames"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "number",
+                        "url",
+                        "since",
+                        "members",
+                        "hold",
+                        "queued",
+                        "stale",
+                        "fixKeys",
+                        "checks"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "leftOut": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "aheadKey": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "key",
+                      "title",
+                      "reason",
+                      "aheadKey"
+                    ]
+                  }
+                },
+                "finished": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "formed": {
+                        "type": "number"
+                      },
+                      "ended": {
+                        "type": "number"
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "merged",
+                          "closed"
+                        ]
+                      },
+                      "holds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "key",
+                            "title"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "number",
+                      "formed",
+                      "ended",
+                      "outcome",
+                      "holds",
+                      "url",
+                      "members"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "repoId",
+                "name",
+                "projectId",
+                "place",
+                "gap",
+                "nextBatchAt",
+                "line",
+                "open",
+                "leftOut",
+                "finished"
+              ]
+            }
+          }
+        },
+        "required": [
+          "repos"
         ]
       }
     },
@@ -9571,6 +10221,11 @@
                       "head",
                       "checks"
                     ]
+                  },
+                  "holds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -9747,6 +10402,73 @@
               },
               "formed": {
                 "type": "number"
+              },
+              "finished": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "number": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "url": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formed": {
+                      "type": "number"
+                    },
+                    "ended": {
+                      "type": "number"
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "merged",
+                        "closed"
+                      ]
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "taskId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "taskId",
+                          "title"
+                        ]
+                      }
+                    },
+                    "holds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "number",
+                    "formed",
+                    "ended",
+                    "outcome",
+                    "members",
+                    "holds"
+                  ]
+                }
               }
             },
             "required": [
@@ -62827,6 +63549,7 @@
                       "forge.changes",
                       "automation.list",
                       "automation.kept",
+                      "batches.list",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -63335,6 +64058,7 @@
                       "forge.changes",
                       "automation.list",
                       "automation.kept",
+                      "batches.list",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -73883,6 +74607,34 @@
                               "properties": {
                                 "type": {
                                   "type": "string",
+                                  "const": "batch_checks"
+                                },
+                                "repoId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "repoId"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "runbooks_changed"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
                                   "const": "repo_runs_on"
                                 },
                                 "actor": {
@@ -78230,6 +78982,34 @@
             "required": [
               "type",
               "repoId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "batch_checks"
+              },
+              "repoId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "repoId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "runbooks_changed"
+              }
+            },
+            "required": [
+              "type"
             ]
           },
           {
@@ -85624,6 +86404,7 @@
                       "forge.changes",
                       "automation.list",
                       "automation.kept",
+                      "batches.list",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -86132,6 +86913,7 @@
                       "forge.changes",
                       "automation.list",
                       "automation.kept",
+                      "batches.list",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",

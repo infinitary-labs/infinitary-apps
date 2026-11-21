@@ -87,6 +87,8 @@ export function createOwnBatches(owners: {
   firstmate: () => Pick<FirstmateAgent, "notifyOp"> | undefined;
   /** A line for the Activity feed, as a fact so it follows the language. */
   note: (fact: Said) => void;
+  /** The open batch's checks reading changed (`Batches.checksReading`). */
+  checksRead?: (repoId: string) => void;
   /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   /** The combine, the push and the read of merged commits; git's own where left out. */
@@ -230,6 +232,7 @@ export function createOwnBatches(owners: {
         "agent",
       ),
     note: owners.note,
+    ...(owners.checksRead ? { checksRead: owners.checksRead } : {}),
     taskNote: (taskId, text) => tasks.note(taskId, text, { news: true }),
     ...owners.git,
   });

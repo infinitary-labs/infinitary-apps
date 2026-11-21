@@ -855,7 +855,9 @@ export class RepoRegistry {
       // A declared fix and the versions it is carried from outlive every batch until it merges.
       !record.fixes?.length &&
       !record.held?.length &&
-      !record.fixBases;
+      !record.fixBases &&
+      // The batches that ended in the last day stay for the Batches panel (docs/forge.md, "The Batches panel").
+      !record.finished?.length;
     const json = empty ? null : JSON.stringify(batchRecordSchema.parse(record));
     if (json === (repo.batch ? JSON.stringify(repo.batch) : null)) return repo;
     this.db.prepare("UPDATE repos SET batch_json = ? WHERE id = ?").run(json, id);

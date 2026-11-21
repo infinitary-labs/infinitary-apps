@@ -6,7 +6,7 @@ import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
 import { computerPresenceOf, deviceRunsWork } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
-import { forgeOf } from "@shared/forge";
+import { forgeOf, forgePlace } from "@shared/forge";
 import {
   type CoreInvokeChannel,
   HOME_CAPABILITIES,
@@ -28,6 +28,7 @@ import { resolveWorkComputer } from "@shared/workComputer";
 import { WORK_SETUP_ONLY } from "@shared/workSetup";
 import { asAView, askedFromAView } from "./askedFromAView";
 import { automationNotesOf, automationRuleOf, automationRulesOf } from "./automationViews";
+import { batchesView } from "./batches/view";
 import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { privateSiteChannels } from "./browser/privateSites";
 import { prepareComposerTurn } from "./composerTurn";
@@ -370,6 +371,18 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:repos:move": (repoIds, target, expected) =>
       moveRepositories(services, repoIds, target, expected),
     "inf:repos:batch-answer": (repoId, answer) => services.batches.answerOrThrow(repoId, answer),
+    "inf:batches:list": () =>
+      batchesView({
+        repos: services.repos.list(),
+        projectOf: (repoId) => services.repos.projectOf(repoId)?.id,
+        place: (repo) => forgePlace(forgeOf(repo.origin)) ?? undefined,
+        reading: (repoId) => services.batches.checksReading(repoId),
+        task: (taskId) => {
+          const task = services.tasks.get(taskId);
+          return task ? { key: task.key, title: task.title } : undefined;
+        },
+        now: Date.now(),
+      }),
     "inf:repos:configure": async (repoId, changes) => {
       if (changes.contributionDestination !== undefined) {
         const { contributionDestination, ...rest } = changes;

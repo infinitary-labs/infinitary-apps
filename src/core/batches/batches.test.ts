@@ -1955,3 +1955,36 @@ describe("a later part whose earlier part closes without merging", () => {
     expect(home.open().members[0]?.head).toBe(rebuilt.head);
   });
 });
+
+// Intent: the captain's approved plan for the Batches panel: its open batch shows its checks
+// as the app last read them, and the panel reads again only when that reading changed.
+describe("the open batch's checks reading", () => {
+  it("is kept from each pass, said only when it changed, and gone once the batch ends", async () => {
+    const home = await batchOfTwo();
+    home.host.report([passed("build"), running("unit-tests"), failed("lint")]);
+    await home.pass();
+    const head = home.open().head;
+    expect(home.batches.checksReading(REPO)).toMatchObject({
+      head,
+      passed: 1,
+      failed: 1,
+      running: 1,
+      failedNames: ["lint"],
+    });
+    const said = home.heard.checksRead.length;
+    expect(said).toBeGreaterThan(0);
+
+    // The same reading again says nothing.
+    await home.pass();
+    expect(home.heard.checksRead).toHaveLength(said);
+
+    // The batch merged with nothing behind it: the reading goes with it, and that is said.
+    home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.host.merges).toHaveLength(1);
+    expect(home.record().open).toBeUndefined();
+    expect(home.batches.checksReading(REPO)).toBeUndefined();
+    expect(home.heard.checksRead.length).toBeGreaterThan(said);
+  });
+});

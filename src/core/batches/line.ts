@@ -7,6 +7,8 @@ import {
   type BatchRecord,
   type BatchSendBack,
   type BatchStatus,
+  FINISHED_BATCH_KEPT_MS,
+  type FinishedBatch,
   type OpenBatch,
 } from "@shared/batches";
 import { BATCH_WAITING_WORDS } from "../forge";
@@ -509,7 +511,10 @@ export function hold(
     };
   }
   const held = [next.head, ...(record.held ?? []).filter((head) => head !== next.head)];
-  return { record: { ...record, held, open: { ...open, hold: next } }, fresh: true };
+  return {
+    record: { ...record, held, open: { ...open, hold: next, holds: (open.holds ?? 0) + 1 } },
+    fresh: true,
+  };
 }
 
 /** End the open batch's hold, and any wait for a fix: its checks run again, or it was combined again. */
@@ -528,11 +533,12 @@ export function merged(
   landed: ReadonlyMap<string, string | undefined>,
   at: number,
 ): BatchRecord {
-  const { open, ...rest } = record;
+  const { open, finished: _finished, ...rest } = record;
   if (!open || open.number === undefined) return record;
   const number = open.number;
   return {
     ...rest,
+    ...finishedWith(record, open, "merged", at),
     receipts: [
       ...record.receipts.filter(
         (entry) => !open.members.some((member) => member.taskId === entry.taskId),
@@ -557,10 +563,49 @@ export function merged(
  * merge where the project lives: the members go back to the front of the
  * line, in their order, and the next batch forms from it.
  */
-export function reopened(record: BatchRecord): BatchRecord {
-  const { open, ...rest } = record;
+export function reopened(record: BatchRecord, at?: number): BatchRecord {
+  const { open, finished, ...rest } = record;
   if (!open) return record;
-  return { ...rest, line: [...open.members.map(asChange), ...record.line] };
+  return {
+    ...rest,
+    ...(at !== undefined ? finishedWith(record, open, "closed", at) : finished ? { finished } : {}),
+    line: [...open.members.map(asChange), ...record.line],
+  };
+}
+
+/**
+ * The record's batches that ended, with `open` ended at `at` as `outcome`,
+ * and none that ended longer ago than `FINISHED_BATCH_KEPT_MS`. A batch
+ * whose pull request was never confirmed ended nothing anyone could see.
+ */
+function finishedWith(
+  record: BatchRecord,
+  open: OpenBatch,
+  outcome: FinishedBatch["outcome"],
+  at: number,
+): Pick<BatchRecord, "finished"> {
+  const kept = finishedWithin(record.finished ?? [], at);
+  const ended: FinishedBatch[] =
+    open.number === undefined
+      ? []
+      : [
+          {
+            number: open.number,
+            ...(open.url !== undefined ? { url: open.url } : {}),
+            formed: open.since,
+            ended: at,
+            outcome,
+            members: open.members.map(({ taskId, title }) => ({ taskId, title })),
+            holds: open.holds ?? 0,
+          },
+        ];
+  const finished = [...kept, ...ended];
+  return finished.length ? { finished } : {};
+}
+
+/** The batches of `finished` that ended within `FINISHED_BATCH_KEPT_MS` of `now`. */
+export function finishedWithin(finished: readonly FinishedBatch[], now: number): FinishedBatch[] {
+  return finished.filter((batch) => now - batch.ended < FINISHED_BATCH_KEPT_MS);
 }
 
 /**

@@ -1559,7 +1559,7 @@
     {
       "from": "integrations",
       "to": "GitHub, GitLab and Bitbucket",
-      "why": "reaches GitHub outside the projects"
+      "why": "reaches GitHub, GitLab and Bitbucket outside the projects"
     },
     {
       "from": "integrations",

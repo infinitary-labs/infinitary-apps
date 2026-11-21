@@ -4990,6 +4990,75 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     };
     return inst;
   }
+  const SQL_VIEWS = [
+    "v_version_v1",
+    "v_tasks_v1",
+    "v_task_events_v1",
+    "v_usage_v1",
+    "v_feed_v1",
+    "v_quota_windows_v1",
+    "v_routing_v1",
+    "v_placements_v1",
+    "v_projects_v1",
+    "v_repos_v1"
+  ];
+  const SQL_VIEW_NAME_PATTERN = /^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$/;
+  const sqlViewNameSchema = string().regex(SQL_VIEW_NAME_PATTERN, {
+    message: "a versioned view name, such as v_usage_v1"
+  });
+  const SQL_LIMITS = {
+    /** UTF-8 bytes of SQL text. */
+    textBytes: 4096,
+    params: 32,
+    /** UTF-8 bytes of one string param. */
+    paramBytes: 4096
+  };
+  function utf8Bytes(text) {
+    return new TextEncoder().encode(text).byteLength;
+  }
+  const sqlParamSchema = union([
+    string().refine((value) => utf8Bytes(value) <= SQL_LIMITS.paramBytes, "a param is at most 4 KB"),
+    number().finite(),
+    _null()
+  ]);
+  const sqlTextSchema = string().min(1).refine((value) => utf8Bytes(value) <= SQL_LIMITS.textBytes, "a query is at most 4 KB");
+  const sqlQuerySchema = strictObject({
+    sql: sqlTextSchema,
+    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional()
+  });
+  strictObject({
+    sql: sqlTextSchema,
+    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional(),
+    views: array(sqlViewNameSchema).max(64)
+  });
+  const SQL_REFUSAL_CODES = [
+    "sql_view_not_declared",
+    "sql_not_readonly",
+    "sql_invalid",
+    "sql_timeout",
+    "sql_too_large"
+  ];
+  const sqlValueSchema = union([string(), number(), _null()]);
+  const sqlRowsSchema = object({
+    columns: array(string()),
+    rows: array(record(string(), sqlValueSchema)),
+    truncated: boolean(),
+    elapsedMs: number()
+  });
+  const sqlRefusalSchema = object({
+    refused: _enum(SQL_REFUSAL_CODES),
+    message: string()
+  });
+  union([sqlRefusalSchema, sqlRowsSchema]);
+  function sameSqlAnswer(a, b) {
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    const left = a;
+    const right = b;
+    if ("refused" in left || "refused" in right) {
+      return left.refused === right.refused && left.message === right.message;
+    }
+    return left.truncated === right.truncated && JSON.stringify(left.columns) === JSON.stringify(right.columns) && JSON.stringify(left.rows) === JSON.stringify(right.rows);
+  }
   const SOURCE_LANGUAGE = "en";
   const PSEUDO_LANGUAGES = ["en-XA", "ar-XB"];
   function isPseudoLanguage(tag) {
@@ -51539,60 +51608,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return `idle`;
   }
   function settingsDevicesIntroHere(input2) {
-    const reads = input2.reads;
+    const reads2 = input2.reads;
     switch (currentLanguage()) {
       case "ar":
-        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هنا. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads}`;
+        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هنا. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads2}`;
       case "de":
-        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads}`;
+        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads2}`;
       case "es":
-        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads}`;
+        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads2}`;
       case "fr":
-        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads}`;
+        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads2}`;
       case "ja":
-        return `一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads}`;
+        return `一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads2}`;
       case "ko":
-        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads}`;
+        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads2}`;
       case "pt-BR":
-        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam aqui. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads}`;
+        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam aqui. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads2}`;
       case "zh-Hans":
-        return `你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads}`;
+        return `你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads2}`;
       case "zh-Hant":
-        return `你的大副在這台電腦上。它的任務和對話都留在這裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads}`;
+        return `你的大副在這台電腦上。它的任務和對話都留在這裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads2}`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads2} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads}`;
+        return `‮Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads2}`;
     }
-    return `Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads}`;
+    return `Your first mate lives on this computer. Its tasks and conversation stay here. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads2}`;
   }
   function settingsDevicesIntroThere(input2) {
-    const reads = input2.reads;
+    const reads2 = input2.reads;
     switch (currentLanguage()) {
       case "ar":
-        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هناك. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads}`;
+        return `يقيم نائب القبطان على هذا الحاسوب. تبقى مهامه ومحادثته هناك. من أي حاسوب تضيفه يمكنك التحكم فيه، وأي حاسوب تضيفه يمكنه تشغيل عمل مشروع. التشغيل باسم مستخدم آخر على هذا الحاسوب يشغّل العمل، ويمكن نقل نائب القبطان إليه. ${reads2}`;
       case "de":
-        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben dort. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads}`;
+        return `Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben dort. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. ${reads2}`;
       case "es":
-        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan allí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads}`;
+        return `Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan allí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. ${reads2}`;
       case "fr":
-        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation y restent. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads}`;
+        return `Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation y restent. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. ${reads2}`;
       case "ja":
-        return `一等航海士はこのコンピューターにいます。タスクと会話はそちらに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads}`;
+        return `一等航海士はこのコンピューターにいます。タスクと会話はそちらに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。${reads2}`;
       case "ko":
-        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 그곳에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads}`;
+        return `일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 그곳에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. ${reads2}`;
       case "pt-BR":
-        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam lá. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads}`;
+        return `Seu imediato mora neste computador. As tarefas e a conversa dele ficam lá. De qualquer computador que você adicionar, você pode controlá-lo, e qualquer computador que você adicionar pode rodar o trabalho de um projeto. Rodar como outro usuário neste computador roda trabalho, e seu imediato pode se mudar para lá. ${reads2}`;
       case "zh-Hans":
-        return `你的大副在这台电脑上。它的任务和对话都留在那里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads}`;
+        return `你的大副在这台电脑上。它的任务和对话都留在那里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。${reads2}`;
       case "zh-Hant":
-        return `你的大副在這台電腦上。它的任務和對話都留在那裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads}`;
+        return `你的大副在這台電腦上。它的任務和對話都留在那裡。你可以從任何加入的電腦控制它，任何加入的電腦也都能執行專案的工作。在這台電腦上以另一位使用者身分執行時會執行工作，你的大副也可以搬到那裡。${reads2}`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ţĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ļîṽéš öñ ţĥîš çöɱþûţéŕ. Îţš ţášķš áñð çöñṽéŕšáţîöñ šţáý ţĥéŕé. Ƒŕöɱ áñý çöɱþûţéŕ ýöû áðð ýöû çáñ çöñţŕöļ îţ, áñð áñý çöɱþûţéŕ ýöû áðð çáñ ŕûñ á þŕöĵéçţ'š ŵöŕķ. Ŕûññîñĝ áš áñöţĥéŕ ûšéŕ öñ ţĥîš çöɱþûţéŕ ŕûñš ŵöŕķ, áñð ýöûŕ ƒîŕšţ ɱáţé çáñ ɱöṽé ţĥéŕé. ${reads2} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads}`;
+        return `‮Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ‬${reads2}`;
     }
-    return `Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads}`;
+    return `Your first mate lives on this computer. Its tasks and conversation stay there. From any computer you add you can control it, and any computer you add can run a project's work. Running as another user on this computer runs work, and your first mate can move there. ${reads2}`;
   }
   function settingsDevicesJoined(input2) {
     const when = input2.when;
@@ -94059,123 +94128,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "welcomeTasks": [],
     "welcomeTitle": []
   };
-  const saidTimeSchema = strictObject({ time: number() });
-  const leafFillSchema = union([string(), number(), saidTimeSchema]);
-  const saidPartSchema = strictObject({
-    m: string(),
-    a: record(string(), leafFillSchema).optional()
-  });
-  const saidSchema = strictObject({
-    m: string(),
-    a: record(string(), union([leafFillSchema, saidPartSchema])).optional()
-  });
-  function said(m, ...args) {
-    const [a] = args;
-    return a && Object.keys(a).length ? { m, a } : { m };
-  }
-  function saidPart(m, ...args) {
-    const [a] = args;
-    return a && Object.keys(a).length ? { m, a } : { m };
-  }
-  function isMessage(name) {
-    return Object.hasOwn(MESSAGES, name);
-  }
-  function fillOf(value) {
-    if (typeof value === "string" || typeof value === "number") return value;
-    if ("time" in value) return formatTime(value.time, { hour: "numeric", minute: "2-digit" });
-    return wordSaid(value);
-  }
-  function wordSaid(fact) {
-    if (!isMessage(fact.m)) return void 0;
-    const given = fact.a ?? {};
-    const input2 = {};
-    for (const blank of MESSAGE_FILLS[fact.m]) {
-      const value = given[blank];
-      if (value === void 0) return void 0;
-      const filled = fillOf(value);
-      if (filled === void 0) return void 0;
-      input2[blank] = filled;
-    }
-    const word = MESSAGES[fact.m];
-    return word(input2);
-  }
-  function englishOf(fact) {
-    return inLanguage(SOURCE_LANGUAGE, () => wordSaid(fact)) ?? "";
-  }
-  function wordedLine(line2) {
-    if (!line2.said) return line2.text;
-    return wordSaid(line2.said) ?? line2.text;
-  }
-  array(strictObject({ text: string(), said: saidSchema }));
-  const SQL_VIEWS = [
-    "v_version_v1",
-    "v_tasks_v1",
-    "v_task_events_v1",
-    "v_usage_v1",
-    "v_feed_v1",
-    "v_quota_windows_v1",
-    "v_routing_v1",
-    "v_placements_v1",
-    "v_projects_v1",
-    "v_repos_v1"
-  ];
-  const SQL_VIEW_NAME_PATTERN = /^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$/;
-  const sqlViewNameSchema = string().regex(SQL_VIEW_NAME_PATTERN, {
-    message: "a versioned view name, such as v_usage_v1"
-  });
-  const SQL_LIMITS = {
-    /** UTF-8 bytes of SQL text. */
-    textBytes: 4096,
-    params: 32,
-    /** UTF-8 bytes of one string param. */
-    paramBytes: 4096
-  };
-  function utf8Bytes(text) {
-    return new TextEncoder().encode(text).byteLength;
-  }
-  const sqlParamSchema = union([
-    string().refine((value) => utf8Bytes(value) <= SQL_LIMITS.paramBytes, "a param is at most 4 KB"),
-    number().finite(),
-    _null()
-  ]);
-  const sqlTextSchema = string().min(1).refine((value) => utf8Bytes(value) <= SQL_LIMITS.textBytes, "a query is at most 4 KB");
-  const sqlQuerySchema = strictObject({
-    sql: sqlTextSchema,
-    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional()
-  });
-  strictObject({
-    sql: sqlTextSchema,
-    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional(),
-    views: array(sqlViewNameSchema).max(64)
-  });
-  const SQL_REFUSAL_CODES = [
-    "sql_view_not_declared",
-    "sql_not_readonly",
-    "sql_invalid",
-    "sql_timeout",
-    "sql_too_large"
-  ];
-  const sqlValueSchema = union([string(), number(), _null()]);
-  const sqlRowsSchema = object({
-    columns: array(string()),
-    rows: array(record(string(), sqlValueSchema)),
-    truncated: boolean(),
-    elapsedMs: number()
-  });
-  const sqlRefusalSchema = object({
-    refused: _enum(SQL_REFUSAL_CODES),
-    message: string()
-  });
-  union([sqlRefusalSchema, sqlRowsSchema]);
-  function sameSqlAnswer(a, b) {
-    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
-    const left = a;
-    const right = b;
-    if ("refused" in left || "refused" in right) {
-      return left.refused === right.refused && left.message === right.message;
-    }
-    return left.truncated === right.truncated && JSON.stringify(left.columns) === JSON.stringify(right.columns) && JSON.stringify(left.rows) === JSON.stringify(right.rows);
-  }
   function searchWords(words2) {
     return words2.split(/[,、，]/).map((word) => word.trim()).filter(Boolean);
   }
@@ -95502,7 +95454,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     data: panelCardDataSchema.optional()
   });
   const panelCardsDeclarationSchema = record(panelNameSchema, panelCardDeclarationSchema).refine(
-    (cards2) => Object.keys(cards2).length <= PANEL_CARD_VIEWS_MAX,
+    (cards) => Object.keys(cards).length <= PANEL_CARD_VIEWS_MAX,
     `at most ${PANEL_CARD_VIEWS_MAX} named cards`
   );
   const panelHeaderSchema = array(panelHeaderButtonSchema).max(PANEL_HEADER_MAX);
@@ -100767,6 +100719,31 @@ ${FRAME_KEYBOARD_SCRIPT}
     "point.focusProject"
   ];
   const PANEL_LINE_PEEK_ACTION = "point.peekLine";
+  const CARD_DATA_HOST = "data";
+  const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
+  function parseCardDataFileName(name) {
+    const match = DATA_FILE_NAME.exec(name);
+    if (!match) return void 0;
+    const [, taskId, hex] = match;
+    if (!taskId || !hex) return void 0;
+    return { taskId, id: `${taskId}-${hex}`, fileName: name };
+  }
+  function cardDataName(src) {
+    const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
+    if (!src.startsWith(prefix)) return void 0;
+    const name = src.slice(prefix.length);
+    return parseCardDataFileName(name) ? name : void 0;
+  }
+  function noteFrameLink(href, what) {
+    console.info(`[infinitary] link ${href}: ${what}`);
+  }
+  function noteDroppedLinkMessage(data, why) {
+    if (typeof data !== "object" || data === null || !("type" in data) || data.type !== "link")
+      return;
+    const href = "href" in data ? data.href : void 0;
+    const shown = typeof href === "string" ? href.slice(0, 2048) : JSON.stringify(href ?? null);
+    noteFrameLink(shown, `not opened, ${why}`);
+  }
   const planItemStateSchema = _enum(["done", "current", "next", "skipped"]);
   const planItemSchema = strictObject({
     /** What the item is, in a few words. */
@@ -101053,6 +101030,54 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     byWindow: literal(true).optional()
   });
+  const saidTimeSchema = strictObject({ time: number() });
+  const leafFillSchema = union([string(), number(), saidTimeSchema]);
+  const saidPartSchema = strictObject({
+    m: string(),
+    a: record(string(), leafFillSchema).optional()
+  });
+  const saidSchema = strictObject({
+    m: string(),
+    a: record(string(), union([leafFillSchema, saidPartSchema])).optional()
+  });
+  function said(m, ...args) {
+    const [a] = args;
+    return a && Object.keys(a).length ? { m, a } : { m };
+  }
+  function saidPart(m, ...args) {
+    const [a] = args;
+    return a && Object.keys(a).length ? { m, a } : { m };
+  }
+  function isMessage(name) {
+    return Object.hasOwn(MESSAGES, name);
+  }
+  function fillOf(value) {
+    if (typeof value === "string" || typeof value === "number") return value;
+    if ("time" in value) return formatTime(value.time, { hour: "numeric", minute: "2-digit" });
+    return wordSaid(value);
+  }
+  function wordSaid(fact) {
+    if (!isMessage(fact.m)) return void 0;
+    const given = fact.a ?? {};
+    const input2 = {};
+    for (const blank of MESSAGE_FILLS[fact.m]) {
+      const value = given[blank];
+      if (value === void 0) return void 0;
+      const filled = fillOf(value);
+      if (filled === void 0) return void 0;
+      input2[blank] = filled;
+    }
+    const word = MESSAGES[fact.m];
+    return word(input2);
+  }
+  function englishOf(fact) {
+    return inLanguage(SOURCE_LANGUAGE, () => wordSaid(fact)) ?? "";
+  }
+  function wordedLine(line2) {
+    if (!line2.said) return line2.text;
+    return wordSaid(line2.said) ?? line2.text;
+  }
+  array(strictObject({ text: string(), said: saidSchema }));
   const HERE = {
     this: "this computer"
   };
@@ -106820,13 +106845,13 @@ ${FRAME_KEYBOARD_SCRIPT}
   function sortBoardLinks(links) {
     return [...links].sort((a, b) => linkKey(a).localeCompare(linkKey(b)));
   }
-  function applyTaskBoardDelta(board2, delta) {
-    if (delta.seq <= board2.seq) return board2;
-    if (delta.baseSeq !== board2.seq) return null;
-    const rows = new Map(board2.tasks.map((task) => [task.id, task]));
+  function applyTaskBoardDelta(board, delta) {
+    if (delta.seq <= board.seq) return board;
+    if (delta.baseSeq !== board.seq) return null;
+    const rows = new Map(board.tasks.map((task) => [task.id, task]));
     for (const id2 of delta.removed) rows.delete(id2);
     for (const task of delta.upserts) rows.set(task.id, task);
-    const links = new Map(board2.links.map((link) => [linkKey(link), link]));
+    const links = new Map(board.links.map((link) => [linkKey(link), link]));
     for (const link of delta.links.removed) links.delete(linkKey(link));
     for (const link of delta.links.added) links.set(linkKey(link), link);
     const next = {
@@ -106836,10 +106861,10 @@ ${FRAME_KEYBOARD_SCRIPT}
       tasks: sortBoardTasks([...rows.values()]),
       links: sortBoardLinks([...links.values()])
     };
-    if (board2.closedLeftOut) {
+    if (board.closedLeftOut) {
       const gone = /* @__PURE__ */ new Set([...delta.removed, ...delta.upserts.map((task) => task.id)]);
       const done = {};
-      for (const [projectId, ids] of Object.entries(board2.closedLeftOut.done)) {
+      for (const [projectId, ids] of Object.entries(board.closedLeftOut.done)) {
         const left = ids.filter((id2) => !gone.has(id2));
         if (left.length > 0) done[projectId] = left;
       }
@@ -107801,285 +107826,6 @@ ${FRAME_KEYBOARD_SCRIPT}
       description: "A read-only SQL query over the published views of the app's record."
     })
   };
-  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
-  const words = {
-    backlog: "Backlog",
-    queued: "Queued",
-    starting: "Starting",
-    working: "Working",
-    idle: "Idle",
-    interrupted: "Interrupted",
-    waiting: "Waiting on you",
-    done: "Done",
-    dropped: "Dropped"
-  };
-  function taskStatusOf(task, now = Date.now()) {
-    const reading = (mark, reason2) => ({
-      mark,
-      word: words[mark],
-      reason: reason2 === words[mark] ? "" : reason2
-    });
-    const connecting = task.place?.reach === "connecting";
-    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
-    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
-    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
-    const awayReading = (mark, reason2) => ({
-      ...reading(mark, reason2 ?? awayWords),
-      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
-    });
-    if (task.status === "done") {
-      return reading(
-        "done",
-        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
-      );
-    }
-    if (task.status === "dropped") {
-      return reading(
-        "dropped",
-        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
-      );
-    }
-    if (task.requiredAction)
-      return reading(
-        "waiting",
-        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
-      );
-    if (task.answerNoteId)
-      return {
-        ...reading(
-          "waiting",
-          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
-        ),
-        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
-      };
-    if (task.waitingCardId) {
-      return reading(
-        "waiting",
-        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
-      );
-    }
-    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
-      return reading("starting", "");
-    }
-    if (task.status === "active" && task.backlogSince !== void 0) {
-      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
-    }
-    if (task.startNotice && (task.status === "open" || task.status === "active")) {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      return reading(mark, "Could not start");
-    }
-    if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      if (task.queueWait) return reading(mark, task.queueWait.line);
-      const parts = task.children.total;
-      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
-      if (away) return awayReading(mark, holds);
-      return reading(
-        mark,
-        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
-      );
-    }
-    const waits = task.blockedBy ?? [];
-    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
-    const reason = dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
-    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
-      if (away) return awayReading("working", null);
-      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
-      if (wait === "checks" && task.workPosture?.batch)
-        return { ...reading("working", reason), wait: "batch" };
-      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
-    }
-    if (task.activity === "interrupted") return reading("interrupted", reason);
-    if (away) return awayReading("idle", null);
-    if (!dependency) return reading("idle", reason);
-    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
-    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
-  }
-  function dependencyWaitWords(blockedBy) {
-    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
-  }
-  function waitRecordedTime(at, now) {
-    const date2 = new Date(at);
-    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
-    if (date2.toDateString() === new Date(now).toDateString()) return time2;
-    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
-  }
-  function recordBarOf(task) {
-    if (task.status === "done") return null;
-    if (task.status === "dropped") {
-      return task.kind === "work" && !task.replacedBy && task.children.total === 0 ? { end: null, next: "start-again", blocked: false } : null;
-    }
-    if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
-    const work = task.kind === "work";
-    const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
-    const { mark } = taskStatusOf(task);
-    const parent = task.status === "open" && task.children.total > 0;
-    const backlog = task.status === "active" && task.backlogSince !== void 0;
-    const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
-    const startable = backlog || task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked);
-    const next = mark === "waiting" ? task.waitingCardId || task.requiredAction && task.requiredAction.state !== "blocked" ? "show-card" : null : mark === "starting" ? "starting" : !work ? null : startable ? task.startNotice ? "try-again" : "start" : mark === "interrupted" ? "continue" : null;
-    return {
-      end: mark === "starting" ? null : end,
-      next,
-      blocked: next === "starting" || (next === "start" || next === "try-again") && blocked
-    };
-  }
-  const OK = Object.freeze({ ok: true });
-  const no = (text) => ({ ok: false, text });
-  function keyList(keys) {
-    if (keys.length === 0) return "What it waits on";
-    if (keys.length === 1) return keys[0];
-    return `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
-  }
-  function taskMovesOf(task) {
-    if (task.requiredAction && task.status === "open") {
-      const captainOwns = no("This action waits for you, not a crewmate.");
-      return {
-        "answer-done": no("This is not an answer task."),
-        "dismiss-question": no("This is not a question."),
-        "start-task": captainOwns,
-        "start-again": captainOwns,
-        "stop-task": captainOwns,
-        "continue-task": captainOwns,
-        "drop-task": no("Ask your first mate to cancel this action with a reason."),
-        "queue-task": captainOwns,
-        "unqueue-task": captainOwns,
-        "show-card": task.requiredAction.state === "blocked" ? no("Its prerequisites have not finished.") : OK
-      };
-    }
-    if (task.kind === "decision" && task.status === "open" && task.waitingCardId) {
-      const unavailable = no("This question waits for your choice.");
-      return Object.fromEntries(
-        TASK_LIFECYCLE_OPS.map((op) => [
-          op,
-          op === "dismiss-question" || op === "show-card" ? OK : unavailable
-        ])
-      );
-    }
-    if (task.kind !== "work" || task.status !== "open" && task.status !== "active" && task.status !== "dropped") {
-      return void 0;
-    }
-    const bar = recordBarOf(task);
-    const unstarted = isUnstartedWork(task);
-    const parts = task.children.total > 0;
-    const started = no("It has already started.");
-    const starting = bar?.next === "starting";
-    const heldStart = no("It is starting.");
-    const start = starting ? heldStart : bar?.next === "start" || bar?.next === "try-again" ? bar.blocked ? no(`${keyList(task.blockedBy)} must finish first.`) : OK : task.status === "active" ? started : parts ? no("Its parts are the work. Start a part instead.") : bar?.next === "show-card" || task.waitingCardId ? no("It waits for your answer on its card.") : task.startPolicy === "when-ready" ? no("It is queued. It starts by itself once nothing holds it.") : no("It cannot start from here.");
-    const stop = bar?.end === "stop-task" ? OK : unstarted ? no("It has not started. Drop task drops it.") : no("It cannot be stopped from here.");
-    const resume = bar?.next === "continue" ? OK : no("Only interrupted work continues.");
-    const drop = bar?.end === "drop-task" ? OK : task.status === "active" ? no("It has started. Stopping it drops it and keeps a copy of its work.") : no("It cannot be dropped from here.");
-    const underway = task.status === "active";
-    const inBacklog = underway && task.backlogSince !== void 0;
-    const queueGuard = starting ? heldStart : underway ? null : !unstarted ? started : parts ? no("Its parts do the work. Move a part instead.") : null;
-    const queue = queueGuard ?? (underway ? no("It has already started. Start picks it up from the backlog.") : task.startPolicy === "when-ready" ? no("It is already queued.") : OK);
-    const waitsForWord = underway ? inBacklog : task.startPolicy === "on-request";
-    const unqueue = queueGuard ?? (waitsForWord ? no("It already waits for your word.") : OK);
-    return {
-      "answer-done": task.answerNoteId ? OK : no("It has no answer ready."),
-      "dismiss-question": no("This is not a question."),
-      "start-task": start,
-      "start-again": bar?.next === "start-again" ? OK : no("Only dropped work without a replacement or parts starts again."),
-      "stop-task": stop,
-      "continue-task": resume,
-      "drop-task": drop,
-      "queue-task": queue,
-      "unqueue-task": unqueue,
-      "show-card": task.waitingCardId ? OK : no("It has no card to show.")
-    };
-  }
-  function cardMerges(card) {
-    return card?.actions.some((action) => mergeEffectOf(action) !== void 0) ?? false;
-  }
-  function presentTask(task, cards2) {
-    const associated = (card) => card.taskId === task.id || card.id === task.waitingCardId;
-    const authorWorking = task.status === "active" && (task.workPosture?.state === "active" || !task.workPosture && task.activity === "running" || cards2.some((card) => associated(card) && card.awaiting === "answer"));
-    const minimized = authorWorking ? void 0 : cards2.find((card) => card.minimized && associated(card));
-    if (task.minimizedCardId !== minimized?.id) {
-      const { minimizedCardId: _old, ...raw } = task;
-      task = { ...raw, ...minimized ? { minimizedCardId: minimized.id } : {} };
-    }
-    const waitingCard = task.waitingCardId && (task.status === "open" || task.status === "active") ? cards2.find(
-      (card) => isReadyDecision(card) && (card.taskId === task.id || card.id === task.waitingCardId)
-    ) : void 0;
-    const waitingCardId = waitingCard?.id ?? null;
-    if (waitingCardId === task.waitingCardId) return task;
-    const { waitingCardMerges: _merges, moves: _moves, ...rest } = task;
-    const presented = { ...rest, waitingCardId };
-    const moves = taskMovesOf(presented);
-    return {
-      ...presented,
-      ...cardMerges(waitingCard) ? { waitingCardMerges: true } : {},
-      ...moves ? { moves } : {}
-    };
-  }
-  function presentProjects(projects, tasks) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const task of tasks) {
-      if (task.answerNoteId || task.waitingCardId || task.minimizedCardId || task.requiredAction && (task.status === "open" || task.status === "active")) {
-        counts.set(task.projectId, (counts.get(task.projectId) ?? 0) + 1);
-      }
-    }
-    return projects.map((project) => ({
-      ...project,
-      counts: { ...project.counts, waitingOnYou: counts.get(project.id) ?? 0 }
-    }));
-  }
-  function presentBoard(board2, cards2) {
-    const tasks = board2.tasks.map((task) => presentTask(task, cards2));
-    for (const card of cards2) {
-      if (!card.minimized || tasks.some((task) => task.minimizedCardId === card.id || task.id === card.taskId))
-        continue;
-      if (card.taskId) continue;
-      tasks.push({
-        id: minimizedRowId(card.id),
-        key: "",
-        projectId: "",
-        parentId: null,
-        kind: "operation",
-        title: card.title,
-        goal: null,
-        priority: card.priority,
-        status: "open",
-        activity: null,
-        closedReason: null,
-        startPolicy: "on-request",
-        flags: { blocked: false, held: false, needsYou: false, ready: false },
-        blockedBy: [],
-        blocks: [],
-        children: { total: 0, closed: 0 },
-        assignee: null,
-        model: null,
-        tier: null,
-        repo: null,
-        delivery: null,
-        outcomeSummary: null,
-        waitingCardId: null,
-        minimizedCardId: card.id,
-        createdAt: card.createdAt,
-        updatedAt: card.createdAt,
-        startedAt: null,
-        closedAt: null
-      });
-    }
-    return { ...board2, tasks, projects: presentProjects(board2.projects, tasks) };
-  }
-  const minimizedRowId = (cardId) => `minimized-card:${cardId}`;
-  const CARD_DATA_HOST = "data";
-  const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
-  function parseCardDataFileName(name) {
-    const match = DATA_FILE_NAME.exec(name);
-    if (!match) return void 0;
-    const [, taskId, hex] = match;
-    if (!taskId || !hex) return void 0;
-    return { taskId, id: `${taskId}-${hex}`, fileName: name };
-  }
-  function cardDataName(src) {
-    const prefix = `${APP_FRAME_SCHEME}://${CARD_DATA_HOST}/`;
-    if (!src.startsWith(prefix)) return void 0;
-    const name = src.slice(prefix.length);
-    return parseCardDataFileName(name) ? name : void 0;
-  }
   const COALESCE_MS = 40;
   class ReadSubscriptionError extends Error {
     constructor(code, message) {
@@ -108130,12 +107876,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     }
     /** One read's run, held value and invalidations, handed to every reader joined to it. */
     open(readName, entry2, args, grant, closed) {
-      const listeners2 = /* @__PURE__ */ new Set();
+      const listeners = /* @__PURE__ */ new Set();
       const wholeReaders = /* @__PURE__ */ new Set();
       const { narrows } = entry2;
       const readArgs = () => narrows && wholeReaders.size === 0 ? narrows.args : args;
       const each = (send) => {
-        for (const listener of [...listeners2]) {
+        for (const listener of [...listeners]) {
           try {
             send(listener);
           } catch (caught) {
@@ -108263,8 +108009,8 @@ ${FRAME_KEYBOARD_SCRIPT}
             onValue: (value) => subscriber.onValue(value),
             onError: (error) => subscriber.onError(error)
           };
-          const first = listeners2.size === 0;
-          listeners2.add(listener);
+          const first = listeners.size === 0;
+          listeners.add(listener);
           if (narrows && !asksLess) {
             wholeReaders.add(listener);
             if (!first && inFlight && inFlightLesser) dirty = true;
@@ -108275,7 +108021,7 @@ ${FRAME_KEYBOARD_SCRIPT}
           } else if (hasValue) {
             const joined = epoch;
             queueMicrotask(() => {
-              if (disposed || !listeners2.has(listener) || epoch !== joined) return;
+              if (disposed || !listeners.has(listener) || epoch !== joined) return;
               listener.onValue(this.api.present?.(readName, current) ?? current);
             });
           } else if (!inFlight) {
@@ -108283,21 +108029,131 @@ ${FRAME_KEYBOARD_SCRIPT}
           }
           return () => {
             wholeReaders.delete(listener);
-            if (listeners2.delete(listener) && listeners2.size === 0) stop();
+            if (listeners.delete(listener) && listeners.size === 0) stop();
           };
         }
       };
     }
   }
-  function noteFrameLink(href, what) {
-    console.info(`[infinitary] link ${href}: ${what}`);
+  class FrameSubscriptions {
+    constructor(executor, post, reuseReads, delivered = () => {
+    }) {
+      this.executor = executor;
+      this.post = post;
+      this.reuseReads = reuseReads;
+      this.delivered = delivered;
+    }
+    executor;
+    post;
+    reuseReads;
+    delivered;
+    live = /* @__PURE__ */ new Map();
+    /** The read each live subscription names, so a declaration that drops it ends it. */
+    named = /* @__PURE__ */ new Map();
+    /** Subscriptions the host ended because their read is no longer declared. */
+    revoked = /* @__PURE__ */ new Set();
+    get size() {
+      return this.live.size;
+    }
+    /** Starts one subscription, or says why not. */
+    subscribe(declaration, request) {
+      if (!declaration.reads.includes(request.read)) {
+        return {
+          code: "read_not_declared",
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
+          message: `plugin "${declaration.pluginId}" does not declare the read "${request.read}"`
+        };
+      }
+      if (this.live.has(request.sub)) {
+        return { code: "bad_request", message: `subscription ${request.sub} already exists` };
+      }
+      if (this.live.size >= FRAME_MAX_SUBSCRIPTIONS) {
+        return {
+          code: "too_many_subscriptions",
+          // i18n-exempt: not shown (a console line, or an error for the panel's code)
+          message: `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`
+        };
+      }
+      const sub = request.sub;
+      let previous;
+      let stop;
+      try {
+        stop = this.executor.subscribe(
+          request.read,
+          request.args,
+          {
+            onValue: (value) => {
+              if (!this.live.has(sub)) return;
+              const transfer = this.reuseReads() ? transferReadValue(previous, value) : { value };
+              previous = value;
+              this.post({ fm: FRAME_BRIDGE_VERSION, type: "data", sub, ...transfer });
+              this.delivered();
+            },
+            onError: (error) => {
+              if (this.live.has(sub))
+                this.post({ fm: FRAME_BRIDGE_VERSION, type: "data", sub, error });
+            }
+          },
+          declaration.grant
+        );
+      } catch (caught) {
+        if (caught instanceof ReadSubscriptionError)
+          return { code: caught.code, message: caught.message };
+        return {
+          code: "read_failed",
+          message: caught instanceof Error ? caught.message : String(caught)
+        };
+      }
+      this.live.set(sub, stop);
+      this.named.set(sub, request.read);
+      return void 0;
+    }
+    /** Ends one subscription the frame asked to stop, or says why not. */
+    unsubscribe(sub) {
+      if (this.revoked.delete(sub)) return void 0;
+      const stop = this.live.get(sub);
+      if (!stop) return { code: "subscription_unknown", message: `no subscription ${sub}` };
+      this.live.delete(sub);
+      this.named.delete(sub);
+      stop();
+      return void 0;
+    }
+    /**
+     * The frame's declaration changed from `before` to `after`: each
+     * subscription whose read it no longer names, or a `sql` read whose views
+     * changed, ends at once, and the frame's `onError` hears why while it
+     * keeps what it drew.
+     */
+    redeclared(before, after) {
+      const viewsMoved = viewsOf(after.grant) !== viewsOf(before.grant);
+      for (const [sub, read] of this.named) {
+        if (after.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
+        this.live.get(sub)?.();
+        this.live.delete(sub);
+        this.named.delete(sub);
+        this.revoked.add(sub);
+        this.post({
+          fm: FRAME_BRIDGE_VERSION,
+          type: "data",
+          sub,
+          error: {
+            code: "read_not_declared",
+            // i18n-exempt: not shown (a console line, or an error for the panel's code)
+            message: `"${read}" is no longer a read this frame may use`
+          }
+        });
+      }
+    }
+    /** Ends every subscription: the frame's document was replaced or stopped. */
+    drop() {
+      for (const stop of this.live.values()) stop();
+      this.live.clear();
+      this.named.clear();
+      this.revoked.clear();
+    }
   }
-  function noteDroppedLinkMessage(data, why) {
-    if (typeof data !== "object" || data === null || !("type" in data) || data.type !== "link")
-      return;
-    const href = "href" in data ? data.href : void 0;
-    const shown = typeof href === "string" ? href.slice(0, 2048) : JSON.stringify(href ?? null);
-    noteFrameLink(shown, `not opened, ${why}`);
+  function viewsOf(grant) {
+    return (grant?.sql ?? []).join(",");
   }
   const FRAME_COLLECT_TIMEOUT_MS = 1e3;
   const FRAME_WATCHDOG_INTERVAL_MS = 1e3;
@@ -108329,6 +108185,12 @@ ${FRAME_KEYBOARD_SCRIPT}
       this.port = port;
       this.spec = spec;
       this.theme = theme;
+      this.subscriptions = new FrameSubscriptions(
+        deps.executor,
+        (message) => this.port.post(message),
+        () => this.reuseReads,
+        () => this.hostUpdated()
+      );
     }
     deps;
     port;
@@ -108342,11 +108204,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     births = 0;
     disposed = false;
     inFlight = 0;
-    subscriptions = /* @__PURE__ */ new Map();
-    /** The read each live subscription names, so a declaration that drops it ends it. */
-    subscribedReads = /* @__PURE__ */ new Map();
-    /** Subscriptions the host ended because their read is no longer declared. */
-    revoked = /* @__PURE__ */ new Set();
+    subscriptions;
     watchdog = null;
     pingSeq = 0;
     /**
@@ -108390,26 +108248,9 @@ ${FRAME_KEYBOARD_SCRIPT}
      * closed): the frame's `onError` hears why, and it keeps what it drew.
      */
     update(spec) {
-      const views = viewsOf(this.spec.grant);
+      const before = this.spec;
       this.spec = { ...this.spec, ...spec };
-      const viewsMoved = viewsOf(this.spec.grant) !== views;
-      for (const [sub, read] of this.subscribedReads) {
-        if (this.spec.reads.includes(read) && !(read === "sql" && viewsMoved)) continue;
-        this.subscriptions.get(sub)?.();
-        this.subscriptions.delete(sub);
-        this.subscribedReads.delete(sub);
-        this.revoked.add(sub);
-        this.port.post({
-          fm: V,
-          type: "data",
-          sub,
-          error: {
-            code: "read_not_declared",
-            // i18n-exempt: not shown (a console line, or an error for the panel's code)
-            message: `"${read}" is no longer a read this frame may use`
-          }
-        });
-      }
+      this.subscriptions.redeclared(before, this.spec);
     }
     setTheme(theme) {
       this.theme = theme;
@@ -109080,24 +108921,11 @@ ${FRAME_KEYBOARD_SCRIPT}
     handle(asker, request) {
       switch (request.verb) {
         case "subscribe":
-          this.subscribe(asker, request);
+          this.answerRead(asker, this.subscriptions.subscribe(this.spec, request));
           return;
-        case "unsubscribe": {
-          if (this.revoked.delete(request.sub)) {
-            this.respond(asker);
-            return;
-          }
-          const stop = this.subscriptions.get(request.sub);
-          if (!stop) {
-            this.refuse(asker, "subscription_unknown", `no subscription ${request.sub}`);
-            return;
-          }
-          this.subscriptions.delete(request.sub);
-          this.subscribedReads.delete(request.sub);
-          stop();
-          this.respond(asker);
+        case "unsubscribe":
+          this.answerRead(asker, this.subscriptions.unsubscribe(request.sub));
           return;
-        }
         case "action":
           void this.action(asker, request);
           return;
@@ -109163,65 +108991,10 @@ ${FRAME_KEYBOARD_SCRIPT}
         this.inFlight -= 1;
       }
     }
-    subscribe(asker, request) {
-      if (!this.spec.reads.includes(request.read)) {
-        this.refuse(
-          asker,
-          "read_not_declared",
-          // i18n-exempt: not shown (a console line, or an error for the panel's code)
-          `plugin "${this.spec.pluginId}" does not declare the read "${request.read}"`
-        );
-        return;
-      }
-      if (this.subscriptions.has(request.sub)) {
-        this.refuse(asker, "bad_request", `subscription ${request.sub} already exists`);
-        return;
-      }
-      if (this.subscriptions.size >= FRAME_MAX_SUBSCRIPTIONS) {
-        this.refuse(
-          asker,
-          "too_many_subscriptions",
-          // i18n-exempt: not shown (a console line, or an error for the panel's code)
-          `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`
-        );
-        return;
-      }
-      const sub = request.sub;
-      let previous;
-      let stop;
-      try {
-        stop = this.deps.executor.subscribe(
-          request.read,
-          request.args,
-          {
-            onValue: (value) => {
-              if (!this.subscriptions.has(sub)) return;
-              const transfer = this.reuseReads ? transferReadValue(previous, value) : { value };
-              previous = value;
-              this.port.post({ fm: V, type: "data", sub, ...transfer });
-              this.hostUpdated();
-            },
-            onError: (error) => {
-              if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, error });
-            }
-          },
-          this.spec.grant
-        );
-      } catch (caught) {
-        if (caught instanceof ReadSubscriptionError) {
-          this.refuse(asker, caught.code, caught.message);
-        } else {
-          this.refuse(
-            asker,
-            "read_failed",
-            caught instanceof Error ? caught.message : String(caught)
-          );
-        }
-        return;
-      }
-      this.subscriptions.set(sub, stop);
-      this.subscribedReads.set(sub, request.read);
-      this.respond(asker);
+    /** A read's subscribe or unsubscribe answered: done, or refused with why. */
+    answerRead(asker, refusal) {
+      if (refusal) this.refuse(asker, refusal.code, refusal.message);
+      else this.respond(asker);
     }
     async action(asker, request) {
       if (!this.spec.actions.includes(request.action)) {
@@ -109290,14 +109063,8 @@ ${FRAME_KEYBOARD_SCRIPT}
       this.port.post({ fm: V, type: "response", ...to, ok: false, error: { code, message } });
     }
     dropSubscriptions() {
-      for (const stop of this.subscriptions.values()) stop();
-      this.subscriptions.clear();
-      this.subscribedReads.clear();
-      this.revoked.clear();
+      this.subscriptions.drop();
     }
-  }
-  function viewsOf(grant) {
-    return (grant?.sql ?? []).join(",");
   }
   function plainAnswer(answer) {
     if (answer === void 0) return void 0;
@@ -109580,6 +109347,361 @@ a:hover {
     return `${cachedPanel}
 ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
   }
+  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
+  const words = {
+    backlog: "Backlog",
+    queued: "Queued",
+    starting: "Starting",
+    working: "Working",
+    idle: "Idle",
+    interrupted: "Interrupted",
+    waiting: "Waiting on you",
+    done: "Done",
+    dropped: "Dropped"
+  };
+  function taskStatusOf(task, now = Date.now()) {
+    const reading = (mark, reason2) => ({
+      mark,
+      word: words[mark],
+      reason: reason2 === words[mark] ? "" : reason2
+    });
+    const connecting = task.place?.reach === "connecting";
+    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
+    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
+    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+    const awayReading = (mark, reason2) => ({
+      ...reading(mark, reason2 ?? awayWords),
+      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
+    });
+    if (task.status === "done") {
+      return reading(
+        "done",
+        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
+      );
+    }
+    if (task.status === "dropped") {
+      return reading(
+        "dropped",
+        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
+      );
+    }
+    if (task.requiredAction)
+      return reading(
+        "waiting",
+        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
+      );
+    if (task.answerNoteId)
+      return {
+        ...reading(
+          "waiting",
+          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
+        ),
+        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
+      };
+    if (task.waitingCardId) {
+      return reading(
+        "waiting",
+        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
+      );
+    }
+    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
+      return reading("starting", "");
+    }
+    if (task.status === "active" && task.backlogSince !== void 0) {
+      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
+    }
+    if (task.startNotice && (task.status === "open" || task.status === "active")) {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      return reading(mark, "Could not start");
+    }
+    if (task.status === "open") {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      if (task.queueWait) return reading(mark, task.queueWait.line);
+      const parts = task.children.total;
+      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
+      if (away) return awayReading(mark, holds);
+      return reading(
+        mark,
+        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
+      );
+    }
+    const waits = task.blockedBy ?? [];
+    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
+    const reason = dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
+    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
+      if (away) return awayReading("working", null);
+      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
+      if (wait === "checks" && task.workPosture?.batch)
+        return { ...reading("working", reason), wait: "batch" };
+      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
+    }
+    if (task.activity === "interrupted") return reading("interrupted", reason);
+    if (away) return awayReading("idle", null);
+    if (!dependency) return reading("idle", reason);
+    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
+    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
+  }
+  function dependencyWaitWords(blockedBy) {
+    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
+  }
+  function waitRecordedTime(at, now) {
+    const date2 = new Date(at);
+    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
+    if (date2.toDateString() === new Date(now).toDateString()) return time2;
+    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
+  }
+  function recordBarOf(task) {
+    if (task.status === "done") return null;
+    if (task.status === "dropped") {
+      return task.kind === "work" && !task.replacedBy && task.children.total === 0 ? { end: null, next: "start-again", blocked: false } : null;
+    }
+    if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
+    const work = task.kind === "work";
+    const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
+    const { mark } = taskStatusOf(task);
+    const parent = task.status === "open" && task.children.total > 0;
+    const backlog = task.status === "active" && task.backlogSince !== void 0;
+    const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
+    const startable = backlog || task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked);
+    const next = mark === "waiting" ? task.waitingCardId || task.requiredAction && task.requiredAction.state !== "blocked" ? "show-card" : null : mark === "starting" ? "starting" : !work ? null : startable ? task.startNotice ? "try-again" : "start" : mark === "interrupted" ? "continue" : null;
+    return {
+      end: mark === "starting" ? null : end,
+      next,
+      blocked: next === "starting" || (next === "start" || next === "try-again") && blocked
+    };
+  }
+  const OK = Object.freeze({ ok: true });
+  const no = (text) => ({ ok: false, text });
+  function keyList(keys) {
+    if (keys.length === 0) return "What it waits on";
+    if (keys.length === 1) return keys[0];
+    return `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
+  }
+  function taskMovesOf(task) {
+    if (task.requiredAction && task.status === "open") {
+      const captainOwns = no("This action waits for you, not a crewmate.");
+      return {
+        "answer-done": no("This is not an answer task."),
+        "dismiss-question": no("This is not a question."),
+        "start-task": captainOwns,
+        "start-again": captainOwns,
+        "stop-task": captainOwns,
+        "continue-task": captainOwns,
+        "drop-task": no("Ask your first mate to cancel this action with a reason."),
+        "queue-task": captainOwns,
+        "unqueue-task": captainOwns,
+        "show-card": task.requiredAction.state === "blocked" ? no("Its prerequisites have not finished.") : OK
+      };
+    }
+    if (task.kind === "decision" && task.status === "open" && task.waitingCardId) {
+      const unavailable = no("This question waits for your choice.");
+      return Object.fromEntries(
+        TASK_LIFECYCLE_OPS.map((op) => [
+          op,
+          op === "dismiss-question" || op === "show-card" ? OK : unavailable
+        ])
+      );
+    }
+    if (task.kind !== "work" || task.status !== "open" && task.status !== "active" && task.status !== "dropped") {
+      return void 0;
+    }
+    const bar = recordBarOf(task);
+    const unstarted = isUnstartedWork(task);
+    const parts = task.children.total > 0;
+    const started = no("It has already started.");
+    const starting = bar?.next === "starting";
+    const heldStart = no("It is starting.");
+    const start = starting ? heldStart : bar?.next === "start" || bar?.next === "try-again" ? bar.blocked ? no(`${keyList(task.blockedBy)} must finish first.`) : OK : task.status === "active" ? started : parts ? no("Its parts are the work. Start a part instead.") : bar?.next === "show-card" || task.waitingCardId ? no("It waits for your answer on its card.") : task.startPolicy === "when-ready" ? no("It is queued. It starts by itself once nothing holds it.") : no("It cannot start from here.");
+    const stop = bar?.end === "stop-task" ? OK : unstarted ? no("It has not started. Drop task drops it.") : no("It cannot be stopped from here.");
+    const resume = bar?.next === "continue" ? OK : no("Only interrupted work continues.");
+    const drop = bar?.end === "drop-task" ? OK : task.status === "active" ? no("It has started. Stopping it drops it and keeps a copy of its work.") : no("It cannot be dropped from here.");
+    const underway = task.status === "active";
+    const inBacklog = underway && task.backlogSince !== void 0;
+    const queueGuard = starting ? heldStart : underway ? null : !unstarted ? started : parts ? no("Its parts do the work. Move a part instead.") : null;
+    const queue = queueGuard ?? (underway ? no("It has already started. Start picks it up from the backlog.") : task.startPolicy === "when-ready" ? no("It is already queued.") : OK);
+    const waitsForWord = underway ? inBacklog : task.startPolicy === "on-request";
+    const unqueue = queueGuard ?? (waitsForWord ? no("It already waits for your word.") : OK);
+    return {
+      "answer-done": task.answerNoteId ? OK : no("It has no answer ready."),
+      "dismiss-question": no("This is not a question."),
+      "start-task": start,
+      "start-again": bar?.next === "start-again" ? OK : no("Only dropped work without a replacement or parts starts again."),
+      "stop-task": stop,
+      "continue-task": resume,
+      "drop-task": drop,
+      "queue-task": queue,
+      "unqueue-task": unqueue,
+      "show-card": task.waitingCardId ? OK : no("It has no card to show.")
+    };
+  }
+  function cardMerges(card) {
+    return card?.actions.some((action) => mergeEffectOf(action) !== void 0) ?? false;
+  }
+  function presentTask(task, cards) {
+    const associated = (card) => card.taskId === task.id || card.id === task.waitingCardId;
+    const authorWorking = task.status === "active" && (task.workPosture?.state === "active" || !task.workPosture && task.activity === "running" || cards.some((card) => associated(card) && card.awaiting === "answer"));
+    const minimized = authorWorking ? void 0 : cards.find((card) => card.minimized && associated(card));
+    if (task.minimizedCardId !== minimized?.id) {
+      const { minimizedCardId: _old, ...raw } = task;
+      task = { ...raw, ...minimized ? { minimizedCardId: minimized.id } : {} };
+    }
+    const waitingCard = task.waitingCardId && (task.status === "open" || task.status === "active") ? cards.find(
+      (card) => isReadyDecision(card) && (card.taskId === task.id || card.id === task.waitingCardId)
+    ) : void 0;
+    const waitingCardId = waitingCard?.id ?? null;
+    if (waitingCardId === task.waitingCardId) return task;
+    const { waitingCardMerges: _merges, moves: _moves, ...rest } = task;
+    const presented = { ...rest, waitingCardId };
+    const moves = taskMovesOf(presented);
+    return {
+      ...presented,
+      ...cardMerges(waitingCard) ? { waitingCardMerges: true } : {},
+      ...moves ? { moves } : {}
+    };
+  }
+  function presentProjects(projects, tasks) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const task of tasks) {
+      if (task.answerNoteId || task.waitingCardId || task.minimizedCardId || task.requiredAction && (task.status === "open" || task.status === "active")) {
+        counts.set(task.projectId, (counts.get(task.projectId) ?? 0) + 1);
+      }
+    }
+    return projects.map((project) => ({
+      ...project,
+      counts: { ...project.counts, waitingOnYou: counts.get(project.id) ?? 0 }
+    }));
+  }
+  function presentBoard(board, cards) {
+    const tasks = board.tasks.map((task) => presentTask(task, cards));
+    for (const card of cards) {
+      if (!card.minimized || tasks.some((task) => task.minimizedCardId === card.id || task.id === card.taskId))
+        continue;
+      if (card.taskId) continue;
+      tasks.push({
+        id: minimizedRowId(card.id),
+        key: "",
+        projectId: "",
+        parentId: null,
+        kind: "operation",
+        title: card.title,
+        goal: null,
+        priority: card.priority,
+        status: "open",
+        activity: null,
+        closedReason: null,
+        startPolicy: "on-request",
+        flags: { blocked: false, held: false, needsYou: false, ready: false },
+        blockedBy: [],
+        blocks: [],
+        children: { total: 0, closed: 0 },
+        assignee: null,
+        model: null,
+        tier: null,
+        repo: null,
+        delivery: null,
+        outcomeSummary: null,
+        waitingCardId: null,
+        minimizedCardId: card.id,
+        createdAt: card.createdAt,
+        updatedAt: card.createdAt,
+        startedAt: null,
+        closedAt: null
+      });
+    }
+    return { ...board, tasks, projects: presentProjects(board.projects, tasks) };
+  }
+  const minimizedRowId = (cardId) => `minimized-card:${cardId}`;
+  function phoneReads(ask2) {
+    const listeners = /* @__PURE__ */ new Map();
+    const resyncs = /* @__PURE__ */ new Set();
+    function listen2(channel, listener) {
+      let set = listeners.get(channel);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        listeners.set(channel, set);
+      }
+      set.add(listener);
+      return () => {
+        set?.delete(listener);
+      };
+    }
+    let cards = [];
+    let cardsAsked = false;
+    const presentations = /* @__PURE__ */ new Set();
+    function needCards() {
+      if (cardsAsked) return;
+      cardsAsked = true;
+      listen2("inf:cards", (payload) => {
+        cards = Array.isArray(payload) ? payload : cards;
+        for (const tell of presentations) tell();
+      });
+      void ask2("inf:cards:list", []).then((value) => {
+        if (Array.isArray(value)) {
+          cards = value;
+          for (const tell of presentations) tell();
+        }
+      }).catch(() => {
+      });
+    }
+    let board;
+    function rememberBoard(next) {
+      if (!board || next.seq > board.seq || next.seq === board.seq && (board.closedLeftOut !== void 0 || next.closedLeftOut === void 0)) board = next;
+    }
+    const readApi = {
+      read: async (name, args, grant) => {
+        const entry2 = readCatalog[name];
+        if (name === "tasks.board" || name === "tasks.detail") needCards();
+        if (name === "tasks.board" && args.closed === false) {
+          return ask2(entry2.channel, entry2.toRequest(args, grant)).catch(() => ask2(entry2.channel, entry2.toRequest({}, grant)));
+        }
+        if (name === "projects.list") {
+          needCards();
+          const value = await ask2(entry2.channel, entry2.toRequest(args, grant));
+          const boardRead = readCatalog["tasks.board"];
+          rememberBoard(await ask2(boardRead.channel, boardRead.toRequest({ closed: false }, void 0)).catch(() => ask2(boardRead.channel, boardRead.toRequest({}, void 0))));
+          return value;
+        }
+        return ask2(entry2.channel, entry2.toRequest(args, grant));
+      },
+      present: (name, value) => {
+        if (name === "tasks.board") {
+          rememberBoard(value);
+          return presentBoard(value, cards);
+        }
+        if (name === "projects.list" && board) return presentProjects(value, presentBoard(board, cards).tasks);
+        if (name === "tasks.detail") return presentTask(value, cards);
+        if (name === "feed.recent") {
+          return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
+        }
+        if (name === "computers.resources") return panelComputerResources(value);
+        return value;
+      },
+      onPresentation: (listener) => {
+        presentations.add(listener);
+        return () => {
+          presentations.delete(listener);
+        };
+      },
+      onEvent: (listener) => listen2("inf:event", (payload) => listener(payload)),
+      onPush: (channel, listener) => listen2(channel, listener),
+      onResync: (listener) => {
+        resyncs.add(listener);
+        return () => {
+          resyncs.delete(listener);
+        };
+      }
+    };
+    return {
+      executor: new ReadExecutor(readApi),
+      listen: listen2,
+      push(channel, payload) {
+        for (const listener of [...listeners.get(channel) ?? []]) listener(payload);
+      },
+      resync() {
+        for (const listener of [...resyncs]) listener();
+      }
+    };
+  }
   function phonePressRule() {
     return "\n[data-inf-picture] { -webkit-user-drag: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n";
   }
@@ -109601,85 +109723,8 @@ svg { ${pinned} }
   }
   const native = (message) => window.webkit.messageHandlers.panelHost.postMessage(message);
   const ask = (channel, args) => native({ type: "ask", channel, args });
-  const listeners = /* @__PURE__ */ new Map();
-  const resyncs = /* @__PURE__ */ new Set();
-  function listen(channel, listener) {
-    let set = listeners.get(channel);
-    if (!set) {
-      set = /* @__PURE__ */ new Set();
-      listeners.set(channel, set);
-    }
-    set.add(listener);
-    return () => {
-      set?.delete(listener);
-    };
-  }
-  let cards = [];
-  let cardsAsked = false;
-  const presentations = /* @__PURE__ */ new Set();
-  function needCards() {
-    if (cardsAsked) return;
-    cardsAsked = true;
-    listen("inf:cards", (payload) => {
-      cards = Array.isArray(payload) ? payload : cards;
-      for (const tell of presentations) tell();
-    });
-    void ask("inf:cards:list", []).then((value) => {
-      if (Array.isArray(value)) {
-        cards = value;
-        for (const tell of presentations) tell();
-      }
-    }).catch(() => {
-    });
-  }
-  let board;
-  function rememberBoard(next) {
-    if (!board || next.seq > board.seq || next.seq === board.seq && (board.closedLeftOut !== void 0 || next.closedLeftOut === void 0)) board = next;
-  }
-  const readApi = {
-    read: async (name, args, grant) => {
-      const entry2 = readCatalog[name];
-      if (name === "tasks.board" || name === "tasks.detail") needCards();
-      if (name === "tasks.board" && args.closed === false) {
-        return ask(entry2.channel, entry2.toRequest(args, grant)).catch(() => ask(entry2.channel, entry2.toRequest({}, grant)));
-      }
-      if (name === "projects.list") {
-        needCards();
-        const value = await ask(entry2.channel, entry2.toRequest(args, grant));
-        const boardRead = readCatalog["tasks.board"];
-        rememberBoard(await ask(boardRead.channel, boardRead.toRequest({ closed: false }, void 0)).catch(() => ask(boardRead.channel, boardRead.toRequest({}, void 0))));
-        return value;
-      }
-      return ask(entry2.channel, entry2.toRequest(args, grant));
-    },
-    present: (name, value) => {
-      if (name === "tasks.board") {
-        rememberBoard(value);
-        return presentBoard(value, cards);
-      }
-      if (name === "projects.list" && board) return presentProjects(value, presentBoard(board, cards).tasks);
-      if (name === "tasks.detail") return presentTask(value, cards);
-      if (name === "feed.recent") {
-        return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
-      }
-      if (name === "computers.resources") return panelComputerResources(value);
-      return value;
-    },
-    onPresentation: (listener) => {
-      presentations.add(listener);
-      return () => {
-        presentations.delete(listener);
-      };
-    },
-    onEvent: (listener) => listen("inf:event", (payload) => listener(payload)),
-    onPush: (channel, listener) => listen(channel, listener),
-    onResync: (listener) => {
-      resyncs.add(listener);
-      return () => {
-        resyncs.delete(listener);
-      };
-    }
-  };
+  const reads = phoneReads(ask);
+  const listen = reads.listen;
   let frame;
   let controller;
   let input;
@@ -109867,7 +109912,7 @@ svg { ${pinned} }
         },
         value.theme,
         {
-          executor: new ReadExecutor(readApi),
+          executor: reads.executor,
           fetch: (call) => ask("inf:plugins:fetch", [call]),
           store,
           // A folded panel, or one on a tab that is not showing, keeps running out of sight and is never stopped for missed pings.
@@ -109893,10 +109938,10 @@ svg { ${pinned} }
       controller?.setState(viewState());
     },
     push(channel, payload) {
-      for (const listener of [...listeners.get(channel) ?? []]) listener(payload);
+      reads.push(channel, payload);
     },
     resync() {
-      for (const listener of [...resyncs]) listener();
+      reads.resync();
     },
     // The device's Text Size changed while the panel shows: it redraws at it in place.
     textScale(value) {

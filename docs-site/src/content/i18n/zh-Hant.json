@@ -18,7 +18,7 @@
   "page.lastUpdated": "最後更新於：",
   "page.previousLink": "前一則",
   "page.nextLink": "下一則",
-  "page.draft": "This content is a draft and will not be included in production builds.",
+  "page.draft": "這是草稿內容，不會包含在正式版本中。",
   "404.text": "找不到頁面。請檢查網址或改用搜尋功能。",
   "aside.note": "注意",
   "aside.tip": "提示",
@@ -29,5 +29,15 @@
   "expressiveCode.copyButtonCopied": "複製成功！",
   "fileTree.directory": "目錄",
   "builtWithStarlight.label": "Built with Starlight",
-  "heading.anchorLabel": "「{{title}}」一節"
+  "heading.anchorLabel": "「{{title}}」一節",
+  "pagefind.clear_search": "清除",
+  "pagefind.load_more": "顯示更多結果",
+  "pagefind.search_label": "搜尋這個網站",
+  "pagefind.filters_label": "篩選條件",
+  "pagefind.zero_results": "找不到「[SEARCH_TERM]」的結果",
+  "pagefind.many_results": "「[SEARCH_TERM]」共有 [COUNT] 筆結果",
+  "pagefind.one_result": "「[SEARCH_TERM]」有 1 筆結果",
+  "pagefind.alt_search": "找不到「[SEARCH_TERM]」的結果，改為顯示「[DIFFERENT_TERM]」的結果",
+  "pagefind.search_suggestion": "找不到「[SEARCH_TERM]」的結果。試試以下搜尋：",
+  "pagefind.searching": "正在搜尋「[SEARCH_TERM]」…"
 }

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "review-finding-no-checks",
+      "kind": "improvement",
+      "title": "Review finding cards leave the checks to the merge card",
+      "body": "A card that asks you about a review's finding no longer lists the change's checks, the cause of each failed check or the review's own state. It names the change it asks about, so your answer is the one thing on it; the checks stay on the change's merge card.",
+      "area": "cards",
+      "picture": {
+        "dark": "review-finding-no-checks-dark.webp",
+        "light": "review-finding-no-checks-light.webp",
+        "alt": "A Review finding card whose foot names only the project, the change, its lines and its care above the buttons, with no checks"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

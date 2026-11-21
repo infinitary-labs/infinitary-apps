@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { alreadyAllowedWords } from "@shared/captainAllowances";
-import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
+import { SETTLE_FACT_VALUE_CLASS, SETTLE_FACTS_OPEN } from "@shared/cards";
 import { branchComparePage } from "@shared/forge";
 import { acceptedValidation } from "@shared/liveValidation";
 import type { WorkShape } from "@shared/routingPolicy";
@@ -879,8 +879,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
 
       // The reviewer's decision is its Review finding card: on its own
-      // task, labeled by the app, with the builder's facts strip. Its
-      // report while the card is up, with no review record, wakes no one.
+      // task, labeled by the app, with the builder's facts strip naming its
+      // change and none of its states, such as the review's findings, which
+      // its merge card shows. Its report while the card is up, with no
+      // review record, wakes no one.
       const beforeCard = ops.length;
       const findingInput = {
         id: "review-meter",
@@ -901,9 +903,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         author: "crewmate",
         reviewTaskId: reviewId,
       });
-      expect(findingCard?.body).toContain(
-        `<span class="inf-foot-k">Review</span> <span class="${SETTLE_FACT_VALUE_CLASS}">${REVIEW_WORDS.findings}</span>`,
-      );
+      expect(findingCard?.body).toContain(SETTLE_FACTS_OPEN);
+      expect(findingCard?.body).toContain('data-fact="project"');
+      expect(findingCard?.body).not.toContain('data-fact="review"');
       expect(ops.slice(beforeCard)).toEqual([]);
       expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
 

@@ -1150,8 +1150,9 @@ export async function createServices(
     const presentation = workPresentation.hold();
     const board = taskProtocol.holdPushes();
     return () => {
-      // The refresh's microtask runs before the board's coalescing timer,
-      // so the board includes the sweep and its final derived posture.
+      // The refresh runs at the end of this event-loop turn, before the
+      // board's coalescing timer, so the board includes the sweep and its
+      // final derived posture.
       presentation();
       board();
     };

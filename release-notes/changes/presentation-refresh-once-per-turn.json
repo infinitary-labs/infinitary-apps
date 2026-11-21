@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "presentation-refresh-once-per-turn",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Shorter pauses while the crew's checks are read",
+      "body": "When the app read several pull requests' checks at once, it refreshed every task on the board once for each answer, one after another, holding the window still meanwhile. Answers that arrive together now share one refresh.",
+      "noPicture": "The window looks the same; the change shortens a pause while checks are read.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -890,6 +890,7 @@ The application yields an event-loop turn before each due registration, preservi
 A tick still running never overlaps or accumulates a backlog, stopping cancels its remaining turns, and unregistering a pass while it yields prevents it from running.
 Each registration reports its synchronous duration as `[ticker] <name>: <duration> ms synchronous`; this measures the registered call, not asynchronous work it starts.
 The derived presentation refresh stays held across the sweep's separate turns and runs once after it, with its own `presentation-refresh` duration measuring the actual deferred work, not merely its scheduling callback.
+Outside a sweep, the refresh runs once the event loop has run the callbacks it already holds, so writes landing in separate callbacks of one turn, such as the check watch's readings answered together, share one refresh rather than running one each.
 The task protocol holds its board timer over the same sweep, then publishes one board including the final derived posture; the timer cannot send intermediate snapshots between registrations.
 A throwing pass does not skip the rest, and every throw of a tick is raised after it; tests move that clock instead of faking `Date` through the synchronous `tick()` driver.
 Separate turns shorten the combined task, not an individual SQLite call: they are not a frame-time guarantee.

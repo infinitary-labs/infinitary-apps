@@ -1902,16 +1902,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     },
     moved: (payload) => liveToAll(HOME_MOVED_LIVE, payload),
     goodbye: () => liveToAll(HOME_GOODBYE_LIVE, {}),
-    liveToView: (deviceId, channel, payload, change, one) => {
-      const eligible = [...(run?.clients ?? [])].filter(
-        (client) =>
-          client.welcomed &&
-          !client.closing &&
-          client.role === "view" &&
-          client.device.id === deviceId &&
-          (change === undefined || (client.changes?.includes(change) ?? false)),
-      );
-      const windows = windowAsked.sendTo(eligible, payload, one);
+    liveToView: (...args) => {
+      const [, channel, payload] = args;
+      const windows = windowAsked.sendTo(run?.clients, args);
       for (const client of windows)
         client.out.send(
           JSON.stringify({ t: "live", channel: channelIn(channel, client.spelling), payload }),

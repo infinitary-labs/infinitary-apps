@@ -1,14 +1,18 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  closeSync,
   copyFileSync,
   existsSync,
+  fstatSync,
   lstatSync,
   lutimesSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   readlinkSync,
+  readSync,
   realpathSync,
   statSync,
   symlinkSync,
@@ -31,10 +35,15 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { seedProject } from "../workspace/seedProject";
 import { copyTree } from "./copy";
-import { dueMove, type FolderMove, holdsSavedWork, stagedFolderFor, stagedFolders } from "./due";
+import {
+  dueMove,
+  type FolderMove,
+  stagedFolderFor,
+  stagedFolders,
+  wordProfilesBeside,
+} from "./due";
 import { type MoveDeps, type MoveItem, runMove, stageMove } from "./move";
 import { readMoveRecord, writeMoveRecord } from "./record";
-import { WORD_PROFILES_DIR } from "./tree";
 
 // Integration budget (docs/test-cohorts.md): real git, the system's copier,
 // SQLite, a vite build and the Electron binary on scratch folders; the slowest
@@ -224,19 +233,9 @@ describe("the one-time move of a data folder", () => {
       n: 0,
     });
     bare.close();
-    // An installer already wrote the new app's channel marker, and a refused launch's word copy
-    // still uses its profile there: neither is saved work. The older folder's profiles, an empty
-    // folder of them included, are not brought.
+    // An installer already wrote the new app's channel marker, and nothing else.
     mkdirSync(to);
     writeFileSync(join(to, "update-channel.json"), '{"schemaVersion":1,"channel":"alpha"}\n');
-    const inUse = join(to, WORD_PROFILES_DIR, "infinitary-word-live");
-    mkdirSync(inUse, { recursive: true });
-    writeFileSync(join(inUse, "infinitary-word.pid"), String(process.pid));
-    expect(holdsSavedWork(to)).toBe(false);
-    mkdirSync(join(from, WORD_PROFILES_DIR, "infinitary-word-old"), { recursive: true });
-    const emptyProfiles = scratchDir("fm-folder-move-empty-profiles-");
-    mkdirSync(join(emptyProfiles, WORD_PROFILES_DIR));
-    expect(holdsSavedWork(emptyProfiles)).toBe(false);
 
     const phases: string[] = [];
     const outcome = await runMove(world.move, {
@@ -248,9 +247,6 @@ describe("the one-time move of a data folder", () => {
 
     expect(outcome).toEqual({ kind: "moved", startAtLogin: true });
     expect(phases).toEqual(["checking", "copying", "verifying", "finishing"]);
-    // The profile in use stays where its copy finds it; the older folder's stays behind.
-    expect(readFileSync(join(inUse, "infinitary-word.pid"), "utf8")).toBe(String(process.pid));
-    expect(readdirSync(join(to, WORD_PROFILES_DIR))).toEqual(["infinitary-word-live"]);
     // The work, and the paths into it.
     expect(
       rows(
@@ -364,7 +360,14 @@ describe("the one-time move of a data folder", () => {
 
     const brought = olderFolder();
     mkdirSync(join(brought.to, "crewmates", "mine"), { recursive: true });
-    expect(await runMove(brought.move, brought.deps, "bring")).toMatchObject({ kind: "moved" });
+    // A word's copy, refused the folder's lock, still uses its profile while the work is brought.
+    const inUse = liveWordProfile(brought.to);
+    try {
+      expect(await runMove(brought.move, brought.deps, "bring")).toMatchObject({ kind: "moved" });
+      inUse.stillThere();
+    } finally {
+      inUse.close();
+    }
     const record = readMoveRecord(brought.to);
     expect(record?.setAside).toBeDefined();
     expect(existsSync(join(record?.setAside ?? "", "crewmates", "mine"))).toBe(true);
@@ -604,6 +607,30 @@ describe("the one-time move of a data folder", () => {
   // A launch that brings the older work sets this app's own work aside before it copies,
   // and only the checked copy's record names where it went; a launch killed mid-copy
   // leaves that folder named by nothing. The next launch puts it back and asks again.
+  /**
+   * A word's copy's profile in use beside the app's folder (src/main/personWord.ts): a file the copy
+   * holds open, which must stay at the path the copy was given, whatever the move does.
+   */
+  function liveWordProfile(to: string): { stillThere: () => void; close: () => void } {
+    const profile = join(wordProfilesBeside(to), "infinitary-word-live");
+    mkdirSync(join(profile, "temp"), { recursive: true });
+    const record = join(profile, "infinitary-word.pid");
+    writeFileSync(record, `${process.pid}\n`);
+    const held = openSync(record, "r");
+    const kept = fstatSync(held);
+    return {
+      stillThere: () => {
+        const now = statSync(record);
+        expect([now.dev, now.ino]).toEqual([kept.dev, kept.ino]);
+        expect(existsSync(join(profile, "temp"))).toBe(true);
+        // The copy still reads the record it holds, through the move.
+        const bytes = Buffer.alloc(32);
+        expect(bytes.toString("utf8", 0, readSync(held, bytes, 0, 32, 0))).toBe(`${process.pid}\n`);
+      },
+      close: () => closeSync(held),
+    };
+  }
+
   /** Brings the older work under a launch killed mid-copy, leaving the disk as it stopped. */
   async function killedMidCopy(world: ReturnType<typeof olderFolder>): Promise<void> {
     mkdirSync(join(world.to, "crewmates", "mine"), { recursive: true });
@@ -636,21 +663,28 @@ describe("the one-time move of a data folder", () => {
 
   it("puts the app's own work back after a launch killed mid-copy, and asks again", async () => {
     const world = olderFolder();
-    await killedMidCopy(world);
+    const inUse = liveWordProfile(world.to);
+    try {
+      await killedMidCopy(world);
+      inUse.stillThere();
 
-    // The next launch, with the disk as the killed one left it.
-    expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toEqual(
-      world.move,
-    );
-    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
-    expect(readFileSync(join(world.to, "crewmates", "mine", "notes.md"), "utf8")).toBe(
-      "my own work\n",
-    );
-    expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
-    const record = readMoveRecord(world.to);
-    expect(
-      readFileSync(join(record?.setAside ?? "", "crewmates", "mine", "notes.md"), "utf8"),
-    ).toBe("my own work\n");
+      // The next launch, with the disk as the killed one left it.
+      expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toEqual(
+        world.move,
+      );
+      expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+      expect(readFileSync(join(world.to, "crewmates", "mine", "notes.md"), "utf8")).toBe(
+        "my own work\n",
+      );
+      expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
+      inUse.stillThere();
+      const record = readMoveRecord(world.to);
+      expect(
+        readFileSync(join(record?.setAside ?? "", "crewmates", "mine", "notes.md"), "utf8"),
+      ).toBe("my own work\n");
+    } finally {
+      inUse.close();
+    }
   });
 
   // INF-3307 review: a reinstall after the kill writes its channel marker into a fresh

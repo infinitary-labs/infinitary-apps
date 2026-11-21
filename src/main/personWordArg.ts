@@ -67,11 +67,11 @@ export function endWithRequester(input: NodeJS.ReadableStream, end: () => void):
 }
 
 /**
- * Whether the copy's throwaway profile may be made in the data folder's folder for them
- * (`WORD_PROFILES_DIR`): anywhere but Windows, whose modes keep it this account's alone; on Windows
- * only once the data folder was kept private (`keepDataFolderPrivate`), as that folder is then given
- * an owner-only access list of its own. A launch that never judged it, or whose data folder was
- * refused, makes none and touches nothing in it.
+ * Whether the copy's throwaway profile may be made in the folder for them beside the data folder
+ * (`wordProfilesBeside`), which is given this account's access alone (`ownProfilesFolder`):
+ * anywhere but Windows; on Windows only once the data folder was kept private
+ * (`keepDataFolderPrivate`). A launch that never judged it, or whose data folder was refused, makes
+ * none and touches nothing there.
  */
 export function wordProfilePrivate(
   platform: NodeJS.Platform,
@@ -80,9 +80,9 @@ export function wordProfilePrivate(
   return platform !== "win32" || (privacy !== null && privacy.refused === null);
 }
 
-/** What names a copy's throwaway profile, a folder in the profiles' folder (`WORD_PROFILES_DIR`). */
+/** What names a copy's throwaway profile, a folder in the profiles' folder (`wordProfilesBeside`). */
 export const WORD_PROFILE_PREFIX = "infinitary-word-";
-/** The file in a profile naming the one copy that uses it, by its process number alone. */
+/** The file in a profile naming the one copy that uses it: its process number and a line's end. */
 export const WORD_OWNER_FILE = "infinitary-word.pid";
 /** The copy's own temporary folder, inside its profile (`TEMP` and `TMP` name it). */
 export const WORD_TEMP_DIR = "temp";
@@ -90,8 +90,8 @@ const PROFILE_SWITCH = "--user-data-dir=";
 
 /**
  * The copy's first act, before anything else it runs: names itself in the profile it was started
- * with, which Electron made as the copy started and nothing else uses, and makes its temporary
- * folder there. False where it was started with no profile of ours or could not name itself, as a
+ * with, which its launch made for it alone, with its temporary folder; the line's end says the
+ * record was written whole. False where it was started with no profile of ours or could not name itself, as a
  * copy that then shows nothing and says so; a profile it never named is one a later launch leaves.
  */
 export function claimWordProfile(argv: readonly string[]): boolean {
@@ -100,7 +100,7 @@ export function claimWordProfile(argv: readonly string[]): boolean {
   try {
     mkdirSync(profile, { recursive: true, mode: 0o700 });
     // Only a file it made itself: never one already there, nor through a link.
-    writeFileSync(join(profile, WORD_OWNER_FILE), String(process.pid), { flag: "wx", mode: 0o600 });
+    writeFileSync(join(profile, WORD_OWNER_FILE), `${process.pid}\n`, { flag: "wx", mode: 0o600 });
     mkdirSync(join(profile, WORD_TEMP_DIR), { recursive: true, mode: 0o700 });
     return true;
   } catch {

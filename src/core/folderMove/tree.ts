@@ -11,18 +11,10 @@ import { createReadStream, lstat, readdir, readlink } from "../plainFs";
  */
 
 /**
- * The folder holding the throwaway profiles of the copies a launch refused the
- * folder's lock starts to show the person a word (src/main/personWord.ts,
- * docs/run.md): none of it is saved work, and a copy may still use one.
- */
-export const WORD_PROFILES_DIR = "word-profiles";
-
-/**
  * What the move leaves behind, by name at the folder's top: Chromium's own
  * locks and caches, which a new run makes again, retired working copies
- * waiting to be deleted, the task channel's keys, which the app empties
- * each time it opens (docs/axi-commands.md), and the word copies' profiles.
- * Nothing in them is saved work.
+ * waiting to be deleted, and the task channel's keys, which the app empties
+ * each time it opens (docs/axi-commands.md). Nothing in them is saved work.
  */
 export const LEFT_BEHIND: ReadonlySet<string> = new Set([
   "SingletonLock",
@@ -39,7 +31,6 @@ export const LEFT_BEHIND: ReadonlySet<string> = new Set([
   "ShaderCache",
   "worktree-trash",
   "task-channel",
-  WORD_PROFILES_DIR,
 ]);
 
 /**

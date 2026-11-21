@@ -149,10 +149,10 @@ describe("a refused launch's word to the person", () => {
   it("has the copy name itself in the profile it was started with, and only there", () => {
     const profiles = scratchDir("person-word-claim-");
     const profile = join(profiles, "infinitary-word-one");
-    // Electron makes the profile as the copy starts; the copy names itself and its temporary folder.
+    // Its launch made the profile for it; the copy names itself there, its record ending its line.
     mkdirSync(profile);
     expect(claimWordProfile(["/app", `--user-data-dir=${profile}`])).toBe(true);
-    expect(readFileSync(join(profile, WORD_OWNER_FILE), "utf8")).toBe(String(process.pid));
+    expect(readFileSync(join(profile, WORD_OWNER_FILE), "utf8")).toBe(`${process.pid}\n`);
     expect(existsSync(join(profile, WORD_TEMP_DIR))).toBe(true);
     // Never twice, nor over a file it did not make, nor for a profile not of a word, nor none.
     expect(claimWordProfile(["/app", `--user-data-dir=${profile}`])).toBe(false);

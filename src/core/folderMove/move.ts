@@ -53,7 +53,6 @@ import {
   type TreeSurvey,
   type UnitKind,
   unitKindOf,
-  WORD_PROFILES_DIR,
 } from "./tree";
 
 /**
@@ -551,16 +550,13 @@ function undoStage(staged: string, to: string, setAside: string | undefined): vo
  * Puts the staged copy in place of this app's folder in one rename. A folder
  * there with no saved work - an installer's channel marker and nothing else
  * - hands its entries to the staged copy first, so the marker the newer
- * install wrote is the one kept, and the word copies' profiles stay where
- * a copy still using one finds it.
+ * install wrote is the one kept.
  */
 function commit(staged: string, to: string): void {
   if (existsSync(to)) {
     for (const name of readdirSync(to)) {
       const entry = join(to, name);
-      // The channel marker the newer install wrote, and the profiles a word's copy may still use.
-      if (name === "update-channel.json" || name === WORD_PROFILES_DIR)
-        renameSync(entry, join(staged, name));
+      if (name === "update-channel.json") renameSync(entry, join(staged, name));
       else if (NOT_SAVED_WORK.has(name) || LEFT_BEHIND.has(name))
         rmSync(entry, { recursive: true, force: true });
       else throw new Error(`${name} appeared in ${to} during the move.`);

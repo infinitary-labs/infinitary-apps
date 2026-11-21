@@ -140,9 +140,9 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
   process.stdout.write(replyLine(reply), () => app.exit(0));
 }
 
-export { WORD_PROFILES_DIR } from "@core/folderMove/tree";
+export { wordProfilesBeside } from "@core/folderMove/due";
 
-/** Its process number and nothing else: anything longer is no owner file of ours. */
+/** Its process number and the line's end, and nothing else: anything longer is no owner file of ours. */
 const OWNER_FILE_BYTES = 16;
 
 /**
@@ -171,23 +171,36 @@ export async function ownProfilesFolder(
   }
 }
 
+/** Which entry a path is, by device and number: the same only while nothing replaced it. */
+const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: number }) =>
+  a.dev === b.dev && a.ino === b.ino;
+
 /**
- * The copy a profile's owner file names (`claimWordProfile`): read from the file it opened - a plain
- * file, never through a link nor waiting on a pipe, of no more than a process number - and only its
- * exact number; anything else, or no file, is no owner.
+ * The copy a profile's owner file names (`claimWordProfile`): a plain file, never a link nor a pipe,
+ * whose opened file is the one the path named and which reads to its end in no more than the
+ * copy's whole record - its number and the line's end - and nothing else; anything else, a record
+ * not yet written whole, or no file, is no owner.
  */
 function profileOwner(profile: string): number | null {
+  const path = join(profile, WORD_OWNER_FILE);
   let fd: number | undefined;
   try {
+    // Checked before it is opened, where opening cannot refuse a link itself, as on Windows.
+    const named = lstatSync(path);
+    if (!named.isFile() || named.size > OWNER_FILE_BYTES) return null;
     fd = openSync(
-      join(profile, WORD_OWNER_FILE),
+      path,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
     );
     const kept = fstatSync(fd);
-    if (!kept.isFile() || kept.size > OWNER_FILE_BYTES) return null;
+    if (!kept.isFile() || !sameEntry(kept, named) || kept.size > OWNER_FILE_BYTES) return null;
     const bytes = Buffer.alloc(OWNER_FILE_BYTES + 1);
-    const said = bytes.toString("utf8", 0, readSync(fd, bytes, 0, bytes.length, 0));
-    return /^[1-9][0-9]{0,9}$/.test(said) ? Number(said) : null;
+    let read = 0;
+    for (let got = 1; got > 0 && read < bytes.length; read += got)
+      got = readSync(fd, bytes, read, bytes.length - read, read);
+    if (read !== kept.size) return null;
+    const said = bytes.toString("utf8", 0, read);
+    return /^[1-9][0-9]{0,9}\n$/.test(said) ? Number(said.trimEnd()) : null;
   } catch {
     return null;
   } finally {
@@ -210,18 +223,27 @@ function reclaimWordProfiles(root: string): void {
   }
   for (const name of names) {
     const profile = join(root, name);
-    try {
-      if (!lstatSync(profile).isDirectory()) continue;
-    } catch {
-      continue;
-    }
+    const folder = entryOf(profile);
+    if (folder === null || !folder.isDirectory()) continue;
     const owner = profileOwner(profile);
     if (owner === null || !processGone(owner)) continue;
+    // The same folder, read again just before it goes: one replaced since is left as it is.
+    const now = entryOf(profile);
+    if (now === null || !now.isDirectory() || !sameEntry(now, folder)) continue;
     try {
       rmSync(profile, { recursive: true, force: true });
     } catch (error) {
       console.warn(`[app] could not remove a word's profile: ${(error as Error).message}`);
     }
+  }
+}
+
+/** What a path names, not following a link; null where nothing can be read there. */
+function entryOf(path: string): ReturnType<typeof lstatSync> | null {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
   }
 }
 
@@ -241,11 +263,12 @@ function processGone(pid: number): boolean {
  * which ends that copy and its box, and unshown where the copy could not be started or show its box,
  * or where its profile has no private folder to go in (`profiles` null, as `wordProfilePrivate`
  * decides, or one not this account's alone), which then starts none. The copy's input stays open
- * while this launch lives, so the copy ends with it too. This launch only names the copy's
- * throwaway profile, in `profiles` (`WORD_PROFILES_DIR`), with its temporary folder inside it; the
- * copy, the one process to use it, makes it and names itself there as it starts
+ * while this launch lives, so the copy ends with it too. This launch makes the copy's throwaway
+ * profile, in `profiles` (`wordProfilesBeside`), with the temporary folder the copy is given from
+ * its start inside it; the copy, the one process to use it, names itself there as it starts
  * (`claimWordProfile`). It goes once the copy has ended - by this launch, or by a later one's ask
- * where this launch died first - and a profile that cannot go changes no reply. `launcher` starts
+ * where this launch died after the copy named itself; one never named stays - and a profile that
+ * cannot go changes no reply. `launcher` starts
  * this app as it was started (`wordLauncher`).
  */
 export async function askPersonWord(
@@ -263,6 +286,19 @@ export async function askPersonWord(
   reclaimWordProfiles(profiles);
   const profile = join(profiles, `${WORD_PROFILE_PREFIX}${randomUUID()}`);
   const temp = join(profile, WORD_TEMP_DIR);
+  // Its profile and temporary folder are there before the copy runs, so its temporary files
+  // have a place from its start; it names itself there before using either.
+  try {
+    mkdirSync(temp, { recursive: true, mode: 0o700 });
+  } catch (error) {
+    console.warn(`[app] could not make a word's profile: ${(error as Error).message}`);
+    try {
+      rmSync(profile, { recursive: true, force: true });
+    } catch {
+      // Unnamed, so a later ask leaves it; nothing here used it.
+    }
+    return "unshown";
+  }
   return new Promise((done) => {
     let settled = false;
     let takeAway = () => {};

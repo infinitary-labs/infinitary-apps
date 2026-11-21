@@ -49,6 +49,8 @@ function copyProgram(): string {
     const [mode, marks] = process.argv.slice(2);
     const profile = process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice(16) ?? "";
     const say = (text, code = 0) => process.stdout.write(text, () => process.exit(code));
+    // Whether the temporary folder it was given was there before it ran anything.
+    const tempAtStart = existsSync(process.env.TEMP ?? "");
     if (!claimWordProfile(process.argv)) say(replyLine("unshown"));
     else if (mode === "late") {
       // The reply in two pieces, the last just before the copy ends.
@@ -77,6 +79,7 @@ function copyProgram(): string {
       // A temporary file it still uses, where its requester said its temporary files go.
       writeFileSync(join(process.env.TEMP, "in-use"), "");
       writeFileSync(join(marks, "temp"), process.env.TEMP);
+      writeFileSync(join(marks, "temp-at-start"), String(tempAtStart));
       writeFileSync(join(marks, "pid"), String(process.pid));
       endWithRequester(process.stdin, () => {
         writeFileSync(join(marks, "requester-gone"), "");
@@ -303,11 +306,12 @@ describe("a refused launch's copy that shows a word", () => {
       const temp = readFileSync(join(marks, "temp"), "utf8");
       const [named] = wordProfiles(profiles);
       expect(temp).toBe(join(profiles, named ?? "", WORD_TEMP_DIR));
+      expect(readFileSync(join(marks, "temp-at-start"), "utf8")).toBe("true");
       await clearPrivateTemp(requesterTemp);
       expect(existsSync(join(temp, "in-use"))).toBe(true);
       // Nobody is left to remove its profile, and while the copy still runs a later ask keeps it.
       expect(alive(copy)).toBe(true);
-      expect(readFileSync(join(profiles, named ?? "", WORD_OWNER_FILE), "utf8")).toBe(String(copy));
+      expect(readFileSync(join(profiles, named ?? "", WORD_OWNER_FILE), "utf8")).toBe(`${copy}\n`);
       await later();
       expect(wordProfiles(profiles)).toEqual([named]);
       // Once the copy has ended, the next ask removes it.
@@ -332,27 +336,36 @@ describe("a refused launch's copy that shows a word", () => {
       mkdirSync(join(profiles, name));
       if (said !== undefined) writeFileSync(join(profiles, name, WORD_OWNER_FILE), said);
     };
-    // A copy that ended after the launch that asked for it died.
-    profile("infinitary-word-ended", String(ended));
+    // A copy that ended after the launch that asked for it died: its whole record, number and
+    // line's end.
+    profile("infinitary-word-ended", `${ended}\n`);
     // A copy still running (this test's own process) whose launch has gone, and one that has not
     // named itself yet, as a copy just starting, or never will, as one ended before it could.
-    profile("infinitary-word-live", String(process.pid));
+    profile("infinitary-word-live", `${process.pid}\n`);
     profile("infinitary-word-unnamed");
+    // A record not yet written whole, as a copy stopped while it named itself.
+    profile("infinitary-word-partial", String(ended));
     // Owner files not in the copy's own words: garbled, padded, two numbers, too long, a folder.
-    profile("infinitary-word-garbled", "not a number");
-    profile("infinitary-word-padded", `${ended}\n`);
-    profile("infinitary-word-two", `${ended} ${ended}`);
+    profile("infinitary-word-garbled", "not a number\n");
+    profile("infinitary-word-padded", `0${ended}\n`);
+    profile("infinitary-word-two", `${ended}\n${ended}\n`);
     profile("infinitary-word-long", `${"0".repeat(80)}${ended}`);
     profile("infinitary-word-folder");
     mkdirSync(join(profiles, "infinitary-word-folder", WORD_OWNER_FILE));
-    profile("other-folder", String(ended));
-    // Where links and pipes exist: a link to a folder elsewhere named as a profile, never followed,
-    // and an owner file that is a pipe nothing writes, never waited on.
+    profile("other-folder", `${ended}\n`);
+    // Where links and pipes exist: a link to a folder elsewhere named as a profile, and an owner
+    // file that links to a record elsewhere, never followed, and an owner file that is a pipe
+    // nothing writes, never waited on.
     const elsewhere = scratchDir("person-word-elsewhere-");
-    writeFileSync(join(elsewhere, WORD_OWNER_FILE), String(ended));
+    writeFileSync(join(elsewhere, WORD_OWNER_FILE), `${ended}\n`);
     const posix = process.platform !== "win32";
     if (posix) {
       symlinkSync(elsewhere, join(profiles, "infinitary-word-link"));
+      profile("infinitary-word-linked-owner");
+      symlinkSync(
+        join(elsewhere, WORD_OWNER_FILE),
+        join(profiles, "infinitary-word-linked-owner", WORD_OWNER_FILE),
+      );
       profile("infinitary-word-pipe");
       const made = spawnSync("mkfifo", [join(profiles, "infinitary-word-pipe", WORD_OWNER_FILE)]);
       expect(made.status).toBe(0);
@@ -368,9 +381,12 @@ describe("a refused launch's copy that shows a word", () => {
         "infinitary-word-live",
         "infinitary-word-long",
         "infinitary-word-padded",
+        "infinitary-word-partial",
         "infinitary-word-two",
         "infinitary-word-unnamed",
-        ...(posix ? ["infinitary-word-link", "infinitary-word-pipe"] : []),
+        ...(posix
+          ? ["infinitary-word-link", "infinitary-word-linked-owner", "infinitary-word-pipe"]
+          : []),
         "other-folder",
       ].sort(),
     );

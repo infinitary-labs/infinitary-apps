@@ -98,9 +98,9 @@ import {
   type PersonReply,
   type PersonWord,
   personWordBox,
-  WORD_PROFILES_DIR,
   wordLauncher,
   wordProfilePrivate,
+  wordProfilesBeside,
 } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
@@ -838,10 +838,11 @@ export async function startApp(
             resourcesDir: process.resourcesPath,
             env: process.env,
           }),
-          // In the data folder's own folder for them, away from the temporary folder its holder
-          // clears; on Windows only where the data folder was kept private.
+          // In the folder for them beside the data folder, away from the temporary folder its
+          // holder clears and from any folder move; on Windows only where the data folder was kept
+          // private.
           profiles: wordProfilePrivate(hostPlatform(), privacy)
-            ? join(dataDir, WORD_PROFILES_DIR)
+            ? wordProfilesBeside(dataDir)
             : null,
           signal,
         });

@@ -22,6 +22,7 @@ import type {
   TaskDelivery,
   TaskRecord,
 } from "../storage/taskRecords";
+import { TaskGraph } from "../tasks/taskGraph";
 import type { TaskService } from "../tasks/taskService";
 import type { PrOutcome } from "./changeMerge";
 import { publicationRepo } from "./publicationRepo";
@@ -275,7 +276,7 @@ export function standInFront(
 
 /** The one head an approval can merge now. */
 export function candidateHead(authorization: MergeAuthorization): string {
-  return authorization.lineage.at(-1)?.toHead ?? authorization.approvedHead;
+  return TaskGraph.newestApproved(authorization);
 }
 
 /**
@@ -595,6 +596,14 @@ export type LineageQuestion = {
   fromHead: string;
   toHead: string;
   newBase: string;
+  /**
+   * For a part built on another part's approved version, repaired onto that
+   * part's newer approved version: the versions of the part under it, newest
+   * first, the approved change's own base being the first the approved head
+   * builds on (docs/task-graph.md, "Following the part under it"). Absent,
+   * the approved change is read from where it leaves `newBase`.
+   */
+  recordedBases?: string[];
 };
 
 const filled = (value: unknown): value is string =>
@@ -754,7 +763,7 @@ export function declareMergeRepair(
   if (!facts.baseInTo) {
     return {
       read: false,
-      text: `Repair declaration refused: ${step.newBase} is not in ${step.toHead}. newBase is the default branch commit the repaired change sits on: name that one, or bring the change up to date with ${step.newBase} first.`,
+      text: `Repair declaration refused: ${step.newBase} is not in ${step.toHead}. newBase is the default branch commit the repaired change sits on, or the newest approved version of the task it was built on: name that one, or bring the change up to date with ${step.newBase} first.`,
     };
   }
   // The lineage holds, and the crewmate cannot tell what the repair did:

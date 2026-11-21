@@ -66,6 +66,7 @@ import type { CardRefusal, CompletionOffer, TaskRecord } from "../storage/taskRe
 import { keptYeses } from "../tasks/alreadyAllowed";
 import { recordValidation as checkValidationTransition } from "../tasks/liveValidation";
 import { TaskService } from "../tasks/taskService";
+import { followBase } from "./baseFollow";
 import { CardBrowserActions } from "./cardBrowserActions";
 import { revisionNotice } from "./cardChanges";
 import { crewmateCardId } from "./cardEmit";
@@ -584,6 +585,13 @@ export class CrewmateCards {
             throw new Error(
               "The current story has not been published or completed for this destination.",
             );
+          // A part built on another part's approved version offers only a
+          // version holding that part's newest approved version, as its
+          // batch carries it (docs/task-graph.md, "Following the part under it").
+          const behind = contributing
+            ? undefined
+            : await followBase(this.options.tasks, task.id, head);
+          if (behind) throw new Error(`Card refused: ${behind}.`);
           const { presentationRevision: _revision, ...rest } = input;
           return await this.addCrewmateCard(
             task,

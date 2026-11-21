@@ -548,7 +548,7 @@ describe("the batches of a person's own, wired to the task record", () => {
 // the task record, which earlier part merged and which closed without merging.
 describe("a later part built on an earlier part's approved version, wired to the task record", () => {
   it("names the version an earlier part merged at, and the version a later part was built on once its earlier part closed unmerged", async () => {
-    const seen: { merged?: string; unmergedBase?: string }[] = [];
+    const seen: { merged?: string; unmergedBase?: readonly string[] }[] = [];
     const forge = new BatchHostForge();
     const git = standInGit(forge);
     const at = home({
@@ -586,10 +586,28 @@ describe("a later part built on an earlier part's approved version, wired to the
         after: base.id,
       });
     };
-    // The export was approved, then dropped: its approval ended unspent.
+    // The export was approved, repaired under its kept approval, then dropped: its approval
+    // ended unspent, and a later part may have been brought onto the repaired version.
+    const repaired = commitId("export-repaired");
     insertTask(at.tasks, { id: EXPORT.id, repoId: REPO, branch: branchOf(EXPORT) });
     seedDelivery(at.tasks, EXPORT.id, {
-      mergeAuthorization: approvalOf(EXPORT, { status: "revoked", reason: "the task closed" }),
+      mergeAuthorization: approvalOf(EXPORT, {
+        status: "revoked",
+        reason: "the task closed",
+        lineage: [
+          {
+            fromHead: EXPORT.head,
+            toHead: repaired,
+            newBase: commitId("main-newer"),
+            impact: "none",
+            changedPaths: [],
+            evidence: "brought up to date with the default branch",
+            validation: "the unit tests",
+            generation: 1,
+            at: 2,
+          },
+        ],
+      }),
     });
     at.tasks.close(EXPORT.id, { status: "dropped", reason: "cancelled", actor: "captain" });
     // The parser merged: its approval was spent by the merge.
@@ -604,7 +622,7 @@ describe("a later part built on an earlier part's approved version, wired to the
     // Each combine of the line reads the same answers.
     expect(new Set(seen.map((answer) => JSON.stringify(answer)))).toEqual(
       new Set([
-        JSON.stringify({ unmergedBase: EXPORT.head }),
+        JSON.stringify({ unmergedBase: [EXPORT.head, repaired] }),
         JSON.stringify({ merged: PARSER.head }),
       ]),
     );

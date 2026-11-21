@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "chains-follow-base",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A task in a chain keeps up with the task under it",
+      "body": "In a project whose approved changes merge together in batches, a task started on an earlier task's approved version now hears when you approve a newer version of that earlier task, and moves its own work onto it. If that earlier task closes without merging, the later task stops and asks the first mate what to do. A merge card built on an older version of the task under it no longer reaches you, since its batch would leave it out.",
+      "noPicture": "This changes how a waiting task follows the one before it, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

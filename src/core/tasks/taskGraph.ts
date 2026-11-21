@@ -4,7 +4,7 @@ import { fixedHoldWords, overridePasses } from "@shared/holds";
 import { taskStatusSchema } from "@shared/tasks";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskLink, TaskLinkType } from "../storage/taskLinkStore";
-import type { TaskRecord, TaskStatus } from "../storage/taskRecords";
+import type { MergeAuthorization, TaskRecord, TaskStatus } from "../storage/taskRecords";
 import type { TaskReference, TaskReferenceKind } from "../storage/taskReferenceStore";
 import { baselineStands } from "./dependencyWaits";
 import { holdingWaits } from "./holdingWaits";
@@ -634,7 +634,7 @@ export class TaskGraph {
     if (!best || !authorization) return undefined;
     return {
       task: best.task,
-      head: authorization.approvedHead,
+      head: TaskGraph.newestApproved(authorization),
       branch: authorization.target.branch,
       carried: best.carried,
     };
@@ -681,14 +681,26 @@ export class TaskGraph {
   }
 
   /**
+   * The newest version an approval covers: the last repair its kept
+   * approval accepted, or the version the captain approved. A part started
+   * on it, followed to it and merged at it read this one version
+   * (docs/task-graph.md, "Following the part under it").
+   */
+  static newestApproved(approval: Pick<MergeAuthorization, "approvedHead" | "lineage">): string {
+    return approval.lineage.at(-1)?.toHead ?? approval.approvedHead;
+  }
+
+  /**
    * The approved version a task's work merged at: it closed done by a
-   * merge, which spent the captain's approval. Undefined for any other
-   * close, a done close without a merge included, and for live work.
+   * merge, which spent the captain's approval. The merge's receipt names the
+   * version that merged; without one, the newest version the approval
+   * covered. Undefined for any other close, a done close without a merge
+   * included, and for live work.
    */
   static mergedAt(task: Pick<TaskRecord, "status" | "delivery">): string | undefined {
     const approval = task.delivery?.mergeAuthorization;
     return task.status === "done" && approval?.status === "consumed"
-      ? approval.approvedHead
+      ? (approval.receipt?.head ?? TaskGraph.newestApproved(approval))
       : undefined;
   }
 

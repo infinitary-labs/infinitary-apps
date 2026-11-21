@@ -136,6 +136,42 @@ export async function readFrameNow<T>(
   return (await frame.evaluate(read).catch(() => fallback)) as T;
 }
 
+/**
+ * One read of `frame`'s page, run on its body, as a poll samples a page the
+ * stage may take away: `gone` when the window holds no such frame, or when
+ * its page is torn down while the read runs. The stage retires a card's page
+ * once the card has paged out, and a read caught in that moment fails with
+ * the frame detached or its page's context destroyed; `expect.poll` stops
+ * at a read that throws instead of looking again, so the read answers what
+ * the next look would: nothing there. Whether the page was torn down is the
+ * window's own fact, that the frame's element has left it, never the
+ * error's words; a page in a process of its own can report its context
+ * destroyed before Playwright marks its frame detached, while the element
+ * left the window first. Any other failure still throws, as a second frame
+ * matching does.
+ */
+export async function readFrameOnce<T>(
+  frame: FrameLocator,
+  read: (body: HTMLElement) => T | Promise<T>,
+  gone: T,
+): Promise<T> {
+  const holders = await frame.owner().elementHandles();
+  try {
+    if (holders.length > 1) throw new Error(`${holders.length} frames match ${frame.owner()}`);
+    const [holder] = holders;
+    const held = await holder?.contentFrame();
+    if (!holder || !held) return gone;
+    try {
+      return await held.locator("body").evaluate(read);
+    } catch (error) {
+      if (!(await holder.evaluate((element) => element.isConnected))) return gone;
+      throw error;
+    }
+  } finally {
+    await Promise.all(holders.map((holder) => holder.dispose()));
+  }
+}
+
 /** The iframe element of a side panel, by its id. */
 export function panelElement(page: Page, panelId: string): Locator {
   return frameElement(page, `[data-side-panel="${panelId}"] iframe`);

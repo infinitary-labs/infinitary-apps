@@ -179,6 +179,9 @@ A rail panel's frame (`panelBody`, `nowFrame`, `activityFrame`, `dockBody`) goes
 A folded rail keeps its panels outside the window, where Chromium runs no animation frame, so a panel whose page mounted after the fold (a reload with a card's thread open) is marked drawn only once the rails unfold.
 A locator in that page still waits for its element, while a one-shot read of a folded panel can meet the empty first document.
 A journey about a frame's own states reads the element with the `…Element` helpers (`cardBodyElement`, `panelElement`, `frameIn`, `warmElement`), which carry no mark; one about a frame that stops drawing, such as a body that navigates itself away, reads it with `cardBodyAsHeld`.
+The stage tears a card's page down once the card has paged out, and a read caught in that moment fails with the frame detached or its page's context destroyed, which stops `expect.poll` instead of letting it look again.
+So a poll that samples a page the stage may take away reads it with `readFrameOnce(frame, read, gone)`, which answers `gone` when the window holds no such frame or the frame's element has left the window by the time the read fails, and throws any other failure.
+It asks the window rather than Playwright's frame state, because a page in a process of its own can report its context destroyed before Playwright marks the frame detached.
 A script that resolves a frame inside the window takes its selector from `cardBodySelector` or `frameSelectorIn`.
 The `e2e-frame-door` Biome rule (`tests/lint/e2e-frame-door.grit`, in `pnpm check`) refuses `frameLocator`, `contentFrame` and any string naming an `iframe` in a `*.spec.ts`; the helper files under `tests/e2e/` are the door's own.
 A spec whose subject is a frame it builds itself, or the iframes an attack plants, says so in `// biome-ignore lint/plugin/e2e-frame-door: <why>`.

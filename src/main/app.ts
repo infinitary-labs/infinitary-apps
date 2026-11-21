@@ -97,6 +97,7 @@ import {
   followInstalledProgram,
   keepsStarterBesideGrant,
   lockHolder,
+  lockHolderKind,
   markRunning,
   ownedRunOf,
   processAlive,
@@ -672,19 +673,19 @@ export async function startApp(
   // starter, and neither starts nor stops it; over a run started by hand, or none, it has no starter.
   // One reading decides both whether a command holds the folder and whether it is the agent's own,
   // so the window never opens beside an owned run with no starter, nor keeps a starter for none.
-  const startHolder = startsHere ? commandHolding(dataDir) : null;
-  const ownRunHere = startHolder?.owned != null;
+  // The same reading decides whether a grant waiting keeps the starter (`keepsStarterBesideGrant`).
+  const holding = commandHolding(dataDir);
   const starter =
     windowless ||
     move ||
-    (startsHere && !ownRunHere) ||
+    (startsHere && holding.owned === null) ||
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
-    !keepsStarterBesideGrant(dataDir, grantFollowed(work.place.dataDir, joinedHere))
+    !keepsStarterBesideGrant(holding, grantFollowed(work.place.dataDir, joinedHere))
       ? null
       : commandStarter(starterOptions);
-  let besideRun = !windowless && (startHolder ? startHolder.running : runningByCommand(dataDir));
+  let besideRun = !windowless && holding.running;
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:
@@ -728,17 +729,27 @@ export async function startApp(
     // A run took the folder after this window read it, as the agent's job starting its run again
     // after Start it here's force stop: a run ignores a second launch, so this window starts again
     // and opens beside it, never quitting with no window and never starting or stopping that run.
-    // A run holds the single-instance lock a moment before it notes that it holds the folder, so
-    // the window waits, as long as a command waits for a stopped run, for that note; a window that
-    // holds the lock focuses itself instead, and this launch quits.
-    else if (startsHere && !besideRun && (await commandNoted(dataDir))) {
+    // A run notes that it holds the folder in the same step as it takes the lock, and one that
+    // ends before then lets the lock go, which this window then starts again on as well; a window
+    // that holds the lock focuses itself instead, and this launch quits.
+    else if (
+      startsHere &&
+      !besideRun &&
+      (await lockHolderKind({
+        running: () => runningByCommand(dataDir),
+        lockFree: () => app.requestSingleInstanceLock(),
+        waitMs: STOPPED_RUN_WAIT_MS,
+      })) !== "window"
+    ) {
       if (!isolatedUserDataDir) app.relaunch({ args: process.argv.slice(1) });
       app.quit();
     } else app.quit();
   } else {
     // The launch that holds the folder clears what earlier ones left in its
-    // own temporary folder; a window beside a run leaves it to the run.
-    if (privacy?.temp && !besideRun) await clearPrivateTemp(privacy.temp);
+    // own temporary folder; a window beside a run leaves it to the run, and
+    // a run clears it once it noted that it holds the folder (below), in the
+    // same step as it took the lock.
+    if (privacy?.temp && !besideRun && !windowless) await clearPrivateTemp(privacy.temp);
     // Start it here over a run that did not answer ended that run alone and asked its service
     // manager nothing, so its job may start the run again (`stopRunAgent`'s force). Now that this
     // window holds the folder, whatever that job runs is a start the folder refuses, so the job is
@@ -825,6 +836,8 @@ export async function startApp(
           process.stderr.write("[infinitary] Could not record why the command stopped.\n");
         }
       };
+      // Noted first, so a launch refused the lock meanwhile reads a run here (`lockHolderKind`).
+      if (privacy?.temp) await clearPrivateTemp(privacy.temp);
       // A settings file names where programs are, so no shell is asked
       // before the core starts (./runSettings.ts); one it cannot use ends
       // the run, kept as its last stop for status to read.
@@ -1649,14 +1662,4 @@ export async function startApp(
 function grantFollowed(workDir: string, joined: JoinedHome): boolean {
   const found = windowFromWork(workDir, joined.leftDeviceId());
   return Boolean(found && found.grant.deviceId !== joined.keptOwnDeviceId());
-}
-
-/** Whether a command notes that it holds `dataDir` within a stopped run's wait. */
-async function commandNoted(dataDir: string): Promise<boolean> {
-  const until = Date.now() + STOPPED_RUN_WAIT_MS;
-  while (!runningByCommand(dataDir)) {
-    if (Date.now() >= until) return false;
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  return true;
 }

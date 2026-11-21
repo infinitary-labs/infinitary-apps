@@ -285,22 +285,38 @@ export function commandHolding(
  * or no command running it always does, so a home that keeps its own first
  * mate still runs it in the background; beside a running command, only when
  * this app's own agent started it, so following along stops that command
- * and never one the person started by hand.
+ * and never one the person started by hand. Read from the one reading of the
+ * records (`commandHolding`) the window also opens beside a command by, so
+ * the two never describe different runs.
  */
 export function keepsStarterBesideGrant(
-  dataDir: string,
+  holding: { running: boolean; owned: OwnedRun | null },
   grant: boolean,
-  alive: (pid: number) => boolean = processAlive,
 ): boolean {
-  return !grant || !runningByCommand(dataDir, alive) || runByOwnAgent(dataDir, alive);
+  return !grant || !holding.running || holding.owned !== null;
 }
 
-/** Whether the command running on this folder now says this app's own agent started it. */
-export function runByOwnAgent(
-  dataDir: string,
-  alive: (pid: number) => boolean = processAlive,
-): boolean {
-  return ownedRun(dataDir, alive) !== null;
+/**
+ * Who holds the single-instance lock a launch was refused, for Start it
+ * here: a run notes that it holds the folder in the same step as it takes
+ * that lock, so `run` once a command notes it; `free` once the lock can be
+ * taken, as when the holder ended before it noted anything; `window` where
+ * neither comes within a stopped run's wait, which leaves only a window,
+ * itself shown again by the launch.
+ */
+export async function lockHolderKind(options: {
+  running: () => boolean;
+  lockFree: () => boolean;
+  waitMs: number;
+  everyMs?: number;
+}): Promise<"run" | "free" | "window"> {
+  const until = Date.now() + options.waitMs;
+  for (;;) {
+    if (options.running()) return "run";
+    if (options.lockFree()) return "free";
+    if (Date.now() >= until) return "window";
+    await new Promise((resolve) => setTimeout(resolve, options.everyMs ?? 250));
+  }
 }
 
 /** One run, by its process and the start its own note keeps, so a reused process number is another. */

@@ -5,7 +5,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
-  rmSync,
+  renameSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -84,6 +84,8 @@ function programTable(asked: string[][], dataDir: () => string) {
   const programs = {
     /** A program runs under `pid`: a run that knows itself by `startedAt`, or another program (null). */
     run: (pid: number, startedAt: string | null) => table.set(pid, { startedAt }),
+    /** The program under `pid` ends on its own. */
+    gone: (pid: number) => table.delete(pid),
     /** What happens as a run ends, before anything reads again. */
     onEnd: undefined as ((pid: number) => void) | undefined,
     /** Whether the runs read no force stop, as one stuck past its own thread or from before it. */
@@ -96,8 +98,8 @@ function programTable(asked: string[][], dataDir: () => string) {
         return table.has(pid);
       },
       forceWaitMs: 300,
-      wake: (pid: number, birth?: string) => {
-        programs.woken.push([pid, birth]);
+      wake: (run: Run, birth?: string) => {
+        programs.woken.push([run.pid, birth]);
       },
     },
   };
@@ -120,7 +122,8 @@ function programTable(asked: string[][], dataDir: () => string) {
       }
       const pid = request.pid ?? -1;
       if (programs.deaf || table.get(pid)?.startedAt !== request.startedAt) continue;
-      rmSync(file, { force: true });
+      // Claimed within its time, the stop stays claimed as the run ends by its own hand.
+      renameSync(file, file.replace(/\.json$/, ".taken"));
       table.delete(pid);
       asked.push(["end", String(pid)]);
       programs.onEnd?.(pid);
@@ -351,6 +354,20 @@ describe("the command the window starts, on a Mac", () => {
     // through the host's own.
     expect(restart.programs.woken).toEqual([[NAMED.pid, undefined]]);
     expect(startHere.programs.woken).toEqual([[NAMED.pid, undefined]]);
+  });
+
+  // The review of INF-5409: a run that ends on its own after its stop was written, before it claimed
+  // it, was not ended by that stop: Start it here hears that it is gone, which never lets the
+  // window that starts here retire the job.
+  it("answers gone, never ended, for a run that ended before claiming its stop", async () => {
+    const { context, asked, programs } = mac();
+    recordRun(context, NAMED, true);
+    programs.run(NAMED.pid, NAMED.startedAt);
+    programs.deaf = true;
+    setTimeout(() => programs.gone(NAMED.pid), 100);
+    expect(await stopRunAgent(context, { forget: false, force: NAMED })).toBe("gone");
+    expect(asked).toEqual([]);
+    expect(forceStopsLeft(context.dataDir)).toEqual([]);
   });
 
   // The review of INF-5409: a run the job started again after the named one ended keeps going on
@@ -769,18 +786,29 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // The review of INF-5409: the named run claimed its stop, and another program took its number as
-  // it went. A program still runs under that number, so the run is never called ended and the stop
-  // stays pending (`uncertain`): the task is not run again, and the program there now is never ended.
-  it("calls nothing ended while a program that took the named run's number runs under it", async () => {
+  // it went. While a program still runs under that number the run is never called ended, so the
+  // restart stays pending and the program there is never ended; once that number is free, the
+  // confirmed end starts the task once, which Task Scheduler never does by itself.
+  it("waits while a program that took the named run's number runs under it, then starts the task once", async () => {
     const { context, asked, programs } = windows();
     await startRunAgent(context);
     recordRun(context, NAMED, true);
     programs.run(NAMED.pid, NAMED.startedAt);
     programs.onEnd = (pid) => programs.run(pid, null);
     asked.length = 0;
-    expect(await restartRunAgent(context, NAMED)).toBe("uncertain");
+    let outcome: string | null = null;
+    const restarting = restartRunAgent(context, NAMED).then((end) => {
+      outcome = end;
+      return end;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(outcome).toBeNull();
     expect(asked).toEqual([["end", String(NAMED.pid)]]);
     expect(programs.processes.alive(NAMED.pid)).toBe(true);
+    programs.gone(NAMED.pid);
+    expect(await restarting).toBe("restarted");
+    expect(asked.filter(([ask]) => ask === "/Run")).toHaveLength(1);
+    expect(forceStopsLeft(context.dataDir)).toEqual([]);
   });
 });
 

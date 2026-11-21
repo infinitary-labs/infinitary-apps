@@ -7,13 +7,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askLoginShellEarly,
+  commandHolding,
   followInstalledProgram,
   keepsStarterBesideGrant,
   lockHolder,
+  lockHolderKind,
   markRunning,
   ownedRun,
   ownedRunOf,
   programIdentity,
+  RUN_MARKER,
   runCommand,
   runningByCommand,
   runOptions,
@@ -133,7 +136,7 @@ describe("a window opened beside a run", () => {
       symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
       return dataDir;
     };
-    const alive = (pid: number) => pid === 4242;
+    const alive = (pid: number): boolean => pid === 4242;
     // The agent's own definition marks the runs it starts with its label (`runAgentEnv`), and
     // Windows' task with its `--agent` word; a terminal's run carries no mark, or another agent's.
     const env: NodeJS.ProcessEnv = { [RUN_AGENT_ENV]: label, PATH: "/usr/bin" };
@@ -147,14 +150,69 @@ describe("a window opened beside a run", () => {
     // agent's.
     expect(env).toEqual({ PATH: "/usr/bin" });
     expect(startedByAgent({ mark: takeRunAgentMark({ ...env }), label })).toBe(false);
-    expect(keepsStarterBesideGrant(runs(byAgent), true, alive)).toBe(true);
-    expect(keepsStarterBesideGrant(runs(byHand), true, alive)).toBe(false);
+    const holding = (dataDir: string, isAlive = alive) => commandHolding(dataDir, isAlive);
+    expect(keepsStarterBesideGrant(holding(runs(byAgent)), true)).toBe(true);
+    expect(keepsStarterBesideGrant(holding(runs(byHand)), true)).toBe(false);
     // With no grant waiting, the window keeps its starter as it always has.
-    expect(keepsStarterBesideGrant(runs(byHand), false, alive)).toBe(true);
+    expect(keepsStarterBesideGrant(holding(runs(byHand)), false)).toBe(true);
     // The review of INF-5409: with no command running, a grant waiting leaves the starter too,
     // so a home that keeps its own first mate still starts it in the background.
-    expect(keepsStarterBesideGrant(runs(byHand), true, () => false)).toBe(true);
-    expect(keepsStarterBesideGrant(scratchDir("infinitary-run-none-"), true, alive)).toBe(true);
+    expect(
+      keepsStarterBesideGrant(
+        holding(runs(byHand), () => false),
+        true,
+      ),
+    ).toBe(true);
+    expect(keepsStarterBesideGrant(holding(scratchDir("infinitary-run-none-")), true)).toBe(true);
+    // The review of INF-5409: the window opens beside a command and keeps its starter from one
+    // reading, so a note that changes after it, either way, never splits the two.
+    const owned = runs(byAgent);
+    const before = holding(owned);
+    writeFileSync(join(owned, RUN_MARKER), "not a note");
+    expect([before.running, keepsStarterBesideGrant(before, true)]).toEqual([true, true]);
+    const empty = scratchDir("infinitary-run-none-");
+    const none = holding(empty);
+    markRunning(empty, 4242, new Date("2026-10-25T17:00:00Z"), undefined, false);
+    symlinkSync(`${hostname()}-4242`, join(empty, "SingletonLock"));
+    expect([none.running, keepsStarterBesideGrant(none, true)]).toEqual([false, true]);
+  });
+
+  // The review of INF-5409: Start it here refused the lock reads who holds it. A run notes that it
+  // holds the folder in the same step as it takes the lock, however late it takes it; a holder
+  // that ends before then lets the lock go; only a window does neither.
+  it("tells a run, a lock let go and a window apart for a launch refused the lock", async () => {
+    let noted = false;
+    let free = false;
+    setTimeout(() => {
+      noted = true;
+    }, 300);
+    expect(
+      await lockHolderKind({
+        running: () => noted,
+        lockFree: () => false,
+        waitMs: 5_000,
+        everyMs: 20,
+      }),
+    ).toBe("run");
+    setTimeout(() => {
+      free = true;
+    }, 300);
+    expect(
+      await lockHolderKind({
+        running: () => false,
+        lockFree: () => free,
+        waitMs: 5_000,
+        everyMs: 20,
+      }),
+    ).toBe("free");
+    expect(
+      await lockHolderKind({
+        running: () => false,
+        lockFree: () => false,
+        waitMs: 200,
+        everyMs: 20,
+      }),
+    ).toBe("window");
   });
 
   // The review of INF-5409: joining and following along stop only the run this window's starter
@@ -215,7 +273,7 @@ describe("a window opened beside a run", () => {
   // program may have taken by the time it arrives; only that run reads the ask as its own.
   it("asks a stop for one run through its folder, by its process and start, sending no signal", () => {
     const dataDir = scratchDir("infinitary-run-marker-");
-    const alive = (pid: number) => pid === 4242;
+    const alive = (pid: number): boolean => pid === 4242;
     markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
     symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
     const owned = ownedRun(dataDir, alive);

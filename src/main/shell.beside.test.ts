@@ -581,28 +581,31 @@ describe("the window beside a command's first mate", () => {
   });
 
   // The review of INF-5409: only a force stop that ended the run lets the window starting here
-  // retire the job. A run gone before the press is ended by nothing, so the job stays as it is.
-  it("leaves the job in place where the run was gone before Start it here ended anything", async () => {
-    const command = silentRun();
-    await command.open().settled();
-    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
-    await at.shell.start();
-    await expect
-      .poll(() => at.shell.thisMac())
-      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
-    at.starter.stop.mockImplementation(async () => {
-      at.command.records = { running: false, run: null, lastStop: null };
-      return "untouched" as const;
-    });
-    expect(at.shell.startHere()).toBe(true);
-    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+  // retire the job. A run gone before the press, or one that ended on its own after its stop was
+  // written and before it claimed it, was ended by nothing, so the job stays as it is.
+  it("leaves the job in place where the run went without its force stop ending it", async () => {
+    for (const ended of ["untouched", "gone"] as const) {
+      const command = silentRun();
+      await command.open().settled();
+      const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+      await at.shell.start();
+      await expect
+        .poll(() => at.shell.thisMac())
+        .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+      at.starter.stop.mockImplementation(async () => {
+        at.command.records = { running: false, run: null, lastStop: null };
+        return ended;
+      });
+      expect(at.shell.startHere()).toBe(true);
+      await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    }
   });
 
-  // The review of INF-5409: a force stop the run claimed and has not acted on may still end it.
-  // Start it here stays pending on that run, its buttons away, and starts here once the run let
-  // the folder go, with no retirement of the job its stop was not shown to end; Restart it keeps
-  // waiting under its notice, offering neither button again nor a join.
-  it("keeps Start it here and Restart it pending on a force stop the run claimed", async () => {
+  // The review of INF-5409: a force stop the run claimed is waited for until it ended or was
+  // declined, so the starter has not answered meanwhile. Through every reading of the records and
+  // past the wait for an answer, Restart it keeps waiting under its notice, offering neither button
+  // nor a join; Start it here keeps its wait, and starts here only once its stop ended the run.
+  it("keeps Restart it pending while its force stop is still waited for", async () => {
     const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
@@ -610,14 +613,24 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
-    at.starter.restart.mockImplementation(async () => "uncertain" as const);
+    let restarted: (outcome: "failed") => void = () => {};
+    at.starter.restart.mockImplementation(() => new Promise((resolve) => (restarted = resolve)));
     expect(at.shell.restartCommand()).toBe(true);
     await expect.poll(() => at.starter.restart.mock.calls.length).toBe(1);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Past a reading of the records and the wait for an answer.
+    await new Promise((resolve) => setTimeout(resolve, 1_300));
     expect(at.shell.thisMac()).toMatchObject({ command: { state: "waiting", ending: "restart" } });
     expect(at.shell.followsAdded()).toMatchObject({ joins: false, pastes: false });
     expect(at.shell.startHere()).toBe(false);
+    expect(at.shell.restartCommand()).toBe(false);
+    // Declined, the run still runs and does not answer: its notice offers Restart it again.
+    restarted("failed");
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+  });
 
+  it("keeps Start it here pending while its force stop is still waited for", async () => {
     const second = silentRun();
     await second.open().settled();
     const here = besideShell(second.doorDir, {
@@ -630,15 +643,23 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => here.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
-    here.starter.stop.mockImplementation(async () => "uncertain" as const);
+    let stopped: (ended: "ended") => void = () => {};
+    here.starter.stop.mockImplementation(() => new Promise((resolve) => (stopped = resolve)));
     expect(here.shell.startHere()).toBe(true);
     await expect.poll(() => here.starter.stop.mock.calls.length).toBe(1);
-    // Past the wait for a stopped run, the run still holds the folder: nothing is started.
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    // Past a reading of the records and the wait for a stopped run.
+    await new Promise((resolve) => setTimeout(resolve, 1_300));
+    expect(here.shell.thisMac()).toMatchObject({
+      command: { state: "waiting", ending: "not-answering" },
+    });
     expect(here.relaunch).not.toHaveBeenCalled();
     expect(here.shell.restartCommand()).toBe(false);
+    expect(here.shell.startHere()).toBe(false);
     here.command.records = { running: false, run: null, lastStop: null };
-    await expect.poll(() => here.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    stopped("ended");
+    await expect
+      .poll(() => here.relaunch.mock.calls)
+      .toEqual([[{ startHere: true, letGoJob: true }]]);
   });
 
   // The review of INF-5409: Start it here starts this window again only once the run its notice

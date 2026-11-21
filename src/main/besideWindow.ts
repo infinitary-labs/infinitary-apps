@@ -477,11 +477,11 @@ export class BesideWindow {
     // The window hears the stopped command go, and dials the one started again.
     this.away();
     void starter.restart(outgoing ?? undefined).then((outcome) => {
+      // A force stop the run claimed is waited for until it ended or was declined, so the starter
+      // answers only once nothing it asked may still act: until then the window keeps waiting under
+      // its notice, its buttons away, through every reading of the records.
       restart.settled = true;
-      // A force stop the run claimed and has not acted on yet may still end it: the window keeps
-      // waiting under its notice, as for a run started again, never offering a join or the run
-      // named back, until a run its agent started in its place welcomes it.
-      restart.refused = outcome !== "restarted" && outcome !== "uncertain";
+      restart.refused = outcome !== "restarted";
       if (this.closed || this.restart !== restart) return;
       const status = this.options.beside.status();
       // Nothing was ended or started: the run named is not one its agent started that still runs,
@@ -892,10 +892,9 @@ export class BesideWindow {
         );
         return undefined;
       });
+      // A run gone on its own, with its stop never acted on, is not one this stop ended. A stop the
+      // run claimed is waited for until it ended or was declined, its buttons away meanwhile.
       forced = ended === "ended";
-      // Claimed and not yet ended, the stop may still act: Start it here stays pending on that run,
-      // its buttons away, until a reading says the run let the folder go, however long that takes.
-      if (ended === "uncertain") await this.released(target, Number.POSITIVE_INFINITY);
     }
     // A stop asked through the folder is read by its run within a second: the app starts again
     // only once that run let the folder go, so it is never joined again in its own place.
@@ -918,11 +917,9 @@ export class BesideWindow {
     );
   }
 
-  /** Waits, as long as a command waits for a stopped run unless `waitMs` says, until `run` let the folder go. */
-  private async released(
-    run: OwnedRun,
-    waitMs: number = this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS,
-  ): Promise<void> {
+  /** Waits, as long as a command waits for a stopped run, until `run` let the folder go. */
+  private async released(run: OwnedRun): Promise<void> {
+    const waitMs = this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS;
     const readings = Math.ceil(waitMs / BESIDE_RUN_READ_MS);
     for (let read = 0; read < readings && !this.closed; read++) {
       if (this.letGo(this.options.beside.status(), run)) return;

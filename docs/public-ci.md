@@ -13,7 +13,9 @@ A fork's pull request never starts it, even when its branch looks like an intern
 ## The project's own Linux jobs
 
 The project's own Linux jobs run on GitHub's hosted Ubuntu, which costs nothing a minute in a public project and leaves the project's own machines to the Mac, Windows and signing work.
-Leave the repository variables `LINUX_RUNNER`, `LINUX_QUEUES` and `RELEASE_LINUX_PACKAGES_RUNNER` unset on the destination: every Linux job then falls back to `ubuntu-24.04` (`docs/testing.md`, "Each Linux job's kind").
+The one exception is the branch check each push of the project's own task branches starts: its three jobs run on the project's own Linux places, where they finish about three times sooner (INF-5577's review, the captain's pick "Run your own task branches' checks on your own Linux machines again; contributors' checks stay on GitHub").
+Leave the repository variables `LINUX_RUNNER` and `RELEASE_LINUX_PACKAGES_RUNNER` unset on the destination, and set `LINUX_QUEUES` to `{"typecheck":"fleet-linux-pr"}` alone: every other Linux job then falls back to `ubuntu-24.04` (`docs/testing.md`, "Each Linux job's kind").
+An outside contributor's pull request takes hosted Ubuntu before any variable, so it never reaches that queue ("Outside contributors").
 The existing private project keeps its variables until it is archived, since GitHub bills its hosted minutes.
 The Mac, Windows, signing and TestFlight jobs keep their runner variables and stay on the project's own machines.
 Use neutral runner registration names that identify platform and queue, not people or machines.

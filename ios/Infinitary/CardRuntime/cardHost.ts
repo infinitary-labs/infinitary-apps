@@ -12,6 +12,9 @@ import { cardNavigationParts, type NavigationPart } from "../../../src/shared/ca
 import { setCurrentLanguage } from "../../../src/shared/i18n/current";
 import { wordSaidBody } from "../../../src/shared/i18n/said";
 import { appBodyOf } from "../../../src/shared/welcome";
+import { frameReads } from "../../../src/shared/reads";
+import { type FrameReadDeclaration, type FrameReadRefusal, FrameSubscriptions } from "../../../src/renderer/src/plugins/frames/frameSubscriptions";
+import { phoneReads } from "./phoneReads";
 import { phonePressRule } from "./pressRule";
 import { phoneTextRule, textScale } from "./textSize";
 
@@ -26,6 +29,7 @@ declare global {
       question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
       expanded(index: number, state: string): void; textScale(value: number): void; pressMoved(): void;
       fill(answers: unknown): boolean;
+      reads(value: CardReads): void; push(channel: string, payload: unknown): void; resync(): void;
     };
   }
 }
@@ -45,7 +49,13 @@ type Input = {
   expanded?: { index: number; state: string };
   /** The device's Text Size as a factor of the Mac's sizes (docs/ios.md, "Text size"); 1 draws them as the Mac does. */
   textScale?: number;
-};
+} & CardReads;
+/**
+ * INF-5531 piece 2: the live reads and views the open card's crewmate declared, which its body's own script may
+ * subscribe to through `inf.subscribe`, as on the Mac (docs/ui-plugins.md, "A card's reads"). Native code passes them
+ * only while the card is open, and none to a past card, a fact strip or a cover.
+ */
+type CardReads = { reads?: string[]; sql?: string[] };
 /**
  * INF-3296's phone piece: what the native chrome holds about the card's notes. The frame hears only targets and
  * offsets, never a comment (docs/card-threads.md, "Pointing at a card").
@@ -88,6 +98,19 @@ let next = 0;
 const collections = new Map<number, { resolve: (answers: FrameAnswers) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
 const send = (message: object) => frame?.contentWindow?.postMessage({ fm: 2, ...message }, "*");
 const fail = (message: string) => new Error(message);
+/**
+ * The card's reads, through the same read catalog and executor a panel's page on the phone uses (phoneReads.ts): each
+ * ask goes to native code, which passes only a read's channel, and the computer's pushes come back through it.
+ */
+const reads = phoneReads((channel, args) => native({ type: "ask", channel, args }));
+/** Whether the body's document reuses its last value (`ready`'s `reuseReads`), as the desktop's controller reads it. */
+let reuseReads = false;
+const subscriptions = new FrameSubscriptions(reads.executor, (message) => frame?.contentWindow?.postMessage(message, "*"), () => reuseReads);
+/** What the body may read now: the mount's declaration, then each the card's changes hand it. */
+let declaration: FrameReadDeclaration = declared({});
+function declared(value: CardReads): FrameReadDeclaration {
+  return { pluginId: "host", ...frameReads(value.reads ?? [], value.sql ?? []) };
+}
 
 window.addEventListener("message", (event: MessageEvent) => {
   if (!frame || event.source !== frame.contentWindow) return;
@@ -97,6 +120,7 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (message.type === "ready") {
     if (documentID || !message.document) return;
     documentID = message.document;
+    reuseReads = message.reuseReads === true;
     // INF-1338: the body can answer a ping from here on, so the native watchdog starts counting its own answers.
     void native({ type: "ready" }).catch(() => {});
     // INF-4425: a playable preview's questions are settings, so none is tagged Default.
@@ -140,6 +164,11 @@ window.addEventListener("message", (event: MessageEvent) => {
       const request = frameRequestSchema.safeParse(message);
       const reply = (ok: boolean, value: unknown) => send({ type: "response", document: documentID, id: message.id,
         ...(ok ? { ok, result: value } : { ok, error: { code: "refused", message: String(value) } }) });
+      // A live read the open card declared (INF-5531 piece 2), answered as the Mac's frame controller answers it.
+      const answerRead = (refusal: FrameReadRefusal | undefined) => send({ type: "response", document: documentID, id: message.id,
+        ...(refusal ? { ok: false, error: refusal } : { ok: true }) });
+      if (request.success && request.data.verb === "subscribe") { answerRead(subscriptions.subscribe(declaration, request.data)); break; }
+      if (request.success && request.data.verb === "unsubscribe") { answerRead(subscriptions.unsubscribe(request.data.sub)); break; }
       // A data file the body names (docs/card-authoring.md, "Data by reference"): its text, read from the Mac's copy.
       if (request.success && request.data.verb === "data") {
         const name = cardDataName(request.data.src);
@@ -236,6 +265,8 @@ window.phoneCard = {
     const value = worded.body === given.body ? given : { ...given, body: worded.body, ...(given.marks ? { marks: given.marks.map(worded.at) } : {}) };
     input = value;
     scale = textScale(value.textScale);
+    subscriptions.drop();
+    declaration = declared(value);
     // The Mac's split: a settle card's fact strip stands beside its choices, and the body shows the rest.
     const split = value.card && takesTaskFacts(value.card) ? splitSettleFacts(value.body) : undefined;
     const marks = (value.marks ?? []).map((mark) => (split && mark > split.at ? mark - split.facts.length : mark));
@@ -327,6 +358,16 @@ window.phoneCard = {
     send({ type: "fill", answers: answers.data });
     return true;
   },
+  // INF-5531 piece 2: the card's declaration changed under the body, as when its author ended it: a read it no longer
+  // grants ends at once and the body's script hears why, keeping what it drew.
+  reads(value) {
+    const before = declaration;
+    declaration = declared(value);
+    subscriptions.redeclared(before, declaration);
+  },
+  // A push from the computer, or a reload of what the phone held, which the card's live reads read again on.
+  push(channel, payload) { reads.push(channel, payload); },
+  resync() { reads.resync(); },
   expanded(index, state) {
     if (documentID && !input.expanded && typeof state === "string") send({ type: "expanded", document: documentID, index, state });
   },

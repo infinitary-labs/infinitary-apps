@@ -27,8 +27,9 @@ import { calledTool, latestServedTurn, spawnedTaskOf } from "../providerRequest"
  * - `quiet`: the turn that reads the answer ends with closing words only;
  * - `card`: that turn shows an answer card;
  * - `follow`: that turn asks one follow-up question, answered `quiet`;
- * - `carry`: that turn steers the reader to carry on, asking no answer,
- *   with the step held until the spec lets it go (`releaseThreadAnswer`);
+ * - `carry`: the asking turn's last step and the answer's turn, which
+ *   steers the reader to carry on asking no answer, are each held until
+ *   the spec lets them go (`releaseThreadAnswer`);
  * - `hold`: the reader reports without answering it.
  *
  * The scenario answers the first mate's own wakes (`answersFirst`): its
@@ -172,6 +173,11 @@ export const askedAnswer: Scenario = Object.assign(
         return results.length === 0 ? card(METER_CARD_TITLE) : said("Shown.");
       const asked = words.match(/meter journey ask \[(\w+)\]: ([^\n"]+)/);
       if (asked) {
+        // A `carry` question's asking turn looks at the crew once more, that
+        // step held until the spec lets it go: the reader's answer and its
+        // report then both wait on the lane when the turn ends.
+        if (asked[1] === "carry" && results.length === 1)
+          return { threadHeld: [{ name: "crew_status", args: {} }] };
         if (results.length > 0) return said("Asked the reader.");
         return {
           calls: [

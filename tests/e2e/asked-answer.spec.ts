@@ -10,6 +10,7 @@ import {
 } from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
+import { FIRSTMATE_RECIPIENT, InboxStore } from "../../src/core/storage/inboxStore";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -125,6 +126,7 @@ async function launch(name: string) {
   const db = openDatabase(userDataDir);
   // TaskService performs boot recovery in its constructor: build it only before launch.
   const tasks = new TaskService({ db });
+  const inbox = new InboxStore(db);
   db.pragma("query_only = ON");
   const app = await launchApp({ withMockProvider: true, userDataDir, scenarios: [askedAnswer] });
   const reader = () => tasks.list().find((task) => task.title === READER_TITLE);
@@ -147,7 +149,7 @@ async function launch(name: string) {
         2,
       ),
     );
-  return { app, page: app.page, tasks, db, reader, open, keep };
+  return { app, page: app.page, tasks, inbox, db, reader, open, keep };
 }
 
 /** The captain's first message starts the reader; it reports once before any question. */
@@ -318,19 +320,24 @@ test("after a refused change, the task's own card answers the message", async ()
 test("an answer is read in a turn of its own, and carry on keeps its message tied", async () => {
   const run = await launch("answer-turn-alone");
   try {
-    const { app, page, tasks } = run;
+    const { app, page, tasks, inbox } = run;
     const provider = app.mockProvider;
     if (!provider) throw new Error("no stand-in provider");
     await startReader(app, page);
     const question = "Did the reading go through?";
     const words = askWords("carry", question);
     await say(page, words);
-    // The turn that reads the answer is held at its carry-on steer.
+    // The asking turn's last step is held until the reader has answered and
+    // its turn has ended: its answer and its report both wait on the lane.
     await expect.poll(() => provider.heldThreadAnswers(), { timeout: 60_000 }).toBe(1);
-    // The reader's turn ends meanwhile, so its report waits too.
+    const waiting = () => inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.facts?.kind);
     await expect
-      .poll(() => readerReported(app, READER_ANSWER), { timeout: 60_000 })
-      .toBeGreaterThan(0);
+      .poll(waiting, { timeout: 60_000 })
+      .toEqual(expect.arrayContaining(["requested-response", "report"]));
+    provider.releaseThreadAnswer();
+    // The turn that reads the answer is held at its carry-on steer.
+    await expect.poll(() => answersTo(app, question).length, { timeout: 60_000 }).toBe(1);
+    await expect.poll(() => provider.heldThreadAnswers(), { timeout: 60_000 }).toBe(1);
     // The captain writes while the answer's turn runs.
     await say(page, SHOW_THE_METER);
     await expect
@@ -341,12 +348,22 @@ test("an answer is read in a turn of its own, and carry on keeps its message tie
     provider.releaseThreadAnswer();
     await expect.poll(() => retriesFor(app, words).length, { timeout: 60_000 }).toBe(1);
     await expect.poll(() => cardTitles(page), { timeout: 60_000 }).toContain(METER_CARD_TITLE);
+    const reports = () =>
+      turns(app).filter((turn) =>
+        turn.segments.some(
+          (segment) =>
+            segment.body.includes("reported on task") && segment.body.includes(READER_ANSWER),
+        ),
+      );
+    await expect.poll(() => reports().length, { timeout: 60_000 }).toBeGreaterThan(0);
     await waitForFirstmateIdle(page);
 
     // The answer was read alone: no other wake and no captain's words beside it.
     const answers = answersTo(app, question);
     expect(answers).toHaveLength(1);
     expect(answers[0]?.segments).toHaveLength(1);
+    // The report that waited beside it was served in a later turn.
+    expect(reports()[0]?.index).toBeGreaterThan(answers[0]?.index ?? Number.MAX_SAFE_INTEGER);
     // The carry-on steer kept the tie: the retry came while the reader is open.
     expect(run.open()).toBe(true);
     // The captain's words came after the answer's turn and its retry, in a turn of their own.

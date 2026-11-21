@@ -87,6 +87,9 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     "inf:keyboard:reminders": DEFAULT_KEY_REMINDERS,
     "inf:devices:this-mac": { role: "home", left: null },
     "inf:voice:recognizer": { where: "window" },
+    // Someone is at this computer, which cannot tell, as main answers on a
+    // Linux desktop (src/main/presence.ts).
+    "inf:window:presence": { away: false, watched: false },
     // The card a notification's click asked the window to open: none, as nothing was clicked.
     "inf:cards:take-notified": { cardId: null },
     // A frame's document is served over the shell's own scheme, which a page

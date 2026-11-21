@@ -1,5 +1,5 @@
 ---
-source: 7c4d9925493d8861
+source: 023b6be0be6240d0
 title: Projets
 description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -48,6 +48,9 @@ Pour GitHub, vous saisissez un code sur la page de GitHub dans votre navigateur.
 Pour GitLab, vous pouvez vous connecter dans votre navigateur ou coller une clé, sur gitlab.com ou sur votre propre serveur GitLab.
 Pour Bitbucket, vous créez un jeton d’API sur votre compte Atlassian et vous le collez, pour les projets sur bitbucket.org.
 Le formulaire de clé nomme les autorisations à cocher sur la page d’Atlassian.
+Pour votre propre serveur Bitbucket Data Center, en version 8.19 ou plus récente, vous saisissez son adresse et collez un jeton d’accès HTTP avec les autorisations Project read et Repository write.
+Les changements d’un projet Data Center sont proposés en demandes de tirage, et la fusion ne se fait qu’à la version que vous avez approuvée : si quelqu’un pousse entre-temps, rien n’est fusionné et la tâche le signale.
+Sur Data Center, les demandes de tirage groupées, les forks et l’accès propre de l’équipage au serveur ne sont pas encore disponibles.
 Vos projets Bitbucket sont listés à partir des espaces de travail dont vous faites partie ; s’il y en a beaucoup, certains peuvent ne pas avoir été vérifiés, et la liste le signale.
 Les changements d’un projet Bitbucket sont proposés en demandes de tirage, comme sur GitHub et GitLab ; un projet ajouté avant cela fonctionne de la même façon dès sa prochaine tâche.
 La description d’une demande de tirage Bitbucket porte le récit sous forme de texte, et ses images restent sur la carte.

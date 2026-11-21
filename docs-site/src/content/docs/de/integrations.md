@@ -1,5 +1,5 @@
 ---
-source: 48dd73d5a1c0ec46
+source: a2f4b38f0b300f73
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -40,6 +40,8 @@ Unter [Projekte](/de/projects/#your-github-gitlab-or-bitbucket-sign-in) steht, w
 - **GitLab**: Du meldest dich in deinem Browser an oder fügst einen Schlüssel ein, auf gitlab.com oder auf deinem eigenen GitLab-Server.
 - **GitHub Enterprise**: Du erstellst auf deinem eigenen Server einen Schlüssel und fügst ihn hier ein.
 - **Bitbucket**: Du erstellst in deinem Atlassian-Konto ein API-Token und fügst es hier ein, für bitbucket.org.
+  Für deinen eigenen Bitbucket-Data-Center-Server ab Version 8.19 gibst du seine Adresse ein und fügst ein HTTP-Zugriffstoken ein, das du dort erstellst, mit den Berechtigungen Project read und Repository write.
+  Eine Data-Center-Zeile bietet noch keine Aktionen.
 
 Jede Zeile hat zwei Aktionen: eine, die liest, und eine, die etwas ändert, etwa **Etwas auf GitHub ändern**.
 Damit schlagen dein erster Offizier und deine Crew etwas nach oder handeln dort über die eigene Arbeit einer Aufgabe hinaus.

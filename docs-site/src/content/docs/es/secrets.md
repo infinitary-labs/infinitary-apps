@@ -1,5 +1,5 @@
 ---
-source: 472b645fe91b5143
+source: 0cf7ba43b1059baf
 title: Secretos
 description: Guarda las contraseñas y claves que necesita tu tripulación, permite cada uso en una tarjeta y mira qué las usó.
 ---
@@ -39,9 +39,11 @@ Olvidar lo quita de esta computadora, pero no desactiva la clave donde se creó.
 ### Cuando un tripulante necesita uno que no has guardado {#when-a-crewmate-needs-one-you-have-not-kept}
 
 Un tripulante que necesita un secreto que no has guardado lo pide por su nombre, nunca por su valor.
-Infinitary pone entonces su propia tarjeta, como «¿Guardar el secreto Despliegue del sitio web para «Publicar el sitio»?», con el motivo del tripulante.
+Infinitary pone entonces su propia tarjeta, como «¿Añadir Despliegue del sitio web a Secretos?», con el motivo del tripulante en sus propias palabras.
+Cuando tienes que crear o encontrar el secreto tú mismo, la tarjeta también muestra **Cómo conseguirlo**: los pasos, nombres o lugares que el tripulante preparó para este caso, y una línea que dice quién los escribió.
+Revisa cada dirección que muestra antes de iniciar sesión ahí.
 
-Escribe o pega cada valor en el campo oculto que Infinitary dibuja en la tarjeta, y luego elige **Guardar en Secretos**.
+Escribe o pega cada valor en el campo oculto que Infinitary dibuja en la tarjeta, y luego elige **Guardar secreto**.
 **No guardar** no guarda nada.
 El tripulante recibe el nombre del secreto, nunca su valor, y cada uso sigue preguntándote.
 

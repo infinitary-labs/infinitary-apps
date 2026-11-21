@@ -353,7 +353,7 @@ export class CrewSupervisor {
       },
       closeAnsweredTask: (card, action, by) =>
         this.settling.declared.closeAnsweredTask(card, action, by),
-      settleFacts: (taskId) => this.settleFacts.strip(taskId),
+      settleFacts: (taskId, part) => this.settleFacts.strip(taskId, part),
       mergeLabel: (card) => this.cardActions.mergeLabel(card),
       mergeAnyway: (card) => this.cardActions.mergeAnyway(card),
       mergeBehind: (card) => this.cardActions.mergeBehind(card),

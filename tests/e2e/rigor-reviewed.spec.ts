@@ -284,11 +284,11 @@ test("a reviewed task's review passes before its completion card, which merges w
   );
   const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
   await expect(findingFacts.project).toContainText(REPO_NAME);
-  // The version the review read and its risk are the review state's words
-  // on rest (INF-3709's plan).
-  await expect(findingFacts.review).toBeVisible();
-  for (const words of [HEAD_SHA.slice(0, 7), `risk ${MOCK_REVIEW_FINDINGS_RISK.level}`])
-    await expect.poll(() => findingFacts.cell("review").getAttribute("title")).toContain(words);
+  // It names the change it asks about and none of its states: the checks
+  // and the review's own word stay on the merge card (step 9).
+  const findingStrip = await findingFacts.facts();
+  expect(findingStrip).toContain("change");
+  for (const state of ["checks", "review"] as const) expect(findingStrip).not.toContain(state);
   await expect(page.getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })).toBeVisible();
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_FIX_REPORT) }),

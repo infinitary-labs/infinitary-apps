@@ -366,7 +366,7 @@ export class CardEmits {
     const taskId = context.factsOf ?? context.taskId;
     if (taskId) {
       input = emittedSettleFacts(input, {
-        facts: () => this.host.settleFacts(taskId),
+        facts: (part) => this.host.settleFacts(taskId, part),
         othersOpen: () => this.stack.othersOpen(taskId, input.id),
         followups: () => this.host.followupNotice(taskId),
       });

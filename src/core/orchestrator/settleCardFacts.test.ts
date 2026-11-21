@@ -1,4 +1,4 @@
-import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
+import { type Card, SETTLE_FACT_VALUE_CLASS, type TaskFactsPart } from "@shared/cards";
 import { checkSnapshotState, checkSnapshotSummary } from "@shared/checkSnapshot";
 import {
   checksDuration,
@@ -14,9 +14,10 @@ import type { WorkflowJobLine } from "../forge";
 import { openInMemoryDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { CHECK_VERDICT_WORDS } from "./checkVerdicts";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { RUN_WATCH_TICK_MS, type RunReading, RunWatcher } from "./runWatch";
-import { SettleFacts } from "./settleCardFacts";
+import { emittedSettleFacts, SettleFacts, settleCardFacts } from "./settleCardFacts";
 
 /**
  * INF-3220: a merge card's Checks state read passed while the crewmate held
@@ -348,5 +349,119 @@ describe("a merge card's batch check for a change sent back before (INF-5097)", 
         "<li>#33: Its repair still fails the leap-year &lt;date&gt; test.</li>" +
         `<li>#35: Its repair breaks the export of dates. ${BATCH_CHECK_WORDS.neverRanUnknown}</li></ul></details>`,
     );
+  });
+});
+
+// Intent: a Review finding card asks the captain about the work itself, so its
+// strip shows none of the checks, their causes or the review's own state, which
+// stay on the builder's merge card. The readings are a real review's: four
+// checks failed at the reviewed version, three diagnosed as caused by the
+// change and one as broken on main too, beside the review's findings.
+describe("a Review finding card's strip", () => {
+  const now = Date.parse("2026-11-21T20:34:00Z");
+  const failedAt = now - 26 * 3_600_000;
+  const failed = [
+    "Manual request · Selected app journeys (Mac)",
+    "Branch push · Code, build, affected tests and critical path (Linux)",
+    "Manual request · Install and run the Windows app (fresh Windows 11)",
+    "Manual request · Selected journeys (Linux; part 3/5)",
+  ];
+  const reading = () => {
+    const db = openInMemoryDatabase();
+    const tasks = new TaskService({ db, strict: true, now: () => now });
+    seedTask(tasks, {
+      id: "builder",
+      title: "Make the address the default way to add a computer",
+      status: "completed",
+    });
+    seedDelivery(tasks, "builder", {
+      mode: "queue-pr",
+      changeLabel: "inf/ssh-address-default-add-computer",
+      headSha: HEAD,
+      ci: "red",
+      ciAt: failedAt,
+      ciFinishedAt: failedAt,
+      checks: {
+        headSha: HEAD,
+        absenceDeclared: false,
+        items: failed.map((name) => ({ name, state: "failure" as const })),
+      },
+      ciRepair: {
+        failures: [{ headSha: HEAD, checks: failed }],
+        diagnoses: failed.map((check, index) => ({
+          headSha: HEAD,
+          check,
+          classification: index === 1 ? ("baseline-blocked" as const) : ("own-regression" as const),
+          evidence: "The failed step names an assertion this change added.",
+          at: failedAt,
+        })),
+        repairs: [],
+      },
+      changeLines: { base: EARLIER, head: HEAD, added: 6673, deleted: 558, at: now },
+      reviewVerdict: "findings",
+      reviewSha: HEAD,
+      reviewRisk: "medium",
+    });
+    const facts = new SettleFacts(
+      { tasks, repos: { get: () => undefined } } as unknown as CrewSupervisorOptions,
+      { now: () => now, taskDelivery: () => "queue-pr", reviewOpen: () => false },
+    );
+    return {
+      facts: (part: TaskFactsPart) => facts.strip("builder", part),
+      othersOpen: () => true,
+      followups: () => undefined,
+    };
+  };
+  const finding = {
+    title: "Review of the address change: notices during a folder move or a second launch",
+    body: "<p>If two launches are refused at once, should the second show its own question?</p>",
+    reviewTaskId: "review",
+    actions: [
+      { id: "send", label: "Send choices", default: true },
+      { id: "not-now", label: "Not now", declines: true as const },
+    ],
+  };
+  const states = ["checks", "run", "batch", "review", "override"];
+  const factsOf = (body: string) =>
+    [...body.matchAll(/data-fact="(\w+)"/g)].map(([, fact]) => fact ?? "");
+
+  it("names the change it asks about and none of its checks, which its merge card keeps", () => {
+    const read = reading();
+    const card = emittedSettleFacts(finding, read).body;
+    expect(factsOf(card)).toEqual(["project", "change", "lines"]);
+    expect(card).not.toContain("inf-foot-needs");
+    for (const verdict of Object.values(CHECK_VERDICT_WORDS)) expect(card).not.toContain(verdict);
+
+    const merge = emittedSettleFacts(
+      {
+        ...finding,
+        title: "The address is the default way to add a computer",
+        reviewTaskId: undefined,
+        actions: [{ id: "merge", label: "Merge", effect: { kind: "merge", after: "close" } }],
+      },
+      read,
+    ).body;
+    expect(factsOf(merge).filter((fact) => states.includes(fact))).toEqual(["checks", "review"]);
+    expect(merge.split(CHECK_VERDICT_WORDS["own-regression"])).toHaveLength(4);
+    expect(merge).toContain(CHECK_VERDICT_WORDS["baseline-blocked"]);
+  });
+
+  it("drops the checks from a card that went up with the whole strip on its next refresh", () => {
+    const read = reading();
+    const shown: Card = {
+      ...finding,
+      id: "card-review-1",
+      taskId: "review",
+      author: "crewmate",
+      meta: "crewmate",
+      priority: 40,
+      status: "ready",
+      createdAt: now - 60_000,
+      body: `${finding.body}${read.facts("whole")}`,
+    };
+    expect(factsOf(shown.body)).toContain("checks");
+    const refreshed = settleCardFacts(shown, read).body;
+    expect(factsOf(refreshed)).toEqual(["project", "change", "lines"]);
+    expect(refreshed).toBe(`${finding.body}${read.facts("reference")}`);
   });
 });

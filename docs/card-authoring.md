@@ -178,6 +178,8 @@ The strip is at most two parts, each the card's full width: the status line, and
   Earlier-version diagnoses and non-failing readings show no verdicts.
   A check recorded failed at this version that the newest reading no longer shows failing - it passed, or runs again - is left out (`stillFails`, the captain's answer on INF-3709's plan); for a job of a requested run the newest reading is that run's newest attempt.
   A failed check whose newest run on the default branch failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1) reads Fails on main too when the crewmate has not diagnosed it, and under its line the host writes, in the open, that main's newest run of this check failed as well, at which version and when it was read, so the captain sees what failed and why it is outside the change without opening anything; a diagnosed check keeps the crewmate's verdict as its row and gets the same host line under it.
+- A Review finding card, one naming a review with no merge or settle of its own, carries the reference alone: no state and nothing under the line (`taskFactsPartOf`, "Review finding attribution" below).
+  A card already up with the whole strip takes the reference alone at its next refresh.
 - The strip is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
   Host fact refreshes update both the shown and staged card without an author revision or thread message, so the card, record and paired view read the same delivery facts.
   Each refresh shares a task's fact strip across those revisions inside the task-read projection; a task write invalidates it, and the next refresh reads again so time wording stays current.
@@ -1372,7 +1374,8 @@ A declaration grants no execution permission; a successful merge creates durable
 An independent reviewer puts its ask-user findings to the captain on its own decision card (INF-4338, direction D); the host labels any decision card from an independent review Review finding.
 It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a tradeoff table of it, which the app draws as a chart (The tradeoff chart, above): one row per option, as built included, one column per product-level heading where the options differ, and a high, medium or low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
 Findings it settled itself are listed in a fold, and again on the builder's merge card.
-Its head names the review task, as every crewmate card's does, and the card draws the builder's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
+Its head names the review task, as every crewmate card's does, and the card's strip beside the buttons names the builder's change alone - its project, change, lines and care - with none of its states (`taskFactsPartOf`, `src/shared/cards.ts`).
+The checks, their causes and the review's own verdict bear on the merge, so they stay on the builder's merge card and never pull the eye from the card's question.
 The captain's choice goes to the builder the review reads, and a reply under the card goes to the reviewer.
 The question is the builder's: it outlives the review's passing close, keeps the builder's merge from closing the task while it stands, and leaves with the builder.
 The first mate may still pass `review_task_id` with its builder's `task_id` when it puts a blocked review to the captain (INF-63, accepted direction B); the host refuses a missing or unrelated review, and the card is the first mate's own, headed first mate with no task key (INF-2714).

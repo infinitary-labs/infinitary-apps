@@ -51,7 +51,8 @@ The build writes plain files to `docs-site/dist/`, search index included.
 ### The check
 
 `docs-site/scripts/check-site.mjs` serves `dist/` on this computer and opens every built page in Chromium through Playwright, in a browser that may reach only that server.
-It fails on a page that does not answer or draws no title, a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that finds nothing, and a wordmark drawn in anything but the text color at weight 500.
+It fails on a page that does not answer or draws no title, a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box or finds nothing, and a wordmark drawn in anything but the text color at weight 500.
+Starlight builds the search box only when the browser next has idle time, and headless Chromium on a busy computer can stop drawing without ever having it, so the check waits for the box while asking the page for animation frames, as a visitor's pointer would.
 It also opens the home page with the system asking for dark and then for light, and fails unless the site follows.
 `SCREENSHOTS=<folder>` saves the home, install and first launch pages in both themes there.
 

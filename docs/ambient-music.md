@@ -19,7 +19,7 @@ Play or pause ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, C
 It turns the switch on if it was off, and otherwise pauses or resumes without turning the switch off.
 The separate `ambient-paused` row leaves the enable and volume row readable by older builds.
 On a Mac or a Windows PC the group's last row is a Pause when you're away switch, on until turned off ("When nobody is at the computer" below).
-The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/ambientActions.ts`), with no tool of its own.
+The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting, and turns Pause when you're away on or off through `ambient-away` (`src/shared/ambientActions.ts`), with no tool of its own.
 
 ## The styles
 

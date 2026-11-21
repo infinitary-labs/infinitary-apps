@@ -1223,10 +1223,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         });
         return;
       }
-      if (windowAsked.stray(channel, frame.args, client)) {
-        reply({ ok: true, value: { ok: true } });
-        return;
-      }
+      if (windowAsked.stray(channel, frame.args, client))
+        return reply({ ok: true, value: { ok: true } });
       try {
         // A paired view is the captain at another Mac: the same actor the
         // desktop adapter stamps, with the contract's reach as the limit, so

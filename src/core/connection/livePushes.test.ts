@@ -3,7 +3,7 @@ import type { ComputerResourcesView } from "@shared/resources";
 import { expect, it } from "vitest";
 import { connectClient } from "../../../tests/helpers/connectionClient";
 import { changed, home } from "../../../tests/helpers/connectionHome";
-import { STREAMED_EVENTS_LIVE } from "./connection";
+import { STREAMED_EVENTS_LIVE } from "./viewHello";
 
 // What goes outside the numbering (docs/connection.md, "Live pushes"), on the
 // connection with a stand-in core as src/core/connection/connection.test.ts

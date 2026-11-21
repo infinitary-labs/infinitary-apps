@@ -26,6 +26,7 @@ export const PANEL_UNREADABLE = {
   home: "only the computer that holds it reads it, never a view of it",
   read: "a panel reads it through a read of its own (quota.snapshot, automation.list or automation.kept)",
   unchecked: "how the crew's models are chosen: not yet checked field by field for a panel",
+  own: "a person's own ambient styles, in their own words: read by the first mate and Settings, not yet offered to a panel",
 } as const;
 export type PanelUnreadable = keyof typeof PANEL_UNREADABLE;
 
@@ -118,6 +119,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "sharing-ask": { unreadable: "names" },
   purge: { unreadable: "act" },
   dictation: { unreadable: "home" },
+  "ambient-own-style": { unreadable: "own" },
   "firstmate-model": { unreadable: "unchecked" },
   "firstmate-account": { unreadable: "names" },
   "crew-slots": { unreadable: "unchecked" },

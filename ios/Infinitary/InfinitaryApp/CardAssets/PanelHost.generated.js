@@ -70088,6 +70088,196 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sound`;
   }
+  function settingsSoundOwn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `موسيقاك الخاصة`;
+      case "de":
+        return `Deine eigene Musik`;
+      case "es":
+        return `Tu propia música`;
+      case "fr":
+        return `Votre propre musique`;
+      case "ja":
+        return `自分だけの音楽`;
+      case "ko":
+        return `나만의 음악`;
+      case "pt-BR":
+        return `Sua própria música`;
+      case "zh-Hans":
+        return `你自己的音乐`;
+      case "zh-Hant":
+        return `你自己的音樂`;
+      case "en-XA":
+        return `[Ýöûŕ öŵñ ɱûšîç ~~~~~]`;
+      case "ar-XB":
+        return `‮Your own music‬`;
+    }
+    return `Your own music`;
+  }
+  function settingsSoundOwnDescribe() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف موسيقاك`;
+      case "de":
+        return `Eigene beschreiben`;
+      case "es":
+        return `Describe la tuya`;
+      case "fr":
+        return `Décrire la vôtre`;
+      case "ja":
+        return `自分で説明する`;
+      case "ko":
+        return `직접 설명하기`;
+      case "pt-BR":
+        return `Descrever a sua`;
+      case "zh-Hans":
+        return `描述你自己的`;
+      case "zh-Hant":
+        return `描述你自己的`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ýöûŕ öŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe your own‬`;
+    }
+    return `Describe your own`;
+  }
+  function settingsSoundOwnDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف الموسيقى التي تريدها، فيكتبها نائب القبطان نمطًا لآلات التطبيق نفسه، ويضعه تحت أنماطك.`;
+      case "de":
+        return `Beschreib die Musik, die du möchtest, und dein erster Offizier schreibt sie als Stil für die eigenen Instrumente der App, aufgeführt unter Deine.`;
+      case "es":
+        return `Describe la música que quieres y tu primer oficial la escribe como un estilo para los instrumentos propios de la app, en la lista Tuyos.`;
+      case "fr":
+        return `Décrivez la musique que vous voulez, et votre second l’écrit comme un style pour les instruments de l’app, listé sous Les vôtres.`;
+      case "ja":
+        return `聴きたい音楽を説明すると、一等航海士がアプリの楽器で鳴らすスタイルとして書き、「あなたのスタイル」に並べます。`;
+      case "ko":
+        return `원하는 음악을 설명하면 일등항해사가 앱의 악기로 연주할 스타일로 만들어 내 스타일 아래에 둡니다.`;
+      case "pt-BR":
+        return `Descreva a música que você quer, e seu imediato a escreve como um estilo para os instrumentos do próprio app, listado em Seus.`;
+      case "zh-Hans":
+        return `描述你想听的音乐，你的大副会把它写成一种用应用自带乐器演奏的风格，列在“你的”下面。`;
+      case "zh-Hant":
+        return `描述你想聽的音樂，你的大副會把它寫成一種用應用程式內建樂器演奏的風格，列在「你的」下面。`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ţĥé ɱûšîç ýöû ŵáñţ, áñð ýöûŕ ƒîŕšţ ɱáţé ŵŕîţéš îţ áš á šţýļé ƒöŕ ţĥé áþþ’š öŵñ îñšţŕûɱéñţš, ļîšţéð ûñðéŕ Ýöûŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe the music you want, and your first mate writes it as a style for the app’s own instruments, listed under Yours.‬`;
+    }
+    return `Describe the music you want, and your first mate writes it as a style for the app’s own instruments, listed under Yours.`;
+  }
+  function settingsSoundOwnDraft() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب موسيقاي الهادئة الخاصة: `;
+      case "de":
+        return `Schreib meine eigene Ambient-Musik: `;
+      case "es":
+        return `Escribe mi propia música ambiental: `;
+      case "fr":
+        return `Écris ma propre musique d’ambiance : `;
+      case "ja":
+        return `自分だけのアンビエント音楽を書いてください：`;
+      case "ko":
+        return `나만의 앰비언트 음악을 만들어 주세요: `;
+      case "pt-BR":
+        return `Escreva minha própria música ambiente: `;
+      case "zh-Hans":
+        return `为我写一段自己的环境音乐：`;
+      case "zh-Hant":
+        return `為我寫一段自己的環境音樂：`;
+      case "en-XA":
+        return `[Ŵŕîţé ɱý öŵñ áɱƀîéñţ ɱûšîç:  ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Write my own ambient music: ‬`;
+    }
+    return `Write my own ambient music: `;
+  }
+  function settingsSoundOwnNoWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نمط كتبه لك نائب القبطان.`;
+      case "de":
+        return `Ein Stil, den dein erster Offizier für dich geschrieben hat.`;
+      case "es":
+        return `Un estilo que tu primer oficial escribió para ti.`;
+      case "fr":
+        return `Un style que votre second a écrit pour vous.`;
+      case "ja":
+        return `一等航海士があなたのために書いたスタイルです。`;
+      case "ko":
+        return `일등항해사가 당신을 위해 만든 스타일입니다.`;
+      case "pt-BR":
+        return `Um estilo que seu imediato escreveu para você.`;
+      case "zh-Hans":
+        return `你的大副为你写的风格。`;
+      case "zh-Hant":
+        return `你的大副為你寫的風格。`;
+      case "en-XA":
+        return `[Å šţýļé ýöûŕ ƒîŕšţ ɱáţé ŵŕöţé ƒöŕ ýöû. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A style your first mate wrote for you.‬`;
+    }
+    return `A style your first mate wrote for you.`;
+  }
+  function settingsSoundOwnRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Supprimer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `삭제`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsSoundOwnRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Supprimer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 삭제`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
   function settingsSoundPauseWhenAway() {
     switch (currentLanguage()) {
       case "ar":
@@ -70438,6 +70628,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Space‬`;
     }
     return `Space`;
+  }
+  function settingsSoundStyleGroupYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنماطك`;
+      case "de":
+        return `Deine`;
+      case "es":
+        return `Tuyos`;
+      case "fr":
+        return `Les vôtres`;
+      case "ja":
+        return `あなたのスタイル`;
+      case "ko":
+        return `내 스타일`;
+      case "pt-BR":
+        return `Seus`;
+      case "zh-Hans":
+        return `你的`;
+      case "zh-Hant":
+        return `你的`;
+      case "en-XA":
+        return `[Ýöûŕš ~~]`;
+      case "ar-XB":
+        return `‮Yours‬`;
+    }
+    return `Yours`;
   }
   function settingsSoundStyleHarborDawn() {
     switch (currentLanguage()) {
@@ -89356,6 +89573,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSoundAmbientMusic,
     settingsSoundAmbientMusicDescription,
     settingsSoundHeading,
+    settingsSoundOwn,
+    settingsSoundOwnDescribe,
+    settingsSoundOwnDescription,
+    settingsSoundOwnDraft,
+    settingsSoundOwnNoWords,
+    settingsSoundOwnRemove,
+    settingsSoundOwnRemoveNamed,
     settingsSoundPauseWhenAway,
     settingsSoundPauseWhenAwayDescription,
     settingsSoundStyle,
@@ -89369,6 +89593,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSoundStyleGroupNautical,
     settingsSoundStyleGroupPirate,
     settingsSoundStyleGroupSpace,
+    settingsSoundStyleGroupYours,
     settingsSoundStyleHarborDawn,
     settingsSoundStyleHarborDawnDescription,
     settingsSoundStyleIslandMorning,
@@ -92174,6 +92399,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSoundAmbientMusic": [],
     "settingsSoundAmbientMusicDescription": [],
     "settingsSoundHeading": [],
+    "settingsSoundOwn": [],
+    "settingsSoundOwnDescribe": [],
+    "settingsSoundOwnDescription": [],
+    "settingsSoundOwnDraft": [],
+    "settingsSoundOwnNoWords": [],
+    "settingsSoundOwnRemove": [],
+    "settingsSoundOwnRemoveNamed": ["name"],
     "settingsSoundPauseWhenAway": [],
     "settingsSoundPauseWhenAwayDescription": [],
     "settingsSoundStyle": [],
@@ -92187,6 +92419,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSoundStyleGroupNautical": [],
     "settingsSoundStyleGroupPirate": [],
     "settingsSoundStyleGroupSpace": [],
+    "settingsSoundStyleGroupYours": [],
     "settingsSoundStyleHarborDawn": [],
     "settingsSoundStyleHarborDawnDescription": [],
     "settingsSoundStyleIslandMorning": [],

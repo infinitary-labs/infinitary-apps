@@ -3095,6 +3095,13 @@
 "settingsSoundAmbientMusic" = "موسيقى هادئة";
 "settingsSoundAmbientMusicDescription" = "موسيقى هادئة تُولَّد إجرائيًا على حاسوبك أثناء تشغيلها، فلا تتكرر أبدًا. تتبع الطاقم وترن نغمة عندما ينتظرك شيء.";
 "settingsSoundHeading" = "الصوت";
+"settingsSoundOwn" = "موسيقاك الخاصة";
+"settingsSoundOwnDescribe" = "صف موسيقاك";
+"settingsSoundOwnDescription" = "صف الموسيقى التي تريدها، فيكتبها نائب القبطان نمطًا لآلات التطبيق نفسه، ويضعه تحت أنماطك.";
+"settingsSoundOwnDraft" = "اكتب موسيقاي الهادئة الخاصة: ";
+"settingsSoundOwnNoWords" = "نمط كتبه لك نائب القبطان.";
+"settingsSoundOwnRemove" = "إزالة";
+"settingsSoundOwnRemoveNamed" = "إزالة %1$@";
 "settingsSoundPauseWhenAway" = "إيقاف مؤقت عند ابتعادك";
 "settingsSoundPauseWhenAwayDescription" = "تتوقف الموسيقى مؤقتًا ما دامت شاشتك مطفأة أو مقفلة، حتى لا تُبقي حاسوبك مستيقظًا، ثم تعود عند رجوعك.";
 "settingsSoundStyle" = "النمط";
@@ -3108,6 +3115,7 @@
 "settingsSoundStyleGroupNautical" = "الإبحار";
 "settingsSoundStyleGroupPirate" = "القراصنة";
 "settingsSoundStyleGroupSpace" = "الفضاء";
+"settingsSoundStyleGroupYours" = "أنماطك";
 "settingsSoundStyleHarborDawn" = "فجر الميناء";
 "settingsSoundStyleHarborDawnDescription" = "بطيء ومهيب: نحاسيات ناعمة وقيثارة وجرس السفينة فوق أمواج هادئة.";
 "settingsSoundStyleIslandMorning" = "صباح الجزيرة";

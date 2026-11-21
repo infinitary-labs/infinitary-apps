@@ -1,0 +1,280 @@
+{
+  "name": "Late shift",
+  "words": "Lofi beats to code to: a mellow electric piano, lazy drums, a little swing",
+  "bpm": 72,
+  "beats": 4,
+  "grid": 2,
+  "swing": 0.09,
+  "hold": 1,
+  "key": "F",
+  "scale": "major",
+  "chords": [
+    {
+      "name": "Imaj7",
+      "degree": 0,
+      "tones": [0, 2, 4, 6]
+    },
+    {
+      "name": "vi7",
+      "degree": 5,
+      "tones": [0, 2, 4, 6]
+    },
+    {
+      "name": "ii7",
+      "degree": 1,
+      "tones": [0, 2, 4, 6]
+    },
+    {
+      "name": "V7",
+      "degree": 4,
+      "tones": [0, 2, 4, 6]
+    },
+    {
+      "name": "IVmaj7",
+      "degree": 3,
+      "tones": [0, 2, 4, 6]
+    },
+    {
+      "name": "iii7",
+      "degree": 2,
+      "tones": [0, 2, 4, 6]
+    }
+  ],
+  "start": "Imaj7",
+  "next": {
+    "Imaj7": ["vi7", "IVmaj7", "ii7"],
+    "vi7": ["ii7", "IVmaj7"],
+    "ii7": ["V7", "V7", "iii7"],
+    "V7": ["Imaj7", "Imaj7", "vi7"],
+    "IVmaj7": ["iii7", "V7", "Imaj7"],
+    "iii7": ["vi7", "IVmaj7"]
+  },
+  "cadence": ["ii7", "V7", "Imaj7"],
+  "hands": {
+    "lo": 53,
+    "hi": 76,
+    "center": [60, 67],
+    "start": [57, 60, 64, 65]
+  },
+  "bassLow": 36,
+  "pad": {
+    "timbre": "strings",
+    "anchors": [41, 48, 53],
+    "amp": 0.03,
+    "glide": 0.25,
+    "drift": [[0.18, 4]]
+  },
+  "room": {
+    "reverb": 1.8,
+    "wet": 0.35,
+    "echo": {
+      "beats": 0.75,
+      "fb": 0.25,
+      "lp": 1800,
+      "mix": 0.35
+    }
+  },
+  "tone": -4,
+  "buses": {
+    "keys": [2600, 0.3, 0.12],
+    "lead": [3000, 0.4, 0.3],
+    "tick": [8000, 0.04, 0],
+    "rim": [3000, 0.1, 0],
+    "kick": [900, 0, 0],
+    "bass": [340, 0, 0]
+  },
+  "voices": {
+    "ep": {
+      "instrument": "fm",
+      "bus": "keys",
+      "preset": "ep"
+    },
+    "bass": {
+      "instrument": "bass",
+      "bus": "bass"
+    },
+    "kick": {
+      "instrument": "drum",
+      "bus": "kick",
+      "preset": "kick"
+    },
+    "rim": {
+      "instrument": "wood",
+      "bus": "rim",
+      "preset": "tap"
+    },
+    "hat": {
+      "instrument": "tick",
+      "bus": "tick",
+      "preset": "shaker"
+    },
+    "vibes": {
+      "instrument": "mallet",
+      "bus": "lead",
+      "preset": "vibes"
+    },
+    "star": {
+      "instrument": "glass",
+      "bus": "star"
+    },
+    "chime": {
+      "instrument": "fm",
+      "bus": "cue",
+      "preset": "chime"
+    },
+    "spark": {
+      "instrument": "glass",
+      "bus": "cue"
+    }
+  },
+  "levels": [
+    {
+      "heat": 0,
+      "layers": {
+        "pad": 1,
+        "keys": 0.9,
+        "bass": 0.7,
+        "star": 0.3
+      }
+    },
+    {
+      "heat": 0.4,
+      "layers": {
+        "pad": 0.9,
+        "keys": 1,
+        "bass": 0.85,
+        "kick": 0.6,
+        "tick": 0.5,
+        "rim": 0.35,
+        "star": 0.3
+      }
+    },
+    {
+      "heat": 0.8,
+      "layers": {
+        "pad": 0.8,
+        "keys": 1,
+        "bass": 0.9,
+        "kick": 0.7,
+        "tick": 0.6,
+        "rim": 0.5,
+        "lead": 0.7,
+        "star": 0.4
+      }
+    }
+  ],
+  "cue": {
+    "vel": 0.11,
+    "gain": [-3.5, 1]
+  },
+  "parts": [
+    {
+      "part": "strum",
+      "voice": "ep",
+      "hits": [[0, 0.55]],
+      "spread": 0.035,
+      "len": 3.4
+    },
+    {
+      "part": "strum",
+      "voice": "ep",
+      "hits": [[5, 0.34]],
+      "spread": 0.02,
+      "len": 1.2,
+      "top": 3,
+      "when": {
+        "chance": 0.5,
+        "levels": [1, 2]
+      }
+    },
+    {
+      "part": "hold",
+      "voice": "bass",
+      "pitch": "bass",
+      "vel": 0.8,
+      "when": {
+        "levels": [0]
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "bass",
+      "hits": [[0, "bass", 0.9, 1.5], [3, "bass", 0.5, 0.4], [4, "bass+7", 0.7, 1.2]],
+      "pan": 0,
+      "when": {
+        "levels": [1, 2]
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "kick",
+      "hits": [[0, 0, 0.9, 0.4], [5, 0, 0.6, 0.4]],
+      "pan": 0,
+      "when": {
+        "layer": "kick"
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "rim",
+      "hits": [[2, 0, 0.55, 0.1], [6, 0, 0.7, 0.1]],
+      "pan": 0.15,
+      "when": {
+        "layer": "rim"
+      }
+    },
+    {
+      "part": "steps",
+      "voice": "hat",
+      "hits": [
+        [0, 0, 0.5, 0.05],
+        [1, 0, 0.3, 0.05],
+        [2, 0, 0.55, 0.05],
+        [3, 0, 0.32, 0.05],
+        [4, 0, 0.5, 0.05],
+        [5, 0, 0.3, 0.05],
+        [6, 0, 0.55, 0.05],
+        [7, 0, 0.36, 0.05]
+      ],
+      "pan": -0.2,
+      "when": {
+        "layer": "tick"
+      }
+    },
+    {
+      "part": "tune",
+      "id": "lead",
+      "tune": {
+        "voice": "vibes",
+        "form": "A-B-A-C-",
+        "center": 77,
+        "pent": true,
+        "vel": 0.75,
+        "legato": 1,
+        "tail": 0.8,
+        "vary": 0.12,
+        "pan": 0.25,
+        "rhythms": [
+          [[0, 3], [3, 1], [4, 4]],
+          [[1, 2], [3, 2], [5, 3]],
+          [[0, 2], [3, 3], [6, 2]],
+          [[2, 2], [4, 4]]
+        ]
+      },
+      "when": {
+        "playing": "lead"
+      }
+    },
+    {
+      "part": "pings",
+      "voice": "star",
+      "layer": "star",
+      "p": 0.05,
+      "lo": 84,
+      "hi": 94,
+      "vel": [0.03, 0.045],
+      "pool": "pent",
+      "len": 2
+    }
+  ]
+}

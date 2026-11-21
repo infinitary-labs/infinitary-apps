@@ -1,6 +1,6 @@
 # Ambient music
 
-The desktop window can play calm music it composes itself, following the crew, in one of ten styles.
+The desktop window can play calm music it composes itself, following the crew, in one of ten styles or a style of the person's own ("Your own styles" below).
 It is the captain's choice from INF-4741: rules in the app, off until someone turns it on, and the desktop app only.
 Nine styles are the ones the captain kept from INF-5056's prototypes, with Star cruise the default; the tenth, Cold sleep, is the piano style the captain kept from INF-4749's.
 Nothing is downloaded and no recorded sample plays: every sound is an oscillator made on the computer, and nothing leaves it.
@@ -19,7 +19,7 @@ Play or pause ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, C
 It turns the switch on if it was off, and otherwise pauses or resumes without turning the switch off.
 The separate `ambient-paused` row leaves the enable and volume row readable by older builds.
 On a Mac or a Windows PC the group's last row is a Pause when you're away switch, on until turned off ("When nobody is at the computer" below).
-The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/actions.ts`), with no tool of its own.
+The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/ambientActions.ts`), with no tool of its own.
 
 ## The styles
 
@@ -73,10 +73,39 @@ Two moments get a cue in the style's own instruments, heard from the character's
 - A card landing unseen, the notice pulse's moment, plays the waiting chime on the next beat, at most once every two bars: three notes up the home chord, then a held note on the notice pulse's own curve (`noticeFrame`), spreading from the center to both sides.
 - A task merging, the celebrate emote's moment, plays a rising run of sparks on the next beat and steers the next chords through the style's cadence home.
 
-The only noise is the sea styles' waves: a dark wash, cut well below the treble.
-There is no crackle or hiss, and every drum, tick and rim is made of tones alone.
+The shipped styles' only noise is the sea styles' waves: a dark wash, cut well below the treble.
+They have no crackle or hiss, and every drum, tick and rim is made of tones alone.
+A person's own style may also bring soft rain or wind, the captain's choice for INF-5541 ("Your own styles" below); nothing else plays noise.
 Loudness is one fixed gain and a gentle compressor, never a step that lifts quiet parts.
 Every note's nodes are disconnected when it ends, so memory stays flat however long it plays.
+
+## Your own styles
+
+It is INF-5541's approved plan: a person describes the music they want, and the first mate writes it as a style for the app's own instruments.
+Asked "play lofi beats to code to", the first mate saves a new style and plays it in the same reply; asked "make it slower", it saves the same style again under its name, and the music starts again from its first bar.
+The first mate does it through its `ambient-own-style` setting (`src/shared/ambientActions.ts`), whose line teaches what the instruments can make: tones, the sea's waves, soft rain and wind, and never voices singing words, recorded instruments or sounds such as birds, so asked for those it says so and offers the nearest it can play.
+No code judges the person's words; the line is the whole of that teaching.
+
+A style is settings, never code: `ownStyleSchema` in `src/shared/ambientOwn.ts` holds every value to a range, and `ownStyleFaults` checks what a range cannot, such as a part playing a voice the style never defines, a step past the bar, a preset its instrument lacks, or more than 96 notes a bar.
+A faulty style is refused with each fault in words the first mate can act on, and nothing is saved.
+A style may start from a shipped one (`like`) and change only what the words name, such as its tempo, key or the loudness of a layer; or it writes every field: its chords and which may follow which, its hands' range, its pad, its room, its voices from the app's own instruments and their named presets, its three crew levels, its cue, and its parts.
+Each part kind is one fixed way of writing a bar's notes (`src/renderer/src/ambient/own.ts`): a held note, steps on the grid, a pattern over the chord, a strum, random pings, or a tune of repeating motifs, each with a condition on the crew level, a layer, the bar or chance.
+Every style keeps the waiting chime and the merge sparks, so a style that defines its own voices must define `chime` and `spark` on the cue bus.
+
+The app sets the loudness, never the model (`src/renderer/src/ambient/balance.ts`).
+The first time a style plays in a session, the window renders it silently, faster than it plays: each layer alone at the crew level where it plays loudest, moved to that layer's median across the shipped styles, and then the whole mix at level 1 moved to theirs and lowered if its loudest moment at level 2 would pass -1 dB.
+A style that brings no voices of its own keeps the shipped style's layers and has only its whole mix measured.
+The meter is the broadcast standard's (ITU-R BS.1770, `loudness.ts`), so each crew level plays within about 1 LUFS of the shipped medians, -18.1, -16.8 and -16.0.
+The measurement takes one to nine seconds in the window, and the music starts once it ends; a style that cannot be read or measured plays Star cruise.
+The person's own `mix` tilts a layer louder or quieter on top of the balance, and -60 silences it.
+
+Rain is a soft bed of filtered noise with scattered drops, and wind a band of noise whose pitch and loudness drift in slow gusts (`player.ts`).
+At its fullest each reads about -32.5 LUFS alone, 2 dB above the sea's waves, and the style sets how much of it plays.
+
+The styles are `ambientOwnStyles` in the look, at most 12, kept in a row of their own, `ambient-own-styles`, so an older build never meets them, and a view from before the change is never sent them (`src/shared/contract-changes/ambient-own-styles.md`).
+Each has an id made from its name, `own-` and a few lowercase words, which `ambientStyle` names while it plays.
+Settings lists them under Yours in the Style picker, with the person's own words as the chosen style's description.
+The Your own music row below it has Describe your own, which goes home and starts the ask to the first mate in the message box, and Remove while a style of the person's own is chosen, which deletes it and plays Star cruise.
 
 ## When it goes quiet
 

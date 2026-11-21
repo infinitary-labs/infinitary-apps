@@ -1,5 +1,5 @@
 ---
-source: 472b645fe91b5143
+source: 0cf7ba43b1059baf
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -39,10 +39,12 @@ Vergessen entfernt es von diesem Computer, schaltet den Schlüssel aber nicht do
 ### Wenn ein Crewmitglied eines braucht, das du nicht aufbewahrt hast {#when-a-crewmate-needs-one-you-have-not-kept}
 
 Ein Crewmitglied, das ein Geheimnis braucht, das du nicht aufbewahrt hast, fragt danach mit dem Namen, nie mit dem Wert.
-Infinitary zeigt dann eine eigene Karte, zum Beispiel „Das Geheimnis Website-Veröffentlichung für „Die Website veröffentlichen“ aufbewahren?“, mit der Begründung des Crewmitglieds.
+Infinitary zeigt dann eine eigene Karte, zum Beispiel „Website-Veröffentlichung zu Geheimnisse hinzufügen?“, mit der Begründung des Crewmitglieds in seinen eigenen Worten.
+Wenn du das Geheimnis selbst erstellen oder finden musst, zeigt die Karte auch **So bekommst du es**: die Schritte, Namen oder Orte, die das Crewmitglied für diesen Fall aufgeschrieben hat, und eine Zeile, die sagt, wer sie geschrieben hat.
+Prüf jede Adresse, die sie zeigt, bevor du dich dort anmeldest.
 
-Tipp oder füg jeden Wert in das verborgene Feld ein, das Infinitary auf der Karte zeichnet, und wähl dann **In Geheimnissen behalten**.
-**Nicht behalten** behält nichts.
+Tipp oder füg jeden Wert in das verborgene Feld ein, das Infinitary auf der Karte zeichnet, und wähl dann **Geheimnis speichern**.
+**Nicht speichern** speichert nichts.
 Das Crewmitglied bekommt den Namen des Geheimnisses, nie seinen Wert, und jede Nutzung fragt trotzdem bei dir nach.
 
 Gib ein Geheimnis nur in ein Feld ein, das Infinitary zeichnet, nie in das Antwortfeld einer Karte oder in dein Nachrichtenfeld.

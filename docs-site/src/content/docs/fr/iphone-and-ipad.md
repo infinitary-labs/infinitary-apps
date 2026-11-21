@@ -1,5 +1,5 @@
 ---
-source: 4b256578ba14e5e2
+source: a8120adef7569dc8
 title: iPhone et iPad
 description: Demandez une invitation TestFlight privée pour Infinitary sur iPhone et iPad, puis rejoignez votre ordinateur pour lire les cartes et envoyer des messages.
 ---
@@ -30,6 +30,17 @@ Si l’appareil photo n’est pas autorisé, collez plutôt le lien.
 
 Votre téléphone et votre ordinateur doivent partager un réseau : le même Wi-Fi, ou le même réseau privé quand vous êtes ailleurs.
 Ne rejoignez que votre propre ordinateur.
+
+## Plus d’un ordinateur {#more-than-one-computer}
+
+Votre téléphone peut garder plus d’un ordinateur, comme un à la maison et un au travail, et en affiche un à la fois.
+Pour en ajouter un autre, touchez le bouton de l’ordinateur à droite de la barre du haut du téléphone et choisissez **Ajouter un autre ordinateur**, puis scannez son code, collez son lien ou rejoignez-le par son adresse.
+L’ordinateur que vous affichiez reste gardé.
+
+Avec plus d’un ordinateur gardé, le bouton de l’ordinateur nomme l’ordinateur affiché.
+Sa feuille liste vos autres ordinateurs et marque chacun de ceux qui répondent depuis l’endroit où vous êtes, comme quand votre téléphone est sur le réseau ou le réseau privé de cet ordinateur.
+Touchez-en un, ou appuyez sur Return dessus avec un clavier, pour l’afficher.
+Le téléphone ne change jamais de lui-même : il reste sur votre choix jusqu’à ce que vous en choisissiez un autre.
 
 ## Ce qu’il affiche {#what-it-shows}
 
@@ -74,12 +85,16 @@ Voir [Mettre à jour et supprimer Infinitary](/fr/update-and-remove/#your-other-
 Le téléphone a besoin que votre ordinateur soit éveillé, avec Infinitary ouvert.
 S’il ne peut pas le joindre, il indique « Votre ordinateur est hors de portée. Vérifiez qu’Infinitary est ouvert et que les deux appareils partagent un réseau. »
 
-Le téléphone ne vous signale une nouvelle carte que pendant que l’app est ouverte.
+Avec les notifications activées, votre téléphone affiche une notification pour chaque nouvelle carte, même quand Infinitary y est fermé.
+Avec plus d’un ordinateur gardé, chacun envoie les siennes, et la notification nomme l’ordinateur d’où elle vient ; la toucher affiche cet ordinateur et ouvre la carte.
+Chaque ordinateur continue de les envoyer pendant que vous en affichez un autre : votre téléphone lui laisse une note scellée par le relais d’Infinitary chaque fois que son autorisation de notifications se renouvelle, et seul cet ordinateur peut la lire.
 
 ## Quitter ou retirer {#leave-or-remove}
 
 Pour ne plus afficher votre ordinateur, touchez le bouton de l’ordinateur à droite de la barre du haut du téléphone et choisissez **Quitter** suivi du nom de votre ordinateur.
-Le téléphone oublie l’ordinateur.
+Le téléphone oublie cet ordinateur et ses notifications, et lui laisse une note scellée pour qu’il cesse de les envoyer dans la journée, même quand il est hors de portée.
+Quand il est hors de portée, **Oublier** fait la même chose sur le téléphone seul.
+Vos autres ordinateurs gardés restent : celui que vous avez affiché le plus récemment s’affiche ensuite, et s’il n’en reste aucun, le téléphone vous accueille comme au début.
 Sur votre ordinateur, **Retirer** dans le menu du téléphone dans Réglages → **Appareils**, les trois points sur sa ligne, le coupe aussitôt.
 Pour rejoindre de nouveau, créez un nouveau lien.
 

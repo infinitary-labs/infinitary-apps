@@ -1,5 +1,5 @@
 ---
-source: 7c4d9925493d8861
+source: 023b6be0be6240d0
 title: 프로젝트
 description: Infinitary에 프로젝트를 추가하고, 창을 한 프로젝트에 집중시키고, 변경을 병합하는 방식을 고르고, 프로젝트를 제거하는 방법이에요.
 ---
@@ -48,6 +48,9 @@ GitHub는 브라우저에서 GitHub 페이지에 코드를 입력해요.
 GitLab은 gitlab.com이나 자체 GitLab 서버에서, 브라우저로 로그인하거나 키를 붙여 넣을 수 있어요.
 Bitbucket은 bitbucket.org의 프로젝트를 위해 Atlassian 계정에서 API 토큰을 만들어 붙여 넣어요.
 키 양식에 Atlassian 페이지에서 체크할 범위가 적혀 있어요.
+선장님의 Bitbucket Data Center 서버(버전 8.19 이상)는 그 주소를 입력하고 Project read 및 Repository write 권한이 있는 HTTP 액세스 토큰을 붙여 넣어요.
+Data Center 프로젝트의 변경은 끌어오기 요청으로 올라가고, 병합은 선장님이 승인한 버전에서만 이뤄져요: 그 사이에 누군가 푸시하면 아무것도 병합되지 않고 작업에 그렇다고 표시돼요.
+Data Center에서는 일괄 끌어오기 요청, 포크, 서버에 대한 선원들의 직접 접근이 아직 없어요.
 Bitbucket 프로젝트는 속한 작업 공간에서 나열돼요. 작업 공간이 많으면 일부는 확인되지 않을 수 있고, 목록에 그렇다고 표시돼요.
 Bitbucket 프로젝트의 변경도 GitHub, GitLab처럼 끌어오기 요청으로 올라가요. 이전에 추가한 프로젝트도 다음 작업부터 같은 방식으로 작동해요.
 Bitbucket 끌어오기 요청의 설명에는 스토리가 글로 담기고, 사진은 카드에 남아요.

@@ -1,5 +1,5 @@
 ---
-source: 472b645fe91b5143
+source: 0cf7ba43b1059baf
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -39,10 +39,12 @@ Oublier le retire de cet ordinateur, mais ne désactive pas la clé là où elle
 ### Quand un équipier en a besoin d’un que vous n’avez pas gardé {#when-a-crewmate-needs-one-you-have-not-kept}
 
 Un équipier qui a besoin d’un secret que vous n’avez pas gardé le demande par son nom, jamais par sa valeur.
-Infinitary affiche alors sa propre carte, comme « Garder le secret Déploiement du site web pour « Publier le site » ? », avec la raison de l’équipier.
+Infinitary affiche alors sa propre carte, comme « Ajouter Déploiement du site web à Secrets ? », avec la raison de l’équipier dans ses propres mots.
+Quand vous devez créer ou trouver le secret vous-même, la carte affiche aussi **Comment l’obtenir** : les étapes, noms ou endroits que l’équipier a indiqués pour ce cas, et une ligne qui dit qui les a écrits.
+Vérifiez chaque adresse qu’elle affiche avant de vous y connecter.
 
-Tapez ou collez chaque valeur dans le champ masqué qu’Infinitary dessine sur la carte, puis choisissez **Garder dans Secrets**.
-**Ne pas garder** ne garde rien.
+Tapez ou collez chaque valeur dans le champ masqué qu’Infinitary dessine sur la carte, puis choisissez **Enregistrer le secret**.
+**Ne pas enregistrer** n’enregistre rien.
 L’équipier reçoit le nom du secret, jamais sa valeur, et chaque utilisation vous demande toujours.
 
 Ne tapez un secret que dans un champ dessiné par Infinitary, jamais dans le champ de réponse d’une carte ni dans votre zone de message.

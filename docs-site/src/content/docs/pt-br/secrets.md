@@ -1,5 +1,5 @@
 ---
-source: 472b645fe91b5143
+source: 0cf7ba43b1059baf
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
@@ -39,10 +39,12 @@ Esquecer o remove deste computador, mas não desativa a chave no lugar onde ela 
 ### Quando um tripulante precisa de um que você não guardou {#when-a-crewmate-needs-one-you-have-not-kept}
 
 Um tripulante que precisa de um segredo que você não guardou o pede pelo nome, nunca pelo valor.
-O Infinitary então mostra um cartão próprio, como “Guardar o segredo Publicação do site para “Publicar o site”?”, com o motivo do tripulante.
+O Infinitary então mostra um cartão próprio, como “Adicionar Publicação do site a Segredos?”, com o motivo do tripulante nas palavras dele.
+Quando você precisa criar ou encontrar o segredo por conta própria, o cartão também mostra **Como obter**: os passos, nomes ou lugares que o tripulante organizou para este caso, e uma linha dizendo quem os escreveu.
+Confira cada endereço que ele mostra antes de entrar nele.
 
-Digite ou cole cada valor no campo oculto que o Infinitary desenha no cartão e escolha **Guardar em Segredos**.
-**Não guardar** não guarda nada.
+Digite ou cole cada valor no campo oculto que o Infinitary desenha no cartão e escolha **Salvar segredo**.
+**Não salvar** não salva nada.
 O tripulante recebe o nome do segredo, nunca o valor, e cada uso continua pedindo sua permissão.
 
 Digite um segredo só em um campo que o Infinitary desenha, nunca no campo de resposta de um cartão nem na sua caixa de mensagem.

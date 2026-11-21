@@ -10,12 +10,15 @@ import {
   SIGN_OFF_PROMPT_MARKER,
   threadSignOff,
 } from "./scenarios/threadSignOff";
-import { cardReply, shownCard } from "./stack";
+import { cardReply, closeEndedCard, expectEndedCard, shownCard } from "./stack";
 
 /**
  * Saying you are done under an answer closes it (INF-2845, the captain's
  * direction A: "the crewmate marks a reply that says you are done, in any
- * words, as closing"). The test launches its own app, so it owns every
+ * words, as closing"), and the card stays in front of the captain, ended,
+ * until they close it (INF-5561: "even if it's considered a sign-off, the
+ * card should not just disappear in front of me. it should show me the close
+ * card button"). The test launches its own app, so it owns every
  * prerequisite. The real first mate turn, crewmate session, card thread and
  * window run; the mock provider supplies only the two models' words.
  */
@@ -35,7 +38,7 @@ async function askAndShow(launched: LaunchedApp, title: string) {
   return { card, taskId, detail };
 }
 
-test("a crewmate's signed-off line under its answer closes the card and the task as answered", async () => {
+test("a crewmate's signed-off line under its answer ends the card in front of the captain and closes the task as answered", async () => {
   const launched = await launchApp({
     withMockProvider: true,
     scenarios: [threadSignOff],
@@ -51,15 +54,13 @@ test("a crewmate's signed-off line under its answer closes the card and the task
     await box.fill(SIGN_OFF_CAPTAIN_LINE);
     await cardReply(page).send.click();
 
-    // The crewmate's mark ends the answer: the task closes answered and the card leaves.
+    // The crewmate's mark ends the answer: the task closes answered, and the
+    // card the captain was reading stays, ended, with one Close.
     await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
       status: "done",
       closedReason: "answered",
     });
-    await expect(shownCard(page, SIGN_OFF_CARD_TITLE)).toBeHidden();
-    expect(
-      (await page.evaluate(() => window.infinitary.cards.list())).map((c) => c.id),
-    ).not.toContain(card.id);
+    await expectEndedCard(page, SIGN_OFF_CARD_TITLE);
     await page.screenshot({ path: test.info().outputPath("sign-off-after.png") });
 
     // The mark on the crewmate's interim line first was refused and wrote
@@ -73,6 +74,9 @@ test("a crewmate's signed-off line under its answer closes the card and the task
       body: JSON.stringify({ task: await detail(), thread: thread.messages }, null, 2),
       contentType: "application/json",
     });
+
+    // Its Close takes it off the stack.
+    await closeEndedCard(page, SIGN_OFF_CARD_TITLE);
   } finally {
     await launched.close();
   }

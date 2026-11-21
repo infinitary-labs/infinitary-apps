@@ -154,18 +154,33 @@ describe("reading a folder's access list", () => {
         USER,
       ),
     ).toBe("unread");
-    // An entry missing its account or its rights, or of a kind this reading does not judge, is
-    // not read whole either: an account read as nothing is no account to judge.
+    // An entry missing its account or its rights, of a kind this reading does not judge, or
+    // whose account, rights or flags are not in Windows' own form - an account number cut short,
+    // rights no letters name, flags no pairs name - is not read whole either: an account read as
+    // nothing, or half read, is no account to judge.
     for (const entry of [
       `(A;OICI;FA;;)`,
       `(A;OICI;FA;;;)`,
       `(A;OICI;;;;${OTHER})`,
       `(Q;OICI;FA;;;${OTHER})`,
+      `(A;OICI;FA;;;S-1-5-21-)`,
+      `(A;OICI;FA;;;S-1)`,
+      `(A;OICI;FA;;;QQ)`,
+      `(A;OICI;ZZ;;;${OTHER})`,
+      `(A;OICI;0x;;;${OTHER})`,
+      `(A;XXIO;FA;;;${OTHER})`,
     ]) {
       const reading = readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})${entry}`);
       expect(reading).toMatchObject({ entries: null, whole: false });
       expect(ownerOnlyVerdict(reading, USER)).toBe("unread");
     }
+    // Nor is a list whose own flags are not Windows' (`P`, `AI`, `AR`).
+    expect(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`).whole).toBe(false);
+    // Flags are read in their pairs: inheriting to folders and to files is not "inherit only".
+    const both = readAccessList(
+      `O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;CIOI;FA;;;${OTHER})`,
+    );
+    expect(othersCanChange(both, USER)).toBe(true);
     // The word only in what follows the list leaves the list itself to be judged.
     const audited = `${IN_PROFILE}S:(AU;SA;FA;;;WD)`;
     expect(readAccessList(audited).entries).toHaveLength(3);
@@ -308,6 +323,10 @@ describe("the data folder on Windows", () => {
       `O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(D;OICI;WD;;;${OTHER})`,
       // A deny, then an entry missing its account: not an account besides this one to remove.
       `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;)`,
+      // A deny, then an allow whose account number is cut short: not an account to remove.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;;S-1-5-21-)`,
+      // A deny, then an allow whose rights no letters name.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;ZZ;;;${OTHER})`,
     ]) {
       const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
       const temp = join(scratchDir("fm-owner-only-"), "Temp");

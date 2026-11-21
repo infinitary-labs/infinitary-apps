@@ -89,14 +89,15 @@ function ownerKeeps(owner: string | null, user: string): boolean {
  * folder has no list, or its flags and entries - and anything of its audit list (`S:`) after.
  */
 const DESCRIPTOR =
-  /^O:([^:()]+?)(?:G:[^:()]+?)?D:(?:(NO_ACCESS_CONTROL)|([A-Z]*)((?:\([^()]*\))*))(?:S:.*)?$/s;
+  /^O:([^:()]+?)(?:G:[^:()]+?)?D:(?:(NO_ACCESS_CONTROL)|((?:P|AI|AR)*)((?:\([^()]*\))*))(?:S:.*)?$/s;
 
 /**
  * Reads a security descriptor string's owner (`O:`) and access list (`D:`), taken apart in order
  * (`DESCRIPTOR`). Only the list's own `NO_ACCESS_CONTROL` says a folder has no list. Anything
  * else - no owner, no access list at all, a list not read to its end (one holding an entry this
  * reading does not take apart, as a conditional entry with its own brackets, an entry of a kind it
- * does not judge or one missing its rights or account; `ENTRY_TYPES`), or text out of that
+ * does not judge or one whose flags, rights or account are missing or not in Windows' own form;
+ * `ENTRY_TYPES`, `ENTRY_FLAGS`), or text out of that
  * order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
  * the entries it did read nor as a folder with no list.
  */
@@ -113,9 +114,13 @@ export function readAccessList(sddl: string): AccessList {
   for (const match of (read[4] ?? "").matchAll(/\(([^)]*)\)/g)) {
     const fields = (match[1] ?? "").split(";");
     const [type = "", entryFlags = "", rights = "", , , account = ""] = fields;
-    if (fields.length !== 6 || !ENTRY_TYPES.has(type) || !/^[A-Z]*$/.test(entryFlags))
-      return { owner, entries: null, protected: false, whole: false };
-    if (rights === "" || account === "")
+    if (
+      fields.length !== 6 ||
+      !ENTRY_TYPES.has(type) ||
+      !ENTRY_FLAGS.test(entryFlags) ||
+      !(HEX_RIGHTS.test(rights) || LETTER_RIGHTS.test(rights)) ||
+      !(ACCOUNT_NUMBER.test(account) || ACCOUNT_LETTERS.has(account))
+    )
       return { owner, entries: null, protected: false, whole: false };
     entries.push({ type, flags: entryFlags, rights, account, text: match[0] });
   }
@@ -128,6 +133,30 @@ export function readAccessList(sddl: string): AccessList {
  * rights or its account), is an entry this reading did not take apart, so the list is not whole.
  */
 const ENTRY_TYPES = new Set(["A", "D", "OA", "OD", "XA", "XD", "ZA"]);
+
+/**
+ * What an entry this reading takes apart must say in its other fields, each in the form Windows
+ * writes it, so nothing is judged from a field half read: its flags as the pairs Windows names
+ * (`hasFlag` reads them pair by pair), its rights as one number or the pairs naming rights, and its
+ * account as a whole account number or one of Windows' own two-letter names for accounts.
+ */
+const ENTRY_FLAGS = /^(?:CI|OI|NP|IO|ID|SA|FA|TP|CR)*$/;
+const HEX_RIGHTS = /^0x[0-9A-Fa-f]{1,8}$/;
+const LETTER_RIGHTS =
+  /^(?:GA|GR|GW|GX|RC|SD|WD|WO|RP|WP|CC|DC|LC|SW|LO|DT|CR|FA|FR|FW|FX|KA|KR|KW|KX|NR|NW|NX)+$/;
+const ACCOUNT_NUMBER = /^S-1-\d+(?:-\d+)+$/;
+const ACCOUNT_LETTERS = new Set(
+  (
+    "AA AC AN AO AP AS AU BA BG BO BU CA CD CG CN CO CY DA DC DD DG DU EA ED EK ER ES HA HI HO " +
+    "IS IU KA LA LG LS LU LW ME MP MU NO NS NU OW PA PO PS PU RA RC RD RE RM RO RS RU SA SI SO " +
+    "SS SU SY UD WD WR"
+  ).split(" "),
+);
+
+/** Whether an entry's flags hold `flag`, read as the pairs they are, never across two of them. */
+function hasFlag(entry: AccessEntry, flag: string): boolean {
+  return (entry.flags.match(/../g) ?? ([] as string[])).includes(flag);
+}
 
 /** An entry that lets an account in: allow, object allow and the callback forms of them. */
 function allows(entry: AccessEntry): boolean {
@@ -166,7 +195,7 @@ export function othersCanChange(list: AccessList, user: string): boolean {
   return list.entries.some(
     (entry) =>
       allows(entry) &&
-      !entry.flags.includes("IO") &&
+      !hasFlag(entry, "IO") &&
       !accountMayHold(entry.account, user) &&
       letsChange(entry.rights),
   );
@@ -187,16 +216,16 @@ export function handsDownToOthers(list: AccessList, user: string): boolean {
   const handsOwnDown = list.entries.some(
     (entry) =>
       entry.type === "A" &&
-      entry.flags.includes("OI") &&
-      entry.flags.includes("CI") &&
-      !entry.flags.includes("NP") &&
+      hasFlag(entry, "OI") &&
+      hasFlag(entry, "CI") &&
+      !hasFlag(entry, "NP") &&
       accountNumber(entry.account) === user,
   );
   if (!handsOwnDown) return true;
   return list.entries.some(
     (entry) =>
       allows(entry) &&
-      (entry.flags.includes("CI") || entry.flags.includes("OI")) &&
+      (hasFlag(entry, "CI") || hasFlag(entry, "OI")) &&
       !accountMayHold(entry.account, user),
   );
 }
@@ -227,7 +256,7 @@ export function ownerOnlyVerdict(
 export function ownerOnlyAccessList(list: AccessList, user: string): string {
   const kept = (list.entries ?? []).filter(
     (entry) =>
-      !entry.flags.includes("ID") &&
+      !hasFlag(entry, "ID") &&
       (!allows(entry) ||
         (accountMayHold(entry.account, user) && accountNumber(entry.account) !== user)),
   );

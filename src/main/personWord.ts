@@ -360,10 +360,11 @@ async function reservedAt(
  * alone - made with no access for anyone else, or on Windows given an owner-only access list of its
  * own (`keepOwnerOnly`), and in either case read back as a folder already there is (`aloneNow`), so
  * on Windows it hands this account's access down to all it holds - and only then marked whole with
- * its own name and which folder it is (`wordProfilesMark`). A folder the system gives no birth time
- * could not be told from another put at its path later, so none is made there. Null
- * where it cannot be, the folder then removed again only while still the same, empty folder
- * (`dropIfEmpty`). Its mark is made new, never one already there, and is known by the file it
+ * its own name and which folder it is (`wordProfilesMark`). A folder the system gives no birth time,
+ * or one whose birth moves when its mark goes in (a system giving the last change in its place),
+ * could not be told from another put at its path later, so none is kept there. Null
+ * where it cannot be, or where reading it fails, the folder then removed again only while still
+ * the same, empty folder (`dropIfEmpty`). Its mark is made new, never one already there, and is known by the file it
  * opened, so a mark that could not be finished is removed only while it is still that file.
  */
 async function makeProfilesFolder(
@@ -375,15 +376,20 @@ async function makeProfilesFolder(
   const path = `${name}.${id}`;
   mkdirSync(path, { mode: 0o700 });
   const folder = { path, made: lstatSync(path, { bigint: true }) };
-  const alone =
-    folder.made.birthtimeNs !== 0n &&
-    (platform !== "win32" ||
-      (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only") &&
-    (await aloneNow(path, folder.made, platform, access));
-  if (!alone || !stillReserved(folder)) {
-    dropIfEmpty(path, folder.made);
-    return null;
+  let alone = false;
+  try {
+    alone =
+      folder.made.birthtimeNs !== 0n &&
+      (platform !== "win32" ||
+        (await keepOwnerOnly([path], access)).kept[0]?.kind === "owner-only") &&
+      (await aloneNow(path, folder.made, platform, access));
+  } finally {
+    if (!alone || !stillReserved(folder)) {
+      alone = false;
+      dropIfEmpty(path, folder.made);
+    }
   }
+  if (!alone) return null;
   const markPath = join(path, WORD_PROFILES_RESERVED);
   let mark: Entry | null = null;
   let fd: number | undefined;
@@ -395,6 +401,13 @@ async function makeProfilesFolder(
       wrote += writeSync(fd, text, wrote, text.length - wrote);
     closeSync(fd);
     fd = undefined;
+    // A birth the system takes from the last change (as some give in place of one) moved with
+    // the mark just made: it names no one folder, so nothing is published or kept there.
+    const after = entryOf(path);
+    if (after === null || !after.isDirectory() || after.birthtimeNs !== folder.made.birthtimeNs) {
+      dropMade({ folder, mark }, sameEntry);
+      return null;
+    }
     return { folder, mark };
   } catch (error) {
     if (fd !== undefined) closeSync(fd);
@@ -408,7 +421,10 @@ async function makeProfilesFolder(
  * the file it made (`mark`; none where it never knew which file that was), then the folder while
  * still the same and empty, never more.
  */
-function dropMade(made: { folder: ProfilesFolder; mark: Entry | null }): void {
+function dropMade(
+  made: { folder: ProfilesFolder; mark: Entry | null },
+  same: (now: Entry, made: Entry) => boolean = sameMade,
+): void {
   const markPath = join(made.folder.path, WORD_PROFILES_RESERVED);
   const mark = entryOf(markPath);
   if (made.mark !== null && mark?.isFile() && sameEntry(mark, made.mark))
@@ -417,13 +433,21 @@ function dropMade(made: { folder: ProfilesFolder; mark: Entry | null }): void {
     } catch {
       // Left with the folder, which is then not empty and stays.
     }
-  dropIfEmpty(made.folder.path, made.folder.made);
+  dropIfEmpty(made.folder.path, made.folder.made, same);
 }
 
-/** Removes a folder this launch made while it is still that folder and still empty, never more. */
-function dropIfEmpty(path: string, made: Entry): void {
+/**
+ * Removes a folder this launch made while it is still that folder and still empty, never more:
+ * by device, number and birth, or by device and number alone (`same`) where its birth was found to
+ * move with each change, when nothing but that folder's own emptiness lets it go.
+ */
+function dropIfEmpty(
+  path: string,
+  made: Entry,
+  same: (now: Entry, made: Entry) => boolean = sameMade,
+): void {
   const now = entryOf(path);
-  if (now === null || !now.isDirectory() || !sameMade(now, made)) return;
+  if (now === null || !now.isDirectory() || !same(now, made)) return;
   try {
     rmdirSync(path);
   } catch (error) {

@@ -41,14 +41,22 @@ import {
 
 /**
  * A file system that gives no birth time, as some do: while `noBirth.on`, every folder read here
- * answers a birth of zero, and nothing else about it changes.
+ * answers a birth of zero, and while `noBirth.fromChange` its last change in place of one, as
+ * Node may answer where the system has none; nothing else about it changes.
  */
-const noBirth = vi.hoisted(() => ({ on: false }));
+const noBirth = vi.hoisted(() => ({ on: false, fromChange: false }));
 vi.mock("node:fs", async (original) => {
   const fs = await original<typeof import("node:fs")>();
   const lstatSync = ((path: string, options?: { bigint?: boolean }) => {
-    const found = fs.lstatSync(path, options as never) as unknown as { birthtimeNs?: bigint };
-    if (noBirth.on && found && typeof found.birthtimeNs === "bigint") found.birthtimeNs = 0n;
+    const found = fs.lstatSync(path, options as never) as unknown as {
+      birthtimeNs?: bigint;
+      ctimeNs?: bigint;
+    };
+    if (found && typeof found.birthtimeNs === "bigint") {
+      if (noBirth.on) found.birthtimeNs = 0n;
+      else if (noBirth.fromChange && typeof found.ctimeNs === "bigint")
+        found.birthtimeNs = found.ctimeNs;
+    }
     return found;
   }) as typeof fs.lstatSync;
   return { ...fs, default: { ...fs, lstatSync }, lstatSync };
@@ -426,6 +434,28 @@ describe("a refused launch's word to the person", () => {
     } finally {
       noBirth.on = false;
     }
+    // Where the system gives the last change in place of a birth, the mark going in moves it: the
+    // folder names no one folder, so it is removed again, nothing is reserved and no name is taken.
+    const changing = root();
+    noBirth.fromChange = true;
+    try {
+      expect(await ownProfilesFolder(changing, "win32", answering(ownList))).toBeNull();
+    } finally {
+      noBirth.fromChange = false;
+    }
+    expect(existsSync(changing)).toBe(false);
+    expect(readdirSync(join(changing, ".."))).toEqual([]);
+    // A new folder whose read-back fails, after it was made private, is removed again while empty.
+    const unreadBack = root();
+    let readsOfNew = 0;
+    const failsBack: AccessRun = async (ask) => {
+      if (ask.read.some((path) => path.startsWith(`${unreadBack}.`)) && ++readsOfNew === 2)
+        throw new Error("PowerShell ended with 1");
+      return answering(ownList)(ask);
+    };
+    expect(await ownProfilesFolder(unreadBack, "win32", failsBack)).toBeNull();
+    expect(readsOfNew).toBe(2);
+    expect(readdirSync(join(unreadBack, ".."))).toEqual([]);
     // A folder made that another account owns is never taken as private, nor reserved.
     const owned = root();
     expect(

@@ -41,8 +41,15 @@ const SYSTEM_PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
 
 test.afterEach(endCommands);
 
-/** The lines a run that cannot go on says, apart from Chromium's own notes on stderr. */
-const said = (error: string) => error.split("\n").filter((line) => line && !line.startsWith("["));
+/**
+ * The lines a run that cannot go on says, apart from Chromium's own notes on stderr: its
+ * `[pid:...]` lines, and the `ERR: <file>.cpp:<line>` lines its graphics layer (ANGLE) writes when
+ * a run past Electron's start has no display to draw on, as on Linux with none.
+ */
+const said = (error: string) =>
+  error
+    .split("\n")
+    .filter((line) => line && !line.startsWith("[") && !/^ERR: \S+\.cpp:\d+ /.test(line));
 
 test("a command starts the whole app with no window, and a stop signal stops it cleanly", async () => {
   const userDataDir = scratchDir("infinitary-run-command-");

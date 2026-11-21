@@ -6,3 +6,6 @@ An older view ignores `starting` and reads the outage as its crewmate being aske
 An older home ignores `start`, so its crewmate's wake says nothing answers without saying the saved command ran.
 The order `inf:task-browser:turn` tells a computer that runs work when a turn of a task's crewmate begins or ends at the home, so a build Infinitary started there lives through that turn; a home sends it only to a computer that lists this change.
 A computer without the change keeps no starts, so it is never told.
+The home sends a turn's end even when it forgot the turn, and says each task's turn again whenever that computer comes back in reach.
+`inf:work:browser` and the `inf:task-browser:facts` answer may carry `unstarted: true` beside a fact: its page is served on that computer with no saved start, so the home's emit_card says so in one line.
+An older home ignores `unstarted`.

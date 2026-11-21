@@ -1,4 +1,5 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { PROTOCOL_VERSION } from "@shared/ipc";
@@ -60,13 +61,17 @@ describe("a page's saved start on a computer that runs work", () => {
     const told: { task: string; unanswered: PageUnanswered }[] = [];
     let computer: ComputerBrowsers | undefined;
     let turnHeard = 0;
+    let inReach = () => {};
     const home = new PlacedBrowsers({
       devices: {
         ask: async (_device, channel, args) => {
           if (channel === "inf:task-browser:turn") turnHeard += 1;
           return computer?.answer(channel, args);
         },
-        onWorkDevice: () => () => {},
+        onWorkDevice: (listener) => {
+          inReach = () => listener({ deviceId: "work", contact: "in-reach" });
+          return () => {};
+        },
         version: () => ({
           contract: PROTOCOL_VERSION,
           takesWork: true,
@@ -98,8 +103,10 @@ describe("a page's saved start on a computer that runs work", () => {
       // What reaches the home: each fact as it changes, and each event once.
       tell: async (channel, args) => {
         if (channel !== "inf:work:browser") return;
-        const [{ task, fact }] = args as [{ task: string; fact: TaskBrowserFact | null }];
-        home.heardFact("work", task, fact);
+        const [{ task, fact, unstarted }] = args as [
+          { task: string; fact: TaskBrowserFact | null; unstarted?: true },
+        ];
+        home.heardFact("work", task, fact, unstarted);
       },
       ask: async (channel, args) => {
         if (channel !== "inf:work:browser-event") return;
@@ -116,6 +123,17 @@ describe("a page's saved start on a computer that runs work", () => {
     const url = `http://127.0.0.1:${port}/settings`;
     const answers = () => probeLoopback("127.0.0.1", port);
 
+    // A page served there with no saved start: the home's emit_card has its one line to say.
+    const plain = createHttpServer((_q, s) => s.end("<title>Docs</title>"));
+    await new Promise<void>((resolve) => plain.listen(0, "127.0.0.1", resolve));
+    const plainPort = (plain.address() as { port: number }).port;
+    try {
+      await computer.browsers.forTask("t1").navigate({ url: `http://127.0.0.1:${plainPort}/` });
+      await expect.poll(() => home.unstarted("t1"), { timeout: 5_000 }).toBe(true);
+    } finally {
+      plain.close();
+    }
+
     // The crewmate opens its page with --start while nothing answers: it runs there.
     writeFileSync(join(project, "gate"), "");
     const open = await computer.browsers.forTask("t1").navigate({
@@ -125,6 +143,7 @@ describe("a page's saved start on a computer that runs work", () => {
     expect(open.next?.[0]).toContain(`Infinitary ran your --start command in ${project}`);
     expect(await answers()).toBe("answered");
     expect(home.fact("t1")).toMatchObject({ state: "open", url });
+    await expect.poll(() => home.unstarted("t1"), { timeout: 5_000 }).toBe(false);
 
     // The captain's Stop browser at the home stops the build on that computer.
     expect(await home.stopByCaptain("t1")).toEqual({ ok: true });
@@ -155,6 +174,22 @@ describe("a page's saved start on a computer that runs work", () => {
     expect(await home.stopByCaptain("t1")).toEqual({ ok: true });
     expect(await answers()).toBe("answered");
     home.turn("t1", false);
+    await expect.poll(answers, { timeout: 5_000 }).toBe("refused");
+
+    // A turn that computer heard begin from a home that since restarted: the home's next end still reaches it.
+    const started = async () => {
+      expect(await home.reopen("t1")).toEqual({ ok: true });
+      await expect.poll(answers, { timeout: 5_000 }).toBe("answered");
+      await computer?.answer("inf:task-browser:turn", [{ task: "t1", running: true }]);
+      expect(await home.stopByCaptain("t1")).toEqual({ ok: true });
+      expect(await answers()).toBe("answered");
+    };
+    await started();
+    home.turn("t1", false);
+    await expect.poll(answers, { timeout: 5_000 }).toBe("refused");
+    // An end lost while it was out of reach: coming back in reach says the turn's state again.
+    await started();
+    inReach();
     await expect.poll(answers, { timeout: 5_000 }).toBe("refused");
 
     // The build breaks: the next press's start fails, and the crewmate hears how, at the home.

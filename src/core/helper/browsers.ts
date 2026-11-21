@@ -253,7 +253,7 @@ export class ComputerBrowsers {
           facts: [...new Set([...this.known, ...(this.options.heldTasks?.() ?? [])])].flatMap(
             (task) => {
               const fact = browsers.fact(task);
-              return fact ? [{ task, fact }] : [];
+              return fact ? [{ task, fact, ...this.startFact(task) }] : [];
             },
           ),
         };
@@ -397,6 +397,11 @@ export class ComputerBrowsers {
     send(frame);
   }
 
+  /** Its page is served here with no saved start: the home's emit_card says so in one line. */
+  private startFact(task: string): { unstarted?: true } {
+    return this.browsers.unstarted(task) ? { unstarted: true } : {};
+  }
+
   /** The browser's fact home, whole: one at a time per task, then once more if it changed meanwhile. */
   private tellFact(task: string): void {
     const telling = this.telling.get(task);
@@ -408,7 +413,9 @@ export class ComputerBrowsers {
     this.telling.set(task, state);
     const tell = (): void => {
       void this.options
-        .tell("inf:work:browser", [{ task, fact: this.browsers.fact(task) ?? null }])
+        .tell("inf:work:browser", [
+          { task, fact: this.browsers.fact(task) ?? null, ...this.startFact(task) },
+        ])
         .catch(() => undefined)
         .finally(() => {
           if (state.again && !this.closed) {

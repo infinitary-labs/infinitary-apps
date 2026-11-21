@@ -39,7 +39,14 @@ export const browserOrders = {
     effect: "read",
     request: z.tuple([]),
     response: z.object({
-      facts: z.array(z.object({ task: placedTaskIdSchema, fact: taskBrowserFactSchema })),
+      facts: z.array(
+        z.object({
+          task: placedTaskIdSchema,
+          fact: taskBrowserFactSchema,
+          /** Its page is served there with no saved start (`page-start`): emit_card's one line. */
+          unstarted: z.literal(true).optional(),
+        }),
+      ),
     }),
   },
   /** Whether the captain watches the task's browser now: pictures come while he does. */

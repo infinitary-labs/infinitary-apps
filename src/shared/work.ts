@@ -1061,7 +1061,15 @@ export const workRequests = {
   "inf:work:browser": {
     effect: "change",
     request: z.tuple([
-      z.object({ task: placedTaskIdSchema, fact: taskBrowserFactSchema.nullable() }),
+      z.object({
+        task: placedTaskIdSchema,
+        fact: taskBrowserFactSchema.nullable(),
+        /**
+         * Its page is served there with no saved start (`page-start`), for
+         * emit_card's one line; never part of the fact a view reads.
+         */
+        unstarted: z.literal(true).optional(),
+      }),
     ]),
     response: doneSchema,
   },

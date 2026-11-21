@@ -75501,6 +75501,10 @@
                     "type": "null"
                   }
                 ]
+              },
+              "unstarted": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [
@@ -97448,6 +97452,10 @@
                         ]
                       }
                     ]
+                  },
+                  "unstarted": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [

@@ -197,13 +197,18 @@ test("the Batches panel shows a held batch, its line and its last day, and point
 
     await test.step("collapsed, its header says what it holds; open, it shows each group", async () => {
       if ((await panel.getAttribute("data-side-panel-collapsed")) !== null) {
-        await expect(panel).toContainText("1 waiting");
-        await expect(panel).toContainText("1 left out");
+        await expect(panel).toContainText(words.batchesPanelWaitingCount({ count: 1 }));
+        await expect(panel).toContainText(words.batchesPanelLeftOutCount({ count: 1 }));
         await panel.getByRole("button", { name: `Expand ${batchesManifest.title}` }).click();
       }
       await expect(panel).not.toHaveAttribute("data-side-panel-collapsed", "");
-      await expect(body.locator("[data-batches-open]")).toContainText("Batch #31 · 2 changes");
-      await expect(body.locator("[data-batches-open]")).toContainText("held 4m");
+      await expect(body.locator("[data-batches-open]")).toContainText(
+        words.batchesPanelBatchTitle({ number: "31", count: 2 }),
+      );
+      // Held, not checking; how many minutes depends on when the launch finished.
+      await expect(body.locator("[data-batches-open]")).toContainText(
+        words.batchesPanelHeld({ duration: "" }).trim(),
+      );
       await expect(body.locator("[data-batches-failed]")).toContainText("unit-tests");
       await expect(body.locator("[data-batches-member]")).toHaveText([keys.parser, keys.export]);
       await expect(body.locator("[data-batches-line]")).toContainText(
@@ -246,8 +251,12 @@ test("the Batches panel shows a held batch, its line and its last day, and point
     await test.step("Show your batches puts up the details card with the last day's batch", async () => {
       await runFromSearch(app, page, panelCommandId(PANEL, "open"));
       const card = shownPanelCardBody(page, PANEL, "details");
-      await expect(card.locator("[data-batches-details-open]")).toContainText("Held since");
-      await expect(card.locator('[data-batches-finished-row="30"]')).toContainText("#30 merged");
+      await expect(card.locator("[data-batches-details-open]")).toContainText(
+        words.batchesPanelFailedNames({ names: "unit-tests" }),
+      );
+      await expect(card.locator('[data-batches-finished-row="30"]')).toContainText(
+        words.batchesPanelMergedNumber({ number: "30" }),
+      );
       await expect(card.locator("[data-batches-details-line]")).toContainText(keys.legend);
     });
   } finally {

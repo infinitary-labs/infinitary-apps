@@ -120,9 +120,14 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       };
     },
     update: async (input) => {
+      // The task the change is about: tied to the message before any write,
+      // so a refused change keeps the message's tie to it (its own card can
+      // still answer) without counting as the message's work.
+      let about: string | undefined;
       try {
         const text = await (async () => {
           const record = resolve(input.task);
+          about = record.id;
           // Resolve before any write. An unknown prerequisite is a tool error,
           // and two references to one task count once. INF-416 piece I: add
           // what is not linked yet; never compare the list or remove a link.
@@ -130,7 +135,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             input.declaredBlockers === undefined
               ? undefined
               : [...new Set(input.declaredBlockers.map((ref) => resolve(ref).id))];
-          host.asks.attach(record.id, "update_task");
+          host.asks.attach(record.id, "update_task", undefined, "tie");
           // The answer to a task stuck at its provider (docs/inbox.md): the
           // app's own pick, never a model named here.
           if (input.unstick) {
@@ -332,6 +337,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           const now = tasks.get(record.id);
           return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}${stopText ? ` ${stopText}` : ""}`;
         })();
+        // The change took effect: the task is the message's work.
+        if (about) host.asks.attach(about, "update_task");
         return { text, ok: true };
       } catch (caught) {
         if (caught instanceof TaskGraphRefusal) return { text: caught.message, ok: false };

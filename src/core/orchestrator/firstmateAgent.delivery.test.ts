@@ -120,13 +120,60 @@ describe("FirstmateAgent answer delivery", () => {
     });
     vi.spyOn(f.supervisor.steer, "steerCrewmate").mockResolvedValue("recorded-held");
     await f.agent.converse("tell the crew to use cursors");
+    // Guidance passed on with no answer asked makes the task the message's
+    // work; a question asked there is the request's (askRequestTie.test.ts).
     const steered = await toolsOf(f.specs)
       .get("steer_crewmate")
-      ?.execute("s1", { task_id: "t1", message: "Use cursors." });
+      ?.execute("s1", { task_id: "t1", message: "Use cursors.", response_mode: "guidance-only" });
     expect(steered?.content[0]?.text).toBeDefined();
     await finish(f);
     expect(states(f)).toEqual(["covered"]);
     expect(f.session.prompts).toHaveLength(1);
+  });
+
+  // INF-5578's audit, finding 1: a question asked of a long-running task for
+  // the captain's message waits for its answer, not for the task to close.
+  it("ties a question asked of a task to the message, and asks for its card when the answer brings none", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        { id: "t1", title: "Cut the batch alpha", status: "idle", sessionFile: "/tmp/t1.jsonl" },
+      ],
+    });
+    const inbox = new InboxStore(f.db);
+    const answer = (responseId: string, text: string) => {
+      const [request] = inbox.pendingResponses("t1");
+      if (!request) throw new Error("No open request on t1");
+      inbox.submitResponse(
+        { requestId: request.id, responseId, status: "answered" },
+        { task: "t1", session: null },
+        text,
+      );
+      f.agent.pokeInbox();
+    };
+    const steer = (id: string, message: string) =>
+      toolsOf(f.specs).get("steer_crewmate")?.execute(id, { task_id: "t1", message });
+    await f.agent.converse("will updating get the new alpha?");
+    await steer("s1", "Will updating get the new alpha?");
+    await finish(f, "I'll answer you once it reports.");
+    expect(states(f)).toEqual(["covered"]);
+    expect(f.tasks.get("t1")?.status).toBe("active");
+
+    // The turn that reads the answer asks a follow-up for the same message.
+    answer("r1", "Yes, updating gets the alpha.");
+    await drained(f.session, 2);
+    await steer("s2", "Which channel does it come from?");
+    await finish(f, "Asked which channel.");
+    expect(states(f)).toEqual(["covered"]);
+    expect(retries(f)).toEqual([]);
+
+    // The follow-up's answer brings no card: the one retry asks for it.
+    answer("r2", "The alpha channel.");
+    await drained(f.session, 3);
+    await finish(f, "Updating gets the alpha from the alpha channel.");
+    await drained(f.session, 4);
+    expect(retries(f)).toHaveLength(1);
+    expect(f.tasks.get("t1")?.status).toBe("active");
   });
 
   it("does not count a lookup or closing words: one output-only retry, served alone, then covered by an answer", async () => {
@@ -1091,7 +1138,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.prompts[2]).toContain("[user]\ntell the crew to use cursors");
     const steered = await toolsOf(f.specs)
       .get("steer_crewmate")
-      ?.execute("s1", { task_id: "t1", message: "Use cursors." });
+      ?.execute("s1", { task_id: "t1", message: "Use cursors.", response_mode: "guidance-only" });
     expect(steered?.content[0]?.text).not.toBe(ANSWER_ONLY_REFUSAL);
     await finish(f);
     expect(states(f)).toEqual(["covered", "covered"]);

@@ -105,6 +105,17 @@ type Row = {
   feed: number;
 };
 
+/** The request ids an `ask` event's `requests` holds, read as JSON text. */
+function requestIdsOf(value: unknown): string[] {
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function fromRow(row: Row): TaskEvent {
   let data: Record<string, unknown> | null = null;
   if (row.data_json) {
@@ -285,23 +296,107 @@ export class TaskEventStore {
     return rows.reverse().map(fromRow);
   }
 
-  /** Ask attribution needs the attached task and typed via, not its whole timeline. */
-  askAttributions(askIds: readonly string[]): { taskId: string; via: string | null }[] {
+  /**
+   * Ask attribution needs the attached task, its typed via and whether the
+   * message is only tied to the task (`tie`, with the response requests it
+   * asked there), not its whole timeline.
+   */
+  askAttributions(
+    askIds: readonly string[],
+  ): { taskId: string; via: string | null; tie: boolean; requests: string[] }[] {
     if (askIds.length === 0) return [];
     return (
       this.db
         .prepare(
+          // i18n-exempt: SQL, never shown to a person
           `SELECT events.task_id AS taskId,
-         CASE WHEN json_valid(events.data_json) THEN json_extract(events.data_json, '$.via') END AS via
+         CASE WHEN json_valid(events.data_json) THEN json_extract(events.data_json, '$.via') END AS via,
+         CASE WHEN json_valid(events.data_json) THEN json_extract(events.data_json, '$.tie') END AS tie,
+         CASE WHEN json_valid(events.data_json) THEN json_extract(events.data_json, '$.requests') END AS requests
          FROM json_each(?) AS asks CROSS JOIN task_events AS events
          WHERE events.kind = 'ask' AND events.ref = asks.value
          ORDER BY CAST(asks.key AS INTEGER), events.id`,
         )
-        .all(JSON.stringify(askIds)) as { taskId: string; via: unknown }[]
+        .all(JSON.stringify(askIds)) as {
+        taskId: string;
+        via: unknown;
+        tie: unknown;
+        requests: unknown;
+      }[]
     ).map((row) => ({
       taskId: row.taskId,
       via: typeof row.via === "string" ? row.via : null,
+      tie: row.tie === 1 || row.tie === true,
+      requests: requestIdsOf(row.requests),
     }));
+  }
+
+  /** The `ask` event that attached a message to a task, if one did. */
+  askEvent(taskId: string, askId: string): TaskEvent | undefined {
+    const row = this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        "SELECT * FROM task_events WHERE task_id = ? AND kind = 'ask' AND ref = ? ORDER BY id LIMIT 1",
+      )
+      .get(taskId, askId) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
+  /** A message's tie to a task becomes its work: the tie mark leaves its `ask` event. */
+  clearAskTie(eventId: number): void {
+    this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `UPDATE task_events SET data_json = json_remove(data_json, '$.tie')
+         WHERE id = ? AND kind = 'ask' AND json_valid(data_json)`,
+      )
+      .run(eventId);
+  }
+
+  /** A response request a message asked of the task its `ask` event names. */
+  addAskRequest(eventId: number, requestId: string): void {
+    this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `UPDATE task_events SET data_json = json_set(data_json, '$.requests',
+           json_insert(COALESCE(json_extract(data_json, '$.requests'), json('[]')), '$[#]', ?))
+         WHERE id = ? AND kind = 'ask' AND json_valid(data_json)`,
+      )
+      .run(requestId, eventId);
+  }
+
+  /** The messages whose tie to a task asked it this response request. */
+  requestAsks(taskId: string, requestId: string): string[] {
+    return (
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          `SELECT events.ref AS ref FROM task_events AS events
+         CROSS JOIN json_each(CASE WHEN json_valid(events.data_json)
+           THEN COALESCE(json_extract(events.data_json, '$.requests'), '[]') ELSE '[]' END) AS asked
+         WHERE events.task_id = ? AND events.kind = 'ask' AND events.ref IS NOT NULL
+           AND asked.value = ?
+         ORDER BY events.id`,
+        )
+        .all(taskId, requestId) as { ref: string }[]
+    ).map((row) => row.ref);
+  }
+
+  /**
+   * The messages attached to a task as its work, oldest first: a message
+   * only tied to it (a question asked there, a refused change) is left out.
+   */
+  workAskRefs(taskId: string): string[] {
+    return (
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          `SELECT ref FROM task_events WHERE task_id = ? AND kind = 'ask' AND ref IS NOT NULL
+         AND NOT (json_valid(data_json) AND COALESCE(json_extract(data_json, '$.tie'), 0) = 1)
+         ORDER BY at, id`,
+        )
+        .all(taskId) as { ref: string }[]
+    ).map((row) => row.ref);
   }
 
   /** The graph's escalation endpoints, without decoding the retained event payload. */

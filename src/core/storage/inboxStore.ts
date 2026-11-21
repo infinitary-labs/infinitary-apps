@@ -1121,6 +1121,26 @@ export class InboxStore {
     ).map(responseRequestOf);
   }
 
+  /**
+   * Whether a request still waits for its answer: open, or answered with the
+   * wake carrying that answer still waiting on the first mate's lane, unread.
+   */
+  requestOpen(id: string): boolean {
+    const request = this.responseRequest(id);
+    if (!request) return false;
+    if (request.state === "pending") return true;
+    if (request.state !== "answered") return false;
+    return (
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          `SELECT 1 FROM crew_responses AS responses JOIN inbox ON inbox.id = responses.wake_id
+         WHERE responses.request_id = ? AND inbox.delivered_at IS NULL LIMIT 1`,
+        )
+        .get(id) !== undefined
+    );
+  }
+
   /** Cancellation is a sender declaration, never inferred from closing work. */
   cancelResponse(id: string): void {
     const request = this.responseRequest(id);

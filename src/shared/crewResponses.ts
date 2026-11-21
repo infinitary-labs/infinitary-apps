@@ -16,6 +16,12 @@ export type ResponsePolicy = {
   cancel?: string[];
   card?: ResponseCard;
   sourceSession?: string | null;
+  /**
+   * The captain's message the request was asked for, by its saved id: the
+   * message waits for the answer and is due when it comes back
+   * (docs/task-capture.md "How a message ends").
+   */
+  ask?: string;
 };
 
 /**

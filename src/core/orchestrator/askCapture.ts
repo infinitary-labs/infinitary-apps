@@ -216,9 +216,11 @@ export class AskCapture {
   /**
    * Attach the action's selected ask, not merely the latest message in its turn.
    * No-op for unrelated operational work or an unknown task - the tool's own error
-   * already said so.
+   * already said so. `tie` attaches it as about the task without making the
+   * task its work: a question asked there, or a change before it takes
+   * effect (attached again without `tie` once it does).
    */
-  attach(taskId: string, tool: string, starts?: boolean): boolean {
+  attach(taskId: string, tool: string, starts?: boolean, tie?: "tie"): boolean {
     this.onAttach?.(taskId, tool);
     const ask = this.current();
     if (!this.tasks.get(taskId)) return false;
@@ -229,7 +231,13 @@ export class AskCapture {
       if (origin) this.tasks.capture.saveOrigin(taskId, origin);
       return false;
     }
-    return this.tasks.capture.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia, starts);
+    return this.tasks.capture.attachAsk(
+      ask.id,
+      taskId,
+      `tool:${tool}` as AskAttachedVia,
+      starts,
+      tie === "tie",
+    );
   }
 
   /**

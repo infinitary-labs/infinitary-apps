@@ -125,6 +125,16 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     }
     return result;
   };
+  /** The captain's message an expected answer is asked for: the action's own. */
+  const askFor = (response?: import("@shared/crewResponses").AskedResponsePolicy) =>
+    (response?.mode ?? "expected") === "expected" ? host.asks.current()?.id : undefined;
+  /**
+   * A steer that asks for an answer ties its message to the task, so the
+   * message waits for that answer and not for the task's close; one that
+   * only passes guidance on makes the task the message's work, as before.
+   */
+  const steerTie = (response?: import("@shared/crewResponses").AskedResponsePolicy) =>
+    askFor(response) ? ("tie" as const) : undefined;
   /** A first mate steer's source, read from this turn as it stands. */
   const steerSource = (response?: import("@shared/crewResponses").AskedResponsePolicy) => ({
     via: "tool" as const,
@@ -134,6 +144,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       sourceSession: host.sessionFile(),
       ...(response?.card ? { card: response.card } : {}),
       ...(response?.cancel ? { cancel: response.cancel } : {}),
+      ...(askFor(response) ? { ask: askFor(response) } : {}),
     },
     // In a turn that carries the captain's own words, the steer is his
     // guidance: it holds a kept merge until its crewmate declares it (FI3-662).
@@ -193,7 +204,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // The ask is about the task the captain named, whatever the tool then
     // says about it - a refused settle is still about that task.
     steerCrewmate: async (taskId, message, response) => {
-      host.asks.attach(taskId, "steer_crewmate");
+      host.asks.attach(taskId, "steer_crewmate", undefined, steerTie(response));
       // The answer waits for the message's record, never its delivery (INF-3060).
       const delivery = await supervisor.steer.steerCrewmate(taskId, message, "firstmate", {
         ...steerSource(response),
@@ -207,12 +218,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // The hand-over's checks answer now; its copy and the steer after it go
     // on behind the answer, read from this turn as it stands (INF-3060).
     steerAfterFiles: async (fromTask, taskId, message, response) => {
-      host.asks.attach(taskId, "steer_crewmate");
+      host.asks.attach(taskId, "steer_crewmate", undefined, steerTie(response));
       await supervisor.steer.steerAfterFiles(fromTask, taskId, message, steerSource(response));
       steered(taskId);
     },
     interruptCrewmate: async (taskId, mode, closingSentence) => {
-      host.asks.attach(taskId, "interrupt_crewmate");
+      // About the task even when refused; its work once it takes effect.
+      host.asks.attach(taskId, "interrupt_crewmate", undefined, "tie");
       await supervisor.sessions.interruptCrewmate(
         taskId,
         mode,
@@ -223,6 +235,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         },
         closingSentence,
       );
+      host.asks.attach(taskId, "interrupt_crewmate");
       host.turn.delivered = true;
       host.noteDelivery({
         outcome: "action",
@@ -254,10 +267,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // carries the captain's own words.
     isCaptainTurn: () => host.turn.origin === "captain-turn",
     settleTask: async (taskId, mode, confirm, proceedWithOpen, closingSentence) => {
-      host.asks.attach(taskId, "settle_task");
+      // About the task even when refused; its work once it takes effect.
+      host.asks.attach(taskId, "settle_task", undefined, "tie");
       const settle = (): Promise<{ text: string; refusal?: SettleRefusal }> =>
         supervisor.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
-      return settled(taskId, closingSentence, settle);
+      const result = await settled(taskId, closingSentence, settle);
+      if (!result.refusal) host.asks.attach(taskId, "settle_task");
+      return result;
     },
     closeDone: async (taskId, input) => {
       host.asks.attach(taskId, "settle_task");

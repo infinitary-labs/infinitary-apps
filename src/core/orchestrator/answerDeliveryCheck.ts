@@ -103,6 +103,17 @@ export class AnswerDeliveryCheck {
         if (this.host.tasks.capture.getAsk(facts.askId)?.delivery !== "retrying") {
           this.host.tasks.capture.setAskDelivery(facts.askId, "retrying");
         }
+      } else if (facts?.kind === "requested-response") {
+        // The answer to a request asked for a captain's message: the turn
+        // that reads it reads that message too, so its follow-up stays the
+        // message's and the message is judged when it ends - its card, or
+        // the one retry (docs/task-capture.md "How a message ends").
+        for (const ask of this.host.tasks.capture.requestAsks(facts.taskId, facts.requestId)) {
+          if (!ask.followed || ask.answeredAt !== null) continue;
+          if (ask.delivery === "covered") this.host.tasks.capture.setAskDelivery(ask.id, "pending");
+          else if (!JUDGEABLE_DELIVERY.includes(ask.delivery)) continue;
+          this.adopted.add(ask.id);
+        }
       }
     }
   }

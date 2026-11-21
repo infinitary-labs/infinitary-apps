@@ -33,6 +33,11 @@ export type AskEndingHost = {
    * over every lifecycle its own author withdrew (`CardStore.seenCards`).
    */
   seenCards: (taskId: string) => readonly { cardId: string; at: number }[];
+  /**
+   * Whether a response request still waits for its answer: open, or answered
+   * with the answer not yet served to the first mate. Absent, none waits.
+   */
+  requestOpen?: (requestId: string) => boolean;
 };
 
 /** A root message with every message that joined its work. */
@@ -47,6 +52,13 @@ export type AskChain = {
   acted: ReadonlySet<string>;
   /** When a merge linked each task of `work` it filed or started (`askCoverage`'s `joined`). */
   joined?: ReadonlyMap<string, number>;
+  /**
+   * The tasks of `work` the chain's messages are only tied to: a question
+   * the first mate asked there, or a change it refused (`askCoverage`'s `tied`).
+   */
+  tied?: ReadonlySet<string>;
+  /** The response requests the first mate asked for the chain's messages, by task. */
+  requests?: readonly { taskId: string; requestId: string }[];
 };
 
 /**
@@ -99,6 +111,7 @@ export function askEndingOf(
     shownAt(card: Card): number;
     seenCards(taskId: string): readonly { cardId: string; at: number }[];
   },
+  requestOpen?: (requestId: string) => boolean,
 ): AskEnding {
   return new AskEnding({
     tasks,
@@ -106,6 +119,7 @@ export function askEndingOf(
     storedCard: (id) => cards.stored(id),
     shownAt: (card) => cards.shownAt(card),
     seenCards: (taskId) => cards.seenCards(taskId),
+    ...(requestOpen ? { requestOpen } : {}),
   });
 }
 
@@ -122,7 +136,7 @@ export class AskEnding {
 
   private withCoverage(root: AskRecord, members: AskRecord[]): AskChain {
     const ids = members.map((member) => member.id);
-    const { work, acted, joined } = this.host.tasks.capture.askCoverage(ids);
+    const { work, acted, joined, tied, requests } = this.host.tasks.capture.askCoverage(ids);
     return {
       root,
       members,
@@ -131,6 +145,8 @@ export class AskEnding {
       work,
       acted,
       joined,
+      tied,
+      requests,
     };
   }
 
@@ -294,15 +310,43 @@ export class AskEnding {
   ownWork(chain: AskChain): TaskCoverageFields[] {
     return chain.work.filter(
       (task) =>
-        chain.acted.has(task.id) ||
-        Math.max(task.createdAt, task.startedAt ?? 0, chain.joined?.get(task.id) ?? 0) >
-          chain.root.at,
+        !chain.tied?.has(task.id) &&
+        (chain.acted.has(task.id) ||
+          Math.max(task.createdAt, task.startedAt ?? 0, chain.joined?.get(task.id) ?? 0) >
+            chain.root.at),
     );
+  }
+
+  /**
+   * The open tasks the chain waits on: its own work still running, and each
+   * task a request asked for its messages still owes an answer. A request
+   * whose task closed, or that its sender cancelled, waits no longer: the
+   * message falls back to its work, so it never waits longer than that.
+   */
+  private waitsOn(chain: AskChain): Set<string> {
+    const open = new Set(
+      this.ownWork(chain)
+        .filter((task) => !TaskService.isClosed(task))
+        .map((task) => task.id),
+    );
+    const requestOpen = this.host.requestOpen;
+    if (!requestOpen) return open;
+    for (const { taskId, requestId } of chain.requests ?? []) {
+      if (open.has(taskId)) continue;
+      const task = chain.work.find((entry) => entry.id === taskId);
+      if (task && !TaskService.isClosed(task) && requestOpen(requestId)) open.add(taskId);
+    }
+    return open;
   }
 
   /** Whether the chain's own work runs on: the message still waits for its outcome. */
   private live(chain: AskChain): boolean {
-    return this.ownWork(chain).some((task) => !TaskService.isClosed(task));
+    return this.waitsOn(chain).size > 0;
+  }
+
+  /** Whether the chain waits on a task other than this one. */
+  private waitsOnOther(chain: AskChain, taskId: string): boolean {
+    return [...this.waitsOn(chain)].some((id) => id !== taskId);
   }
 
   state(chain: AskChain): AskState {
@@ -379,8 +423,8 @@ export class AskEnding {
       const { root } = chain;
       if (!root.followed || root.answeredAt !== null || root.delivery === "unresolved") continue;
       if (root.crewmateAskedAt !== null) continue;
-      const others = chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task));
-      if (others || this.acceptance(chain) || this.waitingCard(chain)) continue;
+      if (this.waitsOnOther(chain, taskId) || this.acceptance(chain) || this.waitingCard(chain))
+        continue;
       if (this.seenAnswer(chain)) continue;
       this.host.tasks.capture.markCrewmateAsked(root.id);
       return chain;
@@ -395,7 +439,9 @@ export class AskEnding {
    * is revised; otherwise the app's one closing note answers it.
    */
   closingPlace(taskId: string): ClosingPlace {
-    const chain = this.chainsOf(taskId)[0];
+    // A message only tied to the task decides only when no message has it as work.
+    const chains = this.chainsOf(taskId);
+    const chain = chains.find((entry) => !entry.tied?.has(taskId)) ?? chains[0];
     const own = [...this.host.openCards()].find(
       (card) => this.cardTask(card) === taskId && answersByShape(card),
     );
@@ -409,9 +455,7 @@ export class AskEnding {
       return card ? { kind: "revise", card, open: open !== undefined } : { kind: "quiet" };
     }
     if (root.answeredAt !== null || root.delivery === "unresolved") return { kind: "quiet" };
-    if (chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task))) {
-      return { kind: "quiet" };
-    }
+    if (this.waitsOnOther(chain, taskId)) return { kind: "quiet" };
     // An answering card up is revised; so is the task's own, shown before a
     // later message about it, which the revision shows again as the answer.
     const waiting = this.waitingCard(chain) ?? own;

@@ -133,6 +133,17 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   A cold card dismissal or choice uses the same narrow readers without needing a board read to prime them; acceptance still uses the complete batched message membership.
   A terminal answer-task choice still reads its own task's shape for eligibility; it does not compose the other covered tasks.
   The message's own work is the part of it the first mate's tools acted on for the message (`acted` on the same read), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
+- **Tied, not its work.**
+  Two actions tie a message to a task without making the task its work (`tie` on the `ask` event, `TaskService.capture.attachAsk`): a `steer_crewmate` that asks for an answer, which is its default, and a change the first mate tried there before it takes effect (`update_task`, `settle_task`, `interrupt_crewmate`).
+  A change that takes effect makes the task its work; a refused one leaves the tie, so the task's own answering card can still answer the message, and the message no longer waits for the task to close.
+  A steer that only passes guidance on (`guidance-only`) makes the task its work as before.
+  A tied task is about the message, so its cards count as above, but the work after it is not walked and it never joins the message to another (`asksAbove` with ties left out).
+- **Waiting for an answer.**
+  Each response request the first mate asks for a message is saved on that message's `ask` event (`TaskService.capture.tieRequest`, from `CrewSteer`).
+  The message waits on it while the request is open and its task is open, and while its answer is still waiting unread on the first mate's lane (`InboxStore.requestOpen`).
+  A crewmate that answers not yet, or never answers, keeps it waiting until the task closes, so the message never waits longer than its task; a request the first mate cancels waits no longer.
+  The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
+  Several messages asked of one long task each wait on their own requests and end on their own answers.
 - **Joining.**
   A message about open work of an earlier message that has not ended joins it (`continues`), set once when it first attaches; the earliest is the root, and the root with every message that joined it ends together.
   A later attachment, such as the first mate naming the message on other work, never moves it under another chain.

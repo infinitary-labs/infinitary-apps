@@ -734,6 +734,8 @@ public enum PhoneMessages {
     public static func `feedBatchHeldUnanswered`(`label`: String, `place`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnanswered", [`label`, `place`, `project`]) }
     public static func `feedBatchHeldUnansweredHost`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnansweredHost", [`label`, `project`]) }
     public static func `feedBatchHeldUnnamed`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchHeldUnnamed", [`label`, `project`]) }
+    public static func `feedBatchMergeRunning`(`label`: String, `place`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergeRunning", [`label`, `place`, `project`]) }
+    public static func `feedBatchMergeRunningHost`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergeRunningHost", [`label`, `project`]) }
     public static func `feedBatchMergedMany`(`count`: Int, `label`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergedMany", [`count`, `label`, `project`]) }
     public static func `feedBatchMergedOne`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchMergedOne", [`label`, `project`]) }
     public static func `feedBatchNoStory`(`label`: String, `project`: String, `titles`: String) -> String { PhoneWords.format("feedBatchNoStory", [`label`, `project`, `titles`]) }
@@ -3083,6 +3085,11 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchSendBack`() -> String { PhoneWords.format("settingsProjectsBatchSendBack", []) }
     public static func `settingsProjectsBatchSentBack`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchSentBack", [`count`]) }
     public static func `settingsProjectsBatchTryAgain`() -> String { PhoneWords.format("settingsProjectsBatchTryAgain", []) }
+    public static func `settingsProjectsBatchWaiting`() -> String { PhoneWords.format("settingsProjectsBatchWaiting", []) }
+    public static func `settingsProjectsBatchWaitingSince`(`place`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingSince", [`place`, `since`]) }
+    public static func `settingsProjectsBatchWaitingSinceHost`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingSinceHost", [`since`]) }
+    public static func `settingsProjectsBatchWaitingStillOpen`(`label`: String, `place`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingStillOpen", [`label`, `place`]) }
+    public static func `settingsProjectsBatchWaitingStillOpenHost`(`label`: String) -> String { PhoneWords.format("settingsProjectsBatchWaitingStillOpenHost", [`label`]) }
     public static func `settingsProjectsCare`() -> String { PhoneWords.format("settingsProjectsCare", []) }
     public static func `settingsProjectsCareNone`() -> String { PhoneWords.format("settingsProjectsCareNone", []) }
     public static func `settingsProjectsCarePersonal`() -> String { PhoneWords.format("settingsProjectsCarePersonal", []) }
@@ -4605,6 +4612,8 @@ extension PhoneWords {
         "feedBatchHeldUnanswered": ["label", "place", "project"],
         "feedBatchHeldUnansweredHost": ["label", "project"],
         "feedBatchHeldUnnamed": ["label", "project"],
+        "feedBatchMergeRunning": ["label", "place", "project"],
+        "feedBatchMergeRunningHost": ["label", "project"],
         "feedBatchMergedMany": ["count", "label", "project"],
         "feedBatchMergedOne": ["label", "project"],
         "feedBatchNoStory": ["label", "project", "titles"],
@@ -6954,6 +6963,11 @@ extension PhoneWords {
         "settingsProjectsBatchSendBack": [],
         "settingsProjectsBatchSentBack": ["count"],
         "settingsProjectsBatchTryAgain": [],
+        "settingsProjectsBatchWaiting": [],
+        "settingsProjectsBatchWaitingSince": ["place", "since"],
+        "settingsProjectsBatchWaitingSinceHost": ["since"],
+        "settingsProjectsBatchWaitingStillOpen": ["label", "place"],
+        "settingsProjectsBatchWaitingStillOpenHost": ["label"],
         "settingsProjectsCare": [],
         "settingsProjectsCareNone": [],
         "settingsProjectsCarePersonal": [],

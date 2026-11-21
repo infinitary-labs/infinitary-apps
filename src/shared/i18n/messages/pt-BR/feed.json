@@ -20,6 +20,8 @@
   "feedBatchHeldUnanswered": "{project}: {label} está retido porque o {place} não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.",
   "feedBatchHeldUnansweredHost": "{project}: {label} está retido porque o host do projeto não confirmou a mesclagem e a solicitação de pull continua aberta lá. Nada foi enviado de novo: Tentar de novo envia uma nova mesclagem.",
   "feedBatchHeldUnnamed": "{project}: {label} está retido porque as verificações falharam. As alterações aprovadas enquanto isso esperam por ele.",
+  "feedBatchMergeRunning": "{project}: o {place} aceitou a mesclagem de {label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.",
+  "feedBatchMergeRunningHost": "{project}: o host do projeto aceitou a mesclagem de {label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.",
   "feedBatchMergedMany": {
     "plural": "count",
     "one": "{project}: {label} foi mesclado com {count} alteração, um commit para cada uma.",

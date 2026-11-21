@@ -20,6 +20,8 @@
   "feedBatchHeldUnanswered": "{project} : {label} est retenu, car {place} n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.",
   "feedBatchHeldUnansweredHost": "{project} : {label} est retenu, car l’hébergeur du projet n’a pas confirmé la fusion et la demande de tirage y est toujours ouverte. Rien n’a été renvoyé : Réessayer envoie une nouvelle fusion.",
   "feedBatchHeldUnnamed": "{project} : {label} est retenu, car ses vérifications ont échoué. Les modifications approuvées entre-temps l’attendent.",
+  "feedBatchMergeRunning": "{project} : {place} a accepté la fusion de {label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.",
+  "feedBatchMergeRunningHost": "{project} : l’hébergeur du projet a accepté la fusion de {label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.",
   "feedBatchMergedMany": {
     "plural": "count",
     "one": "{project} : {label} a été fusionné avec {count} modification, un commit chacune.",

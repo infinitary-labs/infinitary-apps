@@ -903,6 +903,11 @@
     "other": "変更{count}件を差し戻しました。残りの変更をまとめ直します。"
   },
   "settingsProjectsBatchTryAgain": "再試行",
+  "settingsProjectsBatchWaiting": "一括プルリクエストのマージを待機中",
+  "settingsProjectsBatchWaitingSince": "{since} から待機中：{place} がマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。",
+  "settingsProjectsBatchWaitingSinceHost": "{since} から待機中：プロジェクトのホストがマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。",
+  "settingsProjectsBatchWaitingStillOpen": "{place} が {label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。",
+  "settingsProjectsBatchWaitingStillOpenHost": "プロジェクトのホストが {label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。",
   "settingsProjectsCare": "慎重さ",
   "settingsProjectsCareNone": "なし",
   "settingsProjectsCarePersonal": "ここでは何も関門を通りません。",

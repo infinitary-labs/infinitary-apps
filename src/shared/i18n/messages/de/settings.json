@@ -926,6 +926,11 @@
     "other": "{count} Änderungen zurückgeschickt. Der Rest des Bündels wird neu zusammengestellt."
   },
   "settingsProjectsBatchTryAgain": "Erneut versuchen",
+  "settingsProjectsBatchWaiting": "Bündel wartet auf sein Zusammenführen",
+  "settingsProjectsBatchWaitingSince": "Wartet seit {since}: {place} hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.",
+  "settingsProjectsBatchWaitingSinceHost": "Wartet seit {since}: Der Host des Projekts hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.",
+  "settingsProjectsBatchWaitingStillOpen": "{place} hat {label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.",
+  "settingsProjectsBatchWaitingStillOpenHost": "Der Host des Projekts hat {label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.",
   "settingsProjectsCare": "Sorgfalt",
   "settingsProjectsCareNone": "keine",
   "settingsProjectsCarePersonal": "Hier geht nichts durch eine Prüfstelle.",

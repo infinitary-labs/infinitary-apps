@@ -82,6 +82,11 @@ export function wordProfilePrivate(
 
 /** What names a copy's throwaway profile, a folder in the profiles' folder (`wordProfilesBeside`). */
 export const WORD_PROFILE_PREFIX = "infinitary-word-";
+/**
+ * The file this app makes in the profiles' folder as it makes that folder: a folder found there
+ * without it is someone else's, never changed, read or used.
+ */
+export const WORD_PROFILES_RESERVED = ".infinitary-word-profiles";
 /** The file in a profile naming the one copy that uses it: its process number and a line's end. */
 export const WORD_OWNER_FILE = "infinitary-word.pid";
 /** The copy's own temporary folder, inside its profile (`TEMP` and `TMP` name it). */

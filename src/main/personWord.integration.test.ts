@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -14,7 +15,12 @@ import { clearPrivateTemp } from "@core/storage/ownerOnly";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { askPersonWord } from "./personWord";
-import { PERSON_WORD_ARG, WORD_OWNER_FILE, WORD_TEMP_DIR } from "./personWordArg";
+import {
+  PERSON_WORD_ARG,
+  WORD_OWNER_FILE,
+  WORD_PROFILES_RESERVED,
+  WORD_TEMP_DIR,
+} from "./personWordArg";
 
 /**
  * The review of INF-5409: a refused window launch hears the person's answer from a copy of the
@@ -210,6 +216,34 @@ describe("a refused launch's copy that shows a word", () => {
     },
   );
 
+  it("uses only a profiles' folder it made, and leaves a folder already there alone", async () => {
+    // One it makes is marked as made, and used again by the next ask.
+    const made = profilesFolder();
+    const marks = scratchDir("person-word-marks-");
+    const ask = (profiles: string) =>
+      askPersonWord("dock", { launcher: launcher(copyProgram(), "zero", marks), profiles });
+    expect(await ask(made)).toBe(0);
+    expect(readdirSync(made)).toEqual([WORD_PROFILES_RESERVED]);
+    expect(await ask(made)).toBe(0);
+    // A folder of the same name the app never made: never scanned, changed or used.
+    const found = profilesFolder();
+    mkdirSync(found, { recursive: true, mode: 0o755 });
+    chmodSync(found, 0o755);
+    mkdirSync(join(found, "infinitary-word-theirs"));
+    writeFileSync(join(found, "infinitary-word-theirs", WORD_OWNER_FILE), `${await endedPid()}\n`);
+    const before = statSync(found).mode;
+    const unmarked = scratchDir("person-word-marks-");
+    expect(
+      await askPersonWord("dock", {
+        launcher: launcher(copyProgram(), "zero", unmarked),
+        profiles: found,
+      }),
+    ).toBe("unshown");
+    expect(existsSync(join(unmarked, "started"))).toBe(false);
+    expect(readdirSync(found)).toEqual(["infinitary-word-theirs"]);
+    expect(statSync(found).mode).toBe(before);
+  });
+
   it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     "keeps the person's press when the copy's profile cannot be removed",
     async () => {
@@ -331,6 +365,7 @@ describe("a refused launch's copy that shows a word", () => {
   it("removes only profiles whose copy named itself and has positively ended", async () => {
     const profiles = profilesFolder();
     mkdirSync(profiles, { recursive: true, mode: 0o700 });
+    writeFileSync(join(profiles, WORD_PROFILES_RESERVED), "");
     const ended = await endedPid();
     const profile = (name: string, said?: string) => {
       mkdirSync(join(profiles, name));
@@ -388,6 +423,7 @@ describe("a refused launch's copy that shows a word", () => {
           ? ["infinitary-word-link", "infinitary-word-linked-owner", "infinitary-word-pipe"]
           : []),
         "other-folder",
+        WORD_PROFILES_RESERVED,
       ].sort(),
     );
     expect(readdirSync(elsewhere)).toEqual([WORD_OWNER_FILE]);

@@ -10,8 +10,10 @@ import {
   openSync,
   readdirSync,
   readSync,
+  rmdirSync,
   rmSync,
   type Stats,
+  writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
@@ -31,6 +33,7 @@ import {
   replyLine,
   WORD_OWNER_FILE,
   WORD_PROFILE_PREFIX,
+  WORD_PROFILES_RESERVED,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -147,10 +150,11 @@ export { wordProfilesBeside } from "@core/folderMove/due";
 const OWNER_FILE_BYTES = 16;
 
 /**
- * Makes the profiles' folder and says whether it is this account's alone: a real folder, not a link;
- * away from Windows owned by this account with no access for anyone else (a wider mode of its own is
- * narrowed); on Windows with an owner-only access list of its own (`keepOwnerOnly`), whatever list
- * a folder already there was given.
+ * Makes the profiles' folder and says whether it is this app's and this account's alone. Only a
+ * folder this app made, marked as it was made (`WORD_PROFILES_RESERVED`), is ever used: one already
+ * there without the mark, or a link, is left exactly as it is. Away from Windows it must be owned by
+ * this account with no access for anyone else (a wider mode of its own is narrowed); on Windows it
+ * gets an owner-only access list of its own (`keepOwnerOnly`).
  */
 export async function ownProfilesFolder(
   root: string,
@@ -158,11 +162,13 @@ export async function ownProfilesFolder(
   access: AccessRun = powerShellAccess,
 ): Promise<boolean> {
   try {
-    mkdirSync(root, { recursive: true, mode: 0o700 });
-    const folder = lstatSync(root);
-    if (!folder.isDirectory() || folder.isSymbolicLink()) return false;
+    if (!reserveProfilesFolder(root)) {
+      console.warn("[app] a word's profiles' folder is there but not this app's; it is left alone");
+      return false;
+    }
     if (platform === "win32")
       return (await keepOwnerOnly([root], access)).kept[0]?.kind === "owner-only";
+    const folder = lstatSync(root);
     if (folder.uid !== process.getuid?.()) return false;
     if ((folder.mode & 0o077) !== 0) chmodSync(root, 0o700);
     return (lstatSync(root).mode & 0o077) === 0;
@@ -172,9 +178,38 @@ export async function ownProfilesFolder(
   }
 }
 
+/**
+ * Makes the profiles' folder with its mark, or finds one this app made: a real folder, not a link,
+ * holding the mark as a plain file. A folder it made but could not mark goes again, so the next
+ * launch can make it whole.
+ */
+function reserveProfilesFolder(root: string): boolean {
+  let made = false;
+  try {
+    mkdirSync(root, { mode: 0o700 });
+    made = true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  const folder = lstatSync(root);
+  if (!folder.isDirectory() || folder.isSymbolicLink()) return false;
+  const mark = join(root, WORD_PROFILES_RESERVED);
+  if (!made) return entryOf(mark)?.isFile() === true;
+  try {
+    writeFileSync(mark, "", { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    rmdirSync(root);
+    throw error;
+  }
+  return true;
+}
+
 /** Which entry a path is, by device and number: the same only while nothing replaced it. */
 const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: number }) =>
   a.dev === b.dev && a.ino === b.ino;
+
+/** A profile's owner: the copy's number, and which file said it. */
+type Owner = { pid: number; dev: number; ino: number };
 
 /**
  * The copy a profile's owner file names (`claimWordProfile`): a plain file, never a link nor a pipe,
@@ -182,7 +217,7 @@ const sameEntry = (a: { dev: number; ino: number }, b: { dev: number; ino: numbe
  * copy's whole record - its number and the line's end - and nothing else; anything else, a record
  * not yet written whole, or no file, is no owner.
  */
-function profileOwner(profile: string): number | null {
+function profileOwner(profile: string): Owner | null {
   const path = join(profile, WORD_OWNER_FILE);
   let fd: number | undefined;
   try {
@@ -201,7 +236,8 @@ function profileOwner(profile: string): number | null {
       got = readSync(fd, bytes, read, bytes.length - read, read);
     if (read !== kept.size) return null;
     const said = bytes.toString("utf8", 0, read);
-    return /^[1-9][0-9]{0,9}\n$/.test(said) ? Number(said.trimEnd()) : null;
+    if (!/^[1-9][0-9]{0,9}\n$/.test(said)) return null;
+    return { pid: Number(said.trimEnd()), dev: kept.dev, ino: kept.ino };
   } catch {
     return null;
   } finally {
@@ -227,10 +263,13 @@ function reclaimWordProfiles(root: string): void {
     const folder = entryOf(profile);
     if (folder === null || !folder.isDirectory()) continue;
     const owner = profileOwner(profile);
-    if (owner === null || !processGone(owner)) continue;
-    // The same folder, read again just before it goes: one replaced since is left as it is.
+    if (owner === null || !processGone(owner.pid)) continue;
+    // The same folder and the same whole owner file, read again just before it goes: a profile
+    // where either was replaced or changed since is left as it is.
     const now = entryOf(profile);
     if (now === null || !now.isDirectory() || !sameEntry(now, folder)) continue;
+    const still = profileOwner(profile);
+    if (still === null || still.pid !== owner.pid || !sameEntry(still, owner)) continue;
     try {
       rmSync(profile, { recursive: true, force: true });
     } catch (error) {

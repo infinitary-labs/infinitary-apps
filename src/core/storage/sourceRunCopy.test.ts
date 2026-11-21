@@ -1,4 +1,11 @@
-import { copyFileSync, existsSync, readdirSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -113,5 +120,18 @@ describe("the copy a run from source keeps before it opens the person's record",
     expect(formatChangeDue(dir)).toBe(false);
     expect(keepRecordBeforeSourceRun(dir, copyFileSync)).toBeNull();
     expect(appliedIn(join(dir, SOURCE_RUN_COPY_DIR))).toBe(DATABASE_VERSION - 1);
+  });
+
+  // The review of the copy-again rule (NEW-A): a record nothing will migrate,
+  // because it cannot be read, must not replace the last good copy.
+  it("leaves the kept copy alone when the record cannot be read", () => {
+    const dir = installedFolder();
+    const kept = keepRecordBeforeSourceRun(dir, copyFileSync) as string;
+    const good = readFileSync(join(kept, "firstmate.db"));
+    writeFileSync(join(dir, "firstmate.db"), "not a database");
+    rmSync(join(dir, "firstmate.db-wal"), { force: true });
+    expect(formatChangeDue(dir)).toBe(false);
+    expect(keepRecordBeforeSourceRun(dir, copyFileSync)).toBeNull();
+    expect(readFileSync(join(kept, "firstmate.db")).equals(good)).toBe(true);
   });
 });

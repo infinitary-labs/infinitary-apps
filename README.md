@@ -54,8 +54,8 @@ pnpm dev
 A dev run opens your own saved data, `~/Library/Application Support/infinitary`,
 as the installed app does, so quit the installed app first; only one of them opens
 the folder at a time (`src/shared/userDataFolders.ts`). Before it first opens that
-data it keeps a copy in the folder's `before-source-run`, and says in the terminal
-how to go back. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR`
+data, and again before a version that changes how it is saved, it keeps a copy in
+the folder's `before-source-run`, and says in the terminal how to go back. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR`
 to an empty folder.
 
 That's it - no hidden step to fetch the Electron binary. `pnpm install`'s postinstall

@@ -34,8 +34,9 @@ export const SOURCE_RUN_COPY_FILES = [
  * Whether this build would change how the record in `dataDir` is saved
  * when it opens it: a database migration the record has not had - in the
  * saved record or the knowledge collection - or no format marker yet. A
- * database this build cannot read counts as due, so a copy is kept before
- * anything else reads it.
+ * database this build cannot read is not due: the compatibility guard and
+ * the knowledge collection refuse it and never migrate it, so the kept copy
+ * stays the last good one.
  */
 export function formatChangeDue(dataDir: string): boolean {
   if (!existsSync(join(dataDir, "saved-data-format.json"))) return true;
@@ -60,7 +61,7 @@ export function formatChangeDue(dataDir: string): boolean {
       for (let version = 1; version <= known; version += 1) if (!applied.has(version)) return true;
       return false;
     } catch {
-      return true;
+      return false;
     }
   };
   return (

@@ -140,6 +140,11 @@ export class KeptMerge {
     // it steps back so the next runs in the same pass. Each runs once.
     const ran = new Set<string>();
     for (;;) {
+      // This run already tried the approval in front: a run that holds the
+      // task now tries it itself, and a retry armed on its settle would arm
+      // the next run's in turn, without end.
+      const current = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+      if (current && ran.has(current.id)) return;
       // Another settle holds the task: the run comes back once it ends.
       if (this.locks.holder(taskId)) {
         this.locks.retryWhenFree(taskId);

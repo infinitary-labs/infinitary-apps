@@ -626,3 +626,29 @@ it("continues other queue removals after one fails and retains only the unacknow
   expect(visited).toEqual([HEAD, OTHER_HEAD]);
   expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
 });
+
+// Two runs of one task's kept merge started together, as a turn's end and a
+// passed check can start them: each tries the approval once. Before the
+// fix, the run that had already tried it asked for another run whenever the
+// other one held the task, and the two re-armed each other forever on the
+// event loop's queue, so nothing else in the app ran.
+it("tries the approval once when two runs start together, and arms no retry for a run already tried", async () => {
+  const world = approved();
+  let attempts = 0;
+  world.merge = async () => {
+    attempts += 1;
+    // A bound so a regression fails here instead of never yielding: the closed
+    // pull request ends the approval and with it every run.
+    return attempts > 10
+      ? { ok: false, text: "The pull request was closed.", stop: "closed" }
+      : { ok: false, text: "The change is in line for the next batch.", stop: "queue" };
+  };
+  await Promise.all([
+    world.kept.runMergeAuthorization(TASK),
+    world.kept.runMergeAuthorization(TASK),
+  ]);
+  // The retry the second run armed while the first held the task runs once.
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(attempts).toBe(2);
+  expect(approvalOf(world)?.waiting?.on).toBe("queue");
+});

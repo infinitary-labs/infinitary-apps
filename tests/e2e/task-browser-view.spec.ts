@@ -601,7 +601,7 @@ test("the captain points at a task's running page by keys and by pointer, and it
       await expect(layer).toHaveCount(0);
       await expect(queued).toHaveAttribute("data-crew-notes", "0");
       // With Point at off, the captain's press on the same button is the first the page counts.
-      // The page takes his presses in the order he made them, so the one that made the mark never reached it.
+      // The page takes presses in the order they were made, so the one that made the mark never reached it.
       await clickOnPage(app, page, task.id, watchedUrl, "send");
       await expect.poll(() => pageSays(app, watchedUrl, "out")).toBe("1");
       await browser.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();

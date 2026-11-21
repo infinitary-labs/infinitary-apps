@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-20-size-and-phone-bundle",
+      "reason": "Moves the knowledge tool shapes a computer that runs work hands its home out of src/shared/work.ts into their own file, so it stays under the size check's ceiling once the changes are combined, and regenerates the phone's bundled card script so it carries the task browser schema's new comment; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-20-connection-size-and-phone-bundle",
+      "reason": "Moves the helpers that read what a view's hello lists into their own file, so src/core/connection/connection.ts stays under the size check's ceiling once two of the batch's changes are combined, and regenerates the phone's card script with the saved-resets fields the saved Codex resets change added; nothing a person sees changes."
+    }
+  ]
+}

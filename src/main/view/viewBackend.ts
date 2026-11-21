@@ -1,12 +1,12 @@
 import { createServer, type Server } from "node:http";
 import type { BrowserViewer } from "@core/browser/browserViews";
+import { contractChange, listsChange } from "@core/connection/contractChanges";
 import {
   BROWSER_FROM_ANY_VIEW,
   DEVICES_FROM_A_VIEW,
   EVERY_VIEW_ASKS,
   PANELS_IN_EVERY_WINDOW,
-} from "@core/connection/connection";
-import { contractChange, listsChange } from "@core/connection/contractChanges";
+} from "@core/connection/viewHello";
 import { computerName } from "@core/devices/computerName";
 import { dialHome } from "@core/devices/dial";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";

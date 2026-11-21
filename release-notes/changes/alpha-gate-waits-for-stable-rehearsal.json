@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-gate-waits-for-stable-rehearsal",
+      "reason": "Release process only: a rolling alpha now cuts nothing while a stable rehearsal runs, as it already did while a stable is promoted; the app does not change."
+    }
+  ]
+}

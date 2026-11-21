@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-zh-hant",
+      "reason": "Publishes the documentation site in Traditional Chinese (Taiwan) beside English and Arabic; nothing in the app changes."
+    }
+  ]
+}

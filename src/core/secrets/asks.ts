@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
+import { secretAskHow } from "./askHow";
 
 /**
  * Asking the captain to keep a secret (docs/secrets.md, "Asking to keep a
@@ -15,6 +16,12 @@ export type SecretAskInput = {
   reason: string;
   /** Each secret by name and place, or by the reference of a kept one it replaces. */
   secrets: { name?: string; place?: string; replace?: string }[];
+  /**
+   * How the captain gets the secrets, when they must make or find them
+   * themselves: an HTML fragment the asker designs, drawn under "How to get
+   * it" once it passes `secretAskHow`'s checks.
+   */
+  how?: string;
 };
 
 /** One secret the captain kept for an ask: what the asker hears, never the value. */
@@ -22,7 +29,8 @@ export type KeptSecret = { ref: string; name: string; place: string; version: nu
 
 /** What an ask answers at once. */
 export type SecretAskAnswer =
-  | { ask: string; state: "waiting" }
+  /** `without` names what an older home could not take, and so left off the card. */
+  | { ask: string; state: "waiting"; without?: "how" }
   /** Every secret it names is already kept under that name and place: no card. */
   | { ask: string; state: "kept"; secrets: KeptSecret[] }
   | { ask: string; state: "unavailable"; help: string };
@@ -38,10 +46,24 @@ export type SecretAskEnded =
 /** The shape of a secret's reference, and of an ask's own id. */
 const REFERENCE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
-/** A well-formed ask: an id, a reason, and at least one named secret, each name once per place. */
+/** A well-formed ask: an id, a reason, and at least one named secret, each name once per place, and a how-to that passes its checks. */
 export function validSecretAsk(input: SecretAskInput): boolean {
+  return wellFormed(input) && !secretAskHowProblem(input);
+}
+
+/** Why an otherwise well-formed ask's how-to is refused, in words for the asker; none when it passes or has none. */
+export function secretAskHowProblem(input: SecretAskInput): string | undefined {
+  if (input.how === undefined) return undefined;
+  // i18n-exempt: served to the asking agent, which reads English
+  if (typeof input.how !== "string") return "The how-to must be text: an HTML fragment.";
+  const how = secretAskHow(input.how);
+  return how && "problem" in how ? how.problem : undefined;
+}
+
+function wellFormed(input: SecretAskInput): boolean {
   if (!input || typeof input !== "object") return false;
-  if (!Object.keys(input).every((key) => ["id", "reason", "secrets"].includes(key))) return false;
+  if (!Object.keys(input).every((key) => ["id", "reason", "secrets", "how"].includes(key)))
+    return false;
   if (typeof input.id !== "string" || !REFERENCE.test(input.id)) return false;
   if (typeof input.reason !== "string" || !input.reason.trim()) return false;
   if (!Array.isArray(input.secrets) || input.secrets.length === 0) return false;
@@ -80,6 +102,8 @@ const askSchema = z.strictObject({
   task: z.string().nullable(),
   id: z.string(),
   reason: z.string(),
+  /** The how-to as the card draws it, already checked and drawn again by `secretAskHow`. */
+  how: z.string().optional(),
   at: z.number(),
   fields: z.array(fieldSchema).min(1),
   /** Secrets the ask named that were already kept: they ride the answer with the kept ones. */
@@ -94,8 +118,8 @@ const bookSchema = z.strictObject({ asks: z.array(askSchema) });
 /**
  * The asks still waiting for the captain, kept beside Secrets in one small
  * file (`<userData>/secret-asks.json`) so a card comes back after a restart
- * with a new pass. It holds names, places, reasons and references, never a
- * value. `SecretsSettings` is its one writer.
+ * with a new pass. It holds names, places, reasons, how-tos and references,
+ * never a value. `SecretsSettings` is its one writer.
  */
 export class SecretAskBook {
   private readonly asks = new Map<string, WaitingSecretAsk>();

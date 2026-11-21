@@ -221,29 +221,44 @@ A paired phone never sees these questions: only this computer's window reads the
 ### Asking to keep a secret
 
 An agent that needs a secret the captain has not kept asks for it by name, place and reason, never a value, and Infinitary draws its own masked field for the captain to type it (INF-4239, the captain's direction A).
-A crewmate runs `infinitary-secrets-axi ask --name '<name>' [--place '<place>'] --reason '<why>' --id <ask>`; `--replace <reference>` names a kept secret that stopped working, and `--secrets '<JSON list>'` asks for several on one card.
-A crewmate on a computer that runs work asks the same way (INF-4239's piece 2): its command sends the ask, or the withdrawal of a waiting one, to the home with one work request, `inf:work:secret-ask`, which carries names, places, references, a reason and the ask's id, and never a value (`placedSecretAskInputSchema`, `workSecrets.ts`).
+A crewmate runs `infinitary-secrets-axi ask --name '<name>' [--place '<place>'] [--how '<HTML>'] --reason '<why>' --id <ask>`; `--replace <reference>` names a kept secret that stopped working, and `--secrets '<JSON list>'` asks for several on one card.
+The name is short, and a place is only a label that tells two secrets of one name apart, such as staging, never where to get it.
+When the captain must make or find the secret, `--how` says how ("How to get it" below).
+A crewmate on a computer that runs work asks the same way (INF-4239's piece 2): its command sends the ask, or the withdrawal of a waiting one, to the home with one work request, `inf:work:secret-ask`, which carries names, places, references, a reason, the ask's id and its how-to, and never a value (`placedSecretAskInputSchema`, `workSecrets.ts`).
 The home must take such asks (`takesSecretAsks`: the computer takes uses and lists `secret-asks-elsewhere`), and the task's spec then carries `secretAsks`; `SecretsSettings.askElsewhere` answers it as the same ask as one here, for the task the work route names, never the request's words, so the card goes up on the home, the captain types the value there or wherever the card is answered, and the task hears the outcome once through its inbox.
+A home that does not list the contract change `secret-ask-how` gets the ask without its how-to (`offerAsks`, `secretUses.ts`), and the ask's answer says so (`without: "how"`), so the crewmate puts the steps in its report.
 A computer without the change keeps its `ask` answering `unavailable` with words telling it to name the secret and its place in its report, so the first mate can ask with `ask_secret`.
-The first mate asks the same way with its `ask_secret` tool.
+The first mate asks the same way with its `ask_secret` tool, whose `how` is the same how-to.
 `SecretsSettings.askToKeep` answers at once: `waiting` while the card asks, `kept` with each reference when every secret it names is already kept under that name and place, so no card goes up, or `unavailable` with words where Secrets is not offered or the secret it replaces cannot be read.
 Asking again with a waiting ask's id raises nothing new, and `cancel <ask>` (or `ask_secret` with `cancel`) withdraws it.
-A waiting ask is kept in `<userData>/secret-asks.json`, which holds names, places, reasons and references and never a value (`SecretAskBook`, `asks.ts`); after a restart each comes back with new passes, and a closed task's ask ends.
-`SecretsSettings` answers each ask through `SecretAsks` (`askToKeep.ts`), which raises the ask's card and spends its Keep with the controller's own passes and protected owner.
+A waiting ask is kept in `<userData>/secret-asks.json`, which holds names, places, reasons, how-tos and references and never a value (`SecretAskBook`, `asks.ts`); after a restart each comes back with new passes, and a closed task's ask ends.
+`SecretsSettings` answers each ask through `SecretAsks` (`askToKeep.ts`), which raises the ask's card and spends its Save with the controller's own passes and protected owner.
 
-The card is Infinitary's own (`askCard.ts`): its title names the secrets and who asks, its body the asker's reason in its own words, a row per secret with its place, and, for a replacement, the version it replaces.
-Its answers are Don't keep, an ordinary one-time pass, and Keep in Secrets, a host effect `secrets-keep` whose argument names the fields (`SecretKeepOffer`) and whose id is a pass only `keep` spends.
-The window draws one masked field per secret between the body and the buttons (`SecretAskFields.tsx`), outside the card's frame, so the body's own script never reads it.
-Tab reaches each field, Enter moves to the next, and Enter in the last keeps.
-Keep sends the values with the pass in their own request, `inf:secrets:keep`, never as a card choice, so a value never reaches a card answer, its thread, the task record or a log; a Keep sent as a card choice does nothing.
+The card is Infinitary's own (`askCard.ts`, INF-5516's plan), one column at one measure.
+Its title names one or two secrets short, or counts more, and says Replace when every secret on it replaces a saved one.
+Its body is the asker's reason in quotes with who wrote it, then, when the asker gave one, the "How to get it" part.
+Its answers are Don't save, an ordinary one-time pass, and Save secret (Save secrets for several), a host effect `secrets-keep` whose argument names the fields (`SecretKeepOffer`) and whose id is a pass only `keep` spends.
+The window draws one masked field per secret below the body, at the body's measure and left edge (`SecretAskFields.tsx`), outside the card's frame, so the body's own script never reads it.
+Each field's name sits above it, with its place and, for a replacement, the version it replaces, and one line under the fields says where the values go.
+Tab reaches each field, Enter moves to the next, and Enter in the last saves.
+Save sends the values with the pass in their own request, `inf:secrets:keep`, never as a card choice, so a value never reaches a card answer, its thread, the task record or a log; a Save sent as a card choice does nothing.
 The controller spends the pass before it writes, puts each value straight into the protected owner as Add secret does, zero-fills its copy and records nothing of it.
 A missing value, a spent or stale pass, or a closed task's ask keeps nothing.
-A Keep that cannot finish leaves the card up with new passes, and the window or phone that pressed it says why once, outside the card's body (a window above the body, the phone beside the card's buttons, kept through the card's new passes), while a card a restore changed says why above its rows: locked storage adds Unlock, storage that needs recovery points to Settings, and a replaced secret that changed since the card asked names its current version.
+A Save that cannot finish leaves the card up with new passes, and the window or phone that pressed it says why once, outside the card's body (a window above the body, the phone beside the card's buttons, kept through the card's new passes), while a card a restore changed says why above its rows: locked storage adds Unlock, storage that needs recovery points to Settings, and a replaced secret that changed since the card asked names its current version.
 What was kept stays kept, and the card asks again only for the rest.
-When the ask ends, its asker hears once, through its inbox (`secrets-ask-ended`), each kept secret's name, place, reference and version, that the captain chose Don't keep, or that it was withdrawn; never a value.
+When the ask ends, its asker hears once, through its inbox (`secrets-ask-ended`), each kept secret's name, place, reference and version, that the captain chose Don't save, or that it was withdrawn; never a value.
 
-Another Mac's window and the phone answer the same card: each lists the contract change `secrets-ask` in its hello and sends Keep through the same request over the connection.
-A view that does not list it gets the card without Keep in Secrets (`frameWithoutUnreadActions`, `taskAllow.ts`) and shows the card's line saying where to answer it, which a view that draws the fields hides (`data-inf-secret-elsewhere`); its Don't keep still works.
+#### How to get it
+
+When the captain must make or find a secret themselves, the asker says how in an HTML fragment it designs for that case (the captain's write-in on INF-5516's plan: freeform, guided by instructions, never one form for every case).
+Numbered steps suit a sign-in and a few presses, a grid of exact names in `<code>` suits scopes to tick, a table suits several places, and `<details>` folds what most people need not read; the command's help and `ask_secret`'s `how` parameter say so.
+`secretAskHow` (`askHow.ts`) checks closed facts about it and draws it again from its parsed elements, never the asker's own string: only text, headings, paragraphs, lists, tables, details, figures, code, kbd, mark and links; a class only from the frame's layout classes (`inf-mono`, `inf-muted`, `inf-row`, `inf-grid`, `inf-panel`); no script, style, field, picture, id, `data-` or `on` attribute; and every link a safe address (`isSafeCardHref`) holding only text, which is that address with or without its `https://`, so the captain sees where a link goes before signing in there; and no list `start`, since the card numbers each list's steps from one.
+A refused how-to asks nothing, and the asker hears why in words it can act on.
+The card draws it under the heading How to get it, with steps numbered in circles, and a line under it says who wrote it and to check each address.
+The masked fields stay outside the frame, so nothing in the how-to can read them.
+
+Another Mac's window and the phone answer the same card: each lists the contract change `secrets-ask` in its hello and sends Save through the same request over the connection.
+A view that does not list it gets the card without Keep in Secrets (`frameWithoutUnreadActions`, `taskAllow.ts`) and shows the card's line saying where to answer it, which a view that draws the fields hides (`data-inf-secret-elsewhere`); its Don't save still works.
 The card lint refuses an agent's own card that holds a password field and points the agent to the ask (`PASSWORD_FIELD_REFUSAL`, `cardLint.ts`).
 
 ### Bringing secrets from another tool

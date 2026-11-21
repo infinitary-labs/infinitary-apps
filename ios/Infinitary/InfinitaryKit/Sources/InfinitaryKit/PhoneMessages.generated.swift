@@ -1768,8 +1768,11 @@ public enum PhoneMessages {
     public static func `phoneSceneWaitingBatchCheck`() -> String { PhoneWords.format("phoneSceneWaitingBatchCheck", []) }
     public static func `phoneSceneWaitingChecks`() -> String { PhoneWords.format("phoneSceneWaitingChecks", []) }
     public static func `phoneSceneWorking`() -> String { PhoneWords.format("phoneSceneWorking", []) }
-    public static func `phoneSecretsAskFields`() -> String { PhoneWords.format("phoneSecretsAskFields", []) }
-    public static func `phoneSecretsAskNote`() -> String { PhoneWords.format("phoneSecretsAskNote", []) }
+    public static func `phoneSecretsAskNoteMany`() -> String { PhoneWords.format("phoneSecretsAskNoteMany", []) }
+    public static func `phoneSecretsAskNoteOne`() -> String { PhoneWords.format("phoneSecretsAskNoteOne", []) }
+    public static func `phoneSecretsAskPlace`(`place`: String) -> String { PhoneWords.format("phoneSecretsAskPlace", [`place`]) }
+    public static func `phoneSecretsAskPlaceholder`() -> String { PhoneWords.format("phoneSecretsAskPlaceholder", []) }
+    public static func `phoneSecretsAskReplaces`(`version`: String) -> String { PhoneWords.format("phoneSecretsAskReplaces", [`version`]) }
     public static func `phoneSecretsGiveOnce`(`recipient`: String, `secrets`: String) -> String { PhoneWords.format("phoneSecretsGiveOnce", [`recipient`, `secrets`]) }
     public static func `phoneSecretsRefusedDenied`() -> String { PhoneWords.format("phoneSecretsRefusedDenied", []) }
     public static func `phoneSecretsRefusedExpired`() -> String { PhoneWords.format("phoneSecretsRefusedExpired", []) }
@@ -2203,8 +2206,37 @@ public enum PhoneMessages {
     public static func `secretsArchiveOpenTitle`() -> String { PhoneWords.format("secretsArchiveOpenTitle", []) }
     public static func `secretsArchiveSaveMessage`() -> String { PhoneWords.format("secretsArchiveSaveMessage", []) }
     public static func `secretsArchiveSaveTitle`() -> String { PhoneWords.format("secretsArchiveSaveTitle", []) }
+    public static func `secretsAskAskedFirstMate`() -> String { PhoneWords.format("secretsAskAskedFirstMate", []) }
+    public static func `secretsAskAskedTask`(`task`: String) -> String { PhoneWords.format("secretsAskAskedTask", [`task`]) }
+    public static func `secretsAskByCrewmate`() -> String { PhoneWords.format("secretsAskByCrewmate", []) }
+    public static func `secretsAskByFirstMate`() -> String { PhoneWords.format("secretsAskByFirstMate", []) }
+    public static func `secretsAskClosed`() -> String { PhoneWords.format("secretsAskClosed", []) }
+    public static func `secretsAskDontSave`() -> String { PhoneWords.format("secretsAskDontSave", []) }
+    public static func `secretsAskElsewhere`() -> String { PhoneWords.format("secretsAskElsewhere", []) }
+    public static func `secretsAskEmpty`() -> String { PhoneWords.format("secretsAskEmpty", []) }
+    public static func `secretsAskEnded`() -> String { PhoneWords.format("secretsAskEnded", []) }
     public static func `secretsAskFields`() -> String { PhoneWords.format("secretsAskFields", []) }
-    public static func `secretsAskNote`() -> String { PhoneWords.format("secretsAskNote", []) }
+    public static func `secretsAskGone`() -> String { PhoneWords.format("secretsAskGone", []) }
+    public static func `secretsAskHowMany`() -> String { PhoneWords.format("secretsAskHowMany", []) }
+    public static func `secretsAskHowOne`() -> String { PhoneWords.format("secretsAskHowOne", []) }
+    public static func `secretsAskLocked`() -> String { PhoneWords.format("secretsAskLocked", []) }
+    public static func `secretsAskNoteMany`() -> String { PhoneWords.format("secretsAskNoteMany", []) }
+    public static func `secretsAskNoteOne`() -> String { PhoneWords.format("secretsAskNoteOne", []) }
+    public static func `secretsAskPlace`(`place`: String) -> String { PhoneWords.format("secretsAskPlace", [`place`]) }
+    public static func `secretsAskPlaceholder`() -> String { PhoneWords.format("secretsAskPlaceholder", []) }
+    public static func `secretsAskRecovery`() -> String { PhoneWords.format("secretsAskRecovery", []) }
+    public static func `secretsAskReplaceMany`(`count`: Int) -> String { PhoneWords.format("secretsAskReplaceMany", [`count`]) }
+    public static func `secretsAskReplaceOne`(`name`: String) -> String { PhoneWords.format("secretsAskReplaceOne", [`name`]) }
+    public static func `secretsAskReplaceTwo`(`first`: String, `second`: String) -> String { PhoneWords.format("secretsAskReplaceTwo", [`first`, `second`]) }
+    public static func `secretsAskReplaces`(`version`: String) -> String { PhoneWords.format("secretsAskReplaces", [`version`]) }
+    public static func `secretsAskSaveMany`() -> String { PhoneWords.format("secretsAskSaveMany", []) }
+    public static func `secretsAskSaveOne`() -> String { PhoneWords.format("secretsAskSaveOne", []) }
+    public static func `secretsAskStale`() -> String { PhoneWords.format("secretsAskStale", []) }
+    public static func `secretsAskTitleMany`(`count`: Int) -> String { PhoneWords.format("secretsAskTitleMany", [`count`]) }
+    public static func `secretsAskTitleOne`(`name`: String) -> String { PhoneWords.format("secretsAskTitleOne", [`name`]) }
+    public static func `secretsAskTitleTwo`(`first`: String, `second`: String) -> String { PhoneWords.format("secretsAskTitleTwo", [`first`, `second`]) }
+    public static func `secretsAskUnavailable`() -> String { PhoneWords.format("secretsAskUnavailable", []) }
+    public static func `secretsAskUnlock`() -> String { PhoneWords.format("secretsAskUnlock", []) }
     public static func `secretsBringCannotEmpty`() -> String { PhoneWords.format("secretsBringCannotEmpty", []) }
     public static func `secretsBringCannotNotText`() -> String { PhoneWords.format("secretsBringCannotNotText", []) }
     public static func `secretsBringCannotTooLarge`() -> String { PhoneWords.format("secretsBringCannotTooLarge", []) }
@@ -5597,8 +5629,11 @@ extension PhoneWords {
         "phoneSceneWaitingBatchCheck": [],
         "phoneSceneWaitingChecks": [],
         "phoneSceneWorking": [],
-        "phoneSecretsAskFields": [],
-        "phoneSecretsAskNote": [],
+        "phoneSecretsAskNoteMany": [],
+        "phoneSecretsAskNoteOne": [],
+        "phoneSecretsAskPlace": ["place"],
+        "phoneSecretsAskPlaceholder": [],
+        "phoneSecretsAskReplaces": ["version"],
         "phoneSecretsGiveOnce": ["recipient", "secrets"],
         "phoneSecretsRefusedDenied": [],
         "phoneSecretsRefusedExpired": [],
@@ -6032,8 +6067,37 @@ extension PhoneWords {
         "secretsArchiveOpenTitle": [],
         "secretsArchiveSaveMessage": [],
         "secretsArchiveSaveTitle": [],
+        "secretsAskAskedFirstMate": [],
+        "secretsAskAskedTask": ["task"],
+        "secretsAskByCrewmate": [],
+        "secretsAskByFirstMate": [],
+        "secretsAskClosed": [],
+        "secretsAskDontSave": [],
+        "secretsAskElsewhere": [],
+        "secretsAskEmpty": [],
+        "secretsAskEnded": [],
         "secretsAskFields": [],
-        "secretsAskNote": [],
+        "secretsAskGone": [],
+        "secretsAskHowMany": [],
+        "secretsAskHowOne": [],
+        "secretsAskLocked": [],
+        "secretsAskNoteMany": [],
+        "secretsAskNoteOne": [],
+        "secretsAskPlace": ["place"],
+        "secretsAskPlaceholder": [],
+        "secretsAskRecovery": [],
+        "secretsAskReplaceMany": ["count"],
+        "secretsAskReplaceOne": ["name"],
+        "secretsAskReplaceTwo": ["first", "second"],
+        "secretsAskReplaces": ["version"],
+        "secretsAskSaveMany": [],
+        "secretsAskSaveOne": [],
+        "secretsAskStale": [],
+        "secretsAskTitleMany": ["count"],
+        "secretsAskTitleOne": ["name"],
+        "secretsAskTitleTwo": ["first", "second"],
+        "secretsAskUnavailable": [],
+        "secretsAskUnlock": [],
         "secretsBringCannotEmpty": [],
         "secretsBringCannotNotText": [],
         "secretsBringCannotTooLarge": [],
@@ -7756,6 +7820,8 @@ extension PhoneWords {
         "secretsApprovalConfirmRead": "uses",
         "secretsApprovalNamedMany": "count",
         "secretsApprovalRead": "uses",
+        "secretsAskReplaceMany": "count",
+        "secretsAskTitleMany": "count",
         "settingsAccountsCount": "count",
         "settingsAccountsWaiting": "count",
         "settingsAutomationEventPreview": "count",

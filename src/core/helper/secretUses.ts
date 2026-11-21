@@ -70,8 +70,13 @@ export class SecretUsesThere implements SecretsCommand {
 
   constructor(private readonly options: SecretUsesThereOptions) {}
 
-  /** The home takes asks from here, or no longer does (a conversation opened again without them). */
-  offerAsks(home: SecretAsksHome | undefined): void {
+  /**
+   * The home takes asks from here, or no longer does (a conversation opened
+   * again without them). `takesHow` says whether it draws an ask's how-to
+   * (`secret-ask-how.md`): an older home gets the ask without it, and the
+   * asker hears so.
+   */
+  offerAsks(home: SecretAsksHome | undefined, takesHow = false): void {
     if (!home) {
       this.ask = undefined;
       this.cancelAsk = undefined;
@@ -80,9 +85,13 @@ export class SecretUsesThere implements SecretsCommand {
     this.ask = async (input) => {
       const copied: SecretAskInput = structuredClone(input);
       if (!validSecretAsk(copied)) throw new Error("Invalid ask.");
-      const answer = await home({ op: "ask", ...copied });
+      const { how, ...rest } = copied;
+      const dropped = how !== undefined && !takesHow;
+      const answer = await home({ op: "ask", ...(dropped ? rest : copied) });
       if (!("ask" in answer)) throw new Error("The home answered an ask with something else.");
-      return answer.ask;
+      return dropped && answer.ask.state === "waiting"
+        ? { ...answer.ask, without: "how" }
+        : answer.ask;
     };
     this.cancelAsk = async (id) => {
       const answer = await home({ op: "cancel", id });

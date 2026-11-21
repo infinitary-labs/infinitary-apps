@@ -1,4 +1,5 @@
 import type { Card } from "@shared/cards";
+import { SECRET_ASK_CARD_WORDS } from "@shared/secrets";
 import { describe, expect, it } from "vitest";
 import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -9,7 +10,10 @@ import { createSecretTools } from "./secretTools";
 // Intent: INF-4239, direction A, for the first mate: it asks by name, place
 // and reason through its own tool; the ask raises Infinitary's card, which the
 // turn counts as its answer, and an ask that names no secret is refused in
-// words it can act on. The Secrets controller is real, over disposable custody.
+// words it can act on. INF-5516 with the captain's write-in: the first mate
+// may lay out how to get it, and a how-to the card cannot take is refused in
+// words saying why, with nothing asked. The Secrets controller is real, over
+// disposable custody.
 function tool() {
   const custody = disposableCustody();
   const dir = scratchDir("secret-tool-");
@@ -52,7 +56,8 @@ describe("the first mate's ask_secret", () => {
     });
     expect(JSON.parse(out.text)).toEqual({ ask: "stripe", state: "waiting" });
     expect(t.raised).toEqual(["stripe"]);
-    expect(t.cards.at(-1)?.title).toContain("the first mate");
+    expect(t.cards.at(-1)?.title).toBe(SECRET_ASK_CARD_WORDS.title(["Stripe test key"], false));
+    expect(t.cards.at(-1)?.body).toContain(SECRET_ASK_CARD_WORDS.asked(null));
     expect(t.cards.at(-1)?.taskId).toBeUndefined();
     expect(JSON.parse((await t.ask.run({ id: "stripe", cancel: true })).text)).toEqual({
       ask: "stripe",
@@ -66,5 +71,27 @@ describe("the first mate's ask_secret", () => {
     expect(out.text).toMatch(/^Refused: /);
     expect(t.cards).toEqual([]);
     expect(t.raised).toEqual([]);
+  });
+
+  it("draws the first mate's how-to under its words, and refuses one holding a script", async () => {
+    const t = tool();
+    const secrets = [{ name: "Bitbucket API token" }];
+    const how =
+      '<ol><li>Open <a href="https://bitbucket.org/account/settings/api-tokens/">bitbucket.org/account/settings/api-tokens</a>.</li><li>Tick <code>read:repository:bitbucket</code>.</li></ol>';
+    const refused = await t.ask.run({
+      id: "bad",
+      reason: "Review pull requests",
+      secrets,
+      how: `${how}<script>alert(1)</script>`,
+    });
+    expect(refused.text).toMatch(/^Refused: /);
+    expect(refused.text).toContain("<script>");
+    expect(t.cards).toEqual([]);
+    const out = await t.ask.run({ id: "bitbucket", reason: "Review pull requests", secrets, how });
+    expect(JSON.parse(out.text)).toEqual({ ask: "bitbucket", state: "waiting" });
+    const body = t.cards.at(-1)?.body ?? "";
+    expect(body).toContain(SECRET_ASK_CARD_WORDS.how(false));
+    expect(body).toContain(SECRET_ASK_CARD_WORDS.by(null));
+    expect(body).toContain("<code>read:repository:bitbucket</code>");
   });
 });

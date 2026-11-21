@@ -117,7 +117,7 @@ export class HostCardStack {
     host: string,
     name: string,
     waitingChanges: number,
-    options: { reauth?: boolean; cli?: boolean; kind?: string } = {},
+    options: { reauth?: boolean; cli?: boolean } = {},
   ): void {
     if (this.cards.has(id)) return;
     this.put({

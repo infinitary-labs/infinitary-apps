@@ -987,6 +987,7 @@
 "mergeSetInProject" = "依這個專案的設定。";
 "mergeWaitsForReview" = "此合併會等你回答審查的問題：";
 "mergedAt" = "已於 %1$@ 合併";
+"mergedChangeNewerOn" = "已在 %2$@ 合併 %1$@，其中包含核准版本之後的推送";
 "mergedChangeOn" = "已在 %2$@ 合併 %1$@";
 "mergedChangeOnHost" = "已在專案的主機上合併 %1$@";
 "mergedChangeWhereItLives" = "已在專案所在處合併 %1$@";

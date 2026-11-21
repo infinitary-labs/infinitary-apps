@@ -1,4 +1,5 @@
 import type { AppDatabase } from "./db";
+import { UNRESOLVED_SEND } from "./taskDeliveryStore";
 import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
 import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
 
@@ -20,7 +21,10 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * the tasks that start at a prerequisite's approval, which the ready list
  * seeks the same way (docs/task-graph.md, "A part that starts at approval").
  * The permission index seeks only recorded overrides for each load round,
- * never the permission-bearing history that has no override.
+ * never the permission-bearing history that has no override, and the
+ * unresolved-send index only the approval records holding a merge whose
+ * outcome was never read back, which every merge send and the minute pass
+ * read, closed tasks included (INF-5193).
  * The required-action index seeks the rows holding a required-action
  * record, which a merged close matches its own requirements against
  * instead of composing every task (INF-4224).
@@ -84,6 +88,8 @@ export function createQueryIndexes(db: AppDatabase): void {
       json_extract(data_json, '$.leftoversComputerId'), at, id
     ) WHERE kind = 'note'
       AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.leftoversUnresolved') END = 1;
+    CREATE INDEX IF NOT EXISTS task_permissions_unresolved_send
+      ON task_permissions ((${UNRESOLVED_SEND}), task_id) WHERE (${UNRESOLVED_SEND}) = 1;
     CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
     CREATE INDEX IF NOT EXISTS tasks_branch ON tasks (branch);
     CREATE INDEX IF NOT EXISTS tasks_status_reads ON tasks (closed_at, id, status)

@@ -7,6 +7,7 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
+import { changeHostOf, changeRequestHost, changeRequestHostAt } from "@shared/forgeKinds";
 import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
 import { opensPullRequest, ownsBatches, type RepoDelivery } from "@shared/repos";
@@ -177,12 +178,82 @@ export function putInFront(
   const next = others[index];
   if (top.status !== "standing" || top.attempt || !next) return undefined;
   const rest = others.filter((_, at) => at !== index);
-  const { queued: _others, guidance: _marks, queueRemovals: _removals, ...stepped } = top;
+  const {
+    queued: _others,
+    guidance: _marks,
+    queueRemovals: _removals,
+    unsettled: _unsettled,
+    ...stepped
+  } = top;
   return {
     ...next,
     guidance: top.guidance,
     queueRemovals: top.queueRemovals,
+    unsettled: top.unsettled,
     queued: toBack ? [...rest, stepped] : [stepped, ...rest],
+  };
+}
+
+/**
+ * The forge kind a managed project configured for a host's address (a
+ * self-hosted GitLab's, say), when one did: what a host is, before its
+ * public address.
+ */
+export type HostKindAt = (host: string) => string | null | undefined;
+
+/**
+ * The same pull request on the same host, owner and repository, compared as
+ * the host reads them: a host that folds a project's owner and name, as
+ * GitHub's and Bitbucket's do, matches them without regard to case
+ * (`foldsNames`). The kind a managed project configured for that address
+ * (`kindAt`) decides first, then the public host's, and a host neither
+ * names reads as GitHub's, as a numbered request's identity does
+ * (`requestIdentity`).
+ */
+export function samePullTarget(
+  a: MergeAuthorization["target"],
+  b: MergeAuthorization["target"],
+  kindAt?: HostKindAt,
+): boolean {
+  if (a.host !== b.host || a.prNumber !== b.prNumber) return false;
+  const folds = (
+    changeRequestHost(kindAt?.(a.host)) ??
+    changeRequestHostAt(a.host) ??
+    changeHostOf(undefined)
+  ).foldsNames;
+  const fold = (word: string) => (folds ? word.toLowerCase() : word);
+  return fold(a.owner) === fold(b.owner) && fold(a.name) === fold(b.name);
+}
+
+/**
+ * The approval that replaces `previous` as the task's record, carrying every
+ * merge sent whose outcome was never read back (INF-5193): `previous`'s own
+ * attempt joins its unsettled list, kept by pull request, and the entry for
+ * `next`'s pull request becomes `next`'s attempt, so it reads that merge back
+ * before sending anything (`KeptMerge.reconcileAttempt`).
+ */
+export function carryUnsettled(
+  previous: MergeAuthorization | undefined,
+  next: MergeAuthorization,
+  kindAt?: HostKindAt,
+): MergeAuthorization {
+  const same = (a: MergeAuthorization["target"], b: MergeAuthorization["target"]) =>
+    samePullTarget(a, b, kindAt);
+  let unsettled = [...(previous?.unsettled ?? []), ...(next.unsettled ?? [])];
+  const keep = (entry: {
+    target: MergeAuthorization["target"];
+    attempt: NonNullable<MergeAuthorization["attempt"]>;
+  }) => {
+    unsettled = [...unsettled.filter((item) => !same(item.target, entry.target)), entry];
+  };
+  if (previous?.attempt) keep({ target: previous.target, attempt: previous.attempt });
+  if (next.attempt) keep({ target: next.target, attempt: next.attempt });
+  const own = unsettled.find((item) => same(item.target, next.target));
+  const rest = unsettled.filter((item) => !same(item.target, next.target));
+  return {
+    ...next,
+    ...(own ? { attempt: own.attempt } : {}),
+    unsettled: rest.length > 0 ? rest : undefined,
   };
 }
 
@@ -338,15 +409,24 @@ export function approvalClosesOn(
 
 /**
  * A standing approval as it ends - spent by its merge, or revoked,
- * invalidated or superseded - with no attempt, retry or wait left on it:
- * the one shape every end of an approval records.
+ * invalidated or superseded - with no retry or wait left on it: the one
+ * shape every end of an approval records. A merge spends its attempt;
+ * any other end keeps it: a merge sent whose outcome was never read back is
+ * not undone by the end, and the next approval of the same pull request
+ * reads it back before sending again (`KeptApproval.authorizeMerge`).
  */
 export function endedAuthorization(
   standing: MergeAuthorization,
   end: Pick<MergeAuthorization, "status" | "endedAt"> &
     Partial<Pick<MergeAuthorization, "reason" | "generation" | "holds" | "receipt">>,
 ): MergeAuthorization {
-  return { ...standing, ...end, attempt: undefined, retryAt: undefined, waiting: undefined };
+  return {
+    ...standing,
+    ...end,
+    ...(end.status === "consumed" ? { attempt: undefined } : {}),
+    retryAt: undefined,
+    waiting: undefined,
+  };
 }
 
 /**
@@ -452,7 +532,6 @@ export function declareMergeGuidance(
         guidance: { ...guidance, declared: Math.max(guidance.declared, input.mark) },
         waiting: undefined,
         retryAt: undefined,
-        attempt: undefined,
       },
     });
     tasks.note(taskId, `The captain's kept merge approval ended: ${reason}.`, {
@@ -627,7 +706,6 @@ export function declareMergeRepair(
         undecided: undefined,
         waiting: undefined,
         retryAt: undefined,
-        attempt: undefined,
       },
       `The captain's kept merge approval ended: ${reason}.`,
       true,
@@ -840,7 +918,6 @@ export function decideMergeRepair(
       undecided: assessed,
       waiting: undefined,
       retryAt: undefined,
-      attempt: undefined,
     },
   });
   tasks.note(builderId, `The captain's kept merge approval ended: ${reason}.`, {

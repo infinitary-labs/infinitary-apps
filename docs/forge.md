@@ -9,27 +9,27 @@ This is the one home of what the seam is in the code.
 
 `src/core/forge/` answers every question the app asks of the place a project lives, without the rest of the core knowing which host answers:
 
-| Call | GitHub | GitLab | Plain Git host | Kept on this Mac |
-|---|---|---|---|---|
-| `changeFor(branch)` | the open pull request for the branch and its selected source project | the open merge request from the project's own branch or its selected contribution fork | the branch, if it has been sent up | never one |
-| `checks(change)` | every page of the check runs (a cancelled run superseded by a later run of its workflow set aside) and commit statuses on the head; a suite past the ten pages read keeps a pending item, so it never reads green | the pipelines for the head and each one's jobs ("GitLab merge requests" below) | none: green with zero checks | none |
-| `holdsCommit(sha)` | whether the Git database holds that exact full commit id (`git/commits`), since the commit reads `checks` uses resolve a longer id by its first 40 characters; a 404 counts only once the repository reads | whether `repository/commits` answers that exact full id, once the project reads | absent | absent |
-| `branchesAt(sha)` | the branches whose head is that version (`branches-where-head`), where a pushed or dispatched run can still start | the branches `repository/commits/:sha/refs` says hold it whose own head it is; a full page is unknown | absent | absent |
-| `pull(number)` | the pull request by its number, open or not, merged or not, with its readiness (`mergeable_state`: clean, conflict, behind, blocked by the branch's rules, computing, draft) | the merge request by its number, with its readiness from `detailed_merge_status` | absent | absent |
-| `putIn(change, headSha, way)` | merge the way the project allows, read just before (`way`), only at the checked head, taken only when GitHub answers `merged` | merge with or without squash as the project allows, read just before (`way`), only at the checked head (`sha`), taken only when GitLab reads it merged | fast-forward the default branch onto the checked head and send it up, never forced | not through the seam: the local land (`WorkspaceService.landTaskWork`) through the local-only posture |
-| `close(change)` | close without merging | close without merging | take the sent-up branch back | nothing to close |
-| `openChange` | open a pull request onto the default branch | open a merge request onto the default branch | send the branch up | refused as `unsupported` |
-| `label(change)` / `url(change)` | `#N` and its page | `!N` and its page | the branch, no page | the branch, no page |
-| `listProjects()` | the person's repositories, newest first, every page up to 1,000 (`listProjectsPaged` also says whether that was all; `findProject` reads one exact owner/name) | the person's projects, newest first, up to 1,000 (`findProject` reads one exact nested path) | none | none |
-| `hasChecks` | yes: the app watches them (below) | yes | no: nothing is watched, and the crewmate is told so | no |
-| `workflows` | read-only Actions runs, jobs, logs and artifact downloads, whole or in parts | read-only pipelines, jobs, logs and artifacts archives | unsupported | unsupported |
-| `api` | the gateway's raw REST call under GitHub's policy | the gateway's raw REST call under GitLab's policy | unsupported | unsupported |
+| Call | GitHub | GitLab | Bitbucket | Plain Git host | Kept on this Mac |
+|---|---|---|---|---|---|
+| `changeFor(branch)` | the open pull request for the branch and its selected source project | the open merge request from the project's own branch or its selected contribution fork | the open pull request from the project's own branch | the branch, if it has been sent up | never one |
+| `checks(change)` | every page of the check runs (a cancelled run superseded by a later run of its workflow set aside) and commit statuses on the head; a suite past the ten pages read keeps a pending item, so it never reads green | the pipelines for the head and each one's jobs ("GitLab merge requests" below) | the build statuses on the head, up to five pages ("Bitbucket pull requests" below) | none: green with zero checks | none |
+| `holdsCommit(sha)` | whether the Git database holds that exact full commit id (`git/commits`), since the commit reads `checks` uses resolve a longer id by its first 40 characters; a 404 counts only once the repository reads | whether `repository/commits` answers that exact full id, once the project reads | whether the commit read answers that exact full id, once the repository reads | absent | absent |
+| `branchesAt(sha)` | the branches whose head is that version (`branches-where-head`), where a pushed or dispatched run can still start | the branches `repository/commits/:sha/refs` says hold it whose own head it is; a full page is unknown | absent | absent | absent |
+| `pull(number)` | the pull request by its number, open or not, merged or not, with its readiness (`mergeable_state`: clean, conflict, behind, blocked by the branch's rules, computing, draft) | the merge request by its number, with its readiness from `detailed_merge_status` | the pull request by its number, with its readiness from Bitbucket's mergeability checks | absent | absent |
+| `putIn(change, headSha, way)` | merge the way the project allows, read just before (`way`), only at the checked head, taken only when GitHub answers `merged` | merge with or without squash as the project allows, read just before (`way`), only at the checked head (`sha`), taken only when GitLab reads it merged | squash merge after reading the branch still at the checked head, since the merge takes no version; the answer names the version merged | fast-forward the default branch onto the checked head and send it up, never forced | not through the seam: the local land (`WorkspaceService.landTaskWork`) through the local-only posture |
+| `close(change)` | close without merging | close without merging | decline it | take the sent-up branch back | nothing to close |
+| `openChange` | open a pull request onto the default branch | open a merge request onto the default branch | open a pull request onto the main branch | send the branch up | refused as `unsupported` |
+| `label(change)` / `url(change)` | `#N` and its page | `!N` and its page | `#N` and its page | the branch, no page | the branch, no page |
+| `listProjects()` | the person's repositories, newest first, every page up to 1,000 (`listProjectsPaged` also says whether that was all; `findProject` reads one exact owner/name) | the person's projects, newest first, up to 1,000 (`findProject` reads one exact nested path) | every workspace's repositories, newest first, under ten pages (`findProject` reads one exact workspace/name) | none | none |
+| `hasChecks` | yes: the app watches them (below) | yes | yes | no: nothing is watched, and the crewmate is told so | no |
+| `workflows` | read-only Actions runs, jobs, logs and artifact downloads, whole or in parts | read-only pipelines, jobs, logs and artifacts archives | not yet | unsupported | unsupported |
+| `api` | the gateway's raw REST call under GitHub's policy | the gateway's raw REST call under GitLab's policy | not yet | unsupported | unsupported |
 
 A `Forge` is per repository.
 `createForgeResolver` in `src/core/forge/index.ts` picks it from the repository's `host`, which the registry stamps from its `origin` through `forgeOf` (`src/shared/forge.ts`) at insert and migration 40 backfilled for older rows (logged in `forge_backfill`).
 The composition root binds an implementation per kind (`ForgeBindings`); a kind with none is a plain host.
-GitHub and GitLab are bound; they are the kinds with change requests (`hasChangeRequests`, `src/shared/forge.ts`), which the merge path, the kept merge approval and the settle words read instead of naming GitHub.
-Bitbucket is recognised by name and sends its work up as a plain host does, while the app signs in to Bitbucket Cloud and lists its projects ("Bitbucket sign-in and projects" below).
+GitHub, GitLab and Bitbucket are bound; they are the kinds with change requests (`hasChangeRequests`, `src/shared/forge.ts`), which the merge path, the kept merge approval and the settle words read instead of naming GitHub.
+Bitbucket is Bitbucket Cloud at bitbucket.org ("Bitbucket sign-in and projects" and "Bitbucket pull requests" below).
 
 ## Contributing through an owned fork
 
@@ -82,19 +82,19 @@ The provider tests, `projectContributions.test.ts`, and the `fork-contribution.s
   `INFINITARY_GITHUB_API_URL` (github.com) and `INFINITARY_GITHUB_ENTERPRISE_API_URL` (every enterprise host) are honoured only in an unpackaged app.
   The home's forge wiring (`src/core/forge/homeForges.ts`) binds every GitHub project to it; no other program's GitHub sign-in is ever read, and the app no longer runs any GitHub tool of the Mac's.
 - `gitlab`: `providers/gitlab/gitlabForge.ts`, GitLab's REST API (`/api/v4`) with the app’s own sign-in, on gitlab.com and on each self-hosted server ("GitLab merge requests" below).
-- `git` (and `bitbucket`): `providers/plainGit.ts`, git against the repository's own `origin` with prompts off.
-  Bitbucket's sign-in and project listing live in `providers/bitbucket/`, outside `ForgeBindings`, so its projects still deliver as a plain host's.
+- `bitbucket`: `providers/bitbucket/bitbucketForge.ts`, Bitbucket Cloud's REST API (`/2.0`) with the app's own API token sign-in, at bitbucket.org ("Bitbucket pull requests" below).
+- `git`: `providers/plainGit.ts`, git against the repository's own `origin` with prompts off.
 - `none`: `providers/noHost.ts`.
   There is nowhere to send a change.
 
 ### What each kind of host owns
 
 Code outside a provider's own folder never compares a kind to GitLab.
-It reads a fact from the shared table in `src/shared/forgeKinds.ts`, which holds one row for each kind whose changes are numbered requests: GitHub and GitLab.
-A row names the kind's public host, its word for a change and its handle, the `#N` or `!N` before a number, its change and compare pages, whether owner and name ignore case, a draft's title marker, whether a description runs quick actions, whether a refused fetch waits only on a known host, its key page and sample address, its server integration and whether it takes batches.
+It reads a fact from the shared table in `src/shared/forgeKinds.ts`, which holds one row for each kind whose changes are numbered requests: GitHub, GitLab and Bitbucket.
+A row names the kind's public host, its word for a change and its handle, the `#N` or `!N` before a number, its change and compare pages and how the compare page names its two branches (`compareRange`), whether owner and name ignore case, a draft's title marker, whether a description runs quick actions, whether a refused fetch waits only on a known host, its key page and sample address, its server integration and whether it takes batches.
 A fact only one part of the core uses, such as a REST path the gateway or the write guard reads, sits in that file as a record keyed by kind, so a missing kind fails the typecheck there.
 A new kind of host is a new row and a new entry in each of those records, never another comparison to GitLab in shared code.
-A kind the app signs in to before its changes are numbered requests has a row of its sign-in facts alone (`SIGN_IN_HOSTS`): Bitbucket, with its public host, server integration, key page, sample address, the scopes its key form names, and whether a refused fetch waits only on a known host.
+Every kind the app signs in to is one of those rows (`SIGN_IN_HOSTS`), which also names the account its key page belongs to and the scopes its key form names where that page cannot tick them (Bitbucket's).
 Some shared code still tests whether a kind is GitHub for a GitHub-only behavior, such as a fork's contributions, a story's attachment forms, merging past branch rules, the gateway's sent comments and workflow dispatches, and a placed copy's sign-in words; a new kind reads those as not GitHub until that fact moves into the table or a record.
 
 ## The app's own sign-in (PR 1.2)
@@ -278,14 +278,14 @@ Bitbucket Cloud signs in with an API token the person makes on their Atlassian a
 The Bitbucket chip in Settings -> Integrations opens the key form at bitbucket.org; another address is refused as not that kind of server (`ForgeServer.publicOnly`).
 The form says to make the key on the person's Atlassian account, and Make a key names and opens Atlassian's API tokens page at id.atlassian.com (`SignInHost.keyAccount`, `forgeKeyPlace`).
 That page cannot tick scopes itself, so the form names them: create the token with scopes, pick Bitbucket as the app, and tick `read:user`, `read:workspace`, `read:repository`, `write:repository`, `read:pullrequest`, `write:pullrequest`, `read:pipeline` and `write:pipeline`, each ending in `:bitbucket`.
-Those are the scopes the app reads and writes with once Bitbucket's pull requests and the crew's reach are built, so one token serves them all.
+Those are the scopes the app reads and writes with for Bitbucket's pull requests now and the crew's reach later, so one token serves them all.
 An Atlassian token is padded with `=`, so the kind checks a key against its own pattern (`ForgeServer.keyPattern`).
 
 `createBitbucketServer` (`providers/bitbucket/signIn.ts`) supplies the kind `bitbucket`, the git user `x-bitbucket-api-token-auth` and `GET /2.0/user` to verify the token and read its health, naming the account by its nickname.
 The token is sent as `Authorization: Bearer`, which Bitbucket accepts without the account's email.
 `bitbucketApiBaseFor` uses `https://api.bitbucket.org/2.0`; `INFINITARY_BITBUCKET_API_URL` overrides it only in an unpackaged development/test run.
 `BitbucketClient` sends the token only to that API, follows a `next` page link only on it, refuses redirects, bounds each answer to 256 KiB and each request to 30 seconds, and asks the existing health service to check a 401; a 403 is a scope the token lacks, never a sign-out.
-A token is never renewed: a refused one needs a new sign-in, and its card says the first mate cannot list, clone or push the projects there (`SignInHost.refusedStops`), never pull requests the app does not open on Bitbucket yet.
+A token is never renewed: a refused one needs a new sign-in, and its card says the first mate cannot open, check or merge pull requests there, as for every kind.
 A new token kept over one that was still ok counts as a renewal (`onRenewed`): a token `/user` accepts can still be refused by git on a project, and the work that refusal held goes again with the new one.
 Observe and a signed-in task browser hide the `ATATT` token shape (`src/core/keyFormats.ts`).
 
@@ -295,15 +295,68 @@ Each page asks only for the fields the listing reads (`fields=`), which keeps a 
 A listing cut at the budget says so: Add project shows that not every project was checked and a pasted link adds one that is missing (`inf:forges:projects-listed`'s `complete`), and the first mate's listing says the others were not read and an exact `workspace/name` is still looked up.
 Exact lookup reads `/repositories/<workspace>/<name>`; nothing nests.
 A project's clone address is `https://bitbucket.org/<workspace>/<name>.git`, since Bitbucket's own clone link names an account.
-Settings' Add project offers Bitbucket repo beside GitHub's and GitLab's, and the home's forge wiring lists with the project lister alone (`forgeOnHost`), never a `Forge`.
+Settings' Add project offers Bitbucket repo beside GitHub's and GitLab's, and `BitbucketForge` lists through `BitbucketProjects` the way the other kinds list through their own forge (`forgeOnHost`).
 
-Git keeps the person's own credential helpers for bitbucket.org until they sign in (`ForgeServer.gitOnceSignedIn`), since a Bitbucket project already sends its branch up with them; once signed in, the app's helper answers bitbucket.org with the token alone, and signing out hands it back.
+Git on this Mac answers bitbucket.org with the app's sign-in alone, as it does gitlab.com, since the pull requests the app opens there are made with that sign-in too; with none on file a push there is refused, and the task waits for the sign-in.
 An HTTPS authentication refusal on bitbucket.org waits for its sign-in through `forgeAuthRequired`; SSH still uses the person's own setup.
-No task is held for a Bitbucket sign-in before it starts.
 
 Integrations lists one Bitbucket row with its sign-in's health and account, and no actions yet.
 
-**Not yet:** pull requests, checks and merges on Bitbucket, the crew's reach through the gateway, batches and forks, and Bitbucket Data Center.
+## Bitbucket pull requests
+
+A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request.
+Before it sends the merge, the app reads that the branch is still at the checked version and that Bitbucket reports no conflict, draft or blocking rule.
+Bitbucket's merge itself holds to no version, so a push in the moment after that read goes in with it, and the app says so rather than promising the checked version alone.
+That is the chosen guarantee: the merge stays one click, best effort at the checked version, with this limit said in the release note and on the task, rather than handing the merge to Bitbucket until it can hold a merge to a version.
+A Bitbucket project added before the app opened pull requests there delivers this way from its next task, with no setting to change; without a sign-in, `open_change` and the merge answer the same refusal as on GitHub, whose ways are signing in and keeping the project on this Mac.
+`BitbucketForge` (`providers/bitbucket/bitbucketForge.ts`) reaches the project at `/repositories/<workspace>/<name>` through `BitbucketClient`, whose writes (`request`, `write`) send JSON with the same token, bounds and refusals as its reads.
+
+- **Its ordinary change** is a pull request from the project's own branch onto the main branch Bitbucket names (`POST /pullrequests`, `source.branch.name`, `destination.branch.name`, `title`, `description`, `draft`), with `close_source_branch` off; a fork's pull request from a branch of the same name is never taken for it.
+  A draft becomes ready through the host's own step (`markReady`, `PUT` with `draft: false`).
+  It is named `#N` with Bitbucket's page under `pull-requests/`, and recorded on the task as `changeLabel`, `prNumber` and `prUrl`.
+  Bitbucket names a pull request's commits by a short id; the forge reads each back as the full id (`GET /commit/<id>?fields=hash`) before the app keeps it, and a branch's head comes from `GET /refs/branches/<name>`.
+- **Its story** is the saved story's text in Markdown: Bitbucket keeps no pictures in a description, so every picture stays on the merge card (`media: "card-only"`), and the story's folds are plain `###` sections instead of `<details>`, which Bitbucket would show as text.
+  A description is replaced only after the pull request is read again and still holds the version and words the app read (`updateChangeBody`), since Bitbucket's write has no condition of its own; the write sends the title only when the story changes it, so a title a person changed since is kept.
+  Its size limit is 32,768 characters (`NATIVE.bitbucket` in `presentation.ts`), an assumed bound: Atlassian publishes none.
+  A repository has no number, so the story's place names it by the first 52 bits of its UUID, the same for the same repository each time.
+- **Its checks** are the build statuses on the head (`GET /commit/<head>/statuses`), which every check service posts there, Bitbucket Pipelines included: one check per status key, `SUCCESSFUL` success, `FAILED` failure, `STOPPED` cancelled, and `INPROGRESS` pending.
+  A reading that stops at its fifth page is marked incomplete; no status yet is an empty reading, which the shared green rule keeps pending.
+- **Its readiness** (`pull`) reads Bitbucket's own mergeability checks (`GET /pullrequests/<N>/mergeability/checks`): a draft is a draft; a Git check with `conflicts` is a conflict; a blocking `maximum_commits_behind` rule is behind; any other blocking rule is blocked; a Git check that has not passed, or any check still pending or unknown, is computing; otherwise it is clean.
+- **Its merge** (`putIn`) checks the title against the active naming runbook, then reads the branch: Bitbucket's merge takes no version, so a branch that moved past the checked version sends nothing and is refused.
+  Before that, every merge reads the pull request's readiness, the captain's own click included (`Forge.mergeNamesNoVersion`): an owner's sign-in may merge past a rule Bitbucket does not enforce, so a conflict, a draft or a blocking rule sends no merge.
+  It then asks `POST /pullrequests/<N>/merge` with `merge_strategy: squash` and the message `<title>`, a blank line and the story's plain summary.
+  A 409, a ref that moved during the merge, reads as the base moving.
+  The approval's last check and the attempt it records run as the merge request leaves, after the branch read and the sign-in (`putIn`'s `beforeSend`, run from the client's send hook; `atDispatch` in `changeMerge.ts`, for the task's own pull request and one named by its number): an approval that ended during those reads sends nothing, the captain's newer guidance that arrived during them holds the merge as the guidance hold does, and a merge interrupted while it still reads holds no attempt.
+  A failure before the request left sent nothing (`ForgeError.beforeSend`), so the merge path treats it as a hiccup before sending, never as a merge whose outcome is unknown.
+  GitHub and GitLab hold their merge to the version, so their check runs just before the call, as before.
+  Once the request went out, nothing read after it counts as a refusal: a 202 (Bitbucket still merging in the background), a read that fails and an answer that names no merged version are each an outcome the app does not know.
+  Such a merge is never sent again: a kept merge approval keeps its attempt and waits on the outcome, and every later reconcile (`keptMerge`'s `reconcileAttempt`, on the tick and after a restart) only reads the pull request, since an open pull request on a host whose merge names no version (`ForgePull.mergeNamesNoVersion`) cannot show that nothing went in; a read showing it merged closes the task once, and one showing it closed ends the approval.
+  A 202 names Bitbucket's own reference to the merge it took in its Location (`.../pullrequests/<N>/merge/task-status/<task>`), kept as `<N>/<task>` only when it names this repository and pull request; the error carries it (`ForgeMergeUnconfirmed.mergeTask`), the approval's attempt keeps it (`attempt.task`), for the task's own pull request and one named by its number alike, and while the pull request stays open the reconcile asks Bitbucket how that merge ended (`Forge.mergeTaskRefused`).
+  Bitbucket answers that read 400 for a merge that failed or left its queue unmerged, and also for a task that is not this pull request's, and a Location naming this pull request does not prove the task is its own, so a 400 is a refusal, never a confirmed failure.
+  A refusal keeps the wait read-only (`ForgePull.mergeTaskRefused`): the reference is dropped so it is asked about once, the task says once that the merge stays unsent until the pull request reads merged or closed on Bitbucket, and nothing is sent again.
+  A merge whose outcome is known leaves no attempt: a spent approval drops it, and so does a pull request named by its number that merged at a push made during its merge, whose approval ends because a different version went in (`finishContinued`).
+  An unresolved attempt is not undone when its approval ends unmerged (`endedAuthorization` keeps it, as do the ends a guidance or repair declaration and a repair's independent assessment record), and it stays with the approval record by pull request through every approval that replaces it, including another pull request's (`MergeAuthorization.unsettled`, `carryUnsettled`); a later approval of that pull request, the captain's click or autonomy's, takes it as its own attempt and reads it back before sending, so no click sends a second merge while the first one's outcome is unknown.
+  The merge card's click hands such an approval to that read-back instead of the merge sender, and a click a quit interrupted after its merge left is not resumed at launch, whether its approval still stands or ended since (`resumePendingSettles`).
+  The read-back asks the repository the approval pinned (`MergeAuthorization.target`, carried as `MergeGuard.place`), never another managed project whose pull request has the same number, both the one right after a request whose answer never came and the reconcile later.
+  The send itself refuses too: a kept approval's guard sends nothing while any task's approval record, a closed task's included, holds an unresolved send of the same pull request on the same repository, its own earlier attempt or another task's attempt or unsettled entry (`MergeGuard.unresolved`, over `TaskService.unresolvedMergeSends`, whose partial index seeks only those records), and that refusal is a wait on the outcome (`stop: "outcome"`) that keeps the earlier attempt; only the attempt a send recorded itself is cleared by its answer (`afterAttempt`).
+  The same pull request is compared as the host reads it (`samePullTarget`): Bitbucket and GitHub fold a project's owner and name, so two saved spellings of one repository hold the same reservation.
+  The kind a managed project configured for the host's address decides first, so a self-hosted GitLab, which keeps case apart, keeps two such projects apart; only a host neither a project nor the public table names reads as GitHub's.
+  A send no standing approval reads, an ended approval's attempt or an unsettled entry on any task, is read back on the minute pass in the repository its approval pinned (`KeptMerge.reconcileUnsettledSends`), on the outcome wait's backoff: a read showing it merged or closed takes it off the record, a merge found made is said once on its task, and nothing is ever sent from there.
+  That read finds the pinned repository among every managed project before it looks at the task's own, so it still settles once the task's project delivers no pull requests or is no longer managed (`pinnedRequestRepo`).
+  The repository it reads must name the pinned repository in its origin and the pinned host in its forge, so a project repointed to another host since, whose task still publishes under the old origin, never answers for it.
+  Only a state Bitbucket names, in an answer about that pull request, settles a send: an answer with no state, one the app does not know, or one about another pull request reads as unreadable, never closed, and a merge answer about another pull request confirms no merge.
+  Its note names where that repository lives and tells the merged version against the version the send was approved at, so a push after the click that went in with it is said.
+  A merge under no kept approval, such as the first mate's own merge call, is refused at the send (`atDispatch`'s `guard`), since it could neither see an unresolved merge nor record its own; the app merges from the merge card's approval instead, the captain's click or autonomy's.
+  A read showing it closed clears it, since nothing went in; one showing it merged tells the merged version against the version the original send was approved at (`attempt.head`), not a later approval's.
+  A reference that does not name the pull request is never asked about, and a pending task, an unknown or expired one (which Bitbucket reads as pending) or an unreadable answer keeps the wait.
+  A push that lands between the branch read and the merge is merged with it, since nothing holds the merge to the read version: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), the receipt records that version, and the task's merge line in Activity says another version than the approved one merged instead of hiding it.
+  The same line and receipt come from one place (`otherMergedFacts`) for a merge confirmed at once, one a reconcile finds made, one found already made, and a pull request named by its number (`check_change pull`), whose reviewed close keeps the line.
+- **Its words** name the host: "Merged #4 on Bitbucket." and the host's own words for a conflict.
+- **Its allowance** is Bitbucket's hourly request limit; a 429 that names its wait (`Retry-After`) is a spent allowance until then (`ForgeAllowanceSpent`), never a sign-out.
+
+Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the status mapping, every readiness, the squash at the version, the moved branch, a push during the merge, the 409, a 202 and an answer naming no version each sent once, a failed branch read sending nothing, the last check run as the request leaves, a 202's task reference kept only for this pull request and its failure read, and a description replaced without its title; `mergeReviews.test.ts` holds a numbered review's receipt naming the version that merged; and `tests/e2e/bitbucket-delivery.spec.ts` runs the journey on bitbucket.org: a crewmate's pull request, its build statuses as the card's checks and the captain's squash merge at the pushed version, a moved branch, a conflict, a rule wanting an approval, a draft, a failed, running or stopped build each merging nothing, a merge Bitbucket has not finished asked once, and a push during the merge merged and told.
+
+**Not yet:** a manual Pipelines step told apart from a running one, the crew's reach through the gateway (`api`, the raw write rules and an integration's scopes, workflow logs and artifacts), the open pull requests panel and its wakes, batches, forks, and Bitbucket Data Center.
 
 ## GitLab merge requests
 
@@ -378,14 +431,14 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub, GitHub Enterpri
   Settings -> Projects holds no sign-in, this computer's or another's.
   A computer older than `FORGE_SIGN_INS_SINCE` says no hosts, so it gets no row.
 - **The card, and the typed refusal** (the captain's picks on FI3-1350).
-  A project that lives on GitHub, GitHub Enterprise or GitLab set to run on a computer that offers that host's sign-in from here and holds none raises the host's own card for that computer (`computerForgeHost`, named by `computerForgeName`), "Sign in to GitHub on Mac mini" (`CardService.addDeviceForgeSignInCard`, its words `src/shared/deviceSetup.ts`): "website runs on Mac mini now.
+  A project that lives on GitHub, GitHub Enterprise, GitLab or Bitbucket set to run on a computer that offers that host's sign-in from here and holds none raises the host's own card for that computer (`computerForgeHost`, named by `computerForgeName`), "Sign in to GitHub on Mac mini" (`CardService.addDeviceForgeSignInCard`, its words `src/shared/deviceSetup.ts`): "website runs on Mac mini now.
   Mac mini needs its own GitHub sign-in to clone it and push." and "Its next task waits for it.
   This computer's GitHub sign-in is not sent there.", with one button that opens Settings -> Integrations with that computer's sign-in started under its row (`forgeSignInOn` on an effect naming `projects`, which `openedSection` routes to Integrations); the feed says "website's next task waits for Mac mini's own GitHub sign-in." once per project and computer.
   It is raised when Runs on names such a computer (`DeviceSetup.runsOnChanged`), when a task is about to start there (`TaskPlacement.placedWaitFor`, before anything is tried), and when that computer's clone is refused: the computer answers `inf:working-copy:prepare` with `{ refused: "forge-sign-in", host, name }` rather than a failure's words (`SessionHost`, from `forgeAuthRequired`), the home reads it as `ForgeAuthRequiredError` (`PlacedCopies.prepare`), and the task waits behind `forge-sign-in:<host>@<device>`, never this Mac's own card for that host.
   While that computer's setup card is on the stack (`docs/devices.md`, "Finishing its setup"), its own GitHub row asks for github.com instead and no second card goes up; another host's card goes up beside it, since the setup card does not ask for that host.
   The moment the computer reports that host's sign-in, the card comes down and every task held for it starts (`TaskPlacement.resumeDeviceForgeSignInTasks`).
   A computer too old to offer the sign-in from here is tried, and a refusal there holds the task the same way.
-  A Bitbucket project raises no card and holds no task before it starts, since it sends its branch up with the computer's own git login until Bitbucket's pull requests are built; only a refused clone there waits for that computer's own Bitbucket sign-in.
+  A Bitbucket project is held the same way for that computer's own Bitbucket sign-in.
 
 ## Workflow logs and artifacts
 
@@ -679,7 +732,7 @@ The sign-in, consent and unknown-outcome boundaries are unchanged.
 A project whose pull requests run no checks is a recorded fact on the project, not something each change declares again (INF-2114).
 The record is the project's `noChecks` (`RepoView`, the `no_checks_json` column), and `RepoRegistry` is its only writer.
 Settings → Projects shows it as Require pull request checks, on for every project; off is the record.
-The switch is offered only where checks can run: a project that ships through pull requests on GitHub or GitLab (`readsPullRequestChecks` in `src/shared/repos.ts`).
+The switch is offered only where checks can run: a project that ships through pull requests on GitHub, GitLab or Bitbucket (`readsPullRequestChecks` in `src/shared/repos.ts`).
 A plain Git host, a project kept on this Mac or one that merges locally reads no pull request checks already, so it needs no record.
 `RepoRegistry.checkConfigure` refuses to turn the switch off for such a project, as the patch leaves it, whoever asks (`NO_CHECKS_REFUSAL`); turning it on is always accepted.
 
@@ -750,7 +803,7 @@ A crewmate on a computer that runs work does the same with a branch it checked o
 The crewmate pushes a branch to where that project lives and names it with `branch`; the branch needs a name other than the task's own branch, which names the task's own change.
 The home reads that branch from the project's host into the project's folder under a private ref (`refs/infinitary/opened/<task>`), beside its default branch, and checks the branch's own commit names there, so a placed task's crewmate needs nothing brought home.
 The change opens through that project's host with `body` as its description: it carries no saved story, since `prepare_change` prepares the task's own project's.
-The project must be on a host with pull requests (GitHub or GitLab); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
+The project must be on a host with pull requests (GitHub, GitLab or Bitbucket); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
 The opened pull request becomes the task's current change through a review that names its project (`MergeReview.repoId`), so `check_change`, the check watch, `check_change pull` of that number, the kept approval, the merge card's merge and the reads by number after a merge all go to that project, and the change record keeps it under that project's id.
 When a saved request names a different repository, its number does not identify a request at the project's new address.
 It merges as its own pull request at the captain's click, whatever that project's delivery: a pull request a task names by number joins no batch ("Batches of your own").
@@ -789,6 +842,7 @@ A confirmed continuing merge wakes the crew once.
 Dropping the task does not close another branch's pull request, because the task's own change is still what discard closes.
 
 The first mate's `settle_task merge-pr` merges the task's current change with autonomy on, and is held for the captain with it off; it is for the captain's spoken words, since the merge card already merges under autonomy.
+On a host whose merge names no version (Bitbucket) it sends no merge even with autonomy on, since only a merge card's approval records and reads back a merge whose outcome is unknown; it still closes a task whose pull request is already merged there.
 When that change is already merged where the project lives, it closes the task as merged and sends nothing, with autonomy on or off, once none of the task's other pull requests reads open (`SettleService.otherOpenChange`, over every change the record keeps); one still open, or one that cannot be read, refuses the close in words and the task stays open.
 A first mate merge card on a task with a saved story is bound to the published story (`CrewSupervisor.bindFirstmateOffer`), so its click passes the same story gate as the crewmate's merge card; before the story is published it is refused.
 Evidence: `tests/e2e/request-merge.spec.ts` and `tests/e2e/declared-close.spec.ts`.
@@ -1338,7 +1392,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - The forge seam (git integration PRs 1.1-1.3; `docs/forge.md` is the one home): everything the app asks of where a project lives - a branch's open change, its checks, put it in, close it, what it is called - goes through `src/core/forge/index.ts`; the provider files under `src/core/forge/providers/` are Biome-fenced to `src/core/forge/`, the seam and its home wiring (`homeForges.ts`).
   A repo's `host` (`RepoView.host`, migration 40) is stamped from its `origin` by `forgeOf`.
-  GitHub is the REST `GitHubForge` with the app's OWN GitHub sign-in (PR 1.2: OAuth device flow, `userData/forges/<host>/` 0700/0600 beside - never inside - the account vault, health on the supervisor's tick where GitHub's 401 is the proof, one `card-forge-<host>` card; the app's own code never runs `gh` or reads another program's sign-in; a crewmate the captain asks to run a program runs it), and GitLab the REST `GitLabForge` with the person's browser or key sign-in; every "Not signed in" answer is a refusal whose ways are the sign-in and keeping the project on this Mac, and crewmates open and check changes with `open_change`/`check_change`; a plain host (and Bitbucket until its file exists) has the working copy sent up as a branch, reads green with zero checks, and is put in by a never-forced fast-forward push; a project kept on this Mac has no host.
+  GitHub is the REST `GitHubForge` with the app's OWN GitHub sign-in (PR 1.2: OAuth device flow, `userData/forges/<host>/` 0700/0600 beside - never inside - the account vault, health on the supervisor's tick where GitHub's 401 is the proof, one `card-forge-<host>` card; the app's own code never runs `gh` or reads another program's sign-in; a crewmate the captain asks to run a program runs it), and GitLab the REST `GitLabForge` with the person's browser or key sign-in; every "Not signed in" answer is a refusal whose ways are the sign-in and keeping the project on this Mac, and crewmates open and check changes with `open_change`/`check_change`; Bitbucket the REST `BitbucketForge` with its key sign-in; a plain host has the working copy sent up as a branch, reads green with zero checks, and is put in by a never-forced fast-forward push; a project kept on this Mac has no host.
   Surfaces name a change by the recorded `changeLabel`, never by parsing a URL, and name a host only on a project whose changes go there - a forge is never required.
   The first mate reads the same (PR 1.3): the context's `lives` fact carries the app's sign-in only where a project's changes go to that host, and `crew_status` names it as `goesIn`.
 
@@ -1347,7 +1401,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The app checks new save-point subjects and change titles against the active naming runbook's rule before opening and putting in a change (`docs/runbooks.md`, Commit and PR naming); it holds no form of its own.
 The built-in Commit and PR naming runbook asks for `type(scope): summary` or `type: summary`: the scope is optional and open-ended, the types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs` and `perf`, and a breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
 A runbook that replaces it decides all of this instead, and with no naming runbook on no name is checked.
-An existing change's current title on GitHub or GitLab is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), and GitLab a squash or merge commit whose message is the title, a blank line and the description.
+An existing change's current title on GitHub, GitLab or Bitbucket is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), GitLab a squash or merge commit whose message is the title, a blank line and the description, and Bitbucket a squash whose commit message is the title, a blank line and the description.
 The app does not rewrite older commits; incoming commits are checked relative to the common base.
 For a change it opens or puts in, that base is measured from the fetched `origin/<default>` when it exists, so a local default branch this Mac has not pulled never makes merged commits look like the branch's own.
 Merge commits are skipped: git names them, and they bring in no work of the branch's own.
@@ -1562,7 +1616,7 @@ Only a crewmate-authored merge card counts as a replacement for a kept merge app
 ### Description hosts, plain branches and local work
 
 `Forge.storyDestination` reads description identity independently of `Forge.attachments`; destination comparison preserves older public-host records without the optional explicit format.
-GitHub Enterprise and self-hosted GitLab publish the same prose, risk assessment, checks and view descriptions, using their own description dialect and size limit.
+GitHub Enterprise, self-hosted GitLab and Bitbucket publish the same prose, risk assessment, checks and view descriptions, using their own description dialect and size limit; Bitbucket's dialect is Markdown with no HTML ("Bitbucket pull requests" above).
 Pictures and recordings remain on the merge card; the hosted text says so and includes their captions and alt text, never local file paths or invented remote media URLs.
 Native-media support is still only github.com and gitlab.com: a missing capability, failed upload or uncertain upload on either host never becomes a text-only fallback.
 Text publication uses the same serial writer, committed and pushed heads, audience checks, owned-region protection, human-edit recovery, read-back and squash summary as native publication.
@@ -1634,7 +1688,7 @@ An approved prerequisite publication names the task's own project and branch and
 On a saved-story host it uses the existing publisher and attachment barrier, carrying the draft flag through the same opening rather than bypassing the story.
 The publisher rechecks and consumes that authority after its preflight and before any upload; a failed preflight leaves the permission unused.
 Ordinary Careful publication likewise rechecks the current proof and code clearance after that asynchronous preflight.
-Once current proof and independent review pass, the host-owned `markReady` operation uses GitHub GraphQL or removes GitLab's `Draft: ` prefix; the agent-facing REST-only gateway never gains GraphQL access.
+Once current proof and independent review pass, the host-owned `markReady` operation uses GitHub GraphQL, removes GitLab's `Draft: ` prefix or sends Bitbucket's `draft: false`; the agent-facing REST-only gateway never gains GraphQL access.
 The host persists an unknown readiness outcome before sending and reconciles a later ready reading without another write.
 A later still-draft reading settles that readiness attempt as not applied and permits another idempotent request, never concurrently with an outstanding attempt.
 Readiness failures remain on the task record and in tool feedback without preventing check readings.

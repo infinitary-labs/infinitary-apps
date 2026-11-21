@@ -60,6 +60,25 @@ const NATIVE = {
     sizingUrl: (mediaType: AttachmentMediaType) =>
       `/uploads/${"0".repeat(32)}/${gitlabAttachmentName(mediaType)}`,
   },
+  /**
+   * Bitbucket Cloud takes no pictures in a description: its stories keep
+   * their media on the card, so it has no attachment address of its own.
+   */
+  bitbucket: {
+    url: (_value: unknown): string | undefined => undefined,
+    recording: (url: string, alt: string) => `![${markdown(alt)}](${url})`,
+    altParagraph: false,
+    /**
+     * Atlassian publishes no description limit for Bitbucket Cloud; the app
+     * keeps a story's text within half of GitHub's.
+     */
+    bodyLimit: 32_768,
+    /** The same bound for one comment on a pull request. */
+    commentLimit: 32_768,
+    sizingUrl: (_mediaType: AttachmentMediaType): string => {
+      throw new Error("Bitbucket keeps no pictures in a description.");
+    },
+  },
 } as const satisfies Record<ChangeRequestKind, object>;
 
 /** A kind's native forms, by its kind or its public host; any other names GitHub's. */

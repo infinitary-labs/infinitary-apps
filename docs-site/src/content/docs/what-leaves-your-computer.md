@@ -19,7 +19,7 @@ Your sign-ins stay on your computer.
 ## Your projects go where they live
 
 A crewmate works in a working copy of your project on your computer.
-When a task is offered as a pull request, its branch is pushed to where your project lives, such as GitHub or GitLab, and the pull request is opened there.
+When a task is offered as a pull request, its branch is pushed to where your project lives, such as GitHub, GitLab or Bitbucket, and the pull request is opened there.
 A project kept on this computer only stays on this computer.
 
 When a crewmate prepares a working copy or does its task, it may fetch what your project needs, the way you would by hand.

@@ -226,9 +226,7 @@ export function autonomyForRecord(
 /**
  * Where a registered project lives (git integration PR 1.1, migration 40):
  * the host kind read from its origin (`forgeOf` in `./forge.ts`) and the
- * host's name. Null for a project kept only on this Mac. GitLab and
- * Bitbucket are recognised so a surface can name them; until their own
- * forge files exist they behave as a plain Git host. A remote on this Mac's
+ * host's name. Null for a project kept only on this Mac. A remote on this Mac's
  * own disk is a plain host with no name.
  */
 export const repoHostSchema = z
@@ -277,7 +275,7 @@ export function readsPullRequestChecks(
 
 /** Why a project that reads no pull request checks cannot turn Require pull request checks off. */
 export const NO_CHECKS_REFUSAL =
-  "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub or GitLab. This project's changes do not, so no check holds its merge.";
+  "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub, GitLab or Bitbucket. This project's changes do not, so no check holds its merge.";
 
 /** Why batched pull requests cannot be chosen while no runbook that is on offers them. */
 export const BATCHES_OFF_REFUSAL =

@@ -1,5 +1,6 @@
 {
   "mergedAt": "已于 {at} 合并",
+  "mergedChangeNewerOn": "已在 {place} 上合并 {change}，其中包含批准版本之后的推送",
   "mergedChangeOn": "已在 {place} 上合并 {change}",
   "mergedChangeOnHost": "已在项目的托管平台上合并 {change}",
   "mergedChangeWhereItLives": "已在项目托管处合并 {change}",

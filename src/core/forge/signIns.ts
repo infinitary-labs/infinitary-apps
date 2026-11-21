@@ -346,13 +346,6 @@ export type ForgeServer = ForgeServerView & {
    * Data Center is offered.
    */
   publicOnly?: boolean;
-  /**
-   * Git keeps the person's own helpers for this kind's public hosts until
-   * a sign-in is on file there, as for a plain host: Bitbucket, whose
-   * projects still send their work up as a branch with whatever sign-in
-   * git already had.
-   */
-  gitOnceSignedIn?: boolean;
   /** The keys this kind issues, when they hold more than `KEY` allows (an Atlassian token's `=`). */
   keyPattern?: RegExp;
   signIn: (host: string, applicationId?: string) => ForgeSignInProvider;
@@ -1228,7 +1221,7 @@ function messageOf(caught: unknown): string {
 type ForgeHostSources = {
   store: ForgeSignInStore;
   providers: readonly Pick<ForgeSignInProvider, "host">[];
-  servers?: readonly Pick<ForgeServer, "kind" | "hosts" | "gitOnceSignedIn">[] | undefined;
+  servers?: readonly Pick<ForgeServer, "kind" | "hosts">[] | undefined;
   projectHosts?: (() => readonly KnownForgeHost[]) | undefined;
 };
 
@@ -1279,10 +1272,7 @@ function forgeGitHosts(sources: ForgeHostSources): string[] {
   return [
     ...new Set([
       ...sources.providers.map((provider) => provider.host),
-      // A kind whose git keeps the person's own helpers until signed in joins with its filed hosts.
-      ...(sources.servers ?? []).flatMap((server) =>
-        server.gitOnceSignedIn ? [] : (server.hosts ?? []),
-      ),
+      ...(sources.servers ?? []).flatMap((server) => server.hosts ?? []),
       ...filed,
     ]),
   ];

@@ -253,6 +253,15 @@ export class SettleService {
   resumePendingSettles(): void {
     for (const record of this.host.tasks.listLive()) {
       if (!record.pendingSettle) continue;
+      // The quit came after the merge left: the click is not sent again,
+      // whether its approval still stands or ended since. A standing one's
+      // kept run reads that merge back at boot; an ended one keeps it for
+      // the next approval of its pull request to read back first.
+      const kept = record.delivery?.mergeAuthorization;
+      if (record.pendingSettle.mode === "merge-pr" && (kept?.attempt || kept?.unsettled?.length)) {
+        this.host.tasks.delivery.setPendingSettle(record.id, null);
+        continue;
+      }
       void this.reportCardSettle(
         record.id,
         record.pendingSettle.mode,
@@ -396,9 +405,6 @@ export class SettleService {
         ? { beforeDispatch, unattended: actor !== "captain" || guard?.unattended === true }
         : undefined,
     );
-    // The answer came: an attempt token has done its job, whatever it said.
-    if (guard && result.stop !== "outcome")
-      this.approvals.patchStanding(taskId, { attempt: undefined });
     if (!result.ok) {
       // The project's host needs the app's sign-in (git integration PR
       // 1.2): a typed refusal whose ways are the sign-in and keeping the
@@ -411,6 +417,7 @@ export class SettleService {
         ...(result.plain ? { plain: result.plain } : {}),
         ...(result.notGreen ? { notGreen: true } : {}),
         ...(result.stop ? { stop: result.stop } : {}),
+        ...(result.mergeTask ? { mergeTask: result.mergeTask } : {}),
         ...(result.skip ? { skip: result.skip } : {}),
         ...(refusal ? { refusal } : {}),
       };
@@ -838,6 +845,8 @@ export class SettleService {
     return this.closeMerged(record, closeActor(actor), {
       ok: true,
       text: result.text,
+      ...(result.line ? { line: result.line } : {}),
+      ...(result.lineSaid ? { lineSaid: result.lineSaid } : {}),
       ...(result.receipt ? { receipt: result.receipt } : {}),
     });
   }
@@ -884,13 +893,17 @@ export class SettleService {
           candidateHead(authorization) === result.receipt?.head
         )
           this.approvals.consumeStanding(taskId, result.receipt);
-        else if (review && authorization?.review?.id === review.id)
+        else if (review && authorization?.review?.id === review.id) {
+          // The merge's outcome is known, so its send reserves the pull
+          // request no more (INF-5193), as a spent approval's does.
+          this.approvals.patchStanding(taskId, { attempt: undefined });
           this.approvals.endAuthorization(
             taskId,
             "invalidated",
             "the pull request merged at a different version",
             { feed: true },
           );
+        }
         this.host.tasks.delivery.activateRequiredActions(taskId);
         this.host.tasks.delivery.activateAfterMergeSteps(
           taskId,

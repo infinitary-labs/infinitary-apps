@@ -867,6 +867,7 @@
   {"said":{"m":"mergeSetInProject"},"words":"Set in this project's settings."},
   {"said":{"m":"mergeWaitsForReview"},"words":"This merge waits until you answer the review:"},
   {"said":{"m":"mergedAt","a":{"at":"‹at›"}},"words":"Merged at ‹at›"},
+  {"said":{"m":"mergedChangeNewerOn","a":{"change":"‹change›","place":"‹place›"}},"words":"Merged ‹change› on ‹place›, with a push made after the approved version"},
   {"said":{"m":"mergedChangeOn","a":{"change":"‹change›","place":"‹place›"}},"words":"Merged ‹change› on ‹place›"},
   {"said":{"m":"mergedChangeOnHost","a":{"change":"‹change›"}},"words":"Merged ‹change› on the project's host"},
   {"said":{"m":"mergedChangeWhereItLives","a":{"change":"‹change›"}},"words":"Merged ‹change› where the project lives"},

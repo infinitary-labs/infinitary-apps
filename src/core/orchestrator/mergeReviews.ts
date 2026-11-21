@@ -10,6 +10,8 @@ import {
   type Forge,
   ForgeBaseMoved,
   type ForgeChange,
+  ForgeError,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   forkStoryForge,
   isForkReview,
@@ -29,6 +31,7 @@ import {
   reviewOf,
 } from "./changeContext";
 import {
+  atDispatch,
   branchInProject,
   type ChangeMerge,
   hostQueued,
@@ -36,6 +39,9 @@ import {
   type MergeAttempt,
   type MergeGuard,
   type MergeStop,
+  MergeWithdrawn,
+  otherMerged,
+  otherMergedFacts,
   type PrOutcome,
   readDecided,
   readinessStop,
@@ -777,16 +783,29 @@ export class MergeReviews {
         const located = this.context.locate(taskId, "check", review);
         if (!("said" in located) && located.forge.pull) {
           const pull = await located.forge.pull(review.number).catch(() => undefined);
-          if (pull?.merged && pull.headSha === candidate.headSha) {
+          // A host whose merge names no version may have merged a later push:
+          // that merge is the one made, recorded and told as such.
+          if (
+            pull?.merged &&
+            (pull.headSha === candidate.headSha || located.forge.mergeNamesNoVersion)
+          ) {
+            const label = numberLabel(located.forge, review.number);
+            const other = otherMergedFacts(
+              located.forge.place,
+              label,
+              pull.headSha,
+              candidate.headSha,
+            );
             const receipt = this.storeReviewReceipt(
               taskId,
               review.id,
-              candidate.headSha,
+              pull.headSha,
               pull.mergedSha,
             );
             return {
               ok: true,
-              text: `${numberLabel(located.forge, review.number)} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.`,
+              text: `${label} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.${other.told}`,
+              ...other.line,
               receipt: { ...receipt, already: true },
             };
           }
@@ -811,17 +830,24 @@ export class MergeReviews {
       title: pull.title ?? review.title,
       body: "",
     };
-    const merged = (sha?: string): PrOutcome => ({
-      ok: true,
-      text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.`,
-      receipt: this.storeReviewReceipt(
-        taskId,
-        review.id,
-        candidate.headSha,
-        sha,
-        guard?.unattended ? undefined : "captain",
-      ),
-    });
+    // The receipt names the version that merged: on a host whose merge names
+    // no version, a push after the read may have gone in instead, and is told.
+    const merged = (sha?: string, head?: string): PrOutcome => {
+      const newer = otherMerged(candidate.headSha, head);
+      const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
+      return {
+        ok: true,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}`,
+        ...other.line,
+        receipt: this.storeReviewReceipt(
+          taskId,
+          review.id,
+          newer ?? candidate.headSha,
+          sha,
+          guard?.unattended ? undefined : "captain",
+        ),
+      };
+    };
     let dispatched = false;
     try {
       if (!isForkReview(review) && hasChangeRequests(forge.kind))
@@ -854,21 +880,35 @@ export class MergeReviews {
       }
       // The merge the project allows, read where it lives before anything is sent.
       const way = await wayToSend(forge, change);
-      const stopped = guard?.beforeDispatch(candidate.headSha);
-      if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
-      dispatched = true;
-      const sent = await forge.putIn(change, candidate.headSha, way);
+      const leaving = atDispatch(
+        forge,
+        guard,
+        () => guard?.beforeDispatch(candidate.headSha),
+        () => {
+          dispatched = true;
+        },
+      );
+      const sent = leaving
+        ? await forge.putIn(change, candidate.headSha, way, leaving)
+        : await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
-      return merged(sent?.sha);
+      return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
+      if (caught instanceof MergeWithdrawn)
+        return {
+          ok: false,
+          stop: caught.stop,
+          text: caught.message,
+        };
       const message = caught instanceof Error ? caught.message : String(caught);
-      const after = dispatched
-        ? await forge.pull?.(review.number).catch(() => undefined)
-        : undefined;
-      if (after?.merged && after.headSha === candidate.headSha) return merged(after.mergedSha);
+      // A request the host says never left sent nothing, whatever was marked.
+      const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
+      const after = sent ? await forge.pull?.(review.number).catch(() => undefined) : undefined;
+      if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
+        return merged(after.mergedSha, after.headSha);
       const stop = guard
         ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
-          (dispatched ? "outcome" : undefined))
+          (sent ? "outcome" : isTransientForgeFailure(caught) ? "transient" : undefined))
         : /Head branch was modified/i.test(message)
           ? "moved"
           : undefined;
@@ -877,6 +917,9 @@ export class MergeReviews {
         text: `Cannot merge: ${message}`,
         problem: message,
         stop,
+        ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
+          ? { mergeTask: caught.mergeTask }
+          : {}),
         ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
           ? { baseMoved: true }
           : {}),

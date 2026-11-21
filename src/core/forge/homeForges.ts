@@ -29,8 +29,8 @@ import {
   isSignInForgeFailure,
   remoteProjectsText,
 } from "./index";
+import { BitbucketForge } from "./providers/bitbucket/bitbucketForge";
 import { bitbucketApiBaseFor } from "./providers/bitbucket/client";
-import { BitbucketProjects } from "./providers/bitbucket/projects";
 import { readOpenChanges } from "./providers/github/changes";
 import { GitHubForge, githubApiBaseFor } from "./providers/github/githubForge";
 import { readGitLabOpenChanges } from "./providers/gitlab/changes";
@@ -152,12 +152,22 @@ export function startHomeForges(options: {
       onSignInRejected: () => forgeSignIns.rejected(forgeHost),
     });
   };
+  const bitbucketForge = (location: ForgeLocation) => {
+    const forgeHost = location.host ?? "bitbucket.org";
+    return new BitbucketForge(location, {
+      namingRule,
+      token: () => forgeSignIns.token(forgeHost),
+      apiBaseUrl: bitbucketApiBaseFor(forgeHost, forgeEndpoints),
+      onSignInRejected: () => forgeSignIns.rejected(forgeHost),
+    });
+  };
   // Which forge serves each kind of host: GitHub's and GitLab's, each on its
-  // public host and on the person's own server. A kind with none here is a
-  // plain Git host.
+  // public host and on the person's own server, and Bitbucket Cloud's. A
+  // kind with none here is a plain Git host.
   const kindForges: Record<ChangeRequestKind, (location: ForgeLocation) => Forge> = {
     github: githubForge,
     gitlab: gitlabForge,
+    bitbucket: bitbucketForge,
   };
   const forgeBindings: ForgeBindings = kindForges;
   const resolve = createForgeResolver(forgeBindings);
@@ -174,14 +184,6 @@ export function startHomeForges(options: {
       })
     | undefined => {
     const kind = kindOfHost(forgeHost, forgeSignIns.knownHosts());
-    // Bitbucket lists and finds its projects before its pull requests are
-    // built, so its host has a project lister and no forge of its own.
-    if (kind === "bitbucket")
-      return new BitbucketProjects(forgeHost, {
-        token: () => forgeSignIns.token(forgeHost),
-        apiBaseUrl: bitbucketApiBaseFor(forgeHost, forgeEndpoints),
-        onSignInRejected: () => forgeSignIns.rejected(forgeHost),
-      });
     return forgeBindings[kind]?.({ kind, host: forgeHost, dir: "" });
   };
   const projectsListed = async (forgeHost: string): Promise<ForgeProjectListing> => {
@@ -231,10 +233,10 @@ export function startHomeForges(options: {
       const kind = changeRequestKind(kindOfHost(row.host, forgeSignIns.knownHosts()));
       return kind ? [{ host: row.host, kind }] : [];
     });
-    // Each kind's own reading of a host's open changes.
-    const openChanges: Record<
-      ChangeRequestKind,
-      (forgeHost: string, token: string) => Promise<ForgeChangeRow[]>
+    // Each kind's own reading of a host's open changes; Bitbucket's comes
+    // with the crew's reach there, so its hosts are read for none yet.
+    const openChanges: Partial<
+      Record<ChangeRequestKind, (forgeHost: string, token: string) => Promise<ForgeChangeRow[]>>
     > = {
       github: async (forgeHost, token) => {
         try {
@@ -260,10 +262,12 @@ export function startHomeForges(options: {
     let reachable = true;
     const rows: ForgeChangeRow[] = [];
     for (const { host: forgeHost, kind } of hosts) {
+      const read = openChanges[kind];
+      if (!read) continue;
       const token = await forgeSignIns.token(forgeHost);
       if (!token) continue;
       try {
-        rows.push(...(await openChanges[kind](forgeHost, token)));
+        rows.push(...(await read(forgeHost, token)));
       } catch {
         reachable = false;
       }
@@ -332,10 +336,7 @@ export function startHomeForges(options: {
             change.host,
             change.name,
             waitingChangesOn(change.host),
-            {
-              cli: forgeSignIns.wayOf(change.host) === "cli",
-              kind: kindOfHost(change.host, forgeSignIns.knownHosts()),
-            },
+            { cli: forgeSignIns.wayOf(change.host) === "cli" },
           );
         } else if (change.to === "ok" || change.to === "none") {
           supervisor.cards.hostCards.clearAuthDecisionCard(cardId);

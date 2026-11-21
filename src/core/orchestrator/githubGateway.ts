@@ -1,12 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
-import {
-  CHANGE_REQUEST_HOSTS,
-  type ChangeRequestKind,
-  changeHostOf,
-  changeRequestKind,
-} from "@shared/forgeKinds";
+import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/forgeKinds";
 import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type {
@@ -34,6 +29,7 @@ import {
   releaseFileIn,
   smallerPage,
 } from "../forge";
+import { type RawApiKind, rawApiKind } from "../forge/api";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import { IntegrationOutcomeUnknown } from "../integrations";
 import { storyLedgers } from "../storage/changeProjection";
@@ -245,7 +241,7 @@ export class GithubGatewayService {
         );
         if (!route.write)
           throw new ForgeError("refused", "A change sends POST, PATCH, PUT or DELETE only.");
-        const kind = changeRequestKind(forge.kind);
+        const kind = rawApiKind(forge.kind);
         if (kind) await guardApiWrite(kind, route, parsed, () => forge.defaultBranch());
         const response = await this.send(
           calls,
@@ -327,7 +323,7 @@ export class GithubGatewayService {
         if (!route.write)
           throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
         // Merges and default-branch moves keep the merge card, asked or not (piece 1).
-        const kind = changeRequestKind(forge.kind);
+        const kind = rawApiKind(forge.kind);
         if ((route.own || target.via === "account") && kind) {
           await guardApiWrite(kind, route, parsed, () => forge.defaultBranch());
         }
@@ -383,7 +379,7 @@ export class GithubGatewayService {
     }
     const located = this.locateFile(taskId, input.file ?? "");
     const route = this.releaseRoute(api, input.path, located.filename);
-    const kind = changeRequestKind(forge.kind);
+    const kind = rawApiKind(forge.kind);
     if ((route.own || target.via === "account") && kind) {
       await guardApiWrite(kind, route, undefined, () => forge.defaultBranch());
     }
@@ -461,7 +457,7 @@ export class GithubGatewayService {
       }
       if (!route.write) throw new ForgeError("refused", "only a write is asked for.");
       const { forge } = target;
-      const kind = changeRequestKind(forge.kind);
+      const kind = rawApiKind(forge.kind);
       if ((route.own || target.via === "account") && kind) {
         await guardApiWrite(
           kind,
@@ -522,7 +518,7 @@ export class GithubGatewayService {
       .map((part) => decodeURIComponent(part))
       .join("/")
       .replace(/\/+$/, "");
-    const kind = changeRequestKind(forge.kind) ?? "github";
+    const kind = rawApiKind(forge.kind) ?? "github";
     if (route.method === "POST" && rest === KIND_REST[kind].opensChange)
       throw new ForgeError(
         "refused",
@@ -607,7 +603,8 @@ export class GithubGatewayService {
       at: this.options.now(),
     };
     this.options.tasks.delivery.keepWriteAsk(taskId, ask);
-    const numbered = KIND_REST[ask.kind].numberedProject;
+    const raw = rawApiKind(ask.kind);
+    const numbered = raw ? KIND_REST[raw].numberedProject : undefined;
     const byNumber =
       numbered && target.via === "project" && numbered.test(ask.path)
         ? " If it is your own project, name it by its URL-encoded path instead, and the write goes at once."
@@ -906,7 +903,7 @@ export class GithubGatewayService {
         else {
           const run = rest.match(/^(?:actions\/runs|pipelines)\/(\d+)\//);
           if (run) runId = Number(run[1]);
-          else if (KIND_REST[changeRequestKind(target.forge.kind) ?? "github"].retryNamesRun)
+          else if (KIND_REST[rawApiKind(target.forge.kind) ?? "github"].retryNamesRun)
             runId = objectOf(body.pipeline).id;
           else {
             // GitHub's job rerun is empty: the job itself supplies the parent run number.
@@ -1148,7 +1145,7 @@ function isDispatch(forge: Forge, rest: string): boolean {
 
 /** A pipeline start, such as GitLab's, by its path under the project. */
 function isPipelineStart(forge: Forge, rest: string): boolean {
-  const kind = changeRequestKind(forge.kind);
+  const kind = rawApiKind(forge.kind);
   return kind !== undefined && KIND_REST[kind].startsPipeline === rest;
 }
 
@@ -1158,7 +1155,7 @@ function isPipelineStart(forge: Forge, rest: string): boolean {
  * project is named by its number rather than its path.
  */
 const KIND_REST: Record<
-  ChangeRequestKind,
+  RawApiKind,
   {
     opensChange: string;
     /** The call that rewrites a change's description: its path, method and field. */

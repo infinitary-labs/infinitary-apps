@@ -85,8 +85,13 @@ export function tieredPresentationMarkdown(
       ].join("\n\n");
     })
     .join("\n\n");
+  // Bitbucket shows Markdown but no HTML, so its folds are plain sections.
   const fold = (title: string, body: string) =>
-    body ? `<details>\n<summary>${title}</summary>\n\n${body}\n\n</details>` : "";
+    !body
+      ? ""
+      : host === "bitbucket"
+        ? `### ${title}\n\n${body}`
+        : `<details>\n<summary>${title}</summary>\n\n${body}\n\n</details>`;
   const actions = story.requiredActions
     .map((action) =>
       [

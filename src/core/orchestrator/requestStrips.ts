@@ -25,6 +25,7 @@ const RELEASE_FILE_CALLS: Record<
 > = {
   github: undefined,
   gitlab: gitlabReleaseFileCalls,
+  bitbucket: undefined,
 };
 
 /** A merge past the branch rules: the version, the method, every rule it may skip and every failed check. */

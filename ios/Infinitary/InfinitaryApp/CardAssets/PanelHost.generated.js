@@ -28457,6 +28457,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Merged at ${at}`;
   }
+  function mergedChangeNewerOn(input2) {
+    const change = input2.change;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `دُمج ${change} على ${place} مع دفع أُجري بعد النسخة المعتمدة`;
+      case "de":
+        return `${change} auf ${place} zusammengeführt, mit einem Push nach der freigegebenen Version`;
+      case "es":
+        return `Se fusionó ${change} en ${place}, con un envío posterior a la versión aprobada`;
+      case "fr":
+        return `${change} fusionnée sur ${place}, avec un envoi fait après la version approuvée`;
+      case "ja":
+        return `${place} で ${change} をマージしました。承認後のバージョンへのプッシュも含まれています`;
+      case "ko":
+        return `${place}에서 ${change} 병합됨, 승인된 버전 이후의 푸시가 포함됨`;
+      case "pt-BR":
+        return `${change} mesclada no ${place}, com um envio feito depois da versão aprovada`;
+      case "zh-Hans":
+        return `已在 ${place} 上合并 ${change}，其中包含批准版本之后的推送`;
+      case "zh-Hant":
+        return `已在 ${place} 合併 ${change}，其中包含核准版本之後的推送`;
+      case "en-XA":
+        return `[Ṁéŕĝéð ${change} öñ ${place}, ŵîţĥ á þûšĥ ɱáðé áƒţéŕ ţĥé áþþŕöṽéð ṽéŕšîöñ ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Merged ‬${change}‮ on ‬${place}‮, with a push made after the approved version‬`;
+    }
+    return `Merged ${change} on ${place}, with a push made after the approved version`;
+  }
   function mergedChangeOn(input2) {
     const change = input2.change;
     const place = input2.place;
@@ -84171,6 +84200,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     mergeSetInProject,
     mergeWaitsForReview,
     mergedAt,
+    mergedChangeNewerOn,
     mergedChangeOn,
     mergedChangeOnHost,
     mergedChangeWhereItLives,
@@ -86870,6 +86900,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "mergeSetInProject": [],
     "mergeWaitsForReview": [],
     "mergedAt": ["at"],
+    "mergedChangeNewerOn": ["change", "place"],
     "mergedChangeOn": ["change", "place"],
     "mergedChangeOnHost": ["change"],
     "mergedChangeWhereItLives": ["change"],

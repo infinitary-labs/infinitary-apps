@@ -987,6 +987,7 @@
 "mergeSetInProject" = "Défini dans les réglages de ce projet.";
 "mergeWaitsForReview" = "Cette fusion attend que vous répondiez à la revue :";
 "mergedAt" = "Fusionnée à %1$@";
+"mergedChangeNewerOn" = "%1$@ fusionnée sur %2$@, avec un envoi fait après la version approuvée";
 "mergedChangeOn" = "%1$@ fusionnée sur %2$@";
 "mergedChangeOnHost" = "%1$@ fusionnée chez l’hébergeur du projet";
 "mergedChangeWhereItLives" = "%1$@ fusionnée là où le projet est hébergé";

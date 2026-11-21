@@ -27,7 +27,10 @@ import type { ForgeWorkflows } from "./workflows";
  * - `gitlab`: a merge request, the pipelines and jobs GitLab ran for its
  *   head, a squash merge at the checked head, over GitLab's REST API with
  *   the key the person made there.
- * - `git` (and Bitbucket, until its own file exists): the
+ * - `bitbucket`: a pull request on Bitbucket Cloud, the build statuses on
+ *   its head, a squash merge after reading the branch is still at the
+ *   checked head, over Bitbucket's REST API with the person's API token.
+ * - `git`: the
  *   working copy is SENT UP as its own branch; it has no checks, so it reads
  *   green with zero of them; putting it in fast-forwards the default branch
  *   onto the checked head and sends that up.
@@ -235,6 +238,17 @@ export type ForgePull = {
   readiness: ForgeReadiness;
   mergeable?: boolean | null;
   mergeableState?: string;
+  /**
+   * Its host's merge names no version (`Forge.mergeNamesNoVersion`): an open
+   * read after a merge was sent cannot show that nothing went in.
+   */
+  mergeNamesNoVersion?: true;
+  /**
+   * The host refused the read of the merge it took (`ForgeMergeUnconfirmed.mergeTask`)
+   * in a way that may mean the merge failed or that the task is not this
+   * pull request's: it does not confirm either, so nothing is sent again.
+   */
+  mergeTaskRefused?: true;
 };
 
 /**
@@ -259,7 +273,16 @@ export type ForgeRuleset = {
  * one, or `queued` when the branch's own merge queue took the change and has
  * not merged it yet.
  */
-export type MergeAnswer = { sha?: string; queued?: true };
+export type MergeAnswer = {
+  sha?: string;
+  queued?: true;
+  /**
+   * The full version the host says it merged, where its merge takes no
+   * version to hold it to (`Forge.mergeNamesNoVersion`): when it is not the
+   * one asked for, a push landed between the app's read and the merge.
+   */
+  mergedHead?: string;
+};
 
 /**
  * A merge past the rules as the host reports it: merged, failed (nothing
@@ -346,6 +369,22 @@ export class ForgeBaseMoved extends ForgeError {
   }
 }
 
+/**
+ * A merge the host took and has not confirmed, on a host whose merge names
+ * no version: an outcome not yet known, never sent again. `mergeTask` is
+ * the host's own reference to that merge, when it gave one, which a later
+ * read asks how it ended (`Forge.mergeTaskRefused`).
+ */
+export class ForgeMergeUnconfirmed extends ForgeError {
+  constructor(
+    message: string,
+    readonly mergeTask?: string,
+  ) {
+    super("transient", message);
+    this.name = "ForgeMergeUnconfirmed";
+  }
+}
+
 /** When a spent allowance comes back, if that is why the host refused; otherwise undefined. */
 export function allowanceResetOf(caught: unknown): number | undefined {
   return caught instanceof ForgeAllowanceSpent ? caught.resetAt : undefined;
@@ -387,6 +426,19 @@ export interface Forge {
    * green with zero checks; the app watches nothing there and says so.
    */
   readonly hasChecks: boolean;
+  /**
+   * The host's merge takes no version to hold it to (Bitbucket Cloud), and
+   * an owner's sign-in may merge past its rules. Every merge then reads the
+   * pull request's own readiness first, and a merge request whose answer
+   * never came is never sent again: only a read says how it ended.
+   */
+  readonly mergeNamesNoVersion?: true;
+  /**
+   * Whether the host refused the read of a merge it took and had not
+   * confirmed (`ForgeMergeUnconfirmed.mergeTask`); false while it runs or
+   * once it merged. A refusal is not proof the merge failed.
+   */
+  mergeTaskRefused?(number: number, task: string): Promise<boolean>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */
@@ -486,6 +538,13 @@ export interface Forge {
      * `mergeWays` to read, and a host that has them refuses it.
      */
     way: MergeWay | undefined,
+    /**
+     * On a host whose merge names no version (`mergeNamesNoVersion`), runs
+     * once as the merge request leaves, after every read before it; a throw
+     * stops the request with nothing sent. Other hosts never run it, so
+     * their caller runs its check before the call.
+     */
+    beforeSend?: () => void,
   ): Promise<MergeAnswer | undefined>;
   /**
    * Whether the host's own merge queue holds this change now. Read, never

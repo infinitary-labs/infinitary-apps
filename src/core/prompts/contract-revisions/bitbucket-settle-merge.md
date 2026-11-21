@@ -1,0 +1,3 @@
+The first mate's `settle_task` description says that on Bitbucket `merge-pr` only closes a task whose pull request is already merged, and that a new merge goes through the merge card's approval even with autonomy on.
+It comes from the work that opens and merges Bitbucket pull requests, under the captain's choice to keep one-click merges there: Bitbucket's merge names no version, so only a merge card's approval records a merge whose outcome is unknown and reads it back before anything is sent again, and the host refuses a merge sent under no approval.
+The rule's one home is the `settle_task` description; the fixed context grows by about 30 tokens.

@@ -987,6 +987,7 @@
 "mergeSetInProject" = "在此项目的设置中设定。";
 "mergeWaitsForReview" = "此合并会等你回答审查的问题：";
 "mergedAt" = "已于 %1$@ 合并";
+"mergedChangeNewerOn" = "已在 %2$@ 上合并 %1$@，其中包含批准版本之后的推送";
 "mergedChangeOn" = "已在 %2$@ 上合并 %1$@";
 "mergedChangeOnHost" = "已在项目的托管平台上合并 %1$@";
 "mergedChangeWhereItLives" = "已在项目托管处合并 %1$@";

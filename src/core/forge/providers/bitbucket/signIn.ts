@@ -18,8 +18,8 @@ const BITBUCKET_KEY = /^[A-Za-z0-9_.=-]{20,1024}$/;
 
 /**
  * Bitbucket Cloud by API token alone: bitbucket.org is its one host for
- * now, and git keeps the person's own credential helpers there until they
- * sign in, since a Bitbucket project already sends its branch up with them.
+ * now, and git answers it with the app's sign-in alone, as the pull
+ * requests the app opens there are made with that sign-in too.
  */
 export function createBitbucketServer(options: {
   apiBaseFor: (host: string) => string;
@@ -30,7 +30,6 @@ export function createBitbucketServer(options: {
     kind: "bitbucket",
     hosts: ["bitbucket.org"],
     publicOnly: true,
-    gitOnceSignedIn: true,
     gitUser: BITBUCKET_GIT_USER,
     keyPattern: BITBUCKET_KEY,
     signIn: (host) => ({

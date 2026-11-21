@@ -121,6 +121,13 @@ export class KeptForge implements Forge {
   /** The pull request's description, as GitHub shows it. */
   body = "";
   sends = 0;
+  /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
+  mergeNamesNoVersion?: true;
+  /** The merges the host took and then said failed, by its own reference to each. */
+  refusedTasks = new Set<string>();
+  async mergeTaskRefused(_number: number, task: string) {
+    return this.refusedTasks.has(task);
+  }
   async listProjects() {
     return [];
   }
@@ -148,7 +155,19 @@ export class KeptForge implements Forge {
   inQueue = false;
   /** How many times that queue was read. */
   queueReads = 0;
-  async putIn(_change: ForgeChange, headSha: string): Promise<MergeAnswer> {
+  /** Runs while the merge reads what it reads before its request leaves. */
+  beforeLeaving: () => Promise<void> = async () => {};
+  async putIn(
+    _change: ForgeChange,
+    headSha: string,
+    _way?: unknown,
+    beforeSend?: () => void,
+  ): Promise<MergeAnswer> {
+    // A failure before the request leaves sends nothing, as the host says.
+    await this.beforeLeaving();
+    if (this.refuse?.beforeSend) throw this.refuse;
+    // A host whose merge names no version runs the caller's last check as the request leaves.
+    if (this.mergeNamesNoVersion) beforeSend?.();
     this.sends += 1;
     if (this.refuse) throw this.refuse;
     if (this.hostQueue) {
@@ -193,6 +212,7 @@ export class KeptForge implements Forge {
       headSha: this.headSha,
       base: "main",
       readiness: this.readiness,
+      ...(this.mergeNamesNoVersion ? { mergeNamesNoVersion: true as const } : {}),
       ...(this.referencedBranch
         ? { branch: this.referencedBranch, headRepo: "o/r", title: "fix: ship the meter" }
         : {}),
@@ -311,7 +331,8 @@ export async function approved(
       service().merges.merge(id, guard, beforeDispatch),
     mergeReview: (id, reviewId, guard) => service().reviews.mergeReview(id, reviewId, guard),
     reviewGate: (id, reviewId) => service().reviews.reviewGate(id, reviewId),
-    readPull: (id, prNumber) => service().merges.pullState(id, prNumber),
+    readPull: (id, prNumber, mergeTask, place) =>
+      service().merges.pullState(id, prNumber, mergeTask, place),
     mergedStory: (id, pull) => service().merges.mergedStory(id, pull),
     openChange: (id, input) => service().publication.open(id, input),
     checkChange: (id, input) => service().checkTool.checkForCrew(id, input),

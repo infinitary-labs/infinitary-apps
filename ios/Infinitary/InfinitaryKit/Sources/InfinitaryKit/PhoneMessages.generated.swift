@@ -1035,6 +1035,7 @@ public enum PhoneMessages {
     public static func `mergeSetInProject`() -> String { PhoneWords.format("mergeSetInProject", []) }
     public static func `mergeWaitsForReview`() -> String { PhoneWords.format("mergeWaitsForReview", []) }
     public static func `mergedAt`(`at`: String) -> String { PhoneWords.format("mergedAt", [`at`]) }
+    public static func `mergedChangeNewerOn`(`change`: String, `place`: String) -> String { PhoneWords.format("mergedChangeNewerOn", [`change`, `place`]) }
     public static func `mergedChangeOn`(`change`: String, `place`: String) -> String { PhoneWords.format("mergedChangeOn", [`change`, `place`]) }
     public static func `mergedChangeOnHost`(`change`: String) -> String { PhoneWords.format("mergedChangeOnHost", [`change`]) }
     public static func `mergedChangeWhereItLives`(`change`: String) -> String { PhoneWords.format("mergedChangeWhereItLives", [`change`]) }
@@ -4737,6 +4738,7 @@ extension PhoneWords {
         "mergeSetInProject": [],
         "mergeWaitsForReview": [],
         "mergedAt": ["at"],
+        "mergedChangeNewerOn": ["change", "place"],
         "mergedChangeOn": ["change", "place"],
         "mergedChangeOnHost": ["change"],
         "mergedChangeWhereItLives": ["change"],

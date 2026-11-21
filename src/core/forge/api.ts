@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import { type ChangeRequestKind, changeRequestKind } from "@shared/forgeKinds";
 import { ForgeError } from "./forge";
 
 /**
@@ -26,6 +27,20 @@ export const API_PER_PAGE_MAX = 100;
 export const API_OVERSIZE_HOLD_BYTES = API_PER_PAGE_MAX * API_RESPONSE_MAX_BYTES;
 /** Calls a task may make through the gateway in one run of the app. */
 export const API_CALLS_PER_TASK = 200;
+
+/**
+ * The kinds whose REST API the crew reaches through the app's sign-in. A
+ * Bitbucket project opens, checks and merges its pull requests, but its raw
+ * API, write rules and scopes come with its gateway (docs/forge.md,
+ * "Bitbucket pull requests"), so none of them answers for it yet.
+ */
+export type RawApiKind = Exclude<ChangeRequestKind, "bitbucket">;
+
+/** The kind, when the crew reaches its REST API. */
+export function rawApiKind(kind: string | null | undefined): RawApiKind | undefined {
+  const known = changeRequestKind(kind);
+  return known === "bitbucket" ? undefined : known;
+}
 
 export type ApiProject = { owner: string; name: string };
 

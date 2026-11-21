@@ -458,9 +458,8 @@ export function forgeSignInTitle(name: string, reauth = true): string {
 }
 
 /** The refused sign-in card's opening words: what the host stopped accepting, and what that stops. */
-export function forgeRefusedText(name: string, kind?: string): string {
-  const stops = signInHost(kind)?.refusedStops ?? "open, check or merge pull requests";
-  return `${name} no longer accepts the sign-in on ${HERE.this}, so your first mate cannot ${stops} there.`;
+export function forgeRefusedText(name: string): string {
+  return `${name} no longer accepts the sign-in on ${HERE.this}, so your first mate cannot open, check or merge pull requests there.`;
 }
 
 /** Every sign-in card's last words: a project kept on this Mac never needs the sign-in. */

@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 import { standingApproval } from "../../../tests/helpers/settleHarness";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import {
+  carryUnsettled,
   FAILED_BATCH_NOTE,
   isCaptainGuidance,
   keptFeedLine,
   keptNote,
   parseRepairAssessment,
   putInFront,
+  samePullTarget,
   waitingInLine,
 } from "./mergeAuthorization";
 import {
@@ -230,4 +232,37 @@ it("retains a pending queue removal at the front when another approval rotates i
   const rotated = putInFront(first, 0, true);
   expect(rotated?.queueRemovals).toEqual([pending]);
   expect(rotated?.queued?.[0]?.queueRemovals).toBeUndefined();
+});
+
+// INF-5193 (the review of Bitbucket's merge): a merge sent whose outcome was
+// never read back is kept by pull request, compared as its host compares a
+// project's owner and name. A self-hosted GitLab keeps case apart, so its
+// "Team/Meter" and "team/meter" are two pull requests, while GitHub's are one.
+describe("an unsettled merge kept by pull request (INF-5193)", () => {
+  const sent = (owner: string, name: string, host: string, token: string) =>
+    standingApproval({
+      target: { ...standingApproval().target, host, owner, name },
+      attempt: { token, head: "approved", at: 1 },
+    });
+  const gitlabAt = (host: string) => (host === "git.example.org" ? "gitlab" : undefined);
+
+  it("keeps a self-hosted GitLab's case-distinct projects apart, by the kind its project configured", () => {
+    const first = sent("Team", "Meter", "git.example.org", "first");
+    const next = sent("team", "meter", "git.example.org", "next");
+    expect(samePullTarget(first.target, next.target, gitlabAt)).toBe(false);
+    const carried = carryUnsettled(first, next, gitlabAt);
+    expect(carried.attempt?.token).toBe("next");
+    expect(carried.unsettled?.map((item) => item.attempt.token)).toEqual(["first"]);
+  });
+
+  it("still matches a public GitHub project's owner and name without regard to case", () => {
+    const first = sent("O", "Meter", "github.com", "first");
+    const next = standingApproval({
+      target: { ...standingApproval().target, owner: "o", name: "meter" },
+    });
+    expect(samePullTarget(first.target, next.target, gitlabAt)).toBe(true);
+    const carried = carryUnsettled(first, next, gitlabAt);
+    expect(carried.attempt?.token).toBe("first");
+    expect(carried.unsettled).toBeUndefined();
+  });
 });

@@ -1,5 +1,5 @@
-import type { ChangeRequestKind } from "@shared/forgeKinds";
 import type { IntegrationScope } from "@shared/writeAsk";
+import type { RawApiKind } from "../forge/api";
 
 /**
  * What one Allow for the rest of this task covers for each kind
@@ -48,7 +48,7 @@ function bare(path: string): string {
  * or one with a segment that could leave it, is its own place, exactly as
  * written without its query.
  */
-export function forgeScope(kind: ChangeRequestKind): (input: unknown) => IntegrationScope {
+export function forgeScope(kind: RawApiKind): (input: unknown) => IntegrationScope {
   const place = FORGE_PLACES[kind];
   return (input) => {
     const { method = "GET", path } = input as { method?: string; path: string };
@@ -62,7 +62,7 @@ export function forgeScope(kind: ChangeRequestKind): (input: unknown) => Integra
 
 /** Each kind's own place in a REST path: a repository, or a project by its id. */
 const FORGE_PLACES: Record<
-  ChangeRequestKind,
+  RawApiKind,
   {
     /** The one segment that may hold an escaped slash. */
     encodedAt?: number;

@@ -248,7 +248,7 @@ function readBoard(): Promise<void> {
   // The orbit has no use for closed rows: they never fly.
   return readBoardWithoutClosed()
     .then((board) => {
-      seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
+      seedCrew(crewOrbit(), board.tasks, stageNow());
       reconcileCrew(crewOrbit(), board, stageNow());
       useShellStore.setState({
         crewActivity: Object.fromEntries(
@@ -419,7 +419,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       {
         onValue: (value) => {
           const board = value as TaskBoard;
-          applyCrewDependencies(crewOrbit(), board.tasks, board.links, stageNow());
+          applyCrewDependencies(crewOrbit(), board.tasks, stageNow());
           reconcileCrew(crewOrbit(), board, stageNow());
         },
         onError: () => {},

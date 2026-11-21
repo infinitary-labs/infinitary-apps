@@ -24,10 +24,10 @@ import { served } from "./providerRequest";
  * `program-constellation.spec.ts` seeds one, with a second verifier running
  * beside the first, next to two idle crewmates.
  * The first mate links the two crewmates by a wait and later unlinks them,
- * and puts the second verifier behind the first, so the constellation, which
- * draws only running parts (INF-1037), moves; the window records every board push, and
+ * and puts the second verifier behind the first, so an arrow joins two
+ * parts circling the program's ring; the window records every board push, and
  * each change must arrive as a delta, never a snapshot, before the stage's
- * published arrows and constellation are read. Completion is the near
+ * published arrows and program are read. Completion is the near
  * layer's published reading; it runs on this Mac alone and shares nothing
  * with another test.
  */
@@ -173,7 +173,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await resizeWindow(app.app, page, { width: 1280, height: 860 });
     await expect
       .poll(() => near(page).getAttribute("data-constellation"), { timeout: 15_000 })
-      .toBe("review=review>verify review>check");
+      .toBe("review=rings:1 gem:0.25");
     await expect(near(page)).toHaveAttribute("data-crew-arrows", "");
     // The core's first push follows the boot's presentation pass, so every
     // push from here on has a base and is a delta.
@@ -200,10 +200,12 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await expect
       .poll(() => carrierOf(page, "verify", (task) => task.blocks.includes(checkKey)))
       .toBe("delta");
-    await expect(near(page)).toHaveAttribute(
-      "data-constellation",
-      "review=review>verify verify>check",
-    );
+    // The two parts keep circling the program's ring; the wait between them is an arrow like any other.
+    await expect
+      .poll(async () =>
+        ((await near(page).getAttribute("data-crew-arrows")) ?? "").split(" ").sort(),
+      )
+      .toEqual(["wait:check>verify", "wait:waiter>owner"]);
     await regionShot(formation(page), out("delta-part-linked.png"));
 
     // Section 3: the first mate takes the wait away again.
@@ -212,7 +214,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await expect
       .poll(() => carrierOf(page, "waiter", (task) => task.blockedBy.length === 0, linked))
       .toBe("delta");
-    await expect(near(page)).toHaveAttribute("data-crew-arrows", "");
+    await expect(near(page)).toHaveAttribute("data-crew-arrows", "wait:check>verify");
     await regionShot(formation(page), out("delta-wait-cleared.png"));
 
     // Nothing reached the window but deltas: no snapshot redrew the stage.

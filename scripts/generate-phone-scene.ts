@@ -39,7 +39,7 @@ try {
   const character = join(REPO_ROOT, "src/renderer/src/character");
   const { FM_STATES } = await runner.import<typeof import("../src/renderer/src/character/targets.ts")>(join(character, "targets.ts"));
   const { EMOTE_DURATION_MS, FIDGET_DURATION_MS } = await runner.import<typeof import("../src/renderer/src/character/machine.ts")>(join(character, "machine.ts"));
-  const { CAPTAIN_LIGHT, TIER_SOLIDS, WAIT_LIGHT } = await runner.import<typeof import("../src/renderer/src/character/crew/crewmate.ts")>(join(character, "crew/crewmate.ts"));
+  const { CAPTAIN_LIGHT, GEM_WIRES, TIER_SOLIDS, WAIT_LIGHT } = await runner.import<typeof import("../src/renderer/src/character/crew/crewmate.ts")>(join(character, "crew/crewmate.ts"));
   const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius, planeRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
   const { CLUSTER_LAYOUT } = await runner.import<typeof import("../src/renderer/src/character/crew/computers.ts")>(join(character, "crew/computers.ts"));
   const { ORION, BIG_DIPPER } = await runner.import<typeof import("../src/renderer/src/character/constellations.ts")>(join(character, "constellations.ts"));
@@ -96,10 +96,10 @@ try {
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
-      orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: { branchPx: CONSTELLATION.branchPx, branchDecay: CONSTELLATION.branchDecay, spreadDeg: CONSTELLATION.spreadDeg, rootMarkPx: CONSTELLATION.rootMarkPx, crewGapPx: CONSTELLATION.crewGapPx, widestSpreadDeg: CONSTELLATION.widestSpreadDeg },
+      orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: Object.fromEntries(Object.entries(CONSTELLATION).filter(([, value]) => typeof value === "number")),
       firstmateID: FIRSTMATE_SESSION_ID, dependency: { ...DEPENDENCY_VISUAL, sceneReachPx: SCENE_REACH_PX, phase: satellitePhase(0, 1, 0, true) },
       targets: FM_STATES, durations: EMOTE_DURATION_MS, fidgets: FIDGET_DURATION_MS,
-      solids: TIER_SOLIDS, planes: CROWDED_PLANES,
+      solids: TIER_SOLIDS, gemWires: GEM_WIRES, planes: CROWDED_PLANES,
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,
         remoteGlyphPx: CLUSTER_LAYOUT.crewGlyphPx, crowdedGlyphPx: CLUSTER_LAYOUT.crowdedGlyphPx, crowdedCrew: CLUSTER_LAYOUT.crowdedCrew }, constellations: { orion: ORION, dipper: BIG_DIPPER },
       saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(),

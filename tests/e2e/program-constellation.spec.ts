@@ -14,14 +14,16 @@ import { heroShot, regionShot } from "./pictures";
 import { focusOn } from "./windowKeys";
 
 /**
- * A task with parts draws on the stage as a constellation (the captain's
- * INF-799 choice, "Branching constellation"), of its running parts only
+ * A task with parts draws on the stage as moons (the captain's INF-5365
+ * choice, "Moons"): its running parts circle its mark on a tilted ring, and a
+ * gem inside the mark gains a wire for each share of the program finished. It
+ * draws its running parts only
  * (INF-1037: "i feel 'not started' and 'finished' parts should not be
  * rendered there"). A review program is seeded the way the task graph
  * records one: two finders done, a verifier for each underway, built on its
  * finder by a recorded wait, and a synthesis waiting on both verifiers. The
- * stage draws each verifier's crewmate on a branch from the program's ring
- * and nothing for the finders or the synthesis. A task that only holds
+ * stage draws each verifier's crewmate on the program's one ring, its gem
+ * two fifths wired, and nothing for the finders or the synthesis. A task that only holds
  * children, a plan and its build, runs no program and draws none (INF-999).
  * A seated part names the program it is part of, and the program's ring is a
  * mark of its own the keyboard reaches, whose summary counts every part by
@@ -121,21 +123,25 @@ test("a task with parts draws its running parts as a constellation, and its ring
     await page.emulateMedia({ reducedMotion: "reduce" });
     await resizeWindow(app.app, page, { width: 1280, height: 860 });
 
-    // Section 1: only the running verifiers draw, each on a branch from the program's ring.
+    // Section 1: only the running verifiers draw, circling the program's ring; two of five parts wire the gem.
     await expect
       .poll(() => constellation(page), { timeout: 15_000 })
-      .toBe("review=review>verify-a review>verify-b");
+      .toBe("review=rings:1 gem:0.40");
     await expect(near(page)).toHaveAttribute("data-constellation-crew", "verify-a verify-b");
     await regionShot(
       page.locator("[data-crew-formation]"),
       test.info().outputPath("constellation-review.png"),
     );
     // The release note's pair, taken on request: it rewrites committed files.
-    if (process.env.CONSTELLATION_HERO === "1")
+    if (process.env.CONSTELLATION_HERO === "1") {
+      // A wider window, so the landscape crop round the crew stays clear of the panels at the side.
+      await resizeWindow(app.app, page, { width: 1700, height: 900 });
       await heroShot(app.app, page, {
         region: page.locator("[data-crew-formation]"),
-        name: "program-constellation",
+        name: "program-moons",
       });
+      await resizeWindow(app.app, page, { width: 1280, height: 860 });
+    }
 
     // Section 2: a seated part names its program; the program's root is a mark of its own.
     const reviewKey = await page.evaluate(

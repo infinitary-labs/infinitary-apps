@@ -38,6 +38,11 @@ final class CharacterFrameMetrics: @unchecked Sendable {
             frames.append(Frame(timestamp: start, work: end - start, mode: mode, heat: heat, rotation: rotation))
         }
     }
+    /// How many frames the named drawing has recorded since `start`, without ending the reading.
+    var count: Int {
+        lock.lock(); defer { lock.unlock() }
+        return frames.count
+    }
     func finish() -> [Frame] {
         lock.lock(); defer { lock.unlock() }
         source = nil

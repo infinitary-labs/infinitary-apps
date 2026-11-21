@@ -471,11 +471,11 @@ describe("a program on another computer", () => {
           id: "505",
           state: "live",
           parts: [
-            { id: "506", parents: [], state: "done" },
-            { id: "507", parents: ["506"], state: "live" },
+            { id: "506", state: "done" },
+            { id: "507", state: "live" },
           ],
         },
-        { id: "923", state: "live", parts: [{ id: "925", parents: [], state: "live" }] },
+        { id: "923", state: "live", parts: [{ id: "925", state: "live" }] },
       ],
       0,
     );
@@ -487,7 +487,7 @@ describe("a program on another computer", () => {
       Math.hypot(p.x - c.x, p.y - c.y);
     expect(from(program("505"), mini)).toBeLessThan(mini.radius + 1);
     expect(from(program("923"), { x: 0, y: 0 })).toBeLessThan(from(program("923"), mini));
-    // Each live part sits at its node on its own computer's orbit.
+    // Each live part circles its mark on its own computer's orbit.
     for (const [parent, part] of [
       ["505", "507"],
       ["923", "925"],
@@ -513,14 +513,9 @@ describe("a program running parts on two computers", () => {
     for (const id of mini) seed(model, id, "mini");
     const finished = Array.from({ length: 20 }, (_, i) => ({
       id: String(1018 + i),
-      parents: [],
       state: "done" as const,
     }));
-    const running = [...mini, ...here].map((id) => ({
-      id,
-      parents: [],
-      state: "live" as const,
-    }));
+    const running = [...mini, ...here].map((id) => ({ id, state: "live" as const }));
     model.setPrograms([{ id: "1017", state: "live", parts: [...finished, ...running] }], 0);
     model.settleBootRoster(0);
     return { model, here, mini };
@@ -540,7 +535,8 @@ describe("a program running parts on two computers", () => {
     expect(atHome.nodes.map((n) => n.id).sort()).toEqual([...here].sort());
     expect(atMini.nodes.map((n) => n.id).sort()).toEqual([...mini].sort());
     for (const ring of [atHome, atMini]) {
-      expect(ring.branches.every((b) => b.fromId === "1017")).toBe(true);
+      // Each copy's gem counts the whole program: 20 of its 28 parts finished.
+      expect(ring.gem).toBeCloseTo(20 / 28);
       for (const node of ring.nodes) {
         const mate = required(frame.crew.find((c) => c.id === node.id));
         expect(mate.x).toBeCloseTo(node.x);

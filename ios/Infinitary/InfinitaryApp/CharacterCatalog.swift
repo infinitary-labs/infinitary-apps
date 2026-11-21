@@ -15,6 +15,8 @@ struct CharacterCatalog: Decodable, Sendable {
     let durations: [String: Double]
     let fidgets: [String: Double]
     let solids: [String: Solid]
+    /// The high solid's edges in the order a program's gem gains them as its parts finish.
+    let gemWires: [[Int]]
     let planes: [Plane]
     /// The growing ring's lone-crewmate radius and a remote computer's share of home's size.
     let ring: [String: Double]

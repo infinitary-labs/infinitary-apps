@@ -551,19 +551,19 @@ describe("crew orbit wiring", () => {
           : row,
       );
       const before = visibleSeats(model.update(0, true))[0]?.filter((id) => id !== "crew-1") ?? [];
-      applyCrewDependencies(model, wait, [], 0);
+      applyCrewDependencies(model, wait, 0);
       const waiting = model.update(0, true);
       expect(waiting.links).toEqual([{ fromId: "crew-1", toId: "crew-0", kind: "wait" }]);
       sameCircularOrder(before, visibleSeats(waiting, ["crew-1"])[0] ?? []);
       const restarted = fixture().model;
-      applyCrewDependencies(restarted, wait, [], 0);
+      applyCrewDependencies(restarted, wait, 0);
       visibleSeats(restarted.update(0, true), ["crew-1"]);
-      applyCrewDependencies(model, rows, [], 100);
+      applyCrewDependencies(model, rows, 100);
       sameCircularOrder(
         before,
         visibleSeats(model.update(100, true))[0]?.filter((id) => id !== "crew-1") ?? [],
       );
-      applyCrewDependencies(model, wait, [], 200);
+      applyCrewDependencies(model, wait, 200);
       model.update(200, true);
       model.leave("crew-1", "home", 200);
       visibleSeats(model.update(201, true));
@@ -625,7 +625,6 @@ describe("crew orbit wiring", () => {
                 }
               : row,
           ),
-          [],
           0,
         );
         // Let the waiter glide onto its circle, then follow every frame of one loop.
@@ -651,14 +650,14 @@ describe("crew orbit wiring", () => {
         expect(worstEdge).toBeLessThanOrEqual(SCENE_HALF_PX);
       });
 
-    it("counts a visible program ring but not its branch parts, and seats a released part again", () => {
+    it("counts a visible program ring but not the parts circling it, and seats a released part again", () => {
       const { model } = fixture();
       const program = {
         id: "survey",
         state: "live" as const,
         parts: [
-          { id: "crew-1", parents: [], state: "live" as const },
-          { id: "crew-2", parents: ["crew-1"], state: "live" as const },
+          { id: "crew-1", state: "live" as const },
+          { id: "crew-2", state: "live" as const },
         ],
       };
       model.setPrograms([program], 0);

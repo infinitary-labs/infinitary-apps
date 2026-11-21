@@ -3,7 +3,7 @@ import type { FmEvent } from "@shared/events";
 import type { Slot } from "@shared/modelSlots";
 import { nowGroupOf } from "@shared/nowPanel";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
-import type { TaskBoard, TaskLinkView, TaskView } from "@shared/tasks";
+import type { TaskBoard, TaskView } from "@shared/tasks";
 import { requestFirstmateFlicker, tokenIntensity, usageTotal } from "../flicker";
 import { prefersReducedMotion } from "../reducedMotion";
 import { stageNow } from "../stageClock";
@@ -84,7 +84,7 @@ function applyCaptainWaits(model: CrewOrbit, tasks: readonly TaskView[]): void {
  * answer: "Every crewmate the Tasks panel lists under Pinned"), in its
  * order: each pinned task oldest pin first, with its parts, and theirs,
  * under it by priority then age, as `pinnedRowsOf` lists them. A part
- * running on its program's branches stays there. These become fixed stars.
+ * circling its program's mark stays there. These become fixed stars.
  */
 export function pinnedCrewOf(
   tasks: readonly TaskView[],
@@ -131,19 +131,18 @@ export function pinnedCrewOf(
 /**
  * The sequenced board's waits, for whichever orbit holds each crewmate, the
  * crew waiting on the captain, and
- * its tasks with parts, drawn from the board's own links as constellations.
+ * its tasks with parts, each drawn as its running parts circling its mark.
  */
 export function applyCrewDependencies(
   model: CrewOrbit,
   tasks: readonly TaskView[],
-  links: readonly TaskLinkView[] = [],
   now: number = stageNow(),
 ): void {
   const nodes = tasks.map(centerNode);
   model.setDependencies(centerCues(nodes));
   applyCaptainWaits(model, tasks);
   if (model instanceof ComputerOrbits) model.setWaits(crewedWaits(nodes));
-  const programs = programsOf(tasks, links);
+  const programs = programsOf(tasks);
   model.setPrograms(programs, now);
   model.setPinned(
     pinnedCrewOf(tasks, new Set(programs.flatMap((program) => program.parts.map((p) => p.id)))),
@@ -286,12 +285,7 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
  * settled. Restart is not a spawn - no re-emission theatre for work that
  * was already there.
  */
-export function seedCrew(
-  model: CrewOrbit,
-  tasks: readonly TaskView[],
-  now: number,
-  links: readonly TaskLinkView[] = [],
-): void {
+export function seedCrew(model: CrewOrbit, tasks: readonly TaskView[], now: number): void {
   // Known before the spawns, so a crewmate already waiting boots lit.
   applyCaptainWaits(model, tasks);
   for (const task of tasks) {
@@ -316,6 +310,6 @@ export function seedCrew(
     if (task.kind === "work" && task.status === "active" && task.reviewOf)
       model.setReview(task.id, task.reviewOf);
   }
-  applyCrewDependencies(model, tasks, links, now);
+  applyCrewDependencies(model, tasks, now);
   model.settleBootRoster(now);
 }

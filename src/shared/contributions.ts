@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { forgeOf } from "./forge";
+import { changeRequestHost } from "./forgeKinds";
 
 /** Host identities, never credentials, for a project's contribution route. */
 export const contributionProjectSchema = z.strictObject({
@@ -9,7 +10,7 @@ export const contributionProjectSchema = z.strictObject({
 });
 export type ContributionProject = z.infer<typeof contributionProjectSchema>;
 
-/** GitHub project paths are case-insensitive; GitLab keeps the host's path spelling. */
+/** GitHub and Bitbucket project paths are case-insensitive; GitLab keeps the host's path spelling. */
 export function contributionOriginMatches(
   project: Pick<ContributionProject, "fullName" | "origin">,
   origin: string | null | undefined,
@@ -18,7 +19,7 @@ export function contributionOriginMatches(
   const where = forgeOf(origin);
   if (where.host !== forgeOf(project.origin).host) return false;
   const name = `${where.owner}/${where.name}`;
-  return kind === "github"
+  return changeRequestHost(kind)?.foldsNames
     ? name.toLowerCase() === project.fullName.toLowerCase()
     : name === project.fullName;
 }

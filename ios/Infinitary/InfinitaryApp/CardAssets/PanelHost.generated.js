@@ -16611,6 +16611,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardRunbookAddPanels() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
+      case "de":
+        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
+      case "es":
+        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
+      case "ja":
+        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
+      case "ko":
+        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
+      case "zh-Hans":
+        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
+      case "zh-Hant":
+        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
+    }
+    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
+  }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
       case "ar":
@@ -18056,6 +18083,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Written by ‬${label}‮, after the card closed‬`;
     }
     return `Written by ${label}, after the card closed`;
+  }
+  function cardTradeoffTable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الموازنة في جدول`;
+      case "de":
+        return `Die Abwägung als Tabelle`;
+      case "es":
+        return `La comparación en una tabla`;
+      case "fr":
+        return `Le compromis sous forme de tableau`;
+      case "ja":
+        return `トレードオフを表で見る`;
+      case "ko":
+        return `장단점을 표로 보기`;
+      case "pt-BR":
+        return `A comparação em tabela`;
+      case "zh-Hans":
+        return `以表格查看取舍`;
+      case "zh-Hant":
+        return `以表格檢視取捨`;
+      case "en-XA":
+        return `[Ţĥé ţŕáðéöƒƒ áš á ţáƀļé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tradeoff as a table‬`;
+    }
+    return `The tradeoff as a table`;
   }
   function cardUseSavedReset() {
     switch (currentLanguage()) {
@@ -24222,6 +24276,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Report`;
   }
+  function crewmateRoutedAgain(input2) {
+    const left = input2.left;
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن ${model}`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt ${model}`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración, así que esta tarea ahora usa ${model}`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages, donc cette tâche utilise désormais ${model}`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなったため、このタスクは今後 ${model} を使います`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없어서 이 작업은 이제 ${model}을(를) 사용합니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes, então esta tarefa agora usa ${model}`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，所以这个任务现在改用 ${model}`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，所以這個任務現在改用 ${model}`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, šö ţĥîš ţášķ ñöŵ ûšéš ${model} ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, so this task now uses ‬${model}`;
+    }
+    return `${left} is on no level in Settings any more, so this task now uses ${model}`;
+  }
   function crewmateRunning() {
     switch (currentLanguage()) {
       case "ar":
@@ -24491,6 +24574,63 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Waiting on you‬`;
     }
     return `Waiting on you`;
+  }
+  function crewmateWaitsForModel(input2) {
+    const left = input2.left;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، ولا يستطيع أي نموذج آخر في مستوياتك تولي هذه المهمة، لذا تنتظر حتى يستطيع أحدها`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없고 수준에 있는 다른 모델도 이 작업을 맡을 수 없어서, 맡을 수 있는 모델이 생길 때까지 기다립니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，你的等級中也沒有其他模型能接手這個任務，所以它會等到有模型能接手`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ñö öţĥéŕ ɱöðéļ öñ ýöûŕ ļéṽéļš çáñ ţáķé ţĥîš ţášķ, šö îţ ŵáîţš ûñţîļ öñé çáñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can‬`;
+    }
+    return `${left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can`;
+  }
+  function crewmateWaitsForUpdate(input2) {
+    const computer = input2.computer;
+    const left = input2.left;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، ويحتاج ${computer} إلى تحديث قبل أن تنتقل هذه المهمة إلى نموذج آخر هناك، لذا تنتظر حتى ذلك الحين`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und ${computer} braucht ein Update, bevor diese Aufgabe dort zu einem anderen Modell wechseln kann, deshalb wartet sie bis dahin`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración y ${computer} necesita una actualización antes de que esta tarea pueda pasar a otro modelo allí, así que espera hasta entonces`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages, et ${computer} doit être mis à jour avant que cette tâche puisse passer à un autre modèle là-bas, donc elle attend jusque-là`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなりました。${computer} を更新するまで、このタスクはそこで別のモデルに移れないため、それまで待ちます`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없습니다. ${computer}을(를) 업데이트해야 이 작업이 그곳에서 다른 모델로 옮겨갈 수 있으므로 그때까지 기다립니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes e ${computer} precisa de uma atualização antes que esta tarefa possa passar para outro modelo lá, então ela espera até lá`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，而 ${computer} 需要更新后这个任务才能在那里改用其他模型，所以它会等到那时`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，而 ${computer} 需要更新後這個任務才能在那裡改用其他模型，所以它會等到那時`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ${computer} ñééðš áñ ûþðáţé ƀéƒöŕé ţĥîš ţášķ çáñ ɱöṽé ţö áñöţĥéŕ ɱöðéļ ţĥéŕé, šö îţ ŵáîţš ûñţîļ ţĥéñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, and ‬${computer}‮ needs an update before this task can move to another model there, so it waits until then‬`;
+    }
+    return `${left} is on no level in Settings any more, and ${computer} needs an update before this task can move to another model there, so it waits until then`;
   }
   function crewmateWorking() {
     switch (currentLanguage()) {
@@ -32140,6 +32280,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count}‮ more‬`;
     }
     return `${count} more`;
+  }
+  function panelReadsSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مظهرك وموسيقاك وبعض الإعدادات الأخرى`;
+      case "de":
+        return `dein Erscheinungsbild, deine Musik und einige weitere Einstellungen`;
+      case "es":
+        return `tu apariencia, tu música y algunos ajustes más`;
+      case "fr":
+        return `votre apparence, votre musique et quelques autres réglages`;
+      case "ja":
+        return `外観、音楽、その他いくつかの設定`;
+      case "ko":
+        return `모양, 음악 및 몇 가지 다른 설정`;
+      case "pt-BR":
+        return `sua aparência, sua música e algumas outras configurações`;
+      case "zh-Hans":
+        return `你的外观、音乐和其他几项设置`;
+      case "zh-Hant":
+        return `你的外觀、音樂和其他幾項設定`;
+      case "en-XA":
+        return `[ýöûŕ ļööķ, ɱûšîç áñð á ƒéŵ öţĥéŕ šéţţîñĝš ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮your look, music and a few other settings‬`;
+    }
+    return `your look, music and a few other settings`;
   }
   function panelRetry() {
     switch (currentLanguage()) {
@@ -67951,6 +68118,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open folder`;
   }
+  function settingsRunbooksPanels(input2) {
+    const panels = input2.panels;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض ${panels} على أشرطتك.`;
+      case "de":
+        return `Solange er an ist, zeigt er ${panels} auf deinen Leisten.`;
+      case "es":
+        return `Mientras está activo, muestra ${panels} en tus barras.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche ${panels} dans vos colonnes.`;
+      case "ja":
+        return `オンの間、パネル列に ${panels} を表示します。`;
+      case "ko":
+        return `켜져 있는 동안 레일에 보여 주는 패널: ${panels}`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, mostra ${panels} nas suas barras laterais.`;
+      case "zh-Hans":
+        return `开启时，会在侧栏上显示 ${panels}。`;
+      case "zh-Hant":
+        return `開啟時，會在側欄上顯示 ${panels}。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ šĥöŵš ${panels} öñ ýöûŕ ŕáîļš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it shows ‬${panels}‮ on your rails.‬`;
+    }
+    return `While it is on, it shows ${panels} on your rails.`;
+  }
   function settingsRunbooksView() {
     switch (currentLanguage()) {
       case "ar":
@@ -87651,6 +87846,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
+    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -87694,6 +87890,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenAfterClose,
     cardThreadWrittenBy,
     cardThreadWrittenByAfterClose,
+    cardTradeoffTable,
     cardUseSavedReset,
     cardUseSavedResets,
     closeYourFirstMate,
@@ -87912,6 +88109,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateProgress,
     crewmateQueued,
     crewmateReport,
+    crewmateRoutedAgain,
     crewmateRunning,
     crewmateSendsTo,
     crewmateShowCard,
@@ -87922,6 +88120,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateStopping,
     crewmateUnreadable,
     crewmateWaiting,
+    crewmateWaitsForModel,
+    crewmateWaitsForUpdate,
     crewmateWorking,
     devicesCarriedOn,
     devicesCarryNotRemoved,
@@ -88185,6 +88385,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
+    panelReadsSettings,
     panelRetry,
     panelSaidLineOpen,
     panelSettingsAppearance,
@@ -89393,6 +89594,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsRunbooksMakeYourOwn,
     settingsRunbooksOpenFailed,
     settingsRunbooksOpenFolder,
+    settingsRunbooksPanels,
     settingsRunbooksView,
     settingsRunbooksViewLabel,
     settingsRunbooksYours,
@@ -90471,6 +90673,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
+    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],
@@ -90514,6 +90717,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenAfterClose": [],
     "cardThreadWrittenBy": ["label"],
     "cardThreadWrittenByAfterClose": ["label"],
+    "cardTradeoffTable": [],
     "cardUseSavedReset": [],
     "cardUseSavedResets": [],
     "closeYourFirstMate": ["sentence"],
@@ -90732,6 +90936,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateProgress": [],
     "crewmateQueued": [],
     "crewmateReport": [],
+    "crewmateRoutedAgain": ["left", "model"],
     "crewmateRunning": [],
     "crewmateSendsTo": [],
     "crewmateShowCard": [],
@@ -90742,6 +90947,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateStopping": [],
     "crewmateUnreadable": [],
     "crewmateWaiting": [],
+    "crewmateWaitsForModel": ["left"],
+    "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
@@ -91005,6 +91212,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
+    "panelReadsSettings": [],
     "panelRetry": [],
     "panelSaidLineOpen": ["panelTitle"],
     "panelSettingsAppearance": [],
@@ -92213,6 +92421,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsRunbooksMakeYourOwn": [],
     "settingsRunbooksOpenFailed": [],
     "settingsRunbooksOpenFolder": [],
+    "settingsRunbooksPanels": ["panels"],
     "settingsRunbooksView": [],
     "settingsRunbooksViewLabel": ["name"],
     "settingsRunbooksYours": [],

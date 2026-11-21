@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-row-swipe-busy-app",
+      "reason": "Test-only repair of the phone card form journey: its swipe from the card's title is a press and drag from rest, which keeps its travel when a busy test run holds the app, with no app behavior change."
+    }
+  ]
+}

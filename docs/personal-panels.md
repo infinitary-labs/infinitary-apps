@@ -98,6 +98,9 @@ A missing figure is unknown, never zero and never a panel's own math.
 Render unknown as unavailable, never zero usage or spare capacity.
 The values are physical-system facts rather than process limits or scheduling capacity, and must not be written into the panel store as live history.
 
+`batches.list` reads each project on batched pull requests from the app's own record: its line, its open batch with the checks the batch pass last read, the changes left out and the batches that ended in the last day (`PanelBatchRepo`; `docs/forge.md`, "The Batches panel").
+A panel declares it like any read; nothing in it asks where the project lives.
+
 `tasks.detail` (FI3-1014 piece 4) reads one task in full by the id the board gave it, `reads.subscribe("tasks.detail", { id }, listener)`: its row, brief, latest report, and while Drop task applies the `dropEffects` a drop sends back as its review.
 `tasks.search` (piece 7) is the app's own search over every task, closed ones included, `reads.subscribe("tasks.search", { query }, listener)`: the rows it found, so a panel's Find reaches done and dropped work the board no longer lists, and the panel may open and point at what it found.
 A live work row also says which of the six moves it allows now and why not (`PanelTaskRow.moves`), and whether its waiting card merges (`waitingCardMerges`); a panel that asked for `moves` makes one with `tasks.run` on the captain's click or key, and a panel that reads the board points at tasks with `point` and sees what the captain has open in `view` (`docs/ui-plugins.md`, "A panel's cards").

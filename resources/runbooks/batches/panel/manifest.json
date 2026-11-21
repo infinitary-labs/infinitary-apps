@@ -1,0 +1,21 @@
+{
+  "api": 1,
+  "title": "Batches",
+  "placement": { "x": "right", "y": "bottom" },
+  "order": 15,
+  "size": "content",
+  "presence": { "code": true },
+  "reads": ["batches.list", "tasks.board"],
+  "cards": {
+    "details": { "view": "details", "title": "Batches", "width": "wide" }
+  },
+  "header": [{ "id": "open", "icon": "open", "label": "Show your batches", "emits": "details" }],
+  "commands": [
+    {
+      "id": "open",
+      "label": "Show your batches",
+      "emits": "details",
+      "words": ["batch", "merge", "pull", "request", "held", "waiting"]
+    }
+  ]
+}

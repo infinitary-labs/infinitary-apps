@@ -21,8 +21,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-/** Where the check reads: the window and the app's own panels, where stylesheets live. */
-const ROOTS = ["src/renderer/src/", "src/panels/"];
+/** Where the check reads: the window, the app's own panels and the built-in runbooks' panels, where stylesheets live. */
+const ROOTS = ["src/renderer/src/", "src/panels/", "resources/runbooks/"];
 /** The developer-only gallery of the design's parts. */
 const NOT_SHOWN = /^src\/renderer\/src\/design\/fixtures\//;
 const WAIVER = /physical:\s*\S/;

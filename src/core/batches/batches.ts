@@ -4,6 +4,7 @@ import {
   BATCH_STATUS_WORDS,
   type BatchAnswer,
   type BatchChange,
+  type BatchChecksReading,
   type BatchMember,
   type BatchRecord,
   type BatchSendBack,
@@ -16,7 +17,12 @@ import {
   type OpenBatch,
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
-import { checkSnapshotSummary, checksThatRan, isRedCheckState } from "@shared/checkSnapshot";
+import {
+  type CheckItem,
+  checkSnapshotSummary,
+  checksThatRan,
+  isRedCheckState,
+} from "@shared/checkSnapshot";
 import { formatList, formatTime } from "@shared/i18n/format";
 import { englishOf, type Said, said, wordSaid } from "@shared/i18n/said";
 import type { RepoView } from "@shared/repos";
@@ -51,6 +57,7 @@ import {
 } from "./combine";
 import { type BatchLimits, batchDescription, batchList } from "./description";
 import {
+  abandoned,
   awaitedJoins,
   batchStatus,
   carried,
@@ -277,6 +284,11 @@ export type BatchesOptions = {
   held: (held: BatchHeld) => void;
   /** A line for the Activity feed, as a fact so it follows the language. */
   note: (fact: Said) => void;
+  /**
+   * The open batch's checks reading changed (`checksReading`): the Batches
+   * panel reads the project again. Absent, nobody hears it.
+   */
+  checksRead?: (repoId: string) => void;
   taskNote: (taskId: string, text: string) => void;
   combine?: (input: CombineInput) => Promise<Combined>;
   push?: typeof pushBatch;
@@ -319,8 +331,41 @@ export class Batches {
   private readonly described = new Map<string, string>();
   /** The changes of each project whose missing story this run already said, by task and version. */
   private readonly storyless = new Map<string, Set<string>>();
+  /**
+   * Each project's open batch's checks as the last pass read them, by
+   * project, kept in memory alone: after a restart the next pass reads them.
+   */
+  private readonly readings = new Map<string, BatchChecksReading>();
 
   constructor(private readonly options: BatchesOptions) {}
+
+  /** The open batch's checks as last read at its version; undefined before the first reading. */
+  checksReading(repoId: string): BatchChecksReading | undefined {
+    const reading = this.readings.get(repoId);
+    return reading && reading.head === this.record(repoId).open?.head ? reading : undefined;
+  }
+
+  /** Keeps a pass's reading of the open batch's checks, and says so only when it changed. */
+  private read(repoId: string, head: string, items: readonly CheckItem[]): void {
+    const failed = items.filter((item) => isRedCheckState(item.state));
+    const running = items.filter((item) => item.state === "pending").length;
+    const reading: BatchChecksReading = {
+      head,
+      at: this.options.now(),
+      passed: items.length - failed.length - running,
+      failed: failed.length,
+      running,
+      failedNames: failed.map((item) => item.name),
+    };
+    const before = this.readings.get(repoId);
+    this.readings.set(repoId, reading);
+    const { at: _at, ...now } = reading;
+    if (before) {
+      const { at: _then, ...then } = before;
+      if (JSON.stringify(then) === JSON.stringify(now)) return;
+    }
+    this.options.checksRead?.(repoId);
+  }
 
   record(repoId: string): BatchRecord {
     return this.options.repos.get(repoId)?.batch ?? EMPTY_BATCH_RECORD;
@@ -724,7 +769,7 @@ export class Batches {
     if (pull.state === "closed") {
       // Closed where the project lives without a merge: the changes go back in line.
       await forge.deleteBranch?.(open.branch).catch(() => {});
-      return this.save(repo.id, reopened(record));
+      return this.save(repo.id, reopened(record, this.options.now()));
     }
     // A comment reading that fails is read again on a later pass; the batch goes on.
     await this.options.comments?.({ repo, open, pull, forge }).catch((caught: unknown) => {
@@ -816,6 +861,7 @@ export class Batches {
       ),
     });
     const failed = items.filter((item) => isRedCheckState(item.state));
+    this.read(repo.id, open.head, items);
     if (summary.overall === "red") {
       const never = notRun(checks);
       const held = hold(record, {
@@ -1116,8 +1162,7 @@ export class Batches {
         url: open.url ?? null,
       });
     await forge.deleteBranch?.(open.branch).catch(() => {});
-    const { open: _open, ...rest } = unfixed(record, []);
-    return this.save(repo.id, rest);
+    return this.save(repo.id, abandoned(unfixed(record, []), this.options.now()));
   }
 
   /**
@@ -1430,6 +1475,8 @@ export class Batches {
   }
 
   private save(repoId: string, record: BatchRecord): BatchRecord {
+    // A batch that ended takes its checks reading with it.
+    if (!record.open && this.readings.delete(repoId)) this.options.checksRead?.(repoId);
     this.options.repos.recordBatch(repoId, record);
     return record;
   }

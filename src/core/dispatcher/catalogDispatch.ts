@@ -32,7 +32,7 @@ import type { Layout } from "@shared/preferences";
 import type { RepoPolicyPatch, RepoSetupResult, RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { devicePlace } from "@shared/signIns";
-import type { AppPanelGates } from "@shared/surfaces";
+import { type AppPanelGates, runbookGatesOf } from "@shared/surfaces";
 import { addedPrivateSite } from "../browser/privateSites";
 import type { CoreServices } from "../coreServices";
 import { actionValue } from "../pi/appTools";
@@ -43,12 +43,14 @@ import type { createActionTrail } from "./actionTrail";
 
 /**
  * The gates open now, for the app panels that wait on one: Knowledge's while
- * this build keeps knowledge and there is some to show.
+ * this build keeps knowledge and there is some to show, Automation's while a
+ * rule is saved, and a built-in runbook's while it is on.
  */
 function gatesOf(services: CoreServices): AppPanelGates {
   return {
     knowledge: services.knowledge?.held() ?? false,
     automation: services.scheduler.rules().length > 0,
+    ...runbookGatesOf(services.runbooks.list()),
   };
 }
 

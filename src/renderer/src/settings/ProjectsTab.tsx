@@ -124,6 +124,9 @@ function moveTargets(
     .map(({ id, key, name }) => ({ id, key, name }));
 }
 
+/** The Settings item that opens a repository's page at its held batch (`HELD_BATCH_ITEM` + its id). */
+export const HELD_BATCH_ITEM = "batch:";
+
 /** The list line an entry is drawn as, which focus goes back to from its page. */
 function lineId(entry: ProjectEntry): string {
   return entry.kind === "several" ? entry.project.key : entry.repo.id;
@@ -138,6 +141,7 @@ export function ProjectsTab() {
   // The confirmation for a repository just added from the page.
   const [notice, setNotice] = useState<string | null>(null);
   const focusLine = useRef<string | null>(null);
+  const focusHold = useRef<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const pending = useRef(new Map<string, RepoPolicyPatch>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -277,12 +281,30 @@ export function ProjectsTab() {
   );
   useEffect(() => {
     if (arrival === null || repos.length === 0) return;
-    const project = projects.find((one) => one.id === arrival || one.key === arrival);
-    const target = pageEntry(entries, { project: project?.id ?? null, repo: arrival });
+    // `batch:<repository>` opens that repository's page at its held batch (the Batches panel).
+    const heldBatch = arrival.startsWith(HELD_BATCH_ITEM)
+      ? arrival.slice(HELD_BATCH_ITEM.length)
+      : null;
+    const named = heldBatch ?? arrival;
+    const project = projects.find((one) => one.id === named || one.key === named);
+    const target = pageEntry(entries, { project: project?.id ?? null, repo: named });
     // The projects may still be unread: a project's id waits for them.
     if (!target && projects.length === 0) return;
     useShellStore.getState().clearSettingsItem();
-    if (target) open({ project: target.entry.project?.id ?? null, repo: target.chosen.id });
+    if (!target) return;
+    focusHold.current = heldBatch;
+    open({ project: target.entry.project?.id ?? null, repo: target.chosen.id });
+  });
+  // The held batch a panel named, once its page shows it: its first answer takes the keyboard.
+  useEffect(() => {
+    const id = focusHold.current;
+    if (!id || !shown) return;
+    const button = document.querySelector<HTMLButtonElement>(
+      `[data-batch-hold="${CSS.escape(id)}"] button`,
+    );
+    if (!button) return;
+    focusHold.current = null;
+    button.focus();
   });
   // A page whose project is gone (its last repository removed) gives way to the list.
   useEffect(() => {

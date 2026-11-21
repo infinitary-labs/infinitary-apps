@@ -814,6 +814,8 @@ export async function createServices(
     }),
     firstmate: () => firstmateForSeat,
     note: (fact) => broadcastEvent({ type: "firstmate_note", ...saidLine(fact) }),
+    // The Batches panel reads the project again (docs/forge.md, "The Batches panel").
+    checksRead: (repoId) => broadcastEvent({ type: "batch_checks", repoId }),
     namingRule,
     git: {
       push: async (input) => {
@@ -848,6 +850,9 @@ export async function createServices(
   });
   // A project's batch changed (docs/forge.md, "Batches of your own"): Settings reads it again.
   repos.onBatch((repo) => broadcastEvent({ type: "repo_batch", repoId: repo.id }));
+  // Which runbooks are on may have changed: a window reads them again for the
+  // panels a built-in runbook shows (docs/runbooks.md, "Panels").
+  runbooks.subscribe(() => broadcastEvent({ type: "runbooks_changed" }));
   // The app started or ended a project's no-checks record (docs/forge.md, "A
   // project with no checks"): one Activity line, and Settings reads it again.
   repos.onNoChecks((repo, change) => {

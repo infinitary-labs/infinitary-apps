@@ -99,6 +99,134 @@
       <string>%1$ld Ereignisse, %2$@</string>
     </dict>
   </dict>
+  <key>batchesPanelBatchTitle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Bündel #%2$@ · %1$ld Änderung</string>
+      <key>other</key>
+      <string>Bündel #%2$@ · %1$ld Änderungen</string>
+    </dict>
+  </dict>
+  <key>batchesPanelFailed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld fehlgeschlagen: %2$@</string>
+      <key>other</key>
+      <string>%1$ld fehlgeschlagen, zuerst %2$@</string>
+    </dict>
+  </dict>
+  <key>batchesPanelLeftOutCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld ausgelassen</string>
+      <key>other</key>
+      <string>%1$ld ausgelassen</string>
+    </dict>
+  </dict>
+  <key>batchesPanelMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Min.</string>
+      <key>other</key>
+      <string>%1$ld Min.</string>
+    </dict>
+  </dict>
+  <key>batchesPanelMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>+%1$ld weitere</string>
+      <key>other</key>
+      <string>+%1$ld weitere</string>
+    </dict>
+  </dict>
+  <key>batchesPanelNewBatchTitle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Neues Bündel · %1$ld Änderung</string>
+      <key>other</key>
+      <string>Neues Bündel · %1$ld Änderungen</string>
+    </dict>
+  </dict>
+  <key>batchesPanelWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Änderung wartet</string>
+      <key>other</key>
+      <string>%1$ld Änderungen warten</string>
+    </dict>
+  </dict>
+  <key>batchesPanelWaitingCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld wartet</string>
+      <key>other</key>
+      <string>%1$ld warten</string>
+    </dict>
+  </dict>
   <key>cardAfterMergeWait</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

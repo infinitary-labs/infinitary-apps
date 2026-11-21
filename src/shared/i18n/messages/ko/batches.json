@@ -1,0 +1,81 @@
+{
+  "batchesPanelAfter": "#{number} 다음",
+  "batchesPanelAnswer": "설정에서 답하기",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "other": "일괄 끌어오기 요청 #{number} · 변경 {count}개"
+  },
+  "batchesPanelChecking": "검사 중 {duration}",
+  "batchesPanelChecksFull": "검사: 통과 {passed}, 실패 {failed}, 실행 중 {running}, {time} 기준",
+  "batchesPanelChecksPassed": "검사 {total}개 중 {passed}개 통과",
+  "batchesPanelChecksUnread": "검사를 아직 읽지 않음",
+  "batchesPanelClosed": "닫힘",
+  "batchesPanelClosedNumber": "#{number} 닫힘",
+  "batchesPanelColumnBatch": "일괄 끌어오기 요청",
+  "batchesPanelColumnChanges": "변경",
+  "batchesPanelColumnEnded": "종료",
+  "batchesPanelColumnFormed": "생성",
+  "batchesPanelColumnHeld": "보류 횟수",
+  "batchesPanelColumnTook": "소요 시간",
+  "batchesPanelCombining": "묶는 중",
+  "batchesPanelEmpty": "이 프로젝트에 일괄 끌어오기 요청이 없어요",
+  "batchesPanelEndedTook": "{time} · {took} 걸림",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "other": "{count}개 실패, 첫 번째: {first}"
+  },
+  "batchesPanelFailedNames": "실패한 검사: {names}",
+  "batchesPanelFix": "수정: {keys}",
+  "batchesPanelHeld": "보류 중 {duration}",
+  "batchesPanelHoldChecks": "{time}부터 보류 중: 검사가 실패했어요",
+  "batchesPanelHoldMergeWay": "{time}부터 보류 중: 프로젝트의 병합 설정이 이 병합 방식을 거부해요",
+  "batchesPanelHoldRefused": "{time}부터 보류 중: 병합이 거부됐어요({detail})",
+  "batchesPanelHoldRules": "{time}부터 보류 중: 프로젝트의 분기 규칙이 병합을 거부해요",
+  "batchesPanelHours": "{hours}시간 {minutes}분",
+  "batchesPanelInQueue": "병합 대기열에 있음",
+  "batchesPanelLastDay": "최근 하루",
+  "batchesPanelLeftOut": "제외됨",
+  "batchesPanelLeftOutAhead": "{reason} ({key} 다음)",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "other": "{count}개 제외됨"
+  },
+  "batchesPanelListLabel": "대기 중이거나 제외된 변경",
+  "batchesPanelMembersLabel": "이 일괄 끌어오기 요청의 변경",
+  "batchesPanelMerged": "병합됨",
+  "batchesPanelMergedNumber": "#{number} 병합됨",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "other": "{count}분"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "other": "+{count}개 더"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "other": "새 일괄 끌어오기 요청 · 변경 {count}개"
+  },
+  "batchesPanelNext": "다음 {time}",
+  "batchesPanelOpening": "여는 중",
+  "batchesPanelStateChecking": "{time}부터 검사 중",
+  "batchesPanelStateCombining": "최신 기본 분기에서 변경을 다시 묶고 있어요",
+  "batchesPanelStateOpening": "일괄 끌어오기 요청을 여는 중이에요",
+  "batchesPanelStateQueue": "검사를 통과해 프로젝트의 병합 대기열에서 기다리고 있어요",
+  "batchesPanelTitle": "일괄 끌어오기 요청",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "other": "변경 {count}개 대기 중"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "other": "{count}개 대기 중"
+  },
+  "batchesPanelWaitingHeading": "대기 중",
+  "batchesPanelWaitsAfter": "{key}의 병합을 먼저 기다려요",
+  "batchesPanelWaitsBatch": "#{number} 다음 일괄 끌어오기 요청에 들어가요",
+  "batchesPanelWaitsFix": "보류된 일괄 끌어오기 요청에 수정으로 들어가요",
+  "batchesPanelWaitsGap": "{time}에 다음 일괄 끌어오기 요청에 들어가요",
+  "batchesPanelWaitsNow": "다음 일괄 끌어오기 요청에 들어가요",
+  "batchesReadWords": "승인된 변경을 묶은 일괄 끌어오기 요청"
+}

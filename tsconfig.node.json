@@ -37,6 +37,8 @@
     // The docs site's languages; its scripts and checks read them here (docs/docs-site.md, "Languages").
     "docs-site/languages.ts",
     "tests/**/*.ts",
+    // A built-in runbook panel's compiled words; its journey reads the words it expects there.
+    "resources/runbooks/*/panel/messages.generated.ts",
     // The card geometry is pure arithmetic the e2e specs read their layout
     // constants from (docs/testing.md, the e2e assertion contract). The crew
     // plane constants are pure too; the orbit e2e reads its capacity here.

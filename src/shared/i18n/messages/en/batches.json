@@ -1,0 +1,89 @@
+{
+  "batchesPanelAfter": "after #{number}",
+  "batchesPanelAnswer": "Answer in Settings",
+  "batchesPanelBatchTitle": {
+    "plural": "count",
+    "one": "Batch #{number} · {count} change",
+    "other": "Batch #{number} · {count} changes"
+  },
+  "batchesPanelChecking": "checking {duration}",
+  "batchesPanelChecksFull": "Checks: {passed} passed, {failed} failed, {running} running, as read at {time}",
+  "batchesPanelChecksPassed": "{passed} of {total} checks passed",
+  "batchesPanelChecksUnread": "checks not read yet",
+  "batchesPanelClosed": "closed",
+  "batchesPanelClosedNumber": "#{number} closed",
+  "batchesPanelColumnBatch": "Batch",
+  "batchesPanelColumnChanges": "Changes",
+  "batchesPanelColumnEnded": "Ended",
+  "batchesPanelColumnFormed": "Formed",
+  "batchesPanelColumnHeld": "Times held",
+  "batchesPanelColumnTook": "Took",
+  "batchesPanelCombining": "combining",
+  "batchesPanelEmpty": "No batches in this project",
+  "batchesPanelEndedTook": "{time} · took {took}",
+  "batchesPanelFailed": {
+    "plural": "count",
+    "one": "{count} failed: {first}",
+    "other": "{count} failed, first {first}"
+  },
+  "batchesPanelFailedNames": "Failed checks: {names}",
+  "batchesPanelFix": "fix {keys}",
+  "batchesPanelHeld": "held {duration}",
+  "batchesPanelHoldChecks": "Held since {time}: checks failed",
+  "batchesPanelHoldMergeWay": "Held since {time}: your project's merge settings refuse this way to merge",
+  "batchesPanelHoldRefused": "Held since {time}: the merge was refused ({detail})",
+  "batchesPanelHoldRules": "Held since {time}: your project's branch rules refuse the merge",
+  "batchesPanelHours": "{hours}h {minutes}m",
+  "batchesPanelInQueue": "in merge queue",
+  "batchesPanelLastDay": "Last day",
+  "batchesPanelLeftOut": "left out",
+  "batchesPanelLeftOutAhead": "{reason} (after {key})",
+  "batchesPanelLeftOutCount": {
+    "plural": "count",
+    "one": "{count} left out",
+    "other": "{count} left out"
+  },
+  "batchesPanelListLabel": "Changes waiting and left out",
+  "batchesPanelMembersLabel": "Changes in this batch",
+  "batchesPanelMerged": "merged",
+  "batchesPanelMergedNumber": "#{number} merged",
+  "batchesPanelMinutes": {
+    "plural": "count",
+    "one": "{count}m",
+    "other": "{count}m"
+  },
+  "batchesPanelMore": {
+    "plural": "count",
+    "one": "+{count} more",
+    "other": "+{count} more"
+  },
+  "batchesPanelNewBatchTitle": {
+    "plural": "count",
+    "one": "New batch · {count} change",
+    "other": "New batch · {count} changes"
+  },
+  "batchesPanelNext": "next {time}",
+  "batchesPanelOpening": "opening",
+  "batchesPanelStateChecking": "Checking since {time}",
+  "batchesPanelStateCombining": "Combining the changes again on the newest main branch",
+  "batchesPanelStateOpening": "Opening the batch's pull request",
+  "batchesPanelStateQueue": "Passed its checks and waiting in your project's merge queue",
+  "batchesPanelTitle": "Batches",
+  "batchesPanelWaiting": {
+    "plural": "count",
+    "one": "{count} change waiting",
+    "other": "{count} changes waiting"
+  },
+  "batchesPanelWaitingCount": {
+    "plural": "count",
+    "one": "{count} waiting",
+    "other": "{count} waiting"
+  },
+  "batchesPanelWaitingHeading": "waiting",
+  "batchesPanelWaitsAfter": "Waits for {key} to merge first",
+  "batchesPanelWaitsBatch": "Joins the batch after #{number}",
+  "batchesPanelWaitsFix": "Joins the held batch as its fix",
+  "batchesPanelWaitsGap": "Joins the next batch at {time}",
+  "batchesPanelWaitsNow": "Joins the next batch",
+  "batchesReadWords": "your batches of approved changes"
+}

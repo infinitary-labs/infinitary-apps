@@ -147,6 +147,198 @@
       <string>%1$ld حدث، %2$@</string>
     </dict>
   </dict>
+  <key>batchesPanelBatchTitle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+      <key>one</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+      <key>two</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+      <key>few</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+      <key>many</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+      <key>other</key>
+      <string>الدفعة #%2$@ · التغييرات: %1$ld</string>
+    </dict>
+  </dict>
+  <key>batchesPanelFailed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>فشل %1$ld، أولها %2$@</string>
+      <key>one</key>
+      <string>فشل %1$ld: %2$@</string>
+      <key>two</key>
+      <string>فشل %1$ld، أولها %2$@</string>
+      <key>few</key>
+      <string>فشل %1$ld، أولها %2$@</string>
+      <key>many</key>
+      <string>فشل %1$ld، أولها %2$@</string>
+      <key>other</key>
+      <string>فشل %1$ld، أولها %2$@</string>
+    </dict>
+  </dict>
+  <key>batchesPanelLeftOutCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>المستبعدة: %1$ld</string>
+      <key>one</key>
+      <string>المستبعدة: %1$ld</string>
+      <key>two</key>
+      <string>المستبعدة: %1$ld</string>
+      <key>few</key>
+      <string>المستبعدة: %1$ld</string>
+      <key>many</key>
+      <string>المستبعدة: %1$ld</string>
+      <key>other</key>
+      <string>المستبعدة: %1$ld</string>
+    </dict>
+  </dict>
+  <key>batchesPanelMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld د</string>
+      <key>one</key>
+      <string>%1$ld د</string>
+      <key>two</key>
+      <string>%1$ld د</string>
+      <key>few</key>
+      <string>%1$ld د</string>
+      <key>many</key>
+      <string>%1$ld د</string>
+      <key>other</key>
+      <string>%1$ld د</string>
+    </dict>
+  </dict>
+  <key>batchesPanelMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>+%1$ld أخرى</string>
+      <key>one</key>
+      <string>+%1$ld أخرى</string>
+      <key>two</key>
+      <string>+%1$ld أخرى</string>
+      <key>few</key>
+      <string>+%1$ld أخرى</string>
+      <key>many</key>
+      <string>+%1$ld أخرى</string>
+      <key>other</key>
+      <string>+%1$ld أخرى</string>
+    </dict>
+  </dict>
+  <key>batchesPanelNewBatchTitle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+      <key>one</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+      <key>two</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+      <key>few</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+      <key>many</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+      <key>other</key>
+      <string>دفعة جديدة · التغييرات: %1$ld</string>
+    </dict>
+  </dict>
+  <key>batchesPanelWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+      <key>one</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+      <key>two</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+      <key>few</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+      <key>many</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+      <key>other</key>
+      <string>تغييرات منتظرة: %1$ld</string>
+    </dict>
+  </dict>
+  <key>batchesPanelWaitingCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>المنتظرة: %1$ld</string>
+      <key>one</key>
+      <string>المنتظرة: %1$ld</string>
+      <key>two</key>
+      <string>المنتظرة: %1$ld</string>
+      <key>few</key>
+      <string>المنتظرة: %1$ld</string>
+      <key>many</key>
+      <string>المنتظرة: %1$ld</string>
+      <key>other</key>
+      <string>المنتظرة: %1$ld</string>
+    </dict>
+  </dict>
   <key>cardAfterMergeWait</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

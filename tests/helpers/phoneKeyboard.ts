@@ -169,6 +169,65 @@ export function phoneKeyOutcome(
   };
 }
 
+type KeyRecord = { processImagePath?: string; eventMessage?: string; timestamp?: string };
+
+/**
+ * INF-5183's key witness reads the owned subscription as well as the kept log. In phone run 44860960513 the
+ * subscription held backboardd's line for the open Duo's Escape 5 ms after the press, while the simulator started a
+ * dozen wallpaper extensions and ten seconds of kept-log reads passed without it, so the key read as unknown. A live
+ * subscription can drop a line its simulator kept (INF-1799), so the kept log is still read inside the press's own
+ * window, and the first source that names a key for the press answers. The two are never added together, since one
+ * line read from both would count as two presses.
+ */
+export class PhoneKeyEvents {
+  private records: KeyRecord[] = [];
+  private listeners = new Set<() => void>();
+  private readonly recover: (since: number, signal: AbortSignal) => Promise<object[]>;
+
+  constructor(recover: (since: number, signal: AbortSignal) => Promise<object[]>) {
+    this.recover = recover;
+  }
+
+  receive(record: KeyRecord) {
+    if (basename(record.processImagePath ?? "") !== "backboardd") return;
+    if (!(record.eventMessage ?? "").startsWith(KEY_EVENT_PREFIX)) return;
+    this.records.push(record);
+    for (const notify of this.listeners) notify();
+  }
+
+  /**
+   * Where the key pressed between `since` and `until` went, answered by `deadline`: the subscription's lines for the
+   * press, else the kept log's, read until a subscription line names the press or the window ends. A kept-log read
+   * the window ended is unknown; one that fails for another reason still fails.
+   */
+  async outcome(
+    pid: number,
+    since: number,
+    until: number,
+    deadline: number,
+  ): Promise<PhoneKeyOutcome> {
+    const heard = () => phoneKeyOutcome(this.records, pid, since, until);
+    const left = deadline - Date.now();
+    if (heard().proof.length || left <= 0) return heard();
+    const ended = AbortSignal.timeout(left);
+    const answered = new AbortController();
+    const check = () => {
+      if (heard().proof.length) answered.abort();
+    };
+    this.listeners.add(check);
+    try {
+      const kept = await this.recover(since, AbortSignal.any([ended, answered.signal]));
+      const live = heard();
+      return live.proof.length ? live : phoneKeyOutcome(kept, pid, since, until);
+    } catch (error) {
+      if (!answered.signal.aborted && !ended.aborted) throw error;
+      return heard();
+    } finally {
+      this.listeners.delete(check);
+    }
+  }
+}
+
 /**
  * INF-1477 (the captain's choice "Allow a proven second tap"): XCTest gives each synthesized tap a virtual
  * touch screen of its own. When a starved simulator's backboardd cannot read that screen's properties in
@@ -882,6 +941,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   const touches = new PhoneTouchOutcomes((since, signal) => keptPhoneLog(options, since, signal));
   const previews = new PhonePickerPreviews((since, signal) => keptPhoneLog(options, since, signal));
   const displays = new PhoneDisplayChanges((since) => keptPhoneLog(options, since));
+  const keys = new PhoneKeyEvents((since, signal) => keptPhoneLog(options, since, signal));
   const child = spawn(
     "xcrun",
     [
@@ -978,6 +1038,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
           touches.receive(record);
           previews.receive(record);
           displays.receive(record);
+          keys.receive(record);
         } catch {
           /* Non-record log diagnostics are not witnesses. */
         }
@@ -990,20 +1051,10 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   return {
     wait: (pid: number, chord: PhoneChord) => registrations.wait(pid, chord),
     touch: (since: number) => touches.outcome(since),
-    // INF-5183: a key's outcome is read from the kept log, and the read ends when the press's own window does,
-    // `deadline`, never at the kept log's own minute: a key the log has not named by then is unknown, and the
-    // journey's request for it is still waiting to hear so. A read that fails for another reason still fails.
-    keyOutcome: async (pid: number, since: number, until: number, deadline: number) => {
-      const left = deadline - Date.now();
-      if (left <= 0) return phoneKeyOutcome([], pid, since, until);
-      const ended = AbortSignal.timeout(left);
-      try {
-        return phoneKeyOutcome(await keptPhoneLog(options, since, ended), pid, since, until);
-      } catch (error) {
-        if (!ended.aborted) throw error;
-        return phoneKeyOutcome([], pid, since, until);
-      }
-    },
+    // INF-5183: a key's outcome is read from this subscription and the kept log, and the kept log's read ends when
+    // the press's own window does, `deadline`, never at the kept log's own minute (`PhoneKeyEvents`).
+    keyOutcome: (pid: number, since: number, until: number, deadline: number) =>
+      keys.outcome(pid, since, until, deadline),
     preview: (since: number) => previews.preview(since),
     previewLine: (line: string) => previews.receiveLine(line),
     appearance: (since: number, style: "light" | "dark", until?: number) =>

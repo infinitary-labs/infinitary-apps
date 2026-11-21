@@ -1093,7 +1093,7 @@
   {"said":{"m":"panelChangeNotAsked"},"words":"Only your own click or key press in this panel changes a setting, one change each time. Nothing was changed."},
   {"said":{"m":"panelChangeNotGranted","a":{"setting":"‹setting›"}},"words":"This panel may not change ‹setting›. Nothing was changed."},
   {"said":{"m":"panelChangeNotifications"},"words":"Notifications"},
-  {"said":{"m":"panelChangeOrigin"},"words":"A panel never changes where a project's code is pushed. Nothing was changed."},
+  {"said":{"m":"panelChangeOrigin"},"words":"A panel never changes where a project's code lives or where it is pushed. Nothing was changed."},
   {"said":{"m":"panelChangePanel"},"words":"Where panels sit"},
   {"said":{"m":"panelChangePanelCollapse"},"words":"Fold or open a panel"},
   {"said":{"m":"panelChangePersonalResources"},"words":"Your personal resources"},

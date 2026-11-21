@@ -5,6 +5,9 @@ import type { CoreDispatch } from "../dispatcher";
 import { actionRequest } from "../pi/appTools";
 import { errorText } from "./errorText";
 
+/** The project fields that say where its code lives or goes, never a panel's to change. */
+const PLACE_FIELDS = ["origin", "path", "contributionDestination"] as const;
+
 /** What a panel's settings change answers (`inf:plugins:settings:change`). */
 export type PanelChangeAnswer = { ok: true } | { ok: false; text: string };
 
@@ -28,10 +31,12 @@ export async function panelChange(
   const panel = isPanelChange(action) ? grantOf(extensionId, action) : null;
   if (!isPanelChange(action) || panel === null)
     return refused(englishOf(said("panelChangeNotGranted", { setting: action })));
-  // Where a project's code goes stays on the app's exact-change card.
+  // Where a project's code lives and where it is pushed stay on the app's
+  // exact-change card: its folder, its git address, and whether new work goes
+  // to the original project or a fork.
   if (action === "project-settings") {
     const changes = (value as { changes?: unknown }).changes;
-    if (changes && typeof changes === "object" && "origin" in changes)
+    if (changes && typeof changes === "object" && PLACE_FIELDS.some((field) => field in changes))
       return refused(englishOf(said("panelChangeOrigin")));
   }
   const actor = { kind: "captain", panel } as const;

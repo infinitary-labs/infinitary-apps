@@ -1729,12 +1729,29 @@ describe("the core, driven with no Electron in the process", () => {
       expect(malformed.ok).toBe(false);
       expect((await core.dispatch("inf:settings:appearance:get", [])).theme).toBe(other);
 
+      // Granted project settings still never move where a project's code
+      // lives or is pushed: its folder, its git address, or upstream or fork.
+      const at = join(folder, "manifest.json");
+      const manifest = JSON.parse(readFileSync(at, "utf8"));
+      const project = ["theme", "window-size", "project-settings"];
+      writeFileSync(at, JSON.stringify({ ...manifest, actions: project }));
+      await expect.poll(granted, { timeout: 30_000 }).toEqual(project);
+      const repo = (await core.dispatch("inf:repos:list", []))[0];
+      const elsewhere = join(core.paths.personalWorkspaceDir, "elsewhere");
+      for (const changes of [
+        { origin: elsewhere },
+        { path: elsewhere },
+        { contributionDestination: "fork" },
+      ]) {
+        const value = { repoId: repo?.id ?? "no-project", changes };
+        expect(
+          await core.dispatch("inf:plugins:settings:change", ["look", "project-settings", value]),
+        ).toEqual({ ok: false, text: englishOf(said("panelChangeOrigin")) });
+      }
+      expect((await core.dispatch("inf:repos:list", []))[0]).toEqual(repo);
+
       // The grant taken out of the manifest: the next change is refused.
-      const manifest = JSON.parse(readFileSync(join(folder, "manifest.json"), "utf8"));
-      writeFileSync(
-        join(folder, "manifest.json"),
-        JSON.stringify({ ...manifest, actions: ["window-size"] }),
-      );
+      writeFileSync(at, JSON.stringify({ ...manifest, actions: ["window-size"] }));
       await expect.poll(granted, { timeout: 30_000 }).toEqual(["window-size"]);
       expect(
         (await core.dispatch("inf:plugins:settings:change", ["look", "theme", before])).ok,

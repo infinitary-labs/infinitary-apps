@@ -174,7 +174,7 @@ function usePage(
   const server = content.server === true;
   const version = versionOf(content);
   const reads = content.reads.join(",");
-  const changes = (content.actions ?? []).join(",");
+  const changes = useChanges(content).join(",");
   return useMemo(() => {
     // Only the captain's own panel on its rail answers how its body fared.
     const onBody =
@@ -211,6 +211,16 @@ function usePage(
   ]);
 }
 
+/**
+ * The settings a page may change: its grant, only in the window of the
+ * computer holding the first mate, since the change reaches no other
+ * (docs/ui-plugins.md, "Changing settings"); a view of another one gets none.
+ */
+function useChanges(content: FramedPanelContent): readonly string[] {
+  const view = useShellStore((s) => s.thisMac?.role === "view");
+  return view ? [] : (content.actions ?? []);
+}
+
 /** The frame config's reads and views, and the controller's, from a content's lists. */
 function useGrants(content: FramedPanelContent) {
   const readsKey = content.reads.join(",");
@@ -236,7 +246,7 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
   const version = versionOf(content);
   const grants = useGrants(content);
   const moves = content.moves;
-  const settings = (content.actions?.length ?? 0) > 0;
+  const settings = useChanges(content).length > 0;
   const server = content.server === true;
   const source = content.code.source;
   const draft = content.draft === true;
@@ -384,7 +394,7 @@ function FramedCard({
   const cardId = card.id;
   const cardView = card.view;
   const moves = content.moves;
-  const settings = (content.actions?.length ?? 0) > 0;
+  const settings = useChanges(content).length > 0;
   const server = content.server === true;
   const panel = useMemo(
     () => ({

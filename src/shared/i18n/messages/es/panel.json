@@ -39,7 +39,7 @@
   "panelChangeNotAsked": "Solo tu propio clic o pulsación de tecla en este panel cambia un ajuste, un cambio cada vez. No se cambió nada.",
   "panelChangeNotGranted": "Este panel no puede cambiar {setting}. No se cambió nada.",
   "panelChangeNotifications": "Notificaciones",
-  "panelChangeOrigin": "Un panel nunca cambia adónde se envía el código de un proyecto. No se cambió nada.",
+  "panelChangeOrigin": "Un panel nunca cambia dónde está el código de un proyecto ni adónde se envía. No se cambió nada.",
   "panelChangePanel": "Dónde están los paneles",
   "panelChangePanelCollapse": "Plegar o abrir un panel",
   "panelChangePersonalResources": "Tus recursos personales",

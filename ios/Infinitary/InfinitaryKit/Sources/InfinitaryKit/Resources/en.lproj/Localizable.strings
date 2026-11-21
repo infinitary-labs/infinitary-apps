@@ -1331,7 +1331,7 @@
 "panelChangeNotAsked" = "Only your own click or key press in this panel changes a setting, one change each time. Nothing was changed.";
 "panelChangeNotGranted" = "This panel may not change %1$@. Nothing was changed.";
 "panelChangeNotifications" = "Notifications";
-"panelChangeOrigin" = "A panel never changes where a project's code is pushed. Nothing was changed.";
+"panelChangeOrigin" = "A panel never changes where a project's code lives or where it is pushed. Nothing was changed.";
 "panelChangePanel" = "Where panels sit";
 "panelChangePanelCollapse" = "Fold or open a panel";
 "panelChangePersonalResources" = "Your personal resources";

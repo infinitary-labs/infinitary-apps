@@ -245,6 +245,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("repo_runs_on"),
     actor: z.enum(["captain", "firstmate"]).optional(),
+    /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+    panel: z.string().optional(),
     repoId: z.string(),
     name: z.string(),
     runsOn: z.string().nullable(),

@@ -2,7 +2,15 @@ import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { deviceJoinedLine } from "./devices";
 import type { FmEvent } from "./events";
-import { englishOf, type Said, type SaidPart, said, saidPart, saidSchema } from "./i18n/said";
+import {
+  englishOf,
+  type Said,
+  type SaidPart,
+  said,
+  saidPart,
+  saidPartSchema,
+  saidSchema,
+} from "./i18n/said";
 import { FIRSTMATE_SESSION_ID } from "./observe";
 import { plainProblem } from "./plainProblem";
 import { withoutIntentLead } from "./rigor";
@@ -108,6 +116,22 @@ function isFeedEvent(event: FmEvent): event is FeedEvent {
   return feedTypes.has(event.type);
 }
 
+/**
+ * A whole line the captain's change in a panel made, led by who and the panel
+ * (docs/ui-plugins.md, "Changing settings"): its fact worded where it is shown
+ * when it is one level deep, else its English.
+ */
+function inPanel(panel: string, text: string, fact?: Said): Omit<FeedLine, "at"> {
+  const part = fact ? saidPartSchema.safeParse(fact) : null;
+  return line(
+    "info",
+    said("feedCaptainSetInPanel", {
+      text: part?.success ? part.data : text || (fact ? englishOf(fact) : ""),
+      panel,
+    }),
+  );
+}
+
 /** Who set a project's fact, as a line's lead ("Captain · "); none when the app did. */
 function byWho(actor: string | undefined, panel?: string): string | SaidPart {
   return actor === "captain"
@@ -201,6 +225,8 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       // The standing rigor is named only when the repository declares one
       // (delivery rigor phase 3); a derived rigor is the default and says
       // nothing here.
+      if (event.panel && (event.said || event.description))
+        return inPanel(event.panel, event.description ?? "", event.said);
       if (event.said)
         return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
       if (event.description) return { kind: "info", text: event.description };
@@ -221,6 +247,7 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       );
     }
     case "repo_runs_on":
+      if (event.panel) return inPanel(event.panel, event.text, event.said);
       return { kind: "info", text: event.text, ...(event.said ? { said: event.said } : {}) };
     case "repo_unregistered":
       return line(

@@ -1331,7 +1331,7 @@
 "panelChangeNotAsked" = "لا يغيّر إعدادًا إلا نقرك أو ضغطك مفتاحًا بنفسك في هذه اللوحة، تغييرًا واحدًا في كل مرة. لم يتغير شيء.";
 "panelChangeNotGranted" = "لا يمكن لهذه اللوحة تغيير %1$@. لم يتغير شيء.";
 "panelChangeNotifications" = "الإشعارات";
-"panelChangeOrigin" = "لا تغيّر اللوحة أبدًا المكان الذي يُدفع إليه رمز مشروع. لم يتغير شيء.";
+"panelChangeOrigin" = "لا تغيّر اللوحة أبدًا مكان رمز المشروع أو المكان الذي يُدفع إليه. لم يتغير شيء.";
 "panelChangePanel" = "أماكن اللوحات";
 "panelChangePanelCollapse" = "طي لوحة أو فتحها";
 "panelChangePersonalResources" = "مواردك الشخصية";

@@ -1331,7 +1331,7 @@
 "panelChangeNotAsked" = "Nur dein eigener Klick oder Tastendruck in diesem Panel ändert eine Einstellung, jeweils eine Änderung. Nichts wurde geändert.";
 "panelChangeNotGranted" = "Dieses Panel darf %1$@ nicht ändern. Nichts wurde geändert.";
 "panelChangeNotifications" = "Mitteilungen";
-"panelChangeOrigin" = "Ein Panel ändert nie, wohin der Code eines Projekts gepusht wird. Nichts wurde geändert.";
+"panelChangeOrigin" = "Ein Panel ändert nie, wo der Code eines Projekts liegt oder wohin er gepusht wird. Nichts wurde geändert.";
 "panelChangePanel" = "Wo Panels sitzen";
 "panelChangePanelCollapse" = "Panel ein- oder ausklappen";
 "panelChangePersonalResources" = "Deine persönlichen Ressourcen";

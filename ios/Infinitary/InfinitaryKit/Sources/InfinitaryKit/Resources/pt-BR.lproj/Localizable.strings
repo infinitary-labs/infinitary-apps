@@ -1331,7 +1331,7 @@
 "panelChangeNotAsked" = "Só o seu próprio clique ou tecla neste painel altera uma configuração, uma alteração por vez. Nada foi alterado.";
 "panelChangeNotGranted" = "Este painel não pode alterar %1$@. Nada foi alterado.";
 "panelChangeNotifications" = "Notificações";
-"panelChangeOrigin" = "Um painel nunca altera para onde o código de um projeto é enviado. Nada foi alterado.";
+"panelChangeOrigin" = "Um painel nunca altera onde fica o código de um projeto nem para onde ele é enviado. Nada foi alterado.";
 "panelChangePanel" = "Onde ficam os painéis";
 "panelChangePanelCollapse" = "Recolher ou abrir um painel";
 "panelChangePersonalResources" = "Seus recursos pessoais";

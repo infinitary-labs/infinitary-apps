@@ -82417,6 +82417,9 @@
                                     "firstmate"
                                   ]
                                 },
+                                "panel": {
+                                  "type": "string"
+                                },
                                 "repoId": {
                                   "type": "string"
                                 },
@@ -86846,6 +86849,9 @@
                   "captain",
                   "firstmate"
                 ]
+              },
+              "panel": {
+                "type": "string"
               },
               "repoId": {
                 "type": "string"

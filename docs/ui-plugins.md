@@ -633,7 +633,7 @@ A panel with the grant gets `PanelProps.settings.change(action, value)` (`panelS
 A change counts only from the captain's click or key in the page, gated as a task move is, and one press makes one change: a change with no press since the panel's last one answers "Only your own click or key press in this panel changes a setting, one change each time.
 Nothing was changed.", and nothing is written.
 The core reads the grant again on every change (`inf:plugins:settings:change`, `src/core/personal/panelChange.ts`), builds the request with the first mate's own builder (`actionRequest`), and runs the line's channel as the captain, so Settings, the first mate and a panel change a setting the same way.
-A project's origin never changes from a panel; it stays on the app's exact-change card.
+Where a project's code lives and where it is pushed never change from a panel: its folder (`path`), its git address (`origin`) and whether new work goes to the original project or a fork (`contributionDestination`) stay on the app's exact-change card.
 The feed names the panel: "Captain, in the Look panel · Theme set to light" (`feedCaptainSetInPanel`), and a settled run from a panel never merges with one from Settings.
 The request reaches only this computer's own window (`reach: "home"`), so a panel drawn in a view of another computer, or on the phone, gets no `settings`.
 

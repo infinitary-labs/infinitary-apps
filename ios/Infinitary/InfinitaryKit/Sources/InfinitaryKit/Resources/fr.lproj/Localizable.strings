@@ -1331,7 +1331,7 @@
 "panelChangeNotAsked" = "Seul votre propre clic ou appui sur une touche dans ce panneau modifie un réglage, une modification à la fois. Rien n’a été modifié.";
 "panelChangeNotGranted" = "Ce panneau ne peut pas modifier %1$@. Rien n’a été modifié.";
 "panelChangeNotifications" = "Notifications";
-"panelChangeOrigin" = "Un panneau ne modifie jamais l’endroit où le code d’un projet est poussé. Rien n’a été modifié.";
+"panelChangeOrigin" = "Un panneau ne modifie jamais l’endroit où se trouve le code d’un projet ni celui où il est poussé. Rien n’a été modifié.";
 "panelChangePanel" = "L’emplacement des panneaux";
 "panelChangePanelCollapse" = "Replier ou ouvrir un panneau";
 "panelChangePersonalResources" = "Vos ressources personnelles";

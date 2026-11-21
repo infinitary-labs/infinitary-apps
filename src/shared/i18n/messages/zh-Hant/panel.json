@@ -39,7 +39,7 @@
   "panelChangeNotAsked": "只有你在此面板中親自點按或按鍵才會變更設定，每次一項。沒有任何變更。",
   "panelChangeNotGranted": "此面板不能變更 {setting}。沒有任何變更。",
   "panelChangeNotifications": "通知",
-  "panelChangeOrigin": "面板從不變更專案程式碼推送到的位置。沒有任何變更。",
+  "panelChangeOrigin": "面板從不變更專案程式碼所在的位置或推送到的位置。沒有任何變更。",
   "panelChangePanel": "面板的位置",
   "panelChangePanelCollapse": "摺疊或展開面板",
   "panelChangePersonalResources": "你的個人資源",

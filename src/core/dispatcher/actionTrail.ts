@@ -185,6 +185,7 @@ export function createActionTrail(
         text,
         said: runsOnDoneSaid(value),
         actor: actor.kind,
+        ...(actor.kind === "captain" && actor.panel ? { panel: actor.panel } : {}),
       });
     } else
       services.broadcastEvent({

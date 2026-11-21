@@ -108399,6 +108399,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     object({
       type: literal("repo_runs_on"),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       repoId: string(),
       name: string(),
       runsOn: string().nullable(),
@@ -111387,6 +111389,16 @@ ${FRAME_KEYBOARD_SCRIPT}
   function isFeedEvent(event) {
     return feedTypes.has(event.type);
   }
+  function inPanel(panel, text, fact) {
+    const part = fact ? saidPartSchema.safeParse(fact) : null;
+    return line(
+      "info",
+      said("feedCaptainSetInPanel", {
+        text: part?.success ? part.data : text || (fact ? englishOf(fact) : ""),
+        panel
+      })
+    );
+  }
   function byWho(actor, panel) {
     return actor === "captain" ? panel ? saidPart("feedByCaptainInPanel", { panel }) : saidPart("feedByCaptain") : actor === "firstmate" ? saidPart("feedByFirstMate") : "";
   }
@@ -111445,6 +111457,8 @@ ${FRAME_KEYBOARD_SCRIPT}
         );
       }
       case "repo_configured": {
+        if (event.panel && (event.said || event.description))
+          return inPanel(event.panel, event.description ?? "", event.said);
         if (event.said)
           return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
         if (event.description) return { kind: "info", text: event.description };
@@ -111463,6 +111477,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         );
       }
       case "repo_runs_on":
+        if (event.panel) return inPanel(event.panel, event.text, event.said);
         return { kind: "info", text: event.text, ...event.said ? { said: event.said } : {} };
       case "repo_unregistered":
         return line(

@@ -4,6 +4,7 @@ import { claimLink } from "@core/devices/dial";
 import { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { DevicePairing } from "@core/devices/pairing";
+import type { RestartOutcome } from "@core/helper/runAgent";
 import type { Card } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { DEFAULT_SAVED_KEYMAP, presetKeymap, type SavedKeymap } from "@shared/keymap";
@@ -149,6 +150,18 @@ describe("the window beside a command's first mate", () => {
     };
   }
 
+  /** A command whose first mate welcomes the window and never answers its first ask. */
+  function silentRun() {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    // How it answers once it does, as a program started again in its place would.
+    return Object.assign(command, { answer });
+  }
+
   function besideShell(
     doorDir: string,
     options: {
@@ -204,7 +217,7 @@ describe("the window beside a command's first mate", () => {
       },
       inPlace: () => true,
       stop: vi.fn(async (_how: { forget: boolean }) => {}),
-      restart: vi.fn(async (_run?: { pid?: number }) => true),
+      restart: vi.fn(async (_run?: { pid?: number }): Promise<RestartOutcome> => "restarted"),
       login: false,
       stops: 0,
       /** Which run each stop asked to stop, when it named one. */
@@ -820,12 +833,7 @@ describe("the window beside a command's first mate", () => {
   // The window draws, says its first mate is not answering, and Start it here stops that
   // command and runs the first mate here.
   it("draws under a notice when the command welcomes it and never answers, and Start it here stops it", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
     // The window draws at once, and says so once the command's wait is over.
@@ -850,12 +858,7 @@ describe("the window beside a command's first mate", () => {
   // background process?" Restart it ends the command this window started by force and starts it
   // again; the window waits under its notice and joins the one that comes back.
   it("restarts a command that does not answer on Restart it, and joins the one started again", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
     await at.shell.start();
@@ -867,9 +870,9 @@ describe("the window beside a command's first mate", () => {
     // The program the service manager starts again answers, at the same door.
     at.starter.restart.mockImplementation(async () => {
       await command.stop();
-      command.run.dispatch.mockImplementation(answer as never);
+      command.run.dispatch.mockImplementation(command.answer as never);
       await command.open().settled();
-      return true;
+      return "restarted" as const;
     });
     expect(at.shell.restartCommand()).toBe(true);
     expect(at.shell.thisMac()).toMatchObject({
@@ -887,14 +890,15 @@ describe("the window beside a command's first mate", () => {
   // never answers would leave the window waiting for its answers with no end, the bug this fix is
   // for. Every welcome waits as the first does: the notice comes back and offers Restart it again.
   it("says a command started again by Restart it is not answering when it welcomes and never answers", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
-    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      // The run started again is its agent's own too, as its record says.
+      ownedRun: (status) => (status.run?.pid === 42 ? { ...JOINED, pid: 42 } : JOINED),
+    });
     await at.shell.start();
     await expect
       .poll(() => at.shell.thisMac())
@@ -904,7 +908,7 @@ describe("the window beside a command's first mate", () => {
       await command.stop();
       at.command.records = { running: true, run: { ...JOINED, pid: 42 }, lastStop: null };
       await command.open({ ...JOINED, pid: 42 }).settled();
-      return true;
+      return "restarted" as const;
     });
     expect(at.shell.restartCommand()).toBe(true);
     await expect.poll(() => at.restartWindows.mock.calls.length, { timeout: 3_000 }).toBe(1);
@@ -920,12 +924,7 @@ describe("the window beside a command's first mate", () => {
   // INF-4624's review: a restart that fails leaves the notice up, with its way out, rather than
   // taking it down until a new wait has passed.
   it("keeps the notice that the command is not answering when Restart it could not restart it", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 1_500 });
     const ending = () => {
@@ -934,7 +933,7 @@ describe("the window beside a command's first mate", () => {
     };
     await at.shell.start();
     await expect.poll(ending, { timeout: 3_000 }).toBe("not-answering");
-    at.starter.restart.mockImplementation(async () => false);
+    at.starter.restart.mockImplementation(async () => "failed" as const);
     expect(at.shell.restartCommand()).toBe(true);
     await expect
       .poll(() => at.shell.thisMac())
@@ -1048,12 +1047,7 @@ describe("the window beside a command's first mate", () => {
   // The one started again gets a wait of its own: the first welcome's wait running out does not
   // call it silent seconds after it started and offer to end it by force.
   it("gives a command started again while the first welcome waited a wait of its own", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
     let stuck = false;
     const at = besideShell(command.doorDir, {
@@ -1247,12 +1241,7 @@ describe("the window beside a command's first mate", () => {
   // is offered until the restart settles, and a restart that did not happen offers it again.
   it("offers no join while Restart it is under way, and offers it again when the restart did not happen", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
     await at.shell.start();
@@ -1260,10 +1249,10 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
     expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
-    const answers: ((done: boolean) => void)[] = [];
+    const answers: ((done: RestartOutcome) => void)[] = [];
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           answers.push(resolve);
         }),
     );
@@ -1284,7 +1273,7 @@ describe("the window beside a command's first mate", () => {
     // The service manager would not restart it while the records cannot be read: nothing is offered
     // until they name the run the window owns, by its process and start, still running.
     at.command.records = { running: null, run: null, lastStop: null };
-    answers.shift()?.(false);
+    answers.shift()?.("failed");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(at.shell.followsAdded()).toEqual(starting);
     at.command.records = { running: true, run: JOINED, lastStop: null };
@@ -1295,7 +1284,7 @@ describe("the window beside a command's first mate", () => {
       .toMatchObject({ command: { ending: "not-answering" } });
     expect(at.shell.restartCommand()).toBe(true);
     at.command.records = stopped("signal", 1);
-    answers.shift()?.(false);
+    answers.shift()?.("failed");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(at.shell.followsAdded()).toEqual(starting);
   });
@@ -1306,12 +1295,7 @@ describe("the window beside a command's first mate", () => {
   // again records unreadable at it, and names that replacement.
   it("counts no welcome from the run Restart it replaces toward the run started again, and stops that run alone", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     const first = { pid: 41, startedAt: "2026-11-20T08:00:00.000Z", agent: true as const };
     // The run started again, whose record says when it started once it writes it.
     const again = { pid: 42, startedAt: "", agent: true as const };
@@ -1331,10 +1315,10 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    let settle: (done: boolean) => void = () => {};
+    let settle: (done: RestartOutcome) => void = () => {};
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           settle = resolve;
         }),
     );
@@ -1361,7 +1345,7 @@ describe("the window beside a command's first mate", () => {
     // the run replaced, which named it, however late it was handled, so it counts for nothing.
     again.startedAt = new Date().toISOString();
     at.command.records = { running: true, run: again, lastStop: null };
-    settle(true);
+    settle("restarted");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(links.map((link) => link.connection())).not.toEqual([null]);
     expect(at.shell.followsAdded()).toEqual(starting);
@@ -1419,10 +1403,10 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    let settle: (done: boolean) => void = () => {};
+    let settle: (done: RestartOutcome) => void = () => {};
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           settle = resolve;
         }),
     );
@@ -1443,10 +1427,12 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.followsAdded()).toEqual(starting);
     // One that answers late, while the starter has still not answered, is back.
     if (answers) {
+      // The window handled its answers once it started its pages over on them.
+      const restarts = at.restartWindows.mock.calls.length;
       heres[1]?.();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await expect.poll(() => at.restartWindows.mock.calls.length).toBe(restarts + 1);
     }
-    settle(true);
+    settle("restarted");
     if (answers) await expect.poll(() => at.shell.thisMac()).not.toHaveProperty("command");
     else
       await expect
@@ -1472,12 +1458,7 @@ describe("the window beside a command's first mate", () => {
   // was pressed, and that welcomes it while the restart is under way, is the only run there was:
   // a restart that did not happen joins it at once, never waiting for a second welcome.
   it("joins the run a refused Restart it left running at once where it welcomed the window meanwhile", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     // Started by this window, running, and not yet listening.
     const at = besideShell(command.doorDir, {
       starts: true,
@@ -1489,10 +1470,10 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    let settle: (done: boolean) => void = () => {};
+    let settle: (done: RestartOutcome) => void = () => {};
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           settle = resolve;
         }),
     );
@@ -1501,7 +1482,7 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => command.asked("inf:own-window:here").length, { timeout: 5_000 })
       .toBe(1);
-    settle(false);
+    settle("failed");
     await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
   });
 
@@ -1530,10 +1511,10 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    let settle: (done: boolean) => void = () => {};
+    let settle: (done: RestartOutcome) => void = () => {};
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           settle = resolve;
         }),
     );
@@ -1542,10 +1523,13 @@ describe("the window beside a command's first mate", () => {
     await command.stop();
     await command.open(door).settled();
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
+    // The window had its answer once it went on to read the rest from that run, and the starter's
+    // answer once the window's own handler of it ran, before this test's.
+    const reads = command.asked("inf:settings:dictation:get").length;
     heres[1]?.();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    settle(false);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await expect.poll(() => command.asked("inf:settings:dictation:get").length).toBe(reads + 1);
+    settle("failed");
+    await at.starter.restart.mock.results.at(-1)?.value;
     expect(at.shell.thisMac()).not.toHaveProperty("command");
     expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
   });
@@ -1556,12 +1540,7 @@ describe("the window beside a command's first mate", () => {
   // the folder meanwhile, are not that run's: nothing calls the other silent.
   it("says the first mate is not answering when its records come back during the wait for its answers", async () => {
     for (const comesBack of ["same", "another"] as const) {
-      const command = commandRun();
-      const answer = command.run.dispatch.getMockImplementation();
-      command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-        channel === "inf:own-window:here"
-          ? new Promise(() => {})
-          : answer?.(channel as never, args as never)) as never);
+      const command = silentRun();
       // The run behind the door, there before the window opened.
       const run = { pid: 42, startedAt: new Date().toISOString(), agent: true as const };
       await command.open({ pid: run.pid, startedAt: run.startedAt }).settled();
@@ -1600,36 +1579,32 @@ describe("the window beside a command's first mate", () => {
     }
   });
 
-  // The review of INF-5409: a door from before doors named their run says nobody's silence, so no
-  // run is called silent from its welcome alone. The run holding the folder is counted on its own
-  // wait, and the notice then names that run, by its process and start, for Start it here alone.
-  it("names no run silent from a door that names none, and counts the run there on its own wait", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+  // The review of INF-5409: a door from before doors named their run says nobody's silence, so its
+  // welcome that is never answered still gets its notice once the wait is over, and that notice
+  // ends no run: it offers no Restart it, and its Start it here stops nothing, so the app starting
+  // again finds the folder held and joins whichever run holds it.
+  it("says a first mate behind a door that names no run is not answering, and ends no run for it", async () => {
+    const command = silentRun();
     await command.open(null).settled();
     const holder = { pid: 44, startedAt: new Date().toISOString(), agent: true as const };
     const at = besideShell(command.doorDir, {
       starts: true,
       readyMs: 2_000,
-      answerWaitMs: 600,
+      answerWaitMs: 200,
       records: { running: true, run: holder, lastStop: null },
       ownedRun: (status) => ownedRunOf(status),
     });
-    const opened = Date.now();
     await at.shell.start();
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    // Its own wait began once the welcome's wait was over, not at the welcome.
-    expect(Date.now() - opened).toBeGreaterThanOrEqual(1_200);
+    expect(at.shell.thisMac()).not.toHaveProperty("command.byWindow");
+    expect(at.shell.restartCommand()).toBe(false);
     expect(at.shell.startHere()).toBe(true);
-    await expect
-      .poll(() => at.starter.stop.mock.calls)
-      .toEqual([[{ forget: false, force: { pid: holder.pid, startedAt: holder.startedAt } }]]);
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    expect(at.starter.restart).not.toHaveBeenCalled();
+    expect(at.starter.stop).not.toHaveBeenCalled();
+    expect(at.starter.stops).toBe(0);
   });
 
   // The review of INF-5409: a first mate that welcomed the window and never answered is silent for
@@ -1637,12 +1612,7 @@ describe("the window beside a command's first mate", () => {
   // run's connection is still open, that other run is not called silent and nothing offers to end
   // it.
   it("calls no run silent that took the folder while another run's welcome waited for its answers", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
     await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
     const at = besideShell(command.doorDir, {
@@ -1671,12 +1641,7 @@ describe("the window beside a command's first mate", () => {
   // The review of INF-5409: the notice that a first mate does not answer is about the run that
   // timed out, so Start it here ends that run by force, never one that took the folder since.
   it("ends only the run its notice says does not answer on Start it here", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
     await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
     const at = besideShell(command.doorDir, {
@@ -1706,12 +1671,7 @@ describe("the window beside a command's first mate", () => {
   // answer as Stop does, and Start it here then asks only the run its notice names to stop, by its
   // process and start, so a run started by hand in its place keeps going.
   it("asks only the run its notice names to stop on Start it here, with no starter", async () => {
-    const command = commandRun();
-    const answer = command.run.dispatch.getMockImplementation();
-    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
-      channel === "inf:own-window:here"
-        ? new Promise(() => {})
-        : answer?.(channel as never, args as never)) as never);
+    const command = silentRun();
     const first = { pid: 41, startedAt: new Date().toISOString() };
     await command.open(first).settled();
     const at = besideShell(command.doorDir, {
@@ -1728,6 +1688,63 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.startHere()).toBe(true);
     await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
     expect(at.starter.stopped).toEqual([first]);
+  });
+
+  // The review of INF-5409: the starter's service manager ends and starts again only the run its
+  // own agent started, so over a silent run started by hand the notice is not the window's own: it
+  // offers no Restart it, and Start it here asks that run alone to stop as Stop does.
+  it("offers only a stop as Stop stops one over a silent run its agent did not start", async () => {
+    const command = silentRun();
+    const byHand = { pid: 41, startedAt: new Date().toISOString() };
+    await command.open(byHand).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: byHand, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    expect(at.shell.thisMac()).not.toHaveProperty("command.byWindow");
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.shell.startHere()).toBe(true);
+    await expect.poll(() => at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+    expect(at.starter.stopped).toEqual([byHand]);
+    expect(at.starter.stop).not.toHaveBeenCalled();
+    expect(at.starter.restart).not.toHaveBeenCalled();
+  });
+
+  // The review of INF-5409: a Restart it whose starter ended and started nothing, the run named no
+  // longer being the one its agent holds, leaves the window as before the press at once: a run
+  // started by hand there since is offered as before, never waited for as the run started again.
+  it("stands as before the press when Restart it ended and started nothing", async () => {
+    const command = silentRun();
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    await command.open({ pid: first.pid, startedAt: first.startedAt }).settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    const byHand = { pid: 50, startedAt: new Date(Date.now() + 1).toISOString() };
+    at.starter.restart.mockImplementation(async () => {
+      at.command.records = { running: true, run: byHand, lastStop: null };
+      return "untouched" as const;
+    });
+    expect(at.shell.restartCommand()).toBe(true);
+    await at.starter.restart.mock.results.at(-1)?.value;
+    expect(at.shell.followsAdded()).toMatchObject({ joins: false, outside: true });
+    expect(at.shell.thisMac()).not.toHaveProperty("command");
+    expect(at.starter.stop).not.toHaveBeenCalled();
   });
 
   // The review of INF-5409: a start this window asked ends only on a welcome from the run its own
@@ -1798,10 +1815,10 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
-    let settle: (done: boolean) => void = () => {};
+    let settle: (done: RestartOutcome) => void = () => {};
     at.starter.restart.mockImplementation(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<RestartOutcome>((resolve) => {
           settle = resolve;
         }),
     );
@@ -1809,9 +1826,11 @@ describe("the window beside a command's first mate", () => {
     expect(at.starter.restart.mock.calls).toEqual([
       [{ pid: first.pid, startedAt: first.startedAt }],
     ]);
+    // The window handled its answers once it started its pages over on them.
+    const restarts = at.restartWindows.mock.calls.length;
     heres[0]?.();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    settle(false);
+    await expect.poll(() => at.restartWindows.mock.calls.length).toBe(restarts + 1);
+    settle("failed");
     // Past two readings of the records, a second apart, each longer than the wait for its answers,
     // nothing says it is silent again.
     await new Promise((resolve) => setTimeout(resolve, 2_100));

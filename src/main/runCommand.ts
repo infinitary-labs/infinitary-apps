@@ -1,15 +1,6 @@
-import {
-  closeSync,
-  openSync,
-  readFileSync,
-  readlinkSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { RUN_RECORD_FILE, requestRunStop } from "@core/helper/windowsTask";
+import { RUN_RECORD_FILE, requestRunStop, windowsLockHeld } from "@core/helper/windowsTask";
 import { captureLoginPath } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
@@ -369,6 +360,8 @@ export function stopRunningCommand(
  * holds open (`lockfile`, removed when its holder ends): held reads as
  * undefined, a holder this cannot name, and free as null.
  */
+export { windowsLockHeld };
+
 export function lockHolder(
   dataDir: string,
   platform: string = hostPlatform(),
@@ -382,23 +375,6 @@ export function lockHolder(
   }
   const pid = Number(link.slice(link.lastIndexOf("-") + 1));
   return Number.isInteger(pid) && pid > 0 ? pid : null;
-}
-
-/**
- * Whether a program holds Windows' lock file: Chromium opens it for writing
- * and lets others only read it, so opening it for writing fails while it is
- * held. A file no program holds is opened and closed again, changed in nothing.
- */
-export function windowsLockHeld(file: string): boolean {
-  let fd: number;
-  try {
-    fd = openSync(file, "r+");
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    return code === "EBUSY" || code === "EPERM" || code === "EACCES";
-  }
-  closeSync(fd);
-  return false;
 }
 
 export function processAlive(pid: number): boolean {

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "../devices/identity";
 import { hostEnv } from "../hostEnv";
@@ -438,6 +438,23 @@ export const RUN_STOP_FOR_FILE = "run-stop-for.json";
 
 /** The run's own record in its data folder, which the window reads as the command's status. */
 export const RUN_RECORD_FILE = "run.json";
+
+/**
+ * Whether a program holds Windows' lock file: Chromium opens it for writing
+ * and lets others only read it, so opening it for writing fails while it is
+ * held. A file no program holds is opened and closed again, changed in nothing.
+ */
+export function windowsLockHeld(file: string): boolean {
+  let fd: number;
+  try {
+    fd = openSync(file, "r+");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "EBUSY" || code === "EPERM" || code === "EACCES";
+  }
+  closeSync(fd);
+  return false;
+}
 
 /** One run on a data folder: its process and the start its own note keeps, so a reused process number is another run. */
 export type RunInstance = { pid: number; startedAt: string };

@@ -68,7 +68,9 @@ const REUSED: Run = { pid: 4242, startedAt: "2026-10-25T17:05:00.000Z" };
 /** A run started again in the named one's place, by the job or by hand. */
 const REPLACEMENT: Run = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
 
-function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer } = {}) {
+function mac(
+  answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer; job?: number } = {},
+) {
   const asked: string[][] = [];
   const context: RunAgentContext = {
     label: LABEL,
@@ -95,13 +97,18 @@ function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswe
       // A launchctl that timed out, which answers nothing of the job.
       if (args[0] === "print" && args[1] === `gui/502/${LABEL}` && answers.stop === "unreadable")
         return { ok: false, output: "" };
+      // The job's own instance: the process launchd runs for it now.
+      if (args[0] === "print" && args[1] === `gui/502/${LABEL}` && answers.job !== undefined)
+        return { ok: true, output: `${LABEL} = {\n\tstate = running\n\tpid = ${answers.job}\n}\n` };
       return { ok: true, output: "" };
     },
   };
   return { context, asked };
 }
 
-function linux(answers: { session?: boolean; stop?: StopAnswer } = {}) {
+function linux(
+  answers: { session?: boolean; stop?: StopAnswer; job?: number; kill?: boolean } = {},
+) {
   const asked: string[][] = [];
   const unitsDir = join(scratchDir("infinitary-run-agent-config-"), "systemd", "user");
   const context: RunAgentContext = {
@@ -119,6 +126,10 @@ function linux(answers: { session?: boolean; stop?: StopAnswer } = {}) {
       if (args.includes("show-environment") && answers.session === false)
         return { ok: false, output: "Failed to connect to bus" };
       if (args.includes("--system")) return { ok: true, output: "inactive\n" };
+      // The unit's own instance: the process systemd runs for it now, 0 for none.
+      if (args.includes("--property=MainPID")) return { ok: true, output: `${answers.job ?? 0}\n` };
+      if (args[1] === "kill" && answers.kill === false)
+        return { ok: false, output: `Failed to kill unit ${LABEL}.service: Access denied` };
       if (args[1] === "stop" && answers.stop)
         return { ok: false, output: `Failed to stop ${LABEL}.service: Access denied` };
       if (args[1] === "show" && answers.stop === "gone") return { ok: true, output: "inactive\n" };
@@ -248,28 +259,34 @@ describe("the command the window starts, on a Mac", () => {
   });
 
   // The review of INF-5409: launchd's kickstart and bootout end whichever run the job holds, so
-  // Restart it and Start it here act only while the record names the run their notice names, and
-  // that run is the agent's own: a run the job started again in its place, one with its process
-  // number, and one started by hand are left alone, and the job with them.
+  // Restart it and Start it here act only while the record names the run their notice names as
+  // the agent's own, and launchd's own instance for the job is that same process: a run the job
+  // started again in its place, one with its process number, one started by hand, and a job
+  // launchd runs another process for or cannot say about are left alone, and the job with them.
   it("restarts or stops the job only for the named run its agent started", async () => {
     const named = { pid: process.pid, startedAt: NAMED.startedAt };
-    const owned = mac();
+    const print = ["print", `gui/502/${LABEL}`];
+    const owned = mac({ job: process.pid });
     recordRun(owned.context, named, true);
-    expect(await restartRunAgent(owned.context, named)).toBe(true);
+    expect(await restartRunAgent(owned.context, named)).toBe("restarted");
     await stopRunAgent(owned.context, { forget: false, force: named });
     expect(owned.asked).toEqual([
+      print,
       ["kickstart", "-k", `gui/502/${LABEL}`],
+      print,
       ["bootout", `gui/502/${LABEL}`],
     ]);
-    for (const [there, agent] of [
-      [{ pid: process.pid, startedAt: REUSED.startedAt }, true],
-      [named, false],
+    for (const [there, agent, answers] of [
+      [{ pid: process.pid, startedAt: REUSED.startedAt }, true, { job: process.pid }],
+      [named, false, { job: process.pid }],
+      [named, true, { job: REPLACEMENT.pid }],
+      [named, true, { stop: "unreadable" as const }],
     ] as const) {
-      const other = mac();
+      const other = mac(answers);
       recordRun(other.context, there, agent);
-      expect(await restartRunAgent(other.context, named)).toBe(false);
+      expect(await restartRunAgent(other.context, named)).toBe("untouched");
       await stopRunAgent(other.context, { forget: false, force: named });
-      expect(other.asked).toEqual([]);
+      expect(other.asked.filter(([verb]) => verb !== "print")).toEqual([]);
     }
   });
 });
@@ -423,22 +440,51 @@ describe("the command the window starts, on Linux", () => {
   // its agent started is ended, and a run started again in its place keeps going.
   it("restarts or stops the unit only for the named run its agent started", async () => {
     const named = { pid: process.pid, startedAt: NAMED.startedAt };
-    const owned = linux();
+    const owned = linux({ job: process.pid });
     recordRun(owned.context, named, true);
-    expect(await restartRunAgent(owned.context, named)).toBe(true);
-    expect(owned.asked.map((args) => args[1])).toEqual(["kill", "start"]);
-    const replaced = linux();
-    recordRun(replaced.context, { pid: process.pid, startedAt: REUSED.startedAt }, true);
-    expect(await restartRunAgent(replaced.context, named)).toBe(false);
-    await stopRunAgent(replaced.context, { forget: false, force: named });
-    expect(replaced.asked).toEqual([]);
+    expect(await restartRunAgent(owned.context, named)).toBe("restarted");
+    expect(owned.asked.map((args) => args[1])).toEqual(["show", "kill", "start"]);
+    for (const [there, job] of [
+      [{ pid: process.pid, startedAt: REUSED.startedAt }, process.pid],
+      [named, REPLACEMENT.pid],
+    ] as const) {
+      const other = linux({ job });
+      recordRun(other.context, there, true);
+      expect(await restartRunAgent(other.context, named)).toBe("untouched");
+      await stopRunAgent(other.context, { forget: false, force: named });
+      expect(other.asked.filter((args) => args[1] !== "show")).toEqual([]);
+    }
+  });
+
+  // The review of INF-5409: a kill systemd refused ended nothing, so the start that follows would
+  // find the same run active; Restart it says it failed rather than restarted.
+  it("says Restart it failed where systemd refused to end the run", async () => {
+    const named = { pid: process.pid, startedAt: NAMED.startedAt };
+    const { context, asked } = linux({ job: process.pid, kill: false });
+    recordRun(context, named, true);
+    expect(await restartRunAgent(context, named)).toBe("failed");
+    expect(asked.map((args) => args[1])).toEqual(["show", "kill"]);
   });
 });
 
-function windows(answers: { create?: boolean; running?: number; remove?: boolean } = {}) {
+function windows(
+  answers: {
+    create?: boolean;
+    running?: number;
+    remove?: boolean;
+    /** Whether a run holds the data folder's lock file, as a live run does until it ends. */
+    locked?: boolean;
+    /** What happens as Task Scheduler is asked to end the task, before the next read. */
+    onEnd?: (context: RunAgentContext) => void;
+    /** Another program takes the ended run's process number as it goes, so the number stays alive. */
+    numberTaken?: boolean;
+  } = {},
+) {
   const asked: string[][] = [];
-  // The run's process, as its record names it: ended by force, it is gone a moment later.
+  // The run's process, as its record names it: ended by force, it is gone a moment later, and the
+  // folder's lock goes with it.
   const live = new Set<number>();
+  const lock = { held: answers.locked ?? true };
   const context: RunAgentContext = {
     label: LABEL,
     dataDir: scratchDir("infinitary-run-agent-data-"),
@@ -453,10 +499,12 @@ function windows(answers: { create?: boolean; running?: number; remove?: boolean
       end: (pid) => {
         asked.push(["end", String(pid)]);
         setTimeout(() => {
-          live.delete(pid);
+          if (!answers.numberTaken) live.delete(pid);
+          lock.held = false;
           asked.push(["gone", String(pid)]);
         }, 250);
       },
+      locked: () => lock.held,
     },
     schtasks: Object.assign(
       async (args: readonly string[]) => {
@@ -465,6 +513,7 @@ function windows(answers: { create?: boolean; running?: number; remove?: boolean
           return { ok: false, output: "ERROR: Access is denied." };
         if (args[0] === "/Delete" && answers.remove === false)
           return { ok: false, output: "ERROR: Access is denied." };
+        if (args[0] === "/End") answers.onEnd?.(context);
         return { ok: true, output: "SUCCESS" };
       },
       // Task Scheduler's own answer for the task: still there where it would not take it away.
@@ -472,7 +521,7 @@ function windows(answers: { create?: boolean; running?: number; remove?: boolean
     ),
   };
   if (answers.running !== undefined) live.add(answers.running);
-  return { context, asked };
+  return { context, asked, lock };
 }
 
 // INF-4243's plan, piece 5: "<app> run is registered at your login through Windows' Task
@@ -585,7 +634,7 @@ describe("the command the window starts, on Windows", () => {
     await startRunAgent(context);
     recordRun(context, NAMED, true);
     asked.length = 0;
-    expect(await restartRunAgent(context, NAMED)).toBe(true);
+    expect(await restartRunAgent(context, NAMED)).toBe("restarted");
     expect(asked).toEqual([
       ["/End", "/TN", LABEL],
       ["end", "4242"],
@@ -611,32 +660,74 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // The review of INF-5409: Restart it and Start it here act on the run their notice names, by its
-  // process and start as its record reads when they act. Another run there - its process number
-  // reused, or a run started again in its place - is neither ended nor its task's end asked.
+  // process and start as its record reads when they act, while it holds the folder's lock. Another
+  // run there - its process number reused, or a run started again in its place - and a program
+  // that took the number of a named run that ended, its record left behind and the lock let go,
+  // are neither ended nor the task's end asked.
   it("ends nothing on Restart it or Start it here for another run there, its process number reused included", async () => {
-    for (const there of [REUSED, REPLACEMENT]) {
-      const { context, asked } = windows({ running: there.pid });
+    for (const [there, locked] of [
+      [REUSED, true],
+      [REPLACEMENT, true],
+      [NAMED, false],
+    ] as const) {
+      const { context, asked } = windows({ running: there.pid, locked });
       await startRunAgent(context);
       recordRun(context, there, true);
       asked.length = 0;
-      expect(await restartRunAgent(context, NAMED)).toBe(false);
+      expect(await restartRunAgent(context, NAMED)).toBe("untouched");
       await stopRunAgent(context, { forget: false, force: NAMED });
       expect(asked).toEqual([]);
       expect(context.processes?.alive(there.pid)).toBe(true);
     }
   });
 
-  // A run started by hand is no run of the task's: Task Scheduler's end, which ends whatever the
-  // task runs, is not asked, and the named run's own process alone is ended.
-  it("ends a run started by hand by its process alone, never the task's run", async () => {
+  // The review of INF-5409: Task Scheduler's end ends the named run, and a run that starts in its
+  // place with its process number before the force is read again keeps going: the named run let
+  // the lock go, so it has ended, and the task runs again.
+  it("ends no run that took the named run's process number during the task's end", async () => {
+    const { context, asked } = windows({
+      running: NAMED.pid,
+      onEnd: (at) => recordRun(at, REUSED, false),
+    });
+    await startRunAgent(context);
+    recordRun(context, NAMED, true);
+    asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("restarted");
+    expect(asked).toEqual([
+      ["/End", "/TN", LABEL],
+      ["/Run", "/TN", LABEL],
+    ]);
+    expect(context.processes?.alive(REUSED.pid)).toBe(true);
+  });
+
+  // The review of INF-5409: a named run that let the folder's lock go has ended, though another
+  // program took its process number as it went: the wait for it ends there, and the task runs
+  // again without ending that program.
+  it("counts the named run gone once it let the lock go, its process number taken", async () => {
+    const { context, asked } = windows({ running: NAMED.pid, numberTaken: true });
+    await startRunAgent(context);
+    recordRun(context, NAMED, true);
+    asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("restarted");
+    expect(asked).toEqual([
+      ["/End", "/TN", LABEL],
+      ["end", String(NAMED.pid)],
+      ["gone", String(NAMED.pid)],
+      ["/Run", "/TN", LABEL],
+    ]);
+    expect(context.processes?.alive(NAMED.pid)).toBe(true);
+  });
+
+  // The review of INF-5409: a run started by hand is no run of the task's, and the window stops it
+  // as Stop does: the starter ends nothing for it, neither the task's run nor its process.
+  it("ends nothing for a run started by hand, neither the task's run nor its process", async () => {
     const { context, asked } = windows({ running: 4242 });
     await startRunAgent(context);
     recordRun(context, NAMED, false);
     asked.length = 0;
+    expect(await restartRunAgent(context, NAMED)).toBe("untouched");
     await stopRunAgent(context, { forget: false, force: NAMED });
-    expect(asked).toEqual([
-      ["end", "4242"],
-      ["gone", "4242"],
-    ]);
+    expect(asked).toEqual([]);
+    expect(context.processes?.alive(NAMED.pid)).toBe(true);
   });
 });

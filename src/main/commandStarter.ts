@@ -1,6 +1,7 @@
 import { homedir, userInfo } from "node:os";
 import { resolve } from "node:path";
 import {
+  type RestartOutcome,
   type RunAgentContext,
   type RunManager,
   restartRunAgent,
@@ -46,10 +47,11 @@ export type CommandStarter = {
   }) => Promise<void>;
   /**
    * Restart it: ends the run named, by its process and start, by force and
-   * starts it again; false where it could not start again, and where that
-   * run no longer runs or another holds the folder, ending nothing.
+   * starts it again (`RestartOutcome`): untouched, ending nothing, where this
+   * app's own agent no longer holds that run, and failed where it ended or
+   * asked something and started no run again.
    */
-  restart: (run?: RunInstance) => Promise<boolean>;
+  restart: (run?: RunInstance) => Promise<RestartOutcome>;
 };
 
 /**
@@ -146,7 +148,7 @@ export function commandStarter(options: {
         return await restartRunAgent(context, run);
       } catch (error) {
         console.warn(`[run] could not restart the command: ${(error as Error).message}`);
-        return false;
+        return "failed";
       }
     },
   };

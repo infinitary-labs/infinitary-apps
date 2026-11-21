@@ -22,7 +22,7 @@ Cask publication keeps its style, compatibility, immutability and channel-isolat
 Historical download URLs stay available; the readers retain their exact-version fallback for older paired computers.
 
 - Contribution stays hidden until approved terms are published; [Infinitary’s privacy policy](https://getinfinitary.com/privacy) covers Diagnostics and phone notifications.
-  The alpha notice ships with the build, and outside code waits for the maintainers’ contributor agreement policy.
+  The alpha notice ships with the build, and outside code merges only once its author accepted the Contributor License Agreement (`CLA.md`; `docs/public-ci.md`, "Outside contributors").
   The amendment is the EONA alpha-before-incorporating decision (captain, 2026-09-22: "on from the first cask: an anonymous daily count, opt-out, disclosed in the notice"), widened by the captain the same day for funnel and retention accounting: the Diagnostics switch is ON by default and carries an allowlisted set of anonymous usage events - the app opening, a first mate turn ending or failing, the first-run funnel - with the app version and an anonymous random install ID that resets when Diagnostics is turned off and back on, never anything typed; it is disclosed in the alpha notice and on the first launch, and turned off by the switch (`docs/sharing.md` is the one home).
 
 ## Update channels

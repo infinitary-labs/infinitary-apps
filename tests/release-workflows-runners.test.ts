@@ -420,6 +420,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // An outside contributor's pull request reads what its change reaches
     // on GitHub's machines alone (docs/public-ci.md, "Outside contributors").
     "contributors.yml:paths",
+    // The contributor agreement check, which holds a write token for an
+    // outside pull request (docs/public-ci.md, "Outside contributors").
+    "contributor-agreement.yml:check",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

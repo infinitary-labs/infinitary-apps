@@ -88,7 +88,7 @@ const wire = (near: number) =>
 
 /**
  * The Firstmate as a still, drawn the way the real character draws itself
- * (src/renderer/src/character/Firstmate.tsx, `drawFrame`): the tesseract
+ * (src/renderer/src/character/firstmatePainter.ts, `drawFrame`): the tesseract
  * turned in its two planes and projected the same way, each wire and dot
  * shaded from the far cell to the near one, a faint glow behind it, and its
  * two soft-light eyes - a little larger and closer than the real ones, each
@@ -153,29 +153,64 @@ function firstmateStill(cx: number, cy: number, r: number): string {
 const words = (x: number, y: number, width: number, height: number, text: string, extra = "") =>
   `<foreignObject x="${x}" y="${y}" width="${width}" height="${height}"><div style="font-size:var(--text-sm);line-height:1.45;color:var(--fg-2)${extra}">${text}</div></foreignObject>`;
 
+/** The picture's size in its own units: the window, drawn at the card's width. */
+const PICTURE = { width: 520, height: 212 } as const;
+
+/**
+ * Where the live first mate draws (INF-5609's approved plan, the captain's
+ * 176 of 520 units): centered on the still's place, under the card shape.
+ */
+const FIRSTMATE = { x: 263, y: 88, size: 176 } as const;
+
+/** Where the live crewmate beside the card's top corner draws, from the third chapter. */
+const CREWMATE = { x: 374, y: 20, size: 30 } as const;
+
+/** A box's place over the picture, in shares of its size, so it follows the card's width. */
+const over = (place: { x: number; y: number; size: number }) => {
+  const share = (value: number, of: number) => `${round((value / of) * 10000) / 100}%`;
+  return `left:${share(place.x - place.size / 2, PICTURE.width)};top:${share(place.y - place.size / 2, PICTURE.height)};width:${share(place.size, PICTURE.width)};aspect-ratio:1`;
+};
+
+/**
+ * The stage part (`APP_ONLY_PARTS`, ./appParts): the home stage's own first
+ * mate and crewmate, drawn by the center's painters, calm, in the marks
+ * beside the picture. A reader without the part keeps the stills marked
+ * `data-inf-stage-still`. Its reference sits inside the figure, so the
+ * welcome stays prose (`isPreviewBody`, ./cards).
+ */
+const STAGE_PART = '<script data-inf-part="stage"></script>';
+
 /**
  * The picture at rest is the whole explanation: every part with its words,
  * the card over the Firstmate as the window shows it, the box lit. The
  * script beside it starts it at the first chapter and shows one part per
- * press; without the script the card still reads whole.
+ * press; without the script the card still reads whole. The live first mate
+ * draws under the picture's lines and fades as the card rises, as the
+ * window hides the character while a card is up, and the live crewmate
+ * draws over them; the stills they cover follow the chapter unseen, for a
+ * copy of the picture that shows them.
  */
 const picture = (
   said = chapterWords(),
   named = labels(),
-) => `<svg viewBox="0 0 520 190" width="520" style="display:block;font-size:var(--text-sm)">
-<rect x="0.5" y="0.5" width="519" height="189" rx="8" style="fill:var(--bg-1);stroke:var(--line-1)"/>
-<g data-part="firstmate" style="visibility:hidden">${firstmateStill(263, 66, 50)}</g>
-<g data-part="box"><rect data-look="box" x="190" y="122" width="140" height="18" rx="9" style="fill:none;stroke:var(--accent)"/><text data-look="box-label" x="260" y="135" text-anchor="middle" style="fill:var(--fg-1)">${named.box}</text>
+) => `<div style="position:relative;max-width:${PICTURE.width}px;background:var(--bg-1);border-radius:8px">
+<svg viewBox="0 0 ${PICTURE.width} ${PICTURE.height}" width="${PICTURE.width}" style="display:block;position:relative;z-index:1;width:100%;height:auto;font-size:var(--text-sm)">
+<rect x="0.5" y="0.5" width="519" height="211" rx="8" style="fill:none;stroke:var(--line-1)"/>
+<g data-part="firstmate" data-inf-stage-still style="visibility:hidden">${firstmateStill(FIRSTMATE.x, FIRSTMATE.y, 50)}</g>
+<g transform="translate(0 22)"><g data-part="box"><rect data-look="box" x="190" y="122" width="140" height="18" rx="9" style="fill:none;stroke:var(--accent)"/><text data-look="box-label" x="260" y="135" text-anchor="middle" style="fill:var(--fg-1)">${named.box}</text>
 ${words(140, 146, 240, 42, said.box, ";text-align:center").replace("<div ", `<div data-part="words" data-last="${said.end}" `)}</g>
-<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words(171, 48, 180, 50, said.card, ";color:var(--fg-1)")}</g>
-<g data-part="activity"><line x1="130" y1="1" x2="130" y2="189" style="stroke:var(--line-1)"/><text x="14" y="24" style="fill:var(--fg-1)">${named.activity}</text>
+<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words(171, 48, 180, 50, said.card, ";color:var(--fg-1)")}</g></g>
+<g data-part="activity"><line x1="130" y1="1" x2="130" y2="211" style="stroke:var(--line-1)"/><text x="14" y="24" style="fill:var(--fg-1)">${named.activity}</text>
 <g style="fill:var(--line-2)"><circle cx="18" cy="42" r="2.5"/><rect x="26" y="40.5" width="88" height="3" rx="1.5"/><circle cx="18" cy="58" r="2.5"/><rect x="26" y="56.5" width="70" height="3" rx="1.5"/><circle cx="18" cy="74" r="2.5"/><rect x="26" y="72.5" width="94" height="3" rx="1.5"/></g>
 ${words(12, 88, 112, 98, said.activity)}
-<path data-look="crew" d="M374 12l9 16h-18zM374 12v16" style="fill:none;stroke:var(--line-2);stroke-linejoin:round"/><path d="M364 24C300 18 200 26 132 40" style="fill:none;stroke:var(--line-2);stroke-dasharray:3 3"/></g>
-<g data-part="tasks"><line x1="390" y1="1" x2="390" y2="189" style="stroke:var(--line-1)"/><text x="404" y="24" style="fill:var(--fg-1)">${named.tasks}</text>
+<path data-look="crew" data-inf-stage-still d="M374 12l9 16h-18zM374 12v16" style="fill:none;stroke:var(--line-2);stroke-linejoin:round"/><path d="M364 24C300 18 200 26 132 40" style="fill:none;stroke:var(--line-2);stroke-dasharray:3 3"/></g>
+<g data-part="tasks"><line x1="390" y1="1" x2="390" y2="211" style="stroke:var(--line-1)"/><text x="404" y="24" style="fill:var(--fg-1)">${named.tasks}</text>
 <g style="fill:var(--line-2)"><rect data-look="task" x="404" y="40.5" width="96" height="3" rx="1.5"/><rect x="404" y="56.5" width="72" height="3" rx="1.5"/><rect x="404" y="72.5" width="84" height="3" rx="1.5"/></g>
 ${words(402, 88, 112, 98, said.tasks)}</g>
-</svg>`;
+</svg>
+<div data-part="firstmate" data-inf-stage="firstmate" aria-hidden="true" style="position:absolute;z-index:0;visibility:hidden;${over(FIRSTMATE)}"></div>
+<div data-part="crewmate" data-inf-stage="crewmate" aria-hidden="true" style="position:absolute;z-index:2;${over(CREWMATE)}"></div>
+</div>`;
 
 /**
  * The controls under the picture, which only the script shows: the dots
@@ -205,7 +240,7 @@ const PRESENTATION_SCRIPT = `<script>
   var said = figure.querySelector('[data-part="words"]');
   var first = said.textContent;
   var last = said.getAttribute("data-last");
-  var ADDS = [["firstmate", "box"], ["card"], ["activity"], ["tasks"], []];
+  var ADDS = [["firstmate", "box"], ["card"], ["activity", "crewmate"], ["tasks"], []];
   var LIT = ["box", "card", "crew", "task", "box"];
   var LOOKS = {
     "box": [["stroke", "var(--accent)", "var(--line-2)"]],
@@ -215,7 +250,10 @@ const PRESENTATION_SCRIPT = `<script>
     "task": [["fill", "var(--accent)", "var(--line-2)"]]
   };
   var chapter = 1;
-  function part(name) { return figure.querySelector('[data-part="' + name + '"]'); }
+  function parts(name) { return Array.prototype.slice.call(figure.querySelectorAll('[data-part="' + name + '"]')); }
+  // A still the stage part drew over (display none) follows the chapter but never
+  // moves, so each part on screen moves once and an opened picture shows the chapter.
+  function drawn(element) { return getComputedStyle(element).display !== "none"; }
   function token(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   function duration() {
     var value = token("--dur-med");
@@ -228,20 +266,22 @@ const PRESENTATION_SCRIPT = `<script>
     figure.getAnimations({ subtree: true }).forEach(function (running) { running.cancel(); });
     for (var c = 0; c < ADDS.length; c++) {
       for (var p = 0; p < ADDS[c].length; p++) {
-        var element = part(ADDS[c][p]);
         var shown = c < chapter && !(ADDS[c][p] === "firstmate" && chapter > 1);
-        element.style.visibility = shown ? "visible" : "hidden";
-        if (pass > 0 && shown && c === chapter - 1) {
-          element.animate([{ opacity: 0, transform: "translateY(" + (c === 1 ? 10 : 6) + "px)" }, { opacity: 1, transform: "none" }], { duration: pass, easing: ease });
-        }
+        parts(ADDS[c][p]).forEach(function (element) {
+          element.style.visibility = shown ? "visible" : "hidden";
+          if (pass > 0 && shown && c === chapter - 1 && drawn(element)) {
+            element.animate([{ opacity: 0, transform: "translateY(" + (c === 1 ? 10 : 6) + "px)" }, { opacity: 1, transform: "none" }], { duration: pass, easing: ease });
+          }
+        });
       }
     }
-    var firstmate = part("firstmate");
     if (pass > 0 && chapter === 2) {
-      firstmate.style.visibility = "visible";
-      firstmate.animate([{ opacity: 1 }, { opacity: 0 }], { duration: pass, easing: ease, fill: "forwards" }).onfinish = function () {
-        firstmate.style.visibility = "hidden";
-      };
+      parts("firstmate").filter(drawn).forEach(function (firstmate) {
+        firstmate.style.visibility = "visible";
+        firstmate.animate([{ opacity: 1 }, { opacity: 0 }], { duration: pass, easing: ease, fill: "forwards" }).onfinish = function () {
+          firstmate.style.visibility = "hidden";
+        };
+      });
     }
     var words = chapter === ADDS.length ? last : first;
     if (said.textContent !== words) {
@@ -299,6 +339,7 @@ export function welcomeBody(): string {
 ${picture()}
 ${steps()}
 ${PRESENTATION_SCRIPT}
+${STAGE_PART}
 </figure>
 ${startersHtml()}`;
 }

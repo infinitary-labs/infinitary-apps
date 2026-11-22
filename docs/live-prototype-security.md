@@ -174,7 +174,7 @@ The frame's policy is unchanged: the part's script is an inline script of the se
 
 **Layers.**
 
-- The code comes only from the reading app's own bundle (`src/shared/appParts.generated.json`, generated from `src/core/runbooks/parts/`): a body can name a part, never supply or change one.
+- The code comes only from the reading app's own bundle (`src/shared/appParts.generated.json`, generated from `src/core/runbooks/parts/` and, for the app's own stage, bundled from `src/renderer/src/character/stage/`): a body can name a part, never supply or change one.
 - Only the one exact form is filled, and only for a name the build ships; any other reference stays an empty script that runs nothing, and the card checks refuse it at `emit_card` (`appPartProblem`).
 - The part goes in when the markup is built (`cardBodyMarkup`), before the window's mount or the phone's parent page hashes the body's scripts, so the policy pins exactly the code the build shipped.
 - The part's code is the same code a body could already carry inline, so a body gains no reach it did not have; the generator refuses a part whose code would close its own element or open a comment.

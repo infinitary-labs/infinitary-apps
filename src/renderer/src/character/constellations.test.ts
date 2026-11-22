@@ -8,7 +8,7 @@ import {
 } from "./constellations";
 import type { SkyDots, SkyPt } from "./sky";
 
-// The character's stage: a 280 px canvas, R = size * 0.27, as Firstmate.tsx
+// The character's stage: a 280 px canvas, R = size * 0.27, as firstmatePainter.ts
 // projects it.
 const SIZE = 280;
 const C = SIZE / 2;

@@ -552,6 +552,15 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   At the `emit_card` boundary the card checks refuse a reference written in another form or naming a part the app does not ship (`appPartProblem`).
   A computer that runs work sends a card naming a part home as written, as every home it takes work from knows parts.
   A view or phone too old to know parts draws the part's markup with none of its code.
+- **The app's own stage.**
+  One part, `stage`, is the app's own and only the app's own cards name it (`APP_ONLY_PARTS`): the card checks refuse it in any other card, and it is never offered to a runbook.
+  It draws the center's real first mate and crewmates, smaller, with the center's own painters (`src/renderer/src/character/firstmatePainter.ts`, `drawCrewmate`, `CrewOrbit`), so the welcome and the first crewmate's note show the same character as the window (`docs/first-launch.md`).
+  `node scripts/generate-runbook-parts.ts` bundles it from `src/renderer/src/character/stage/` into the same generated parts file, so every reader fills it as any part.
+  The part draws into each element marked `data-inf-stage` - `firstmate`, `crewmate` or `sendoff`, the first mate sending a crewmate off into its orbit - and hides each element marked `data-inf-stage-still`, the still drawing a reader without the part shows instead; its canvases are hidden from screen readers and from Tab.
+  Its motion is calm: the first mate drifts and blinks and the crew orbit and spin, with no greeting, fidget or turn toward the pointer.
+  It follows the theme through `inf.onTheme`, draws only what is on screen, and under reduced motion draws one settled frame.
+  Its reference sits inside a `<figure>`, so a card that names it stays prose (Scripting, above).
+  A drawing opened as a picture shows its stills, since the live drawing beside it does not travel with the copy (`framePictureScript.ts`).
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.

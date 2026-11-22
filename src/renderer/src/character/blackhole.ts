@@ -14,7 +14,7 @@ import { band, clamp01, easeInOut, easeOut, TAU } from "./face";
 // a deliberate cartoon of Hawking's pair-at-the-horizon picture.
 //
 // The character keeps its identity through the emote: the same 16 vertices
-// wind into the disk (Firstmate.tsx owns the projection and hands the points
+// wind into the disk (firstmatePainter.ts owns the projection and hands the points
 // here), the wires follow them as disk streamlines, and the eyes become two
 // hot spots caught in the disk, the far one riding up the lensed arc. The
 // emote's envelope, gaze and squint are unchanged from the shipped fidget.

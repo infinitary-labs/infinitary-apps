@@ -107,8 +107,9 @@ describe("approved welcome document", () => {
       document.children,
     );
     const shown = parts.filter(drawn).map((node) => node.attribs["data-part"]);
-    // The card covers the Firstmate, as the window shows it: every other part is drawn.
-    expect(shown).toEqual(["box", "words", "card", "activity", "tasks"]);
+    // The card covers the Firstmate, as the window shows it: every other part
+    // is drawn, the live crewmate beside the card's corner too (INF-5609).
+    expect(shown).toEqual(["box", "words", "card", "activity", "tasks", "crewmate"]);
     const text = parts.filter(drawn).map(words).join(" ");
     for (const said of [
       WELCOME_WORDS.box,

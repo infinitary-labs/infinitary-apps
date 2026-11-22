@@ -223,6 +223,9 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
       element.removeAttribute("tabindex");
       element.removeAttribute("data-inf-picture");
       element.setAttribute("style", lookOf(from[i], from[i].namespaceURI === SVG_SPACE ? DRAWING_LOOK : DRAWING_WORDS_LOOK, families));
+      // A still the stage part drew over shows in the picture, since the live
+      // drawing beside it does not travel (docs/card-authoring.md, "The app's own stage").
+      if (from[i].hasAttribute("data-inf-stage-still")) element.style.removeProperty("display");
     }
     scripts.forEach(function (script) { script.remove(); });
     var box = drawing.viewBox && drawing.viewBox.baseVal;

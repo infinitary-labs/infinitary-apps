@@ -600,8 +600,8 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
  * this Mac serves ("sign in for a program at http://127.0.0.1:PORT/") opens
  * the task's browser there and asks the captain to sign in, never opening
  * the program's own address first. Woken by Return control, it takes its
- * fresh look and reports what the program's page said, read off that look,
- * never assumed.
+ * fresh look, opens the sign-in page again, and reports what the program's
+ * page said, read off that look, never assumed.
  */
 export const TASK_BROWSER_LOCAL_RETURN_MARKER = "sign in for a program at ";
 export const MOCK_LOCAL_RETURN_CARD_TITLE = "Sign in so the program can finish its sign-in";
@@ -656,6 +656,7 @@ function taskBrowserLocalReturnStep(body: string): ScriptedCall[] | undefined {
   if (after.some((text) => text.startsWith("Reported."))) return undefined;
   const look = after[0];
   if (look === undefined) return [browser()];
+  if (after.length === 1) return [browser("open", url)];
   const said = look.match(/Program [a-z ]+/)?.[0] ?? look.split("\n").slice(0, 3).join(" | ");
   return [
     {

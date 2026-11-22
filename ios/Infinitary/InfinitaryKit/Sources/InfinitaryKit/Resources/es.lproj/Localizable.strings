@@ -303,7 +303,7 @@
 "cardBrowserBlockedInsecure" = "Infinitary bloqueó %1$@: los navegadores de tareas abren sitios web solo por https.";
 "cardBrowserBlockedLocal" = "Infinitary bloqueó %1$@, un programa en la computadora del navegador que el tripulante aún no ha abierto.";
 "cardBrowserBlockedLocalHeld" = "Infinitary bloqueó %1$@, un programa en la computadora del navegador. Devuelve el control y el tripulante podrá dejar que la página llegue a él.";
-"cardBrowserBlockedPrivate" = "Infinitary bloqueó %1$@ en una red privada. Un navegador de tarea solo llega a uno cuando lo permites en Ajustes.";
+"cardBrowserBlockedPrivate" = "Infinitary bloqueó %1$@, una dirección de una red privada. Un navegador de tarea llega a un sitio privado solo por su nombre, cuando permites ese nombre en Ajustes.";
 "cardBrowserCopyAddress" = "Copiar la dirección de la página";
 "cardBrowserFit" = "Ajustar";
 "cardBrowserForward" = "Adelante";

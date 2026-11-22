@@ -303,7 +303,7 @@
 "cardBrowserBlockedInsecure" = "Infinitary 已封鎖 %1$@：任務瀏覽器只透過 https 開啟網站。";
 "cardBrowserBlockedLocal" = "Infinitary 已封鎖 %1$@，它是瀏覽器所在電腦上船員還沒開啟的程式。";
 "cardBrowserBlockedLocalHeld" = "Infinitary 已封鎖 %1$@，它是瀏覽器所在電腦上的程式。交還控制後，船員可以讓頁面連到它。";
-"cardBrowserBlockedPrivate" = "Infinitary 已封鎖私人網路上的 %1$@。任務瀏覽器只有在你於設定中允許後才能連到它。";
+"cardBrowserBlockedPrivate" = "Infinitary 已封鎖私人網路上的位址 %1$@。任務瀏覽器只能透過名稱連到私人網站，需在設定中允許該名稱。";
 "cardBrowserCopyAddress" = "複製網頁網址";
 "cardBrowserFit" = "符合大小";
 "cardBrowserForward" = "下一頁";

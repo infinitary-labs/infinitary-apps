@@ -49,7 +49,7 @@
   "cardBrowserBlockedInsecure": "Infinitary blocked {site}: task browsers open websites over https only.",
   "cardBrowserBlockedLocal": "Infinitary blocked {site}, a program on the browser's computer that the crewmate has not opened.",
   "cardBrowserBlockedLocalHeld": "Infinitary blocked {site}, a program on the browser's computer. Return control, and the crewmate can let the page reach it.",
-  "cardBrowserBlockedPrivate": "Infinitary blocked {site} on a private network. A task browser reaches one only once you allow it in Settings.",
+  "cardBrowserBlockedPrivate": "Infinitary blocked {site}, an address on a private network. A task browser reaches a private site only by its name, once you allow that name in Settings.",
   "cardBrowserCopyAddress": "Copy page address",
   "cardBrowserFit": "Fit",
   "cardBrowserForward": "Forward",

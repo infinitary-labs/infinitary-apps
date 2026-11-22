@@ -45,7 +45,7 @@
   "cardBrowserBlockedInsecure": "Infinitary が {site} をブロックしました。タスクのブラウザーは https のウェブサイトだけを開きます。",
   "cardBrowserBlockedLocal": "Infinitary が {site} をブロックしました。ブラウザーのコンピューター上の、乗組員がまだ開いていないプログラムです。",
   "cardBrowserBlockedLocalHeld": "Infinitary が {site} をブロックしました。ブラウザーのコンピューター上のプログラムです。操作を返すと、乗組員がページからそこへ届くようにできます。",
-  "cardBrowserBlockedPrivate": "Infinitary がプライベートネットワーク上の {site} をブロックしました。タスクのブラウザーは、設定で許可したサイトにだけ届きます。",
+  "cardBrowserBlockedPrivate": "Infinitary がプライベートネットワーク上のアドレス {site} をブロックしました。タスクのブラウザーは、プライベートなサイトに名前でだけ届きます。その名前を設定で許可してください。",
   "cardBrowserCopyAddress": "ページのアドレスをコピー",
   "cardBrowserFit": "合わせる",
   "cardBrowserForward": "進む",

@@ -65,7 +65,7 @@
   "cardBrowserBlockedInsecure": "حظر Infinitary ‏{site}: متصفحات المهام تفتح المواقع عبر https فقط.",
   "cardBrowserBlockedLocal": "حظر Infinitary ‏{site}، وهو برنامج على حاسوب المتصفح لم يفتحه فرد الطاقم بعد.",
   "cardBrowserBlockedLocalHeld": "حظر Infinitary ‏{site}، وهو برنامج على حاسوب المتصفح. أعد التحكم، وسيتمكن فرد الطاقم من السماح للصفحة بالوصول إليه.",
-  "cardBrowserBlockedPrivate": "حظر Infinitary ‏{site} على شبكة خاصة. لا يصل متصفح المهمة إلى موقع كهذا إلا بعد أن تسمح به في الإعدادات.",
+  "cardBrowserBlockedPrivate": "حظر Infinitary ‏{site}، وهو عنوان على شبكة خاصة. لا يصل متصفح المهمة إلى موقع خاص إلا باسمه، بعد أن تسمح بهذا الاسم في الإعدادات.",
   "cardBrowserCopyAddress": "نسخ عنوان الصفحة",
   "cardBrowserFit": "ملاءمة",
   "cardBrowserForward": "تقدّم",

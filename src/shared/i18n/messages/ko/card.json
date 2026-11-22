@@ -45,7 +45,7 @@
   "cardBrowserBlockedInsecure": "Infinitary가 {site}을(를) 차단했어요. 작업 브라우저는 https 웹사이트만 열어요.",
   "cardBrowserBlockedLocal": "Infinitary가 브라우저 컴퓨터에서 선원이 아직 열지 않은 프로그램인 {site}을(를) 차단했어요.",
   "cardBrowserBlockedLocalHeld": "Infinitary가 브라우저 컴퓨터의 프로그램인 {site}을(를) 차단했어요. 제어를 돌려주면 선원이 페이지가 거기에 닿게 할 수 있어요.",
-  "cardBrowserBlockedPrivate": "Infinitary가 사설 네트워크의 {site}을(를) 차단했어요. 작업 브라우저는 설정에서 허용한 사이트에만 닿아요.",
+  "cardBrowserBlockedPrivate": "Infinitary가 사설 네트워크의 주소 {site}을(를) 차단했어요. 작업 브라우저는 사설 사이트에 이름으로만 닿아요. 설정에서 그 이름을 허용하면 돼요.",
   "cardBrowserCopyAddress": "페이지 주소 복사",
   "cardBrowserFit": "맞춤",
   "cardBrowserForward": "앞으로",

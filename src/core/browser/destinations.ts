@@ -9,9 +9,11 @@ import { isPublicAddress, literalAddress } from "./addresses";
  * project serves on this Mac: an address on loopback (`localhost`,
  * `*.localhost`, `127.0.0.0/8`, `[::1]`) that the crewmate itself opened
  * with `infinitary-browser-axi open`. Opening one registers its origin for the task,
- * so the page's own requests to it go through. Everything else is refused
- * before it leaves: another local service, an address on a private network,
- * a public website over plain http, a file, an app scheme. The crewmate's
+ * so the page's own requests to it go through. A page's own top-level move to
+ * another local service also goes through, and then only a page at that
+ * service reaches it (`decidePageRequest`). Everything else is refused before
+ * it leaves: another local service by any other way, an address on a private
+ * network, a public website over plain http, a file, an app scheme. The crewmate's
  * own shell is not fenced by this; the page is, so a hostile page cannot
  * reach the rest of this Mac or its network through the task's browser.
  *

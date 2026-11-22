@@ -90,7 +90,8 @@ A page that takes the crewmate to a sign-in it did not expect, or on another sit
 
 ### A page on a refused address
 
-A page can come to rest on an address its browser refuses, as when a page in the kept profile moves to a program's address on this computer that its task may not use there: the browser engine then shows its own error page at that address, blank in the built-in engine and `localhost is blocked` in Chrome.
+A page can come to rest on an address its browser refuses, as when it moves to a website over plain http or to an address written out on a private network: the browser engine then shows its own error page at that address, blank in the built-in engine and `localhost is blocked` in Chrome.
+A program on this computer is such an address only for a moment, since a page's own move reaches it ("Where a page may go"): a kept-profile page the crewmate drives is refused there before it reopens in an empty context (`leaveKept`), and the captain can take the browser in that moment.
 Each engine tells the core such a page with `onLoadFailed` (`HostPageEvents`, `src/core/host.ts`), so the captain's view reads the address again.
 The error page takes the whole address as its title, so the view's tab names only its host and port, and the crewmate reads it as it reads the address (`titleOf`, `src/core/browser/browserRecord.ts`).
 Whether the page is on one is read off its address as it is now (`pageBlock`, `src/core/browser/destinations.ts`), never off what the page said, so it holds whoever drives and goes once the page moves on.

@@ -841,8 +841,10 @@ test("a sign-in that returns to a program on this computer reaches it on the fir
   const programSite = `127.0.0.1:${(program.address() as AddressInfo).port}`;
   // The site's sign-in, whose Sign in redirects to the program with the code,
   // as a real one does; its page also asks the program for something behind
-  // the page's back, as a hostile website could.
+  // the page's back, as a hostile website could, and records each load.
+  const accountLoads: string[] = [];
   const account = createServer((request, response) => {
+    accountLoads.push(request.url ?? "");
     if (request.url === "/authorize") {
       response.writeHead(302, { location: `http://${programSite}/auth/callback?code=${CODE}` });
       response.end();
@@ -907,6 +909,10 @@ test("a sign-in that returns to a program on this computer reaches it on the fir
         .poll(async () => (await detail()).outcome ?? "", { timeout: 60_000 })
         .toContain(MOCK_LOCAL_RETURN_REPORT);
       expect((await detail()).outcome).toContain(`${MOCK_LOCAL_RETURN_SAID} "${SIGNED_IN}"`);
+      // The crewmate opened the sign-in page again after the program was
+      // reached, so its hidden request was asked when only the program's own
+      // page may reach the program.
+      expect(accountLoads.filter((load) => load === "/")).toHaveLength(2);
       // One sign-in: the program was reached once, with the code.
       expect(visits.filter((visit) => visit.startsWith("/auth/callback"))).toEqual([
         `/auth/callback?code=${CODE}`,

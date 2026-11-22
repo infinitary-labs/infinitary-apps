@@ -70,7 +70,7 @@ export type Browser = {
   current: PageEntry;
   /** The one way its pages reach the internet; it closes with the browser. */
   guard: ConnectionGuardHandle;
-  /** Origins on this Mac the crewmate opened: the only local servers the page reaches. */
+  /** Origins on this Mac the crewmate opened: the local servers every page of it reaches. */
   origins: Set<string>;
   /**
    * Origins on this Mac a page's own top-level move reached, such as a

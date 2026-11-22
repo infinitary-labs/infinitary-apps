@@ -35,8 +35,9 @@ export const PHONE_JOB_BUDGET_MS = 14 * 60_000;
 /** INF-5546: what each device past a job's first adds on a phone Mac with one simulator, which starts a device only
  * after the last one's parts end: deleting that simulator and starting the next took 40 to 72 seconds, and the new
  * device's first part ran about a minute past its recorded time (runs 44868118991 and 44868828667). INF-6058 adds a
- * minute for the new simulator's wallpaper prewarm, which its first part now waits for: that simulator boots with no
- * build beside it, and an idle simulator's prewarm finished 41 to 64 seconds after its boot began. */
+ * minute for the new simulator's wallpaper prewarm, which its first part now waits for: on the phone Macs a later
+ * device's start, that wait included, took 1.8 and 2.3 minutes, and its first part then ran inside its recorded time
+ * (run 45005056719). */
 export const PHONE_DEVICE_START_MS = 3 * 60_000;
 
 export const phoneMinutes = (ms: number): string => (ms / 60_000).toFixed(1);

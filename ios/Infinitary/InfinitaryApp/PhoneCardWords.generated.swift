@@ -7,6 +7,7 @@ enum PhoneCardWords {
     static let replyHint = PhoneMessages.`cardReplyHint`()
     static let anythingElse = "anything_else"
     static let sentWithChoice = PhoneMessages.`cardPastSentLead`()
+    static let filesFirst = "Send the file as a reply first"
     static let reviewFinding = PhoneMessages.`cardReviewFinding`()
     static let panelLeave = PhoneMessages.`cardLeaveHide`()
     static let panelLeaveRest = PhoneMessages.`cardLeaveHidePanelRest`()

@@ -132,6 +132,9 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The home reads a skipped question's answer marked skipped (`card-answer-skipped`, INF-4425); one that does not reads
     /// answers strictly, so a click and a reply leave the mark out there.
     public private(set) var homeReadsSkips = false
+    /// INF-5608 piece 2: the home takes a card button's press that carries the field's photos and queued notes
+    /// (`choice-attachments`); against one that does not, the buttons wait while either waits, as the Mac's do.
+    public private(set) var homeTakesChoiceAttachments = false
     /// INF-5445 piece 2: each open card's unsent picks, the words in its field and its queued notes, which follow the
     /// captain between the phone and every other screen through a computer whose welcome lists `card-drafts`
     /// (docs/ios.md, "Unsent picks on the phone"); a computer without it leaves them on this phone, in memory, as before.
@@ -1073,7 +1076,8 @@ public struct PhoneNotice: Equatable, Sendable {
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"],
             "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
-                        PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent]]
+                        PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent,
+                        PhoneContract.choiceAttachments]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         // Its own version, as Settings shows it, which the computer's Devices lists.
         if let version = PhoneAppVersion.forHello(Bundle.main.infoDictionary) { hello["appVersion"] = version }
@@ -1202,6 +1206,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeLeavesClosed = folded || (frame["changes"] as? [String] ?? []).contains(PhoneContract.boardWithoutClosed)
             homeReadsSkips = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnswerSkipped)
             homeKeepsDrafts = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardDrafts)
+            homeTakesChoiceAttachments = (frame["changes"] as? [String] ?? []).contains(PhoneContract.choiceAttachments)
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)

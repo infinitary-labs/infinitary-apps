@@ -329,6 +329,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   A selection of more than `REACH_RUN_FILES` (100) files runs as several Vitest runs of at most that many, one after another, each with fresh workers and its own report, and every run goes even after one fails (INF-4163).
   An in-memory worker (`pure`, `unit`, `isolate: false`) keeps what each file it ran leaves behind until its run ends, so one run of a wide selection can use most of the memory of the check's runner, which has 7.9 GB and no swap.
   For the same reason the in-memory cohorts start no more workers than the runner's memory holds, as well as no more than its cores (`docs/test-cohorts.md`).
+  An integration worker holds the programs its file starts as well, the quick check's among them, so the `integration` cohort also starts no more workers than the runner's memory holds: two on the 2-core, 8 GB Linux places, where four left as little as 278 MiB free and a SIGKILL, most likely from the kernel's out-of-memory killer, ended Vitest's own process (INF-5632).
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.

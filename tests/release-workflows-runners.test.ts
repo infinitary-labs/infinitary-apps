@@ -594,7 +594,7 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
     LINUX_QUEUES: JSON.stringify({ journeys: "fleet-linux-pr" }),
   };
   /** Where each Linux part of a request for these files starts, as journeys.yml calls it. */
-  const placed = (files: string[]) => {
+  const placed = (files: string[], hosted = false) => {
     const reasons = new Map(files.map((file) => [file, ["requested by name"]]));
     // The Mac readings of a passing verify run, as the chooser reads its newest.
     const times = new Map<string, number>(
@@ -607,11 +607,11 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
     const { linux } = budget(reasons, times, () => false, false, [], false, "linux");
     return linuxParts(linux).map((matrix) => {
       const passed = (input: string) =>
-        workflowValue(String(overflow?.with?.[input] ?? ""), { matrix, inputs: {} });
+        workflowValue(String(overflow?.with?.[input] ?? ""), { matrix, inputs: { hosted } });
       return {
         files: matrix.files,
         runner: workflowValue(journeys?.["runs-on"] ?? "", {
-          inputs: { "far-linux": passed("far-linux") },
+          inputs: { hosted: passed("hosted"), "far-linux": passed("far-linux") },
           vars,
         }),
       };
@@ -637,6 +637,10 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
   const others = request.filter((file) => !file.includes("run-work-ssh"));
   expect(placed(others).map((part) => part.runner)).toEqual(
     placed(others).map(() => "fleet-linux-pr"),
+  );
+  // A caller that asks for hosted machines still gets them.
+  expect(placed(request, true).map((part) => part.runner)).toEqual(
+    placed(request, true).map(() => "ubuntu-24.04"),
   );
 });
 
@@ -845,9 +849,13 @@ describe("a release's hosted machines", () => {
       "batch-checks.yml:critical-path",
       "batch-checks.yml:sweep",
       // An outside contributor's pull request (docs/public-ci.md, "Outside
-      // contributors"): the swept batch's full check and its Windows build.
+      // contributors"): the swept batch's full check, its edited journeys'
+      // rounds and its Windows build, and journeys.yml's Linux part on what
+      // its caller passed.
+      "contributors.yml:journeys",
       "contributors.yml:sweep",
       "contributors.yml:windows",
+      "journeys.yml:linux-overflow",
       "main.yml:verify",
       "release.yml:linux",
       "release.yml:verify",
@@ -855,6 +863,9 @@ describe("a release's hosted machines", () => {
     ]);
     // verify.yml passes on only what its own caller passed.
     expect(passed(verify["linux-e2e"], "hosted", { inputs: {} })).toBe(false);
+    expect(passed(workflow("journeys.yml").jobs["linux-overflow"], "hosted", { inputs: {} })).toBe(
+      false,
+    );
     // A request names no hosted input of its own.
     for (const file of [
       "verify.yml",

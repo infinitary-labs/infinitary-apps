@@ -13,6 +13,10 @@ name: journeys
 # pull request no longer starts this workflow, and main's desktop release
 # check and the alpha run every journey through verify.yml, so only a request
 # starts it; INF-2539 removed its pull-request paths.
+# An outside contributor's pull request is the one exception (docs/public-ci.md,
+# "Outside contributors"): a contributor cannot request a run, so contributors.yml calls
+# this workflow with hosted, which runs every job on GitHub's own machines and
+# never on the project's.
 
 on:
   workflow_dispatch:
@@ -54,6 +58,49 @@ on:
         description: Hold waits to their budgets on the wall clock, for a quiet run
         type: boolean
         default: false
+  # contributors.yml's call for an outside contributor's pull request, with hosted set.
+  # It declares every input the jobs read, so a call reads each as a request does.
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      hosted:
+        description: Run every job on GitHub's hosted Ubuntu and Mac, whatever the runner variables and mac_runner say
+        type: boolean
+        default: false
+      mac_runner:
+        type: string
+        default: ''
+      files:
+        description: Journey files to run, by name or path, separated by spaces or commas
+        required: true
+        type: string
+      platforms:
+        description: linux, mac or both
+        type: string
+        default: linux
+      base:
+        description: Comparison ref for directly edited journey files, which run three total rounds
+        type: string
+        default: origin/main
+      mac_all:
+        type: boolean
+        default: false
+      mac_once:
+        description: Run each edited named journey once on the Mac too, every test, beside the rounds of its tests that need a Mac
+        type: boolean
+        default: false
+      browser_engine:
+        type: string
+        default: built-in
+      starve:
+        type: boolean
+        default: false
+      perf:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -73,7 +120,8 @@ jobs:
   # marks itself before it looks, so whichever looks last sees both and the older one stops.
   replace-older-request:
     name: Manual request · Replace an older request of the same journeys
-    if: github.ref != 'refs/heads/main' && github.run_attempt == '1'
+    # A contributor's call is replaced by contributors.yml's own group for its pull request.
+    if: github.ref != 'refs/heads/main' && github.run_attempt == '1' && !inputs.hosted
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light_gate || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     # Replacing is housekeeping: it never decides whether the named journeys passed.
     continue-on-error: true
@@ -131,9 +179,9 @@ jobs:
             }
             if (!replaced.length) core.info('No older request of this selection is still going.');
   choose-journeys:
-    name: Manual request · Choose and place app journeys
+    name: ${{ format('{0} · Choose and place app journeys', inputs.trigger || 'Manual request') }}
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -306,10 +354,11 @@ jobs:
       matrix: ${{ fromJSON(needs.choose-journeys.outputs.linux) }}
     # Each group's one-based part comes with it from journey-budget.ts, and
     # whether it holds a journey whose far computer is this one (farLinux).
-    name: ${{ format('Manual request · Selected journeys (Linux; part {0})', matrix.part) }}
+    name: ${{ format('{0} · Selected journeys (Linux; part {1})', inputs.trigger || 'Manual request', matrix.part) }}
     uses: ./.github/workflows/source-journeys.yml
     with:
-      trigger: Manual request
+      trigger: ${{ inputs.trigger || 'Manual request' }}
+      hosted: ${{ inputs.hosted || false }}
       part: ${{ matrix.part }}
       ref: ${{ github.sha }}
       artifact-suffix: overflow-${{ strategy.job-index }}
@@ -320,11 +369,11 @@ jobs:
       repeat-base: ${{ inputs.base || 'origin/main' }}
   affected-journeys:
     needs: choose-journeys
-    name: Manual request · Selected app journeys (Mac)
+    name: ${{ format('{0} · Selected app journeys (Mac)', inputs.trigger || 'Manual request') }}
     # The implicit success() skips on chooser failure; zero skips by this
     # job's own condition, so its check passes without taking a Mac runner.
     if: needs.choose-journeys.outputs.count != '0'
-    runs-on: ${{ inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').journeys || vars.MAC_RUNNER || 'macos-15' }}
+    runs-on: ${{ inputs.hosted && 'macos-15' || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').journeys || vars.MAC_RUNNER || 'macos-15' }}
     # Every crewmate works under "Application Support", and so does this job
     # (verify.yml): a check that only fails from a path with a space fails
     # here, not only in a working copy.

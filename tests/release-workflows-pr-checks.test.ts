@@ -888,7 +888,9 @@ describe("public CI admission", () => {
           const given = Object.fromEntries(
             Object.entries(job.with ?? {}).map(([name, value]) => [
               name,
-              typeof value === "string" && value.includes("${{")
+              // A whole expression is read; text around one, such as an
+              // artifact name, decides no machine and passes on as written.
+              typeof value === "string" && /^\$\{\{[^}]*\}\}$/.test(value.trim())
                 ? workflowValue(value, { github, inputs, matrix: {}, strategy: {} })
                 : value,
             ]),
@@ -907,6 +909,7 @@ describe("public CI admission", () => {
     const calls = Object.entries(contributors).filter(([, job]) => job.uses);
     expect(calls.map(([id, job]) => `${id} ${job.uses}`)).toEqual([
       "sweep ./.github/workflows/verify.yml",
+      "journeys ./.github/workflows/journeys.yml",
       "startup ./.github/workflows/linux-startup.yml",
       "windows ./.github/workflows/windows.yml",
     ]);
@@ -923,6 +926,11 @@ describe("public CI admission", () => {
     expect(reached).toContain(
       ".github/workflows/source-journeys.yml:source-desktop desktop 3 3 ubuntu-24.04",
     );
+    // The edited journeys' rounds reached hosted Ubuntu and GitHub's Mac, and
+    // the request-replacing job, which only a request needs, took none.
+    expect(reached).toContain(".github/workflows/journeys.yml:choose-journeys ubuntu-24.04");
+    expect(reached).toContain(".github/workflows/journeys.yml:affected-journeys macos-15");
+    expect(reached.some((line) => line.includes("replace-older-request"))).toBe(false);
     expect(reached).toContain(".github/workflows/linux-startup.yml:runtime-facts ubuntu-24.04");
     expect(reached).toContain(".github/workflows/windows.yml:build windows-2025");
     expect(reached.some((line) => line.startsWith(".github/workflows/windows.yml:check"))).toBe(

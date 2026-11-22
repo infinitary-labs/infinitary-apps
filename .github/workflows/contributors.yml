@@ -9,7 +9,10 @@ name: contributors
 # every Linux journey on hosted Ubuntu, its three Mac lanes with every
 # journey on GitHub's hosted Mac, the Linux startup fixtures, and the Windows
 # installer's build on hosted Windows when the change reaches it
-# (scripts/windows-paths.ts, windows.yml). The fresh Windows 11 check needs
+# (scripts/windows-paths.ts, windows.yml). Each journey file the change edits
+# also runs three rounds and then by itself on hosted Ubuntu, and once on
+# GitHub's Mac (journeys.yml), the proof a task branch requests for its own
+# edited journeys, since a contributor cannot request a run. The fresh Windows 11 check needs
 # the project's own Windows PC, so it waits for the next alpha's release
 # check; the phone check, the signed installer checks, signing and TestFlight
 # run only from main. The owner merges the pull request itself once its
@@ -31,14 +34,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Whether the change reaches the Windows installer, read from the pull
-  # request's merge commit against its base parent. Plain Node, no install.
-  # Its name leads with what started it (scripts/ci-job-names.mjs).
+  # The journey files the change edits and whether it reaches the Windows
+  # installer, read from the pull request's merge commit against its base
+  # parent. Plain Node, no install. Its name leads with what started it
+  # (scripts/ci-job-names.mjs).
   paths:
     if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
-    name: Pull request · Read the contributor's Windows reach (Linux)
+    name: Pull request · Read the contributor's edited journeys and Windows reach (Linux)
     runs-on: ubuntu-24.04
     outputs:
+      base: ${{ steps.read.outputs.base }}
+      journeys: ${{ steps.read.outputs.journeys }}
       windows: ${{ steps.read.outputs.windows }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -49,8 +55,14 @@ jobs:
         with:
           node-version: 24
       - id: read
-        name: Read the change's Windows reach
-        run: node scripts/windows-paths.ts --base "$(git rev-parse HEAD^1)"
+        name: Read the change's edited journeys and Windows reach
+        run: |
+          base=$(git rev-parse HEAD^1)
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          journeys=$(git diff --name-only --diff-filter=d "$base" HEAD -- 'tests/e2e/*.spec.ts' | tr '\n' ' ' | sed 's/ *$//')
+          echo "journeys=$journeys" >> "$GITHUB_OUTPUT"
+          echo "Edited journeys: ${journeys:-none}"
+          node scripts/windows-paths.ts --base "$base"
 
   # The batch's full check (batch-checks.yml's sweep), every job on GitHub's
   # hosted machines: hosted Ubuntu for the Linux jobs, the test groups
@@ -71,6 +83,30 @@ jobs:
       all_journeys: true
       hosted: true
       mac_runner: macos-15
+
+  # Each edited journey file three rounds and then by itself (the run-alone
+  # pass) on hosted Ubuntu, and once on GitHub's Mac, with base naming the
+  # change's base parent so scripts/journey-runs.ts counts them as edited.
+  # The sweep runs every journey once; this is the repeat it does not.
+  journeys:
+    needs: paths
+    if: ${{ needs.paths.outputs.journeys != '' }}
+    name: Pull request · Contributor's edited journeys
+    # journeys.yml's request-replacing job asks to cancel runs, and GitHub
+    # refuses a call whose grant is short of any called job's ask, even one
+    # that skips; an outside pull request's token stays read-only whatever
+    # this grants.
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/journeys.yml
+    with:
+      trigger: Pull request
+      hosted: true
+      files: ${{ needs.paths.outputs.journeys }}
+      platforms: both
+      base: ${{ needs.paths.outputs.base }}
+      mac_once: true
 
   # The Linux automatic startup fixtures, which the batch runs in a job of
   # its own; linux-startup.yml names hosted Ubuntu itself.

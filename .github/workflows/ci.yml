@@ -55,7 +55,8 @@ name: ci
 # An outside contributor's pull request (docs/public-ci.md, "Outside
 # contributors") runs only on GitHub's own machines, whatever the variables
 # say: these jobs on hosted Ubuntu, and contributors.yml's run of the swept
-# batch's tests and Windows build on hosted Ubuntu, Mac and Windows. The fresh
+# batch's tests, its edited journeys' rounds and its Windows build on hosted
+# Ubuntu, Mac and Windows. The fresh
 # Windows 11 check waits for the next alpha's release check; the signed
 # installer checks, signing and TestFlight run only from main. A pull request runs the
 # check files it carries, so the owner's approval of each run, not this

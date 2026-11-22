@@ -831,7 +831,7 @@ The cost is GitHub's per-minute bill for those jobs.
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and this project's own pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
-An outside contributor's pull request runs on GitHub's machines whatever the variables say: `ci.yml`'s branch check and the docs site's check name `ubuntu-24.04` first for it, and `contributors.yml` calls `verify.yml` with `hosted: true` and `mac_runner: macos-15`, `linux-startup.yml`, and `windows.yml` with `hosted: true` (`docs/public-ci.md`, "Outside contributors").
+An outside contributor's pull request runs on GitHub's machines whatever the variables say: `ci.yml`'s branch check and the docs site's check name `ubuntu-24.04` first for it, and `contributors.yml` calls `verify.yml` with `hosted: true` and `mac_runner: macos-15`, `linux-startup.yml`, and `journeys.yml` and `windows.yml` with `hosted: true` (`docs/public-ci.md`, "Outside contributors").
 `tests/release-workflows-runners.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
 
 ## Native phone checks
@@ -1008,7 +1008,9 @@ It runs the same branch check on hosted `ubuntu-24.04`, and the docs site's chec
 An outside change merges as its own pull request and joins no batch (`docs/forge.md`, "Batches of your own"), so `contributors.yml` runs on it the tests the swept batch runs ("The swept batch"), on GitHub's machines (the captain's route on INF-3559).
 Its `sweep` job calls `verify.yml` with the batch's selection and `hosted: true`: the code checks, every Linux test group and every Linux journey on hosted Ubuntu, and the three Mac lanes with every journey on hosted `macos-15`, which `mac_runner` names ahead of `MAC_QUEUES` and `MAC_RUNNER`.
 Its `startup` job runs the Linux startup fixtures, and the branch check runs the critical path and the release notes check.
-Its `paths` job reads the merge commit against its base parent with `scripts/windows-paths.ts`; when the change reaches the Windows installer, `windows.yml` with `hosted: true` builds it on hosted `windows-2025` and skips the fresh Windows 11 check.
+Its `paths` job reads the merge commit against its base parent: the journey files it edits, and `scripts/windows-paths.ts`.
+A contributor cannot request a run, so its `journeys` job requests for them what a task branch requests for its own edited journeys ("What a task branch requests"): `journeys.yml` with `hosted: true`, the edited files and the base parent, which runs each three rounds and then by itself on hosted Ubuntu, and once on hosted `macos-15` (`mac_once`).
+When the change reaches the Windows installer, `windows.yml` with `hosted: true` builds it on hosted `windows-2025` and skips the fresh Windows 11 check.
 Unlike the batch, it confirms no failed test files again: the owner reads a failed run.
 GitHub's Macs are smaller than the project's, so the Mac lanes run slower there.
 The fresh Windows 11 check needs the project's own Windows PC, so for an outside change it waits for the next alpha's release check; the phone check, the signed installer checks, signing and TestFlight run only from `main`.

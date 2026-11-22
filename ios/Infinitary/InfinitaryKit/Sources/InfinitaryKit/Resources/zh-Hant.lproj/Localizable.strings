@@ -2823,10 +2823,8 @@
 "settingsIntegrationsAs" = "以 %1$@ 身分";
 "settingsIntegrationsCheckNow" = "立即檢查";
 "settingsIntegrationsCopying" = "複製中…";
-"settingsIntegrationsPause" = "暫停";
 "settingsIntegrationsPauseDetail" = "在你繼續之前，誰都無法使用它";
 "settingsIntegrationsPaused" = "已暫停";
-"settingsIntegrationsResume" = "繼續";
 "settingsIntegrationsRowCollapsed" = "%1$@，已收合";
 "settingsIntegrationsRowExpanded" = "%1$@，已展開";
 "settingsIntegrationsRuleNote" = "選擇「詢問你」或「一律允許」";
@@ -2960,6 +2958,7 @@
 "settingsLocalSeatModelLabel" = "本機模型";
 "settingsLocalSeatRun" = "讓你的大副在本機模型上運作";
 "settingsLocalSeatSaveFailed" = "無法儲存本機模型設定。請再試一次。";
+"settingsMenuPaused" = "已暫停";
 "settingsModelsAutomaticChoice" = "Infinitary 會為每項任務選擇模型。你也可以為任務指定模型，或釘選想優先嘗試的模型。";
 "settingsModelsDormantPins" = "這些釘選的模型在更新前未啟用。除非你還原，Infinitary 不會嘗試它們。若要讓 Infinitary 再次選擇專案在哪台電腦執行，請在「專案 → 執行於」中選擇「自動」。";
 "settingsModelsHeading" = "模型";
@@ -3309,13 +3308,9 @@
 "settingsSubscriptionsMenuKeepGoingOffClaude" = "%1$@ 上的額外用量已關閉";
 "settingsSubscriptionsMenuKeepGoingOffCodex" = "%1$@ 上沒有點數";
 "settingsSubscriptionsMenuModelSlots" = "模型等級";
-"settingsSubscriptionsMenuPause" = "暫停";
 "settingsSubscriptionsMenuPrefer" = "優先用於船員工作";
 "settingsSubscriptionsMenuRename" = "重新命名";
 "settingsSubscriptionsMenuResetSlots" = "重設模型等級";
-"settingsSubscriptionsMenuResume" = "繼續";
-"settingsSubscriptionsMenuStopKeepingGoing" = "停止花費點數";
-"settingsSubscriptionsMenuStopPreferring" = "不再優先用於船員工作";
 "settingsSubscriptionsMenuStopUsingResets" = "停止自動使用已儲存的重設";
 "settingsSubscriptionsMenuUseReset" = "使用已儲存的重設";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex 登入後使用最先到期的那一次";

@@ -2823,10 +2823,8 @@
 "settingsIntegrationsAs" = "en tant que %1$@";
 "settingsIntegrationsCheckNow" = "Vérifier maintenant";
 "settingsIntegrationsCopying" = "Copie...";
-"settingsIntegrationsPause" = "Mettre en pause";
 "settingsIntegrationsPauseDetail" = "Personne n’y accède tant que vous ne la reprenez pas";
 "settingsIntegrationsPaused" = "en pause";
-"settingsIntegrationsResume" = "Reprendre";
 "settingsIntegrationsRowCollapsed" = "%1$@, replié";
 "settingsIntegrationsRowExpanded" = "%1$@, développé";
 "settingsIntegrationsRuleNote" = "Choisissez « Vous demande » ou « Toujours autorisée »";
@@ -2960,6 +2958,7 @@
 "settingsLocalSeatModelLabel" = "Modèle local";
 "settingsLocalSeatRun" = "Faire tourner votre second sur un modèle local";
 "settingsLocalSeatSaveFailed" = "Le réglage du modèle local n’a pas pu être enregistré. Réessayez.";
+"settingsMenuPaused" = "En pause";
 "settingsModelsAutomaticChoice" = "Infinitary choisit un modèle pour chaque tâche. Indiquez-en un pour la tâche ou épinglez des modèles à essayer en priorité.";
 "settingsModelsDormantPins" = "Ces modèles épinglés étaient inactifs avant la mise à jour. Infinitary ne les essaie que si vous les rétablissez. Pour lui laisser de nouveau le choix de l’ordinateur, choisissez Automatique dans Projets → S’exécute sur.";
 "settingsModelsHeading" = "Modèles";
@@ -3309,13 +3308,9 @@
 "settingsSubscriptionsMenuKeepGoingOffClaude" = "L’utilisation supplémentaire est désactivée sur %1$@";
 "settingsSubscriptionsMenuKeepGoingOffCodex" = "Aucun crédit sur %1$@";
 "settingsSubscriptionsMenuModelSlots" = "Niveaux des modèles";
-"settingsSubscriptionsMenuPause" = "Mettre en pause";
 "settingsSubscriptionsMenuPrefer" = "Privilégier pour le travail de l’équipage";
 "settingsSubscriptionsMenuRename" = "Renommer";
 "settingsSubscriptionsMenuResetSlots" = "Réinitialiser les niveaux des modèles";
-"settingsSubscriptionsMenuResume" = "Reprendre";
-"settingsSubscriptionsMenuStopKeepingGoing" = "Arrêter de dépenser des crédits";
-"settingsSubscriptionsMenuStopPreferring" = "Ne plus privilégier pour le travail de l’équipage";
 "settingsSubscriptionsMenuStopUsingResets" = "Ne plus utiliser les réinitialisations enregistrées d’office";
 "settingsSubscriptionsMenuUseReset" = "Utiliser une réinitialisation enregistrée";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex se connecte et utilise celle qui expire en premier";

@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -22,8 +22,8 @@ Abra uma linha para ver as ações dela e o que ela pode avisar às suas automa�
 
 O menu no fim de uma linha tem:
 
+- **Pausada**: enquanto o interruptor estiver ligado, ninguém a alcança.
 - **Verificar agora**, que verifica se a conexão ainda funciona.
-- **Pausar**: ninguém a alcança até você a **Retomar**.
 - **Sair e remover**, ou **Remover** para um servidor MCP.
 
 Os botões abaixo da lista conectam algo novo, como **GitHub**, **Google** ou **Servidor MCP**.

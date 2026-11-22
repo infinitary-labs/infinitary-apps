@@ -61797,33 +61797,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Copying...`;
   }
-  function settingsIntegrationsPause() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إيقاف مؤقت`;
-      case "de":
-        return `Pausieren`;
-      case "es":
-        return `Pausar`;
-      case "fr":
-        return `Mettre en pause`;
-      case "ja":
-        return `一時停止`;
-      case "ko":
-        return `일시 정지`;
-      case "pt-BR":
-        return `Pausar`;
-      case "zh-Hans":
-        return `暂停`;
-      case "zh-Hant":
-        return `暫停`;
-      case "en-XA":
-        return `[Þáûšé ~~]`;
-      case "ar-XB":
-        return `‮Pause‬`;
-    }
-    return `Pause`;
-  }
   function settingsIntegrationsPauseDetail() {
     switch (currentLanguage()) {
       case "ar":
@@ -61877,33 +61850,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮paused‬`;
     }
     return `paused`;
-  }
-  function settingsIntegrationsResume() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `استئناف`;
-      case "de":
-        return `Fortsetzen`;
-      case "es":
-        return `Reanudar`;
-      case "fr":
-        return `Reprendre`;
-      case "ja":
-        return `再開`;
-      case "ko":
-        return `다시 시작`;
-      case "pt-BR":
-        return `Retomar`;
-      case "zh-Hans":
-        return `继续`;
-      case "zh-Hant":
-        return `繼續`;
-      case "en-XA":
-        return `[Ŕéšûɱé ~~]`;
-      case "ar-XB":
-        return `‮Resume‬`;
-    }
-    return `Resume`;
   }
   function settingsIntegrationsRowCollapsed(input2) {
     const name = input2.name;
@@ -65547,6 +65493,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮The local model setting could not be saved. Try again.‬`;
     }
     return `The local model setting could not be saved. Try again.`;
+  }
+  function settingsMenuPaused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متوقف مؤقتًا`;
+      case "de":
+        return `Pausiert`;
+      case "es":
+        return `En pausa`;
+      case "fr":
+        return `En pause`;
+      case "ja":
+        return `一時停止中`;
+      case "ko":
+        return `일시 정지됨`;
+      case "pt-BR":
+        return `Pausada`;
+      case "zh-Hans":
+        return `已暂停`;
+      case "zh-Hant":
+        return `已暫停`;
+      case "en-XA":
+        return `[Þáûšéð ~~]`;
+      case "ar-XB":
+        return `‮Paused‬`;
+    }
+    return `Paused`;
   }
   function settingsModelsAutomaticChoice() {
     switch (currentLanguage()) {
@@ -75805,33 +75778,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Model slots`;
   }
-  function settingsSubscriptionsMenuPause() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إيقاف مؤقت`;
-      case "de":
-        return `Pausieren`;
-      case "es":
-        return `Pausar`;
-      case "fr":
-        return `Mettre en pause`;
-      case "ja":
-        return `一時停止`;
-      case "ko":
-        return `일시 정지`;
-      case "pt-BR":
-        return `Pausar`;
-      case "zh-Hans":
-        return `暂停`;
-      case "zh-Hant":
-        return `暫停`;
-      case "en-XA":
-        return `[Þáûšé ~~]`;
-      case "ar-XB":
-        return `‮Pause‬`;
-    }
-    return `Pause`;
-  }
   function settingsSubscriptionsMenuPrefer() {
     switch (currentLanguage()) {
       case "ar":
@@ -75912,87 +75858,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Reset model slots‬`;
     }
     return `Reset model slots`;
-  }
-  function settingsSubscriptionsMenuResume() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `استئناف`;
-      case "de":
-        return `Fortsetzen`;
-      case "es":
-        return `Reanudar`;
-      case "fr":
-        return `Reprendre`;
-      case "ja":
-        return `再開`;
-      case "ko":
-        return `재개`;
-      case "pt-BR":
-        return `Retomar`;
-      case "zh-Hans":
-        return `恢复`;
-      case "zh-Hant":
-        return `繼續`;
-      case "en-XA":
-        return `[Ŕéšûɱé ~~]`;
-      case "ar-XB":
-        return `‮Resume‬`;
-    }
-    return `Resume`;
-  }
-  function settingsSubscriptionsMenuStopKeepingGoing() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إيقاف إنفاق الاعتمادات`;
-      case "de":
-        return `Kein Guthaben mehr ausgeben`;
-      case "es":
-        return `Dejar de gastar créditos`;
-      case "fr":
-        return `Arrêter de dépenser des crédits`;
-      case "ja":
-        return `クレジットの使用をやめる`;
-      case "ko":
-        return `크레딧 사용 그만하기`;
-      case "pt-BR":
-        return `Parar de gastar créditos`;
-      case "zh-Hans":
-        return `停止花费点数`;
-      case "zh-Hant":
-        return `停止花費點數`;
-      case "en-XA":
-        return `[Šţöþ šþéñðîñĝ çŕéðîţš ~~~~~~~]`;
-      case "ar-XB":
-        return `‮Stop spending credits‬`;
-    }
-    return `Stop spending credits`;
-  }
-  function settingsSubscriptionsMenuStopPreferring() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إيقاف التفضيل لعمل الطاقم`;
-      case "de":
-        return `Nicht mehr für Crew-Arbeit bevorzugen`;
-      case "es":
-        return `Dejar de preferir para el trabajo de la tripulación`;
-      case "fr":
-        return `Ne plus privilégier pour le travail de l’équipage`;
-      case "ja":
-        return `乗組員の作業での優先をやめる`;
-      case "ko":
-        return `선원 작업에 우선 사용 그만하기`;
-      case "pt-BR":
-        return `Deixar de preferir para o trabalho da tripulação`;
-      case "zh-Hans":
-        return `不再优先用于船员工作`;
-      case "zh-Hant":
-        return `不再優先用於船員工作`;
-      case "en-XA":
-        return `[Šţöþ þŕéƒéŕŕîñĝ ƒöŕ çŕéŵ ŵöŕķ ~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Stop preferring for crew work‬`;
-    }
-    return `Stop preferring for crew work`;
   }
   function settingsSubscriptionsMenuStopUsingResets() {
     switch (currentLanguage()) {
@@ -92466,10 +92331,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsIntegrationsAs,
     settingsIntegrationsCheckNow,
     settingsIntegrationsCopying,
-    settingsIntegrationsPause,
     settingsIntegrationsPauseDetail,
     settingsIntegrationsPaused,
-    settingsIntegrationsResume,
     settingsIntegrationsRowCollapsed,
     settingsIntegrationsRowExpanded,
     settingsIntegrationsRuleNote,
@@ -92603,6 +92466,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsLocalSeatModelLabel,
     settingsLocalSeatRun,
     settingsLocalSeatSaveFailed,
+    settingsMenuPaused,
     settingsModelsAutomaticChoice,
     settingsModelsDormantPins,
     settingsModelsHeading,
@@ -92960,13 +92824,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsMenuKeepGoingOffClaude,
     settingsSubscriptionsMenuKeepGoingOffCodex,
     settingsSubscriptionsMenuModelSlots,
-    settingsSubscriptionsMenuPause,
     settingsSubscriptionsMenuPrefer,
     settingsSubscriptionsMenuRename,
     settingsSubscriptionsMenuResetSlots,
-    settingsSubscriptionsMenuResume,
-    settingsSubscriptionsMenuStopKeepingGoing,
-    settingsSubscriptionsMenuStopPreferring,
     settingsSubscriptionsMenuStopUsingResets,
     settingsSubscriptionsMenuUseReset,
     settingsSubscriptionsMenuUseResetDetail,
@@ -95377,10 +95237,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsIntegrationsAs": ["account"],
     "settingsIntegrationsCheckNow": [],
     "settingsIntegrationsCopying": [],
-    "settingsIntegrationsPause": [],
     "settingsIntegrationsPauseDetail": [],
     "settingsIntegrationsPaused": [],
-    "settingsIntegrationsResume": [],
     "settingsIntegrationsRowCollapsed": ["name"],
     "settingsIntegrationsRowExpanded": ["name"],
     "settingsIntegrationsRuleNote": [],
@@ -95514,6 +95372,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsLocalSeatModelLabel": [],
     "settingsLocalSeatRun": [],
     "settingsLocalSeatSaveFailed": [],
+    "settingsMenuPaused": [],
     "settingsModelsAutomaticChoice": [],
     "settingsModelsDormantPins": [],
     "settingsModelsHeading": [],
@@ -95871,13 +95730,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsMenuKeepGoingOffClaude": ["site"],
     "settingsSubscriptionsMenuKeepGoingOffCodex": ["site"],
     "settingsSubscriptionsMenuModelSlots": [],
-    "settingsSubscriptionsMenuPause": [],
     "settingsSubscriptionsMenuPrefer": [],
     "settingsSubscriptionsMenuRename": [],
     "settingsSubscriptionsMenuResetSlots": [],
-    "settingsSubscriptionsMenuResume": [],
-    "settingsSubscriptionsMenuStopKeepingGoing": [],
-    "settingsSubscriptionsMenuStopPreferring": [],
     "settingsSubscriptionsMenuStopUsingResets": [],
     "settingsSubscriptionsMenuUseReset": [],
     "settingsSubscriptionsMenuUseResetDetail": [],

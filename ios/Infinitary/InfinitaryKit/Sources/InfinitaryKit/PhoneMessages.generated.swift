@@ -2960,10 +2960,8 @@ public enum PhoneMessages {
     public static func `settingsIntegrationsAs`(`account`: String) -> String { PhoneWords.format("settingsIntegrationsAs", [`account`]) }
     public static func `settingsIntegrationsCheckNow`() -> String { PhoneWords.format("settingsIntegrationsCheckNow", []) }
     public static func `settingsIntegrationsCopying`() -> String { PhoneWords.format("settingsIntegrationsCopying", []) }
-    public static func `settingsIntegrationsPause`() -> String { PhoneWords.format("settingsIntegrationsPause", []) }
     public static func `settingsIntegrationsPauseDetail`() -> String { PhoneWords.format("settingsIntegrationsPauseDetail", []) }
     public static func `settingsIntegrationsPaused`() -> String { PhoneWords.format("settingsIntegrationsPaused", []) }
-    public static func `settingsIntegrationsResume`() -> String { PhoneWords.format("settingsIntegrationsResume", []) }
     public static func `settingsIntegrationsRowCollapsed`(`name`: String) -> String { PhoneWords.format("settingsIntegrationsRowCollapsed", [`name`]) }
     public static func `settingsIntegrationsRowExpanded`(`name`: String) -> String { PhoneWords.format("settingsIntegrationsRowExpanded", [`name`]) }
     public static func `settingsIntegrationsRuleNote`() -> String { PhoneWords.format("settingsIntegrationsRuleNote", []) }
@@ -3097,6 +3095,7 @@ public enum PhoneMessages {
     public static func `settingsLocalSeatModelLabel`() -> String { PhoneWords.format("settingsLocalSeatModelLabel", []) }
     public static func `settingsLocalSeatRun`() -> String { PhoneWords.format("settingsLocalSeatRun", []) }
     public static func `settingsLocalSeatSaveFailed`() -> String { PhoneWords.format("settingsLocalSeatSaveFailed", []) }
+    public static func `settingsMenuPaused`() -> String { PhoneWords.format("settingsMenuPaused", []) }
     public static func `settingsModelsAutomaticChoice`() -> String { PhoneWords.format("settingsModelsAutomaticChoice", []) }
     public static func `settingsModelsDormantPins`() -> String { PhoneWords.format("settingsModelsDormantPins", []) }
     public static func `settingsModelsHeading`() -> String { PhoneWords.format("settingsModelsHeading", []) }
@@ -3454,13 +3453,9 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsMenuKeepGoingOffClaude`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoingOffClaude", [`site`]) }
     public static func `settingsSubscriptionsMenuKeepGoingOffCodex`(`site`: String) -> String { PhoneWords.format("settingsSubscriptionsMenuKeepGoingOffCodex", [`site`]) }
     public static func `settingsSubscriptionsMenuModelSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuModelSlots", []) }
-    public static func `settingsSubscriptionsMenuPause`() -> String { PhoneWords.format("settingsSubscriptionsMenuPause", []) }
     public static func `settingsSubscriptionsMenuPrefer`() -> String { PhoneWords.format("settingsSubscriptionsMenuPrefer", []) }
     public static func `settingsSubscriptionsMenuRename`() -> String { PhoneWords.format("settingsSubscriptionsMenuRename", []) }
     public static func `settingsSubscriptionsMenuResetSlots`() -> String { PhoneWords.format("settingsSubscriptionsMenuResetSlots", []) }
-    public static func `settingsSubscriptionsMenuResume`() -> String { PhoneWords.format("settingsSubscriptionsMenuResume", []) }
-    public static func `settingsSubscriptionsMenuStopKeepingGoing`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopKeepingGoing", []) }
-    public static func `settingsSubscriptionsMenuStopPreferring`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopPreferring", []) }
     public static func `settingsSubscriptionsMenuStopUsingResets`() -> String { PhoneWords.format("settingsSubscriptionsMenuStopUsingResets", []) }
     public static func `settingsSubscriptionsMenuUseReset`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseReset", []) }
     public static func `settingsSubscriptionsMenuUseResetDetail`() -> String { PhoneWords.format("settingsSubscriptionsMenuUseResetDetail", []) }
@@ -6939,10 +6934,8 @@ extension PhoneWords {
         "settingsIntegrationsAs": ["account"],
         "settingsIntegrationsCheckNow": [],
         "settingsIntegrationsCopying": [],
-        "settingsIntegrationsPause": [],
         "settingsIntegrationsPauseDetail": [],
         "settingsIntegrationsPaused": [],
-        "settingsIntegrationsResume": [],
         "settingsIntegrationsRowCollapsed": ["name"],
         "settingsIntegrationsRowExpanded": ["name"],
         "settingsIntegrationsRuleNote": [],
@@ -7076,6 +7069,7 @@ extension PhoneWords {
         "settingsLocalSeatModelLabel": [],
         "settingsLocalSeatRun": [],
         "settingsLocalSeatSaveFailed": [],
+        "settingsMenuPaused": [],
         "settingsModelsAutomaticChoice": [],
         "settingsModelsDormantPins": [],
         "settingsModelsHeading": [],
@@ -7433,13 +7427,9 @@ extension PhoneWords {
         "settingsSubscriptionsMenuKeepGoingOffClaude": ["site"],
         "settingsSubscriptionsMenuKeepGoingOffCodex": ["site"],
         "settingsSubscriptionsMenuModelSlots": [],
-        "settingsSubscriptionsMenuPause": [],
         "settingsSubscriptionsMenuPrefer": [],
         "settingsSubscriptionsMenuRename": [],
         "settingsSubscriptionsMenuResetSlots": [],
-        "settingsSubscriptionsMenuResume": [],
-        "settingsSubscriptionsMenuStopKeepingGoing": [],
-        "settingsSubscriptionsMenuStopPreferring": [],
         "settingsSubscriptionsMenuStopUsingResets": [],
         "settingsSubscriptionsMenuUseReset": [],
         "settingsSubscriptionsMenuUseResetDetail": [],

@@ -18,6 +18,12 @@ export type RowMenuItem =
       detail?: string;
       /** Listed but dim: it cannot run now, and its detail says why. */
       disabled?: boolean;
+      /**
+       * An on/off setting rather than an action: it draws a small switch at
+       * its end in this state, keeps one fixed label, and a pick flips it
+       * with the menu left open (design skill RowMenu, "Settings").
+       */
+      checked?: boolean;
     }
   | { separator: true };
 
@@ -49,6 +55,9 @@ export type RowMenuProps = {
   "data-key-command"?: string | undefined;
 };
 
+/** Every item a key can reach: actions and on/off settings. */
+const ITEMS = '[role="menuitem"], [role="menuitemcheckbox"]';
+
 /** Space between the kebab and the panel, and the minimum kept from the window edge. */
 const GAP = 4;
 const EDGE = 8;
@@ -66,7 +75,9 @@ const kebab = (
  * row offers, out of the glance path. Anchored bottom-right, and flipped
  * above the kebab when the panel would run past the window's bottom edge
  * (a row low in the Models list otherwise opened its menu off-screen, where
- * no click could reach it); closes on Escape, an outside click, or a pick.
+ * no click could reach it); closes on Escape, an outside click, or a pick
+ * of an action. An on/off setting (`checked`) draws a small switch and stays
+ * open when picked, focus on it, so the person sees the switch move.
  * Arrow keys walk the items and focus returns to the kebab on close (or
  * where `restoreFocus` says), so the menu is a keyboard citizen. An item
  * that cannot run stays listed, dim, with its `detail` saying why; a pick
@@ -129,7 +140,7 @@ export function RowMenu({
       menu.current = node;
       if (!node) return;
       place();
-      node.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+      node.querySelector<HTMLButtonElement>(ITEMS)?.focus();
     },
     [place],
   );
@@ -152,9 +163,7 @@ export function RowMenu({
         return;
       }
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      const focusable = [
-        ...(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []),
-      ];
+      const focusable = [...(menu.current?.querySelectorAll<HTMLButtonElement>(ITEMS) ?? [])];
       if (focusable.length === 0) return;
       event.preventDefault();
       const index = focusable.indexOf(document.activeElement as HTMLButtonElement);
@@ -256,6 +265,10 @@ export function RowMenu({
                   item={item}
                   onPick={() => {
                     if (item.disabled) return;
+                    if (item.checked !== undefined) {
+                      item.onSelect?.();
+                      return;
+                    }
                     setOpen(false);
                     giveBackFocus();
                     item.onSelect?.();
@@ -279,10 +292,21 @@ function MenuItem({
 }) {
   const [hover, setHover] = useState(false);
   const dim = item.disabled === true;
+  const setting = item.checked !== undefined;
+  const label = setting ? (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span>{item.label}</span>
+      {item.trailing}
+    </span>
+  ) : (
+    <span>{item.label}</span>
+  );
   return (
     <button
       type="button"
-      role="menuitem"
+      {...(setting
+        ? { role: "menuitemcheckbox", "aria-checked": item.checked }
+        : { role: "menuitem" })}
       data-menu-item={item.id}
       aria-disabled={dim || undefined}
       onClick={onPick}
@@ -307,7 +331,7 @@ function MenuItem({
     >
       {item.detail ? (
         <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          <span>{item.label}</span>
+          {label}
           <span
             data-menu-detail=""
             style={{
@@ -321,9 +345,48 @@ function MenuItem({
           </span>
         </span>
       ) : (
-        <span>{item.label}</span>
+        label
       )}
-      {item.trailing}
+      {setting ? <MenuSwitch on={item.checked === true} dim={dim} /> : item.trailing}
     </button>
+  );
+}
+
+/**
+ * The switch at the end of an on/off item: the Switch's look at menu size,
+ * drawn only, since the whole item is the control that flips it.
+ */
+function MenuSwitch({ on, dim }: { on: boolean; dim: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-menu-switch={on ? "on" : "off"}
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        width: 28,
+        height: 16,
+        boxSizing: "border-box",
+        borderRadius: "var(--radius-pill)",
+        background: on ? "var(--accent)" : "var(--bg-3)",
+        border: `1px solid ${on ? "transparent" : "var(--line-1)"}`,
+        opacity: dim ? 0.4 : 1,
+        transition: "background var(--dur-med) var(--ease-out)",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          insetInlineStart: on ? 14 : 2,
+          width: 10,
+          height: 10,
+          borderRadius: "50%",
+          background: on ? "#05070d" : "var(--fg-2)",
+          transition:
+            "inset-inline-start var(--dur-med) var(--ease-out),background var(--dur-med) var(--ease-out)",
+        }}
+      />
+    </span>
   );
 }

@@ -810,19 +810,16 @@ function IntegrationRow({
         <RowMenu
           label={m.settingsIntegrationsActionsLabel({ name: integration.name })}
           items={[
+            // Its on/off setting first, as a switch, then its action (design skill RowMenu, "Settings").
+            {
+              id: "pause",
+              label: m.settingsMenuPaused(),
+              checked: integration.paused === true,
+              detail: m.settingsIntegrationsPauseDetail(),
+              onSelect: () => onPause(!integration.paused),
+            },
+            { separator: true },
             { id: "check", label: m.settingsIntegrationsCheckNow(), onSelect: onCheck },
-            integration.paused
-              ? {
-                  id: "resume",
-                  label: m.settingsIntegrationsResume(),
-                  onSelect: () => onPause(false),
-                }
-              : {
-                  id: "pause",
-                  label: m.settingsIntegrationsPause(),
-                  detail: m.settingsIntegrationsPauseDetail(),
-                  onSelect: () => onPause(true),
-                },
             { separator: true },
             {
               id: "remove",

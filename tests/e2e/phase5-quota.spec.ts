@@ -405,11 +405,11 @@ test("the account pin toggles and persists", async () => {
   await expect.poll(preferred).toEqual([CODEX_WORK]);
   await expect(work.locator("[data-crew-preferred]")).toHaveCount(1, { timeout: 10_000 });
   await expect(page.locator("[data-crew-preferred]")).toHaveCount(1);
-  // Unpin to leave clean state.
-  await work.getByRole("button", { name: "Work #2 actions" }).click();
+  // Unpin to leave clean state; the setting is a switch, so its menu is still open.
   await page.locator('[data-menu-item="prefer"]').click();
   await expect.poll(preferred).toEqual([]);
   await expect(page.locator("[data-crew-preferred]")).toHaveCount(0, { timeout: 10_000 });
+  await page.keyboard.press("Escape");
 });
 
 /** Ensure the Models disclosure is open. */

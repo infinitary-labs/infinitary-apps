@@ -664,7 +664,7 @@ describe("Subscriptions rowView: credits past the allowance (INF-4104 piece 1)",
         reading("claude", { state: "off" }),
         () => {},
       ),
-    ).toMatchObject({ label: m.settingsSubscriptionsMenuStopKeepingGoing() });
+    ).toMatchObject({ label: m.settingsSubscriptionsMenuKeepGoing(), checked: true });
   });
 
   it("says nothing when the fact is unknown or the row is not a reading", () => {

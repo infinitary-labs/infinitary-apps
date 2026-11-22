@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -22,8 +22,8 @@ description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등�
 
 줄 끝의 메뉴에는 다음이 있어요:
 
+- **일시 정지됨**: 스위치가 켜져 있는 동안 아무도 닿지 못해요.
 - **지금 확인**: 연결이 아직 작동하는지 확인해요.
-- **일시 정지**: **다시 시작**할 때까지 아무도 닿지 못해요.
 - **로그아웃하고 제거**, MCP 서버는 **제거**예요.
 
 목록 아래의 버튼은 **GitHub**, **Google**, **MCP 서버**처럼 새로운 것을 연결해요.

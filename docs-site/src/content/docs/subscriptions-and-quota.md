@@ -49,10 +49,11 @@ Amazon Bedrock is billed by use on your AWS account; its row shows this month’
 ## Choose which account does what
 
 Open an account's menu, the three dots on its row, for these choices.
+Its settings come first, each with a switch that shows whether it is on; picking one turns it on or off and leaves the menu open.
 
 - **Prefer for crew work** makes your crew use this account first.
   A ✱ marks it.
-- **Pause** stops all work on this account until you choose **Resume**.
+- **Paused** stops all work on this account while its switch is on.
 - **Disconnect** removes the account from Infinitary.
 
 When you have two or more accounts of the provider your first mate uses, Settings lets you pick which one your first mate answers on.

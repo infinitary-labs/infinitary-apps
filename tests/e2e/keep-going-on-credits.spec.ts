@@ -3,6 +3,7 @@ import { creditsOfferCardId } from "../../src/core/orchestrator/hostCards";
 import * as m from "../../src/shared/i18n/messages.generated";
 import type { CatalogModelView } from "../../src/shared/quota";
 import { CLAUDE_CREW_ACCOUNT, FIRSTMATE_MODEL_KEY, launchClaudeCrew } from "./claudeCrew";
+import { leaveSettings } from "./handoverCards";
 import type { LaunchedApp } from "./launch";
 import { promptInput } from "./prompt";
 import { HARD_TASK_PROMPT_MARKER, hardTask } from "./scenarios/hardTask";
@@ -97,7 +98,9 @@ test("a spent Claude allowance with extra usage keeps a hard task at its level o
       .toBe(true);
     await expect(row).toContainText(m.settingsSubscriptionsCreditsKeepsGoing());
     await expect.poll(() => offerShown(page)).toBe(false);
-    await page.keyboard.press("Escape");
+    // The switch leaves its menu open, on, until Escape closes it; then Settings closes.
+    await expect(item).toHaveAttribute("aria-checked", "true");
+    await leaveSettings(page);
 
     // 3. Switch on: the next hard task stays at the high level on Claude.
     await startHardTask(page, SECOND_TITLE);

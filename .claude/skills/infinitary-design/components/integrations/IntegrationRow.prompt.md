@@ -15,7 +15,7 @@ A connection the app renamed to avoid a GitHub name clash carries one quiet expl
 It says "Renamed from “GitHub” to keep it distinct from your GitHub connection." and stays across restarts until the person chooses a name themselves.
 A refused sign-in carries one small primary "Sign in again", as a forge row does.
 A GitHub sign-in the person took from GitHub CLI reads "as octo · through GitHub CLI · 2 actions"; when GitHub CLI no longer holds a sign-in its `--danger` line reads "Sign in to GitHub CLI again, then Check now." and the small primary is "Check now", since the app never runs GitHub CLI's own sign-in.
-Its `RowMenu` holds "Check now", "Pause" (detail "Nobody reaches it until you resume it") or "Resume", and, behind a separator, "Sign out and remove" (danger).
+Its `RowMenu` holds the setting "Paused" as a switch (detail "Nobody reaches it until you resume it"; `RowMenu.prompt.md`, "Settings"), then behind a separator "Check now", and, behind another, "Sign out and remove" (danger).
 With nothing connected the box holds one quiet line, "Nothing connected yet.", never a warning.
 Open, the row is followed by its actions, indented to the name: each a row of its label in `--text-sm --fg-1`, an outline `Badge` with what it does ("reads", "changes", "sends"), its rule in mono `--fg-3` ("Allowed", "Asks you", "Off"), and a `Switch` whose name is "<label> on".
 After the actions come what it can tell, on the same grid: the label ("A resource changed") and an outline `Badge` "tells", with no rule and no switch.

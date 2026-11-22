@@ -375,7 +375,7 @@ The captain records it on a Mac of their own, since Google's consent page runs i
 14. Calendar events, update: type "Move the Infinitary demo call to 11."
     Click the card's button.
     Show the change in Google Calendar.
-15. Controls: in Settings → Integrations open the Google row's menu and click Pause; say that nothing reaches Google while it is paused; click Resume.
+15. Controls: in Settings → Integrations open the Google row's menu and turn its Paused switch on; say that nothing reaches Google while it is paused; turn the switch off.
     Say: "Sign out and remove deletes the sign-in from this computer and revokes the app's access at Google."
 16. Stop recording.
     Watch it once: every permission on the consent page readable, the page in English, no password or code on screen.

@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { createServer, type Server } from "node:http";
@@ -252,6 +253,85 @@ describe("the signed channel workflow", () => {
     expect(cleanup?.name).toBe("Remove the signing keychain");
     expect(cleanup?.if).toBe("always()");
     expect(signingSteps.indexOf(step("handoff-upload"))).toBeLessThan(signingSteps.length - 1);
+  });
+
+  // INF-6050: the signing job left its App Store Connect key in the real
+  // Mac's home folder after every run. The restore and removal steps run here
+  // as Actions runs them, with a scratch home and temporary folder and a key
+  // made the way App Store Connect makes one (P-256, PKCS #8).
+  it("keeps the notarization key out of the Mac's home folder and removes it however the job ends", () => {
+    const scratch = scratchDir("signing-key");
+    const home = join(scratch, "home");
+    const temp = join(scratch, "runner-temp");
+    mkdirSync(home);
+    mkdirSync(temp);
+    const pem = generateKeyPairSync("ec", { namedCurve: "P-256" })
+      .privateKey.export({ format: "pem", type: "pkcs8" })
+      .toString();
+    const secrets = {
+      APP_STORE_CONNECT_KEY_ID: "A1B2C3D4E5",
+      APP_STORE_CONNECT_ISSUER_ID: "69a6de70-03db-47e3-e053-5b8c7c11a4d1",
+      APP_STORE_CONNECT_API_KEY: Buffer.from(pem).toString("base64"),
+    };
+    // A step with no `steps` context is one that runs after the restore
+    // stopped before writing its output, as a cancel can leave it.
+    const run = (found: Step) => {
+      const output = join(scratch, "output");
+      writeFileSync(output, "");
+      const env = Object.entries(found.env ?? {}).map(([name, value]) => [
+        name,
+        workflowString(value, { runner: { temp }, secrets }),
+      ]);
+      const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", found.run ?? ""], {
+        cwd: scratch,
+        encoding: "utf8",
+        env: {
+          PATH: process.env.PATH,
+          HOME: home,
+          RUNNER_TEMP: temp,
+          GITHUB_OUTPUT: output,
+          ...Object.fromEntries(env),
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return Object.fromEntries(
+        readFileSync(output, "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
+      );
+    };
+
+    const restored = run(step("asc-key"));
+    const key = restored.key_path ?? "";
+    expect(readFileSync(key, "utf8")).toBe(pem);
+    expect(dirname(dirname(key))).toBe(temp);
+    expect(statSync(key).mode & 0o777).toBe(0o600);
+    expect(statSync(dirname(key)).mode & 0o777).toBe(0o700);
+    expect(readdirSync(home)).toEqual([]);
+    // notarytool is handed that exact path, by the zip's notarization and the
+    // disk image's.
+    const readers = signingSteps.filter((candidate) =>
+      JSON.stringify(candidate.env ?? {}).includes("steps.asc-key.outputs.key_path"),
+    );
+    expect(readers.map(({ id }) => id)).toEqual(["notarize", "dmg"]);
+    for (const reader of readers)
+      expect(
+        workflowString(reader.env?.APPLE_API_KEY ?? "", {
+          steps: { "asc-key": { outputs: restored } },
+        }),
+      ).toBe(key);
+
+    // The removal runs on every exit, after the disk image's background
+    // notarization ended, and finds the key without the restore's output.
+    const removal = step("Remove the App Store Connect API key");
+    expect(removal.if).toBe("always()");
+    expect(signingSteps.indexOf(removal)).toBeGreaterThan(signingSteps.indexOf(step("dmg-done")));
+    run(removal);
+    expect(existsSync(dirname(key))).toBe(false);
+    expect(readdirSync(home)).toEqual([]);
+    // A cancel before the restore wrote anything leaves nothing to remove.
+    run(removal);
   });
 
   /**

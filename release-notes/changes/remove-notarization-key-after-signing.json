@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remove-notarization-key-after-signing",
+      "reason": "Internal: the release's signing job keeps its notarization key in the job's temporary folder and removes it when the job ends, whether it passed, failed or was cancelled, instead of leaving it in the signing machine's home folder; the app itself is unchanged."
+    }
+  ]
+}

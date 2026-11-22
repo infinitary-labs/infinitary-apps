@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 /** A host over a real task record, filing each part as a child task. */
-function harness(script: string, bound: number) {
+function harness(script: string, bound: number, partsAtOnce = 4) {
   const db = freshDatabase();
   const tasks = new TaskService({ db, repos: new RepoRegistry(db, scratchDir("program-fleet-")) });
   const shape = (extra: Partial<WorkShape>): WorkShape =>
@@ -76,7 +76,7 @@ function harness(script: string, bound: number) {
     bounded: (_program, calls) => bounded.push(calls),
     // Room for every part these scripts open at once, whatever this computer's processors:
     // a two-processor runner otherwise holds F4's third part forever.
-    partsAtOnce: 4,
+    partsAtOnce,
   };
   const start = () => {
     const runner = new ProgramRunner(host);
@@ -223,6 +223,52 @@ describe("the program runner", () => {
     await vi.waitFor(() => expect(h.filed).toHaveLength(3), WAIT);
     h.answer(2, "Capped dial.ts.");
     expect(await h.end).toEqual({ value: 3 });
+  });
+
+  // SCR-1259's diagnosis: while calls wait for a free slot, the pump runs on every task
+  // write anywhere, and reading every part's record there paused the main thread at
+  // hundreds of parts. It reads two counts instead, and still fills only free slots.
+  it("fills free slots as parts close, counting only its parts, and reads no part's record on an unrelated write", async () => {
+    const h = harness(
+      `
+      const capped = ["meter", "gauge", "dial", "knob"].map((file) => task("Cap " + file + "."));
+      log("all four asked");
+      return await Promise.all(capped);
+      `,
+      4,
+      2,
+    );
+    // A task filed under the program that is not one of its parts takes no slot.
+    seedTask(h.tasks, {
+      id: "aside001",
+      title: "Note the meter's owner",
+      status: "running",
+      parentId: h.program.id,
+    });
+    h.start();
+    await vi.waitFor(() => expect(h.lines("all four asked")).toBe(1), WAIT);
+    expect(h.filed).toHaveLength(2);
+    const counted = vi.spyOn(h.tasks.graph, "programPartCounts");
+    const children = vi.spyOn(h.tasks.graph, "children");
+    const live = vi.spyOn(h.tasks.graph, "openChildren");
+    const other = seedTask(h.tasks, { id: "other001", title: "Read the gauge", status: "running" });
+    h.tasks.noteProgress(other.id, "Read the gauge's scale.", "crewmate");
+    await vi.waitFor(() => expect(counted).toHaveBeenCalledWith(h.program.id), WAIT);
+    expect(children).not.toHaveBeenCalled();
+    expect(live).not.toHaveBeenCalled();
+    expect(h.filed).toHaveLength(2);
+    vi.restoreAllMocks();
+    h.answer(0, "Capped meter.");
+    await vi.waitFor(() => expect(h.filed).toHaveLength(3), WAIT);
+    h.answer(1, "Capped gauge.");
+    await vi.waitFor(() => expect(h.filed).toHaveLength(4), WAIT);
+    h.answer(2, "Capped dial.");
+    h.answer(3, "Capped knob.");
+    expect(await h.end).toEqual({
+      value: ["Capped meter.", "Capped gauge.", "Capped dial.", "Capped knob."],
+    });
+    // Each part's call number is the count of parts filed before it.
+    expect(h.filed.map((part) => part.call)).toEqual([0, 1, 2, 3]);
   });
 
   it("refuses a label no earlier call used, and answers a dropped part with null", async () => {

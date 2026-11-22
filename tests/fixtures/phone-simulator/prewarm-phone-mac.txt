@@ -1,0 +1,7 @@
+getpwuid_r did not find a match for uid 501
+Timestamp               Ty Process[PID:TID]
+2026-11-22 01:50:46.502 I  SpringBoard[1807:8978] [com.apple.BackgroundSystemTasks:BGSTFramework] Received run request for com.apple.springboard.posterboardupdate.prewarm
+2026-11-22 01:50:46.881 Df SpringBoard[1807:8978] [com.apple.BackgroundSystemTasks:BGSTFramework] Calling launch handler for com.apple.springboard.posterboardupdate.prewarm
+2026-11-22 01:50:47.615 Df SpringBoard[1807:8978] [com.apple.SpringBoard:Wallpaper] [SBPosterBoardUpdateManager _registerForWork] Handling launch for posters task: [com.apple.springboard.posterboardupdate.prewarm:6521CF2A-CFAE-4B9A-B092-432F8A940356]
+2026-11-22 01:51:32.171 Df SpringBoard[1807:95e4] [com.apple.SpringBoard:Wallpaper] [SBPosterBoardUpdateManager executeUpdate] PosterBoardUpdate completed. Background Task: [com.apple.springboard.posterboardupdate.prewarm:6521CF2A-CFAE-4B9A-B092-432F8A940356]
+2026-11-22 01:51:32.171 Df SpringBoard[1807:95e4] [com.apple.BackgroundSystemTasks:BGSTFramework] Marking task <BGNonRepeatingSystemTask: com.apple.springboard.posterboardupdate.prewarm> complete

@@ -423,11 +423,12 @@ describe("the native gate on an affected request", () => {
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
   // INF-2582: the two edited-part passes run in the same gate, each with the same 90 minutes, and the job
   // keeps 165 minutes for the ordinary pass and 90 more for each further pass.
-  // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, a dealt job is stopped at 25 minutes
-  // and its gate at 21; a call, which runs no further pass, keeps its gate's 90 and its job's limit.
+  // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, a dealt job is stopped at 27 minutes
+  // and its gate at 23 (INF-6058, the captain's choice to raise both about 2 minutes for the wait on the simulator's
+  // wallpaper prewarm); a call, which runs no further pass, keeps its gate's 90 and its job's limit.
   // INF-6039's plan, part 1, and the captain's answer on its review ("Give the first job 12 more minutes, the build
-  // step's own limit"): job 1 of a check of several jobs builds and uploads before its gate, so its job keeps 37.
-  it("caps a call's gate at ninety minutes and a dealt job's gate at 21, each within its job's limit", () => {
+  // step's own limit"): job 1 of a check of several jobs builds and uploads before its gate, so its job keeps 39.
+  it("caps a call's gate at ninety minutes and a dealt job's gate at 23, each within its job's limit", () => {
     const limits = (matrix: Plain, strategy: Plain = { "job-total": 1 }) => {
       const contexts = { matrix, strategy };
       return [
@@ -453,11 +454,11 @@ describe("the native gate on an affected request", () => {
     );
     for (const job of FULL_JOBS)
       expect(limits(job, { "job-total": FULL_JOBS.length })).toEqual([
-        21,
-        job.key === "job-1" ? 25 + build["timeout-minutes"] : 25,
+        23,
+        job.key === "job-1" ? 27 + build["timeout-minutes"] : 27,
       ]);
-    // A check dealt into one job builds in its gate, so its job keeps 25.
-    expect(limits({ ...FULL_JOBS[0], key: "job-1" })).toEqual([21, 25]);
+    // A check dealt into one job builds in its gate, so its job keeps 27.
+    expect(limits({ ...FULL_JOBS[0], key: "job-1" })).toEqual([23, 27]);
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone

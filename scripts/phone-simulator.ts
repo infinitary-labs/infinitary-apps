@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { budgetTimer, type DeadlineTimer } from "../tests/helpers/budgets.ts";
+import { logTime } from "../tests/helpers/phonePhotos.ts";
 import type { PhoneDevice } from "./phone-test-plan.ts";
 
 type DeviceType = { name: string; identifier: string };
@@ -139,5 +140,104 @@ export async function phoneSimulatorBooted({
   throw new Error(
     `${device}: simulator ${simulator} had not finished booting after ${minutes} minutes, so the gate stopped waiting; ` +
       (step.length > 0 ? `its boot last printed: ${step.join("; ")}` : "its boot printed nothing"),
+  );
+}
+
+/**
+ * How long the gate waits, after a simulator finished booting, for its wallpaper prewarm to finish (INF-6058). The
+ * simulator's background-task scheduler (dasd) gives that task a five-minute window from SpringBoard's submission;
+ * with two simulators booting at once on a Mac mini, SpringBoard submitted it up to 1.6 minutes after the boot
+ * finished, and the prewarm then ran for 9 to 37 seconds there and 45 seconds on a phone Mac. The wait runs on the
+ * load clock, so a busy Mac stretches it, up to the clock's wall cap.
+ */
+export const PHONE_PREWARM_BUDGET_MS = 10 * 60_000;
+
+/** SpringBoard's own lines about its wallpaper prewarm: its submission, the scheduler's run request, its launch and
+ * its end. */
+export const PREWARM_LOG = 'process == "SpringBoard" AND eventMessage CONTAINS "posterboardupdate.prewarm"';
+// SpringBoard's words once the prewarm's poster extensions are done.
+const PREWARM_DONE =
+  /\sSpringBoard\[[^\]]*\] .*PosterBoardUpdate completed\. Background Task: \[com\.apple\.springboard\.posterboardupdate\.prewarm:/;
+/** What says why a prewarm had not finished: SpringBoard's wallpaper lines and the scheduler's about its task. */
+export const PREWARM_FAILURE_LOG =
+  '(process == "SpringBoard" AND (category == "Wallpaper" OR eventMessage CONTAINS "posterboardupdate"))' +
+  ' OR (process == "dasd" AND eventMessage CONTAINS "posterboardupdate")';
+
+/**
+ * Waits until the simulator's wallpaper prewarm since `booting`, the start of its latest boot, has finished
+ * (INF-6058). Minutes after every boot the simulator's scheduler runs SpringBoard's one-time task
+ * `com.apple.springboard.posterboardupdate.prewarm`, which starts some thirty wallpaper extensions at once; on a phone
+ * Mac it ran 45 seconds inside the take-over part, and the Face ID prompt the part waits for missed its five-second
+ * start. The iPhone, the iPad and the Duo all run it, and run it again after each boot. `run` runs `xcrun` with the
+ * given arguments, giving each line it prints to `heard` until `stop`, and answers its output: a `log stream` of
+ * SpringBoard's prewarm lines, then a query since `booting`, since the stream sees only what follows its start. A
+ * prewarm not finished within `budget` fails the wait, naming the device and simulator, after the simulator's log
+ * since boot is kept with the command logs.
+ */
+export async function phonePrewarmFinished({
+  device,
+  simulator,
+  booting,
+  run,
+  budget = PHONE_PREWARM_BUDGET_MS,
+}: {
+  device: PhoneDevice;
+  simulator: string;
+  booting: Date;
+  run: (args: string[], heard?: (line: string) => void, stop?: AbortSignal) => Promise<string>;
+  budget?: number;
+}): Promise<void> {
+  const began = Date.now();
+  const shown = (predicate: string, info: string[] = []) => ["simctl", "spawn", simulator, "log", "show", "--style",
+    "compact", ...info, "--start", logTime(booting), "--predicate", predicate];
+  let listening!: () => void;
+  const started = new Promise<"listening">((resolve) => {
+    listening = () => resolve("listening");
+  });
+  let finished!: () => void;
+  const done = new Promise<"finished">((resolve) => {
+    finished = () => resolve("finished");
+  });
+  const hear = (line: string) => {
+    if (line.startsWith("Filtering the log data using ")) listening();
+    else if (PREWARM_DONE.test(line)) finished();
+  };
+  const stopping = new AbortController();
+  const streaming = run(["simctl", "spawn", simulator, "log", "stream", "--style", "compact", "--predicate", PREWARM_LOG],
+    hear, stopping.signal);
+  const ended = streaming.then(() => "ended" as const, () => "ended" as const);
+  let timer: DeadlineTimer | undefined;
+  const late = new Promise<"late">((resolve) => {
+    timer = budgetTimer(() => resolve("late"), budget);
+  });
+  let outcome: "finished" | "ended" | "late";
+  try {
+    const first = await Promise.race([started, done, ended, late]);
+    if (first === "listening") {
+      for (const line of (await run(shown(PREWARM_LOG))).split("\n")) hear(line);
+      outcome = await Promise.race([done, ended, late]);
+    } else outcome = first;
+  } finally {
+    timer?.cancel();
+    stopping.abort();
+    // The stopped stream ends with a failure of its own, which is not the wait's.
+    await streaming.catch(() => {});
+  }
+  const afterBoot = Math.round((Date.now() - booting.getTime()) / 1000);
+  if (outcome === "finished") {
+    console.log(
+      `${device}: simulator ${simulator}'s wallpaper prewarm finished ${afterBoot} seconds after its boot began`,
+    );
+    return;
+  }
+  await run(shown(PREWARM_FAILURE_LOG, ["--info"]))
+    .then(() => console.log("The simulator's wallpaper and scheduler log since boot is kept with the command logs"))
+    .catch((problem: Error) => console.log(`The simulator's log since boot could not be kept: ${problem.message}`));
+  const minutes = ((Date.now() - began) / 60_000).toFixed(1);
+  throw new Error(
+    outcome === "late"
+      ? `${device}: simulator ${simulator}'s wallpaper prewarm had not finished ${minutes} minutes after its boot` +
+          " finished, so the gate stopped waiting rather than let it run during a part"
+      : `${device}: simulator ${simulator}'s log stream ended before its wallpaper prewarm finished`,
   );
 }

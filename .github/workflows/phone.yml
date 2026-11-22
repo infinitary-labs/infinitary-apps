@@ -34,8 +34,9 @@ name: phone
 # one phone Mac and keeps one part-times.json.
 # INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
 # chooser builds the passes its device jobs ran and deals them into jobs of at most 14 recorded minutes, each device
-# past a job's first counted as 2 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546), one phone Mac each, side
-# by side, each stopped at 25 minutes, the first of several at 37, since it builds and shares the app first (INF-6039).
+# past a job's first counted as 3 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546, INF-6058), one phone Mac
+# each, side by side, each stopped at 27 minutes, the first of several at 39, since it builds and shares the app first
+# (INF-6039).
 # The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
 on:
   workflow_call:
@@ -232,14 +233,15 @@ jobs:
       group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.key) }}
       queue: max
       cancel-in-progress: false
-    # INF-5387's plan, piece 2, and INF-5546: a dealt job of at most 14 recorded minutes, a later device's start
-    # included, ends its gate near 19.5 minutes on a phone Mac with one simulator and sooner on one with two, and setup
-    # and evidence upload add up to about 3, so it is stopped at 25. INF-6039's plan, part 1: in a check of several jobs,
-    # job 1 builds the app (2.4 to 3.8 minutes measured, stopped at 12) and uploads it before its gate, whose own build
-    # it then skips, so job 1 gets the build step's 12 minutes more, 37, and its gate's 21 still ends inside it. A call keeps its limit for setup,
-    # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
-    # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
-    timeout-minutes: ${{ matrix.passes && (matrix.key == 'job-1' && strategy.job-total > 1 && 37 || 25) || 345 }}
+    # INF-5387's plan, piece 2, INF-5546 and INF-6058: a dealt job of at most 14 recorded minutes, a later device's
+    # start included, ends its gate near 21.5 minutes on a phone Mac with one simulator, its wait for the wallpaper
+    # prewarm included, and sooner on one with two, and setup and evidence upload add up to about 3, so it is stopped
+    # at 27. INF-6039's plan, part 1: in a check of several jobs, job 1 builds the app (2.4 to 3.8 minutes measured,
+    # stopped at 12) and uploads it before its gate, whose own build it then skips, so job 1 gets the build step's 12
+    # minutes more, 39, and its gate's 23 still ends inside it. A call keeps its limit for setup, checks, cleanup and
+    # evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two edited-part passes, which ran
+    # as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
+    timeout-minutes: ${{ matrix.passes && (matrix.key == 'job-1' && strategy.job-total > 1 && 39 || 27) || 345 }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -368,10 +370,10 @@ jobs:
           path: ${{ runner.temp }}/phone-build
       - id: both
         name: Read and recover on iPhone and iPad
-        # A dealt job's gate is stopped at 21 minutes, inside its job's 25, so an over-long gate fails the job and its
+        # A dealt job's gate is stopped at 23 minutes, inside its job's 27, so an over-long gate fails the job and its
         # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes. Job 1 of a check of several
-        # jobs runs its build and upload steps before its gate, so its job keeps 12 minutes more, 37 (INF-6039's plan, part 1).
-        timeout-minutes: ${{ matrix.passes && 21 || 90 }}
+        # jobs runs its build and upload steps before its gate, so its job keeps 12 minutes more, 39 (INF-6039's plan, part 1).
+        timeout-minutes: ${{ matrix.passes && 23 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
           evidence="$RUNNER_TEMP/phone"

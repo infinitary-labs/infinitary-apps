@@ -60,6 +60,7 @@ export type KeyboardModules = {
     isCatalogCommand: (id: string) => boolean;
     bindingLabel: (binding: Binding, system: System) => string;
     keysOf: (bindings: unknown, id: string) => readonly Binding[];
+    commandEntry: (id: string, panels: readonly PanelCommand[]) => { label: string } | undefined;
   };
   keymap: {
     presetKeymap: (preset: string) => unknown;
@@ -119,7 +120,7 @@ export function presetRows(modules: KeyboardModules, preset: string, notTyping =
       ? modules.keyboard.KEYBOARD_COMMANDS[id]
       : undefined;
     if (catalog?.section) return [];
-    const label = catalog?.label ?? panels.find((command) => command.id === id)?.label ?? id;
+    const label = modules.keyboard.commandEntry(id, panels)?.label ?? id;
     return [
       {
         id,

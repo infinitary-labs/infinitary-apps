@@ -92,6 +92,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | offline, disconnected (never said) | hors de portée | |
 | out of reach | hors de portée | Never "hors ligne" or "déconnecté". |
 | panel | panneau | |
+| part (of a task) | partie | Feminine: "toutes les parties". |
 | passcode (iOS) | code | As French iOS says "Face ID et code". |
 | phone | téléphone | |
 | plan | forfait | The word on a French bill. |

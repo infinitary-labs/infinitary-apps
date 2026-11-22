@@ -104,6 +104,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | offline, disconnected (never said) | خارج المتناول | |
 | out of reach | خارج المتناول | Chosen over "غير متصل", which is the "offline" the vocabulary avoids. |
 | panel | لوحة | Plural "لوحات"; "لوحة المفاتيح" stays the keyboard. |
+| part (of a task) | جزء | Plural "أجزاء"; the task that holds them is "المهمة الحاوية". |
 | passcode (iOS) | رمز الدخول | Apple's Arabic word. |
 | personal context | السياق الشخصي | |
 | phone | هاتف | |

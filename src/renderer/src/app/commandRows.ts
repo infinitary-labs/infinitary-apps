@@ -13,6 +13,7 @@ import {
   keyHint,
   type PanelCommand,
   type PanelCommandId,
+  panelCommandEntry,
   type WindowCommandId,
 } from "@shared/keyboard";
 import type { KeySystem } from "@shared/platform";
@@ -85,7 +86,8 @@ export function commandOffered(id: CommandId, sections: CommandSections): boolea
  * The rows for what is typed, each read against the window as it is now and
  * its key from the installed keys; a command this build does not offer is
  * never among them. The window's commands come first, in the catalog's
- * order with the app's own panels' among them; then each other panel's,
+ * order with the app's own panels' among them, in the catalog's words and
+ * found by their English as a catalog command is; then each other panel's,
  * under its title, found by it and by the other words its manifest names.
  */
 export function commandRows(
@@ -115,12 +117,15 @@ export function commandRows(
     }
     const command = panels.find((candidate) => candidate.id === id);
     if (!command) return [];
-    const words = [...(command.own ? [] : [command.panel]), ...(command.words ?? [])];
-    if (!commandMatches(command.label, query, words)) return [];
+    const entry = panelCommandEntry(command, system);
+    const words = command.own
+      ? catalogSearchWords(entry)
+      : [command.panel, ...(entry.searchWords ?? [])];
+    if (!commandMatches(entry.label, query, words)) return [];
     return [
       {
         id: command.id,
-        label: command.label,
+        label: entry.label,
         ...(command.own ? {} : { panel: command.panel }),
         keys: keyHint(command.id, bindings, system),
         refusal: refusal(command.id),

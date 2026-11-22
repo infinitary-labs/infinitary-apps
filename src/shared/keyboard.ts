@@ -1,3 +1,4 @@
+import { APP_PANEL_COMMAND_WORDS } from "./appPanelWords.ts";
 import * as m from "./i18n/messages.generated.ts";
 import type { KeySystem } from "./platform";
 /**
@@ -1481,12 +1482,18 @@ export type PanelCommand = {
 /** A command of the catalog's, or a panel's. */
 export type AnyCommandId = CommandId | PanelCommandId;
 
-/** The catalog entry a panel command reads as, its suggested key as this system presses it. */
+/**
+ * The catalog entry a panel command reads as, its suggested key as this
+ * system presses it. One of the app's own panels' commands reads in the
+ * catalog's words (`APP_PANEL_COMMAND_WORDS`), worded each time they are
+ * read, so it follows the language as the catalog's commands do; any other
+ * panel's reads as its manifest names it.
+ */
 export function panelCommandEntry(
   command: PanelCommand,
   system: KeySystem = "mac",
 ): KeyboardCommand {
-  return {
+  const entry: KeyboardCommand = {
     label: command.label,
     scope: "window",
     runs: "shell",
@@ -1495,6 +1502,13 @@ export function panelCommandEntry(
     keys: systemKeys(command.keys, system),
     ...(command.words?.length ? { searchWords: command.words } : {}),
   };
+  const worded = command.own ? APP_PANEL_COMMAND_WORDS[command.id] : undefined;
+  if (!worded) return entry;
+  const { label, words } = worded;
+  return Object.defineProperties(entry, {
+    label: { get: label, enumerable: true },
+    ...(words ? { searchWords: { get: () => searchWords(words()), enumerable: true } } : {}),
+  });
 }
 
 /** Whether an id is one of the catalog's own commands. */

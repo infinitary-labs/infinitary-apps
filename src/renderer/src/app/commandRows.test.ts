@@ -1,4 +1,4 @@
-import { setCurrentLanguage } from "@shared/i18n/current";
+import { inLanguage, setCurrentLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
 import {
   APP_PANEL_COMMANDS_BEFORE,
@@ -297,5 +297,37 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
       );
     expect(found("board").slice(0, 2)).toEqual([board.id, "settings.keyboard"]);
     expect(found("tasks")).not.toContain(board.id);
+  });
+
+  // INF-5299, the captain's "Translate the names in both the app and docs".
+  it("lists the app's own panels' commands in the window's language, found by their English too", () => {
+    const board = {
+      id: panelCommandId("now", "board"),
+      label: "Open task board",
+      panel: "Tasks",
+      keys: [{ key: "b", meta: true }],
+      words: ["kanban", "columns"],
+      own: true as const,
+    };
+    const { own: _, ...copy } = board;
+    const bindings = resolveBindings({ ...DEFAULT_SAVED_KEYMAP, keys: {} }, [board]);
+    const english = inLanguage("en", () => ({
+      label: m.commandPanelNowBoard(),
+      word: m.commandPanelNowBoardWords().split(",")[0] ?? "",
+    }));
+    setCurrentLanguage("ar");
+    try {
+      const rows = (query: string, panels: (typeof board | typeof copy)[]) =>
+        commandRows(query, () => null, bindings, { devices: false }, panels);
+      const own = rows("", [board]).find((row) => row.id === board.id);
+      expect(own?.label).toBe(m.commandPanelNowBoard());
+      expect(own?.label).not.toBe(english.label);
+      for (const query of [m.commandPanelNowBoard(), english.label, english.word])
+        expect(rows(query, [board]).map((row) => row.id)).toContain(board.id);
+      // A copy of the folder added from elsewhere reads as its manifest names it.
+      expect(rows("", [copy]).find((row) => row.id === copy.id)?.label).toBe(board.label);
+    } finally {
+      setCurrentLanguage("en");
+    }
   });
 });

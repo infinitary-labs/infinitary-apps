@@ -22955,6 +22955,573 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your first mate is starting again on its new version. This window waits for it.`;
   }
+  function commandPanelBatchesPanelOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض دفعاتك`;
+      case "de":
+        return `Deine Bündel anzeigen`;
+      case "es":
+        return `Mostrar tus lotes`;
+      case "fr":
+        return `Afficher vos lots`;
+      case "ja":
+        return `一括プルリクエストを表示`;
+      case "ko":
+        return `일괄 끌어오기 요청 보기`;
+      case "pt-BR":
+        return `Mostrar seus lotes`;
+      case "zh-Hans":
+        return `显示批量拉取请求`;
+      case "zh-Hant":
+        return `顯示你的批次`;
+      case "en-XA":
+        return `[Šĥöŵ ýöûŕ ƀáţçĥéš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show your batches‬`;
+    }
+    return `Show your batches`;
+  }
+  function commandPanelBatchesPanelOpenWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دفعة, دمج, طلب سحب, معلّقة, منتظرة`;
+      case "de":
+        return `Bündel, zusammenführen, Pull Request, angehalten, wartend`;
+      case "es":
+        return `lote, fusionar, solicitud de incorporación de cambios, retenido, en espera`;
+      case "fr":
+        return `lot, fusionner, demande de tirage, retenu, en attente`;
+      case "ja":
+        return `一括, マージ, プルリクエスト, 保留中, 待機中`;
+      case "ko":
+        return `일괄, 병합, 끌어오기 요청, 보류, 대기 중`;
+      case "pt-BR":
+        return `lote, mesclar, solicitação de pull, retido, esperando`;
+      case "zh-Hans":
+        return `批量, 合并, 拉取请求, 暂缓, 等待中`;
+      case "zh-Hant":
+        return `批次, 合併, pull request, 暫緩, 等待中`;
+      case "en-XA":
+        return `[ƀáţçĥ, ɱéŕĝé, þûļļ, ŕéǫûéšţ, ĥéļð, ŵáîţîñĝ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮batch, merge, pull, request, held, waiting‬`;
+    }
+    return `batch, merge, pull, request, held, waiting`;
+  }
+  function commandPanelKnowledgeOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح المعرفة`;
+      case "de":
+        return `Wissen öffnen`;
+      case "es":
+        return `Abrir Conocimiento`;
+      case "fr":
+        return `Ouvrir Connaissances`;
+      case "ja":
+        return `ナレッジを開く`;
+      case "ko":
+        return `지식 열기`;
+      case "pt-BR":
+        return `Abrir Conhecimento`;
+      case "zh-Hans":
+        return `打开知识`;
+      case "zh-Hant":
+        return `開啟知識`;
+      case "en-XA":
+        return `[Öþéñ Ķñöŵļéðĝé ~~~~~]`;
+      case "ar-XB":
+        return `‮Open Knowledge‬`;
+    }
+    return `Open Knowledge`;
+  }
+  function commandPanelKnowledgeOpenWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مفاهيم, نتائج, المخطط, ما تعلّمه, الأدلة, توجيهات, ملاحظات`;
+      case "de":
+        return `Begriffe, Erkenntnisse, Graph, gelernt, Belege, Vorgaben, Notizen`;
+      case "es":
+        return `conceptos, hallazgos, grafo, aprendido, evidencias, directrices, notas`;
+      case "fr":
+        return `concepts, constats, graphe, appris, éléments, consignes, notes`;
+      case "ja":
+        return `概念, 知見, グラフ, 学んだこと, 根拠, 方針, ノート`;
+      case "ko":
+        return `개념, 발견, 그래프, 배운 것, 근거, 지침, 노트`;
+      case "pt-BR":
+        return `conceitos, constatações, grafo, aprendido, evidências, diretrizes, notas`;
+      case "zh-Hans":
+        return `概念, 发现, 图谱, 学到, 证据, 指引, 笔记`;
+      case "zh-Hant":
+        return `概念, 發現, 圖譜, 學到, 證據, 指引, 筆記`;
+      case "en-XA":
+        return `[çöñçéþţš, ƒîñðîñĝš, ĝŕáþĥ, ļéáŕñéð, éṽîðéñçé, ðîŕéçţîöñš, ñöţéš ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮concepts, findings, graph, learned, evidence, directions, notes‬`;
+    }
+    return `concepts, findings, graph, learned, evidence, directions, notes`;
+  }
+  function commandPanelNowBoard() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح لوح المهام`;
+      case "de":
+        return `Aufgabenboard öffnen`;
+      case "es":
+        return `Abrir el tablero de tareas`;
+      case "fr":
+        return `Ouvrir le tableau des tâches`;
+      case "ja":
+        return `タスクボードを開く`;
+      case "ko":
+        return `작업 보드 열기`;
+      case "pt-BR":
+        return `Abrir o quadro de tarefas`;
+      case "zh-Hans":
+        return `打开任务看板`;
+      case "zh-Hant":
+        return `開啟任務看板`;
+      case "en-XA":
+        return `[Öþéñ ţášķ ƀöáŕð ~~~~~]`;
+      case "ar-XB":
+        return `‮Open task board‬`;
+    }
+    return `Open task board`;
+  }
+  function commandPanelNowBoardBacklog() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض قائمة المهام المؤجلة`;
+      case "de":
+        return `Backlog anzeigen`;
+      case "es":
+        return `Mostrar pendientes`;
+      case "fr":
+        return `Afficher la réserve`;
+      case "ja":
+        return `バックログを表示`;
+      case "ko":
+        return `백로그 보기`;
+      case "pt-BR":
+        return `Mostrar o backlog`;
+      case "zh-Hans":
+        return `显示待办列表`;
+      case "zh-Hant":
+        return `顯示待辦清單`;
+      case "en-XA":
+        return `[Šĥöŵ ţĥé ƀáçķļöĝ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show the backlog‬`;
+    }
+    return `Show the backlog`;
+  }
+  function commandPanelNowBoardBacklogWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, لوح, مُدرجة`;
+      case "de":
+        return `Kanban, Board, geplant`;
+      case "es":
+        return `kanban, tablero, planificadas`;
+      case "fr":
+        return `kanban, tableau, prévues`;
+      case "ja":
+        return `カンバン, ボード, 予定`;
+      case "ko":
+        return `칸반, 보드, 계획됨`;
+      case "pt-BR":
+        return `kanban, quadro, planejadas`;
+      case "zh-Hans":
+        return `看板, 计划`;
+      case "zh-Hant":
+        return `看板, 計畫`;
+      case "en-XA":
+        return `[ķáñƀáñ, ƀöáŕð, þļáññéð ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, board, planned‬`;
+    }
+    return `kanban, board, planned`;
+  }
+  function commandPanelNowBoardDone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض المهام التي تمّت`;
+      case "de":
+        return `Fertige Aufgaben anzeigen`;
+      case "es":
+        return `Mostrar las tareas terminadas`;
+      case "fr":
+        return `Afficher les tâches terminées`;
+      case "ja":
+        return `完了したタスクを表示`;
+      case "ko":
+        return `완료된 작업 보기`;
+      case "pt-BR":
+        return `Mostrar as tarefas concluídas`;
+      case "zh-Hans":
+        return `显示已完成的任务`;
+      case "zh-Hant":
+        return `顯示已完成的任務`;
+      case "en-XA":
+        return `[Šĥöŵ ðöñé ţášķš ~~~~~]`;
+      case "ar-XB":
+        return `‮Show done tasks‬`;
+    }
+    return `Show done tasks`;
+  }
+  function commandPanelNowBoardDoneWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, لوح, منتهية, مكتملة`;
+      case "de":
+        return `Kanban, Board, erledigt, abgeschlossen`;
+      case "es":
+        return `kanban, tablero, finalizadas, completadas`;
+      case "fr":
+        return `kanban, tableau, finies, achevées`;
+      case "ja":
+        return `カンバン, ボード, 終了, 済み`;
+      case "ko":
+        return `칸반, 보드, 끝남, 마침`;
+      case "pt-BR":
+        return `kanban, quadro, finalizadas, terminadas`;
+      case "zh-Hans":
+        return `看板, 完成, 结束`;
+      case "zh-Hant":
+        return `看板, 完成, 結束`;
+      case "en-XA":
+        return `[ķáñƀáñ, ƀöáŕð, ƒîñîšĥéð, çöɱþļéţéð ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, board, finished, completed‬`;
+    }
+    return `kanban, board, finished, completed`;
+  }
+  function commandPanelNowBoardDropped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض المهام التي أُسقطت`;
+      case "de":
+        return `Aufgegebene Aufgaben anzeigen`;
+      case "es":
+        return `Mostrar las tareas abandonadas`;
+      case "fr":
+        return `Afficher les tâches écartées`;
+      case "ja":
+        return `取りやめたタスクを表示`;
+      case "ko":
+        return `중단된 작업 보기`;
+      case "pt-BR":
+        return `Mostrar as tarefas abandonadas`;
+      case "zh-Hans":
+        return `显示已放弃的任务`;
+      case "zh-Hant":
+        return `顯示已放棄的任務`;
+      case "en-XA":
+        return `[Šĥöŵ ðŕöþþéð ţášķš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show dropped tasks‬`;
+    }
+    return `Show dropped tasks`;
+  }
+  function commandPanelNowBoardDroppedWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, لوح`;
+      case "de":
+        return `Kanban, Board`;
+      case "es":
+        return `kanban, tablero`;
+      case "fr":
+        return `kanban, tableau`;
+      case "ja":
+        return `カンバン, ボード`;
+      case "ko":
+        return `칸반, 보드`;
+      case "pt-BR":
+        return `kanban, quadro`;
+      case "zh-Hans":
+        return `看板`;
+      case "zh-Hant":
+        return `看板`;
+      case "en-XA":
+        return `[ķáñƀáñ, ƀöáŕð ~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, board‬`;
+    }
+    return `kanban, board`;
+  }
+  function commandPanelNowBoardFind() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `البحث في لوح المهام`;
+      case "de":
+        return `Auf dem Aufgabenboard suchen`;
+      case "es":
+        return `Buscar en el tablero de tareas`;
+      case "fr":
+        return `Rechercher dans le tableau des tâches`;
+      case "ja":
+        return `タスクボードで検索`;
+      case "ko":
+        return `작업 보드에서 찾기`;
+      case "pt-BR":
+        return `Buscar no quadro de tarefas`;
+      case "zh-Hans":
+        return `在任务看板中查找`;
+      case "zh-Hant":
+        return `在任務看板中搜尋`;
+      case "en-XA":
+        return `[Ƒîñð öñ ţášķ ƀöáŕð ~~~~~~]`;
+      case "ar-XB":
+        return `‮Find on task board‬`;
+    }
+    return `Find on task board`;
+  }
+  function commandPanelNowBoardFindWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, إيجاد`;
+      case "de":
+        return `Kanban, finden`;
+      case "es":
+        return `kanban, encontrar`;
+      case "fr":
+        return `kanban, trouver`;
+      case "ja":
+        return `カンバン, 探す`;
+      case "ko":
+        return `칸반, 검색`;
+      case "pt-BR":
+        return `kanban, procurar`;
+      case "zh-Hans":
+        return `看板, 搜索`;
+      case "zh-Hant":
+        return `看板, 尋找`;
+      case "en-XA":
+        return `[ķáñƀáñ, šéáŕçĥ ~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, search‬`;
+    }
+    return `kanban, search`;
+  }
+  function commandPanelNowBoardMove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نقل المهمة المحددة`;
+      case "de":
+        return `Ausgewählte Aufgabe verschieben`;
+      case "es":
+        return `Mover la tarea seleccionada`;
+      case "fr":
+        return `Déplacer la tâche sélectionnée`;
+      case "ja":
+        return `選択したタスクを移動`;
+      case "ko":
+        return `선택한 작업 옮기기`;
+      case "pt-BR":
+        return `Mover a tarefa selecionada`;
+      case "zh-Hans":
+        return `移动所选任务`;
+      case "zh-Hant":
+        return `移動所選任務`;
+      case "en-XA":
+        return `[Ṁöṽé ţĥé šéļéçţéð ţášķ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move the selected task‬`;
+    }
+    return `Move the selected task`;
+  }
+  function commandPanelNowBoardMoveWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, لوح, قائمة الانتظار, بدء, المؤجلة, إسقاط`;
+      case "de":
+        return `Kanban, Board, einreihen, starten, Backlog, aufgeben`;
+      case "es":
+        return `kanban, tablero, cola, iniciar, pendientes, abandonar`;
+      case "fr":
+        return `kanban, tableau, file, démarrer, réserve, écarter`;
+      case "ja":
+        return `カンバン, ボード, 待機中, 開始, バックログ, 取りやめ`;
+      case "ko":
+        return `칸반, 보드, 대기열, 시작, 백로그, 중단`;
+      case "pt-BR":
+        return `kanban, quadro, fila, iniciar, backlog, abandonar`;
+      case "zh-Hans":
+        return `看板, 排队, 开始, 待办, 放弃`;
+      case "zh-Hant":
+        return `看板, 排入佇列, 開始, 待辦, 放棄`;
+      case "en-XA":
+        return `[ķáñƀáñ, ƀöáŕð, ǫûéûé, šţáŕţ, ƀáçķļöĝ, ðŕöþ ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, board, queue, start, backlog, drop‬`;
+    }
+    return `kanban, board, queue, start, backlog, drop`;
+  }
+  function commandPanelNowBoardWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, أعمدة`;
+      case "de":
+        return `Kanban, Spalten`;
+      case "es":
+        return `kanban, columnas`;
+      case "fr":
+        return `kanban, colonnes`;
+      case "ja":
+        return `カンバン, 列`;
+      case "ko":
+        return `칸반, 열`;
+      case "pt-BR":
+        return `kanban, colunas`;
+      case "zh-Hans":
+        return `看板, 列`;
+      case "zh-Hant":
+        return `看板, 欄`;
+      case "en-XA":
+        return `[ķáñƀáñ, çöļûɱñš ~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, columns‬`;
+    }
+    return `kanban, columns`;
+  }
+  function commandPanelNowCollapseParts() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طي كل الأجزاء`;
+      case "de":
+        return `Alle Teile einklappen`;
+      case "es":
+        return `Contraer todas las partes`;
+      case "fr":
+        return `Replier toutes les parties`;
+      case "ja":
+        return `すべてのパートを折りたたむ`;
+      case "ko":
+        return `모든 부분 접기`;
+      case "pt-BR":
+        return `Recolher todas as partes`;
+      case "zh-Hans":
+        return `收起所有组成部分`;
+      case "zh-Hant":
+        return `收合所有部分`;
+      case "en-XA":
+        return `[Çöļļáþšé áļļ þáŕţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Collapse all parts‬`;
+    }
+    return `Collapse all parts`;
+  }
+  function commandPanelNowCollapsePartsWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ضم, مهام فرعية, إخفاء`;
+      case "de":
+        return `zuklappen, Unteraufgaben, untergeordnet, ausblenden`;
+      case "es":
+        return `plegar, subtareas, hijas, ocultar`;
+      case "fr":
+        return `réduire, sous-tâches, enfants, masquer`;
+      case "ja":
+        return `閉じる, サブタスク, 子, 隠す`;
+      case "ko":
+        return `닫기, 하위 작업, 숨기기`;
+      case "pt-BR":
+        return `fechar, subtarefas, filhas, ocultar`;
+      case "zh-Hans":
+        return `折叠, 子任务, 隐藏`;
+      case "zh-Hant":
+        return `摺疊, 子任務, 隱藏`;
+      case "en-XA":
+        return `[ƒöļð, šûƀţášķš, çĥîļðŕéñ, ĥîðé ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮fold, subtasks, children, hide‬`;
+    }
+    return `fold, subtasks, children, hide`;
+  }
+  function commandPanelNowExpandParts() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توسيع كل الأجزاء`;
+      case "de":
+        return `Alle Teile ausklappen`;
+      case "es":
+        return `Expandir todas las partes`;
+      case "fr":
+        return `Déplier toutes les parties`;
+      case "ja":
+        return `すべてのパートを展開`;
+      case "ko":
+        return `모든 부분 펼치기`;
+      case "pt-BR":
+        return `Expandir todas as partes`;
+      case "zh-Hans":
+        return `展开所有组成部分`;
+      case "zh-Hant":
+        return `展開所有部分`;
+      case "en-XA":
+        return `[Éẋþáñð áļļ þáŕţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Expand all parts‬`;
+    }
+    return `Expand all parts`;
+  }
+  function commandPanelNowExpandPartsWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح, مهام فرعية, إظهار`;
+      case "de":
+        return `aufklappen, Unteraufgaben, untergeordnet, einblenden`;
+      case "es":
+        return `desplegar, subtareas, hijas, mostrar`;
+      case "fr":
+        return `développer, sous-tâches, enfants, afficher`;
+      case "ja":
+        return `開く, サブタスク, 子, 表示`;
+      case "ko":
+        return `열기, 하위 작업, 보이기`;
+      case "pt-BR":
+        return `abrir, subtarefas, filhas, mostrar`;
+      case "zh-Hans":
+        return `打开, 子任务, 显示`;
+      case "zh-Hant":
+        return `打開, 子任務, 顯示`;
+      case "en-XA":
+        return `[ûñƒöļð, šûƀţášķš, çĥîļðŕéñ, šĥöŵ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮unfold, subtasks, children, show‬`;
+    }
+    return `unfold, subtasks, children, show`;
+  }
+  function commandPanelNowFind() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `البحث عن مهمة`;
+      case "de":
+        return `Aufgabe suchen`;
+      case "es":
+        return `Buscar una tarea`;
+      case "fr":
+        return `Rechercher une tâche`;
+      case "ja":
+        return `タスクを検索`;
+      case "ko":
+        return `작업 찾기`;
+      case "pt-BR":
+        return `Buscar uma tarefa`;
+      case "zh-Hans":
+        return `查找任务`;
+      case "zh-Hant":
+        return `搜尋任務`;
+      case "en-XA":
+        return `[Ƒîñð á ţášķ ~~~~]`;
+      case "ar-XB":
+        return `‮Find a task‬`;
+    }
+    return `Find a task`;
+  }
   function commandProjectFocusClear() {
     switch (currentLanguage()) {
       case "ar":
@@ -93478,6 +94045,27 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandNoticeWindowStopped,
     commandNoticeWindowUpdated,
     commandNoticeWindowUpdating,
+    commandPanelBatchesPanelOpen,
+    commandPanelBatchesPanelOpenWords,
+    commandPanelKnowledgeOpen,
+    commandPanelKnowledgeOpenWords,
+    commandPanelNowBoard,
+    commandPanelNowBoardBacklog,
+    commandPanelNowBoardBacklogWords,
+    commandPanelNowBoardDone,
+    commandPanelNowBoardDoneWords,
+    commandPanelNowBoardDropped,
+    commandPanelNowBoardDroppedWords,
+    commandPanelNowBoardFind,
+    commandPanelNowBoardFindWords,
+    commandPanelNowBoardMove,
+    commandPanelNowBoardMoveWords,
+    commandPanelNowBoardWords,
+    commandPanelNowCollapseParts,
+    commandPanelNowCollapsePartsWords,
+    commandPanelNowExpandParts,
+    commandPanelNowExpandPartsWords,
+    commandPanelNowFind,
     commandProjectFocusClear,
     commandProjectFocusClearWords,
     commandProjectFocusOpen,
@@ -96476,6 +97064,27 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandNoticeWindowStopped": [],
     "commandNoticeWindowUpdated": [],
     "commandNoticeWindowUpdating": [],
+    "commandPanelBatchesPanelOpen": [],
+    "commandPanelBatchesPanelOpenWords": [],
+    "commandPanelKnowledgeOpen": [],
+    "commandPanelKnowledgeOpenWords": [],
+    "commandPanelNowBoard": [],
+    "commandPanelNowBoardBacklog": [],
+    "commandPanelNowBoardBacklogWords": [],
+    "commandPanelNowBoardDone": [],
+    "commandPanelNowBoardDoneWords": [],
+    "commandPanelNowBoardDropped": [],
+    "commandPanelNowBoardDroppedWords": [],
+    "commandPanelNowBoardFind": [],
+    "commandPanelNowBoardFindWords": [],
+    "commandPanelNowBoardMove": [],
+    "commandPanelNowBoardMoveWords": [],
+    "commandPanelNowBoardWords": [],
+    "commandPanelNowCollapseParts": [],
+    "commandPanelNowCollapsePartsWords": [],
+    "commandPanelNowExpandParts": [],
+    "commandPanelNowExpandPartsWords": [],
+    "commandPanelNowFind": [],
     "commandProjectFocusClear": [],
     "commandProjectFocusClearWords": [],
     "commandProjectFocusOpen": [],

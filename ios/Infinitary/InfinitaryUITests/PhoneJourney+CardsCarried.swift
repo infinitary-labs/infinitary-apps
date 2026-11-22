@@ -100,6 +100,8 @@ extension PhoneJourney {
         _ = try await home("carried-older-home")
         reach("Live", timeout: 30)
         let older = try await home("carried-card", body: #"{"id":"phone-carried-older"}"#)
+        // The stage was empty after the past card went aside, so the new card reaches it before it can be shown.
+        XCTAssertTrue(app.staticTexts["card-title"].waitForPresence(timeout: 20), app.debugDescription)
         showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         waitForShownBodyRevealed()

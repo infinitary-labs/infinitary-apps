@@ -207,3 +207,31 @@ test("Enter on a focused drawing opens it after the text selection is gone", asy
   expect(opened(heard)[0]?.pictures?.[0]?.alt).toBe(WIDE_LABEL);
   expect(heard.filter((message) => message.type === "annotate")).toHaveLength(1);
 });
+
+/**
+ * Intent: INF-5609's welcome keeps its first mate when its picture opens. The
+ * app's stage part hides the still and draws the live first mate beside the
+ * drawing, which does not travel, so the picture shows the still instead.
+ */
+test("a still the stage drew over shows in the opened picture", async () => {
+  const heard = await mounted();
+  await inFrame(() => {
+    const diagram = document.getElementById("diagram");
+    const still = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    const attributes: [string, string][] = [
+      ["id", "still"],
+      ["data-inf-stage-still", ""],
+      ["cx", "500"],
+      ["cy", "60"],
+      ["r", "30"],
+    ];
+    for (const [name, value] of attributes) still.setAttribute(name, value);
+    // As the stage part hides it once its live drawing is up.
+    still.style.display = "none";
+    diagram?.append(still);
+    return true;
+  }, null);
+  await press("label");
+  const picture = drawn(opened(heard)[0]?.pictures?.[0] as Picture);
+  expect(picture.getElementById("still")?.getAttribute("style")).not.toContain("display:none");
+});

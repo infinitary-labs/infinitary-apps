@@ -4,7 +4,7 @@ import { band } from "./face";
 // (the captain's picks from the eleven-fidget prototype review, 2026-09-29):
 // what the five modules share. Each is a one-shot fidget like the pretend
 // black hole (./blackhole): the same wind-up / hold / unwind envelope, the
-// same 16 vertices handed over by Firstmate.tsx at their projected positions
+// same 16 vertices handed over by firstmatePainter.ts at their projected positions
 // and moved into the figure by the envelope, the wires fading by each
 // vertex's progress, and the eyes kept as the character's own.
 //

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { appPartProblem, withAppParts } from "./appParts";
 import sources from "./appParts.generated.json" with { type: "json" };
+import { FIRST_CREWMATE_BODY } from "./firstCrewmateNote";
 
 // The captain, on map cards carrying the map's code: "does our cards not
 // support importing repetitive boilerplates, avoiding counting them in the
@@ -38,5 +39,21 @@ describe("a card body naming the app's map part", () => {
     const body = BODY.replace(REFERENCE, reference);
     expect(withAppParts(body)).toBe(body);
     expect(appPartProblem(body)).toContain("is not a part reference the app fills");
+  });
+});
+
+// INF-5609's approved plan: the stage part draws the home stage's first mate
+// and crew on the app's own first-run cards, and only the app's own cards may
+// name it, so a written card keeps the card rules on motion.
+describe("the app's own stage part", () => {
+  it("is filled in the first crewmate's note and refused in a written card", () => {
+    const reference = '<script data-inf-part="stage"></script>';
+    expect(FIRST_CREWMATE_BODY).toContain(reference);
+    expect(withAppParts(FIRST_CREWMATE_BODY)).toContain(
+      `<style>${sources.stage.style}</style><script>${sources.stage.script}</script>`,
+    );
+    expect(appPartProblem(FIRST_CREWMATE_BODY)).toContain(
+      "is the app's own part, which only the app's own cards name; its parts for a card are map",
+    );
   });
 });

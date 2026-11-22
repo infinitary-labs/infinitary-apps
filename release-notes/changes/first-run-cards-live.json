@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "first-run-cards-live",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "The welcome and first crewmate cards show your real first mate and crew",
+      "body": "The welcome card and the card that appears when your first crewmate starts now show the same first mate and crewmates you see in the middle of the window, smaller and moving calmly, in place of still sketches. When your first crewmate starts, its card shows your first mate sending it off. With reduced motion on, they hold still.",
+      "picture": {
+        "dark": "first-run-cards-live-dark.webp",
+        "light": "first-run-cards-live-light.webp",
+        "alt": "The card that appears when the first crewmate starts, with the first mate sending a small crewmate off above the Now and Later panels"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

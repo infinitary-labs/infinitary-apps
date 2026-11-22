@@ -744,8 +744,10 @@ private struct PhoneCardPane: View {
         reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty || !notes.isEmpty)
     }
     private var takesReply: Bool { card.takesReplies && !card.isPast }
-    /// INF-5608 piece 2: whether the card's buttons carry the field's photos and notes, or wait (`PhoneChoiceCarry`).
-    private var carry: PhoneChoiceCarry { .reading(photos: photos.count, notes: notes.count, homeTakes: session.homeTakesChoiceAttachments) }
+    /// INF-5608 piece 2: whether the card's buttons carry the field's photos and notes, or wait; a past card sends none.
+    private var carry: PhoneChoiceCarry {
+        card.isPast ? .nothing : .reading(photos: photos.count, notes: notes.count, homeTakes: session.homeTakesChoiceAttachments)
+    }
     /// INF-3296's phone piece: the card's reply takes notes on its body, by the home's own say.
     private var takesNotes: Bool { takesReply && session.cardNotes && host.failure == nil }
     /// The task the card is about, which leads its head as its door to the task's record.
@@ -1362,7 +1364,7 @@ private struct PhoneCardPane: View {
             if pick == nil, !card.isPast, let ask = PhoneSecretAsk.of(card) {
                 secretFields(ask).modifier(PhoneFaceOnly(angle: turnAngle))
             }
-            if pick == nil, !card.isPast { PhoneCarryLine(carry: carry).modifier(PhoneFaceOnly(angle: turnAngle)) }
+            if pick == nil { PhoneCarryLine(carry: carry).modifier(PhoneFaceOnly(angle: turnAngle)) }
             if pick == nil { choiceRow.modifier(PhoneFaceOnly(angle: turnAngle)) }
         }
         .padding(.horizontal, PhoneTheme.space4).padding(.top, PhoneTheme.space2).padding(.bottom, PhoneTheme.space3)

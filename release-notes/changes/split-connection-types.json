@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-connection-types",
+      "reason": "The connection's public types moved to their own file to keep the implementation below the size ceiling. Its caller imports and behavior are unchanged."
+    }
+  ]
+}

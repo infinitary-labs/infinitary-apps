@@ -3,6 +3,7 @@
 How a paired device, and the window on the home itself, reach the home's core: the same requests and pushes, over one WebSocket on TLS.
 The home is the Mac that holds the record (`docs/architecture.md` §9).
 The connection is the core's adapter for its clients: it sits on the two seams, `core.dispatch` in and `core.events` out (§17), and names no channel (`src/core/connection/connection.ts`).
+Its options, pairing seam and returned handle are defined in `src/core/connection/connectionTypes.ts` and exported by `connection.ts`.
 The window on the home is one of them, through the local door below (`docs/view.md`, "The window on the first mate's own computer").
 The envelope around the contract's own requests and pushes is `src/shared/connection.ts`, which every client parses; both are published as JSON Schema in `docs/contract.json` with the version rule (`docs/contract.md`).
 How a device pairs, and the keys both sides prove themselves with, is `docs/devices.md`.

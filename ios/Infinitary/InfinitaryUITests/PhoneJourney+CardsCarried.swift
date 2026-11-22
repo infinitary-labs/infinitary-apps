@@ -38,12 +38,14 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["queued-notes-count"].waitForPresence(timeout: 10), app.debugDescription)
         // The keyboard may close with the editor or stay up with its Done button; put it down only when it stayed. As it
         // starts to close, Done can still read for a moment, so the state settles only when two readings in a row agree.
+        // Done is read from one snapshot of its frame: asking a closing Done whether it is hittable fails the test itself.
         let keyboard = app.keyboards.firstMatch
         let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
         var lastReading: [Bool]?
         let settled = NSPredicate { _, _ in
             let up = keyboard.exists
-            let reading = [up, up && done.exists && done.isHittable]
+            let shown = up ? (try? done.snapshot()).map { !$0.frame.isEmpty && app.frame.contains($0.frame) } : nil
+            let reading = [up, shown ?? false]
             defer { lastReading = reading }
             return (!reading[0] || reading[1]) && lastReading == reading
         }

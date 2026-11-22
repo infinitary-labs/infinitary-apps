@@ -1,5 +1,6 @@
 import { CARD_DRAFTS, type CardDraft, type CardDraftChange } from "@shared/cardDrafts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pageQueue } from "../cards/markedPictures";
 import { startCardDrafts } from "./cardDrafts";
 import { DRAFT_QUIET_MS } from "./draftSync";
 import type { ShellState } from "./store";
@@ -173,6 +174,35 @@ describe("startCardDrafts", () => {
     expect(holdsUnsentWords(at.state())).toBe(false);
     at.type("Start after the tide, then wait");
     expect(holdsUnsentWords(at.state())).toBe(true);
+    // The card leaves, and with it what this window took for it.
+    at.stack([]);
+  });
+
+  // Intent (the captain's wait-for-draft and typed-there choices on INF-5374's
+  // review): a card answered or withdrawn at another computer leaves the
+  // stack, and the words it held here show in no field, so they hold nothing;
+  // a page's own queue of notes, with no card, still does.
+  it("holds a restart for nothing a card answered elsewhere left behind", async () => {
+    vi.useFakeTimers();
+    stubStorage();
+    const at = windowWith([CARD_DRAFTS], VIEW, {
+      inputText: "",
+      attachments: [],
+      pastes: [],
+      replyPastes: {},
+      replyImages: {},
+    });
+    at.stack([{ id: "card-1" }]);
+    await vi.runAllTimersAsync();
+    at.type("Start after the tide");
+    expect(holdsUnsentWords(at.state())).toBe(true);
+    // The card was answered at the other computer: the next snapshot no longer holds it.
+    at.stack([]);
+    expect(at.state().replyDrafts["card-1"]).toBe("Start after the tide");
+    expect(holdsUnsentWords(at.state())).toBe(false);
+    const note = { id: "note-1", target: { kind: "point" }, comment: "Too dark" };
+    const page = { ...at.state(), replyNotes: { [pageQueue("task-1")]: [note] } };
+    expect(holdsUnsentWords(page as unknown as ShellState)).toBe(true);
   });
 
   it("reads every draft again when a view's link comes back, however short the drop", async () => {

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-app-handover-helpers",
+      "reason": "Moves the startup handover helpers into their own module without changing behavior."
+    }
+  ]
+}

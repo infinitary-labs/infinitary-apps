@@ -1,23 +1,19 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { homedir, hostname, tmpdir, userInfo } from "node:os";
+import { homedir, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
 import { isatty } from "node:tty";
 import { openCommandDoor } from "@core/axi/commandDoor";
-import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
 import type { LocalDoorRun } from "@core/connection/localDoor";
 import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove, type FolderMove } from "@core/folderMove/due";
-import type { MoveDeps } from "@core/folderMove/move";
-import { olderRunAgent, type TakeOverDeps } from "@core/folderMove/takeOver";
-import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
+import { startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
-import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { type RunPipes, watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
@@ -58,7 +54,6 @@ import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
 import { SMALLEST_WINDOW } from "@shared/smallestWindow";
 import { checksUpdates } from "@shared/update";
-import { spellingOfUserDataFolder } from "@shared/userDataFolders";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
 import { installAppMenu, nameAppMenu, resetAllKeysAfterAsking } from "./appMenu";
@@ -77,7 +72,7 @@ import { frameLibPins } from "./frames/frameLibFiles";
 import { FrameMountRegistry } from "./frames/frameMounts";
 import { handleFrameProtocol } from "./frames/frameProtocol";
 import { handOverProfileDir, runHandOver } from "./handOver";
-import type { HandOverNames } from "./handOverPage";
+import { handOverNames, handOverReach } from "./handOverReach";
 import {
   createElectronHost,
   type ElectronHostOptions,
@@ -202,97 +197,6 @@ const isRelease = !isDev && packagedFlavor(readPackageJsonAt(app.getAppPath())) 
 // Windows files the app's windows and notifications under the identity its
 // Start menu entry carries (./windowsStartup.ts).
 if (hostPlatform() === "win32") app.setAppUserModelId(windowsAppUserModelId(isRelease));
-
-/** The app a data folder belongs to, by the name a person knows it (`@shared/codeNames`). */
-function appNameOfFolder(dir: string): string {
-  return APP_IDENTITIES[spellingOfUserDataFolder(basename(dir)) ?? "fm"].app.release;
-}
-
-/** The two apps of the one-time move, by the names a person knows them. */
-function handOverNames(move: FolderMove): HandOverNames {
-  return { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) };
-}
-
-/**
- * What the one-time move's hand-over reaches, the window's and a run's
- * alike: the move itself, the take-over from an older copy with no window
- * still holding the older folder, its background agent let go first
- * (src/core/folderMove/takeOver.ts), and once the work is in, the older
- * agent's hand-over to this app's label, as the work run's move hands it
- * over, so its file starts nothing on the frozen older folder.
- */
-function handOverReach(
-  move: FolderMove,
-  work: WorkContext,
-): {
-  deps: Pick<MoveDeps, "platform" | "claudeConfigDir" | "hostname">;
-  takeOver: TakeOverDeps;
-  handBackground?: () => Promise<unknown>;
-} {
-  const serviceManager = work.serviceManager;
-  // The older copy's names follow the folder it moves from, never where
-  // this computer's work happens to be (`folderSpelling` names this app's
-  // own folder whenever its work is not still in the older one).
-  const olderSpelling = spellingOfUserDataFolder(basename(move.from)) ?? "fm";
-  // The start entry a run of the older copy may have, let go before a forced end.
-  const olderRun = olderRunAgent({
-    spelling: olderSpelling,
-    flavor: work.place.flavor,
-    platform: hostPlatform(),
-    homeDir: homedir(),
-    unitsDir: userUnitsDir(process.env, homedir()),
-    dataDir: move.from,
-  });
-  const olderBackground = serviceManager && {
-    flavor: work.place.flavor,
-    dataDir: join(move.from, "work"),
-    spelling: olderSpelling,
-    homeDir: homedir(),
-    uid: process.getuid?.() ?? userInfo().uid,
-    ...serviceManager,
-  };
-  return {
-    deps: {
-      platform: hostPlatform(),
-      claudeConfigDir: defaultClaudeConfigDir(),
-      hostname: hostname(),
-    },
-    takeOver: {
-      platform: hostPlatform(),
-      hostname: hostname(),
-      ...(olderBackground
-        ? {
-            unloadAgent: (service) => pauseInBackground(olderBackground, service),
-            resumeAgent: (service) => resumeInBackground(olderBackground, service),
-          }
-        : {}),
-      ...(olderRun ? { runAgent: olderRun } : {}),
-    },
-    ...(serviceManager
-      ? {
-          handBackground: async () => {
-            const dataDir = join(move.to, "work");
-            const { workLog } = await import("@core/helper/run");
-            return handBackgroundOver(dataDir, {
-              spelling: work.place.spelling,
-              flavor: work.place.flavor,
-              background: (dir, spelling) => ({
-                flavor: work.place.flavor,
-                dataDir: dir,
-                spelling,
-                homeDir: homedir(),
-                uid: process.getuid?.() ?? userInfo().uid,
-                ...serviceManager,
-              }),
-              launcher: work.launcher,
-              env: work.backgroundEnv,
-              log: workLog(dataDir),
-            });
-          },
-        }
-      : {}),
-  };
-}
 
 /**
  * Turns start at login on for this app once the work is in, as the older

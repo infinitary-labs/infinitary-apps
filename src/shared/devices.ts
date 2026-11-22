@@ -37,6 +37,15 @@ export function deviceRunsWork(kind: DeviceKind): boolean {
 }
 
 /**
+ * Whether a computer can build Infinitary from its home's source
+ * (docs/devices.md, "Matching the home's build"): a Mac, or one that never
+ * said its system; never a Linux computer or a Windows PC.
+ */
+export function buildsSourceThere(system: DeviceSystem | undefined): boolean {
+  return system === undefined || system === "macos";
+}
+
+/**
  * What one connection of a device does (docs/connection.md, "Hello"): a
  * `view` is Firstmate open on it, controlling this one; `work` is its work,
  * which runs with no window. A Mac that does both holds one of each.

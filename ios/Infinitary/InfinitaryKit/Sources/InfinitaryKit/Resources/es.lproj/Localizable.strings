@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ está fuera de alcance";
 "devicesSourceBuilding" = "%1$@ está compilando el código de este ordenador.";
 "devicesSourceCardBody" = "Este ordenador usa Infinitary desde su código en el commit %1$@, y %2$@ usa otra compilación. Igualar hace que %2$@ obtenga ese código confirmado, lo compile y se inicie con él. Los cambios sin confirmar se quedan en este ordenador.";
+"devicesSourceCardKeychain" = "La primera vez, %1$@ puede pedir una vez la contraseña del Mac para que esta compilación lea las contraseñas guardadas allí.";
 "devicesSourceCardMatch" = "Igualarlo";
 "devicesSourceCardOnce" = "Se te pregunta una sola vez por %1$@. Después, se iguala solo cada vez que este ordenador use otro código.";
 "devicesSourceCardRefused" = "La última igualación no se completó. %1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "Volver a intentar conectar con %1$@";
 "settingsDevicesUpdate" = "Actualizar";
 "settingsDevicesUpdateFailed" = "No se pudo actualizar Infinitary allí.";
-"settingsDevicesUpdateNamed" = "Actualizar %1$@";
-"settingsDevicesUpdateOlder" = "Instalar versión anterior";
-"settingsDevicesUpdateOlderNamed" = "Instalar la versión anterior en %1$@";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Copiar un comando";
 "settingsDevicesWaysCopyLink" = "Copiar un enlace";

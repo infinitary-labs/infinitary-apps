@@ -539,9 +539,6 @@
   "settingsDevicesTryAgainNamed": "{device} への接続を再試行",
   "settingsDevicesUpdate": "更新",
   "settingsDevicesUpdateFailed": "そちらの Infinitary を更新できませんでした。",
-  "settingsDevicesUpdateNamed": "{device} を更新",
-  "settingsDevicesUpdateOlder": "古いバージョンをインストール",
-  "settingsDevicesUpdateOlderNamed": "{device} に古いバージョンをインストール",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ と連絡がつきません";
 "devicesSourceBuilding" = "%1$@ がこのコンピュータのコードをビルドしています。";
 "devicesSourceCardBody" = "このコンピュータはコミット %1$@ のコードから Infinitary を実行していて、%2$@ は別のビルドを実行しています。「合わせる」を選ぶと、%2$@ がそのコミット済みのコードを取得してビルドし、そこから起動します。コミットしていない変更はこのコンピュータに残ります。";
+"devicesSourceCardKeychain" = "初回は、このビルドがそこに保存されたパスワードを読めるように、%1$@ が Mac のパスワードを一度求めることがあります。";
 "devicesSourceCardMatch" = "合わせる";
 "devicesSourceCardOnce" = "%1$@ について確認するのはこの一度だけです。以後は、このコンピュータが別のコードを実行するたびに自動で合わせます。";
 "devicesSourceCardRefused" = "前回の「合わせる」は完了しませんでした。%1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "%1$@ への接続を再試行";
 "settingsDevicesUpdate" = "更新";
 "settingsDevicesUpdateFailed" = "そちらの Infinitary を更新できませんでした。";
-"settingsDevicesUpdateNamed" = "%1$@ を更新";
-"settingsDevicesUpdateOlder" = "古いバージョンをインストール";
-"settingsDevicesUpdateOlderNamed" = "%1$@ に古いバージョンをインストール";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "コマンドをコピー";
 "settingsDevicesWaysCopyLink" = "リンクをコピー";

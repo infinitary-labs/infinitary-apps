@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ 연락 닿지 않음";
 "devicesSourceBuilding" = "%1$@에서 이 컴퓨터의 코드를 빌드하는 중이에요.";
 "devicesSourceCardBody" = "이 컴퓨터는 커밋 %1$@의 코드로 Infinitary를 실행하고, %2$@은(는) 다른 빌드를 실행해요. 맞추기를 선택하면 %2$@에서 커밋된 그 코드를 받아 빌드한 뒤 그걸로 시작해요. 커밋하지 않은 변경 사항은 이 컴퓨터에 남아요.";
+"devicesSourceCardKeychain" = "처음에는 이 빌드가 그곳에 저장된 암호를 읽을 수 있도록 %1$@에서 Mac 암호를 한 번 물어볼 수 있어요.";
 "devicesSourceCardMatch" = "맞추기";
 "devicesSourceCardOnce" = "%1$@에 대해서는 한 번만 물어봐요. 그 뒤로는 이 컴퓨터가 다른 코드를 실행할 때마다 알아서 맞춰요.";
 "devicesSourceCardRefused" = "지난번 맞추기가 완료되지 않았어요. %1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "%1$@에 다시 연락하기";
 "settingsDevicesUpdate" = "업데이트";
 "settingsDevicesUpdateFailed" = "그곳의 Infinitary를 업데이트할 수 없어요.";
-"settingsDevicesUpdateNamed" = "%1$@ 업데이트";
-"settingsDevicesUpdateOlder" = "이전 버전 설치";
-"settingsDevicesUpdateOlderNamed" = "%1$@에 이전 버전 설치";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "명령 복사";
 "settingsDevicesWaysCopyLink" = "링크 복사";

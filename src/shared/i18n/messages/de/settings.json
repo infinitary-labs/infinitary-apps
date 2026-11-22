@@ -553,9 +553,6 @@
   "settingsDevicesTryAgainNamed": "Erneut versuchen, {device} zu erreichen",
   "settingsDevicesUpdate": "Aktualisieren",
   "settingsDevicesUpdateFailed": "Infinitary konnte dort nicht aktualisiert werden.",
-  "settingsDevicesUpdateNamed": "{device} aktualisieren",
-  "settingsDevicesUpdateOlder": "Ältere Version installieren",
-  "settingsDevicesUpdateOlderNamed": "Ältere Version auf {device} installieren",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

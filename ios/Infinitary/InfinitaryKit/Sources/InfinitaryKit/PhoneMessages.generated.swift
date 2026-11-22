@@ -879,6 +879,7 @@ public enum PhoneMessages {
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
     public static func `devicesSourceBuilding`(`device`: String) -> String { PhoneWords.format("devicesSourceBuilding", [`device`]) }
     public static func `devicesSourceCardBody`(`commit`: String, `device`: String) -> String { PhoneWords.format("devicesSourceCardBody", [`commit`, `device`]) }
+    public static func `devicesSourceCardKeychain`(`device`: String) -> String { PhoneWords.format("devicesSourceCardKeychain", [`device`]) }
     public static func `devicesSourceCardMatch`() -> String { PhoneWords.format("devicesSourceCardMatch", []) }
     public static func `devicesSourceCardOnce`(`device`: String) -> String { PhoneWords.format("devicesSourceCardOnce", [`device`]) }
     public static func `devicesSourceCardRefused`(`why`: String) -> String { PhoneWords.format("devicesSourceCardRefused", [`why`]) }
@@ -3007,9 +3008,6 @@ public enum PhoneMessages {
     public static func `settingsDevicesTryAgainNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesTryAgainNamed", [`device`]) }
     public static func `settingsDevicesUpdate`() -> String { PhoneWords.format("settingsDevicesUpdate", []) }
     public static func `settingsDevicesUpdateFailed`() -> String { PhoneWords.format("settingsDevicesUpdateFailed", []) }
-    public static func `settingsDevicesUpdateNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateNamed", [`device`]) }
-    public static func `settingsDevicesUpdateOlder`() -> String { PhoneWords.format("settingsDevicesUpdateOlder", []) }
-    public static func `settingsDevicesUpdateOlderNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesUpdateOlderNamed", [`device`]) }
     public static func `settingsDevicesVersionMark`(`version`: String) -> String { PhoneWords.format("settingsDevicesVersionMark", [`version`]) }
     public static func `settingsDevicesWayCount`(`count`: Int) -> String { PhoneWords.format("settingsDevicesWayCount", [`count`]) }
     public static func `settingsDevicesWaysCopyCommand`() -> String { PhoneWords.format("settingsDevicesWaysCopyCommand", []) }
@@ -5042,6 +5040,7 @@ extension PhoneWords {
         "devicesRemoteOutOfReach": ["name"],
         "devicesSourceBuilding": ["device"],
         "devicesSourceCardBody": ["commit", "device"],
+        "devicesSourceCardKeychain": ["device"],
         "devicesSourceCardMatch": [],
         "devicesSourceCardOnce": ["device"],
         "devicesSourceCardRefused": ["why"],
@@ -7170,9 +7169,6 @@ extension PhoneWords {
         "settingsDevicesTryAgainNamed": ["device"],
         "settingsDevicesUpdate": [],
         "settingsDevicesUpdateFailed": [],
-        "settingsDevicesUpdateNamed": ["device"],
-        "settingsDevicesUpdateOlder": [],
-        "settingsDevicesUpdateOlderNamed": ["device"],
         "settingsDevicesVersionMark": ["version"],
         "settingsDevicesWayCount": ["count"],
         "settingsDevicesWaysCopyCommand": [],

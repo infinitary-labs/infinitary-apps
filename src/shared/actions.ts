@@ -10,6 +10,7 @@ import {
   scheduleDetailsWords,
 } from "./automation";
 import { type BatchAnswer, batchAnswerSchema } from "./batches";
+import { shortCommit } from "./buildIdentity";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
@@ -32,6 +33,7 @@ import { hostOfAddress, kindByName } from "./forge";
 import { isServerIntegration, SERVER_INTEGRATION_KINDS, signInHost } from "./forgeKinds";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
+import * as m from "./i18n/messages.generated.ts";
 import { englishOf, type Said } from "./i18n/said";
 import {
   INBOX_WORDS,
@@ -779,6 +781,23 @@ const actionLines = {
       const cardId = `app-device-update-${cardSlug(device.id)}`;
       const title = `Update Infinitary on ${label}`;
       const stops = "Its running work stops for a moment and goes on after.";
+      // This computer's code, which the captain's yes lets that computer build and run from
+      // now on: said as the card the app raises for it says it (docs/devices.md, "Matching the home's build").
+      const source = device.otherVersion?.source;
+      if (source)
+        return {
+          cardId,
+          title: m.devicesSourceCardTitle({ device: label }),
+          paragraphs: [
+            m.devicesSourceCardBody({ device: label, commit: shortCommit(source.commit) }),
+            m.devicesSourceCardOnce({ device: label }),
+            m.devicesSourceCardKeychain({ device: label }),
+            stops,
+          ],
+          label: m.devicesSourceCardMatch(),
+          decline: m.devicesAppCardNotNow(),
+          arrival: { update: device.id },
+        };
       if (device.remoteLogin)
         return {
           cardId,

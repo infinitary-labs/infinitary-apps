@@ -90,6 +90,7 @@
   "devicesRemoteOutOfReach": "{name} خارج المتناول",
   "devicesSourceBuilding": "يبني {device} شيفرة هذا الكمبيوتر.",
   "devicesSourceCardBody": "يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام {commit}، ويشغّل {device} بناءً آخر. تجعل «مطابقة» {device} يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.",
+  "devicesSourceCardKeychain": "في المرة الأولى، قد يطلب {device} كلمة سر Mac مرة واحدة، حتى يقرأ هذا البناء كلمات السر المحفوظة هناك.",
   "devicesSourceCardMatch": "طابِقه",
   "devicesSourceCardOnce": "يُطرح عليك هذا السؤال مرة واحدة بشأن {device}. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.",
   "devicesSourceCardRefused": "لم تكتمل آخر مطابقة. {why}",

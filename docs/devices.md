@@ -387,7 +387,7 @@ The same step turns on linger for that account, so its work keeps running after 
 Where systemd does not run, as in a container or WSL without it, linger fails and the install still stands: the step says so on a line of its own (`LINGER_OFF_LINE`), and the add or update goes on.
 Once the work there joined, or updated, and runs in the background or starts at the next login, the last two lines are warnings that name the one line an administrator runs there: "To keep Mac mini running work after sam logs out, an administrator runs this there once:" and `sudo loginctl enable-linger sam`.
 The work then joins from `/opt/infinitary/infinitary` as `work join --from-home --agreed`, which asks nothing there since the captain agreed here, and no AppImage is kept there.
-Update asks for the password again and installs the new package the same way.
+Match asks for the password again and installs the new package the same way.
 Removing the computer leaves the package installed.
 Any other Linux system keeps the AppImage way above.
 Only a home that reads the tap installs the package; one that reads none (below, "Infinitary for another system"), such as a development run or the journeys on a Linux runner, sets up Ubuntu 24.04 and 26.04 the AppImage way too.
@@ -527,7 +527,7 @@ A computer that runs work and connects on an older Infinitary than this Mac's is
 It reads the same comparison as the row (`Computers.list`'s `otherVersion`, `than: "older"`), hung on `WorkDevices.onVersion`, and never asks the first mate to judge it.
 So once this Mac installs a new version, each computer it updates comes up on it as it connects.
 The update is the one Update in Devices asks (`Computers.update`, below, "Updating"), so its crew pauses and carries on after, and the feed says each step, from "Updating Infinitary on Mac mini.".
-While Settings -> Devices is open, its row follows those steps as it follows a click's update, from the first step that says how far it is (a count, or that it is starting there) until a step says it is done or refused, with no Update meanwhile (`useSetups.follow`, `src/renderer/src/settings/devicesState.ts`); a step that says none, such as one that only asks a password, leaves the row as it was.
+While Settings -> Devices is open, its row follows those steps as it follows a click's update, from the first step that says how far it is (a count, or that it is starting there) until a step says it is done or refused, with no Match meanwhile (`useSetups.follow`, `src/renderer/src/settings/devicesState.ts`); a step that says none, such as one that only asks a password, leaves the row as it was.
 It is tried once per gap while this Mac runs, never again for a reconnect on the same versions, and never while one is under way.
 Every computer this Mac can update with nothing asked of the captain is updated this way (`deviceUpdatesItself`, `src/shared/deviceUpdateNudge.ts`), whether over the connection or over Remote Login with the captain's own SSH key.
 It never takes a joined Ubuntu package worker's package route (below, "Updating"): that route is the captain's click alone.
@@ -589,11 +589,11 @@ This Mac's own SSH connection to it waits while it is updated (`SshConnections.h
 So the update there cannot dial this Mac, and `--on-home-mac` carries this Mac's word on whether that computer runs on this Mac instead: its list's `onThisMac` (above, "Where a computer joins from"), left out while the list does not say, which the update keeps on its grant before it sets its agent up anew (`docs/helper.md`, "Started by the home").
 When the session there refused to start it in the background, the feed says "Mac mini has this computer's version of Infinitary now." then the two warning lines "Mac mini could not set itself to start in the background, so it runs no work for now." and "Ask again to update it.".
 A turn running there is cut off, as when that computer restarts (`docs/helper.md`, "That computer restarts").
-For a joined Linux computer not added by its address, Update in the desktop Devices list can fall back to installing its Ubuntu package over Remote Login.
+For a joined Linux computer not added by its address, Match in the desktop Devices list can fall back to installing its Ubuntu package over Remote Login.
 For a package update, this Mac verifies the address, then checks that the Linux account has the named worker's grant for this Mac and an installed Ubuntu package before it asks for administrator approval or installs anything.
 The address stays bound to the worker for future package updates, but does not change how the computer connects or add it again.
-Update tries the normal connection route before trying a package update, and computers too old to take the update order keep the update command.
-When the connection cannot update an installed Linux copy, Update tries the saved address or a candidate from the worker’s current local or private connection before asking for one.
+Match tries the normal connection route before trying a package update, and computers too old to take the update order keep the update command.
+When the connection cannot update an installed Linux copy, Match tries the saved address or a candidate from the worker’s current local or private connection before asking for one.
 It still verifies the Remote Login host and the worker’s grant, and shows any questions inside that worker’s row.
 When that address is refused - unreachable, or another account, worker or package there - the worker's address form opens prefilled with it and says why, so it can be corrected.
 An installer or restart there that ran past its time limit may already have updated it, so that warning stays as it is, with no form to try again, whether the address was tried on its own or typed, confirmed and answered with a password in the form.
@@ -603,7 +603,7 @@ The package route refuses a worker already running a kept AppImage, even if an U
 This Mac waits for a welcome on its own version before saying that the updated copy is running.
 When Remote Login or administrator approval is unavailable, the address form gives local update and restart instructions.
 Other computers not added by address are updated over the connection (below, "Another version, and updating").
-A Windows PC that runs work for another computer takes no update yet, and its window there installs none (`docs/windows.md`); this Mac sends it no copy: its row says it has another version and "Install the newer Infinitary on that computer.", with no Update button, and asking to update it says the same (`installedThere`, `installItThereWords`, `src/shared/devices.ts`).
+A Windows PC that runs work for another computer takes no update yet, and its window there installs none (`docs/windows.md`); this Mac sends it no copy: its row says it has another version and "Install the newer Infinitary on that computer.", with no Match button, and asking to update it says the same (`installedThere`, `installItThereWords`, `src/shared/devices.ts`).
 
 ### Removing it there
 
@@ -1099,11 +1099,11 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 
 ### Updating
 
-`inf:devices:update` (`Computers.update`) brings a computer that runs work to this Mac's version, the app by itself as that computer connects (above, "Updating by itself") or the captain's own click on Update in Devices or on the first mate's card:
+`inf:devices:update` (`Computers.update`) brings a computer that runs work to this Mac's version, the app by itself as that computer connects (above, "Updating by itself") or the captain's own click on Match in Devices or on the first mate's card:
 
 - **Added by its address**: over Remote Login, as above ("Adding a computer by its address", "Updating").
 - **Joined Ubuntu package worker**: try the connection first, then use verified Remote Login if the worker needs a package update.
-  Only the captain's click takes that second route (`packageFallback`, from Update in Devices or the card's Update it, which opens Devices).
+  Only the captain's click takes that second route (`packageFallback`, from Match in Devices or the card's Update it, which opens Devices).
   The app's update by itself tries the connection alone.
   A worker that comes back on its old version from that update's order without being sent a copy may need a package, so that update is refused as soon as it is back, never after the whole return wait, and the worker gets the card.
   A reconnect before the order is sent, such as a network drop, does not count.
@@ -1111,7 +1111,7 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
   Devices can try a saved address or an eligible direct peer before asking for one, without changing the pairing.
   The worker stays selected while its update sends a request or needs an answer, including an update started from a card.
 - **Any other computer that takes the update order** (`takesUpdate`, a contract from `WORK_UPDATE_SINCE` on, whatever its major): over the connection, below.
-- **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
+- **One too old to take it**: refused as `not-updatable`; Devices' Match makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
 Its crew pauses for the update and carries on after, with no message from the captain and no failed turn (INF-721 friction 9; `pauseTasks` and `resumeTasks`, `CrewUpdates.pauseForUpdate` and `resumeAfterUpdate`):
 
@@ -1185,7 +1185,7 @@ A turn running there is cut off, as when that computer restarts.
 
 A computer that went back to the copy it kept, because the one an update brought did not reach this Mac within the update's wait (`docs/helper.md`, "A copy that does not start"), says so in its hello (`failedUpdate`) until it has reached this Mac once.
 The copy that did not start is the one this Mac sent, so `Computers` keeps this Mac's own version on pairing's `failed-updates.json` (`DevicePairing.noteFailedUpdate`), and the feed says once, in two warning lines, "Mac mini could not start Infinitary 0.1.29, so it went back to the version it ran before." and "This computer does not send Infinitary 0.1.29 there again."
-While this Mac's version is that one (`Computers.failedHere`), Update refuses before anything is asked there ("Mac mini could not start Infinitary 0.1.29 before, so this computer does not send it there again.
+While this Mac's version is that one (`Computers.failedHere`), Match refuses before anything is asked there ("Mac mini could not start Infinitary 0.1.29 before, so this computer does not send it there again.
 It can be updated once a newer version is here."), and neither the update by itself nor the update card is for it (`DeviceUpdateNudge`'s `failedHere`, which reads the note `Computers` keeps first, since it hears each version before the card does).
 The note goes once that computer runs that version or a newer one, and when it is removed.
 
@@ -1196,7 +1196,6 @@ The home says its own from its starter (`starterBuild`, `src/core/devices/source
 
 - **Two releases** compare by version, as above.
 - **A home run from source that names its commit** is matched by commit, whatever the other runs: a computer on another commit, or on a release, carries `otherVersion.source` with that commit, and Match builds it there.
-  A home run from source that names none, one its starter did not start, compares contracts alone, since its package version names no release.
 - **A home on a release** brings a computer that runs source back to that release, as the update over the connection does.
 
 The row says "Runs another build than this computer, which runs its code at commit 1a2b3c4." and offers one Match, which replaces Update and Install older version for every computer, installed copies too: it brings that computer to whatever the home runs, older or newer.
@@ -1478,10 +1477,10 @@ The tab after Usage, built to the agreed design in the design skill's `component
   The home hears a view come and go through the connection's `onViewDevice`, held by `WorkDevices`, and keeps when it was last seen in `seen.json`, so a restart still says since when.
   A device that may run work - a Mac, or a computer that only runs work - is drawn in `components/machines/MachineRow`'s shape, and a Mac's summary leads with "Controlling your first mate now" while Infinitary is open there (`controlling`, read as for a view), its dot and state following its work: "Running as Builder" with "another user on this computer · runs work only, while Builder is logged in · seen just now", or another Mac's name with "a computer · joined today 14:06 · seen just now"; then "Runs website and api · Signed in to Codex and GitHub" (or "Runs no project yet", "No sign-ins yet"); its dot `ok` in reach, `idle` while its connection is being made and `warn` out of reach; and on the right "1 task" in the accent, "idle", "connecting" while its SSH connection is being made, or "out of reach" in `--warn`.
   Out of reach it reads "out of reach since 14:02", or "not logged in since this computer restarted" for another user on this Mac nobody has logged in as since.
-  Connected on another version of Infinitary, a line under its summary says which, "Has Infinitary 0.1.20, older than this computer's.", with "It takes no new work until it is updated." in `--warn` while it takes none, its dot `warn` and "no new work" on the right; Update stands before Remove (above, "Another version, and updating").
+  Connected on another version of Infinitary, a line under its summary says which, "Has Infinitary 0.1.20, older than this computer's.", with "It takes no new work until it is updated." in `--warn` while it takes none, its dot `warn` and "no new work" on the right; Match stands before Remove (above, "Another version, and updating").
   Under it, each copy's version: "Its app has Infinitary 0.8.3, older than this computer's." in `--warn` while the app open there is behind, "Its work runs Infinitary 0.8.4, as this computer does.", or one line, "Its app and its work run Infinitary 0.8.4, as this computer does.", when both run this computer's; a Mac that only controls and a phone say their app's the same way, a phone's as "Its app has version 0.1.0 (212)."
   (above, "Each copy's version").
-  Update on one too old to update from here makes the command for it, for another Mac or for another user on this Mac.
+  Match on one too old to update from here makes the command for it, for another Mac or for another user on this Mac.
 - **Bringing a computer back**: added by a command and out of reach with `addressChanged`, a computer's row adds "It still looks for this computer at its old address." under its summary, for another Mac with "A new command run there brings it back.", and for another user on this Mac with "A new command run as Builder brings it back."; Make a command opens the command panel for that kind.
 - **Held on the local network**: a computer a command added that macOS holds on the local network (above, "Held on the local network") reads "a computer · joined today 14:06 · out of reach", and adds under its summary "It has not reached this computer since it joined. macOS lets Infinitary on Mac mini use your local network only once someone there allows it.
   Added by its address, this computer reaches it with your SSH key instead.", with a secondary Add it by its address before Remove.
@@ -1737,10 +1736,10 @@ A link that expires with nothing paired stops the listener.
 - `src/core/devices/computerUpdate.test.ts`: the list saying another version, and Update over the real connection, pairing and work mode composition - the copy got with the computer's own key and kept, its send counted, another user here getting nothing, the run started again on this Mac's version, not back in time or by hand, every refusal, and a copy that exits at start: the computer goes back to the copy it kept, this Mac names that version once and refuses to send it again, while a copy that reaches this Mac lets the previous one go.
   On a Mac it also holds a Mac a command added downloading from a stand-in release over local HTTPS: its count in one line toward the release's size, the downloaded copy kept; a download that does not match its checksum or publisher, cannot be got, or stops with nothing moving falls back to a counted send with nothing left of it; a dropped connection followed to the new version, with the order asked again answering `updating`; an update asked while a download runs following it with no fallback; a run stopped part way coming back on its old version and sent this Mac's copy; one not heard from again said to have maybe updated; and an older contract kept on the update order.
 - `src/core/devices/joinCommand.test.ts`, "when this Mac's version is published": the command downloads it there with its count rewriting one line and joins with it, getting nothing from this Mac; falls back to this Mac's copy when the download does not match or cannot be got, or once only the time a copy of its size needs is left of the link, and downloads while more is left even under two minutes; and says a used or expired command before it downloads anything.
-- `tests/e2e/devices-command.spec.ts`, "a computer on another version": the app brings an older one to this Mac's version by itself, its row following the update and no card asking, and one too old gets the card and, from Update, the command; `tests/e2e/run-work.spec.ts`, "updated over the connection": the built app gets the home's Infinitary with its own key, keeps it and ends for its background.
+- `tests/e2e/devices-command.spec.ts`, "a computer on another version": the app brings an older one to this Mac's version by itself, its row following the update and no card asking, and one too old gets the card and, from Match, the command; `tests/e2e/run-work.spec.ts`, "updated over the connection": the built app gets the home's Infinitary with its own key, keeps it and ends for its background.
 - `tests/e2e/devices.spec.ts`, "a Mac a command added downloads its update": Devices' command names the published download, and the update the app starts by itself as the Mac connects on an older version counts the download in its row and one rewritten feed line, or falls back to a counted send when it does not match.
   `tests/e2e/run-work.spec.ts`, "the command for another Mac downloads the published version" and "updated over the connection, the copy a command kept downloads": the built app joins with the copy the command downloaded, and keeps the one its work mode downloaded, after a mismatch changed nothing.
-- `tests/browser/devices-tab-update-by-itself.test.tsx`: an update the app started by itself reads in its row from its first count until it is done, with no Update meanwhile; `tests/browser/devices-tab-update-from-card.test.tsx`: the update card's Update it opens Devices and asks that computer's update there, its row reading as updating until the update answers.
+- `tests/browser/devices-tab-update-by-itself.test.tsx`: an update the app started by itself reads in its row from its first count until it is done, with no Match meanwhile; `tests/browser/devices-tab-update-from-card.test.tsx`: the update card's Update it opens Devices and asks that computer's update there, its row reading as updating until the update answers.
 
 ## Unsupported Linux automatic startup
 

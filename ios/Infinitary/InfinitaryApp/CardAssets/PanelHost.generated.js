@@ -29640,6 +29640,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This computer runs Infinitary from its code at commit ${commit}, and ${device} runs another build. Match has ${device} get that committed code, build it and start from it. Changes not committed stay on this computer.`;
   }
+  function devicesSourceCardKeychain(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `في المرة الأولى، قد يطلب ${device} كلمة سر Mac مرة واحدة، حتى يقرأ هذا البناء كلمات السر المحفوظة هناك.`;
+      case "de":
+        return `Beim ersten Mal fragt ${device} eventuell einmal nach dem Mac-Passwort, damit dieser Build die dort gespeicherten Passwörter lesen kann.`;
+      case "es":
+        return `La primera vez, ${device} puede pedir una vez la contraseña del Mac para que esta compilación lea las contraseñas guardadas allí.`;
+      case "fr":
+        return `La première fois, ${device} peut demander une fois le mot de passe du Mac, pour que cette compilation lise les mots de passe enregistrés là-bas.`;
+      case "ja":
+        return `初回は、このビルドがそこに保存されたパスワードを読めるように、${device} が Mac のパスワードを一度求めることがあります。`;
+      case "ko":
+        return `처음에는 이 빌드가 그곳에 저장된 암호를 읽을 수 있도록 ${device}에서 Mac 암호를 한 번 물어볼 수 있어요.`;
+      case "pt-BR":
+        return `Na primeira vez, ${device} pode pedir uma vez a senha do Mac, para que este build leia as senhas salvas lá.`;
+      case "zh-Hans":
+        return `第一次时，${device} 可能会询问一次 Mac 密码，以便这个构建读取那里保存的密码。`;
+      case "zh-Hant":
+        return `第一次時，${device} 可能會詢問一次 Mac 密碼，讓這個建置讀取那裡儲存的密碼。`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕšţ ţîɱé, ${device} ɱáý ášķ öñçé ƒöŕ îţš Ṁáç þáššŵöŕð, šö ţĥîš ƀûîļð çáñ ŕéáð ţĥé þáššŵöŕðš šáṽéð ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The first time, ‬${device}‮ may ask once for its Mac password, so this build can read the passwords saved there.‬`;
+    }
+    return `The first time, ${device} may ask once for its Mac password, so this build can read the passwords saved there.`;
+  }
   function devicesSourceCardMatch() {
     switch (currentLanguage()) {
       case "ar":
@@ -62994,89 +63022,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Could not update Infinitary there.‬`;
     }
     return `Could not update Infinitary there.`;
-  }
-  function settingsDevicesUpdateNamed(input2) {
-    const device = input2.device;
-    switch (currentLanguage()) {
-      case "ar":
-        return `تحديث ${device}`;
-      case "de":
-        return `${device} aktualisieren`;
-      case "es":
-        return `Actualizar ${device}`;
-      case "fr":
-        return `Mettre à jour ${device}`;
-      case "ja":
-        return `${device} を更新`;
-      case "ko":
-        return `${device} 업데이트`;
-      case "pt-BR":
-        return `Atualizar ${device}`;
-      case "zh-Hans":
-        return `更新 ${device}`;
-      case "zh-Hant":
-        return `更新 ${device}`;
-      case "en-XA":
-        return `[Ûþðáţé ${device} ~~~]`;
-      case "ar-XB":
-        return `‮Update ‬${device}`;
-    }
-    return `Update ${device}`;
-  }
-  function settingsDevicesUpdateOlder() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `تثبيت الإصدار الأقدم`;
-      case "de":
-        return `Ältere Version installieren`;
-      case "es":
-        return `Instalar versión anterior`;
-      case "fr":
-        return `Installer la version antérieure`;
-      case "ja":
-        return `古いバージョンをインストール`;
-      case "ko":
-        return `이전 버전 설치`;
-      case "pt-BR":
-        return `Instalar versão anterior`;
-      case "zh-Hans":
-        return `安装旧版本`;
-      case "zh-Hant":
-        return `安裝舊版本`;
-      case "en-XA":
-        return `[Îñšţáļļ öļðéŕ ṽéŕšîöñ ~~~~~~~]`;
-      case "ar-XB":
-        return `‮Install older version‬`;
-    }
-    return `Install older version`;
-  }
-  function settingsDevicesUpdateOlderNamed(input2) {
-    const device = input2.device;
-    switch (currentLanguage()) {
-      case "ar":
-        return `تثبيت الإصدار الأقدم على ${device}`;
-      case "de":
-        return `Ältere Version auf ${device} installieren`;
-      case "es":
-        return `Instalar la versión anterior en ${device}`;
-      case "fr":
-        return `Installer la version antérieure sur ${device}`;
-      case "ja":
-        return `${device} に古いバージョンをインストール`;
-      case "ko":
-        return `${device}에 이전 버전 설치`;
-      case "pt-BR":
-        return `Instalar a versão anterior em ${device}`;
-      case "zh-Hans":
-        return `在 ${device} 上安装旧版本`;
-      case "zh-Hant":
-        return `在 ${device} 上安裝舊版本`;
-      case "en-XA":
-        return `[Îñšţáļļ ţĥé öļðéŕ ṽéŕšîöñ öñ ${device} ~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Install the older version on ‬${device}`;
-    }
-    return `Install the older version on ${device}`;
   }
   function settingsDevicesVersionMark(input2) {
     const version2 = input2.version;
@@ -96690,6 +96635,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesRemoteOutOfReach,
     devicesSourceBuilding,
     devicesSourceCardBody,
+    devicesSourceCardKeychain,
     devicesSourceCardMatch,
     devicesSourceCardOnce,
     devicesSourceCardRefused,
@@ -97816,9 +97762,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesTryAgainNamed,
     settingsDevicesUpdate,
     settingsDevicesUpdateFailed,
-    settingsDevicesUpdateNamed,
-    settingsDevicesUpdateOlder,
-    settingsDevicesUpdateOlderNamed,
     settingsDevicesVersionMark,
     settingsDevicesWayCount,
     settingsDevicesWaysCopyCommand,
@@ -99785,6 +99728,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesRemoteOutOfReach": ["name"],
     "devicesSourceBuilding": ["device"],
     "devicesSourceCardBody": ["commit", "device"],
+    "devicesSourceCardKeychain": ["device"],
     "devicesSourceCardMatch": [],
     "devicesSourceCardOnce": ["device"],
     "devicesSourceCardRefused": ["why"],
@@ -100911,9 +100855,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesTryAgainNamed": ["device"],
     "settingsDevicesUpdate": [],
     "settingsDevicesUpdateFailed": [],
-    "settingsDevicesUpdateNamed": ["device"],
-    "settingsDevicesUpdateOlder": [],
-    "settingsDevicesUpdateOlderNamed": ["device"],
     "settingsDevicesVersionMark": ["version"],
     "settingsDevicesWayCount": ["count"],
     "settingsDevicesWaysCopyCommand": [],

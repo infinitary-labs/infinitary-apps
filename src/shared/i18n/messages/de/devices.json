@@ -86,6 +86,7 @@
   "devicesRemoteOutOfReach": "{name} ist außer Reichweite",
   "devicesSourceBuilding": "{device} baut den Code dieses Computers.",
   "devicesSourceCardBody": "Dieser Computer führt Infinitary aus seinem Code beim Commit {commit} aus, und {device} führt einen anderen Build aus. Angleichen lässt {device} diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.",
+  "devicesSourceCardKeychain": "Beim ersten Mal fragt {device} eventuell einmal nach dem Mac-Passwort, damit dieser Build die dort gespeicherten Passwörter lesen kann.",
   "devicesSourceCardMatch": "Angleichen",
   "devicesSourceCardOnce": "Du wirst für {device} nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.",
   "devicesSourceCardRefused": "Das letzte Angleichen hat nicht geklappt. {why}",

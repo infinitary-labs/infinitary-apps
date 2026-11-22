@@ -36,7 +36,7 @@ The inspector uses the Projects list's box and the existing device row shape:
 The summary line is "Runs website and api" or "Runs no project yet", then "Signed in to Codex, Claude and GitHub" or "No sign-ins yet".
 It leads with "Controlling your first mate now" while Infinitary is open on that computer.
 A Windows PC that joined from its window controls and runs work as a Mac does, and reads the same.
-On another version, its line ends "Install the newer Infinitary on that computer.", since no update reaches a Windows PC yet, and it has no Update button.
+On another version, its line ends "Install the newer Infinitary on that computer.", since no update reaches a Windows PC yet, and it has no Match button.
 On the right one mono status - "1 task" in `--accent`, "idle", "connecting" while its SSH connection is being made, or "out of reach since 14:02" in `--warn` - then the row's ⋯ (below, "The row").
 The dot is `ok` while the device answers, `idle` while its connection is being made (its status reads "connecting"), and `warn` while it is out of reach.
 A mono line too long for the row wraps between its parts; only a part wider than the whole line, such as a long address, wraps inside itself.
@@ -349,9 +349,9 @@ It updates only from its own window there, so update it there."), and one that t
 Update app tries again."
 While it gets the version, waits or failed, that strip's button is Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it get the version at once and start again as soon as no words are left unsent there, even with its window in front.
 
-**Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Update or Remove until it is done (`AddAMac.prompt.md`).
+**Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Match or Remove until it is done (`AddAMac.prompt.md`).
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".
-For a Mac reached by its address, Add and Update first let it download this computer's published version itself, and so does Update for a Mac a command added, once it runs a version that takes the download.
+For a Mac reached by its address, Add and Match first let it download this computer's published version itself, and so does Match for a Mac a command added, once it runs a version that takes the download.
 Its summary and the feed read "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size.
 The count changes in place at most once a second; it has no bar, percentage or time remaining.
 If the download fails or its checksum does not match, the feed explains that this computer is sending its own copy instead, and the row and feed count "Sending Infinitary to Mac mini… 42.3 MB sent".

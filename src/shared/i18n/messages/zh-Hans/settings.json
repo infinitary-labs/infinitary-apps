@@ -539,9 +539,6 @@
   "settingsDevicesTryAgainNamed": "再次尝试连接 {device}",
   "settingsDevicesUpdate": "更新",
   "settingsDevicesUpdateFailed": "无法更新那里的 Infinitary。",
-  "settingsDevicesUpdateNamed": "更新 {device}",
-  "settingsDevicesUpdateOlder": "安装旧版本",
-  "settingsDevicesUpdateOlderNamed": "在 {device} 上安装旧版本",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

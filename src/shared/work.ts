@@ -1959,9 +1959,12 @@ export type WorkDownloadAnswer = z.infer<
 export const SOURCE_BUILD_STEPS = ["system", "tools", "fetch", "install", "build", "keep"] as const;
 export type SourceBuildStep = (typeof SOURCE_BUILD_STEPS)[number];
 
+/** The contract change that brings `build` in the hello and the source order. */
+export const SOURCE_BUILDS_CHANGE = "source-builds";
+
 /**
  * The order a home run from source asks a Mac that runs work for it, once
- * that computer lists `source-builds` (docs/devices.md, "Sending source";
+ * that computer lists `source-builds` (docs/devices.md, "Matching the home's build";
  * docs/helper.md, "Building the home's source"): get the home's committed
  * source at `commit` from `FETCH_SOURCE_PATH` with its own key, install its
  * packages, build it, and have its background run Electron from that folder
@@ -1971,9 +1974,6 @@ export type SourceBuildStep = (typeof SOURCE_BUILD_STEPS)[number];
  * while an update or another build runs there answers `updating`. While it
  * runs, the progress order says `fetching`, `installing` or `building`.
  */
-/** The contract change that brings `build` in the hello and the source order. */
-export const SOURCE_BUILDS_CHANGE = "source-builds";
-
 export const sourceOrders = {
   "inf:source:build": {
     effect: "change",

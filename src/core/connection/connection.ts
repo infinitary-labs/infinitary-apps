@@ -448,8 +448,8 @@ export type HomeConnection = {
   /**
    * Asks a connected computer that runs work one order (src/shared/work.ts)
    * and resolves with its answer, or rejects with its refusal. With
-   * `anyVersion` - the update and download orders alone, whose shapes never
-   * change - it reaches one that takes no work too. Refused at
+   * `anyVersion` - the update, download and source orders alone, whose shapes
+   * never change - it reaches one that takes no work too. Refused at
    * once with `DeviceOutOfReachError` when the device is not connected or
    * its welcome said it takes no work, and with it too when the connection
    * goes before the answer; never asked again here.

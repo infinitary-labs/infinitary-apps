@@ -553,9 +553,6 @@
   "settingsDevicesTryAgainNamed": "Try again to reach {device}",
   "settingsDevicesUpdate": "Update",
   "settingsDevicesUpdateFailed": "Could not update Infinitary there.",
-  "settingsDevicesUpdateNamed": "Update {device}",
-  "settingsDevicesUpdateOlder": "Install older version",
-  "settingsDevicesUpdateOlderNamed": "Install the older version on {device}",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

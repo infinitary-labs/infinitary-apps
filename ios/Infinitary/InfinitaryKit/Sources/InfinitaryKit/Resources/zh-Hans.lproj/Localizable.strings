@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ 无法联系";
 "devicesSourceBuilding" = "%1$@ 正在构建这台电脑的代码。";
 "devicesSourceCardBody" = "这台电脑从提交 %1$@ 的代码运行 Infinitary，而 %2$@ 运行的是另一个构建。“对齐”会让 %2$@ 获取这份已提交的代码，构建后从中启动。未提交的更改留在这台电脑上。";
+"devicesSourceCardKeychain" = "第一次时，%1$@ 可能会询问一次 Mac 密码，以便这个构建读取那里保存的密码。";
 "devicesSourceCardMatch" = "对齐";
 "devicesSourceCardOnce" = "关于 %1$@ 只问你这一次。之后，每当这台电脑运行其他代码，它都会自动对齐。";
 "devicesSourceCardRefused" = "上一次对齐没有完成。%1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "再次尝试连接 %1$@";
 "settingsDevicesUpdate" = "更新";
 "settingsDevicesUpdateFailed" = "无法更新那里的 Infinitary。";
-"settingsDevicesUpdateNamed" = "更新 %1$@";
-"settingsDevicesUpdateOlder" = "安装旧版本";
-"settingsDevicesUpdateOlderNamed" = "在 %1$@ 上安装旧版本";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "复制命令";
 "settingsDevicesWaysCopyLink" = "复制链接";

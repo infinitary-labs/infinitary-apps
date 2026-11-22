@@ -1,6 +1,12 @@
 import type { Card } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
-import { appBehind, type DeviceView, deviceLabel, deviceRunsWork } from "@shared/devices";
+import {
+  appBehind,
+  buildsSourceThere,
+  type DeviceView,
+  deviceLabel,
+  deviceRunsWork,
+} from "@shared/devices";
 import {
   appUpdateCard,
   appUpdateCardId,
@@ -253,6 +259,12 @@ export class DeviceUpdateNudge {
     if (this.options.failedHere?.(deviceId)) {
       // i18n-exempt: why it forgot the card, for the log, never shown
       this.forget(deviceId, "this build did not start there");
+      return;
+    }
+    // Only a Mac builds Infinitary from code: Devices' row says so on Match.
+    if (!buildsSourceThere(device.system)) {
+      // i18n-exempt: why it forgot the card, for the log, never shown
+      this.forget(deviceId, "it cannot build source");
       return;
     }
     if (this.updating.has(deviceId)) return;

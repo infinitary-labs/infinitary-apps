@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ ist außer Reichweite";
 "devicesSourceBuilding" = "%1$@ baut den Code dieses Computers.";
 "devicesSourceCardBody" = "Dieser Computer führt Infinitary aus seinem Code beim Commit %1$@ aus, und %2$@ führt einen anderen Build aus. Angleichen lässt %2$@ diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.";
+"devicesSourceCardKeychain" = "Beim ersten Mal fragt %1$@ eventuell einmal nach dem Mac-Passwort, damit dieser Build die dort gespeicherten Passwörter lesen kann.";
 "devicesSourceCardMatch" = "Angleichen";
 "devicesSourceCardOnce" = "Du wirst für %1$@ nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.";
 "devicesSourceCardRefused" = "Das letzte Angleichen hat nicht geklappt. %1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "Erneut versuchen, %1$@ zu erreichen";
 "settingsDevicesUpdate" = "Aktualisieren";
 "settingsDevicesUpdateFailed" = "Infinitary konnte dort nicht aktualisiert werden.";
-"settingsDevicesUpdateNamed" = "%1$@ aktualisieren";
-"settingsDevicesUpdateOlder" = "Ältere Version installieren";
-"settingsDevicesUpdateOlderNamed" = "Ältere Version auf %1$@ installieren";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Einen Befehl kopieren";
 "settingsDevicesWaysCopyLink" = "Einen Link kopieren";

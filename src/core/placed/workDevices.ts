@@ -100,7 +100,7 @@ export class WorkDevices {
 
   /**
    * Asks a computer in reach one order (src/shared/work.ts); refused at once
-   * when none is. With `anyVersion` - the update and download orders alone -
+   * when none is. With `anyVersion` - the update, download and source orders alone -
    * one connected that takes no work is asked too.
    */
   ask(

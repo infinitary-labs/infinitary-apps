@@ -62,20 +62,15 @@ const orderOf = (order: number | null): "older" | "newer" | undefined =>
 
 /**
  * Compares a computer's build with the home's (`BuildMatch`). Two releases
- * compare by version as they always have. A home run from source that names
- * its commit is matched by commit, whatever the other runs; one that names
- * none (a run its starter did not start) compares contracts alone, since its
- * package version names no release. A home on a release brings a computer
+ * compare by version as they always have. A home run from source names its
+ * commit (only `pnpm dev`'s starter gives a home a build), and is matched by
+ * commit, whatever the other runs. A home on a release brings a computer
  * that runs source back to that release.
  */
 export function compareBuilds(home: BuildSide, other: BuildSide): BuildMatch {
   const contracts = orderOf(compareSemver(other.contract, home.contract));
   const homeCommit = sourceCommitOf(home.build);
-  if (home.build?.source) {
-    if (!homeCommit)
-      return other.contract === home.contract
-        ? { same: true }
-        : { same: false, target: "release", ...(contracts ? { than: contracts } : {}) };
+  if (homeCommit) {
     if (sourceCommitOf(other.build) === homeCommit) return { same: true };
     return { same: false, target: "source", ...(contracts ? { than: contracts } : {}) };
   }

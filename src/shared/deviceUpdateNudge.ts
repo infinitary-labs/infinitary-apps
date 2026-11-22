@@ -316,6 +316,7 @@ export function sourceMatchCard(facts: SourceMatchCardFacts): {
   const paragraphs = [
     m.devicesSourceCardBody({ device: facts.device, commit: shortCommit(facts.commit) }),
     m.devicesSourceCardOnce({ device: facts.device }),
+    m.devicesSourceCardKeychain({ device: facts.device }),
   ];
   if (facts.refusal && facts.refusal.length > 0)
     paragraphs.push(m.devicesSourceCardRefused({ why: facts.refusal.join(" ") }));

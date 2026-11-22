@@ -86,6 +86,7 @@
   "devicesRemoteOutOfReach": "{name} is out of reach",
   "devicesSourceBuilding": "{device} is building this computer's code.",
   "devicesSourceCardBody": "This computer runs Infinitary from its code at commit {commit}, and {device} runs another build. Match has {device} get that committed code, build it and start from it. Changes not committed stay on this computer.",
+  "devicesSourceCardKeychain": "The first time, {device} may ask once for its Mac password, so this build can read the passwords saved there.",
   "devicesSourceCardMatch": "Match it",
   "devicesSourceCardOnce": "You are asked once for {device}. After that, it matches this computer by itself whenever this computer runs other code.",
   "devicesSourceCardRefused": "The last match did not go through. {why}",

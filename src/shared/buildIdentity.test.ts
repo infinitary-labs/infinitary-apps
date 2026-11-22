@@ -33,18 +33,6 @@ describe("comparing a computer's build with the home's", () => {
     });
   });
 
-  it("compares contracts alone for a home run from source that names no commit", () => {
-    const home = { contract: "48.2.0", build: sourceAt() };
-    expect(compareBuilds(home, { contract: "48.2.0", app: "0.8.6-alpha.20" })).toEqual({
-      same: true,
-    });
-    expect(compareBuilds(home, { contract: "49.0.0", app: "0.8.7" })).toEqual({
-      same: false,
-      target: "release",
-      than: "newer",
-    });
-  });
-
   it("brings a computer that runs source back to the release a home on a release runs", () => {
     const home = { contract: "48.2.0", app: "0.8.6-alpha.20", build: { commit: A } };
     expect(

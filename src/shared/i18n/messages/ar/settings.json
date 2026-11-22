@@ -609,9 +609,6 @@
   "settingsDevicesTryAgainNamed": "محاولة الوصول إلى {device} مجددًا",
   "settingsDevicesUpdate": "تحديث",
   "settingsDevicesUpdateFailed": "تعذّر تحديث Infinitary هناك.",
-  "settingsDevicesUpdateNamed": "تحديث {device}",
-  "settingsDevicesUpdateOlder": "تثبيت الإصدار الأقدم",
-  "settingsDevicesUpdateOlderNamed": "تثبيت الإصدار الأقدم على {device}",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

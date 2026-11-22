@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ خارج المتناول";
 "devicesSourceBuilding" = "يبني %1$@ شيفرة هذا الكمبيوتر.";
 "devicesSourceCardBody" = "يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام %1$@، ويشغّل %2$@ بناءً آخر. تجعل «مطابقة» %2$@ يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.";
+"devicesSourceCardKeychain" = "في المرة الأولى، قد يطلب %1$@ كلمة سر Mac مرة واحدة، حتى يقرأ هذا البناء كلمات السر المحفوظة هناك.";
 "devicesSourceCardMatch" = "طابِقه";
 "devicesSourceCardOnce" = "يُطرح عليك هذا السؤال مرة واحدة بشأن %1$@. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.";
 "devicesSourceCardRefused" = "لم تكتمل آخر مطابقة. %1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "محاولة الوصول إلى %1$@ مجددًا";
 "settingsDevicesUpdate" = "تحديث";
 "settingsDevicesUpdateFailed" = "تعذّر تحديث Infinitary هناك.";
-"settingsDevicesUpdateNamed" = "تحديث %1$@";
-"settingsDevicesUpdateOlder" = "تثبيت الإصدار الأقدم";
-"settingsDevicesUpdateOlderNamed" = "تثبيت الإصدار الأقدم على %1$@";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "نسخ أمر";
 "settingsDevicesWaysCopyLink" = "نسخ رابط";

@@ -830,6 +830,7 @@
 "devicesRemoteOutOfReach" = "%1$@ est hors de portée";
 "devicesSourceBuilding" = "%1$@ compile le code de cet ordinateur.";
 "devicesSourceCardBody" = "Cet ordinateur exécute Infinitary à partir de son code au commit %1$@, et %2$@ exécute une autre compilation. Aligner fait récupérer ce code commité par %2$@, qui le compile et démarre avec. Les changements non commités restent sur cet ordinateur.";
+"devicesSourceCardKeychain" = "La première fois, %1$@ peut demander une fois le mot de passe du Mac, pour que cette compilation lise les mots de passe enregistrés là-bas.";
 "devicesSourceCardMatch" = "L’aligner";
 "devicesSourceCardOnce" = "On vous le demande une seule fois pour %1$@. Ensuite, il s’aligne de lui-même chaque fois que cet ordinateur exécute un autre code.";
 "devicesSourceCardRefused" = "Le dernier alignement n’a pas abouti. %1$@";
@@ -2873,9 +2874,6 @@
 "settingsDevicesTryAgainNamed" = "Réessayer de joindre %1$@";
 "settingsDevicesUpdate" = "Mettre à jour";
 "settingsDevicesUpdateFailed" = "Impossible de mettre à jour Infinitary là-bas.";
-"settingsDevicesUpdateNamed" = "Mettre à jour %1$@";
-"settingsDevicesUpdateOlder" = "Installer la version antérieure";
-"settingsDevicesUpdateOlderNamed" = "Installer la version antérieure sur %1$@";
 "settingsDevicesVersionMark" = "Infinitary %1$@";
 "settingsDevicesWaysCopyCommand" = "Copier une commande";
 "settingsDevicesWaysCopyLink" = "Copier un lien";

@@ -87,6 +87,7 @@
   "devicesRemoteOutOfReach": "{name} está fora de alcance",
   "devicesSourceBuilding": "{device} está fazendo o build do código deste computador.",
   "devicesSourceCardBody": "Este computador roda o Infinitary a partir do código no commit {commit}, e {device} roda outro build. Igualar faz {device} obter esse código commitado, fazer o build e iniciar com ele. Mudanças sem commit ficam neste computador.",
+  "devicesSourceCardKeychain": "Na primeira vez, {device} pode pedir uma vez a senha do Mac, para que este build leia as senhas salvas lá.",
   "devicesSourceCardMatch": "Igualar",
   "devicesSourceCardOnce": "Você só recebe esta pergunta uma vez para {device}. Depois, ele se iguala sozinho sempre que este computador rodar outro código.",
   "devicesSourceCardRefused": "A última igualação não deu certo. {why}",

@@ -539,9 +539,6 @@
   "settingsDevicesTryAgainNamed": "{device}에 다시 연락하기",
   "settingsDevicesUpdate": "업데이트",
   "settingsDevicesUpdateFailed": "그곳의 Infinitary를 업데이트할 수 없어요.",
-  "settingsDevicesUpdateNamed": "{device} 업데이트",
-  "settingsDevicesUpdateOlder": "이전 버전 설치",
-  "settingsDevicesUpdateOlderNamed": "{device}에 이전 버전 설치",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

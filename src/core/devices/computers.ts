@@ -6,6 +6,7 @@ import { takesDownload, takesUpdate } from "@shared/contractFeatures";
 import { HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
   awayWord,
+  buildsSourceThere,
   type ComputerReach,
   type DeviceAppVersion,
   type DeviceCarryOn,
@@ -432,6 +433,15 @@ export class Computers {
       );
     if (this.updating.has(deviceId))
       throw new Error(`${deviceLabel(device)} is being updated already.`);
+    // This Mac's commit, built there from its source over the connection
+    // (docs/devices.md, "Matching the home's build"), whichever way the
+    // computer was added: a home run from source has no release to send over
+    // Remote Login. Only an address the order names takes that route.
+    if (!options?.address) {
+      const version = this.options.work.version(deviceId);
+      const other = version ? this.otherVersion(device, version) : undefined;
+      if (other?.source) return this.matchSource(device, other.source.commit);
+    }
     if (device.remoteLogin || options?.address) {
       const update = this.options.updateOverRemoteLogin;
       if (!update) throw new Error(`${deviceLabel(device)} cannot be reached over Remote Login.`);
@@ -468,10 +478,6 @@ export class Computers {
         if (paused) this.options.resumeTasks?.(deviceId);
       }
     }
-    // This Mac's commit, built there from its source (docs/devices.md, "Matching the home's build").
-    const version = this.options.work.version(deviceId);
-    const other = version ? this.otherVersion(device, version) : undefined;
-    if (other?.source) return this.matchSource(device, other.source.commit);
     // A Linux worker of its own may be a package that restarts unchanged.
     const packageWorker = device.system === "linux" && !(device.onThisMac && device.user);
     const fallback = options?.packageFallback === true && packageWorker;
@@ -514,7 +520,8 @@ export class Computers {
   allowSource(deviceId: string): void {
     const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
     const version = this.options.work.version(deviceId);
-    if (!device || !version || !this.otherVersion(device, version)?.source) return;
+    if (!device || !buildsSourceThere(device.system)) return;
+    if (!version || !this.otherVersion(device, version)?.source) return;
     this.options.pairing.noteSourceAllowed(deviceId);
   }
 
@@ -988,7 +995,7 @@ export class Computers {
         "out-of-reach",
         remoteLoginWords.refused("out-of-reach", { address: label, name: label, doing: "update" }),
       );
-    if (device.system !== undefined && device.system !== "macos")
+    if (!buildsSourceThere(device.system))
       return refused("other-system", [
         m.devicesSourceNotMac({ device: label }),
         m.devicesSourceKeepsVersion(),

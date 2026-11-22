@@ -114,7 +114,7 @@ export const askedAnswer: Scenario = Object.assign(
                 args: {
                   task_id: task,
                   message: "Carry on with the reading.",
-                  response: { mode: "guidance-only" },
+                  response_mode: "guidance-only",
                 },
               },
             ],

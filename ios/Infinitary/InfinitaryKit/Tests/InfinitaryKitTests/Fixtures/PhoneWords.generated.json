@@ -487,6 +487,7 @@
   {"said":{"m":"cardSinceSeenSaw","a":{"when":"‹when›"}},"words":"Since the card you saw · ‹when›"},
   {"said":{"m":"cardSoundUnplayable"},"words":"This sound could not be played."},
   {"said":{"m":"cardSoundWord"},"words":"Sound"},
+  {"said":{"m":"cardSpentTryOnce","a":{"provider":"‹provider›"}},"words":"If your first mate reaches ‹provider› on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again."},
   {"said":{"m":"cardTabStripLabel"},"words":"Task card"},
   {"said":{"m":"cardThreadAddFiles"},"words":"Add files to this reply"},
   {"said":{"m":"cardThreadCard"},"words":"card"},

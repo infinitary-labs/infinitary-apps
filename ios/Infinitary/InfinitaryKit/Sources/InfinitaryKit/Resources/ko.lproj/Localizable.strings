@@ -455,6 +455,7 @@
 "cardSinceSeenSaw" = "확인한 카드 이후 · %1$@";
 "cardSoundUnplayable" = "이 소리를 재생할 수 없습니다.";
 "cardSoundWord" = "소리";
+"cardSpentTryOnce" = "일등항해사가 다른 로그인(직접 설정한 환경이 넘겨주는 토큰 등)으로 %1$@에 닿는다면, 다시 시도하면 메시지를 한 번 보내요. 사용량이 여전히 소진됐다면 다시 일시 중지돼요.";
 "cardTabStripLabel" = "작업 카드";
 "cardThreadAddFiles" = "이 답장에 파일 추가";
 "cardThreadCard" = "카드";

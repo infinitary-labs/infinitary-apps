@@ -68,6 +68,7 @@ When your first mate's own account runs out, it first moves to another account o
 If there is none, a card says **Your first mate has used up its allowance**.
 Your words wait, and nothing is lost.
 On the card you can choose **Recheck allowance**, move your first mate to another provider, or **Open settings**.
+If a recheck finds nothing changed, the card also offers to try your provider again, such as **Try Claude again**, for when your first mate reaches it on another sign-in; if the allowance is still used up, it pauses again.
 
 Some providers can keep answering on credits you set up with them.
 For a Claude or Codex account, the menu holds **Keep going on credits**.

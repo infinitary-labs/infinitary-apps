@@ -1,5 +1,5 @@
 ---
-source: 9b6e613d96f64f80
+source: f2b6491db2dbaf8c
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -69,6 +69,7 @@ Cuando se agota la propia cuenta de tu primer oficial, primero pasa a otra cuent
 Si no hay ninguna, una tarjeta dice **Tu primer oficial agotó su asignación**.
 Tus palabras esperan, y no se pierde nada.
 En la tarjeta puedes elegir **Volver a consultar la asignación**, pasar a tu primer oficial a otro proveedor, o **Abrir Configuración**.
+Si la consulta no encuentra ningún cambio, la tarjeta también ofrece intentarlo de nuevo con tu proveedor, como **Try Claude again**, para cuando tu primer oficial llegue a él con otro inicio de sesión; si la asignación sigue agotada, se vuelve a pausar.
 
 Algunos proveedores pueden seguir respondiendo con créditos que configuras con ellos.
 Para una cuenta de Claude o de Codex, el menú tiene **Seguir con créditos**.

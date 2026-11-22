@@ -283,6 +283,7 @@
   "cardSinceSeenSaw": "Desde o cartão que você viu · {when}",
   "cardSoundUnplayable": "Não foi possível tocar este som.",
   "cardSoundWord": "Som",
+  "cardSpentTryOnce": "Se o seu imediato chega ao {provider} por outro login, como um token que a sua própria configuração passa, tentar de novo envia suas mensagens uma vez; se a franquia continuar esgotada, ele pausa de novo.",
   "cardTabStripLabel": "Cartão da tarefa",
   "cardThreadAddFiles": "Adicionar arquivos a esta resposta",
   "cardThreadCard": "cartão",

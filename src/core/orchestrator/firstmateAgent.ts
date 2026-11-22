@@ -463,7 +463,7 @@ export class FirstmateAgent {
       moveFlagship: (providerId) => {
         void this.seat.moveFlagship(providerId);
       },
-      tryAgain: (accountId) => this.seat.tryAgain(accountId),
+      tryAgain: (arg) => this.seat.tryAgain(arg),
       keepGoingOnCredits: (accountId) => this.seat.keepGoingOnCredits(accountId),
       redeemSavedReset: (accountKey) => this.options.redeemSavedReset?.(accountKey) ?? "sign-in",
       turnOnSavedResets: (accountKey) => this.options.turnOnSavedResets?.(accountKey) ?? "sign-in",

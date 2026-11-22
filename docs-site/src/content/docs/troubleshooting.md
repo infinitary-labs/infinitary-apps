@@ -25,6 +25,7 @@ The work goes on by itself once it resets.
 To go on sooner:
 
 - Press **Recheck allowance** if you changed something on your provider's side.
+- If the recheck finds nothing changed, the card also offers to try your provider again, such as **Try Claude again**: your words go once, and if the allowance is still used up, the first mate pauses again.
 - Press **Move to** another provider, when the card offers one.
 - Ask your first mate to move the work to another model.
 

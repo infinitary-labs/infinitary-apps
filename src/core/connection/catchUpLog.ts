@@ -120,7 +120,7 @@ export function describeCatchUp(catchUp: PhoneCatchUp): string {
   return [
     `phone catch-up: ${kind === "replay" ? "sent missed updates" : "read everything again"} (${WHY_WORDS[why]})`,
     `sent ${sentBytes} bytes`,
-    `${missedUpdates === null ? "missed updates not kept" : `${missedUpdates} missed updates weigh ${missedBytes ?? 0} bytes`} against a reload weight of ${reloadWeight === null ? "unweighed" : `${reloadWeight} bytes`}`,
+    `${missedUpdates === null ? "missed updates not kept" : `missed updates (${missedUpdates}) weigh ${missedBytes ?? 0} bytes`} against ${reloadWeight === null ? "a reload not weighed yet" : `a reload weight of ${reloadWeight} bytes`}`,
     `route ${route}`,
     catchUp.acknowledged
       ? `acknowledged ${ms} ms after its hello`

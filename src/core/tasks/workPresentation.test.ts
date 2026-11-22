@@ -64,8 +64,10 @@ function setup() {
     broadcastEvent: broadcast,
     measured: (durationMs) => durations.push(durationMs),
   });
+  // A pass runs at the end of an event-loop turn; a few turns let a pass
+  // asked for by another pass run too.
   const settled = async () => {
-    for (let i = 0; i < 10; i++) await Promise.resolve();
+    for (let i = 0; i < 4; i++) await new Promise((resolve) => setImmediate(resolve));
   };
   return {
     tasks,
@@ -116,7 +118,7 @@ describe("the presentation pass (INF-1073)", () => {
     expect(f.events.filter((event) => event.type === "crew_counts")).toEqual([
       { type: "crew_counts", working: 3, idle: 0, queued: 2 },
     ]);
-    // Releasing before an already queued microtask drains also shares it.
+    // Releasing before an already queued pass runs also shares it.
     f.presentation.schedule();
     const quick = f.presentation.hold();
     quick();
@@ -161,6 +163,33 @@ describe("the presentation pass (INF-1073)", () => {
       f.postures.set(id, { state: "active", reason: "turn" });
       f.tasks.turns.setActivity(id, "running");
     }
+    await f.settled();
+    expect(f.passes()).toBe(1);
+    expect(f.events.filter((e) => e.type === "crew_counts")).toEqual([
+      { type: "crew_counts", working: 3, idle: 0, queued: 2 },
+    ]);
+    f.close();
+  });
+
+  // A freeze record showed the check watch's readings, answered together,
+  // each running a whole pass back to back in one stall: Node drains
+  // microtasks after every I/O callback, so a pass queued as a microtask
+  // ran once per reading. Separate callbacks of one event-loop turn stand
+  // in for those readings here.
+  it("runs one pass for writes landing in separate callbacks of one event-loop turn", async () => {
+    const f = setup();
+    f.presentation.schedule();
+    await f.settled();
+    f.reset();
+    await new Promise<void>((resolve) => {
+      const ids = ["crew-1", "crew-2", "crew-3"];
+      for (const id of ids)
+        setImmediate(() => {
+          f.postures.set(id, { state: "active", reason: "turn" });
+          f.tasks.turns.setActivity(id, "running");
+          if (id === ids.at(-1)) resolve();
+        });
+    });
     await f.settled();
     expect(f.passes()).toBe(1);
     expect(f.events.filter((e) => e.type === "crew_counts")).toEqual([

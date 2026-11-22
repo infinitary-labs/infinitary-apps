@@ -6,10 +6,13 @@ import type { TaskService } from "./taskService";
 
 /**
  * The presentation pass (INF-683, INF-1073): a task write, a crew change or
- * a host clock asks for it, and one microtask later it reads each live
- * row's posture and place once (`TaskProtocol.refreshPresentation`),
- * republishes the rows that moved, and announces the crew counts from the
- * same readings. Asks during one synchronous run share a pass.
+ * a host clock asks for it, and once the event loop has run the callbacks
+ * it already holds, it reads each live row's posture and place once
+ * (`TaskProtocol.refreshPresentation`), republishes the rows that moved,
+ * and announces the crew counts from the same readings. Asks during one
+ * turn of the event loop share a pass: writes that land in separate
+ * callbacks of one turn, as the check watch's readings answered together
+ * do, are read once, not once each.
  *
  * The pass's own effects ask for nothing: its republish write changes no
  * posture (`TaskChange.republish`), and its own counts event is not a crew
@@ -41,13 +44,15 @@ export class WorkPresentation {
     });
   }
 
-  /** Ask for a pass on the next microtask; asks before it runs share it. */
+  /** Ask for a pass after the event loop's ready callbacks; asks before it runs share it. */
   schedule(): void {
     if (this.disposed) return;
     this.queued = true;
     if (this.scheduled || this.holds > 0) return;
     this.scheduled = true;
-    queueMicrotask(() => {
+    // Not a microtask: Node drains microtasks after each I/O callback, so a
+    // pass there ran once per reading when several landed in one turn.
+    setImmediate(() => {
       this.scheduled = false;
       if (this.holds > 0 || this.disposed) return;
       this.queued = false;

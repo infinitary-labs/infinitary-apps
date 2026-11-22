@@ -1,6 +1,7 @@
 import type { AppFollowReport } from "@shared/appFollow";
 import { type DeviceView, deviceViewSchema } from "@shared/devices";
 import { appUpdateCardId, deviceUpdateCardId } from "@shared/deviceUpdateNudge";
+import * as m from "@shared/i18n/messages.generated";
 import { describe, expect, it } from "vitest";
 import { DeviceUpdateNudge } from "./deviceUpdateNudge";
 
@@ -114,7 +115,7 @@ describe("matching a computer to this computer's source", () => {
     },
   });
 
-  function sourceHome(allowed: boolean, device: DeviceView = mini) {
+  function sourceHome(allowed: boolean, device: DeviceView = mini, refusal?: string) {
     const raised = new Map<string, { title: string; body: string; actions: unknown[] }>();
     const chosen = new Map<string, string>();
     const updates: string[] = [];
@@ -126,6 +127,7 @@ describe("matching a computer to this computer's source", () => {
       sourceAllowed: () => allowed,
       update: async (deviceId) => {
         updates.push(deviceId);
+        if (refusal) throw new Error(refusal);
         const { otherVersion: _matched, ...matched } = device;
         listed = matched;
         return listed;
@@ -183,5 +185,26 @@ describe("matching a computer to this computer's source", () => {
     h.nudge.refresh("mac-mini");
     expect(h.updates).toEqual(["mac-mini"]);
     expect(h.raised.size).toBe(0);
+  });
+
+  // INF-5646's proof: a failed build raised the card that asks for the yes the captain already gave.
+  it("offers an allowed computer's match again after it did not go through, without asking once more", async () => {
+    const why = m.devicesSourceKeepsVersion();
+    const h = sourceHome(true, mini, why);
+    h.nudge.refresh("mac-mini");
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.updates).toEqual(["mac-mini"]);
+    const card = h.raised.get(deviceUpdateCardId("mac-mini"));
+    expect(card?.title).toBe(m.devicesSourceCardAgainTitle({ device: "Mac mini" }));
+    expect(card?.body).toContain(m.devicesSourceCardRefused({ why }));
+    expect(card?.body).not.toContain(m.devicesSourceCardOnce({ device: "Mac mini" }));
+    expect(card?.body).not.toContain(m.devicesSourceCardKeychain({ device: "Mac mini" }));
+    expect(card?.actions).toEqual([
+      expect.objectContaining({
+        id: `update@source:${COMMIT}`,
+        label: m.devicesSourceCardMatchAgain(),
+      }),
+      expect.objectContaining({ id: `not-now@source:${COMMIT}` }),
+    ]);
   });
 });

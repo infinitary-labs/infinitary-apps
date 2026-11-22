@@ -878,9 +878,11 @@ public enum PhoneMessages {
     public static func `devicesRemoteLineReadingAgain`() -> String { PhoneWords.format("devicesRemoteLineReadingAgain", []) }
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
     public static func `devicesSourceBuilding`(`device`: String) -> String { PhoneWords.format("devicesSourceBuilding", [`device`]) }
+    public static func `devicesSourceCardAgainTitle`(`device`: String) -> String { PhoneWords.format("devicesSourceCardAgainTitle", [`device`]) }
     public static func `devicesSourceCardBody`(`commit`: String, `device`: String) -> String { PhoneWords.format("devicesSourceCardBody", [`commit`, `device`]) }
     public static func `devicesSourceCardKeychain`(`device`: String) -> String { PhoneWords.format("devicesSourceCardKeychain", [`device`]) }
     public static func `devicesSourceCardMatch`() -> String { PhoneWords.format("devicesSourceCardMatch", []) }
+    public static func `devicesSourceCardMatchAgain`() -> String { PhoneWords.format("devicesSourceCardMatchAgain", []) }
     public static func `devicesSourceCardOnce`(`device`: String) -> String { PhoneWords.format("devicesSourceCardOnce", [`device`]) }
     public static func `devicesSourceCardRefused`(`why`: String) -> String { PhoneWords.format("devicesSourceCardRefused", [`why`]) }
     public static func `devicesSourceCardTitle`(`device`: String) -> String { PhoneWords.format("devicesSourceCardTitle", [`device`]) }
@@ -5039,9 +5041,11 @@ extension PhoneWords {
         "devicesRemoteLineReadingAgain": [],
         "devicesRemoteOutOfReach": ["name"],
         "devicesSourceBuilding": ["device"],
+        "devicesSourceCardAgainTitle": ["device"],
         "devicesSourceCardBody": ["commit", "device"],
         "devicesSourceCardKeychain": ["device"],
         "devicesSourceCardMatch": [],
+        "devicesSourceCardMatchAgain": [],
         "devicesSourceCardOnce": ["device"],
         "devicesSourceCardRefused": ["why"],
         "devicesSourceCardTitle": ["device"],

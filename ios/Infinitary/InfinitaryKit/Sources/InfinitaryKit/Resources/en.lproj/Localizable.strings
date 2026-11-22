@@ -829,9 +829,11 @@
 "devicesRemoteLineReadingAgain" = "· catching up, reading everything again";
 "devicesRemoteOutOfReach" = "%1$@ is out of reach";
 "devicesSourceBuilding" = "%1$@ is building this computer's code.";
+"devicesSourceCardAgainTitle" = "Match %1$@ again?";
 "devicesSourceCardBody" = "This computer runs Infinitary from its code at commit %1$@, and %2$@ runs another build. Match has %2$@ get that committed code, build it and start from it. Changes not committed stay on this computer.";
 "devicesSourceCardKeychain" = "The first time, %1$@ may ask once for its Mac password, so this build can read the passwords saved there.";
 "devicesSourceCardMatch" = "Match it";
+"devicesSourceCardMatchAgain" = "Match again";
 "devicesSourceCardOnce" = "You are asked once for %1$@. After that, it matches this computer by itself whenever this computer runs other code.";
 "devicesSourceCardRefused" = "The last match did not go through. %1$@";
 "devicesSourceCardTitle" = "Run this computer's code on %1$@?";

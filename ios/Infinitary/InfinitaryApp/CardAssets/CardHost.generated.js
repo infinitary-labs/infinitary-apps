@@ -29419,6 +29419,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${device} is building this computer's code.`;
   }
+  function devicesSourceCardAgainTitle(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تريد مطابقة ${device} مرة أخرى؟`;
+      case "de":
+        return `${device} noch einmal angleichen?`;
+      case "es":
+        return `¿Igualar ${device} otra vez?`;
+      case "fr":
+        return `Aligner ${device} à nouveau ?`;
+      case "ja":
+        return `${device} をもう一度合わせますか?`;
+      case "ko":
+        return `${device}을(를) 다시 맞출까요?`;
+      case "pt-BR":
+        return `Igualar ${device} de novo?`;
+      case "zh-Hans":
+        return `要再次对齐 ${device} 吗？`;
+      case "zh-Hant":
+        return `要再次對齊 ${device} 嗎？`;
+      case "en-XA":
+        return `[Ṁáţçĥ ${device} áĝáîñ? ~~~~~]`;
+      case "ar-XB":
+        return `‮Match ‬${device}‮ again?‬`;
+    }
+    return `Match ${device} again?`;
+  }
   function devicesSourceCardBody(input2) {
     const commit = input2.commit;
     const device = input2.device;
@@ -29502,6 +29530,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Match it‬`;
     }
     return `Match it`;
+  }
+  function devicesSourceCardMatchAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابِقه مرة أخرى`;
+      case "de":
+        return `Noch einmal angleichen`;
+      case "es":
+        return `Igualar otra vez`;
+      case "fr":
+        return `Aligner à nouveau`;
+      case "ja":
+        return `もう一度合わせる`;
+      case "ko":
+        return `다시 맞추기`;
+      case "pt-BR":
+        return `Igualar de novo`;
+      case "zh-Hans":
+        return `再次对齐`;
+      case "zh-Hant":
+        return `再次對齊`;
+      case "en-XA":
+        return `[Ṁáţçĥ áĝáîñ ~~~~]`;
+      case "ar-XB":
+        return `‮Match again‬`;
+    }
+    return `Match again`;
   }
   function devicesSourceCardOnce(input2) {
     const device = input2.device;
@@ -96442,9 +96497,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesRemoteLineReadingAgain,
     devicesRemoteOutOfReach,
     devicesSourceBuilding,
+    devicesSourceCardAgainTitle,
     devicesSourceCardBody,
     devicesSourceCardKeychain,
     devicesSourceCardMatch,
+    devicesSourceCardMatchAgain,
     devicesSourceCardOnce,
     devicesSourceCardRefused,
     devicesSourceCardTitle,
@@ -99535,9 +99592,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesRemoteLineReadingAgain": [],
     "devicesRemoteOutOfReach": ["name"],
     "devicesSourceBuilding": ["device"],
+    "devicesSourceCardAgainTitle": ["device"],
     "devicesSourceCardBody": ["commit", "device"],
     "devicesSourceCardKeychain": ["device"],
     "devicesSourceCardMatch": [],
+    "devicesSourceCardMatchAgain": [],
     "devicesSourceCardOnce": ["device"],
     "devicesSourceCardRefused": ["why"],
     "devicesSourceCardTitle": ["device"],

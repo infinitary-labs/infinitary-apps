@@ -829,9 +829,11 @@
 "devicesRemoteLineReadingAgain" = "· 追いつき中、すべてを読み直しています";
 "devicesRemoteOutOfReach" = "%1$@ と連絡がつきません";
 "devicesSourceBuilding" = "%1$@ がこのコンピュータのコードをビルドしています。";
+"devicesSourceCardAgainTitle" = "%1$@ をもう一度合わせますか?";
 "devicesSourceCardBody" = "このコンピュータはコミット %1$@ のコードから Infinitary を実行していて、%2$@ は別のビルドを実行しています。「合わせる」を選ぶと、%2$@ がそのコミット済みのコードを取得してビルドし、そこから起動します。コミットしていない変更はこのコンピュータに残ります。";
 "devicesSourceCardKeychain" = "初回は、このビルドがそこに保存されたパスワードを読めるように、%1$@ が Mac のパスワードを一度求めることがあります。";
 "devicesSourceCardMatch" = "合わせる";
+"devicesSourceCardMatchAgain" = "もう一度合わせる";
 "devicesSourceCardOnce" = "%1$@ について確認するのはこの一度だけです。以後は、このコンピュータが別のコードを実行するたびに自動で合わせます。";
 "devicesSourceCardRefused" = "前回の「合わせる」は完了しませんでした。%1$@";
 "devicesSourceCardTitle" = "このコンピュータのコードを %1$@ で実行しますか?";

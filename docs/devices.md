@@ -1212,6 +1212,7 @@ The captain is asked once per computer before it first runs the home's code.
 The captain's own Match is that yes, and so is Match it on the card "Run this computer's code on Mac mini?"
 (`sourceMatchCard`, `src/shared/deviceUpdateNudge.ts`), which the update by itself raises for a computer not yet allowed, with Not now beside it; its answers carry the commit in their action ids (`source:<commit>`).
 The yes is kept on pairing's `source-builds.json` (`DevicePairing.noteSourceAllowed`), goes when that computer is removed, and from then on the update by itself matches that computer whenever the home runs another commit, with no card.
+For an allowed computer the card comes back only after a match that did not go through: "Match Mac mini again?", with the first paragraph and why, and Match again beside Not now; it does not ask for the yes again or say the password sentence.
 
 `/infinitary-source` (`FETCH_SOURCE_PATH`) answers `{ commit }` from a computer that runs work, already on the list and proven by its key in TLS, as `/firstmate` admits it, with `git archive --format=tar.gz` of that commit from the home's starter folder (`homeSourceOf`): `malformed` for a body it does not read, `unknown` for a key the list does not hold or a view, and `none` for another commit than the one the home runs, or a home that does not run source.
 An archive that fails part way cuts the answer short, so the computer never builds half a tree.

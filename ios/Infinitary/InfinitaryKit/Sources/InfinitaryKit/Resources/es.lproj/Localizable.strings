@@ -829,9 +829,11 @@
 "devicesRemoteLineReadingAgain" = "· poniéndose al día, leyendo todo de nuevo";
 "devicesRemoteOutOfReach" = "%1$@ está fuera de alcance";
 "devicesSourceBuilding" = "%1$@ está compilando el código de este ordenador.";
+"devicesSourceCardAgainTitle" = "¿Igualar %1$@ otra vez?";
 "devicesSourceCardBody" = "Este ordenador usa Infinitary desde su código en el commit %1$@, y %2$@ usa otra compilación. Igualar hace que %2$@ obtenga ese código confirmado, lo compile y se inicie con él. Los cambios sin confirmar se quedan en este ordenador.";
 "devicesSourceCardKeychain" = "La primera vez, %1$@ puede pedir una vez la contraseña del Mac para que esta compilación lea las contraseñas guardadas allí.";
 "devicesSourceCardMatch" = "Igualarlo";
+"devicesSourceCardMatchAgain" = "Igualar otra vez";
 "devicesSourceCardOnce" = "Se te pregunta una sola vez por %1$@. Después, se iguala solo cada vez que este ordenador use otro código.";
 "devicesSourceCardRefused" = "La última igualación no se completó. %1$@";
 "devicesSourceCardTitle" = "¿Usar el código de este ordenador en %1$@?";

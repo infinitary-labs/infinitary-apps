@@ -829,9 +829,11 @@
 "devicesRemoteLineReadingAgain" = "· 正在追上，重新讀取全部內容";
 "devicesRemoteOutOfReach" = "%1$@ 連絡不上";
 "devicesSourceBuilding" = "%1$@ 正在建置這台電腦的程式碼。";
+"devicesSourceCardAgainTitle" = "要再次對齊 %1$@ 嗎？";
 "devicesSourceCardBody" = "這台電腦從提交 %1$@ 的程式碼執行 Infinitary，而 %2$@ 執行的是另一個建置。「對齊」會讓 %2$@ 取得這份已提交的程式碼，建置後從中啟動。未提交的變更留在這台電腦上。";
 "devicesSourceCardKeychain" = "第一次時，%1$@ 可能會詢問一次 Mac 密碼，讓這個建置讀取那裡儲存的密碼。";
 "devicesSourceCardMatch" = "對齊";
+"devicesSourceCardMatchAgain" = "再次對齊";
 "devicesSourceCardOnce" = "關於 %1$@ 只問你這一次。之後，每當這台電腦執行其他程式碼，它都會自動對齊。";
 "devicesSourceCardRefused" = "上一次對齊沒有完成。%1$@";
 "devicesSourceCardTitle" = "要在 %1$@ 上執行這台電腦的程式碼嗎？";

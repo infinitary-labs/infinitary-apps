@@ -42,8 +42,10 @@ Match has Mac mini get that committed code, build it and start from it.
 Changes not committed stay on this computer."
 Second paragraph: "You are asked once for Mac mini.
 After that, it matches this computer by itself whenever this computer runs other code."
-After a match that did not go through, a third paragraph: "The last match did not go through." and why.
+Third paragraph: "The first time, Mac mini may ask once for its Mac password, so this build can read the passwords saved there."
+After a match that did not go through, a last paragraph: "The last match did not go through." and why.
 Buttons: Match it (default), which opens Settings → Devices with the match running, and Not now, which holds the card away for that commit.
+For a Mac already allowed, the card comes back only after a match that did not go through: title "Match Mac mini again?", the first paragraph and the last, without the second and third, and Match again (default) beside Not now.
 
 **The app open on another computer.**
 That app updates itself to this computer's version while nobody uses it there, with no card (`DevicesTab.prompt.md`, "Each copy's version").

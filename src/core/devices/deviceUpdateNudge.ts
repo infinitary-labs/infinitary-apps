@@ -268,20 +268,23 @@ export class DeviceUpdateNudge {
       return;
     }
     if (this.updating.has(deviceId)) return;
+    const allowed = this.options.sourceAllowed?.(deviceId) === true;
     const facts = {
       deviceId,
       device: deviceLabel(device),
       commit,
       refusal: this.refusals.get(deviceId),
+      allowed,
     };
     const gap = sourceMatchGap(facts);
     const chosen = this.options.cards.chosenAction(id);
     const notNow = chosen === deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.notNow, gap);
-    if (this.options.sourceAllowed?.(deviceId) && this.tried.get(deviceId) !== gap && !notNow) {
+    if (allowed && this.tried.get(deviceId) !== gap && !notNow) {
       this.updateItself(deviceId, gap);
       return;
     }
-    const signature = JSON.stringify([gap, facts.refusal ?? []]);
+    // An allowed computer's card comes back only to offer a match that did not go through again.
+    const signature = JSON.stringify([gap, allowed, facts.refusal ?? []]);
     if (!forced && (this.raised.get(deviceId) === signature || this.remembered(id, gap, deviceId)))
       return;
     const first = this.gaps.get(deviceId) !== gap;

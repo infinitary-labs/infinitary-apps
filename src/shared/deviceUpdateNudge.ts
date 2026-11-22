@@ -299,6 +299,12 @@ export type SourceMatchCardFacts = {
   commit: string;
   /** What a refused match said, once one was. */
   refusal?: readonly string[] | undefined;
+  /**
+   * The captain already let that computer run this computer's source: the
+   * card only comes back after a match that did not go through, and offers
+   * it again without asking for the yes it already has.
+   */
+  allowed?: boolean | undefined;
 };
 
 /** What names a source card's gap: the commit this computer runs. */
@@ -313,21 +319,28 @@ export function sourceMatchCard(facts: SourceMatchCardFacts): {
   actions: CardAction[];
 } {
   const gap = sourceMatchGap(facts);
+  const again = facts.allowed === true;
   const paragraphs = [
     m.devicesSourceCardBody({ device: facts.device, commit: shortCommit(facts.commit) }),
-    m.devicesSourceCardOnce({ device: facts.device }),
-    m.devicesSourceCardKeychain({ device: facts.device }),
+    ...(again
+      ? []
+      : [
+          m.devicesSourceCardOnce({ device: facts.device }),
+          m.devicesSourceCardKeychain({ device: facts.device }),
+        ]),
   ];
   if (facts.refusal && facts.refusal.length > 0)
     paragraphs.push(m.devicesSourceCardRefused({ why: facts.refusal.join(" ") }));
   return {
-    title: m.devicesSourceCardTitle({ device: facts.device }),
+    title: again
+      ? m.devicesSourceCardAgainTitle({ device: facts.device })
+      : m.devicesSourceCardTitle({ device: facts.device }),
     meta: facts.device,
     body: paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join("\n"),
     actions: [
       {
         id: deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.update, gap),
-        label: m.devicesSourceCardMatch(),
+        label: again ? m.devicesSourceCardMatchAgain() : m.devicesSourceCardMatch(),
         default: true,
         effect: { kind: "open", target: "devices", update: facts.deviceId },
       },

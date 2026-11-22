@@ -30,13 +30,31 @@ An outside contributor's pull request runs only on GitHub's hosted machines, wha
 - the journeys its change can break on hosted Ubuntu, and their tests that need a Mac on hosted macOS;
 - the Windows installer's build on hosted Windows, when the change reaches it.
 
-The fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight wait for the batch, which runs every check again on the project's own machines.
+Nothing from an outside change runs on the project's own machines, before or after the captain's merge click.
+An outside change never joins the swept batch: once approved it merges as its own pull request (`docs/forge.md`, "Batches of your own").
+So the fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight first meet it after it reaches `main`: main's own check, and for the fresh Windows 11 install the next alpha's release check (`docs/alpha.md`).
+
+### How an outside pull request moves
+
+1. **It opens.**
+   GitHub starts the contributor agreement check at once, which needs no run approval ("The contributor agreement check"); every other check waits for the captain's approval of the run.
+2. **The crew reads it when the captain asks.**
+   Nothing reads new outside pull requests on a schedule.
+   A crewmate reviews one the captain names (`check_change pull`), reads its code and GitHub's runs, and puts it on a card for the captain.
+3. **The captain starts its checks.**
+   The captain approves each run on GitHub, after reading any change under `.github/`, `scripts/`, the package and lock files or the packaging settings, since a pull request runs the check files it carries.
+4. **GitHub's machines run them.**
+   The checks in the list above run on the pull request's own version, merged with the current `main`.
+5. **The captain merges it.**
+   With every check passing, the crewmate shows the merge card with `asks_first`, and only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.
+   A later push needs a new review and a new click.
+
+The crew's safety rule: a crewmate reviewing an outside pull request runs nothing from it on the project's own machines or the captain's computers before the click; it reads the change and GitHub's runs, and starts nothing on the project's own runners for it.
+The fork guard on the project's own runners refuses a job whose pull request comes from another copy of the project in any case.
 
 Routing is not the guard: a pull request runs the check files it carries, so it can send itself to the project's own machines by editing them.
-The guard is the owner's approval of each outside run.
+The guards are GitHub's approval of each outside run and the fork guard on the project's own runners.
 Set the destination's fork run approval to "Require approval for all external contributors"; the first-time contributor options stop asking once a person has one change merged.
-Approve a run only when the change leaves `.github/` alone, and read any change there before approving.
-Apply the same rule before a contributor's change enters a batch, which runs on the project's own machines with its secrets.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
 
 ### The contributor agreement check

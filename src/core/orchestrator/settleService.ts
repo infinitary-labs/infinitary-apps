@@ -1272,7 +1272,12 @@ export class SettleService {
       // on him still holds the merge unless they pass the decisions too.
       const decisions = this.decisionsHold(record, taskId, head);
       if (decisions)
-        return { ok: false, text: `Cannot merge yet: ${decisions}`, stop: "questions" };
+        return {
+          ok: false,
+          // i18n-exempt: a refusal served to the first mate, not shown to a person
+          text: `Cannot merge yet: ${decisions}`,
+          stop: "questions",
+        };
       const minted = this.approvals.authorizeMerge(
         taskId,
         {

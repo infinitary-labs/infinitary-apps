@@ -196,6 +196,7 @@ describe("each Mac job's kind", () => {
     sign: "q-sign",
     light: "q-light",
     release_split: "q-release-split",
+    release_build: "q-release-build",
     release_sign: "q-release-sign",
     release_light: "q-release-light",
   };
@@ -213,8 +214,8 @@ describe("each Mac job's kind", () => {
     ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
     ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
     ["ios-release.yml", "testflight", {}, "testflight", "mini-mac-real"],
-    ["mac-installer.yml", "build", {}, "build", "mini-mac-virtual"],
-    ["mac-installer.yml", "installed", { matrix: { chip: "arm64" } }, "light", "mini-mac-virtual"],
+    ["mac-installer.yml", "build", { inputs: {} }, "build", "mini-mac-virtual"],
+    ["mac-installer.yml", "installed", {}, "light", "mini-mac-virtual"],
     ["mac-update.yml", "update", { inputs: {} }, "light", "mini-mac-virtual"],
     ["republish-casks.yml", "republish", { inputs: {} }, "light", "mini-mac-any"],
     ["release.yml", "release", { needs: publishing(true) }, "sign", "mini-mac-real"],
@@ -248,12 +249,28 @@ describe("each Mac job's kind", () => {
     },
   );
 
-  it("keeps the Intel installer check on its hosted Mac", () => {
-    const runner = workflowValue(jobs("mac-installer.yml").installed?.["runs-on"] ?? "", {
-      matrix: { chip: "x64" },
-      vars: { MAC_QUEUES: JSON.stringify(queues) },
-    });
-    expect(runner).toBe("macos-15-intel");
+  // INF-5571's approved plan, part 5: a publishing release's signed installer
+  // build asks for the release_build queue, which the placement service starts
+  // before release_sign, so it no longer waits behind the signing job. A dry
+  // run, or MAC_QUEUES without the kind, keeps the build kind, then the label.
+  it("puts a publishing release's installer build in the release_build queue", () => {
+    const release = jobs("release.yml")["signed-installer"];
+    const build = (dryRun: boolean, named: Record<string, string>) => {
+      const vars = { ...today, MAC_QUEUES: JSON.stringify(named) };
+      const runner = workflowValue(release?.with?.runner ?? "", {
+        needs: publishing(dryRun),
+        vars,
+      });
+      return workflowValue(jobs("mac-installer.yml").build?.["runs-on"] ?? "", {
+        inputs: { runner },
+        vars,
+      });
+    };
+    expect(build(false, queues)).toBe("q-release-build");
+    expect(build(true, queues)).toBe("q-build");
+    const { release_build: _unserved, ...ordinary } = queues;
+    expect(build(false, ordinary)).toBe("q-build");
+    expect(build(false, {})).toBe("mini-mac-virtual");
   });
 
   it("leaves no Mac job without a kind", () => {

@@ -244,44 +244,22 @@ it("selects only the complete installed checks for reuse, without a signing job"
 });
 
 // DOP-42 supplies the virtual-only label for INF-643's approved signed rerun.
-// INF-818 owns any later move of Intel. A real-Mac setting cannot redirect these.
+// A real-Mac setting cannot redirect these.
 it("keeps installer verification on the selected disposable runners", () => {
   const { jobs } = loadYamlFile(".github/workflows/mac-installer.yml") as {
     jobs: {
       build: { "runs-on": string };
-      installed: {
-        name: string;
-        "runs-on": string;
-        strategy: { matrix: { chip: string } };
-      };
+      installed: { name: string; "runs-on": string };
     };
   };
   const vars = { MAC_RUNNER: "mini-mac-real", REAL_MAC_RUNNER: "mini-mac-real" };
-  expect(workflowString(jobs.build["runs-on"], { vars })).toBe("mini-mac-virtual");
-  const chips = workflowValue(jobs.installed.strategy.matrix.chip, {
-    inputs: { chip: "both" },
-  }) as string[];
-  const assigned = chips.map((chip) => ({
-    chip,
-    runner: workflowString(jobs.installed["runs-on"], { vars, matrix: { chip } }),
-  }));
-  // The check names PR readings and diagnoses are keyed to, each with its
-  // caller's trigger (docs/testing.md, "CI job names").
-  expect(
-    chips.map((chip) =>
-      workflowString(jobs.installed.name, {
-        inputs: { trigger: "Manual request" },
-        matrix: { chip },
-      }),
-    ),
-  ).toEqual([
+  expect(workflowString(jobs.build["runs-on"], { vars, inputs: {} })).toBe("mini-mac-virtual");
+  expect(workflowString(jobs.installed["runs-on"], { vars })).toBe("mini-mac-virtual");
+  // The check name PR readings and diagnoses are keyed to, with its caller's
+  // trigger (docs/testing.md, "CI job names").
+  expect(workflowString(jobs.installed.name, { inputs: { trigger: "Manual request" } })).toBe(
     "Manual request · Install and update (Mac; Apple silicon)",
-    "Manual request · Install and update (Mac; Intel)",
-  ]);
-  expect(assigned).toEqual([
-    { chip: "arm64", runner: "mini-mac-virtual" },
-    { chip: "x64", runner: "macos-15-intel" },
-  ]);
+  );
 });
 
 // INF-1900 direction D: the release's update check runs in a disposable
@@ -346,32 +324,31 @@ it("runs the update check on Apple silicon only, updating from the signing job's
   );
 });
 
-// INF-1539: the captain approved "Add logging and recheck once" for Apple silicon
-// alone. A one-chip recheck must drop the other Mac from the run, and a release
-// (which passes no chip) must still check both.
-it("runs only the requested Mac type's installed checks", () => {
-  type Matrix = { chip: string };
+// INF-5571: the captain chose "Apple silicon only" for the signed installer
+// check, so every caller - a release and a request alike - runs one installed
+// check, on Apple silicon, and no Intel Mac.
+it("runs the installed check on Apple silicon only, for every caller", () => {
+  type Job = { "runs-on"?: string; strategy?: unknown; steps?: { run?: string }[] };
   const installer = loadYamlFile(".github/workflows/mac-installer.yml") as {
-    on: { workflow_call: { inputs: { chip: { default: string } } } };
-    jobs: { installed: { strategy: { matrix: Matrix } } };
+    on: { workflow_call: { inputs: Record<string, unknown> } };
+    jobs: Record<string, Job>;
   };
   const verify = loadYamlFile(".github/workflows/verify.yml") as {
+    on: { workflow_dispatch: { inputs: Record<string, unknown> } };
     jobs: { installer: { with: Record<string, string> } };
   };
-  const matrix = installer.jobs.installed.strategy.matrix;
-  const chipsFor = (dispatched: string | undefined) => {
-    const chip = workflowString(verify.jobs.installer.with.chip ?? "", {
-      inputs: { installer_chip: dispatched },
-    });
-    // A matrix include entry would add an excluded chip back, so the chip list itself is chosen.
-    expect(matrix).not.toHaveProperty("include");
-    return workflowValue(matrix.chip, { inputs: { chip } }) as string[];
-  };
-  expect(installer.on.workflow_call.inputs.chip.default).toBe("both");
-  expect(chipsFor(undefined)).toEqual(["arm64", "x64"]);
-  expect(chipsFor("both")).toEqual(["arm64", "x64"]);
-  expect(chipsFor("arm64")).toEqual(["arm64"]);
-  expect(chipsFor("x64")).toEqual(["x64"]);
+  expect(Object.keys(installer.jobs)).toEqual(["build", "installed"]);
+  const installed = installer.jobs.installed;
+  expect(installed?.strategy).toBeUndefined();
+  const queues = { MAC_QUEUES: JSON.stringify({ light: "q-light" }) };
+  expect(workflowString(installed?.["runs-on"] ?? "", { vars: queues })).toBe("q-light");
+  expect(installed?.steps?.some((step) => step.run?.includes('process.arch !== "arm64"'))).toBe(
+    true,
+  );
+  // No caller can ask for a chip any more.
+  expect(installer.on.workflow_call.inputs).not.toHaveProperty("chip");
+  expect(verify.on.workflow_dispatch.inputs).not.toHaveProperty("installer_chip");
+  expect(verify.jobs.installer.with).not.toHaveProperty("chip");
 });
 
 describe("the private alpha (roadmap 1.2)", () => {

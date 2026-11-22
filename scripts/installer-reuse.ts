@@ -59,7 +59,6 @@ export function fixtureNames(versions: Versions): string[] {
     ...[versions.alphaBefore, versions.promotedStable].map(
       (version) => `Infinitary-${version}-mac-universal.dmg`,
     ),
-    "invalid-signature.zip",
     "digests.json",
     "versions.json",
   ].sort();
@@ -187,7 +186,7 @@ export function checkReuseMetadata(
   return { run, artifact, build };
 }
 
-async function fileDigests(path: string) {
+export async function fileDigests(path: string) {
   const sha256 = createHash("sha256");
   const sha512 = createHash("sha512");
   let size = 0;
@@ -244,8 +243,9 @@ with zipfile.ZipFile(archive) as outer:
     for entry in entries:
         with outer.open(entry) as incoming, (target / entry.filename).open("xb") as outgoing:
             shutil.copyfileobj(incoming, outgoing)
-# The source record remains the original one, including in the deliberately
-# damaged signature fixture. No signed archive or embedded record is rewritten.
+# The source record remains the original one. No signed archive or embedded
+# record is rewritten; the deliberately damaged copy is made later, on the
+# checking Mac (scripts/installer-tampered-copy.ts).
 for name in names:
     if name.endswith(".zip"):
         with zipfile.ZipFile(target / name) as app:

@@ -657,7 +657,7 @@ The installer inputs are what the check guards, compared with the previous relea
 In `electron-builder.yml` only the `appId`, `productName`, `mac`, `afterPack`, `afterSign`, `electronFuses`, `publish` and `dmg` settings count, so a copyright line, a license file the app carries or a comment does not.
 Every other alpha, the check's own workflow and fixtures included, relies on the update check, and the release log names the inputs that held it.
 It signs only merged code from protected `main`; for a notes-only candidate it uses the merged base after verifying that nothing outside `release-notes/` differs.
-Both Apple silicon and Intel must pass, and a failure or skip holds publication.
+Its Apple silicon check must pass, and a failure or skip holds publication; no Intel Mac runs it (INF-5571), so Intel stays a best-effort side effect of the universal build here too.
 A stable promotes an already published alpha, not a branch build.
 The update check covers only the path from the current alpha to the release; channel switching, refused downloads, the read-only disk image, the saved-work handover and Homebrew are the five-copy check's.
 
@@ -665,14 +665,17 @@ The update check covers only the path from the current alpha to the release; cha
 
 `verify.yml` with `installer_only=true` invokes `mac-installer.yml` and runs no personal-Mac signing job.
 A fresh manual run in `infinitary-apps` must use the exact commit of its protected `main` dispatch.
-The build and Apple-silicon checks request the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none; Intel remains on `macos-15-intel`.
-`installer_chip` (`both` by default, or `arm64` or `x64`) drops the other Mac type's installed checks from the run for a one-chip recheck; a release passes none and checks both.
+The build and the Apple silicon check request the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none; a publishing release hands the build its `release_build` kind's queue instead (`docs/testing.md`, "Each Mac job's kind and size").
+The installed check runs on Apple silicon only: no Intel Mac runs it.
 The workflow uses existing Apple credentials only in disposable Actions Macs, under a scratch signing home, and publishes nothing.
 Before installation, signing or trust changes, `scripts/installer-environment.ts` refuses local execution and requires the kernel's virtual-machine reading on a self-hosted runner; the physical Mac cannot substitute for a guest.
 `scripts/installer-signing.mjs` repeats that guard and keeps passwords off command lines.
 It creates the scratch home's `Library/Preferences` before writing the keychain search list, because Security does not create that parent directory.
 Before packaging, it checks the disposable identity's search-list visibility and signs and verifies a throwaway executable; finding the certificate alone is not signing proof.
-It builds real release binaries at ordered fixture versions, notarizes them, and tests the actual native updater on Apple silicon and Intel.
+It builds real release binaries at ordered fixture versions, notarizes them, and tests the actual native updater on Apple silicon.
+Each version builds into its own folder and is sent to Apple as soon as it passes the signed check; its notarization, Gatekeeper check, kept zip and disk image finish in the background while the next version builds (`scripts/build-installer-fixtures.sh`).
+The step waits for every version's finishing and fails, naming the versions, when any one failed.
+The invalid-signature copy is not built or uploaded: the installed check makes it from the next alpha's zip after checking that zip's recorded digest, adds one byte to its `app.asar` and records the new zip's own digest (`scripts/installer-tampered-copy.ts`).
 The packager's automatic notarization is disabled: `scripts/installer-notarize.ts`, the guarded entry to the release's `scripts/notarize.ts`, submits each app and disk image once, saves its submission ID and artifact digest, and reads that same submission until Apple accepts or rejects it.
 The upload streams normal output and saves the assigned ID before the upload finishes; JSON output would withhold it until the command ends.
 Uploads use the enclosing workflow's time limit, not the two-minute deadline for status and ticket commands.

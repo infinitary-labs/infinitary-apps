@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "public-ci-contributor-docs",
+      "reason": "Documents how an outside contributor's pull request is checked and merged, and tells contributors to add a release note or an exclusion; only the project's own documents change."
+    }
+  ]
+}

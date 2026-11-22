@@ -97,11 +97,14 @@ export class DataCenterContributions implements ForgeContributions {
   }
 
   async findFork(): Promise<ContributionProject | null> {
-    const personal = await this.personalKey();
+    const user = await this.signedInName();
     const forks = await this.client.list<DataCenterRepository>(`${this.path()}/forks`, MAX_PAGES);
-    const found = forks.values.find(
-      (fork) =>
-        typeof fork.project?.key === "string" && fork.project.key.toLowerCase() === personal,
+    // A personal project's key is `~` and the owner's slug, which differs from
+    // the name for a name such as `jane@example.com`: match the owner first.
+    const found = forks.values.find(({ project }) =>
+      project?.type === "PERSONAL" && typeof project.owner?.name === "string"
+        ? project.owner.name.toLowerCase() === user
+        : typeof project?.key === "string" && project.key.toLowerCase() === `~${user}`,
     );
     if (found) return this.identity(found);
     if (!forks.complete)
@@ -124,13 +127,13 @@ export class DataCenterContributions implements ForgeContributions {
     return this.identity(made.body as DataCenterRepository | null);
   }
 
-  /** The person's own project key, `~name` in lower case. */
-  private async personalKey(): Promise<string> {
+  /** The signed-in person's user name, in lower case. */
+  private async signedInName(): Promise<string> {
     const user =
       (await this.client.request("GET", "/rest/api/latest/application-properties")).user ??
       (await this.client.signedInUser());
     if (!user)
       throw new ForgeError("transient", "Bitbucket did not name the signed-in user.", true);
-    return `~${user.toLowerCase()}`;
+    return user.toLowerCase();
   }
 }

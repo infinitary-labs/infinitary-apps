@@ -74,9 +74,12 @@ const WRITE_GRAMMAR: Record<ApiDialect, WriteGrammar> = {
   },
   // Data Center's paths name their API first: `api/pull-requests/3/merge`.
   "bitbucket-data-center": {
+    // Auto-merge (8.15+) merges later at whatever version is there; ref sync
+    // brings a fork's branch up to date with its origin, as merge-upstream does.
     merges: (rest) =>
-      /^api\/pull-requests\/\d+\/merge(?:\/|$)/.test(rest) ||
-      /^git\/pull-requests\/\d+\/rebase(?:\/|$)/.test(rest),
+      /^api\/pull-requests\/\d+\/(?:merge|auto-merge)(?:\/|$)/.test(rest) ||
+      /^git\/pull-requests\/\d+\/rebase(?:\/|$)/.test(rest) ||
+      rest === "sync/synchronize",
     branchOf: async ({ rest, data, query, readDefault, refuse }) => {
       // The repository's own write names its main branch in `defaultBranch`.
       if (rest === "api" && "defaultBranch" in data) refuse();

@@ -27,8 +27,8 @@ type Call = { method: string; path: string; body: unknown };
 /** Answers a call named `METHOD /path` (no query), or leaves it to a 404. */
 type Route = (where: string, url: URL) => Response | undefined;
 
-/** A stand-in Data Center, recording every call; it names the signed-in user `jane.doe`. */
-function server(route: Route) {
+/** A stand-in Data Center, recording every call; it names the signed-in user `jane.doe` unless told. */
+function server(route: Route, user = "jane.doe") {
   const calls: Call[] = [];
   const fetcher = vi.fn<typeof fetch>(async (input, init) => {
     expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${KEY}`);
@@ -37,7 +37,7 @@ function server(route: Route) {
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     calls.push({ method, path: url.pathname + url.search, body });
     if (method === "GET" && url.pathname === "/rest/api/latest/application-properties")
-      return Response.json({ version: "8.19.1" }, { headers: { "X-AUSERNAME": "jane.doe" } });
+      return Response.json({ version: "8.19.1" }, { headers: { "X-AUSERNAME": user } });
     return (
       route(`${method} ${url.pathname}`, url) ??
       Response.json(
@@ -333,6 +333,31 @@ describe("a fork on Data Center", () => {
     });
     forks = [...forks, fork];
     expect(await contributions?.findFork()).toMatchObject({ id: 77 });
+  });
+
+  it("finds the fork of a person whose user name differs from the slug their own project is keyed by", async () => {
+    // Data Center keys `jane@example.com`'s own project by her slug, `~JANE_EXAMPLE.COM`.
+    const owner = { name: "jane@example.com", slug: "jane_example.com", type: "NORMAL" };
+    const theirs = {
+      id: 78,
+      slug: "app",
+      project: { key: "~JANE_EXAMPLE.COM", type: "PERSONAL", owner },
+      origin: upstream,
+    };
+    const someoneElse = {
+      id: 79,
+      slug: "app",
+      project: { key: "~JANE", type: "PERSONAL", owner: { ...owner, name: "jane", slug: "jane" } },
+    };
+    const { fetcher, calls } = server((where) => {
+      if (where === `GET ${REPO}/forks`) return page([someoneElse, theirs]);
+      return undefined;
+    }, "jane@example.com");
+    expect(await forgeWith(fetcher).contributions?.findFork()).toMatchObject({
+      id: 78,
+      fullName: "scm/~jane_example.com/app",
+    });
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
   });
 
   it("opens a contribution from the fork's branch, and leaves its merge to the maintainers", async () => {

@@ -209,6 +209,12 @@ describe("the gateway on a Bitbucket Data Center repository, through crewmate to
   it.each([
     ["POST", `${OWN}/pull-requests/1/merge?version=0`, undefined],
     ["POST", "/rest/git/latest/projects/PRJ/repos/app/pull-requests/1/rebase", '{"version":0}'],
+    ["POST", `${OWN}/pull-requests/1/auto-merge`, undefined],
+    [
+      "POST",
+      "/rest/sync/latest/projects/PRJ/repos/app/synchronize",
+      '{"refId":"refs/heads/main","action":"MERGE"}',
+    ],
     ["PUT", OWN, '{"defaultBranch":"inf/fix-notes"}'],
     ["PUT", `${OWN}/default-branch`, '{"id":"refs/heads/inf/fix-notes"}'],
     [

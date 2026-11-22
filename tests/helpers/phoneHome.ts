@@ -10,6 +10,7 @@ import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
 import { startCore } from "@core/index";
+import type { CardService } from "@core/orchestrator/cardService";
 import { sinceSeenSaid, sinceSeenSection } from "@core/orchestrator/sinceSeen";
 import { appPathsFor } from "@core/paths";
 import { resolveFirstmateCardId } from "@core/pi/cardTool";
@@ -344,7 +345,12 @@ export async function startPhoneHome(
     notes: "",
     field: "",
     carried: "",
+    topBar: "",
   };
+  // INF-6136: the top bar card's task and story, which its revision reuses.
+  let topBarRevision:
+    | { taskId: string; story: (extra: string) => Parameters<CardService["emitCrewmateCard"]>[1] }
+    | undefined;
   // The captain's question on the flip card, which the first mate's revision answers by its id.
   let flipQuestion: number | undefined;
   const cardBarrier = () => {
@@ -1842,6 +1848,104 @@ export async function startPhoneHome(
             offerId: shown?.offerId ?? null,
             messages: core.services.supervisor.cards.thread(cardIDs.flip),
           };
+          break;
+        }
+        // INF-6136: a crewmate's decision with the tallest head a card draws (its task's key, place and model, a
+        // four-line title and a revised line), a body several screens long with a required question, three choices
+        // and a thread; beside it a short first mate card, its neighbour in the row.
+        case "POST top-bar-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const shortTitle = "The tide table is up to date";
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-top-bar-short",
+            title: shortTitle,
+            body: "<p>The harbour office posted this week's tide table.</p>",
+            actions: [
+              { id: "later", label: "Not now" },
+              { id: "read", label: "Read it", default: true },
+            ],
+          });
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          const surveying = seedTask(core.services.tasks, {
+            id: "phone-top-bar",
+            title: "Review what slowed the harbour survey",
+            status: "idle",
+          });
+          const cards = core.services.supervisor.cards;
+          const title =
+            "The pilot boats and the survey launch slowed the north entrance chart; two fixes recommended";
+          const reading = (text: string) => `<p>${text}</p>`.repeat(5);
+          const story = (extra: string) => ({
+            id: "harbour-slowdown",
+            title,
+            body: `<p>The north entrance chart waited on two things this week.</p>
+              ${reading("The pilot boats took the survey launch's mornings, so the depth readings waited a day each time.")}
+              <fieldset><legend>Which fix goes first?</legend>
+              <label><input type="radio" name="first" required value="boats" data-inf-recommended> Give the launch its own mornings</label>
+              <label><input type="radio" name="first" required value="sounder"> Fit a second depth sounder</label></fieldset>
+              ${reading("A second depth sounder lets the pilot boats take readings on their own runs past the entrance.")}${extra}`,
+            actions: [
+              { id: "both", label: "Approve both fixes", default: true },
+              { id: "first", label: "Approve the first fix only" },
+              { id: "later", label: "Not now" },
+            ],
+          });
+          cardIDs.topBar = cards.emitCrewmateCard(
+            surveying.id,
+            story(""),
+            surveying.title,
+            "Opus 5.5",
+            "on Mac mini",
+          );
+          cards.closeOut({ kind: "crewmate", taskId: surveying.id }, "idle");
+          const question = cards.addMessage(
+            cardIDs.topBar,
+            "captain",
+            "Would a third boat help instead?",
+          );
+          // The captain saw the first version, so the revision carries the revised line under the title.
+          cards.seen(cardIDs.topBar, cards.shown(cardIDs.topBar)?.offerId ?? "");
+          cards.emitCrewmateCard(
+            surveying.id,
+            {
+              ...story("<p>A third boat would wait on the same sounder, so it would not help.</p>"),
+              reply: "No: a third boat would wait on the same sounder.",
+              answersMessage: question.id,
+            },
+            surveying.title,
+            "Opus 5.5",
+            "on Mac mini",
+          );
+          cards.closeOut({ kind: "crewmate", taskId: surveying.id }, "idle");
+          cards.flushBroadcast();
+          topBarRevision = { taskId: surveying.id, story };
+          result = { title, shortTitle, key: core.services.tasks.get(surveying.id)?.key };
+          break;
+        }
+        // The crewmate revises that card again while the captain reads its thread.
+        case "POST top-bar-card-revise": {
+          if (!topBarRevision) throw new Error("top-bar-card-revise before top-bar-card");
+          const cards = core.services.supervisor.cards;
+          const added = "The launch's own mornings start on Monday.";
+          cards.emitCrewmateCard(
+            topBarRevision.taskId,
+            {
+              ...topBarRevision.story(`<p>${added}</p>`),
+              reply: "I added when the launch's mornings start.",
+            },
+            "Review what slowed the harbour survey",
+            "Opus 5.5",
+            "on Mac mini",
+          );
+          cards.closeOut({ kind: "crewmate", taskId: topBarRevision.taskId }, "idle");
+          cards.flushBroadcast();
+          result = { added, messages: cards.thread(cardIDs.topBar).length };
           break;
         }
         // INF-3124: a first mate card whose thread is longer than the card's back, read from its start.

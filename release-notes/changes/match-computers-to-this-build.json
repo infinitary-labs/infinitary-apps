@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "match-computers-to-this-build",
+      "kind": "feature",
+      "title": "Match brings each computer to the build this computer runs",
+      "body": "Settings → Devices now offers one Match button for a computer on another build, whether it is older or newer. When this Mac runs Infinitary from its code, Match has another Mac get the committed code, build it and start from it, and changes not committed stay on this Mac. You are asked once for each computer, and after that it matches by itself. A build that fails or does not start leaves that computer on the version it ran.",
+      "area": "devices",
+      "picture": {
+        "dark": "match-computers-to-this-build-dark.webp",
+        "light": "match-computers-to-this-build-light.webp",
+        "alt": "A card asking whether to run this computer's code on another computer, with Match it and Not now"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

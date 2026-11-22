@@ -378,6 +378,10 @@
     {
       "name": "the system",
       "about": "macOS's own logs and services"
+    },
+    {
+      "name": "package registry",
+      "about": "Where a build of the home's source gets its packages"
     }
   ],
   "links": [
@@ -1567,6 +1571,11 @@
       "why": "keeps working copies and commits"
     },
     {
+      "from": "devices",
+      "to": "git",
+      "why": "packs the home's committed source for a computer to build"
+    },
+    {
       "from": "batches",
       "to": "git",
       "why": "writes one commit per change and pushes the batch branch"
@@ -1660,6 +1669,11 @@
       "from": "helper",
       "to": "other computers",
       "why": "answers its home"
+    },
+    {
+      "from": "helper",
+      "to": "package registry",
+      "why": "installs the packages of a build of the home's source"
     },
     {
       "from": "placed",

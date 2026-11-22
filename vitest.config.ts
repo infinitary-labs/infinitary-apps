@@ -322,10 +322,10 @@ export default defineConfig({
             "./tests/helpers/scratchDirCleanup.ts",
             "./tests/helpers/waitWindow.ts",
           ],
-          // On two-CPU Linux runners even two probe workers compete with the
-          // plain-Node CLI children and Vite transforms they start. Run one
-          // probe file at a time there; elsewhere, the integration cohort's count.
-          maxWorkers: process.platform === "linux" && jobCores() <= 2 ? 1 : withPrograms,
+          // Linux probes spawn CPU-heavy programs of their own. A memory-based
+          // worker cap still lets these programs compete with the archive CLI
+          // and its Vite transforms, even on runners with more than two CPUs.
+          maxWorkers: process.platform === "linux" ? 1 : withPrograms,
           sequence: { groupOrder: 2 },
         },
       },

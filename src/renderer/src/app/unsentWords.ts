@@ -1,9 +1,12 @@
 import { type ShellState, useShellStore } from "./store";
+import { notesTaken, wordsTaken } from "./takenDrafts";
 
 /**
  * Whether this window holds words not yet sent: the message box's words,
  * pictures or pastes, or a reply under a card with its words, notes,
- * pastes or pictures. An app following its home's version waits to start
+ * pastes or pictures typed here: a card's words and notes this window took
+ * from another window were typed there and are kept at the first mate's
+ * computer (./takenDrafts.ts). An app following its home's version waits to start
  * again while any of its windows holds some (docs/view.md, "Following the
  * home's version"), so a restart never takes what someone is writing.
  */
@@ -12,8 +15,12 @@ export function holdsUnsentWords(state: ShellState): boolean {
     state.inputText.trim() !== "" ||
     state.attachments.length > 0 ||
     state.pastes.length > 0 ||
-    Object.values(state.replyDrafts).some((draft) => draft.trim() !== "") ||
-    Object.values(state.replyNotes).some((notes) => notes.length > 0) ||
+    Object.entries(state.replyDrafts).some(
+      ([cardId, draft]) => draft.trim() !== "" && !wordsTaken(cardId, draft),
+    ) ||
+    Object.entries(state.replyNotes).some(
+      ([cardId, notes]) => notes.length > 0 && !notesTaken(cardId, notes),
+    ) ||
     Object.values(state.replyPastes).some((pastes) => pastes.length > 0) ||
     Object.values(state.replyImages).some((images) => images.length > 0)
   );

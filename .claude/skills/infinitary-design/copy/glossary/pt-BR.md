@@ -53,6 +53,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | direction (a standing instruction in Knowledge) | diretriz | Feminine; "diretrizes" in the plural. |
 | discard | descartar | |
 | draft | rascunho | As in GitHub's Portuguese docs. |
+| drop (a task) | abandonar | "Abandonada", as the board's lines say. |
 | extra usage (Claude's credits past the allowance) | uso extra | |
 | feed / activity | Atividade | |
 | fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |
@@ -87,6 +88,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Not now | Agora não | |
 | out of reach | fora de alcance | |
 | panel | painel | |
+| part (of a task) | parte | Feminine: "todas as partes". |
 | passcode (iOS) | código | iOS says "Face ID e Código". |
 | personal context (Knowledge) | contexto pessoal | |
 | phone | celular | The Brazilian everyday word. |

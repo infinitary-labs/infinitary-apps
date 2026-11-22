@@ -92,6 +92,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | on pace / empty (an allowance) | al ritmo / se agota, agotada | "se agota en 2h", "agotada"; never "vacía". |
 | out of reach | fuera de alcance | Never "desconectado" or "sin conexión". |
 | panel | panel | |
+| part (of a task) | parte | Feminine: "todas las partes". |
 | passcode (iOS) | código | As in Apple's "Face ID y código". |
 | phone | teléfono | |
 | plan | plan | |

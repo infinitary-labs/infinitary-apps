@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-installer-release-notes",
+      "reason": "Release work: the Windows alpha installer's build now packages the release's verified notes catalog and checks it before upload, as the Mac and Linux builds do; no app code changes, and the notes would name a system the notes rules do not list."
+    }
+  ]
+}

@@ -130,12 +130,12 @@ Every later job reads the one `notes` result, which holds only when both parts p
    A release stands on a source when its commit is in the source's history, or is a candidate - a notes-only commit - off it, so an alpha cut from a candidate is the previous release of the next one.
    A stable promotion instead proves `release-notes/` is identical to its alpha's.
 2. `generate` writes the offline catalog: this release's entries and every published release's membership, and its highlighted entries' hero pairs in `release-notes/pictures/` beside it, each file's sha256 and size in the catalog's `pictures`.
-   The signing job downloads both and packages them as `Resources/release-notes.json` and `Resources/release-notes/pictures/`.
+   The signing job, the Linux packages and the Windows installer each download both and package them as `release-notes.json` and `release-notes/pictures/` in the app's resources (`Resources/` on the Mac).
 3. For a stable, `stable-highlights --picks <ids>` then rewrites that catalog so the captain's picks are its only highlights, lead first, with only their hero pairs beside it; nothing else in it changes.
    It refuses a lead with no picture, a pick that is not a change since the last stable (backfilled history never is), a change picked twice, and a count of picks other than its slots.
    It runs from the workflow's own commit, since the promoted alpha's may predate it, and the alpha's own `verify-package` checks the result at once.
    Without `--picks` it lists the changes since the last stable to pick from, for the promotion's card.
-4. `verify-package` runs against the packaged app, before notarization: the catalog is this exact logical version and source commit, and each packaged picture is the file the catalog hashed.
+4. `verify-package` runs against each packaged app, before notarization on the Mac and before the Linux packages and the Windows installer leave their jobs: the catalog is this exact logical version and source commit, and each packaged picture is the file the catalog hashed.
 
 Every change's first check step runs `node scripts/release-notes.ts change` from the commit the change starts at (`ci.yml`, on each push of a task's branch and on a pull request; plain Node with no install, under a second).
 It refuses a change whose commits add no file under `release-notes/changes/` declaring a note or an exclusion: a change merges as one commit, squashed alone or as its own commit of a batch of several (`docs/testing.md`, "The swept batch"), and the commit that adds the file is the one the alpha credits, so this is the alpha's coverage rule applied before merge.

@@ -213,6 +213,27 @@ jobs:
         if: ${{ !steps.reuse.outputs.run }}
         env:
           INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
+      # A release packages the notes job's verified catalog and its hero
+      # pictures, as its Mac build and Linux packages do, never the
+      # development placeholder `pnpm build` leaves, which the installed app
+      # reads as notes it cannot read (docs/release-notes.md).
+      - name: Fetch the verified release notes catalog
+        if: ${{ inputs.version }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-notes-catalog
+          path: ${{ runner.temp }}/release-notes
+      - name: Place the release notes catalog
+        if: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/release-notes/release-notes.json" packaging/generated/release-notes.json
+          rm -rf packaging/generated/release-notes
+          mkdir -p packaging/generated/release-notes/pictures
+          # An artifact keeps no empty folder: a release with no pictured highlight has none.
+          if [[ -d "$RUNNER_TEMP/release-notes/release-notes/pictures" ]]; then
+            cp -R "$RUNNER_TEMP/release-notes/release-notes/pictures/." packaging/generated/release-notes/pictures/
+          fi
       # The requested rounds, as the list the check job's matrix reads: the
       # installer below is built once and every round installs that one.
       - id: rounds
@@ -244,6 +265,14 @@ jobs:
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
           [[ "$(wc -l < windows-installer/SHA256SUMS)" -eq 1 ]] || { echo 'expected exactly one installer' >&2; exit 1; }
           echo "sums=$(cat windows-installer/SHA256SUMS)" >> "$GITHUB_OUTPUT"
+      # The packaged catalog is this exact version and source, before the
+      # installer leaves the job.
+      - name: Verify the packaged release notes
+        if: ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_COMMIT: ${{ inputs.ref }}
+        run: node scripts/release-notes.ts verify-package --catalog dist/win-unpacked/resources/release-notes.json --version "$VERSION" --source "$SOURCE_COMMIT"
       # Each test version from the one build above, only its version told
       # apart. The installers wait outside the project until the last is
       # built, so no later version packs an earlier one's installer.

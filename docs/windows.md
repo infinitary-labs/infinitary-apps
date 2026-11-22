@@ -140,6 +140,7 @@ An outside contributor's pull request that reaches Windows-relevant files builds
 
 ## Published on every alpha
 
+An alpha's installer packages the release notes job's verified catalog and its hero pictures, never the development placeholder `pnpm build` leaves, and `build` runs `verify-package` on the packaged catalog before it keeps the installer (`docs/release-notes.md`), so the installed app's update note lists what changed.
 An alpha publishes the installer its own Windows check built, installed and ran, and no other: `release.yml`'s upload job downloads the `windows-installer` artifact and refuses it unless its bytes match the `sums` line the windows job handed over.
 It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap.
 A retry keeps an installer a place already holds only when its bytes are the ones this run's Windows check built and checked; any other copy stops the release before anything is written, the record's zip included, so testers only ever get checked bytes.

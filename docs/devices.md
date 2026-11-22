@@ -1191,12 +1191,13 @@ The note goes once that computer runs that version or a newer one, and when it i
 
 ### Matching the home's build
 
-Every copy that runs work also says which build it runs in its hello (`build`, `buildIdentitySchema`, `src/shared/buildIdentity.ts`): an installed release names the commit its source index names, and a run from source names its commit, whether tracked files were edited from it, and its lockfile's digest.
+Every copy that runs work also says which build it runs in its hello (`build`, `buildIdentitySchema`, `src/shared/buildIdentity.ts`): an installed release names the commit its source index names, and a run from source says so (`source: true`) and names its commit when it has one.
 The home says its own from its starter (`starterBuild`, `src/core/devices/sourceArchive.ts`), and `compareBuilds` measures each computer against it, the one comparison the row, the update by itself and the card read:
 
 - **Two releases** compare by version, as above.
 - **A home run from source that names its commit** is matched by commit, whatever the other runs: a computer on another commit, or on a release, carries `otherVersion.source` with that commit, and Match builds it there.
 - **A home on a release** brings a computer that runs source back to that release, as the update over the connection does.
+- **Another account on this Mac** runs this Mac's own copy, so it is compared by version alone and never matched by build: a home run from source offers it no Match for a commit, and builds no second copy there.
 
 The row says "Runs another build than this computer, which runs its code at commit 1a2b3c4." and offers one Match, which replaces Update and Install older version for every computer, installed copies too: it brings that computer to whatever the home runs, older or newer.
 

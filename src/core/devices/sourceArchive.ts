@@ -7,19 +7,12 @@ import type { StarterSession } from "../update/devStarter";
 
 /**
  * This Mac's own build when `pnpm dev`'s starter started it (docs/devices.md,
- * "Matching the home's build"): the commit it read at that start, whether
- * tracked files were edited from it, and its lockfile's digest. An edited
- * run still names its commit: a computer matched to it builds that commit,
- * never the edits.
+ * "Matching the home's build"): the commit it read at that start. A run
+ * with edits not committed still names its commit: a computer matched to it
+ * builds that commit, never the edits.
  */
 export function starterBuild(session: StarterSession): BuildIdentity {
-  return buildIdentitySchema.parse({
-    commit: session.commit,
-    source: {
-      edited: session.edited,
-      ...(/^[a-f0-9]{64}$/.test(session.lockDigest) ? { lockDigest: session.lockDigest } : {}),
-    },
-  });
+  return buildIdentitySchema.parse({ commit: session.commit, source: true });
 }
 
 /**

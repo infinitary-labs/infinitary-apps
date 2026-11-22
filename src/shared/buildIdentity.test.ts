@@ -8,7 +8,7 @@ const A = "a".repeat(40);
 const B = "b".repeat(40);
 const sourceAt = (commit?: string) => ({
   ...(commit ? { commit } : {}),
-  source: { edited: false },
+  source: true as const,
 });
 
 describe("comparing a computer's build with the home's", () => {

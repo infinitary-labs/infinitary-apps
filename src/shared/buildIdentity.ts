@@ -4,8 +4,7 @@ import { compareSemver } from "./semver";
 /**
  * Which build of Infinitary a copy runs (docs/devices.md, "Matching the
  * home's build"): an installed release by its version and the commit its
- * source index names, or a run from source by its commit, whether tracked
- * files were edited from it, and its lockfile's digest. A computer that
+ * source index names, or a run from source by its commit. A computer that
  * runs work says it in its hello (`build`, `source-builds`), and the home
  * compares it with its own (`compareBuilds`).
  */
@@ -15,18 +14,8 @@ export const buildIdentitySchema = z.object({
     .string()
     .regex(/^[a-f0-9]{40,64}$/)
     .optional(),
-  /** Present for a run from source: absent for an installed release. */
-  source: z
-    .object({
-      /** Tracked files differed from `commit` when it started. */
-      edited: z.boolean(),
-      /** The SHA-256 of `pnpm-lock.yaml`, in hex, when it was read. */
-      lockDigest: z
-        .string()
-        .regex(/^[a-f0-9]{64}$/)
-        .optional(),
-    })
-    .optional(),
+  /** True for a run from source: absent for an installed release. */
+  source: z.literal(true).optional(),
 });
 export type BuildIdentity = z.infer<typeof buildIdentitySchema>;
 

@@ -481,7 +481,7 @@ A run whose hello lists the `source-builds` change answers it:
 2. It gets the home's committed tree at that commit from `/infinitary-source` with its own key (`fetchFromHome`, `src/core/devices/dial.ts`) and unpacks it with the Mac's own tar into `source/.<commit>.partial` in its work folder (`fetching`).
 3. It runs `pnpm install --frozen-lockfile` there (`installing`), then `node scripts/prepare-local-codesign.mjs` and electron-vite's build (`building`), each through `hostEnv()` with a thirty-minute limit.
    A step that fails takes the partial folder away, changes nothing else, and answers which step with the last of what it printed (`fetch`, `install`, `build`).
-4. It writes what it built beside it (`infinitary-build.json`: the commit and its lockfile's digest) and renames the folder to `source/<commit>`; a build of that commit kept there already is used again without building.
+4. It writes what it built beside it (`infinitary-build.json`: the commit) and renames the folder to `source/<commit>`; a build of that commit kept there already is used again without building.
 5. It rewrites its agent to start that build's own Electron (`node_modules/electron/dist/`, as `path.txt` names it) with the build's folder, and takes away every other build but the one this run started from.
    That is on trial as an update's copy is (above, "A copy that does not start"): the agent's file and `installed.json` are set aside first, and a build that does not reach the home in the update's wait has them put back, the build taken away and launchd read the agent anew, so the copy before it starts again and its hello says `failedUpdate`.
 6. It answers `{ restarts }`, and its run ends as `updated`, as the update order's does.

@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -62,10 +61,6 @@ export const SOURCE_BUILD_FILE = "infinitary-build.json";
 const sourceBuildFileSchema = z.strictObject({
   version: z.literal(1),
   commit: z.string().regex(/^[a-f0-9]{40,64}$/),
-  lockDigest: z
-    .string()
-    .regex(/^[a-f0-9]{64}$/)
-    .optional(),
 });
 
 /** How long one step may run before it is stopped: an install on a slow network takes minutes. */
@@ -120,7 +115,7 @@ export function sourceBuildDir(dataDir: string, commit: string): string {
 /**
  * The build a run from source says it is (docs/devices.md, "Matching the
  * home's build"): one this computer built from its home's source names its
- * commit and lockfile, from the file it wrote beside it; any other run from
+ * commit, from the file it wrote beside it; any other run from
  * source names no commit, so a home run from source reads it as another
  * build. An installed release names the commit its source index names.
  */
@@ -131,11 +126,8 @@ export function buildIdentityOf(input: {
 }): BuildIdentity {
   if (input.packaged) return input.releaseCommit ? { commit: input.releaseCommit } : {};
   const built = readBuildFile(input.appDir);
-  if (!built) return { source: { edited: false } };
-  return buildIdentitySchema.parse({
-    commit: built.commit,
-    source: { edited: false, ...(built.lockDigest ? { lockDigest: built.lockDigest } : {}) },
-  });
+  if (!built) return { source: true };
+  return buildIdentitySchema.parse({ commit: built.commit, source: true });
 }
 
 function readBuildFile(dir: string): z.infer<typeof sourceBuildFileSchema> | null {
@@ -238,17 +230,6 @@ async function getSource(
   return (await unpacked) === 0;
 }
 
-/** The SHA-256 of a build's lockfile, in hex; absent when it has none. */
-function lockDigestOf(dir: string): string | undefined {
-  try {
-    return createHash("sha256")
-      .update(readFileSync(join(dir, "pnpm-lock.yaml")))
-      .digest("hex");
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Builds the home's source at `commit` here and moves the background to it
  * (`SourceBuilt`). A build of that commit kept here already is used again.
@@ -333,11 +314,7 @@ async function build(
   } catch {
     return failed("install");
   }
-  const lockDigest = lockDigestOf(partial);
-  writePrivate(
-    join(partial, SOURCE_BUILD_FILE),
-    `${JSON.stringify({ version: 1, commit, ...(lockDigest ? { lockDigest } : {}) })}\n`,
-  );
+  writePrivate(join(partial, SOURCE_BUILD_FILE), `${JSON.stringify({ version: 1, commit })}\n`);
   rmSync(dir, { recursive: true, force: true });
   renameSync(partial, dir);
   return null;

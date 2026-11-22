@@ -13039,13 +13039,8 @@ ${events}` : prompt;
   object({
     /** The commit the build was made from: a release's source index's, or a source run's. */
     commit: string().regex(/^[a-f0-9]{40,64}$/).optional(),
-    /** Present for a run from source: absent for an installed release. */
-    source: object({
-      /** Tracked files differed from `commit` when it started. */
-      edited: boolean(),
-      /** The SHA-256 of `pnpm-lock.yaml`, in hex, when it was read. */
-      lockDigest: string().regex(/^[a-f0-9]{64}$/).optional()
-    }).optional()
+    /** True for a run from source: absent for an installed release. */
+    source: literal(true).optional()
   });
   const commandEndingSchema = _enum([
     "quit",

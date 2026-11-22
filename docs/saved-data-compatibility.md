@@ -548,5 +548,5 @@ An older build that opens the profile again reads that 0 as a queue version it n
 ## Builds of the home's source
 
 The home's pairing folder keeps `source-builds.json`, the computers the captain allowed to run the home's code (`DevicePairing.noteSourceAllowed`, `docs/devices.md`, "Matching the home's build"); a missing or unreadable file allows none, and a computer's entry goes when it is removed.
-A computer that runs work keeps each build of the home's source in its work folder's `source/<commit>`, with `infinitary-build.json` (version 1: the commit and its lockfile's digest) beside it; its agent may name that build's Electron, which an older app reads as any launcher it did not write.
+A computer that runs work keeps each build of the home's source in its work folder's `source/<commit>`, with `infinitary-build.json` (version 1: the commit) beside it; its agent may name that build's Electron, which an older app reads as any launcher it did not write.
 No database migration or saved-data format boundary changes.

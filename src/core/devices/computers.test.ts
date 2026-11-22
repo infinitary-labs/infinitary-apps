@@ -1028,7 +1028,7 @@ describe("matching a computer to this Mac's source", () => {
   const sourceHome = () => {
     const home = homeAt("192.168.65.2", {
       contract: PROTOCOL_VERSION,
-      build: { commit: HOME, source: { edited: true } },
+      build: { commit: HOME, source: true },
     });
     home.connection.tell({ deviceId: home.deviceId, contact: "in-reach" });
     return home;
@@ -1044,10 +1044,10 @@ describe("matching a computer to this Mac's source", () => {
 
   it("names this Mac's commit on a row running another build, and none once it runs that commit", () => {
     const { connection, computers, deviceId } = sourceHome();
-    connection.tellVersion(deviceId, hello({ commit: OTHER, source: { edited: false } }));
+    connection.tellVersion(deviceId, hello({ commit: OTHER, source: true }));
     const row = () => computers.list().find((device) => device.id === deviceId);
     expect(row()?.otherVersion?.source).toEqual({ commit: HOME });
-    connection.tellVersion(deviceId, hello({ commit: HOME, source: { edited: false } }));
+    connection.tellVersion(deviceId, hello({ commit: HOME, source: true }));
     expect(row()?.otherVersion).toBeUndefined();
   });
 
@@ -1062,9 +1062,7 @@ describe("matching a computer to this Mac's source", () => {
       state = "building";
       await new Promise((resolve) => setTimeout(resolve, 30));
       // It restarts on the build, and its hello names this Mac's commit.
-      setImmediate(() =>
-        connection.tellVersion(deviceId, hello({ commit: HOME, source: { edited: false } })),
-      );
+      setImmediate(() => connection.tellVersion(deviceId, hello({ commit: HOME, source: true })));
       return { restarts: true };
     };
     const view = await computers.update(deviceId);
@@ -1117,7 +1115,7 @@ describe("matching a computer to this Mac's source", () => {
     const overRemoteLogin: string[] = [];
     const home = homeAt(
       "192.168.65.2",
-      { contract: PROTOCOL_VERSION, build: { commit: HOME, source: { edited: true } } },
+      { contract: PROTOCOL_VERSION, build: { commit: HOME, source: true } },
       {
         updateOverRemoteLogin: async (deviceId) => {
           overRemoteLogin.push(deviceId);
@@ -1146,6 +1144,19 @@ describe("matching a computer to this Mac's source", () => {
     expect(overRemoteLogin).toEqual([]);
   });
 
+  // The captain's choice on this change's review: other accounts on this Mac are left out of matching.
+  it("leaves another account on this Mac out of matching by build, comparing it by version alone", () => {
+    const { connection, computers, deviceId, pairing } = sourceHome();
+    const list = pairing.list.bind(pairing);
+    pairing.list = () =>
+      list().map((device) => (device.id === deviceId ? { ...device, onThisMac: true } : device));
+    connection.tellVersion(deviceId, hello({ commit: OTHER, source: true }));
+    const row = () => computers.list().find((device) => device.id === deviceId);
+    expect(row()?.otherVersion).toBeUndefined();
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(false);
+  });
+
   it("refuses a computer that is not a Mac, sending it nothing and keeping no yes", async () => {
     const { connection, computers, deviceId, pairing } = sourceHome();
     pairing.noteSystem(deviceId, { system: "linux" });
@@ -1167,7 +1178,7 @@ describe("matching a computer to this Mac's source", () => {
 
   it("keeps the captain's Match as that computer's yes to running source, and only then", () => {
     const { connection, computers, deviceId } = sourceHome();
-    connection.tellVersion(deviceId, hello({ commit: HOME, source: { edited: false } }));
+    connection.tellVersion(deviceId, hello({ commit: HOME, source: true }));
     computers.allowSource(deviceId);
     expect(computers.sourceAllowed(deviceId)).toBe(false);
     connection.tellVersion(deviceId, hello({ commit: OTHER }));

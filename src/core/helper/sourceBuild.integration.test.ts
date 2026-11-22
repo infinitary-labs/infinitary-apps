@@ -102,7 +102,6 @@ describe("building the home's source on a Mac", () => {
     expect(JSON.parse(readFileSync(join(dir, SOURCE_BUILD_FILE), "utf8"))).toEqual({
       version: 1,
       commit: COMMIT,
-      lockDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     // The agent starts that build's Electron with the build's folder, and the run it starts names the commit.
     const plist = readFileSync(agent, "utf8");
@@ -112,7 +111,7 @@ describe("building the home's source on a Mac", () => {
     expect(plist).toContain(`<string>${dir}</string>`);
     expect(buildIdentityOf({ packaged: false, appDir: dir })).toEqual({
       commit: COMMIT,
-      source: { edited: false, lockDigest: expect.stringMatching(/^[a-f0-9]{64}$/) },
+      source: true,
     });
     expect(runsSourceBuild(context.dataDir, dir, false)).toBe(true);
   });
@@ -156,7 +155,7 @@ describe("the build a run says it is", () => {
     });
     const checkout = scratchDir("infinitary-source-checkout-");
     expect(buildIdentityOf({ packaged: false, appDir: checkout })).toEqual({
-      source: { edited: false },
+      source: true,
     });
     expect(runsSourceBuild(join(checkout, "work"), checkout, false)).toBe(false);
   });

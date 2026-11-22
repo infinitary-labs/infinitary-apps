@@ -127,19 +127,8 @@
                       "pattern": "^[a-f0-9]{40,64}$"
                     },
                     "source": {
-                      "type": "object",
-                      "properties": {
-                        "edited": {
-                          "type": "boolean"
-                        },
-                        "lockDigest": {
-                          "type": "string",
-                          "pattern": "^[a-f0-9]{64}$"
-                        }
-                      },
-                      "required": [
-                        "edited"
-                      ]
+                      "type": "boolean",
+                      "const": true
                     }
                   }
                 },

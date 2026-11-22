@@ -1341,13 +1341,17 @@ export class Computers {
     version: WorkDeviceVersion,
   ): DeviceOtherVersion | undefined {
     const home = this.options.home ?? { contract: PROTOCOL_VERSION };
-    const match = compareBuilds(home, {
+    // Another account on this Mac runs this Mac's own copy, whichever build it
+    // names: it is compared by version alone, and never matched by build
+    // (docs/devices.md, "Matching the home's build").
+    const builds = !device.onThisMac;
+    const match = compareBuilds(builds ? home : { contract: home.contract, app: home.app }, {
       contract: version.contract,
       app: version.app,
-      build: version.build,
+      ...(builds ? { build: version.build } : {}),
     });
     if (match.same) return undefined;
-    const homeCommit = sourceCommitOf(home.build);
+    const homeCommit = builds ? sourceCommitOf(home.build) : null;
     const source = match.target === "source" && homeCommit;
     const updateBy = device.remoteLogin
       ? "remote-login"

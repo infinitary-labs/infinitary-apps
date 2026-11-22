@@ -1797,7 +1797,13 @@ describe("a computer whose update brought a copy that does not start", () => {
   // home runs one (docs/devices.md, "Matching the home's build"): the release
   // replaces the copy kept at the same path, and the trial puts the build back.
   it("brings a computer running the home's source back to the release, and goes back to its build when the release does not start", async () => {
-    const at = await world({ kept: true, app: bundle("the home's own copy"), waitMs: 200 });
+    // On another Mac: another account on this Mac is compared by version alone, never by build.
+    const at = await world({
+      kept: true,
+      app: bundle("the home's own copy"),
+      waitMs: 200,
+      fromAnotherMac: true,
+    });
     const { context, asked } = standInBackground(at.dataDir);
     const kept = join(at.dataDir, "app", "Firstmate 3000.app");
     // Its agent starts a build of the home's source, as a source match leaves it.
@@ -1818,7 +1824,7 @@ describe("a computer whose update brought a copy that does not start", () => {
         appVersion: HOME_APP,
         trialSeconds: 2,
         sourceRun: build,
-        build: { commit: "a".repeat(40), source: { edited: false } },
+        build: { commit: "a".repeat(40), source: true },
       },
       context,
     );

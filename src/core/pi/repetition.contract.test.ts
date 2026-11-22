@@ -19,14 +19,17 @@ import { followCompletions } from "../session/followCompletions";
 import { openDatabase, openInMemoryDatabase } from "../storage/db";
 import { InboxStore } from "../storage/inboxStore";
 import { SessionCompletionStore } from "../storage/sessionCompletionStore";
-import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
+import { REPETITION_WAKE_AT, TaskRepetitionStore } from "../storage/taskRepetitionStore";
 import { UsageStore } from "../storage/usageStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 
 // Intent: INF-1996's accepted piece 2, including the captain's three-total
-// choice and efficient long-session observation. Real read-tool content is
-// used below; the transcript envelopes are the two backends' recorded shapes.
+// choice for failed repeats and efficient long-session observation, and
+// INF-6091 finding 4: repeats that worked wake the first mate only at a higher
+// count. Real read-tool content is used below; the transcript envelopes are
+// the two backends' recorded shapes.
+const WORKED = REPETITION_WAKE_AT.worked;
 const picturePath = resolve("release-notes/pictures/activity-settles-setting-runs-light.png");
 async function pictureResult() {
   return (
@@ -159,14 +162,19 @@ describe("incremental completed-operation repetition", () => {
     ["Pi", pi],
     ["Claude", claude],
   ] as const) {
-    it(`${backend}: third unchanged completion notifies once across interleaved operations and compaction`, async () => {
+    it(`${backend}: a third working completion wakes nobody; the higher count notifies once across interleaved operations and compaction`, async () => {
       const e = environment();
       try {
         const content = await pictureResult();
-        for (const [index, operation] of ["A", "B", "C", "A", "B", "C", "A", "A"].entries()) {
+        const operations = ["A", "B", "C", "A", "B", "C", ...Array(WORKED - 1).fill("A")];
+        // A's completions sit at 0, 3 and 6 onward, so its WORKED-th is here.
+        const wakes = WORKED + 3;
+        for (const [index, operation] of operations.entries()) {
           append(e.path, ...entries(`call-${index}`, { path: operation, limit: 20 }, content));
           e.work.scan(e.path, e.deliver);
-          expect(e.notices).toHaveLength(index < 6 ? 0 : 1);
+          expect(e.notices).toHaveLength(index < wakes ? 0 : 1);
+          // INF-6091 finding 4: A's third identical working completion wakes nobody.
+          if (index === 6) expect(e.notices).toHaveLength(0);
           if (index === 4) {
             append(e.path, { type: "compaction", id: "fold", summary: "pictures compared" });
             if (backend === "Claude")
@@ -179,10 +187,10 @@ describe("incremental completed-operation repetition", () => {
           }
         }
         expect(e.notices[0]).toMatchObject({
-          count: 3,
+          count: WORKED,
           outcome: "worked",
           first: { callId: "call-0" },
-          latest: { callId: "call-6" },
+          latest: { callId: `call-${wakes}` },
         });
         expect(e.inbox.pending("firstmate")).toHaveLength(1);
         const notice = e.notices[0];
@@ -213,7 +221,7 @@ describe("incremental completed-operation repetition", () => {
               "SELECT count FROM task_repetitions WHERE task_id = ? ORDER BY count DESC LIMIT 1",
             )
             .get("task"),
-        ).toEqual({ count: 4 });
+        ).toEqual({ count: WORKED + 1 });
       } finally {
         e.work.close();
         e.db.close();
@@ -282,14 +290,14 @@ describe("incremental completed-operation repetition", () => {
     const e = environment();
     try {
       const result = [{ type: "text", text: readFileSync("CONTRIBUTING.md", "utf8") }];
-      for (let index = 0; index < 3; index++)
+      for (let index = 0; index < WORKED; index++)
         append(e.path, ...pi(`before-${index}`, { path: "CONTRIBUTING.md" }, result));
       e.work.scan(e.path, e.deliver);
       expect(e.notices).toHaveLength(1);
-      for (const [index, isError] of [true, false, false, false].entries()) {
+      for (const [index, isError] of [true, ...Array(WORKED).fill(false)].entries()) {
         append(e.path, ...pi(`changed-${index}`, { path: "CONTRIBUTING.md" }, result, isError));
         e.work.scan(e.path, e.deliver);
-        expect(e.notices).toHaveLength(index === 3 ? 2 : 1);
+        expect(e.notices).toHaveLength(index === WORKED ? 2 : 1);
       }
       const changed = [{ type: "text", text: readFileSync("CLAUDE.md", "utf8") }];
       append(e.path, ...pi("new-content-1", { path: "CONTRIBUTING.md" }, changed));
@@ -306,7 +314,7 @@ describe("incremental completed-operation repetition", () => {
       });
       e.work.scan(e.path, e.deliver);
       expect(e.db.prepare("SELECT COUNT(*) AS n FROM task_repetitions").get()).toEqual({ n: 0 });
-      for (let index = 0; index < 3; index++)
+      for (let index = 0; index < WORKED; index++)
         append(e.path, ...pi(`after-${index}`, { path: "CONTRIBUTING.md" }, result));
       e.work.scan(e.path, e.deliver);
       expect(e.notices).toHaveLength(3);
@@ -366,6 +374,8 @@ describe("incremental completed-operation repetition", () => {
     try {
       const content = await pictureResult();
       append(e.path, ...pi("one", { path: "picture" }, content));
+      for (let index = 3; index < WORKED; index++)
+        append(e.path, ...pi(`earlier-${index}`, { path: "picture" }, content));
       work.scan(e.path, e.deliver);
       const [start, end] = pi("two", { path: "picture" }, content);
       append(e.path, start);
@@ -400,7 +410,9 @@ describe("incremental completed-operation repetition", () => {
       work = new SessionCompletionStore(e.journal);
       work.scan(e.path, e.deliver);
       expect(work.work).toMatchObject({ lines: 0, fingerprintBytes: 0, completions: 0 });
-      expect(e.db.prepare("SELECT count FROM task_repetitions").get()).toEqual({ count: 4 });
+      expect(e.db.prepare("SELECT count FROM task_repetitions").get()).toEqual({
+        count: WORKED + 1,
+      });
       // A reconnect carries only the compact fact through the existing wire.
       const transported = placedEventRecordSchema.parse({
         seq: 10,
@@ -443,7 +455,8 @@ describe("incremental completed-operation repetition", () => {
     let work = e.work;
     try {
       const content = [{ type: "text", text: readFileSync("CONTRIBUTING.md", "utf8") }];
-      append(e.path, ...pi("first", {}, content));
+      for (let index = 2; index < WORKED; index++)
+        append(e.path, ...pi(`first-${index}`, {}, content));
       work.scan(e.path, e.deliver);
       const next = join(e.dir, "next-conversation.jsonl");
       append(next, ...pi("second", {}, content), ...pi("third", {}, content));
@@ -464,7 +477,8 @@ describe("incremental completed-operation repetition", () => {
     let work = e.work;
     try {
       const content = [{ type: "text", text: readFileSync("CONTRIBUTING.md", "utf8") }];
-      append(e.path, ...pi("first", {}, content), ...pi("second", {}, content));
+      for (let index = 1; index < WORKED; index++)
+        append(e.path, ...pi(`earlier-${index}`, {}, content));
       work.scan(e.path, e.deliver);
       work.close();
       const moved = join(e.dir, "moved");
@@ -505,10 +519,11 @@ describe("incremental completed-operation repetition", () => {
       renameSync(changed, e.path);
       e.work.scan(e.path, e.deliver);
       expect(e.events).toHaveLength(1);
-      append(e.path, ...pi("second", {}, content), ...pi("third", {}, content));
+      for (let index = 1; index < WORKED; index++)
+        append(e.path, ...pi(`later-${index}`, {}, content));
       e.work.scan(e.path, e.deliver);
       expect(e.notices).toHaveLength(1);
-      expect(e.notices[0]?.count).toBe(3);
+      expect(e.notices[0]?.count).toBe(WORKED);
     } finally {
       e.work.close();
       e.db.close();

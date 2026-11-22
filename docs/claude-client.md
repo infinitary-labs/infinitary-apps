@@ -56,7 +56,7 @@ When that sign-in ends with no reason, the person is told Claude failed, and to 
 Never let a test or probe start a real Claude sign-in.
 The sign-in leg of `claudeLoginProbe.test.ts` is opt-in with `INFINITARY_CLAUDE_LOGIN_PROBE=1` and stubs the platform opener even then; no test asks a person to authorize a sign-in.
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Every `@anthropic-ai/*` import stays behind `src/core/claude/`, the same fence Pi has (Biome `noRestrictedImports`).
   The Claude client is the one the person INSTALLED (F14, captain lock 2026-09-20: "assume / require the user has already installed claude code cli"): the app ships no copy and downloads none - `electron-builder.yml` `files` excludes the SDK's platform packages (one ~300 MB binary each), `tests/release-contract.test.ts` pins the exclusion and `scripts/verify-app.sh` fails a bundle that carries one.

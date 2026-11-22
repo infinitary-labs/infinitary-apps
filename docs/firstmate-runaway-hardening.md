@@ -72,7 +72,7 @@ Do not revert to "write nothing": the host cannot tell a completed empty turn fr
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Failure visibility (captain fixes 2026-08-22, scout report fm3000-devmode-auth-message-s1): Pi RESOLVES a provider-failed turn (assistant `stopReason: "error"`) instead of throwing, so `piEvents.ts` maps it to the `turn_failed` FmEvent - the first mate routes it to the error/sign-in card, the supervisor reports it instead of "(no report)" and keeps the crewmate steerable, and `src/shared/feed.ts` gives it a feed line.
   Never remove that event or a failed turn goes silent again.

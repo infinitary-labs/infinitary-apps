@@ -125,3 +125,12 @@ An approved exception is recorded here with its decision.
 
 - **Keeping several computers on one phone (INF-5264's plan, INF-5265).**
   The captain chose "The phone only, recorded as an approved exception to that rule": the phone keeps every computer it joined and switches between them, which the desktop app does not do, because a person's computers behind separate VPNs cannot see each other and one phone is the device that travels between them (`docs/ios.md`, "Several computers").
+
+## VoiceOver and accessibility on the iOS app wait for the captain (captain)
+
+VoiceOver and accessibility work on the Infinitary iOS app is out of scope for now.
+Agents do not file, start or reopen this work until the captain asks for accessibility improvement.
+
+## The center crew animation stays the same across platforms (captain)
+
+Any change to the center crew animation updates the desktop app and the iOS app the same way, in the same change.

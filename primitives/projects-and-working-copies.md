@@ -80,7 +80,7 @@ The app never runs `gh` or reads another program's sign-in; forge work goes thro
 When the captain's own words ask a crewmate to run a program, that rule is in the crewmate prompt, not a reason to refuse.
 Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.
 It is a captain KEEP call (`docs/architecture.md` §4; the 2026-08-14 architecture review): a crewmate's stock tools, `bash` included, run with its worktree as `cwd` and can leave it, and crewmates are not to be over-rigidified.
-The first mate's steer-only turns, the other half of that call, stay with the model sessions foundation in `AGENTS.md`.
+The first mate's steer-only turns, the other half of that call, stay with the model sessions foundation (`docs/architecture.md` §2, "The first mate's turns are steer-only").
 
 ## Compositions
 

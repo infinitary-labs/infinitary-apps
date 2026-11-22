@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "agents-md-trim",
+      "reason": "This change shortens the project's instructions for its agents, lists every documentation page in one index and adds a size check for the instructions; it does not change the app."
+    }
+  ]
+}

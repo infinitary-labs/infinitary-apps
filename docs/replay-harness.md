@@ -330,7 +330,7 @@ An effect-free closing choice on a first mate card is the captain's own words, n
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The interaction eval gate (interaction-system P3, WI-19/20/21; `docs/replay-harness.md`): `pnpm replay:gate` replays the captain sessions under `tests/fixtures/replay/` (userData-shaped; `sep14`/`sep04` are reconstructions the F1-F9 mode tests assert on, `fleet-mixed` and `fleet-captain-only` independently authored recordings beside them, gated like the rest) through the REAL FirstmateAgent and CrewSupervisor with only the models recorded, scores `scripts/interaction-metrics.ts` (the one home of the section-4 numbers, Sep 14 values and targets), and fails on any regression from `tests/fixtures/replay/baseline.json`; it is a step of `verify.yml`'s mac lane (every alpha, and on demand), never per PR since captain decision B (2026-09-15), so a PR touching the prompt, card lint, the whose-turn sort, routing, the first mate agent, or `src/renderer/src/cards/` runs `pnpm replay:gate` locally before pushing.
   The baseline changes only in a PR that explains every moved number.

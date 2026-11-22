@@ -22,7 +22,7 @@ This project adds five rulings of the captain, which win over that default:
 
 Before merge, prove the change with the smallest relevant checks, counted once for the current version and required platform (INF-2259's accepted hybrid process).
 Opening a pull request may start that proof; there is no duplicate complete local pre-push gate when CI owns it.
-The PR's Linux check owns typecheck, lint, adherence and build.
+The PR's Linux check owns typecheck, lint and build; the adherence lint runs in `pnpm check:changed` before each push, never on a pull request.
 A small local diagnostic run is allowed, not an additional mandatory gate.
 Passing checks never grants merge permission.
 
@@ -64,6 +64,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
+  An edited file on that list keeps its three rounds on the Mac.
   A developer without a Mac cannot count skipped native cases as proof.
 - Edited phone parts retain three runs on the iPhone and one on the iPad (INF-2732, the captain: "run each edited phone part three times on the iPhone and once on the iPad"), the iPad's only for a part about the iPad, and one on the iPhone Duo for a part about the Duo (`docs/ios.md`, "Which parts run on which device").
   An affected request gives ordinary coverage once and only its distance-zero parts twice more, on the iPhone alone, in the same CI gate, whether it selects every part or a proper subset (INF-2811: a computer in CI mode cannot run a local phone check), so no local phone repeat or second request is needed.
@@ -317,9 +318,9 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
-- The branch check's Linux `code-checks` and `build` jobs own typecheck, lint/adherence and build; do not duplicate them as a complete local pre-push gate.
+- The branch check's Linux `code-checks` and `build` jobs own typecheck, lint and build; the adherence lint runs in `pnpm check:changed` before each push and in `code-checks` only on request; do not duplicate them as a complete local pre-push gate.
   It also runs, once, each edited Vitest file and the unedited unit, integration and browser tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated`, `integration` and `browser` cohorts (INF-2441, INF-2478, INF-2999, INF-3690's gap 3).
   An edited Mac-listed file runs there too, since Linux runs its portable cases in the merge batch and main's full check.
   It lists apart, with the run that owns each, an unedited Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and, when the change touches the renderer or its browser tests, a browser test (the browser step, which then runs every browser file).
@@ -650,6 +651,24 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
   An Automation rule on GitHub's "A workflow run fails", filtered to workflow `prompt-budget` on branch `main`, files and starts one trim task unless one is already open.
   The trim brings every reading back at or under its budget, with no rule lost from the tests' ledgers; how far under is the trimming crewmate's judgment.
   It changes served text, so it asks before it merges.
+
+## The size check on AGENTS.md
+
+`AGENTS.md` is read by every agent session in this project, so it holds only the captain's principles, pointers to ground truth and the rules no check stops; its own "Maintaining this file" says what belongs.
+Its length has two lines, the captain's picks, built as the prompt budget's two are.
+`scripts/agent-memory.ts` owns both lines and counts words as `wc -w` does.
+
+- **The ceiling, 1,500 words.**
+  `pnpm check` runs `node scripts/agent-memory.ts`, which refuses an `AGENTS.md` over `AGENTS_WORD_CEILING` words, so every check that merges or releases holds it.
+  The same run refuses a path the file names in backticks that does not exist, a quoted section heading after a path that the page does not have, a page under `docs/` that `docs/README.md` does not list, and a listed page that is gone.
+- **The warning line, 1,200 words.**
+  `node scripts/agent-memory.ts --warn` fails past `AGENTS_WARNING_WORD_LIMIT` words.
+  `agent-memory.yml` runs it on each push to main that changes `AGENTS.md`, the script or the workflow, and by hand.
+  No pull request starts it, and the batch, main's release check, the alpha and every release never read it; `tests/agent-memory-workflow.test.ts` holds that.
+- **The trim task.**
+  An Automation rule on GitHub's "A workflow run fails", filtered to workflow `agent-memory` on branch `main`, files and starts one trim task unless one is already open.
+  The trim brings the file back to 1,200 words or under with no rule lost, by moving detail to the page that owns it.
+  It is a documentation change, so it asks before it merges.
 
 ## Main's desktop release check
 
@@ -1430,6 +1449,8 @@ Pictures and a surface reproduction still show whether a visible fix meets the c
 ## Capturing pictures of a change
 
 A change a person can see gets pictures of each changed view before the first edit and after the change (`docs/delivery-rigor.md`, `docs/card-authoring.md`).
+A view that shows only under a condition, or only after a script reveals it, still counts as a changed view.
+The merge card's Before and After show as many pictures as the change needs.
 This project's recipe uses `regionShot` in `tests/e2e/pictures.ts`:
 
 1. Build once per state: `pnpm build` before the first edit (the unchanged app), and again after the change.

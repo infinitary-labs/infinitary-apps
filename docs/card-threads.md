@@ -408,7 +408,7 @@ Cancellation and terminal session failure retire the task's open cards through `
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
   Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.

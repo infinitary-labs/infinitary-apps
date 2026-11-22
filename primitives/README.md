@@ -45,7 +45,7 @@ Lessons, a mail integration, a guided way of working and a particular panel are 
 ## Execution foundations
 
 Four lower-level contracts carry every primitive above.
-They have no page here; their manuals and the rules in [`AGENTS.md`](../AGENTS.md) own them.
+They have no page here; the manuals linked beside each own them.
 
 - Model sessions: every agent role runs through one backend-neutral session contract ([`docs/architecture.md`](../docs/architecture.md) §2, [`docs/orchestrator-contract.md`](../docs/orchestrator-contract.md)).
 - Accounts and allowance: model access and honest availability without exposing credentials ([`docs/quota.md`](../docs/quota.md), [`docs/architecture.md`](../docs/architecture.md) §16).

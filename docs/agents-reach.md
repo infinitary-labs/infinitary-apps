@@ -9,7 +9,7 @@ The nets are rules we wrote too, so they stay few and typed, and an explained mo
 
 ## The limits ledger
 
-`scripts/limits.ts` holds every named limit in the host's code: a `const` declared at the start of a line in `src/core`, `src/shared`, `src/main` or `src/preload`, outside the tests, and the phone check's command deadlines in `scripts/phone-deadlines.ts`, whose name has a limit word (`MAX`, `MIN`, `CAP`, `LIMIT`, `LIMITS`, `BUDGET`, `CEILING`, `FLOOR`) between its underscores.
+`scripts/limits.ts` holds every named limit in the host's code: a `const` declared at the start of a line in `src/core`, `src/shared`, `src/main` or `src/preload`, outside the tests, the phone check's command deadlines in `scripts/phone-deadlines.ts` and the two lines of the size check on `AGENTS.md` in `scripts/agent-memory.ts`, whose name has a limit word (`MAX`, `MIN`, `CAP`, `LIMIT`, `LIMITS`, `BUDGET`, `CEILING`, `FLOOR`) between its underscores.
 Each is in one of two lists, with its way out: what an agent or a person does when work meets it, as the code works today.
 
 - `LIMITS` holds a limit that rests on a fact the app holds (`record`, which includes a product rule the captain chose and a document records), a fact outside the app (`outside fact`: a platform, a protocol, a file format, a provider), the person's consent (`consent`), or a physical limit of the process or the machine (`physical limit`: memory, disk, a message's size, the context window, screen room, a wait on something that may never answer).

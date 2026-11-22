@@ -55,6 +55,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | session, session file, transcript, JSONL | the conversation; a crewmate's "notes" |
 | SHA, hash, head, in the sentence | the version; "at the latest version", "the checks failed on 3 versions" (the SHA itself stays in mono where it is the thing) |
 | supervisor, orchestrator, harness, backend, transport, runtime, placement | never named; the app "sends", "checks", "runs" |
+| memory, preference, sequence, step, telemetry, analytics, Umami, for the app's own machinery | never named; say what the app keeps or does in the person's words |
 | posture, delivery posture, direct-pr, local-only | how it is delivered: "as a pull request", "merged locally, no pull request" (pill "local merge"), "built in place". The record label is "Delivery" |
 | rigor, tier, quick / standard / reviewed (internal values) | the setting is "Rigor" ("Careful rigor" after a level, never "care"), with the labels "Quick", "Default", "Careful"; the reviewer's pass is "review" |
 | autonomy | "Merges on its own" / "Asks first"; the switch is "Ask before merging" |

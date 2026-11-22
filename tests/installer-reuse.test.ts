@@ -185,7 +185,6 @@ for version in versions.values():
     files["Infinitary-" + version + "-universal.zip"] = buffer.getvalue()
 for version in [versions["alphaBefore"], versions["promotedStable"]]:
     files["Infinitary-" + version + "-mac-universal.dmg"] = pathlib.Path(content).read_bytes()
-files["invalid-signature.zip"] = files["Infinitary-" + versions["alphaAfter"] + "-universal.zip"]
 digests = {name: {"size": len(data), "sha256": hashlib.sha256(data).hexdigest(), "sha512": __import__("base64").b64encode(hashlib.sha512(data).digest()).decode()} for name, data in files.items()}
 if mode == "changed-file":
     files["Infinitary-" + versions["alphaBefore"] + "-universal.zip"] += b"changed bytes"

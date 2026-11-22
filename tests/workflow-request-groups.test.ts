@@ -338,7 +338,6 @@ describe("verify.yml's request group", () => {
     profile: "stable",
     installer_only: false,
     installer_reuse: "",
-    installer_chip: "both",
     perf: false,
     all_journeys: false,
     ref,

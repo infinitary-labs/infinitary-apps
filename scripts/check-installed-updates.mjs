@@ -13,6 +13,7 @@ import { installerHomebrewEnvironment, prepareInstallerHomebrew } from "./instal
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
 import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { removeScratchHome } from "./installer-app.ts";
+import { makeTamperedCopy } from "./installer-tampered-copy.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
@@ -32,6 +33,9 @@ mkdirSync(evidence, { recursive: true });
 const versions = JSON.parse(readFileSync(join(fixtures, "versions.json"), "utf8"));
 const source = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
 const ownership = JSON.parse(readFileSync("packaging/mac-installation.json", "utf8"));
+// The byte-tampered copy the "signature" download serves is made here, not uploaded.
+checkpoint("Making the byte-tampered copy from the next alpha's verified zip");
+await makeTamperedCopy(fixtures, versions.alphaAfter, work);
 const { env: appEnv, launch: launchValues } = installerAppEnvironment(home, process.env);
 assert.notEqual(spawnSync("/usr/bin/which", ["brew"], { env: appEnv }).status, 0);
 function run(command, args, options = {}) {

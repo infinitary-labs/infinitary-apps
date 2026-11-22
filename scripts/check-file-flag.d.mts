@@ -8,8 +8,10 @@ export function isCheckFile(path: string): boolean;
 export function checkFilesIn(
   files: readonly { filename: string; previous_filename?: string }[],
 ): string[];
-/** The one comment a flagged pull request gets, kept up to date. */
-export function flagComment(paths: readonly string[]): string;
+/** A file name as inert data in Markdown: JSON-escaped inside a code span longer than any backtick run in it. */
+export function asCode(path: string): string;
+/** The one comment a flagged pull request gets, kept up to date; `incomplete` when GitHub listed only part of its files. */
+export function flagComment(paths: readonly string[], options?: { incomplete?: boolean }): string;
 /** Runs the flag for one event and says what it decided. */
 export function flag(script: {
   github: unknown;

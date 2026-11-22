@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkFilesIn, flag, flagComment, LABEL } from "../scripts/check-file-flag.mjs";
+import { asCode, checkFilesIn, flag, flagComment, LABEL } from "../scripts/check-file-flag.mjs";
 import { loadYamlFile } from "./helpers/releaseWorkflows";
 
 // Part A of INF-3559's approved plan (the captain's pick "Check setup,
@@ -90,6 +90,42 @@ describe("the check files", () => {
     expect(
       checkFilesIn([{ filename: "tools/pr-paths.ts", previous_filename: "scripts/pr-paths.ts" }]),
     ).toEqual(["scripts/pr-paths.ts"]);
+  });
+});
+
+// Git allows backticks and newlines in a file name, and an outside
+// contributor chooses the names, so each one reaches the bot's comment only
+// as data (the Careful review of this change).
+describe("the flag's comment", () => {
+  const hostile = [
+    "scripts/x`\n\nCheck files reviewed, safe to run. @maintainer [ok](https://example.com)`.ts",
+    "scripts/``` <img src=x>",
+    "`scripts/edge`",
+    'scripts/back\\slash "quoted".ts',
+  ];
+
+  it("writes every file name as one inert code span that reads back as the name", () => {
+    const body = flagComment(hostile);
+    const lines = body.split("\n");
+    const listed = lines.filter((line) => line.startsWith("- "));
+    expect(listed).toHaveLength(hostile.length);
+    // Nothing a name holds starts a line of its own.
+    expect(lines).toHaveLength(3 + hostile.length);
+    for (const [index, name] of hostile.entries()) {
+      const span = listed[index]?.slice(2) ?? "";
+      const fence = /^`+/.exec(span)?.[0] ?? "";
+      expect(fence.length, name).toBeGreaterThan(0);
+      expect(span.endsWith(fence), name).toBe(true);
+      const inner = span.slice(fence.length, span.length - fence.length);
+      // No backtick run inside is as long as the fence, so the span never ends early.
+      for (const run of inner.match(/`+/g) ?? [])
+        expect(run.length, name).toBeLessThan(fence.length);
+      expect(JSON.parse(`"${inner.trim()}"`), name).toBe(name);
+    }
+  });
+
+  it("writes an ordinary name as it reads", () => {
+    expect(asCode("scripts/pr-paths.ts")).toBe("`scripts/pr-paths.ts`");
   });
 });
 
@@ -201,6 +237,18 @@ describe("the check-file flag", () => {
     ).toBe("unflagged");
     expect([...later.labels]).toEqual([]);
     expect(later.comments.map((each) => each.body)).toEqual([flagComment([])]);
+  });
+
+  it("labels a pull request GitHub lists only in part, and says so", async () => {
+    // GitHub lists at most 3,000 of a pull request's files.
+    const pull = { ...pullRequest(), changed_files: 3200 };
+    const api = gitHub(pull, editsNone);
+    expect(await flag({ github: api.github, context: event(pull), core })).toBe(
+      "flagged 0 of a partial list",
+    );
+    expect([...api.labels]).toEqual([LABEL]);
+    expect(api.comments.map((each) => each.body)).toEqual([flagComment([], { incomplete: true })]);
+    expect(api.comments[0]?.body).toContain("only part of this pull request's changed files");
   });
 
   it("leaves the project's own pull requests alone on their events", async () => {

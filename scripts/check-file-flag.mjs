@@ -57,9 +57,26 @@ export function checkFilesIn(files) {
   return [...new Set(paths.filter(isCheckFile))].toSorted();
 }
 
-/** The one comment a flagged pull request gets, kept up to date. */
-export function flagComment(paths) {
-  if (paths.length === 0)
+/**
+ * A file name as inert data in Markdown: control characters, quotes and
+ * backslashes escaped as JSON escapes them, inside a code span fenced with
+ * more backticks than any run in the name, so a contributor's name never
+ * adds text, links or mentions to the comment.
+ */
+export function asCode(path) {
+  const text = JSON.stringify(String(path)).slice(1, -1);
+  const fence = "`".repeat(Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length)) + 1);
+  const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+  return `${fence}${pad}${text}${pad}${fence}`;
+}
+
+/**
+ * The one comment a flagged pull request gets, kept up to date. `incomplete`
+ * says GitHub listed fewer of its changed files than it has, so files it
+ * did not list may be check files too.
+ */
+export function flagComment(paths, { incomplete = false } = {}) {
+  if (paths.length === 0 && !incomplete)
     return [
       MARK,
       `The newest version of this pull request edits no check files, so the \`${LABEL}\` label is removed.`,
@@ -68,7 +85,13 @@ export function flagComment(paths) {
     MARK,
     `This pull request edits files that decide which checks run, where they run, or what installs, so it is labeled \`${LABEL}\`. A maintainer reads these changes before approving any run of its checks:`,
     "",
-    ...paths.map((path) => `- \`${path}\``),
+    ...paths.map((path) => `- ${asCode(path)}`),
+    ...(incomplete
+      ? [
+          "",
+          "GitHub lists only part of this pull request's changed files, so the files it did not list may edit checks too.",
+        ]
+      : []),
   ].join("\n");
 }
 
@@ -91,14 +114,15 @@ export async function flag({ github, context, core, pullNumber }) {
     : context.payload.pull_request;
   if (!byHand && pull.head.repo?.full_name === project) return "own branch";
 
-  const paths = checkFilesIn(
-    await github.paginate(github.rest.pulls.listFiles, {
-      owner,
-      repo,
-      pull_number: number,
-      per_page: 100,
-    }),
-  );
+  const files = await github.paginate(github.rest.pulls.listFiles, {
+    owner,
+    repo,
+    pull_number: number,
+    per_page: 100,
+  });
+  const paths = checkFilesIn(files);
+  // GitHub lists at most 3,000 of a pull request's files; an unread rest may hold check files.
+  const incomplete = files.length < (pull.changed_files ?? 0);
   const labeled = (pull.labels ?? []).some((label) => label.name === LABEL);
   const comment = (
     await github.paginate(github.rest.issues.listComments, {
@@ -115,13 +139,14 @@ export async function flag({ github, context, core, pullNumber }) {
     else await github.rest.issues.createComment({ owner, repo, issue_number: number, body });
   };
 
-  if (paths.length > 0) {
+  if (paths.length > 0 || incomplete) {
     if (!labeled)
       await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [LABEL] });
-    await write(flagComment(paths));
-    core.summary.addRaw(`#${number} edits check files:\n\n${paths.map((p) => `- ${p}`).join("\n")}\n`);
+    const body = flagComment(paths, { incomplete });
+    await write(body);
+    core.summary.addRaw(`#${number}:\n\n${body.slice(MARK.length + 1)}\n`);
     await core.summary.write();
-    return `flagged ${paths.length}`;
+    return incomplete ? `flagged ${paths.length} of a partial list` : `flagged ${paths.length}`;
   }
   if (labeled) {
     await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: LABEL });

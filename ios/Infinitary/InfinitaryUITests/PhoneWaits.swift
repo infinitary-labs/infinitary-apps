@@ -177,7 +177,7 @@ enum PhoneShownLayout: Equatable {
 /// One sampler owns native target frames and their on-screen pixels, including the photo recovery observation.
 @MainActor func readPhoneTarget(_ element: XCUIElement, window: XCUIElement? = nil) -> PhoneTargetReading? {
     // The screen's bounds are read again because a turn moves them.
-    let screen = window?.frame ?? XCUIApplication().frame
+    let screen = window?.frame ?? phoneAppInFront().frame
     return (try? element.snapshot()).flatMap { snapshot in
         // A target off the screen draws nothing there yet; XCTest scrolls it into view as it taps.
         guard snapshot.frame.intersects(screen) else { return PhoneTargetReading(frame: snapshot.frame, drawn: nil) }
@@ -187,6 +187,15 @@ enum PhoneShownLayout: Equatable {
                                             scale: UIScreen.main.scale, native: { element.screenshot().pngRepresentation }) else { return nil }
         return PhoneTargetReading(frame: snapshot.frame, drawn: drawn)
     }
+}
+
+/// INF-6067: the app whose frame bounds the screen: the app under test while it is in front, SpringBoard while it is
+/// away. Away, the app draws nothing on the screen and a target there is SpringBoard's, such as a notification. Reading
+/// the app away also read its card body's web process as WebKit suspended it, and XCTest waited about 40 seconds on
+/// each read until the notification had left. Its state is the process's, read without its tree.
+@MainActor private func phoneAppInFront() -> XCUIApplication {
+    let tested = XCUIApplication()
+    return tested.state == .runningForeground ? tested : XCUIApplication(bundleIdentifier: "com.apple.springboard")
 }
 
 /// Reads a load-clock tick apart until the target holds still (`PhoneSteadyTarget`) and `settled` accepts it.

@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { GUARD_SIGN_IN_HOST } from "@core/browser/connectionGuard";
+import { originKey } from "@core/browser/destinations";
 import {
   FORM_RESEND,
   type HostBrowserCookies,
@@ -126,17 +127,18 @@ const WEB_NAVIGATION = /^https?:/i;
  * requests to a server on this computer its top-level move reached go
  * through, and no other's. A new document can ask for its parts before the
  * browser records its address, while its frame still reads the page before
- * it or nothing, so a request whose referrer is a document at the very
- * origin it asks counts as that document's; a page cannot name another
- * site as its referrer.
+ * it or nothing, so a request the browser says a document at the very
+ * origin it asks started (its initiator, which no page sets and no referrer
+ * policy hides) counts as that document's.
  */
 function topPageOf(details: {
   url: string;
-  referrer?: string;
+  initiatorOrigin?: string;
   frame?: Electron.WebFrameMain | null;
 }): { page?: string } {
-  if (details.referrer && sameOrigin(details.referrer, details.url))
-    return { page: details.referrer };
+  if (details.initiatorOrigin && sameOriginKey(details.initiatorOrigin, details.url)) {
+    return { page: details.initiatorOrigin };
+  }
   try {
     const page = details.frame?.top?.url;
     return page ? { page } : {};
@@ -146,10 +148,11 @@ function topPageOf(details: {
   }
 }
 
-function sameOrigin(one: string, other: string): boolean {
+function sameOriginKey(origin: string, url: string): boolean {
   try {
-    return new URL(one).origin === new URL(other).origin;
+    return originKey(new URL(origin)) === originKey(new URL(url));
   } catch {
+    // An opaque initiator ("null") names no origin.
     return false;
   }
 }

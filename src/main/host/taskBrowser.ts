@@ -122,17 +122,35 @@ let signInsAnswered = false;
 const WEB_NAVIGATION = /^https?:/i;
 
 /**
- * The address of the top-level document a request came from, when Electron
- * still knows its frame: a page's own requests to a server on this computer
- * its top-level move reached go through, and no other's.
+ * The address of the top-level document a request came from: a page's own
+ * requests to a server on this computer its top-level move reached go
+ * through, and no other's. A new document can ask for its parts before the
+ * browser records its address, while its frame still reads the page before
+ * it or nothing, so a request whose referrer is a document at the very
+ * origin it asks counts as that document's; a page cannot name another
+ * site as its referrer.
  */
-function topPageOf(details: { frame?: Electron.WebFrameMain | null }): { page?: string } {
+function topPageOf(details: {
+  url: string;
+  referrer?: string;
+  frame?: Electron.WebFrameMain | null;
+}): { page?: string } {
+  if (details.referrer && sameOrigin(details.referrer, details.url))
+    return { page: details.referrer };
   try {
     const page = details.frame?.top?.url;
     return page ? { page } : {};
   } catch {
     // A frame that went away mid-request has no address to read.
     return {};
+  }
+}
+
+function sameOrigin(one: string, other: string): boolean {
+  try {
+    return new URL(one).origin === new URL(other).origin;
+  } catch {
+    return false;
   }
 }
 

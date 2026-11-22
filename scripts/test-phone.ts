@@ -24,6 +24,7 @@ import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { buildPhoneHinge, type PhoneHinge, type PhoneKey, type PhoneTurn, pressPhoneKey, setPhoneHinge, turnPhone } from "./phone-hinge.ts";
 import { phoneRecording } from "./phone-recording.ts";
+import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from "./phone-build.ts";
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { PHONE_BOOT_BUDGET_MS, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
@@ -78,6 +79,9 @@ const { values } = parseArgs({ options: {
   // run exactly as listed; and whether this job leaves the package tests to the request's first job.
   plan: { type: "string" },
   "skip-package-tests": { type: "boolean", default: false },
+  // INF-6039's plan, part 1: the folder a dealt job's check shares its first job's build in (scripts/phone-build.ts);
+  // the gate uses that build only when it was made from this version with this Xcode, SDK and chip, and builds otherwise.
+  "shared-build": { type: "string" },
   // INF-4326: one part on the Mac itself (PHONE_PARTS' `mac`), with the package build the gate's package tests made.
   mac: { type: "boolean", default: false },
   "swift-build": { type: "string" },
@@ -109,6 +113,7 @@ if (values.plan && (values.part || values["iphone-part"] || values["repeat-part"
   || values["every-device"] || values.both || values.ipad || values.xctestrun || values.mac || values.waits || values.tools))
   throw new Error("--plan names the job's passes itself, so it takes no parts, devices or selection");
 if (values["skip-package-tests"] && !values.plan) throw new Error("--skip-package-tests belongs to a dealt job's --plan");
+if (values["shared-build"] && (values.xctestrun || values.mac)) throw new Error("--shared-build belongs to the gate, not one part");
 // A part the gate started, on its device's simulator or on the Mac.
 const onePartOnly = !!(values.xctestrun || values.mac);
 const repeatTests: Record<string, string[]> = JSON.parse(values["repeat-tests"] || "{}");
@@ -413,8 +418,6 @@ const recording = {
 };
 let faceInView: { stop(): Promise<void> } | undefined;
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
-const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
-  "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
 // INF-2125 piece 3: the Swift packages' fetched repositories, which the package tests and Xcode share. CI keeps
 // them outside the gate's scratch folder, restored from the nightly check of main; otherwise they stay in it.
 // A part on the Mac reads the cache beside the gate's package build.
@@ -515,27 +518,35 @@ let hingeHelper: Promise<string> | undefined;
 // simulator it starts once and each part as its own gate from that build with its own test home, at most
 // --simulators lanes at once (INF-4241 piece 3).
 const everyPart = async () => {
-  phoneXcode(await run("xcodebuild", ["-version"]));
+  const xcode = await run("xcodebuild", ["-version"]);
+  phoneXcode(xcode);
   // INF-2125 piece 3: the simulators the first lanes use start while Xcode builds, so their first parts
   // begin as the build ends; a lane past --simulators starts its own when a place frees.
   const starting = new Map(lanePlan.lanes.slice(0, simulators)
     .map(({ device, number }) => [`${device} ${number}`, startSimulator(device)] as const));
   // A start that fails is heard by its lane's open, and every start settles before the gate's cleanup.
   for (const started of starting.values()) started.catch(() => {});
-  try { await everyPartOn(starting); }
+  try { await everyPartOn(starting, xcode); }
   finally { await Promise.allSettled(starting.values()); }
 };
-const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
+const everyPartOn = async (starting: Map<string, Promise<Lane>>, xcode: string) => {
   // INF-4241 piece 8: the hinge helper builds beside the app when a Duo part runs; its failure fails the Duo's parts.
   if (jobs.some((job) => job.device === "duo")) {
     hingeHelper = buildPhoneHinge(run, root);
     hingeHelper.catch(() => {});
   }
-  const building = Date.now();
-  await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator", "-derivedDataPath", join(root, "DerivedData"),
-    "-packageCachePath", packageCache, `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
-  console.log(`Built the app for testing in ${((Date.now() - building) / 60_000).toFixed(1)} minutes`);
   const products = join(root, "DerivedData", "Build", "Products");
+  // INF-6039's plan, part 1: the build this check's first job shared stands in for this job's own only when it was made
+  // from this very version with this Xcode, SDK and chip; anything else, and the gate builds as it always has.
+  const shared = values["shared-build"]
+    ? await useSharedPhoneBuild(values["shared-build"], products, await readPhoneBuildIdentity(run, xcode), run) : undefined;
+  if (shared && "plan" in shared) console.log(`Using the build this check's first job shared, of this version; not building the app here`);
+  else {
+    if (shared) console.log(`::notice::Not using a shared build: ${shared.refusal}. Building the app here.`);
+    const building = Date.now();
+    await run("xcodebuild", phoneBuildArguments(join(root, "DerivedData"), packageCache));
+    console.log(`Built the app for testing in ${((Date.now() - building) / 60_000).toFixed(1)} minutes`);
+  }
   const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
   const [plan] = plans;
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);

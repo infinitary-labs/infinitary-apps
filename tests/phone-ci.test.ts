@@ -80,7 +80,7 @@ type Step = {
   "timeout-minutes"?: number;
   env?: Record<string, string>;
 };
-type Plain = { [key: string]: string | boolean | Plain | readonly unknown[] };
+type Plain = { [key: string]: string | number | boolean | Plain | readonly unknown[] };
 const STATUS = ["success", "always", "cancelled", "failure"];
 
 function toData(value: Plain): data.Dictionary {
@@ -147,6 +147,7 @@ function stepsThatRun(
   github: Plain = BRANCH_REQUEST,
   outputs: Record<string, Plain> = {},
   matrix: Plain = { device: "iphone", key: "iphone" },
+  strategy: Plain = { "job-total": 1 },
 ): Step[] {
   const seen: Plain = {};
   const ran: Step[] = [];
@@ -161,6 +162,7 @@ function stepsThatRun(
         inputs,
         github,
         matrix,
+        strategy,
       },
       { failed },
     );
@@ -178,6 +180,11 @@ function stepsThatRun(
 const RESULTS = "Keep native results and connection readings";
 const SAVE_PACKAGES = "Save the Swift packages from main";
 const KEEP_PASSES = "Keep the passes for a rerun of this job";
+// INF-6039's plan, part 1: a dealt request's first job builds and shares, its other jobs fetch; a call runs none of them.
+const BUILD_ONCE = "Build the app once for this check's jobs";
+const SHARE_BUILD = "Share the build with this check's other jobs";
+const FETCH_BUILD = "Fetch the build this check's first job shared";
+const SHARED_BUILD_STEPS = [BUILD_ONCE, SHARE_BUILD, FETCH_BUILD];
 // The steps a plain branch request skips: none since INF-2582, whose edited-part passes ride the
 // ordinary gate and its evidence.
 const SKIPPED_STEPS: string[] = [];
@@ -418,13 +425,15 @@ describe("the native gate on an affected request", () => {
   // keeps 165 minutes for the ordinary pass and 90 more for each further pass.
   // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, a dealt job is stopped at 25 minutes
   // and its gate at 21; a call, which runs no further pass, keeps its gate's 90 and its job's limit.
+  // INF-6039's plan, part 1, and the captain's answer on its review ("Give the first job 12 more minutes, the build
+  // step's own limit"): job 1 of a check of several jobs builds and uploads before its gate, so its job keeps 37.
   it("caps a call's gate at ninety minutes and a dealt job's gate at 21, each within its job's limit", () => {
-    const limits = (matrix: Plain) => {
-      const contexts = { matrix };
+    const limits = (matrix: Plain, strategy: Plain = { "job-total": 1 }) => {
+      const contexts = { matrix, strategy };
       return [
         workflowValue(
           String(
-            stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix).find(isGate)?.[
+            stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix, strategy).find(isGate)?.[
               "timeout-minutes"
             ],
           ),
@@ -438,7 +447,17 @@ describe("the native gate on an affected request", () => {
     for (const device of ["every", "ipad", "duo", "iphone"])
       expect(limits({ device, key: device })).toEqual([90, 165 + 90 * 2]);
     // The gate stops first, so an over-long one fails its job, which still keeps its results.
-    for (const job of FULL_JOBS) expect(limits(job)).toEqual([21, 25]);
+    expect(FULL_JOBS.length).toBeGreaterThan(1);
+    const build = workflow.jobs[NATIVE_JOB].steps.find((step: { run?: string }) =>
+      /scripts\/phone-build\.ts/.test(step.run ?? ""),
+    );
+    for (const job of FULL_JOBS)
+      expect(limits(job, { "job-total": FULL_JOBS.length })).toEqual([
+        21,
+        job.key === "job-1" ? 25 + build["timeout-minutes"] : 25,
+      ]);
+    // A check dealt into one job builds in its gate, so its job keeps 25.
+    expect(limits({ ...FULL_JOBS[0], key: "job-1" })).toEqual([21, 25]);
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone
@@ -500,6 +519,7 @@ describe("the native gate on an affected request", () => {
             name !== SAVE_PACKAGES &&
             name !== KEEP_PASSES &&
             name !== "Restore the passes of this run's earlier attempts" &&
+            !SHARED_BUILD_STEPS.includes(name) &&
             !SKIPPED_STEPS.includes(name),
         ),
       );
@@ -727,6 +747,7 @@ describe("a failing phone check", () => {
           each.uses?.startsWith("actions/upload-artifact") &&
           workflowString(String(each.with?.name ?? ""), {
             inputs: {},
+            github: BRANCH_REQUEST,
             matrix: FULL_JOBS[1]!,
           }) === `${name}-job-2`,
       );
@@ -810,6 +831,52 @@ describe("the phone check on request", () => {
         }),
       ),
     ).toEqual(["every", "ipad", "duo", "iphone"].map((device) => [{ device, key: device }]));
+  });
+  // INF-6039's plan, part 1: only a dealt request's jobs share a build, the first job's, within their own run attempt; the
+  // gate then decides whether it may use it (tests/phone-build.test.ts). A call, the phone release's among them, builds
+  // in its gate as before.
+  it("shares the first job's build with the other jobs of its own run attempt, and only in a dealt request", () => {
+    const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
+    const ran = (matrix: Plain, jobs: number) =>
+      names(stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix, { "job-total": jobs })).filter(
+        (name) => SHARED_BUILD_STEPS.includes(name),
+      );
+    const [first = {}, ...others] = FULL_JOBS;
+    expect(others.length).toBeGreaterThan(0);
+    expect(ran(first, FULL_JOBS.length)).toEqual([BUILD_ONCE, SHARE_BUILD]);
+    for (const job of others) expect(ran(job, FULL_JOBS.length)).toEqual([FETCH_BUILD]);
+    for (const device of ["every", "ipad", "duo", "iphone"])
+      expect(ran({ device, key: device }, 1)).toEqual([]);
+    // A request dealt into one job, as any request within 14 recorded minutes is, shares nothing.
+    const lone = requestJobs(selection(), TIMES);
+    expect(lone).toHaveLength(1);
+    expect(ran(lone[0] ?? {}, 1)).toEqual([]);
+    const sharing = (jobs: number) =>
+      workflowValue(String(steps.find(isGate)?.env?.PHONE_SHARED), {
+        strategy: { "job-total": jobs },
+      });
+    expect([sharing(1), sharing(FULL_JOBS.length)]).toEqual([false, true]);
+    const named = (name: string, field: "name" | "pattern", attempt: string) =>
+      workflowString(String(steps.find((step) => step.name === name)?.with?.[field]), {
+        github: { ...BRANCH_REQUEST, run_attempt: attempt },
+      });
+    for (const attempt of ["1", "2"]) {
+      expect(named(SHARE_BUILD, "name", attempt)).toBe(`phone-build-${attempt}`);
+      expect(named(FETCH_BUILD, "pattern", attempt)).toBe(`phone-build-${attempt}`);
+    }
+    // Sharing is a saving only: a failed upload or download never fails the check.
+    for (const name of [SHARE_BUILD, FETCH_BUILD])
+      expect(steps.find((step) => step.name === name)).toHaveProperty("continue-on-error", true);
+    // The dealt gate reads the folder both steps use.
+    const folder = (name: string) =>
+      String(
+        steps.find((step) => step.name === name)?.with?.path ??
+          steps.find((step) => step.name === name)?.run,
+      );
+    for (const name of [SHARE_BUILD, FETCH_BUILD])
+      expect(folder(name)).toBe("${{ runner.temp }}/phone-build");
+    expect(folder(BUILD_ONCE)).toContain('--out "$RUNNER_TEMP/phone-build"');
+    expect(steps.find(isGate)?.run).toContain('shared=(--shared-build "$RUNNER_TEMP/phone-build")');
   });
 });
 

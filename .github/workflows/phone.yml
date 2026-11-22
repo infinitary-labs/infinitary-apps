@@ -35,7 +35,7 @@ name: phone
 # INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
 # chooser builds the passes its device jobs ran and deals them into jobs of at most 14 recorded minutes, each device
 # past a job's first counted as 2 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546), one phone Mac each, side
-# by side, each stopped at 25 minutes.
+# by side, each stopped at 25 minutes, the first of several at 37, since it builds and shares the app first (INF-6039).
 # The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
 on:
   workflow_call:
@@ -234,10 +234,12 @@ jobs:
       cancel-in-progress: false
     # INF-5387's plan, piece 2, and INF-5546: a dealt job of at most 14 recorded minutes, a later device's start
     # included, ends its gate near 19.5 minutes on a phone Mac with one simulator and sooner on one with two, and setup
-    # and evidence upload add up to about 3, so it is stopped at 25. A call keeps its limit for setup,
+    # and evidence upload add up to about 3, so it is stopped at 25. INF-6039's plan, part 1: in a check of several jobs,
+    # job 1 builds the app (2.4 to 3.8 minutes measured, stopped at 12) and uploads it before its gate, whose own build
+    # it then skips, so job 1 gets the build step's 12 minutes more, 37, and its gate's 21 still ends inside it. A call keeps its limit for setup,
     # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
     # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
-    timeout-minutes: ${{ matrix.passes && 25 || 345 }}
+    timeout-minutes: ${{ matrix.passes && (matrix.key == 'job-1' && strategy.job-total > 1 && 37 || 25) || 345 }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -333,10 +335,42 @@ jobs:
           path: ${{ runner.temp }}/phone-passes
           key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.key, github.run_attempt) }}
           restore-keys: ${{ format('phone-passes-{0}-{1}-', github.run_id, matrix.key) }}
+      # INF-6039's plan, part 1: a dealt request's first job builds the app for testing in a step of its own and shares
+      # it with the check's other jobs before its gate starts; a later job that finds it skips its own build. The gate
+      # uses a shared build only when it was made from this very version, from a checkout with no changes, with the same
+      # Xcode, simulator SDK and chip, and its archive is whole (scripts/phone-build.ts); otherwise it builds, as before.
+      # Sharing is only a saving: a failed upload or download leaves every job to build for itself.
+      # A request dealt into one job shares nothing: its job builds in its gate as before.
+      - name: Build the app once for this check's jobs
+        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' && strategy.job-total > 1 }}
+        timeout-minutes: 12
+        run: node scripts/phone-build.ts --out "$RUNNER_TEMP/phone-build" --evidence "$RUNNER_TEMP/phone"
+        env:
+          INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
+      - name: Share the build with this check's other jobs
+        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' && strategy.job-total > 1 }}
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-build-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phone-build
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 1
+      # A pattern that matches nothing downloads nothing and passes, so a job that starts first builds for itself.
+      - name: Fetch the build this check's first job shared
+        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key != 'job-1' }}
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: phone-build-${{ github.run_attempt }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/phone-build
       - id: both
         name: Read and recover on iPhone and iPad
         # A dealt job's gate is stopped at 21 minutes, inside its job's 25, so an over-long gate fails the job and its
-        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes.
+        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes. Job 1 of a check of several
+        # jobs runs its build and upload steps before its gate, so its job keeps 12 minutes more, 37 (INF-6039's plan, part 1).
         timeout-minutes: ${{ matrix.passes && 21 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
@@ -345,7 +379,8 @@ jobs:
           # only the request's first job runs the phone's Swift package tests.
           if [ -n "$PHONE_PLAN" ]; then
             package=(); [ "$PHONE_FIRST_JOB" = true ] || package=(--skip-package-tests)
-            node scripts/test-phone.ts --plan "$PHONE_PLAN" "${package[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
+            shared=(); [ "$PHONE_SHARED" != true ] || shared=(--shared-build "$RUNNER_TEMP/phone-build")
+            node scripts/test-phone.ts --plan "$PHONE_PLAN" "${package[@]}" "${shared[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
             exit
           fi
           case "$PHONE_DEVICE" in
@@ -358,6 +393,7 @@ jobs:
           PHONE_DEVICE: ${{ matrix.device }}
           PHONE_PLAN: ${{ matrix.passes && toJSON(matrix.passes) || '' }}
           PHONE_FIRST_JOB: ${{ matrix.key == 'job-1' }}
+          PHONE_SHARED: ${{ strategy.job-total > 1 }}
           PHONE_PASSES: ${{ runner.temp }}/phone-passes/passes.json
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_PHONE_TOOLS_ONLY: ${{ inputs.tools && '1' || '0' }}

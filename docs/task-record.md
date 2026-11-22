@@ -231,9 +231,10 @@ The one card and note, and a review, belong to the change by its id; the deliver
 ## Specification delivery and history
 
 `update_task` applies combined edits before `start_now`; a typed graph refusal prevents that start.
-The first mate's `start_now` also waits while its own open decision still asks the captain about the task (INF-6091): a decision kept on the task, or one filed as its own record that names the task in `related` (`src/core/orchestrator/cardHeldStart.ts`).
-It holds only a start not yet made - queued work, or started work in the backlog - and only on a turn that carries none of the captain's words; the captain's choice on that card, their own words, their Start on the task, or the first mate's withdrawal of the card lets it through, and the refusal names the card.
-A decision kept on another task, which names this one only for context, holds nothing, and a start that runs by itself when its wait ends is not the first mate's and is never held.
+The first mate's `start_now` also waits while its own open decision still asks the captain about the task, and so does its `start_policy` when-ready on queued work, which would let the ready sweep start it (INF-6091; the soft hold `card-question`, `docs/delivery-rigor.md` "The holds"; `src/core/orchestrator/cardHeldStart.ts`).
+The decision is one kept on the task, or one filed as its own record that names the task in `related`.
+It holds only a start not yet made - queued work, or started work in the backlog - and only on a turn that carries none of the captain's words; the captain's choice on that card, their own words, their Start on the task, or the first mate's withdrawal of the card lifts it, the refusal names the card, and the first mate then starts the task again.
+A decision kept on another task, which names this one only for context, holds nothing, and work already set to start when ready before the card went up still starts when its wait ends.
 Goal edits atomically update `tasks.goal`, the structured intent and the host-rendered goal in the stored template.
 The captain's verbatim words, constraints, delivery and escalation context are not rewritten.
 Queued intent tasks render from saved intent at dispatch (escalations retain their host-authored context).

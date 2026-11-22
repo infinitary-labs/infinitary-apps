@@ -34,6 +34,13 @@ export type FirstmateTaskToolsHost = {
 export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDelegate {
   const supervisor = host.options.supervisor;
   const tasks = host.options.tasks;
+  /** What the card-question hold reads (./cardHeldStart). */
+  const cardHold = (taskId: string) => ({
+    open: supervisor.cards,
+    tasks,
+    captainWords: host.turn.asked.length > 0,
+    captainPressedStart: supervisor.hostOps.pendingStarts.has(taskId),
+  });
   /**
    * The open parts under a task whose override changed (INF-1939 friction 5):
    * a part does not carry its parent's override, so the captain's words reach
@@ -209,6 +216,15 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             ...(input.repository !== undefined ? { repository: input.repository } : {}),
             ...(input.parent !== undefined ? { parent: input.parent } : {}),
           };
+          // INF-6091 finding 1: when-ready would let the ready sweep start
+          // what the first mate's own open card still asks about.
+          if (input.startPolicy === "when-ready" && record.status !== "active") {
+            const held = cardHeldStartRefusal(record, {
+              ...cardHold(record.id),
+              edit: "when-ready",
+            });
+            if (held) throw new TaskGraphRefusal(held);
+          }
           // A program's bound is the captain's consent (INF-799): raised only on the captain's turn.
           if (input.programBound !== undefined && host.turn.origin !== "captain-turn")
             throw new TaskGraphRefusal(
@@ -529,12 +545,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       const record = resolve(input.task);
       host.asks.attach(record.id, "update_task", true, "tie");
       // INF-6091 finding 1: the first mate's own open card still asks.
-      const held = cardHeldStartRefusal(record, {
-        open: supervisor.cards.values(),
-        tasks,
-        captainWords: host.turn.asked.length > 0,
-        captainPressedStart: supervisor.hostOps.pendingStarts.has(record.id),
-      });
+      const held = cardHeldStartRefusal(record, cardHold(record.id));
       if (held) return held;
       const text = await supervisor.starts.startQueuedNow(record.id);
       // A refusal comes back as text; a start now running behind the

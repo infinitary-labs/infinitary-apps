@@ -609,6 +609,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past its bound | on the captain's words the crewmate that started it raises the bound with `start_program`, or the first mate with `update_task program_bound` |
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
+| `card-question` | soft | consent | the first mate's start of unstarted work, or its when-ready setting, while its own open decision card still asks the captain about that task | the captain answers that card or gives their own words, or the first mate withdraws the card, and the first mate starts the task again |
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `cost-limit` | soft | consent | a task, and everything under it, past its cost limit (docs/usage.md, "The cost limit") | the captain's click on its card, or the override |
 | `model-levels` | soft | record | a task's next conversation while the model it routed to left every level and no model where it runs can take it (docs/routing.md, "A model that left every level") | the captain places a model that can take it on a level, names one for the task, or adds a sign-in that serves one where it runs |
@@ -620,7 +621,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 
 Every refusal ends with its hold's sentence.
 `softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
-A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `model-levels`) names that way instead.
+A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `card-question`, `model-levels`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**

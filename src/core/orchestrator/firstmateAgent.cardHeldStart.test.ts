@@ -63,8 +63,8 @@ describe("FirstmateAgent start held by its own open card", () => {
     (await f.tools.get("update_task")?.execute("start", { task: f.task.key, start_now: true }))
       ?.content[0]?.text;
 
-  it("refuses the start from a wake while the card waits, naming the card", async () => {
-    const f = await cardUp();
+  /** The Nov 21 turn: an operational wake carrying none of the captain's words. */
+  const reportWake = async (f: Awaited<ReturnType<typeof cardUp>>) => {
     notifyProse(
       f.db,
       f.agent,
@@ -73,9 +73,31 @@ describe("FirstmateAgent start held by its own open card", () => {
       "origin",
     );
     await drained(f.session, 2);
+  };
+
+  it("refuses the start from a wake while the card waits, naming the card", async () => {
+    const f = await cardUp();
+    await reportWake(f);
     const text = await startNow(f);
     expect(text).toContain(`Not started: your open card "${decision.title}" (${f.card.id})`);
     expect(f.tasks.get(f.task.id)?.status).toBe("open");
+    expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
+  });
+
+  // The review's finding: when-ready lets the ready sweep start it at once.
+  it("refuses setting it to start when ready from a wake while the card waits", async () => {
+    const f = await cardUp();
+    await reportWake(f);
+    const text = (
+      await f.tools
+        .get("update_task")
+        ?.execute("ready", { task: f.task.key, start_policy: "when-ready", blocked_by: [] })
+    )?.content[0]?.text;
+    expect(text).toContain(`Not set to start when ready: your open card "${decision.title}"`);
+    expect(text).toContain("Soft hold card-question");
+    await tick();
+    expect(f.tasks.get(f.task.id)?.status).toBe("open");
+    expect(f.tasks.get(f.task.id)?.startPolicy).not.toBe("when-ready");
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
   });
 

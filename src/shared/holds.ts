@@ -72,6 +72,12 @@ export const HOLDS = {
     name: "a start's waits",
     way: "the first mate removes the wait on the captain's words",
   },
+  "card-question": {
+    level: "soft",
+    restsOn: "consent",
+    name: "the open question card",
+    way: "the captain answers that card or gives their own words, or the first mate withdraws the card, and the first mate starts the task again",
+  },
   "load-line": {
     level: "soft",
     restsOn: "record",

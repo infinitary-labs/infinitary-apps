@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { writeStarterSession } from "../../src/core/update/devStarter";
@@ -8,7 +8,11 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { UPDATE_STEP_WORDS, UPDATE_WORDS } from "../../src/shared/updateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
+import { promptInput } from "./prompt";
+import { readSavedData } from "./savedData";
+import { SOURCE_UPDATE_WORK_MARKER, sourceUpdateWork } from "./scenarios/sourceUpdateWork";
 import { commandSearch, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 const GIT_ENV = {
@@ -113,6 +117,65 @@ test("a copy run from source that is up to date refuses the update command, sayi
     await expect(row).toContainText(m.refuseNoUpdateIsAvailable());
     await page.keyboard.press("Escape");
     expect(existsSync(join(starter, "update.json"))).toBe(false);
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-5635's approved plan, piece 2: Update and restart saves the crew's work
+// before it asks the starter, as an installed update does.
+// Fixture: the same throwaway project one commit behind, and an isolated app
+// whose crewmate's turn the stand-in model holds open, still working.
+// Completion: the crewmate's turn recorded as paused for the update no later
+// than the starter's request, and the app's own exit.
+test("a copy run from source saves a crewmate's running work before it asks its starter", async () => {
+  const { from, to, starter } = sourceCopy(1);
+  const launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [sourceUpdateWork],
+    env: { INFINITARY_DEV_STARTER: starter },
+  });
+  const { app, page } = launched;
+  try {
+    const title = `${SOURCE_UPDATE_WORK_MARKER} on the release checklist`;
+    const input = promptInput(page);
+    await expect(input).toBeEnabled({ timeout: 30_000 });
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+    await input.press("Enter");
+    await expect.poll(() => launched.mockProvider?.heldRequests(), { timeout: 60_000 }).toBe(1);
+    // The stand-in keeps the ask's start as the task's title.
+    const taskId = await page.evaluate(
+      async (marker) =>
+        (await window.infinitary.tasks.board()).tasks.find((task) => task.title.startsWith(marker))
+          ?.id ?? "",
+      SOURCE_UPDATE_WORK_MARKER,
+    );
+    expect(taskId).not.toBe("");
+
+    await runFromSearch(app, page, "updates.show");
+    const panel = page.locator("[data-update-channel]");
+    await expect(panel.getByRole("button", { name: UPDATE_WORDS.check })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeFocused();
+    const child = app.process();
+    const exited = once(child, "exit");
+    await page.keyboard.press("Enter");
+    await exited;
+
+    const request = join(starter, "update.json");
+    expect(JSON.parse(readFileSync(request, "utf8"))).toEqual({ from, to });
+    // The crewmate's running turn stopped for the update before the starter was asked.
+    const paused = readSavedData(
+      launched.userDataDir,
+      (db) =>
+        db
+          .prepare(
+            "SELECT at FROM task_events WHERE task_id = ? AND json_extract(data_json, '$.restartOutcome.outcome') = 'waiting'",
+          )
+          .all(taskId) as { at: number }[],
+    );
+    expect(paused).toHaveLength(1);
+    expect(paused[0]?.at).toBeLessThanOrEqual(statSync(request).mtimeMs);
   } finally {
     await launched.close();
   }

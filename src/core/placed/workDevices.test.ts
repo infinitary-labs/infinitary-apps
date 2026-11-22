@@ -51,8 +51,13 @@ describe("a computer welcomed before the connection is attached", () => {
     devices.onWorkDevice((contact) =>
       heard.push({ contact, version: devices.version(contact.deviceId) }),
     );
+    // What listens for versions hears it too: the one way a hold for that
+    // computer's app update learns it is installed (INF-5578).
+    const versions: [string, WorkDeviceVersion | null][] = [];
+    devices.onVersion((deviceId, reported) => versions.push([deviceId, reported]));
     devices.attach(at.connection);
     const version = { contract: PROTOCOL_VERSION, app: "0.1.30", takesWork: true };
+    expect(versions).toEqual([[workGrant.deviceId, version]]);
     // Heard as its welcome tells it: its version first, then in reach.
     expect(heard).toEqual([
       { contact: { deviceId: workGrant.deviceId, contact: "in-reach" }, version },

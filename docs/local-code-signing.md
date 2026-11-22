@@ -218,7 +218,7 @@ If a prompt does return, run `pnpm codesign:verify` first: a changed certificate
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Local packaging: `pnpm package:mac` (dev overlay; the fuse-flipped binary MUST be re-signed or Apple Silicon SIGKILLs it at exec).
   That re-signature is no longer ad-hoc: ad-hoc code's designated requirement is just its cdhash, and macOS pins Keychain "Always Allow" grants to the designated requirement, so every rebuild and every `pnpm install` re-asked the captain for the Claude credential.

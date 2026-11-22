@@ -1507,7 +1507,7 @@ A computer's own sign-in is `src/core/helper/signIns.test.ts` (GitHub's device f
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The forge seam (git integration PRs 1.1-1.3; `docs/forge.md` is the one home): everything the app asks of where a project lives - a branch's open change, its checks, put it in, close it, what it is called - goes through `src/core/forge/index.ts`; the provider files under `src/core/forge/providers/` are Biome-fenced to `src/core/forge/`, the seam and its home wiring (`homeForges.ts`).
   A repo's `host` (`RepoView.host`, migration 40) is stamped from its `origin` by `forgeOf`.

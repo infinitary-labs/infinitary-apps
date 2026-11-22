@@ -227,7 +227,7 @@ A computer that runs work reads every file of a conversation at each visit, sinc
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Scale, polish and retention (task-system P5, the final phase; `docs/task-retention.md`, architecture §19): the board push switches to `inf:tasks:delta` above the measured trigger (`BOARD_DELTA_TRIGGER` in `src/shared/tasks.ts`: 500 rows or 256 KB; `INFINITARY_TASK_DELTA_ROWS` lowers it in dev/e2e only) - the delta is a DIFF of the snapshot just rebuilt against the one last pushed (`diffTaskBoards`), so `applyTaskBoardDelta(prev, delta)` equals the fresh read by construction and a derived-flag change travels like a written one; the read executor folds it (`deltaFromPush`) and re-reads on a gap; the first push, and the first after rows vanish, is a snapshot.
   `PROTOCOL_VERSION` 1.3.0; `tasks.onBoardDelta` is a sub-key, no new top-level `window.infinitary` key, no new tool.

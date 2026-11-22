@@ -499,6 +499,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
 - **Repairs.**
   Any new version after the approved one is a repair - bringing the change up to date, a reworded commit, a fix for what refused the merge - and the crewmate declares it with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).
   The host checks the closed facts with git: the repair starts from the candidate head, `toHead` is a commit here, `newBase` - the default branch commit the repaired change sits on, newer or the one it already had - is in it, and every path that differs between the ORIGINAL approved change and the repaired one is named, so drift across several repairs adds up.
+  Generated files count among those paths, so the crewmate diffs the two heads before it declares.
   A change built on another task's approved version that has not merged names that task's newest approved version as `newBase` once it is moved onto it, and its ORIGINAL approved change is then read from the version of that task it was approved on, the newest of that task's pushed versions its approved head holds, so a path only the task under it changed is never counted (docs/task-graph.md, "Following the part under it").
   Once the approval covers that repair, the change's recorded base moves to that version (`followBase`).
   That same read stores the repaired head's change reading on the repair.
@@ -741,7 +742,7 @@ The merge validates the published and PR heads without waking the work computer 
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Delivery direct-pr (captain rule): a crewmate that opens a PR must babysit CI (`check_change`, through the app's own sign-in) until every check on the head SHA is green before the final report; the local evidence is the standard tier's (the Standing CI rule in `docs/testing.md`), not the full suite; the first mate must not present any land/merge/accept decision while CI is red or running.
 - Delivery care (captain-approved 2026-09-19; `docs/delivery-rigor.md` is the one home): three care names - quick, standard, reviewed, shown as Quick, Default and Careful - and what each asks is the Rigor levels runbook's (INF-1876).

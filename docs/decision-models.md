@@ -304,7 +304,7 @@ No plugin's query reaches them.
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - **Decision models** (S7, captain-approved design `fm3000-decision-models-s7-design-s1/report.md`, "ok let's ship"; `docs/decision-models.md`).
   A decision model answers ONE typed, bounded question and returns one value from the closed set the question declared - no text, no tool call, no session - so it is a fifth GROUP on the Models board, never a fifth `Slot`, never a `PROVIDER_CATALOG` row, and `route()` cannot see it.

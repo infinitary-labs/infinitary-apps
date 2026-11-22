@@ -328,7 +328,7 @@ The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` 
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The durable inbox (captain-approved design `firstmate/data/fm3000-inbox-supervision-port-s1/report.md`; a port of firstmate's inbox-doorbell steering, adapted - NOT copied - to the in-process transport).
   The `inbox` table (`src/core/storage/inboxStore.ts`) is fm_inbox generalized to a lane per recipient (firstmate | task id; the `supervision` lane retired with its reader, and rows a previous version parked there are reassigned to the first mate's lane at boot) with ack-AFTER-handling: rows delete only when the consuming turn ends clean, failed turns release for a 90s-grace retry (3 attempts, then task lanes escalate loudly and stop; the first mate's lane waits forever; since 2026-09-26 a turn the PROVIDER failed spends no attempt - "The honest retry" above), and boot resets in-flight rows (at-least-once - a rare duplicate over a silent loss), giving the cut turn's attempt back ("A turn a quit or crash cut" above).

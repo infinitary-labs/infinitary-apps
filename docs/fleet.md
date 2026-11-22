@@ -107,7 +107,7 @@ How a project joined, its key and its workspace kind are provenance, not editabl
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Adding and configuring projects are shared by Settings and the first mate through `app_change project-setup` and `app_change project-settings` (`src/shared/actions.ts`); the first mate's `project-setup` puts up the setup card above, and only the captain's click there adds; removal is the own-words `project-remove` line (`inf:repos:remove`, guarded by `inf:repos:removal`), and `unregister_repo` is retired.
   The app-owned fleet root is `userData/fleet` (`paths.fleetDir`), the index of every managed repo: clone/init create real directories in the projects folder, which is the fleet root unless the person chose another folder in Settings → Projects (the projects folder's line under Add project, `RepoRegistry.setProjectsFolder` over the `projects-folder` settings row, picked with the shell's `inf:app:choose-folder`); a project created or cloned in a chosen folder gets a fleet-root symlink exactly like an adopted one; adopt links an existing folder in place via a fleet-root symlink (captain's call - adopted data never moves), so `RepoView.path` is always the real working directory.

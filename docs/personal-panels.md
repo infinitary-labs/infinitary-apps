@@ -387,7 +387,7 @@ The one thing that works in the workspace and not contained is `invoke`: a panel
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The build loop (talk-to-personalize Step 4, `docs/personal-panels.md` "The build loop"): the personal workspace is a workspace KIND (`repos.kind: personal`, `repoKindSchema`, migration 37 - the crew-posture rationalization's Task A, 2026-09-20, lifted it out of `delivery`, where it had been a third `live` posture) - `RepoRegistry.ensurePersonal` registers the workspace as repo `personal` on first need (`kind: personal`, autonomy on, its own project; its `delivery` column is written `local-only` and never read) and refuses its WHOLE policy patch with one message, and refuses to unregister it.
   A `spawn_crewmate` with `personal_ui: true` (intent `kind: "personal-ui"`) is bound to it by the host whatever repo_id came along; `renderIntentBrief` writes no `Delivery:` line for it and appends the in-place sentence, the workspace path, what to read first, the checks before every report and the existing surfaces, and `deriveRigor` stamps no tier (rigor exists only where a change lands through a gate).

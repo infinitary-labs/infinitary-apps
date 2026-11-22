@@ -750,7 +750,7 @@ The words "preference", "extension" and "plugin" reach no user surface; `tests/e
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The UI plugin system (phase 0, captain's go 2026-09-05; design record and phase gates in `docs/ui-plugins.md` - read it before touching `src/renderer/src/plugins/` or `src/shared/plugins/`).
   Three of the four contribution slots are hosted (`card-kind`, `settings-section`, `side-panel`; `agent-pack` is reserved) behind one door, `pluginHost.registerPlugin(manifest, bindings)` (`src/renderer/src/plugins/host.ts`), and the app's own UI is the first plugin (`plugins/builtin/`): a new wire card kind is a manifest row (the built-in test fails without one) and a settings tab is a manifest entry plus a binding, never a hard-coded list again.

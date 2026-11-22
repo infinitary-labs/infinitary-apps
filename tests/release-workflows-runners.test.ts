@@ -448,6 +448,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     light: [
       "verify.yml:request",
       "size-warning.yml:size-warning",
+      // The AGENTS.md warning line counts words with plain Node too.
+      "agent-memory.yml:agent-memory",
       // The docs site's check builds and browses the site, nothing that needs a desktop.
       "docs-site.yml:build-and-check",
     ],

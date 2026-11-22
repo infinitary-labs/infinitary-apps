@@ -220,7 +220,7 @@ An open first mate decision card does not light the rail: the strip counts worki
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.capture.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
   `emit_card` refuses `task_id` on a note unless it relays a review (INF-2714: an answer is the first mate's own and names its tasks in `related`), a task-less decision files an open `decision` task keyed by its card id (a choice, Decline included, or close_card closes it; putting it away does not), and the operate tools file `operation` tasks through one helper.

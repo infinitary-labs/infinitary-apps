@@ -207,7 +207,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await expect.poll(() => focusedTileKey(page)).toBe("FM3K-1");
     });
 
-    /** Opens a Backlog row's ⋯ menu by keys and picks an entry, as a person does. */
     const backlogMenu = async (key: string, entry: string) => {
       await pressInBoard(boardViewTab(page, "backlog"));
       await expect(boardViewTab(page, "backlog")).toHaveAttribute("aria-pressed", "true");
@@ -248,8 +247,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await expect(boardLive(page)).toHaveAttribute("data-board-live", "said");
       await toBoard();
       await expect(boardTile(page, "FM3K-4")).toHaveAttribute("data-board-lane", "queued");
-      // On the Board, a drag onto the Backlog column takes it back at once,
-      // and a drag from it onto Queued queues it at once again.
       await dragTile(page, "FM3K-4", "backlog");
       await expect.poll(async () => (await detail(page, "blocked")).startPolicy).toBe("on-request");
       await expect(boardTile(page, "FM3K-4")).toHaveAttribute("data-board-lane", "backlog");
@@ -278,7 +275,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
         });
         await expect(boardLive(page)).toHaveAttribute("data-board-live", "refused");
         await expect(boardLive(page)).not.toBeEmpty();
-        // Focus comes back to the tile, and nothing was written.
         await expect.poll(() => focusedTileKey(page)).toBe(key);
         const after = await detail(page, id);
         expect([after.status, after.startPolicy, after.events.length]).toEqual([
@@ -314,7 +310,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       const parked = await detail(page, "started");
       expect([parked.status, parked.startedAt]).toEqual(["active", before.startedAt]);
       await expect(boardLive(page)).toHaveAttribute("data-board-live", "said");
-      // The Backlog list shows it, marked started; Queue it is refused there.
       await pressInBoard(boardViewTab(page, "backlog"));
       await expect.poll(() => laneKeys(page, "backlog")).toContain("FM3K-8");
       await expect(boardTile(page, "FM3K-8")).toContainText(STARTED_BACKLOG_REASON);
@@ -348,7 +343,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await toBoard();
       await expect(boardTile(page, "FM3K-9")).toHaveAttribute("data-board-lane", "working");
 
-      // The menu, by keys: Space opens it, the arrows walk it, Enter picks.
       await pressInBoard(boardViewTab(page, "backlog"));
       await pressKey(boardTile(page, "FM3K-10"), "Space");
       const menu = boardMenu(page, "FM3K-10");
@@ -391,7 +385,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       );
       await pressInBoard(byTray.go);
       await expect.poll(async () => (await detail(page, "drop-tray")).status).toBe("dropped");
-      // The task that waited on it still waits; nothing else moved.
       expect((await detail(page, "waiter")).status).toBe("open");
       // The board draws it gone, and focus lands on the tile now nearest
       // where it was, before the next move: a later one would take focus
@@ -429,7 +422,6 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await expect(byParent.card.locator("p")).toHaveText(
         `${dropConfirmLead("FM3K-6")} ${dropPartsLine([{ key: "FM3K-7", title: "Part" }])}`,
       );
-      // Nothing is written until the confirm.
       expect((await detail(page, "parent")).status).toBe("open");
       expect(await captainMoves(page, "parent")).toEqual([]);
       await pressInBoard(byParent.go);

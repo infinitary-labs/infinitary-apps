@@ -11,7 +11,6 @@ describe("a connection's frames read back from their parts", () => {
     expect(reader.read(bytes.subarray(0, 10))).toBeUndefined();
     expect(reader.read(bytes.subarray(10))).toBe(frame);
     expect(reader.joined).toBe(1);
-    // A short frame after it is read as it came, and so is one that only mentions parts.
     const welcome = JSON.stringify({ t: "welcome", note: "parts" });
     expect(reader.read(welcome)).toBe(welcome);
     expect(reader.read('{"t":"push","channel":"parts"}')).toBe('{"t":"push","channel":"parts"}');
@@ -22,7 +21,6 @@ describe("a connection's frames read back from their parts", () => {
     const reader = new FramePartsReader();
     reader.read(partsHeader(4));
     expect(() => reader.read("{} {}")).toThrow("ran past");
-    // The next message starts afresh.
     expect(reader.read("{}")).toBe("{}");
     expect(() => reader.read(partsHeader(CONNECTION_MAX_FRAME_BYTES + 1))).toThrow("longer");
     expect(() => reader.read('{"t":"parts"}')).toThrow("no length");

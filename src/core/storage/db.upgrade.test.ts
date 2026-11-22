@@ -14,7 +14,6 @@ import { UnsupportedSavedDataError } from "./savedDataCompatibility";
 // version of every migration it ran, so each one keeps its number and its
 // effect wherever its code lives.
 
-/** Every named saved-version boundary db.ts exports, read from the module itself. */
 function namedVersions(): [string, number][] {
   return Object.entries(db).filter(
     (entry): entry is [string, number] =>
@@ -22,7 +21,6 @@ function namedVersions(): [string, number][] {
   );
 }
 
-/** Every table, column, index and view as SQLite records it. */
 function schemaOf(database: AppDatabase): unknown[] {
   return database
     .prepare(

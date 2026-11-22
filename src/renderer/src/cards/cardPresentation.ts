@@ -53,7 +53,6 @@ function chromeParts(card: Element): Element[] {
 /** The shown stack entry inside the shell (`StageEntry`); prepared and leaving entries are not it. */
 const SHOWN = ':scope > [data-stage-entry="shown"]';
 
-/** The shown entry's box, or null while the stage holds nothing. */
 function shownEntry(shell: HTMLElement): HTMLElement | null {
   return shell.querySelector<HTMLElement>(SHOWN);
 }

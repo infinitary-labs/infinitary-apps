@@ -212,7 +212,6 @@ export class PlacedTasks {
     return { file, complete: true };
   }
 
-  /** Every task this computer holds a folder for. */
   list(): string[] {
     try {
       return readdirSync(this.tasksDir, { withFileTypes: true })
@@ -224,7 +223,6 @@ export class PlacedTasks {
     }
   }
 
-  /** This computer holds a folder for the task. */
   has(task: string): boolean {
     return existsSync(this.folders(task).root);
   }
@@ -286,7 +284,6 @@ export class PlacedTasks {
     renameSync(temporary, join(root, "state.json"));
   }
 
-  /** The events after `kept` that the home has not kept, in order. */
   outbox(task: string, kept: number): PlacedEventRecord[] {
     let text: string;
     try {
@@ -316,7 +313,6 @@ export class PlacedTasks {
     );
   }
 
-  /** Keeps only the events after `kept`. */
   trim(task: string, kept: number): void {
     const root = this.folders(task).root;
     const left = this.outbox(task, kept);
@@ -327,7 +323,6 @@ export class PlacedTasks {
     renameSync(temporary, join(root, "outbox.jsonl"));
   }
 
-  /** The orders this conversation already applied, with what each answered. */
   orders(task: string): Map<string, unknown> {
     const applied = new Map<string, unknown>();
     let text: string;
@@ -447,7 +442,6 @@ export class PlacedTasks {
     return { files, more };
   }
 
-  /** The task's own folder, made 0700 when it is first written to. */
   private root(task: string): string {
     const { root } = this.folders(task);
     mkdirSync(root, { recursive: true, mode: 0o700 });
@@ -492,7 +486,6 @@ export class PlacedTasks {
     });
   }
 
-  /** A job's row as given, in place of the one with its id. */
   keepJob(task: string, row: PlacedJob): void {
     this.keepJobs(task, (jobs) => [...jobs.filter((job) => job.id !== row.id), row]);
   }

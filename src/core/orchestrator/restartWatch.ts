@@ -22,22 +22,18 @@ export class RestartWatch {
     private readonly host: RestartWatchHost,
   ) {}
 
-  /** Watch a task cut now, starting over when it was already watched. */
   observe(taskId: string): void {
     this.restartObservations.set(taskId, { at: this.host.now() });
   }
 
-  /** Whether a task cut by a restart or an update is still watched. */
   observing(taskId: string): boolean {
     return this.restartObservations.has(taskId);
   }
 
-  /** Stop watching a task, with nothing recorded. */
   forget(taskId: string): void {
     this.restartObservations.delete(taskId);
   }
 
-  /** Every task still watched. */
   observed(): IterableIterator<string> {
     return this.restartObservations.keys();
   }

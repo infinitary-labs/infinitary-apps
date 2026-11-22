@@ -37,7 +37,6 @@ export function requestedRange(
   return { start, end };
 }
 
-/** The headers every answer for a recording carries. */
 function mediaHeaders(contentType: string, length: number): Record<string, string> {
   return {
     "content-type": contentType,

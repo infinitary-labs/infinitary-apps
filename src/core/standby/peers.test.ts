@@ -468,7 +468,6 @@ describe("copies that reach each other", () => {
   // a file another reader has open, so a full copy is put in place only
   // after every read of the copy under way has closed its file.
   it("puts a newer full copy in place only once another copy's read of its files is done", async () => {
-    // Who writes and reads the copy, in order.
     const events: string[] = [];
     class Watched extends CopyAccess {
       onWriteRequested?: () => void;

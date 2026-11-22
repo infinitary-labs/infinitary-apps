@@ -53,7 +53,6 @@ struct PhoneUsageView: View {
         }
     }
 
-    /// The total stands alone and large; the two counts sit under it side by side.
     private var readouts: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space3) {
             if let total = page.readouts.first {

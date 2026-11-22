@@ -59,7 +59,6 @@ export function useMarkLook(): MarkLook {
   return markLook();
 }
 
-/** Where a place is drawn in the window, given where its picture is drawn. */
 export function placeClientBox(place: NotePlace, drawn: DOMRect): ClientBox {
   const bounds = placeBounds(place);
   const x = drawn.width / place.width;
@@ -82,7 +81,6 @@ export type PictureMarksProps = {
   tool: MarkTool;
   /** The number the mark being drawn takes. */
   next: number;
-  /** A place was marked, and where it is drawn in the window. */
   onMark: (place: NotePlace, at: ClientBox) => void;
   /** The wheel over the surface, which the viewer pans a picture at 1:1 with. */
   onWheel?: ((event: React.WheelEvent) => void) | undefined;

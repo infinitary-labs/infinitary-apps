@@ -135,7 +135,6 @@ async function expectNoProjectPicker(page: Page, projects: readonly string[]): P
   for (const project of projects) expect(offered).not.toContain(project);
 }
 
-/** Repo beta's standing autonomy flag, returning its id. */
 async function setBetaAutonomy(page: Page, autonomy: boolean): Promise<string> {
   const name = repoBeta.split("/").at(-1) as string;
   return await page.evaluate(
@@ -167,11 +166,8 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
     await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
     await expect(reportLine(page, key)).toBeVisible({ timeout: 30_000 });
     await waitForFirstmateIdle(page, 20_000);
-    // No picker anywhere: no card asks which project, and no card offers a
-    // project as a choice, the way the which-project card above does.
     await expectNoProjectPicker(page, [alphaName, betaName]);
 
-    // The worktree landed on repo B, on the task's branch; repo A stayed untouched.
     const board = await page.evaluate(() => window.infinitary.tasks.board());
     betaBranch = await taskBranch(page, board.tasks.find((row) => row.key === key)?.id ?? "");
     expect(betaBranch).not.toBe("");
@@ -369,7 +365,6 @@ test("the captain can set project policy from a project's page in settings", asy
   });
   await row.screenshot({ path: testInfo.outputPath("expanded-merges-on-its-own.png") });
 
-  // Going back to the list and reopening keep the stored permission and switch state.
   await page.locator("[data-project-back]").click();
   await expect(projectRowWords(page, alpha.id)).toHaveText([
     PROJECT_ROW_WORDS.linked,

@@ -129,7 +129,6 @@ export type TaskToolsDelegate = {
     until: "version" | "task";
     from?: string;
   }): string;
-  /** He takes his override back. */
   withdrawOverride(input: { task: string }): string;
   /** The captain takes back a yes the app recorded from their click on a card (INF-3170 piece 2). */
   withdrawAllowance(input: { task: string; card: string }): string;
@@ -812,7 +811,6 @@ export const TASK_QUERY_PAGE_CHARACTERS = ANSWER_WHOLE_MAX_CHARACTERS;
 
 const PAGE_NOTE =
   "This record does not fit one read. Read remaining fields before acting; nextOffset continues.";
-/** A list that stops short ends by saying where its next page starts. */
 /** A list that stops short ends by naming the read that continues its one cut. */
 const morePagesLine = (next: string) => `More: read with next "${next}" for the next page.`;
 const MORE_PAGES = /\nMore: read with next "[^"]*" for the next page\.$/;
@@ -863,7 +861,6 @@ function renderOversizedRow(head: string, row: TaskQueryRow): string {
   return render();
 }
 
-/** The projects read as tool text: each project's key, name and folder. */
 export function renderProjectsResult(projects: readonly TaskQueryProject[]): string {
   if (projects.length === 0) return "No projects.";
   return `Each project's folder is on ${HOME.the}:\n${JSON.stringify(projects, null, 2)}`;

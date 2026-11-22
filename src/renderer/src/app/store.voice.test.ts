@@ -16,7 +16,6 @@ import { VOICE_MODEL_DOWNLOAD_FAILED } from "./voice";
 
 const state = () => useShellStore.getState();
 
-/** A home window with dictation on and the voice model on this computer. */
 const READY = {
   view: "home" as const,
   dictation: { enabled: true, key: "AltRight" as const },

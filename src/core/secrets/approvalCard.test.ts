@@ -63,7 +63,6 @@ function region(body: string, label: string) {
   if (!found) throw new Error(`Missing approval region: ${label}`);
   return found;
 }
-/** A labelled list's rows as [label, value] text, in order. */
 function rows(body: string, label: string): [string, string][] {
   return DomUtils.getElementsByTagName("div", region(body, label), true).map((row) => [
     DomUtils.textContent(DomUtils.getElementsByTagName("dt", row, true)),

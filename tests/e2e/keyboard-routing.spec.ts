@@ -43,7 +43,6 @@ const REFUSED = "cards.next-revision";
 /** The caret after "ship". */
 const CARET = 4;
 
-/** Where the pager stands: the shown card's place and the stack's size. */
 async function pagerPlace(page: Page): Promise<{ position: number; count: number }> {
   const pagination = page.locator("[data-card-pager]");
   return {
@@ -76,7 +75,6 @@ test("Cmd+L brings focus back to the main message from wherever it is, words and
   await prompt.fill(DRAFT);
   await prompt.evaluate((field: HTMLTextAreaElement, at) => field.setSelectionRange(at, at), CARET);
 
-  /** Types into `field`, presses Cmd+L, and finds the main message as it was left. */
   const backFrom = async (field: Locator, words: string) => {
     await field.fill(words);
     await pressWindowKey(app, "l", ["meta"]);
@@ -161,7 +159,6 @@ test("command search opens from inside a card, says why a command cannot run, an
       "settings.open",
     ])
       await expect(search.row(command).locator("kbd")).toHaveCount(1);
-    // Close is chosen by name only: it has no key.
     await expect(search.row("cards.maximize").locator("kbd")).toHaveCount(0);
     // The arrows go round past either end (INF-4541), so neither refuses;
     // the shown card has no revised areas, so going to the next one does.
@@ -299,7 +296,6 @@ test("the window's keys go to the reply, page the cards, find a task and open Se
     await typeInto(query, "SC");
     await expect(query).toHaveValue("SC");
     await expect(note()).toHaveValue("");
-    // Pressed again from elsewhere, the search stays open and takes the keys back.
     await focusOn(note());
     await pressWindowKey(app, "f", ["meta", "shift"]);
     await expect.poll(holdsCaret).toBe(true);

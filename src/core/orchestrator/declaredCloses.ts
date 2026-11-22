@@ -51,7 +51,6 @@ export class DeclaredCloses {
       : action === SIGNED_OFF_ACTION_ID
         ? "signed off under the answer"
         : "marked answer Done";
-    // An invalid action never produces a closure-choice wake.
     const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
     void this.closing
       .closeTask(card.taskId, {

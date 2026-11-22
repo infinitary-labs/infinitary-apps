@@ -24,7 +24,6 @@ const OPUS = claudeStarter("high");
 const SONNET = claudeStarter("medium");
 const OPUS_KEY = `anthropic-claude/${OPUS.id}`;
 
-/** Claude's catalog as its spent reading builds it: both levels at 0%. */
 const SPENT_CATALOG: CatalogModelView[] = [OPUS, SONNET].map((model) => ({
   provider: "claude",
   id: model.id,
@@ -33,11 +32,9 @@ const SPENT_CATALOG: CatalogModelView[] = [OPUS, SONNET].map((model) => ({
   paceStatus: "behind",
 }));
 
-// The captain's own words for each task: titles the journey finds them by.
 const FIRST_TITLE = "Audit the rivet ledger";
 const SECOND_TITLE = "Audit the hull ledger";
 
-/** The model the task titled `title` runs on, once routing has placed it. */
 async function modelOf(page: Page, title: string): Promise<string | null> {
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   return board.tasks.find((task) => task.title === title)?.model ?? null;
@@ -69,15 +66,12 @@ test("a spent Claude allowance with extra usage keeps a hard task at its level o
     });
     const { page } = launched;
 
-    // 1. Switch off: the hard task drops to the weaker level, and the app
-    // offers to keep going on credits.
     await startHardTask(page, FIRST_TITLE);
     await expect
       .poll(() => modelOf(page, FIRST_TITLE), { timeout: 60_000 })
       .toBe(FIRSTMATE_MODEL_KEY);
     await expect.poll(() => offerShown(page), { timeout: 30_000 }).toBe(true);
 
-    // 2. The captain turns the switch on from the account's row menu, by keys.
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Intelligence", exact: true }).click();
     const row = page.locator(`[data-account-row="${CLAUDE_CREW_ACCOUNT}"]`);
@@ -102,7 +96,6 @@ test("a spent Claude allowance with extra usage keeps a hard task at its level o
     await expect(item).toHaveAttribute("aria-checked", "true");
     await leaveSettings(page);
 
-    // 3. Switch on: the next hard task stays at the high level on Claude.
     await startHardTask(page, SECOND_TITLE);
     await expect.poll(() => modelOf(page, SECOND_TITLE), { timeout: 60_000 }).toBe(OPUS_KEY);
   } finally {

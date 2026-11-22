@@ -302,7 +302,6 @@ class Repo {
 type Loaded = {
   files: LedgerFile[];
   manifests: { path: string; manifest: ReleaseManifest }[];
-  /** The record of past releases, when the ledger has one. */
   archive: ReleaseArchive | null;
   /** Each manifest file's SHA-256, by version. */
   hashes: Map<string, string>;
@@ -433,7 +432,6 @@ function derive(
   };
 }
 
-/** Published releases: the committed manifests, then every tag not yet pinned. */
 function publishedReleases(repo: Repo, loaded: Loaded): ReleaseManifest[] {
   const out = loaded.manifests.map((item) => item.manifest);
   const pinned = new Set(out.map((manifest) => manifest.version));
@@ -450,7 +448,6 @@ function publishedReleases(repo: Repo, loaded: Loaded): ReleaseManifest[] {
   return out;
 }
 
-/** A hero file's bytes by its name under release-notes/pictures/, or null when it is missing. */
 function heroReader(root: string): (file: string) => Buffer | null {
   return (file) => {
     const path = join(root, PICTURES_DIR, file);
@@ -758,7 +755,6 @@ function resetPictures(catalogDir: string): string {
   return dir;
 }
 
-/** One hero file's hash and size, read from the ledger, or null when it is not a picture. */
 function heroPicture(root: string): (file: string) => CatalogPicture | null {
   const read = heroReader(root);
   return (file) => {

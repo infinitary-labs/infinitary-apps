@@ -97,7 +97,6 @@ describe("a project that still carries the team queue's files", () => {
         files: [".gitlab/infinitary-queue.yml"],
       },
     ]);
-    // The project with none is not read a second time either.
     await look.lookAll();
     expect(at.heard.reads.sort()).toEqual(["repo-chart", METER].sort());
   });

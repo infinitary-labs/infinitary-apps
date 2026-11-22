@@ -206,9 +206,7 @@ globalThis.fetch = async (url, init) => {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-  } catch {
-    /* Refusals happen before any tool runs. */
-  }
+  } catch {}
   const receipt = files.includes("receipt.json")
     ? JSON.parse(readFileSync(env.PHONE_RECEIPT, "utf8"))
     : undefined;

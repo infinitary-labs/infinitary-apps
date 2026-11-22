@@ -14,7 +14,6 @@ import { openSize, openWindow } from "./window";
  * way a control stops being usable, including through its ancestors.
  */
 
-/** Whether the main message holds the window's focus. */
 const mainMessageFocused = () =>
   document.activeElement !== null && document.activeElement === messageBox();
 

@@ -38,7 +38,6 @@ import { pressWindowKey } from "./windowKeys";
 
 const KEY_PROVIDER = "xai";
 
-/** Where each section stood, kept with the run's results. */
 const picture = (name: string) => test.info().outputPath(`${name}.png`);
 
 const openTitles = async (page: LaunchedApp["page"]) =>

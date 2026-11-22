@@ -145,7 +145,6 @@ struct PhoneRowMovesTests {
             case "unpin": #expect(pins.map(\.label) == [PhoneRowMoveWords.unpin], "\(name): Unpin, once")
             default: #expect(pins.isEmpty, "\(name): nothing to pin")
             }
-            // Every other move of the board's menu stays as it was, in its order, and nothing else joins.
             let board = reading.menu.compactMap { $0.id == "start" && reading.controls.start != nil ? nil : $0.id }
             let added: Set<PhoneRowMoves.Entry.ID> = [.open, .rowStart, .pin]
             #expect(entries.map(\.id.rawValue).filter { board.contains($0) } == board, "\(name): the board's moves, in order")

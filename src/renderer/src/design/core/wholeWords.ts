@@ -46,7 +46,6 @@ export function wordEnds(words: string): number[] {
 
 let pen: CanvasRenderingContext2D | null | undefined;
 
-/** The ellipsis's width in the node's own type. */
 function ellipsisWidth(node: HTMLElement): number {
   pen ??= document.createElement("canvas").getContext("2d");
   if (!pen) return 0;

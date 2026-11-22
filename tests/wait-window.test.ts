@@ -193,7 +193,6 @@ describe("a wait for a state, on a Mac that freezes the work", () => {
     const graded = { grades: true, test, now: 4_000 };
     // The rest of the budget, less the moment the wait takes to report its mismatch.
     expect(waitWindow(undefined, graded)).toBe(6_500);
-    // A window its author named stays.
     expect(waitWindow(100, graded)).toBe(100);
     // Outside a test, and once the budget is spent, vitest's own second.
     expect(waitWindow(undefined, { ...graded, test: undefined })).toBe(1_000);

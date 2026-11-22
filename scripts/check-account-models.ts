@@ -53,7 +53,6 @@ export type MainDeps = {
   print?: (line: string) => void;
 };
 
-/** The CLI's own loader: the core through a Vite module runner. */
 export async function loadThroughVite(): ReturnType<MainDeps["load"]> {
   const runner = await openModuleRunner();
   try {

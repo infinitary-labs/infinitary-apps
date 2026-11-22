@@ -119,7 +119,6 @@ export function runStop(stop: TaskStop, fallbackCwd: string, timeMs: number): Pr
   });
 }
 
-/** This computer's record of what its finished tasks left, whose kept stops rerun as at a close. */
 export function leftBehindHere(
   options: Omit<LeftBehindOptions, "runStop"> & { stopTimeMs?: number },
 ): LeftBehindHere {
@@ -130,7 +129,6 @@ export function leftBehindHere(
   });
 }
 
-/** The close's sweep of one task's leftovers on this computer, and what it did. */
 export async function sweepLeftovers(input: LeftoverSweep): Promise<LeftoversReport> {
   // A task carried on hands its stops and keeps to the task that goes on, and runs none.
   const handed = input.handTo
@@ -313,7 +311,6 @@ export type LeftoverProgramsOptions = {
   log?: (line: string) => void;
 };
 
-/** Writes a close's report on the task's timeline: one line, with the typed report in its data. */
 export function noteLeftovers(
   tasks: Pick<TasksPart, "note">,
   taskId: string,
@@ -374,12 +371,10 @@ export class LeftoverPrograms {
     return sweep;
   }
 
-  /** The task's sweep, when one was begun; resolved otherwise. */
   settled(taskId: string): Promise<void> {
     return this.sweeps.get(taskId) ?? Promise.resolve();
   }
 
-  /** Whether the task's sweep has begun and not yet ended. */
   sweeping(taskId: string): boolean {
     return this.running.has(taskId);
   }

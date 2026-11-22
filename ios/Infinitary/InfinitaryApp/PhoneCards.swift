@@ -216,15 +216,12 @@ struct PhoneCards<Content: View>: View {
         }
     }
 
-    /// The row's card while a glide carries it on, else the shown card's.
     private var rowIndex: Int {
         base.flatMap { id in stack.firstIndex { $0.id == id } } ?? index
     }
 
-    /// A new move takes the row from here.
     private func began() { driver.stop(); moves += 1 }
 
-    /// The row's cards whose bodies have drawn, for the row's probe.
     private var drawnBodies: Set<String> {
         let cards = rowCards.map(\.card)
         return Set(zip(cards, bodies.drawn(cards)).filter(\.1).map(\.0.id))
@@ -334,7 +331,6 @@ struct PhoneCards<Content: View>: View {
         began()
         if swipedFrom == nil { PhoneCardRowProbe.shared?.began(drawn: drawnBodies) }
         moving = true
-        // With two cards the other one sits on the side the turn heads to.
         if stack.count == 2 { ringSide = heading }
         buildBeside()
         if reduceMotion {
@@ -401,7 +397,6 @@ struct PhoneCards<Content: View>: View {
         }
     }
     private var pagerLabel: String { past != nil ? PhoneMessages.phoneCardsPagerPast() : PhoneMessages.phoneCardsPagerPosition(position: String(index + 1), total: String(stack.count)) }
-    /// The cards on the stack not yet read, besides the one shown.
     private var fresh: [PhoneCard] {
         stack.filter { $0.id != card?.id && !hasSeen($0) }
     }
@@ -1036,7 +1031,6 @@ private struct PhoneCardPane: View {
                     scroller.scrollTo(Self.notePart, anchor: nil)
                     scroller.scrollTo(Self.noteRest, anchor: nil)
                 }
-                // INF-3468: the field comes to rest with the choices under it, or with the margin under it.
                 .onChange(of: revealedNote?.seq) {
                     withAnimation(reduceMotion ? nil : PhoneTheme.surfaceMove) { scroller.scrollTo(Self.noteReveal, anchor: .center) }
                 }
@@ -1467,7 +1461,6 @@ private struct PhoneCardPane: View {
         .accessibilityIdentifier(id)
     }
 
-    /// A step through the body's questions: the card turns to its face and its scroller brings the question into view.
     private func stepQuestion(_ step: Int, unpicked: Bool, keyboard: Bool) {
         if showsBack { turnOver(back: false) }
         Task { followQuestion(await host.question(step: step, unpicked: unpicked, keyboard: keyboard)) }

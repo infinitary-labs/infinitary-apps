@@ -202,11 +202,9 @@ describe("a computer's sign-ins view", () => {
       expect(signIns.view()[0]?.flows).toEqual([
         expect.objectContaining({ signInId: order.signInId, accountId: "acct-codex" }),
       ]);
-      // A second press while it runs is refused, and sends nothing.
       await expect(signIns.redeemSavedReset(MINI.id, "acct-codex", true)).rejects.toThrow(
         m.accountsSavedResetBusy({ account: "Codex · Work" }),
       );
-      // A sign-in started there meanwhile runs beside it and cancels nothing.
       await signIns.start(MINI.id, "anthropic-claude", "oauth");
       expect(ask.mock.calls.map(([, channel]) => channel)).not.toContain("inf:sign-ins:cancel");
       expect(ask.mock.calls.filter(([, c]) => c === "inf:sign-ins:use-saved-reset")).toHaveLength(
@@ -227,7 +225,6 @@ describe("a computer's sign-ins view", () => {
         expect.objectContaining({ type: "device_signed_in" }),
       );
 
-      // A use that failed there says that computer's words.
       const failed = signIns.redeemSavedReset(MINI.id, "acct-codex", false);
       await vi.waitFor(() =>
         expect(ask.mock.calls.filter(([, c]) => c === "inf:sign-ins:use-saved-reset")).toHaveLength(

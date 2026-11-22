@@ -47,7 +47,6 @@ const ANSWERS = [
   { name: "notes", values: ["saved words"], changed: true },
 ];
 
-/** The frame's name, by which the browser reaches into it. */
 const FRAME = "past-card";
 
 /** The content policy's hash of an inline script, as the host allows a card's own script. */
@@ -144,7 +143,6 @@ test("a past card's body fills the saved answers, disables every control and kee
   await expect.poll(async () => (await shown()).late).toBe(true);
   const body = await shown();
 
-  // The saved answers are back.
   expect(body.checked.B).toBe(true);
   expect(body.checked.A).toBe(false);
   expect(body.notes).toBe("saved words");
@@ -154,7 +152,6 @@ test("a past card's body fills the saved answers, disables every control and kee
   expect(body.written).toEqual({ shown: true, value: "One project a week" });
   expect(body.firstWritten).toBe(false);
 
-  // Every control is disabled, including the one a script added later.
   expect(body.enabled).toEqual([]);
   expect(body.figure).toBe(true);
 

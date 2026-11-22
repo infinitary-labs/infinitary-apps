@@ -330,7 +330,6 @@ describe("card threads", () => {
       },
     ]);
     expect(cards.observeThreads(FIRSTMATE_SESSION_ID).map((thread) => thread.cardId)).toEqual([fm]);
-    // A question still waits on the card when its task's cards retire.
     cards.addMessage(id, "captain", "And for the panel?");
     tasks.close("t1", { status: "done", reason: "finished", actor: "host" });
     expect(cards.answerOwed(id)).toBe(true);

@@ -80,7 +80,6 @@ test("Settings → Automation's changes and the first mate's take one path and n
       return settingsSection(page, "automation");
     };
 
-    // The captain's Pause in the rule's sheet.
     let tab = await openAutomation();
     await tab.locator(`[data-automation-row="${audit.id}"]`).getByRole("button").first().click();
     await tab.getByRole("button", { name: "Pause", exact: true }).click();
@@ -94,7 +93,6 @@ test("Settings → Automation's changes and the first mate's take one path and n
       }),
     ).toHaveCount(1);
 
-    // The first mate, asked, turns the draft on through the same path.
     await ask("automation-edit", { id: digest.id, enable: true });
     await expect(
       feedLineOf(page, {
@@ -105,7 +103,6 @@ test("Settings → Automation's changes and the first mate's take one path and n
     ).toHaveCount(1);
     await expect.poll(rules).toEqual({ [audit.id]: "paused", [digest.id]: "enabled" });
 
-    // And deletes the paused rule, as Delete in its sheet does.
     await ask("automation-delete", { id: audit.id });
     await expect(
       feedLineOf(page, {

@@ -70,7 +70,6 @@ function exportPack(userDataDir: string) {
   };
 }
 
-/** The evidence one card left, read back through its one store. */
 function observationsOf(userDataDir: string, cardId: string): CardObservation[] {
   const db = openDatabase(userDataDir);
   try {
@@ -160,12 +159,10 @@ test("a choice names the offer the stage showed, not the head its crewmate wrote
   expect(pack.manifest().counts.by_display).toMatchObject({ matched: 1 });
 });
 
-/** Clicks a control inside the card's frame, where the captain would. */
 async function pick(frame: FrameLocator, selector: string) {
   await frame.locator(selector).evaluate((control: HTMLInputElement) => control.click());
 }
 
-/** Sets a field inside the card's frame, as the captain's input would. */
 async function enter(frame: FrameLocator, selector: string, value: string) {
   await frame.locator(selector).evaluate((field: HTMLInputElement, text) => {
     field.value = text;

@@ -52,17 +52,14 @@ export const BUILTIN_PLUGIN_ID = "firstmate";
  */
 export const GATED_PLUGIN_ID = "firstmate-gated";
 
-/** The plugin one gate's folders are registered as. */
 export function gatedPluginId(gate: AppPanelGate): string {
   return `${GATED_PLUGIN_ID}-${gate}`;
 }
 
-/** The folders with no gate: always the app's. */
 export const UNGATED_FOLDERS: readonly AppPanelFolder[] = APP_PANEL_FOLDERS.filter(
   (folder) => !folder.gate,
 );
 
-/** Each folder as a side panel: its surface, and the cards, header buttons and commands it declares. */
 function sidePanelsOf(folders: readonly AppPanelFolder[]) {
   return folders.flatMap((folder) => {
     const surface = builtinSurface(folder.id);
@@ -80,7 +77,6 @@ function sidePanelsOf(folders: readonly AppPanelFolder[]) {
   });
 }
 
-/** What the folders read, as they declare it. */
 function readsOf(folders: readonly AppPanelFolder[]): string[] {
   return [...new Set(folders.flatMap((folder) => folder.manifest.reads ?? []))];
 }
@@ -176,7 +172,6 @@ export const builtinManifest: PluginManifest = wordSectionLabels(
         // What a task's work declared it used, which the record reads only
         // where the window has knowledge (docs/knowledge.md).
         "knowledge.uses",
-        // What the app's own panels read, as their folders declare it.
         ...readsOf(UNGATED_FOLDERS),
       ],
     },

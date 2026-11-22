@@ -23,7 +23,6 @@ import { readWindowsLoopbackOwners } from "./windowsProcesses";
  * system or another app started, reads as not the crew's.
  */
 
-/** Both ends of a loopback connection, by their ports: the caller's and the app's own. */
 export type LoopbackEnds = { clientPort: number; serverPort: number };
 
 /** What the reading says, or why there is none: a system it cannot read, or a failed read. */

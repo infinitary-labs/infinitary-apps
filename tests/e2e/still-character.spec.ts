@@ -41,7 +41,6 @@ function character(page: Page) {
   return page.getByRole("img", { name: /^First mate - / });
 }
 
-/** The character's canvas as it stands, read whole. */
 function picture(page: Page): Promise<string> {
   return character(page).evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL());
 }
@@ -66,7 +65,6 @@ async function holdStill(page: Page): Promise<void> {
   await page.evaluate(() => window.__fmStill);
 }
 
-/** The Firstmate's busy signal as the window hears it, in order. */
 async function recordBusy(page: Page): Promise<void> {
   await page.evaluate(() => {
     const log: boolean[] = [];
@@ -97,7 +95,6 @@ test("under reduced motion a theme switch repaints the still Firstmate in the ne
   await input.fill(PERSONALIZE_THEME_PROMPT_MARKER);
   await input.press("Enter");
   await expect.poll(() => theme(page), { timeout: 30_000 }).toBe("light");
-  // The captain sees the character in the theme they asked for.
   await expect.poll(() => picture(page)).not.toBe(dark);
   const light = await picture(page);
   await page.screenshot({ path: test.info().outputPath("still-light.png") });
@@ -165,7 +162,6 @@ test("under reduced motion a size change redraws the still Firstmate sharp", asy
   expect(await drawn(page)).toBe(true);
   const bigger = await picture(page);
 
-  // Smaller again, and sharp again.
   await setSize(launched, 100);
   await expect.poll(() => blur(page)).toBe(0);
   expect(await drawn(page)).toBe(true);

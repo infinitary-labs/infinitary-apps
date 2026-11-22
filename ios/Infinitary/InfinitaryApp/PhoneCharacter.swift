@@ -278,7 +278,6 @@ final class CharacterMotion: @unchecked Sendable {
         pose.cinchGate += ((mode == .working ? 1 : 0) - pose.cinchGate) * min(dt * 3, 1)
         let body = CharacterCinch.body(pose.cinchK)
         vel += (0.5 - vel) * min(dt * 1.5, 1)
-        // A warp (CharacterWarp) adds its own spin, squint and held look.
         let warp = CharacterWarp.pose(of: pose)
         pose.a += (pose.cur.sa * body.spin + (warp?.sa ?? 0)) * dt
         pose.b += (pose.cur.sb * body.spin + (warp?.sb ?? 0)) * dt
@@ -488,7 +487,6 @@ enum CharacterPainter {
                 cache.points[i].y += CharacterSky.twinkle(now / 1000 * 13 + Double(i) * 5.7) * warp.jitter * R
             }
             var placed = CharacterSky.place(i, base: CGPoint(x: cache.points[i].x, y: cache.points[i].y), pose: p, c: c, r: R)
-            // The sphere warp: the vertices take their places on the wormhole's rim.
             if warp != nil, p.variant == .sphere,
                let rim = CharacterWarp.sphereVertex(i, base: placed.point, et: et, c: c, r: R, time: now / 1000) {
                 placed.point = rim.point; placed.progress = rim.progress
@@ -534,7 +532,6 @@ enum CharacterPainter {
             cache.prims.dotCore[i] = max(heat > 0.02 && m > 0.4 && fade > 0.5 ? heat * fade : 0, cache.sky[i].white)
         }
 
-        // The cinch's centre and ring, under the wires.
         if let frame = p.cinch {
             CharacterCinch.drawUnder(frame, k: cinchK, gate: p.cinchGate, arrival: cinchFlight.arrival, still: p.still, c: c, r0: R0, size: s,
                                      dim: dimUse, bright: bright, boost: boost, in: &context)
@@ -548,7 +545,6 @@ enum CharacterPainter {
                 paint(cache.prims, cache.points, in: &mask) { _, _ in tint }
             }
         }
-        // The sphere warp's wormhole, under the wires that ring it.
         if warp != nil, p.variant == .sphere {
             CharacterWarp.drawSphere(et, c: c, r: R, time: now / 1000, bright: bright, background: bg, boost: boost, in: &context)
         }
@@ -563,7 +559,6 @@ enum CharacterPainter {
         }
 
         CharacterSky.draw(p, over: true, context: &context, c: c, r: R, color: bright.color(1), background: bg.color(1))
-        // The cinch's motes streaming in to the centre, under the eyes.
         if let frame = p.cinch, !cinchFlight.motes.isEmpty {
             let corners = cache.points.filter { $0.w > 0 }.map { CGPoint(x: $0.x, y: $0.y) }
             CharacterCinch.drawOver(frame, motes: cinchFlight.motes, k: cinchK, gate: p.cinchGate, c: c, r0: R0, size: s,
@@ -623,7 +618,6 @@ enum CharacterPainter {
         Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
     }
 
-    /// Replays the resolved edges, their filament cores, the dots and their incandescent cores.
     private static func paint(_ prims: Primitives, _ points: [Point], in context: inout ScenePen,
                               color: (Kind, Double) -> RGB) {
         let wire = StrokeStyle(lineWidth: 1.4, lineCap: .round), filament = StrokeStyle(lineWidth: 0.7, lineCap: .round)

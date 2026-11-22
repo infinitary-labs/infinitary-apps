@@ -9,12 +9,6 @@ import {
   screenFromSnapshot,
 } from "./reading";
 
-/**
- * Facts the host reads off a page before the outline is written: a time,
- * a title tooltip, which elements the window shows, a whole-page
- * picture's width, and one noisy error.
- */
-
 const strings = [
   "time",
   "datetime",
@@ -157,13 +151,11 @@ describe("which elements the window shows", () => {
       screenFromSnapshot(snapshot, viewport),
     );
     expect(marked.map((each) => each.onScreen)).toEqual([false, true, undefined]);
-    // A snapshot with no layout marks nothing.
     expect(applyScreen([node(11)], screenFromSnapshot({}, viewport))[0]?.onScreen).toBeUndefined();
   });
 
   it("gives each element the window shows its box from the window's top left, for Point at", () => {
     const screen = screenFromSnapshot(snapshot, viewport);
-    // The page is scrolled 1,000 pixels down: the element at 1,200 is 200 from the window's top.
     expect(screen.boxes?.get(12)).toEqual({ x: 8, y: 200, width: 600, height: 40 });
     expect(screen.boxes?.has(11)).toBe(false);
     expect(screen.boxes?.has(13)).toBe(false);

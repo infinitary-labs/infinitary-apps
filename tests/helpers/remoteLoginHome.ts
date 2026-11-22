@@ -34,7 +34,6 @@ export const pairings: DevicePairing[] = [];
 export const servers: SshServer[] = [];
 export const doors: PhoneDoor[] = [];
 
-/** Closes every door, connection, pairing and SSH server a test started. */
 export async function closeEach() {
   for (const door of doors.splice(0)) door.close();
   await Promise.all(connections.splice(0).map((connection) => connection.close()));
@@ -67,7 +66,6 @@ export async function addChecked(
 
 export const standInBundle = (record: string, uid = THEIR_UID) => standInFirstmate(record, uid);
 
-/** The other user's world: a home folder of its own, and where its work keeps its data. */
 export function otherUser(extra: Record<string, string> = {}) {
   const home = scratchDir("infinitary-remote-user-");
   const work = join(home, "work");
@@ -147,7 +145,6 @@ export async function home(options: {
     settled: async () => {
       await listening?.settled();
     },
-    /** Stops answering where it was. */
     close: async () => {
       await listening?.close();
     },
@@ -174,7 +171,6 @@ export async function server(): Promise<SshServer> {
   return started;
 }
 
-/** `text` as a regular expression matches it, letter for letter. */
 export function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

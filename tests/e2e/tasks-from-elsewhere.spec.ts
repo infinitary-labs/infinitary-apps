@@ -119,8 +119,6 @@ test("the Tasks panel's own folder, added from elsewhere under another id, runs 
   test.setTimeout(240_000);
   const userDataDir = scratchDir("infinitary-tasks-elsewhere-");
   seedBoard(userDataDir);
-  // The app's own folder, as someone else would hand it over: their name
-  // and version on it, and a title of their own.
   const source = join(scratchDir("infinitary-tasks-elsewhere-source-"), COPY);
   cpSync(join(process.cwd(), "src", "panels", "now"), source, { recursive: true });
   const manifest = JSON.parse(readFileSync(join(source, "manifest.json"), "utf8"));
@@ -199,7 +197,6 @@ test("the Tasks panel's own folder, added from elsewhere under another id, runs 
         "data-stage-entry-id",
         "record:start-me",
       );
-      // Paged back, the board finds its view and selected row as it left them.
       await pressWindowKey(app, "]", ["meta", "shift"]);
       await expect(boardEntry(page, COPY)).toBeVisible();
       await expect(boardViewTab(page, "backlog", COPY)).toHaveAttribute("aria-pressed", "true");

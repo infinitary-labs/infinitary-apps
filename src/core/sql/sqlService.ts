@@ -60,7 +60,6 @@ export class SqlService {
     return this.started;
   }
 
-  /** The pid of the running query process, if one is up. */
   get pid(): number | undefined {
     return this.child?.process.pid;
   }
@@ -76,7 +75,6 @@ export class SqlService {
     });
   }
 
-  /** Kills the query process and fails whatever was waiting. */
   dispose(): void {
     this.disposed = true;
     const waiting = this.inFlight ? [this.inFlight.pending, ...this.queue] : [...this.queue];

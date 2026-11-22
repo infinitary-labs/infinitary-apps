@@ -84,7 +84,6 @@ function boxedCrewmate() {
     { ...crewmateToolDelegate(), machineId: LOCAL_MACHINE_ID, cwd },
     { backend: "claude", accountId: "acct_claude_crew" },
   );
-  /** What the app hands the SDK for this crewmate, over the box's host environment. */
   const options = (): Options =>
     claudeSessionOptions({
       spec,

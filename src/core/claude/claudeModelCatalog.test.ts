@@ -245,7 +245,6 @@ describe("reading the catalog from the client", () => {
     const { factory, seen } = fakeQuery(LIVE_ROWS);
     const rows = await readClaudeModelCatalog({ factory });
     expect(canonicalClaudeModelIds(rows)).toContain("claude-fable-5-1");
-    // No turn was ever started: nothing was pushed onto the input stream.
     expect(seen.prompted).toEqual([]);
     expect(seen.closed).toBe(1);
   });

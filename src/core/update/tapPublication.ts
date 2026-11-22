@@ -37,10 +37,8 @@ import {
 
 export { BUILDS_FILE, FIRSTMATE_TAP, INFINITARY_TAP, TAP, UPDATE_TARGETS_FILE };
 
-/** The bundle the casks install, quit before replacing, and zap. */
 export const BUNDLE_ID = APP_IDENTITIES[OWN_IDENTITY].bundleId;
 
-/** The app the casks install, by its file name. */
 export const APP_BUNDLE = `${APP_IDENTITIES[OWN_IDENTITY].app.release}.app`;
 
 /**
@@ -51,7 +49,6 @@ export const APP_BUNDLE = `${APP_IDENTITIES[OWN_IDENTITY].app.release}.app`;
  */
 export const HOMEPAGE = "https://getinfinitary.com/";
 
-/** What a channel's cask calls the app it installs. */
 const CASK_NAMES: Record<UpdateChannel, string> = {
   stable: APP_IDENTITIES[OWN_IDENTITY].app.release,
   alpha: `${APP_IDENTITIES[OWN_IDENTITY].app.release} Alpha`,
@@ -65,12 +62,8 @@ export class TapPublicationRefusal extends Error {
   override name = "TapPublicationRefusal";
 }
 
-// --- The casks ---------------------------------------------------------------
-
-/** What one channel's cask installs: a version's public download and its checksum. */
 export type CaskArtifact = { version: string; sha256: string; downloadUrl: string };
 
-/** The tap path of a channel's cask. */
 export function caskPathFor(channel: UpdateChannel, tap: TapNames = TAP): string {
   return `Casks/${tap.caskTokens[channel]}.rb`;
 }
@@ -157,7 +150,6 @@ export function channelCaveats(
       ];
 }
 
-/** Each channel's paragraph on this build's own tap, once it names a stable target. */
 export const CHANNEL_CAVEATS: Record<UpdateChannel, string[]> = {
   stable: channelCaveats("stable"),
   alpha: channelCaveats("alpha"),
@@ -294,9 +286,6 @@ export function renderCask(
   ].join("\n");
 }
 
-// --- The update targets ------------------------------------------------------
-
-/** One file a publication carries on its tap release: its asset name and checksum. */
 export type PublishedFile = { asset: string; sha256: string };
 
 /**
@@ -315,7 +304,6 @@ export type LinuxBuilds = Record<string, Record<string, PublishedFile>>;
 export type Publication = {
   channel: UpdateChannel;
   version: string;
-  /** The zip's file name on the tap release. */
   assetName: string;
   sha256: string;
   /** The product source commit the artifact was built from. */
@@ -350,7 +338,6 @@ function refuse(message: string): never {
   throw new TapPublicationRefusal(message);
 }
 
-/** The publication's target record, or a refusal saying why it is not one. */
 export function publicationTarget(publication: Publication, tap: TapNames = TAP): UpdateTarget {
   const { channel, version } = publication;
   if (channel === "alpha" && !isAlphaVersion(version)) {
@@ -502,7 +489,6 @@ export function advanceUpdateTargets(
   return { targets, changed, notes };
 }
 
-/** The targets file's exact bytes. */
 export function formatUpdateTargets(targets: UpdateTargets): string {
   return `${JSON.stringify(targets, null, 2)}\n`;
 }
@@ -651,13 +637,6 @@ export function tapFilesFor(
   return { ...advance, notes, files };
 }
 
-// --- Republishing the casks --------------------------------------------------
-
-/**
- * What a cask on the tap installs, read off its stanzas: its version, its
- * checksum and the download its url names once the version is filled in;
- * null when a stanza is missing.
- */
 export function caskArtifact(cask: string): CaskArtifact | null {
   const version = caskVersion(cask);
   const sha256 = /^ {2}sha256 "([^"]+)"$/m.exec(cask)?.[1];
@@ -739,8 +718,6 @@ export function republishCasks(
   }
   return { changed, notes, files };
 }
-
-// --- Activating the alpha channel --------------------------------------------
 
 /**
  * The last stable published before the saved-data guard and the

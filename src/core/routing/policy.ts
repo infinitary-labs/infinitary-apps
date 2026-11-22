@@ -97,7 +97,6 @@ function isGrounded(shape: WorkShape): boolean {
   return Boolean(shape.basis) && shape.basis_verified === true;
 }
 
-/** The outcome of asking for one rung up (S4 scaffolding; nothing calls it yet). */
 export type EscalationFloor = { floor: IntelligenceBucket; attempt: number } | { refused: string };
 
 /**

@@ -32,7 +32,6 @@ function frames(): Promise<void> {
   return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
 }
 
-/** How many times each stage component ran during `act`, read from the browser's call counters. */
 async function stageRuns(act: () => Promise<void>): Promise<Runs> {
   const session = cdp();
   // Taking the counts resets them, so only `act` and the frames after it count.

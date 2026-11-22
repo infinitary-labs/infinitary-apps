@@ -35,11 +35,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
 );
 
 /**
- * Capture through the whole booted core (tests/helpers/bootedCore.ts), with
- * real Firstmate and crewmate sessions against the mock provider.
- */
-
-/**
  * Capture (task-system P1, design section 6, acceptance in section 12): the
  * seven turn shapes the six-way contract produces - answer, ask, steer,
  * spawn, settle, operate, and a turn that does nothing - each driven through
@@ -59,7 +54,6 @@ describe("capture: every captain ask lands in a task", () => {
   let adoptDir: string;
   let core: Core;
   let mock: MockProviderServer;
-  /** The ask each captain turn of this file opened, oldest first. */
   const turnAsks: string[] = [];
 
   beforeAll(async () => {
@@ -100,7 +94,6 @@ describe("capture: every captain ask lands in a task", () => {
     expect(existsSync(adoptDir)).toBe(false);
   }, 30_000);
 
-  /** One captain turn: the ask closes when the turn ends. */
   async function turn(payload: string | { text: string; taskId?: string }): Promise<AskRecord> {
     const before = new Set(core.services.tasks.capture.listAsks().map((ask) => ask.id));
     await core.dispatch("inf:converse", [payload]);
@@ -162,7 +155,6 @@ describe("capture: every captain ask lands in a task", () => {
     expect(task?.closedReason).toBe("settled");
     const repoId = task?.repoId ?? "";
     expect(core.services.repos.managesProjectPath(repoId, adoptDir)).toBe(true);
-    // Scratch first; the adopted repo's project rides the board with its repo facts.
     const board = await core.dispatch("inf:tasks:board", []);
     expect(board.projects[0]?.id).toBe("scratch");
     expect(board.projects.find((project) => project.id === `proj-${repoId}`)?.repo?.name).toBe(
@@ -278,7 +270,6 @@ describe("capture: every captain ask lands in a task", () => {
     await section(
       "protocol: the pushed board equals a fresh read, the detail and feed carry the record",
       async () => {
-        // The landed task: no longer crew, still a record with a key.
         const key = core.services.tasks.get(taskId)?.key ?? "";
         expect(core.services.tasks.byKey(key)?.id).toBe(taskId);
         const boards: TaskBoard[] = [];
@@ -306,7 +297,6 @@ describe("capture: every captain ask lands in a task", () => {
             assignee: "crewmate 1",
             flags: { blocked: false, held: false, needsYou: false, ready: false },
           });
-          // Scratch first, then a project for each managed repo.
           expect(fresh.projects.map((project) => project.id)).toEqual([
             "scratch",
             ...core.services.repos.list().map((repo) => `proj-${repo.id}`),
@@ -360,7 +350,6 @@ describe("capture: every captain ask lands in a task", () => {
         // WI-11 retired `finish`: the idle crewmate was settled by a land, so its
         // close reads as the landing, not a decommission.
         expect(keyed.some((text) => text === "Merged")).toBe(true);
-        // Task-less lines still ride beside them, unkeyed, and no line appears twice.
         expect(
           feed.some((line) => line.taskKey === undefined && line.text.startsWith("Captain: ")),
         ).toBe(true);

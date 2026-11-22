@@ -101,7 +101,6 @@ struct PhoneDot: View {
     }
 }
 
-/// A group's label above its rows, as the Mac draws a section label.
 struct PhoneSectionLabel: View {
     let words: String
     init(_ words: String) { self.words = words }

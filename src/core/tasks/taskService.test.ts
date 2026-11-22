@@ -807,7 +807,6 @@ describe("TaskService (task-system P0)", () => {
       tick();
       tasks.noteProgress("t", `step ${index}`);
     }
-    // Exactly at the cap: nothing folds.
     expect(tasks.timeline("t")).toHaveLength(TIMELINE_CAP);
     expect(tasks.timeline("t")[0]?.kind).toBe("created");
     tick();
@@ -970,7 +969,6 @@ describe("the basis (primitives review P1)", () => {
       repoId: "r1",
       shape: { ...shape, basis: "NIA-404" },
     });
-    // A later shape write carries no stamp either.
     tasks.placement.recordShape("k", shape, "low");
     for (const record of [byKey, byId, ghost]) {
       expect(tasks.get(record.id)?.shape).not.toHaveProperty("basis_verified");

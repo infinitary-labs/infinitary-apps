@@ -19,14 +19,12 @@ import {
  * pieces from the same step, so they always say and offer the same thing.
  */
 
-/** The step for this window's update state now. */
 export function useUpdateStep(): { status: UpdateStatus | null; step: UpdateStep | null } {
   const { status, checking, busy, problem, later } = useUpdateState();
   const now = useMinute();
   return { status, step: updateStep(status, { checking, busy, problem, later, now }) };
 }
 
-/** What each button runs: one existing update request each. */
 export function runUpdateStep(action: UpdateStepAction, command?: string): Promise<unknown> {
   switch (action) {
     case "check":
@@ -42,7 +40,6 @@ export function runUpdateStep(action: UpdateStepAction, command?: string): Promi
   }
 }
 
-/** The selectable command block. */
 function Command({ command }: { command: string }) {
   return (
     <code
@@ -109,7 +106,6 @@ function StepLine({
   );
 }
 
-/** The line, and the waiting tasks, the download's progress or the command it names. */
 export function UpdateStepText({
   step,
   strong = false,

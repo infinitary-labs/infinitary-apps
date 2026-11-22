@@ -36,7 +36,6 @@ export const DEMO_POSTER: PictureFixture = {
   ),
 };
 
-/** The demo's caption: the action and its result. */
 export const DEMO_CAPTION = "Drag the box: it slides right to its new place.";
 
 /** The GIF fallback of the same recording: 3 seconds at 10 frames a second, played once. */

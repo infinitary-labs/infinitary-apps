@@ -5,7 +5,6 @@
 // Firstmate (../Firstmate.tsx) and its crew (./crew/CrewOrbit.tsx) each
 // redraw their last frame at the new ratio when this fires.
 
-/** Called on every change of `window.devicePixelRatio`. Returns the unsubscribe. */
 export function onPixelRatioChange(listener: () => void): () => void {
   let query: MediaQueryList | null = null;
   const onChange = () => {

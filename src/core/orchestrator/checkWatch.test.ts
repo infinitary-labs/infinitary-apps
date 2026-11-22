@@ -68,7 +68,6 @@ function setup() {
     answer: (reading: WatchedReading | (() => WatchedReading)) => {
       next = reading;
     },
-    /** The shared tick at `ms` past the watch's start. */
     at: async (ms: number) => {
       now = start + ms;
       await watcher.poll(now);
@@ -342,7 +341,6 @@ describe("CheckWatcher", () => {
  * approval covers gets no such wake.
  */
 describe("CheckWatcher at a version the captain's approval covers (INF-4018)", () => {
-  /** The approval the captain's click keeps, at HEAD of PR #7. */
   function approve(tasks: TaskService) {
     seedDelivery(tasks, "t1", {
       prNumber: 7,

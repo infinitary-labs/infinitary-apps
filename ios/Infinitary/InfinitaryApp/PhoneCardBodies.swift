@@ -130,7 +130,6 @@ struct PhoneCardRowLoading: View {
     /// A swipe or a page turn began; these cards had drawn their bodies.
     func began(drawn: Set<String>) { drawnAtStart = drawn; resting = nil }
 
-    /// The row came to rest on this card.
     func rested(on card: String) {
         moves += 1; arrivedDrawn = drawnAtStart.contains(card); reports = 0; resting = card
     }

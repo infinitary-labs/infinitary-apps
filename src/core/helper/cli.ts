@@ -61,7 +61,6 @@ import { helperWords } from "./words";
 
 export type CliContext = {
   source?: import("../selfSource/resolve").SelfSourceReader;
-  /** The app's own version. */
   version: string;
   /** Which build it runs (`buildIdentityOf`), which its hello tells the home. */
   build?: BuildIdentity;
@@ -257,7 +256,6 @@ async function readJoin(stdin: NodeJS.ReadableStream): Promise<SshJoin | null> {
   return readSshMessage(sshJoinSchema, await readLine(stdin));
 }
 
-/** The first line of the input. */
 function readLine(stdin: NodeJS.ReadableStream): Promise<string> {
   return new Promise((resolve) => {
     const reader = createInterface({ input: stdin });

@@ -38,7 +38,6 @@ export type CommandRow = {
   panel?: string;
   /** Its first key as a hint shows it, or none for a command chosen only by name. */
   keys: string | undefined;
-  /** Why it cannot run now, or null. */
   refusal: string | null;
 };
 

@@ -18,12 +18,10 @@ import { projectFile } from "../workspace/projectPage";
 export type ProjectServer = {
   /** `http://127.0.0.1:<port>`: where the folder's files are. */
   origin: string;
-  /** The folder it serves. */
   folder: string;
   close: () => void;
 };
 
-/** What a file is, by its extension: the types a web page's own files use. */
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".htm": "text/html; charset=utf-8",

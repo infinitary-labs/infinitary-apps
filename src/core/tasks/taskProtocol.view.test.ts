@@ -555,7 +555,6 @@ describe("the task protocol (task-system P3)", () => {
       expect(task.blockedBy).toEqual([]);
       expect(protocol.detail(task.id).blockedBy).toEqual([]);
     }
-    // Closed graph edges remain history; they no longer appear as live blockers.
     expect(tasks.graph.blockers("active-dependent")).toHaveLength(5);
     expect(protocol.detail("active-dependent").flags.blocked).toBe(false);
     expect(tasks.graph.blockerRefusal("active-dependent")).toBeUndefined();

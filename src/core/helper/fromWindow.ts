@@ -119,7 +119,6 @@ export function adoptWindowGrant(dataDir: string, homeKey: string): boolean {
   }
 }
 
-/** The pin of the home key a data folder keeps, or null when it keeps none. */
 function ownHomePin(userData: string): string | null {
   try {
     const cert = readFileSync(join(userData, "devices", "home-cert.pem"), "utf8");

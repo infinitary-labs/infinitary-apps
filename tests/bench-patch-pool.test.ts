@@ -61,7 +61,6 @@ function applyTo(app: string, base: string, patch: Buffer): void {
   rmSync(file);
 }
 
-/** Every tracked-or-untracked, non-ignored file and its contents. */
 function tree(dir: string): Record<string, string> {
   const files = git(dir, "ls-files", "--cached", "--others", "--exclude-standard")
     .split("\n")

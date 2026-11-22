@@ -24,7 +24,6 @@ export type WaitingMessage = {
   excerpt: string;
 };
 
-/** One waiting message in a sentence's words. */
 function messageWords(message: WaitingMessage): string {
   const state =
     message.state === "handed"

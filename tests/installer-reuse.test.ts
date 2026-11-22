@@ -90,7 +90,6 @@ it("finds the signed build by its trigger-first name", () => {
   );
   const renamed = [{ ...jobs[0], name: build as string }] satisfies [unknown];
   expect(checkReuseMetadata(recordedPlan, run, artifact, renamed).build.id).toBe(jobs[0].id);
-  // Twice under both names is no one original build.
   expect(() => checkReuseMetadata(recordedPlan, run, artifact, [...jobs, ...renamed])).toThrow(
     "exactly once",
   );

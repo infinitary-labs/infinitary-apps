@@ -438,7 +438,6 @@ const suiteFile = (part: PartTable[number]) => !("suite" in part) ? undefined
 export const hostedTest = (path: string, parts: PartTable = PHONE_PARTS) =>
   path.startsWith(APP_TESTS) || parts.some((part) => "mac" in part && part.mac && suiteFile(part) === path);
 const names = (parts: PartTable) => parts.map((part) => part.name);
-/** The gate's own parts, in order. */
 const EVERY = names(PHONE_PARTS);
 const owners = (part: string) => PART_OWNERS[part] ?? Object.entries(PART_OWNERS)
   .filter(([name]) => partFamily(name) === part).flatMap(([, files]) => files);
@@ -843,7 +842,6 @@ export function requestJobs(selection: RequestSelection, times: PhonePassTimes):
 export const requestStopsEarly = (selection: RequestSelection) =>
   !selection.named && (selection.full || selection.repeats.length > 0);
 
-/** A dealt job's name in its check's name: its number of all of them and the devices it checks. */
 export function dealtJobLabel(job: PhoneDealtJob, of: number): string {
   const names: Record<PhoneDevice, string> = { ipad: "iPad", duo: "iPhone Duo", iphone: "iPhone" };
   const devices = PHONE_DEVICES.filter((device) => job.passes.some((pass) => pass.device === device));

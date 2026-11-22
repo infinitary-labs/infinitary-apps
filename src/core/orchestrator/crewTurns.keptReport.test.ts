@@ -29,7 +29,6 @@ describe("a report its turn's provider failure would have lost", () => {
     if (!onReport) throw new Error("Missing production report callback");
     const reportsBefore = events.filter((event) => event.type === "task_report").length;
 
-    // The crewmate reports mid-turn; then the provider fails the same turn.
     await onReport("Verdict: pass. No findings at abc123.", "Review passed", { finished: true });
     await failTurn(crewmate, taskId, "API Error: 529 Overloaded");
 
@@ -38,12 +37,10 @@ describe("a report its turn's provider failure would have lost", () => {
     expect(events.filter((event) => event.type === "task_report")).toHaveLength(reportsBefore);
     expect(tasks.get(taskId)?.outcome).toBe("Done with step one.");
     expect(tasks.get(taskId)?.status).toBe("active");
-    // The words are on the record anyway.
     expect(tasks.turns.keptReport(taskId)).toMatchObject({
       text: "Verdict: pass. No findings at abc123.",
       summary: "Review passed",
     });
-    // The first mate hears the failure and the report it would have lost.
     const wake = ops.at(-1) ?? "";
     expect(wake).toContain("failed at the provider: API Error: 529 Overloaded");
     expect(wake).toContain('Before it failed, the crewmate reported "Review passed"');
@@ -51,8 +48,6 @@ describe("a report its turn's provider failure would have lost", () => {
     // The guidance is still kept for the honest retry.
     expect(inbox.allFor(taskId)).toMatchObject([{ failures: 1 }]);
 
-    // The retry opens with the check-first note naming the kept report,
-    // then the same guidance.
     const prompts = crewmate.promptCalls.length;
     await sweepWhenDue(harness, taskId);
     expect(crewmate.promptCalls).toHaveLength(prompts + 1);
@@ -63,7 +58,6 @@ describe("a report its turn's provider failure would have lost", () => {
     await sweepWhenDue(harness, taskId);
     expect(crewmate.promptCalls.at(-1)).toBe(guidance);
 
-    // The crewmate reports again and the turn ends clean: that report counts.
     await onReport("Verdict: pass. No findings at abc123.", "Review passed", {});
     await endTurn(crewmate, taskId);
     expect(tasks.get(taskId)?.outcome).toBe("Verdict: pass. No findings at abc123.");

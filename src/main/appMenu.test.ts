@@ -67,7 +67,6 @@ describe("the Help menu", () => {
         accelerator: undefined,
       }),
     ]);
-    // The app menu keeps its own items.
     expect(submenu(menu[0]).map((entry) => entry.id ?? entry.role)).toEqual([
       "about",
       "updates-check",

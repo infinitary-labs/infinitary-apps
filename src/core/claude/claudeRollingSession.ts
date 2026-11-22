@@ -240,7 +240,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     });
   }
 
-  /** Attach, set the turn's effort, then hand the client the prompt and any steer that waited. */
   private async start(mine: Starting, text: string, images?: SessionImage[]): Promise<void> {
     let connection: Connection;
     try {
@@ -412,7 +411,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     return this.turn.kind === "running" && this.turn.interrupt !== undefined;
   }
 
-  /** Remember a starting turn's stop; send a running turn's interrupt. */
   private async interrupt(failure?: string): Promise<void> {
     const turn = this.turn;
     if (turn.kind === "idle") return;
@@ -521,7 +519,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       connection.closedAt !== undefined &&
       now - connection.closedAt >= TICK_PERIOD_MS
     ) {
-      // Its input ended a tick ago and the client is still running: stop it.
       this.close(connection, true);
     }
     // The interrupt never landed within a tick: the client is wedged.
@@ -546,7 +543,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   /** This session's own folder for the skills its attaches stage, held until it retires. */
   private staging: StagingFolder | undefined;
 
-  /** A coding session's working copy as this attach hands it to the client (`claudeProjectResources`). */
   private async projectResources(): Promise<ClaudeProjectResources | undefined> {
     const shape = this.spec.shape;
     if (this.spec.builtins !== "coding" || shape.turns !== "rolling") return undefined;
@@ -670,7 +666,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     return connection;
   }
 
-  /** Throws, spawning nothing, when the prompt an attach serves is no longer the open one. */
   private stillServing(mine: Starting): void {
     if (this.disposed) throw new Error(ENDED_TEXT);
     if (this.turn !== mine) {
@@ -923,7 +918,6 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     this.settle(new Error(STOPPED_TEXT));
   }
 
-  /** One result: its events, then the session's closing text for it. */
   private closeTurn(result: ClaudeNormalizeResult, text: string | undefined): void {
     const turn = this.turn;
     if (turn.kind === "running") turn.ran = true;

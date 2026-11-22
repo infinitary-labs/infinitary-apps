@@ -47,8 +47,6 @@ test("a reply that asks for work shows the crewmate's interim line and what it r
 
     const thread = shownEntry(page).locator("[data-card-thread]");
     await expect(thread.getByText(REPLY_PROGRESS_REPLY)).toBeVisible({ timeout: 30_000 });
-    // The interim line shows while the crewmate still works, and the
-    // working row names the command it ran on the reply.
     await expect(
       thread.locator('[data-thread-message="crewmate"]').getByText(REPLY_PROGRESS_INTERIM),
     ).toBeVisible({ timeout: 30_000 });
@@ -56,7 +54,6 @@ test("a reply that asks for work shows the crewmate's interim line and what it r
       REPLY_PROGRESS_DOING,
       { timeout: 30_000 },
     );
-    // Both came before the answer, and the reply still waits for it.
     await expect(thread.getByText(REPLY_PROGRESS_ANSWER)).toHaveCount(0);
     const awaiting = () =>
       page.evaluate(
@@ -67,7 +64,6 @@ test("a reply that asks for work shows the crewmate's interim line and what it r
       );
     expect(await awaiting()).toBe("answer");
 
-    // The answer lands once the work is done, and ends the wait.
     await expect(
       thread.locator('[data-thread-message="crewmate"]').getByText(REPLY_PROGRESS_ANSWER),
     ).toBeVisible({ timeout: 60_000 });

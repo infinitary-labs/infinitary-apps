@@ -22,9 +22,7 @@ export type CrewWorkForUpdate = {
   resuming: () => string[];
 };
 
-/** One installation's save of the crew's work before its copy is replaced, with Update later. */
 export type UpdateSaving = {
-  /** The status's `work` now. */
   status: () => UpdateWork | undefined;
   /** Saves the crew's work; false when Update later let the update go first. */
   save: () => Promise<boolean>;
@@ -77,7 +75,6 @@ export function createUpdateSaving(work: CrewWorkForUpdate | undefined): UpdateS
   };
 }
 
-/** A status with the crew's work around the update, when there is any. */
 export function withUpdateWork(status: UpdateStatus, saving: UpdateSaving): UpdateStatus {
   const work = saving.status();
   return work ? { ...status, work } : status;

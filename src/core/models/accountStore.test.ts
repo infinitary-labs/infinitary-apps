@@ -35,7 +35,6 @@ const claudeCredential: AccountBackend = {
 
 const bridge = { prompt: async () => "answer", notify: () => {}, openExternal: async () => {} };
 
-/** The client's own catalog as it answers it: aliases, a default row and one older generation. */
 const CLIENT_ROWS: ClaudeModelRow[] = [
   { value: "default", resolvedModel: "claude-opus-5-5", displayName: "Default (recommended)" },
   { value: "fable", resolvedModel: "claude-fable-5-1", displayName: "Fable 5.1" },

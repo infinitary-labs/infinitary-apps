@@ -2,10 +2,8 @@ import { Flagship } from "../../src/core/orchestrator/flagship";
 import type { ModelRuntime } from "../../src/core/pi/types";
 import type { SettingsStore } from "../../src/core/storage/settingsStore";
 
-/** The one Claude login these flagships bind the seat to. */
 export const CLAUDE_ACCOUNT = "acct_claude";
 
-/** The Claude model the seat runs on over that login. */
 export const CLAUDE_SEAT_MODEL = { provider: "anthropic-claude", id: "claude-opus" };
 
 /**

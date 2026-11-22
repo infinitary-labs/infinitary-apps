@@ -9,7 +9,6 @@
  * (scripts/batch-failures.mjs).
  */
 
-/** What a batch's branch starts with. */
 export const BATCH_BRANCH = "infinitary-batch/";
 
 /** The workflow a batch pull request starts, as GitHub names a run's file. */

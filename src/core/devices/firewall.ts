@@ -28,7 +28,6 @@ import { findOnPath } from "../userBin";
  * to keep devices out.
  */
 
-/** What one program answered: whether it ended well, and what it printed. */
 export type FirewallRun = (
   program: string,
   args: readonly string[],
@@ -39,11 +38,8 @@ export type FirewallLook = {
   port: number;
   /** Reads a file any user may read; null when it is not there or cannot be read. */
   readFile?: (path: string) => string | null;
-  /** Runs one of the system's own programs, found on the search path. */
   run?: FirewallRun;
-  /** Finds a program on the search path. */
   which?: (name: string) => string | undefined;
-  /** Whether a path is there. */
   exists?: (path: string) => boolean;
 };
 
@@ -165,7 +161,6 @@ function listOf(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [value];
 }
 
-/** A reading from what the script printed, or null when it printed anything else. */
 export function readWindowsFirewall(output: string): WindowsFirewallReading | null {
   let said: unknown;
   try {

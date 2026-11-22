@@ -166,7 +166,6 @@ async function until(check: () => boolean, what: string): Promise<void> {
   }
 }
 
-/** Lets the watch's own reports of what just changed arrive, as they do after any write. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
 
 const copyOf = (there: Computer) => join(there.workDir, STANDBY_DIR, STANDBY_COPY);
@@ -189,7 +188,6 @@ describe("keeping a copy on other computers", () => {
     expect(s.named()).toEqual(["one", "two"]);
     expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
 
-    // Changes as the first mate saves them: tasks, knowledge, a conversation that grows, a new file, one gone.
     for (let index = 0; index < 20; index++)
       seedTask(at.tasks, { id: `task-${index}`, title: `Task ${index}`, status: "queued" });
     at.knowledge.prepare("INSERT INTO notes (text) VALUES (?)").run("the captain likes tea");
@@ -206,7 +204,6 @@ describe("keeping a copy on other computers", () => {
     const expected = recordDigest(at.userData);
     expect(recordDigest(copyOf(one))).toEqual(expected);
     expect(recordDigest(copyOf(two))).toEqual(expected);
-    // Changes crossed as changes: one full copy each.
     expect(one.asks.filter((ask) => ask === STANDBY_FULL_ORDER)).toHaveLength(1);
     // The copy is the work folder's own: nothing lands where a first mate would open it.
     expect(existsSync(join(one.workDir, "firstmate.db"))).toBe(false);
@@ -236,11 +233,9 @@ describe("keeping a copy on other computers", () => {
       reach(one, true);
       await until(() => state("one")?.state === "in-sync", "back in sync");
     };
-    // The same hello again tells nothing new.
     await away("first-save");
     expect(told).toBe(1);
 
-    // Its network changed: the home tells its devices the new address.
     said = ["192.168.1.31:7443"];
     await away("second-save");
     expect(told).toBe(2);
@@ -294,7 +289,6 @@ describe("keeping a copy on other computers", () => {
     reach(one, true);
     await until(() => state("one")?.state === "in-sync", "in sync again");
     expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
-    // It crossed as changes, not as a second full copy.
     expect(one.asks.filter((ask) => ask === STANDBY_FULL_ORDER)).toHaveLength(1);
   });
 
@@ -615,7 +609,6 @@ describe("taking over from a copy", () => {
     expect(arrived[0]?.homeNumber).toBe(2);
     expect(started).toEqual([2]);
     const files = join(filesDir, taking, "files");
-    // The laid-out record holds the last change, names this takeover, and keeps the other copy only.
     const laid = new Database(join(files, "firstmate.db"), { readonly: true });
     expect(laid.prepare("SELECT title FROM tasks WHERE id = ?").get("last")).toEqual({
       title: "The last change before it died",

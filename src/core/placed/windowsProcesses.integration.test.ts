@@ -96,7 +96,6 @@ const HOLD = "process.stdin.resume();process.stdin.on('end',()=>process.exit(0))
 const connect = (port: number) =>
   `const s=require('node:net').connect(${port},'127.0.0.1',()=>console.log(process.pid));s.on('error',()=>{});`;
 
-/** Whether a program with this number still runs. */
 function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -393,8 +392,6 @@ describe.skipIf(!windows)("the Windows reading of programs", () => {
   it("keeps a program a Pi shell left running after the app that started it exits, until a stop ends it", async () => {
     const dir = scratchDir("infinitary-windows-outlive-");
     writeProbe(dir);
-    // A stand-in for the app: the real JobManager, built the way the app is,
-    // runs one command that leaves a program running, then exits.
     const app = await bundleStandInApp(dir);
     const node = process.execPath.replace(/\\/g, "/");
     const at = (name: string) => join(dir, name).replace(/\\/g, "/");
@@ -470,7 +467,6 @@ const reading: ResourceObservation = {
   },
 };
 
-/** The load line's journal events, in order. */
 function journalEvents(dir: string): string[] {
   const file = join(dir, JOURNAL_FILE);
   if (!existsSync(file)) return [];

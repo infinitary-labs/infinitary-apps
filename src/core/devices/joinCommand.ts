@@ -69,7 +69,6 @@ export type AppLauncher = { executable: string; args: readonly string[] };
 
 export type JoinCommandInput = {
   for: DeviceCommandFor;
-  /** The link the command carries. */
   link: string;
   /** This Mac's own name, which the other Mac's question says. */
   homeName: string;
@@ -149,7 +148,6 @@ function anotherWindowsUserCommand(launcher: AppLauncher, link: string, localApp
   ].join("; ");
 }
 
-/** The line each Linux installer installs packages with, the command naming what it needs after it. */
 const INSTALL_LINES: Readonly<Record<LinuxInstaller, string>> = {
   apt: "sudo apt-get install -y",
   dnf: "sudo dnf install -y",
@@ -302,7 +300,6 @@ const UBUNTU_INSTALL =
 /** What a Linux computer lacks for the AppImage, as one word the command's `printf %b` gives back. */
 const LINUX_NEEDS_SCRIPT = printable(LINUX_TOOL_NEEDS.join("\n"));
 
-/** The arms that set `x` to the line that installs packages with that computer's installer. */
 const INSTALL_CASES = Object.entries(INSTALL_LINES)
   .map(
     ([installer, install]) => `${installer === "apt" ? "apt|apt64" : installer}) x="${install}";;`,

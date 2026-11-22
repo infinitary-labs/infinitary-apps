@@ -158,11 +158,9 @@ describe("the integrations command on a computer that runs work", () => {
     await expect
       .poll(() => home.tasks.get("t-reach")?.outcome)
       .toBe("The issue waits for the captain.");
-    // Its instructions there name the command.
     expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
     const [listed, shown, read, write] = answers;
 
-    // List and show answer what this Mac has connected.
     expect(listed?.exit).toBe(0);
     expect(listed?.output).toContain("GitHub");
     expect(listed?.output).toContain("octo");
@@ -220,7 +218,6 @@ describe("the integrations command on a computer that runs work", () => {
     expect(home.tasks.get("t-reach")?.delivery?.writeAsks?.[0]?.outcome).toMatchObject({
       kind: "refused",
     });
-    // Repeating the already-resolved choice never repeats the request.
     home.supervisor.cardActions.act(approval.id, "once");
     expect(github.seen.filter((request) => request.method === "POST")).toHaveLength(1);
 
@@ -412,7 +409,6 @@ describe("the files command between this Mac and a computer that runs work", () 
       `${FILES_COMMAND} get home:${join(home.paths.accountsDir, "registry.json")}`,
       `${FILES_COMMAND} get home:~/Documents/letter.txt`,
     ]);
-    // Its instructions there name the command beside the computers.
     expect(systemOf(api.requests[requests])).toContain(
       `To read a file on another of these computers, copy it with ${FILES_COMMAND} in your shell`,
     );
@@ -421,7 +417,6 @@ describe("the files command between this Mac and a computer that runs work", () 
     expect(listed?.output).toContain("clips.csv");
     expect(listed?.output).toContain("record.db");
 
-    // The file arrives whole in the task's hand-over folder there, private, and only its path is heard.
     const handover = join(at.folders("t-files").temp, "handover");
     const [kept] = readdirSync(handover).filter((name) => name.endsWith("clips.csv"));
     const path = join(handover, kept ?? "missing");
@@ -437,7 +432,6 @@ describe("the files command between this Mac and a computer that runs work", () 
     expect(copy.prepare("select key from tasks").all()).toEqual([{ key: "INF-2468" }]);
     copy.close();
 
-    // The app's own sign-ins stay where they are, and so do the captain's private folders.
     expect(refused?.exit).toBe(1);
     expect(refused?.output).toContain("never copies");
     expect(closed?.exit).toBe(1);
@@ -445,7 +439,6 @@ describe("the files command between this Mac and a computer that runs work", () 
       "~/Documents/letter.txt is in a private folder - Desktop, Documents, Library or ~/.ssh - which the files command never copies for another user on the same computer.",
     );
 
-    // Each copy is one line on the task's record here, and nothing is kept on this Mac.
     const notes = home.tasks
       .timeline("t-files")
       .filter((event) => event.kind === "note" && event.text.startsWith("copied "))
@@ -480,7 +473,6 @@ describe("the files command between this Mac and a computer that runs work", () 
     expect(path.startsWith(crewmateTempDir(home.paths, "t-here"))).toBe(true);
     expect(readFileSync(path).equals(footage)).toBe(true);
     expect(statSync(path).mode & 0o777).toBe(0o600);
-    // Neither computer keeps a copy once it is delivered.
     expect(readdirSync(join(at.dataDir, "file-reach"))).toEqual([]);
     expect(readdirSync(join(home.paths.userData, "file-reach", "fetched"))).toEqual([]);
     // The other computer's own sign-ins stay there.
@@ -676,7 +668,6 @@ describe("the Secrets command on a computer that runs work", () => {
       .map((line) => (JSON.parse(line) as { channel: string }).channel);
     expect(calls).toEqual(["inf:work:secrets", "inf:work:secrets"]);
 
-    // Nothing on that computer holds the value or any custody bytes.
     expect(filesHolding(at.dataDir, value)).toEqual([]);
     expect(custody.slots.size).toBeGreaterThan(0);
     for (const bytes of custody.slots.values()) expect(filesHolding(at.dataDir, bytes)).toEqual([]);
@@ -787,7 +778,6 @@ describe("asking to keep a secret from a computer that runs work", () => {
         },
       },
     ]);
-    // Nothing on that computer holds the value.
     expect(filesHolding(at.dataDir, value)).toEqual([]);
   });
 
@@ -871,7 +861,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
       "t-lena",
       `${INTEGRATIONS_COMMAND} call Google read_message '${JSON.stringify({ id })}'`,
     );
-    // It read the message there, and its record there and this Mac's copy hold it.
     expect(read).toContain(LENA.subject);
     const there = at.folders("t-lena").sessions;
     const here = crewmateSessionsDir(home.paths, "t-lena");
@@ -907,10 +896,8 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     const path = join(handover, saved ?? "missing");
     expect(readFileSync(path).equals(pdf)).toBe(true);
     expect(statSync(path).mode & 0o777).toBe(0o600);
-    // The crewmate heard its path there, never its bytes.
     expect(heard).toContain(path);
     expect(heard).not.toContain(pdf.subarray(0, 64).toString("base64url"));
-    // Nothing of it stays on this Mac.
     expect(
       existsSync(join(crewmateTempDir(home.paths, "t-lena"), "handover", saved ?? "missing")),
     ).toBe(false);
@@ -933,7 +920,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
     expect(filesHolding(here, "Lena's message is answered.")).not.toEqual([]);
 
-    // Its next turn there carries the note, never the message.
     model([{ text: "Lena's invoice is answered." }]);
     const requests = api.requests.length;
     await home.supervisor.steer.steerCrewmate("t-lena", "What did Lena ask for?");
@@ -942,7 +928,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(next).toContain("What did Lena ask for?");
     expect(next).toContain(NOTE);
     expect(next).not.toContain(LENA.subject);
-    // This Mac's copy follows that turn as written there, file for file.
     await expect.poll(() => sameFiles(here, there)).toEqual({ missing: [], differing: [] });
     expect(filesHolding(at.dataDir, LENA.subject)).toEqual([]);
   });
@@ -962,7 +947,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
       const copy = answer as { files: { name: string; data: string }[]; more: boolean };
       return {
         ...copy,
-        // Cut short with nothing more to come: each file that now holds the note arrives half.
         more: false,
         files: [
           ...copy.files.map((file) => {
@@ -982,14 +966,12 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     });
     expect(await outsideData.deleteNow()).toEqual({ conversations: 0, waiting: 1 });
     expect(cut).toBeGreaterThan(0);
-    // Replaced there; this Mac's copy holds what it held, never half of each.
     expect(filesHolding(there, LENA.subject)).toEqual([]);
     expect(filesHolding(here, LENA.subject)).not.toEqual([]);
     expect(filesHolding(here, NOTE)).toEqual([]);
     expect(existsSync(`${here}.whole`)).toBe(false);
     expect(existsSync(outside)).toBe(false);
 
-    // The next pass copies them whole.
     asked.mockRestore();
     expect(await outsideData.deleteNow()).toEqual({ conversations: 1, waiting: 0 });
     expect(filesHolding(dirname(here), LENA.subject)).toEqual([]);
@@ -1025,7 +1007,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(filesHolding(there, LENA.subject)).not.toEqual([]);
     expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
 
-    // Updated, it is replaced there at the next sweep.
     await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
     await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
     await at.inReach("t-lena");
@@ -1101,7 +1082,6 @@ function shellCommand(command: string) {
   return { name: "bash", args: { command, description: "Reach the integrations" } };
 }
 
-/** The crewmate's instructions as a request carried them. */
 function systemOf(request: StubRequest | undefined): string {
   return (request?.body.system ?? []).map((block) => block.text ?? "").join("\n");
 }
@@ -1117,7 +1097,6 @@ function shellAnswer(request: StubRequest | undefined): Answered {
   return answerOf(textOf(result));
 }
 
-/** How a command run in the crewmate's shell answered: its exit, and what it printed. */
 type Answered = { exit: number; output: string };
 
 /** A command's answer in the bash tool's words: `exit <code>`, then what it printed. */
@@ -1135,7 +1114,6 @@ function lastHeard(request: StubRequest): string {
     .join("\n");
 }
 
-/** A message's or tool result's content as its text. */
 function textOf(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -1187,7 +1165,6 @@ function jobEnd(heard: string, job: string): Answered | undefined {
   };
 }
 
-/** The longest start two texts share. */
 function sharedStart(a: string, b: string): string {
   let at = 0;
   while (at < a.length && a[at] === b[at]) at += 1;
@@ -1289,7 +1266,6 @@ function collectEach(
   return answers;
 }
 
-/** Every file under `root` whose bytes hold `text`. */
 function filesHolding(root: string, text: string | Buffer): string[] {
   const found: string[] = [];
   const walk = (dir: string) => {

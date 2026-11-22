@@ -139,7 +139,6 @@ export class JobManager {
    */
   private readonly limited = new Map<string, { answering: boolean }>();
   private readonly now: () => number;
-  /** The home's jobs table, when its rows are kept there. */
   private readonly store: JobStore | undefined;
   /** The interrupted-at-quit record; absent with neither (tests). */
   private readonly rows: JobRows | undefined;
@@ -339,7 +338,6 @@ export class JobManager {
     });
   }
 
-  /** How many background commands this owner still has running. */
   runningJobCount(ownerId: string): number {
     let count = 0;
     for (const job of this.jobs.values()) {

@@ -106,7 +106,6 @@ function standInHost(ways: MergeWays) {
     mergeQueue: false,
     /** The pull requests that queue holds now. */
     queued: new Set<number>(),
-    /** How many times that queue was read. */
     queueReads: 0,
     /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
     noVersion: false,
@@ -141,7 +140,6 @@ function standInHost(ways: MergeWays) {
     comments: new Map<number, StandInComment[]>(),
     /** The last id the host gave a comment. */
     commentId: 900,
-    /** A comment's id, as the host gives it to one it keeps. */
     nextCommentId(): number {
       host.commentId += 1;
       return host.commentId;
@@ -585,7 +583,6 @@ export function setup(ways: MergeWays = EVERY_WAY) {
     },
     /** One more pass, after every pass already asked for. */
     pass: () => batches.pass(REPO),
-    /** Time passes on the app's clock. */
     advance(ms: number) {
       clock += ms;
     },

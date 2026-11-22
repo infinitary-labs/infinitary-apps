@@ -229,7 +229,6 @@ export type SetupExtras = {
   realRouter?: (
     db: ReturnType<typeof openInMemoryDatabase>,
   ) => import("@core/routing/router").Router;
-  /** Whether the account-less runtime serves a model of its own. */
   accountlessServes?: () => boolean;
   /** The models the account-less runtime serves (a models.json provider's). */
   accountlessModels?: () => { provider: string; id: string }[];
@@ -324,7 +323,6 @@ export type SetupExtras = {
   runbooks?: CrewSupervisorOptions["runbooks"];
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
   readMainChecks?: CrewSupervisorOptions["readMainChecks"];
-  /** The home's knowledge, over this setup's projects. */
   knowledge?: (repos: RepoRegistry) => KnowledgeService;
   /** The kind classifier (S3); absent keeps S2's every-shape-unclear behaviour. */
   classifier?: import("@core/routing/kindClassifier").KindClassifier;
@@ -450,7 +448,6 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
   } as unknown as WorkspaceService;
   const realWorkspace = extras.realWorkspace ? new RealWorkspaceService(paths) : undefined;
   const specs: CrewmateSpec[] = [];
-  /** Every session spec the supervisor opened, in order. */
   const sessionSpecs: SessionSpec[] = [];
   const open = vi.fn(async (spec: SessionSpec): Promise<ModelSession> => {
     sessionSpecs.push(spec);
@@ -739,7 +736,6 @@ export const tick = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(80);
 };
 
-/** A crewmate's turn that ends with this text as its last answer. */
 export async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
   crewmate.emit({ type: "assistant_delta", taskId, text });
   crewmate.emit({ type: "turn_end", taskId });
@@ -747,7 +743,6 @@ export async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: s
   await tick();
 }
 
-/** A crewmate's turn that ends, with this text as its last answer when one is given. */
 export async function endTurn(
   crewmate: FakeCrewmate,
   taskId: string,
@@ -814,7 +809,6 @@ export function askedOn(supervisor: Pick<CrewSupervisor, "cards">, cardId: strin
   return supervisor.cards.thread(cardId).messages.findLast((line) => line.who === "captain")?.id;
 }
 
-/** A crewmate's whole risk declaration: every dimension rated. */
 export const METER_RISK: RiskDeclaration = {
   blast: { level: "low", why: "Two files in the meter" },
   behavior: { level: "low", why: "Corrects the unit" },
@@ -825,7 +819,6 @@ export const METER_RISK: RiskDeclaration = {
   deps: { level: "low", why: "Nothing added" },
 };
 
-/** A step the person takes after the meter change merges, for a story's required actions. */
 export const METER_ACTION: RequiredAction = {
   id: "reconnect-meter",
   target: "the meter",
@@ -850,7 +843,6 @@ export const completionBody = (after: string) =>
     after,
   );
 
-/** The [fm-op] lines a host-run settle sends back to the Firstmate. */
 export const settleWakes = (ops: string[]) =>
   ops.filter((line) => line.includes("the host settled it"));
 
@@ -867,7 +859,6 @@ export function settleLines(tasks: TaskService, taskId: string): string[] {
  * that only need "some work text" put it in both goal and user words - the
  * host-rendered template then contains it, so content assertions hold.
  */
-/** The queued-guidance lines a task's timeline holds. */
 export function queuedGuidanceLines(tasks: TaskService, taskId: string) {
   return tasks.timeline(taskId).filter((event) => event.text === QUEUED_GUIDANCE_LINE);
 }

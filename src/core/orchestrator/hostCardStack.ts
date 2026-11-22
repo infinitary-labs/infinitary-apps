@@ -21,7 +21,6 @@ import {
   systemNoteCard,
 } from "./hostCards";
 
-/** Host-authored card lifecycle over the card stack. */
 export class HostCardStack {
   constructor(
     private readonly host: CardServiceHost,
@@ -217,7 +216,6 @@ export class HostCardStack {
     this.put({ ...signInAgainCard(id, signIn, from), createdAt: this.host.now() });
   }
 
-  /** An app-raised note card (for example the mic permission primer). */
   addSystemNoteCard(id: string, title: string, body: string): void {
     if (this.cards.has(id)) return;
     this.put({ ...systemNoteCard(id, title, body), createdAt: this.host.now() });

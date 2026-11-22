@@ -40,7 +40,6 @@ const WORDS = "words";
 const NOTES = "notes";
 const answerPart = (name: string) => `answer:${name}`;
 
-/** One card's parts as values, by part. */
 type Parts = Map<string, unknown>;
 
 /** What a change asks to set, or another window's change to take here. */
@@ -98,7 +97,6 @@ function partsOfDraft(draft: CardDraft): Parts {
   return parts;
 }
 
-/** Parts as a change names them. */
 function draftParts(parts: Parts): DraftParts {
   const named: DraftParts = {};
   const answers: FrameAnswer[] = [];
@@ -133,7 +131,6 @@ export class DraftSync {
   private readonly early = new Map<string, CardDraft>();
   /** Parts changed here and not yet sent, with the revision each goes against, by card. */
   private readonly dirty = new Map<string, Map<string, Base>>();
-  /** What the request in flight carries, by card. */
   private readonly flying = new Map<string, Flying>();
   private readonly timers = new Map<string, unknown>();
   /** Each card's changes refused for their size, none sent again unchanged. */
@@ -377,7 +374,6 @@ export class DraftSync {
     return lifecycle !== undefined && (draft.lifecycle ?? null) === lifecycle;
   }
 
-  /** What this window kept of the card's draft, when it is of the card's current opening. */
   private saved(cardId: string): DraftBase | null {
     const saved = this.deps.loadBase(cardId);
     return saved && (saved.lifecycle ?? null) === this.deps.lifecycle(cardId) ? saved : null;

@@ -34,17 +34,14 @@ const LEVEL_NAME: Record<Slot, string> = {
   low: "simple",
 };
 
-/** A level's word inside an English sentence: premium, hard, normal, simple. */
 export function levelName(slot: Slot): string {
   return LEVEL_NAME[slot];
 }
 
-/** A level's models in a sentence: "premium models", "models for hard tasks". */
 export function levelModels(slot: Slot): string {
   return slot === "premium" ? "premium models" : `models for ${LEVEL_NAME[slot]} tasks`;
 }
 
-/** One model of a level in a sentence: "a premium model", "a model for hard tasks". */
 export function levelModel(slot: Slot): string {
   return slot === "premium" ? "a premium model" : `a model for ${LEVEL_NAME[slot]} tasks`;
 }

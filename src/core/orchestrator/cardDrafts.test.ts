@@ -149,7 +149,6 @@ describe("CardDrafts", () => {
         ],
       }),
     );
-    // No table but the drafts' own holds them.
     const tables = h.db
       .prepare<[], { name: string }>(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'card_drafts'",

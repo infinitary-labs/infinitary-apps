@@ -20,7 +20,6 @@ extension PhoneJourney {
         waitForShownBodyRevealed()
         waitForDraftCount("2 to answer")
 
-        // A pick on the phone reaches the computer's draft.
         let tuesday = app.webViews.staticTexts["Tuesday"].firstMatch
         XCTAssertTrue(tuesday.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(tuesday)
@@ -43,7 +42,6 @@ extension PhoneJourney {
         XCTAssertEqual(after - before, worded.count, "Each change the phone sent moved the draft's revision once")
         try await dismissKeyboardForProbe()
 
-        // A note queued on the phone reaches the computer's draft.
         let point = app.buttons["point-at"]
         XCTAssertTrue(point.waitForPresence(timeout: 10), app.debugDescription)
         reveal(point); tapOnPhone(point)
@@ -56,7 +54,6 @@ extension PhoneJourney {
         let noted = try await waitForDraft(["notes": [""]])
         var note = try XCTUnwrap(((noted["draft"] as? [String: Any])?["notes"] as? [[String: Any]])?.first)
 
-        // Another screen's pick shows in the body on screen, its words in the card's field, and its comment on the note.
         let elsewhere = "Thursday suits the pilot better"
         let comment = "Ask the harbour office first"
         note["comment"] = comment
@@ -70,7 +67,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts[comment].waitForPresence(timeout: 10), "The note never showed another screen's comment")
         picture("card-drafts-from-elsewhere")
 
-        // After the app ends and starts again, the card shows its picks and words again, read from the computer.
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
@@ -84,7 +80,6 @@ extension PhoneJourney {
         XCTAssertEqual(app.staticTexts["queued-notes-count"].label, "1 note not sent")
         picture("card-drafts-after-restart")
 
-        // A pick made while the computer is out of reach stays on the phone and goes once it is back.
         _ = try await home("offline")
         outOfReach("the test home went offline")
         let thursday = app.webViews.staticTexts["Thursday"].firstMatch
@@ -96,7 +91,6 @@ extension PhoneJourney {
         // The other screen's pick of the launch, which the phone never changed, still stands beside it.
         try await waitForDraft(["answers": ["day": ["thursday"], "boat": ["launch"]]])
 
-        // The captain's choice sends the card, and its draft goes with it.
         let book = app.buttons["card-action-book"]
         waitUntilEnabled(book)
         reveal(book); tapOnPhone(book)
@@ -104,7 +98,6 @@ extension PhoneJourney {
         try await waitForDraft(["gone": true])
     }
 
-    /// The values the draft holds for one question.
     private static func picked(_ draft: [String: Any], _ name: String) -> [String]? {
         (draft["answers"] as? [[String: Any]])?.first { $0["name"] as? String == name }?["values"] as? [String]
     }
@@ -116,7 +109,6 @@ extension PhoneJourney {
         return try await home("draft-wait", body: String(decoding: body, as: UTF8.self))
     }
 
-    /// The footer's count of the card's answers starts with these words.
     private func waitForDraftCount(_ words: String) {
         let count = app.buttons["card-answers"]
         let read = NSPredicate { _, _ in count.exists && count.label.hasPrefix(words) }

@@ -18,7 +18,6 @@ public struct PhonePushRegistration: Equatable, Sendable {
     /// `phone-push-withdraw`, since an older computer's registration refuses any field it does not know.
     public var withdrawals = false
 
-    /// The request's one argument.
     public var argument: [String: Any] {
         var argument: [String: Any] = ["token": token, "environment": environment.rawValue, "grant": grant, "key": key]
         if withdrawals { argument["withdrawals"] = true }
@@ -95,7 +94,6 @@ public enum PhonePush {
     /// The push address Apple gave, as the relay and the computer take it: lowercase hexadecimal.
     public static func token(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
 
-    /// When a grant expires, or nil for text that is not one.
     public static func expiry(_ grant: String) -> Date? {
         guard let match = grant.wholeMatch(of: grantShape), let seconds = TimeInterval(match.1) else { return nil }
         return Date(timeIntervalSince1970: seconds)
@@ -115,8 +113,6 @@ public enum PhonePush {
         return PhonePushRegistration(token: token, environment: environment, grant: grant, key: key)
     }
 
-    /// Whether the phone asks the relay for a grant: it holds none for this address and service, or its grant expires
-    /// within `renewBefore`.
     public static func needsGrant(_ held: PhonePushHeld, token: String, environment: PhonePushEnvironment, now: Date) -> Bool {
         // The grant is the address's alone, whichever computer's key goes with it.
         guard held.token == token, held.environment == environment, let grant = held.grant, let expiry = expiry(grant),
@@ -191,7 +187,6 @@ public enum PhonePush {
 
 /// Whether this phone may show Infinitary's notifications, as iOS says.
 public enum PhonePushPermission: Equatable, Sendable {
-    /// iOS has not asked yet.
     case notAsked
     case on
     /// Off in the phone's own Settings.
@@ -214,7 +209,6 @@ public struct PhonePushEffects {
     public var load: @MainActor () throws -> PhonePushHeld?
     /// Writes the held record; it throws unless the write was confirmed.
     public var save: @MainActor (PhonePushHeld) throws -> Void
-    /// Whether this phone asked the person once already, and noting that it did.
     public var askedPerson: @MainActor () -> Bool
     public var noteAskedPerson: @MainActor () -> Void
     /// The notifications shown now, each with the card it opens, which push of it this is and the pin of its
@@ -621,8 +615,6 @@ public struct PhonePushEffects {
         return status
     }
 
-    /// Hands the computer what the phone holds: the registration while notifications are on and a grant is held,
-    /// null while they are off in the phone's Settings, and nothing before iOS has asked.
     private func handOver() async {
         guard let hand, let permission else { return }
         switch permission {
@@ -643,7 +635,6 @@ public struct PhonePushEffects {
         }
     }
 
-    /// Asks the relay to send this address a grant, at most once every `askEvery`.
     private func askRelay() async {
         guard let token, permission == .on, var held = keep() else { return }
         let now = effects.now()

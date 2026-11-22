@@ -315,7 +315,6 @@ describe("a conversation held on a computer that runs work", () => {
     ).toEqual({ turn: 1 });
     await at.ended(1);
 
-    // The model's request carried the home's instructions and the forwarded tools.
     const served = api.requests.at(-1)?.body;
     expect(JSON.stringify(served?.system)).toContain("You are a crewmate on another Mac.");
     expect(served?.tools?.map((tool) => tool.name)).toEqual(
@@ -340,7 +339,6 @@ describe("a conversation held on a computer that runs work", () => {
     );
     expect(at.home.effects[1]?.after).toBeGreaterThanOrEqual(reportStart?.seq ?? Number.NaN);
 
-    // Every event once, numbered from 1 with no gap, the turn's start first and its end last.
     expect(at.home.events.map((record) => record.seq)).toEqual(
       at.home.events.map((_, index) => index + 1),
     );
@@ -588,7 +586,6 @@ describe("a conversation held on a computer that runs work", () => {
       },
     ]);
     expect(asked).toMatchObject({ state: { model: { provider: PROVIDER, id: MODEL } } });
-    // The conversation it held is the one that answers the next turn.
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);
     expect(api.requests.at(-1)?.body.model).toBe(MODEL);
@@ -1066,7 +1063,6 @@ describe("a conversation held on a computer that runs work", () => {
     ]);
     await at.ended(1);
 
-    // Only the call without around reached the home.
     expect(at.home.effects.map((effect) => effect.channel)).toEqual(["inf:work:open-change"]);
     expect(at.home.effects[0]?.request).toMatchObject({ input: { title, presentation: 2 } });
     expect(at.home.effects[0]?.request).not.toHaveProperty("input.around");

@@ -124,7 +124,6 @@ function Chip({ standing }: { standing: PanelKnowledgeStanding }) {
   );
 }
 
-/** A row that opens what it names in the inspector. */
 function LinkRow({
   title,
   detail,
@@ -176,7 +175,6 @@ function sourceBlock(source: PanelKnowledgeSource) {
   );
 }
 
-/** The connection a selection names, found on the entry it reads. */
 function connectionOf(
   selection: Selection,
   entry: PanelKnowledgeEntry,
@@ -209,7 +207,6 @@ export function AskButton({ onAsk }: { onAsk: (() => void) | null }) {
   );
 }
 
-/** One thing an earlier revision says beside what the current one says. */
 function CompareRow({
   name,
   label,

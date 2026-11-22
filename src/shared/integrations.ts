@@ -45,7 +45,6 @@ export const integrationKindSchema = z.enum([
 ]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
 
-/** What each kind is called on screen. */
 export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
   github: "GitHub",
   gitlab: "GitLab",
@@ -74,7 +73,6 @@ export function integrationRule(allowed: boolean, enabled: boolean): Integration
   return !enabled ? "never" : allowed ? "allow" : "ask";
 }
 
-/** An action's name: lowercase words joined by underscores. */
 export const integrationActionNameSchema = z
   .string()
   .regex(/^[a-z][a-z0-9_]{0,47}$/, "an action is named in lowercase words joined by underscores");
@@ -134,7 +132,6 @@ export const integrationSecretViewSchema = z
     name: integrationSecretNameSchema,
     /** A few plain words for the slot ("Linear key"). */
     label: z.string().min(1).max(64),
-    /** A value is kept for it. */
     kept: z.boolean(),
     /** Its actions run without it. */
     optional: z.boolean().optional(),
@@ -186,7 +183,6 @@ export const integrationDoorViewSchema = z
       .object({
         /** When the old name last ran, in epoch milliseconds. */
         at: z.number(),
-        /** The working folder it ran from. */
         cwd: z.string().max(4096),
       })
       .strict()
@@ -304,7 +300,6 @@ export const INTEGRATION_SECRET_WORDS = {
   stays: "It stays on this computer. Your first mate and your crew use it but never see it.",
 } as const;
 
-/** The words of the form that adds an MCP server. */
 export const INTEGRATIONS_MCP_WORDS = {
   add: "MCP server",
   title: "Add an MCP server",
@@ -387,14 +382,12 @@ export const INBOX_WORDS = {
   pending: "Deleting...",
 } as const;
 
-/** The words for what an action does, as its row shows them. */
 export const INTEGRATION_EFFECT_WORDS: Record<IntegrationEffect, string> = {
   reads: "reads",
   changes: "changes",
   sends: "sends",
 };
 
-/** The words for an action's rule, as its row shows them. */
 export const INTEGRATION_RULE_WORDS: Record<IntegrationRule, string> = {
   allow: "Always allowed",
   ask: "Asks you",
@@ -419,7 +412,6 @@ export function forgeSignInHost(integration: {
   );
 }
 
-/** The kinds that sign in in the person's browser rather than by a code or a form. */
 const browserSignInKindSchema = z.enum(["google"]);
 
 /** A typed arrival for a newly named server, before the forge knows its kind. */
@@ -586,7 +578,6 @@ const GOOGLE_NOTICE: IntegrationNotice = {
   cancel: "Cancel",
 };
 
-/** The kinds that show a notice before their sign-in starts, and its words. */
 export const INTEGRATION_NOTICES: Partial<Record<IntegrationKind, IntegrationNotice>> = {
   google: GOOGLE_NOTICE,
 };

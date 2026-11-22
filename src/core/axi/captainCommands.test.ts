@@ -286,7 +286,6 @@ function asClaudeRuns(
   });
 }
 
-/** What an answer printed above its help lines, as data. */
 function answer(stdout: string): Record<string, unknown> {
   return decode(stdout.split(/\nhelp\[/)[0] ?? "") as Record<string, unknown>;
 }
@@ -297,7 +296,6 @@ describe("infinitary-axi", () => {
     const key = core.services.tasks.get("axi-read")?.key;
     if (!key) throw new Error("the stuck task has no key");
 
-    // Bare, it shows what waits on you first, then the next commands.
     const home = await run([]);
     expect(home.exitCode).toBe(0);
     // The bin line names the command's own file, the home folder shortened to ~.
@@ -314,7 +312,6 @@ describe("infinitary-axi", () => {
     expect(homeRows.tasks).toMatch(/^\d+ waiting on you · \d+ working · /);
     expect(homeRows.help).toContain(`${INFINITARY_COMMAND} card show <id>`);
 
-    // A card as plain words, with its buttons and the one recommended.
     const shown = await run(["card", "show", cardId]);
     expect(shown.exitCode).toBe(0);
     const card = answer(shown.stdout) as {
@@ -332,11 +329,9 @@ describe("infinitary-axi", () => {
       live?.actions.filter((action) => action.default).length ?? 0,
     );
 
-    // A task by its key.
     const task = answer((await run(["task", "show", key])).stdout);
     expect(task).toMatchObject({ key, title: "Tidy axi-read" });
 
-    // The raw verb: the contract's own arguments, and a read sent.
     const detail = answer((await run(["api", "show", "inf:tasks:detail"])).stdout);
     expect(detail).toMatchObject({ channel: "inf:tasks:detail", effect: "read", required: 1 });
     const read = await run(["api", "inf:tasks:detail", "axi-read"]);
@@ -374,7 +369,6 @@ describe("infinitary-axi", () => {
       .timeline("axi-act")
       .filter((event) => event.kind === "card_resolved");
     expect(resolved.at(-1)).toMatchObject({ actor: "captain", data: { through: "command" } });
-    // The task's record says where the change came from.
     const detail = await core.dispatch("inf:tasks:detail", ["axi-act"]);
     expect(JSON.stringify(detail)).toContain(`From ${INFINITARY_COMMAND}.`);
 
@@ -383,7 +377,6 @@ describe("infinitary-axi", () => {
     expect(again.exitCode).toBe(0);
     expect(answer(again.stdout)).toMatchObject({ card: cardId, closed: "already" });
 
-    // The raw verb sends a change of the contract as you, recorded the same way.
     expect(invokeContract["inf:cards:act"].effect).toBe("change");
     const viaApi = await run(["api", "inf:cards:act", "card-stall-axi-api", button.id, "chrome"]);
     expect(viaApi.exitCode).toBe(0);
@@ -394,7 +387,6 @@ describe("infinitary-axi", () => {
         .at(-1),
     ).toMatchObject({ actor: "captain", data: { through: "command" } });
 
-    // Your words reach your first mate as from the window's input.
     const said = await run(["say", "What is waiting on me?"]);
     expect(said.exitCode).toBe(0);
     expect(answer(said.stdout)).toMatchObject({ sent: "yes" });
@@ -414,7 +406,6 @@ describe("infinitary-axi", () => {
       return thread.messages.filter((message) => message.who === "captain");
     };
 
-    // A reply in the window first, then one from the command: only the command's is marked.
     await core.dispatch("inf:cards:reply", [cardId, { text: "From the window" }], {
       kind: "captain",
     });
@@ -425,15 +416,12 @@ describe("infinitary-axi", () => {
       expect.objectContaining({ text: "From my terminal", through: "command" }),
     ]);
 
-    // The choice that closes the card is marked on its resolution.
     expect((await run(["card", "act", cardId, button.id])).exitCode).toBe(0);
     const resolution = core.services.supervisor.cards
       .captainResolutionsSince(0, 100)
       .find((one) => one.card.id === cardId);
     expect(resolution).toMatchObject({ action: button.id, through: "command" });
 
-    // A message from the command is marked where it is saved and in the window's last turn;
-    // one from the window's input is not.
     await core.dispatch("inf:converse", [{ text: "From the window's input" }], { kind: "captain" });
     expect(core.services.tasks.capture.lastTurn()?.through).toBeUndefined();
     expect((await run(["say", "From my terminal too"])).exitCode).toBe(0);
@@ -447,7 +435,6 @@ describe("infinitary-axi", () => {
     const now = answer((await run(["watch", "--for", "0"])).stdout) as { cursor: string };
     expect(now.cursor).toMatch(/^[0-9a-f-]{36}-\d+$/);
 
-    // The captain discards the card in the window; watch prints the cards' change.
     const watching = run(["watch", "--after", now.cursor, "--only", "cards", "--for", "20"]);
     await core.dispatch("inf:cards:act", [cardId, "discard", "chrome"], { kind: "captain" });
     const seen = await watching;
@@ -468,7 +455,6 @@ describe("infinitary-axi", () => {
   });
 
   it("admits only the door's key, never a task's shell, and is off with the inbox's switch", async () => {
-    // A copy of the door's folder with another key reaches nothing.
     const door = readLocalDoor(core.paths.localDoorDir);
     if (!door) throw new Error("no local door");
     const elsewhere = scratchDir("infinitary-axi-wrong-");
@@ -662,7 +648,6 @@ describe("infinitary-axi", () => {
     expect(named.exitCode).toBe(0);
     expect(JSON.parse(named.stdout)).toMatchObject({ notice: words });
 
-    // Settings says when the old name last ran, and from where.
     const door = core.services.integrations
       .view()
       .integrations.find((row) => row.id === INBOX_ID)?.door;

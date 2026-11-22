@@ -79,7 +79,6 @@ export function endProgram(program: ProgramState, mode: LeaveMode, now: number):
   program.packets = [];
 }
 
-/** The program a crewmate is a part of, among `programs`. */
 export function programOfPart(
   programs: Iterable<ProgramState>,
   id: string,

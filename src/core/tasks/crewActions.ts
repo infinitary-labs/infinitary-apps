@@ -64,7 +64,6 @@ export class CrewActions {
 
   constructor(private readonly options: CrewActionsOptions) {}
 
-  /** Every action the task's crewmate took, oldest first. */
   of(task: TaskRecord): TaskActionLine[] {
     const actions = this.files(task).flatMap((file) => this.read(file, task.worktreeDir));
     return actions.sort((a, b) => a.at - b.at);

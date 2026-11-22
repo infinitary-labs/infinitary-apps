@@ -76,7 +76,6 @@ export const RECORD_NEXT_LABELS: Readonly<Record<RecordBarNext, string>> = {
   },
 };
 
-/** The open record bar, or Start again on eligible dropped work. */
 export function recordBarOf(task: RecordBarInput): RecordBar | null {
   if (task.status === "done") return null;
   if (task.status === "dropped") {
@@ -174,7 +173,6 @@ export function leftBehindLine(
   return `It continues from commit ${head.slice(0, 7)}${since}. What only ${computer} holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there.`;
 }
 
-/** Where a move stands, in one line: what it waits for, or what it is doing now. */
 export function computerMoveLine(move: ComputerMoveView): string {
   const line =
     move.state === "retiring"

@@ -98,23 +98,19 @@ export type KnownForgeHost = { host: string; kind: ForgeKind };
 /** GitHub Enterprise Cloud with data residency: every `<name>.ghe.com` is GitHub's own. */
 const GHE_CLOUD = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.ghe\.com$/;
 
-/** A GitHub Enterprise Cloud host, known by its name alone. */
 export function isGitHubEnterpriseCloud(host: string): boolean {
   return GHE_CLOUD.test(host);
 }
 
-/** A public host (github.com, gitlab.com, bitbucket.org), never one on the person's own server. */
 export function isPublicForgeHost(host: string): boolean {
   return Object.hasOwn(PUBLIC_HOSTS, host);
 }
 
-/** The kind a host is by its name alone: a public host's, or GitHub Enterprise Cloud's. */
 export function kindByName(host: string): ForgeKind | undefined {
   if (Object.hasOwn(PUBLIC_HOSTS, host)) return PUBLIC_HOSTS[host];
   return isGitHubEnterpriseCloud(host) ? "github" : undefined;
 }
 
-/** The kind of a host: by its name, else as the caller knows it, else a plain Git host. */
 export function kindOfHost(host: string, known: readonly KnownForgeHost[] = []): ForgeKind {
   return kindByName(host) ?? known.find((entry) => entry.host === host)?.kind ?? "git";
 }

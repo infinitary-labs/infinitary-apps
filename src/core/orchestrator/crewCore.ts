@@ -48,7 +48,6 @@ import type { WorkPostures } from "./workPosture";
  */
 export type CrewCore = {
   readonly options: CrewSupervisorOptions;
-  /** The crewmate running each task here now, by task. */
   readonly tasks: Map<string, TaskRuntime>;
   now(): number;
   /** The app is quitting: a turn that settles now is not the crew's to act on. */

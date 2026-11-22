@@ -57,16 +57,12 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     await expect.poll(() => runner.state().contact, { timeout: 30_000 }).toBe("in-reach");
     await selectDevice(app.page, device.id);
     const row = () => app.page.locator(`[data-device-row="${device.id}"]`);
-    // Where this Mac's SSH connection to it stands, as the list says it.
     const ssh = async () =>
       (await app.page.evaluate(() => window.infinitary.devices.list()))[0]?.ssh;
     await expect.poll(ssh).toEqual({ state: "connected" });
-    // In reach over it: the dot says so, and the row names it by its address.
     await expect(reachDot(row())).toHaveAttribute("data-tone", "ok");
     await expect(row().locator("[data-device-identity]")).toContainText(sshd.address);
 
-    // This Mac quits and starts again at another port, and that Mac answers unlike
-    // the key Firstmate remembered: this Mac stops trying, and Devices says why, with Try again.
     const trustPath = join(app.userDataDir, "devices", "host-trust.json");
     const remembered = readFileSync(trustPath, "utf8");
     const unlike = JSON.parse(remembered) as {
@@ -115,7 +111,6 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
       sshd.address,
     );
 
-    // Change address, from the keyboard through the row's ⋯ menu: the same Mac under another name.
     const change = await rowAction(app.page, device.id, "address");
     await expect(change).toHaveText(m.settingsDevicesChangeAddress());
     await app.page.keyboard.press("Enter");
@@ -134,7 +129,6 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     await expect(row().locator("[data-device-identity]")).toContainText(sshd.alias);
     await expect(reachDot(row())).toHaveAttribute("data-tone", "ok");
 
-    // Stopped again after another restart, Try again by name in command search.
     sshd.knownHosts("changed");
     app = await moveThisMac(app, env);
     await openDevices(app.page);
@@ -187,7 +181,6 @@ test("a Mac added by its address that leaves for another Firstmate: this Mac sto
     app = await moveThisMac(app, env);
     await openDevices(app.page);
 
-    // This Mac stops trying, and Devices and the feed say why and what to do.
     await expect.poll(ssh, { timeout: 30_000 }).toEqual({ state: "stopped", reason: "other-home" });
     const lines = sshConnectionWords.stopped("other-home", { address: sshd.address, device });
     const row = await selectDevice(app.page, device.id);
@@ -225,7 +218,6 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
   let app: LaunchedApp = await launchApp({ withMockProvider: true, env });
   const runs: HelperRun[] = [];
   try {
-    // The command for another Mac, made here.
     await openDevices(app.page);
     await app.page.locator('[data-device-add="mac"]').click();
     await app.page.getByRole("button", { name: "Run a command there", exact: true }).click();
@@ -269,7 +261,6 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
     });
     const { page } = app;
 
-    // Devices says why it never came into reach, and offers its way back.
     await openDevices(page);
     const listed = async () =>
       (await page.evaluate(() => window.infinitary.devices.list())).find(
@@ -280,7 +271,6 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
     await expect(row.locator("[data-device-held]")).toBeVisible();
     const label = deviceLabel({ ...device, onThisMac: false });
 
-    // Add it by its address, from the keyboard: asked in place, then found again.
     await pressKey(
       row.getByRole("button", { name: `Add ${label} by its address`, exact: true }),
       "Enter",

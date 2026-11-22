@@ -50,7 +50,6 @@ export type CopilotUsageParse =
   | { kind: "windows"; windows: QuotaWindowView[]; credits?: QuotaCreditsView }
   /** A known answer with nothing metered in it. */
   | { kind: "empty" }
-  /** Not the answer this reader knows. */
   | { kind: "unrecognized" };
 
 /**
@@ -96,7 +95,6 @@ function copilotCredits(value: unknown): QuotaCreditsView | undefined {
   return undefined;
 }
 
-/** A snapshot's percent left, or undefined when it meters nothing. */
 function meteredPercent(value: unknown): number | undefined {
   const snapshot = asRecord(value);
   if (!snapshot || snapshot.unlimited === true) return undefined;

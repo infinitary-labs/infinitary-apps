@@ -505,7 +505,6 @@ export class StandbyKeeper {
   }
 }
 
-/** A file written whole beside its place, then put there at once. */
 function writeWhole(file: string, data: Buffer): void {
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
   const temp = `${file}.standby-tmp`;

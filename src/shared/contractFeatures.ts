@@ -289,7 +289,6 @@ export function takesDownload(deviceVersion: string): boolean {
  */
 export const FETCH_APP_SYSTEM_SINCE = "5.1.0";
 
-/** Whether a home reads the asking computer's system where it gets Firstmate (`FETCH_APP_SYSTEM_SINCE`). */
 export function readsFetchAppSystem(homeVersion: string): boolean {
   return speaksSince(homeVersion, FETCH_APP_SYSTEM_SINCE);
 }
@@ -326,7 +325,6 @@ export const PHONE_DIAGNOSTICS_SINCE = "14.0.0";
  */
 export const SHARED_CARDS_SINCE = "14.0.0";
 
-/** Whether a view reads a thread line's contributor fields (`SHARED_CARDS_SINCE`, or its older name). */
 export function readsSharedCards(
   version: string | undefined,
   changes: readonly string[] | undefined,
@@ -351,7 +349,6 @@ export function readsEndedCards(
   );
 }
 
-/** Whether a home answers current-update sightings (`CARD_SEEN_UPDATE_SINCE`, or its older name). */
 export function readsSeenUpdate(
   homeVersion: string | undefined,
   homeChanges: readonly string[] | undefined,
@@ -362,17 +359,14 @@ export function readsSeenUpdate(
   );
 }
 
-/** Whether a computer takes a task with no project (`PLACED_SEED_SINCE`). */
 export function speaksSeed(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, PLACED_SEED_SINCE);
 }
 
-/** Whether a computer gives its crewmates the home's knowledge (`KNOWLEDGE_THERE_SINCE`). */
 export function speaksKnowledge(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, KNOWLEDGE_THERE_SINCE);
 }
 
-/** Whether a computer speaks the custom API sign-in orders. */
 export function speaksCustomApi(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, CUSTOM_API_SIGN_INS_SINCE);
 }
@@ -401,7 +395,6 @@ export function speaksRecordRefresh(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, SESSION_RECORD_REFRESH_SINCE);
 }
 
-/** Whether a computer knows the Infinitary rename's code names (`INFINITARY_NAMES_SINCE`). */
 export function speaksInfinitaryNames(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, INFINITARY_NAMES_SINCE);
 }
@@ -415,7 +408,6 @@ export function speaksInfinitaryNames(deviceVersion: string): boolean {
  */
 export const CARD_TYPEFACES_SINCE = "8.9.0";
 
-/** Whether a home keeps a preview's project fonts (`CARD_TYPEFACES_SINCE`). */
 export function keepsCardTypefaces(homeVersion: string): boolean {
   return speaksSince(homeVersion, CARD_TYPEFACES_SINCE);
 }
@@ -428,7 +420,6 @@ export function keepsCardTypefaces(homeVersion: string): boolean {
  */
 export const STORY_AROUND_SINCE = "10.1.0";
 
-/** Whether a home changes the words around a published story (`STORY_AROUND_SINCE`). */
 export function changesStoryAround(homeVersion: string): boolean {
   return speaksSince(homeVersion, STORY_AROUND_SINCE);
 }
@@ -442,7 +433,6 @@ export function changesStoryAround(homeVersion: string): boolean {
  */
 export const CLIENT_JOB_ENDS_SINCE = "9.2.0";
 
-/** Whether a home hears a job's end as its Claude client's (`CLIENT_JOB_ENDS_SINCE`). */
 export function hearsClientJobEnds(homeVersion: string): boolean {
   return speaksSince(homeVersion, CLIENT_JOB_ENDS_SINCE);
 }
@@ -454,7 +444,6 @@ export function hearsClientJobEnds(homeVersion: string): boolean {
  */
 const TEMP_CLEANUP_SINCE = "7.1.0";
 
-/** Whether a work computer removes a closed task's temporary folder. */
 export function speaksTempCleanup(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, TEMP_CLEANUP_SINCE);
 }

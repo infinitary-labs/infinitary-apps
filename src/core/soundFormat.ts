@@ -24,7 +24,6 @@ import {
  * held, by the card's check.
  */
 
-/** Why a recording with pictures is no sound clip, and what to do instead. */
 export const SOUND_HOLDS_PICTURES =
   "holds pictures: a sound clip is sound alone, so take the video out (-vn), or show it as a demo";
 
@@ -144,7 +143,6 @@ function wavMs(bytes: Buffer): number {
   return Math.round((data / format.byteRate) * 1000);
 }
 
-/** A `fmt ` chunk that describes PCM, plain or in its extensible form. */
 function pcmFormat(
   bytes: Buffer,
   content: number,

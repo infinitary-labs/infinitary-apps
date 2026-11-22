@@ -144,11 +144,9 @@ export type CardResolution = {
   through?: Through;
 };
 
-/** One card's action observations, oldest first: never its offers' words. */
 const ACTION_OBSERVATIONS =
   "SELECT * FROM card_observations WHERE card_id = ? AND kind = 'action' ORDER BY seq";
 
-/** One offer observation of a card, by its offer id. */
 const OFFER_OBSERVATION =
   "SELECT * FROM card_observations WHERE id = ? AND card_id = ? AND kind = 'offer'";
 
@@ -297,7 +295,6 @@ function fromRow(row: Row): Card | undefined {
   return parsed.success ? parsed.data : undefined;
 }
 
-/** Whether a card's actions offer the merge decision of a finished build. */
 function isMergeDecision(actions: Card["actions"]): boolean {
   return actions.some((action) => mergeEffectOf(action) !== undefined);
 }
@@ -601,7 +598,6 @@ export class CardStore {
     })();
   }
 
-  /** A card's superseded versions, oldest first. */
   history(cardId: string): CardRevision[] {
     const rows = this.db
       .prepare("SELECT * FROM card_revisions WHERE card_id = ? ORDER BY revision")
@@ -665,7 +661,6 @@ export class CardStore {
     );
   }
 
-  /** The put-off kept on one card, by its id. */
   putOffOf(cardId: string): KeptPutOff | undefined {
     const row = prepared(this.db, "SELECT put_off_json FROM cards WHERE id = ?").get(cardId) as
       | { put_off_json: string | null }
@@ -1023,7 +1018,6 @@ export class CardStore {
     });
   }
 
-  /** One card by id, resolved or not. */
   get(cardId: string): Card | undefined {
     const row = this.row(cardId);
     return row ? fromRow(row) : undefined;
@@ -1178,7 +1172,6 @@ export class CardStore {
     return { status: "flagged", card: refOf(card), original: refOf(original), at };
   }
 
-  /** The duplicate label on a card, when stamped. */
   duplicateLabel(cardId: string): { duplicateOf: string; note: string; at: number } | undefined {
     const row = this.row(cardId);
     if (!row || row.duplicate_of === null) return undefined;
@@ -1287,7 +1280,6 @@ export class CardStore {
     }
   }
 
-  /** Keep a contribution's result under its operation identity, once. */
   recordContribution(input: {
     operationId: string;
     cardId: string;
@@ -1358,7 +1350,6 @@ export class CardStore {
     return new Map(rows.map(({ cardId, ...stat }) => [cardId, stat]));
   }
 
-  /** One card's thread, counted, with its newest message; absent when it has none. */
   threadStat(cardId: string): ThreadSummary | undefined {
     const row = this.db
       .prepare("SELECT COUNT(*) AS count, MAX(id) AS last_id FROM card_messages WHERE card_id = ?")
@@ -1426,7 +1417,6 @@ export class CardStore {
 
   deleteForTask(taskId: string): void {
     this.db.transaction(() => {
-      // The thread, the revisions and the evidence die with their card.
       for (const table of [
         "card_messages",
         "card_revisions",
@@ -1615,7 +1605,6 @@ export class CardStore {
     };
   }
 
-  /** A card's observations, every lifecycle, oldest first. */
   observations(cardId: string): CardObservation[] {
     const rows = this.db
       .prepare("SELECT * FROM card_observations WHERE card_id = ? ORDER BY seq")
@@ -1649,7 +1638,6 @@ export class CardStore {
     return row ? observationOf(row) : undefined;
   }
 
-  /** The newest availability of one offer on a lifecycle, if any. */
   lastAvailabilityOf(
     cardId: string,
     lifecycleId: string,
@@ -1708,7 +1696,6 @@ export class CardStore {
     );
   }
 
-  /** The offer a lifecycle last had available on the stage, if any. */
   lastAvailableOffer(cardId: string, lifecycleId: string): string | undefined {
     const row = this.db
       .prepare(
@@ -1792,7 +1779,6 @@ export class CardStore {
     return [...seen].map(([cardId, at]) => ({ cardId, at }));
   }
 
-  /** One offer as the host put it up, and when. */
   offer(
     cardId: string,
     offerId: string,

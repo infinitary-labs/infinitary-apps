@@ -139,8 +139,6 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
       };
     });
 
-    // Intelligence: every account in the computer's order, its allowance, its one verdict, and where
-    // a sign-in happens.
     const { intelligence } = pages;
     expect(intelligence.summary).toBe("3 accounts · 1 needs a sign-in");
     expect(intelligence.groups).toHaveLength(1);
@@ -200,7 +198,6 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
       canTurnOn: true,
       save: { id: draft?.id, name: "Friday wrap-up", enable: true },
     });
-    // Its next runs are read one a line.
     expect(draft?.review?.facts.find((one) => one.term === "Next runs")?.lines).toHaveLength(3);
     expect(rules["Morning summary"]?.review).toBeUndefined();
     // A rule that ran shows the run, with the prompt as the first mate got it.
@@ -213,7 +210,6 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
     expect(fact(rules["Release notes reminder"], "Your first mate gets")).toBe(run?.prompt);
     expect(rules["Morning summary"]?.history.runs).toEqual([]);
 
-    // Usage: the period's figures in either unit, and where they went.
     const { tokens, dollars } = pages;
     expect(tokens.readouts.map((readout) => readout.value)).toEqual(["19.00M", "8", "1"]);
     expect(dollars.readouts[0]?.value).toBe("$29.54");
@@ -244,7 +240,6 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
       project(PHONE_SETTINGS_PROJECTS.app)?.delivery.choices.map((choice) => choice.value),
     ).toEqual(["local-only"]);
 
-    // Runbooks: every runbook the computer lists, on or off as it holds it.
     const { runbooks, books } = pages;
     expect(books.length).toBeGreaterThan(0);
     expect(

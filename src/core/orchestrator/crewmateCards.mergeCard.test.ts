@@ -39,7 +39,6 @@ import { renderWake } from "./wakes";
 fakeCrewTimersEachTest();
 
 const HEAD = "5ca2d466ee21f9733827383f23df81f3874e0d10";
-/** The version a later push moves the pull request to. */
 const PUSHED = "732a709e5b1c48d2a9f03e6c7d1b84a2f5e90c13";
 
 /**
@@ -343,7 +342,6 @@ describe("show_merge_card's card steps (INF-3717 piece 2)", () => {
 
   it("uses a new id once the captain answered the card under the one given", async () => {
     const at = await ready();
-    // An earlier decision under the same id, which the captain answered.
     await at.specs[0]?.onCard?.({
       requiredActions: [],
       title: "Which meter goes first?",
@@ -632,7 +630,6 @@ describe("a merge card for a version the captain already approved (INF-4018)", (
 const merges = (card: Card | undefined) =>
   (card?.actions ?? []).filter((action) => mergeEffectOf(action) !== undefined);
 
-/** Every wake the crewmate's session was handed, in the words it read. */
 const heard = (crewmate: ReturnType<typeof fakeCrewmate>) =>
   [...crewmate.promptCalls, ...crewmate.steer.mock.calls.map((call) => String(call[0]))].join("\n");
 
@@ -641,7 +638,6 @@ const heard = (crewmate: ReturnType<typeof fakeCrewmate>) =>
 // version"): the replay of INF-3930, whose card stayed at its first story
 // for nine minutes after a push and refused every click.
 describe("a merge card behind its change (INF-4031)", () => {
-  /** The merge card up at HEAD from story revision 1, then a push to PUSHED. */
   async function pushedPast() {
     const at = await ready();
     await at.call({ id: "merge-meter" });
@@ -760,7 +756,6 @@ describe("a merge card behind its change (INF-4031)", () => {
     at.crewmate.finishPrompt();
     await tick();
     const shown = at.cards().find((entry) => entry.title === "The meter reads true") as Card;
-    // The card's offer is gone from the record, so it shows no version.
     seedDelivery(at.tasks, at.taskId, { completionOffers: [] });
     expect(() => at.supervisor.cardActions.act(shown.id, "merge")).toThrow(
       "This action changed or still waits for other work.",
@@ -776,7 +771,6 @@ describe("a merge card behind its change (INF-4031)", () => {
       default: true,
       effect: { kind: "merge" as const, after: "close" as const },
     };
-    // The host's own line, copied whole, and the bare mark elsewhere.
     await at.specs[0]?.onCard?.({
       title: "A note",
       body: `${heldLine("pushed", [merge])}<p ${MERGE_HELD_MARK}="x">The meter reads true.</p>`,
@@ -828,7 +822,6 @@ describe("a merge card behind its change (INF-4031)", () => {
 
   it("leaves the card to the crewmate's own show_merge_card while it runs", async () => {
     const at = await pushedPast();
-    // The walk publishes the story at the new version, then the call writes the card.
     at.mergeCardSteps.mockImplementationOnce(async () => {
       at.publish(2, PUSHED);
       await tick();
@@ -891,8 +884,6 @@ describe("a merge card behind its change (INF-4031)", () => {
     await tick();
     expect(holding).toBe(true);
     const presentedSoFar = at.completionPresentation.mock.calls.length;
-    // The crewmate's prepare_change, open_change, emit_card with its story
-    // and show_merge_card all arrive mid-redraw.
     const prepared = at.specs[0]?.onPrepareChange?.(
       {} as Parameters<NonNullable<(typeof at.specs)[0]["onPrepareChange"]>>[0],
     );

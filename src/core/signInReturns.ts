@@ -24,10 +24,8 @@ import type { FoldedInto16 } from "@shared/contractFeatures";
  */
 export const SIGN_IN_RETURN = "sign-in-return" satisfies FoldedInto16;
 
-/** What the waiting sign-in answered the browser: its status and its page. */
 export type SignInReturnAnswer = { status: number; page: string };
 
-/** Where a waiting sign-in listens here, and when it ends. */
 export type SignInReturnTo = {
   /** The port of this computer's loopback address the sign-in listens on. */
   port: number;
@@ -60,7 +58,6 @@ export class SignInReturns {
 
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
-  /** A waiting sign-in's return, open until it ends; answers its id. */
   open(to: SignInReturnTo): string {
     const id = randomBytes(16).toString("base64url");
     if (to.ended.aborted) return id;
@@ -69,7 +66,6 @@ export class SignInReturns {
     return id;
   }
 
-  /** Whether a return id still waits. */
   waits(id: string): boolean {
     return this.waiting.has(id);
   }

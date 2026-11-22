@@ -20,7 +20,6 @@ vi.mock("node:fs", async (load) => {
   return { ...actual, statfsSync: renumbered as typeof actual.statfsSync };
 });
 
-/** An older app's folder, a little of it: its database, a project's file and its update channel. */
 function dataFolder(root: string): void {
   mkdirSync(join(root, "fleet", "inside"), { recursive: true });
   writeFileSync(join(root, "firstmate.db"), Buffer.alloc(64 * 1024, 7));

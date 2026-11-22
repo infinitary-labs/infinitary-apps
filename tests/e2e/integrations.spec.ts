@@ -83,7 +83,6 @@ test("Open Integrations reaches the GitHub row, its actions and its menu by keys
       ["write", "never"],
     ]);
 
-  // The row's menu pauses it.
   await pressKey(row.getByRole("button", { name: "GitHub actions" }), "Enter");
   const paused = page.getByRole("menuitemcheckbox", {
     name: new RegExp(`^${m.settingsMenuPaused()}`),

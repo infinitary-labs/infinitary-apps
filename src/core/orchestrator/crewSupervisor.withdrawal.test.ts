@@ -26,7 +26,6 @@ fakeCrewTimersEachTest();
 
 const TITLE = "Approve reading the new Mac's password and network key from your vault";
 
-/** The consent card, as its crewmate emitted it. */
 const CONSENT = {
   id: "vault-consent",
   title: TITLE,
@@ -38,7 +37,6 @@ const CONSENT = {
   ],
 };
 
-/** A started task whose crewmate's consent card is on the captain's screen. */
 async function askedConsent() {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate);
@@ -86,7 +84,6 @@ describe("a decision its crewmate withdrew (INF-2828)", () => {
     });
     await endTurn(h.crewmate, h.taskId);
 
-    // The crewmate reads the record's ending in close_card's own answer.
     expect(answer).toBe(`Closed card "${TITLE}" (${h.cardId}). ${WITHDRAWN_UNCHOSEN}`);
     // The relay woke the first mate when it was made (INF-3926's finding 2);
     // the withdrawal came after it, so the turn's end wakes it again with the
@@ -100,7 +97,6 @@ describe("a decision its crewmate withdrew (INF-2828)", () => {
         "Please have a crewmate on the laptop run the password session for the new Mac.",
       withdrawn: [{ id: h.cardId, title: TITLE }],
     });
-    // A later read of the task names who ended the card.
     expect(decisionsOf(h)).toEqual([
       expect.objectContaining({ by: "crewmate", data: { cardId: h.cardId, action: "closed" } }),
     ]);

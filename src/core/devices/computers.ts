@@ -182,7 +182,6 @@ export type ComputersOptions = {
   download?: (device: DeviceView) => Promise<UpdateDownload | null>;
   /** How often a download's count is asked over the connection, and a send's said; a second unless a test says. */
   countEveryMs?: number;
-  /** One step of an update over the connection, for the feed. */
   emitUpdate?: (event: DeviceUpdateEvent) => void;
   /**
    * Where this Mac's own SSH connection to a computer stands
@@ -234,7 +233,6 @@ export class Computers {
   private readonly removing = new Map<string, Removing>();
   /** Computers out of reach whose tasks are being carried on, with where they go (`carryOn`). */
   private readonly carrying = new Map<string, string>();
-  /** Computers being updated over the connection now. */
   private readonly updating = new Set<string>();
   /** When the connection the row calls connected began, cleared once it is not. */
   private readonly connectedSince = new Map<string, number>();
@@ -717,8 +715,6 @@ export class Computers {
     if (!view) throw new Error("No device with that id is on the list.");
     return view;
   }
-
-  // ---- inside -------------------------------------------------------------------
 
   private async removeWithWork(device: DeviceView): Promise<DeviceView> {
     const { label } = devicePlace([device], device.id);
@@ -1587,7 +1583,6 @@ export class Computers {
     return this.list().find((device) => device.id === deviceId);
   }
 
-  /** Records the start of the connection the row calls connected, once per connection. */
   private noteConnected(deviceId: string): number {
     const had = this.connectedSince.get(deviceId);
     if (had !== undefined) return had;
@@ -1609,7 +1604,6 @@ export class Computers {
     return this.noteConnected(deviceId);
   }
 
-  /** Pushes the list when what it says changed. */
   private changed(): void {
     const devices = this.list();
     const said = JSON.stringify(devices);

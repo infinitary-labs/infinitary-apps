@@ -32,7 +32,6 @@ export type Selection = {
   coverage: "complete" | "partial" | "unavailable";
   /** Every range still unverifiable, to keep until a later catalog covers it. */
   unresolved: UnresolvedRange[];
-  /** The previous version's own history is marked incomplete. */
   previousIncomplete: boolean;
   /** The previous version had entries this release lacks: a move off its line. */
   diverged: boolean;

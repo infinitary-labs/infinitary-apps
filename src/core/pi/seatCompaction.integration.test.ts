@@ -117,7 +117,6 @@ function reply(res: ServerResponse, request: StubRequest, tokens: number, text: 
   finishAnthropicStream(res, "end_turn", 16);
 }
 
-/** Each mark appears in `raw`, in this order. */
 function inOrder(raw: string | undefined, ...marks: string[]): boolean {
   const at = marks.map((mark) => raw?.indexOf(mark) ?? -1);
   return at.every((index, i) => index >= 0 && (i === 0 || index > (at[i - 1] ?? 0)));
@@ -204,7 +203,6 @@ function recoverOnFold(opened: ModelSession, when: (turn: string | undefined) =>
   });
 }
 
-/** The requests after the fold that ended after `fold.afterRequest` requests. */
 function afterFold(seen: Seen[], fold: { afterRequest: number } | undefined): Seen[] {
   expect(seen[(fold?.afterRequest ?? 0) - 1]?.summary).toBe(true);
   return seen.slice(fold?.afterRequest ?? 0);
@@ -257,13 +255,9 @@ it("INF-1746 R43/R44: a fold before a step's next response takes the recovery in
   expect(
     seen.slice(0, folds[inRun - 1]?.afterRequest ?? 0).some((r) => r.raw.includes("RECOVERY-R43")),
   ).toBe(false);
-  // The next response reads the recovery, ahead of the words Pi held.
   expect(inOrder(next[0]?.raw, "RECOVERY-R43", "CAPTAIN-1")).toBe(true);
-  // The captain's words reach the model oldest first.
   const lastOfTurn = next.filter((request) => request.raw.includes("CAPTAIN-3"))[0];
   expect(inOrder(lastOfTurn?.raw, "CAPTAIN-1", "CAPTAIN-2", "CAPTAIN-3")).toBe(true);
-  // The fold after the closing reply does not go on, and no request follows
-  // its summary.
   const after = folds.slice(inRun);
   expect(after).toHaveLength(1);
   expect(after[0]).not.toHaveProperty("turn");

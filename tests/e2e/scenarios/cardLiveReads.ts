@@ -11,7 +11,6 @@ import { providerMessages } from "../providerRequest";
  */
 export const LIVE_READS_PROMPT_MARKER = "show the live task count";
 
-/** What the captain replies under the card to have its crewmate end it. */
 export const LIVE_READS_END_MARKER = "end the live card";
 
 export const LIVE_READS_CARD_TITLE = "Tasks on the record, live";
@@ -70,10 +69,6 @@ function liveReadsCardCall(): ScriptedCall {
   };
 }
 
-/**
- * The live-reads crewmate: emit the card, then end it when the captain's
- * reply under it asks, as an author ends a card the captain has seen.
- */
 export const cardLiveReads: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

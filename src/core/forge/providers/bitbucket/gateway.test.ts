@@ -128,7 +128,6 @@ async function fixture(options: { watchRun?: (taskId: string, runId: number) => 
     },
     { apiBaseUrl: `${base}/2.0`, token: async () => KEY },
   );
-  // Every main-branch read names `main`.
   vi.spyOn(forge, "defaultBranch").mockResolvedValue("main");
   const dir = scratchDir("fm-bitbucket-gateway-");
   const db = freshDatabase();

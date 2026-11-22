@@ -50,7 +50,6 @@ function target(version: string): UpdateTarget {
 
 type Reply = { status: number; body?: unknown } | Error;
 
-/** The tap as the checker reads it: the targets file and the release list. */
 function tap(replies: { targets: Reply; releases?: Reply }) {
   const requests: string[] = [];
   const answer = (reply: Reply | undefined) => {
@@ -310,11 +309,9 @@ describe("failures never invent an update", () => {
     replies.targets = targets({ alpha: target("0.1.25-alpha.3") });
     expect((await updates.getStatus()).latestVersion).toBe("0.1.25-alpha.3");
     expect(fetchImpl).toHaveBeenCalledTimes(2);
-    // ...a good status holds within the interval...
     time = 900;
     await updates.getStatus();
     expect(fetchImpl).toHaveBeenCalledTimes(2);
-    // ...and survives a later invalid file.
     time = 2000;
     replies.targets = {
       status: 200,
@@ -348,7 +345,6 @@ describe("a pressed check", () => {
     expect(found).toMatchObject({ latestVersion: "0.1.31", updateAvailable: true, checkedAt: 500 });
     expect(found.notice).toBeUndefined();
     expect(fetchImpl).toHaveBeenCalledTimes(2);
-    // The quiet check now answers what the press found.
     expect(await updates.getStatus()).toEqual(found);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
@@ -416,7 +412,6 @@ describe("the installed app's checker", () => {
     INFINITARY_UPDATE_TARGETS_URL: STAND_IN_TARGETS,
     INFINITARY_UPDATE_CURRENT_VERSION: "0.1.25-alpha.2",
   };
-  /** A data root the alpha cask's installer wrote its marker into. */
   const alphaRoot = () => {
     const root = scratchDir("infinitary-update-root-");
     writeFileSync(
@@ -647,7 +642,6 @@ describe("saving the crew's work before an in-app Linux update", () => {
     expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
     expect(replaced).toBe(0);
     expect(f.work.release).not.toHaveBeenCalled();
-    // Chosen again, it saves and replaces once.
     const again = f.updates.install();
     await vi.waitFor(() => expect(f.work.save).toHaveBeenCalledTimes(2));
     f.finish();
@@ -866,7 +860,6 @@ describe("updates on Windows", () => {
     url: buildDownloadUrl(version, `Infinitary-${version}-windows-x64-setup.exe`),
     sha256: "d".repeat(64),
   });
-  /** One channel's entry, as the release writes it: the Mac and Linux builds beside Windows'. */
   function entry(version: string, withWindows = true) {
     const release = target(version);
     return {

@@ -40,7 +40,6 @@ class ManualClock implements PanelClock {
   private remove(id: number): void {
     this.timers = this.timers.filter((timer) => timer.id !== id);
   }
-  /** Moves time forward, firing each timer as it comes due, as a running loop would. */
   advance(ms: number, each?: () => void): void {
     const end = this.t + ms;
     for (;;) {

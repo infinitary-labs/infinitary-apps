@@ -135,7 +135,6 @@ describe("a Mac's window checking its work", () => {
     expect(
       await setUpWork({ dataDir: workDir(), grant, name: null, joinedAt: 1, background: none }),
     ).toEqual({ state: "blocked", reason: "no-background" });
-    // One that throws is refused as well.
     const thrown = vi.fn(async (): Promise<"running"> => {
       throw new Error("launchctl: Bootstrap failed: 5: Input/output error");
     });

@@ -375,7 +375,6 @@ export const taskViewSchema = z.object({
    * Move to a computer. Absent otherwise, and on an older home.
    */
   movable: z.literal(true).optional(),
-  /** Its move to another computer, while one stands. */
   computerMove: computerMoveViewSchema.optional(),
   kind: taskKindSchema,
   title: z.string(),
@@ -591,7 +590,6 @@ export type ProjectView = z.infer<typeof projectViewSchema>;
 export const taskBoardSchema = z.object({
   /** Monotonic per mutation; a later push with a lower seq is stale. */
   seq: z.number(),
-  /** When this snapshot was built. */
   at: z.number(),
   projects: z.array(projectViewSchema),
   tasks: z.array(taskViewSchema),
@@ -879,8 +877,6 @@ export const taskDetailSchema = taskViewSchema.extend({
 });
 export type TaskDetail = z.infer<typeof taskDetailSchema>;
 
-// ---- the delta (task-system P5, design section 9.1) ------------------------
-
 /**
  * The live set above which the core pushes deltas instead of snapshots
  * (design section 9.1: "a snapshot over 256 KB or a live set over 500").
@@ -889,7 +885,6 @@ export type TaskDetail = z.infer<typeof taskDetailSchema>;
  * only what changed since the last push, on the same `seq`.
  */
 export const BOARD_DELTA_TRIGGER = Object.freeze({
-  /** Rows on the board. */
   rows: 500,
   /** Serialized snapshot size, in bytes of JSON. */
   bytes: 256 * 1024,
@@ -909,7 +904,6 @@ export const taskBoardDeltaSchema = z.object({
   at: z.number(),
   /** Rows new or changed since the base, whole. */
   upserts: z.array(taskViewSchema),
-  /** Ids of rows that left the board. */
   removed: z.array(z.string()),
   projects: z.array(projectViewSchema),
   links: z.object({
@@ -932,7 +926,6 @@ function linkKey(link: TaskLinkView): string {
   return `${link.fromId} ${link.toId} ${link.type}`;
 }
 
-/** The board's canonical edge order (from, to, type). */
 export function sortBoardLinks(links: readonly TaskLinkView[]): TaskLinkView[] {
   return [...links].sort((a, b) => linkKey(a).localeCompare(linkKey(b)));
 }

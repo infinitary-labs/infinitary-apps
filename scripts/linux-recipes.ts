@@ -45,11 +45,9 @@ export type RecipeInput = {
    * stable version handed to alpha takes alpha's package names.
    */
   channel?: Channel;
-  /** The Ubuntu package's file name. */
   debName: string;
   /** Its SHA-256, in hex. */
   sha256: string;
-  /** Where it is downloaded from. */
   url: string;
 };
 
@@ -76,7 +74,6 @@ function fill(template: string, fields: Record<string, string>): string {
   return filled;
 }
 
-/** Each channel's Arch package and Nix package names. */
 export const PACKAGE_NAMES: Record<Channel, { arch: string; nix: string }> = {
   stable: { arch: "infinitary-bin", nix: "infinitary" },
   alpha: { arch: "infinitary-alpha-bin", nix: "infinitary-alpha" },
@@ -137,7 +134,6 @@ function sha256Of(file: string): string {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-/** The one file in `dir` whose name ends with `ending`. */
 function only(dir: string, ending: string): string {
   const found = readdirSync(dir).filter((name) => name.endsWith(ending));
   if (found.length !== 1) throw new Error(`${dir} holds ${found.length} ${ending} files, not one`);

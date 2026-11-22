@@ -1,8 +1,6 @@
 import type { Scenario } from "../mockProvider";
 
-/** The captain's words that ask the first mate for the marked card. */
 export const CONTINUITY_HELD_ASK = "raise the harbour master's question when I say";
-/** The marked card's title. */
 export const CONTINUITY_HELD_TITLE = "The harbour master needs an answer";
 
 /**

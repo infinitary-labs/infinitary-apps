@@ -43,21 +43,17 @@ export const FIRSTMATE_PAUSE_CARD_IDS = [
   FIRSTMATE_REFUSED_CARD_ID,
   FIRSTMATE_BENCH_CARD_ID,
 ] as const;
-/** The first mate's quiet note. */
 export const FIRSTMATE_QUIET_CARD_ID = "card-fm-quiet";
 /** The Firstmate failure card (the agent-down set): Retry, until a turn ends clean. */
 export const FIRSTMATE_FAILURE_CARD_ID = "card-fm-turn-failure";
-/** The failure card's title. */
 export const FIRSTMATE_FAILURE_TITLE = "Your first mate hit a problem";
 
-/** A paused seat's card, as the Firstmate agent asks for it. */
 export type FirstmatePauseCard = {
   pause: SeatPauseClass;
   /** What stopped the seat and what happens now, in the user's words. */
   body: string;
   /** The paused account, for its way back (sign in again, try again). */
   accountId?: string;
-  /** The paused account's provider, by name. */
   providerName: string;
   /** Rung 2: where the seat could move, asked on the card. */
   move?: { providerId: string; providerName: string };
@@ -172,7 +168,6 @@ export function autoResetsAction(accountKey: string): CardAction {
 /** A crewmate's sign-in card's title, and the Firstmate's own on a 401. */
 export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
 
-/** Sign-in guidance when the first mate has no named provider to recover. */
 export const FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS =
   "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code or Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
 
@@ -426,7 +421,6 @@ export function creditsOfferCard(input: {
     : "";
   const key = computer ? `${input.accountId}@${computer.deviceId}` : input.accountId;
   const { credits } = input;
-  // Without credits the card offers only the reset.
   const waits = computer
     ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.where }))
     : saidMark(said("cardSavedResetCrewWaits"));
@@ -688,7 +682,6 @@ export function signInAgainCard(
   });
 }
 
-/** An app-raised note card (for example the mic permission primer). */
 export function systemNoteCard(id: string, title: string, body: string): HostCard {
   return hostCard({ id, title, meta: FIRSTMATE_CARD_META, body, actions: [] }, { note: true });
 }

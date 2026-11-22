@@ -572,7 +572,6 @@ describe("a task that runs on a computer that runs work", () => {
     const requests = api.requests.length;
     await at.start("t-find", "Find the Google client file.");
     await expect.poll(() => home.tasks.get("t-find")?.activity).toBe("idle");
-    // The home holds it whole, and its report names it by kept name and size alone.
     const sha256 = createHash("sha256").update(readFileSync(found)).digest("hex");
     const kept = `${sha256.slice(0, 16)}-client_secret.json`;
     const atHome = join(home.paths.crewmatesDir, "t-find", "handover-out", kept);
@@ -581,7 +580,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.get("t-find")?.outcome).toContain(
       `Files handed on, kept for steer_crewmate files_from ${home.tasks.get("t-find")?.key}: ${kept}`,
     );
-    // The first mate's steer hands it to the waiting task, in its hand-over folder there.
     model([{ text: "Using it." }]);
     const words = await home.supervisor.sessions.handFiles("t-find", "t-wait");
     const delivered = join(at.folders("t-wait").temp, "handover", kept);
@@ -670,7 +668,6 @@ describe("a task that runs on a computer that runs work", () => {
       worktreeDir: "",
       sessionFile: expect.stringContaining(at.folders("t-first").sessions),
     });
-    // Its brief reached the model there, as a crewmate told that computer's folders.
     const brief = api.requests[requests];
     expect(said(brief)).toContain("Fix the footer.");
     expect(JSON.stringify(brief?.body.system)).toContain(at.folders("t-first").evidence);
@@ -685,25 +682,21 @@ describe("a task that runs on a computer that runs work", () => {
         }),
       ).slice(1, -1),
     );
-    // Each callback had its effect here once, and the brief left the lane.
     expect(kinds(home, "t-first").filter((kind) => kind === "progress")).toHaveLength(1);
     expect(home.inbox.allFor("t-first")).toEqual([]);
     expect(home.inbox.inFlight("t-first")).toEqual([]);
     expect(api.requests.length - requests).toBe(3);
-    // The crew's events reached the feed as any crewmate's do, named by where it runs.
     expect(home.events).toContainEqual(
       expect.objectContaining({ type: "task_started", taskId: "t-first", machineId: at.deviceId }),
     );
     expect(home.events).toContainEqual(
       expect.objectContaining({ type: "tool_start", taskId: "t-first", toolName: "report" }),
     );
-    // A copy of its record is here, the same bytes as there.
     const there = at.folders("t-first").sessions;
     const [file] = readdirSync(there);
     expect(file).toBeDefined();
     const copy = join(crewmateSessionsDir(home.paths, "t-first"), file ?? "");
     expect(readFileSync(copy, "utf8")).toBe(readFileSync(join(there, file ?? ""), "utf8"));
-    // Every callback's answer is kept here, by its id.
     const calls = readFileSync(
       join(crewmatePlacedDir(home.paths, "t-first"), "calls.jsonl"),
       "utf8",
@@ -752,7 +745,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.graph.blockers("t-program").map((row) => row.id)).toContain(program.id);
     await expect.poll(() => home.tasks.get(program.id)?.status).toBe("done");
     expect(home.tasks.latestResult(program.id)?.value).toEqual({ read: "README.md" });
-    // The call was answered here once, kept by its id.
     await expect
       .poll(() =>
         readFileSync(join(crewmatePlacedDir(home.paths, "t-program"), "calls.jsonl"), "utf8")
@@ -900,7 +892,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect(piece("call-3", 8, recording.subarray(0, 4))).rejects.toThrow(
       /past the recording's end/,
     );
-    // Another task's recording is not this task's to keep.
     await expect(
       home.placed.answer(at.deviceId, "inf:work:media", {
         task: "t-demo",
@@ -934,7 +925,6 @@ describe("a task that runs on a computer that runs work", () => {
     });
     const kept = join(crewmateCardPicturesDir(home.paths, "t-font"), `${id}.woff2`);
     expect(readFileSync(kept)).toEqual(font);
-    // A copy damaged in place is replaced whole when the same font arrives again.
     writeFileSync(kept, Buffer.alloc(font.length));
     await home.placed.answer(at.deviceId, "inf:work:typeface", {
       task: "t-font",
@@ -1032,11 +1022,9 @@ describe("a task that runs on a computer that runs work", () => {
       });
     const half = 20;
 
-    // A piece past the file's end is refused.
     await expect(hand("past-end", half, bytes)).rejects.toThrow(
       "That piece runs past the handed file's end.",
     );
-    // Changed on the way: refused, and neither the file nor its partial copy stays.
     const changed = Buffer.from(bytes);
     changed[0] = "i".charCodeAt(0);
     await expect(hand("changed-1", 0, changed.subarray(0, half))).resolves.toEqual({ ok: true });
@@ -1045,7 +1033,6 @@ describe("a task that runs on a computer that runs work", () => {
     );
     expect(readdirSync(dir)).toEqual([]);
 
-    // Whole and unchanged: kept under its name, with nothing partial beside it.
     await expect(hand("whole-1", 0, bytes.subarray(0, half))).resolves.toEqual({ ok: true });
     expect(readdirSync(dir)).toEqual([`${file}.partial`]);
     await expect(hand("whole-2", half, bytes.subarray(half))).resolves.toEqual({ ok: true });
@@ -1086,7 +1073,6 @@ describe("a task that runs on a computer that runs work", () => {
     });
     await at.inReach("t-torn");
     const home = at.home();
-    // The whole line holds: its answer again, its effect once.
     await expect(home.placed.answer(at.deviceId, "inf:work:progress", kept)).resolves.toEqual(
       answered,
     );
@@ -1097,7 +1083,6 @@ describe("a task that runs on a computer that runs work", () => {
         answered,
       );
     expect(progress()).toHaveLength(2);
-    // Its answer, kept after the cut, holds across the next restart too.
     await at.restartHome();
     await at.inReach("t-torn");
     await expect(at.home().placed.answer(at.deviceId, "inf:work:progress", cut)).resolves.toEqual(

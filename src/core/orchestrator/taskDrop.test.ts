@@ -19,7 +19,6 @@ import { discardedText } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
-/** A started task whose crewmate finished its turn and went idle. */
 async function idleTask(
   harness: ReturnType<typeof setup>,
   crewmate: ReturnType<typeof fakeCrewmate>,
@@ -60,7 +59,6 @@ describe("the one drop", () => {
       text: "working copy kept - its work could not be saved first; discard to remove it",
     });
 
-    // Dropping the closed task again is the choice to remove that copy.
     expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(discardedText());
     await tick();
     expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(expect.objectContaining({ taskId }));
@@ -69,7 +67,6 @@ describe("the one drop", () => {
 
   it("closes the task's own open pull request before the captain's Drop task on started work closes it", async () => {
     const crewmate = fakeCrewmate();
-    // What the record said when the pull request was asked to close.
     const statusAtPullClose: (string | undefined)[] = [];
     let harness: ReturnType<typeof setup> | undefined;
     const closePullRequest = vi.fn(async (id: string) => {
@@ -83,8 +80,6 @@ describe("the one drop", () => {
 
     expect(supervisor.hostOps.runTaskOp(taskId, "stop-task")).toBeUndefined();
     await vi.waitFor(() => expect(tasks.get(taskId)?.status).toBe("dropped"));
-    // Before the fold, Drop task closed the record first and asked for the
-    // pull request's close without waiting on it.
     expect(closePullRequest).toHaveBeenCalledWith(taskId);
     expect(statusAtPullClose).toEqual(["active"]);
     expect(
@@ -112,7 +107,6 @@ describe("the one drop", () => {
     expect(held).toContain(part.key);
     expect(tasks.get(parentId)?.status).toBe("active");
 
-    // The captain's own Discard click is the one drop: the part stays planned.
     const outcome = await supervisor.settling.settle.reportCardSettle(parentId, "discard");
     expect(outcome).toMatchObject({ ok: true, text: discardedText() });
     expect(tasks.get(parentId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
@@ -136,9 +130,7 @@ describe("the one drop", () => {
     );
     expect(tasks.get(parent.id)?.status).toBe("open");
 
-    // Before the fold, the record refused this drop while the part was open.
     expect(supervisor.hostOps.runTaskOp(parent.id, "drop-task", review)).toBeUndefined();
-    // Its record closes in the click itself.
     expect(tasks.get(parent.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(tasks.get(part.id)?.status).toBe("open");
   });

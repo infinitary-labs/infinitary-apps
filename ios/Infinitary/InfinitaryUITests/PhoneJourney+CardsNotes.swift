@@ -31,7 +31,6 @@ extension PhoneJourney {
         verifyAnnotateAfterPaging(from: lead, line: leadLine, to: title, words: words, editor: editor)
         let first = app.webViews.staticTexts[part].firstMatch
         XCTAssertTrue(first.waitForPresence(timeout: 20), app.debugDescription)
-        // Point at, then a tap on a whole part: the note editor opens under it with its comment ready.
         let point = app.buttons["point-at"]
         XCTAssertTrue(point.waitForPresence(timeout: 10), app.debugDescription)
         reveal(point); tapOnPhone(point)
@@ -42,7 +41,6 @@ extension PhoneJourney {
         XCTAssertTrue(comment.waitForPresence(timeout: 10), app.debugDescription)
         let excerpt = app.staticTexts["note-excerpt"]
         XCTAssertTrue(excerpt.label.hasPrefix("The release window"), "The editor names \(excerpt.label)\n\(app.debugDescription)")
-        // The editor is drawn inside the card, under the part it notes, and no popover floats over the card.
         waitForSteadyTarget(editor)
         let card = [app.descendants(matching: .any).matching(identifier: "card-frame").firstMatch, app.scrollViews["card-scroll"].firstMatch]
             .first { $0.exists }
@@ -62,10 +60,8 @@ extension PhoneJourney {
         let count = app.staticTexts["queued-notes-count"]
         XCTAssertTrue(count.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(count.label, "1 note not sent")
-        // Point at turned itself off once it picked the part, and the note it made waits.
         XCTAssertFalse(point.isSelected, "Point at stayed on after its pick\n\(app.debugDescription)")
         picture("1a-point-at-off-after-its-pick")
-        // Words selected in the second paragraph: the selection's own menu offers Annotate, which opens the popover.
         let second = app.webViews.staticTexts[words].firstMatch
         XCTAssertTrue(second.waitForPresence(timeout: 10), app.debugDescription)
         reveal(second)
@@ -87,7 +83,6 @@ extension PhoneJourney {
             XCTAssertTrue(editor.waitForPresence(timeout: 10), "Point at did not open the note editor on its side\n\(app.debugDescription)")
             focusForPhoneTyping(comment, in: app, overWebContent: true)
             keyboardViewportProbe("note comment, on its side", comment, into: &failures)
-            // The whole editor fits the card's short foot, its excerpt and buttons included, with none of it cut off.
             waitForSteadyTarget(editor)
             // On its side the card may scroll instead of holding a fixed frame; whichever shows bounds what can be seen.
             let side = try XCTUnwrap([app.descendants(matching: .any).matching(identifier: "card-frame").firstMatch,
@@ -127,7 +122,6 @@ extension PhoneJourney {
         let excerptWords = try XCTUnwrap(ranged?["excerpt"] as? String)
         XCTAssertFalse(excerptWords.isEmpty)
         XCTAssertTrue(words.contains(excerptWords), "The text note's words \(excerptWords) are not in the paragraph")
-        // A press on a sent note turns the card to its face and lights the part.
         let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
         tapOnPhone(sent.element(boundBy: 0))
         XCTAssertTrue(back.waitForAbsence(timeout: 10), "The note did not turn the card to its face\n\(app.debugDescription)")

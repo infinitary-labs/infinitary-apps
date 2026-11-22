@@ -8,7 +8,6 @@ import type { ServedModels } from "../models/servedModels";
 import type { AccountVault } from "../pi/accountVault";
 import type { ModelSlots } from "./modelSlots";
 
-/** How a note on a model a provider added starts. */
 export function modelAddedLead(provider: string): string {
   return `${provider} added `;
 }
@@ -20,7 +19,6 @@ export function modelAddedNote(provider: string, id: string, slots: readonly str
     : `${modelAddedLead(provider)}${id} - it stays off until you place it in a slot.`;
 }
 
-/** How a note on a model a provider no longer serves starts. */
 export function modelGoneLead(provider: string): string {
   return `${provider} no longer serves `;
 }
@@ -32,7 +30,6 @@ export function modelGoneNote(provider: string, model: string, slots: readonly s
     : `${modelGoneLead(provider)}${model}.`;
 }
 
-/** What one pass of the model news reads, and where it says what it found. */
 export type ModelNewsSources = {
   vault: Pick<AccountVault, "availableModelsByAccount">;
   served: Pick<ServedModels, "reads" | "read">;

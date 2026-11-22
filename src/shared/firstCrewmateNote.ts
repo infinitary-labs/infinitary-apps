@@ -42,7 +42,6 @@ const CARD_GLYPH = `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden=
 const LABEL =
   'style="font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:1px;text-transform:uppercase;color:var(--fg-3)"';
 
-/** One of the picture's two panels: its glyph, its label and its two lines. */
 const panel = (glyph: string, label: Said, first: Said, second: Said, look: string, part: string) =>
   `<div data-part="${part}" style="flex:1 1 200px;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-s);${look}">${glyph}<div>${saidMark(label, "div", LABEL)}${saidMark(first, "div", 'style="color:var(--fg-1)"')}${saidMark(second, "div", 'style="color:var(--fg-2)"')}</div></div>`;
 

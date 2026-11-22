@@ -33,7 +33,6 @@ import {
   withMergeLine,
 } from "./settleWords";
 
-/** A record's worktree facts in the shape the workspace service takes. */
 export function workspaceOf(record: TaskRecord): TaskWorkspace {
   return {
     taskId: record.id,
@@ -43,7 +42,6 @@ export function workspaceOf(record: TaskRecord): TaskWorkspace {
   };
 }
 
-/** How a task closes: its status and reason, who closed it, and what the close records. */
 export type TaskClose = {
   status: "done" | "dropped";
   reason:
@@ -78,7 +76,6 @@ export type TaskClose = {
   removeKept?: boolean;
 };
 
-/** Why a task closes: a settle's reason, or a turn that failed. */
 type ClosingReason = TaskClose["reason"] | "failed";
 
 /**

@@ -43,7 +43,6 @@ type WriteAskSent = Awaited<ReturnType<NonNullable<CrewSupervisorOptions["sendWr
 const CALL = "POST /repos/meter-co/meter/issues";
 const PLACE = "GitHub";
 
-/** The write github_write kept for the captain's click: a new issue upstream. */
 const ASK: WriteAsk = {
   id: "ask-1",
   kind: "github",
@@ -56,7 +55,6 @@ const ASK: WriteAsk = {
   at: 1,
 };
 
-/** A started task whose crewmate asks, in its first turn, to send a kept write. */
 async function askedWrite(extras: SetupExtras = {}) {
   const crewmate: FakeCrewmate = fakeCrewmate();
   const h = setup(crewmate, extras);
@@ -81,7 +79,6 @@ async function askedWrite(extras: SetupExtras = {}) {
   return { ...h, crewmate, taskId, cardId: card.id };
 }
 
-/** What the kept write's host answered: a created issue. */
 function sent(): WriteAskSent {
   return {
     ok: true,
@@ -93,7 +90,6 @@ function sent(): WriteAskSent {
   };
 }
 
-/** The app's own card with one action carrying this effect, about no task. */
 function taskless(
   h: Harness,
   id: string,
@@ -181,7 +177,6 @@ describe("a click on a card, as CardActions takes it", () => {
     expect(() => h.supervisor.cardActions.act(h.cardId, "send", "frame")).toThrow(
       "available only from the card controls",
     );
-    // Nothing was sent and the card is still up for the captain's own click.
     expect(sendWriteAsk).not.toHaveBeenCalled();
     expect(h.cards().some((card) => card.id === h.cardId)).toBe(true);
   });
@@ -401,7 +396,6 @@ describe("a crewmate's integration approval card (INF-2993)", () => {
       order.every((at, index) => at >= 0 && (index === 0 || at > (order[index - 1] ?? 0))),
     ).toBe(true);
     expect(heard[0]).toContain(NOT_ALLOWED_WHY);
-    // The other connection's card still waits.
     expect(h.supervisor.cards.get("integration-ask-notes")).toBeDefined();
   });
 
@@ -411,7 +405,6 @@ describe("a crewmate's integration approval card (INF-2993)", () => {
     const withdrawn = integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1);
     h.tasks.delivery.keepWriteAsk(taskId, withdrawn);
     h.supervisor.integrationAsks.askIntegration(taskId, withdrawn);
-    // The crewmate takes its ask back before the captain answers it.
     h.supervisor.closeCard(
       "integration-ask-pr-a",
       { kind: "crewmate", taskId },

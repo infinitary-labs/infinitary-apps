@@ -222,7 +222,6 @@ export function readLabels(file: string): Map<string, Label> {
   return labels;
 }
 
-/** The report's numbers, all of them shares of the same corpus. */
 export function score(rows: Scored[]): Record<string, unknown> {
   const n = rows.length;
   const share = (count: number) => (n === 0 ? 0 : Number((count / n).toFixed(3)));

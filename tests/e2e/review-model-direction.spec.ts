@@ -166,7 +166,6 @@ test.beforeEach(async () => {
     seen: [`${MOCK_PROVIDER_ID}/${MOCK_MODEL_ID}`, REVIEWER_KEY],
   });
   db.close();
-  // A disposable Grok account serves the directed model.
   seedAccountStore(userDataDir, REVIEWER_PROVIDER, REVIEWER_ACCOUNT, { recursive: true });
   seedAccountAuth(
     userDataDir,
@@ -190,7 +189,6 @@ test.beforeEach(async () => {
     {},
     {},
   );
-  // The project's standing direction, as the captain's turn keeps one.
   const now = Date.now();
   const knowledge = KnowledgeStore.open(join(userDataDir, "knowledge"));
   knowledge.saveDirection(
@@ -252,13 +250,10 @@ test("a careful review asked for from the merge card runs on the model a standin
   const builder = await taskRow((task) => task.title === TITLE);
   await expect(startedLine(page, builder.key)).toBeVisible({ timeout: 30_000 });
 
-  // The captain asks for a careful review from the Default merge card.
   const card = shownCard(page, MOCK_CAREFUL_CARD_TITLE);
   await expect(card).toBeVisible({ timeout: 30_000 });
   await card.getByRole("button", { name: REVIEW_CAREFULLY_WORDS, exact: true }).click();
 
-  // The app asked the reviewer question with the direction, how the review
-  // started and both placed models.
   const review = await taskRow((task) => task.reviewOf === builder.id);
   await expect.poll(() => jev.reviewer.length, { timeout: 30_000 }).toBeGreaterThan(0);
   const asked = jev.reviewer[0];

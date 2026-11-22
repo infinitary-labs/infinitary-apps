@@ -164,7 +164,6 @@ export function packedBytes(entries: ZipEntry[]): number {
   return entries.reduce((sum, entry) => sum + entry.end - entry.start, 0);
 }
 
-/** Whether `name` is the path a selection names, or under the folder it names. */
 export function isUnder(name: string, path: string): boolean {
   return name === path || name.startsWith(path.endsWith("/") ? path : `${path}/`);
 }

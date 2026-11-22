@@ -252,7 +252,6 @@ export function diagnosticBodyViolation(body: unknown): string | null {
   return null;
 }
 
-/** The fixed names an event goes under: a phone's own, or the computer's. */
 function fixedNamesFor(name: string): { hostname: string; title: string; app?: string } {
   if (isPhoneDiagnosticEvent(name)) return PHONE_DIAGNOSTIC_NAMES;
   return { hostname: DEFAULT_HOSTNAME, title: DEFAULT_TITLE };

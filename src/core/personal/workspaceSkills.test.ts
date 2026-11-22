@@ -46,7 +46,6 @@ describe("seeding the workspace skills", () => {
     for (const id of AUTHORING_SKILL_IDS) {
       expect(readFileSync(skillPath(dir, id, "SKILL.md"), "utf8")).toContain(`name: ${id}`);
     }
-    // The design skill arrives whole: its rules, its tokens, its components.
     expect(readFileSync(skillPath(dir, DESIGN_SKILL_ID, "readme.md"), "utf8")).toContain(
       "Infinitary — Design System",
     );

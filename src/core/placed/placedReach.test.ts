@@ -160,7 +160,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(kinds(home, "t-drop").slice(before)).not.toContain("note");
     const lines = () =>
       home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
-    // While its connection is still being made the line is held, not said as out of reach.
     connectingNow.add(at.deviceId);
     home.placed.tick(now() + 61_000);
     expect(lines().filter((line) => line.includes("out of reach"))).toEqual([]);
@@ -223,7 +222,6 @@ describe("a task that runs on a computer that runs work", () => {
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     const wakes = home.wakes.length;
-    // Hours of its idle clock pass while that computer is gone.
     for (const hours of [1, 2, 3])
       home.supervisor.watch.reconcileIdle(now() + hours * 60 * 60 * 1000);
     expect(home.inbox.allFor("t-idle")).toEqual([]);
@@ -309,7 +307,6 @@ describe("a task that runs on a computer that runs work", () => {
 
     await at.restartHome();
     const home = at.home();
-    // The restart did not mark it interrupted: the turn there is followed here.
     await expect.poll(() => home.tasks.get("t-restart")?.activity).toBe("running");
     await expect.poll(() => home.placed.ready(at.deviceId, "t-restart")).toBe(true);
 
@@ -346,19 +343,16 @@ describe("a task that runs on a computer that runs work", () => {
     };
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(true);
     expect(home.placed.ready(at.deviceId, "t-catch")).toBe(false);
-    // Connected is in reach: the place says since when it is catching up, never out of reach.
     const catching = place();
     expect(catching).toMatchObject({ reach: "in-reach" });
     expect(catching?.catchingUpSince).toBeGreaterThanOrEqual(restarted);
     expect(catching?.catchingUpSince).toBeLessThanOrEqual(now());
 
-    // Caught up: the place reads in reach with nothing more.
     roster.open();
     await expect.poll(() => home.placed.ready(at.deviceId, "t-catch")).toBe(true);
     expect(place()).toMatchObject({ reach: "in-reach" });
     expect(place()).not.toHaveProperty("catchingUpSince");
 
-    // A computer the home cannot reach is out of reach, never catching up.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     expect(place()).toMatchObject({ reach: "out-of-reach" });
@@ -498,8 +492,6 @@ describe("a task that runs on a computer that runs work", () => {
           claude.answer({ text: "Running 29 tests; I will check back in 30 minutes." });
           await at.start(taskId);
           await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
-          // The tests finish, the crewmate carries on by itself there and
-          // calls report, which waits.
           holdReports();
           claude.answer(report);
           claude.continueTurn();
@@ -641,7 +633,6 @@ describe("a task that runs on a computer that runs work", () => {
         }
         await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
         expect(home.tasks.timeline(taskId).map((event) => event.text)).toContain(UNHEARD_END_NOTE);
-        // Ended as interrupted, never as a failure the first mate is woken for.
         expect(home.tasks.timeline(taskId).some((event) => event.kind === "failed")).toBe(false);
         expect(
           home.wakes
@@ -758,14 +749,12 @@ describe("a task that runs on a computer that runs work", () => {
       const asked = claude.served().length;
       home.supervisor.watch.checkQuietTasks(now() + QUIET_CARD_MS);
       await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Done reading.");
-      // The turn goes on with the answer, and reads the steer in that same request.
       const answered = answeredReadText("tasks", QUIET_CARD_MS).split(":")[0] ?? "";
       const goesOn = claude
         .served()
         .slice(asked)
         .find((served) => served.said.includes(answered));
       expect(goesOn?.said).toContain("Check the header too.");
-      // The home named what it did on the timeline, and raised no quiet alert for it.
       expect(home.tasks.timeline(taskId).map((event) => event.text)).toContainEqual(
         expect.stringContaining('answered tasks "ask again" for the crewmate'),
       );
@@ -844,7 +833,6 @@ describe("a task that runs on a computer that runs work", () => {
             home.tasks.timeline(taskId).some((event) => event.text?.includes("may be stuck")),
         )
         .toBe(true);
-      // Its events arrive, and the turn ends as it really did.
       events.open();
       await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("The check passed.");
       expect(home.tasks.timeline(taskId).map((event) => event.text)).not.toContain(
@@ -905,7 +893,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(JSON.stringify(home.wakes)).toContain("Mac mini quit before this turn finished");
     expect(home.inbox.allFor("t-computer")).toHaveLength(1);
 
-    // The lane runs it again there, in the conversation reopened from its record.
     never.open();
     ahead = 10 * 60_000;
     await home.supervisor.watch.sweepInbox(now());
@@ -934,7 +921,6 @@ describe("a task that runs on a computer that runs work", () => {
       .find((device) => device.id === at.deviceId)?.name;
     expect(computer).toBeDefined();
 
-    // The update pauses its crew first: the turn there stops before it restarts.
     await home.supervisor.updates.pauseForUpdate(at.deviceId);
     await expect.poll(() => home.tasks.get("t-update")?.activity).toBe("idle");
     expect(api.openRequests()).toBe(0);
@@ -951,7 +937,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(said(api.requests.at(-1))).toContain(
       renderWake({ facts: { kind: "turn-resumed", stopped: "update", computer } }),
     );
-    // No turn failed, and the Firstmate heard only the crewmate's report.
     expect(home.tasks.timeline("t-update").some((event) => event.kind === "failed")).toBe(false);
     expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
     expect(home.wakes.slice(wakes).map((wake) => wake.facts?.kind)).not.toEqual(
@@ -1030,7 +1015,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(api.requests.length).toBe(requests);
     // The wait brings back that computer's one Update card (INF-5442 behavior 1).
     expect(home.updateCards).toEqual([at.deviceId]);
-    // What the first mate sends meanwhile waits on the lane with the brief.
     expect(await home.supervisor.steer.steerCrewmate("t-behind", "Make it blue.")).toBe(
       "recorded-held",
     );

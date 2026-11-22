@@ -40,7 +40,6 @@ async function say(page: Page, words: string): Promise<void> {
   await input.press("Enter");
 }
 
-/** Adds the folder as a panel by talking and the captain's click on the host's card. */
 async function addPanel(page: Page, folder: string, title: string, by: string): Promise<void> {
   await say(page, `${ADD_PANEL_PROMPT_MARKER}${folder}`);
   await expect(shownCard(page, panelConsentTitle(title, by))).toBeVisible({
@@ -308,9 +307,7 @@ test.describe
         };
       });
       expect(slices).toEqual({ victim: "kept", own: "overwritten" });
-      // The app's window is where it was.
       expect(page.url()).not.toContain(CARD_FETCH_PROBE_PATH);
-      // No inner vertical scroll hides any of the panel's content.
       await expect
         .poll(() =>
           frame.locator("html").evaluate((html) => html.scrollHeight <= html.clientHeight),
@@ -343,10 +340,8 @@ test.describe
       });
       await expect(runaway.getByRole("button", { name: "Retry" })).toBeVisible();
       await expect(frameIn(runaway)).toHaveCount(0);
-      // Its sibling in the frame realm still draws and answers.
       const sibling = panelBody(page, "mallory");
       await expect(sibling.locator('[data-probe="fetch"]')).toHaveText("fetch: refused");
-      // And the app is still the app.
       const input = promptInput(page);
       await input.fill("still here");
       await expect(input).toHaveValue("still here");

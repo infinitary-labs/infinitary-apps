@@ -42,7 +42,6 @@ describe("memoryUsedBytes on the 11:32:53 PM MacBook reading", () => {
   });
 
   it("counts free, purgeable and file-backed bytes as free when pressure is absent", () => {
-    // Same pages, without pressure: installed minus those three sums.
     expect(memoryUsedBytes(macBook())).toBe(19_397_885_952);
   });
 });

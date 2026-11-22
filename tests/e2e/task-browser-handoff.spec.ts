@@ -195,7 +195,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
           .poll(async () => (await detail())?.outcome ?? "", { timeout: 60_000 })
           .toContain(MOCK_HANDOFF_ASKED_REPORT);
         const current = (await detail()) as TaskDetail;
-        // Its browser refused it the moment its card went up.
         expect(current.outcome).toContain(
           `${MOCK_BROWSER_SAID.before} "You asked the captain to take over this task's browser, so it is paused:`,
         );
@@ -238,7 +237,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await expect(strip).toHaveAttribute("data-attachment-handoff", "waiting");
       await expect(strip.getByRole("button")).toHaveCount(0);
       await expect(cardRegion.getByRole("button", { name: MOCK_HANDOFF_ACTION })).toBeVisible();
-      // The card's key opens its task's record, where the browser's line keeps its own Open.
       await cardRegion.getByRole("link", { name: task.key }).click();
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
       await expectRecordBody(page);
@@ -255,7 +253,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
       await expect(recordCard(page)).toHaveCSS("opacity", "1");
       await expectRecordBody(page);
-      // The view it came from has left the stage.
       await expect(page.locator(`[data-task-browser="${task.id}"]`)).toBeHidden();
       const line = taskFact(recordCard(page), "browser");
       await expect(line).toHaveAttribute("data-browser-driver", "waiting");
@@ -337,7 +334,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
       const sharing = view(page, task.id).locator("[data-browser-sharing]");
       await expect(sharing).toContainText(RETURN_CONTROL_NOTICE);
-      // Opened from the record, the view still docks the request it holds.
       await expect(view(page, task.id).locator("[data-browser-request]")).toContainText(
         MOCK_HANDOFF_CARD_TITLE,
       );
@@ -399,7 +395,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await pressWindowKey(launched.app, "l", ["meta", "shift"]);
       await expect(column).toBeVisible();
       await expect(field).toBeFocused();
-      // From the field, Command-backslash folds it again, focus on its line.
       await pressWindowKey(launched.app, "\\", ["meta"]);
       await expect(column).toHaveCount(0);
       await expect(folded.locator("[data-thread-cue]")).toBeFocused();
@@ -409,7 +404,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await expect(folded).toBeVisible();
       await expect.poll(pageWidth).toBeGreaterThanOrEqual(CARD_SIZES.full - 2);
       const alone = await pageWidth();
-      // Opened, the column joins the page without narrowing it.
       await focusOn(pageArea);
       await pressWindowKey(launched.app, "\\", ["meta"]);
       await expect(column).toBeVisible();
@@ -439,7 +433,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
         MOCK_HANDOFF_THREAD_ANSWERS[2] as string,
       );
       await shoot(page.locator(SHOWN_ENTRY), "card-back-with-answer-dark.png");
-      // The page is still his, so the record's browser line opens it again.
       await cardRegion.getByRole("link", { name: task.key }).click();
       await taskFact(recordCard(page), "browser").locator("[data-browser-open]").click();
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
@@ -454,7 +447,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
           name: "browser-request-beside-page",
         });
       await returnControl.click();
-      // Return control takes the request down with the column.
       await expect(view(page, task.id).locator("[data-browser-request]")).toHaveCount(0);
       await expect.poll(async () => (await savedCard())?.status ?? "gone").not.toBe("ready");
       const status = view(page, task.id).locator("[data-browser-status]");
@@ -475,15 +467,12 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       const outcome = (await detail())?.outcome ?? "";
       // Its ref from before the handoff is refused, never used on the page he handed back.
       expect(outcome).toContain(REF_FROM_BEFORE_HANDBACK);
-      // Its first look says control came back, and reads what he signed in to.
       expect(outcome).toContain(
         `${MOCK_BROWSER_SAID.freshLook} "The captain returned control of this browser:`,
       );
       expect(outcome).toContain(`${MOCK_BROWSER_SAID.page} "Signed in as sam@example.com"`);
       // What the page logged and asked for while he held it never reached it.
       expect(outcome).toContain(`It kept ${MOCK_BROWSER_SAID.keptNothing}.`);
-      // The page may show his account now: a picture only for a reason the
-      // task has, and his record says so.
       expect(outcome).toContain(
         `${MOCK_BROWSER_SAID.noReason} "The captain handed this browser back, so its pages may show the captain's account: a picture is taken only when the task needs one.`,
       );
@@ -593,7 +582,6 @@ test("a picture left in the docked request's field goes to the crewmate as a rep
       .locator("[data-browser-chrome]")
       .getByRole("button", { name: RETURN_CONTROL_LABEL })
       .click();
-    // The reply carried the words and the picture to the crewmate's thread.
     await expect
       .poll(async () =>
         (await page.evaluate((id) => window.infinitary.cards.thread(id), request.id)).messages.some(

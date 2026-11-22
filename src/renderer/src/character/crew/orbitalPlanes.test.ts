@@ -416,7 +416,6 @@ describe("approved product formation", () => {
 });
 
 describe("the black hole's rush", () => {
-  /** Frames 16 ms apart after `from`, through `until`, at one rush level. */
   function rushed(m: CrewOrbit, from: number, until: number, rush: number) {
     let f = m.update(from, false, rush);
     for (let t = from + 16; t <= until; t += 16) f = m.update(t, false, rush);
@@ -498,7 +497,6 @@ describe("the black hole's rush", () => {
           9,
         );
       }
-      // The arrival unfolds on the same schedule.
       expect(member(nextRacing, "new").phase).toBe(member(nextCalm, "new").phase);
       expect(member(nextRacing, "new").unfold).toBe(member(nextCalm, "new").unfold);
       calmFrame = nextCalm;

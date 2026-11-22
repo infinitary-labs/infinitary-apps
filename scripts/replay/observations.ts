@@ -89,7 +89,6 @@ export class CardObserver {
     };
   }
 
-  /** One card the replay holds, as the metrics read it. */
   observe(row: TableRow): ObservedCard {
     const id = stringColumn(row, "id") ?? "";
     const body = stringColumn(row, "body") ?? "";

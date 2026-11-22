@@ -14,7 +14,6 @@ import type { ModelRuntime, ToolDefinition } from "./types";
  */
 
 const piMocks = vi.hoisted(() => {
-  /** A session file's entries and Pi's custom-entry append over them. */
   const sessionEntries = (entries: unknown[]) => ({
     entries,
     getEntries: () => entries,
@@ -116,7 +115,6 @@ const spec = {
   tools: [fakeTool],
 };
 
-/** The seat as the agent opens it: the seat preset, through Pi's session factory. */
 function openSeat(input: Parameters<typeof seatSpec>[0]) {
   return createPiSessionFactory({ agentDir: "/tmp/pi-agent" }).open(seatSpec(input));
 }
@@ -171,7 +169,6 @@ describe("the served sequences at the session boundary (contract v4.6)", () => {
       },
     );
 
-    // The same document again is no work at all.
     piMocks.agentSession.setActiveToolsByName.mockClear();
     session.serveInstructions?.({ text: "# Sequences\ntwo", sha: "sha-two" });
     expect(piMocks.agentSession.setActiveToolsByName).not.toHaveBeenCalled();
@@ -252,7 +249,6 @@ describe("the Pi seat's production contract", () => {
       details: { body: "hi" },
     });
 
-    // The hand-built resource loader supplies only the Firstmate prompt.
     const loader = options.resourceLoader as {
       getSystemPrompt: () => string | undefined;
       getExtensions: () => { extensions: unknown[] };
@@ -538,7 +534,6 @@ describe("the seat's bounds", () => {
     session.dispose();
   });
 
-  /** One model turn that called a tool, as Pi ends it once the tool has run. */
   function toolTurn(n: number): unknown {
     return {
       type: "turn_end",

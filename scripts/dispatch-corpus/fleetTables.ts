@@ -114,7 +114,6 @@ export const EMPTY_TABLES: FleetTables = {
   overrides: new Map(),
 };
 
-/** Read-only snapshot of the three tables the dispatch dataset joins to. */
 export function readFleetTables(dbPath: string): FleetTables {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {

@@ -29,10 +29,6 @@ import { type ChannelDeclaration, okSchema } from "./common";
  * own computer asks, and the panel's own code still runs once, there.
  */
 export const panelChannels = {
-  // The mediated fetch verb (D6). Born in the core beside quota/http.ts so
-  // the trust boundary never moves; until a grant is served (phase 3) every
-  // call is refused, and the refusal is the protocol's answer, not a
-  // renderer shortcut.
   "inf:plugins:fetch": {
     effect: "change",
     surface: "core",

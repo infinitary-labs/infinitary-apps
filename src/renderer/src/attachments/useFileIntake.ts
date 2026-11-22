@@ -10,7 +10,6 @@ import {
 
 const NONE: ReadonlyArray<{ id: string; name: string }> = [];
 
-/** An input's file intake: its drop and picker handlers, files in preparation and status. */
 export function useFileIntake(dest: FileDestination | undefined): FileIntake | undefined {
   const key = dest?.key ?? "";
   const pending = useIntakeStore((s) => s.pending[key]) ?? NONE;

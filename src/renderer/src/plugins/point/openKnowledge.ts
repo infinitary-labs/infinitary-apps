@@ -33,7 +33,6 @@ export function knowledgeHere(
   return panels.get(KNOWLEDGE_PANEL)?.cards?.[BROWSER_CARD] !== undefined;
 }
 
-/** Whether the window has the Knowledge browser, following the panel as it comes and goes. */
 export function useKnowledgeHere(): boolean {
   const panels = useContributions(pluginHost.sidePanels);
   return panels.some(

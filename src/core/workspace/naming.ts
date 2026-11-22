@@ -9,7 +9,6 @@ import { git } from "./git";
  * commit the app writes itself carries its plain summary.
  */
 
-/** Refuses a name the active naming runbook does not accept, with the runbook's own correction. */
 export function requireNamed(name: string, what: string, rule: NamingRule | null): string {
   if (rule === null) return name;
   if (!new RegExp(rule.pattern).test(name) || name.includes("\n")) {

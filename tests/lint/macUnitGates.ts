@@ -54,7 +54,6 @@ function platformName(expression: ts.Expression): string | null {
     : null;
 }
 
-/** Each platform's value of `condition`, reading the file's own constants. */
 function read(
   condition: ts.Expression,
   constants: Map<string, ts.Expression>,
@@ -112,7 +111,6 @@ function read(
   return null;
 }
 
-/** The file's constants, by name, wherever it declares them. */
 function constantsOf(source: ts.SourceFile): Map<string, ts.Expression> {
   const constants = new Map<string, ts.Expression>();
   const visit = (node: ts.Node) => {
@@ -126,7 +124,6 @@ function constantsOf(source: ts.SourceFile): Map<string, ts.Expression> {
   return constants;
 }
 
-/** Every gate in `text` (a test file's source) whose cases run on macOS and not on Linux. */
 export function macOnlyGates(text: string, file = "file.test.ts"): MacGate[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const constants = constantsOf(source);
@@ -154,7 +151,6 @@ export function macOnlyGates(text: string, file = "file.test.ts"): MacGate[] {
   return gates;
 }
 
-/** The Mac-only gates of each file, for the files that have any. */
 export function macOnlyFiles(files: readonly string[]): Map<string, MacGate[]> {
   const found = new Map<string, MacGate[]>();
   for (const file of files) {

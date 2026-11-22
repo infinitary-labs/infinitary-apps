@@ -192,7 +192,6 @@ describe("FirstmateAgent", () => {
     session.emitTurnEnd("Here's what changed.");
     session.resolveNextPrompt();
     await tick();
-    // The carried wakes were acked with the captain turn: no second turn.
     expect(session.prompts).toHaveLength(1);
   });
 
@@ -597,7 +596,6 @@ describe("FirstmateAgent", () => {
     // Steer-only contract: the card informs, it offers no interrupt.
     expect(quiet?.actions).toEqual([]);
 
-    // Output arrives: the question answered itself, the card retires.
     session.emitDelta("still here");
     await tick();
     expect(cards().find((card) => card.id === "card-fm-quiet")).toBeUndefined();

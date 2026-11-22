@@ -17,7 +17,6 @@ struct PhoneNotePick: Equatable {
         self.queued = queued.contains { PhoneCardNotes.same($0, note) }
     }
 
-    /// The note with the comment written now.
     var written: PhoneJSON {
         guard case .object(var fields) = note else { return note }
         fields["comment"] = .string(comment)

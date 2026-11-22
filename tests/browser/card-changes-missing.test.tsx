@@ -27,7 +27,6 @@ const REMOVED_BODY = CHECKS_BODY.replace(
 );
 const REPLY = "Done.";
 
-/** The links of every revision row under the shown card, in order. */
 const revisionLinks = () =>
   document.querySelectorAll<HTMLButtonElement>(
     `${SHOWN_ENTRY} [data-revision-links] [data-revision-link]`,

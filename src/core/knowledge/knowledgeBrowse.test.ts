@@ -89,7 +89,6 @@ function fixture(options: { dir?: string } = {}) {
   };
 }
 
-/** Evidence, Source versions and Retry policy, a claim between two and a read-together link. */
 async function seedAlpha(f: ReturnType<typeof fixture>) {
   writeFileSync(join(f.alphaRoot, "pins.ts"), "export const pinned = true;\n");
   const evidence = await f.concept("Evidence", { aliases: ["proof"] });
@@ -162,8 +161,6 @@ describe("the knowledge browser's reads", () => {
       findings: 1,
       degree: 2,
     });
-    // A claim reads subject to object with its finding's own predicate and
-    // standing; a read-together link keeps its reason and is no claim.
     expect(graph.connections).toEqual(
       expect.arrayContaining([
         {
@@ -187,7 +184,6 @@ describe("the knowledge browser's reads", () => {
     expect(graph.connections).toHaveLength(2);
     expect(graph.shown).toEqual({ concepts: 3, connections: 2 });
     expect(graph.total).toEqual({ concepts: 3, connections: 2 });
-    // Never another collection's: beta is empty, the private one too.
     const beta = f.service.window.graph({ scope: BETA.id });
     expect(beta.state === "ready" && beta.concepts).toEqual([]);
     expect(() => f.service.window.graph({ scope: "repo-gone" })).toThrow("No collection repo-gone");
@@ -405,7 +401,6 @@ describe("the knowledge browser's reads", () => {
     const { evidence, pins } = await seedAlpha(f);
     const beta = await f.concept("Beta idea", {});
     const before = f.changes();
-    // In the order asked, each once; an id no collection holds is left out.
     expect(f.service.window.refs({ ids: [pins, evidence, "f-zzzzzz", pins, beta] })).toEqual({
       state: "ready",
       refs: [
@@ -448,7 +443,6 @@ describe("the knowledge browser's reads", () => {
     );
     const still = f.service.window.refs({ ids: [beta] });
     expect(still.state === "ready" && still.refs).toHaveLength(1);
-    // Reading them recorded nothing.
     expect(f.changes()).toBe(before);
     const read = f.service.window.entry({ id: pins });
     expect(read.state === "ready" && read.entry.uses.count).toBe(0);
@@ -496,7 +490,6 @@ describe("the knowledge browser's reads", () => {
           purpose: "Named the idea.",
           at: expect.any(Number),
         },
-        // The revision it relied on, as it read then, beside what it says now.
         {
           id: pins,
           kind: "finding",
@@ -584,7 +577,6 @@ describe("the knowledge browser's reads", () => {
       f.service.window.refs({ ids: ["c-abcdef"] }),
       f.service.window.uses({ task: "task-a" }),
     ]) {
-      // A collection that cannot be read still has something to say.
       expect(f.service.held()).toBe(true);
       expect(read).toEqual({
         state: "unavailable",

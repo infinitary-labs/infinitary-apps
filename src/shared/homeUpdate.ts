@@ -66,7 +66,6 @@ export const homeUpdateSchema = z.object({
 });
 export type HomeUpdate = z.infer<typeof homeUpdateSchema>;
 
-/** What an update would stop on the home now. */
 export type HomeUpdateStops = HomeUpdate["stops"];
 
 /**

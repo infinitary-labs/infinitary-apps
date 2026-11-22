@@ -32,7 +32,6 @@ import { git } from "./git";
 export type WorktreePoolOptions = {
   /** Idle slots kept per repository; the oldest beyond it are retired. */
   idlePerRepo?: number;
-  /** Idle slots kept across every repository. */
   idleTotal?: number;
   /** An idle slot unused this long is retired. */
   maxIdleAgeMs?: number;
@@ -323,7 +322,6 @@ async function ownCheckout(dir: string): Promise<string> {
   return realpathSync(common);
 }
 
-/** Refuses a directory that is not the root of its own checkout of the given repository. */
 async function assertCheckoutOf(dir: string, common: string): Promise<void> {
   if ((await ownCheckout(dir)) !== common) {
     throw new Error(`${dir} belongs to another repository`);

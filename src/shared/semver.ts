@@ -83,7 +83,6 @@ export function isNewerVersion(candidate: string, current: string): boolean {
   return (compareSemver(candidate, current) ?? 0) > 0;
 }
 
-/** A stable version: `X.Y.Z` with neither prerelease nor build metadata. */
 export function isStableVersion(version: string): boolean {
   const parsed = parseSemver(version);
   return Boolean(parsed && parsed.prerelease.length === 0 && parsed.build.length === 0);

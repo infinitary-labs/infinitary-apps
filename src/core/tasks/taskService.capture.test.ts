@@ -130,7 +130,6 @@ describe("TaskService capture", () => {
     said("ask-move", "start over on a new branch", fresh.id);
     tasks.graph.link(fix.id, fresh.id, "replaced-by", "firstmate");
     expect(quoted(fresh.id)).toBe("the footer overlaps the composer on small windows");
-    // Work no message reached has none.
     const chore = seedTask(tasks, { id: "chore", title: "Rotate the logs", status: "queued" });
     expect(tasks.capture.originAbout(chore.id)).toBeUndefined();
     expect(tasks.capture.originAbout("missing")).toBeUndefined();
@@ -153,7 +152,6 @@ describe("TaskService capture", () => {
       status: "running",
       parentId: fix.id,
     });
-    // The history a running task gathers: CI readings, progress and the crewmate's notes.
     const work = (taskId: string, rounds: number) => {
       for (let round = 0; round < rounds; round += 1) {
         tick();
@@ -225,13 +223,11 @@ describe("TaskService capture", () => {
     });
     tasks.capture.openAsk({ id: "ask2", text: "and this", attachments: [ref(3)] });
     tasks.capture.openAsk({ id: "ask3", text: "no picture here" });
-    // The copies survive the row: read back as they were written.
     expect(tasks.capture.getAsk("ask1")?.attachments).toEqual([ref(1), ref(2)]);
     expect(tasks.capture.getAsk("ask1")?.images).toEqual([
       { mimeType: "image/png" },
       { mimeType: "image/png" },
     ]);
-    // One message about two tasks lands its pictures on both; a later one adds its own.
     tasks.capture.attachAsk("ask1", "t1", "tool:create_task");
     tasks.capture.attachAsk("ask1", "t2", "tool:create_task");
     tasks.capture.attachAsk("ask2", "t1", "tool:update_task");
@@ -311,7 +307,6 @@ describe("TaskService capture", () => {
     expect(operation.key).toMatch(/^API-1$/);
     const status = tasks.timeline("o1").find((event) => event.kind === "status");
     expect(status?.text).toBe("settled by configure_repo");
-    // No repo: Scratch.
     expect(
       tasks.capture.fileOperation({
         id: "o2",
@@ -373,7 +368,6 @@ describe("TaskService capture", () => {
     const answered = tasks.timeline("t1").find((event) => event.kind === "answered");
     expect(answered?.data).toEqual({ cardId: "card-fm-2", body: "<p>Step 2.</p>" });
     expect(tasks.get("t1")?.outcome).toBeNull();
-    // A revised standalone answer also becomes the record's outcome.
     tasks.capture.recordAnswer("t1", {
       cardId: "card-fm-2",
       title: "Under way",

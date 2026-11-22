@@ -30,7 +30,6 @@ export type TapNames = {
   releasePage?: string;
   /** What `brew install --cask` names the tap by, `owner/name`. */
   tap: string;
-  /** Public release tag prefixes, before the version. */
   stableTagPrefix: string;
   alphaTagPrefix: string;
   caskTokens: Readonly<Record<UpdateChannel, string>>;
@@ -46,7 +45,6 @@ export type TapNames = {
   throughOldCask?: true;
 };
 
-/** Infinitary's own public tap: its casks, its releases and its update files. */
 export const INFINITARY_TAP: TapNames = {
   repo: "infinitary-labs/homebrew-tap",
   tap: "infinitary-labs/tap",
@@ -77,7 +75,6 @@ export const FIRSTMATE_TAP: TapNames = {
 /** The tap this build publishes to and reads from. */
 export const TAP: TapNames = INFINITARY_TAP;
 
-/** This build's own tap's names, as one value each. */
 export const TAP_REPO = TAP.repo;
 /** Public tap tag prefixes. Stable's never changes: older apps still read it. */
 export const STABLE_TAG_PREFIX = TAP.stableTagPrefix;
@@ -91,12 +88,10 @@ export function upgradeCommandFor(channel: UpdateChannel, tap: TapNames = TAP): 
   return `brew update && brew upgrade --cask ${tap.tap}/${tap.caskTokens[channel]}`;
 }
 
-/** The public tap's release page of a tag. */
 export function releasePageOf(tag: string, tap: TapNames): string {
   return tap.releasePage ?? `https://github.com/${tap.repo}/releases/tag/${tag}`;
 }
 
-/** Where every asset of a tag's public tap release downloads from. */
 export function downloadPrefixOf(tag: string, tap: TapNames): string {
   return tap.downloadBase
     ? `${tap.downloadBase}releases/${tag}/`
@@ -110,7 +105,6 @@ export function releasesPageFor(channel: UpdateChannel, tap: TapNames = TAP): st
   return `https://github.com/${tap.repo}/releases?q=${encodeURIComponent(prefix)}`;
 }
 
-/** Where a tap's files read from its default branch. */
 function rawUrlOf(tap: TapNames, file: string): string {
   return `https://raw.githubusercontent.com/${tap.repo}/HEAD/${file}`;
 }
@@ -121,17 +115,13 @@ function rawUrlOf(tap: TapNames, file: string): string {
  */
 export const STARTERS_URL = rawUrlOf(TAP, "infinitary-starters.json");
 
-/** A tap's update targets file, as installed Macs fetch it. */
 export function targetsUrlOf(tap: TapNames): string {
   return rawUrlOf(tap, tap.targetsFile);
 }
 
-/** A tap's builds file, as Linux installations fetch it. */
 export function buildsUrlOf(tap: TapNames): string {
   return rawUrlOf(tap, tap.buildsFile);
 }
-
-// --- The installed subscription --------------------------------------------
 
 /**
  * The installer writes this file into the data root after a successful
@@ -227,8 +217,6 @@ export function resolveUpdateChannel(
   );
 }
 
-// --- The published update targets ------------------------------------------
-
 /**
  * The file on the public tap naming what each channel's cask installs now.
  * It is written in the same tap commit as the casks, after the download was
@@ -246,9 +234,7 @@ export const updateTargetSchema = z
   .object({
     /** The logical version the cask installs: stable `X.Y.Z` or alpha `X.Y.Z-alpha.N`. */
     version: z.string(),
-    /** The public tap release page of that version. */
     releaseUrl: z.string(),
-    /** The public download the cask carries. */
     downloadUrl: z.string(),
     sha256: z.string().regex(SHA256),
     /** The product source commit the artifact was built from. */

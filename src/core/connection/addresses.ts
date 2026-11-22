@@ -66,14 +66,6 @@ export function listenAddresses(
   return [LOOPBACK_ADDRESS, chosen];
 }
 
-/**
- * This Mac's own private IPv4 addresses right now: the ones a pairing link
- * may send another device to (docs/devices.md, "Where devices find this
- * Mac"). The local network's come first - Wi-Fi and Ethernet before any
- * other interface - then a private network service's, and last a bridge
- * Linux makes for containers or virtual machines (`interfaceRank`). Each is
- * one the connection may listen on.
- */
 /** A Linux bridge for containers or virtual machines: no other computer reaches it. */
 export function isBridgeInterface(name: string): boolean {
   return interfaceRank(name) >= 3;

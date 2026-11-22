@@ -112,7 +112,6 @@ describe("the client's item under an account other than USER", () => {
   const SERVICE = "Claude Code-credentials";
   const env = { HOME: "/tmp/infinitary-no-claude-home", USER: "kunchen" };
 
-  /** A store holding these items by account, the first one found when none is named. */
   function savedPasswords(items: Record<string, string>) {
     const found = (account: string | undefined): HostKeychainOutcome =>
       account !== undefined && account in items
@@ -483,13 +482,6 @@ describe("readClaudeStore", () => {
 });
 
 /**
- * One macOS grant should carry a session, not one tick. On a Mac whose Claude
- * login lives only in the Keychain there is no sidecar to fall back to, so
- * every quota tick (five minutes, plus focus, resume and startup) used to
- * spend its own VALUE read - which is the difference between being asked once
- * and being asked again minutes later inside the same launch.
- */
-/**
  * A locked store (fm3000-keychain-locked-retry-unlock-fix-r1). macOS settles,
  * at a process's first touch of a store, whether that process may ever show
  * the store's unlock dialog, and Infinitary's first touch is the silent startup
@@ -827,7 +819,6 @@ describe("the remembered credential", () => {
       "vendor_rejected",
     );
     expect(result).toEqual({ outcome: "renewed" });
-    // And what the renewal found is what later ticks see.
     const next = await readClaudeStore(dir, { keychain, now: () => 1000 });
     expect(next).toMatchObject({ state: "present", auth: { accessToken: "after" } });
   });
@@ -1090,7 +1081,6 @@ describe("claudeCredentialStamp", () => {
     );
     expect(stamp.login).toMatch(/^[0-9a-f]{16}$/);
     expect(stamp.written).toBe("file:1000000");
-    // Never a token value, and nothing asked of the Keychain.
     expect(JSON.stringify(stamp)).not.toContain("secret-token");
     expect(keychain.finds).toHaveLength(0);
     expect(keychain.reads).toHaveLength(0);

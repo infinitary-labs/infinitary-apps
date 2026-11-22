@@ -101,7 +101,6 @@ function heldConnection(order: string[]) {
       waiting();
       return listens;
     },
-    /** Resolves once the door waits for the connection. */
     waited,
     listen: () => listen(),
   };

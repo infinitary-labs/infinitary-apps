@@ -250,7 +250,6 @@ function keepWhereItRuns(context: FromHomeContext): void {
   new JoinedHome(context.dataDir, () => {}).onHomeMac(context.onHomeMac);
 }
 
-/** Whether the folder runs work for the home the home expects, as that computer. */
 function expectedHere(grant: DeviceGrant, expected: ExpectedHome): boolean {
   return grant.homeKey === expected.homeKey && grant.deviceId === expected.deviceId;
 }

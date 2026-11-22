@@ -15,7 +15,6 @@ import type { TaskView } from "./tasks";
  * captain's words.
  */
 
-/** The start policy each move writes. */
 export const QUEUE_POLICY: Record<"queue-task" | "unqueue-task", TaskView["startPolicy"]> = {
   "queue-task": "when-ready",
   "unqueue-task": "on-request",
@@ -48,7 +47,6 @@ export function leftBacklogActivity(actor: "captain" | "firstmate"): string {
 export const CAPTAIN_STOP_ACTIVITY =
   "Your first mate recorded that you asked for this task to wait. It stays stopped until it starts again.";
 
-/** The declaration on work that does not wait for a start. */
 export function captainStopRefusal(key: string): string {
   return `Cannot record a stop on ${key}: only work that waits for a start takes one - open work on request, or started work back in the backlog. Pass start_policy on-request with it.`;
 }

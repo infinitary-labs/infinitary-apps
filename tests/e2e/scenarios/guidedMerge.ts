@@ -34,9 +34,7 @@ export const GUIDED_MERGE_MARKER = "hold a kept merge for guidance";
 export const GUIDED_MERGE_TITLE = "feat: hold the merge for guidance";
 export const GUIDED_MERGE_CARD = GUIDED_MERGE_TITLE;
 export const GUIDED_MERGE_QUESTION = "Rename the guided file?";
-/** The captain's ask in the main input: the Firstmate steers it to the crewmate in his turn. */
 export const GUIDED_MERGE_ASK = `${GUIDED_MERGE_MARKER}: ask whether to rename the file`;
-/** The captain's reply under the crewmate's question card. */
 export const GUIDED_MERGE_ANSWER = `${GUIDED_MERGE_MARKER}: keep its name`;
 // e2e-typed-words: the mock Firstmate's own steer, relaying the captain's ask
 export const GUIDED_MERGE_STEER = `${GUIDED_MERGE_MARKER} - the captain asks whether the file should be renamed`;
@@ -91,7 +89,6 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
               },
             ],
           };
-    // The captain's own words: relayed to the crewmate in his turn.
     if (user.includes(GUIDED_MERGE_ASK))
       return results.length
         ? { text: "Asked the crewmate." }
@@ -104,7 +101,6 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
     return { text: "Noted; nothing for the captain." };
   }
   if (user.includes(GUIDED_MERGE_ANSWER)) {
-    // The newest mark the steer named, read after the words the app wrote it with.
     const mark = Number(
       user
         .split(GUIDANCE_MARK_WORDS)

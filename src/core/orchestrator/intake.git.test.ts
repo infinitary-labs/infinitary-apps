@@ -514,7 +514,6 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       shape: { result_schema: FINDINGS },
     });
     await tick();
-    /** The report tool's answer, a refusal's words included. */
     const report = async (declared?: Parameters<NonNullable<CrewmateSpec["onReport"]>>[2]) => {
       try {
         return await harness.specs[0]!.onReport!("Found the two renderers.", undefined, declared);
@@ -696,7 +695,6 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
 
     it("INF-1550: takes over a host-blocked branch without a merge or captain card, keeping the origin's evidence", async () => {
       const h = await firstStage();
-      // The origin's own check evidence: a failed check at its committed version.
       h.tasks.delivery.recordChangeEvidence(h.first.id, {
         ciRepair: {
           failures: [{ headSha: h.head, checks: ["unit-tests"] }],
@@ -743,7 +741,6 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
 
     it("INF-1550 F9: runs the served spawn, file-steer and relationship tools for an immediate takeover", async () => {
       const h = await firstStage();
-      // The origin's own check evidence: a failed check at its committed version.
       h.tasks.delivery.recordChangeEvidence(h.first.id, {
         ciRepair: {
           failures: [{ headSha: h.head, checks: ["unit-tests"] }],
@@ -896,7 +893,6 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         `branch_from ${answered.key} has no branch or saved work to start from`,
       );
       expect(tasks.list()).toHaveLength(count);
-      // A spawn reads the same refusal, and spawns nothing.
       await expect(
         supervisor.intake.commission({
           title: "Migrate the callers now",

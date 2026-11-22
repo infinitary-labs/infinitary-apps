@@ -93,7 +93,6 @@ function stillRunning(holder: Holder): boolean {
   return holder.child.exitCode === null && holder.child.signalCode === null;
 }
 
-/** An older folder with saved work, its background agent recorded, and a launchctl stand-in. */
 function olderFolder() {
   const appData = scratchDir("infinitary-take-over-");
   const homeDir = scratchDir("infinitary-take-over-home-");

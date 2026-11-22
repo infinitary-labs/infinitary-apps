@@ -34,7 +34,6 @@ function excerptOf(row: InboxRow): string {
   return clip(span ? served.slice(span.from, span.to) : served);
 }
 
-/** The messages still waiting for a task's crewmate, oldest first. */
 export function waitingGuidance(inbox: InboxStore, taskId: string, now: number): WaitingMessage[] {
   const rows = [
     ...inbox.allFor(taskId).filter((row) => row.escalatedAt === null),

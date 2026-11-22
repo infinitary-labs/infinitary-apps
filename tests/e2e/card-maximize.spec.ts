@@ -70,7 +70,6 @@ function card(id: string, title: string, priority: number): Card {
   };
 }
 
-/** The shown entry's size control, by the words it reads now. */
 const sizeControl = (page: Page, label: string) =>
   shownEntry(page).getByRole("button", { name: label, exact: true });
 
@@ -100,7 +99,6 @@ async function partInView(page: Page, frame: FrameLocator, part: number): Promis
   return at >= seen.top - 1 && at <= seen.bottom;
 }
 
-/** The body's part whose top is the first in sight. */
 async function partAtTop(page: Page, frame: FrameLocator): Promise<number> {
   for (let part = 1; part <= PARTS; part++) if (await partInView(page, frame, part)) return part;
   return 0;
@@ -167,7 +165,6 @@ test("a card maximizes into the window and comes back with its page, answers, re
       expect(within(big, await windowBox(page))).toEqual([]);
       const bar = await box(page, "[data-topbar]");
       expect(big.y).toBeGreaterThanOrEqual(bar.y + bar.height);
-      // The pager keeps its own lane under the card.
       expect(within(await box(page, "[data-card-pager]"), await windowBox(page))).toEqual([]);
       expect((await box(page, "[data-card-pager]")).y).toBeGreaterThanOrEqual(big.y + big.height);
       await expect.poll(() => partInView(page, frame, reading)).toBe(true);

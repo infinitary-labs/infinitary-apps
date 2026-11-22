@@ -55,7 +55,6 @@ export type ComputerChoiceInput = {
   computers: readonly ComputerChoiceComputer[];
 };
 
-/** What the model picked: start or wait on one computer. */
 export type ComputerPick = {
   computerId: string | null;
   mode: "start" | "wait";
@@ -87,7 +86,6 @@ const DELIVERS: Record<Deliverable, string> = {
     "an operation such as merging, releasing or setting something up; it writes no new code",
 };
 
-/** A name's words, lowercase letters only. */
 function words(name: string): string[] {
   return (
     name
@@ -206,7 +204,6 @@ export function computerChoiceQuestions(
   return { computer: where, ifNotNow: notNow };
 }
 
-/** One computer's line of facts. */
 function computerLine(computer: ComputerChoiceComputer): string {
   const where = computer.here
     ? "this computer, the one Infinitary's window runs on"
@@ -225,7 +222,6 @@ function computerLine(computer: ComputerChoiceComputer): string {
   ].join("; ");
 }
 
-/** The directions that fit, each whole, and how many did not. */
 export function directionsThatFit(directions: readonly string[]): {
   kept: string[];
   leftOut: number;
@@ -240,7 +236,6 @@ export function directionsThatFit(directions: readonly string[]): {
   return { kept, leftOut: directions.length - kept.length };
 }
 
-/** The facts the model reads: the task, the directions and each computer. */
 export function computerChoiceState(input: ComputerChoiceInput): DecisionState {
   const { kept, leftOut } = directionsThatFit(input.directions);
   return {

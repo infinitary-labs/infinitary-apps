@@ -32,7 +32,6 @@ async function holdNextReveal(page: Page): Promise<void> {
   }, SHOWN_ENTRY);
 }
 
-/** The shown card's own reveal is the one held, still in flight. */
 async function expectRevealHeld(page: Page): Promise<void> {
   await shownEntry(page).evaluate((entry) => {
     const held = entry

@@ -7,7 +7,6 @@
  * card after a race.
  */
 export type CardStage = {
-  /** The stack entry on the stage now. */
   shownId: string;
   /** The pager's arrows: 1 is the next card, -1 the previous. */
   page: (dir: 1 | -1) => void;
@@ -41,7 +40,6 @@ export function lendCardStage(read: () => CardStage | null): () => void {
   };
 }
 
-/** The shown card's controls, when a card layer is up and shows one. */
 export function cardStage(): CardStage | null {
   return lent?.() ?? null;
 }

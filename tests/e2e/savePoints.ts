@@ -16,15 +16,12 @@ import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 const git = (dir: string, ...args: string[]) =>
   execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
 
-/** How many save points the workspace's history holds. */
 export function savePointCount(dir: string): number {
   return Number(git(dir, "rev-list", "--count", "HEAD").trim());
 }
 
-/** A save point: its subject, its whole message, and the paths it touched. */
 export type SavePoint = { subject: string; message: string; paths: string[] };
 
-/** The workspace's newest save point. */
 export function newestSavePoint(dir: string): SavePoint {
   return {
     subject: git(dir, "log", "-1", "--format=%s").trim(),
@@ -33,7 +30,6 @@ export function newestSavePoint(dir: string): SavePoint {
   };
 }
 
-/** Whether nothing in the workspace is left unsaved. */
 export function workspaceClean(dir: string): boolean {
   return git(dir, "status", "--porcelain") === "";
 }

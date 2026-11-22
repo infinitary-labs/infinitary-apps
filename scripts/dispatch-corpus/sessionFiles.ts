@@ -12,7 +12,6 @@ import { readFirstmateSessionFile } from "./userData.ts";
 
 type JsonRecord = Record<string, unknown>;
 
-/** Where the transcripts are: explicit files, or the directories that hold them. */
 export type SessionSources = {
   /** Explicit transcript files, of either dialect; override the directories when non-empty. */
   sessionFiles?: string[];

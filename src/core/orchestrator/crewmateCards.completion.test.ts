@@ -147,7 +147,6 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     const body = completionBody("<p>The meter reads true now.</p><p>It awaits the merge.</p>");
-    // Beside the merge the host words, an action the crewmate keeps for itself.
     expect(() =>
       specs[0]?.onCard?.({
         requiredActions: [],
@@ -156,7 +155,6 @@ describe("CrewSupervisor", () => {
         actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }, { id: "ask" }],
       }),
     ).toThrow(/Card refused: action "ask" has no label/);
-    // A decision with no merge: every action is the crewmate's own to word.
     expect(() =>
       specs[0]?.onCard?.({
         title: "Which meter?",
@@ -206,7 +204,6 @@ describe("CrewSupervisor", () => {
     const body = completionBody(
       "<p>The meter test passes ten runs in a row.</p><p>It awaits the flush now.</p>",
     );
-    // Two of the crewmate's own beside the host's pair make four.
     expect(() =>
       specs[0]?.onCard?.({
         requiredActions: [],
@@ -221,7 +218,6 @@ describe("CrewSupervisor", () => {
     ).toThrow(/this one gives 4 \(ask, later, merge, discard\)/);
     expect(cards()).toEqual([]);
 
-    // The merge alone, unlabeled, as the crewmate is told to declare it.
     await specs[0]?.onCard?.({
       requiredActions: [],
       title: "The meter test is steady",
@@ -248,7 +244,6 @@ describe("CrewSupervisor", () => {
     // beside it four times and closed three of its own as duplicates.
     expect(supervisor.crewmateCards.crewmateOwesCompletion(taskId)).toBe(true);
     expect(supervisor.crewmateCards.crewmateOwesCompletion("no-such-task")).toBe(false);
-    // A note of its own does not close the window - only a completion card.
     await specs[0]?.onCard?.({
       title: "One thing I noticed",
       body: "<p>The flush is racy.</p>",
@@ -294,8 +289,6 @@ describe("CrewSupervisor", () => {
     supervisor.cardActions.act(settle.id, "later");
     await tick();
 
-    // The click returns to its author like any declared choice; nothing
-    // parks, nothing comes back on its own.
     expect(cards()).toEqual([]);
     expect(crewmate.promptCalls.at(-1)).toBe(
       'Card "firstmate-3000 fm/task-ready is done": the user chose "Ask me tomorrow" (later).',
@@ -422,7 +415,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await expect(refused).rejects.toThrow(
       "The captain's reply in your card's thread is still unanswered: answer it now with reply",
     );
-    // Once the thread has its answer, the refusal is the checks' alone.
     specs[0]?.onReply?.({
       cardId: card.id,
       text: "Renamed; the checks are running again.",
@@ -458,7 +450,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
 
     await expect(result).rejects.toThrow(`the checks read ${CHECK_WORDS.red}, not passed`);
-    // The refusal names both ways up and tells the crew to spend no rerun on main's failure.
     await expect(result).rejects.toThrow("carries your diagnosis");
     await expect(result).rejects.toThrow("spend no rerun on it");
     await expect(result).rejects.toThrow(softHoldWords("checks", "crewmate"));
@@ -796,7 +787,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       expect(supervisor.cards.snapshot()).toEqual([unchangedCard]);
       expect(tasks.get(taskId)?.delivery).toEqual(unchangedDelivery);
     }
-    // Published, the same offer shows with the app's line and binds the story it carries.
     tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
@@ -1098,7 +1088,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     };
   }
 
-  /** The note's merge line: its first paragraph. */
   const mergeLineOf = (card: Card | undefined) =>
     card?.body.slice(0, card.body.indexOf("</p>") + 4) ?? "";
 
@@ -1123,7 +1112,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(onStage(shown)).toBe(true);
     expect(shown.body).toContain(mergedWords("", true).trim());
     expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
-    // One card, raised once: no second note beside it.
     expect(supervisor.cards.snapshot()).toHaveLength(1);
     expect(
       tasks
@@ -1141,7 +1129,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const { supervisor, tasks, taskId, note, mergePullRequest, specs, crewmate, checksPass } =
       await heldStoryNote();
     const held = note() as Card;
-    // Its next turn reports the green change, waiting on the captain to read the note.
     await supervisor.steer.steerCrewmate(taskId, "the checks passed; report");
     await tick();
     await specs[0]?.onReport?.(
@@ -1202,7 +1189,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
           .timeline(taskId)
           .filter((event) => event.kind === "card_raised" && event.ref === shown.id),
       ).toHaveLength(1);
-      // No second note, and the first mate's card does not repeat the sentence.
       const others = supervisor.cards.snapshot().filter((card) => card.id !== shown.id);
       expect(others.map((card) => card.id)).toEqual(pick ? [] : [answerCard]);
       for (const card of others) expect(card.body).not.toContain(SENTENCE);
@@ -1226,7 +1212,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const { supervisor, tasks, taskId, note } = await heldStoryNote(undefined, {
       readPull: async (_id, number) => (number === 1 ? pull : undefined),
     });
-    // The captain's message names this work alone.
     const message = tasks.capture.openAsk({ id: "ask-release", text: "did the upload fix ship?" });
     tasks.capture.attachAsk(message.id, taskId, "tool:spawn_crewmate");
     tasks.turns.recordReport(taskId, { text: "Version 1.2.3 shipped the change." });
@@ -1489,8 +1474,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const first = note();
     expect(onStage(first)).toBe(true);
     expect(mergeLineOf(first)).toContain(MERGE_CLOSES_WORDS.continues);
-    // More work on the same change: a second story at the new commit, shown
-    // on the same note.
     prepare(version(2, later));
     await emitCard.run({
       id: first.id,
@@ -1503,8 +1486,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(revised.createdAt).toBe(first.createdAt);
     expect(mergeLineOf(revised)).toContain(MERGES_NEXT_WORDS);
     expect(mergeLineOf(revised)).not.toContain(MERGE_CLOSES_WORDS.continues);
-    // The question is answered and the later version merges, closing the
-    // task: its receipt names that version and the note says it merged.
     const question = supervisor.cards
       .snapshot()
       .find((card) => card.title === "Keep the old receipts?") as Card;
@@ -1671,7 +1652,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       ],
     };
     const cardId = supervisor.addFirstmateCard(mergeOffer);
-    // A newer commit with its story, prepared after the offer, refuses its click.
     const second = { ...story, revision: 2, head: "6db3e577ff32a8844938494f34f92a940985e121" };
     const revise = (next: ChangePresentation, publish = false) =>
       tasks.delivery.updateChangePresentation(taskId, (record) =>
@@ -1683,7 +1663,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(() => supervisor.cardActions.act(cardId, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).not.toBe("done");
-    // Published, the revised offer binds the newer version; a story revised there keeps its click.
     revise(second, true);
     seedDelivery(tasks, taskId, { headSha: second.head });
     supervisor.addFirstmateCard({ ...mergeOffer, id: cardId });
@@ -1801,7 +1780,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
 describe("a refused completion card is a fact the Firstmate reads (FI3-401)", () => {
   const merge = [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }];
 
-  /** One crewmate turn that ends with `text` as its report. */
   async function shipping(checks: { overall: import("./changeChecks").PrCiOverall }) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { checkCi: async () => checks.overall });
@@ -1833,8 +1811,6 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     await tick();
     expect(cards()).toEqual([]);
 
-    // The record: refused, when, and why, on the task's delivery facts and
-    // its timeline.
     const refusal = tasks.get(taskId)?.delivery?.cardRefusal;
     expect(refusal).toEqual({
       at: expect.any(Number),
@@ -1852,7 +1828,6 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       text: 'merge card "Ready to merge" refused: no open pull request was found for its branch',
     });
 
-    // The crewmate's report claims the card went up; the wake says it did not.
     await reportTurn(crewmate, taskId, "Completion card emitted.");
     expect(ops).toEqual([
       `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its merge card "Ready to merge" at ${at}: no open pull request was found for its branch. That card did not reach the captain, and no card of its is on the captain's screen.`,
@@ -1869,7 +1844,6 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       why: "no open pull request was found for its branch",
     });
 
-    // The proposed change can be read and the card goes up: the refusal no longer stands.
     checks.overall = "green";
     await supervisor.steer.steerCrewmate(taskId, "the checks passed; emit the completion card");
     await tick();
@@ -1915,7 +1889,6 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     expect(tasks.get(taskId)?.delivery?.cardRefusal).toBeUndefined();
     expect(supervisor.facts.crewStatus(taskId)[0]).not.toHaveProperty("cardRefused");
 
-    // An answer task has no completion card, and its refusal says so.
     const reader = fakeCrewmate();
     const answer = setup(reader);
     const { taskId: answerId } = await answer.supervisor.intake.commission({

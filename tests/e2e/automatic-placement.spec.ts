@@ -101,10 +101,6 @@ async function recordCpuState(app: LaunchedApp, task: TaskDetail, phase: string)
   );
 }
 
-/**
- * Wait for a compared task, rejecting waits unrelated to the CPU immediately;
- * a wait with no current reading of this computer is not yet compared.
- */
 async function placementState(detail: () => Promise<TaskDetail>): Promise<string> {
   const task = await detail();
   if (task.startedAt !== null) return "started";
@@ -232,7 +228,6 @@ function seedAutomaticProject(userDataDir: string, throughVersion?: number): voi
   db.close();
 }
 
-/** Ask Firstmate for a task in the project, and read its key and id back from the board. */
 async function askForTask(app: LaunchedApp): Promise<{ key: string; id: string | undefined }> {
   const title = `${GIT_STATUS_PROMPT_MARKER} in ${PROJECT}`;
   const input = promptInput(app.page);
@@ -290,7 +285,6 @@ test("a new task in an Automatic project waits for CPU room, then starts with th
       observation: { cpu: replayedCpu("available"), memory: { totalBytes: totalmem() } },
     });
 
-    // And the crewmate ran here, in a working copy of its own branch.
     const report = ranOnItsBranch(app, key);
     await expect(report).toBeVisible({ timeout: 45_000 });
     console.info("Automatic placement execution:", await report.innerText());
@@ -401,7 +395,6 @@ test("a premium ask in an Automatic project that no computer can serve waits on 
     await expect.poll(async () => (await detail()).flags.held, { timeout: 90_000 }).toBe(true);
     expect((await detail()).status).toBe("open");
 
-    // Firstmate hears what could serve it now, once.
     const told = renderWake({
       facts: {
         kind: "reasoning-wait",
@@ -483,8 +476,6 @@ test("a task in an Automatic project that requires a system no computer runs wai
     id = filed?.id;
     if (!filed || !id) throw new Error("The ask filed no task");
 
-    // Firstmate hears, once, that no computer runs what the task requires,
-    // naming this computer's own system.
     const told = renderWake({
       facts: {
         kind: "system-wait",
@@ -505,7 +496,6 @@ test("a task in an Automatic project that requires a system no computer runs wai
         .filter((count) => count > 0);
     await expect.poll(heard, { timeout: 30_000 }).not.toHaveLength(0);
     expect(heard().every((count) => count === 1)).toBe(true);
-    // It waits, chosen nowhere and unstarted.
     const waiting = await detail();
     expect(waiting).toMatchObject({ status: "open", startedAt: null });
     expect(waiting.placement).toBeUndefined();
@@ -566,7 +556,6 @@ test("a task in an Automatic project naming a model no computer serves waits, an
     id = filed?.id;
     if (!filed || !id) throw new Error("The ask filed no task");
 
-    // Firstmate hears, once, that the task waits for the model it named.
     const told = renderWake({
       facts: { kind: "named-model-wait", task: { id, key: filed.key, title }, model: named },
     });
@@ -582,7 +571,6 @@ test("a task in an Automatic project naming a model no computer serves waits, an
         .filter((count) => count > 0);
     await expect.poll(heard, { timeout: 30_000 }).not.toHaveLength(0);
     expect(heard().every((count) => count === 1)).toBe(true);
-    // It waits, chosen nowhere, unstarted, with words naming the model.
     const waiting = await detail();
     expect(waiting).toMatchObject({ status: "open", startedAt: null });
     expect(waiting.placement).toBeUndefined();

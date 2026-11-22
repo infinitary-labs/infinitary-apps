@@ -413,7 +413,6 @@ export function budget(
   const lanes = (["parallel", "desktop"] as const).filter((lane) =>
     ordered.some((file) => laneOf(file) === lane),
   );
-  // A job under SMALL_BIN_MS joins its lane's lightest other job.
   const joinSmall = (bins: Bin[]): Bin[] => {
     const kept = [...bins];
     for (const small of bins.toSorted((a, b) => a.estimatedMs - b.estimatedMs)) {

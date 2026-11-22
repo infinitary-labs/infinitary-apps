@@ -12,7 +12,6 @@ import {
 } from "../storage/projectStore";
 import { deriveProjectKey } from "../tasks/projectKey";
 
-/** One project a move takes repositories from, and whether it empties. */
 export type MoveSource = { id: string; key: string; name: string; empties: boolean };
 
 /**
@@ -193,7 +192,6 @@ export function moveImpact(
   };
 }
 
-/** The refusal of a move card whose move or impact changed since it was written. */
 export const STALE_MOVE_CARD =
   "The projects changed since this card was written. Ask for a new card.";
 

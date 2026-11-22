@@ -63,7 +63,6 @@ export const RELEASES: ReleaseManifest[] = [
   release("0.1.28-alpha.10", upTo("f")),
 ];
 
-/** The catalog release `to` packages: its own entries and every release's membership. */
 export function catalogFor(
   to: string,
   releases: ReleaseManifest[] = RELEASES,

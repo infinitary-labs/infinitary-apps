@@ -94,7 +94,6 @@ export type ClaudeSessionDeps = {
   resolveWorkSettings?: ResolveClaudeSettings;
 };
 
-/** Where a session's notes go: the deps' log, or the console. */
 export function noteTo(deps: ClaudeSessionDeps): (line: string) => void {
   return deps.log ?? ((line) => console.warn(`[claude] ${line}`));
 }

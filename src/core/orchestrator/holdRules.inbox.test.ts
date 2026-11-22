@@ -146,7 +146,6 @@ describe("a hold a connected source's event ends (INF-5145 part 2)", () => {
         });
       return { answer, now: () => text };
     };
-    /** One poll's worth of ticks, with every look answered and acted on. */
     const poll = async () => {
       for (let tick = 0; tick < POLL_EVERY; tick++) scheduler.tick(clock.now);
       await scheduler.settled();

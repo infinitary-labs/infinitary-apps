@@ -22,7 +22,6 @@ export function removeAll(path: string): boolean {
   }
 }
 
-/** Makes a folder and every folder in it writable to its owner, never following a link. */
 function writable(path: string): void {
   const stat = lstatSync(path);
   if (!stat.isDirectory()) return;

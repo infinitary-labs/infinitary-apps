@@ -270,7 +270,6 @@ async function commandHome(options: {
   return { proDir, command, beside, joined, run: started.run, miniRoot, miniPort, managerAsked };
 }
 
-/** Opens the Ready list on the computer's row in Settings, Devices and presses Move now, by keys. */
 async function moveNow(page: Page, deviceId: string) {
   await openDevices(page);
   await selectDevice(page, deviceId);
@@ -283,7 +282,6 @@ async function moveNow(page: Page, deviceId: string) {
   return ready;
 }
 
-/** Resolves once the window's own program ends. */
 const windowEnded = (opened: LaunchedApp) =>
   new Promise<void>((resolve) => opened.app.process().once("exit", () => resolve()));
 

@@ -104,7 +104,6 @@ function pushFix(branch: string, subject: string): string {
   return next;
 }
 
-/** The builder's readings so far (`builderReads`). */
 let readings = 0;
 
 /**
@@ -142,7 +141,6 @@ async function builderReads(taskId: string, head: string): Promise<void> {
     .toBe(true);
 }
 
-/** The first board row that matches, once the board holds one. */
 async function boardRow(
   launched: LaunchedApp,
   match: (task: TaskView) => boolean,
@@ -153,10 +151,6 @@ async function boardRow(
   return (await find()) as TaskView;
 }
 
-/**
- * Every wake the Firstmate was served across the run, as the host framed
- * it: each request's newest input, segment by segment.
- */
 function servedToFirstmate(): string[] {
   return (launched.mockProvider?.requestBodies() ?? [])
     .filter((body) => body.includes(FIRSTMATE_PERSONA))
@@ -164,7 +158,6 @@ function servedToFirstmate(): string[] {
     .map((segment) => segment.body);
 }
 
-/** How many steers a task's record holds. */
 async function steersOn(taskId: string): Promise<number> {
   const detail = await launched.page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
   return detail.events.filter((event) => event.kind === "steered").length;
@@ -272,8 +265,6 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
   const findingCard = shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
   await expect(findingCard.getByText(REVIEW_FINDING_LABEL, { exact: true })).toBeVisible();
-  // The card is the reviewer's own, on its review task, and draws the
-  // builder's facts; no first mate raised it.
   expect(
     (await page.evaluate(() => window.infinitary.cards.list())).find(
       (card) => card.title === MOCK_REVIEW_ASK_CARD_TITLE,
@@ -374,7 +365,6 @@ test("a reviewed task's review passes before its completion card, which merges w
         reviewRiskNote: MOCK_REVIEW_PASS_RISK.why,
       }),
     });
-  // The review task's own close is silent: no status line for it.
   await expect(statusLine(page, review.key)).toHaveCount(0);
 
   // 9. Told the review passed, the builder emits its completion card, which
@@ -428,7 +418,6 @@ test("a reviewed task's review passes before its completion card, which merges w
   // 11. The merge: the click asks GitHub for exactly that PR at its head.
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect(putInLine(page, builder.key)).toBeVisible({ timeout: 30_000 });
-  // GitHub squashes exactly that change at the reviewed head, under its title.
   expect(github.merges()).toEqual([
     {
       number: 55,

@@ -74,7 +74,6 @@ describe("a review question's tradeoff table", () => {
     // One radar per option, each naming the three headings as written.
     expect(html.match(/<svg /g)).toHaveLength(3);
     expect(html.match(/>Reliability<\/text>/g)).toHaveLength(3);
-    // The table as the author wrote it stays, in a fold after the chart.
     expect(html).toContain(
       `<details data-inf-tradeoff-table><summary>The tradeoff as a table</summary>${THREE}</details>`,
     );
@@ -100,7 +99,6 @@ describe("a review question's tradeoff table", () => {
     expect(html.indexOf("data-inf-tradeoff-chart")).toBeLessThan(
       html.indexOf("<label data-inf-tradeoff-charted>"),
     );
-    // The table as written stays where it was, folded, after the write-in.
     expect(html.indexOf('value="something-else"')).toBeLessThan(
       html.indexOf("<details data-inf-tradeoff-table>"),
     );

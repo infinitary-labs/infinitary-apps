@@ -39,7 +39,6 @@ import { seedProject } from "../workspace/seedProject";
 
 fakeCrewTimersEachTest();
 
-/** Everything a crewmate was served: its turns' prompts and its mid-turn steers. */
 function servedTo(crewmate: FakeCrewmate): string {
   return [
     ...crewmate.promptCalls,
@@ -52,7 +51,6 @@ function servedTo(crewmate: FakeCrewmate): string {
 const COVERS = "Signing in with your own GitHub account to run the sign-in check against it";
 const TITLE = "Run the sign-in check on your account";
 
-/** A live check of the sign-in fix that uses the captain's own account. */
 const OWN_ACCOUNT: ValidationScenario = {
   id: "own-account",
   source: "Fix the sign-in check.",
@@ -66,7 +64,6 @@ const OWN_ACCOUNT: ValidationScenario = {
   resources: "Your own GitHub account, signed in through the app",
   cost: "One sign-in check; it changes nothing on the account",
 };
-/** A second check through the same sign-in, which reads and changes nothing. */
 const REPOSITORY_LIST: ValidationScenario = {
   ...OWN_ACCOUNT,
   id: "repository-list",
@@ -101,7 +98,6 @@ async function startedTask(crewmates: FakeCrewmate[] = [], change = false) {
   return { ...h, crewmate, taskId, key: h.tasks.get(taskId)?.key ?? taskId };
 }
 
-/** A started task whose crewmate asks for consent on a card, with its yes marked. */
 async function askedConsent(crewmates: FakeCrewmate[] = [], change = false) {
   const h = await startedTask(crewmates, change);
   const shown = await h.specs[0]?.onCard?.({
@@ -207,7 +203,6 @@ async function plannedChecks(
 describe("a yes the captain gave on a crewmate's card", () => {
   it("is kept from the captain's own click, quoted on the timeline and served on the task's lane", async () => {
     const h = await askedConsent();
-    // The card says what the yes is kept as before the captain clicks.
     expect(h.card.body).toContain("is kept as your yes to");
     expect(h.card.body).toContain(COVERS);
 
@@ -347,7 +342,6 @@ describe("a yes the captain gave on a crewmate's card", () => {
     h.supervisor.cardActions.act(h.card.id, "yes", "chrome");
     await tick();
     const live = await plannedChecks(h, [OWN_ACCOUNT]);
-    // A card that holds no kept yes approves nothing.
     await expect(live.check("not-a-yes", OWN_ACCOUNT.id, "card-unknown")).rejects.toThrow(
       "Already allowed",
     );
@@ -358,7 +352,6 @@ describe("a yes the captain gave on a crewmate's card", () => {
       "first-run",
     ]);
     expect(h.supervisor.cards.snapshot()).toHaveLength(cardsBefore);
-    // Once the captain takes the yes back, the check asks again.
     h.supervisor.overrides.withdrawAllowance(h.taskId, h.card.id);
     await expect(live.run("after-take-back")).rejects.toThrow("needs your approval");
   });
@@ -406,7 +399,6 @@ describe("a yes the captain gave on a crewmate's card", () => {
       "both-checks",
     ]);
     expect(h.supervisor.cards.snapshot()).toHaveLength(cardsBefore);
-    // Taking back the one yes ends both approvals.
     h.supervisor.overrides.withdrawAllowance(h.taskId, card.id);
     await expect(live.run("after-take-back")).rejects.toThrow(OWN_ACCOUNT.id);
     await expect(live.run("after-take-back", [REPOSITORY_LIST.id])).rejects.toThrow(
@@ -444,7 +436,6 @@ describe("a yes the captain gave on a crewmate's card", () => {
     await expect(live.run("after-new-words")).rejects.toThrow("needs your approval");
     await live.check("from-new-words", OWN_ACCOUNT.id, STANDING_WORDS_FROM);
     await live.run("second-run");
-    // Once the captain takes the override back, the check asks again.
     h.supervisor.overrides.withdrawOverride(h.taskId);
     await expect(live.run("after-take-back")).rejects.toThrow("needs your approval");
     expect(h.tasks.get(h.taskId)?.delivery?.liveValidation?.runs.map((r) => r.id)).toEqual([

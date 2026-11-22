@@ -10,7 +10,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-// Intent: the bundled Commit and PR naming runbook's convention, checked through its own rule.
 describe("save points under the bundled naming runbook", () => {
   it("accepts scoped, unscoped and breaking subjects; refuses plain names with a correction", () => {
     const named = (name: string) => requireNamed(name, "commit", BUNDLED_NAMING);

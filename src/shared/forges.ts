@@ -45,7 +45,6 @@ export type ForgeSignInState = z.infer<typeof forgeSignInStateSchema>;
 export const forgeServerViewSchema = z
   .object({
     kind: z.string().min(1).max(32),
-    /** What that kind of server is called ("GitHub Enterprise"). */
     name: z.string().min(1).max(64),
     /** This kind also offers browser sign-in with a registered application. */
     browser: z.boolean().optional(),
@@ -68,7 +67,6 @@ export const forgeSignInViewSchema = z
     since: z.number().int().nonnegative(),
     /** Public application identifier, never an application secret. */
     applicationId: z.string().max(256).optional(),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional(),
     /** The sign-in is GitHub CLI's, asked each time it is needed; absent for the app's own. */
     way: z.enum(["cli"]).optional(),
@@ -81,7 +79,6 @@ export const forgeHostViewSchema = z
   .object({
     host: z.string().min(1).max(253),
     name: z.string().min(1).max(64),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional(),
   })
   .strict();
@@ -362,7 +359,6 @@ export const GITLAB: ForgeServerView = { kind: "gitlab", name: "GitLab", browser
 /** Bitbucket Cloud, which signs in with an API token the person makes on their Atlassian account. */
 export const BITBUCKET: ForgeServerView = { kind: "bitbucket", name: "Bitbucket" };
 
-/** Each kind of server's view, as its chip and row call it. */
 export const SERVER_VIEWS: Readonly<Record<SignInKind, ForgeServerView>> = {
   github: GITHUB_ENTERPRISE,
   gitlab: GITLAB,
@@ -411,7 +407,6 @@ export function forgeKeyScopesText(kind: string, host: string | null = null): st
   return `Choose Create API token with scopes, pick ${name} as the app, and tick these scopes: ${scopes.join(", ")}.`;
 }
 
-/** The words a key sign-in says when it was not kept. */
 export function forgeKeyProblemText(
   problem: ForgeKeyProblem,
   host: string | null,
@@ -481,7 +476,6 @@ export const FORGE_SECTION_WORDS = {
   keyFailed: "Could not check the key. Try again.",
 } as const;
 
-/** The key sign-in's opening line: where to make the key, and that it stays on this Mac. */
 export function forgeKeyIntro(host: string | null, server: ForgeServerView): string {
   const account =
     host && serverFactsAt(server.kind, host) ? undefined : signInHost(server.kind)?.keyAccount;

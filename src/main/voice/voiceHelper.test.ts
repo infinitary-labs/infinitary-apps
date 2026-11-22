@@ -2,7 +2,6 @@ import { EventEmitter } from "node:events";
 import { RECOGNIZER_IDLE_MS, recognizerPlaceFor } from "@shared/voiceRecognizer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/** A forked utility process the test drives: its messages, its exit. */
 class FakeChild extends EventEmitter {
   sent: Array<{ id: number; type: string; audio?: Float32Array }> = [];
   postMessage = vi.fn((message: { id: number; type: string }) => this.sent.push(message));

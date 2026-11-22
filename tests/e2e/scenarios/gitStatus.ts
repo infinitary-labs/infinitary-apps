@@ -11,7 +11,6 @@ import { calledTool, providerMessages } from "../providerRequest";
 export const GIT_STATUS_PROMPT_MARKER = "say which git this project runs";
 export const MOCK_GIT_REPORT_PREFIX = "The working copy's git answers";
 
-/** The crewmate asks its working copy's git, then reports what came back. */
 export const gitStatus: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {

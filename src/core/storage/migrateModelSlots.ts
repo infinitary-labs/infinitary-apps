@@ -59,7 +59,6 @@ const NORMALIZED: Record<string, Slot> = Object.fromEntries(
   Object.entries(FROZEN_BUCKETS).map(([id, slot]) => [normalizeId(id), slot]),
 );
 
-/** Frozen classifier: explicit row, then the old heuristic, else medium. */
 export function frozenClassify(id: string, name = ""): Slot {
   const explicit = NORMALIZED[normalizeId(id)];
   if (explicit) return explicit;
@@ -201,10 +200,8 @@ export function migrateGpt6Slots(db: AppDatabase): void {
   );
 }
 
-/** Test helper: the empty v1 record, for asserts on a fresh install. */
 export function emptyMigratedSlots(): typeof EMPTY_MODEL_SLOTS {
   return { ...EMPTY_MODEL_SLOTS, assignments: {}, seen: [] };
 }
 
-/** Test helper: rebuild an offering key the way activation did. */
 export { offeringKey };

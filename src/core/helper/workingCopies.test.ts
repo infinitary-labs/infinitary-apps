@@ -75,7 +75,6 @@ async function commitAll(dir: string, message: string): Promise<string> {
   return git(dir, ["rev-parse", "HEAD"]);
 }
 
-/** The computer's data folder and its working copies, with no pool unless asked. */
 function computer(pool = false) {
   const dataDir = scratchDir("infinitary-copies-computer-");
   return { dataDir, copies: new WorkingCopies(dataDir, pool ? {} : { pool: false }) };
@@ -119,7 +118,6 @@ describe("the working copies a computer that runs work keeps", () => {
     const second = await copies.prepare("t-two", { origin });
     expect(second.cloned).toBe(false);
     expect(readdirSync(join(dataDir, "repos"))).toHaveLength(1);
-    // Asked again, a working copy already there is answered as it is.
     const again = await copies.prepare("t-one", { origin });
     expect(again).toEqual({ dir: first.dir, branch: "fm/task-t-one", cloned: false });
     expect(copies.list()).toEqual(["t-one", "t-two"]);
@@ -720,7 +718,6 @@ describe("the working copies a computer that runs work keeps", () => {
     });
     expect(readFileSync(path).equals(bytes)).toBe(true);
     expect(await copies.artifact(piece(0, bytes.length))).toEqual({ outcome: "exists" });
-    // A digest that does not match is refused, and nothing is written.
     await expect(
       copies.artifact({ ...piece(0, bytes.length), artifactId: 10, sha256: "0".repeat(64) }),
     ).rejects.toThrow("not the one the home downloaded");

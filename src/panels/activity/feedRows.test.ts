@@ -30,7 +30,6 @@ describe("the feed's rows", () => {
     expect(leadingDrop(painted, ["a", "b", "c", "d"])).toBe(0);
     expect(leadingDrop(painted, ["b", "c", "d"])).toBe(1);
     expect(leadingDrop(painted, ["c", "d", "e"])).toBe(2);
-    // Nothing painted survives: the list is rebuilt.
     expect(leadingDrop(painted, ["x", "y"])).toBe(3);
     expect(leadingDrop([], ["a"])).toBe(0);
   });

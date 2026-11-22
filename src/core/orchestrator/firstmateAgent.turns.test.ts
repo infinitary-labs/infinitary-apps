@@ -42,7 +42,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: turns: the input, its context block and steering (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 describe("FirstmateAgent", () => {
@@ -1006,7 +1005,6 @@ describe("FirstmateAgent", () => {
     expect(shown()).toBeUndefined();
     const waiting = supervisor.cards.snapshot().find((card) => card.id === cardId);
     expect(waiting?.awaiting).toBe("answer");
-    // Still on the stage, in its place, showing what it showed.
     expect(waiting && onStage(waiting)).toBe(true);
     expect(waiting?.body).toContain("Default is the care every project starts with");
 
@@ -1050,7 +1048,6 @@ describe("FirstmateAgent", () => {
       answers_message: asked,
     });
     expect(shown()).toBeUndefined();
-    // The turn that carried the research ends: its close-out.
     supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     expect(shown()?.title).toBe("How Default Care is chosen");
     expect(supervisor.cards.snapshot().filter((card) => card.author === "firstmate")).toHaveLength(
@@ -1107,7 +1104,6 @@ describe("FirstmateAgent", () => {
     supervisor.cardActions.replyToCard(cardId, "build it");
     supervisor.closeCard(cardId, { kind: "crewmate", taskId }, "recover the settings");
     await crewSpecs[0]?.callbacks?.onCard?.({ ...preview, id: cardId, title: "Settings kept" });
-    // The newest line on each of these threads is the captain's too.
     supervisor.cardActions.replyToCard("card-t1-1", "what about X?");
     supervisor.cardActions.replyToCard("card-t2-1", "never mind");
     // INF-1879: a pending note stays owed when put away; its author explicitly withdraws this closed-history fixture.
@@ -1278,7 +1274,6 @@ describe("FirstmateAgent", () => {
     expect(session.prompts[0]).toContain("[user]\nwhat is this dialog?");
     expect(session.promptImages[0]).toEqual([shot]);
 
-    // Mid-turn, an image-only paste steers with its attachment intact.
     const followUp = pngImage;
     await agent.converse({ images: [followUp] });
     expect(session.steers).toHaveLength(1);

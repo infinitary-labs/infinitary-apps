@@ -9,7 +9,6 @@ const CARD_ID = "card-place-readme-1";
 /** The card's thread, which the window reads when the card shows. */
 export const asked: HomeRead[] = [["inf:cards:thread", [CARD_ID]]];
 
-/** What the card-place test's story reads back. */
 type Words = { title: string; place: string; card: string };
 
 /** A queued task placed on another computer, and its ready card naming where it runs. */

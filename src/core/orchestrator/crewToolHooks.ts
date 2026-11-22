@@ -64,7 +64,6 @@ export class CrewToolHooks {
     this.programs = new CrewmatePrograms(core);
   }
 
-  /** What a crewmate's tools run on: this task's callbacks into the host. */
   crewmateHooks(
     task: TaskRuntime,
     personal: PersonalLiveDelegate | undefined,

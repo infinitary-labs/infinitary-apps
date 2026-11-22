@@ -102,7 +102,6 @@ const factIn = (row: HTMLElement, fact: string) => {
   return el;
 };
 
-/** Each cell and the checks inside the row, each label whole and clear of the others. */
 function expectRowHolds(row: HTMLElement) {
   const box = row.getBoundingClientRect();
   const cells = [...row.children];

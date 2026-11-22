@@ -21,7 +21,6 @@ beforeAll(async () => {
   inElectron = await bundleForElectron("tests/helpers/taskTempProcess.ts");
 });
 
-/** The archive the installed Electron itself ships, beside its binary. */
 function installedAsar(): string {
   const resources = process.platform === "darwin" ? "../Resources" : "resources";
   return join(dirname(electronBinary()), resources, "default_app.asar");

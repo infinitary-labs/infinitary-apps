@@ -81,7 +81,6 @@ const NATIVE = {
   },
 } as const satisfies Record<ChangeRequestKind, object>;
 
-/** A kind's native forms, by its kind or its public host; any other names GitHub's. */
 function nativeOf(hostOrKind: string) {
   return NATIVE[
     (changeRequestHost(hostOrKind) ?? changeRequestHostAt(hostOrKind))?.kind ?? "github"
@@ -119,7 +118,6 @@ function adjacentPictures(
   );
 }
 
-/** Recordings use each host's own native player; GitHub's also signs private media. */
 function legacyPresentationMarkdown(
   story: ChangePresentation,
   urls: ReadonlyMap<string, string>,

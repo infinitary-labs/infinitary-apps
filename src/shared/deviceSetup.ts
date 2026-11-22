@@ -34,7 +34,6 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-/** The host where a computer's clones and pushes need their own sign-in. */
 export const GITHUB_HOST = "github.com";
 
 /**
@@ -80,7 +79,6 @@ export function deviceForgeGateRef(host: string, deviceId: string): string {
   return `forge-sign-in:${host}@${deviceId}`;
 }
 
-/** The typed facts the card is built from. */
 export type DeviceSetupFacts = {
   deviceId: string;
   reach: ComputerReach;
@@ -98,10 +96,8 @@ export type DeviceSetupFacts = {
 
 export type DeviceSetupRowId = "subscription" | "github" | "project";
 
-/** One row of the card: a need, and whether the facts say it is met. */
 export type DeviceSetupRow = {
   id: DeviceSetupRowId;
-  /** The need, as the row names it. */
   need: string;
   done: boolean;
   /** Its state in words: what it has, or what the step is. */
@@ -116,7 +112,6 @@ export const DEVICE_SETUP_ACTIONS = {
   notNow: "not-now",
 } as const;
 
-/** The subscriptions a computer reports, by the provider's name: "Codex and Grok". */
 function subscriptionNames(signIns: ComputerSignIns): string[] {
   return [
     ...new Set(

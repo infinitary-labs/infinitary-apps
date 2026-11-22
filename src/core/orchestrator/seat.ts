@@ -111,7 +111,6 @@ export const FIRSTMATE_MAX_MODEL_TURNS = 40;
 /** Provider-side retries of one request (Pi's knob; the Claude client keeps its own). */
 export const FIRSTMATE_RETRIES = 2;
 
-/** Which backend serves the seat, and on what: the one session binding. */
 export type SeatBinding = SessionBinding;
 
 export type SeatBackend = SeatBinding["backend"];
@@ -279,7 +278,6 @@ export type SeatSessionInput = {
   tools: readonly BoundTool[];
   /** The captain-owned instructions served after the prompt (docs/sequences.md); absent serves none. */
   instructions?: ServedInstructions;
-  /** Resume the binding backend's own rolling session instead of starting fresh. */
   resume?: SessionResume;
 };
 

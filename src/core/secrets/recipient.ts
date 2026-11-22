@@ -414,7 +414,6 @@ export function recipientBase(
   return env;
 }
 
-/** A regular file at this path, resolved through links, or nothing. */
 export async function regularFile(path: string): Promise<string | undefined> {
   try {
     await lstat(path);

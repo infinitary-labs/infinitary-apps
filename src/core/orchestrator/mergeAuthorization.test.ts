@@ -95,7 +95,6 @@ describe("the captain's guidance on a kept merge (FI3-662)", () => {
     expect(
       rowAttachments([{ facts: kept.facts } as Parameters<typeof rowAttachments>[0][number]]),
     ).toEqual([picture]);
-    // A prose steer is marked the same way.
     expect(renderWake(withGuidanceMark("Keep it.", 1))).toMatch(
       new RegExp(`^Keep it\\.\\n\\n.*${GUIDANCE_MARK_WORDS} 1 `),
     );
@@ -166,7 +165,6 @@ describe("a repair's declared impact (INF-493)", () => {
 
 // Captain INF-1555 F12: the offer carries readiness; a checks hold names only checks.
 describe("kept merge check words", () => {
-  // The captain's wait and the first mate's note name the batch as the merger.
   it("names the batch a kept merge waits in", () => {
     expect(keptFeedLine("queue", "GitHub")).toBe(
       "Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass.",

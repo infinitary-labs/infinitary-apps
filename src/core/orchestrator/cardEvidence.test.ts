@@ -129,8 +129,6 @@ describe("CardService evidence", () => {
       [first.offerId, "Which way?"],
       [head.offerId, "Which way now?"],
     ]);
-    // What the stage did: waiting on the close-out, shown, then the newer
-    // head waiting while the old one stayed up.
     expect(
       only(cardStore, id, "availability").map((entry) => [
         entry.offerId,
@@ -452,7 +450,6 @@ describe("CardService evidence", () => {
     expect(exit("card-auth-x")).toEqual(["host", "host", "host-withdrawal", "recovered"]);
     expect(exit(duplicate)).toEqual(["firstmate", "tool", "duplicate", "same ask"]);
     expect(exit(retired)).toEqual(["host", "host", "task-retired", "merged"]);
-    // None of them is a choice.
     for (const id of [withdrawn, "card-auth-x", duplicate, retired]) {
       expect(kinds(cardStore, id)).not.toContain("action");
     }

@@ -137,7 +137,6 @@ async function board(page: Page): Promise<TaskView[]> {
   return (await page.evaluate(() => window.infinitary.tasks.board())).tasks;
 }
 
-/** A row by its exact title, once it is on the board. */
 async function rowTitled(page: Page, title: string): Promise<TaskView> {
   let found: TaskView | undefined;
   await expect
@@ -156,7 +155,6 @@ function detailOf(page: Page, id: string): () => Promise<TaskDetail> {
   return () => page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
 }
 
-/** The first brief a crewmate was served that carries `needle`. */
 async function servedBrief(needle: string): Promise<string> {
   const find = () =>
     (launched.mockProvider?.requestBodies() ?? []).find(
@@ -177,7 +175,6 @@ function handedCard(brief: string): { file: string; body: string } {
   return { file, body: readFileSync(file, "utf8") };
 }
 
-/** A card by title, once it is on the stack, paged to the front. */
 async function cardShown(page: Page, title: string): Promise<void> {
   await expect
     .poll(
@@ -200,8 +197,6 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
   const { page } = launched;
   await ask(page, SEQ_FEATURE_ASK);
 
-  // The record: a parent with no crewmate, the plan step running as an
-  // answer, the implement step on request with the plan as its basis.
   const parent = await rowTitled(page, SEQ_FEATURE.parent);
   const plan = await rowTitled(page, SEQ_FEATURE.plan);
   const implement = await rowTitled(page, SEQ_FEATURE.implement);
@@ -313,7 +308,6 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
   // saved from it, so the brief names no working copy to start from.
   for (const words of START_FROM_WORDS) expect(brief).not.toContain(words);
 
-  // The implement step's completion card; the captain puts the work in.
   await cardShown(page, SEQ_IMPLEMENT_CARD_TITLE);
   await expect(
     cardBody(page, SEQ_IMPLEMENT_CARD_TITLE).getByRole("heading", { name: "After", exact: true }),
@@ -347,7 +341,6 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
   const { page } = launched;
   await ask(page, SEQ_SAVED_ASK);
 
-  // A plan asked for on its own: one read-only step, an answer, no parent.
   const plan = await rowTitled(page, SEQ_SAVED.plan);
   const planDetail = detailOf(page, plan.id);
   await expect.poll(planDetail, { timeout: 30_000 }).toMatchObject({
@@ -356,8 +349,6 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
     deliverable: "answer",
   });
 
-  // The ready plan ends in three choices; the captain picks an answer, then
-  // keeps the plan for later.
   await cardShown(page, SEQ_SAVED_CARD_TITLE);
   await shownCardFrame(page)
     .getByLabel(SEQ_SAVED_BOTTOM_LABEL)
@@ -369,8 +360,6 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
     closedReason: "answered",
   });
 
-  // The Firstmate filed one build on request, grounded on the plan, and
-  // started nothing: it waits in the backlog with no crewmate.
   const build = await rowTitled(page, SEQ_SAVED.build);
   const buildDetail = detailOf(page, build.id);
   await expect(feedLine(page, new RegExp(SEQ_SAVED.build))).toBeVisible({ timeout: 30_000 });
@@ -387,7 +376,6 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
   await rowAtRest(page, build.key);
   await page.screenshot({ path: testInfo.outputPath("saved-build-planned.png") });
 
-  // Its record offers the captain's Start; his press starts it.
   await pressRow(page, build.key);
   await expect(recordCard(page)).toHaveAttribute("data-task-record", build.id);
   await expectRecordBody(page);
@@ -436,10 +424,8 @@ test("an ask for a prototype is a plan whose card is a playable preview, and App
   expect(planBrief).toContain(SEQ_PLAN_LINE);
   writeFileSync(testInfo.outputPath("prototype-plan-brief.json"), planBrief);
 
-  // Its card is the preview.
   await cardShown(page, SEQ_PROTOTYPE_CARD_TITLE);
 
-  // The captain tries another tilt: the preview moves and stages the setting.
   const frame = cardBody(page, SEQ_PROTOTYPE_CARD_TITLE);
   await frame.locator("#tilt").evaluate((input: HTMLInputElement) => {
     input.value = "42";
@@ -490,7 +476,6 @@ test("a single-place change declares its plan skip: one running task, no parent"
     skippedPlanBecause: SEQ_SMALL_PLAN_SKIP,
   });
   await expect(feedLine(page, planSkippedText(SEQ_SMALL_PLAN_SKIP))).toBeVisible();
-  // The ask is that one task: nothing else was filed for it.
   const added = (await board(page)).filter((task) => !before.includes(task.id));
   expect(added.map((task) => task.title)).toEqual([SEQ_SMALL.implement]);
   await pressRow(page, implement.key);
@@ -581,7 +566,6 @@ test("a check the build waits on closes answered into the build, and the build i
       expect(line.text.toLowerCase()).not.toContain(words.toLowerCase());
     expect(line.kind).not.toBe("warn");
   }
-  // The wait cleared as done: the build carries on and nothing holds its merge.
   expect(await buildDetail()).toMatchObject({
     status: "active",
     blockedBy: [],
@@ -609,7 +593,6 @@ test("a repro the captain asked to see is his: the Firstmate leaves it, and his 
   expect(await reproduceDetail()).toMatchObject({ status: "active" });
   await expect(shownCard(page, SEQ_SHOWN_REPRO_TITLE)).toBeVisible();
 
-  // His click is its close.
   await page.getByRole("button", { name: SEQ_SHOWN_FIX_LABEL, exact: true }).click();
   await expect.poll(reproduceDetail, { timeout: 30_000 }).toMatchObject({
     status: "done",

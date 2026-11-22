@@ -115,7 +115,6 @@ describe("the holds registry check", () => {
   });
 });
 
-/** His line leaves the agents' sentences out (the vocabulary: no tool names on his surface). */
 describe("an override naming a retired hold", () => {
   it("is refused in words that name the retired hold, never a crash (INF-1876)", () => {
     // A release before INF-1876 wrote the review and live-proof holds; an

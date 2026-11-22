@@ -231,7 +231,6 @@ describe.skipIf(!runs)("Linux Secret Service custody", () => {
     // Another flavor's store shares the keyring and none of its items.
     expect(await custody("infinitary-dev-probe").read("root")).toEqual({ kind: "absent" });
 
-    // A protected owner on this custody: sealed, reopened, and refusing a use it cannot bind.
     const dir = join(home, "owner");
     const owned = custody("infinitary-owner-probe");
     const opened = await ProtectedSecrets.open({

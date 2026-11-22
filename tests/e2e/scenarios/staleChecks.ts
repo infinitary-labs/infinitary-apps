@@ -109,7 +109,6 @@ function staleChecksMove(
   return { text: "Waiting on the captain." };
 }
 
-/** The stale check strip, for the first mate and for its crewmate. */
 export const staleChecks: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) =>

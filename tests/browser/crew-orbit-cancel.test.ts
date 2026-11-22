@@ -5,7 +5,6 @@ import { openCrewWindow, paint, ringSize } from "./crewOrbit";
 test("a cancelled crewmate leaves the ring", async () => {
   await commands.emulateReducedMotion("no-preference");
   const crew = await openCrewWindow();
-  // A fresh home: an empty ring, nothing painted.
   await expect.poll(ringSize).toBe(0);
   expect(paint().count).toBe(0);
 

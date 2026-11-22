@@ -89,7 +89,6 @@ export function lineCount(text: string): number {
   return lines;
 }
 
-/** Whether a paste is long enough to become a chip: over 20 lines or 2,000 characters. */
 export function shouldChip(text: string): boolean {
   return text.length > PASTE_CHIP_CHARS || lineCount(text) > PASTE_CHIP_LINES;
 }
@@ -134,7 +133,6 @@ const CTRL_HINT_KEYS: Readonly<Record<string, string>> = {
   "⌘⏎": "Ctrl+Enter",
 };
 
-/** The foot row's hint in this keyboard's words: a Mac's glyphs, or the words Linux writes. */
 export function composerHint(hint: ComposerHint, system: KeySystem = "mac"): ComposerHintPart[] {
   const parts: ComposerHintPart[] = COMPOSER_HINTS[hint];
   return system === "mac"
@@ -155,7 +153,6 @@ export function fittingHint(
   return forms.find((form) => widthOf(form) <= room) ?? forms[forms.length - 1];
 }
 
-/** "1 line", "240 lines". */
 function lines(count: number): string {
   return m.composerLines({ count });
 }

@@ -658,10 +658,6 @@ function parseToonContext(block: string): {
   }
 }
 
-// --------------------------------------------------------------------------
-// Classification
-// --------------------------------------------------------------------------
-
 /**
  * PoC-1 parity (`run_gates.test.ts` `inferClass`): the class a turn's tool
  * NAMES alone imply. `emit_card` is deliberately ambiguous here because a
@@ -717,10 +713,6 @@ export function classifyTurn(
     basis: fromTools > 0 ? "tool" : "card-shape",
   };
 }
-
-// --------------------------------------------------------------------------
-// Small helpers
-// --------------------------------------------------------------------------
 
 function textFromContent(content: unknown): string {
   if (typeof content === "string") return content;

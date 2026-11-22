@@ -12,7 +12,6 @@ import type { TypedWake } from "./wakes";
  * A host that cannot read these checks leaves the task-close notification in place.
  */
 
-/** What one read of the default branch's checks found. */
 export type MainBranchReading =
   | {
       kind: "read";
@@ -32,7 +31,6 @@ export type MainBranchReading =
 export type MainCheckWakeHost = {
   tasks: TaskService;
   inbox: Pick<InboxStore, "woken">;
-  /** The default branch's checks where this project lives. */
   read(repoId: string): Promise<MainBranchReading>;
   /** The supervisor's own steer on the task's durable lane. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;

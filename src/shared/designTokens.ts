@@ -200,7 +200,6 @@ export function nearestShadowToken(value: string): string {
   return nearestOnScale(SHADOW_TOKENS, blur);
 }
 
-/** Is this radius one the scale already names? */
 export function isRadiusOnScale(px: number): boolean {
   return RADIUS_TOKENS.some((token) => token.px === px);
 }

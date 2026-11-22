@@ -2,7 +2,6 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the thread-working-reveal test's story reads back. */
 type Input = { cardId: string; title: string };
 
 /** The card's thread, empty until the captain replies, read when the card shows. */

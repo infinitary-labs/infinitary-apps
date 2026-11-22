@@ -185,7 +185,6 @@ export async function readOwnComments(
   );
 }
 
-/** The files one commit changes (`GET /commits/{sha}`), as GitHub lists them. */
 export async function readCommitFiles(
   get: (path: string) => Promise<unknown>,
   repoPath: string,

@@ -115,7 +115,6 @@ function listProcesses(columns: string): string {
   return listing.stdout;
 }
 
-/** Every process running a program from inside `bundle` now. */
 export function readAppProcesses(bundle: string): AppProcess[] {
   return parseAppProcesses(
     listProcesses("pid=,ppid=,etime=,stat=,comm="),
@@ -138,7 +137,6 @@ export function lingering(processes: readonly AppProcess[]): AppProcess[] {
   return processes.filter(({ program }) => program !== "ShipIt");
 }
 
-/** One clause per process: its program, kind, number, parent, time since start and state. */
 export function describeProcesses(processes: readonly AppProcess[]): string {
   if (processes.length === 0) return "none";
   return processes
@@ -165,7 +163,6 @@ export function mainThreadFrame(report: string): string | undefined {
   return frame;
 }
 
-/** Copy the app's own records out of its data folder under `label`; returns the names kept. */
 export function keepAppRecords(data: string, evidence: string, label: string): string[] {
   mkdirSync(evidence, { recursive: true });
   const kept: string[] = [];

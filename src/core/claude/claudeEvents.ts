@@ -264,7 +264,6 @@ function turnFailure(
   return outputCapped ? { error, outputCapped: true } : { error };
 }
 
-/** Text and thinking deltas, from the Messages API streaming events. */
 function deltaEvents(event: unknown, taskId: string): FmEvent[] {
   if (!isRecord(event) || event.type !== "content_block_delta") return [];
   const delta = event.delta;
@@ -316,7 +315,6 @@ function contentBlocks(message: unknown): Record<string, unknown>[] {
   return Array.isArray(content) ? content.filter(isRecord) : [];
 }
 
-/** Each token field of a model's totals, and the usage field it becomes. */
 const TOKEN_FIELDS = [
   ["input", "input"],
   ["output", "output"],
@@ -381,7 +379,6 @@ function turnUsage(
   return named.length > 0 ? { ...usage, models: named } : usage;
 }
 
-/** One model's spend as a turn part, or nothing when it spent nothing. */
 function spentPart(
   model: string,
   value: (field: keyof ClaudeTurnTotals) => number | undefined,

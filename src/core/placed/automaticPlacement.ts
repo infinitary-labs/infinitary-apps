@@ -55,7 +55,6 @@ type Facts = {
 };
 type Read = { result: Promise<Facts | null>; started: number };
 
-/** Where a new Automatic task starts, with what routing chose for it there. */
 export type AutomaticChoice = {
   computerId: string | null;
   routed?: RouteResult;

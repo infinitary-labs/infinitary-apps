@@ -80,7 +80,6 @@ function stubSession(
     prompt: async (text: string) => {
       prompts.push(text);
       if (options.hang) {
-        // Stays open until abort(), like a real provider that went quiet.
         await new Promise<void>((resolve) => {
           resolveHang = resolve;
         });
@@ -122,7 +121,6 @@ function stubSession(
 
 type Open = (spec: SessionSpec) => Promise<ModelSession>;
 
-/** The adapter's factories, each opening whatever the test hands it. */
 function factories(opens: { pi: Open; claude?: Open }): SessionFactories {
   const factory = (backend: SessionBackend, open: Open) => ({
     backend,
@@ -583,7 +581,6 @@ describe("the adapter on Claude (W1 S10)", () => {
       { recordUsage },
     ).classify({ ...INPUT, deliverable: "answer" }, new AbortController().signal);
     expect(verdict.kind).toBe("research");
-    // The burn lands under the task and the Claude account, like any other.
     expect(recordUsage.mock.calls[0]?.[0]).toMatchObject({
       taskId: "task-1",
       accountId: "acct_claude",

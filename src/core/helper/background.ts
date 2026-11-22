@@ -103,7 +103,6 @@ const INSTALLED_FILE = "installed.json";
 
 const installedSchema = z.strictObject({
   version: z.literal(1),
-  /** The agent, by its label and its file. */
   service: z.strictObject({ label: z.string().min(1), file: z.string().min(1) }).nullable(),
   /** The copy of Firstmate a command fetched from its home; null when this user runs one already here. */
   app: z.string().min(1).nullable(),
@@ -467,7 +466,6 @@ type Adapter = {
   pause: (context: BackgroundContext, service: Service) => Promise<void>;
   /** Starts it again after a pause that changed nothing. */
   resume: (context: BackgroundContext, service: Service) => Promise<void>;
-  /** Whether it runs now. */
   state: (context: BackgroundContext, service: Service) => Promise<InBackgroundNow>;
 };
 
@@ -683,7 +681,6 @@ export function systemctlOf(context: ServiceManager): Systemctl {
   return (args) => systemctl(["--user", ...args]);
 }
 
-/** Where this user's own systemd reads their services. */
 function systemdUnits(context: BackgroundContext): string {
   return join(
     "configHome" in context ? context.configHome : join(context.homeDir, ".config"),

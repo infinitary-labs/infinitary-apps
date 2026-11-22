@@ -8,7 +8,6 @@ import { SHOWN_ENTRY } from "./stack";
  * its parts by their typed hooks, never by their words.
  */
 
-/** The Crewmate tab of `taskId` on the stage. */
 export const crewmateView = (page: Page, taskId: string): Locator =>
   page.locator(`${SHOWN_ENTRY} [data-task-crewmate="${taskId}"]`);
 
@@ -16,7 +15,6 @@ export const crewmateView = (page: Page, taskId: string): Locator =>
 export const crewLines = (view: Locator, kind: string): Locator =>
   view.locator(`[data-crew-log] [data-crew-line="${kind}"]`);
 
-/** The kinds of every line the transcript draws, in order. */
 export const crewLineKinds = (view: Locator): Promise<string[]> =>
   view
     .locator("[data-crew-log] [data-crew-line]")
@@ -40,6 +38,5 @@ export function callTo(view: Locator, tool: string): { call: Locator; result: Lo
 export const crewBlock = (view: Locator, kind: "plan" | "report" | "card" | "change"): Locator =>
   view.locator(`[data-crew-block="${kind}"]`);
 
-/** The boxed prompt's field, by its accessible name. */
 export const crewComposer = (view: Locator): Locator =>
   view.getByRole("textbox", { name: CREWMATE_WORDS.field });

@@ -188,7 +188,6 @@ export function condenseActivity(
           : data.through === THROUGH_THE_COMMAND
             ? `${words}${/[.!?]$/.test(words) ? "" : "."} From ${INFINITARY_COMMAND}.`
             : words;
-      // Whatever names the task's own pull request links to it.
       const span = changeSpan(text, change, changeUrl);
       return {
         id: event.id,
@@ -342,7 +341,6 @@ function saidHere(event: TaskEventView): { saidHere?: true } {
   return speaksAsFirstMatesComputer(event.actor) ? { saidHere: true } : {};
 }
 
-/** The task's own events and the ones that concern it, merged in timeline order. */
 function inTimeOrder(
   own: readonly TaskEventView[],
   concerned: readonly ConcernedEventView[],
@@ -556,7 +554,6 @@ export function reportHeadline(report: string, stored?: unknown): string {
   return reportSummary(report) || (typeof stored === "string" && stored) || report;
 }
 
-/** A captain drop of work that never started, read from the typed fact. */
 function droppedBeforeStart(event: TaskEventView): string | null {
   const data = event.data ?? {};
   if (data[DROP_BEFORE_START] === true && event.actor === "captain" && data.status === "dropped") {
@@ -565,7 +562,6 @@ function droppedBeforeStart(event: TaskEventView): string | null {
   return null;
 }
 
-/** A change's page, as the forge gave it. */
 function changeUrlOf(data: Record<string, unknown>): string | undefined {
   return typeof data.prUrl === "string" ? data.prUrl : undefined;
 }

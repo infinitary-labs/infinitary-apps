@@ -72,7 +72,6 @@ it("continues a crewmate whose turn overflowed in one fresh conversation that ke
   // The recovery is not an outage of the provider, and nobody is woken for it.
   expect(inbox.outage(taskId).failures).toBe(0);
   expect(ops.filter((line) => line.includes(OVERFLOW))).toHaveLength(0);
-  // The old conversation is never prompted again.
   await waitOutRetries(supervisor);
   expect(crewmate.promptCalls).toHaveLength(1);
 });

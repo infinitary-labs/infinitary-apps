@@ -20,7 +20,6 @@ import { openSize, openWindow } from "./window";
 const TITLES = ["Alpha", "Bravo", "Charlie"];
 const PICTURE = "chart.png";
 
-/** Whether the main message holds the window's focus. */
 const mainMessageFocused = () =>
   document.activeElement !== null && document.activeElement === messageBox();
 

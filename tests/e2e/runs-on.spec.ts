@@ -47,7 +47,6 @@ import { pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys"
  */
 
 const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) + 1000 };
-/** How the home's words place the computer: another user on this Mac. */
 const PLACE = signInPlace({ name: "Mac mini", user: BUILDER.name, onThisMac: true });
 
 const runs: HelperRun[] = [];
@@ -112,7 +111,6 @@ async function projectOnThisComputer(page: Page, path = projectWithOrigin()) {
   }, path);
 }
 
-/** The captain's words, answered by a Firstmate turn that makes `calls`; the tools' results. */
 async function ask(app: LaunchedApp, words: string, calls: ScriptedCall[]): Promise<string[]> {
   if (!app.mockProvider) throw new Error("Asking Firstmate needs the mock provider");
   await waitForFirstmateIdle(app.page);
@@ -132,7 +130,6 @@ async function ask(app: LaunchedApp, words: string, calls: ScriptedCall[]): Prom
   return answer.outcome().results;
 }
 
-/** A filed task in a project, by asking Firstmate; its key and id. */
 async function fileTask(app: LaunchedApp, title: string, repoId: string) {
   const [planned] = await ask(app, `File ${title}.`, [
     {
@@ -145,7 +142,6 @@ async function fileTask(app: LaunchedApp, title: string, repoId: string) {
   return { key, id };
 }
 
-/** Moves the keyboard to `target` with Tab, as a person would. */
 async function tabTo(page: Page, target: Locator) {
   for (let i = 0; i < 40; i++) {
     if (await target.evaluate((el) => el === el.ownerDocument.activeElement)) break;
@@ -177,13 +173,11 @@ test("a project runs on a computer chosen in Settings or by asking, and one kept
           )?.runsOn,
       )
       .toBe(deviceId);
-    // Back on the list, the project's line says where its tasks run.
     await page.locator("[data-project-back]").click();
     await expect(
       projectLine(page, repo.id).getByText(PROJECT_ROW_WORDS.runs(PLACE.where), { exact: true }),
     ).toBeVisible();
 
-    // A project kept on this Mac only has nothing to choose.
     const notesPage = await openProject(page, notes.id);
     await expect(notesPage.getByRole("combobox", { name: "Runs on" })).toHaveCount(0);
     await expect(

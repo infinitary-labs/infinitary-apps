@@ -177,7 +177,6 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
     expect(note.textContent).toContain(
       "Give it a project in Projects when you want it to run work.",
     );
-    // A sign-in on another computer leaves the note.
     bridge.push("inf:event", {
       type: "device_signed_in",
       deviceId: "mini",

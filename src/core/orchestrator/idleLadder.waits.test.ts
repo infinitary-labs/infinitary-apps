@@ -71,7 +71,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         .timeline(taskId)
         .filter((event) => event.kind === "steered" && event.actor === "supervisor");
 
-    /** A crewmate that stopped while its task waits on work another crewmate holds. */
     async function waitingOn(wait: "blocks" | "baseline") {
       const harness = await stopped();
       const { tasks, taskId } = harness;
@@ -478,7 +477,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await supervisor.watch.sweepGates(clock.now);
       await settle();
       expect(crewmate.promptCalls.at(-1)).toContain('"Fix the shared fixture", which your task');
-      // Queued or in flight: every row the lane holds for the task.
       const resumeRows = (inbox: InboxStore) =>
         [...inbox.allFor(waiting.id), ...inbox.inFlight(waiting.id)].filter(
           (row) => row.facts?.kind === "dependency-closed",
@@ -566,7 +564,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
 
-      // The captain approves the base again, and that approval ends too: the part is told again.
       await endTurn(crewmate, later.id, "Waiting for the export to be approved again.");
       approval("standing", "approval-base-again");
       await supervisor.watch.sweepGates(clock.now);
@@ -611,7 +608,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(heard().some((text) => text.includes("was dropped and no longer holds it"))).toBe(
         false,
       );
-      // Told once: later sweeps send nothing more.
       clock.now += minutes(30);
       await supervisor.watch.sweepGates(clock.now);
       await settle();
@@ -720,26 +716,22 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         await settle();
       };
 
-      // Approved at the version the part started on: nothing to follow.
       approval(head);
       const prompts = crewmate.promptCalls.length;
       await sweep();
       expect(crewmate.promptCalls).toHaveLength(prompts);
 
-      // Approved at a newer version: told once, naming both versions.
       approval(newer);
       await sweep();
       await sweep();
       expect(heard().filter((text) => text.includes(moved(newer)))).toHaveLength(1);
 
-      // A kept approval's repair moves its newest version again: told once more.
       await endTurn(crewmate, later.id, "Moved onto the newer export.");
       approval(newer, [repaired]);
       await sweep();
       await sweep();
       expect(heard().filter((text) => text.includes(moved(repaired)))).toHaveLength(1);
 
-      // Once the part's recorded base names the newest version, nothing more is said.
       await endTurn(crewmate, later.id, "Moved onto the repaired export.");
       tasks.placement.setBuiltOn(later.id, {
         task: base.key,
@@ -868,7 +860,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const harness = wakesThroughInbox(clockedSetup(crewmate));
       const { supervisor, tasks } = harness;
       const origin = seedTask(tasks, { id: "origin", title: "Land the API", status: "running" });
-      // A Continue filing: blocked by its origin, started by the ready query.
       const { taskId } = await supervisor.intake.commission({
         title: "Continue: show it in Settings",
         intent: intentOf("Show it"),
@@ -1017,7 +1008,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(tasks.get(taskId)?.gate).toBeNull();
     });
 
-    /** The first mate's real update_task over this harness's supervisor and record. */
     function firstmateUpdateTask(harness: { supervisor: CrewSupervisor; tasks: TaskService }) {
       const delegate = firstmateTaskTools({
         options: { supervisor: harness.supervisor, tasks: harness.tasks },
@@ -1264,7 +1254,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       return { ...harness, crewmate, taskId, note };
     }
 
-    /** Tick the ladder at each idle minute past the task's clock. */
     async function idleFor(
       harness: { supervisor: CrewSupervisor; tasks: TaskService },
       taskId: string,
@@ -1408,13 +1397,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       supervisor.pressNote(note.id, undefined, { answers: withAnythingElse([], words) });
       await settle();
-      // The read starts the crewmate's turn, and the words are steered into it.
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
       expect(crewmate.steers.map((steer) => steer.text).join("\n")).toContain(words);
       expect(closeAsks()).toEqual([]);
 
-      // Its answer to the words ends with its finished report again, which
-      // wakes the first mate for the close once the turn ends.
       specs[0]?.onReport?.("I added the link to the changelog.", undefined, { finished: true });
       await endTurn(crewmate, taskId);
       await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20)]);
@@ -1452,12 +1438,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       ]);
       const prompts = crewmate.promptCalls.length;
       await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20)]);
-      // Nothing nudges the crewmate, which already did its part.
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.at(-1)).toContain(
         `[fm-op] task ${taskId} "Release" is held for the captain (its crewmate waits on them to decide whether to keep the old build) and has had no card up for 20m`,
       );
-      // Two wakes let go, the app asks him itself, in the crewmate's words.
       await idleFor({ supervisor, tasks }, taskId, [minutes(50), minutes(80)]);
       expect(crewmate.promptCalls).toHaveLength(prompts);
       const stall = cards().find((entry) => entry.id === `card-stall-${taskId}`);
@@ -1565,7 +1549,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const ASK = "Build the plan the captain approved.";
     const askedWakes = (ops: string[]) => ops.filter((line) => line.includes("ago to act:"));
 
-    /** The stopped crewmate asks the first mate to act, on the host's clock. */
     async function asks(harness: Awaited<ReturnType<typeof stopped>>) {
       const { supervisor, crewmate, specs, tasks, taskId } = harness;
       await supervisor.steer.steerCrewmate(taskId, "the captain approved it");
@@ -1577,7 +1560,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       return tasks.get(taskId)?.idleSince ?? clock.now;
     }
 
-    /** A builder the first mate starts on the task, merged and closed. */
     function mergedBuilder(
       harness: Awaited<ReturnType<typeof stopped>>,
       id: string,
@@ -1743,7 +1725,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const [row] = inbox.allFor(taskId);
     expect(row).toMatchObject({ escalatedAt: null, attempts: 0, failures: 9 });
     expect(ops.some((line) => line.includes("could not be delivered"))).toBe(false);
-    // One wake when it began, one when it was still down at 15 minutes.
     expect(failureWakes(ops)).toHaveLength(1);
     const stillDown = ops.filter((line) => line.includes("is still failing at the provider"));
     expect(stillDown).toHaveLength(1);
@@ -1751,7 +1732,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // Meanwhile the reply is deliverable, so nothing climbs the ladder.
     expect(idleWakes(ops)).toEqual([]);
 
-    // The provider answers: the reply goes through on the first attempt.
     await sweepWhenDue(harness, taskId);
     expect(crewmate.promptCalls.at(-1)).toBe(reply);
     await endTurn(crewmate, taskId);
@@ -1774,7 +1754,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await sweepWhenDue(harness, taskId);
       await failTurn(crewmate, taskId);
     }
-    // Six tries, all of them the brief, and it is still on its lane.
     expect(crewmate.promptCalls).toEqual(Array.from({ length: 6 }, () => brief));
     expect(inbox.allFor(taskId)).toMatchObject([{ escalatedAt: null, failures: 6 }]);
     expect(tasks.get(taskId)?.outcome).toBeNull();
@@ -1844,7 +1823,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(idleWakes(ops)[0]).not.toContain("nudge");
     expect(idleWakes(ops)[0]).toContain("Its last turn hit a problem: upstream 500");
     expect(sorts.at(-1)?.rule).toBe("idle-wake");
-    // Nothing further claims a nudge that never went out.
     await at(minutes(51));
     expect(idleWakes(ops)[1]).not.toContain("nudge");
     await at(minutes(81));
@@ -1859,7 +1837,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       hasRunningJobs: () => true,
       oldestRunningJob: () => ({ jobId: "poll-1", command: "gh run watch", startedAt: started }),
     });
-    // The job began as the turn that started it went idle.
     started = idleSince;
     await at(JOB_BOUND_MS - 1);
     expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(0);
@@ -1867,8 +1844,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const bound = ops.filter((line) => line.includes("background job running"));
     expect(bound).toHaveLength(1);
     expect(bound[0]).toContain('"gh run watch"');
-    // The job no longer witnesses: in the same tick the ladder climbs from
-    // its first rung.
     expect(sorts.slice(-2)).toEqual([
       { taskId, verdict: "captain", rule: "job-bound" },
       { taskId, verdict: "routine", rule: "idle-nudge" },
@@ -1884,7 +1859,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   it("a Claude background command the client reports holds the nudge for the job bound, then stops counting", async () => {
     const crewmate = fakeCrewmate();
     const { crewmate: client, ops, sorts, at, idleSince } = await stopped({}, crewmate);
-    // The client began the command as the turn went idle.
     clock.now = idleSince;
     client.emit({ type: "background_work_changed", count: 1 });
     await at(STALL_WAKE_MS + minutes(5));
@@ -1937,7 +1911,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(reconciled).toBeLessThan(swept ?? 0);
     expect(swept).toBeLessThan(drained ?? 0);
 
-    // Disposed, the supervisor leaves the ticker.
     supervisor.disposeAll();
     ticker.tick();
     expect(reconcile).toHaveBeenCalledTimes(1);
@@ -1969,13 +1942,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
     expect(quiet.outcome).toBeNull();
     const boot = clock.now;
-    // The first reconcile after boot starts the clock of records older than it.
     supervisor.watch.reconcileIdle(boot);
     expect(tasks.get(quiet.id)?.idleSince).toBe(boot);
     clock.now = boot + STALL_WAKE_MS;
     supervisor.watch.reconcileIdle(clock.now);
     await settle();
-    // Both are nudged by resuming their conversations - outcome or none.
     expect(crewmate.promptCalls).toEqual([IDLE_NUDGE_TEXT, IDLE_NUDGE_TEXT]);
     expect(sorts.map((sort) => [sort.taskId, sort.rule])).toEqual([
       [quiet.id, "idle-nudge"],

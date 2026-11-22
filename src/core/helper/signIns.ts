@@ -372,7 +372,6 @@ export class SignInHost {
     }
   }
 
-  /** Refuses an account this computer does not hold. */
   private ownAccount(accountId: string): void {
     if (!this.options.accounts.vault.get(accountId))
       throw new Error("This computer has no account with that id.");
@@ -524,7 +523,6 @@ export type HeldSignIns = {
  */
 export async function startSignIns(options: {
   dataDir: string;
-  /** Whether it runs from a packaged app. */
   packaged: boolean;
   tell: Tell;
   log: (line: string) => void;

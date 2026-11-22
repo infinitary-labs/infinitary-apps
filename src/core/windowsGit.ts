@@ -41,7 +41,6 @@ export const GIT_FOR_WINDOWS = {
   publisher: "Johannes Schindelin",
 } as const;
 
-/** What finding a Git may look at; the real one reads this PC. */
 export type WindowsGitProbe = {
   readonly exists: (path: string) => boolean;
   /** `git --version`'s answer, or nothing when it does not run. */
@@ -77,7 +76,6 @@ export function windowsGitRoots(env: NodeJS.ProcessEnv, onPath: readonly string[
   });
 }
 
-/** The first suitable Git for Windows on this PC, or nothing. */
 export async function findWindowsGit(
   env: NodeJS.ProcessEnv,
   probe: WindowsGitProbe = realProbe(env),
@@ -92,7 +90,6 @@ export async function findWindowsGit(
   return undefined;
 }
 
-/** Whether a git's answer names the release the app installs. */
 export function isOfferedVersion(answer: string): boolean {
   return answer.trim() === `git version ${GIT_FOR_WINDOWS.version}.windows.1`;
 }

@@ -418,7 +418,6 @@ describe("DraftSync", () => {
     laptop.reachable = false;
     desk.edit({ answers: [pick("format", "csv")] });
     await time.advance(DRAFT_QUIET_MS);
-    // Out of reach, the laptop changes the question again.
     laptop.edit({ answers: [pick("format", "xml")] });
     // The answer to its first pick holds the same value, but the desk's change took it.
     laptop.release();

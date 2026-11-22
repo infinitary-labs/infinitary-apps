@@ -46,7 +46,6 @@ const PRESSED: UpdateStepPresses = {
 };
 const step = (status: UpdateStatus | null, pressed: Partial<UpdateStepPresses> = {}) =>
   updateStep(status, { ...PRESSED, ...pressed });
-/** The step's line and its buttons' labels, the way a person reads it. */
 const reads = (status: UpdateStatus | null, pressed: Partial<UpdateStepPresses> = {}) => {
   const found = step(status, pressed);
   return found && [found.line, found.secondary?.label ?? null, found.primary.label];

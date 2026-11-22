@@ -69,7 +69,6 @@ describe("PointerGaze", () => {
     expect(resting.weight).toBeLessThan(held.weight);
     const gone = run(p, 0.6);
     expect(gone.weight).toBeLessThan(0.05);
-    // A new move re-engages at once.
     p.move(1, 0);
     expect(run(p, 0.3).weight).toBeGreaterThan(0.9);
   });

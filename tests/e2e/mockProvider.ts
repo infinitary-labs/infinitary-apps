@@ -363,7 +363,6 @@ const SCRIPTED_DIAGNOSTIC_CHARS = 240;
 const clipped = (text: string) =>
   text.length > SCRIPTED_DIAGNOSTIC_CHARS ? `${text.slice(0, SCRIPTED_DIAGNOSTIC_CHARS)}...` : text;
 
-/** A served turn, in brief: who each non-context segment came from and what it opens with. */
 function servedSummary(turn: ServedTurn | undefined): string {
   if (!turn) return "(an input the host did not frame)";
   const parts = turn.segments
@@ -380,12 +379,10 @@ function servedSummary(turn: ServedTurn | undefined): string {
  */
 const REPLY_CHECK_OPENING = CORRECTION_QUESTION.instructions.split("\n")[0] ?? "";
 
-/** Whether a completion request is the reply check rather than a turn of the conversation. */
 export function isReplyCheck(body: string): boolean {
   return REPLY_CHECK_OPENING !== "" && body.includes(REPLY_CHECK_OPENING);
 }
 
-/** What a journey's scenario reads of one request. */
 export type ScenarioRequest = {
   body: string;
   /**
@@ -518,7 +515,6 @@ export async function startMockProvider(
   let requestCount = 0;
   let failFirstmate = false;
   let cardFetchProbeHits = 0;
-  /** Every request received, oldest first; the reply checks are marked apart. */
   const received: { body: string; headers: IncomingHttpHeaders; replyCheck: boolean }[] = [];
   const recorders = new Set<(body: string) => void>();
   /** Held crewmate steps, each with the request that opened it. */
@@ -527,7 +523,6 @@ export async function startMockProvider(
   const heldThreadAnswers: (() => void)[] = [];
   let refusingClaude = true;
   let seatCut: ClaudeSeatCut | null = null;
-  /** Held Firstmate steps, each with the request that opened it. */
   const heldFirstmate = new Map<ServerResponse, { body: string; request: number }>();
   /** The Firstmate turns a spec scripted ahead (`scriptFirstmateTurn`), oldest first. */
   const scripted: Array<{
@@ -771,8 +766,6 @@ export async function startMockProvider(
           res.on("close", () => held.delete(res));
         };
 
-        // One answer a scenario or a built-in crew script gives, sent on
-        // this request's wire; `afterMs` holds it back that long.
         const send = (answer: ScenarioAnswer) => {
           const now = () => {
             if ("calls" in answer) streamToolCalls(answer.calls);
@@ -1202,7 +1195,6 @@ export async function startMockProvider(
             return;
           }
           if (!hasToolResults && latestUserTail.includes(WELCOME_WAKE_WORDS)) {
-            // The welcome: one note in the Firstmate's own voice.
             streamToolCalls([
               {
                 name: "emit_card",

@@ -54,7 +54,6 @@ function clock(ms: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-/** The recording's length on the player's clock. */
 const LENGTH = clock(DEMO_RECORDING.durationMs);
 
 function body(page: Page): FrameLocator {
@@ -65,7 +64,6 @@ function viewer(page: Page) {
   return page.getByRole("dialog", { name: `Demo from ${DEMO_CARD_TITLE}` });
 }
 
-/** The viewer's recording, read off the element itself. */
 function recording(page: Page) {
   return viewer(page).locator("video[data-demo-video]");
 }
@@ -118,7 +116,6 @@ test("the host keeps only a recording it could play, and the card shows its post
   expect(kept).toEqual([`${poster?.demo?.id}.mp4`]);
   expect(await readFile(join(dir, kept[0] ?? ""))).toEqual(DEMO_RECORDING.bytes);
 
-  // In the body: the poster, a Play button that says how long it plays, the caption.
   const frame = body(page);
   const figure = frame.locator("figure[data-inf-demo]");
   await expect(figure).toHaveAttribute("data-inf-demo", SERVED);
@@ -139,7 +136,6 @@ test("the Play button plays the demo once in the viewer, Replay plays it again, 
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(DEMO_CAPTION);
   await expect(viewer(page).locator("[data-picture-count]")).toHaveText(LENGTH);
 
-  // It plays from the start, one pass, and stops on its last picture.
   await expect.poll(async () => (await playerState(page)).paused).toBe(false);
   await expect.poll(async () => (await playerState(page)).ended, { timeout: 15_000 }).toBe(true);
   const ended = await playerState(page);
@@ -148,7 +144,6 @@ test("the Play button plays the demo once in the viewer, Replay plays it again, 
   const control = viewer(page).getByRole("button", { name: /^(Play|Pause|Replay)$/ });
   await expect(control).toHaveAccessibleName("Replay");
 
-  // Replay starts it again from the start; Space on the focused control pauses it.
   await pressKey(control, "Enter");
   await expect.poll(async () => (await playerState(page)).paused).toBe(false);
   await expect(control).toHaveAccessibleName("Pause");
@@ -186,7 +181,6 @@ test("the poster opens the viewer paused on it, and the slider seeks by keys", a
   await page.keyboard.press("ArrowLeft");
   await expect.poll(async () => Math.round((await playerState(page)).time)).toBe(0);
   await expect(viewer(page).locator("[data-demo-time]")).toHaveText(`${clock(0)} / ${LENGTH}`);
-  // Seeking plays nothing.
   expect((await playerState(page)).paused).toBe(true);
   await page.keyboard.press("Escape");
   await expect(viewer(page)).toHaveCount(0);
@@ -231,7 +225,6 @@ test("a demo of the Play journey, recorded by the demo helper, is one the card c
   // The action's own length - a 3-second recording played once - plus its lead and tail.
   expect(read.video.durationMs).toBeGreaterThan(3_000);
   expect(read.video.durationMs).toBeLessThan(15_000);
-  // Its poster is a picture of the recording's own size.
   expect(readPicture(await readFile(files.poster))?.size).toEqual({
     width: read.video.width,
     height: read.video.height,
@@ -245,7 +238,6 @@ test("the demo plays again after the app restarts and from the card once it is c
   const userDataDir = scratchDir("infinitary-card-demo-restart-");
   const mockProvider = await startMockProvider({ scenarios: [demoCard] });
   let app: LaunchedApp | undefined;
-  /** Presses a frame's Play button by key and waits for the recording to play. */
   const playFrom = async (page: Page, frame: FrameLocator) => {
     await pressKey(frame.getByRole("button", { name: "Play the demo, 3 seconds" }), "Enter");
     await expect(viewer(page)).toBeVisible();

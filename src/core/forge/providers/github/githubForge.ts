@@ -163,7 +163,6 @@ type PullStateJson = PullJson & {
   mergeable_state?: string;
 };
 
-/** GitHub's answer to an asynchronous merge, and to reading its result. */
 type AsyncMergeJson = {
   status?: string;
   details?: { uuid?: string; message?: string; sha?: string };
@@ -1710,7 +1709,6 @@ function numbered(change: ForgeChange): number {
   return change.number;
 }
 
-/** A check run: pending until completed, then its conclusion. */
 function runState(run: { status: string; conclusion: string | null }): ForgeCheckState {
   if (run.status !== "completed") return "pending";
   return RUN_CONCLUSIONS[run.conclusion ?? ""] ?? "pending";

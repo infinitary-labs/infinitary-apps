@@ -46,7 +46,6 @@ const trialSchema = z.strictObject({
 });
 type Trial = z.infer<typeof trialSchema>;
 
-/** Where a copy kept for a trial keeps the one it replaced. */
 export function previousOf(app: string): string {
   return `${app}${PREVIOUS}`;
 }
@@ -64,7 +63,6 @@ function wentBackPath(dataDir: string): string {
   return join(dataDir, "app", WENT_BACK_FILE);
 }
 
-/** Writes the trial for a copy just kept at `app`, with the one it replaced beside it. */
 export function beginTrial(dataDir: string, app: string, previous = previousOf(app)): void {
   const trial: Trial = { version: 1, app, previous };
   writePrivate(trialPath(dataDir), `${JSON.stringify(trial, null, 2)}\n`);

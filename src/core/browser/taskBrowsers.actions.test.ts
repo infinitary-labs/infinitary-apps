@@ -209,7 +209,6 @@ describe('a frame on the page (docs/task-browser.md, "Frames")', () => {
       );
     }
     expect(page.effects).toEqual(before);
-    // The rest of the page is the crewmate's as before.
     await browser.act({ action: "click", ref: "g1:e3" });
     expect(page.effects.length).toBeGreaterThan(before.length);
   });
@@ -325,7 +324,6 @@ describe("a page that asks for a file", () => {
 // INF-1734's goal: a file the task's browser downloads, such as an IRS
 // letter, lands where the crewmate can read it and hand it on.
 describe('a page downloads a file (docs/task-browser.md, "A download")', () => {
-  /** The host's part: it writes the file at the core's path, then says how it ended. */
   function hostSaves(page: FakePage, url: string, name: string, content: string) {
     const target = page.opened.onDownload({ url, name, bytes: content.length });
     if (!target) throw new Error("the core refused the download");
@@ -362,7 +360,6 @@ describe('a page downloads a file (docs/task-browser.md, "A download")', () => {
     expect(answer.text).toContain(`- ${first} (${letter.length} bytes, from www.irs.gov)`);
     expect(answer.text).toContain(`- ${second} (`);
     expect(notes).toContain("t1: its browser downloaded cp2000.pdf from www.irs.gov");
-    // Said once.
     expect((await browser.inspect({})).text).not.toContain("downloaded files");
   });
 

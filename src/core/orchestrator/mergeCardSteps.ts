@@ -46,7 +46,6 @@ export type MergeCardSupplier =
 /** The first step not yet true, in words, and who supplies it. */
 export type MergeCardStop = { step: MergeCardStep; missing: string; by: MergeCardSupplier };
 
-/** What the walk did, and where it stopped or the story the card shows. */
 export type MergeCardWalk = {
   did: string[];
   stop?: MergeCardStop;
@@ -54,7 +53,6 @@ export type MergeCardWalk = {
   ready?: { revision: number; title: string; head: string };
 };
 
-/** Each supplier, in the words the call's answer names them by. */
 const SUPPLIER_WORDS: Record<MergeCardSupplier, string> = {
   crewmate: "you",
   reviewer:
@@ -74,7 +72,6 @@ export const MERGE_CARD_WORDS = {
     `Confirmed the story on the pushed branch ${branch}, the change itself: this project merges approved changes together, so the change opens no pull request of its own, and its story is published on its batch's pull request once the change is approved.`,
 } as const;
 
-/** The call's answer: what it did, then the card shown or the one thing missing and who supplies it. */
 export function mergeCardAnswer(walk: Pick<MergeCardWalk, "did" | "stop">, shown?: string): string {
   const did = walk.did.length ? `Did: ${walk.did.join(" ")}` : "Nothing new was needed before it.";
   if (shown !== undefined) return `${did} ${shown}`;
@@ -83,7 +80,6 @@ export function mergeCardAnswer(walk: Pick<MergeCardWalk, "did" | "stop">, shown
   return `${did} Missing (${stop.step}): ${stop.missing} Supplied by: ${SUPPLIER_WORDS[stop.by]}. Called again, show_merge_card repeats nothing already done.`;
 }
 
-/** A thrown error's own words. */
 function wordsOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }

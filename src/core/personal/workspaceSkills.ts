@@ -34,10 +34,8 @@ import retiredSkillIds from "../../../resources/personal-workspace/retired-skill
  * round trips to the file system queued end to end.
  */
 
-/** Where skills live inside the workspace. */
 export const WORKSPACE_SKILLS_DIR = join(".claude", "skills");
 
-/** The app's own design skill, at its one home in the tree. */
 export const DESIGN_SKILL_ID = "infinitary-design";
 const DESIGN_SKILL_SOURCE = join(".claude", "skills", DESIGN_SKILL_ID);
 
@@ -47,7 +45,6 @@ const DESIGN_SKILL_SOURCE = join(".claude", "skills", DESIGN_SKILL_ID);
  */
 export const RETIRED_SKILL_IDS = retiredSkillIds as [string, ...string[]];
 
-/** The authoring skills, at theirs. */
 export const AUTHORING_SKILL_IDS = [
   "runbooks",
   "personal-panel",
@@ -62,7 +59,6 @@ export const AUTHORING_SKILLS_SOURCE = join("resources", "personal-workspace", "
 export type SeedSkillsOptions = {
   /** The self-source root: the checkout in dev, Resources/self-source packaged. */
   sourceDir: string;
-  /** The personal workspace root. */
   workspaceDir: string;
 };
 
@@ -134,7 +130,6 @@ async function syncTree(source: string, target: string): Promise<boolean> {
   return removed.length > 0 || copied.includes(true);
 }
 
-/** Every skill the app owns in the workspace, design skill first. */
 export function managedSkillIds(): string[] {
   return [DESIGN_SKILL_ID, ...AUTHORING_SKILL_IDS];
 }

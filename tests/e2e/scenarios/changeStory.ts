@@ -25,7 +25,6 @@ export const MOCK_GITHUB_STORY: Omit<
   projectText: "",
 };
 
-/** The story a scripted author passes, at the two versions its git reading printed. */
 export function mockStory(
   title: string,
   gitReading: string | undefined,

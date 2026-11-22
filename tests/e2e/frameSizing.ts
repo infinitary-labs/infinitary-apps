@@ -10,7 +10,6 @@ export async function classicScrollbars(page: Page, scrollerSelector: string): P
   }, scrollerSelector);
 }
 
-/** Passive measurements through the real resize bridge and host height setter. */
 export async function captureFrameSizing(
   iframe: Locator,
   scrollerSelector: string,

@@ -126,7 +126,6 @@ function ownRecord(to: ReturnType<typeof destination>) {
   writeFileSync(join(to.homeData, "joined", "grant.json"), "the mini's own grant");
 }
 
-/** Every file under `dir`, relative to it, sorted; none when it is gone. */
 function filesUnder(dir: string): string[] {
   if (!existsSync(dir)) return [];
   return execFileSync("find", [".", "-type", "f"], { cwd: dir, encoding: "utf8" })
@@ -227,7 +226,6 @@ describe("moving the first mate to a computer that runs work", () => {
         }),
       }),
     ]);
-    // The new home's record: the next number, the task under its key, the crewmate's conversation.
     expect(readHomeNumber(join(to.homeData, "devices"))).toBe(2);
     const db = openDatabase(to.homeData);
     const landed = new TaskService({ db, now: () => 5_000 }).get("task-1");
@@ -237,7 +235,6 @@ describe("moving the first mate to a computer that runs work", () => {
     expect(
       readFileSync(join(to.homeData, "crewmates", "task-1", "sessions", "one.jsonl"), "utf8"),
     ).toBe('{"a":1}\n');
-    // The project lands beside the others with every branch and its remote, and the record names it there.
     expect(repo.path).toBe(join(to.homeData, "fleet", "website"));
     expect(sh(repo.path, "branch", "--format=%(refname:short)", "--all")).toContain("fm/task-1");
     expect(sh(repo.path, "remote", "get-url", "origin")).toBe(
@@ -400,7 +397,6 @@ describe("moving the first mate to a computer that runs work", () => {
         },
       ],
     });
-    // A change the captain has not committed in the project's folder.
     writeFileSync(join(old.project, "draft.md"), "not committed\n");
     const ready = await outgoing.ready("mini");
     expect(ready.gaps.map((gap) => [gap.id, gap.level])).toEqual([
@@ -551,7 +547,6 @@ describe("moving the first mate to a computer that runs work", () => {
     expect(existsSync(join(old.userData, "firstmate.db"))).toBe(true);
     // The old home started again only after the destination said it dropped the move.
     expect(orders.slice(-2)).toEqual(["inf:home:arrive", "inf:home:abandon"]);
-    // The destination is as it was: its own record and grant back, nothing of the move left.
     expect(filesUnder(to.homeData)).toEqual(before);
     expect(readFileSync(join(to.homeData, "firstmate.db"), "utf8")).toBe("the mini's own record");
     expect(existsSync(join(to.homeData, "fleet", "website"))).toBe(false);
@@ -632,7 +627,6 @@ describe("moving the first mate to a computer that runs work", () => {
       },
     });
     await outgoing.start("mini");
-    // The work mode there started again, and the first mate it started answers.
     expect(await finished(progress)).toMatchObject({ stage: "moved" });
     expect(handOvers).toEqual([expect.objectContaining({ homeNumber: 2 })]);
     expect(to.started).toEqual([to.homeData]);
@@ -715,7 +709,6 @@ describe("moving the first mate to a computer that runs work", () => {
     expect(second.held).toEqual([HOME_MOVE_WORDS.holding("Mac mini")]);
     expect(second.handOvers).toEqual([expect.objectContaining({ homeNumber: 2 })]);
     expect(to.started).toHaveLength(1);
-    // A launch with no mark finds nothing to resume.
     expect(await move(oldHome(), destination()).outgoing.resume()).toBe(false);
   });
 
@@ -813,7 +806,6 @@ describe("moving the first mate to a computer that runs work", () => {
       stage: "failed",
       text: HOME_MOVE_WORDS.startedHere("Mac mini"),
     });
-    // It never asks the destination again, and a second click finds nothing.
     const last = arrives;
     await new Promise((resolve) => setTimeout(resolve, 2_500));
     expect(arrives).toBe(last);
@@ -1010,7 +1002,6 @@ describe("moving the first mate to a computer that runs work", () => {
         if (channel === HOME_RECEIVE_ORDER) {
           const [{ path, offset }] = args as [{ path: string; offset: number }];
           pieces.push({ path, offset });
-          // The captain presses Cancel the move while the project's first piece crosses.
           if (pieces.length === 1) answers.push(cancel());
         }
         const answer = await to.incoming.answer(
@@ -1030,7 +1021,6 @@ describe("moving the first mate to a computer that runs work", () => {
     expect(pieces).toEqual([{ path: "projects/0.bundle", offset: 0 }]);
     expect(held).toEqual([]);
     expect(outgoing.moving()).toBe(false);
-    // The destination drops the piece that crossed.
     await vi.waitFor(() =>
       expect(filesUnder(join(to.homeData, "work", HOME_ARRIVING_DIR))).toEqual([]),
     );

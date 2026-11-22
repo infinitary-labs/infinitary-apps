@@ -7,7 +7,6 @@ import {
   STAGE_LIFT,
 } from "./promptGeometry";
 
-/** The frame's bottom and the shell's top, for a shell `shell` tall in a window `height` tall. */
 function edges(height: number, shell: number) {
   const rise = shell - PROMPT_HEIGHT;
   return {

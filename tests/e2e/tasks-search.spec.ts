@@ -87,7 +87,6 @@ function seedTasks(userDataDir: string): void {
   db.close();
 }
 
-/** The keys of the rows the Tasks panel paints, in its order. */
 function listedKeys(page: Page): Promise<(string | null)[]> {
   return nowFrame(page)
     .locator("[data-now-row]")
@@ -118,7 +117,6 @@ test("the Tasks search closes by its close, by Esc and by Search tasks, and ever
     const everyTaskListed = () => expect.poll(() => listedKeys(page)).toEqual(keys);
     const fmKeys = keys.filter((key) => key?.startsWith("FM3K-"));
     const everyFmTaskListed = () => expect.poll(() => listedKeys(page)).toEqual(fmKeys);
-    /** Focus inside the panel's page, on a row or a group's header of its list. */
     const listHasFocus = () =>
       dockBody(page, "now")
         .locator("body")

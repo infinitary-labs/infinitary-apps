@@ -17,7 +17,6 @@ import type { InsertTaskEvent, TaskEvent, TaskEventStore } from "../storage/task
 export const TIMELINE_CAP = 500;
 export const TIMELINE_KEEP = 400;
 
-/** What a `compacted` event carries in `data`. */
 export type CompactedEventData = {
   folded: number;
   firstAt: number;
@@ -61,7 +60,6 @@ function asCompacted(data: Record<string, unknown> | null): CompactedEventData |
   };
 }
 
-/** Keep the folded events' newest plan and highest program line numbers on the fold. */
 function keepLatest(
   data: CompactedEventData,
   plan: unknown,

@@ -33,7 +33,6 @@ const HOSTNAME = "builder-mac";
 const PROGRAMS = [basename(process.execPath)];
 const NAMES = { from: "Firstmate 3000", to: "Infinitary" };
 
-/** The stand-in older copy: holds the folder as its arguments say, saves and exits on the ordinary stop unless stubborn. */
 const HOLDER = `
 const { mkdirSync, rmSync, symlinkSync, writeFileSync, appendFileSync } = require("node:fs");
 const { join } = require("node:path");
@@ -181,7 +180,6 @@ function olderFolder(answer?: string) {
   };
 }
 
-/** Whether the saved work reached Infinitary's own folder. */
 function movedIn(move: FolderMove): boolean {
   return (
     existsSync(join(move.to, "saved-work.txt")) && existsSync(join(move.to, "work", "home.json"))

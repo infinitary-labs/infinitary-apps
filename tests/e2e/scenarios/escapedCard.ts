@@ -37,7 +37,6 @@ const MOCK_ESCAPED_CARD_BODY = completionCardBody(
 
 const ESCAPED_BODY_REFUSAL_PHRASE = "arrived HTML-escaped";
 
-/** A crewmate whose card body arrives entity-escaped is refused once and sends it again as markup. */
 export const escapedCard: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

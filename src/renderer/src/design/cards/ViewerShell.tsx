@@ -107,7 +107,6 @@ export type ViewerShellProps = {
 
 export const NO_DRAG = { WebkitAppRegion: "no-drag" } as React.CSSProperties;
 
-/** The header's leading words, cut with an ellipsis when long. */
 export const HEADING_STYLE: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
@@ -118,7 +117,6 @@ export const HEADING_STYLE: React.CSSProperties = {
   textOverflow: "ellipsis",
 };
 
-/** The header's trailing count or size, in the mono face. */
 export const META_STYLE: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
   fontSize: "var(--text-xs)",

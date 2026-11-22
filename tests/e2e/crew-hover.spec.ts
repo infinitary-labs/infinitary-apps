@@ -65,7 +65,6 @@ const ROUTING = {
   served: "medium",
 } satisfies CrewRouting;
 
-/** The second crewmate has opened a pull request whose checks have run for 15 minutes. */
 const CHANGE = { prNumber: 612, ci: "pending", startedAgo: 15 * 60_000 } as const;
 
 /** The second crewmate's plan, sent with its note (FI3-734): two done, one current, one next. */
@@ -130,7 +129,6 @@ function runningWords(span: ChecksSpan, least: number, now: number): string[] {
   return words;
 }
 
-/** The summary's facts as it shows them, and whether its state line is cut off. */
 function summaryFacts(page: Page) {
   return crewSummary(page).evaluate((panel) => {
     // The shared task facts by identity (FI3-565 piece 2); the key is the summary's own.
@@ -221,7 +219,6 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       expect(runningWords(span, CHANGE.startedAgo, Date.now())).toContain(summary.checks);
       summaryChecks = summary.checks ?? "";
       expect(summary.checksDot).toBe("running");
-      // One footer row: the change sits beside the model, not under it.
       const top = async (fact: TaskFactId) =>
         (await taskFact(crewSummary(page), fact).boundingBox())?.y ?? Number.NaN;
       expect(await top("change")).toBeCloseTo(await top("model"), 0);
@@ -231,7 +228,6 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
         .poll(async () => (await shownTaskFacts(crewSummary(page))).map(([id]) => id))
         .toContain("project");
       shown = await shownTaskFacts(crewSummary(page));
-      // The state line is read whole.
       expect(summary.stateCut).toBe(false);
       await expect(page.locator(`[data-crew-target="${task.id}"]`)).toBeVisible();
       await page.screenshot({ path: test.info().outputPath("crew-hover/paused-summary.png") });
@@ -281,7 +277,6 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       const { checks } = Object.fromEntries(await shownTaskFacts(recordCard(page)));
       const counted = runningWords(span, CHANGE.startedAgo, Date.now());
       expect(counted.slice(counted.indexOf(summaryChecks))).toContain(checks);
-      // The record draws the same plan as the whole list, every item with its mark.
       await expect(recordCard(page).locator("[data-task-plan-list] [data-plan-label]")).toHaveText(
         PLAN.map((item) => item.label),
       );
@@ -378,7 +373,6 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
       const summary = rowSummary(page).locator("[data-crew-summary]");
       await expect(summary).toHaveAttribute("data-crew-summary", idle.id);
       await expect(taskFact(summary, "now")).toHaveText("Checked example 2.");
-      // The same facts, words and order as on the stage.
       await expect.poll(() => shownTaskFacts(summary)).toEqual(onStage);
       // Read once it has settled: the summary slides in from the row.
       await expectClearOf(
@@ -387,7 +381,6 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
         nowRow(page, idle.key),
         page.locator("[data-prompt-dock]"),
       );
-      // Pointing at a row points at no crewmate, and pauses nothing.
       expect(await crewInspecting(page)).toBeNull();
       await page.screenshot({ path: test.info().outputPath("row-hover/idle-row.png") });
     });
@@ -473,7 +466,6 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
       await clickInBody(row);
       await expect(recordCard(page)).toHaveAttribute("data-task-record", idle.id);
       await expect(rowSummary(page)).toHaveCount(0);
-      // With the record open, another row still opens its summary over the stack.
       await restOnRow(page, done.key);
       await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, done.id);
       await expect(rowSummary(page).locator("[data-crew-summary]")).toBeInViewport();
@@ -647,7 +639,6 @@ test("a pointer that leaves a crewmate as its summary's beat comes due opens no 
     const read = () => page.evaluate(() => (window as unknown as { heldBeats: Beats }).heldBeats);
 
     await pointAtCrewmate(page);
-    // The beat for the crewmate pointed at waits, held.
     expect((await read()).held).toBeGreaterThan(0);
     await page.evaluate(() => {
       (window as unknown as { heldBeats: Beats }).heldBeats.armed = true;

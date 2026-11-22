@@ -294,7 +294,6 @@ export class RunWatcher {
     );
   }
 
-  /** Saves what a read observed, when it observed anything new. */
   private record(taskId: string, observed: ChangeEvidenceUpdate): void {
     if (Object.keys(observed).length > 0)
       this.host.tasks.delivery.recordChangeEvidence(taskId, observed);

@@ -105,9 +105,7 @@ describe("the published update targets", () => {
       { schemaVersion: 1, targets: { stable }, extra: 1 },
       { schemaVersion: 1, targets: { stable, beta: stable } },
       { schemaVersion: 1, targets: { stable: { ...stable, extra: 1 } } },
-      // Stable never carries an alpha artifact.
       { schemaVersion: 1, targets: { stable: target("0.1.26-alpha.43") } },
-      // Versions no channel publishes.
       { schemaVersion: 1, targets: { alpha: { ...stable, version: "0.1.26-beta.1" } } },
       { schemaVersion: 1, targets: { stable: { ...stable, version: "v0.1.25" } } },
       // The private product repository, a foreign host, another release.
@@ -140,7 +138,6 @@ describe("the published update targets", () => {
           },
         },
       },
-      // An alpha-tagged URL for a stable artifact.
       {
         schemaVersion: 1,
         targets: {
@@ -154,7 +151,6 @@ describe("the published update targets", () => {
       { schemaVersion: 1, targets: { stable: { ...stable, sha256: "A".repeat(64) } } },
       { schemaVersion: 1, targets: { stable: { ...stable, sha256: "abc123" } } },
       { schemaVersion: 1, targets: { stable: { ...stable, sourceCommit: "main" } } },
-      // The same stable version with two different artifacts.
       { schemaVersion: 1, targets: { stable, alpha: target("0.1.25", "b") } },
     ];
     for (const payload of refused) expect(parseUpdateTargets(payload)).toBeNull();

@@ -146,7 +146,6 @@ describe("FirstmateMachine crystalActive parameter", () => {
       clip: "engage",
       crystalActive: false,
     });
-    // From idle, crystalActive alone never starts working.
     const idle = machine();
     idle.setInputs({ listening: false, busy: false, crystalActive: true }, 0);
     expect(idle.update(0)).toMatchObject({ state: "idle", crystalActive: true });
@@ -199,7 +198,6 @@ describe("FirstmateMachine fidget pool", () => {
     const first = m.update(100).variant;
     expect(first).toBe(pool[0]);
     const firstDur = FIDGET_DURATION_MS[first as FidgetVariant];
-    // Still going just before its variant duration, home just after.
     expect(m.update(100 + firstDur - 1).state).toBe("fidget");
     expect(m.update(100 + firstDur + 1).state).toBe("idle");
     const t = 100 + firstDur + 10;

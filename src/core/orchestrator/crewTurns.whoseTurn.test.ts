@@ -911,8 +911,6 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
         expect(reportWakes(ops)).toHaveLength(0);
 
-        // The approval by reply: one thread line, the card unchanged, the
-        // relay declared.
         supervisor.cardActions.replyToCard(card.id, APPROVAL);
         await tick();
         specs[0]?.onReply?.({
@@ -936,9 +934,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         expect(wake).toContain(
           `It asks the first mate to act: ${ASK}. The ask authorizes nothing by itself; the captain's own words do.`,
         );
-        // The card is still up with its buttons; nothing was chosen for him.
         expect(cards().find((entry) => entry.id === card.id)?.actions).toEqual(card.actions);
-        // The record keeps the request beside the report it rode.
         expect(
           tasks
             .timeline(taskId)

@@ -105,12 +105,10 @@ export const sshJoinSchema = z.strictObject({
 });
 export type SshJoin = z.infer<typeof sshJoinSchema>;
 
-/** How many bytes a line takes, as UTF-8. */
 function bytesOf(text: string): number {
   return new TextEncoder().encode(text).length;
 }
 
-/** One line for the other side, as it is written. */
 export function sshMessageLine(message: HomeSays | ControllerSays | SshJoin): string {
   const line = JSON.stringify(message);
   if (bytesOf(line) > SSH_MESSAGE_MAX_BYTES) throw new Error("That line is too long.");
@@ -142,7 +140,6 @@ export const expectedHomeSchema = z.strictObject({
 });
 export type ExpectedHome = z.infer<typeof expectedHomeSchema>;
 
-/** A computer named for the words. */
 type Named = Pick<DeviceView, "name" | "user" | "onThisMac">;
 
 /**

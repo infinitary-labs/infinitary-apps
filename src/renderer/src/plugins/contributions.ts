@@ -101,7 +101,6 @@ export type SidePanelContribution<T = unknown> = Contribution &
     readonly attribution: string | null;
   };
 
-/** What a panel's `CardBody` is handed for one card on the stack. */
 export type PanelCardBodyProps = {
   card: PanelCardEntry;
   theme: FrameTheme;

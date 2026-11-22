@@ -5,7 +5,6 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { FIRSTMATE_CONTRACT_VERSION } from "../pi/piResources";
 import { contractRevisionFiles, contractRevisionsDir, contractVersionOf } from "./contractVersion";
 
-/** A copy of the revision folder, as a branch would hold it. */
 function branchOfRevisions(...added: string[]): string {
   const dir = scratchDir("infinitary-contract-revisions-");
   cpSync(contractRevisionsDir(), dir, { recursive: true });

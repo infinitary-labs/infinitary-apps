@@ -56,7 +56,6 @@ function timedOut(id: string): VerifierResult {
   return { ...graded(id), reward: -1, scores: null, timedOut: true, wallSeconds: 1800 };
 }
 
-/** A fake machine: `grade` answers from a per-task script of results, in order. */
 function machine(opts: {
   rowsPath: string;
   script: Record<string, (VerifierResult | Error)[]>;

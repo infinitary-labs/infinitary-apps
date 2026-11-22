@@ -299,7 +299,6 @@ describe("verifyCardImages", () => {
     await expect(
       verifyCardImages(`<img src="${join(outside, "other.png")}" alt="Elsewhere">`, withEvidence),
     ).rejects.toThrow(/inside the task's evidence folder/);
-    // Without an evidence folder the old rule stands.
     await expect(
       verifyCardImages(`<img src="${named}" alt="After the change">`, at),
     ).rejects.toThrow(/relative/);
@@ -378,7 +377,6 @@ describe("keepContentFile", () => {
     await writeFile(file, damaged);
     keepContentFile(file, bytes);
     expect(await readFile(file)).toEqual(bytes);
-    // Nothing temporary is left beside it.
     expect(await readdir(dir)).toEqual([`t1-${"a".repeat(32)}.woff2`]);
   });
 });
@@ -396,7 +394,6 @@ describe("keepPictureFile", () => {
     expect(kept?.id).toMatch(/^release-notes-[0-9a-f]{32}$/);
     expect(isViewablePictureSource(kept?.src ?? "")).toBe(true);
     expect(parseCardPictureFileName(`${kept?.id}.webp`)?.taskId).toBe("release-notes");
-    // The same bytes again, from another file: the same copy.
     expect(keepPictureFile(same, { dir, taskId: "release-notes" })).toEqual(kept);
     expect(await readdir(dir)).toEqual([`${kept?.id}.webp`]);
     expect(await readFile(join(dir, `${kept?.id}.webp`))).toEqual(webp.lossy(1200, 600));

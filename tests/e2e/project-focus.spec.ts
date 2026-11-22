@@ -160,7 +160,6 @@ function feedProjects(page: Page): Promise<(string | undefined)[]> {
     );
 }
 
-/** The keys of the rows the Tasks panel paints, in its order. */
 function listedKeys(page: Page): Promise<(string | null)[]> {
   return nowFrame(page)
     .locator("[data-now-row]")
@@ -200,7 +199,6 @@ test("the top bar's pill focuses the window on one project by keys, keeps it acr
     await expect.poll(() => listedKeys(page)).toEqual(everyKey);
     await expect(pill(page)).toContainText("All projects");
     await expect(pill(page)).toHaveAttribute("aria-expanded", "false");
-    // Every crewmate is lit while every project is shown.
     for (const work of WORK) await expect.poll(() => crewLight(page, work.id)).toBeGreaterThan(0.6);
 
     await test.step("Focus on a project opens the row on the checked pill, and the arrows light the project they rest on", async () => {
@@ -210,7 +208,6 @@ test("the top bar's pill focuses the window on one project by keys, keeps it acr
       await expect(option(page, "all")).toHaveAttribute("aria-checked", "true");
       await page.keyboard.press("ArrowRight");
       await expect(option(page, "INF")).toBeFocused();
-      // Resting on infinitary lights its crew and dims the others before any pick.
       await expect.poll(() => crewLight(page, "lab-1")).toBeLessThan(0.4);
       await expect.poll(() => crewLight(page, "inf-2")).toBeGreaterThan(0.6);
       await expect.poll(() => listedKeys(page)).toEqual(everyKey);

@@ -90,7 +90,6 @@ async function saves(page: Page, count: number): Promise<void> {
   }, count);
 }
 
-/** Resolves once the app's own program ends. */
 const ended = (opened: LaunchedApp) =>
   new Promise<void>((resolve) => {
     const process = opened.app.process();
@@ -300,7 +299,6 @@ test("a copy's window takes over once the home is gone, bringing in the newer co
     });
     if (!studio) throw new Error("The work mode never started the first mate.");
     const home = await studio;
-    // Its own work follows the first mate there.
     await expect.poll(() => studioRun.state().contact, { timeout: 90_000 }).toBe("in-reach");
     // The first mate there knows Mac Studio as itself, never as a copy of its own.
     const list = await home.page.evaluate(() => window.infinitary.devices.standby.list());

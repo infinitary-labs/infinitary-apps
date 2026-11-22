@@ -65,7 +65,6 @@ export function assertIsolatedStateDir(stateDir: string, home = homedir()): void
   }
 }
 
-/** What the scripted captain does with a card on the stage. */
 export type CaptainMove =
   | { kind: "ready" }
   | { kind: "host" }

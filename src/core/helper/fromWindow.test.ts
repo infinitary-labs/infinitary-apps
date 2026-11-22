@@ -32,7 +32,6 @@ describe("a Mac's window and its work", () => {
     expect(await workFromWindow(setUp)).toBe("running");
     expect(new JoinedHome(dataDir).read()).toMatchObject({ grant, name: "MacBook Pro" });
     expect(background).toHaveBeenCalledWith({ launcher: null, app: null });
-    // The same Mac again keeps what it has, and loads the background again.
     expect(await workFromWindow({ ...setUp, joinedAt: 2_000 })).toBe("running");
     expect(new JoinedHome(dataDir).read()?.joinedAt).toBe(1_000);
   });

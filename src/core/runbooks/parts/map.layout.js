@@ -103,7 +103,6 @@
       cols[col[i]] = cols[col[i]] || [];
       cols[col[i]].push(n);
     }
-    // a tall column folds into two side by side
     const flat = [];
     for (const c of cols.filter(Boolean)) {
       if (c.length > 9) {

@@ -58,7 +58,6 @@ export type CardStackProps = {
   /** The arrows' key hints: the keys that page the same way from anywhere in the window. */
   prevKeys?: CommandKeyHint;
   nextKeys?: CommandKeyHint;
-  /** "N new"'s key hint. */
   newKeys?: CommandKeyHint;
   width?: number | string;
   children?: React.ReactNode;

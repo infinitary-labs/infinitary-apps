@@ -79,7 +79,6 @@ test.afterAll(async () => {
 /** A signed-in site's entry, as the list wrote it: never a cookie or page storage. */
 type SavedSignInFile = { site: string; failedAt?: number; automatic?: boolean };
 
-/** The signed-in sites' entries on this Mac, each as the list wrote it. */
 function savedSignInFiles(): SavedSignInFile[] {
   const store = join(launched.userDataDir, "web-sign-ins");
   return existsSync(store)
@@ -104,12 +103,10 @@ async function savedCardOf(taskId: string) {
   );
 }
 
-/** The request to sign in to the club page, as the stack shows it. */
 function savedCardRegion(): Locator {
   return shownCard(launched.page, MOCK_SAVED_CARD_TITLE);
 }
 
-/** A crewmate's own model calls, by its task's title. */
 function crewmateCalls(title: string): string[] {
   return (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
     isTaskRequest(body, title),
@@ -127,7 +124,6 @@ async function askToSignIn(title: string): Promise<TaskDetail> {
   return (await detailTitled(title)) as TaskDetail;
 }
 
-/** Settings › General's Website sign-ins. */
 async function openGeneralSettings(): Promise<Locator> {
   const { page } = launched;
   await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -211,7 +207,6 @@ test("a sign-in kept in this computer's profile signs in a later task on the cap
   const clubUrl = `http://127.0.0.1:${(club.address() as AddressInfo).port}/`;
   const site = new URL(clubUrl).host;
   const PASSWORD = "club-hunter2-correct-horse";
-  /** The cookies a task's hidden page holds now, by name. */
   const pageCookies = (): Promise<string[]> => pageCookieNames(app, clubUrl);
   const titled = (who: string) => `${TASK_BROWSER_SAVED_MARKER}${clubUrl} as ${who}`;
   try {
@@ -254,7 +249,6 @@ test("a sign-in kept in this computer's profile signs in a later task on the cap
       const rule = question.getByRole("group", { name: signInRuleLegend(site) });
       const ask = rule.getByRole("radio", { name: ASK_EACH_TIME_LABEL });
       const automatic = rule.getByRole("radio", { name: USE_WITHOUT_ASKING_LABEL });
-      // Ask me each time leads.
       await expect(ask).toBeChecked();
       await expect(automatic).not.toBeChecked();
       if (evidence) {
@@ -358,7 +352,6 @@ test("a sign-in kept in this computer's profile signs in a later task on the cap
       await shoot(view(page, b.id), "view-kept-granted-dark.png");
       expect(crewmateCalls(second).some((body) => body.includes(PASSWORD))).toBe(false);
       expect(await pageCookies()).toEqual(expect.arrayContaining(["who"]));
-      // Still nothing of the sign-in in the list.
       expect(savedSignInFiles()).toEqual([
         expect.not.objectContaining({ cookies: expect.anything() }),
       ]);
@@ -444,7 +437,6 @@ test("a site that keeps its sign-in in its own page storage stays signed in for 
   const clubUrl = `http://127.0.0.1:${(club.address() as AddressInfo).port}/`;
   const site = new URL(clubUrl).host;
   const PASSWORD = "stored-club-hunter2-battery-staple";
-  /** The page storage a task's hidden page on the club holds now, by key. */
   const pageStorage = async (): Promise<Record<string, string> | null> => {
     const held = await onPage(app, clubUrl, "JSON.stringify({ ...localStorage })");
     return typeof held === "string" ? JSON.parse(held) : null;
@@ -587,7 +579,6 @@ test("a kept sign-in the site turned away is marked by the crewmate, and the nex
     });
     await expect.poll(async () => (await detailTitled(title))?.browser?.state).toBe("stopped");
   };
-  /** A card's buttons as the stack holds them: label and whether it is the default. */
   const buttons = async (title: string, taskId: string) =>
     (await page.evaluate(() => window.infinitary.cards.list()))
       .find((card) => card.title === title && card.taskId === taskId)

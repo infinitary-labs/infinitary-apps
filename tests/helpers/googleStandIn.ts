@@ -24,7 +24,6 @@ import { calendarStandIn } from "./calendarStandIn";
 export const STAND_IN_CLIENT_ID = "1084716423951-k2v7o3lq.apps.googleusercontent.com";
 export const STAND_IN_CLIENT_SECRET = "GOCSPX-stand-in-desktop-secret";
 
-/** The mailbox the stand-in signs in as. */
 export const STAND_IN_ACCOUNT = "ada.park@gmail.com";
 
 type Header = { name: string; value: string };
@@ -47,7 +46,6 @@ type Message = {
   payload: Part;
 };
 
-/** A message as the test delivers it. */
 export type Arriving = {
   from: string;
   subject: string;
@@ -116,7 +114,6 @@ function json(response: ServerResponse, status: number, body: unknown, headers =
 }
 
 export async function startGoogleStandIn() {
-  /** Every request to Gmail's API, with the key it carried. */
   const seen: { method: string; path: string; authorization?: string; body: string }[] = [];
   /** Every token request, with its form. */
   const tokens: Record<string, string>[] = [];

@@ -40,7 +40,6 @@ export type KeptPages = {
   remove: (taskId: string) => void;
 };
 
-/** The kept pages in each task's own folder, as `folderOf` names it. */
 export function keptPagesIn(folderOf: (taskId: string) => string | undefined): KeptPages {
   const fileOf = (taskId: string): string | undefined => {
     const folder = folderOf(taskId);

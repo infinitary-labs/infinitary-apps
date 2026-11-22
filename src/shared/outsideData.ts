@@ -37,7 +37,6 @@ export type FencedSpan = {
   closed: boolean;
 };
 
-/** The opening mark: its label, its fence and when its words were read. */
 export const FENCE_OPENING =
   /\[\[([a-z][a-z0-9-]*) fence=([0-9a-f]{16}) read=(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z)\]\]/g;
 
@@ -72,7 +71,6 @@ export function fenced(words: string, fence: Fence): string {
   return `${fenceOpening(fence)}${unmarked(words, fence.label)}${fenceClosing(fence.label, fence.value)}`;
 }
 
-/** A whole answer: its marks on lines of their own around it, and the line naming its fence before and after them. */
 export function fencedAnswer(words: string, fence: Fence): string {
   return [
     fenceReminder(fence.label, fence.value),

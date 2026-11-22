@@ -123,7 +123,6 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           await expect(risk.dot("blast")).toBeInViewport();
           await readyRegion(risk.chart);
         };
-        // The story as a merge card draws it: the reason, the crewmate's radar and the facts.
         const showsStory = async () => {
           await expect(frame.locator("body")).toContainText(why);
           await expect(risk.chart).toBeVisible();
@@ -134,7 +133,6 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
             );
           await expect(factsStrip(frame).project).toHaveText("meterlab");
         };
-        /** The task the saved story belongs to, once its card is saved. */
         const storyTask = async () =>
           (await page.evaluate(() => window.infinitary.cards.list())).find(
             (entry) => entry.title === DESTINATION_STORY_TITLE,
@@ -204,7 +202,6 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           if (kind === "local") expect(git("-C", bare, "rev-parse", "main")).toBe(initial);
         }
         if (note) {
-          // The merge has a result: the held note shows once, already saying it merged.
           await expect(card).toBeVisible();
           await showsStory();
           await expect(merge).toHaveCount(0);

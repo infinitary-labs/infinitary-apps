@@ -37,7 +37,6 @@ type Node = {
   commits?: { nodes?: { commit?: { statusCheckRollup?: { state?: string } | null } }[] };
 };
 
-/** GitHub's rollup state as the one reading a row needs. */
 function checksOf(state: string | undefined): ForgeChangeRow["checks"] {
   if (!state) return "none";
   if (state === "SUCCESS") return "passed";

@@ -24,7 +24,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: the durable inbox (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 describe("FirstmateAgent durable inbox (design A)", () => {
@@ -137,7 +136,6 @@ describe("FirstmateAgent durable inbox (design A)", () => {
     session.emitTurnEnd("ok");
     session.resolveNextPrompt();
     await tick();
-    // Drained as its own turn - which fails at the provider.
     expect(session.prompts).toHaveLength(2);
     session.emitTurnFailed("upstream 529");
     session.resolveNextPrompt();
@@ -170,7 +168,6 @@ describe("FirstmateAgent durable inbox (design A)", () => {
     session.emitTurnEnd("ok");
     session.resolveNextPrompt();
     await tick();
-    // The recorded turn delivered as the next turn instead of vanishing.
     expect(session.prompts).toHaveLength(2);
     expect(session.prompts[1]).toContain("[user]\nurgent correction");
   });
@@ -186,7 +183,6 @@ describe("FirstmateAgent durable inbox (design A)", () => {
     session.emitTurnEnd("ok");
     session.resolveNextPrompt();
     await tick();
-    // Not left waiting for whatever turn comes next: it is the next turn.
     expect(session.prompts).toHaveLength(2);
     expect(session.prompts[1]).toContain("[user]\nalso this");
     session.emitTurnEnd("ok");

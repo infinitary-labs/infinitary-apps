@@ -160,7 +160,6 @@ extension PhoneJourney {
         XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row brings its card forward, not its record")
         showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
-        // The head: the task's key, the model and where it runs, the risk and the revised line.
         XCTAssertEqual(app.buttons["card-task-key"].label, try XCTUnwrap(fixture["key"] as? String))
         XCTAssertTrue(app.staticTexts["card-model"].exists)
         XCTAssertTrue(app.staticTexts["card-place"].exists)

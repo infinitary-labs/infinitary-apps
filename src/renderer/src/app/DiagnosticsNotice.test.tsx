@@ -3,12 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DiagnosticsNoticeView, diagnosticsNoticeDue } from "./DiagnosticsNotice";
 
-/**
- * The first-launch disclosure of Diagnostics (docs/sharing.md): owed
- * while the switch is on, the build has somewhere to send and the person
- * was never shown it; it says what goes and offers the way off.
- */
-
 const FRESH: SharingView = {
   diagnostics: {
     enabled: true,

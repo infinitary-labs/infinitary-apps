@@ -83,7 +83,6 @@ describe("a start that began no crewmate", () => {
     expect(
       tasks.timeline(taskId).filter((event) => event.text.startsWith("could not start")),
     ).toMatchObject([{ text: `could not start - ${BRANCH_TAKEN}`, feed: true }]);
-    // Nothing starts it again on its own; Start does.
     expect(tasks.graph.listReady().map((ready) => ready.id)).not.toContain(taskId);
     await supervisor.starts.startQueuedNow(taskId);
     await tick();

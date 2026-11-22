@@ -58,7 +58,6 @@ export function onSearchPath(name: string, env: NodeJS.ProcessEnv, platform: str
     .some((dir) => programFiles(dir, name, env, platform).some(isExecutable));
 }
 
-/** The first executable `name` on PATH, or nothing. */
 export function findOnPath(name: string, env: NodeJS.ProcessEnv): string | undefined {
   for (const entry of (env.PATH ?? "").split(delimiter)) {
     if (!entry) continue;
@@ -119,7 +118,6 @@ export function installerDirs(env: NodeJS.ProcessEnv = process.env): string[] {
 /** How a login shell is asked: `-ilc` also reads the interactive startup files. */
 export type LoginShellMode = "interactive" | "login";
 
-/** Why a login shell gave no search path. */
 export type LoginShellMiss = "timeout" | "exit" | "unparsable";
 
 const PATH_MARK = "__INFINITARY_LOGIN_PATH__";

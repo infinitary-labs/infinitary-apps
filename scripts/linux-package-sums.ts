@@ -30,7 +30,6 @@ import { fileURLToPath } from "node:url";
 
 export type SumsEntry = { sha256: string; file: string };
 
-/** The list's own name in the folder, beside the files it names. */
 const LIST = "SHA256SUMS";
 /** One line of `sha256sum` output, text or binary mode. */
 const LINE = /^([0-9a-f]{64}) [ *](.+)$/;

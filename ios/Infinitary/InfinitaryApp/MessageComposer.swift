@@ -174,7 +174,6 @@ struct MessageComposer: View {
     private func round(_ round: PhoneLastRound, newest: Bool) -> some View {
         let id = newest ? "last-turn" : "last-turn-older"
         let busy = newest && session.firstmateBusy
-        // The older round is drawn at half strength.
         let strength = newest ? 1.0 : 0.5
         let bubble = UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14)
         return VStack(alignment: .leading, spacing: 4) {

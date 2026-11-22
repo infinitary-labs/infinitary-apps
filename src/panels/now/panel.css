@@ -69,7 +69,6 @@
 [data-now-filters][hidden] {
   display: none;
 }
-/* The field, and Close search 6px after it. */
 [data-now-query-row] {
   display: flex;
   align-items: center;

@@ -37,7 +37,6 @@ export const probeLoopback: AnswerProbe = (host, port) =>
     );
   });
 
-/** A page's loopback address to try: its origin's key, host and port; none for any other address. */
 export type AnswerTarget = { origin: string; host: string; port: number };
 
 export function answerTarget(address: string): AnswerTarget | undefined {

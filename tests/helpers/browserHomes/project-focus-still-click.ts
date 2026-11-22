@@ -10,16 +10,13 @@ import type { HomeRead } from "../browserFreshHome";
 /** A hosted project at a fixed id its tasks name. */
 type Project = { repoId: string; name: string; key: string };
 
-/** A crewmate's task in one of the projects. */
 type Work = { id: string; title: string; repoId: string };
 
-/** What the project-focus-still-click test's story reads back. */
 type Input = { projects: Project[]; work: Work[]; waitsOn: string[] };
 
 /** The window sends no read with arguments for this home. */
 export const asked: HomeRead[] = [];
 
-/** A git folder with one empty commit on main, as a cloned project's folder holds. */
 function repo(dir: string): string {
   const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" });
   git("init", "--initial-branch=main", dir);

@@ -7,13 +7,10 @@ import { seedTask } from "../../../src/core/tasks/seedTask";
 import { TaskService } from "../../../src/core/tasks/taskService";
 import type { HomeRead } from "../browserFreshHome";
 
-/** One note the crewmate shows: its words, and the author's width hint if it gave one. */
 type Shown = { title: string; body: string; width?: "wide" | "full" };
 
-/** What the card-width test's story reads back: the crewmate's notes, in the order it showed them. */
 type Input = { notes: Shown[] };
 
-/** The most notes the crewmate shows. */
 const MOST = 4;
 
 /** Each note's thread, read when it shows or is prepared. */

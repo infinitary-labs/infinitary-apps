@@ -11,7 +11,6 @@ import { sinceLastUser } from "../providerRequest";
 export const UPGRADED_RELATIONSHIPS_PROMPT = "Read the upgraded task's relationships:";
 const ANSWER = "I read the task's relationships.";
 
-/** The words that ask for these fields of the task with this key. */
 export function relationshipsAsk(key: string, fields: readonly string[]): string {
   return `${UPGRADED_RELATIONSHIPS_PROMPT} ${key} fields ${fields.join(",")}`;
 }

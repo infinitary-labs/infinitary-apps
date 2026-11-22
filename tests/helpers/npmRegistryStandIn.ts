@@ -100,7 +100,6 @@ export async function npmRegistryStandIn(folder: string, packages: readonly Publ
   await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
   return {
     registry: `http://127.0.0.1:${port}/`,
-    /** How many times a package's tarball was asked for. */
     tarballRequests: (name: string) => asked.get(name) ?? 0,
     close: () => {
       for (const timer of sending) clearInterval(timer);

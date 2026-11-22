@@ -7,13 +7,10 @@ import { seedTask } from "../../../src/core/tasks/seedTask";
 import { TaskService } from "../../../src/core/tasks/taskService";
 import type { HomeRead } from "../browserFreshHome";
 
-/** One card the crewmate shows: its words, and the choices a decision offers. */
 type Shown = { title: string; body: string; actions: CardAction[] };
 
-/** What the phase4-cards test's story reads back: the crewmate's three cards, in the order it showed them. */
 type Input = { cards: Shown[] };
 
-/** The most cards the crewmate shows. */
 const MOST = 3;
 
 /** Each card's thread, read when it shows or is prepared. */

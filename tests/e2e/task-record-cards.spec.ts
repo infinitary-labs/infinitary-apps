@@ -100,7 +100,6 @@ test("a closed task's record lists its cards newest first and opens one as the r
     await settled(page, () => page.locator(RECORD_FRAME_SELECTOR).boundingBox());
     await page.screenshot({ path: test.info().outputPath("record-cards-row.png") });
 
-    // The link takes the shared show-card door: the past card, read-only, nothing saved.
     const before = await page.evaluate(() => window.infinitary.tasks.detail("cards-task"));
     await click(lines.nth(2).locator("button"));
     const past = page.locator('[data-past-card="plan"]');
@@ -170,14 +169,12 @@ test("a card still on the stage reads On the stage and its link focuses the live
     await focusFrameAfterStage(page, boardFrameElement(page), shownEntry(page));
     await pressKey(boardTile(page, task.key), "Enter");
     await expect(shownCard(page, TIDES_TITLE)).toBeVisible();
-    // Keep the Cards-tab assertion through the existing record command.
     await runFromSearch(launched.app, page, "cards.show-info");
     await showRecordTab(page, "cards");
     const line = recordFrame(page).locator('[data-record-card="bay-note"]');
     // Its line says the card is on the stage; record.frame.test.ts owns the words it reads.
     await expect(line).toHaveAttribute("data-record-card-state", "open");
     await click(line.locator("button"));
-    // The same live card, never a past copy.
     await expect(page.locator("[data-past-card]")).toHaveCount(0);
     await expect(shownCard(page, TIDES_TITLE)).toBeVisible();
   } finally {
@@ -214,7 +211,6 @@ test("INF-2794: a note's Got it reads it quietly and its record keeps a focusabl
     await expect(shownCard(page, QUAY_TITLE)).toBeVisible();
     await noteDone(page).click();
     await expectNoCard(page, QUAY_TITLE);
-    // Got it reads the note without a close announcement or a task ending.
     const said = noteLines(page, task.key).filter({ hasText: QUAY_TITLE });
     await expect(said).toHaveCount(0);
 
@@ -235,7 +231,6 @@ test("INF-2794: a note's Got it reads it quietly and its record keeps a focusabl
     ]);
     await click(line.locator("button"));
     await expect(page.locator('[data-past-card="quay-note"]')).toBeVisible();
-    // Opening it stays quiet too.
     await expect(said).toHaveCount(0);
   } finally {
     await launched.close();

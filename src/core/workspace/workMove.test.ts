@@ -49,7 +49,6 @@ async function startedWork() {
   await git(project, [...author, "commit", "--quiet", "-m", "chore: start"]);
   const cwd = join(root, "here");
   await git(project, ["worktree", "add", "--quiet", "-b", BRANCH, cwd]);
-  // A commit on the branch, then what is staged and what is not on top of it.
   writeFileSync(join(cwd, "meter.ts"), "export const unit = 'Wh';\n");
   await git(cwd, [...author, "commit", "--quiet", "-am", "fix: meter unit"]);
   writeFileSync(join(cwd, "staged.ts"), "export const staged = true;\n");
@@ -58,7 +57,6 @@ async function startedWork() {
   // The same file staged and then edited again: both layers must arrive.
   writeFileSync(join(cwd, "header.ts"), "export const header = 'Power meter';\n");
   writeFileSync(join(cwd, "meter.ts"), "export const unit = 'mWh';\n");
-  // Untracked: a note, a script that runs, a picture's bytes and a link; an ignored build.
   mkdirSync(join(cwd, "notes"));
   writeFileSync(join(cwd, "notes", "plan.md"), "untracked notes\n");
   writeFileSync(join(cwd, "run.sh"), "#!/bin/sh\necho run\n");
@@ -67,7 +65,6 @@ async function startedWork() {
   symlinkSync("notes/plan.md", join(cwd, "plan-link"));
   mkdirSync(join(cwd, "dist"));
   writeFileSync(join(cwd, "dist", "bundle.js"), "built\n");
-  // The task's own folders.
   const evidence = join(root, "evidence-here");
   mkdirSync(join(evidence, "shots"), { recursive: true });
   writeFileSync(join(evidence, "shots", "before.png"), Buffer.from([1, 2, 3]));
@@ -124,7 +121,6 @@ describe("moving a started task's work to another computer (INF-1713)", () => {
     expect(manifest.entries.map((entry) => entry.path)).not.toContain("dist/bundle.js");
     expect([...readFileSync(join(folders.evidence, "shots", "before.png"))]).toEqual([1, 2, 3]);
     expect(readFileSync(join(folders.sessions, "s1.jsonl"), "utf8")).toBe('{"type":"message"}\n');
-    // Both sides read the same status.
     expect(await git(there, ["status", "--porcelain", "--untracked-files=all"])).toBe(
       await git(w.cwd, ["status", "--porcelain", "--untracked-files=all"]),
     );
@@ -306,7 +302,6 @@ describe("moving a started task's work to another computer (INF-1713)", () => {
       );
       writeFileSync(join(w.cwd, ".gitmodules"), mapping);
 
-      // A commit made inside the submodule and never pushed stays.
       await git(join(w.cwd, "vendor", "library"), [
         ...author,
         "commit",
@@ -329,7 +324,6 @@ describe("moving a started task's work to another computer (INF-1713)", () => {
           "its submodule vendor/library is at a commit only this computer has, which a move cannot carry",
         ),
       );
-      // An edit inside it stays too.
       writeFileSync(join(w.cwd, "vendor", "library", "units.ts"), "export const units = ['Wh'];\n");
       await expect(packWork(w.cwd, BRANCH, w.folders, pack)).rejects.toThrow(
         new UnsupportedWork(

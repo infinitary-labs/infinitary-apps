@@ -86,7 +86,6 @@ describe("CrewSupervisor", () => {
     supervisor.watch.checkQuietTasks(Date.now() + QUIET_CARD_MS);
     await tick();
 
-    // Still running, and the quiet watchdog's own step goes on as before.
     expect(legacyStateOf(tasks.get(taskId))).toBe("running");
     expect(tasks.timeline(taskId).some((event) => event.text === UNHEARD_END_NOTE)).toBe(false);
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(true);
@@ -128,7 +127,6 @@ describe("CrewSupervisor", () => {
     expect(supervisor.facts.crewStatus(taskId)[0]?.waiting).toMatch(
       /^inside bash .*; 1 steer unread /,
     );
-    // The first check found it unread; the next one wakes the first mate once.
     expect(ops.some((line) => line.includes("still unread"))).toBe(false);
     supervisor.watch.checkQuietTasks(start + 2 * QUIET_CARD_MS + 120_000);
     await tick();
@@ -186,7 +184,6 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     await tick();
     const start = Date.now();
 
-    // Nine quiet minutes: nothing.
     supervisor.watch.checkQuietTasks(start + 9 * MIN);
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
 
@@ -263,7 +260,6 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     const start = Date.now();
     supervisor.watch.checkQuietTasks(start + 21 * MIN);
     await tick();
-    // Two hours in, the turn is still running: one more escalation.
     supervisor.watch.checkQuietTasks(start + 121 * MIN);
     supervisor.watch.checkQuietTasks(start + 122 * MIN);
     await tick();
@@ -443,7 +439,6 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     // active and idle, its worktree intact, until the captain settles it.
     expect(tasks.get(taskId)).toMatchObject({ status: "active", activity: "idle" });
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
-    // It is settled by landing, merging, or discarding - here, landing.
     await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
@@ -572,7 +567,6 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     ).run();
   }
 
-  /** One crewmate turn that ends with `text` as its report. */
   it("a failed turn with nothing to retry, and a sign-in failure", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops } = setup(crewmate);
@@ -778,7 +772,6 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await vi.waitFor(() => expect(tasks.get(own.id)?.status).toBe("active"));
     await vi.waitFor(() => expect(tasks.starts.startAttemptOf(own.id)).toBeUndefined());
 
-    // The captain's Start on the task card that could not start still wakes, in his words.
     const planned = supervisor.intake.plan({ title: "Planned", intent: intentOf("do") });
     vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
       new Error("a branch named 'fm/task-x' already exists"),

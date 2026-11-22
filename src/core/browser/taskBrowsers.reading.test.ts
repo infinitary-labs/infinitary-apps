@@ -24,7 +24,6 @@ import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
  * browser journeys (tests/e2e/task-browser*.spec.ts).
  */
 
-/** What the guard reports of a name and the addresses it answered, each read by its kind. */
 const guardSaw = (
   host: string,
   kind: GuardRefusal["kind"],
@@ -255,7 +254,6 @@ describe("a task's own browser", () => {
     expect(filtered.text).toContain(
       "filtered.example leads to 0.0.0.0, a reserved address that is not on the internet, so the browser refused it at the connection. A proxy app or DNS filter usually gives such an address in place of a site's own.",
     );
-    // A mixed name whose public answer did not respond names what it skipped.
     guards[0]?.onRefused(
       guardSaw("portal.corp.example", "unreachable", "2606:4700:10::6814:2011", "10.0.0.5"),
     );
@@ -263,7 +261,6 @@ describe("a task's own browser", () => {
     expect(portal.text).toContain(
       "portal.corp.example did not answer at its public address, 2606:4700:10::6814:2011. The browser skipped 10.0.0.5, an address on a private network such as an office or VPN network, which it never dials. Task browsers reach public websites",
     );
-    // The guard goes with the browser.
     await browser.close();
     expect(guards[0]?.closed).toBe(true);
   });
@@ -318,7 +315,6 @@ describe("a task's own browser", () => {
     expect(look).toContain(
       "Could not reach what the page asked for: v6.skyfare.example. This computer's network has no route to its addresses, as when a name has only IPv6 addresses and the network has no IPv6, so no server was asked. The page itself loaded",
     );
-    // Its own load with no route says so in its lead.
     page.loadOutcome = { ok: false, code: "ERR_TUNNEL_CONNECTION_FAILED" };
     guards[0]?.onRefused({
       ...guardSaw("v6.skyfare.example", "unreachable", "2606:4700:10::6814:2011"),
@@ -377,7 +373,6 @@ describe("a task's own browser", () => {
     const second = await browser.inspect({});
     expect(second.text).not.toContain("Blocked");
     expect(second.text).not.toContain("TypeError");
-    // Opening the other server lets the page reach it.
     await browser.navigate({ url: "http://localhost:3001/" });
     expect(page.opened.allow({ url: "http://localhost:3001/api", topLevel: false })).toBe(true);
   });
@@ -470,7 +465,6 @@ describe("a task's own browser", () => {
       did: "Opened http://localhost:5173/.",
     });
     expect(opened.refused).toBeUndefined();
-    // What follows the facts is the rest of the words, in their order.
     expect(opened.text.endsWith(opened.body ?? "-")).toBe(true);
     expect(opened.body).toContain('textbox "Name" [g1:e1]');
     (pages[0] as FakePage).opened.onPageError("boom");
@@ -784,7 +778,6 @@ describe("a task's own browser", () => {
     expect((await browser.act({ action: "click", ref: "g1:e3" })).text).toBe(
       refusedRefWords("g1:e3", { kind: "earlier-browser" }),
     );
-    // Another task's browser counts its own pages.
     const other = browsers.forTask("t2");
     expect((await other.navigate({ url: "http://localhost:5173/" })).text).toContain(
       'button "Send" [g1:e3]',
@@ -908,7 +901,6 @@ describe("a task's own browser", () => {
     await browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
     await browsers.forTask("t2").navigate({ url: "http://localhost:4000/" });
     const [one, two] = pages as [FakePage, FakePage];
-    // Task two's page reaches only what task two opened.
     expect(two.opened.allow({ url: "http://localhost:5173/", topLevel: false })).toBe(false);
     expect(one.opened.allow({ url: "http://localhost:4000/", topLevel: false })).toBe(false);
     browsers.closeTask("t1");

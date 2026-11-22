@@ -87,7 +87,6 @@ describe("exact-main alpha verification inheritance", () => {
   it("says a main run from before INF-2480 also ran every Linux journey", () => {
     const { run, jobs } = completedMain({ journeys: true });
     expect(verifyMainEvidence(run, jobs, repository, source).journeys).toBe(true);
-    // A partial set does not vouch for every journey.
     expect(verifyMainEvidence(run, jobs.slice(0, -2), repository, source).journeys).toBe(false);
   });
 
@@ -528,7 +527,6 @@ describe("an alpha's own verification (INF-2480)", () => {
         expect(run(whole, [name, { conclusion }]), `${name} ${conclusion}`).toBeNull();
       expect(run(whole, [name, { status: "in_progress", conclusion: "" }]), name).toBeNull();
     }
-    // A part listed twice in place of another, or one of another count, is not the set.
     const third = "verify / Unit tests (Linux; group 3/3)";
     expect(
       run([...whole.filter((name) => name !== third), "verify / Unit tests (Linux; group 2/3)"]),
@@ -584,7 +582,6 @@ describe("an alpha's own verification (INF-2480)", () => {
       expect(run(journeys.filter((each) => each !== name)), name).toBeNull();
       expect(run(journeys, [name, { conclusion: "failure" }]), name).toBeNull();
     }
-    // Main's checks read the same way.
     const main = completedMain();
     const splitMain = [
       ...main.jobs.filter(({ name }) => name !== "verify / mac"),
@@ -749,7 +746,6 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       jobs: Record<string, { if?: string; needs?: string[] }>;
     };
     const alpha = main.jobs.alpha!;
-    // It runs after every other job of the check.
     expect([...(alpha.needs ?? [])].sort()).toEqual(
       Object.keys(main.jobs)
         .filter((id) => id !== "alpha")
@@ -838,8 +834,6 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
     );
   });
 
-  // That alpha omits its verify call and still passes the signed update and
-  // publication checks before it publishes.
   it("omits every lane for an alpha whose swept batch ran every journey, retaining the update and publication checks", () => {
     const batch = sweptBatch();
     const needs = {
@@ -907,7 +901,6 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
           workflowValue(job(name).if!, { needs: { ...needs, verify: { result: unfinished } } }),
           `${name} with verify ${unfinished}`,
         ).toBe(false);
-    // An alpha with no reusable main proof runs the whole check.
     const unproven = {
       ...needs,
       resolve: { ...needs.resolve, outputs: { ...needs.resolve.outputs, main_run: "" } },

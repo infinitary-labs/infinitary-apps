@@ -4,8 +4,6 @@ import { voiceController } from "../voice/voiceController";
 import { useShellStore } from "./store";
 import { resetShell, settle } from "./storeTestKit";
 
-/** Hold-to-talk (./voice.ts): the microphone access lines under the input. */
-
 describe('microphone access lines under the input (docs/composer.md, "Voice")', () => {
   const state = () => useShellStore.getState();
   let access: MicAccess;

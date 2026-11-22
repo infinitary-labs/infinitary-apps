@@ -552,7 +552,6 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       }
     }
   }
-  // Each kind reached every job the plan gave it.
   expect([...queued].toSorted()).toEqual(
     Object.entries(queues)
       .flatMap(([kind, jobs]) => jobs.map((job) => `${kind} ${job}`))
@@ -637,12 +636,10 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
     expect(part.runner, part.files).toBe(
       part.files.includes("run-work-ssh.spec.ts") ? "shell-pc-linux" : "fleet-linux-pr",
     );
-  // Without it, the same request overflows as before.
   const others = request.filter((file) => !file.includes("run-work-ssh"));
   expect(placed(others).map((part) => part.runner)).toEqual(
     placed(others).map(() => "fleet-linux-pr"),
   );
-  // A caller that asks for hosted machines still gets them.
   expect(placed(request, true).map((part) => part.runner)).toEqual(
     placed(request, true).map(() => "ubuntu-24.04"),
   );
@@ -684,7 +681,6 @@ describe("a release's hosted machines", () => {
     const value = job?.["runs-on"] ?? "";
     return value.includes("${{") ? undefined : value;
   };
-  /** A caller's `with` value for a called workflow's input, as the call passes it. */
   const passed = (job: Job | undefined, input: string, contexts: Record<string, unknown>) => {
     const value = job?.with?.[input];
     return typeof value === "string" && value.includes("${{")

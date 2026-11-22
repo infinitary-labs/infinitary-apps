@@ -87,7 +87,6 @@ describe("the work folder's record, held open by another program from the moment
     const userData = scratchDir("infinitary-held-adopt-");
     const dataDir = join(userData, "work");
     const grant = grantFor("pc");
-    // The window joined, and its home said its name, before this join.
     const window = new JoinedHome(join(userData, "joined"));
     window.join(grant, 1_000);
     window.name("MacBook Pro");

@@ -12,10 +12,8 @@ import { closedLeftOutDone, type ProjectView, type TaskBoard, type TaskView } fr
  * lists only beside a working part is not working itself (FI3-1049).
  */
 
-/** What the rule reads of a project: the board's own view of it. */
 export type FocusProjectInput = Pick<ProjectView, "id" | "key" | "name" | "repo" | "archived">;
 
-/** What the rule reads of a task. */
 export type FocusTaskInput = NowGroupInput & Pick<TaskView, "projectId">;
 
 /** One pill: a project, and how many of its tasks wait on the captain and work. */

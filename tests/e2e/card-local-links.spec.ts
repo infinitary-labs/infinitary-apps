@@ -25,7 +25,6 @@ import { focusOn, pressKey } from "./windowKeys";
  * and frames"). The system browser is a recorder here.
  */
 
-/** Replaces the system browser with a recorder of the addresses it is asked to open. */
 const recordOpens = (launched: LaunchedApp) =>
   launched.app.evaluate(({ shell }) => {
     const recorded: string[] = [];

@@ -221,14 +221,12 @@ test("the captain opens a task's browser from its record and watches the crewmat
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
       await expect(page.locator(`[data-task-browser="${task.id}"]`)).toHaveCount(0);
       await expect(selected).toHaveText(INFO_TAB_LABEL);
-      // The strip the swap drew holds focus on the shown tab.
       await untilFocused(selected);
       await shoot(recordCard(page), "tabs-info-dark.png");
       if (evidence) await heroShot(app, page, { region: recordCard(page), name: "task-card-tabs" });
       await runFromSearch(app, page, "cards.show-browser");
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "watching");
       await expect(selected).toHaveText(browserTabLabel("Sign up"));
-      // The tab before Browser is the crewmate's session.
       await runFromSearch(app, page, "cards.previous-tab");
       await expect(crewmateView(page, task.id)).toBeVisible();
       await runFromSearch(app, page, "cards.next-tab");
@@ -499,11 +497,9 @@ test("the captain points at a task's running page by keys and by pointer, and it
         await expect(pop.locator("[data-note-page-shows]")).toHaveCount(0);
         await untilFocused(comment);
         await typeInto(comment, KEYS_NOTE);
-        // Held: nothing was drawn since Point at came on.
         expect((await canvasReading(page)).frames).toBe(still);
         await pressKey(comment, "Enter");
         await expect(pop).toHaveCount(0);
-        // Point at ends with its note, and the live pictures resume with the page's change.
         await expect(layer).toHaveCount(0);
         await expect(queued).toHaveAttribute("data-crew-notes", "1");
         await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(still);
@@ -542,7 +538,6 @@ test("the captain points at a task's running page by keys and by pointer, and it
       const served =
         providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
       expect(served).toContain(PAGE_NOTE_WORDS);
-      // The mark made by keys is the outline's own box for the button.
       const [heading, byKeys] = pointedAtLines([keyed]);
       expect(served).toContain(`${heading}\n${byKeys}`);
       expect(served).toContain(MARKED_PICTURES_LINE);
@@ -594,9 +589,7 @@ test("the captain points at a task's running page by keys and by pointer, and it
       await page.mouse.down();
       await page.mouse.up();
       await expect(pop.locator("[data-note-page-shows]")).toHaveText(PAGE_NOTE_SHOWS);
-      // The press marked the held picture: the page's button was not pressed.
       expect(await pageSays(app, watchedUrl, "out")).toBe("0");
-      // Put away unwritten, the note is not kept and nothing was sent for it; Point at ends with it.
       await untilFocused(comment);
       await pressKey(comment, "Escape");
       await expect(pop).toHaveCount(0);
@@ -688,7 +681,6 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       await expect(view(page, task.id).locator("[data-browser-notice]")).toHaveCount(0);
       await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
       await shoot(view(page, task.id), "view-from-card-dark.png");
-      // The same card, the same offer, nothing said under it, and the task where it was.
       const after = await savedCard();
       expect(after).toMatchObject({
         id: before?.id,
@@ -729,7 +721,6 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
           ready: () => page.mouse.move(1, 1),
         });
       }
-      // Back to the card shows the card itself, its buttons as they were.
       await column.locator("[data-browser-card-back]").click();
       await expect(cardRegion).toBeVisible();
       await expect(
@@ -782,8 +773,6 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       );
       await expect(view(page, task.id)).toBeVisible();
       await shoot(view(page, task.id), "view-card-arrived-dark.png");
-      // Back to the card, chosen from command search, shows the raised card
-      // with its own choices.
       await runFromSearch(app, page, "browser.card");
       const raisedRegion = shownCard(page, MOCK_BROWSER_RAISED_TITLE);
       await expect(raisedRegion).toBeVisible();
@@ -842,7 +831,6 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       const tryIt = strip.getByRole("button", { name: MOCK_BROWSER_BUTTON });
       await focusOn(tryIt);
       await pressKey(tryIt, "Enter");
-      // The one press opened the stopped browser again, at its page.
       await expect(view(page, task.id)).not.toHaveAttribute("data-browser-state", "stopped");
       await expect(view(page, task.id).locator("[data-browser-notice]")).toHaveAttribute(
         "data-browser-notice",
@@ -964,7 +952,6 @@ test("a page's second page opens inside the task's browser, named by its own sit
   });
   await new Promise<void>((resolve) => shop.listen(0, "127.0.0.1", resolve));
   const shopUrl = `http://127.0.0.1:${(shop.address() as AddressInfo).port}/`;
-  // A site whose certificate no authority this Mac trusts signed.
   const certificates = customApiCaFixture(scratchDir("task-browser-ca-"));
   const untrusted = createSecureServer(
     { key: certificates.leafKey, cert: certificates.leaf },
@@ -1046,7 +1033,6 @@ test("a page's second page opens inside the task's browser, named by its own sit
         .toContain(MOCK_PAGES_REPORT_PREFIX);
       const outcome = (await detail())?.outcome ?? "";
       if (evidence) writeFileSync(join(evidence, "task-browser-pages-report.txt"), `${outcome}\n`);
-      // A certificate no one trusts is refused in words, never gone past.
       expect(outcome).toMatch(
         /"localhost:\d+'s certificate did not verify \(ERR_CERT_[A-Z_]+\), so the browser did not open it\."/,
       );
@@ -1058,7 +1044,6 @@ test("a page's second page opens inside the task's browser, named by its own sit
         `Page 2 (${bankSite}) closed itself; your commands act on page 1 again.`,
       );
       expect(outcome).toContain(`${MOCK_PAGES_SAID.shop} "Paid with the bank's approval"`);
-      // The second page's tab goes with it; the view is on the shop.
       await expect(view(page, task.id).locator("[data-browser-page-tab]")).toHaveCount(1);
       await expect(view(page, task.id).locator("[data-browser-site]")).toHaveText(shopSite);
       await expect.poll(() => windowCount(launched.app)).toBe(before + 1);

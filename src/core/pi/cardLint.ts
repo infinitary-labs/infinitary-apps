@@ -134,7 +134,6 @@ function decisionActionsRefusal(all: EmittedCard["actions"]): string | undefined
     : `${given}; keep the ${DECISION_ACTIONS_MIN} or ${DECISION_ACTIONS_MAX} choices that matter, and ask anything finer as a question in the body.`;
 }
 
-/** The card fields the shape rules read. */
 export type ShapedCard = Pick<EmittedCard, "title" | "body" | "actions">;
 
 /**
@@ -282,7 +281,6 @@ function optionValue(option: ControlNode): string {
   return option.attribs?.value ?? textOf(option).replace(/\s+/g, " ").trim();
 }
 
-/** A select's options in order, through its optgroups, and whether each is disabled. */
 function selectOptions(select: ControlNode): { option: ControlNode; disabled: boolean }[] {
   const all: { option: ControlNode; disabled: boolean }[] = [];
   const collect = (nodes: DomNode[], groupDisabled: boolean): void => {
@@ -866,7 +864,6 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   return lintCardShape(card);
 }
 
-/** What a completion card's body declares about pictures, per heading. */
 type PictureDeclaration = {
   /** Pictures under each completion heading (lowercase) and how many are tagged new. */
   sections: Map<string, { pictures: number; fresh: number }>;
@@ -917,7 +914,6 @@ export const COMPLETION_PICTURES_REFUSAL =
  */
 const NO_NEW_TAG = new Set(["img", "svg", "video", "canvas", "iframe", "object", "embed", "input"]);
 
-/** The first element marked data-inf-new that cannot draw the New tag, if any. */
 function untaggedNewMark(body: string): string | undefined {
   const find = (nodes: DomNode[]): string | undefined => {
     for (const node of nodes) {
@@ -934,7 +930,6 @@ function untaggedNewMark(body: string): string | undefined {
   return find(parseDocument(body, { decodeEntities: true }).children as unknown as DomNode[]);
 }
 
-/** The refusal for a data-inf-new mark on an element that cannot draw the New tag. */
 export function untaggedNewMarkRefusal(element: string): string {
   return `data-inf-new is on the <${element}> itself, which cannot draw the New tag, so the new view would read as missing its Before picture; put data-inf-new on the <figure> that holds the <${element}> instead.`;
 }

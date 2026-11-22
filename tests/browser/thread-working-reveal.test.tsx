@@ -66,7 +66,6 @@ test("a thread past its height scrolls to show working once the first mate takes
   const list = () => inShown("[data-card-thread] [data-thread-messages]");
   const answered = () => list().querySelectorAll('[data-thread-message="firstmate"]').length;
   const working = () => list().querySelector("[data-thread-working]");
-  // A few answered replies push the thread past its height.
   for (let count = 1; count <= 4; count++) {
     await reply(`${FILL_REPLY} ${count}`);
     await expect.poll(answered).toBe(count);
@@ -74,10 +73,8 @@ test("a thread past its height scrolls to show working once the first mate takes
   }
   expect(list().scrollHeight > list().clientHeight, "the thread is past its height").toBe(true);
 
-  // The captain replies again and the first mate's turn stays open.
   await reply(HOLD_REPLY);
   await expect.poll(working).not.toBeNull();
-  // The thread scrolls on its own until the row's foot is inside its view.
   await expect
     .poll(
       () =>

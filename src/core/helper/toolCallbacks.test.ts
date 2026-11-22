@@ -16,7 +16,6 @@ describe("toolCallbacks", () => {
   it("sends a report's handed file home in pieces before the report that names it", async () => {
     const tasks = new PlacedTasks(scratchDir("infinitary-tool-callbacks-"));
     const folders = tasks.ensure(TASK);
-    // A bank statement the crewmate saved for another task, longer than one piece.
     const rows = ["date,description,amount,balance"];
     for (let day = 0; rows.length < 120_000; day++)
       rows.push(

@@ -16,7 +16,6 @@ import { TaskService } from "./tasks/taskService";
  * booted core.
  */
 
-/** The seam over a real Activity store and task record, with every listener recorded. */
 function seam() {
   const db = openInMemoryDatabase();
   const activity = new ActivityStore(db, () => 1_000);
@@ -35,7 +34,6 @@ function seam() {
     },
   });
   const lines = () => activity.recent().map((line) => line.text);
-  /** The notes on a task's record, in the order written. */
   const noted = (taskId: string) =>
     tasks
       .timeline(taskId)

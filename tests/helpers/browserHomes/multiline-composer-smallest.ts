@@ -3,7 +3,6 @@ import { openDatabase } from "../../../src/core/storage/db";
 import { TaskService } from "../../../src/core/tasks/taskService";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the multiline-composer-smallest test's story reads back. */
 type Input = { cardId: string; title: string; ask: string };
 
 /** The card's thread, empty, read when the card shows. */

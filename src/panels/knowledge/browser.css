@@ -230,8 +230,6 @@
   display: none;
 }
 
-/* The graph */
-
 .fm-kg-holder {
   position: relative;
 }
@@ -360,8 +358,6 @@
   pointer-events: none;
 }
 
-/* Rows: the connections, the concepts, the findings */
-
 .fm-kb-connections {
   margin-top: var(--space-3);
   padding-top: var(--space-3);
@@ -477,8 +473,6 @@
   color: var(--warn);
   border-color: var(--warn);
 }
-
-/* The inspector */
 
 .fm-kb-inspector-inner {
   display: flex;

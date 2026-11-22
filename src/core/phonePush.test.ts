@@ -374,7 +374,6 @@ function withdrawing(status = 204, options: { tabletWithdraws?: boolean } = {}) 
   const waits: { at: number; run: () => void }[] = [];
   const problems: string[] = [];
   const forgotten: string[] = [];
-  /** When each withdrawal reached the relay. */
   const sentAt: number[] = [];
   /** Each request the relay received: where, to which push address, and when. */
   const sent: { url: string; token: string; at: number }[] = [];
@@ -416,7 +415,6 @@ function withdrawing(status = 204, options: { tabletWithdraws?: boolean } = {}) 
     for (const id of ids) pushes.send({ ...NOTICE, cardId: id });
     await pushes.settled();
   };
-  /** The withdrawals the relay received for one phone, opened as that phone opens them. */
   const withdrawalsTo = (to: PhonePushRegistration) =>
     relay.posts
       .filter((post) => post.url === "https://relay.test/v1/withdraw")
@@ -428,9 +426,7 @@ function withdrawing(status = 204, options: { tabletWithdraws?: boolean } = {}) 
       });
   const withdrawals = () =>
     withdrawalsTo(phone).map((withdrawal) => withdrawal.cards.map((card) => card.cardId));
-  /** Each withdrawal's cards and pushes, as the phone opens them. */
   const cards = () => withdrawalsTo(phone).map((withdrawal) => withdrawal.cards);
-  /** The name of each card push the phone was sent, in the order sent. */
   const pushNames = () =>
     relay.posts
       .filter((post) => post.url === "https://relay.test/v1/push")
@@ -449,12 +445,10 @@ function withdrawing(status = 204, options: { tabletWithdraws?: boolean } = {}) 
   const handAgain = () => {
     phone = { ...phone };
   };
-  /** The phone hands a new registration: a new push address and key. */
   const handAnew = () => {
     phone = { ...registration(), token: "b".repeat(64), withdrawals: true as const };
     return phone;
   };
-  /** Moves the clock and runs every wait that came due. */
   const pass = async (ms: number) => {
     clock.now += ms;
     const due = waits.filter((entry) => entry.at <= clock.now);
@@ -829,7 +823,6 @@ describe("PhonePushes withdrawals", () => {
       url === PUSH && token === w.phone.token ? 429 : undefined;
     await show("card-41aa09c2-new-reply");
     w.answers.answerFor = undefined;
-    // The tablet's first withdrawal goes at once; the phone's waits for its minute.
     await see(FOOTER);
     expect(to(w.tablet.token, WITHDRAW).map((request) => request.at)).toEqual([start]);
     expect(to(w.phone.token, WITHDRAW)).toEqual([]);

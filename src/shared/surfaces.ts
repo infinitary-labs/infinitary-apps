@@ -117,7 +117,6 @@ export const APP_PANEL_FOLDERS: readonly AppPanelFolder[] = [
   },
 ];
 
-/** The folders this build has: every ungated one, and each gated one whose gate is open. */
 export function appPanelFoldersFor(gates: AppPanelGates): AppPanelFolder[] {
   return APP_PANEL_FOLDERS.filter((folder) => !folder.gate || gates[folder.gate] === true);
 }

@@ -6,18 +6,14 @@ import { isHeldEntry, shownCard, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import { card, DECIDE, resetShell } from "./storeTestKit";
 
-/** The window's own state (./store.ts): the core's events, the last turn, and how the slices meet. */
-
 describe("the first mate's turn, the card stack and a recording move apart", () => {
   beforeEach(resetShell);
 
   it("heats only for Firstmate's own turn; cards are layout, not heat", () => {
     const state = () => useShellStore.getState();
-    // A card is layout: it goes on the stack and heats nothing.
     state().applyCards([card({ id: "n1", status: "ready", body: "A fact." })]);
     expect(stackOf(state()).map((entry) => entry.id)).toEqual(["n1"]);
     expect(state()).toMatchObject({ firstmateBusy: false, recording: false });
-    // Firstmate's own turn is the heat, with cards up or not.
     state().applyEvent({ type: "firstmate_state", busy: true });
     expect(state().firstmateBusy).toBe(true);
     state().applyCards([]);
@@ -25,7 +21,6 @@ describe("the first mate's turn, the card stack and a recording move apart", () 
     expect(state().firstmateBusy).toBe(true);
     state().applyEvent({ type: "firstmate_state", busy: false });
     expect(state()).toMatchObject({ firstmateBusy: false, recording: false });
-    // Recording is a fact of its own: neither a card nor the turn moves it.
     useShellStore.setState({ recording: true });
     state().applyCards([card({ id: "n2", status: "ready", body: "Another fact." })]);
     state().applyEvent({ type: "firstmate_state", busy: true });
@@ -91,7 +86,6 @@ describe("emotes on task_changed (task-system P5)", () => {
     // The worktree going, a card resolving: later writes on the closed row.
     applyEvent(changed({ from: "done" }));
     expect(drain()).toEqual([]);
-    // An answered question or a settled operation is not a landing.
     applyEvent(changed({ kind: "question", closedReason: "answered", from: "open" }));
     applyEvent(changed({ kind: "operation", closedReason: "settled", from: "open" }));
     expect(drain()).toEqual([]);
@@ -181,7 +175,6 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     expect(state().lastTurnSeq).toBe(2);
     state().applyEvent({ type: "firstmate_reply", text: "Something went wrong", problem: true });
     expect(state().lastTurn?.reply).toEqual({ text: "Something went wrong", problem: true });
-    // A third message pushes the oldest out: two rounds, never more.
     state().applyEvent({ type: "user_turn", text: "Try again" });
     expect(state().lastTurn).toEqual({
       you: "Try again",
@@ -242,7 +235,6 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
       problem: false,
     });
     expect(isHeldEntry(shown())).toBe(true);
-    // A newer reply: opening again brings the one note forward with it.
     state().nextCard();
     state().applyEvent({ type: "user_turn", text: "Merge it" });
     state().applyEvent({ type: "firstmate_reply", text: "Something went wrong", problem: true });

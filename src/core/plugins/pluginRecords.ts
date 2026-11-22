@@ -80,7 +80,6 @@ export class PluginRecords {
     return row ? fromRow(row) : undefined;
   }
 
-  /** Every plugin the captain added, by id. */
   installed(): PluginRecord[] {
     return (
       this.db
@@ -89,7 +88,6 @@ export class PluginRecords {
     ).map(fromRow);
   }
 
-  /** Every staged install or update still waiting on the captain. */
   pending(): PluginRecord[] {
     return (
       this.db
@@ -152,7 +150,6 @@ export class PluginRecords {
     })();
   }
 
-  /** The plugin is gone: its row, pending or not. */
   delete(id: string): void {
     this.db.prepare("DELETE FROM plugins WHERE id = ?").run(id);
   }

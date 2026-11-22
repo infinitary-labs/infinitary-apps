@@ -193,7 +193,6 @@ describe("bringing secrets from another tool", () => {
         ["Staging token", "Staging", true],
         ["DB_PASSWORD", "Staging", true],
       ]);
-      // Only the first is ticked.
       expect(await f.brings.bringInto({ pass, picked: [rows[0]?.id ?? ""] })).toEqual({
         brought: true,
       });
@@ -214,7 +213,6 @@ describe("bringing secrets from another tool", () => {
       expect((await f.owner.metadata()).map((entry) => [entry.label, entry.environment])).toEqual([
         ["Staging token", "Staging"],
       ]);
-      // What happened names the tool it was brought from.
       expect(f.owner.history().find((item) => item.brought)).toMatchObject({
         brought: "Automic Vault",
         program: realpathSync(av),
@@ -311,7 +309,6 @@ describe("bringing secrets from another tool", () => {
         ["OTHER_KEY", true, undefined],
       ]);
       expect(leaks(JSON.stringify(f.cards))).toBe(false);
-      // An empty one cannot be ticked.
       expect(await f.brings.bringInto({ pass, picked: [rows[1]?.id ?? ""] })).toMatchObject({
         brought: false,
       });

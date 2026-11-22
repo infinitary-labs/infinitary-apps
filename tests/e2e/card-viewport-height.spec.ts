@@ -59,7 +59,6 @@ test("min-height:100vh stops resizing in an emitted scripted card, and still gro
       SCROLLER,
       SURFACE,
     );
-    // Settled with all of the content inside the frame, none clipped.
     const boxes = await settled(page, async () => ({
       content: await content.boundingBox(),
       frame: await iframe.boundingBox(),
@@ -67,8 +66,6 @@ test("min-height:100vh stops resizing in an emitted scripted card, and still gro
     if (!boxes.content || !boxes.frame) throw new Error("The card's content has no box");
     expect(within(boxes.content, boxes.frame)).toEqual([]);
 
-    // Taller content still grows the frame, and scrolling the card reaches
-    // its end; shortened again, the frame follows it down.
     await content.evaluate((element) => {
       element.style.minHeight = "650px";
     });

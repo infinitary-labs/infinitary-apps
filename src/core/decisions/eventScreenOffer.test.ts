@@ -108,7 +108,6 @@ describe("Offering the event screen", () => {
     expect(card?.actions.map((action) => action.label)).toEqual(["Turn on", "Not now"]);
     expect(card?.actions[1]?.declines).toBe(true);
 
-    // A second such watch revises the one card rather than stacking another.
     watch("A calendar invite from my manager");
     expect(cards.size).toBe(1);
     expect(cards.get(EVENT_SCREEN_OFFER_CARD_ID)?.body).toContain("my manager");
@@ -121,7 +120,6 @@ describe("Offering the event screen", () => {
     expect(service.allowsUse("event-screen")).toBe(true);
     expect(feed).toEqual([]);
 
-    // With the screen on, a later watch asks nothing.
     const before = raised.length;
     watch("Another email from Microsoft");
     expect(raised.length).toBe(before);

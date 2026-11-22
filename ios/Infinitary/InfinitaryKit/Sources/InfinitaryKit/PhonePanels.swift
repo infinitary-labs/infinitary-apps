@@ -101,7 +101,6 @@ public struct PhonePanelLayout: Decodable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey { case hiddenPanels, placements, panelOrder, arrangement }
 
-    /// The layout inside the computer's whole preferences.
     public static func of(preferences: PhoneJSON) -> PhonePanelLayout {
         guard case .object(let fields) = preferences, let layout = fields["layout"],
               let data = try? JSONEncoder().encode(layout),

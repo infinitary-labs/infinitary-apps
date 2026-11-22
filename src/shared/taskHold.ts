@@ -53,7 +53,6 @@ function unservedLevel(level: Slot, cause: LevelWaitCause): string {
     : `you have no ${models} in ${MODELS_PLACE}. It starts by itself once you have one.`;
 }
 
-/** The title of a level's own wait: a model there, or one there that reads pictures. */
 function levelTitle(level: Slot, cause: LevelWaitCause | undefined): string {
   return `Waiting for ${levelModel(level)}${cause === "pictures" ? " that reads pictures" : ""}`;
 }

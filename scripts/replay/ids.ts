@@ -16,7 +16,6 @@ export class ReplayIds {
     this.toRecorded.set(replay, recorded);
   }
 
-  /** Recorded ids inside a model's arguments, rewritten to the replay's. */
   mapArgs(value: unknown): unknown {
     if (typeof value === "string") return this.toReplay.get(value) ?? value;
     if (Array.isArray(value)) return value.map((item) => this.mapArgs(item));
@@ -26,7 +25,6 @@ export class ReplayIds {
     );
   }
 
-  /** Replay ids in host text, rewritten to the recorded ones, then wording-normalized. */
   normalize(text: string): string {
     let out = text;
     for (const [replay, recorded] of this.toRecorded) {

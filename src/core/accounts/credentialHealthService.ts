@@ -44,7 +44,6 @@ export class CredentialHealthService {
     this.maxAttempts = options.maxAttempts ?? CREDENTIAL_RENEW_MAX_ATTEMPTS;
   }
 
-  /** One pass over every enabled account. Overlapping ticks share the in-flight work. */
   async tick(now: number = this.now()): Promise<void> {
     if (this.ticking) return;
     this.ticking = true;

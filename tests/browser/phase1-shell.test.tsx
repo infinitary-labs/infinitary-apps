@@ -5,11 +5,6 @@ import { freshHome, subscribed } from "./freshHome";
 import { messageBox } from "./prompt";
 import { openSize, openWindow } from "./window";
 
-/**
- * Phase 1 acceptance (docs/architecture.md §17): the shell's states in the
- * dark theme, here Settings, which opens as a state of its own, and back.
- */
-
 const screenLabel = () =>
   document.querySelector("[data-screen-label]")?.getAttribute("data-screen-label");
 

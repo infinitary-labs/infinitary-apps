@@ -174,7 +174,6 @@ describe("the program runner", () => {
     expect(await h.end).toEqual({
       value: { module: "meter", capped: "Capped src/meter.ts at 4 KiB." },
     });
-    // The replay took every recorded answer: no part filed twice, no second ask, no line twice.
     expect(h.filed).toHaveLength(2);
     expect(h.asked).toEqual(["Which module first?"]);
     expect([h.lines("found 1"), h.lines("Phase: find")]).toEqual([1, 1]);
@@ -465,7 +464,6 @@ describe("the program runner", () => {
     h.answers.push({ module: "meter" });
     const first = h.start();
     await vi.waitFor(() => expect(h.filed).toHaveLength(1), WAIT);
-    // The cap still holds: the oldest lines fold, while the ask's answer and the start stay.
     const timeline = h.tasks.timeline(h.program.id);
     expect(timeline.length).toBeLessThanOrEqual(TIMELINE_CAP);
     expect(timeline.some((event) => event.kind === "compacted")).toBe(true);
@@ -476,7 +474,6 @@ describe("the program runner", () => {
     h.start();
     h.answer(0, "Capped meter.");
     expect(await h.end).toEqual({ value: "Capped meter." });
-    // The replay took the answer back and wrote no line again, folded or kept.
     expect(h.asked).toEqual(["Which module first?"]);
     expect(h.filed).toHaveLength(1);
     expect([h.lines("checked file 0"), h.lines(`checked file ${lines - 1}`)]).toEqual([0, 1]);

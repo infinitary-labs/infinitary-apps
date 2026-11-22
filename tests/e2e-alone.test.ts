@@ -219,7 +219,6 @@ describe("the run-alone pass on Linux and the Mac", () => {
         MAC_ONLY_TAG,
       ]);
       expect(guard(args) === undefined, lane).toBe(process.platform === "darwin");
-      // The guard still refuses it outside the route's load hold.
       expect(guard(args, { ...admitted, INFINITARY_LOAD_HOLD: "" })).toContain("journeys.yml");
     }
     // A pass that keeps no tag, as on Linux, names none, and stays outside the native exception.

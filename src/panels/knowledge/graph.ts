@@ -16,7 +16,6 @@ import type { PanelKnowledgeConnection, PanelKnowledgeGraphConcept } from "@infi
 /** A point in the graph's space: the layout fits it inside a sphere of `LAYOUT_RADIUS`. */
 export type Point3 = { x: number; y: number; z: number };
 
-/** The orbiting camera: its turn around the vertical axis, its tilt, and its zoom. */
 export type Camera = { yaw: number; pitch: number; zoom: number };
 
 /** The neutral overview: where a new browser starts and where Reset view and Home return. */
@@ -77,7 +76,6 @@ export function tiltStep(from: Camera, toward: "up" | "down", step = ORBIT_KEY_S
   return { ...from, pitch: clampPitch(from.pitch + (toward === "down" ? step : -step)) };
 }
 
-/** Zoom in or out by one step, within 60% to 145%. */
 export function zoomStep(from: Camera, toward: "in" | "out"): Camera {
   return { ...from, zoom: clampZoom(from.zoom + (toward === "in" ? ZOOM_STEP : -ZOOM_STEP)) };
 }
@@ -259,7 +257,6 @@ export function layoutGraph(
   return places;
 }
 
-/** A box on the drawing. */
 export type Box = { x: number; y: number; width: number; height: number };
 
 const GAP = 3;
@@ -278,7 +275,6 @@ export function labelWidth(text: string, max: number): number {
   return Math.min(max, text.length * 6.8 + 14);
 }
 
-/** A label tag's height. */
 export const LABEL_HEIGHT = 22;
 
 /**

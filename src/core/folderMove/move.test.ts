@@ -237,7 +237,6 @@ describe("the one-time move of a data folder", () => {
 
     expect(outcome).toEqual({ kind: "moved", startAtLogin: true });
     expect(phases).toEqual(["checking", "copying", "verifying", "finishing"]);
-    // The work, and the paths into it.
     expect(
       rows(
         to,
@@ -262,7 +261,6 @@ describe("the one-time move of a data folder", () => {
     expect(rows(to, "SELECT value FROM settings WHERE key = 'firstmate-session-file'")).toEqual([
       { value: JSON.stringify(join(to, "firstmate", "sessions", "rolling.jsonl")) },
     ]);
-    // Git works in both working copies, from both repositories.
     expect(git(join(to, "worktrees", "one"), "rev-parse", "--abbrev-ref", "HEAD")).toBe(
       "fm/task-one",
     );
@@ -271,7 +269,6 @@ describe("the one-time move of a data folder", () => {
     );
     expect(git(world.outside, "worktree", "list")).toContain(join(to, "worktrees", "two"));
     expect(git(join(to, "worktrees", "two"), "status", "--porcelain")).toBe("");
-    // Links: the app's own retargeted, a project kept outside left where it is.
     expect(
       readlinkSync(join(to, "crewmates", "one", "sessions", "project-skills", "skills", "tidy")),
     ).toBe(join(to, "worktrees", "one", ".claude", "skills", "tidy"));
@@ -279,7 +276,6 @@ describe("the one-time move of a data folder", () => {
     expect(JSON.parse(readFileSync(join(to, "work", "installed.json"), "utf8")).app).toBe(
       join(to, "work", "app", "Firstmate 3000.app"),
     );
-    // Private files stay private.
     expect(statSync(join(to, "accounts")).mode & 0o777).toBe(0o700);
     expect(statSync(join(to, "accounts", "codex", "a1", "auth.json")).mode & 0o777).toBe(0o600);
     // The newer install's channel marker is the one kept.
@@ -293,7 +289,6 @@ describe("the one-time move of a data folder", () => {
           existsSync(join(projects, encodeClaudeProjectDir(join(folder, copy)), file)),
           join(folder, copy),
         ).toBe(true);
-    // The older folder: retired, and otherwise as it was.
     expect(isProfileRetired(from)).toBe(true);
     expect(rows(from, "SELECT worktree_dir FROM tasks WHERE id = 'one'")).toEqual([
       { worktree_dir: join(from, "worktrees", "one") },
@@ -301,7 +296,6 @@ describe("the one-time move of a data folder", () => {
     expect(stagedFolders(to)).toEqual([]);
     expect(moveLockHeld(moveLockPathFor(from))).toBe(false);
     expect(readMoveRecord(to)).toMatchObject({ state: "done", from, to });
-    // A repeated launch finds nothing to move.
     expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toBeNull();
     expect(await runMove(world.move, world.deps)).toEqual({ kind: "nothing" });
   });
@@ -378,7 +372,6 @@ describe("the one-time move of a data folder", () => {
     expect(existsSync(world.to)).toBe(false);
     expect(isProfileRetired(world.from)).toBe(false);
     expect(moveLockHeld(moveLockPathFor(world.from))).toBe(false);
-    // The next launch moves it.
     expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "moved" });
   });
 
@@ -523,7 +516,6 @@ describe("the one-time move of a data folder", () => {
     expect(units.filter((unit) => unit.startsWith("worktree-pool")).sort()).toEqual([
       ...ownShares.keys(),
     ]);
-    // Each spare working copy moved the bar by its own share, and the copy ended full.
     expect(shares).toEqual(ownShares);
     expect(copying.at(-1)?.done).toBe(copying.at(-1)?.total);
     // The window names each by its kind and its place among them, and a task's working copy by its short name.
@@ -624,7 +616,6 @@ describe("the one-time move of a data folder", () => {
     const world = olderFolder();
     await killedMidCopy(world);
 
-    // The next launch, with the disk as the killed one left it.
     expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toEqual(
       world.move,
     );
@@ -730,7 +721,6 @@ describe("the one-time move of a data folder", () => {
     // Made by a launch that then stopped: its own staged folder, named for it.
     expect(await stageMove(world.move, { ...world.deps, pid: process.ppid })).toBeNull();
     expect(readMoveRecord(stagedFolderFor(world.to, process.ppid))?.state).toBe("verified");
-    // The launch after: the staged copy goes into place as it is.
     expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toEqual(
       world.move,
     );
@@ -854,7 +844,6 @@ describe("the one-time move of a data folder", () => {
       release();
     }
     unchanged(working);
-    // Once the work stops, the same Bring moves.
     expect(await runMove(working.move, working.deps, "bring")).toMatchObject({ kind: "moved" });
   });
 

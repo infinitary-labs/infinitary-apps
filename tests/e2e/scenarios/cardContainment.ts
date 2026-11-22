@@ -134,7 +134,6 @@ export const PROJECT_FONT_FAMILY = "Project Face";
 
 export const PROJECT_FONT_REFUSAL = TYPEFACE_UNREAD_WORDS;
 
-/** What the project-font crewmate says when it ends its turn while a font is still being written. */
 export const PROJECT_FONTS_STILL_WRITING = "The font files are still being written.";
 
 const PROJECT_FONT = "shots/project-face.woff2";

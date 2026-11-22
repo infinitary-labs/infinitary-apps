@@ -47,7 +47,6 @@ import { isLoopbackHost } from "./destinations";
 
 /** Why the guard did not carry a connection, as the crewmate is told. */
 export type GuardRefusalKind = "private" | "unresolved" | "unreachable";
-/** One address a name answered, and its kind. */
 export type GuardAnswer = { address: string; kind: AddressKind };
 /**
  * A refused or failed connection, with every address the name answered
@@ -71,11 +70,9 @@ export type GuardRefusal = {
 /** What a dial answers when the computer's network has no way to the address. */
 const NO_ROUTE = new Set(["ENETUNREACH", "EHOSTUNREACH", "EADDRNOTAVAIL", "EAFNOSUPPORT"]);
 
-/** Every address a name resolves to. */
 export type GuardLookup = (host: string) => Promise<string[]>;
 
 export type ConnectionGuardOptions = {
-  /** A connection the guard refused or could not make, by the host it named. */
   onRefused: (refusal: GuardRefusal) => void;
   /** The system's resolver when absent. */
   lookup?: GuardLookup;

@@ -18,7 +18,6 @@ import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { startedReply } from "./replyLine";
 import { handOffShape } from "./workShape";
 
-/** What the graph tools reach of the first mate agent: its options, the running turn and its asks. */
 export type FirstmateTaskToolsHost = {
   readonly options: FirstmateAgentOptions;
   readonly turn: FirstmateTurn;

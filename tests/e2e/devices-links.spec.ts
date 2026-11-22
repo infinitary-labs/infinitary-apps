@@ -25,7 +25,6 @@ import { pressKey } from "./windowKeys";
  * cuts a device off. No card, feed line, record or saved file holds a link.
  */
 
-/** + A Mac, then a link to paste into Firstmate there. */
 /**
  * Firstmate at another app's first launch, as a device that knows only the
  * wire uses a link for a Mac: from this Mac itself it joins as a second app,
@@ -50,8 +49,6 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
   try {
     const { page } = app;
 
-    // Asked to connect a Mac, Firstmate offers one card; its button opens
-    // Settings -> Devices and makes the link there.
     await ask(page, "device-invite", { name: "MacBook Air" });
     const make = page.getByRole("button", { name: "Make a link", exact: true });
     await expect(make).toBeVisible();
@@ -66,7 +63,6 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
     const link = (await linkInTab(page).textContent()) ?? "";
     codes.push(parsePairingLink(link).code);
 
-    // A device that knows only the wire uses it; the tab and the feed say so.
     const air = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" });
     let airConnection = await connectClient(air);
     await expect(page.locator('[data-panel-state="joined"]')).toBeVisible();
@@ -74,8 +70,6 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
     await expect(airRow).toContainText("MacBook Air");
     await expect(claimLink(link, { ...AT_FIRST_LAUNCH, name: "Again" })).rejects.toThrow();
 
-    // While Firstmate is open there its row says it controls this Firstmate;
-    // once it quits, the row says since when it is out of reach.
     const airListed = async () =>
       (await page.evaluate(() => window.infinitary.devices.list())).find(
         (device) => device.id === air.deviceId,
@@ -92,7 +86,6 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
     airConnection = await connectClient(air);
     await expect(airRow).toHaveAttribute("data-controlling", "");
 
-    // Stop it closes a link before anyone uses it.
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await addMacByLink(page);
     const stopped = (await linkInTab(page).textContent()) ?? "";
@@ -104,14 +97,12 @@ test("a Mac joins with a link made from Firstmate's card, and Remove cuts it off
       "no open link",
     );
 
-    // Remove asks once in place, then cuts the device off before it answers.
     await (await rowAction(page, air.deviceId, "remove")).click();
     const question = page.locator(`[data-device-removing="${air.deviceId}"]`);
     await question.getByRole("button", { name: "Remove", exact: true }).click();
     expect(await airConnection.closed).toBe(CONNECTION_CLOSE.unpaired);
     await expect(page.locator(`[data-device-select="${air.deviceId}"]`)).toHaveCount(0);
 
-    // A second Mac from + A Mac, removed from Firstmate's card.
     await addMacByLink(page);
     const second = (await linkInTab(page).textContent()) ?? "";
     codes.push(parsePairingLink(second).code);

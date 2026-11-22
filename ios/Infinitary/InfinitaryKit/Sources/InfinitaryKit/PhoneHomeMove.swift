@@ -9,7 +9,6 @@ public enum PhoneHomeMove {
     /// A home that never moved.
     public static let firstHomeNumber = 1
 
-    /// The number a welcome names, a home that never moved when it names none.
     public static func number(inWelcome frame: [String: Any]) -> Int {
         (frame["homeNumber"] as? Int) ?? firstHomeNumber
     }

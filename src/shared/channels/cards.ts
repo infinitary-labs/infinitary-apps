@@ -30,7 +30,6 @@ import {
 import { taskBrowserHandleSchema } from "../taskBrowser";
 import { type ChannelDeclaration, okSchema, pastedFilesSchema } from "./common";
 
-/** Cards: the stack, a card's actions and thread, its pictures and media, and past cards. */
 export const cardChannels = {
   "inf:cards:list": {
     effect: "read",
@@ -129,7 +128,6 @@ export const cardChannels = {
     request: z.tuple([]),
     response: cardDraftsSchema,
   },
-  // What a window changed in one card's draft since it last heard it.
   "inf:cards:draft": {
     effect: "change",
     surface: "core",

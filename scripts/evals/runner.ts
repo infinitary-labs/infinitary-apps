@@ -135,7 +135,6 @@ export type Deps = {
   crewClient?: () => boolean;
 };
 
-/** Every running process's parent, read from the process table. */
 function processParents(): Map<number, number> {
   const table = execFileSync("ps", ["-A", "-o", "pid=,ppid="], {
     env: hostEnv(),
@@ -339,7 +338,6 @@ export function planAllowances(
     inputTokens: reservation(test.bytes, calls[i]!, limits),
   }));
 }
-/** The run limits an evaluation module's sheet carries: the shared ones with its own allowances. */
 export function evaluationLimits(evaluation: EvaluationModule): Limits {
   return {
     ...LIMITS,

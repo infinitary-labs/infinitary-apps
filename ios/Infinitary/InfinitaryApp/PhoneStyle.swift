@@ -96,7 +96,6 @@ enum PhoneLayout {
 }
 
 extension UIView {
-    /// Whether the view in this one's subtree that holds the keyboard's focus takes text.
     var phoneFocusTakesText: Bool { phoneFirstResponder() is UIKeyInput }
 }
 
@@ -107,7 +106,6 @@ enum PhoneTyping {
     static let margin = PhoneTheme.space4
 }
 
-/// The app's own field, as the Mac draws its input: the panel fill, a hairline and the control radius.
 struct PhoneFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -307,7 +305,6 @@ struct PhoneRow: View {
     }
 }
 
-/// A pressed row lights the field's surface under it, and a disabled one dims.
 struct PhoneRowStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {

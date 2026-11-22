@@ -196,7 +196,6 @@ test("a record's Activity folds minor events under the row they led to, opened b
     expect(steer?.text.length).toBeLessThan(
       detail.events.find((event) => event.kind === "steered")?.text.length ?? 0,
     );
-    // The report keeps the update before it, folded under it.
     const report = detail.activityLog.find((row) => row.kind === "report");
     expect(report?.folded?.map((line) => line.kind)).toContain("progress");
 

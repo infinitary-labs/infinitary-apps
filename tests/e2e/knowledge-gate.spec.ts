@@ -50,7 +50,6 @@ function folder(dir: string): Record<string, string> | null {
   );
 }
 
-/** One captain message, answered; the Firstmate requests it caused. */
 async function say(app: LaunchedApp, words: string): Promise<string[]> {
   const before = app.mockProvider?.requestBodies().length ?? 0;
   const input = promptInput(app.page);
@@ -85,7 +84,6 @@ function readKnowledge(page: Page) {
   );
 }
 
-/** Whether command search offers Open Knowledge for the word "knowledge". */
 async function offersOpenKnowledge(app: LaunchedApp): Promise<boolean> {
   const search = commandSearch(app.page);
   await pressWindowKey(app.app, "k", ["meta"]);
@@ -174,7 +172,6 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
         expect.arrayContaining(["knowledge", "record_knowledge"]),
       );
       expect(await purgeScope(alpha.page)).toEqual(PURGE_SCOPE);
-      // The browser's surfaces are there: its panel, its command, its reads.
       expect(await knowledgeOn(alpha.page)).toEqual({ enabled: true, held: true });
       await expect(knowledgePanel(alpha.page)).toBeAttached({ timeout: 30_000 });
       expect(await offersOpenKnowledge(alpha)).toBe(true);
@@ -232,7 +229,6 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       expect(context.knowledge).toBeUndefined();
       expect(context.saved_knowledge).toContain("1 personal entry");
       expect(requests[0]).not.toMatch(/concept \\?"Deploy day/);
-      // Its purge, which says so beforehand, clears the collection.
       await again.page.evaluate(() => window.infinitary.retention.purge());
       expect(folder(knowledgeDir)).toBeNull();
     } finally {
@@ -260,7 +256,6 @@ test("unreadable directions pause new Firstmate work and leave the collection al
       await input.press("Enter");
       await expect(mateBubble(alpha.page)).toHaveAttribute("data-state", "problem");
       expect(mockProvider.requestBodies()).toHaveLength(beforeRequests);
-      // The Knowledge panel stays on its rail and says the collection cannot be read.
       await expect(knowledgePanel(alpha.page)).toBeAttached({ timeout: 30_000 });
       await expect(knowledgePanel(alpha.page).locator("[data-panel-summary]")).toContainText(
         UNREADABLE_SUMMARY,

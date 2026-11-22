@@ -2,10 +2,8 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The two cards the card-maximize-keys test pages between. */
 const CARD_IDS = ["maximize-plan", "maximize-window"] as const;
 
-/** What the card-maximize-keys test's story reads back: each card's title. */
 type Input = { titles: [string, string] };
 
 /** Each card's thread, read when it shows or is prepared. */

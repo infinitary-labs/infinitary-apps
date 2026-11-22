@@ -27,7 +27,6 @@ import "./version.css";
 
 const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
-/** The day a note was shown, as the Mac writes a short date. */
 export function shownOn(at: number): string {
   return formatDate(at, {
     month: "short",

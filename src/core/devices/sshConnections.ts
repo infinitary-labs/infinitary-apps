@@ -151,9 +151,7 @@ export const QUIET_RETRY_STOPS: ReadonlySet<SshStopReason> = new Set<SshStopReas
   "agent-not-running",
 ]);
 
-/** Where one computer's connection stands, as this manager keeps it. */
 type Phase =
-  /** Waiting to try (again), or about to. */
   | "waiting"
   /** An attempt is under way: SSH, the forward, the check there. */
   | "connecting"
@@ -192,7 +190,6 @@ class DeviceLine {
   quiet = false;
   /** The feed said its work could not start; once a connection. */
   toldNotStarted = false;
-  /** A setup holds it until it is done. */
   heldBySetup = false;
   /** Attempts begun: one that waited goes on only while it is the latest and the line still waits on it. */
   tries = 0;
@@ -423,8 +420,6 @@ export class SshConnections {
     for (const cleanup of this.options.pairing.sshCleanups()) this.cleanUp(cleanup, true);
   }
 
-  // ---- inside -------------------------------------------------------------------
-
   private async stop(): Promise<void> {
     if (!this.running) return;
     this.running = false;
@@ -505,7 +500,6 @@ export class SshConnections {
     await line.master?.stop();
   }
 
-  /** Ends a line's connection now and tries it again at once. */
   private async restart(line: DeviceLine): Promise<void> {
     this.clearTimer(line);
     const master = line.master;
@@ -841,7 +835,6 @@ export class SshConnections {
     return this.options.pairing.list().find((entry) => entry.id === deviceId);
   }
 
-  /** It has read connecting for longer than `CONNECTING_MS`. */
   private timedOut(line: DeviceLine): boolean {
     return this.now() - line.connectingSince >= (this.options.connectingMs ?? CONNECTING_MS);
   }
@@ -864,7 +857,6 @@ export class SshConnections {
   }
 }
 
-/** The loopback port the paired connection listens at now, or null while it listens nowhere. */
 function loopbackPort(listening: readonly string[]): number | null {
   for (const at of listening) {
     const match = /^127\.0\.0\.1:(\d+)$/.exec(at);

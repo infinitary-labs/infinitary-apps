@@ -176,7 +176,6 @@ import Observation
         }
     }
 
-    /// Pause all, as the computer's own button does.
     public func pauseAll() async {
         await change("pause-all") {
             _ = try await self.session.request(.automationPauseAll, as: PhoneJSON.self)
@@ -272,7 +271,6 @@ import Observation
         runbooks = page("runbooks", ["books": books, "home": .string(session.mac.name)], keeping: runbooks)
     }
 
-    /// A runbook's switch; the computer answers its whole list.
     public func setRunbook(_ id: String, on: Bool) async {
         await change(id) {
             let books = try await self.session.request(.runbookSet, args: [id, on], as: PhoneJSON.self)

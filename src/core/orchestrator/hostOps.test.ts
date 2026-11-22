@@ -31,7 +31,6 @@ fakeCrewTimersEachTest();
 
 type Harness = ReturnType<typeof setup>;
 
-/** The app's own card carrying one action with this host effect, put up with no task. */
 function hostCard(h: Harness, id: string, effect: HostEffect): string {
   const action: CardAction = { id: "go", label: "Go", effect };
   h.supervisor.cards.hostCards.raiseHostCard({
@@ -44,7 +43,6 @@ function hostCard(h: Harness, id: string, effect: HostEffect): string {
   return id;
 }
 
-/** A started task whose crewmate finished its first turn and waits idle. */
 async function startedTask(h: Harness, crewmate: FakeCrewmate): Promise<string> {
   const { taskId } = await h.supervisor.intake.commission({
     title: "Count presses",
@@ -95,7 +93,6 @@ describe("the host's own operations, as HostOps runs them", () => {
     expect(change.apply).toHaveBeenCalledWith("meter");
     expect(change.decline).toHaveBeenCalledWith("meter");
 
-    // The setup card's own questions ride the click to the project setups.
     const answers = [{ name: "folder", values: ["~/code/meter"], changed: true }];
     click("c-project", { kind: "host", op: "add-project", arg: "meter" }, { answers });
     click("c-project-no", { kind: "host", op: "decline-project", arg: "meter" });
@@ -113,7 +110,6 @@ describe("the host's own operations, as HostOps runs them", () => {
     expect(hooks.retryConverse).toHaveBeenCalledTimes(1);
     expect(deferred).toHaveBeenCalledWith("t-later");
 
-    // Restore account lands the shell on Subscriptions, naming the account when the card did.
     expect(click("c-restore", { kind: "host", op: "restore-account", arg: "acct-codex" })).toEqual({
       effect: { kind: "open", target: "subscriptions", restoreAccountId: "acct-codex" },
     });
@@ -271,7 +267,6 @@ describe("the host's own operations, as HostOps runs them", () => {
         decision: null,
       }),
     ).toEqual({ ok: true, text: expect.stringContaining("already waits in the backlog") });
-    // The board's unqueue on it again is no refusal and moves nothing.
     expect(h.supervisor.hostOps.runTaskOp(taskId, "unqueue-task")).toBeUndefined();
     expect(h.tasks.get(taskId)?.backlogSince).toBe(since);
   });
@@ -322,7 +317,6 @@ describe("the host's own operations, as HostOps runs them", () => {
     // His Start waits for the first mate, which applies his standing directions first.
     expect(h.tasks.get("t1")?.status).toBe("open");
     expect(h.tasks.starts.startAttemptOf("t1")).toBeTruthy();
-    // A turn over other rows leaves it waiting.
     expect(h.supervisor.hostOps.firstmateTurnEnded([row + 10], "clean")).toEqual([]);
     expect(h.tasks.get("t1")?.status).toBe("open");
 
@@ -335,7 +329,6 @@ describe("the host's own operations, as HostOps runs them", () => {
         .filter((event) => event.kind === "note")
         .map((event) => event.text),
     ).toContain("started without applying your standing directions: your first mate's turn failed");
-    // A second end over the same row starts nothing twice.
     expect(h.supervisor.hostOps.firstmateTurnEnded([row], "clean")).toEqual([]);
   });
 

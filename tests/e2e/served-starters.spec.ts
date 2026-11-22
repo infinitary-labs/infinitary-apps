@@ -51,7 +51,6 @@ function seedGrokKey(userDataDir: string): void {
   );
 }
 
-/** A feed that answers the one starter list and counts the asks. */
 async function standInFeed(body: ServedStarters): Promise<{ url: string; server: Server }> {
   const server = createServer((request, response) => {
     if (request.url !== "/infinitary-starters.json") {

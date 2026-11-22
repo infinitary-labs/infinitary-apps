@@ -65,7 +65,6 @@ extension PhoneJourney {
         XCTAssertTrue(account.label.contains(who), account.label)
         picture("google-signed-in")
 
-        // Sign out asks once, then the computer forgets the sign-in.
         let signOut = app.buttons["google-sign-out"]
         waitForSteadyTarget(signOut)
         tapOnPhone(signOut, repeatDiscarded: false)

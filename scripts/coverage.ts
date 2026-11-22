@@ -21,7 +21,6 @@ import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** The Vitest arguments that measure the named files, from the tests `rest` picks or their own. */
 export function coverageArguments(files: string[], rest: string[] | undefined): string[] {
   const own = files.map((file) => file.replace(/\.[^./]+$/, ""));
   return [

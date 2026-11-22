@@ -238,7 +238,6 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
       (await facts.cell("checks").getAttribute("title")) ?? "",
     );
     await expect(facts.rest("checks")).toContainText(checkSnapshotSummary(outsideChecks).words);
-    // Tab moves on to the pull request's link, and the line goes with the focus.
     await launched.page.keyboard.press("Tab");
     await untilFocused(facts.change.locator("a"));
     await expect(facts.rest("checks")).toBeHidden();

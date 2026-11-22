@@ -158,7 +158,6 @@ export function handOverStops(
  */
 export type KeepsHere = { refused: string } | undefined;
 
-/** The refusal a task run as another user on the home's own computer gets. */
 export const KEEP_AS_ANOTHER_USER =
   "This task runs as another user on the captain's computer, so a job kept here would run as that user, not as the captain. Say so on your card: the first mate can start the job as a task under the captain's own account.";
 

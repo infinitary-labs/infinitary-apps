@@ -11,7 +11,6 @@ import type { AppDatabase } from "./db";
 import type { TaskRecord } from "./taskRecords";
 import { type UsageInput, UsageStore } from "./usageStore";
 
-/** What the home's usage wiring reads beyond its database. */
 export type HomeUsageFacts = {
   /** The app's own limit, from Settings → Intelligence. */
   appLimit(): CostLimit;

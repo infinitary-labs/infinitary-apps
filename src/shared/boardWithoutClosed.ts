@@ -33,7 +33,6 @@ export function boardWithoutClosed(board: TaskBoard, cardTasks: ReadonlySet<stri
     )
       kept.add(task.id);
   }
-  // The parents of every row kept, as the whole board carries them.
   for (const id of [...kept]) {
     let parentId = byId.get(id)?.parentId ?? null;
     while (parentId !== null && !kept.has(parentId) && byId.has(parentId)) {

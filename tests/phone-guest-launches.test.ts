@@ -83,7 +83,6 @@ describe("INF-1936: preserve the capture through the delayed launch response", (
     expect(phoneGuestJourneyFinished(merge(nonterminal), "cards-merge")).toBe(false);
     expect(phoneGuestJourneyFinished(merge(failed), "cards-merge")).toBe(true);
     expect(phoneGuestJourneyFinished(merge(passed), "cards-merge")).toBe(true);
-    // Another cards part's result does not stop the watched one's observer.
     expect(phoneGuestJourneyFinished(merge(passed), "cards-form")).toBe(false);
   });
 });

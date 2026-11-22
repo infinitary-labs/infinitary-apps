@@ -36,7 +36,6 @@ export const API_CALLS_PER_TASK = 200;
 /** The kinds whose REST API the crew reaches through the app's sign-in: every change-request kind. */
 export type RawApiKind = ChangeRequestKind;
 
-/** The kind, when the crew reaches its REST API. */
 export function rawApiKind(kind: string | null | undefined): RawApiKind | undefined {
   return changeRequestKind(kind);
 }
@@ -434,7 +433,6 @@ export function parseApiRequest(
   };
 }
 
-/** GitHub's next page, under its policy for the task's project. */
 export function nextPagePath(
   link: string | null,
   apiBase: string,

@@ -296,7 +296,6 @@ describe("an alpha with nothing new to build", () => {
       },
     };
     const context = { repo: { owner: "example", repo: "project" }, runNumber: 90 };
-    // The step's PAUSED is the repository variable it names.
     const variable = workflowString(gate?.env?.PAUSED ?? "", {
       vars: { ROLLING_ALPHA_PAUSED: paused },
     });
@@ -391,7 +390,6 @@ describe("an alpha with nothing new to build", () => {
    * 0.7.0 alpha, and the alpha's update check found no update to offer.
    */
   describe("a stable being promoted", () => {
-    /** A dispatched release's job name, as the workflow file names it for `inputs`. */
     const requestedJob = (job: string, inputs: Record<string, unknown>) => {
       const event = { github: { event_name: "workflow_dispatch" }, inputs };
       if (job === "resolve") return workflowString(release.jobs.resolve?.name as string, event);
@@ -622,19 +620,16 @@ describe("the next main check waits for the alpha cut", () => {
   };
   const [pauseStep, findStep] = wait.jobs.find.steps;
   const minute = 60_000;
-  /** The name release.yml gives the rolling alpha cut from a main run. */
   const alphaName = (run_number: number) =>
     workflowString(release["run-name"], {
       github: { event_name: "workflow_dispatch" },
       inputs: automaticAlpha(run_number),
     });
-  /** The concurrency group release.yml's rolling alpha cut from a main run holds. */
   const alphaGroup = (run_number: number) =>
     workflowString(release.concurrency.group, {
       github: { event_name: "workflow_dispatch", run_id: 41685700000, ref_name: "main" },
       inputs: automaticAlpha(run_number),
     });
-  /** The groups the wait job joins, one job each, for the alphas the find job names. */
   const joined = (alphas: string) =>
     (
       workflowValue(wait.jobs.wait.strategy?.matrix.run ?? "", {
@@ -671,7 +666,6 @@ describe("the next main check waits for the alpha cut", () => {
     expect(workflowValue(release.concurrency["cancel-in-progress"], { inputs: {} })).toBe(false);
     expect(wait.jobs.wait.concurrency?.["cancel-in-progress"]).toBe(false);
     expect(joined("[73,70]")).toEqual([alphaGroup(73), alphaGroup(70)]);
-    // With nothing being cut, no wait job starts at all.
     for (const [alphas, runs] of [
       ["[]", false],
       ["[73]", true],
@@ -700,7 +694,6 @@ describe("the next main check waits for the alpha cut", () => {
     });
     expect(pauseStep?.name).toBe("Stop while the captain has paused the rolling pipeline");
     expect(decide("push", "true")).toEqual({ pause: true, find: false });
-    // Not paused, or a check started by hand: the wait runs as before.
     for (const [event_name, paused] of [
       ["push", ""],
       ["push", "false"],

@@ -92,7 +92,6 @@ describe("CrewSupervisor", () => {
     );
   });
 
-  /** A merge click parked mid-turn, waiting for the turn's end. */
   async function mergeWaitingForTurn() {
     const crewmate = fakeCrewmate();
     const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #42 is in on GitHub." }));
@@ -989,7 +988,6 @@ describe("CrewSupervisor: the card thread", () => {
       spec?.onReply?.({ cardId: card.id, text: `It is at ${remover}.`, answersMessage: asked }),
     ).toContain(`it answers the captain's message ${asked} and ends that question`);
 
-    // One card, under its own task, now naming the path at generation 2.
     const cards = h.supervisor.cards.snapshot();
     expect(cards.filter((entry) => entry.taskId === taskId)).toHaveLength(1);
     expect(cards.filter((entry) => entry.taskId === helper)).toEqual([]);
@@ -1020,7 +1018,6 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
   });
 
-  /** Commission a task and give it one crewmate card; returns that card. */
   async function withCard(
     harness: ReturnType<typeof setup>,
     input: { title: string; body?: string; actions?: Card["actions"] } = { title: "Owner note" },
@@ -1065,7 +1062,6 @@ describe("CrewSupervisor: the card thread", () => {
     expect(steer).toContain(card.id);
     expect(harness.ops).toEqual([]);
 
-    // And recorded as the gesture it was: a captain steer via the thread.
     const steered = harness.tasks.timeline(taskId).find((event) => event.kind === "steered");
     expect(steered?.data).toMatchObject({ via: "thread", cardId: card.id });
   });
@@ -1381,7 +1377,6 @@ describe("CrewSupervisor: the card thread", () => {
     expect(closed.text).toContain("v1.2.3 published");
     expect(harness.tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
 
-    // The note outlives the close.
     expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
 
     // Its author is gone, so the Firstmate takes the captain's reply.
@@ -1547,7 +1542,6 @@ describe("CrewSupervisor: the card thread", () => {
         (event) => event.type === "firstmate_note" && event.text.includes("is not available"),
       ),
     ).toHaveLength(1);
-    // The copy back, the same message is delivered with its picture.
     writeFileSync(file, bytes);
     await harness.supervisor.watch.sweepInbox(Date.now() + 60_000);
     await tick();

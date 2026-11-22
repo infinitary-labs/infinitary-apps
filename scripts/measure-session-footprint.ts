@@ -36,10 +36,6 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 
-// --------------------------------------------------------------------------
-// Byte classes
-// --------------------------------------------------------------------------
-
 /**
  * Where a session file's bytes go. `turns` is what the D2 note keeps
  * (captain words, briefs, steers, assistant text: the conversation);
@@ -227,10 +223,6 @@ export function classifyLine(line: string): ByteBreakdown {
   into.framing += Math.max(0, total - counted);
   return into;
 }
-
-// --------------------------------------------------------------------------
-// Files and sessions
-// --------------------------------------------------------------------------
 
 export type FileFootprint = {
   path: string;
@@ -460,10 +452,6 @@ export function measureSessionFootprint(options: MeasureOptions): FootprintRepor
     },
   };
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   userDataDir: string;

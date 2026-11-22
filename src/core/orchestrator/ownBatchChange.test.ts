@@ -57,7 +57,6 @@ const REPO = "repo-meter";
 const TASK = "ab12cd34";
 const BRANCH = "fm/task-ab12cd34";
 const HEAD = "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0";
-/** The story a crewmate prepared for the change at its pushed version. */
 const STORY: ChangePresentation = {
   version: 1,
   taskId: TASK,
@@ -136,7 +135,6 @@ function home(where: { dir?: string; head?: string } = {}) {
     taskNote: () => {},
     ...standInGit(forge, conflicting),
   });
-  /** The crewmate prepared the story for the pushed version. */
   const prepare = (prepared: ChangePresentation = story) =>
     at.tasks.delivery.updateChangePresentation(TASK, () => ({
       revisions: [prepared],
@@ -310,12 +308,10 @@ describe("a change of a project that gets batches of the person's own", () => {
       ready: { revision: 1, title: STORY.title, head: HEAD },
     });
     expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
-    // Called again, it confirms nothing again and reaches the same card.
     expect(await at.service.mergeCard.walk(TASK)).toEqual({
       did: [],
       ready: { revision: 1, title: STORY.title, head: HEAD },
     });
-    // The card the walk reaches shows that story from the pushed branch.
     expect(await at.service.publication.completionPresentation(TASK, 1)).toMatchObject({
       revision: 1,
       title: STORY.title,
@@ -404,7 +400,6 @@ describe("a change of a project that gets batches of the person's own", () => {
     });
     expect(said).toContain("Absence evidence stored for this version.");
     expect(at.service.checks.declaredAbsent(TASK, HEAD)).toBe(true);
-    // The declaration is about that version: a later push has none.
     expect(at.service.checks.declaredAbsent(TASK, "c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7")).toBe(
       false,
     );
@@ -921,7 +916,6 @@ describe("the merge of a change that joins a batch", () => {
     await at.pass();
     expect(at.forge.batch).toMatchObject({ number: 31, title: STORY.title, state: "open" });
 
-    // The crewmate revises the story's What changed at the same pushed version.
     const revised: ChangePresentation = {
       ...STORY,
       revision: 2,
@@ -938,11 +932,9 @@ describe("the merge of a change that joins a batch", () => {
     expect(at.open()?.members).toMatchObject([
       { taskId: TASK, head: HEAD, body: presentationCommitMessage(revised, BUNDLED_NAMING) },
     ]);
-    // The same pull request, still open: none was closed and none opened beside it.
     expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toHaveLength(1);
     expect(at.forge.calls.filter((call) => call.startsWith("close"))).toEqual([]);
     expect(at.forge.batch).toMatchObject({ number: 31, state: "open" });
-    // Its kept merge reads the change still in its batch, and puts nothing in line again.
     expect(await at.service.merges.merge(TASK, guard)).toMatchObject({ stop: "queue" });
     expect(at.line()).toEqual([]);
   });
@@ -1117,7 +1109,6 @@ describe("the merge of a change that joins a batch", () => {
         status: "standing",
       });
 
-      // The crewmate pushes its repair, and its branch's own checks are still running.
       at.forge.pushed = project.repaired;
       at.forge.states = ["pending"];
       const answer = await at.service.checkTool.checkForCrew(TASK, {
@@ -1199,7 +1190,6 @@ describe("the merge of a change that joins a batch", () => {
       await at.pass();
       expect(at.open()).toBeUndefined();
 
-      // The project moves to a new address, and the captain approves the same version there.
       at.repos.configure(REPO, { origin: "https://github.com/acme/new-meter.git" });
       await at.pass();
       approvedAt(at, [], HEAD, { name: "new-meter", id: "auth-moved" });
@@ -1216,8 +1206,6 @@ describe("the merge of a change that joins a batch", () => {
         sentBack: [{ head: HEAD, reason }],
       });
 
-      // The crewmate pushes a new version with its confirmed story, its checks pass, and
-      // the captain approves it at the new address: the kept merge puts it in line.
       const REPAIR = "c3d4e5f60718293a4b5c6d7e8f9012345678a1b2";
       at.forge.pushed = REPAIR;
       at.prepare({ ...STORY, head: REPAIR });
@@ -1388,7 +1376,6 @@ describe("a repair's answer to its project's held batch", () => {
       state: "sent-back",
     });
     expect(at.batches.record(REPO).fixes).toEqual([TASK]);
-    // Still held at the version that failed, and nothing is combined or pushed.
     await at.pass();
     expect(at.open()?.hold).toBeDefined();
     expect(at.forge.batchHead).toBe(before);

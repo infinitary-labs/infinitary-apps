@@ -156,7 +156,6 @@ export const MAX_TYPEFACE_BYTES = 8 * 1024 * 1024;
 /** A refusal's words for a font the host's font engine could not load; a scripted stand-in recognizes them. */
 export const TYPEFACE_UNREAD_WORDS = "could not be read by the font engine";
 
-/** What the host's font engine made of a project font: it loaded, or why it did not. */
 export type TypefaceProbeResult = { ok: true } | { ok: false; reason: string };
 
 /**
@@ -252,7 +251,6 @@ type FoundDemo = {
 
 type FoundTag = { start: number; end: number; attribs: [string, string][] };
 
-/** Whether an element's attributes make it a sound clip's figure. */
 function isSound(attribs: Record<string, string>): boolean {
   return Object.hasOwn(attribs, SOUND_ATTRIBUTE);
 }
@@ -293,7 +291,6 @@ type Found = {
   data: FoundTag[];
 };
 
-/** Whether a script element holds data rather than code: its type is JSON. */
 function isDataScript(attribs: Record<string, string>): boolean {
   return (attribs.type ?? "").trim().toLowerCase() === CARD_DATA_TYPE;
 }
@@ -402,7 +399,6 @@ function isUrl(src: string): boolean {
 
 type Verified = { file: string; bytes: Buffer; format: Format; size: Sized };
 
-/** The folders a picture may come from: the working copy, and the evidence folder when it exists. */
 type PictureHomes = { worktree: string; evidence?: string };
 
 /**
@@ -464,7 +460,6 @@ async function verifyPicture(src: string, alt: string, homes: PictureHomes): Pro
   throw new Error(`Card picture refused: ${src} is not a structurally valid PNG, JPEG or WebP.`);
 }
 
-/** What the host read from a recording: its kind, and the size and length it plays at. */
 type DemoRead = {
   kind: CardDemoKind;
   width: number;
@@ -837,7 +832,6 @@ function rewrittenStartTag(name: string, tag: FoundTag, rewrite: Map<string, str
   return `<${name} ${parts.join(" ")}>`;
 }
 
-/** The picture's start tag with only `src`, `width` and `height` rewritten. */
 function rewrittenTag(image: FoundImage, src: string, size: Sized): string {
   return rewrittenStartTag(
     "img",
@@ -889,7 +883,6 @@ export async function verifyCardImages(
       `${SOUND_REFUSED}: a sound figure stands on its own, never on or inside a demo or another sound figure.`,
     );
   }
-  // Each sound clip's path.
   const sounds = found.sounds.map((tag) => {
     const src = attribute(tag, SOUND_ATTRIBUTE)?.trim() ?? "";
     if (!src || isUrl(src)) {
@@ -899,7 +892,6 @@ export async function verifyCardImages(
     }
     return { tag, src };
   });
-  // Each demo: its recording's path, and the one picture inside it, its poster.
   const demos = found.demos.map((demo) => {
     const src = hookValue(Object.fromEntries(demo.attribs), "demo")?.trim() ?? "";
     if (!src || isUrl(src)) {
@@ -929,7 +921,6 @@ export async function verifyCardImages(
       })),
     )
     .filter(({ src }) => src !== "" && !isUrl(src));
-  // Each data script that names its file by a path.
   const data = found.data
     .map((tag) => ({ tag, src: attribute(tag, "src")?.trim() ?? "" }))
     .filter(({ src }) => src !== "" && !isUrl(src));
@@ -1166,7 +1157,6 @@ export async function verifyCardImages(
   return { body: rewritten, pictures };
 }
 
-/** A picture the host copied for a card it writes itself: what the body names it by, and its size. */
 export type KeptPicture = { id: string; src: string; width: number; height: number };
 
 /**

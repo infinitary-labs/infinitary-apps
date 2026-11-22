@@ -86,7 +86,6 @@ export function recognizerPlaceFor(ability: {
 export type SpeechAbilityRequest = { id: number; type: "ability" };
 export type SpeechAbilityResponse = { id: number; type: "ability"; providers: string[] | null };
 
-/** Messages into a recognizer, keyed for replies. */
 export type RecognizerRequest =
   | { id: number; type: "init" }
   | { id: number; type: "transcribe"; audio: Float32Array };
@@ -252,7 +251,6 @@ export function createRecognizerHandler(
   };
 }
 
-/** One running recognizer, as its client sees it. */
 export type RecognizerConnection = {
   /** Sends a request; a transcription's audio may be moved rather than copied. */
   post: (request: RecognizerRequest) => void;
@@ -260,7 +258,6 @@ export type RecognizerConnection = {
   stop: () => void;
 };
 
-/** Starts a recognizer whose replies and failure reach `events`. */
 export type StartRecognizer = (events: {
   message: (response: RecognizerResponse) => void;
   failed: (error: Error) => void;

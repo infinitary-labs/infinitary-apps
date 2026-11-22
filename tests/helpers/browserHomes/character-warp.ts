@@ -4,10 +4,8 @@ import { openDatabase } from "../../../src/core/storage/db";
 import { seedTask } from "../../../src/core/tasks/seedTask";
 import { TaskService } from "../../../src/core/tasks/taskService";
 
-/** What the character-warp test's story holds: how many idle crew. */
 type Input = { crew: number };
 
-/** Idle crew on this computer, each with its working copy. */
 export default function seed(userDataDir: string, { crew }: Input): void {
   const db = openDatabase(userDataDir);
   try {

@@ -38,7 +38,6 @@ import {
   shownEntry,
 } from "./stack";
 
-/** A plain card seeded straight into the store, oldest first by `at`. */
 function seededCard(
   id: string,
   title: string,
@@ -59,7 +58,6 @@ function seededCard(
   };
 }
 
-/** Launches the app on a stack of seeded cards. */
 async function launchWithCards(cards: ReturnType<typeof seededCard>[]) {
   const userDataDir = scratchDir("infinitary-next-card-");
   const db = openDatabase(userDataDir);
@@ -85,7 +83,6 @@ async function receiveUnreadCard(page: Page): Promise<void> {
 
 const surface = (page: Page) => shownEntry(page);
 
-/** The seeded cards' titles, each named once where it is filed and where it is found. */
 const HARBOUR_NOTES = [
   "First harbour note",
   "Second harbour note",
@@ -317,7 +314,6 @@ test("after the last card closes, the stage empties and the next card arrives wi
     await input.fill(ANSWER_PROMPT_MARKER);
     await input.press("Enter");
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible({ timeout: 30_000 });
-    // Its body draws while the card grows into place, and shows.
     const frame = cardBodyElement(page, MOCK_ANSWER_TITLE);
     await expect(frame).toHaveCSS("opacity", "1");
     await expect(cardBody(page, MOCK_ANSWER_TITLE).locator("body")).not.toHaveText("");
@@ -348,7 +344,6 @@ test("a reply under a lone card keeps its body as the captain left it", async ()
         .locator('[data-thread-message="captain"]')
         .filter({ hasText: THREAD_PROSE_REPLY }),
     ).toBeVisible();
-    // The same body: its count and its open disclosure.
     await expect(frame.locator("#count")).toHaveText("3");
     await expect(frame.locator("details")).toHaveAttribute("open", "");
     await expect(reply).toHaveValue("");
@@ -473,7 +468,6 @@ document.addEventListener("DOMContentLoaded", () => { document.documentElement.d
 window.onload = () => { document.documentElement.dataset.loaded = "yes"; };
 </script>`;
 
-/** What a card's page is doing: its script's marks, its animations, its timeline. */
 function pageState(frame: FrameLocator) {
   return frame.locator("html").evaluate((html) => {
     const fade = document.getElementById("fade")?.getAnimations()[0];
@@ -502,7 +496,6 @@ test("a scripted next card is prepared while you read and starts only once shown
   try {
     const { page } = app;
     await expect(shownCard(page, READING_NOTE)).toBeVisible();
-    // Prepared: its page drew, held, while the card above it is read.
     const prepared = warmElement(page);
     await expect(prepared).toHaveAttribute("title", `${NEXT_PLAN} body`);
     await expect(prepared).toHaveAttribute("data-frame-held", "", { timeout: 15_000 });
@@ -532,7 +525,6 @@ test("a scripted next card is prepared while you read and starts only once shown
     const shown = shownCardFrame(page);
     await expect(shown.locator("#ticks")).toHaveText(String(PROBE_TICKS));
     const after = await pageState(shown);
-    // The same page the stage prepared, its own behavior started once shown.
     expect(after).toMatchObject({
       preparedPage: "same",
       started: "yes",

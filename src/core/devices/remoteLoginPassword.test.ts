@@ -39,7 +39,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
   /** An invented password: no person's, and nothing this test may find kept anywhere. */
   const INVENTED = "invented-pw-4c1f";
 
-  /** Every file under `dir`, as text, for a search. */
   function savedText(dir: string): string[] {
     if (!existsSync(dir)) return [];
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -74,7 +73,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(existsSync(placedKeys)).toBe(false);
     expect(existsSync(join(dir, "ssh-key"))).toBe(false);
 
-    // A wrong one is said in the feed and asked again; nothing is placed.
     const wrong = await at.remote.addOrAsk(sshd.address, { password: "not-the-password" });
     expect(wrong).toEqual({ ...asked, wrong: true });
     expect(at.lines().slice(1)).toEqual([
@@ -93,7 +91,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       remoteLoginWords.starting("Mac mini"),
       remoteLoginWords.atLogin(device as DeviceView),
     ]);
-    // Firstmate's own key, kept in its own folder, is what that Mac lets in now.
     expect(statSync(join(dir, "ssh-key")).mode & 0o777).toBe(0o700);
     expect(statSync(join(dir, "ssh-key", "id_ed25519")).mode & 0o777).toBe(0o600);
     const publicLine = readFileSync(join(dir, "ssh-key", "id_ed25519.pub"), "utf8").trim();
@@ -108,7 +105,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       expect(run.args.join(" ")).not.toContain(INVENTED);
       expect(run.envHeldPassword).toBe(false);
     }
-    // Nothing kept, said or left holds it.
     expect(savedText(root).some((text) => text.includes(INVENTED))).toBe(false);
     expect(JSON.stringify(at.said)).not.toContain(INVENTED);
     expect(JSON.stringify(at.said)).not.toContain("not-the-password");

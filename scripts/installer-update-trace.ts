@@ -18,7 +18,6 @@ export type InstallSample = {
 /** The files Squirrel.Mac's ShipIt writes into its cache beside the staged update. */
 export const SHIPIT_FILES = ["ShipIt_stderr.log", "ShipIt_stdout.log", "ShipItState.plist"];
 
-/** ShipIt's cache for an app id under a (scratch) home. */
 export function shipItCache(home: string, appId: string): string {
   return join(home, "Library/Caches", `${appId}.ShipIt`);
 }

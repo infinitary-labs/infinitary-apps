@@ -134,7 +134,6 @@ function show(
       : null;
   el.replaceChildren(text);
   if (keys) {
-    // The command's key after the words, in mono like every keybind.
     const key = doc.createElement("span");
     key.setAttribute("data-icon-label-keys", "");
     Object.assign(key.style, {

@@ -12,13 +12,11 @@ import { openSize, openWindow } from "./window";
 
 const CARD_ID = "lone";
 const TITLE = "Plot the next leg";
-/** The captain's reply about the card. */
 const REPLY = "and the flaky retry - keep it?";
 
 /** The shown card's reply field, read each time: the first reply moves it into the thread. */
 const replyField = () => inShown("[data-card-reply] textarea") as HTMLTextAreaElement;
 
-/** Whether the shown card's thread shows the captain's message `text`. */
 const sent = (text: string) =>
   [...document.querySelectorAll(`${SHOWN_ENTRY} [data-thread-message="captain"]`)].some((message) =>
     message.textContent?.includes(text),

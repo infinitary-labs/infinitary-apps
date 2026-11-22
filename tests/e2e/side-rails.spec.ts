@@ -28,7 +28,6 @@ import { focusOn, pressKey, untilFocused } from "./windowKeys";
  * later one looking at an empty home (docs/testing.md).
  */
 
-/** The one task the rails spec commissions. */
 const TITLE = "refactor the auth middleware";
 
 let launched: LaunchedApp;
@@ -71,7 +70,6 @@ test("collapse is host chrome: the header stays, the body goes out of sight, the
   const { page } = launched;
   const activity = page.locator('[data-side-panel="activity"]');
   const title = activity.locator("header");
-  // Before the first line, the collapsed header carries the panel's title.
   await expect(activity).toHaveAttribute("data-side-panel-collapsed", "");
   await expect(dockSummaryLine(page, "activity")).toHaveCount(0);
   await expect(title).toContainText(dockTitle("activity"));
@@ -85,7 +83,6 @@ test("collapse is host chrome: the header stays, the body goes out of sight, the
   await expect(title).not.toContainText(dockTitle("activity"));
   await expect(dockRegion(page, "activity")).toBeVisible();
 
-  // A newer line takes its place, and the one it replaced leaves.
   const words = dockSummaryLine(page, "activity").locator("[data-panel-summary-words]");
   const before = await words.innerText();
   const said = "check the release notes before the alpha";
@@ -107,7 +104,6 @@ test("collapse is host chrome: the header stays, the body goes out of sight, the
   await expect(words).not.toContainText(said);
   await untilFocused(dockSummaryLine(page, "activity"));
 
-  // The line opens the panel from the keyboard, as the chevron does.
   await pressKey(dockSummaryLine(page, "activity"), "Enter");
   await expect(dockFrameElement(page, "activity")).toBeVisible();
   await expect(startedLine(page, key)).toBeVisible();

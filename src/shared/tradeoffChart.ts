@@ -133,7 +133,6 @@ function choicesIn(question: Node): Node[] {
 
 type Read = { table?: TradeoffTable; problem?: string };
 
-/** The label naming a control: the one around it, or one naming its id. */
 function labelOf(choice: Node, root: Node): Node | undefined {
   for (let at = choice.parent; at; at = at.parent) if (tagOf(at) === "label") return at;
   const id = choice.attribs?.id;

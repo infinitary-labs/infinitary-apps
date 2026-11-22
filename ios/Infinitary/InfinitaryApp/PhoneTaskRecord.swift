@@ -662,7 +662,6 @@ struct PhoneTaskRecord: View {
         }.buttonStyle(PhoneChoiceStyle(kind)).disabled(busy || !session.canChange).accessibilityIdentifier(id)
     }
 
-    // The composer's capsule, with Steer as its send arrow, dimmed until there are words to send.
     private var steerBox: some View {
         let working = PhoneRecord.crewState(task, live: live) == .working
         return HStack(alignment: .center, spacing: PhoneTheme.space2) {

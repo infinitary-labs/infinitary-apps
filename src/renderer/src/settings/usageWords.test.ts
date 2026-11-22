@@ -322,7 +322,6 @@ describe("Usage's recent tasks", () => {
       "$3.75",
     ]);
     expect(taskNote(whole, "usd")).toBe("No estimate here is split by category.");
-    // One of two records priced and split.
     const partial = recent({
       amount: { ...recent().amount, cost: 1, priced: 1, split: 1 },
       costReported: { input: 1, output: 1, cacheRead: 1, cacheWrite: 1 },

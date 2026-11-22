@@ -524,7 +524,6 @@ describe("ObserveService", () => {
     // does the retired supervision session, which no longer lists at all.
     expect(byId[FIRSTMATE_SESSION_ID]?.routing).toBeNull();
     await expect(service.detail("supervision")).rejects.toThrow('Unknown session "supervision"');
-    // The detail pane reads the same facts as the list row.
     expect((await service.detail("rt01")).routing).toEqual(byId.rt01?.routing);
   });
 
@@ -890,7 +889,6 @@ describe("ObserveService", () => {
     await service.list();
     await service.list();
     expect(service.transcriptParses).toBe(parses);
-    // A changed file is read again.
     writeFileSync(
       crewFile,
       `${readFileSync(crewFile, "utf8")}${jsonl([{ type: "compaction", id: "x", timestamp: "2026-08-13T21:00:00.000Z", summary: "later" }])}`,

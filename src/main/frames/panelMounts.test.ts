@@ -199,7 +199,6 @@ describe("a panel mount", () => {
     expect(Object.keys(importMapOf(body).map.integrity)).toContain(
       "app-frame://panel-c1/cards/notes.mjs",
     );
-    // A view the graph does not hold is refused, by name.
     await expect(
       mounts.mountPanel({
         ...request,
@@ -256,7 +255,6 @@ describe("a panel mount", () => {
       server: true,
       module: "app-frame://panel-y1/panel.mjs",
     });
-    // Another version, or the same id as an added panel, is not served.
     await expect(mounts.mountPanel(personal({ version: "fedcba9876543210" }))).rejects.toThrow(
       "is not a panel of the captain's at version fedcba9876543210",
     );

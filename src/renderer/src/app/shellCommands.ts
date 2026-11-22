@@ -61,7 +61,6 @@ const PANELS_ROW = '[data-panels-settings] [data-panels-row][tabindex="0"]';
 /** Usage's unit switch, its first control, where Open Usage puts focus. */
 const USAGE_UNIT = '[data-settings-section="usage"] [data-usage-unit] input:checked';
 
-/** Acts on the stage's shown card only while the store still shows it. */
 function onShownCard(act: (stage: NonNullable<ReturnType<typeof cardStage>>) => void): void {
   const stage = cardStage();
   if (stage && stage.shownId === shownEntry(useShellStore.getState())?.id) act(stage);
@@ -102,7 +101,6 @@ function whenReady(ready: () => boolean, then: () => void, frames = 30): void {
   if (frames > 0) requestAnimationFrame(() => whenReady(ready, then, frames - 1));
 }
 
-/** A place in the shown entry (`selector`), while the stage shows that entry ready to use. */
 function shownPart(entryId: string, selector: string): HTMLElement | null {
   const part = document.querySelector<HTMLElement>(
     `[data-card-layer] [data-stage-entry="shown"][data-stage-entry-id="${CSS.escape(entryId)}"] ${selector}`,
@@ -164,7 +162,6 @@ const browserCardBack = (entryId: string) =>
 /** The shown entry's body, the one place it scrolls. */
 const cardBody = (entryId: string) => shownPart(entryId, "[data-card-body]");
 
-/** The shown card's buttons: its default, or else the first a person can press. */
 const cardButton = (cardId: string) =>
   shownPart(cardId, "[data-card-actions] button[data-card-action-default]:enabled") ??
   shownPart(cardId, "[data-card-actions] button:enabled") ??
@@ -231,13 +228,11 @@ export function showReleaseNote(version: string | null): void {
 /** What had focus when command search opened: where Escape returns it. */
 let searchOpener: Element | null = null;
 
-/** Command search's field, once it takes focus. */
 function searchField(): HTMLElement | null {
   const field = document.querySelector<HTMLElement>("[data-command-search] input");
   return field && available(field) ? field : null;
 }
 
-/** Opens command search over the window, remembering what had focus. */
 export function openCommandSearch(): void {
   const s = useShellStore.getState();
   if (s.commandSearchOpen) return;
@@ -364,10 +359,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
   "settings.open": () => useShellStore.getState().setView("settings"),
-  // Settings → Keyboard, with the caret in its search.
   "settings.keyboard": () =>
     openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
-  // Settings → Panels, with focus on the row the arrows start from.
   "settings.panels": () => openSettingsAt("panels", PANELS_ROW),
   "updates.show": () => setUpdateNoticeOpen(true),
   "updates.later": () => {
@@ -393,7 +386,6 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "settings.automation": openAutomation,
   "settings.integrations": openIntegrations,
   "settings.secrets": () => openSettingsAt("secrets", "[data-secrets-heading]"),
-  // Home, with the ask to move secrets from another tool started in the message box.
   "secrets.move": () => {
     startSecretsMove();
   },
@@ -468,7 +460,6 @@ export function openSavedSignIns(): void {
 /** The Version row's Check for updates (UpdateCheck.tsx). */
 const UPDATE_CHECK = "[data-update-check]";
 
-/** Settings → Automation, with focus on New automation. */
 function openAutomation(): void {
   openSettingsAt("automation", "[data-automation-new]");
 }
@@ -481,12 +472,10 @@ export function openIntegrations(): void {
 /** The tab's first control: a row's disclosure, or an add chip with nothing connected. */
 const INTEGRATIONS_FIRST = "[data-integration-toggle], [data-integration-add]";
 
-/** Settings → Usage, with focus on its unit switch. */
 function openUsage(): void {
   openSettingsAt("usage", USAGE_UNIT);
 }
 
-/** The window's own facts a refusal reads, as they stand now. */
 function windowFacts(): WindowFacts {
   return {
     dialogOpen: modalOpen(),

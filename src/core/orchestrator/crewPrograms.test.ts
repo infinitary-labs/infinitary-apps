@@ -83,7 +83,6 @@ describe("programs (INF-799 piece 2)", () => {
       shape: { program: { script, bound }, ...(options.premium ? { premium_ask: true } : {}) },
     });
     harness.supervisor.intake.graphChanged();
-    /** The part a task() call filed, once its crewmate is working on it. */
     const part = (call: number) =>
       vi.waitFor(() => {
         const found = harness.tasks.graph
@@ -93,7 +92,6 @@ describe("programs (INF-799 piece 2)", () => {
           throw new Error(`part ${call} has not started`);
         return found;
       }, PROGRAM_WAIT);
-    /** The part's crewmate reports, and its turn ends. */
     const report = async (call: number, text: string, result?: Record<string, unknown>) => {
       const found = await part(call);
       const spec = harness.specs[call];
@@ -344,7 +342,6 @@ describe("programs (INF-799 piece 2)", () => {
     );
     const part = await h.part(0);
     const crewmate = h.sessions[0] as FakeCrewmate;
-    /** The app wakes the part's crewmate, which reports, and its turn ends. */
     const turn = async (text: string, declared: ReportDeclaration) => {
       const prompts = crewmate.promptCalls.length;
       await h.supervisor.steer.steerCrewmate(
@@ -375,7 +372,6 @@ describe("programs (INF-799 piece 2)", () => {
     expect(h.tasks.latestResult(h.program.id)?.value).toEqual({ done: true });
   });
 
-  /** A one-part program whose part's crewmate could not open, so the part is back in the queue. */
   async function unstartedPart() {
     const h = await programHarness(`return await task("Cap the meter.");`, 1);
     h.open.mockRejectedValueOnce(new Error("the provider did not answer"));
@@ -398,7 +394,6 @@ describe("programs (INF-799 piece 2)", () => {
       /^Cannot close/,
     );
     expect(h.tasks.get(h.program.id)?.status).toBe("open");
-    // Still running: the captain starts the held part, and its answer ends the script.
     expect(await h.supervisor.starts.startQueuedNow(part.key)).toContain(
       `${part.key} "${part.title}" is starting.`,
     );

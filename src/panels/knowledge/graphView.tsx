@@ -85,7 +85,6 @@ function walkOrder(graph: ReadyGraph): string[] {
     .map((concept) => concept.id);
 }
 
-/** What the count line says: what is drawn, and of how many when some are left out. */
 function countLine(graph: ReadyGraph): string {
   const concepts =
     graph.total.concepts > graph.shown.concepts
@@ -173,7 +172,6 @@ export function GraphView({
     graph.connections.filter(touchesNode).flatMap((connection) => [connection.from, connection.to]),
   );
 
-  // -- the camera, by pointer -------------------------------------------------
   const drag = useRef<Drag | null>(null);
   const targetOf = (element: Element | null): Drag["target"] => {
     const nodeId = element?.closest("[data-knowledge-node]")?.getAttribute("data-knowledge-node");
@@ -258,7 +256,6 @@ export function GraphView({
     return () => drawing.removeEventListener("wheel", onWheel);
   }, [drawingRef, onCamera, say]);
 
-  // -- the camera and the selection, by key -----------------------------------
   const walk = walkOrder(graph);
   // Each step starts from where the last one left the camera, so keys
   // pressed faster than the drawing redraws each count.
@@ -341,7 +338,6 @@ export function GraphView({
     }
   };
 
-  // -- the drawing -------------------------------------------------------------
   const lines = graph.connections.flatMap((connection) => {
     const a = projected.get(connection.from);
     const b = projected.get(connection.to);
@@ -376,7 +372,6 @@ export function GraphView({
   });
 
   const ordered = [...projected.values()].sort((a, b) => b.depth - a.depth);
-  // A label covers no other label and no dot.
   const taken: Box[] = ordered.map((point) => ({
     x: point.x - point.radius - 2,
     y: point.y - point.radius - 2,
@@ -423,7 +418,6 @@ export function GraphView({
   const endName = (end: string | { title: string }) =>
     typeof end === "string" ? (titles.get(end) ?? m.knowledgePanelConceptNotDrawn()) : end.title;
 
-  // The connections list is one stop: ↑ ↓ move along it, Enter opens.
   const listRef = useRef<HTMLDivElement>(null);
   const listStop = listed.some((row) => row.id === chosen) ? chosen : (listed[0]?.id ?? null);
   const pickLine = (row: (typeof listed)[number], open: boolean, byKey: boolean) =>

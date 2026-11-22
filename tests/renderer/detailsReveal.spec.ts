@@ -19,7 +19,6 @@ test("an opened section's controls take focus before its fade draws a frame", as
   const launched = await launchApp();
   const { page } = launched;
   try {
-    // Replace the isolated window's app document with the record's template.
     await page.goto("about:blank");
     await page.setContent(
       readFileSync("src/renderer/src/plugins/builtin/record/record.html", "utf8"),

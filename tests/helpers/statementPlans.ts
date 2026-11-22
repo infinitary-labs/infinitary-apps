@@ -3,7 +3,6 @@ import { KnowledgeStore } from "@core/storage/knowledgeStore";
 import { createUsageDays } from "@core/storage/usageDays";
 import { BOUNDED_TABLES, WALKS } from "./statementWalks";
 
-/** A statement the app prepared, and the steps of its plan that read a growing table whole. */
 export type PlannedStatement = {
   sql: string;
   /** Where the app prepared it (path:line), when the census saw it. */

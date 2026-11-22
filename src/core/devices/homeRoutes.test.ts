@@ -113,7 +113,6 @@ async function oldAddress(homeAt: string): Promise<{ at: string; lose: () => Pro
   return { at: `127.0.0.1:${port}`, lose };
 }
 
-/** Another computer at an address: TLS with a key of its own, which counts every dial it took. */
 async function anotherComputer(): Promise<{ at: string; dialed: () => number }> {
   const other = createKeyIdentity("Another computer");
   let dialed = 0;
@@ -131,7 +130,6 @@ async function anotherComputer(): Promise<{ at: string; dialed: () => number }> 
   return { at: `127.0.0.1:${port}`, dialed: () => dialed };
 }
 
-/** A window's grant kept as `JoinedHome` keeps it, and its link to the home dialing with it. */
 function follow(grant: DeviceGrant, find?: () => Promise<readonly string[]>) {
   const dir = scratchDir("infinitary-routes-joined-");
   const joined = new JoinedHome(dir, () => {});
@@ -283,7 +281,6 @@ describe("a device finds its home on any route it keeps or hears, and only with 
     ).rejects.toBeInstanceOf(HomeKeyMismatchError);
     await until(() => stranger.dialed() === 2);
 
-    // A link that keeps dialing it never comes into reach and keeps nothing of it.
     const device = follow(kept, async () => [stranger.at]);
     await until(() => device.states.some((state) => state.contact === "lost"));
     expect(device.inReach()).toBe(false);

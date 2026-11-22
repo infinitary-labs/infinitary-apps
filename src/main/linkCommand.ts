@@ -48,7 +48,6 @@ export const LINK_WORDS = {
   refused: (reason: string) => [`Infinitary here could not make a link: ${reason}`],
 } as const;
 
-/** Whether the app was started as `<app> link`, and the words after `link` when it was. */
 export function linkCommand(argv: readonly string[], defaultApp: boolean): string[] | null {
   const words = commandWords(argv, defaultApp);
   return words?.[0] === "link" ? words.slice(1) : null;
@@ -56,14 +55,12 @@ export function linkCommand(argv: readonly string[], defaultApp: boolean): strin
 
 export type LinkAsked = { for: LinkCommandFor; json: boolean };
 
-/** What the words after `link` ask for, or null for words it does not take. */
 export function linkAsked(words: readonly string[]): LinkAsked | null {
   const known = new Set(["--phone", "--json"]);
   if (words.some((word) => !known.has(word)) || new Set(words).size !== words.length) return null;
   return { for: words.includes("--phone") ? "phone" : "computer", json: words.includes("--json") };
 }
 
-/** What the door answered, or why nothing did. */
 export type LinkAnswer =
   | { kind: "link"; link: string; expiresAt: number }
   | { kind: "refused"; reason: string }
@@ -95,7 +92,6 @@ export async function askForLink(
 
 type Door = { address: string; key: string };
 
-/** The door's address on this computer's loopback, and its key; null when either is missing. */
 function readDoor(dir: string): Door | null {
   try {
     const address = readFileSync(join(dir, PHONE_DOOR_FILES.address), "utf8").trim();
@@ -109,7 +105,6 @@ function readDoor(dir: string): Door | null {
   }
 }
 
-/** One request to the door; null when nothing answered as the door does. */
 function askDoor(door: Door, asked: LinkCommandFor): Promise<LinkAnswer | null> {
   const [host, port] = door.address.split(":");
   return new Promise((resolve, reject) => {
@@ -221,7 +216,6 @@ export function linkOutput(asked: LinkAsked, answer: LinkAnswer, now: number): L
   return { code: 0, out: `${lines.join("\n")}\n`, error: "" };
 }
 
-/** The whole command: the words after `link`, asked of the app on this data folder. */
 export async function runLinkCommand(
   words: readonly string[],
   dataDir: string,

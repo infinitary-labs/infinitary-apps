@@ -34,7 +34,6 @@ function releaseWriter(state: LeaseState): void {
   for (const resolve of waiting) resolve();
 }
 
-/** Why an exclusive store task did not run. */
 export type StoreLeaseRefusal = "session_active" | "store_busy";
 
 export type StoreLeaseResult<T> =

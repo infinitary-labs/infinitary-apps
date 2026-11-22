@@ -40,7 +40,6 @@ export function baseRef(cwd?: string): string {
     try {
       return git(["merge-base", "HEAD", ref], cwd);
     } catch {
-      // Try the next name.
     }
   }
   return git(["rev-parse", "HEAD"], cwd);

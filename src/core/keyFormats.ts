@@ -28,7 +28,6 @@ export const KEY_FORMATS = {
 /** What a key a signed-in task browser hides reads as, in place. */
 export const KEY_HIDDEN = "[key hidden]";
 
-/** The text with every key in a known format replaced by `KEY_HIDDEN`, the rest as it was. */
 export function hideKeys(text: string): string {
   let out = text;
   for (const pattern of Object.values(KEY_FORMATS)) out = out.replace(pattern, KEY_HIDDEN);

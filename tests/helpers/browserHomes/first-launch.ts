@@ -2,7 +2,6 @@ import { openDatabase } from "../../../src/core/storage/db";
 import { SettingsStore } from "../../../src/core/storage/settingsStore";
 import { TaskService } from "../../../src/core/tasks/taskService";
 
-/** What the first-launch test's story reads back: the captain's message and the first mate's reply line. */
 type Input = { ask: string; reply: string };
 
 /**

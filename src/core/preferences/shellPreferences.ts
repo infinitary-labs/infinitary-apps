@@ -136,7 +136,6 @@ export class ShellPreferencesService {
     return this.setLayout({ ...layout, arrangement, ...(morePick ? { morePick } : {}) });
   }
 
-  /** Forgets every record about a panel: collapse, visibility, its place and a More pick of it. */
   clearPanel(panelId: string): Layout {
     return this.updateLayout((layout) => {
       const collapsedPanels = { ...layout.collapsedPanels };

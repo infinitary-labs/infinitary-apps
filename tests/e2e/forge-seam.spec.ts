@@ -44,7 +44,6 @@ const ORIGIN = `https://${HOST}/me/plainhost.git`;
 
 const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString().trim();
 
-/** A folder with one commit on main, optionally on a host. */
 function initFolder(dir: string, origin?: { url: string; bare?: string }) {
   git("init", "--initial-branch=main", dir);
   git("-C", dir, "config", "user.name", "Test");
@@ -162,7 +161,6 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
-  // The change goes by the branch the app named, which the task's record keeps.
   const branch = task?.repo?.branch ?? "";
   expect(branch).not.toBe("");
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
@@ -218,6 +216,5 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
     .map((line) => line.text)
     .join("\n");
   expect(feed).not.toMatch(/\bgh\b|GitHub|PR merge blocked/);
-  // Nothing on this path asked GitHub's tool anything.
   expect(existsSync(ghLog) ? readFileSync(ghLog, "utf8") : "").toBe("");
 });

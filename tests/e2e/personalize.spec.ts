@@ -235,7 +235,6 @@ test("a panel instruction is a standing direction for the personal workspace", a
   expect(existsSync(join(workspace, OLD_PANEL_INSTRUCTIONS_PATH))).toBe(false);
   expect(savePointCount(workspace)).toBe(before);
   await expect(page.locator("[data-card-layer]")).toHaveCount(0);
-  // The captain sees it among their directions in the Knowledge browser.
   await runFromSearch(app, page, OPEN_KNOWLEDGE);
   await pressKey(tab(page, "directions"), "Enter");
   await expect(row(page, saved?.id ?? "")).toContainText(MOCK_STANDING_INSTRUCTION);

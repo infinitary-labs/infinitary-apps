@@ -97,13 +97,11 @@ describe("InboxStore", () => {
     expect(inbox.pending("task-1", now).map((row) => row.id)).toEqual([id]);
 
     inbox.markDelivered([id]);
-    // In-flight: not pending.
     expect(inbox.pending("task-1", now)).toHaveLength(0);
 
     inbox.release([id]);
     // Released but inside the grace: still not due.
     expect(inbox.pending("task-1", now)).toHaveLength(0);
-    // Past the grace: due again, with the attempt counted.
     const later = now + INBOX_GRACE_MS + 1000;
     const due = inbox.pending("task-1", later);
     expect(due).toHaveLength(1);
@@ -216,7 +214,6 @@ describe("InboxStore", () => {
     const spent = inbox.spent("task-1", INBOX_ATTEMPT_MAX);
     expect(spent.map((row) => row.id)).toEqual([id]);
     inbox.markEscalated(id);
-    // Escalated once: never again a candidate, for retry or escalation.
     expect(inbox.spent("task-1", INBOX_ATTEMPT_MAX)).toHaveLength(0);
     expect(inbox.pending("task-1", later)).toHaveLength(0);
     // Still on the lane for the teardown notice.
@@ -261,13 +258,11 @@ describe("InboxStore", () => {
     const resetsAt = clock.now + 2 * 3_600_000;
     inbox.markDelivered([id]);
     inbox.releaseAfterProviderFailure([id], { notBefore: resetsAt });
-    // The attempt is not spent, and the failure is counted like any other.
     expect(inbox.allFor("task-1")[0]).toMatchObject({ attempts: 0, failures: 1 });
     // Due at the reset, not at the 90 s backoff.
     expect(inbox.pending("task-1", clock.now + 90_000)).toHaveLength(0);
     expect(inbox.pending("task-1", resetsAt - 1)).toHaveLength(0);
     expect(inbox.pending("task-1", resetsAt).map((row) => row.id)).toEqual([id]);
-    // A reset already past leaves the backoff in charge.
     inbox.markDelivered([id]);
     inbox.releaseAfterProviderFailure([id], { notBefore: clock.now - 1 });
     expect(inbox.allFor("task-1")[0]?.nextAttemptAt).toBe(clock.now + inboxBackoffMs(2));
@@ -300,7 +295,6 @@ describe("InboxStore", () => {
     expect(inbox.holdsUndelivered(FIRSTMATE_RECIPIENT, "t1")).toBe(true);
     expect(inbox.holdsUndelivered(FIRSTMATE_RECIPIENT, "t2")).toBe(false);
     expect(inbox.holdsUndelivered("t1", "t1")).toBe(false);
-    // Backing off after a failed turn, it still waits.
     inbox.markDelivered([id]);
     expect(inbox.holdsUndelivered(FIRSTMATE_RECIPIENT, "t1")).toBe(false);
     inbox.releaseAfterProviderFailure([id]);
@@ -580,18 +574,15 @@ describe("the typed wake envelope (the primitives review, P3)", () => {
     const { inbox } = setup();
     const first = inbox.enqueueWake(FIRSTMATE_RECIPIENT, stall(60_000), "agent", "t1");
     expect(first).not.toBeNull();
-    // The same facts, built in another key order: the same wake.
     const { facts, ways } = stall(60_000);
     const reordered = Object.fromEntries(Object.entries(facts).reverse()) as typeof facts;
     expect(
       inbox.enqueueWake(FIRSTMATE_RECIPIENT, { facts: reordered, ways }, "agent", "t1"),
     ).toBeNull();
-    // Another origin or another ref is its own last wake.
     expect(
       inbox.enqueueWake(FIRSTMATE_RECIPIENT, stall(60_000), "supervision", "t1"),
     ).not.toBeNull();
     expect(inbox.enqueueWake(FIRSTMATE_RECIPIENT, stall(60_000), "agent", "t2")).not.toBeNull();
-    // A changed fact is new information.
     expect(inbox.enqueueWake(FIRSTMATE_RECIPIENT, stall(120_000), "agent", "t2")).not.toBeNull();
     expect(inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => [row.origin, row.ref])).toEqual([
       ["agent", "t1"],
@@ -616,7 +607,6 @@ describe("the typed wake envelope (the primitives review, P3)", () => {
       expect(
         inbox.enqueueWake(FIRSTMATE_RECIPIENT, stillDown(0, 960_000), "agent", "t1"),
       ).toBeNull();
-      // An intervening wake on the same task, then the ack, then long after.
       inbox.enqueueWake(FIRSTMATE_RECIPIENT, "[fm-op] t1 reported.", "agent", "t1");
       inbox.markDelivered([id ?? 0]);
       inbox.ack(inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id));

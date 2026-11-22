@@ -9,7 +9,6 @@
 /** The task browser's command on a crewmate's search path (docs/axi-commands.md). */
 export const BROWSER_COMMAND = "infinitary-browser-axi";
 
-/** A browser command as the crewmate types it, in backticks: `infinitary-browser-axi snapshot`. */
 export function browserCommand(args?: string): string {
   return `\`${args ? `${BROWSER_COMMAND} ${args}` : BROWSER_COMMAND}\``;
 }

@@ -403,7 +403,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(at.view()?.seenAt).toBeGreaterThan(0);
     await tooOld.stop();
 
-    // Newer than this Mac's; and on this Mac's own version it says nothing.
     await expect.poll(() => at.view()?.otherVersion).toBeUndefined();
     const newer = at.start({ appVersion: "0.1.31" });
     await expect.poll(() => at.view()?.otherVersion?.than).toBe("newer");
@@ -420,7 +419,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
 
     const updating = at.computers.update(at.deviceId);
-    // It kept this Mac's copy in place of its own, then its run ended.
     expect(await before.ended).toBe("updated");
     expect(at.kept()).toBe("the home's own copy");
     // Its crew paused before its run ended, and waits for it to be back (INF-721 friction 9).
@@ -454,7 +452,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(readdirSync(at.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
   });
 
-  // INF-3307 audit: a stop during a work computer's update can leave its temporary folder behind.
   it("stopped while it gets this Mac's Firstmate, lets the copy go and leaves no temporary folder beside its work (INF-3307 audit)", async () => {
     const at = await world({ kept: true });
     let reached!: () => void;
@@ -487,7 +484,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     await before.stop();
     expect(await before.ended).toBe("stopped");
     expect(readdirSync(at.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
-    // Nothing was kept: the copy it had stays.
     expect(at.kept()).toBe("the copy it kept");
   });
 
@@ -542,7 +538,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     const updating = at.computers.update(at.deviceId);
     expect(await before.ended).toBe("updated");
 
-    // This Mac's copy is kept in its work folder, and its agent starts it from now on.
     const kept = join(at.dataDir, "app", "Firstmate 3000.app");
     expect(readInstalled(at.dataDir)).toEqual({ service, app: kept });
     expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
@@ -558,7 +553,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
       ["bootout", `gui/502/${service.label}`],
       ["bootstrap", "gui/502", service.file],
     ]);
-    // The Mac's own app is left as it was.
     expect(readFileSync(join(installedApp, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
       "the Mac's own app",
     );
@@ -859,7 +853,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
         doing: "update",
       });
 
-    // Out of reach, and on this Mac's version already.
     const at = await world({ kept: true });
     await expect(at.computers.update(at.deviceId)).rejects.toThrow(
       refused("out-of-reach").join(" "),
@@ -870,7 +863,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     await current.stop();
     await expect.poll(() => at.view()?.inReach).toBe(false);
 
-    // Too old to take the update order: a new command updates it instead.
     at.start({ protocolVersion: beforeUpdates(), appVersion: "0.1.25" });
     await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("command");
     await expect(at.computers.update(at.deviceId)).rejects.toThrow(
@@ -895,7 +887,6 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(none.feed()).toEqual([remoteLoginWords.updating(builder), ...refused("failed")]);
     expect(none.kept()).toBe("the copy it kept");
     expect(running.state().contact).toBe("in-reach");
-    // Its crew paused as the update went ahead, and carries on once it failed.
     expect(none.crew).toEqual([`paused ${none.deviceId}`, `resumed ${none.deviceId}`]);
   });
 });
@@ -912,7 +903,6 @@ describe("a computer that connects on an older version than the home's", () => {
   it("is updated by itself as it connects, its crew paused and carried on, with no card to click", async () => {
     const at = await world({ kept: true, nudge: true });
     const before = at.start({ appVersion: "0.1.20" });
-    // Nobody asks: the home updates it as it connects.
     expect(await before.ended).toBe("updated");
     expect(at.kept()).toBe("the home's own copy");
     at.start({ appVersion: HOME_APP });
@@ -948,7 +938,6 @@ describe("a computer that connects on an older version than the home's", () => {
     expect(at.kept()).toBe("the copy it kept");
     expect(running.state().contact).toBe("in-reach");
 
-    // Back on the same versions after a drop, it gets its card again, and nothing tries it again.
     await at.drop();
     await expect.poll(() => at.nudged.raised.length).toBe(2);
     expect(at.nudged.standing.has(deviceUpdateCardId(at.deviceId))).toBe(true);
@@ -1083,7 +1072,6 @@ describe.runIf(process.platform === "darwin")(
         remoteLoginWords.starting(label),
         remoteLoginWords.updated(mini, "running"),
       ]);
-      // Nothing was sent from here, and nothing of the download is left there.
       expect(at.said.some((event) => event.copy?.state === "sending")).toBe(false);
       expect(release.requests()).toBe(1);
       expect(leftovers(at.dataDir)).toEqual([]);
@@ -1157,7 +1145,6 @@ describe.runIf(process.platform === "darwin")(
       await updating;
       expect(at.kept()).toBe("the home's own copy");
       expect(lines(at.said)).toContain(remoteLoginWords.downloadFallback(label, false));
-      // The stalled transfer's connection closed with its downloader.
       await expect.poll(() => release.active()).toBe(0);
       expect(leftovers(at.dataDir)).toEqual([]);
     });
@@ -1285,7 +1272,6 @@ describe.runIf(process.platform === "darwin")(
       const updating = at.computers.update(at.deviceId);
       await expect.poll(() => release.active()).toBe(1);
       await before.stop();
-      // Its download went with the run, and left nothing.
       await expect.poll(() => release.active()).toBe(0);
       expect(leftovers(at.dataDir)).toEqual([]);
       // Its background starts it again on its old version: nothing is under way there.
@@ -1583,7 +1569,6 @@ describe("a computer that reaches its home through the home's SSH connection", (
     writeInstalled(dataDir, { service: null, app });
     const kept = () => readFileSync(join(app, "Contents", "Resources", "marker"), "utf8").trim();
 
-    // With no route, nothing is got and nothing here changes.
     await expect(updateHere({ dataDir, grant })).rejects.toBeInstanceOf(HomeRouteMissingError);
     expect(kept()).toBe("the copy it kept");
     expect(forward.carried()).toBe(1);
@@ -1650,7 +1635,6 @@ describe("a computer whose update brought a copy that does not start", () => {
     await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
     const updating = at.computers.update(at.deviceId);
     expect(await before.ended).toBe("updated");
-    // The new copy is in place, and the one it replaced is kept beside it.
     expect(at.kept()).toBe("the home's own copy");
     expect(
       readFileSync(join(`${kept}.previous`, "Contents", "Resources", "marker"), "utf8").trim(),
@@ -1706,7 +1690,6 @@ describe("a computer whose update brought a copy that does not start", () => {
     });
     expect(nudged(() => false)).toEqual({ cards: [], updates: [at.deviceId] });
     const said = at.said.length;
-    // Update does not send that version there again, and asks nothing of it.
     await expect(at.computers.update(at.deviceId)).rejects.toThrow(
       remoteLoginWords.failedHere(builder, HOME_APP).join(" "),
     );
@@ -1778,7 +1761,6 @@ describe("a computer whose update brought a copy that does not start", () => {
     const updated = await updating;
     if ("asks" in updated) throw new Error("Update asked for a password.");
 
-    // The agent's file and the record are back as they were, and launchd read the agent anew.
     await expect.poll(() => existsSync(kept), { timeout: 8_000 }).toBe(false);
     // launchd read it once for the new copy, then once more for the one put back.
     const readAnew = [`bootout gui/502/${service.label}`, `bootstrap gui/502 ${service.file}`];
@@ -1884,7 +1866,6 @@ describe("a computer whose update brought a copy that does not start", () => {
     const moved = join(at.dataDir, "app", "Infinitary.app");
     const label = workLabelOf("inf", "release");
     const file = join(context.homeDir, "Library", "LaunchAgents", `${label}.plist`);
-    // The new copy and agent stay for the next login, with no trial to take them back.
     expect(readInstalled(at.dataDir)).toEqual({ service: { label, file }, app: moved });
     await expect.poll(() => readdirSync(join(at.dataDir, "app"))).toEqual(["Infinitary.app"]);
   });

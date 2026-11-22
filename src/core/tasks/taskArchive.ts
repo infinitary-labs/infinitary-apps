@@ -108,7 +108,6 @@ export class TaskArchive {
     this.erase(id);
   }
 
-  /** A row, its timeline and its links, gone as if never written. */
   private erase(id: string): void {
     const run = this.writer.write(() => {
       this.writer.events.deleteFor(id);

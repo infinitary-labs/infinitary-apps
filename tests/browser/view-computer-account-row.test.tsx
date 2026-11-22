@@ -39,7 +39,6 @@ const VIEW: ThisMac = {
   caughtUp: 0,
 };
 
-/** A Claude account with no login yet, as a computer lists one. */
 function claudeNotSignedIn(id: string): AccountView {
   return {
     id,
@@ -56,7 +55,6 @@ function claudeNotSignedIn(id: string): AccountView {
 const OWN = claudeNotSignedIn("acct_claude_home");
 const THERE = claudeNotSignedIn("acct_claude_imac");
 
-/** The work computer, in reach, with its own Claude account not signed in. */
 const IMAC: DeviceSignIns = {
   deviceId: "imac",
   name: WORK_COMPUTER,

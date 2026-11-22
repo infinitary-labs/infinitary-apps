@@ -55,7 +55,6 @@ it("refuses command settings before forwarding to an old or unknown home, withou
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used by connect dispatch.
     updates: {} as UpdateChecker,
     link: () => ({
       start: () => {},
@@ -141,7 +140,6 @@ it("hands a streamed reply piece and a computers' reading the home sent live to 
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: (options) => {
       hear = options.onLive;
@@ -227,7 +225,6 @@ function viewWithHeldLook() {
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: (options) => {
       hear = options.onPush;
@@ -328,7 +325,6 @@ it("passes a pointing event on live, and drops one a welcome sends again after a
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     dial: async (dialing, reached) => {
       const socket = await dialHome(dialing, { reached });
@@ -361,7 +357,6 @@ it("passes a pointing event on live, and drops one a welcome sends again after a
   expect(events).toEqual([changed, changed, settings, record]);
 });
 
-/** A view whose home lists `changes()` and answers each request with `invoke`. */
 function pressView(
   prefix: string,
   changes: () => HomeLinkState["homeChanges"],
@@ -386,7 +381,6 @@ function pressView(
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used by a card's press.
     updates: {} as UpdateChecker,
     link: () => ({
       start: () => {},
@@ -549,7 +543,6 @@ it("tells the window it replays from the welcome until the replay's last push, a
         said.push({ replaying: thisMac.replaying === true, caughtUp: thisMac.caughtUp });
     },
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: (options) => {
       link = options;
@@ -572,7 +565,6 @@ it("tells the window it replays from the welcome until the replay's last push, a
   expect(said.at(-1)).toEqual({ replaying: true, caughtUp: 0 });
   link?.onReplayed?.();
   expect(said.at(-1)).toEqual({ replaying: false, caughtUp: 0 });
-  // A welcome that missed nothing replays nothing.
   const before = said.length;
   welcome("replay", 0);
   expect(said.slice(before).some((entry) => entry.replaying)).toBe(false);
@@ -624,7 +616,6 @@ it("tells the window each return of the link, replayed or not, even one that cha
       if (thisMac.role === "view") said.push(thisMac.linkBack);
     },
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: (options) => {
       link = options;
@@ -690,7 +681,6 @@ it("asks the fold once, at the first welcome from a home that lists it", () => {
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     fold,
     link: (options) => {
@@ -706,7 +696,6 @@ it("asks the fold once, at the first welcome from a home that lists it", () => {
   });
   views.push(view);
   const folds = () => invoke.mock.calls.filter(([channel]) => channel === "inf:devices:fold");
-  // A home without the fold is never asked.
   link?.onState?.({ ...state, homeChanges: [] });
   expect(folds()).toEqual([]);
   link?.onState?.({ ...state, homeChanges: [...CONTRACT_CHANGES.names] });
@@ -742,7 +731,6 @@ it("tells the first mate there when this Mac's window is in front and when it le
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: (options) => {
       caughtUp = options.onCaughtUp;
@@ -784,7 +772,6 @@ it("tells the first mate there when this Mac's window is in front and when it le
   caughtUp?.("replay");
   expect(said()).toEqual([[true], [false], [true], [true]]);
 
-  // A first mate from before the request is never asked it.
   changes = [];
   view.front(false);
   caughtUp?.("reload");
@@ -820,7 +807,6 @@ it("answers a panel's settings read from this Mac's own look, asking the other M
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    // No update action is used here.
     updates: {} as UpdateChecker,
     link: () => ({
       start: () => {},
@@ -865,7 +851,6 @@ it("answers a panel's settings read from this Mac's own look, asking the other M
     notifications: { enabled: true },
   });
   expect(asked).toEqual([["inf:settings:current", [["notifications"]]]]);
-  // A read of this Mac's look alone asks the other Mac nothing.
   asked.length = 0;
   expect(await view.dispatch("inf:settings:current", [["theme"]])).toEqual({
     theme: { theme: "light" },

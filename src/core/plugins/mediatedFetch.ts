@@ -13,7 +13,6 @@ import type { MediatedFetchCall, MediatedFetchResult } from "@shared/plugins/fet
 
 export type MediatedFetch = (call: MediatedFetchCall) => Promise<MediatedFetchResult>;
 
-/** What every call answers. */
 export const RETIRED_FETCH_WORDS =
   "a panel sends no request of its own: it reaches a service outside your projects through an integration it names in manifest.json";
 

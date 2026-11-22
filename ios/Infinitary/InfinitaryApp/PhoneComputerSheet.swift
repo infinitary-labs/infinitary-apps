@@ -171,7 +171,6 @@ struct PhoneComputerSheet: View {
         }
     }
 
-    /// Add another computer, the last row of the sheet.
     private var addComputer: some View {
         PhoneList {
             Button { choosingWay = true } label: {

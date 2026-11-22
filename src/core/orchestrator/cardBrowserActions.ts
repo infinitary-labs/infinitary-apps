@@ -33,7 +33,6 @@ import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 export class CardBrowserActions {
   constructor(
     private readonly options: CrewSupervisorOptions,
-    /** A card still up on the stack, by id. */
     private readonly openCard: (id: string) => Card | undefined,
   ) {}
 
@@ -154,7 +153,6 @@ export class CardBrowserActions {
     );
   }
 
-  /** The host pauses the task's browser for the captain, or refuses the card in words. */
   async pauseForCaptain(
     taskId: string,
     handoff: { site: string; reason: string; after: string; signIn?: true },

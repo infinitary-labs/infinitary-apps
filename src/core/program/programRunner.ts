@@ -252,7 +252,6 @@ class RunningProgram {
         ? []
         : [opts.after];
     const refs = [...(opts.from === undefined ? [] : [opts.from]), ...afterRefs];
-    // A label is known once its call is accepted, filed or still queued.
     const unknown = refs.find((ref) => typeof ref !== "string" || !this.named.has(ref));
     if (unknown !== undefined) {
       this.refuse(
@@ -374,7 +373,6 @@ class RunningProgram {
     return last.waitingOnCaptain === undefined && last.needsFirstmate === undefined;
   }
 
-  /** What a closed part answers: its checked result, its report, or null. */
   private settledValue(part: TaskRecord): { value: unknown } | undefined {
     if (part.status === "dropped") return { value: null };
     if (part.status !== "done") return undefined;
@@ -383,7 +381,6 @@ class RunningProgram {
     return { value: part.outcome ?? null };
   }
 
-  /** A part changed: a closed one answers its calls, and frees room for the queue. */
   partsChanged(ids: readonly string[]): void {
     if (this.ended) return;
     let freed = false;
@@ -618,7 +615,6 @@ export function startedProgramBranches(
   });
 }
 
-/** A finished program's report: how many parts ran, its result and the branch it leaves. */
 function programReportText(
   parts: number,
   result: Record<string, unknown> | undefined,
@@ -640,11 +636,8 @@ export type CrewProgramsHost = {
   readonly settling: SettleOwners;
   /** Where a filed part runs and how it delivers (`TaskIntake.resolveGraphPlacement`). */
   resolveGraphPlacement: TaskIntake["resolveGraphPlacement"];
-  /** Tell the first mate an operation happened. */
   notifyOp: FirstmateHooks["notifyOp"];
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
-  /** Run the ready sweep now. */
   sweepGates(now: number): Promise<void>;
   /** Steer a task's crewmate: the one that started a program hears it first. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;

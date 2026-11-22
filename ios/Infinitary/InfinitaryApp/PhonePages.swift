@@ -87,7 +87,6 @@ extension PhoneLayout {
     }
 }
 
-/// Which part of Home a view is to `PhonePagesLayout`.
 enum PhonePagesRole: LayoutValueKey {
     static let defaultValue = Part.stage
     enum Part { case panel, divider, stage, composer, pager }
@@ -126,7 +125,6 @@ struct PhonePagesLayout: Layout {
             let inset = PhoneLayout.keepOff(folds: local, width: width)
             return (x + inset.leading, max(0, width - inset.leading - inset.trailing))
         }
-        /// The message box's height at the width it takes once it keeps off the fold.
         func composerHeight(_ x: CGFloat, _ width: CGFloat) -> CGFloat {
             composer?.sizeThatFits(.init(width: offFold(x, width).width, height: nil)).height ?? 0
         }

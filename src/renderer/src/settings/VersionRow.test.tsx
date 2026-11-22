@@ -48,7 +48,6 @@ describe("the Version row", () => {
       renderToStaticMarkup(<VersionRowView releaseNotes={null} running="0.8.2-alpha.628" />),
     );
     expect(running).toBe("Version Alpha 0.8.2-alpha.628.");
-    // Once read, the notes name it as before.
     expect(
       text(renderToStaticMarkup(<VersionRowView releaseNotes={SHOWN} running="0.1.28" />)),
     ).toContain("Version Stable 0.1.28. Each release note");

@@ -6,7 +6,6 @@ import {
   servedForHome,
 } from "./signIns";
 
-/** OpenRouter's models as a computer's own runtime lists them. */
 function openRouter(ids: readonly string[]): ComputerServedModel[] {
   return ids.map((id) => ({ provider: "openrouter", id }));
 }

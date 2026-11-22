@@ -18,7 +18,6 @@ export type BringReads = "value" | "lines" | "env0" | "json";
  */
 export const BRING_VALUE_MAX_BYTES = 1024 * 1024;
 
-/** What one name read as: its value, or why it cannot be kept. */
 export type ReadValue = Buffer | "empty" | "too-large" | "not-text";
 
 const EQUALS = 0x3d;
@@ -205,7 +204,6 @@ export function readLines(output: Buffer): Map<string, ReadValue> {
   return found;
 }
 
-/** Fills every value a reader answered with zeros. */
 export function zeroFill(values: Iterable<ReadValue | undefined>): void {
   for (const value of values) if (Buffer.isBuffer(value)) value.fill(0);
 }

@@ -8,12 +8,10 @@ import { scratchDir } from "./scratchDirs";
 
 const STEER = "Mind the right side too.";
 
-/** One transcript line, in the shape the pinned client writes it. */
 function line(entry: Record<string, unknown>): string {
   return `${JSON.stringify(entry)}\n`;
 }
 
-/** What the client writes once a prompt's turn is in a tool: the prompt queued and taken in, and the call. */
 function turnInATool(sessionId: string): string {
   const at = new Date().toISOString();
   const uuid = randomUUID();

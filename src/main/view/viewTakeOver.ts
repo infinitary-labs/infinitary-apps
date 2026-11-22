@@ -11,7 +11,6 @@ import {
 } from "@core/standby/takeOver";
 import type { TakeOverOffer, ViewContact } from "@shared/devices";
 
-/** What Take over answers the window. */
 export type TakeOverOutcome = { ok: boolean; text: string };
 
 export const VIEW_TAKE_OVER_WORDS = {
@@ -40,7 +39,6 @@ export const VIEW_TAKE_OVER_WORDS_WINDOWS: typeof VIEW_TAKE_OVER_WORDS = {
     "This window stopped waiting before this PC answered. Taking over may still go on, and its answer shows here.",
 };
 
-/** The words for this computer's system. */
 export function viewTakeOverWords(platform: NodeJS.Platform): typeof VIEW_TAKE_OVER_WORDS {
   return platform === "win32" ? VIEW_TAKE_OVER_WORDS_WINDOWS : VIEW_TAKE_OVER_WORDS;
 }

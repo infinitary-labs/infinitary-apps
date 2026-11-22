@@ -1,9 +1,7 @@
 import type { Scenario } from "../mockProvider";
 
-/** "file a task: <title>" makes the mock Firstmate put planned work on the record. */
 export const FILE_TASK_PROMPT_MARKER = "file a task:";
 
-/** The first mate files the named task with create_task, starting nothing. */
 export const fileTask: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

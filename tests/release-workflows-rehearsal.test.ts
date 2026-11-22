@@ -178,7 +178,6 @@ describe("the signed channel workflow", () => {
         ".",
       ]);
     }
-    // Neither verification nor signing starts without it.
     expect(jobOf(release, "verify").needs).toContain("notes");
     expect(jobOf(release, "release").needs).toContain("notes");
     // A failed phone check stops the Linux packages and desktop checks too (INF-3059).
@@ -213,7 +212,6 @@ describe("the signed channel workflow", () => {
   it("runs the notes check and the catalog as two parts side by side, each step on its own part", () => {
     const notes = jobOf(release, "notes");
     expect(notes.strategy?.matrix).toEqual({ part: ["check", "catalog"] });
-    // Neither part waits for the other: no step of one needs the other's output.
     const steps = notes.steps ?? [];
     const partOf = (name: string) => steps.find((candidate) => candidate.name === name)?.if ?? "";
     expect(partOf("Check the notes cover this release")).toContain("matrix.part == 'check'");
@@ -349,7 +347,6 @@ describe("the signed channel workflow", () => {
       });
     const cancels = (inputs: Record<string, unknown>) =>
       workflowValue(release.concurrency["cancel-in-progress"], { inputs });
-    // Real releases: a stable promotion and an alpha's candidate, both requested from main.
     const candidate = "c".repeat(40);
     for (const [inputs, runId] of [
       [{ channel: "stable", promote: "1.2.3-alpha.13", dry_run: false }, "101"],
@@ -358,7 +355,6 @@ describe("the signed channel workflow", () => {
       expect(group(inputs, runId)).toBe(`release-${runId}`);
       expect(cancels(inputs)).toBe(false);
     }
-    // Rehearsals: one group per channel and what it builds, a newer one replacing an older.
     expect(group({ channel: "alpha", dry_run: true }, "103")).toBe("release-dry-run-alpha-main");
     expect(group({ channel: "alpha", candidate, dry_run: true }, "104")).toBe(
       `release-dry-run-alpha-${candidate}`,
@@ -518,7 +514,6 @@ describe("the signed channel workflow", () => {
         "Summarize the publication",
       ]),
     );
-    // A rehearsal uploads nothing and reads no place.
     const ids = ran.map((candidate) => candidate.id ?? candidate.name);
     for (const id of ["private", "adopt", "upload"]) expect(ids).not.toContain(id);
     expect(ids.filter((id) => /fetch-back$/.test(id ?? ""))).toEqual([]);
@@ -671,7 +666,6 @@ describe("the signed channel workflow", () => {
     const launchStages = ["launch", "zip"];
     expect(launches).toEqual(launchStages.map(() => "$VERSION"));
     for (const id of launchStages) expect(step(id).run).toContain("scripts/check-app-launch.sh");
-    // The fetch-back launches each fetched zip's app through its script.
     expect(step("fetch-back").run).toContain(".release-tooling/scripts/fetch-back-copies.sh ");
     expect(
       [

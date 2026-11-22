@@ -32,7 +32,6 @@ function render(status: UpdateStatus): string {
   return renderToStaticMarkup(<UpdatePanel status={status} />).replace(/<!-- -->/g, "");
 }
 
-/** A hook's text, its version link's tags removed. */
 function hookText(markup: string, hook: string): string | undefined {
   return new RegExp(`<div ${hook}="[^"]*"[^>]*>(.*?)</div>`)
     .exec(markup)?.[1]
@@ -141,7 +140,6 @@ describe("the update notice on a view's update", () => {
       status = { ...status, phase: "downloading", askedFrom: "the phone" };
       await refreshUpdateStatus();
       expect(useUpdateState.getState().noticeOpen).toBe(true);
-      // Someone here closes it: later readings of the same update leave it shut.
       setUpdateNoticeOpen(false);
       await refreshUpdateStatus();
       expect(useUpdateState.getState().noticeOpen).toBe(false);

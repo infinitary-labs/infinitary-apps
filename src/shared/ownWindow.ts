@@ -54,10 +54,8 @@ export const dockPresenceSchema = z.strictObject({ showInDock: z.boolean() });
 export const OWN_WINDOW_WORDS = {
   /** Something asked of the window while none is open beside a first mate a command started. */
   noWindow: "Infinitary's window is not open on this computer. Open it, then try again.",
-  /** Start at login asked while no window is open. */
   noWindowForLogin:
     "Start at login is this computer's own setting, and only Infinitary's window can read or change it. Open Infinitary on this computer, then ask again.",
-  /** The window went away before it answered. */
   windowLeft:
     "Infinitary's window on this computer closed before it answered. Open it, then try again.",
 } as const;

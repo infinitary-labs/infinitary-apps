@@ -50,7 +50,6 @@ const LENGTH = `${Math.floor(SECONDS / 60)}:${String(SECONDS % 60).padStart(2, "
 
 let launched: LaunchedApp;
 
-/** The shown card's sound strip, and the parts of it the person reaches. */
 function strip(page: Page) {
   const at = shownEntry(page).locator("[data-card-sound]");
   return {
@@ -159,12 +158,10 @@ test("Listen plays the clip in the card's strip to its end, Replay and Pause hol
   await expect(seek).toBeVisible();
   await expect.poll(async () => (await player(page))?.at ?? 0).toBeGreaterThan(0);
 
-  // It plays one pass to its end, and the button offers Replay.
   await expect(at).toHaveAttribute("data-sound-state", "ended", { timeout: 15_000 });
   await expect(toggle).toHaveAccessibleName("Replay");
   await expect(time).toHaveText(`${LENGTH} / ${LENGTH}`);
 
-  // Replay plays it again from its start, and Pause holds it where it is.
   await pressKey(toggle, "Enter");
   await expect(at).toHaveAttribute("data-sound-state", "playing");
   await pressKey(toggle, "Enter");

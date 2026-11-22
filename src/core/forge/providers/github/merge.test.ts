@@ -161,7 +161,6 @@ describe("a merge on GitHub", () => {
       failure: "transient",
       message: "GitHub had not finished merging #23 when the app stopped reading",
     });
-    // Sent once, then only read.
     expect(seen.filter((request) => request.method === "PUT")).toHaveLength(1);
     expect(seen.filter((request) => request.method === "GET")).toHaveLength(sleeps.length);
     expect(sleeps.length).toBeGreaterThan(1);

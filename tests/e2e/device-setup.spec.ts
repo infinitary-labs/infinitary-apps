@@ -48,7 +48,6 @@ import { expectNoCard, shownCard } from "./stack";
 const KEY = "sk-or-v1-e2e-setup-key-1350";
 const ASKPASS = join(process.cwd(), "resources", "git-askpass");
 const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) + 1000 };
-/** How the home's words place another user on this Mac. */
 const PLACE = signInPlace({ name: "Mac mini", user: BUILDER.name, onThisMac: true });
 const CARD = deviceSetupTitle(PLACE);
 
@@ -66,7 +65,6 @@ test.afterEach(async () => {
   configureGitSignIn(undefined);
 });
 
-/** A project that lives on GitHub, as a clone here whose origin names it; nothing reaches GitHub. */
 function githubProject(): string {
   const root = scratchDir("infinitary-e2e-device-setup-");
   const website = join(root, "website");
@@ -155,7 +153,6 @@ async function expectRows(page: Page, expected: readonly string[]): Promise<void
     .toEqual(expected);
 }
 
-/** The computer's setup card as the stack holds it, by its id (`deviceSetupCardId`). */
 async function setupCard(page: Page, deviceId: string) {
   const id = deviceSetupCardId(deviceId);
   const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
@@ -165,14 +162,12 @@ async function setupCard(page: Page, deviceId: string) {
   return card;
 }
 
-/** One of the setup card's actions by its typed id, with the words the host gave it. */
 async function setupAction(page: Page, deviceId: string, id: string) {
   const action = (await setupCard(page, deviceId)).actions.find((entry) => entry.id === id);
   if (!action) throw new Error(`The setup card has no ${id} action`);
   return action;
 }
 
-/** Adopts the GitHub project and sets it to run on the computer, from Settings -> Projects' Runs on. */
 async function runProjectThere(page: Page, deviceId: string): Promise<void> {
   const { repo } = await page.evaluate(
     (path) => window.infinitary.repos.setup({ kind: "adopt", path }),
@@ -218,11 +213,8 @@ test("a computer that joins gets its setup card, whose buttons open each step, r
     await aside.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true }).click();
     await expect(group.locator("[data-account-row]")).toHaveCount(1);
     await page.keyboard.press("Escape");
-    // The card is back, revised: the subscription row done, the others open.
     await expect(shownCard(page, CARD)).toBeVisible();
     await expectRows(page, ["subscription:true", "github:false", "project:false"]);
-    // The revised card no longer asks for it: its action is gone, and so is
-    // the button that drew its words.
     expect((await setupCard(page, deviceId)).actions.map((action) => action.id)).not.toContain(
       DEVICE_SETUP_ACTIONS.subscription,
     );
@@ -298,17 +290,12 @@ test("Not now takes the setup card down for good, and a GitHub project set to ru
   await page.getByRole("button", { name: "Not now", exact: true }).click();
   await expectNoCard(page, CARD);
 
-  // Runs on names a computer with no GitHub sign-in of its own: the feed
-  // says its next task waits for it, and the GitHub card asks for it.
   await runProjectThere(page, deviceId);
   await expect(feedLine(page, deviceForgeWaitLine("website's next task", PLACE.who))).toBeVisible();
   const forgeCard = deviceForgeSignInTitle(PLACE.where);
   await expect(shownCard(page, forgeCard)).toBeVisible();
-  // The setup card stays down: Not now meant it.
   await expectNoCard(page, CARD);
 
-  // Its one button opens Integrations with that sign-in started; the code
-  // approved on GitHub's page takes the card down.
   await page.getByRole("button", { name: forgeCard, exact: true }).click();
   await expect(
     page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }),

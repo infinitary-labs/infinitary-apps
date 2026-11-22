@@ -56,12 +56,10 @@ describe("the built-in plugin", () => {
         createdAt: 0,
       }).success,
     ).toBe(false);
-    // Its body is the record template, stamped with the task it shows.
     const template = recordTemplate("abc123");
     expect(frameTemplateSchema.safeParse(template).success).toBe(true);
     expect(template.html).toContain('data-task-id="abc123"');
     expect(template.script).toBe(recordTemplate("other").script);
-    // The id crosses the frame boundary attribute-escaped.
     expect(recordTemplate('x"><b>').html).toContain('data-task-id="x&quot;&gt;&lt;b&gt;"');
   });
 

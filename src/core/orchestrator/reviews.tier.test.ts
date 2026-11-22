@@ -52,8 +52,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
 fakeCrewTimersEachTest();
 
 describe("the reviewed tier (delivery rigor phase 2)", () => {
-  /** A direct-pr repository the host can derive a rigor for. */
-  /** One crewmate turn that ends with `text` as its report. */
   const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
   // INF-994, the captain's direction A: "Keep validation records at every care
@@ -1058,7 +1056,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  /** Everything a crewmate was told: its prompts and the steers into a running turn. */
   const receivedBy = (crew: ReturnType<typeof fakeCrewmate>) =>
     [...crew.promptCalls, ...vi.mocked(crew.steer).mock.calls.map(([text]) => text)].join("\n");
 
@@ -1122,7 +1119,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await reportTurn(reviewer, reviewId, "The card is up.");
       expect(ops.slice(beforeCard)).toEqual([]);
 
-      // A reply turn under the card that declares needs_firstmate still reaches the first mate.
       supervisor.cardActions.replyToCard(cardId, "Is this the meter's copy?");
       await tick();
       const ask = "Choose whether the copy question belongs to another task.";
@@ -1170,7 +1166,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(ops.slice(beforeReply)).toEqual([
         expect.stringContaining("with no typed review record"),
       ]);
-      // The builder's report of the fix goes back to the reviewer at that version.
       await supervisor.steer.steerCrewmate(builderId, "Report the copy fix you committed.");
       await tick();
       const prompts = reviewer.promptCalls.length;
@@ -1225,7 +1220,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(builder, builderId, "The meter copy is committed.");
-      // An earlier review's verdict read an older version.
       seedDelivery(tasks, builderId, {
         reviewVerdict: "pass",
         reviewSha: "fedcba9876543210fedcba9876543210fedcba98",

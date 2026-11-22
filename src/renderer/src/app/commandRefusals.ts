@@ -45,7 +45,6 @@ import type { ShellState } from "./store";
  * nothing.
  */
 
-/** What a refusal reads from the shell's store. */
 export type RefusalState = Pick<
   ShellState,
   | "view"
@@ -75,7 +74,6 @@ export type RefusalState = Pick<
     >
   >;
 
-/** What a refusal reads beyond the store: the window's own facts. */
 export type WindowFacts = {
   /** A modal dialog other than command search holds focus: the picture viewer, the custom API form. */
   dialogOpen: boolean;
@@ -210,7 +208,6 @@ function questionRefusal(s: RefusalState): string | null {
     : m.refuseThisCardAsksNoQuestions();
 }
 
-/** Why a shown-card choice key cannot press its button now. */
 function choiceRefusal(s: RefusalState, index: number): string | null {
   if (s.view !== "home") return m.refuseSettingsIsOpen();
   if (s.recording) return m.refuseARecordingIsRunning();

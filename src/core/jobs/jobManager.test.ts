@@ -381,7 +381,6 @@ describe("JobManager (R2: the exit is the wake)", () => {
 
   it("reports jobs a quit interrupted, once, from the durable rows", async () => {
     const { db } = manager();
-    // A row left behind by a previous process.
     db.prepare("INSERT INTO jobs (id, owner_id, command, started_at) VALUES (?, ?, ?, ?)").run(
       "j1",
       "t9",
@@ -434,7 +433,6 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(outcome.output.length).toBeLessThan(40_000);
     expect(outcome.output).toContain("[earlier output truncated; full output: ");
     expect(outcome.output).toContain("line-5000");
-    // The evicted head is not gone - it spilled to the pointed-at file.
     const file = outcome.output.match(/full output: (.+)\]/)?.[1];
     expect(file).toBeTruthy();
     expect(readFileSync(file ?? "", "utf8")).toContain("line-1-padding-padding-padding");

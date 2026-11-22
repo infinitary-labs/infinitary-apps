@@ -60,7 +60,6 @@ export const languageChoiceSchema = z
 
 /** How loud the ambient music plays, in whole percent. */
 export const ambientVolumeSchema = z.number().int().min(0).max(100);
-/** The ambient music's volume before anyone moves it. */
 export const DEFAULT_AMBIENT_VOLUME = 40;
 export { AMBIENT_STYLES, type AmbientStyle, DEFAULT_AMBIENT_STYLE };
 /**
@@ -72,7 +71,6 @@ export const ambientStyleSchema = z
   .min(1)
   .max(40)
   .regex(/^[a-z0-9-]+$/);
-/** The style a saved name plays: the default when it is missing or one this build lacks. */
 export function ambientStyleOf(saved: string | undefined): AmbientStyle {
   return (AMBIENT_STYLES as readonly string[]).includes(saved ?? "")
     ? (saved as AmbientStyle)
@@ -261,7 +259,6 @@ export const personalPanelsSchema = z.strictObject({
 });
 export type PersonalPanels = z.infer<typeof personalPanelsSchema>;
 
-/** The panels the captain asked for run unless something turned them off. */
 export const DEFAULT_PERSONAL_PANELS: PersonalPanels = { enabled: true, offReason: null };
 
 /**
@@ -282,7 +279,6 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = {
   panels: DEFAULT_PERSONAL_PANELS,
 };
 
-/** Whether the layout keeps a panel off its rail. A missing key means shown. */
 export function isPanelHidden(layout: Layout, panelId: string): boolean {
   return layout.hiddenPanels[panelId] === true;
 }

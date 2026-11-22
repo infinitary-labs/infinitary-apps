@@ -164,7 +164,6 @@ export class CardFileReads {
     }
     const from = offset - held.offset;
     const piece = Buffer.from(held.data.subarray(from, from + length));
-    // The last piece lets the copy go.
     if (offset + length >= file.bytes) await this.release(key);
     return piece;
   }

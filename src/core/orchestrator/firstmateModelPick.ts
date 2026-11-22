@@ -26,7 +26,6 @@ export function deriveModelForProvider(
   return deriveFrom(options, available);
 }
 
-/** `available` narrowed to the listed pool, keeping its order. */
 function listed<T extends ModelRef>(options: ModelPickOptions, available: readonly T[]): T[] {
   if (!options.listedModels) return [...available];
   const listed = new Set(options.listedModels().map((model) => `${model.provider}/${model.id}`));
@@ -37,7 +36,6 @@ function slotsOf(options: ModelPickOptions, model: ModelRef): Slot[] {
   return options.slotsOf?.(model) ?? ["medium"];
 }
 
-/** A premium membership, used to check whether a premium crew option can serve. */
 function isPremium(options: ModelPickOptions, model: ModelRef): boolean {
   return slotsOf(options, model).includes(PREMIUM_SLOT);
 }

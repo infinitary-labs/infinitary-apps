@@ -129,7 +129,6 @@ export type TaskIntegrations = {
   ) => Promise<IntegrationAnswer>;
 };
 
-/** Where asks are kept: a task's own write asks. */
 export type IntegrationAskStore = {
   /** Keep the ask, answering the task's waiting asks the cap dropped for it (`WRITE_ASK_CAP`). */
   keep: (taskId: string, ask: IntegrationAsk) => readonly WriteAsk[] | void;
@@ -217,7 +216,6 @@ export type IntegrationListen = {
   integration: string;
   /** Which connection the id stands for now, which a rule keeps beside it. */
   connection: string;
-  /** Its name as the person reads it. */
   name: string;
   event: string;
   label: string;
@@ -319,7 +317,6 @@ export class IntegrationsService {
     ];
   }
 
-  /** One row as the roster lists it. */
   private rosterEntry(row: Row): Record<string, unknown> {
     const view = this.viewOf(row);
     return {
@@ -422,7 +419,6 @@ export class IntegrationsService {
     };
   }
 
-  /** Run one action for a caller, after the integration's settings and the action's input. */
   async call(
     caller: IntegrationCaller,
     name: string,
@@ -1090,7 +1086,6 @@ Do not repeat this call; read ${name} to check what happened first.`
     }
   }
 
-  /** End the sign-in waiting for the browser, if one is. */
   cancelSignIn(): void {
     this.signingIn?.abort();
     this.signingIn = undefined;
@@ -1191,7 +1186,6 @@ Do not repeat this call; read ${name} to check what happened first.`
     await Promise.all(this.options.bindings.map((binding) => binding.close?.()));
   }
 
-  /** Rename, pause or resume, or turn actions on or off. */
   configure(id: string, patch: IntegrationSettingsPatch): IntegrationsView {
     const row = this.byId(id);
     const all = this.options.store.read();

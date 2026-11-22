@@ -80,7 +80,6 @@ test("a transcript lands at the caret mid-draft, and the draft stays on screen w
     await provideSpeech(page);
     const input = page.getByRole("textbox", { name: "Task prompt" });
     await expect(input).toBeEnabled();
-    // Two lines; the caret goes up to the first and back before "test".
     const draft = "Fix the test\nthen ship it";
     await input.fill(draft);
     await input.press("ArrowUp");
@@ -92,7 +91,6 @@ test("a transcript lands at the caret mid-draft, and the draft stays on screen w
     await page.keyboard.down(DICTATION_KEY);
     await expect(page.getByRole("button", { name: "Abandon" })).toBeVisible();
     await waitForSpeechCapture(page);
-    // Recording keeps the draft on screen, read-only.
     await expect(input).toBeVisible();
     await expect(input).toHaveValue(draft);
     await expect(input).not.toBeEditable();

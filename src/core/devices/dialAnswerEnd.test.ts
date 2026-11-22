@@ -35,7 +35,6 @@ afterEach(async () => {
   );
 });
 
-/** A home's key on loopback that answers each request with `answer` once its head has come. */
 async function home(answer: (socket: TLSSocket) => void) {
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-answer-end-home-"), "devices"),

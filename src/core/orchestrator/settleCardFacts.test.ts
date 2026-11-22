@@ -132,7 +132,6 @@ describe("a merge card's requested runs (INF-3220)", () => {
     expect(facts.strip("t1")).toContain(`<a href="${PAGE}">`);
     expect(facts.strip("t1")).toContain(`class="${SETTLE_FACT_VALUE_CLASS}"`);
 
-    // A phone Mac takes the iPhone job.
     reading = phoneRun(HEAD, "in_progress");
     const started = now;
     await watcher.poll(now);

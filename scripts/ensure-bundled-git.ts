@@ -70,7 +70,6 @@ const STAMP = ".infinitary-source";
 /** The stamp Firstmate 3000's tooling wrote before the rename: a tree it placed still counts. */
 const OLDER_STAMP = ".fm3000-source";
 
-/** dugite's manifest entry for macOS on `arch`: `{ name, url, checksum }`. */
 export function manifestEntry(arch: Arch, cwd: string = root): ManifestEntry {
   const require = createRequire(join(cwd, "package.json"));
   const manifest = JSON.parse(
@@ -135,7 +134,6 @@ function isStamped(tree: string, entry: ManifestEntry): boolean {
   });
 }
 
-/** Unpack, prune and stamp one architecture's tree into `target`. */
 export function unpackTree(archive: string, entry: ManifestEntry, target: string): void {
   // The cached tree is shared by every working copy, and two installs may
   // unpack it at once: each works in its own partial directory.
@@ -164,7 +162,6 @@ export function unpackTree(archive: string, entry: ManifestEntry, target: string
   }
 }
 
-/** Where `entry`'s unpacked, pruned tree is cached, beside its archive. */
 export function cachedTreeDir(entry: ManifestEntry, cacheDir: string): string {
   return join(cacheDir, "trees", entry.name.replace(/\.tar\.gz$/, ""));
 }
@@ -206,7 +203,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exit(1);
   });
-  // The launcher a crewmate's shell finds that git through (scripts/build-git-launcher.ts).
   try {
     ensureGitLauncher();
   } catch (error) {

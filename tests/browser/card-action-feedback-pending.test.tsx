@@ -29,10 +29,8 @@ const ACTIONS: CardAction[] = [
   { id: "wait", label: WAIT },
 ];
 const HOOK = "data-fm-action"; // Firstmate 3000's hook, as a card saved before the rename writes it.
-/** The card's body, with its own choice in that hook. */
 const BODY = `<p>Choose what happens next.</p><button ${HOOK}="choose">${CHOOSE}</button>`;
 
-/** The reason a refused request gives in this story. */
 const REQUEST_REASON = "The request could not be completed.";
 
 /** What Electron hands the window for a handler that rejected with `name: message`. */
@@ -72,7 +70,6 @@ const box = (element: Element): Rect => {
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-/** The card's footer choice named `name`. */
 const footerAction = (name: string) =>
   page
     .getByRole("region", { name: CHOOSE_TITLE, exact: true })

@@ -374,7 +374,6 @@ describe("measure-session-footprint (task-system P5)", () => {
     expect(lastPrompt?.userText).toBe(bytes(STEER));
     expect(title?.framing).toBe(lines[14]?.length);
 
-    // The complete Claude-format planning session: every byte in one class, framing the least of it.
     const recorded = measureFile(RECORDED_CLAUDE_SESSION);
     expect(BYTE_CLASSES.reduce((n, key) => n + recorded.classes[key], 0)).toBe(recorded.bytes);
     for (const key of BYTE_CLASSES.filter((key) => key !== "compaction" && key !== "framing")) {
@@ -428,7 +427,6 @@ describe("measure-session-footprint (task-system P5)", () => {
     });
     expect(report.candidates.droppable.images).toBe(IMAGE.length);
 
-    // A measurement, not a change.
     expect(readFileSync(join(dir, "crewmates", "old1", "sessions", "session.jsonl"))).toEqual(
       before,
     );

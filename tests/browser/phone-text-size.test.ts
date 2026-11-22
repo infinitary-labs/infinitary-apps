@@ -14,7 +14,6 @@ import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
  * sandboxed frame as the phone's card page draws it.
  */
 
-/** A card body of the usual shape: a paragraph, a mono key, a caption, and a drawing with unsized and micro labels. */
 const BODY = `
   <p id="body">Cards and panels follow the device's Text Size.</p>
   <p>Grounded in <span id="key" class="inf-mono">INF-4713</span>.</p>

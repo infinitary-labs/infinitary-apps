@@ -45,7 +45,6 @@ export const railFolds = {
   },
 };
 
-/** One rail's room, read as it changes. */
 export function useRailFolds(side: RailSide): RailRoom {
   const read = () => railFolds.of(side);
   return useSyncExternalStore(railFolds.subscribe, read, read);

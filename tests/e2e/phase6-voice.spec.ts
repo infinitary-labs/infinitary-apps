@@ -60,7 +60,6 @@ test("first hold asks for download consent and declining leaves everything local
   );
   await page.getByRole("button", { name: "Not now" }).click();
   await expect(downloadOffer(page)).toHaveCount(0);
-  // Nothing downloaded.
   const modelsDir = join(userDataDir, "models");
   const modelFiles = (() => {
     try {

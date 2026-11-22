@@ -22,7 +22,6 @@ import { prepared } from "./statements";
  * cannot leave a row in it.
  */
 
-/** A feed-worthy event row with the program it groups under, if any. */
 export type GroupedFeedRow = Record<string, unknown> & {
   id: number;
   at: number;
@@ -81,7 +80,6 @@ const NEWEST_FIRST = `${GROUPED} WHERE e.feed = 1 ORDER BY e.at DESC, e.id DESC`
 const WRITTEN_SINCE = `${GROUPED} WHERE e.id > ? AND e.feed = 1 ORDER BY e.id`;
 const LAST_ID = "SELECT MAX(id) AS id FROM task_events";
 
-/** The group a row belongs to: its program, or the event alone. */
 function groupOf(row: GroupedFeedRow): string {
   return row.program_id === null ? `event:${row.id}` : `program:${row.program_id}`;
 }
@@ -109,7 +107,6 @@ function groupNewest(db: AppDatabase, limit: number, walk?: Statement): GroupedF
   return [...groups.values()];
 }
 
-/** Folds rows written since into the kept groups, newest first, at most `limit`. */
 function fold(rows: GroupedFeedRow[], written: GroupedFeedRow[], limit: number): GroupedFeedRow[] {
   const groups = new Map(rows.map((row) => [groupOf(row), row]));
   for (const row of written) {
@@ -124,7 +121,6 @@ function lastId(db: AppDatabase): number {
   return (prepared(db, LAST_ID).get() as { id: number | null }).id ?? 0;
 }
 
-/** Puts the triggers on this connection once; false when it cannot. */
 function watch(db: AppDatabase, state: Kept): boolean {
   if (state.watched) return true;
   try {

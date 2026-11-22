@@ -201,7 +201,6 @@ struct PhoneCrewSummary: View {
     @ViewBuilder private func rows(_ facts: PhoneTaskFacts, now: Double) -> some View {
         let project = [session.board?.projects.first { $0.id == task.projectId }?.name, task.place?.where].compactMap { $0 }.filter { !$0.isEmpty }
             .joined(separator: " · ")
-        // The plan is drawn until the task is done or dropped.
         let plan = facts.status.mark == "done" || facts.status.mark == "dropped" ? nil : facts.plan.flatMap { $0.items.isEmpty ? nil : $0 }
         VStack(alignment: .leading, spacing: Self.rowGap) {
             factRow(PhoneMessages.uiTaskFactsTask()) {
@@ -307,7 +306,6 @@ struct PhoneCrewSummary: View {
     }
 }
 
-/// An uppercase micro label in the desktop's tracking.
 struct PhoneFactLabel: View {
     let text: String
     var body: some View {

@@ -206,7 +206,6 @@ test("a task with parts collapses and expands by keys and by command, and stays 
         await pressRow(page, planKey, `[data-now-part-index="${index}"]`);
         await expect(recordCard(page)).toHaveAttribute("data-task-record", part);
       }
-      // A click anywhere else on the row still opens the task itself.
       await pressRow(page, planKey, "[data-now-title]");
       await expect(recordCard(page)).toHaveAttribute("data-task-record", "cl-plan");
     });

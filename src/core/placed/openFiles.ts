@@ -43,7 +43,6 @@ export async function readLsof(
   }
 }
 
-/** Each running program's number, from /proc on Linux, or null when it cannot be listed. */
 export async function procPids(): Promise<number[] | null> {
   try {
     return (await readdir("/proc")).filter((entry) => /^\d+$/.test(entry)).map(Number);
@@ -52,7 +51,6 @@ export async function procPids(): Promise<number[] | null> {
   }
 }
 
-/** What a program's open files are, from /proc on Linux: none once it is gone or unreadable. */
 export async function procOpenFiles(pid: number): Promise<string[]> {
   const fds = await readdir(`/proc/${pid}/fd`).catch(() => [] as string[]);
   const targets = await Promise.all(

@@ -177,7 +177,6 @@ export class CrewTurns {
     task.turn.prepare(inboxIds);
     const cwd = task.workspace?.cwd;
     const machine = this.core.facts.machineOf(task.id);
-    // On a computer that runs work, that computer installs its own copy's.
     const installing =
       machine !== LOCAL_MACHINE_ID
         ? this.core.options.machines?.install(machine, task.id)
@@ -460,7 +459,6 @@ export class CrewTurns {
     return task.turn.takeUnheard(task.session?.takeUndeliveredSteers().length ?? 0);
   }
 
-  /** Whether a turn delivers nothing but the idle ladder's own nudge. */
   private isLadderTurn(taskId: string, inboxIds: number[]): boolean {
     const record = this.core.options.tasks.get(taskId);
     if (!record || record.recoveryAt == null) return false;
@@ -1548,7 +1546,6 @@ export class CrewTurns {
     });
   }
 
-  /** The brief the task's first turn served, read back off its record. */
   private servedBrief(taskId: string): string | undefined {
     const briefed = this.core.options.tasks
       .timeline(taskId)
@@ -1851,7 +1848,6 @@ export class CrewTurns {
     );
   }
 
-  /** One settled turn's tokens and cost, on the account and model that served it. */
   recordUsage(
     task: TaskRuntime,
     usage: NonNullable<Extract<FmEvent, { type: "turn_end" }>["usage"]>,
@@ -1902,7 +1898,6 @@ export class CrewTurns {
     this.turnWaiters.set(task.id, waiters);
   }
 
-  /** Resolves once the task's running turn here has ended, at once when none runs. */
   untilTurnOver(task: TaskRuntime): Promise<void> {
     if (this.core.tasks.get(task.id) !== task || !task.turn.busy) return Promise.resolve();
     return new Promise((resolve) => {

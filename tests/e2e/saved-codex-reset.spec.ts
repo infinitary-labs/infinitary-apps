@@ -49,7 +49,6 @@ const LIVE = JSON.parse(
 ) as { rate_limit_reset_credits: { available_count: number } };
 const HELD = LIVE.rate_limit_reset_credits.available_count;
 
-/** Both seats' allowance readings: Claude and Codex spent, Codex holding saved resets that apply now. */
 function spentReadings(now: number, held = HELD): string {
   const HOUR = 3600 * 1000;
   const row = (provider: string, label: string, accountId: string) => ({
@@ -84,7 +83,6 @@ function spentReadings(now: number, held = HELD): string {
   });
 }
 
-/** Replaces the system browser with a recorder of the addresses it is asked to open. */
 const recordOpens = (launched: LaunchedApp) =>
   launched.app.evaluate(({ shell }) => {
     const recorded: string[] = [];
@@ -113,7 +111,6 @@ test("a spent Codex seat's card says its saved reset and opens ChatGPT's usage p
     const codex = (await page.evaluate(() => window.infinitary.accounts.list())).find(
       (account) => account.id === CODEX_SEAT_ACCOUNT,
     );
-    // The captain put the first mate on Codex's high model.
     await page.evaluate(
       (id) => window.infinitary.settings.setFirstmateModel({ provider: "openai-codex", id }),
       starterFor("openai-codex", "high"),
@@ -135,7 +132,6 @@ test("a spent Codex seat's card says its saved reset and opens ChatGPT's usage p
     await pressKey(link, "Enter");
     await expect.poll(() => opened(launched as LaunchedApp)).toEqual([SAVED_RESETS_PAGE.codex]);
 
-    // The account's row in Settings → Intelligence says the count and where one is used.
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Intelligence", exact: true }).click();
     await expect(
@@ -205,7 +201,6 @@ test("Use a saved reset on a spent Codex seat's card signs Codex in on the accou
       "aria-selected",
       "true",
     );
-    // Codex's own ChatGPT sign-in page opens, and the row asks for the address it ends on.
     await expect
       .poll(async () => (await opened(launched as LaunchedApp)).at(-1) ?? "")
       .toMatch(/^https:\/\/auth\.openai\.com\//);

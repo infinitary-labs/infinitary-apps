@@ -61,7 +61,6 @@ function entryTime(entry: Record<string, unknown>): number | null {
 /** The conversation lines a window trims, by the dialect the text is written in. */
 const CLAUDE_CONVERSATION = new Set(["user", "assistant", "attachment"]);
 
-/** The parsed entries of one JSONL text a window keeps, in file order. */
 export function windowEntries(
   raw: string,
   window: ReplayWindow | null | undefined,
@@ -90,7 +89,6 @@ export function windowJsonlText(raw: string, window: ReplayWindow | null | undef
   return kept.length > 0 ? `${kept.join("\n")}\n` : "";
 }
 
-/** Read one session file through the window. */
 export function readWindowedJsonl(file: string, window: ReplayWindow | null | undefined): string {
   return windowJsonlText(readFileSync(file, "utf8"), window);
 }
@@ -105,7 +103,6 @@ export function hasMessageInWindow(files: string[], window: ReplayWindow): boole
   );
 }
 
-/** The recorded tables a window keeps. */
 export function windowTables(
   tables: RecordedTables,
   window: ReplayWindow | null | undefined,

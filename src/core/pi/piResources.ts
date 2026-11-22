@@ -55,7 +55,6 @@ const CLAUDE_TOOL_NAMES = {
   rule: `Wherever these instructions name an app tool by a short name, call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>.`,
 };
 
-/** The backends a crewmate runs on; each placement renders its own note. */
 export type CrewmateBackend = "pi" | "claude";
 
 /**
@@ -148,7 +147,6 @@ export type CrewmateComputers = {
 export const CAPTAIN_PLACE_RULE =
   "Beside each of the captain's choices and replies, and in emit_card's answer, the app names the computer or phone whose window they used, which is where they are, whatever a card's words said. A card that needs the captain at one of these computers names that computer, the one they are using now, and how to reach it from there. When their choice comes from another one than your next step needs them at, say so on a card before you start anything that waits on them there.";
 
-/** A crewmate's word for a computer that runs work, with its role. */
 function workerWords(worker: CrewmateComputers["workers"][number]): string {
   return worker.sameComputer
     ? `${worker.name}, another user on ${HOME.the}, which runs work`
@@ -537,7 +535,6 @@ export const RETRIEVAL_BOUNDARY =
 /** How the kind classifier's instruction opens; a scripted stand-in recognizes the classifier by it. */
 export const KIND_CLASSIFIER_OPENING = "You sort one piece of software work";
 
-/** The research criterion: an answer that needs more than reading what is here. */
 export const RESEARCH_CRITERION =
   "investigating beyond retrieval: an answer that needs a computer the app does not reach, a cause traced across past runs, a reproduction or measurement, the web or an outside report, auditing or surveying, or reporting investigative findings";
 

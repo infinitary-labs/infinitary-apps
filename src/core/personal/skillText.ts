@@ -16,12 +16,10 @@ const AUTHORING_SKILLS_SOURCE = join("resources", "personal-workspace", "skills"
 
 export type AuthoringSkillId = (typeof AUTHORING_SKILL_IDS)[number];
 
-/** The skill's markdown as it ships, read from a self-source root. */
 export function readAuthoringSkill(selfSourceDir: string, id: AuthoringSkillId): string {
   return readFileSync(join(selfSourceDir, AUTHORING_SKILLS_SOURCE, id, "SKILL.md"), "utf8");
 }
 
-/** The same skill, as a seeded workspace serves it to the crewmate. */
 export function readWorkspaceSkill(workspaceDir: string, id: AuthoringSkillId): string {
   return readFileSync(join(workspaceDir, WORKSPACE_SKILLS_DIR, id, "SKILL.md"), "utf8");
 }

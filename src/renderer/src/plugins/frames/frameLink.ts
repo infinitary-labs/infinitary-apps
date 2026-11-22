@@ -24,13 +24,11 @@ export function noteDroppedLinkMessage(data: unknown, why: string): void {
   noteFrameLink(shown, `not opened, ${why}`);
 }
 
-/** What opening a card frame's link asks of the window, step by step. */
 export type FrameLinkSteps = {
   /** Whether the frame's card is the one the captain can act on now. */
   admitted: () => boolean;
   /** Runs `then` once the frame holds the window's focus, else `otherwise` (`whenFrameHoldsFocus`). */
   whenFocused: (then: () => void, otherwise: () => void) => void;
-  /** What holds the window's focus, in words, for the line that says the frame did not. */
   focusedOn: () => string;
   /** The browser: `inf:app:open-external`. */
   open: (href: string) => Promise<unknown>;
@@ -72,7 +70,6 @@ export function openFrameLink(href: string, steps: FrameLinkSteps): void {
   );
 }
 
-/** An element the window's focus is on, in words a log line can carry. */
 export function describeFocus(element: Element | null): string {
   if (!element || element === document.body) return "nothing";
   const name =

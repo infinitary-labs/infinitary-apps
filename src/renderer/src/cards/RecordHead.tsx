@@ -176,7 +176,6 @@ export function RecordRelations({
   );
 }
 
-/** The captain's own messages on the task: the words that started it, then every ask since. */
 export function recordAsksOf(detail: TaskDetail): TaskDetail["asks"] {
   const words = detail.intent?.userWords ?? "";
   return detail.asks.filter((ask) => ask.text !== words);

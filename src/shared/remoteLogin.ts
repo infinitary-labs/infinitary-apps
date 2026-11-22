@@ -35,7 +35,6 @@ export const remoteLoginAddressSchema = z
     /^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}|ssh:\/\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\[[A-Za-z0-9:.%]{2,64}\]):[1-9][0-9]{0,4})$/,
   );
 
-/** The address a person typed, or null when it is not one. */
 export function parseRemoteLoginAddress(text: string): string | null {
   const parsed = remoteLoginAddressSchema.safeParse(text);
   return parsed.success ? parsed.data : null;
@@ -497,7 +496,6 @@ export function linuxNeedNames(missing: readonly string[], installs: LinuxInstal
   return [...new Set(named)];
 }
 
-/** "git", "git and xvfb", "git, xvfb and fuse3". */
 function listed(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;

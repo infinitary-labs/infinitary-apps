@@ -109,7 +109,6 @@ extension PhoneJourney {
         let viewer = app.webViews["card-picture"]
         XCTAssertTrue(viewer.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.navigationBars["Card diagram"].waitForPresence(timeout: 10), app.debugDescription)
-        // The viewer's web page reads the drawing out by the diagram's own label.
         XCTAssertTrue(viewer.images["Harbour approach in three legs"].firstMatch.waitForPresence(timeout: 10), app.debugDescription)
         // WebKit places the drawing's own frame inside the picture, not where it is drawn, so the zoom is read from
         // the viewer's horizontal scroll bar: one page fitted, more once enlarged.

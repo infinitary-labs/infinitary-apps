@@ -421,7 +421,6 @@ export class ComputerOrbits extends CrewOrbit {
       const at = live.length > 0 ? live : (this.programAt.get(program.id) ?? [HOME_COMPUTER]);
       placed.set(program.id, at);
       for (const computer of at) {
-        // Each copy holds only the parts running on its own computer.
         const parts = program.parts.filter(
           (part) => part.state !== "live" || this.computerOf(part.id) === computer,
         );

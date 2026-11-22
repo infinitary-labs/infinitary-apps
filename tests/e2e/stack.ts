@@ -94,7 +94,6 @@ export async function pushCards(
 export const pager = (page: Page, count: number) =>
   page.locator(`[data-card-pager][data-pager-count="${count}"]`);
 
-/** The pager showing card `position` of a stack of `count`. */
 export const pagerAt = (page: Page, position: number, count: number) =>
   page.locator(`[data-card-pager][data-pager-position="${position}"][data-pager-count="${count}"]`);
 
@@ -185,7 +184,6 @@ export async function expectNoCard(
 /** The shown entry once it is ready to read and act on: until then it is hidden from assistive technology. */
 const readyEntry = (page: Page) => page.locator(`${SHOWN_ENTRY}:not([aria-hidden])`);
 
-/** The shown card's body frame, whatever its title. */
 export const shownCardFrame = (page: Page) => drawnFrame(page, `${SHOWN_ENTRY} iframe`);
 
 /**
@@ -390,7 +388,6 @@ export async function completionAction(page: Page, title: string): Promise<Locat
 export type FactsStrip = Readonly<Record<SettleFact, Locator>> & {
   /** The strip's own page, once drawn: for a read that may meet its card paging out (`readFrameOnce`). */
   readonly page: FrameLocator;
-  /** The strip itself. */
   readonly strip: Locator;
   /** A fact's whole item, where its `title` rides: a state of the status line, or a part of its reference. */
   readonly cell: (fact: SettleFact) => Locator;
@@ -483,7 +480,6 @@ export const noteDone = (page: Page, scope: Locator = shownEntry(page)) =>
 
 /** The shown card's ended line in its thread (INF-3071), with its own Close card button. */
 export const endedLine = (page: Page) => shownEntry(page).locator("[data-thread-ended]");
-/** The ended line's own Close card button. */
 export const endedCloseCard = (page: Page) =>
   endedLine(page).getByRole("button", { name: ENDED_CLOSE_CARD_LABEL, exact: true });
 
@@ -515,7 +511,6 @@ export async function expectEndedCard(
   await expect(noteDone(page)).toContainText(ENDED_CLOSE_LABEL);
 }
 
-/** Closes the ended card titled `title` with its one Close, and returns once it left. */
 export async function closeEndedCard(
   page: Page,
   title: string,

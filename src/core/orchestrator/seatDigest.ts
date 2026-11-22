@@ -36,7 +36,6 @@ export type SeatDigestTurn = {
   tools: string[];
   /** Its closing words, capped. */
   said?: string;
-  /** The turn failed before it finished. */
   failed?: boolean;
 };
 
@@ -60,12 +59,10 @@ export const seatDigestEntrySchema = seatDigestTurnSchema.extend({
   at: z.number(),
 });
 
-/** A session's identity on the record: the backend and the session it resumes. */
 export function seatIdentity(backend: string, sessionId: string): string {
   return `${backend}:${sessionId}`;
 }
 
-/** One turn as the record keeps it: every excerpt and the tool list capped. */
 export function digestEntry(input: {
   seat: string;
   at: number;
@@ -88,7 +85,6 @@ export function digestEntry(input: {
   };
 }
 
-/** The record with one more turn, oldest dropped past `SEAT_DIGEST_KEPT`. */
 export function appendDigest(
   entries: readonly SeatDigestEntry[],
   entry: SeatDigestEntry,

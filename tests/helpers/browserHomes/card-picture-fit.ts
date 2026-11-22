@@ -9,7 +9,6 @@ const CARD_ID = "card-picture-fit";
 /** The card's thread, which the window reads when the card shows. */
 export const asked: HomeRead[] = [["inf:cards:thread", [CARD_ID]]];
 
-/** What the card-picture-fit test's story reads back. */
 type Words = { title: string; picture: SeedPicture };
 
 /** A crewmate's card naming one very wide picture it wrote into its working copy. */

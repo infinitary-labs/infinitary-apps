@@ -65,7 +65,6 @@ describe("a merge card's facts", () => {
       },
       { ...merge, label: "Merge and close the task", variant: "primary" },
     ]);
-    // The saved row and the stage carry the same facts.
     expect(cardStore.get(id)?.actions).toEqual(cards.get(id)?.actions);
     expect(cards.snapshot().find((card) => card.id === id)?.actions).toEqual(
       cards.get(id)?.actions,

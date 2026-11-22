@@ -377,7 +377,6 @@ function mainMoves(root: string, alsoEdits: () => void = () => {}): void {
   git(root, "merge", "--quiet", "--ff-only", "text-size");
 }
 
-/** Brings the waiting change up to date with main, which stops on the move. */
 function rebaseStops(root: string): void {
   git(root, "checkout", "--quiet", "waiting");
   expect(() => git(root, "rebase", "main")).toThrow();

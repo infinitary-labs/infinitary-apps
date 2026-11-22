@@ -51,7 +51,6 @@ beforeEach(() => {
 });
 afterEach(() => useShellStore.setState({ records: [], cards: [], cardIndex: 0 }));
 
-/** The page's frame, sitting 40 px in and 100 px down the window. */
 const frameAt = {
   getBoundingClientRect: () => ({ top: 100, left: 40 }) as DOMRect,
 } as HTMLIFrameElement;
@@ -215,10 +214,8 @@ describe("point", () => {
     ).resolves.toBe(false);
     expect(shell().inputText).toBe("and the retries");
     await expect(panelPoint("desk", reading).draft(words)).resolves.toBe(true);
-    // At the head, what he had typed after it, and the caret after the words.
     expect(shell().inputText).toBe(`${words}and the retries`);
     expect(shell().inputCaret).toBe(words.length);
-    // Again: the same words are not put twice.
     await expect(panelPoint("desk", reading).draft(words)).resolves.toBe(true);
     expect(shell().inputText).toBe(`${words}and the retries`);
     expect(submit).not.toHaveBeenCalled();

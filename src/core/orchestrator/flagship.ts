@@ -64,7 +64,6 @@ export type FlagshipVaultView = {
   withheldReason(accountId: string): string | undefined;
   /** The one sentence a client issue carries, when that is what withholds it. */
   withheldDetail(accountId: string): string | undefined;
-  /** Whether the account's Keep going on credits switch is on (`AccountVault`). */
   keepsGoingOnCredits?(accountId: string): boolean;
   /** The typed cut-off standing on the account (`AccountVault.noteCutOff`). */
   cutOff(accountId: string): { class: CutOffClass; resetsAt?: number } | undefined;
@@ -194,7 +193,6 @@ export class Flagship {
     );
   }
 
-  /** Whether an account the seat could stand on is paused only by a fact. */
   private heldByFact(accountId: string): boolean {
     if (!this.seatable(accountId)) return false;
     const pause = this.pause(accountId);
@@ -422,7 +420,6 @@ export class Flagship {
     });
   }
 
-  /** How many accounts of a provider the vault holds. */
   accountCount(providerId: string): number {
     return this.options.vault.list(providerId).length;
   }
@@ -446,7 +443,6 @@ export class Flagship {
     return PROVIDER_CATALOG.find((entry) => entry.id === providerId)?.name ?? providerId;
   }
 
-  /** The flagship's effective remaining from the latest snapshot. */
   headroom(accountId: string): number | undefined {
     return effectiveFromProvider(this.snapshotRow(accountId), Date.now()).effectivePercentRemaining;
   }

@@ -13,7 +13,6 @@ import type { OrbitFrame } from "./orbit";
 /** The light a crewmate of another project keeps: the captain's staged level on INF-1091. */
 export const OUT_OF_FOCUS_LIGHT = 0.25;
 
-/** What the light reads: the lit project, and each crewmate's project by task id. */
 export type FocusLightInput = {
   /** The project in light; null lights every crewmate. */
   project: string | null;

@@ -699,7 +699,6 @@ export function drawDependencyLink(
   ctx.restore();
 }
 
-/** A packet in flight: one bright dot with a faint halo. */
 export function drawPacket(
   ctx: CanvasRenderingContext2D,
   p: PacketFrame,

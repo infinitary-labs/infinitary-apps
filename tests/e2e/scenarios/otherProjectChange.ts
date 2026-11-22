@@ -13,7 +13,6 @@ import { sinceLastUser } from "../providerRequest";
 export const OTHER_PROJECT_MARKER = "open the aliases change in dotfiles";
 /** The other managed project, by the name the app lists it under. */
 export const OTHER_PROJECT = "dotfiles-private";
-/** The branch pushed to the other project, which the change opens from. */
 export const OTHER_BRANCH = "fm/dotfiles-aliases";
 export const OTHER_TITLE = "fix: keep the shell aliases";
 export const OTHER_CARD_TITLE = "The shell aliases are kept";

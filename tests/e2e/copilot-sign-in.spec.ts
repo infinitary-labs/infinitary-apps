@@ -128,7 +128,6 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
     await expect(primary).toBeFocused();
     expect((await standIn(launched)).asked).toEqual(["github.com"]);
 
-    // The whole step fits the smallest window without scrolling.
     await resizeWindow(app, page, await minimumWindowSize(app));
     const fits = await step.evaluate((element) => {
       const box = element.getBoundingClientRect();
@@ -138,14 +137,11 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
     await windowShot(page, test.info().outputPath("code-step-smallest-window.png"));
     await resizeWindow(app, page, { width: 1180, height: 760 });
 
-    // One press copies the code and opens GitHub's page, and says it copied.
     await pressKey(primary, "Enter");
     await expect(step.getByRole("status")).toHaveText(FORGE_SECTION_WORDS.copied);
     expect(await copied(page)).toEqual([USER_CODE]);
     expect((await standIn(launched)).opened).toEqual(["https://github.com/login/device"]);
 
-    // GitHub Enterprise: a bad address is one sentence beside the field,
-    // a good one gets a code from that address.
     await pressKey(step.getByRole("button", { name: CODE_STEP_WORDS.useEnterprise }), "Enter");
     const field = step.getByLabel(CODE_STEP_WORDS.enterpriseLabel);
     await typeInto(field, "not a host!");
@@ -161,14 +157,12 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
       CODE_STEP_WORDS.waiting(ENTERPRISE),
     );
 
-    // Cancel ends the wait at once: the chips are back, with no error and no account.
     await pressKey(step.getByRole("button", { name: "Cancel", exact: true }), "Enter");
     await expect(step).toHaveCount(0);
     await expect(chip).toBeVisible();
     await expect(gate.getByRole("alert")).toHaveCount(0);
     expect(await page.evaluate(() => window.infinitary.accounts.list())).toEqual([]);
 
-    // A code GitHub lets expire says so and offers a new one.
     await setStandIn(launched, { expiresIn: 2 });
     await pressKey(chip, "Enter");
     const expired = gate.locator("[data-code-expired]");
@@ -177,8 +171,6 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
     await pressKey(expired.getByRole("button", { name: CODE_STEP_WORDS.newCode }), "Enter");
     await expect(step.locator("[data-code-step-code]")).toHaveText(USER_CODE);
 
-    // Approved on GitHub: the account is added, named by the GitHub
-    // username that signed in, and the step closes.
     await setStandIn(launched, { approve: true });
     await expect
       .poll(
@@ -242,7 +234,6 @@ test("signing in again to a GitHub Enterprise Copilot account asks nothing it al
     const row = list.locator(`[data-account-row="${accountId}"]`);
     await pressKey(row.getByRole("button", { name: "Sign in", exact: true }), "Enter");
 
-    // Straight to the code at the account's own address: no question, no field.
     const step = list.locator("[data-code-step]");
     await expect(step.locator("[data-code-step-code]")).toHaveText(USER_CODE);
     await expect(step.locator("[data-code-step-waiting]")).toContainText(

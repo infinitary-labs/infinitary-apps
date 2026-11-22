@@ -120,7 +120,6 @@ describe("a project that runs on a computer that runs work", () => {
       .toBe("It waits for Builder, which is out of reach. It never runs on this computer instead.");
     expect(home.tasks.get("t-next")?.status).toBe("open");
 
-    // A day later the feed says it once more, with the way to run it here.
     ahead += 24 * 60 * 60 * 1000;
     await home.supervisor.starts.dispatchQueuedTask("t-next");
     await home.supervisor.starts.dispatchQueuedTask("t-next");
@@ -133,8 +132,6 @@ describe("a project that runs on a computer that runs work", () => {
       "To run it on MacBook Pro instead, set home to run on MacBook Pro.",
     );
 
-    // Back: it starts there, in a working copy that computer made, and its
-    // cards name where it runs.
     model([
       { tools: [{ name: "emit_card", args: { title: "Footer started", body: "<p>On it.</p>" } }] },
       { text: "Started on the footer." },
@@ -161,7 +158,6 @@ describe("a project that runs on a computer that runs work", () => {
       "inf/footer-t-ne",
     );
 
-    // Moved back here: the started task stays there, and the next one starts here.
     home.repos.setRunsOn(repo.id, null);
     seedTask(home.tasks, { id: "t-after", title: "header", status: "queued", repoId: repo.id });
     await home.supervisor.starts.dispatchQueuedTask("t-after");
@@ -193,7 +189,6 @@ describe("a project that runs on a computer that runs work", () => {
       "home's next task waits for Builder. It never runs on this computer instead.",
     );
 
-    // The captain sets it to run here before it starts: it starts here.
     home.repos.setRunsOn(repo.id, null);
     await home.supervisor.starts.dispatchQueuedTask(taskId);
     expect(home.tasks.get(taskId)?.deviceId ?? null).toBeNull();
@@ -243,7 +238,6 @@ function askRunsOn(home: PlacedHome, taskId: string, ask: string | null): string
   return changes.join(", ");
 }
 
-/** The task's record, which the case knows exists. */
 function recordOf(home: PlacedHome, taskId: string) {
   const record = home.tasks.get(taskId);
   if (!record) throw new Error(`No task ${taskId}`);
@@ -331,12 +325,10 @@ describe("a task's own Runs on", () => {
       label: "Running as Builder",
       source: "task",
     });
-    // Started, it finishes there.
     expect(askRunsOn(home, taskId, "this-mac")).toBe(
       `${recordOf(home, taskId).key} "footer" has started, so it finishes where it started, as Builder.`,
     );
 
-    // The project's next task, with nothing said, starts here as before.
     seedTask(home.tasks, { id: "t-here", title: "header", status: "queued", repoId: repo.id });
     expect(home.supervisor.placement.runsOnFact(recordOf(home, "t-here"))).toEqual({
       label: "This computer",
@@ -365,7 +357,6 @@ describe("a task's own Runs on", () => {
       feed: true,
     });
 
-    // Out of reach, it waits as queued work, and the feed names the task.
     await home.supervisor.starts.dispatchQueuedTask("t-own");
     await home.supervisor.starts.dispatchQueuedTask("t-own");
     expect(home.tasks.get("t-own")).toMatchObject({ status: "open", deviceId: at.deviceId });
@@ -391,15 +382,12 @@ describe("a task's own Runs on", () => {
       'To run it on MacBook Pro instead, ask your first mate to run "footer" on MacBook Pro.',
     );
 
-    // The project moves there and back: the captain's word stands, and the
-    // task he said nothing about follows its project.
     home.repos.setRunsOn(repo.id, at.deviceId);
     expect(home.tasks.get("t-follows")?.deviceId).toBe(at.deviceId);
     home.repos.setRunsOn(repo.id, null);
     expect(home.tasks.get("t-follows")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-own")?.deviceId).toBe(at.deviceId);
 
-    // project: it follows its project again, which runs here, and starts here.
     expect(askRunsOn(home, "t-own", null)).toBe("Runs on: This computer (Project setting)");
     expect(home.tasks.get("t-own")?.shape?.runs_on_ask).toBeUndefined();
     await home.supervisor.starts.dispatchQueuedTask("t-own");
@@ -460,7 +448,6 @@ describe("a task's own Runs on", () => {
     });
     expect(home.tasks.get("t-moved")?.deviceId ?? null).toBeNull();
     expect(couldNotStartOf(home.tasks.get("t-moved"))).toBe(STARTED_HERE);
-    // Nothing was tried there.
     expect(at.bound).toEqual([]);
     expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
   });
@@ -544,7 +531,6 @@ describe("a task's own Runs on", () => {
     ]);
     expect(feed(home).filter((line) => line.includes(words))).toEqual([`"website": ${words}`]);
 
-    // Tried again, it still waits there, and Activity keeps one line.
     await home.supervisor.starts.dispatchQueuedTask("t-named");
     expect(home.tasks.get("t-named")?.status).toBe("open");
     expect(feed(home).filter((line) => line.includes(words))).toHaveLength(1);
@@ -577,7 +563,6 @@ describe("a task's own Runs on", () => {
       source: "task",
     });
 
-    // A part commissioned under it later waits for the same computer.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     const { taskId, started } = await home.supervisor.intake.commission({
@@ -718,7 +703,6 @@ describe("a task's own Runs on", () => {
     expect(refusal("t-fine", "this-mac")).toBeUndefined();
     expect(refusal("t-fine", null)).toBeUndefined();
 
-    // Asked at the spawn, a refusal starts nothing.
     const before = home.tasks.list().length;
     await expect(
       home.supervisor.intake.commission({

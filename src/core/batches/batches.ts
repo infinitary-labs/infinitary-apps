@@ -91,7 +91,6 @@ type CommentingForge = Forge &
 const keepsComments = (forge: Forge): forge is CommentingForge =>
   Boolean(forge.ownComments && forge.writeComment && forge.deleteComment);
 
-/** A time of day as the batch check says it: hour and minute. */
 const TIME_OF_DAY: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 
 /** The words a batch puts on the Activity feed and its tasks, from one owner. */
@@ -748,7 +747,6 @@ export class Batches {
     this.options.settle(ended.map((entry) => entry.taskId));
   }
 
-  /** Whether the project is still at the address this pass read it at. */
   private stillAt(repo: RepoView): boolean {
     return this.options.repos.get(repo.id)?.origin === repo.origin;
   }
@@ -1288,7 +1286,6 @@ export class Batches {
     return this.follow(repo, next);
   }
 
-  /** Open the batch's pull request with the captain's sign-in. */
   private async openRequest(
     open: OpenBatch,
     forge: Forge,

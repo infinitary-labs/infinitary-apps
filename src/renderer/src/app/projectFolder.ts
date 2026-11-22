@@ -12,10 +12,8 @@ import { create } from "zustand";
  * folders; a view keeps its typed way.
  */
 export type FolderPick =
-  /** The picker was cancelled: nothing changed. */
   | { kind: "cancelled" }
   | { kind: "added"; result: RepoSetupResult }
-  /** The picker or the add refused, in its own words. */
   | { kind: "refused"; text: string };
 
 export async function pickProjectFolder(): Promise<FolderPick> {

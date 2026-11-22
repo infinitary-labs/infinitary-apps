@@ -70,28 +70,22 @@ export type StandIns = {
   inboxLinkDir?: string;
   /** The native decision model's endpoint. */
   jevUrl?: string;
-  /** OpenRouter's address for a decision model. */
   openRouterDecisionsBaseUrl?: string;
-  /** The release notes catalog a development run reads. */
   releaseNotesDir?: string;
   /** Where card pushes to a phone are posted instead of Infinitary's relay (docs/phone-push.md). */
   pushRelayUrl?: string;
 };
 
-/** What a packaged app reads: nothing. */
 const PACKAGED: StandIns = { joinsFromAnotherMac: false };
 
-/** A named setting's text, trimmed, or nothing when it is unset or blank. */
 function text(env: Readonly<Record<string, string | undefined>>, name: string): string | undefined {
   return settingFrom(env, name)?.trim() || undefined;
 }
 
-/** A named whole number, or nothing when it is unset or not a number. */
 function count(env: Readonly<Record<string, string | undefined>>, name: string): number {
   return Number.parseInt(settingFrom(env, name) ?? "", 10);
 }
 
-/** The stand-ins this run names; a packaged app's are always none. */
 export function readStandIns(
   packaged: boolean,
   env: Readonly<Record<string, string | undefined>>,

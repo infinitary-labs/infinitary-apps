@@ -263,7 +263,6 @@ struct PhoneSettingsSheet: View {
         return parent.map { PhoneMessages.phoneSettingsBackTo(place: $0) } ?? PhoneMessages.shellTopBarBack()
     }
 
-    /// One page back: out of the page under the top bar, or out of the section.
     private func back() {
         settings?.problem = nil
         if let detail, let index = path.lastIndex(of: detail) {

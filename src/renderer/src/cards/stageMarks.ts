@@ -95,7 +95,6 @@ export function stageOutcome(
 export const STAGE_MARKS_KEPT = 200;
 let selections = 0;
 
-/** Leaves one stage mark in the window's performance timeline. */
 export function markStage(milestone: StageMilestone, detail: Record<string, unknown>): void {
   if (milestone === "select" && ++selections > STAGE_MARKS_KEPT) {
     selections = 1;

@@ -65,10 +65,8 @@ const routeFileSchema = z.strictObject({
 });
 type RouteFile = z.infer<typeof routeFileSchema>;
 
-/** A route a connection publishes: where its socket is, for which home and device. */
 export type RouteEntry = { socket: string; homeKey: string; deviceId: string };
 
-/** Whether a socket path is one a dial can reach: absolute, and short enough for macOS. */
 export function socketPathFits(path: string): boolean {
   return isAbsolute(path) && Buffer.byteLength(path) <= SOCKET_PATH_MAX_BYTES;
 }
@@ -147,7 +145,6 @@ export class HomeRoute {
     });
   }
 
-  /** Withdraws this generation's route; a later generation's stays as it is. */
   withdraw(generation: number): void {
     this.locked(() => {
       const read = this.read();

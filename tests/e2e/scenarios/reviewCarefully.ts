@@ -40,9 +40,6 @@ export const reviewCarefully: Scenario =
         ? liveReviewAnswer(body, hasToolResults)
         : undefined;
     }
-    // The careful builder: its change and completion card at Default care;
-    // after Review carefully a report with nothing pushed; after the pass
-    // its completion card again.
     if (!body.includes(REVIEW_CAREFULLY_MARKER)) return undefined;
     const card = (title: string): ScriptedCall[] => [
       {

@@ -21,7 +21,6 @@ function clocksOn(page: Page, side: "left" | "right"): Promise<string[]> {
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-side-panel") ?? ""));
 }
 
-/** The saved layout's clocks in one slot, in order. */
 async function savedClocks(page: Page, side: "left" | "right", y: "top" | "bottom") {
   return (await savedArrangement(page))[side][y].filter((id) => id.startsWith("clock-"));
 }

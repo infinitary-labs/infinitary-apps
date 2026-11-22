@@ -7,7 +7,6 @@
 
 const listeners = new Set<() => void>();
 
-/** Hears every resync; answers its own unsubscribe. */
 export function onResync(listener: () => void): () => void {
   listeners.add(listener);
   return () => {

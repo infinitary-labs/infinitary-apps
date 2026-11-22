@@ -48,7 +48,6 @@ export type ClaudeProjectResources = {
   skillsPlugin?: string;
 };
 
-/** The working copy's instruction file as the crewmate's prompt carries it. */
 export function claudeProjectInstructionsText(instructions: ProjectInstructions): string {
   return [
     "Project-specific instructions and guidelines:",

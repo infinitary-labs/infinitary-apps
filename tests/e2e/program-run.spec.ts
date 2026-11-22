@@ -35,7 +35,6 @@ import {
  * crewmate, which reports. The served words are the unit tests' to own.
  */
 
-/** A project with one commit on main, the folder the app adopts. */
 function project(): string {
   const dir = join(scratchDir("infinitary-e2e-program-"), "meterlab");
   const git = (args: string[]) => execFileSync("git", args, { cwd: dir });

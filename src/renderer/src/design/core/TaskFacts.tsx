@@ -314,7 +314,6 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
   );
 }
 
-/** The current item on the plan's row, cut to its line with the whole label on hover. */
 function PlanCurrent({ words }: { words: string }) {
   const fit = useOverflowTitle(words);
   return (

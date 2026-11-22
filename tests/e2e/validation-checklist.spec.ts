@@ -84,7 +84,6 @@ test("a version's gaps share one checklist card, and the keys accept exactly the
   for (const [, action] of GAP_CHECKS) await expect(frame.getByLabel(action)).not.toBeChecked();
   const checkAll = frame.getByLabel("Check all");
 
-  // Check all ticks every row and, pressed again, clears them.
   await pressKey(checkAll, "Space");
   for (const [, action] of GAP_CHECKS) await expect(frame.getByLabel(action)).toBeChecked();
   await pressKey(checkAll, "Space");
@@ -99,7 +98,6 @@ test("a version's gaps share one checklist card, and the keys accept exactly the
   await expect(frame.getByLabel(GAP_CHECKS[0][1])).toBeFocused();
   await expect(shownCard(page, GAP_CHECKLIST_TITLE)).toBeVisible();
 
-  // The captain ticks the first and third rows by keys, then accepts.
   const ticked = [GAP_CHECKS[0], GAP_CHECKS[2]];
   for (const [, action] of ticked) await pressKey(frame.getByLabel(action), "Space");
   for (const [, action] of ticked) await expect(frame.getByLabel(action)).toBeChecked();

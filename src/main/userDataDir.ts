@@ -119,9 +119,7 @@ export function packagedFlavor(readAppPackageJson: () => string): BuildFlavor {
     ) {
       return "dev";
     }
-  } catch {
-    // The release.
-  }
+  } catch {}
   return "release";
 }
 

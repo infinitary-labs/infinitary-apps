@@ -139,7 +139,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(left).toHaveLength(1);
     expect(existsSync(left[0] ?? "")).toBe(false);
     expect(at.pairing.list()).toEqual([expect.objectContaining({ remoteLogin: sshd.address })]);
-    // Each step said once, in order, and when its work starts there.
     expect(at.lines()).toEqual([
       remoteLoginWords.reaching(sshd.address),
       remoteLoginWords.settingUp("Mac mini"),
@@ -147,7 +146,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       // One Mac in a test: the user it joined as is another user on this one.
       remoteLoginWords.atLogin(device),
     ]);
-    // The copy's count is said between preparing it and starting it there.
     const copy = at.said.map((event) => event.copy?.state ?? null);
     expect(copy.indexOf("sending")).toBeGreaterThan(copy.indexOf("preparing"));
     expect(copy.lastIndexOf("sending")).toBeLessThan(copy.indexOf("starting"));
@@ -169,7 +167,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(curl).toHaveLength(1);
     expect(curl[0]).not.toContain(code);
     expect(curl[0]).toContain("--data-binary @-");
-    // The temporary folder it was unpacked in is gone.
     const unpacked = /--fetched (.+) --from-home/.exec(started)?.[1] ?? "";
     expect(existsSync(unpacked)).toBe(false);
     // Nothing the feed said holds a link.
@@ -191,7 +188,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
 
     const sending = at.sending();
     const counts = sending.map((event) => event.copy?.sent ?? -1);
-    // It moved while the copy went: many counts, each more than the one before.
     expect(counts.length).toBeGreaterThan(3);
     for (const [index, count] of counts.entries())
       expect(count).toBeGreaterThan(index === 0 ? 0 : (counts[index - 1] ?? 0));
@@ -204,7 +200,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(sending.map((event) => event.text)).toEqual(
       counts.map((count) => remoteLoginWords.sending("Mac mini", count)),
     );
-    // Preparing it, the counts, then starting it there, then the joined line.
     const order = at.said.map((event) => event.copy?.state ?? event.stage);
     expect(order.slice(0, 2)).toEqual(["reaching", "preparing"]);
     expect(order.slice(2, 2 + counts.length).every((state) => state === "sending")).toBe(true);
@@ -379,7 +374,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const record = join(scratchDir("infinitary-remote-record-"), "started");
     const bundle = standInBundle(record);
 
-    // Another system: its uname says so.
     const bin = scratchDir("infinitary-remote-other-");
     writeFileSync(join(bin, "uname"), "#!/bin/sh\necho FreeBSD\n");
     chmodSync(join(bin, "uname"), 0o755);

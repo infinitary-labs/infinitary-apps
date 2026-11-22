@@ -16,7 +16,6 @@ import { calledTool, providerMessages } from "../providerRequest";
 export const TASK_BROWSER_PROMPT_MARKER = "check the sign-up page at ";
 export const MOCK_BROWSER_REPORT_PREFIX = "The sign-up page said";
 export const MOCK_BROWSER_PICTURE = "signed-up";
-/** What the report says the page showed first, after Send and, when given, after a reload. */
 export function mockBrowserSaw(first: string, sent: string, reloaded?: string): string {
   const words = `"${first}" first, "${sent}" after Send`;
   return reloaded === undefined ? words : `${words} and "${reloaded}" after a reload`;
@@ -29,7 +28,6 @@ export const MOCK_BROWSER_BLOCKED = {
   local: "on this Mac",
 } as const;
 
-/** The task browser's next scripted step, from the browser answers so far. */
 function taskBrowserStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/check the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
   if (!ask) return undefined;
@@ -110,7 +108,6 @@ function taskBrowserStep(body: string): ScriptedCall[] | undefined {
   }
 }
 
-/** The crewmate drives its task's browser through the sign-up page, then reports. */
 export const taskBrowser: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {

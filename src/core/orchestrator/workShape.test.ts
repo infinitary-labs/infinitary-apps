@@ -61,13 +61,11 @@ describe("the deliverable axis (Task B)", () => {
     const { tasks, taskId } = await investigation(crewmate);
     expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "research", deliverable: "answer" });
     const brief = crewmate.promptCalls[0] ?? "";
-    // The three facts an answer task is told, and the two lines it is not.
     expect(brief).toContain("this task's deliverable is an answer, not a change");
     expect(brief).toContain("commit nothing, push nothing, and open no pull request");
     expect(brief).toContain("Rigor: none - this task ships nothing");
     expect(brief).not.toContain("Delivery: ");
     expect(brief).not.toContain("Rigor: Default");
-    // And no rigor is stamped either: the record says it ships nothing.
     expect(tasks.get(taskId)?.shape?.rigor).toBeUndefined();
   });
 
@@ -306,7 +304,6 @@ describe("the deliverable axis (Task B)", () => {
       });
       crewmate.finishPrompt();
       await tick();
-      // A steer starts another turn, and the captain chooses while it runs.
       await supervisor.steer.steerCrewmate(taskId, "INF-599's helpers still hold the lock.");
       await tick();
       expect(tasks.get(taskId)?.activity).toBe("running");
@@ -431,7 +428,6 @@ describe("the deliverable axis (Task B)", () => {
     expect(inbox.pending(FIRSTMATE_RECIPIENT)).toEqual([]);
     const opsBefore = ops.length;
 
-    // An unmarked note gives its author a turn, not a task receipt or ending.
     const promptsBeforeRead = crewmate.promptCalls.length;
     supervisor.close(card.id);
     await tick();
@@ -694,7 +690,6 @@ describe("the deliverable axis (Task B)", () => {
   it("briefs a follow-up the classifier calls an answer as one, matching the tools it gets (FI3-598)", async () => {
     const { shape, brief, spec } = await filedFollowup("research");
     expect(shape).toMatchObject({ kind: "research", deliverable: "answer" });
-    // No posture it cannot act on, and the answer's shape in its place.
     expect(brief).not.toContain("Delivery: ");
     expect(brief).not.toContain("Rigor: Default");
     expect(brief).toContain("this task's deliverable is an answer, not a change");
@@ -797,7 +792,6 @@ describe("the deliverable axis (Task B)", () => {
     expect(handed.file).toBe(join(paths.crewmatesDir, built.taskId, "source-cards", `${key}.html`));
     expect(brief).not.toContain("<p>The claim query filters on repo_id.</p>");
     expect(brief).not.toContain("Full scoped clause.");
-    // The choice, the settings and the thread stay words in the brief.
     expect(brief).toContain("build it as adjusted");
     expect(brief).toContain('"tiltDeg":57');
     expect(brief).toContain("latest submitted settings/answers");
@@ -846,7 +840,6 @@ describe("the deliverable axis (Task B)", () => {
       intent: intentOf("i'd like to see some mocks and decide"),
     });
     await tick();
-    // The prototype, and the captain's Build it with the settings left on it.
     specs[0]?.onCard?.({
       title: "Three mocks to pick from",
       body: prototypeBody,
@@ -864,9 +857,6 @@ describe("the deliverable axis (Task B)", () => {
     ] as const;
     supervisor.cardActions.act(prototype.id, "build-it", "chrome", { answers: settings });
     await tick();
-    // The build goes on, and other cards land on the same task: a Firstmate
-    // note the captain closes, a Firstmate decision the captain answers, and the
-    // crewmate's own completion card, merged.
     supervisor.close(
       supervisor.addFirstmateCard({
         taskId: mock.taskId,
@@ -983,7 +973,6 @@ describe("the deliverable axis (Task B)", () => {
     const handed = handedCard(brief);
     expect(handed.file).toBe(join(paths.crewmatesDir, built.taskId, "source-cards", `${key}.html`));
     expect(handed.body).toBe(prototype.replace(`app-frame://images/${picture}`, pictureFile));
-    // The brief names the file and the picture, and keeps the rest in words.
     for (const html of ["<style>", "<script>", "data-tilt", "app-frame://"]) {
       expect(brief).not.toContain(html);
     }

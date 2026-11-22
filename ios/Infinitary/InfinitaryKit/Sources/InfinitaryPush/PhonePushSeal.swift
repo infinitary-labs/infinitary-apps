@@ -107,7 +107,6 @@ public struct PhonePushNotice: Equatable, Sendable {
         self.subtitle = subtitle
     }
 
-    /// What the notification carries for the app (`PhonePushSeal.userInfo(for:)`).
     public var userInfo: [AnyHashable: Any] { PhonePushSeal.userInfo(for: self) }
 }
 
@@ -134,7 +133,6 @@ public enum PhonePushSeal {
         (userInfo[cardKey] as? String, userInfo[pushKey] as? String, userInfo[computerKey] as? String)
     }
 
-    /// A new sealing key: 32 random bytes in base64url.
     public static func newKey() -> String { base64url(SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }) }
 
     /// Opens one sealed push: base64url of the 12-byte nonce, the ciphertext and the 16-byte tag, under the phone's key.

@@ -275,7 +275,6 @@ type Schema = {
   const?: unknown;
 };
 
-/** One tool as the captured request carries it. */
 type ServedTool = { name: string; description?: string; input_schema?: Schema };
 
 /**
@@ -716,7 +715,6 @@ describe("what the Claude client adds to the Firstmate seat", () => {
         ...new Set(attachments.map((attachment) => String(attachment.type))),
       ].filter((type) => !SEAT_ATTACHMENTS.includes(type));
       expect(unaccepted, "an attachment docs/claude-client.md does not accept").toEqual([]);
-      // What the two that describe the machine and the person may say.
       for (const { type, ...fields } of attachments) {
         if (type === "environment") {
           const snapshot = (fields.snapshot ?? {}) as Record<string, unknown>;

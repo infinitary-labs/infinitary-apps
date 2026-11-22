@@ -288,7 +288,6 @@ export function PeekSummary() {
     const size = { width: panel.offsetWidth, height: panel.offsetHeight };
     let placed: SummaryPlacement;
     if ("page" in at) {
-      // A page that left the window takes its task with it.
       if (!at.page.isConnected) {
         taskPeek.release(at.page);
         return;
@@ -302,14 +301,12 @@ export function PeekSummary() {
         ? placeRowSummary(box, at.page.getBoundingClientRect(), size, summaryRoom(panel))
         : placeKeySummary(box, box, size, summaryRoom());
     } else if ("anchor" in at) {
-      // A key that left the window takes its summary with it.
       if (!at.anchor.isConnected) {
         taskPeek.release(at.anchor);
         return;
       }
       placed = placeKeySummary(at.key, at.card, size, summaryRoom());
     } else {
-      // A card that left the window takes its key with it.
       if (!at.frame.isConnected) {
         taskPeek.release(at.frame);
         return;

@@ -31,7 +31,6 @@ import { CARRIED_OUT_WORDS, CARRIED_WITH_CHOICE_LEAD } from "../prompts/choiceCa
 import { pageUnansweredWords } from "../prompts/pageUnanswered";
 import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 
-/** The facts of the captain's own moves. */
 export type CaptainFacts =
   | { kind: "validation-question-stale"; card: string; reason: string }
   | {
@@ -202,9 +201,7 @@ export type CaptainFacts =
        */
       kind: "answer-missing";
       askId: string;
-      /** The captain's words, clipped. */
       excerpt: string;
-      /** The task the message was filed on, when it was. */
       filedOn?: { id: string; title: string };
       /** The Firstmate card the message was a reply under, when it was. */
       aboutCard?: { id: string; title: string; messageId?: number };
@@ -339,7 +336,6 @@ function renderBrowserReturned(facts: Extract<WakeFacts, { kind: "browser-return
   return `${renderBrowserReturnedLead(facts, after)}${facts.words ? `\n${BROWSER_RETURNED_WORDS_LEAD}\n${facts.words}` : ""}`;
 }
 
-/** What introduces the words the captain left in the docked request's field as he returned control. */
 export const BROWSER_RETURNED_WORDS_LEAD =
   "As they returned control, the captain left you these words in your request card's reply field. Do what they need first, and answer them in your next card or report. Their words, verbatim:";
 
@@ -365,7 +361,6 @@ export const BROWSER_GONE_OPENING = "The captain chose to open your browser from
 /** What the Firstmate hears when the captain's Add project could not add the project. */
 export const SETUP_CARD_FAILED_WORDS = "it could not be added";
 
-/** The setup card's answer, as the Firstmate hears it once. */
 function renderProjectSetup(facts: Extract<WakeFacts, { kind: "project-setup" }>): string {
   const work = facts.work ? ` The card said you start this once it is added: ${facts.work}` : "";
   switch (facts.outcome) {
@@ -404,7 +399,6 @@ export function answerMissingWake(
 export const THREAD_BROWSER_HELD =
   "The captain has control of your browser and wrote this from beside its page, where your card stays docked. You cannot see the page or use the browser until they return control: answer from what you know, and revise the card under the same id when the steps or values on it should change.";
 
-/** What a thread reply's steer says before the captain's words. */
 export function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply" }>): string {
   return [
     THREAD_STEER_PREAMBLE,
@@ -414,11 +408,6 @@ export function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply"
   ].join("\n");
 }
 
-/**
- * What a line the captain typed in the Crewmate tab says before his words:
- * he reads the crewmate's session as it works, so the line is his direct
- * guidance, answered by the work and the next report.
- */
 /**
  * What the captain sent from the Crewmate tab's box, as the crewmate reads it: his words, then
  * the notes on the task's running page that left with them. Notes need no words beside them.
@@ -463,7 +452,6 @@ function renderAnswerMissing(facts: Extract<WakeFacts, { kind: "answer-missing" 
   return `[fm-op] ${ANSWER_MISSING_OPENING}, so they have no answer yet. Their words, verbatim: "${facts.excerpt}".${about}${refused}${answer} Starting, steering, stopping or closing work and changing settings are refused this turn.`;
 }
 
-/** How the first mate step opens when the message's work ended with no card answering it. */
 export const ANSWER_MISSING_ENDED_OPENING =
   "The work for the captain's message ended with no card that answers it";
 
@@ -494,14 +482,12 @@ function answersText(choice: WakeChoice, source?: "chrome" | "frame"): string {
  */
 export type CardActionUndone = "set-rigor" | "start-review";
 
-/** What the app could not do, as the first mate reads it. */
 const CARD_ACTION_UNDONE_WORDS: Record<CardActionUndone, string> = {
   "set-rigor": "record the rigor the button sets, so the task's rigor and review are unchanged",
   "start-review":
     "start the review the button asks for; the task's new rigor is recorded, and no review of it is open",
 };
 
-/** The captain's own moves, worded. */
 export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
   "card-action-undone": (facts) =>
     `[fm-op] The captain pressed "${facts.label}" on card "${facts.card.title}" (${facts.card.id}) for task ${facts.task.key} "${facts.task.title}", and the app could not ${CARD_ACTION_UNDONE_WORDS[facts.undone]}. The reason: ${facts.reason.trim()} Carry out what the captain's click asked for with your own tools, or tell the captain on a card what stops it.`,

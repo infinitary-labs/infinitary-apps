@@ -37,7 +37,6 @@ export function requestCharacterEmote(emote: FirstmateEmote): void {
   pending.push(emote);
 }
 
-/** Take the oldest pending request, if any. */
 export function takeCharacterEmote(): FirstmateEmote | undefined {
   return pending.shift();
 }
@@ -53,7 +52,6 @@ export function requestCharacterNotice(): void {
   cue("notice");
 }
 
-/** Whether a notice pulse was requested since the last take. */
 export function takeCharacterNotice(): boolean {
   const requested = noticePending;
   noticePending = false;
@@ -76,7 +74,6 @@ export function requestCharacterSendoff(dx: number, dy: number, strength = 1): v
   };
 }
 
-/** The send-off requested since the last take, if any. */
 export function takeCharacterSendoff(): { dx: number; dy: number; strength: number } | null {
   const requested = sendoffPending;
   sendoffPending = null;
@@ -88,7 +85,6 @@ export function requestCharacterReceive(): void {
   receivePending = true;
 }
 
-/** Whether a receive cue was requested since the last take. */
 export function takeCharacterReceive(): boolean {
   const requested = receivePending;
   receivePending = false;

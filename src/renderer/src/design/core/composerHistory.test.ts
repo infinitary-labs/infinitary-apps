@@ -19,7 +19,6 @@ const at = (value: string, start = value.length, end = start): FieldState => ({
   end,
 });
 
-/** Types `text` one character at a time at the end of `from`, as keystrokes do. */
 function typeChars(history: ComposerHistory, from: string, text: string): ComposerHistory {
   let next = history;
   let value = from;

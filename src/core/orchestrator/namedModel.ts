@@ -36,7 +36,6 @@ export function namedModelDiffers(model: NamedModel): boolean {
   return !servedNamed(model);
 }
 
-/** Whether a routing choice is the named model, matched as `servedNamed` matches it. */
 export function routesNamed(named: string, choice?: { provider: string; id: string }): boolean {
   return servedNamed({ named, took: choice ? `${choice.provider}/${choice.id}` : null });
 }

@@ -25,7 +25,6 @@ import { seedTask } from "../tasks/seedTask";
 
 fakeCrewTimersEachTest();
 
-/** A started task with its crewmate between turns, and a second task beside it. */
 async function startedTask() {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate);
@@ -40,7 +39,6 @@ async function startedTask() {
   return { ...h, crewmate, taskId, key: h.tasks.get(taskId)?.key ?? taskId };
 }
 
-/** The first mate's question on a task, with two plain answers. */
 function question(h: Awaited<ReturnType<typeof startedTask>>, taskId: string, id: string): string {
   return h.supervisor.cards.addFirstmateCard({
     id,
@@ -194,7 +192,6 @@ describe("the captain's override", () => {
       'Unknown task "nope".',
     );
     expect(() => h.supervisor.overrides.withdrawOverride("nope")).toThrow('Unknown task "nope".');
-    // Nothing was recorded on either task.
     expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
     expect(h.tasks.get("dropped")?.delivery?.override).toBeUndefined();
   });
@@ -217,7 +214,6 @@ describe("the captain's override", () => {
       text: `Took back the captain's override on ${handle}: ${holdNames(["waits"])} hold again.`,
     });
     expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
-    // The crewmate's lane carries the standing words, then that he took them back.
     const notices = h.inbox
       .allFor(h.taskId)
       .flatMap((row) => (row.facts?.kind === "task-override-changed" ? [row.facts] : []));

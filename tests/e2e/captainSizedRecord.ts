@@ -128,7 +128,6 @@ function share(total: number, count: number, index: number): number {
   return Math.floor((total * (index + 1)) / count) - Math.floor((total * index) / count);
 }
 
-/** A full commit id made from `seed`. */
 const commit = (seed: string) => createHash("sha1").update(seed).digest("hex");
 
 /** Plain words of `chars` characters in all, as entries of at most 4,000 each (the story's limit). */
@@ -179,12 +178,10 @@ function story(taskId: string, chars: number): ChangePresentationRecord {
       assets: [],
       pictures: [],
     });
-  // The fixed fields' size, then the verification lines fill the rest.
   const rest = chars - JSON.stringify({ revisions: [shaped([])], receipts: [] }).length;
   return { revisions: [shaped(entries(rest, 17))], receipts: [] };
 }
 
-/** A live validation record of about `chars` characters. */
 function validation(taskId: string, chars: number, at: number): LiveValidation {
   const head = commit(`${taskId}-head`);
   const part = Math.max(1, Math.floor((chars - 700) / 8));
@@ -236,7 +233,6 @@ function validation(taskId: string, chars: number, at: number): LiveValidation {
   });
 }
 
-/** A CI repair ledger of about `chars` characters. */
 function repair(taskId: string, chars: number, at: number): CheckRepairLedger {
   const headSha = commit(`${taskId}-head`);
   const evidence = prose(Math.max(1, Math.floor((chars - 400) / 2)), 31);
@@ -288,7 +284,6 @@ export async function seedCaptainSizedRecord(
     const cards = new CardStore(db);
     const chainTasks: string[] = [];
     const ids: string[] = [];
-    /** Runs `write(index)` for each index in `[from, to)`, a transaction per turn. */
     const inTurns = async (from: number, to: number, write: (index: number) => void) => {
       for (let first = from; first < to; first += WRITES_PER_TURN) {
         const last = Math.min(first + WRITES_PER_TURN, to);
@@ -420,7 +415,6 @@ export async function seedCaptainSizedRecord(
           },
           action.length > 0,
         );
-        // The captain did each action the card asked for, from its card.
         for (const filed of tasks.listWithRequirementFrom(id, [])) {
           const shown = tasks.delivery.presentCaptainAction(filed.id);
           if (

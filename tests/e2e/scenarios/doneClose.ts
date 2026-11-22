@@ -1,18 +1,11 @@
 import { type Scenario, settleNeedle } from "../mockProvider";
 import { findCrewTaskId } from "../providerRequest";
 
-/** The captain's words that ask the first mate to close a task on its own judgment. */
 export const CLOSE_ALONE_MARKER = "check and close if finished: ";
-/** The captain's words that ask the close themselves, leaving the pull request open. */
 export const CLOSE_ON_WORDS_MARKER = "close it as done, the pull request can stay open: ";
 export const DONE_EVIDENCE = "The meter reads on time on the bench.";
-/** The plain sentence every done close carries for the captain. */
 export const DONE_SENTENCE = "The meter task is done; its pull request stays open.";
 
-/**
- * The first mate closes the named task as finished, on its own for the first
- * marker and citing this turn's words for the second (one close as done).
- */
 export const doneClose: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

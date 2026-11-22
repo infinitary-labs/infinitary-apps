@@ -442,7 +442,6 @@ describe("the task protocol (task-system P3)", () => {
       flags: { held: true, needsYou: true, ready: false },
       waitingCardId: "card-fm-9",
     });
-    // The record's own flags agree with the board's.
     for (const id of ["capped", "carded", "timed", "free"]) {
       const record = tasks.get(id);
       expect(record && tasks.graph.flagsOf(record).held, id).toBe(view(id)?.flags.held);

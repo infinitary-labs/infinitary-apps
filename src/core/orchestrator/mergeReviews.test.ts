@@ -113,7 +113,6 @@ async function onGitHub(
     pull: 23,
     skipRules: { headSha: HEAD, method: "squash" as const, ...overrides },
   });
-  /** Prepares the merge past the rules at HEAD and answers its stored review. */
   const prepareSkip = async (): Promise<MergeReview> => {
     const answer = await harness.service.checkTool.checkForCrew(task.id, skipInput());
     expect(answer).toContain("skipping the branch rules");
@@ -121,7 +120,6 @@ async function onGitHub(
     if (!review) throw new Error(`no review stored: ${answer}`);
     return review;
   };
-  /** Prepares an ordinary review of #23 and answers it. */
   const prepare = async (): Promise<MergeReview> => {
     const answer = await harness.service.checkTool.checkForCrew(task.id, { pull: 23 });
     expect(answer).toContain("Merge review mr");
@@ -186,7 +184,6 @@ describe("preparing a review of a pull request named by its number", () => {
     expect(await absent({ evidence: "  " })).toBe(absenceRefusal);
     expect(await absent({ localGate: "" })).toBe(absenceRefusal);
     expect(reviews()).toEqual([]);
-    // A host with no pull requests to read, and a project with none where it lives.
     Object.assign(forge, { pull: undefined });
     expect(await ask(23)).toBe(
       "Merge review refused: where this project lives has no pull requests to read.",
@@ -1138,7 +1135,6 @@ describe("the captain's click on a pull request the task did not open, while Git
     title: "fix(crew): keep a renewed conversation's reason across a restart",
   };
 
-  /** The fake forge answering each read of PR #94 by its number in turn; the last answer repeats. */
   class UndecidedForge extends FakeForge {
     answers: { readiness: ForgeReadiness; headSha?: string }[] = [{ readiness: "computing" }];
     reads = 0;

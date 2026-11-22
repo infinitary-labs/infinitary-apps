@@ -174,7 +174,6 @@ function isAssistantStart(event: unknown): boolean {
   return typed.type === "message_start" && typed.message?.role === "assistant";
 }
 
-/** The assistant text of a turn_end message, joined; undefined when none. */
 function closingText(message: unknown): string | undefined {
   if (!message || typeof message !== "object") return undefined;
   const content = (message as { content?: unknown }).content;
@@ -191,7 +190,6 @@ function closingText(message: unknown): string | undefined {
   return text || undefined;
 }
 
-/** The provider error a turn ended with, or undefined for a clean stop. */
 function errorFromMessage(message: unknown): string | undefined {
   if (!message || typeof message !== "object") return undefined;
   const typed = message as { stopReason?: unknown; errorMessage?: unknown };

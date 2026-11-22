@@ -24,7 +24,6 @@ vi.setConfig({ testTimeout: 30_000 });
 
 const LINUX = process.platform === "linux";
 
-/** A throwaway home folder, its data folders where this system keeps them. */
 function home() {
   const dir = scratchDir("infinitary-far-home-");
   const appData = LINUX ? join(dir, ".config") : join(dir, "Library", "Application Support");
@@ -36,14 +35,12 @@ function home() {
   return { appData, env };
 }
 
-/** A work folder in data folder `folder` that joined the home `homeKey` as `deviceId`. */
 function joinedIn(appData: string, folder: string, homeKey: string, deviceId: string): void {
   const work = join(appData, folder, "work");
   mkdirSync(work, { recursive: true });
   writeFileSync(join(work, "home.json"), `${JSON.stringify({ grant: { homeKey, deviceId } })}\n`);
 }
 
-/** A copy of Firstmate kept in that folder's work, whose program says where it ran from. */
 function keptIn(appData: string, folder: string): string {
   const app = join(appData, folder, "work", "app");
   const program = LINUX
@@ -71,7 +68,6 @@ function run(
   return { code: ran.status, stdout: ran.stdout };
 }
 
-/** What the look said, by name. */
 function look(env: NodeJS.ProcessEnv, flavor: BuildFlavor = "release"): Record<string, string> {
   const { stdout } = run(LOOK, [""], env, flavor);
   return Object.fromEntries(

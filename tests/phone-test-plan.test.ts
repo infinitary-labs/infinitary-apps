@@ -329,7 +329,6 @@ describe("running each device's parts on one started device", () => {
     });
     await expect(outcome).rejects.toThrow(`${first} failed`);
     expect(most).toBe(1);
-    // One device at a time: the iPad's whole lane, then the iPhone's.
     expect(ran).toEqual(
       ["ipad", "iphone"].flatMap((device) => jobs.filter((job) => job.device === device).map(name)),
     );

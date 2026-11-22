@@ -102,10 +102,8 @@ export type GrokUsageParse =
   | { kind: "windows"; windows: QuotaWindowView[] }
   /** A well-formed message with nothing Infinitary reads as a window. */
   | { kind: "empty" }
-  /** Not the message shape this reader knows. */
   | { kind: "unrecognized" };
 
-/** Read the consumer credits config message into Infinitary windows. */
 export function parseGrokUsage(message: Uint8Array, now: number): GrokUsageParse {
   let config: ReturnType<typeof scanProtobuf> | undefined;
   let windows: QuotaWindowView[];

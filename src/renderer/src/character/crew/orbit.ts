@@ -427,7 +427,6 @@ export const WAIT_ARC_RATE = 1.6;
 /** One breath of the waiting-on-you beacon, ms (INF-1543, the captain's settings). */
 export const CAPTAIN_BREATH_MS = 3200;
 
-/** The ring widens gently as it crowds. */
 export function ringRadiusFor(count: number, tuning: OrbitTuning): number {
   const over = Math.max(0, count - COMFORTABLE);
   return tuning.radius * Math.min(1.25, 1 + over * 0.035);
@@ -439,13 +438,11 @@ export function glyphScaleFor(count: number): number {
   return Math.max(0.6, 1 - over * 0.05);
 }
 
-/** Puts a spring at rest on `target`. */
 function snap(spring: Spring, target: number): void {
   spring.x = target;
   spring.v = 0;
 }
 
-/** A settled frame puts a spring at rest on its target; any other frame steps it there. */
 function follow(spring: Spring, target: number, dt: number, settled: boolean): void {
   if (settled) snap(spring, target);
   else spring.step(target, dt);
@@ -1280,7 +1277,6 @@ export class CrewOrbit {
         const dur = c.tripMs ?? tuning.spawnMs;
         const t = settled ? 1 : clamp01((now - c.spawnAt) / dur);
         if (now < c.spawnAt && !settled) {
-          // Not yet emitted: hold the slot, show nothing.
           c.angle.x = targetA;
           c.radius.x = targetR;
           continue;
@@ -1311,7 +1307,6 @@ export class CrewOrbit {
           r = coreR + (targetR - coreR) * travel;
           a = targetA + tuning.swirl * (1 - travel);
           if (spark > 0.01) {
-            // Three ghosts a few frames behind along the same path.
             for (let g = 1; g <= 3; g++) {
               const tg = clamp01(t - g * 0.035);
               const trg = easeOutCubic(tg);
@@ -1695,7 +1690,6 @@ export class CrewOrbit {
       // A spark still aims at its slot; everyone else eases toward the target.
       if (mate.phase !== "spawning") {
         for (const axis of AXES) follow(mate.companion[axis], target[axis], dt, settled);
-        // Close to home with nothing to circle: land exactly on the slot.
         if (!settled && !target.x && !target.y && !target.z && offsetLength(mate) < 0.05)
           for (const axis of AXES) snap(mate.companion[axis], 0);
       }

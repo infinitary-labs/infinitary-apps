@@ -91,7 +91,6 @@ export type OutageFacts =
       tasks: WakeTask[];
     };
 
-/** The honest retry's wake at the first provider failure of an outage. */
 export function outageFailedWake(
   task: WakeTask & { crewmate: string },
   error: string,
@@ -141,7 +140,6 @@ export function stillDownOnce(since: number): string {
   return `outage-still-down:${since}`;
 }
 
-/** The honest retry's one wake fifteen minutes into an outage, once per outage. */
 export function stillDownWake(
   task: WakeTask & { key: string; crewmate?: string },
   outage: { since: number; failures: number },
@@ -161,7 +159,6 @@ export function stillDownWake(
   };
 }
 
-/** The one wake when a task gets stuck at its provider. */
 export function stuckWake(
   task: WakeTask & { key: string; crewmate: string },
   stuck: { error: string; since: number; refusals: number; moveTo?: string; provider?: string },
@@ -181,7 +178,6 @@ export function stuckWake(
   };
 }
 
-/** The honest retry's wake when the provider answers after two or more failures. */
 export function recoveredWake(task: WakeTask & { crewmate: string }, failures: number): TypedWake {
   return {
     facts: {
@@ -206,7 +202,6 @@ export function providerBackOnce(accountId: string, since: number): string {
   return `provider-back:${accountId}:${since}`;
 }
 
-/** The one wake when a cut-off on an account pauses the crewmates on it, once per cut-off. */
 export function providerCutOffWake(
   account: { id: string; provider: string },
   cutOff: { class: CutOffClass; since: number; resetsAt?: number },
@@ -227,7 +222,6 @@ export function providerCutOffWake(
   };
 }
 
-/** The one wake when that cut-off ends and the account serves again. */
 export function providerBackWake(
   account: { id: string; provider: string },
   since: number,
@@ -244,24 +238,20 @@ export function providerBackWake(
   };
 }
 
-/** Tasks as a wake names them. */
 function tasksText(tasks: readonly WakeTask[]): string {
   return tasks.map((task) => `task ${task.id} "${task.title}"`).join(", ");
 }
 
 type CutOffFacts = Extract<WakeFacts, { kind: "provider-cut-off" }>;
 
-/** How the cut-off wake opens: what stopped the account, and that its crewmates are paused. */
 export function cutOffOpening(facts: Pick<CutOffFacts, "class" | "provider">): string {
   return `${cutOffCause(facts)}, so the crewmates on it are paused`;
 }
 
-/** How the back wake opens when crewmates were paused on the account. */
 export function providerBackOpening(provider: string): string {
   return `${provider} is answering again, so the crewmates paused on it go on`;
 }
 
-/** What stopped the account serving, per class. */
 function cutOffCause(facts: Pick<CutOffFacts, "class" | "provider">): string {
   switch (facts.class) {
     case "refused":
@@ -291,7 +281,6 @@ function cutOffWayBack(facts: CutOffFacts): string {
   }
 }
 
-/** The honest retry's and the cut-off wakes, worded. */
 export const OUTAGE_WORDS: KindWords<OutageFacts> = {
   "outage-failed": (facts) =>
     `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}.${keptReportWords(facts.keptReport)}${sameAccountWords(facts.sameAccount)} Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,

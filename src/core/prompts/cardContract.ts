@@ -243,7 +243,6 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. With autonomy off (read the task’s current fact), merging still requires the captain’s separate merge card click or explicit merge authorization. Checks are verification, not consent; never infer or declare merge authorized from them.",
 ];
 
-/** One handoff source, with each reader receiving the rules it acts on. */
 export const HANDOFF = renderInstructions(HANDOFF_PARTS);
 export const FIRSTMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "firstmate");
 export const CREWMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "crewmate");
@@ -300,10 +299,8 @@ export const FIRSTMATE_CARD_ADDENDUM = [
   "The host runs merge or settle effects and reports the outcome; a dismissed card is not a choice and does not wake you - the next context block lists it.",
 ].join(" ");
 
-/** The crewmate's emit_card description: the mechanics plus the outcome-card rule. */
 export const CREWMATE_EMIT_CARD_DESCRIPTION = `${CARD_MECHANICS} ${CREWMATE_CARD_ADDENDUM}`;
 
-/** The Firstmate's emit_card description: the mechanics plus attach-first. */
 export const FIRSTMATE_EMIT_CARD_DESCRIPTION = `${CARD_MECHANICS} ${FIRSTMATE_CARD_ADDENDUM}`;
 
 /**

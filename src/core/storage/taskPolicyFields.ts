@@ -18,7 +18,6 @@ export const POLICY_SHAPE_FIELDS = [
 ] as const;
 export type PolicyShapeField = (typeof POLICY_SHAPE_FIELDS)[number];
 
-/** A `task_policies` row as saved. */
 export type TaskPolicyRow = {
   task_id: string;
   delivery_ask: string | null;
@@ -27,7 +26,6 @@ export type TaskPolicyRow = {
   edits_json: string | null;
 };
 
-/** The shape fields one saved row puts back, each only where it holds one. */
 export function policyShapeFields(row: TaskPolicyRow): Partial<Record<PolicyShapeField, unknown>> {
   const fields: Partial<Record<PolicyShapeField, unknown>> = {};
   if (row.delivery_ask !== null) fields.delivery_ask = row.delivery_ask;

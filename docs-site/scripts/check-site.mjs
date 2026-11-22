@@ -64,7 +64,6 @@ const SIDE_BY_SIDE = 6;
 const failures = [];
 const fail = (message) => failures.push(message);
 
-/** Every file under dir, as paths relative to dist with forward slashes. */
 async function files(dir) {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -75,7 +74,6 @@ async function files(dir) {
   return out;
 }
 
-/** The built file an address names, or undefined when there is none. */
 async function fileFor(pathname) {
   const clean = decodeURIComponent(pathname).replace(/^\/+/, "");
   if (clean.split("/").includes("..")) return undefined;
@@ -113,7 +111,6 @@ const pages = (await files(DIST))
   .filter((file) => file.endsWith(".html"))
   .map((file) => `/${file.replace(/(^|\/)index\.html$/, "$1")}`);
 
-/** Each address the built sitemap lists, with the alternates it names for it. */
 const SITEMAP = new Map(
   (await readdir(DIST))
     .filter((name) => /^sitemap-\d+\.xml$/.test(name))
@@ -124,7 +121,6 @@ const SITEMAP = new Map(
     ]),
 );
 
-/** An object's entries in name order, to compare two. */
 const sortedEntries = (object) => Object.entries(object).sort(([a], [b]) => a.localeCompare(b));
 
 /** The shipped languages, each with its address prefix ("/" for English, "/ar/" for Arabic). */
@@ -138,12 +134,10 @@ function languageOf(path) {
   return LANGUAGES.find(({ tag, prefix }) => tag !== SOURCE_LANGUAGE && path.startsWith(prefix)) ?? LANGUAGES[0];
 }
 
-/** The same page's address in another language. */
 function inLanguage(path, language) {
   return `${language.prefix}${path.slice(languageOf(path).prefix.length)}`;
 }
 
-/** What a page says about its language, read in the page. */
 function languageMarks() {
   return {
     lang: document.documentElement.lang,

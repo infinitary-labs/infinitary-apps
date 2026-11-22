@@ -43,7 +43,6 @@
 /** How the code checks' job name ends, at every level of a batch run's names. */
 export const CODE_CHECKS = " · Code checks and build (Linux)";
 
-/** How the watch job's own name ends. */
 export const WATCH = " · Watch for a stop";
 
 /** What a confirm job's name holds, a test group's own and the later one's alike. */

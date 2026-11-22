@@ -22,7 +22,6 @@ export const CLAUDE_MODELS: ReadonlyArray<{ id: string; name: string }> = [
   { id: "claude-haiku-5-5", name: "Claude Haiku 5.5" },
 ];
 
-/** A Claude model's name in the shipped catalog; undefined for one the catalog does not name. */
 export function claudeModelName(id: string | undefined): string | undefined {
   return CLAUDE_MODELS.find((model) => model.id === id)?.name;
 }

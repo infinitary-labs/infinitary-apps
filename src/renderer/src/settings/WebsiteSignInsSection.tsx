@@ -57,7 +57,6 @@ export function savedWhen(at: number, now: number): string {
   });
 }
 
-/** The section's lead and its empty line. */
 export const WEBSITE_SIGN_INS_WORDS = {
   get lead() {
     return m.settingsWebsiteSignInsLead();
@@ -70,7 +69,6 @@ export const WEBSITE_SIGN_INS_WORDS = {
 /** Where a signed-in site is kept: this Mac, or a computer that runs work by its id. */
 export type SignInPlace = { deviceId?: string };
 
-/** One computer's list of signed-in sites: its rows, or its empty line. */
 function SignInList({
   label,
   signIns,

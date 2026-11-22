@@ -104,7 +104,6 @@ type Heard = { deviceId: string; fact: TaskBrowserFact; unstarted?: true };
 
 export class PlacedBrowsers implements PlacedBrowserSink {
   private readonly facts = new Map<string, Heard>();
-  /** The views here that watch each task's browser there. */
   private readonly watchers = new Map<string, Set<BrowserFrameSink>>();
   /** Tasks whose crewmate's turn that computer was last told runs. */
   private readonly turning = new Set<string>();
@@ -123,8 +122,6 @@ export class PlacedBrowsers implements PlacedBrowserSink {
   holds(taskId: string): boolean {
     return Boolean(this.options.deviceOf(taskId));
   }
-
-  // ---- what that computer says -------------------------------------------------
 
   /** A retired copy's lending: that computer keeps its own sign-ins, so this Mac lends none. */
   automaticSignIn(): InvokeResponse<"inf:work:browser-sign-in">["signIn"] {
@@ -178,8 +175,6 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         return;
     }
   }
-
-  // ---- the captain's side -------------------------------------------------------
 
   fact(taskId: string): TaskBrowserFact | undefined {
     return this.facts.get(taskId)?.fact;
@@ -334,7 +329,6 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     return this.order(taskId, "inf:task-browser:request", { request });
   }
 
-  /** The signed-in site that computer offers for the task's browser there, as its fact says. */
   savedSignInFor(taskId: string, site: string): OfferedSignIn | undefined {
     return this.keeps(taskId) ? offeredSignIn(this.fact(taskId), site) : undefined;
   }
@@ -515,8 +509,6 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     };
   }
 
-  // ---- in between ---------------------------------------------------------------
-
   private heard(
     deviceId: string,
     task: string,
@@ -563,7 +555,6 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     }
   }
 
-  /** One order about a task's browser there, answered or refused in words. */
   private async order<C extends BrowserOrderChannel>(
     taskId: string,
     channel: C,
@@ -770,7 +761,6 @@ export class HomeBrowsers {
     return this.local.answerAsk(taskId, handle, id, answer);
   }
 
-  /** The signed-in sites this Mac keeps for its own browsers. */
   savedSignIns(): SavedSignIn[] {
     return this.local.savedSignIns();
   }

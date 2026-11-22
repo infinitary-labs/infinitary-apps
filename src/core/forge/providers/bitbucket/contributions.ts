@@ -18,7 +18,6 @@ const PAGE_LENGTH = 100;
 /** How many pages of forks or workspaces one look reads before it stops. */
 const MAX_PAGES = 10;
 
-/** The repository fields every read here needs. */
 const REPOSITORY_FIELDS = "uuid,full_name,owner.uuid,parent.uuid,parent.full_name";
 
 /**
@@ -32,7 +31,6 @@ export function bitbucketRepositoryNumber(uuid: unknown): number | undefined {
   return Number.isSafeInteger(id) && id > 0 ? id : undefined;
 }
 
-/** A repository's API path from its `workspace/name`. */
 export function repositoryPathOf(fullName: string): string {
   const [workspace = "", name = ""] = fullName.split("/");
   return `/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(name)}`;

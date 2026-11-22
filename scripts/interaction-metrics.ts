@@ -20,10 +20,6 @@ import { METRIC_IDS, metricDef, type MetricId } from "./interaction-metric-catal
 
 export * from "./interaction-metric-catalog.ts";
 
-// --------------------------------------------------------------------------
-// Shared thresholds
-// --------------------------------------------------------------------------
-
 /** Two cards on one task at least this similar are an overlap-detected pair. */
 export const DUPLICATE_SIMILARITY = 0.5;
 /** ... and only when the second appeared within this long of the first. */
@@ -54,7 +50,6 @@ const STOPWORDS = new Set(
   ).split(" "),
 );
 
-/** Lowercase topic words of a text, with markup stripped. */
 export function topicTokens(text: string): Set<string> {
   const plain = text
     .replace(/<[^>]*>/g, " ")
@@ -297,10 +292,6 @@ export function cardSimilarity(a: CardText, b: CardText): number {
   return Math.max(title, whole);
 }
 
-// --------------------------------------------------------------------------
-// Duplicate pairs (shared with the WI-20 deriver)
-// --------------------------------------------------------------------------
-
 export type PairableCard = CardText & {
   id: string;
   taskId: string | null;
@@ -353,14 +344,9 @@ export function duplicatePairs(
   return pairs.sort((a, b) => a.taskId.localeCompare(b.taskId) || a.second.localeCompare(b.second));
 }
 
-// --------------------------------------------------------------------------
-// Captain questions and re-asks
-// --------------------------------------------------------------------------
-
 const QUESTION_LEAD =
   /^(why|what|what's|whats|where|which|who|how|when|is|are|was|were|did|does|do|can|could|should|shouldn't|would|will|isn't|aren't|any)\b/i;
 
-/** A captain turn that asks rather than instructs. */
 export function isQuestion(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -438,10 +424,6 @@ export function looksGarbled(text: string): boolean {
   const sample = text.slice(0, 2000);
   return SCRIPTS.filter((script) => script.test(sample)).length >= 3;
 }
-
-// --------------------------------------------------------------------------
-// Routing observability (intelligence-bucket routing S5)
-// --------------------------------------------------------------------------
 
 /**
  * The four intelligence slots, strongest first. Spelled here rather than
@@ -636,10 +618,6 @@ export function scoreRouting(dispatches: ObservedDispatch[]): RoutingScores {
     escalations_per_lineage: ratio(escalations, lineages.length),
   };
 }
-
-// --------------------------------------------------------------------------
-// Delivery rigor observability (delivery rigor phase 4)
-// --------------------------------------------------------------------------
 
 /**
  * The three delivery tiers and the reviewer's closed vocabularies, spelled
@@ -923,10 +901,6 @@ export function overridesByHold(dispatches: readonly ObservedDispatch[]): Record
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-// --------------------------------------------------------------------------
-// Scoring one session
-// --------------------------------------------------------------------------
-
 export type ObservedCard = PairableCard & {
   author: "firstmate" | "crewmate" | "host";
   /** The rendered card body contains a table, svg, figure, or canvas. */
@@ -987,7 +961,6 @@ export type SessionObservation = {
   cards: ObservedCard[];
   opWakes: number;
   guidanceQueuedWakes: number;
-  /** One entry per escalation the Firstmate received. */
   /**
    * `scored` is false for an escalation the recording has no answer for:
    * whether the Firstmate would have acted is unknown, not a failure, so it
@@ -1192,10 +1165,6 @@ export function scorePlanSkips(dispatches: ObservedDispatch[], reviews: Observed
     ),
   };
 }
-
-// --------------------------------------------------------------------------
-// Targets and the regression gate
-// --------------------------------------------------------------------------
 
 export function meetsTarget(id: MetricId, value: number | null): boolean | null {
   const target = metricDef(id).target;

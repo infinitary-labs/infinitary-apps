@@ -151,7 +151,6 @@ export type AppPaths = {
   firstmateClaudeDir: string;
   /** The supervision session's neutral cwd (design B) - never a project. */
   supervisionHomeDir: string;
-  /** The supervision session's rolling session dir. */
   supervisionSessionsDir: string;
   /** Full text spilled here when a message-length cap truncates it (capWithOverflow). */
   overflowDir: string;

@@ -70,7 +70,6 @@ function serializedBoard(board: PushPayload<"inf:tasks">): string {
  * preload freezes it and exposes it as `window.infinitary`.
  */
 export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
-  /** One request, its answer validated against the channel's schema. */
   async function invoke<C extends InvokeChannel>(
     channel: C,
     ...args: InvokeRequest<C>

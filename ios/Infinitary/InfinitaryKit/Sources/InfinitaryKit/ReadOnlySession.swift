@@ -357,7 +357,6 @@ public struct PhoneNotice: Equatable, Sendable {
         args.isEmpty && (channel == PhoneRequest.homeUpdateInstall.rawValue || channel == PhoneRequest.homeUpdateLater.rawValue)
     }
 
-    /// Reads how the computer's own update stands.
     public func readHomeUpdate() async throws {
         guard homeUpdates else { return }
         homeUpdate = try await request(.homeUpdate, as: PhoneHomeUpdate.self)
@@ -856,7 +855,6 @@ public struct PhoneNotice: Equatable, Sendable {
         }
     }
 
-    /// Pings and measures the round trip; a failed ping cuts the connection.
     private func ping(_ socket: URLSessionWebSocketTask) {
         let sent = ContinuousClock.now
         socket.sendPing { [weak self, weak socket] error in

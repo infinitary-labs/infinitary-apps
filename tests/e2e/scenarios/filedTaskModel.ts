@@ -70,7 +70,6 @@ function filedModelFirstmateMove(
   return undefined;
 }
 
-/** The first mate files the calibration, then starts it on the named model. */
 export const filedTaskModel: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) =>

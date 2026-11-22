@@ -6,7 +6,6 @@
  * runner with a value or an error the script's await throws.
  */
 
-/** The host functions a script has in scope, each one call to the runner. */
 export type ProgramOp = "task" | "ask" | "log" | "phase";
 
 /** The core to the program process: run once, then an answer per call. */

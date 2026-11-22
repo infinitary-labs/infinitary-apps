@@ -54,11 +54,9 @@ export type ReviewsHost = {
   readonly cards: CardService;
   /** Settling and closing: the kept merge, and closing a review or an assessment. */
   readonly settling: SettleOwners;
-  /** Queue an operational message for the first mate (`FirstmateHooks.notifyOp`). */
   notifyOp: FirstmateHooks["notifyOp"];
   /** Steer a task as the host, answering no message or card. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;
-  /** Start a task the host filed. */
   startTask(spec: {
     taskId: string;
     title: string;
@@ -839,7 +837,6 @@ export class Reviews {
     await this.deliverTo(builder, builder.id, wake);
   }
 
-  /** A review handoff to the builder or back to its reviewer; a failed one goes to the first mate. */
   private async deliverTo(builder: TaskRecord, taskId: string, wake: TypedWake): Promise<void> {
     try {
       await this.host.steer(taskId, wake);

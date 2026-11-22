@@ -429,7 +429,6 @@ export const personalExtensionViewSchema = z.object({
       reason: z.enum(["unresponsive", "exited"]),
       /** When it was noticed, ISO wall time. */
       at: z.string(),
-      /** The code version that was stopped. */
       version: z.string(),
     })
     .optional(),
@@ -502,8 +501,6 @@ export const personalSnapshotSchema = z.object({
     .optional(),
 });
 export type PersonalSnapshot = z.infer<typeof personalSnapshotSchema>;
-
-// --- the wire shapes ---------------------------------------------------------------
 
 export const personalStoreChangeSchema = z.object({
   extensionId: personalIdSchema,

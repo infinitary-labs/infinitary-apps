@@ -23,7 +23,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-/** The launcher's source. */
 export const GIT_LAUNCHER_SOURCE = join(root, "scripts", "git-launcher.c");
 /** The oldest macOS the app runs on, read from electron-builder.yml's `mac.minimumSystemVersion`. */
 function oldestMacOS(): string {

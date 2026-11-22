@@ -85,7 +85,6 @@ export type PictureSource =
       fetchTypeface?: (fileName: string) => Promise<Uint8Array>;
     };
 
-/** What the scheme's hosts answer from. */
 export type FrameHosts = {
   mounts: FrameMountRegistry;
   fonts: FrameFontFiles;
@@ -162,7 +161,6 @@ async function remoteMedia(
     remoteSizes.set(fileName, size);
   }
   const asked = requestedRange(range, size);
-  // A range is answered at most one piece of it; a request for the whole file, whole.
   const header =
     asked && asked !== "unsatisfiable"
       ? `bytes=${asked.start}-${Math.min(asked.end, asked.start + MEDIA_PIECE_BYTES - 1)}`

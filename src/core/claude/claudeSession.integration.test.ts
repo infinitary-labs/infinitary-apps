@@ -167,7 +167,6 @@ function countsInTheBackground(later: (request: StubRequest, res: ServerResponse
   });
 }
 
-/** Everything the app's request showed the model last, as one string. */
 function latestUserTurn(request: StubRequest | undefined): string {
   const messages = request?.body.messages ?? [];
   return JSON.stringify(messages.filter((message) => message.role === "user").at(-1) ?? "");

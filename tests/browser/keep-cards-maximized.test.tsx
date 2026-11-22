@@ -18,14 +18,11 @@ import { openSize, openWindow } from "./window";
 
 const TITLES: [string, string] = ["Compare the two launch plans", "Pick the release window"];
 
-/** The shown card's control named `label`, such as its size control by the words it reads now. */
 const control = (label: string) =>
   page.getByRole("button", { name: label, exact: true }).query() as HTMLElement | null;
 
-/** Whether the stage holds a maximized card. */
 const maximized = () => document.querySelector("[data-card-layer][data-card-maximized]") !== null;
 
-/** The shown card's title, read from the region the stack labels with it. */
 const shownTitle = (title: string) => page.getByRole("region", { name: title, exact: true });
 
 const switchOf = () =>

@@ -47,7 +47,6 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     crewmate.finishPrompt();
     await tick();
 
-    // The turn ended, so the parked guidance became the next turn.
     expect(crewmate.promptCalls).toHaveLength(2);
     expect(crewmate.promptCalls[1]).toBe("use the other library");
     // Said in the feed as the task's own line, never as a Firstmate wake (WI-5).

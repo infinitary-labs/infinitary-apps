@@ -31,7 +31,6 @@ function build(
   return { served, log, settledCount: () => settled };
 }
 
-/** A reader whose answer the test hands over when it chooses. */
 function heldReader(): { reader: CatalogReader; answer: (result: CatalogReadResult) => void } {
   let answer: (result: CatalogReadResult) => void = () => {};
   const reader: CatalogReader = () =>

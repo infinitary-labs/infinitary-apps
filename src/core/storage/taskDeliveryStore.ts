@@ -115,7 +115,6 @@ export class TaskDeliveryStore {
       | undefined;
   }
 
-  /** The evidence and permission rows of each of these tasks that has one, by task id. */
   listFor(taskIds: readonly string[]): {
     evidence: Map<string, EvidenceRow>;
     permissions: Map<string, PermissionRow>;
@@ -200,7 +199,6 @@ export class TaskDeliveryStore {
     return save.history;
   }
 
-  /** Records or clears a settle that has not run. */
   setPendingSettle(taskId: string, pending: unknown): void {
     this.writePermissions(taskId, {
       pending_settle_json:

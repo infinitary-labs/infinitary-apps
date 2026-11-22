@@ -14,7 +14,6 @@
  */
 export type CrewLevel = 0 | 1 | 2;
 
-/** The crew level for a count of working crewmates. */
 export function crewLevel(working: number): CrewLevel {
   return working >= 3 ? 2 : working >= 1 ? 1 : 0;
 }
@@ -32,7 +31,6 @@ export const LAYERS = [
   "arp",
 ] as const;
 export type Layer = (typeof LAYERS)[number];
-/** A layer, or the cues' own bus. */
 export type Bus = Layer | "cue";
 
 /** One note: when it starts in beats from its bar or cue, how long it is in beats, and how loud and where. */
@@ -62,7 +60,6 @@ export type Chord = {
   p?: number[];
 };
 
-/** One composed bar. */
 export type Bar = {
   index: number;
   level: CrewLevel;
@@ -74,7 +71,6 @@ export type Bar = {
   /** How loud each layer plays this bar, 0..1; the player ramps to it over the bar. */
   layers: Record<Layer, number>;
   notes: Note[];
-  /** Whether the bar starts a chord, and where it stands in the chord's bars. */
   newChord: boolean;
   barInChord: number;
   chordBars: number;
@@ -121,7 +117,6 @@ export type Score = {
 export const pitchClass = (midi: number) => ((midi % 12) + 12) % 12;
 export const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
-/** The nearest note at or above `from` with this pitch class. */
 export function upTo(from: number, pc: number): number {
   let m = Math.round(from);
   while (pitchClass(m) !== pc) m += 1;
@@ -139,7 +134,6 @@ function seeded(seed: number): () => number {
   };
 }
 
-/** Bars that must pass between two waiting chimes. */
 const CHIME_EVERY_BARS = 2;
 
 /** A remembered one-bar motif: its rhythm as [grid step, length in steps], and its scale steps. */
@@ -150,7 +144,6 @@ export type TuneOptions = {
   voice: string;
   /** The letters walked a bar at a time; "-" rests. */
   form: string;
-  /** The note the tune centers on. */
   center: number;
   rhythms: [number, number][][];
   /** Another tune whose motifs this one answers with. */
@@ -186,7 +179,6 @@ export class BarContext {
   readonly notes: Note[] = [];
   readonly steps: number;
   readonly grid: number;
-  /** The five-note scale's pitch classes. */
   readonly pentPcs: number[];
   readonly voicing: number[];
   readonly memo: Memo;
@@ -243,11 +235,9 @@ export class BarContext {
   add(voice: string, midi: number, beat: number, length: number, velocity: number, pan = 0): void {
     this.notes.push({ voice, midi, beat: Math.max(0, beat), length, velocity, pan });
   }
-  /** The chord's root at or above `lo`. */
   bass(lo = 38): number {
     return upTo(lo, this.rootPc);
   }
-  /** The note nearest `target` among these pitch classes. */
   near(target: number, pcs: number[], lo = 24, hi = 108): number {
     let best: number | null = null;
     let distance = 1e9;
@@ -261,7 +251,6 @@ export class BarContext {
     }
     return best === null ? Math.round(target) : best;
   }
-  /** Chord tones climbing from `from`, `n` of them. */
   climb(from: number, n: number): number[] {
     const out: number[] = [];
     for (let m = from; m < 110 && out.length < n; m += 1)
@@ -421,7 +410,6 @@ export class Composer {
     this.beatSeconds = 60 / s.bpm;
   }
 
-  /** The bar the next call of `bar` composes. */
   get nextIndex(): number {
     return this.index;
   }
@@ -432,7 +420,6 @@ export class Composer {
     return (this.s.scale[i] as number) + 12 * Math.floor(n / 7);
   }
 
-  /** A chord's pitch classes. */
   chordPcs(chord: Chord): number[] {
     return chord.t.map((off, i) =>
       pitchClass(this.s.tonic + this.deg(chord.d + off) + (chord.x?.[i] ?? 0)),
@@ -489,7 +476,6 @@ export class Composer {
     }));
   }
 
-  /** Composes the next bar for the crew level now. */
   bar(level: CrewLevel): Bar {
     const s = this.s;
     const index = this.index;

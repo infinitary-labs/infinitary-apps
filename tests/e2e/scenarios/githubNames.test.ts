@@ -115,7 +115,6 @@ const LIST = INTEGRATIONS_COMMAND;
 const READ_GITHUB = `${INTEGRATIONS_COMMAND} call GitHub read '{"path":"/user"}'`;
 const LIST_NOTES = `${INTEGRATIONS_COMMAND} call '${GITHUB_SERVER_NAME}' list_notes '{}'`;
 
-/** The bash tool's answer to one command, in its own words: the output, or a job's receipt. */
 async function bashAnswer(command: string, outcome: BashOutcome) {
   const tool = createEventBashTool(async () => outcome);
   const context = {} as Parameters<typeof tool.execute>[4];

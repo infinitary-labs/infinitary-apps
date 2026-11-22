@@ -8,9 +8,7 @@ export type QuotaFigureTone = "fg-1" | "fg-3" | "warn" | "danger";
 export type QuotaMicroMeterLook = {
   /** The bar's fill, 0-100; 0 for a window that was not read. */
   fill: number;
-  /** The bar's color. */
   bar: QuotaMeterTone;
-  /** The number's color. */
   figure: QuotaFigureTone;
   /** The number as written: "74%", or "–" for a window that was not read. */
   text: string;

@@ -22,7 +22,6 @@ export const AEOLIAN = [0, 2, 3, 5, 7, 8, 10];
 export const PENT_MAJOR = [0, 1, 2, 4, 5];
 export const PENT_MINOR = [0, 2, 3, 4, 6];
 
-/** The app's glass tone, on the stars' bus. */
 export const GLASS: Voice = ["glass", "star", null];
 export const FM_CELESTA: FmPreset = {
   ratio: 4,
@@ -36,7 +35,6 @@ export const FM_CELESTA: FmPreset = {
   tail: 1.5,
 };
 
-/** Plucked strings. */
 export const PLUCK = {
   uke: {
     mix: [
@@ -118,7 +116,6 @@ export const PLUCK = {
   },
 } satisfies Record<string, PluckPreset>;
 
-/** Struck bars, bells and tines. */
 export const MALLET = {
   marimba: {
     partials: [
@@ -185,7 +182,6 @@ export const MALLET = {
   },
 } satisfies Record<string, MalletPreset>;
 
-/** Held voices. */
 export const HELD = {
   sub: {
     osc: [
@@ -309,7 +305,6 @@ export const HELD = {
   },
 } satisfies Record<string, SusPreset>;
 
-/** Drums made of a falling sine. */
 export const DRUM = {
   kick: { f: [92, 48], drop: 0.11, decay: 0.34, amp: 0.5 },
   frame: { f: [105, 64], drop: 0.08, decay: 0.26, amp: 0.4, skin: [190, 0.1, 0.07] },
@@ -318,7 +313,6 @@ export const DRUM = {
   deep: { f: [66, 42], drop: 0.2, decay: 0.7, amp: 0.45, att: 0.012 },
 } satisfies Record<string, DrumPreset>;
 
-/** Wood made of tones alone. */
 export const WOOD = {
   tap: {
     set: [
@@ -341,10 +335,8 @@ export const WOOD = {
   },
 } satisfies Record<string, WoodPreset>;
 
-/** A soft shaker made of two high square tones. */
 export const SHAKER: TickPreset = { amp: 0.016, decay: 0.045, hp: 5000, f: [4800, 6900] };
 
-/** The pad's timbres. */
 export const PADS = {
   ice: {
     osc: [

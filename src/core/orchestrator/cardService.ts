@@ -117,7 +117,6 @@ export class CardService {
   private lastSentBack = 0;
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
-  /** The record's evidence, the threads and the agents' emits, each over this stack. */
   private readonly evidence: CardEvidence;
   private readonly threads: CardThreads;
   private readonly emits: CardEmits;
@@ -327,12 +326,10 @@ export class CardService {
       });
   }
 
-  /** The open card under an id. */
   get(id: string): Card | undefined {
     return this.cards.get(id);
   }
 
-  /** The cards on the stack now. */
   values(): IterableIterator<Card> {
     return this.cards.values();
   }
@@ -380,7 +377,6 @@ export class CardService {
     return this.host.cardStore.messages(cardId);
   }
 
-  /** Whether a task's crewmate has emitted its completion card. */
   hasCompletionCard(taskId: string): boolean {
     return this.host.cardStore.hasCompletionCard(taskId);
   }
@@ -968,7 +964,6 @@ export class CardService {
     return true;
   }
 
-  /** Push the stage, and each thread a close-out released revisions on. */
   private broadcastReleased(released: readonly string[]): void {
     this.scheduleBroadcast();
     for (const id of released) this.host.broadcastThread?.(this.thread(id));
@@ -1583,7 +1578,6 @@ export class CardService {
     return this.host.otherChangeOpen?.(taskId) === true;
   }
 
-  /** A card leaves the stack, and with it everything the stage held of it. */
   private drop(id: string): void {
     this.cards.delete(id);
     this.stage.leave(id);
@@ -1684,12 +1678,10 @@ export class CardService {
     return top + 1;
   }
 
-  /** Whether a card is on the stack right now. */
   has(id: string): boolean {
     return this.cards.has(id);
   }
 
-  /** The crewmate's open merge card's merge action on a task (`openMergeActionIn`). */
   openMergeAction(taskId: string, scope?: { review?: string }): OpenMergeAction | undefined {
     return openMergeActionIn(this.cards.values(), taskId, scope);
   }

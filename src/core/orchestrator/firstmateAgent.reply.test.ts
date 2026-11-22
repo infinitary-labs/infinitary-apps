@@ -23,7 +23,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: reply emotes and the reply line (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**

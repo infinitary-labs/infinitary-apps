@@ -33,7 +33,6 @@ import { isPublicAddress, literalAddress } from "./addresses";
 /** Schemes a page may use for content it makes itself; never a request off the page. */
 const PAGE_LOCAL_SCHEMES = new Set(["data:", "blob:", "about:"]);
 
-/** Schemes a request to a project's server travels over. */
 const WEB_SCHEMES = new Set(["http:", "https:", "ws:", "wss:"]);
 
 /** The secure twin of a scheme shares its default port's role, not its number. */
@@ -138,7 +137,6 @@ export function checkOpenable(
  */
 export type BlockKind = "local" | "private" | "insecure" | "scheme";
 
-/** What became of one request a task page made. */
 export type RequestDecision =
   | { allowed: true }
   | {

@@ -30,7 +30,6 @@ export type PanelListening = {
   /** What its manifest names, events included. */
   uses: readonly PanelIntegrationUse[];
   reach: PanelIntegrationsReach;
-  /** Write one event's arrivals to its store. */
   write: (key: string, entry: PanelEventEntry) => void;
   /** Hand the same arrivals to its background code, when it runs. */
   hand: (integration: string, event: string, items: PanelEventEntry["items"]) => void;
@@ -93,7 +92,6 @@ export class PanelEvents {
         }
       }
     }
-    // A panel that stopped naming an event, or went, stops listening to it.
     for (const id of [...this.state.keys()]) if (!live.has(id)) this.state.delete(id);
     await Promise.all(looks);
   }

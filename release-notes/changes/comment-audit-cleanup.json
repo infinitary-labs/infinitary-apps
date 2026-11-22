@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "comment-audit-cleanup",
+      "reason": "Deletes code comments that only repeated the code beside them, named code that is gone, or excused a shortcut, after an audit of every comment in the project's code files. Only comments change: each edited file compiles to the same output as before, so nothing a person sees or does changes."
+    }
+  ]
+}

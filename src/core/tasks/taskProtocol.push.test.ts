@@ -124,7 +124,6 @@ describe("the task protocol (task-system P3)", () => {
     const pushed = boards();
     expect(pushed.length).toBeGreaterThan(0);
     const last = pushed.at(-1) as TaskBoard;
-    // The acceptance: the pushed snapshot IS the fresh read.
     expect(last).toEqual(protocol.board());
     expect(taskBoardSchema.parse(last)).toEqual(last);
     expect(last.seq).toBe(tasks.boardSeq());
@@ -134,7 +133,6 @@ describe("the task protocol (task-system P3)", () => {
         (pushed[index - 1] as TaskBoard).seq,
       );
     }
-    // And after a further mutation the fresh read moves past the last push.
     tick();
     tasks.updateFields("b", { title: "B2" }, "firstmate");
     expect(protocol.board().seq).toBe(12);
@@ -149,7 +147,6 @@ describe("the task protocol (task-system P3)", () => {
     await settle();
     expect(boards()).toHaveLength(1);
     expect(boards()[0]?.seq).toBe(3);
-    // No-op writes leave the sequence alone.
     tasks.setParent("a", null, "firstmate");
     tasks.updateFields("a", { title: "A" }, "firstmate");
     await settle();
@@ -180,7 +177,6 @@ describe("the task protocol (task-system P3)", () => {
       "note",
       "linked",
     ]);
-    // A refused edge (a cycle) commits nothing and notifies nothing.
     expect(() => tasks.graph.link("origin", "f", "blocks", "firstmate")).toThrow(/cycle/);
     expect(changes).toHaveLength(1);
     expect(tasks.boardSeq()).toBe(2);
@@ -415,7 +411,6 @@ describe("the delta carrier (task-system P5)", () => {
       tick();
       step();
       await settle();
-      // After every push the client's folded board IS the fresh read.
       const client = followed(carried());
       expect(client.gaps).toBe(0);
       expect(client.board).toEqual(protocol.board());
@@ -429,7 +424,6 @@ describe("the delta carrier (task-system P5)", () => {
       expect(taskBoardDeltaSchema.parse(delta)).toEqual(delta);
       expect(delta.seq).toBeGreaterThan(delta.baseSeq);
     }
-    // Contiguous: each delta's base is the seq the client held.
     const seqs = carried().map((push) => (push.payload as { seq: number }).seq);
     for (let index = 1; index < seqs.length; index += 1) {
       const push = carried()[index] as { channel: string; payload: unknown };
@@ -454,7 +448,6 @@ describe("the delta carrier (task-system P5)", () => {
     await byRows.settle();
     expect(byRows.carried().at(-1)?.channel).toBe("inf:tasks:delta");
     expect(byRows.protocol.pushModeFor(byRows.protocol.board())).toBe("delta");
-    // The purge: the board resets, the next push is a snapshot with no rows.
     byRows.tasks.archive.purge();
     await byRows.settle();
     expect(byRows.carried().at(-1)).toMatchObject({
@@ -498,7 +491,6 @@ describe("the delta carrier (task-system P5)", () => {
     expect(changed().at(-1)).toMatchObject({ status: "active", from: "open", closedReason: null });
     tick();
     tasks.turns.setActivity("a", "idle");
-    // A write that moves nothing says so: from equals status.
     expect(changed().at(-1)).toMatchObject({ status: "active", from: "active" });
     tick();
     tasks.close("a", {
@@ -514,7 +506,6 @@ describe("the delta carrier (task-system P5)", () => {
     });
     tick();
     tasks.placement.markWorkspaceRemoved("a");
-    // The later write on the closed row is not a transition.
     expect(changed().at(-1)).toMatchObject({
       status: "done",
       from: "done",

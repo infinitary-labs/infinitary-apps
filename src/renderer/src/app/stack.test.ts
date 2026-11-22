@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { shownCard } from "./stack";
 import { card, DECIDE } from "./storeTestKit";
 
-/** The stack's pure model (./stack.ts): which entry is shown. */
-
 describe("shownCard", () => {
   it("picks the card at cardIndex among visible cards", () => {
     const stack = [

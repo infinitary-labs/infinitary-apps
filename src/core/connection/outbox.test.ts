@@ -22,7 +22,6 @@ class Recorded extends EventEmitter {
     this.pings.push(data);
   }
 
-  /** The device's pong for the ping named `name`. */
   answer(name: string) {
     this.emit("pong", Buffer.from(name));
   }
@@ -103,7 +102,6 @@ describe("the outbox that paces what the home writes to a device", () => {
     for (const piece of socket.pieces) piece.done?.();
     expect(heard).toBe(1);
 
-    // The device joins the parts into the frame, and reads the short one as it came.
     const reader = new FramePartsReader();
     const read = socket.pieces.map((piece) => reader.read(piece.data));
     expect(read.filter((frame) => frame !== undefined)).toEqual([text, "short"]);
@@ -135,7 +133,6 @@ describe("the outbox that paces what the home writes to a device", () => {
       socket.answer(socket.pings.at(-1) as string);
       leads.push(out.unanswered);
     }
-    // Answered within a millisecond each time, the lead doubles from one piece.
     expect(leads).toEqual([8, 16, 32, 64, 128]);
 
     // Then the link slows to four bytes a second: the lead falls back to one piece.

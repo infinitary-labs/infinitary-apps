@@ -294,7 +294,6 @@ describe("route", () => {
   });
 
   it("flags nothing-serveable only when the catalog actually had models (P7)", () => {
-    // Every catalog model exhausted or unavailable: structurally unserveable.
     const exhausted = route({
       catalog: catalog.map((model) => ({ ...model, effectivePercentRemaining: 0 })),
       available,
@@ -865,7 +864,6 @@ describe("no allowance read yet (INF-2654)", () => {
     });
     expect(fellBack.choice).toEqual(sonnet);
     expect(fellBack.servedBucket).toBe("medium");
-    // A model placed only in premium is never chosen for a high ask.
     const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
     expect(
       route({

@@ -6,7 +6,6 @@ import * as m from "./messages.generated";
 import type { Section } from "./place";
 import { directionOrigin, OP_WORDS, whenOf } from "./words";
 
-/** Standing directions retain their origin and Knowledge edit history. */
 export function DirectionInspector({
   read,
   section,

@@ -19,7 +19,6 @@ import { COPIED_ONE_BY_ONE, COPIED_TWO_DEEP, leftBehind } from "./tree";
  * sockets and pipes.
  */
 
-/** Units copied at once (`copyTree`). */
 const UNITS_AT_ONCE = 4;
 
 /**
@@ -96,7 +95,6 @@ export function freeBytes(dir: string): number {
   return Number(stats.bavail) * Number(stats.bsize);
 }
 
-/** How one copy says how it goes, and how it stops. */
 type CopyProgress = { signal?: AbortSignal; copied?: (entries: number) => void };
 
 /**
@@ -224,9 +222,7 @@ export async function copyEntry(
   return false;
 }
 
-/** What `copyTree` says as it goes, and how it stops. */
 export type CopyTreeOptions = CopyOptions & {
-  /** A unit is under way. */
   started?: (unit: string) => void;
   /** The Mac's copier made this many more entries of a unit under way. */
   copied?: (unit: string, entries: number) => void;

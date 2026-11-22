@@ -44,7 +44,6 @@ export class PluginCapabilityError extends Error {
   }
 }
 
-/** Dress and body policy for a kind no plugin described. */
 function fallbackCardKind(kind: string): CardKindContribution {
   return {
     id: kind,
@@ -74,7 +73,6 @@ export class PluginHost {
     this.support = support;
   }
 
-  /** The declaration a registered plugin was admitted with. */
   capabilitiesOf(pluginId: string): PluginCapabilities | undefined {
     return this.capabilities.get(pluginId);
   }
@@ -192,7 +190,6 @@ function checkBindingsCover(
   }
 }
 
-/** A registered panel as the arrangement reads it: its id, the slot it asks for and its order. */
 export function arrangedPanelOf(panel: SidePanelContribution): ArrangedPanel {
   return { id: panel.id, preferred: panel.preferredPlacement, order: panel.order };
 }
@@ -244,14 +241,12 @@ export function placeSidePanels(
   return placed;
 }
 
-/** Settings tabs in display order. */
 export function orderSettingsSections(
   sections: readonly SettingsSectionContribution[],
 ): SettingsSectionContribution[] {
   return [...sections].sort(byOrder);
 }
 
-/** The live contents of a registry, re-rendering on registration changes. */
 export function useContributions<T extends Contribution>(
   registry: ContributionRegistry<T>,
 ): readonly T[] {

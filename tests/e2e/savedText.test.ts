@@ -21,7 +21,6 @@ vi.mock("node:fs", async (load) => {
   return { ...actual, readdirSync };
 });
 
-/** A key typed into a sign-in, which a computer's own account store keeps. */
 const TYPED = "sk-or-v1-e2e-typed-key-7731";
 const KEPT_KEY = JSON.stringify({ type: "api_key", key: TYPED });
 
@@ -53,7 +52,6 @@ it("leaves out a file gone since its folder was listed, and still reads every fi
 
 it("leaves out a folder gone since its folder was listed, and still reads every file kept", () => {
   const { dir, preferences, account } = userData();
-  // A temporary folder of Chromium's, with a file in it, removed.
   const scoped = join(dir, ".org.chromium.Chromium.Q2mZ8k");
   mkdirSync(scoped);
   writeFileSync(join(scoped, "download"), "partial");
@@ -69,7 +67,6 @@ it("leaves out a folder gone since its folder was listed, and still reads every 
 
 it("fails on a file it cannot read for any other reason", () => {
   const { dir, preferences } = userData();
-  // Listed as a file, then a folder by the time it is read.
   afterListing.set(dir, () => {
     unlinkSync(preferences);
     mkdirSync(preferences);

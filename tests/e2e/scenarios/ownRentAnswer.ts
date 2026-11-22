@@ -9,11 +9,6 @@ export const OWN_RENT_CARD_TITLE = "Own vs rent: owning Macs wins for steady use
 
 const OWN_RENT_SETTLE_DELAY_MS = 2_500;
 
-/**
- * Woken by the own-vs-rent task's finished report, the first mate puts the
- * answer on a card of its own and then closes the task answered, a while
- * later in the same turn.
- */
 export const ownRentAnswer: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

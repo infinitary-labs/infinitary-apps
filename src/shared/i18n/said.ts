@@ -93,12 +93,10 @@ export function englishOf(fact: Said): string {
   return inLanguage(SOURCE_LANGUAGE, () => wordSaid(fact)) ?? "";
 }
 
-/** A line's fact with its English beside it, as a saved line keeps both. */
 export function saidLine(fact: Said): { text: string; said: Said } {
   return { text: englishOf(fact), said: fact };
 }
 
-/** A saved line in the process's own language: its fact worded, else its saved English. */
 export function wordedLine(line: { text: string; said?: Said | undefined }): string {
   if (!line.said) return line.text;
   return wordSaid(line.said) ?? line.text;

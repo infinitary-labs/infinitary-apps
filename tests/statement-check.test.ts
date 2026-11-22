@@ -22,7 +22,6 @@ import { WALKS } from "./helpers/statementWalks";
 // INF-2060's task_events_ref index removed and passes on the record as
 // migrated today.
 
-/** The statements `read` prepares on `db`, in order. */
 function preparedBy(db: Database.Database, read: () => unknown): string[] {
   const sql: string[] = [];
   const prepare = db.prepare.bind(db);

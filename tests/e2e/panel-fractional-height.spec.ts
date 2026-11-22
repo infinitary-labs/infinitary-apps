@@ -86,8 +86,6 @@ test("fractional-height installed panels stop resizing, show all of their docume
         return document.scrollingElement?.scrollTop;
       });
       expect(innerScroll, "fitting content must not create an inner scroll surface").toBe(0);
-      // All of the document is inside the frame, its end included, and the
-      // outer surface brings that end into view.
       const [endBox, frameBox, viewBox] = await Promise.all([
         end.boundingBox(),
         iframe.boundingBox(),

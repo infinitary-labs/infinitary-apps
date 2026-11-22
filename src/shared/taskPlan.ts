@@ -72,7 +72,6 @@ function tidy(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-/** How far the plan stands: done against the items that count (skipped ones do not). */
 export function planCounts<T extends PlanItem>(
   items: readonly T[],
 ): { done: number; total: number; skipped: number; current: T | null } {

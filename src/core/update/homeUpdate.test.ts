@@ -10,7 +10,6 @@ import type { UpdateChecker } from "./updateChecker";
 // that computer's own Version row offers, and runs that computer's own install, which saves the
 // crew's work first (docs/view.md, "Updating the first mate's computer").
 
-/** An installed alpha on a Mac, as its updater reads it with a newer alpha out. */
 function macStatus(extra: Partial<UpdateStatus> = {}): UpdateStatus {
   return {
     currentVersion: "0.7.2-alpha.577",
@@ -25,7 +24,6 @@ function macStatus(extra: Partial<UpdateStatus> = {}): UpdateStatus {
   };
 }
 
-/** An updater whose install the test ends, and whose status it moves along. */
 function updater(initial: UpdateStatus) {
   let status = initial;
   let end: (result: UpdateInstallResult) => void = () => {};
@@ -166,7 +164,6 @@ describe("the first mate's computer's update, as a paired view sees it", () => {
 });
 
 describe("a Mac whose first mate a command started", () => {
-  /** The window beside the first mate, closed until it is started. */
   function besideWindow(comes: boolean) {
     let open = false;
     const ask = vi.fn(async (_step: "status" | "install" | "later", _from?: string) => macStatus());

@@ -408,7 +408,6 @@ describe("asking to keep a secret", () => {
       ended: { ask: "checkout", state: "kept", secrets: [{ ...STRIPE, version: 1 }] },
     });
     expect(JSON.stringify(f.heard)).not.toContain(VALUE);
-    // Asked for again once kept, it answers kept at once; a waiting ask is withdrawn by its id.
     expect(await there.ask?.({ id: "again", reason: "Tests", secrets: [STRIPE] })).toMatchObject({
       state: "kept",
     });

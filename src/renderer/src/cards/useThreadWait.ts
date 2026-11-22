@@ -27,7 +27,6 @@ export function threadWaitLine(
   };
 }
 
-/** The shown card's waiting line, read live off the board. */
 export function useThreadWait(
   card: Pick<Card, "author" | "awaiting" | "taskId">,
 ): ThreadWaitLine | undefined {

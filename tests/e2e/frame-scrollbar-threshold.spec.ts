@@ -100,7 +100,6 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
         RECORD_SCROLLER,
         RECORD_CARD_SELECTOR,
       );
-      // The record stays inside the window, nothing of it cut off.
       const box = await pane.boundingBox();
       if (!box) throw new Error("Task record has no box");
       const windowBox = await page.evaluate(() => ({
@@ -111,8 +110,6 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
       }));
       expect(within(box, windowBox)).toEqual([]);
     }
-    // A longer disclosure remains readable to its end through the outer
-    // scroller; closing it shrinks the record again.
     await resizeWindow(app, page, { width: 1200, height: boundary - 100 });
     const goalText = pane.locator("[data-record-words]");
     await expect

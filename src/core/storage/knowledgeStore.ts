@@ -275,7 +275,6 @@ export type RevisionRow = {
 
 export type FileOrigin = {
   kind: "file";
-  /** The registered project the file belongs to. */
   project: string;
   path: string;
   startLine: number;
@@ -520,7 +519,6 @@ export class KnowledgeStore {
     return ids.flatMap((id) => this.entry(id) ?? []);
   }
 
-  /** Active entries of the scopes, newest first, for a bounded listing. */
   listed(scopes: readonly string[], kind: KnowledgeKind | undefined, limit: number): EntryRow[] {
     if (scopes.length === 0) return [];
     const marks = scopes.map(() => "?").join(", ");
@@ -594,7 +592,6 @@ export class KnowledgeStore {
     }));
   }
 
-  /** The links every active entry of a scope declares now. */
   edgesIn(scope: string): EdgeRow[] {
     const rows = this.db
       .prepare(
@@ -626,7 +623,6 @@ export class KnowledgeStore {
     return row ? revisionOf(row) : undefined;
   }
 
-  /** Revisions newest first, from `before` (exclusive) down. */
   revisions(id: string, before: number, limit: number): RevisionRow[] {
     const rows = this.db
       .prepare(
@@ -655,7 +651,6 @@ export class KnowledgeStore {
       );
   }
 
-  /** The concept already saved for this article link, if any. */
   articleConcept(scope: string, url: string): string | undefined {
     const row = this.db
       .prepare("SELECT concept_id FROM articles WHERE scope = ? AND url = ?")
@@ -706,7 +701,6 @@ export class KnowledgeStore {
     for (const edge of edges) insert.run(edge.fromId, edge.toId, edge.layer, edge.label, via);
   }
 
-  /** Every edge with `id` at either end. */
   edgesTouching(id: string): EdgeRow[] {
     const rows = this.db
       .prepare(
@@ -906,7 +900,6 @@ export class KnowledgeStore {
     return Number(result.lastInsertRowid);
   }
 
-  /** Every history relation with `id` at either end, oldest first. */
   relations(id: string): RelationRow[] {
     const rows = this.db
       .prepare("SELECT * FROM relations WHERE from_id = ? OR to_id = ? ORDER BY at, id")
@@ -952,7 +945,6 @@ export class KnowledgeStore {
     return Number(result.lastInsertRowid);
   }
 
-  /** Declared uses of an entry, newest first. */
   uses(entryId: string, limit: number): UseRow[] {
     return this.rowsOfUses(
       this.db
@@ -961,7 +953,6 @@ export class KnowledgeStore {
     );
   }
 
-  /** The uses one task's work declared, newest first. */
   usesOfTask(taskId: string, limit: number): UseRow[] {
     return this.rowsOfUses(
       this.db
@@ -1009,7 +1000,6 @@ export class KnowledgeStore {
   }
 }
 
-/** The words an entry is found by. */
 export type SearchWords = { title: string; aliases: string; body: string };
 
 function migrate(db: AppDatabase): void {

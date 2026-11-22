@@ -162,7 +162,6 @@ export async function readPlacementFacts(
   };
 }
 
-/** Resolves once `signal` aborts, at once when it already has. */
 function aborted(signal: AbortSignal): Promise<undefined> {
   return new Promise((resolve) => {
     if (signal.aborted) resolve(undefined);

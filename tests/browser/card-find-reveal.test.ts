@@ -14,7 +14,6 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-/** The part of `scroller` a person sees, in the window. */
 function port(scroller: HTMLElement): { top: number; bottom: number } {
   const top = scroller.getBoundingClientRect().top + scroller.clientTop;
   return { top, bottom: top + scroller.clientHeight };

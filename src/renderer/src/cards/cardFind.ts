@@ -118,7 +118,6 @@ function shown(element: Element): boolean {
   return false;
 }
 
-/** Every region's words and frames in the shown entry, in reading order. */
 function* regionsOf(entry: HTMLElement): Generator<HTMLElement> {
   for (const region of entry.querySelectorAll<HTMLElement>(REGIONS)) {
     if (region.parentElement?.closest(REGIONS)) continue;
@@ -236,7 +235,6 @@ function clearFrames(keep: Set<HTMLIFrameElement> = new Set()): void {
   marked = new Set([...marked].filter((frame) => keep.has(frame)));
 }
 
-/** The nearest ancestor that scrolls `element` up and down. */
 function scrollerOf(element: Element): HTMLElement | null {
   for (let at = element.parentElement; at && at !== document.body; at = at.parentElement) {
     const overflow = getComputedStyle(at).overflowY;
@@ -333,7 +331,6 @@ function paint(current: number, reveal: boolean, from: number): void {
           return;
         }
         const frame = part.frame;
-        // The frame grows once a section opened in it; look again once it has.
         const show = () => {
           const rect = frame.getBoundingClientRect();
           const scale = frame.offsetWidth ? rect.width / frame.offsetWidth : 1;

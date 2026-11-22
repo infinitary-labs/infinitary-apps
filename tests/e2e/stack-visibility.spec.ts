@@ -85,11 +85,9 @@ test("a new card clears when drawn; notes remain after elapsed time and revision
     await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
     await expect(badge(page)).toHaveText("1 new");
     await expect(dots(page)).toHaveCount(1);
-    // A is still the shown card; B waits on the stack.
     await expect(shownCard(page, DECISION_TITLE)).toBeVisible();
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toHaveCount(0);
 
-    // Page to B, following the dot: the badge clears once B is shown.
     const heading = shownCard(page, MOCK_ANSWER_TITLE);
     while (!(await heading.isVisible())) {
       const side = await dots(page).first().getAttribute("data-unread-dot");
@@ -113,7 +111,6 @@ test("a new card clears when drawn; notes remain after elapsed time and revision
     await page.clock.install();
     await page.clock.fastForward("20:00");
     await askFirstmate(page, ANSWER_PROMPT_MARKER);
-    // All five cards remain; only the newly arrived answer is new.
     await expect(badge(page)).toHaveText("1 new", { timeout: 30_000 });
     await expect(pager(page, 5)).toBeVisible();
     // Two answer cards share a title, so page by the dots until none is left.

@@ -36,7 +36,6 @@ export type CreatePanelSlotFacts = {
   hidden: boolean;
 };
 
-/** The slot shows while all four facts hold, and leaves when any one fails. */
 export function showsCreatePanelSlot(facts: CreatePanelSlotFacts): boolean {
   return (
     facts.thirdCrewmateDoneAt !== undefined &&

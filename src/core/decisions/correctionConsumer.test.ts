@@ -21,7 +21,6 @@ function fixture(receipt: DecisionAnswer, hold = false) {
   const db = openInMemoryDatabase();
   dbs.push(db);
   const settings = new SettingsStore(db);
-  // The person's reply-check switch, as Settings writes it.
   const grant = (enabled: boolean) => settings.setDecisionUses({ "reply-checks": { on: enabled } });
   let resolve: ((run: DecisionRun) => void) | undefined;
   const decide = vi.fn(async () =>

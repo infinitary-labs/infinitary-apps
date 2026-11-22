@@ -23,7 +23,6 @@ const CONTAINER_CLOSE_REASONS = new Set(["finished", "cancelled"]);
  * under it carries that work on.
  */
 
-/** Whether a closed task's newest close is the host's container close (`data.container`). */
 export function closedAsContainer(writer: TaskWriter, record: TaskRecord): boolean {
   if (record.status !== "done" && record.status !== "dropped") return false;
   if (!record.closedReason || !CONTAINER_CLOSE_REASONS.has(record.closedReason)) return false;

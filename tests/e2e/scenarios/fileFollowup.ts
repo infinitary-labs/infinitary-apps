@@ -10,7 +10,6 @@ export const MOCK_FOLLOWUP_GOAL = "The meter test passes ten runs in a row.";
 export const MOCK_FOLLOWUP_WHY = "It failed twice while I ran the suite.";
 export const MOCK_PROGRESS_TEXT = "Filed the follow-up; finishing the note now.";
 
-/** The crewmate files its follow-up and notes progress, then reports on the follow-up leg like any other turn. */
 export const fileFollowup: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

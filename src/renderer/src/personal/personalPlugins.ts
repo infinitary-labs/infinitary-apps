@@ -71,7 +71,6 @@ type Mounted = {
   setRunning: (running: boolean | null) => void;
 };
 
-/** What the rail draws: the panel's code while its presence rule holds. */
 function framedContentOf(view: PersonalExtensionView): FramedPanelContent | null {
   return view.present ? framedCodeOf(view) : null;
 }
@@ -134,7 +133,6 @@ export class PersonalPlugins {
     panelDrafts.set(snapshot.drafts ?? []);
   }
 
-  /** Removes every personal panel from the host, and its cards from the stack. */
   clear(): void {
     for (const [id, entry] of this.mounted) {
       entry.unregister();

@@ -22,7 +22,6 @@ export type LocatedProject = {
 export type LocateOptions = {
   /** Managed repos (the fleet root's contents, by their real paths). */
   managed: { id: string; name: string; path: string }[];
-  /** Injectable for tests; defaults to os.homedir(). */
   home?: string;
 };
 
@@ -31,7 +30,6 @@ const MAX_RESULTS = 8;
 /** Home children never entered: system directories, per the spec. */
 const SYSTEM_DIRS = new Set(["Library", "Applications"]);
 
-/** Common project parents scanned one level deep, under the home. */
 const PROJECT_PARENTS = ["projects", "code", "src", "work", "dev", "Documents"];
 
 export function locateProject(name: string, options: LocateOptions): LocatedProject[] {
@@ -50,11 +48,9 @@ export function locateProject(name: string, options: LocateOptions): LocatedProj
     add(repo.path, repo.name, repo.id);
   }
 
-  // ~ one level deep, skipping hidden and system directories.
   for (const child of safeDirs(home)) {
     add(join(home, child), child);
   }
-  // ~/github at org level and repo level.
   const github = join(home, "github");
   for (const org of safeDirs(github)) {
     add(join(github, org), org);
@@ -62,7 +58,6 @@ export function locateProject(name: string, options: LocateOptions): LocatedProj
       add(join(github, org, repo), repo);
     }
   }
-  // The common project parents.
   for (const parent of PROJECT_PARENTS) {
     const dir = join(home, parent);
     for (const child of safeDirs(dir)) {
@@ -91,7 +86,6 @@ export function locateProject(name: string, options: LocateOptions): LocatedProj
   });
 }
 
-/** Child directories of `dir`, skipping symlinks, hidden, and system dirs. */
 function safeDirs(dir: string): string[] {
   let entries: string[];
   try {
@@ -128,7 +122,6 @@ function originOf(gitDir: string): string | undefined {
   }
 }
 
-/** Render the tool result: candidates or an honest not-found. */
 export function renderLocated(name: string, results: LocatedProject[]): string {
   if (results.length === 0) {
     return `No project matching "${name}" found on disk. Ask the user with one decision card if the work needs it.`;

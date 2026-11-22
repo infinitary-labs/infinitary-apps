@@ -26,7 +26,6 @@ afterEach(async () => {
   for (const run of cleanup.splice(0).reverse()) await run();
 });
 
-/** A stand-in API: every request is recorded and answered with what it carried. */
 async function standIn() {
   const seen: { method: string; url: string; authorization?: string; body: string }[] = [];
   const server = createServer((request, response) => {
@@ -51,7 +50,6 @@ async function standIn() {
   return { seen, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
 }
 
-/** The stand-in kind's actions: a read and a change. */
 const ACTIONS: IntegrationActionSpec[] = [
   {
     name: "search",
@@ -69,7 +67,6 @@ const ACTIONS: IntegrationActionSpec[] = [
   },
 ];
 
-/** A kind with a read and a change, each one request to the stand-in. */
 function linear(base: string): IntegrationBinding {
   const send = async (path: string, method: string, body?: string) => {
     const response = await fetch(`${base}${path}`, {
@@ -153,7 +150,6 @@ describe("integration asks", () => {
     expect(kept.text).toContain(`The app raised its approval card for ask ${ask?.id}`);
     // Kept is not run, so it answers as a refusal (the captain's INF-824 choice).
     expect(kept.refused).toBe("refused");
-    // The card's strip says what the click runs, with its input.
     const strip = ask ? writeAskStrip(ask) : "";
     expect(strip).toContain("Your click runs this on Linear, once");
     expect(strip).toContain("Crash on open");

@@ -16,7 +16,6 @@ export function starterFor(provider: string, slot: Slot): string {
   return entry[0];
 }
 
-/** The shipped label and id of a Claude starter, for journeys through its controls. */
 export function claudeStarter(slot: Slot): { id: string; name: string } {
   const id = starterFor("anthropic-claude", slot);
   const model = CLAUDE_MODELS.find((row) => row.id === id);

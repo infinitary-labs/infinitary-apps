@@ -10,12 +10,6 @@ import {
   UI_SIZES,
 } from "./preferences";
 
-/**
- * The persisted preference shapes (Step 0 and talk-to-personalize Step 1):
- * a layout row written before the hidden and placement records still
- * parses, every record is a deviation, and the helpers read them the way
- * the rails and the Firstmate both must.
- */
 describe("the layout record", () => {
   it("parses a Step 0 row with the newer records defaulted", () => {
     expect(layoutSchema.parse({ collapsedPanels: { activity: false } })).toEqual({
@@ -70,7 +64,6 @@ describe("the layout record", () => {
         panels: { enabled: false, offReason: "safe-mode" },
       }).panels,
     ).toEqual({ enabled: false, offReason: "safe-mode" });
-    // The reason is bounded: a row naming one the app does not write is refused.
     expect(personalPanelsSchema.safeParse({ enabled: false, offReason: "whatever" }).success).toBe(
       false,
     );

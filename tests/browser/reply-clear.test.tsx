@@ -72,7 +72,6 @@ test("a sent message leaves its box at once, in a card's reply box and in the ma
   await openWindow(bridge);
   await expect.element(page.getByRole("region", { name: TITLE, exact: true })).toBeVisible();
 
-  // The card's reply box is already empty when the sent reply paints in the thread.
   const seen: (string | null)[] = [];
   seen.push(await boxWhenReplyPaints(PROSE_REPLY));
   await expect.poll(() => inShown("[data-card-thread]").textContent).toContain(PROSE_ANSWER);
@@ -85,7 +84,6 @@ test("a sent message leaves its box at once, in a card's reply box and in the ma
     "",
   ]);
 
-  // The main message box clears in the first render of its send.
   const field = messageBox();
   if (!field) throw new Error("The window drew no message box");
   await userEvent.fill(field, "main composer immediate clear");

@@ -64,7 +64,6 @@ import {
 
 const HOME = HOME_CAMERA;
 
-/** The camera one zoom step in from home, and two steps out from there. */
 const ZOOMED_IN = zoomStep(HOME, "in");
 const ZOOMED_BACK_OUT = zoomStep(zoomStep(ZOOMED_IN, "out"), "out");
 
@@ -89,7 +88,6 @@ async function taskCount(page: Page): Promise<number> {
 
 type Drawn = { x: number; y: number; depth: number };
 
-/** Every concept's drawn place, by id. */
 async function places(page: Page, ids: readonly string[]): Promise<Record<string, Drawn>> {
   const drawn: Record<string, Drawn> = {};
   for (const id of ids) drawn[id] = await drawnAt(page, id);
@@ -195,7 +193,6 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await expect.poll(async () => (await camera(page)).zoom).toBe(ZOOMED_BACK_OUT.zoom);
       await page.keyboard.press("Home");
       await expect.poll(() => camera(page)).toEqual(HOME);
-      // The camera never moved the selection.
       await expect(concept(page, k.evidence)).toHaveAttribute("aria-selected", "true");
     });
 
@@ -388,7 +385,6 @@ test("the graph orbits like a game camera with either button, a drag never selec
     await dragGraph(page, 70, 0, 2);
     expect((await camera(page)).yaw).toBeCloseTo(afterLeft.yaw, 5);
 
-    // A drag that starts on a concept orbits; it never selects that concept.
     await graph(page).press("Home");
     // One a press can land on: the status line under the graph can cover
     // a concept drawn at its foot, where no pointer reaches it either.
@@ -423,7 +419,6 @@ test("the graph orbits like a game camera with either button, a drag never selec
     await focusOn(browser(page).locator("[data-knowledge-find]"));
     expect(await wheelOnGraph(page, -100)).toEqual({ taken: false });
     expect((await camera(page)).zoom).toBe(HOME.zoom);
-    // Outside the graph the context menu is the page's own.
     const elsewhere = await browser(page).evaluate((root) => {
       const menu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
       root.dispatchEvent(menu);
@@ -455,7 +450,6 @@ test("the panel’s Graph link opens the graph, the browser keeps its place whil
     await expect(browser(page).locator('[data-knowledge-list="directions"]')).toBeVisible();
     await expect(browser(page).locator("[data-knowledge-row]")).toHaveCount(0);
 
-    // The captain's Findings, the recheck filter and a finding selected.
     await filterDirections(page, "all");
     await pressIn(tab(page, "findings"));
     await browser(page).locator("[data-knowledge-filter]").selectOption("recheck");
@@ -463,13 +457,11 @@ test("the panel’s Graph link opens the graph, the browser keeps its place whil
     await pressIn(section(page, "evidence"));
     await expect(inspector(page)).toHaveAttribute("data-knowledge-inspector", k.pins);
 
-    // Another card comes to the front, and paging back finds the browser as it was.
     await runFromSearch(app, page, "panel:now/board");
     await expect(browserCard(page)).toHaveCount(0);
     for (let i = 0; i < 6 && (await browserCard(page).count()) === 0; i++) {
       const from = await page.locator(SHOWN_ENTRY).getAttribute("data-stage-entry-id");
       await pressWindowKey(app, "]", ["meta", "shift"]);
-      // The press has paged once another entry is the shown one.
       await expect(
         page.locator(
           `${SHOWN_ENTRY}[data-stage-entry-id]:not([data-stage-entry-id=${JSON.stringify(from)}])`,
@@ -483,7 +475,6 @@ test("the panel’s Graph link opens the graph, the browser keeps its place whil
     await expect(inspector(page)).toHaveAttribute("data-knowledge-inspector", k.pins);
     await expect(section(page, "evidence")).toHaveAttribute("aria-selected", "true");
 
-    // A narrow card: the inspector takes the pane's place, with Back.
     await dragCardTo(page, 600);
     await expect(browser(page)).toHaveAttribute("data-narrow", "");
     await expect(browser(page).locator("[data-knowledge-aside]")).toHaveCount(0);

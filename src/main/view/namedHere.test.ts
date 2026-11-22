@@ -88,7 +88,6 @@ describe("the first mate's own record, cards and places on a computer that contr
     expect(update?.body).toContain("MacBook Pro has alpha 0.7.1-alpha.557.");
     expect(update?.body).toContain("Update it sends MacBook Pro's Infinitary to it");
     expect(update?.body).not.toMatch(/this computer/i);
-    // The change bar still starts at the paragraph that is new.
     const mark = update?.changes?.marks[0] ?? -1;
     expect(update?.body.slice(mark)).toMatch(/^<p>Update it sends MacBook Pro/);
     expect(pause?.title).toBe("Your first mate cannot run on MacBook Pro right now");

@@ -190,7 +190,6 @@ public struct PhoneRulePage: Decodable, Sendable, Equatable, Identifiable {
     public let foot: String
 }
 
-/// One of a picker's choices: the value the computer takes and the words it is shown in.
 public struct PhoneChoice: Decodable, Sendable, Equatable, Identifiable {
     public let value: String
     public let label: String

@@ -277,7 +277,6 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     await second.close();
   }
   const seen = crewmateMessages(mockProvider.requestBodies(), KNOWLEDGE_REUSE_PROMPT_MARKER);
-  // The brief says how much is saved and names nothing in it.
   const countLine = renderBriefKnowledge({
     state: "held",
     counts: { personal: 0, sources: 1, findings: 1 },

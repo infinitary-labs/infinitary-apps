@@ -143,7 +143,6 @@ const PLACE_SCRIPT = [
  */
 export const COMPUTER_LINK_HEADER = "infinitary-computer-link";
 
-/** Why the computer link script made no link: the phone's reasons, and one more. */
 export const COMPUTER_LINK_NONE = {
   ...PHONE_LINK_NONE,
   /** The Infinitary open there controls another computer, so it has no door. */
@@ -171,7 +170,6 @@ for (const script of [LINK_SCRIPT, PLACE_SCRIPT, COMPUTER_LINK_SCRIPT_TEXT])
   if (/['\\!\n]/.test(script))
     throw new Error("A phone's fixed command must suit every login shell.");
 
-/** The command the phone runs to ask for a link. */
 export const PHONE_LINK_COMMAND = `/bin/sh -c '${LINK_SCRIPT}'`;
 
 /**
@@ -194,7 +192,6 @@ export const COMPUTER_LINK_COMMAND: readonly string[] = [
   COMPUTER_LINK_SCRIPT_TEXT,
 ];
 
-/** Why no computer link came back: the script's own reasons, an older door, or an answer it could not read. */
 export type ComputerLinkNone =
   | (typeof COMPUTER_LINK_NONE)[keyof typeof COMPUTER_LINK_NONE]
   | "unreadable";

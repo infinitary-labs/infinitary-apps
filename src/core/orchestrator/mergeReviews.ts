@@ -60,7 +60,6 @@ import { taskContributesUpstream } from "./workShape";
 const SELECTED_CHANGE_WORDS =
   "It is now this task's current change: check_change reads it until you name another or open_change opens one. Your merge card merges it, with after saying whether the task continues or closes. A saved-story card gives presentation and omits review, because this is the current change; otherwise name this review in the merge effect.";
 
-/** A review's pull request read again, or why it may not merge. */
 type Reread =
   | { ok: true; forge: Forge; pull: ForgePull }
   | { ok: false; text: string; stop?: MergeStop };

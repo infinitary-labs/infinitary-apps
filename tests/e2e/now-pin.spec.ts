@@ -104,7 +104,6 @@ test("a row's pin keeps its task at the top of Tasks by keys and by the pointer,
       await page.keyboard.press("Enter");
       await expect.poll(() => pinnedAt(page, "pn-first")).not.toBeNull();
       await expect.poll(() => nowRowGroup(page, firstKey)).toBe("pinned");
-      // Focus follows its row to the top, and its pin now reads filled and pressed.
       await expect(focused('[data-now-row="pn-first"]')).toHaveCount(1);
       await expect(pin("pn-first")).toHaveAttribute("aria-pressed", "true");
       await expect(pin("pn-first")).toHaveAccessibleName(pinActionLabel(true, firstKey));

@@ -6,7 +6,6 @@ import { standingDependencyWaits } from "./dependencyWaits";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 
-// Reproduction of reciprocal baseline waits and mixed ordinary/baseline loops.
 function setup() {
   const db = freshDatabase();
   const tasks = new TaskService({ db, strict: true });

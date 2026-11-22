@@ -97,7 +97,6 @@ export type BesideOptions = {
    * before an update"); otherwise the first mate's own updater answers.
    */
   installsUpdates: boolean;
-  /** Whether the program this window runs was replaced since it started. */
   programReplaced: () => boolean;
   /**
    * The starter this window starts the command with, where it may

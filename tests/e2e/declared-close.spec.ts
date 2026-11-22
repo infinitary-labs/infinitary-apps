@@ -80,7 +80,6 @@ import { pressKey } from "./windowKeys";
 const MERGE = MERGE_WORDS["merge-pr"];
 const PROJECT = "meterlab";
 const TASK_TITLE = `${PROJECT} ${DECLARED_CLOSE_MARKER}`;
-/** The captain asks the first mate to merge the task. */
 const MERGE_PROMPT = `${MERGE_PROMPT_MARKER}${TASK_TITLE}`;
 /** GitHub's answer while it cannot read a pull request (INF-2546 R8). */
 const READ_FAILURE = { status: 502, message: "Server Error" };
@@ -134,7 +133,6 @@ async function send(page: Page, text: string): Promise<void> {
   await input.press("Enter");
 }
 
-/** The task the card with this title belongs to, as the core lists it. */
 async function cardTask(page: Page, title: string): Promise<string> {
   const cards = await page.evaluate(() => window.infinitary.cards.list());
   const taskId = cards.find((card) => card.title === title)?.taskId;
@@ -146,7 +144,6 @@ function detail(page: Page, taskId: string) {
   return page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
 }
 
-/** The branches the project's working copies are on, from git itself. */
 function workingCopyBranches(repoDir: string): string[] {
   return execFileSync("git", ["-C", repoDir, "worktree", "list", "--porcelain"], {
     encoding: "utf8",
@@ -156,7 +153,6 @@ function workingCopyBranches(repoDir: string): string[] {
     .map((line) => line.slice("branch refs/heads/".length));
 }
 
-/** The numbers GitHub merged, in order. */
 const mergedNumbers = (github: { merges: () => { number: number }[] }) =>
   github.merges().map((merge) => merge.number);
 
@@ -184,7 +180,6 @@ test("a task merges a continuing pull request, then finishes with its own, and c
     const branch = (await detail(page, taskId))?.repo?.branch;
     if (!branch) throw new Error("The task has no branch");
     expect(workingCopyBranches(repo.repoDir)).toContain(branch);
-    // The task's own pull request is open on its branch.
     github.serveNumbered({
       number: OWN_PULL,
       branch,
@@ -197,11 +192,9 @@ test("a task merges a continuing pull request, then finishes with its own, and c
     await expect
       .poll(() => mergedNumbers(github), { timeout: 20_000 })
       .toEqual([RELEASE_PULL.number]);
-    // The continuing merge leaves the task open with its working copy.
     expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
     expect(workingCopyBranches(repo.repoDir)).toContain(branch);
 
-    // Woken once, the crewmate offers its own pull request as the finishing change.
     const finish = shownCard(page, FINISH_CARD_TITLE);
     await expect(finish).toBeVisible({ timeout: 30_000 });
     const facts = factsStrip(cardBody(page, FINISH_CARD_TITLE));
@@ -209,8 +202,6 @@ test("a task merges a continuing pull request, then finishes with its own, and c
     await expect(facts.change).toContainText(`#${OWN_PULL}`);
     await regionShot(finish, test.info().outputPath("finishing-card.png"));
 
-    // Round two (the captain's answer): the record's Info lists both pull
-    // requests, the merged release and the one whose merge closes the task.
     await pressKey(taskKeyLinks(cardSurface(page)).first(), "Enter");
     await expect(recordCard(page)).toBeVisible();
     await expectRecordBody(page);
@@ -241,7 +232,6 @@ test("a task merges a continuing pull request, then finishes with its own, and c
   }
 });
 
-/** How many crewmate steps answered the wake that a continuing merge went in. */
 const continuedWakes = (bodies: string[]) =>
   bodies.filter(
     (body) =>
@@ -256,7 +246,6 @@ test("with autonomy on, the app merges the release from its merge card, the task
   const bodies = () => launched.mockProvider?.requestBodies() ?? [];
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
-    // No click: the app sends the release's merge from the card itself.
     await expect
       .poll(() => mergedNumbers(github), { timeout: 30_000 })
       .toEqual([RELEASE_PULL.number]);
@@ -264,10 +253,8 @@ test("with autonomy on, the app merges the release from its merge card, the task
     const branch = (await detail(page, taskId))?.repo?.branch;
     if (!branch) throw new Error("The task has no branch");
     expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
-    // The crewmate hears the continuing merge once.
     await expect.poll(() => continuedWakes(bodies()), { timeout: 30_000 }).toBe(1);
 
-    // The first mate's merge of the already-merged release sends nothing and closes the task.
     await send(page, `${MERGE_PROMPT_MARKER}${TASK_TITLE}`);
     await expect
       .poll(() => detail(page, taskId), { timeout: 30_000 })
@@ -310,7 +297,6 @@ test("a finishing card shown for one pull request merges that one once another i
   const { launched, page, github, repo, close } = await arrange("stale");
   const bodies = () => launched.mockProvider?.requestBodies() ?? [];
   try {
-    // The finishing card goes up for the release, the task's current change.
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
     const finish = shownCard(page, FINISH_CARD_TITLE);
     await expect(finish).toBeVisible({ timeout: 30_000 });
@@ -388,8 +374,6 @@ test("with autonomy on, the app merges the finishing change on another branch fr
   const { page, github, repo, close } = await arrange("taken-over", { autonomy: true });
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
-    // The crewmate names the release as the task's change and offers it as
-    // the finishing one; the app merges it with no click.
     const task = async () =>
       (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
         (row) => row.title === TASK_TITLE,
@@ -422,7 +406,6 @@ test("the first mate's merge card on a published story merges at the published v
   const title = `${PROJECT} ${STORY_MERGE_MARKER}`;
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
-    // The crewmate published its story and put its merge card up.
     await expect(shownCard(page, STORY_MERGE_TITLE)).toBeVisible({ timeout: 60_000 });
     const taskId = await cardTask(page, STORY_MERGE_TITLE);
     const saved = () =>

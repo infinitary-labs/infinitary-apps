@@ -80,7 +80,6 @@ describe("task record chrome", () => {
     expect(contains(title, "data-record-key")).toBe(false);
     // The model is a fact in the body's readout (FI3-565 piece 2), named once.
     expect(contains(root, "data-model-chip")).toBe(false);
-    // The status and the task carry their shared fact identities, in order.
     const facts: string[] = [];
     walk(root, (node) => {
       const id = node.attribs?.["data-task-fact"];
@@ -176,7 +175,6 @@ function buttons(root: Node): string[] {
   return found;
 }
 
-/** The bar's words outside its buttons. */
 function words(root: Node): string {
   const text = (node: Node): string =>
     node.name === "button"

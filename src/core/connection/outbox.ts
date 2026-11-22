@@ -64,12 +64,10 @@ export class Outbox {
     ws.once("close", () => this.drop());
   }
 
-  /** Bytes waiting here, not yet written to the socket. */
   get waiting(): number {
     return this.queuedBytes;
   }
 
-  /** Bytes written and not yet answered for. */
   get unanswered(): number {
     return this.written - this.answered;
   }

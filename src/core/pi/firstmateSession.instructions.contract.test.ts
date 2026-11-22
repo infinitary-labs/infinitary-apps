@@ -23,7 +23,6 @@ import { createPiSessionFactory, FIRSTMATE_CONTRACT_ENTRY } from "./session";
  * it, and the session file records which document each turn saw.
  */
 
-/** The leading system message of one recorded completion request. */
 function systemOf(body: string): string {
   const messages = (JSON.parse(body) as { messages: { role: string; content: unknown }[] })
     .messages;
@@ -70,7 +69,6 @@ describe("the served sequences (contract v4.6)", () => {
       session.dispose();
 
       const [first, second, third] = provider.requestBodies().map(systemOf);
-      // core + authoring + reply, then the document as its own section.
       const prompt = buildFirstmateSystemPrompt();
       expect(first).toContain(prompt);
       expect(first).toContain(`<addendum>\n${seed}\n</addendum>`);

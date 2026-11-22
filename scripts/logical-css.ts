@@ -89,7 +89,6 @@ export function styleProblems(path: string, text: string): string[] {
   return problems;
 }
 
-/** Every physical side in the files the check reads, as one line each. */
 export function logicalCssProblems(files: Record<string, string>): string[] {
   const problems: string[] = [];
   for (const [path, text] of Object.entries(files)) {

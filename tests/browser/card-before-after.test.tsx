@@ -44,13 +44,11 @@ const AFTER = [
   view("shots/history-after.png", "The history list, new", 1200, 600, "The history list", true),
 ];
 
-/** A box read inside a frame, moved by where the frame sits in the window. */
 const inWindow = (box: Rect, frame: Element): Rect => {
   const at = frame.getBoundingClientRect();
   return { ...box, x: box.x + at.x, y: box.y + at.y };
 };
 
-/** The shown card's outer body scroll surface. */
 const scroller = () => document.querySelector<HTMLElement>(`${SHOWN_ENTRY} [data-card-body]`);
 
 test("a completion card's pictures are reachable in order and its facts stay beside the merge button", async () => {
@@ -125,7 +123,6 @@ test("a completion card's pictures are reachable in order and its facts stay bes
     previousTop = read.box.y;
   }
 
-  // Only the new view is marked new, and its New tag is drawn.
   const marked = await inCardBody(TITLE, () => {
     const figures = [...document.querySelectorAll("[data-inf-new]")];
     const tag = (el: Element) => {

@@ -591,7 +591,6 @@ describe.skipIf(!onMacOS)("a keychain that refuses the stored secret", () => {
     expect(readFileSync(join(fixture.dir, "designated-requirement.txt"), "utf8")).toBe(
       `${fixture.requirement}\n`,
     );
-    // The stored secret opens the keychain again.
     expect(fixture.unlockWithStoredSecret().status).toBe(0);
 
     const calls = readCalls(fixture.securityLog);
@@ -870,7 +869,6 @@ describe.skipIf(!onMacOS)("signing borrows the search list and always hands it b
 
     expect(existsSync(join(dir, "signing-in-progress"))).toBe(false);
 
-    // ...and the next signer signs.
     const next = runModule(signSource, env);
     expect(next.status, next.stderr).toBe(0);
     expect(list()).toEqual([LOGIN_KEYCHAIN]);
@@ -883,7 +881,6 @@ describe.skipIf(!onMacOS)("signing borrows the search list and always hands it b
  * nothing there, and makes its own material in ~/.infinitary/local-codesign.
  */
 describe("the signer from before the Infinitary rename", () => {
-  /** Every file under `dir`, by relative path: its bytes, mode and modification time. */
   function snapshot(dir: string) {
     return Object.fromEntries(
       readdirSync(dir, { recursive: true, encoding: "utf8" })
@@ -975,7 +972,6 @@ describe("the signer from before the Infinitary rename", () => {
       const result = runModule(source, env);
       expect(result.status, result.stderr).toBe(0);
 
-      // New material, under the new names, in the new folder.
       expect(readCalls(codesignLog).some((args) => args.includes("--sign"))).toBe(true);
       const certificate = new X509Certificate(
         readFileSync(join(newDir, "local-codesign.cert.pem")),
@@ -985,7 +981,6 @@ describe("the signer from before the Infinitary rename", () => {
         /^identifier "com\.getinfinitary\.infinitary\.dev" and certificate leaf = H"[0-9a-f]{40}"\n$/,
       );
 
-      // The old folder: no call named it, and every file is as it was.
       const calls = [...readCalls(securityLog), ...readCalls(codesignLog)];
       expect(calls.some((args) => args.some((arg) => arg.includes(".firstmate-3000")))).toBe(false);
       expect(snapshot(oldDir)).toEqual(before);

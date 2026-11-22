@@ -5,7 +5,6 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The first mate's one card. */
 const CARD_ID = "card-drafts";
 
 /** What the card-drafts test's story reads back: the card, and the draft another window left. */

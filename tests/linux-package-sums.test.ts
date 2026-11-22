@@ -332,7 +332,6 @@ describe("the check job's fetch of the Linux packages", () => {
         workflowString(value, contexts),
       ]),
     );
-    // The install step reads the packages from the same folder.
     const read = steps[install]?.run ?? "";
     expect(read).toContain('"$RUNNER_TEMP/linux-packages"');
     expect(given).toEqual({ sums: list, path: "/runner/temp/linux-packages" });
@@ -383,7 +382,6 @@ function releaseFetch(job: string, renders: string) {
   };
 }
 
-/** A release step's inputs, as Actions passes them, with the linux job's list made from `list`. */
 function releaseInputs(step: Step | undefined, list: string, temp: string): Record<string, string> {
   const contexts = {
     needs: { linux: { outputs: { sums: listOfLinuxJob(list) } } },
@@ -422,8 +420,6 @@ describe("a release's fetch of the Linux packages", () => {
       const scripts = new Set(action.runs.steps.map(scriptOf).filter((path) => path !== undefined));
       expect(scripts).toEqual(new Set(["scripts/linux-package-sums.ts"]));
       expect(sparse).toEqual(expect.arrayContaining([`${ACTION}/`, ...scripts]));
-      // The linux job's own list, and the folder the render step then reads,
-      // under the same condition.
       const list = built().sums;
       expect(releaseInputs(steps[fetch], list, "/runner/temp")).toEqual({
         sums: list,

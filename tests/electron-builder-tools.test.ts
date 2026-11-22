@@ -118,7 +118,6 @@ describe(".github/actions/electron-builder-tools", () => {
     return temp;
   }
 
-  /** The tools step's run, as a runner runs it in this checkout. */
   function runToolsStep(temp: string, phase: { save: boolean; restored?: string }) {
     const env = join(temp, "env");
     const output = join(temp, "output");
@@ -155,7 +154,6 @@ describe(".github/actions/electron-builder-tools", () => {
     return { env: lines(env), outputs, contexts };
   }
 
-  /** A value a step must have written, as a string. */
   function required(value: string | undefined): string {
     expect(value).toBeTypeOf("string");
     return value as string;

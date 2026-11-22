@@ -538,7 +538,6 @@ export function DeviceSignInAside({
       </>
     );
   } else if (prompt) {
-    // A code to paste back after the browser, or a key.
     const code = prompt.kind === "manual_code" || (prompt.kind !== "secret" && openLink);
     const asked = !code ? "key" : returnsToLoopback(link) ? "address" : "code";
     body = (

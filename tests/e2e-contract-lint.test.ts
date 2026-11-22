@@ -431,7 +431,6 @@ describe("native pointer actions in e2e frames", () => {
     expect(
       findings.every((finding) => finding.line >= 3 && finding.message.startsWith("Native ")),
     ).toBe(true);
-    // Exactly the same source outside e2e stays outside this lint.
     const outside = join(root, "outside.ts");
     writeFileSync(outside, 'page.frameLocator("iframe").getByRole("button").click();');
     expect(lintFrameActions([outside])).toEqual([]);

@@ -92,7 +92,6 @@ export function pluginSettings(
     }) as unknown as Awaited<ReturnType<ResolveClaudeSettings>>;
 }
 
-/** The words every file a plugin's links reach outside it holds. */
 export const OUTSIDE_THE_PLUGIN = "Planted outside the plugin.";
 
 /**
@@ -121,7 +120,6 @@ export function linkOutsidePlugin(home: string, root: string): void {
   symlinkSync(join(root, "scripts"), join(root, "tools"));
 }
 
-/** Every file under `dir`, links followed, that holds what lies outside the plugin. */
 export function filesFromOutside(dir: string, ancestors: string[] = []): string[] {
   const real = realpathSync(dir);
   if (ancestors.includes(real)) return [];

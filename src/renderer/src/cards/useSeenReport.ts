@@ -4,7 +4,6 @@ import type { FirstmateApi } from "@shared/windowApi";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 
-/** Whether the window is in front of the captain: visible, and focused. */
 function windowPresent(): boolean {
   return document.visibilityState === "visible" && document.hasFocus();
 }

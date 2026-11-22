@@ -89,7 +89,6 @@ const NO_REPLY_IMAGES: ImageAttachment[] = [];
  * thread's latest line above it (FI3-1130).
  */
 
-/** Who wrote it, in the words the thread shows and the color it uses. */
 const WHO: Record<CardMessageWho, { label: string; color: string }> = {
   captain: {
     get label() {
@@ -903,8 +902,6 @@ export function MessageList({
   const count = messages.length;
   const workingEntrance = useWorkingEntrance();
   const waitingText = working ? undefined : waiting?.text;
-  // The list's live tail: the working row with what it names, or the
-  // waiting line.
   const tail = working ? `working ${doing ?? ""}` : ended ? "ended" : waitingText; // i18n-exempt: not shown (a scroll trigger key)
   const split =
     ended && endedAt !== undefined ? messages.findIndex((message) => message.at > endedAt) : -1;
@@ -949,7 +946,6 @@ export function MessageList({
     const node = listRef.current;
     const from = placed.current;
     placed.current = count;
-    // Nothing to hold to while the thread is empty.
     if (!node || (count === 0 && tail === undefined && pendingCount === 0)) return;
     const arrived = messages.slice(from);
     if (arrived.some((message) => message.who === "captain")) {

@@ -153,7 +153,6 @@ describe("CrewSupervisor", () => {
     expect(decision?.taskId).toBe(taskId);
     expect(decision?.meta).toBe("Promote the latest alpha");
     expect(ops.at(-1)).toContain("failed");
-    // The task stays open and idle with its working copy, never closed failed.
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
@@ -237,7 +236,6 @@ describe("CrewSupervisor", () => {
     expect(sessionSpecs.at(-1)?.binding).toMatchObject({ accountId: "acct_codex" });
     expect(crewmate.dispose).toHaveBeenCalled();
     expect(moved.promptCalls.join("\n")).toContain("the release run finished");
-    // The history says who moved it, and the card is down.
     expect(tasks.timeline(taskId).map((event) => [event.actor, event.text])).toContainEqual([
       "captain",
       "the captain moved it from Copilot to GPT-6.1 Sol on Codex",
@@ -294,11 +292,8 @@ describe("CrewSupervisor", () => {
     // The honest retry owns the brief it carried (docs/inbox.md).
     expect(ops.at(-1)).toContain("retries it on its own");
     expect(ops.at(-1)).toContain("You can still steer or interrupt it.");
-    // Transient fault, not auth: no sign-in card.
     expect(cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE)).toBeUndefined();
 
-    // The session survives: still steerable, and the next clean turn
-    // reports normally again.
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     await supervisor.steer.steerCrewmate(taskId, "try again");
     await tick();
@@ -711,7 +706,6 @@ describe("CrewSupervisor", () => {
       );
       // Its title names the refused access too, never a sign-in to redo.
       expect(signIn?.title).toBe(device ? PROVIDER_SIGN_IN_TITLE : CLAUDE_ACCESS_SIGN_IN_TITLE);
-      // And so does its feed line, read back from the record.
       const failed = tasks
         .timeline(taskId)
         .filter((event) => event.kind === "failed")

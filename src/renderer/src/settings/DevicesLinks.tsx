@@ -35,7 +35,6 @@ export function homeFirewallOf(
   return addresses?.firewall ?? addresses?.windowsFirewall;
 }
 
-/** Whether a link or command for another computer is open in the panel, which then says what the firewall may keep out. */
 export function panelForAnotherComputer(panel: LinkPanel | null): boolean {
   return panel?.state === "open" && panel.make !== "user-command";
 }
@@ -267,7 +266,6 @@ export function LinkPanelView({
   );
 }
 
-/** The open link or command: it on one line, Copy, the count and Stop it. */
 function OpenLink({
   invite,
   make,
@@ -279,7 +277,6 @@ function OpenLink({
   invite: DeviceInvite;
   make: DevicePanelMake;
   now: number;
-  /** A home's firewall that may keep the other computer out. */
   firewall: HomeFirewall | undefined;
   /** The section's Copy button already copied it, so the panel opens reading Copied. */
   startCopied?: boolean;

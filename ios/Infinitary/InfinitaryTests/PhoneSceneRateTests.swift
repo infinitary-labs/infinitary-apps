@@ -8,7 +8,6 @@ import XCTest
 @MainActor final class PhoneSceneRateTests: XCTestCase {
     func testTheSceneKeepsTheScreensFullRateUpTo120() {
         XCTAssertEqual(PhoneSceneRate.rate(lowPower: false, screen: 120), 120)
-        // A 60-a-second screen keeps its own top rate, and a faster one is held to 120 as before.
         XCTAssertEqual(PhoneSceneRate.rate(lowPower: false, screen: 60), 60)
         XCTAssertEqual(PhoneSceneRate.rate(lowPower: false, screen: 240), 120)
         let range = PhoneSceneRate.range(lowPower: false, screen: 120)

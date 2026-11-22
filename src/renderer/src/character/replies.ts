@@ -136,7 +136,6 @@ const TICK_SEGMENTS = (() => {
   return { a, b, c, l1, l2, total: l1 + l2 };
 })();
 
-/** How much of the check is drawn, 0..1. */
 function tickDrawn(et: number): number {
   return easeInOut(clamp01((et - TICK_DRAW.from) / (TICK_DRAW.to - TICK_DRAW.from)));
 }
@@ -415,7 +414,6 @@ export function drawReplyGarnish(env: ReplyGarnishEnv): void {
     const dot = tuckDot(et);
     if (dot) {
       const [x, y] = env.pose(c + dot.x * R, c + dot.y * R);
-      // Trail while it swoops.
       if (et >= TUCK_SWOOP.from) {
         for (let g = 1; g <= 2; g++) {
           const back = tuckDot(Math.max(TUCK_SWOOP.from, et - g * 0.025));

@@ -403,7 +403,6 @@ const REJECTION_WORDS: Record<PlacementRejection, string> = {
   "memory-busy": "not enough spare memory",
 };
 
-/** A computer's rejections in words; out of reach reads connecting while its connection was being made. */
 function rejectionWords(
   rejections: readonly PlacementRejection[],
   connecting: boolean,

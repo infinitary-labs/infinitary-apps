@@ -162,7 +162,6 @@ function expectEveryBodyAllowlisted(stub: StubEndpoint, appVersion: string): voi
   }
 }
 
-/** Nothing the person typed, and no local path, reached the endpoint. */
 function expectNothingTyped(stub: StubEndpoint, app: LaunchedApp): void {
   const wire = JSON.stringify(stub.received.map((received) => received.body));
   for (const typed of TYPED) expect(wire).not.toContain(typed);
@@ -265,7 +264,6 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         const channel =
           action === "OK" ? "inf:settings:sharing:viewed" : "inf:settings:sharing:set";
         await refuseNext(app, channel, false, REFUSAL, true);
-        // Reach the notice from the first-launch screen using only Tab.
         for (
           let i = 0;
           i < 30 && !(await choice.evaluate((el) => el === document.activeElement));
@@ -431,8 +429,6 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         expect(view.diagnostics).toMatchObject({ enabled: true, viewedAt: null, sentAt: null });
         expect(view.diagnostics.installId).toMatch(DIAGNOSTIC_INSTALL_ID_PATTERN);
         installId = view.diagnostics.installId as string;
-        // The launch's events are recorded, and every one still waits: none
-        // has gone, and the endpoint has heard nothing.
         await expect
           .poll(async () => (await sharingPreview(page)).diagnostics.pending.map((e) => e.name))
           .toEqual(["ftue_first_launch", "app_launch", "ftue_gate_shown"]);
@@ -508,7 +504,6 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
             }),
           );
 
-        // Each first-run step once, in the order the person took them.
         expect(names(stub).filter((name) => name.startsWith("ftue_"))).toEqual([
           "ftue_first_launch",
           "ftue_gate_shown",

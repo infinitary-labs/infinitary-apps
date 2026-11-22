@@ -24,7 +24,6 @@ extension PhoneJourney {
         waitForSteadyTarget(box)
         picture("0-map-in-card")
 
-        // One finger on the map in the card moves the card, never the map, and opens no cover.
         let before = box.frame
         let start = box.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.3)
@@ -33,7 +32,6 @@ extension PhoneJourney {
         XCTAssertEqual(box.frame.width, before.width, accuracy: 1, "A drag on the map in the card leaves the map's size alone")
         XCTAssertFalse(app.navigationBars["Card diagram"].exists, "A drag on the map opens nothing")
 
-        // A tap opens the live map in its cover.
         reveal(box)
         tapOnPhone(box)
         XCTAssertTrue(app.navigationBars["Card diagram"].waitForPresence(timeout: 10), app.debugDescription)
@@ -47,7 +45,6 @@ extension PhoneJourney {
         picture("1-cover-fitted")
         let fittedDrawing = drawing(of: cover)
 
-        // A pinch enlarges the map, a drag moves it, and Fit fits it again.
         cover.pinch(withScale: 2, velocity: 1)
         XCTAssertTrue(framed(inner) { $0.width > fitted.width * 1.3 }, "A pinch enlarges the map: \(inner.frame)")
         picture("2-cover-pinched")
@@ -80,7 +77,6 @@ extension PhoneJourney {
         waitForStill(cover)
         picture("4-cover-inside")
 
-        // Turning the phone onto its side refits the map inside the cover.
         if phoneTurnedLayout(app) == .onItsSide {
             let anyBox = cover.staticTexts.element(boundBy: 0)
             turnPhone(to: .landscapeLeft, in: app, moving: anyBox)
@@ -99,7 +95,6 @@ extension PhoneJourney {
             turnPhone(to: .portrait, in: app, moving: anyBox)
         }
 
-        // Done closes the cover, and the card's own map stands where the cover left it.
         tapOnPhone(app.navigationBars["Card diagram"].buttons["Done"])
         XCTAssertTrue(cover.waitForAbsence(timeout: 10), app.debugDescription)
         let handed = body.buttons.matching(NSPredicate(format: "label == %@", part)).firstMatch
@@ -117,7 +112,6 @@ extension PhoneJourney {
         return whole.cropping(to: map).map { UIImage(cgImage: $0).pngData() } ?? nil
     }
 
-    /// Waits until the map stops moving: two drawings in a row are the same.
     private func waitForStill(_ cover: XCUIElement) {
         var last: Data?
         _ = waitForPhonePredicate(NSPredicate { _, _ in
@@ -127,7 +121,6 @@ extension PhoneJourney {
         }, object: nil, timeout: 10)
     }
 
-    /// Waits until the element's frame, read afresh each tick, passes `test`.
     private func framed(_ element: XCUIElement, timeout: TimeInterval = 10, _ test: @escaping (CGRect) -> Bool) -> Bool {
         waitForPhonePredicate(NSPredicate { _, _ in element.exists && test(element.frame) }, object: nil, timeout: timeout) == .completed
     }

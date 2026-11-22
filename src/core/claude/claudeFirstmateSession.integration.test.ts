@@ -250,7 +250,6 @@ describe("the Claude seat on the real client", () => {
     expect(session.sessionId).not.toBe(first);
     const at = api.requests.length;
     await session.prompt("two");
-    // The reopen really started a new client, serving the new instructions.
     const system = (api.requests[at]?.body.system ?? [])
       .map((block) => block.text ?? "")
       .join("\n");
@@ -265,7 +264,6 @@ describe("the Claude seat on the real client", () => {
     expect(usages.every((input) => input > 0)).toBe(true);
     session.dispose();
     await session.closed();
-    // The app's copy of the old session stays, beside the new one's.
     expect(JSON.stringify(b.store.entries(first))).toContain("remember the word cobalt");
     expect(JSON.stringify(b.store.entries(session.sessionId))).toContain('"two"');
   });
@@ -408,7 +406,6 @@ describe("the Claude seat on the real client", () => {
     await arrived;
     await session.abort();
     await prompt;
-    // A plain interrupt is not a failure.
     expect(events.some((event) => event.type === "turn_failed")).toBe(false);
     api.answer((request, res) => answerText(request, res, "Back."));
     await session.prompt("are you there?");

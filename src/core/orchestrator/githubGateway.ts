@@ -640,7 +640,6 @@ export class GithubGatewayService {
     throw new ForgeError("unsupported", "This project's host has no JSON API the app can reach.");
   }
 
-  /** The github.com sign-in's own target. */
   private accountTarget(host?: string): Target {
     const account = this.options.accountForge?.(host);
     if (account?.api) return { api: account.api, forge: account, via: "account" };
@@ -759,7 +758,6 @@ export class GithubGatewayService {
     }
   }
 
-  /** One call of the task's budget, or the refusal once it is spent. */
   private spend(taskId: string, api: ForgeApi): void {
     if (taskId === LOOK_CALLS || taskId.startsWith(PANEL_CALLS)) return;
     const used = this.calls.get(taskId) ?? 0;
@@ -1050,10 +1048,8 @@ const CREDENTIAL_QUERY = new Set(["token", "access_token"]);
  */
 const CREDENTIAL_FIELDS = new Set(["temp_clone_token"]);
 
-/** What the crewmate is told when a download token was removed from a link. */
 export const DOWNLOAD_TOKEN_NOTE = "Download tokens were removed from links.";
 
-/** What the crewmate is told when a repository's clone token was left out. */
 export const CLONE_TOKEN_NOTE = "Temporary clone tokens were removed.";
 
 /**
@@ -1140,7 +1136,6 @@ function stripCredentials(value: unknown, removed: { links: boolean; fields: boo
   return value;
 }
 
-/** An absolute link without credential query parameters, or null when it had none. */
 function stripCredentialQuery(text: string): string | null {
   if (!/^https?:\/\//i.test(text)) return null;
   let url: URL;
@@ -1157,12 +1152,10 @@ function stripCredentialQuery(text: string): string | null {
   return url.toString();
 }
 
-/** A GitHub workflow dispatch, by its path under the project. */
 function isDispatch(forge: Forge, rest: string): boolean {
   return forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
 }
 
-/** A pipeline start, such as GitLab's or Bitbucket's, by its path under the project. */
 function isPipelineStart(forge: Forge, rest: string): boolean {
   const kind = apiDialectAt(forge.kind, forge.host);
   return kind !== undefined && KIND_REST[kind].startsPipeline === rest.replace(/\/+$/, "");
@@ -1256,7 +1249,6 @@ function startsRun(forge: Forge, route: ApiRoute): boolean {
   return isDispatch(forge, rest) || isPipelineStart(forge, rest) || route.rerun;
 }
 
-/** A route's path under the project, decoded. */
 function restOf(route: ApiRoute): string {
   return route.rest.split("/").map(decodeURIComponent).join("/");
 }

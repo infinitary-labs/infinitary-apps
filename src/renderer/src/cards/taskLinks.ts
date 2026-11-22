@@ -119,7 +119,6 @@ function readBoard(): void {
   );
 }
 
-/** Lets the board go once nothing wants a key and nothing holds it. */
 function releaseBoard(): void {
   if (wanted.size > 0 || holds > 0 || !stopBoard) return;
   stopBoard();
@@ -158,18 +157,15 @@ export const taskKeyIndex = {
   task(key: string): TaskView | undefined {
     return boardRows.get(key) ?? earlier.get(key);
   },
-  /** The board's row for the task `id`, as last read, or undefined. */
   byId(id: string): TaskView | undefined {
     return boardById.get(id);
   },
-  /** The key of the recorded task `id`, on the board or among the earlier work looked up, or undefined. */
   keyOf(id: string): string | undefined {
     const row = boardById.get(id);
     if (row) return row.key;
     for (const task of earlier.values()) if (task.id === id) return task.key;
     return undefined;
   },
-  /** The board's row whose waiting decision is the card `cardId`, or undefined. */
   waitingOn(cardId: string): TaskView | undefined {
     return boardByCard.get(cardId);
   },

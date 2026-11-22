@@ -55,7 +55,6 @@ describe("the close's sweep of leftover programs", () => {
     // The record closed before the sweep began, so no new work reaches the task.
     expect(statusAtBegin).toEqual(["dropped"]);
     await tick();
-    // The working copy stays while the stops and holders are still being handled.
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
 
     finishSweep();
@@ -112,8 +111,6 @@ describe("the close's sweep of leftover programs", () => {
       `Leftovers at close: its stop went to ${key}.`,
     );
 
-    // Dropped before it ever started, the retry's own close sweeps, and it
-    // no longer counts as carrying the work on.
     supervisor.intake.dropTask(retry.taskId, { reason: "changed course", confirm: true });
     await tick();
     expect(tasks.get(retry.taskId)?.status).toBe("dropped");

@@ -12,7 +12,6 @@ import { z } from "zod";
  * until a major contract change removes the channel and the verb.
  */
 
-/** The methods the verb's request shape names. */
 export const NET_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] as const;
 
 /** The bound a fetch answer's body is shaped to (proposal section 5.2). */

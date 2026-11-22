@@ -21,7 +21,6 @@ export function folderLinkType(): "junction" | "dir" {
   return hostPlatformProfile().windows ? "junction" : "dir";
 }
 
-/** This desktop's conventions (src/shared/platform.ts, `desktopConventions`). */
 export function hostDesktop() {
   return desktopConventions(hostPlatform());
 }

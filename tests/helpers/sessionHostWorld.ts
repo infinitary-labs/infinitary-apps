@@ -219,7 +219,6 @@ export function standInHome() {
     pictures,
     recordings,
     typefaces,
-    /** The event types the home took in, in order. */
     types: () => events.map((record) => record.event.type),
     /** The home's answer to every request of one kind from now on, in place of its usual one. */
     answer(channel: string, value: unknown) {
@@ -417,7 +416,6 @@ export async function placed(
   };
   await inReach();
 
-  /** The home asks the computer one order. */
   const order = <C extends WorkOrderChannel>(channel: C, args: unknown) =>
     connection.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
   const spec: PlacedSpec = {
@@ -457,7 +455,6 @@ export async function placed(
       if (!answer.state) throw new Error("The computer opened no conversation.");
       return { state: answer.state };
     },
-    /** The home's turn ends: the computer said `turn_ended` for this turn. */
     ended: (turn: number) =>
       expect
         .poll(() =>

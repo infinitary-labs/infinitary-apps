@@ -8,7 +8,6 @@ describe("ObserveLiveBuffer", () => {
     live.apply({ type: "assistant_delta", taskId: "firstmate", text: "Hel" });
     live.apply({ type: "assistant_delta", taskId: "firstmate", text: "lo" });
     live.apply({ type: "tool_start", taskId: "firstmate", callId: "c1", toolName: "tasks" });
-    // Another session's stream never bleeds in.
     live.apply({ type: "assistant_delta", taskId: "task-2", text: "other" });
     live.apply({
       type: "tool_end",

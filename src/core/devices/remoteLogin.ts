@@ -434,8 +434,6 @@ export class RemoteLogin {
         if ("refusal" in asked && asked.refusal === "key-refused") {
           const methods = asked.methods ?? null;
           if (methods?.length === 0) return { refused: "password-off" };
-          // Windows' own ssh takes no password from Infinitary yet: only
-          // the person's own key signs in from a Windows PC.
           if (hostPlatform() === "win32") return { refused: "key-refused" };
           const user = await signInUser(this.options.ssh, address);
           const question = { asks: "password" as const, address, ...(user ? { user } : {}) };
@@ -797,8 +795,6 @@ export class RemoteLogin {
     );
   }
 
-  // ---- inside -------------------------------------------------------------------
-
   /**
    * Sets Firstmate up there over one SSH connection this Mac owns
    * (`SshMaster`): its own session runs its system's bootstrap
@@ -811,7 +807,6 @@ export class RemoteLogin {
    */
   private async setUp(at: {
     address: string;
-    /** That computer's system, and the chip the look found there. */
     far: FarSystem;
     chip: DeviceChip;
     locality: Locality;
@@ -1744,7 +1739,6 @@ export function sendCopy(
   });
 }
 
-/** The join's refusal for why the fixed command made no link. */
 function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
   switch (none) {
     case COMPUTER_LINK_NONE.notOpen:

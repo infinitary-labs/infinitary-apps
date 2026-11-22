@@ -31,14 +31,12 @@ export type KeyIdentity = {
 const KEY_FILE = "home-key.pem";
 const CERT_FILE = "home-cert.pem";
 
-/** The pin of a public key: SHA-256 over its SubjectPublicKeyInfo, base64url. */
 export function keyPin(publicKey: KeyObject): string {
   return createHash("sha256")
     .update(publicKey.export({ type: "spki", format: "der" }))
     .digest("base64url");
 }
 
-/** The pin of the key the other end of a TLS socket showed, or null when it showed none. */
 export function peerPin(socket: unknown): string | null {
   const tls = socket as Partial<TLSSocket> | null;
   const certificate =
@@ -96,7 +94,6 @@ export function loadOrCreateHomeIdentity(dir: string): KeyIdentity {
   return made;
 }
 
-/** Writes a whole file 0600 through a temporary file renamed into place. */
 export function writePrivate(path: string, text: string | Uint8Array): void {
   const temp = `${path}.${randomBytes(6).toString("hex")}.tmp`;
   writeFileSync(temp, text, { mode: 0o600, flag: "wx" });

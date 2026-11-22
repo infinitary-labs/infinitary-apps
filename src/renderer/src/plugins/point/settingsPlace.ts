@@ -38,7 +38,6 @@ export function beginPointing(): () => boolean {
   return () => mine === latestPointing;
 }
 
-/** The window's state that opens Settings on a section, with what it shows on arrival. */
 export function settingsPlaceState(place: SettingsShow) {
   return {
     view: "settings" as const,

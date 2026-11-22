@@ -334,7 +334,6 @@ describe("an Automatic wait in Activity", () => {
         event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
       );
     const details = () => supervisor.placement.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
-    // Three sets of words across four sweeps, each naming its own check.
     expect(new Set(waits.map((wait) => wait.words)).size).toBe(3);
     for (const wait of waits) {
       await supervisor.starts.dispatchQueuedTask(task.id);

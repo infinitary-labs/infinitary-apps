@@ -142,7 +142,6 @@ describe("Infinitary's run that finds its work in Firstmate 3000's folder", () =
     expect(isProfileRetired(at.older)).toBe(true);
     // The older folder stays as it was, the recovery copy.
     expect(existsSync(join(at.work, "home.json"))).toBe(true);
-    // What live writers keep stayed behind with it.
     for (const left of ["service.log", "work.log", "route.json", "chromium"]) {
       expect(existsSync(join(work, left))).toBe(false);
       expect(existsSync(join(at.work, left))).toBe(true);

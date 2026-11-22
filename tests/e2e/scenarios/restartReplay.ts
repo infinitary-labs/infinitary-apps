@@ -16,11 +16,6 @@ export const RESTART_REPLAY_QUITS = 3;
 export const MOCK_RESTART_REPLAY_REPORT =
   "I picked the work up again after three restarts and checked what had already happened first.";
 
-/**
- * The crewmate the app closes under: every delivery of its message is held
- * open until that message has come back RESTART_REPLAY_QUITS times, each time
- * saying it is a replay.
- */
 export const restartReplay: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, hasToolResults }) => {

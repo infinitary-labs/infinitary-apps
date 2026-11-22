@@ -206,7 +206,6 @@ export class CrewStarts {
   }
 
   private readonly settle: StartSettle;
-  /** The waits a start holds on its reasoning level (`ReasoningHolds`). */
   readonly reasoning: ReasoningHolds;
 
   constructor(private readonly core: CrewCore) {

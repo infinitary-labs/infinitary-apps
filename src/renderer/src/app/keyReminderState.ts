@@ -41,7 +41,6 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** The switch and the keys pressed, drawn again at each change. */
 export function useKeyReminders(): KeyReminders {
   return useSyncExternalStore(subscribe, keyReminders, keyReminders);
 }
@@ -66,7 +65,6 @@ export function remindOfPanelClick(panel: string, command: string): void {
   for (const listener of panelClicks) listener(id);
 }
 
-/** Hears each panel click `remindOfPanelClick` passes on; returns how to stop. */
 export function onPanelKeyClick(listener: (id: AnyCommandId) => void): () => void {
   panelClicks.add(listener);
   return () => {

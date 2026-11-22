@@ -245,7 +245,6 @@ function fixedBuilder() {
     });
     return last;
   };
-  // One tool message for each call of the last answer.
   const results = (...texts: string[]) => {
     if (!last || !("calls" in last)) throw new Error("Expected tool calls");
     expect(last.calls).toHaveLength(texts.length);
@@ -317,7 +316,6 @@ function reading(head: string): string {
   })}\n- linux-checks: completed / success`;
 }
 
-/** The review's handoff of its auto-fix finding at `head`, as the host words it. */
 function handoff(head: string): string {
   return renderWake({
     facts: {
@@ -331,7 +329,6 @@ function handoff(head: string): string {
   });
 }
 
-/** One row of the builder's lane as the inbox serves it. */
 function row(id: number, wake: TypedWake): InboxRow {
   return {
     v: 1,

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { heldPress } from "./heldKeys";
 
-/** A target whose nearest pressable ancestor is `pressable`, or none. */
 const on = (pressable: boolean): EventTarget =>
   ({ closest: () => (pressable ? {} : null) }) as unknown as EventTarget;
 

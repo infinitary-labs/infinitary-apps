@@ -204,7 +204,6 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
     );
     updates[3]?.resolve({ refused: "unreachable", lines });
     await expect.poll(problemLine).toBe(lines.join("\n"));
-    // A list that says nothing newer keeps the line.
     bridge.push("inf:devices", listed);
     await afterNextFrame();
     expect(problemLine()).toBe(lines.join("\n"));

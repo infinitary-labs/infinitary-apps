@@ -34,7 +34,6 @@ export function inlineQuestionsBody(revised: boolean): string {
   ].join("");
 }
 
-/** The crewmate asks its questions on its card, and revises it on the captain's reply. */
 export const inlineQuestions: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

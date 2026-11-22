@@ -120,7 +120,6 @@ async function recordOnPage(page: Page): Promise<void> {
 
 const log = (page: Page) => page.evaluate(() => [...(window.__fmTurnLog ?? [])]);
 
-/** Wait until the log since `from` holds `entry`, and return the log since `from`. */
 async function saw(page: Page, entry: string, from: number): Promise<string[]> {
   await expect
     .poll(
@@ -216,7 +215,6 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await saw(page, "mate:reply", from);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_ANSWER_TITLE);
     await expect(olderRound(page)).toHaveCount(0);
-    // The card on the stage keeps clear of the round.
     const card = await settled(page, () => box(cardSurface(page)));
     for (const bubble of [yourBubble(page), mateBubble(page)]) {
       expect(intersects(card, await box(bubble))).toBe(false);

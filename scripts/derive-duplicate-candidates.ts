@@ -112,7 +112,6 @@ function offersSettle(actionsJson: string | null): boolean {
   }
 }
 
-/** The cards table rows a pair can be made of: on a task, with a body, offering no settle verb. */
 export function pairableCards(tables: RecordedTables): Map<string, PairableCard & CandidateCard> {
   const cards = new Map<string, PairableCard & CandidateCard>();
   for (const row of tables.cards) {
@@ -211,10 +210,6 @@ export function deriveDuplicateCandidates(
     cardCount: tables.cards.length,
   };
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   userData: string;

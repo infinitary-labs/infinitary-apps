@@ -67,10 +67,6 @@ import {
 
 const ENGINE_PATH = join(REPO_ROOT, "scripts", "replay", "engine.ts");
 
-// --------------------------------------------------------------------------
-// Sources: a userData-shaped directory, or explicit paths
-// --------------------------------------------------------------------------
-
 export type SourceInput = {
   name: string;
   /** userData (or an exported / fixture copy shaped like it). */
@@ -263,10 +259,6 @@ export async function loadEngine(): Promise<Engine> {
   };
 }
 
-// --------------------------------------------------------------------------
-// The report and the gate
-// --------------------------------------------------------------------------
-
 export type BaselineFile = { note?: string; sessions: BaselineScores };
 
 export type ReplayReport = {
@@ -339,7 +331,6 @@ export function summarize(report: ReplayReport): string {
   for (const session of report.sessions) {
     const f = session.fidelity;
     const delivered = f.recorded_thread_replies - f.skipped_thread_replies;
-    // Why each crewmate turn that never played did not, counted by reason.
     const reasons = new Map<string, number>();
     for (const { reason } of session.details.unplayed_crewmate_turns) {
       reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
@@ -373,10 +364,6 @@ export function summarize(report: ReplayReport): string {
   }
   return lines.join("\n");
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   source: SourceInput | null;

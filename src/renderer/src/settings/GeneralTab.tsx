@@ -287,7 +287,6 @@ export type FirstmateAccountSlot = {
   error: string | null;
 };
 
-/** What the Firstmate model row says, with or without the account beside it. */
 export function firstmateSeatDescription(providerName?: string): string {
   return providerName
     ? m.settingsGeneralModelAccountDescription({ provider: providerName })
@@ -590,7 +589,6 @@ export function GeneralTab() {
     <div>
       <SectionLabel>{m.settingsGeneralHeading()}</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
-        {/* Beside a command, what quitting does and Stop come first. */}
         {byCommand && <StopCommandRow />}
         {!remote && (
           <SettingRow

@@ -66,7 +66,6 @@ function harness(provider: ForgeSignInProvider, now: () => number = () => 1_000)
   return { root, store, pushed, changes, service };
 }
 
-/** Resolves once `predicate` holds on the latest push. */
 function pushedWhere(pushed: ForgesView[], predicate: (view: ForgesView) => boolean) {
   return new Promise<ForgesView>((resolve) => {
     const poll = () => {
@@ -126,7 +125,6 @@ describe("signing in", () => {
     ]);
     expect(store.read("github.com")).toMatchObject({ token: "gho_new", login: "octo" });
     expect(changes).toEqual([{ host: "github.com", name: "GitHub", from: "none", to: "ok" }]);
-    // The view never carries the sign-in itself.
     expect(JSON.stringify(pushed)).not.toContain("gho_new");
   });
 
@@ -610,7 +608,6 @@ describe("a short-lived sign-in renews itself (the owner's sign-in, dead eight h
     await signedIn(h);
     h.setClock("2026-09-24T20:50:00.000Z");
     h.signIns.recordApp("quit");
-    // Eight hours pass on GitHub's side while the app is closed.
     h.github.endAccess();
     h.setClock("2026-09-25T16:52:10.000Z");
     const restarted = h.service();
@@ -889,7 +886,6 @@ describe("a key sign-in to a host on the person's own server", () => {
       state: "ok",
     });
     expect(await signIns.token("github.corp.example")).toBe(KEY);
-    // The view, the health log and the console never carry the key.
     expect(JSON.stringify(h.pushed)).not.toContain(KEY);
     const log = readFileSync(join(h.root, HEALTH_LOG), "utf8");
     expect(log).not.toContain(KEY);

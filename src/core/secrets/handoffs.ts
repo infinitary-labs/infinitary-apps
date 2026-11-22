@@ -114,7 +114,6 @@ export class SecretHandoffs {
     return { values };
   }
 
-  /** Whether this request's values already left for its computer. */
   taken(request: string): boolean {
     return this.handoffs.get(request)?.taken ?? false;
   }

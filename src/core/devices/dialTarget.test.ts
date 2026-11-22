@@ -53,7 +53,6 @@ afterEach(async () => {
   );
 });
 
-/** A home on loopback: the real connection and pairing, with a core that answers a work request. */
 async function home() {
   const dispatch = (async (channel) => {
     if (channel === "inf:app:healthcheck")
@@ -173,7 +172,6 @@ describe("a device's dial goes to an address or a private socket, with the same 
     expect(silent).not.toBeInstanceOf(HomeKeyMismatchError);
     expect(silent).not.toBeInstanceOf(PairRefusedError);
 
-    // Something else answers at the far end: its key is not the home's.
     const other = createKeyIdentity("Another computer");
     const impostor = createTlsServer({ key: other.key, cert: other.cert, minVersion: "TLSv1.3" });
     servers.push(impostor);
@@ -206,7 +204,6 @@ describe("a device's dial goes to an address or a private socket, with the same 
     });
     expect(direct.welcome).toMatchObject({ t: "welcome" });
     await direct.close();
-    // A key the home does not list is refused through the socket as at the address.
     const { key, cert } = createKeyIdentity("Stranger");
     await expect(
       connectClient({ ...grant, key, cert }, { dial: { target: { socket: route.socket } } }),
@@ -232,7 +229,6 @@ describe("a device's dial goes to an address or a private socket, with the same 
     expect(again).toEqual(grant);
     expect(pairing.list()).toHaveLength(1);
 
-    // A grant that dials an address moves onto the home's SSH with a link over it.
     const { link: byAddress } = pairing.invite({ kind: "work", at: `127.0.0.1:${port}` });
     const dialing = await claimLink(byAddress, {
       ...MINI,

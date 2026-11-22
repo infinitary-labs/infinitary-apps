@@ -68,7 +68,6 @@ export function checksMode(env: NodeJS.ProcessEnv = process.env, cwd = process.c
   throw new Error(`infinitary.checks reads "${value}"; it takes ci or local.`);
 }
 
-/** Why this heavy check may not run here, or undefined when it may. */
 export function ciModeRefusal(
   check: HeavyCheck,
   env: NodeJS.ProcessEnv = process.env,

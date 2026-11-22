@@ -56,7 +56,6 @@ function sha256Of(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-/** A rule's name as its notes' words give it. */
 function ruleName(rule: ScheduleRecord): string {
   return rule.name?.trim() || rule.prompt.trim().slice(0, 60);
 }

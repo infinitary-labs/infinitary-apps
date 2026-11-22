@@ -81,7 +81,6 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });
     const before = { notes: notes.length, did: browsers.fact("t1") };
     const changed = changes.length;
-    // His typing, his clicks and his wheel reach the page, and nothing writes them down.
     for (const input of [
       { kind: "pointer", type: "down", x: 10, y: 20, button: "left", clickCount: 1, modifiers: 0 },
       { kind: "key", type: "down", key: "s", code: "KeyS", keyCode: 83, text: "s", modifiers: 0 },
@@ -93,7 +92,6 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     expect(notes).toHaveLength(before.notes);
     expect(browsers.fact("t1")).toEqual(before.did);
     expect(changes).toHaveLength(changed);
-    // Every crewmate command refuses, its close too.
     for (const answer of [
       await browser.inspect({}),
       await browser.act({ action: "click", ref: "g1:e3" }),
@@ -116,7 +114,6 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     page.opened.onPageError("Uncaught TypeError: private");
     page.opened.onDialog("alert", "Welcome back, Sam");
     page.opened.onNavigated("http://localhost:5173/account?code=secret");
-    // A browser in his hands never stops for being unused.
     fire(TASK_BROWSER_IDLE_MS);
     expect(browsers.isOpen("t1")).toBe(true);
     expect(await browsers.returnControl("t1", handle)).toEqual({ ok: true });
@@ -275,12 +272,8 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
 });
 
 describe('a page from the project (docs/task-browser.md, "A page from the project")', () => {
-  // Guardrails for TaskBrowsers.openPage before INF-2625's plan splits
-  // taskBrowsers.ts: no other test reaches opening a page, serving its
-  // folder or loading it.
   const FOLDER = "/Users/someone/projects/meteor-run";
 
-  /** The project folders the browsers served, each a stand-in for the loopback server. */
   function folderServers(refuse: () => boolean = () => false) {
     const served: { folder: string; origin: string; closed: boolean }[] = [];
     const serve = async (folder: string): Promise<ProjectServer> => {
@@ -325,7 +318,6 @@ describe('a page from the project (docs/task-browser.md, "A page from the projec
       true,
     );
     expect(page.opened.allow({ url: "http://127.0.0.1:5173/", topLevel: false })).toBe(false);
-    // No crewmate opened it, so none uses it.
     expect((await browsers.forTask("t1").inspect({})).text).toContain(
       "The captain has control of this task's browser",
     );
@@ -453,7 +445,6 @@ describe('a crewmate asks the captain for help (docs/task-browser.md, "Asking fo
       text: "browser_handoff names aurora.example, but this task's browser is on localhost:5173. Name the site it is on.",
     });
     expect(browsers.withCaptain("t1")).toBe(false);
-    // The site as an address names the same host and port.
     expect(
       await browsers.requestHelp("t1", { ...request, site: "http://LOCALHOST:5173/signin" }),
     ).toEqual({ ok: true, handle: { session: browsers.session, generation: 1 } });
@@ -467,7 +458,6 @@ describe('a crewmate asks the captain for help (docs/task-browser.md, "Asking fo
     expect((await browser.inspect({})).text).toContain(
       "You asked the captain to take over this task's browser, so it is paused",
     );
-    // Waiting on him, it never stops for being unused.
     fire(TASK_BROWSER_IDLE_MS);
     expect(browsers.isOpen("t1")).toBe(true);
     expect(await browsers.takeControl("t1")).toEqual({ ok: true });
@@ -577,7 +567,6 @@ describe('a final submission is never sent twice (docs/task-browser.md, "A final
       "Did not reload: this page is the answer to a form that was sent, and reloading it would send the form again. This browser never sends a form twice.",
     );
     expect(reload.text).not.toContain("Reloaded the page.");
-    // It still reads the page as it is, and the captain's line says it sent nothing.
     expect(reload.text).toContain('Page: "Sign up" at http://localhost:5173/pay');
     expect(page.effects).not.toContain("reload");
     expect(browsers.fact("t1")).toMatchObject({ did: "did not resend a form" });

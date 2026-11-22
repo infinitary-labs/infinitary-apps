@@ -82,7 +82,6 @@ import {
 
 const PICTURE_TASK = "harbour-task";
 const PICTURE = `${PICTURE_TASK}-${"c".repeat(32)}.png`;
-/** The seeded cards a step finds by title, each named where it is filed and where it is found. */
 const HARBOUR_CHART = "The harbour chart";
 const INVITE_CARD = "Connect your iMac";
 /** The host's sign-in card for the home's Claude account, in the host's own words. */
@@ -90,7 +89,6 @@ const SIGN_IN_CARD = needsReauthCopy("Claude", "Work");
 /** Settings sections that stay on the Mac where Firstmate lives, by id. */
 const HOME_ONLY_SECTIONS = ["secrets", "observe"] as const;
 
-/** A Settings tab's label, as the built-in manifest names it. */
 function sectionLabel(id: string): string {
   const section = builtinManifest.contributes.settingsSections.find((entry) => entry.id === id);
   if (!section) throw new Error(`No Settings section ${id}`);
@@ -271,7 +269,6 @@ async function watchFreshness(page: Page): Promise<() => Promise<string[]>> {
   return () =>
     page.evaluate(() => [...((window as unknown as { __freshSaid?: string[] }).__freshSaid ?? [])]);
 }
-/** Words the view says in the state given, which says some. */
 function said(words: string | null): string {
   if (words === null) throw new Error("The view says nothing in that state.");
   return words;
@@ -324,7 +321,6 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       const { page } = air;
       await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
       await page.locator("[data-join-chip]").click();
-      // Text that is not a link is refused before anything is sent.
       const field = page.getByLabel(`The link from your other ${COMPUTER.one}`);
       await field.fill("https://example.com/join");
       await page.getByRole("button", { name: "Continue" }).click();
@@ -597,7 +593,6 @@ test("a file given on the Mac that controls goes with the message when it is a p
       const bodies = provider.requestBodies().join("\n");
       expect(bodies).toContain(pictureBytes.toString("base64"));
       expect(readdirSync(join(homeDir, "attachments"))).toHaveLength(1);
-      // Nothing names the refused file or a place on this Mac.
       expect(bodies).not.toContain("Harbour survey.pdf");
       expect(bodies).not.toContain(realpathSync(files));
       expect(bodies).not.toContain(files);

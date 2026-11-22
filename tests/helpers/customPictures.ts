@@ -5,7 +5,7 @@ export function customPicture(width = 1920, height = 1228): string {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
   header.writeUInt32BE(height, 4);
-  header[8] = 8; // grayscale
+  header[8] = 8;
   const raw = Buffer.alloc((width + 1) * height);
   let seed = 7;
   for (let y = 0; y < height; y++) {

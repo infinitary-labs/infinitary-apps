@@ -907,7 +907,6 @@ export class ChangeChecks {
    */
   private batchWake(taskId: string, head: string): string | undefined {
     const own = this.context.ownBatch(taskId);
-    // A change in this person's batch waits on the batch, not on its crewmate.
     const status = own ? this.context.batches?.status(own.id, taskId, head) : undefined;
     return status && status.kind !== "failed"
       ? `The change waits in this project's batch of approved changes (${status.words}). The app merges the batch once its checks pass, so nothing is needed from you.`
@@ -1034,11 +1033,6 @@ function watchAfter(
 export const PROJECT_NO_CHECKS_WORDS =
   "This project is recorded as running no checks (Require pull request checks is off in its settings), so this reading counts as no checks: nothing is watched and no wake will come. The first check that runs on any of its changes ends the record, and checks hold the merge again.";
 
-/**
- * What a reading says about the watch: the crewmate is told to end its turn
- * and wait, or - on a host with no checks - that nothing will be watched;
- * the Firstmate that the crewmate will hear.
- */
 function watchWords(
   forge: Forge,
   audience: Audience,

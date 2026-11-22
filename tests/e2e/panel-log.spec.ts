@@ -21,7 +21,6 @@ import { CHATTY_LINES, seedChattyPanel } from "./personalFixtures";
  * the Mac. Shared resources: none.
  */
 
-/** The log's lines that name the panel, as the file holds them now. */
 function chattyLines(path: string): string[] {
   if (!existsSync(path)) return [];
   return readFileSync(path, "utf8")

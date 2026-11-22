@@ -269,7 +269,6 @@ export function atDispatch(
   return undefined;
 }
 
-/** What a merge says of a change that joins this person's batch. */
 export const BATCH_MERGE_WORDS = {
   needsCard:
     "Cannot merge yet: this project merges approved changes together, as one batch pull request. A change joins the batch from its merge card at its current version: its crewmate puts the card up, and the captain's click on it, his own words recorded as passing asking first while it is up at that version, or the task's autonomy approves that version.",
@@ -1492,7 +1491,6 @@ function alreadyMerged(forge: Forge, pull: ForgePull, approved?: string): PrOutc
   };
 }
 
-/** The version a merge went in at, when the host names one other than the approved version. */
 export function otherMerged(approved: string, merged: string | undefined): string | undefined {
   return merged !== undefined && merged !== approved ? merged : undefined;
 }
@@ -1520,7 +1518,6 @@ export function otherMergedFacts(
   };
 }
 
-/** The receipt of a pull request found already merged: the head it merged at, and its commit. */
 export function mergedReceipt(pull: ForgePull): NonNullable<PrOutcome["receipt"]> {
   return {
     head: pull.headSha,
@@ -1576,7 +1573,6 @@ export function branchInProject(pull: ForgePull, project: string): boolean {
   return pull.headRepo?.toLowerCase() === project.toLowerCase();
 }
 
-/** Why a readiness holds a merge, with where the project lives in the host's words. */
 export function readinessStops(
   place: string,
 ): Record<Exclude<ForgeReadiness, "clean">, { stop: MergeStop; plain: string }> {

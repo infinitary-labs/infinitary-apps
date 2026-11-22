@@ -566,7 +566,6 @@ export async function regionAfter(
   return now;
 }
 
-/** The accelerator the app menu shows on an item, by the item's id. */
 export function menuItemAccelerator(app: ElectronApplication, id: string): Promise<string | null> {
   return app.evaluate(
     ({ Menu }, itemId) => Menu.getApplicationMenu()?.getMenuItemById(itemId)?.accelerator ?? null,

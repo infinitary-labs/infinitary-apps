@@ -178,7 +178,6 @@ function buildBase(): {
 describe("miss deriver - R2 direct-control evidence and the escalation chain", () => {
   it("leaves the output on a pre-R2 database unchanged", () => {
     const { db } = buildBase();
-    // Card-derived and outcome-derived evidence still flow exactly as before.
     insertOutcome(db, {
       taskId: "t-escalated",
       wake: '[fm-op] crewmate 1 reported on task t-escalated "t-escalated": red CI.',

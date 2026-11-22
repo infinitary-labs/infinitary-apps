@@ -7,7 +7,6 @@ import { spawn } from "node:child_process";
  */
 export const BRING_OUTPUT_MAX_BYTES = 8 * 1024 * 1024;
 
-/** How reading the source ended: its output, or why there is none. */
 export type SourceOutput =
   | { output: Buffer }
   | { failed: { exitCode?: number; signal?: string } }

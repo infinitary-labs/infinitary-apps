@@ -256,7 +256,6 @@ test("with 60 in the backlog and 300 done this week, the board pages every lane 
       await pressInBoard(boardPager(page, "landed").next);
       await expect.poll(() => laneKeys(page, "landed")).not.toEqual(firstPage);
       expect(await laneKeys(page, "landed")).toHaveLength(20);
-      // Waiting on you's own list holds all four.
       await pressInBoard(boardPager(page, "waiting").browse);
       expect(await laneKeys(page, "waiting")).toHaveLength(4);
     });

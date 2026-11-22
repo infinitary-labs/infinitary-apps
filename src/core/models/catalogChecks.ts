@@ -26,7 +26,6 @@ import { STARTER_SLOTS } from "@shared/modelSlots";
 
 export type CatalogCheckInput = {
   providerId: string;
-  /** What the catalog serves right now. */
   served: readonly string[];
   /** A shipped list every id of which must still be served. */
   shipped?: readonly string[];

@@ -44,7 +44,6 @@ struct PhoneAddressSheet: View {
         Group {
             Text(PhoneMessages.phoneAddressTypingHelp())
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-            // Return in either field continues, as Continue does.
             TextField("kun@studio", text: $address)
                 .textFieldStyle(.phone).keyboardType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -164,7 +163,6 @@ struct PhoneAddressSheet: View {
                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
             }
             if let line = model.sshKeyLine {
-                // The key box carries its copy mark at its edge.
                 HStack(alignment: .top, spacing: PhoneTheme.space2) {
                     Text(line).font(PhoneFont.micro).textSelection(.enabled).lineLimit(4)
                         .frame(maxWidth: .infinity, alignment: .leading)

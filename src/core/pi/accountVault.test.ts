@@ -467,7 +467,6 @@ describe("AccountVault", () => {
     // The row's Sign in: the saved login is the one Anthropic refused.
     const signingIn = vault.signIn(account.id, bridge());
     await vi.waitFor(() => expect(logins).toBe(2));
-    // A second press while that login is open starts no second one.
     await expect(vault.signIn(account.id, bridge())).rejects.toThrow(
       `A Claude sign-in is already in progress on ${HERE.this}.`,
     );
@@ -553,7 +552,6 @@ describe("AccountVault", () => {
           available: () => true,
           configDir: () => store,
           readStore: async () => ({ state: "absent" }),
-          // A login that stores nothing, and a client that says so.
           run: async () => ({ code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" }),
         }),
       ],
@@ -611,7 +609,6 @@ describe("AccountVault", () => {
     // Never a sign-out: no "a provider needs sign in" card behind it.
     expect(await vault.sweepLiveness()).toEqual([]);
 
-    // The client comes back: the models do too, with no sign-in.
     installed = true;
     await vault.status(account.id, { refresh: true });
     expect((await vault.views())[0]?.detail).toBeUndefined();
@@ -774,7 +771,6 @@ describe("AccountVault", () => {
     expect(() => vault.binding("acct_cursor")).toThrow(/Unknown account/);
     expect(() => vault.runtimeFor("acct_cursor")).toThrow(/Unknown account/);
     expect(await vault.resolveForQuota("acct_cursor")).toBeUndefined();
-    // Its files stay exactly where they were.
     expect(readFileSync(join(store, ".cursor", "auth.json"), "utf8")).toBe(
       '{"accessToken":"kept"}',
     );
@@ -938,7 +934,6 @@ describe("a typed cut-off on the account", () => {
     vault.noteCutOff(id, { class: "no_headroom", resetsAt }, { leftPercent: 19 });
     expect(vault.cutOff(id)).toMatchObject({ class: "no_headroom", resetsAt, leftPercent: 19 });
 
-    // The meter as it stood, or lower: still spent.
     expect(vault.noteReading(id, 19)).toBe(false);
     expect(vault.noteReading(id, 3)).toBe(false);
     expect(vault.cutOff(id)?.class).toBe("no_headroom");
@@ -963,7 +958,6 @@ describe("a typed cut-off on the account", () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);
     vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 60_000 });
-    // Switch off: credits answering again changes nothing.
     expect(vault.noteCreditsAvailable(id)).toBe(false);
     expect(vault.cutOff(id)?.class).toBe("no_headroom");
 
@@ -1253,14 +1247,12 @@ describe("a typed cut-off on the account", () => {
     await vault.health(id, { refresh: true });
     expect(vault.cutOff(id)?.class).toBe("refused");
 
-    // The client changed: the refusal clears, and the models come back.
     world.facts.stamp = { login: "login-a", written: "file:2", client: "2.1.300" };
     await vault.health(id, { refresh: true });
     expect(vault.cutOff(id)).toBeUndefined();
     expect(vault.servesSync(id)).toBe(true);
     expect(vault.availableModels()).toEqual(claudeAvailableModels());
 
-    // Another login clears it too.
     vault.noteCutOff(id, { class: "refused" });
     await vault.health(id, { refresh: true });
     world.facts.stamp = { ...world.facts.stamp, login: "login-b" };
@@ -1288,7 +1280,6 @@ describe("a typed cut-off on the account", () => {
     expect(heard).toEqual([]);
     await Promise.resolve();
     expect(heard).toEqual([{ accountId: id, serves: false }]);
-    // The same fact again is no change.
     vault.noteCutOff(id, { class: "refused" });
     await Promise.resolve();
     expect(heard).toHaveLength(1);

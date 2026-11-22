@@ -153,7 +153,6 @@ function hostileCard(key: string): Card {
   };
 }
 
-/** A recorded task for the bodies to name, and the cards. */
 function seed(userDataDir: string, cards: (key: string) => Card[]): void {
   const db = openDatabase(userDataDir);
   try {
@@ -181,7 +180,6 @@ function observationsOf(userDataDir: string, cardId: string): CardObservation[] 
 
 const body = (page: Page, title: string): FrameLocator => cardBody(page, title);
 
-/** What holds focus inside a card's frame: its tag and its name. */
 function focusedInFrame(frame: FrameLocator): Promise<{ tag: string; name: string } | null> {
   return frame
     .locator("body")
@@ -202,13 +200,11 @@ const cardScroll = (page: Page) =>
     .locator("[data-card-body]")
     .evaluate((scroller) => scroller.scrollTop);
 
-/** How much of the shown card's body lies past its edge, once its frame has laid out. */
 const cardOverflow = (page: Page) =>
   shownEntry(page)
     .locator("[data-card-body]")
     .evaluate((scroller) => scroller.scrollHeight - scroller.clientHeight);
 
-/** The picture viewer and the place it says it is at. */
 const viewer = (page: Page) => page.getByRole("dialog", { name: /^Pictures from / });
 
 async function typeDraft(page: Page): Promise<void> {
@@ -398,7 +394,6 @@ test("focus that leaves a card's field or picture comes back to it, caret and al
       await page.keyboard.press("Escape");
       await expect(viewer(page)).toHaveCount(0);
       await expect.poll(() => focusedInFrame(frame)).toEqual({ tag: "IMG", name: PICTURES[0] });
-      // Space opens the next one.
       await page.keyboard.press("Tab");
       await page.keyboard.press(" ");
       await expect(viewer(page).locator("[data-picture-count]")).toHaveText(pictureCount(2));

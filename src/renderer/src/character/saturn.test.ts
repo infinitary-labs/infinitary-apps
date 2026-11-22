@@ -49,7 +49,6 @@ describe("Saturn's ring system", () => {
     const b = radii.filter((r) => r <= SATURN.ringB + 0.13);
     const a = radii.filter((r) => r >= SATURN.ringA - 0.07);
     expect(Math.min(...a) - Math.max(...b)).toBeGreaterThanOrEqual(0.1);
-    // The globe sits inside the innermost streamline.
     expect(SATURN.globe).toBeLessThan(Math.min(...radii));
   });
 

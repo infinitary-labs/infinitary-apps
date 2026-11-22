@@ -10,7 +10,6 @@ import { backendIdSchema } from "./providers";
  */
 
 export const FIRSTMATE_SESSION_ID = "firstmate";
-/** What a session with no transcript yet says in its pane. */
 export const NO_SESSION_YET = "No session yet. It opens on the first turn.";
 /** The main Firstmate and one task's worker on whichever backend served it.
  * Retired supervision transcripts are historical evidence, not sessions here. */

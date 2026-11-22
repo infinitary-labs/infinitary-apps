@@ -12,7 +12,6 @@ vi.setConfig({ testTimeout: 25_000 });
 
 const head = (dir: string) =>
   execFileSync("git", ["-C", dir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-/** A started task's record once its working copy exists. */
 const startedCopy = (host: Awaited<ReturnType<typeof approvalHost>>, id: string) =>
   vi.waitFor(() => {
     const task = host.tasks.get(id);

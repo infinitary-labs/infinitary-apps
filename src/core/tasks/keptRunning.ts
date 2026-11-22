@@ -33,7 +33,6 @@ export type KeptRunningOptions = {
   work: Pick<WorkDevices, "ask" | "inReach" | "takesCurrentWork" | "version">;
   /** A computer that runs work's name, as Settings → Computers names it. */
   computerName: (deviceId: string) => string | undefined;
-  /** The home's own name, for a job kept here. */
   homeName: () => string;
   stopTimeMs?: number;
   now?: () => number;
@@ -74,7 +73,6 @@ export class KeptRunning {
     return { jobs: this.options.jobs.list().map((job) => this.view(job)) };
   }
 
-  /** Runs the job's check where it runs and keeps how it went on the job. */
   async check(id: string): Promise<KeptJobView> {
     const job = this.find(id);
     const ran = await this.run(job, "check");

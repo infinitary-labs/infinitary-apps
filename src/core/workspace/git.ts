@@ -289,8 +289,6 @@ async function runGit(
     signal?: AbortSignal;
   },
 ): Promise<string> {
-  // The app's own git when this build carries it (bundledGit.ts), else the
-  // one the search path finds.
   const app = bundledGit();
   // Checkouts and removals can touch tens of thousands of files: below the UI.
   const command = atUtilityQos(app?.binary ?? "git", ["-C", repoDir, ...args]);

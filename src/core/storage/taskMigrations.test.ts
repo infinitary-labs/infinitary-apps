@@ -20,9 +20,6 @@ import { TaskService } from "../tasks/taskService";
 import { openDatabase } from "./db";
 import { dropViews } from "./views";
 
-// The task migrations after the record: the graph gaps, the gate as a witness, where a task runs,
-// whom an event concerns, a recorded wait and saved placement words.
-
 describe("migration 46 (the two graph gaps)", () => {
   it("drops the stored basis verdict and review pointer, and the record derives both back", () => {
     const dir = tmpUserData();
@@ -73,7 +70,6 @@ describe("migration 46 (the two graph gaps)", () => {
       )
       .get();
     expect(stamps).toEqual({ n: 0 });
-    // Everything else on the rows stays; the verdict and the join are read.
     const tasks = new TaskService({ db: upgraded, strict: true });
     const build = tasks.get("build");
     const guess = tasks.get("guess");
@@ -111,7 +107,6 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
     // Answered since the cap: the steer that reopens the rounds is all it waits on.
     active("answered");
     seedDelivery(tasks, "answered", { ciRounds: 3, ciCapAt: 100, capAnsweredAt: 150 });
-    // A row that already has a gate keeps it.
     active("gated");
     seedDelivery(tasks, "gated", { ciRounds: 3, ciCapAt: 100 });
     tasks.placement.setGate("gated", { kind: "at-time", until: 999 });
@@ -134,7 +129,6 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
         .all(),
     ).toEqual([]);
 
-    // Reversible: clear the gate of every logged row and drop the log.
     upgraded.exec(
       "UPDATE tasks SET gate_kind = NULL, gate_ref = NULL, gate_until = NULL, gate_reason = NULL WHERE id IN (SELECT task_id FROM cap_gate_backfill); DROP TABLE cap_gate_backfill;",
     );
@@ -178,7 +172,6 @@ describe("migration 63 (where a task's crewmate runs, multi-machine piece 8)", (
       activity: "running",
     });
 
-    // Reversible: dropping the column restores the v62 shape with every row.
     dropViews(reopened);
     reopened.exec(`${REVERSE_RUNNING_WORK} ${REVERSE_MIGRATION_76} ${REVERSE_MIGRATION_63}`);
     expect(columnNames(reopened, "tasks")).toEqual(columnsAt62);

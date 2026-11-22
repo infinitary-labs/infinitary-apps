@@ -156,7 +156,6 @@ if (verb === "view") {
   );
   chmodSync(join(bin, "gh"), 0o755);
 
-  /** A zip's worth of bytes for a version and build. */
   const zip = (version: string, build: string) => {
     const folder = scratchDir("infinitary-release-zip-");
     const file = join(folder, `Infinitary-${version}-universal.zip`);
@@ -265,7 +264,6 @@ if (verb === "view") {
   /** Runs the stand-in `gh` directly, the way a person at the repository would. */
   const gh = (...args: string[]) =>
     spawnSync(join(bin, "gh"), args, { env: baseEnv(dir), encoding: "utf8" });
-  /** The tag the repository shows as latest, or null when it shows none. */
   const latest = (repo: string) => {
     const shown = gh("api", `repos/${repo}/releases/latest`, "--jq", '"\\(.id) \\(.tag_name)"');
     return shown.status === 0 ? shown.stdout.trim().split(" ")[1] : null;

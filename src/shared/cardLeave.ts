@@ -61,7 +61,6 @@ export const CARD_LEAVE = {
   },
 } as const satisfies Record<CardLeaveKind, LeaveRow>;
 
-/** The corner's operation for a card of this kind. */
 export function cardLeaveOperation(kind: CardLeaveKind): LeaveRow["operation"] {
   return CARD_LEAVE[kind].operation;
 }
@@ -84,7 +83,6 @@ export function answerDoneRest(key: string): string {
 export const noteDoneSchema = z.object({
   label: z.string(),
   restWords: z.string(),
-  /** The click closes the note's task as answered. */
   closesTask: z.boolean(),
 });
 export type NoteDone = z.infer<typeof noteDoneSchema>;

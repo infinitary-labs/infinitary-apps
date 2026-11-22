@@ -219,7 +219,6 @@ struct PhoneView: View {
         }
     }
 
-    /// The join alert's title and button, naming the computer its link proposes.
     private var joinWords: (title: String, button: String) {
         guard let computer = model.proposal?.computer else {
             return (PhoneMessages.phoneJoinConfirmTitle(), PhoneMessages.phoneJoinConfirm())

@@ -114,11 +114,8 @@ export class KeptForge implements Forge {
   refuse: ForgeError | undefined;
   merged = false;
   referencedBranch?: string;
-  /** The heads GitHub merged, in order. */
   merges: string[] = [];
-  /** The squash summary each merge request carried, in order. */
   squashes: (string | undefined)[] = [];
-  /** The pull request's description, as GitHub shows it. */
   body = "";
   sends = 0;
   /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
@@ -151,9 +148,7 @@ export class KeptForge implements Forge {
   }
   /** The branch has a merge queue of GitHub's own: a merge request is taken into it, never merged at once. */
   hostQueue = false;
-  /** Whether that queue holds the pull request now. */
   inQueue = false;
-  /** How many times that queue was read. */
   queueReads = 0;
   /** Runs while the merge reads what it reads before its request leaves. */
   beforeLeaving: () => Promise<void> = async () => {};
@@ -183,7 +178,6 @@ export class KeptForge implements Forge {
     this.queueReads += 1;
     return this.inQueue;
   }
-  /** GitHub's queue merges the pull request it holds. */
   queueMerges() {
     this.inQueue = false;
     this.merged = true;
@@ -247,7 +241,6 @@ export class KeptForge implements Forge {
 /** The goal a filed task records in place of the captain's words. */
 export const FILED_GOAL = "The meter reads the same value after a restart.";
 
-/** A follow-up filed with a goal and no intent, then started now. */
 async function startFiled(harness: ReturnType<typeof setup>, repoId: string): Promise<string> {
   seedTask(harness.tasks, {
     id: "filed-meter",

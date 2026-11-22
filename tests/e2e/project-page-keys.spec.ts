@@ -29,7 +29,6 @@ test("a project's page opens, moves between its repositories and goes back by ke
     await focusOn(projectsTab);
     await pressKey(projectsTab, "Enter");
 
-    // Enter on the project's line opens its page, with focus on Back.
     const line = page.locator('[data-project-group="WAL"]').getByRole("button");
     await pressKey(line, "Enter");
     const back = page.locator("[data-project-back]");
@@ -47,7 +46,6 @@ test("a project's page opens, moves between its repositories and goes back by ke
     await expect(walletTab).toBeFocused();
     await expect(walletTab).toHaveAttribute("aria-selected", "true");
 
-    // The arrows move between tabs without choosing; Enter chooses.
     await pressKey(walletTab, "ArrowRight");
     await expect(apiTab).toBeFocused();
     await expect(walletTab).toHaveAttribute("aria-selected", "true");
@@ -56,15 +54,12 @@ test("a project's page opens, moves between its repositories and goes back by ke
     await expect(projectSettings(page, api.id)).toBeVisible();
     await expect(projectSettings(page, wallet.id)).toHaveCount(0);
 
-    // Tab leaves the strip for Add a repository; Shift+Tab comes back to the chosen tab.
     const addTab = page.locator("[data-add-repository-tab]");
     await pressKey(apiTab, "Tab");
     await expect(addTab).toBeFocused();
     await pressKey(addTab, "Shift+Tab");
     await expect(apiTab).toBeFocused();
 
-    // Add a repository opens its form in the panel; Cancel brings the
-    // settings back and puts focus on Add a repository again.
     await pressKey(addTab, "Enter");
     await expect(addTab).toHaveAttribute("aria-expanded", "true");
     const cancel = page.locator("[data-add-repository-cancel]");
@@ -74,18 +69,15 @@ test("a project's page opens, moves between its repositories and goes back by ke
     await pressKey(addTab, "Shift+Tab");
     await expect(apiTab).toBeFocused();
 
-    // Escape goes back to the list with focus on the project's line.
     await pressKey(apiTab, "Escape");
     await expect(line).toBeFocused();
     await expect(back).toHaveCount(0);
 
-    // Space on the line opens the page too.
     await pressKey(line, " ");
     await expect(back).toBeFocused();
     await pressKey(back, "Escape");
     await expect(line).toBeFocused();
 
-    // Escape on the list closes Settings.
     await pressKey(line, "Escape");
     await expect(projectsTab).toHaveCount(0);
   } finally {

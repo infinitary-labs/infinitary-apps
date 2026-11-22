@@ -31,7 +31,6 @@ function scratch(): string {
   return scratchDir("infinitary-hostenv-");
 }
 
-/** Run `command` through /bin/sh with the environment a child of the core gets. */
 function runAsChild(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile("/bin/sh", ["-c", command], { env: hostEnv() }, (error, stdout) => {

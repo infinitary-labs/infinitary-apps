@@ -91,7 +91,6 @@ async function guarded(
   return { guard, refused, lookups, connects };
 }
 
-/** Send raw bytes to the guard and read what it answers, until it closes or `until` matches. */
 function exchange(
   guard: ConnectionGuardHandle,
   request: string,

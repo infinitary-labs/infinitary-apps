@@ -53,7 +53,6 @@ const DIAGRAM =
   `<path d="M475 60h50" stroke="var(--line-2)" stroke-width="2"/>` +
   DIAGRAM_BOX(525, CARD_DIAGRAM.label, true) +
   `</svg><figcaption>${CARD_DIAGRAM.caption}</figcaption></figure>`;
-/** What the crewmate says when it ends its turn while a write still runs as a background job. */
 export const PICTURES_STILL_WRITING = "The pictures are still being written.";
 
 function writePicturesCalls(): ScriptedCall[] {

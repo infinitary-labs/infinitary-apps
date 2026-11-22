@@ -128,7 +128,6 @@ function parsed(text: string | null | undefined): unknown {
   }
 }
 
-/** The delivery fields an evidence row holds, under the names a record reads them by. */
 export function evidenceFields(row: Omit<EvidenceRow, "task_id"> | undefined): Values {
   if (!row) return {};
   const evidence = parsed(row.evidence_json);
@@ -139,7 +138,6 @@ export function evidenceFields(row: Omit<EvidenceRow, "task_id"> | undefined): V
   };
 }
 
-/** The delivery fields a permission row holds, under the names a record reads them by. */
 export function permissionFields(
   row: Partial<Omit<PermissionRow, "task_id">> | undefined,
   liveValidation: unknown,

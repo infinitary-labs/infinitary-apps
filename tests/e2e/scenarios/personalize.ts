@@ -11,7 +11,6 @@ export const PERSONALIZE_INSTRUCTION_PROMPT_MARKER = "always use compact rows in
 /** The work the hide-tasks test starts so a crewmate row is on the board; it builds in the personal workspace. */
 export const PERSONALIZE_TIDY_TITLE = "tidy the personalize fixture";
 
-/** The standing instruction the mock Firstmate writes for that turn. */
 export const MOCK_STANDING_INSTRUCTION = "Always use compact rows in my panels.";
 
 /** The first mate hides and shows the tasks panel, and writes a standing instruction, each with one call and no card. */

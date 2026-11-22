@@ -14,7 +14,6 @@ import { calledTool, latestServedTurn, sinceLastUser } from "../providerRequest"
  * the program's end steers it.
  */
 export const PROGRAM_RUN_PROMPT = "run the meter capping program";
-/** The crewmate's task the first mate spawns. */
 export const CREW_TITLE = "Cap the meter's results with a program";
 const CREW_GOAL = "Cap what the meter renders, through one program.";
 /** The first mate's nudge: it names the tool and writes no script (INF-3022). */

@@ -133,7 +133,6 @@ test("a crewmate's turn runs on the app as a computer that runs work: the home h
       .map((line) => JSON.parse(line) as { callId: string; channel: string });
     expect(new Set(calls.map((call) => call.callId)).size).toBe(calls.length);
     expect(calls.filter((call) => call.channel === "inf:work:progress")).toHaveLength(progress());
-    // A copy of its record is home.
     await expect
       .poll(() =>
         readdirSync(crewmateSessionsDir(home.paths, "t-rivets")).some((name) =>
@@ -221,7 +220,6 @@ test("a closed task with unreadable work history stays present and brings its wo
       worktreeDir: "",
       workspaceState: "present",
     });
-    // The copy there is on the branch this Mac named, which the record keeps.
     const branch = home.tasks.get("t-tidy")?.branch ?? "";
     expect(branch).not.toBe("");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);
@@ -315,7 +313,6 @@ test("a task in a project works in a working copy the app that runs work cloned,
       worktreeDir: "",
       workspaceState: "present",
     });
-    // The copy there is on the branch this Mac named, which the record keeps.
     const branch = home.tasks.get("t-tidy")?.branch ?? "";
     expect(branch).not.toBe("");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);
@@ -324,7 +321,6 @@ test("a task in a project works in a working copy the app that runs work cloned,
   });
 
   await test.step("closed, its work is kept there, comes home, and only then is the copy there deleted", async () => {
-    // What the crewmate left: a commit, and an edit it never committed.
     writeFileSync(join(copy, "README.md"), "# website\n\nTidy.\n");
     await git(copy, ["add", "-A"]);
     await git(copy, [...identity, "commit", "-q", "-m", "docs: tidy the readme"]);
@@ -418,7 +414,6 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
     });
     await home.supervisor.starts.dispatchQueuedTask("t-git");
     expect(home.tasks.get("t-git")).toMatchObject({ status: "active" });
-    // The copy there is on the branch this Mac named, which the record keeps.
     const branch = home.tasks.get("t-git")?.branch ?? "";
     expect(branch).not.toBe("");
     const copy = join(me.dataDir, "worktrees", "t-git");

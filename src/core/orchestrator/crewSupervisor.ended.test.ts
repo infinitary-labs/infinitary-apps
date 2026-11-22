@@ -36,7 +36,6 @@ fakeCrewTimersEachTest();
 const TITLE = "Plan: how a program starts its crewmates";
 const REASON = "Your words went to the first mate, who starts planning crewmates.";
 
-/** The plan card, as its crewmate emitted it, and another card behind it. */
 const PLAN = {
   id: "program-starts-plan",
   title: TITLE,
@@ -89,7 +88,6 @@ describe("a card its author ends after the captain saw it (INF-3071)", () => {
     // The record closed it: every reader in the crew reads it as gone.
     expect(h.supervisor.cards.snapshot().some((entry) => entry.id === h.card.id)).toBe(false);
     expect(h.supervisor.cards.past(h.card.id)?.ending.how).toBe("author-withdrawal");
-    // The window is pushed the card still, ended, with no choices and one Close.
     const ended = pushed(h).find((entry) => entry.id === h.card.id);
     expect(ended).toMatchObject({
       title: TITLE,
@@ -98,7 +96,6 @@ describe("a card its author ends after the captain saw it (INF-3071)", () => {
       corner: { label: ENDED_CLOSE_LABEL },
       ended: { by: "crewmate", reason: REASON, line: endedLineWords("crewmate", REASON) },
     });
-    // Its thread keeps the exchange the captain was reading.
     expect(h.supervisor.cards.thread(h.card.id).messages.map((m) => m.who)).toEqual([
       "captain",
       "crewmate",

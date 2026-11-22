@@ -6,8 +6,6 @@ import { mainInputHeld } from "./composer";
 import { useShellStore } from "./store";
 import { card, picture, resetShell } from "./storeTestKit";
 
-/** The main message (./composer.ts): what a send carries, drafts kept, and the input's focus. */
-
 describe("submit visible card id", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

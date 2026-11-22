@@ -80,7 +80,6 @@ refresh_lists() {
   wait "$pid"
 }
 
-# Whether an argument names a .deb file rather than a package.
 names_a_file() {
   case "$1" in */* | *.deb) return 0 ;; *) return 1 ;; esac
 }

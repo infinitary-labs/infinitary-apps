@@ -151,7 +151,6 @@ export async function startDemo(
   options: LaunchOptions & { size: WindowSize },
 ): Promise<DemoRecorder> {
   const { size, ...launch } = options;
-  // Fail before launching when Playwright cannot record the window.
   needWindowRecorder();
   const home = launch.homeDir ?? scratchDir("infinitary-demo-home-");
   const launched = await launchApp({
@@ -325,7 +324,6 @@ function frameList(capture: Capture, from: number, until: number): string {
   return `${lines.join("\n")}\n`;
 }
 
-/** The span's frames as a list file, with the arguments that read it. */
 function frameInput(capture: Capture, mark: Mark): string[] {
   const { from, seconds } = span(mark);
   const list = join(scratchDir("infinitary-demo-frames-"), "frames.ffconcat");
@@ -333,7 +331,6 @@ function frameInput(capture: Capture, mark: Mark): string[] {
   return ["-f", "concat", "-safe", "0", "-i", list];
 }
 
-/** The MP4, or the GIF when no MP4 can be made; `format` makes one of them only. */
 async function makeDemo(input: DemoInput, format?: "mp4" | "gif"): Promise<DemoFiles> {
   await mkdir(input.dir, { recursive: true });
   // No encoder at all: neither can be made, and that is what the crewmate reports.

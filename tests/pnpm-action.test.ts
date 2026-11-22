@@ -101,7 +101,6 @@ async function standIn(packages: Record<string, Buffer>, failures = 0) {
   };
 }
 
-/** A registry address nothing listens on: any request to it is refused. */
 async function nothingListening(): Promise<string> {
   return `http://127.0.0.1:${await claimedPort()}`;
 }
@@ -297,7 +296,6 @@ describe(".github/actions/pnpm", () => {
     const { temp, checkout } = runner("first", { packageManager: "pnpm@9.9.9" });
     const { outputs } = runRecord(temp, checkout);
 
-    // Nothing restored: the fetch runs, and waits through two 504s.
     const missed = contexts(outputs, server.registry, { hit: false });
     expect(workflowValue(fetch.if ?? "", missed)).toBe(true);
     const fetched = await runFetch(temp, { ...stepEnv(fetch, missed), RUNNER_TEMP: temp });
@@ -320,7 +318,6 @@ describe(".github/actions/pnpm", () => {
     );
     expect(command(home, "pnpx", ["thing"])).toBe("stand-in pnpx thing");
 
-    // The next fresh runner restores the kept folder and never asks the registry.
     await server.close();
     server = undefined;
     const second = runner("second", { packageManager: "pnpm@9.9.9" });
@@ -415,7 +412,6 @@ describe(".github/actions/pnpm", () => {
     expect(slow.tarballRequests("slow-package")).toBe(2);
     expect(installed(short.project)).toBe(false);
 
-    // The step's own waits take the slow download whole.
     const waited = await install("own", stepEnv(waits, hosted));
     expect(waited.status, waited.output).toBe(0);
     expect(slow.tarballRequests("slow-package")).toBe(3);
@@ -423,7 +419,6 @@ describe(".github/actions/pnpm", () => {
   });
 });
 
-/** The contexts after the fetch step ended with `outcome`. */
 function fetchedAs(
   outcome: "success" | "failure",
   context: { steps: Record<string, unknown> },

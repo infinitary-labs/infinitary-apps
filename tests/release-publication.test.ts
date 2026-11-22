@@ -124,7 +124,6 @@ function standInTap() {
     ].join("\n"),
   );
   chmodSync(join(bin, "curl"), 0o755);
-  /** Publish a download and its .sha256 sidecar where the stand-in curl serves them. */
   const serve = (downloadUrl: string, bytes: string, sidecarSha = sha256Of(bytes)) => {
     const path = join(downloads, downloadUrl.slice(RELEASES.length + 1));
     mkdirSync(join(path, ".."), { recursive: true });
@@ -257,7 +256,6 @@ describe("the tap step of a release", () => {
     expect(tap.targets().targets).toEqual({
       alpha: expect.objectContaining({ version: "0.4.2-alpha.1" }),
     });
-    // Without that record, the same tap refuses it.
     const refused = tap.run("live", publication("alpha", "0.4.2-alpha.2"));
     expect(refused.status).toBe(1);
     expect(refused.stderr).toMatch(
@@ -274,7 +272,6 @@ describe("the tap step of a release", () => {
       expect(tap.head()).toBe(before);
     };
 
-    // -- Before activation: no live alpha, and stable never moves behind the old cask.
     const seeded = tap.head();
     unchanged(
       tap.run("live", publication("alpha", "0.1.25-alpha.40")),
@@ -286,7 +283,6 @@ describe("the tap step of a release", () => {
     );
     expect(tap.head()).toBe(seeded);
 
-    // -- The bootstrap stable: both casks and the targets file, in one commit.
     const bootstrap = tap.run("live", publication("stable", "0.1.25"));
     expect(bootstrap.status, bootstrap.stderr).toBe(0);
     expect(tap.commits()).toBe(2);
@@ -304,7 +300,6 @@ describe("the tap step of a release", () => {
       /\/tap: style --except-cops=Cask\/InstallSteps Casks\/infinitary\.rb Casks\/infinitary@alpha\.rb\n$/,
     );
 
-    // -- (a) An alpha moves only alpha: its cask and the targets file.
     expect(tap.run("live", publication("alpha", "0.1.26-alpha.43")).status).toBe(0);
     expect(tap.changedIn("main")).toEqual(["Casks/infinitary@alpha.rb", TARGETS_FILE]);
     expect(tap.targets().targets).toMatchObject({
@@ -313,7 +308,6 @@ describe("the tap step of a release", () => {
     });
     expect(tap.caskVersion("infinitary")).toBe("0.1.25");
 
-    // -- (b) A newer stable moves both.
     expect(tap.run("live", publication("stable", "0.1.26")).status).toBe(0);
     expect(tap.changedIn("main")).toEqual([
       "Casks/infinitary.rb",
@@ -322,7 +316,6 @@ describe("the tap step of a release", () => {
     ]);
     expect(tap.targets().targets.alpha?.version).toBe("0.1.26");
 
-    // -- (f) A stable finishing after a newer alpha moves stable alone.
     expect(tap.run("live", publication("alpha", "0.1.28-alpha.50")).status).toBe(0);
     const late = tap.run("live", publication("stable", "0.1.27"));
     expect(late.status, late.stderr).toBe(0);
@@ -333,14 +326,12 @@ describe("the tap step of a release", () => {
       alpha: { version: "0.1.28-alpha.50" },
     });
 
-    // -- A retry of the same publication writes nothing.
     const head = tap.head();
     const retry = tap.run("live", publication("stable", "0.1.27"));
     expect(retry.status, retry.stderr).toBe(0);
     expect(retry.stdout).toContain("the tap already carries stable 0.1.27; nothing to write");
     expect(tap.head()).toBe(head);
 
-    // -- Refusals leave the tap exactly as it was.
     unchanged(
       tap.run("live", publication("stable", "0.1.27", { sha256: sha256Of("rebuilt") })),
       /stable already carries 0\.1\.27 with a different artifact or source/,
@@ -359,7 +350,6 @@ describe("the tap step of a release", () => {
       ),
       /the alpha target names .*0\.1\.29-alpha\.51.*, not the verified .*0\.1\.28-alpha\.50/,
     );
-    // Another tool's cask on the shared tap is never touched.
     expect(tap.git("-C", tap.bare, "log", "--format=%s", "--", "Casks/other-tool.rb")).toBe("seed");
   });
 
@@ -382,7 +372,6 @@ describe("the tap step of a release", () => {
     const result = tap.run("live", publication("stable", "0.1.26"), { BREW_ON_STYLE: competitor });
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("the tap moved during attempt 1; reading it again");
-    // Both publications, in the order they landed, neither overwriting the other.
     expect(tap.commits()).toBe(before + 2);
     expect(tap.subject("main~1")).toBe("chore: publish infinitary 0.1.27-alpha.60 (alpha)");
     expect(tap.subject("main")).toBe("chore: publish infinitary 0.1.26 (stable)");
@@ -397,7 +386,6 @@ describe("the tap step of a release", () => {
     const tap = standInTap();
     const head = tap.head();
     const out = join(scratchDir("infinitary-tap-rehearsal-"), "out");
-    // An alpha before activation: rehearsed anyway, with what a live one would meet.
     const alpha = tap.run("rehearsal", publication("alpha", "0.1.25-alpha.40"), { OUT: out });
     expect(alpha.status, alpha.stderr).toBe(0);
     expect(alpha.stdout).toContain(
@@ -420,7 +408,6 @@ describe("the tap step of a release", () => {
       "infinitary.rb",
       "infinitary@alpha.rb",
     ]);
-    // A refused rehearsal fails like the live publication would.
     const older = tap.run("rehearsal", publication("stable", "0.1.23"), {
       OUT: join(scratchDir("infinitary-tap-rehearsal-"), "out"),
     });
@@ -474,7 +461,6 @@ describe("republishing the casks on the tap", () => {
     expect(tap.commits()).toBe(before + 1);
     expect(tap.subject("main")).toBe("chore: republish infinitary casks");
     expect(tap.changedIn("main")).toEqual(["Casks/infinitary.rb", "Casks/infinitary@alpha.rb"]);
-    // Nothing moved: the targets file is byte for byte what the tap carried.
     expect(tap.show(TARGETS_FILE)).toBe(targetsFile);
     for (const channel of ["stable", "alpha"] as const) {
       expect(tap.show(`Casks/${CASK_TOKENS[channel]}.rb`)).toBe(
@@ -483,7 +469,6 @@ describe("republishing the casks on the tap", () => {
     }
     expect(result.stdout).toContain("stable cask republished at 0.1.25");
     expect(result.stdout).toContain("alpha cask republished at 0.1.26-alpha.43");
-    // Each download and its sidecar, fetched once, carrying no credential.
     const calls = curlCalls(tap.curlLog);
     expect(calls).toHaveLength(4);
     for (const target of Object.values(targets)) {
@@ -498,7 +483,6 @@ describe("republishing the casks on the tap", () => {
     );
     expect(tap.git("-C", tap.bare, "log", "--format=%s", "--", "Casks/other-tool.rb")).toBe("seed");
 
-    // A second run finds the casks current: nothing written, nothing fetched.
     const head = tap.head();
     const again = tap.run("republish", {});
     expect(again.status, again.stderr).toBe(0);
@@ -516,12 +500,10 @@ describe("republishing the casks on the tap", () => {
       expect(tap.head()).toBe(before);
     };
     tap.serve(targets.alpha.downloadUrl, targets.alpha.version);
-    // Not published at all.
     unchanged(
       tap.run("republish", {}),
       /could not fetch .*infinitary-v0\.1\.25.* without a credential/,
     );
-    // Other bytes than the target's checksum.
     tap.serve(targets.stable.downloadUrl, "rebuilt");
     unchanged(
       tap.run("republish", {}),
@@ -529,10 +511,8 @@ describe("republishing the casks on the tap", () => {
         `Infinitary-0\\.1\\.25-universal\\.zip is ${sha256Of("rebuilt")}, not its target's ${targets.stable.sha256}`,
       ),
     );
-    // The target's bytes, beside a sidecar that names others.
     tap.serve(targets.stable.downloadUrl, targets.stable.version, sha256Of("rebuilt"));
     unchanged(tap.run("republish", {}), /\.zip\.sha256 names [0-9a-f]{64}, not its target's/);
-    // A cask that installs another version than its channel's target.
     tap.serve(targets.stable.downloadUrl, targets.stable.version);
     const path = join(older, "Casks", "infinitary.rb");
     writeFileSync(path, readFileSync(path, "utf8").replace('version "0.1.25"', 'version "0.1.24"'));
@@ -587,7 +567,6 @@ describe("republishing the casks on the tap", () => {
         renderCask(channel, targets[channel], NOTICE),
       );
     }
-    // A refused rehearsal fails as the live republication would.
     rmSync(join(tap.dir, "downloads"), { recursive: true });
     const refused = tap.run(
       "republish-rehearsal",
@@ -630,7 +609,6 @@ describe("a release's published assets", () => {
         [NAME]: `${VERSION} first build`,
         [`${NAME}.sha256`]: `${sha}  ${NAME}\n`,
       });
-      // The public copy of the same bytes, on the tap's own prefixed tag.
       const publicCopy = gh.run("match", PUBLIC, `infinitary-alpha-v${VERSION}`, zip, {
         TARGET: "main",
         PRERELEASE: "true",
@@ -670,7 +648,6 @@ describe("a release's published assets", () => {
       ).toBe(0);
       expect(gh.latest(elsewhere)).toBe("infinitary-v0.1.29");
 
-      // The publication holds the badge where it was.
       const stable = gh.run("match", PUBLIC, "infinitary-v0.1.29", gh.zip("0.1.29", "build"), {
         TARGET: "main",
         PRERELEASE: "false",
@@ -681,7 +658,6 @@ describe("a release's published assets", () => {
       expect(gh.created(PUBLIC, "infinitary-v0.1.29")).toContain("--latest=false");
       expect(gh.created(PUBLIC, "infinitary-v0.1.29")).not.toContain("--prerelease");
       expect(gh.latest(PUBLIC)).toBe("other-tool-v2.0.0");
-      // The next stable, too, while Firstmate's own release shows as latest.
       const own = "kunchenguid/own-tap";
       gh.seed(own, "infinitary-v0.1.28", COMMIT, {});
       const next = gh.run("match", own, "infinitary-v0.1.29", gh.zip("0.1.29", "build"), {
@@ -738,7 +714,6 @@ describe("a release's published assets", () => {
     expect(retry.outputs.sha256).toBe(publishedSha);
     expect(readFileSync(retry.outputs.zip as string, "utf8")).toBe(publishedBytes);
     expect(gh.published(PRIVATE, `v${VERSION}`)?.[NAME]).toBe(publishedBytes);
-    // The adopted artifact goes on to the public copy; an identical retry is a no-op.
     const adopted = retry.outputs.zip as string;
     expect(
       gh.run("match", PUBLIC, `infinitary-alpha-v${VERSION}`, adopted, { PRERELEASE: "true" })
@@ -748,7 +723,6 @@ describe("a release's published assets", () => {
       gh.run("match", PUBLIC, `infinitary-alpha-v${VERSION}`, adopted, { PRERELEASE: "true" })
         .outputs.state,
     ).toBe("identical");
-    // The rebuilt bytes never replace the public copy.
     const refused = gh.run("match", PUBLIC, `infinitary-alpha-v${VERSION}`, rebuilt, {
       PRERELEASE: "true",
     });
@@ -797,7 +771,6 @@ describe("a release's published assets", () => {
     expect(creates()).toBe(3);
     expect(gh.published(PUBLIC, `infinitary-alpha-v${VERSION}`)?.[NAME]).toBe(`${VERSION} build`);
 
-    // A second server error fails the run, with nothing published.
     const record = "kunchenguid/stand-in-record";
     const twice = gh.run("adopt", record, `v${VERSION}`, zip, {
       PRERELEASE: "true",
@@ -884,7 +857,6 @@ function olderSourceWorkspace(
   return workspace;
 }
 
-/** The command a job's step runs, as release.yml declares it. */
 function declaredRun(job: string, id: string): string {
   const run = releaseWorkflow().jobs[job]?.steps.find((step) => step.id === id)?.run;
   if (!run) throw new Error(`release.yml's ${job} job has no ${id} step`);
@@ -992,7 +964,6 @@ describe("the Homebrew-free feed publication", () => {
           env: { ...environment, ...more },
         });
       if (mode === "live") {
-        // The upload job hands its Cloudflare upload the files it chose.
         const upload = step(uploadWorkspace, cloudflareUpload(), {
           ZIP: zip,
           DMG: dmg,

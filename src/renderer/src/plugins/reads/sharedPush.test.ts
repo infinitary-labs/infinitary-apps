@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sharedSubscription } from "./sharedPush";
 
-/** A bridge stand-in: counts subscriptions and emits raw values to them. */
 function fakeUpstream<Raw>() {
   const listeners = new Set<(raw: Raw) => void>();
   let subscriptions = 0;

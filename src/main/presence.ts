@@ -11,7 +11,6 @@ import { watchWindowsDisplay } from "./windowsDisplay";
  */
 let watch: PresenceWatch | null = null;
 
-/** The one watch of this process, started the first time it is asked for. */
 export function presenceWatch(): PresenceWatch {
   if (watch) return watch;
   const platform = hostPlatform();

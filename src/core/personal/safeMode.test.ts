@@ -34,7 +34,6 @@ describe("LaunchWatch", () => {
       return () => {};
     };
 
-    // A first, clean launch on a fresh install: nothing pending, nothing counted.
     const first = new LaunchWatch({ ...options, schedule }).begin();
     expect(first).toEqual({ earlyCrashes: 0, safeMode: false });
     expect(settings.getLaunchRecord()).toEqual({ pending: true, earlyCrashes: 0 });
@@ -66,7 +65,6 @@ describe("LaunchWatch", () => {
     expect(watch.begin()).toEqual({ earlyCrashes: 1, safeMode: false });
     settle();
     expect(settings.getLaunchRecord()).toEqual({ pending: false, earlyCrashes: 0 });
-    // The launch after a good one starts clean, whatever came before it.
     expect(new LaunchWatch({ ...options, schedule: () => () => {} }).begin()).toEqual({
       earlyCrashes: 0,
       safeMode: false,

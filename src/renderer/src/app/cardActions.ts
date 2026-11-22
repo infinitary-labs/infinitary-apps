@@ -65,7 +65,6 @@ export type CardSlice = {
   threads: Record<string, CardMessage[]>;
   /** Initial history determines the destination layout before a body is born. */
   threadsLoaded: Record<string, true>;
-  /** What the captain has typed under each card and not yet sent. */
   replyDrafts: Record<string, string>;
   replyNotes: Record<string, CardNote[]>;
   pointAtCard: string | null;
@@ -77,7 +76,6 @@ export type CardSlice = {
   /** A rejected reply, by card, shown under the row until the next keystroke. */
   replyErrors: Record<string, string>;
   replyNotices: Record<string, ComposerNotice>;
-  /** Pasted pictures waiting to ride the next reply, by card. */
   replyPastes: Record<string, PastedText[]>;
   attachReplyPaste: (cardId: string, text: string, name?: string) => void;
   removeReplyPaste: (cardId: string, id: string) => void;
@@ -131,9 +129,7 @@ export type CardSlice = {
   sendReply: (cardId: string, collect?: () => Promise<FrameAnswers | undefined>) => Promise<void>;
   /** Collapse the thread beside a card into its foot; the messages stay on the record. */
   closeThread: (cardId: string) => void;
-  /** Put a thread the captain collapsed in this window beside its card again. */
   openThread: (cardId: string) => void;
-  /** Open a docked request beside its page, or fold it to its latest line. */
   setRequestColumn: (cardId: string, choice: "open" | "folded") => void;
   minimizeCard: (cardId: string) => Promise<void>;
 };

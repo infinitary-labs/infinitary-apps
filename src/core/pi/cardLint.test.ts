@@ -27,7 +27,6 @@ import { type EmittedCard, resolveFirstmateCardId } from "./cardTool";
 
 /** The one settle effect a merge offer carries (cards/tasks/agents P1): the host resolves the posture. */
 const MERGE = { kind: "merge", after: "close" } as const;
-/** A merge offer as an action, for the cases that need one and nothing else. */
 const MERGE_ACTION = { id: "merge", label: "Merge PR", default: true, effect: MERGE } as const;
 /**
  * A completion decision as the crewmate lint reads it: the crewmate declares
@@ -253,7 +252,6 @@ describe("lintCardShape (both boundaries)", () => {
     ]) {
       expect(lintCardShape(decision({ body })), body).toBe(PASSWORD_FIELD_REFUSAL);
     }
-    // Words about passwords, other fields and quoted markup are still allowed.
     for (const body of [
       '<p>The form reads:</p><pre><code>&lt;input type="password" name="key"&gt;</code></pre>',
       "<p>Set <code>type='password'</code> on the field.</p>",
@@ -283,7 +281,6 @@ describe("lintCardShape (both boundaries)", () => {
         decision({ body: "<p>Use &lt;details&gt; for the rest.</p><ul><li>x</li></ul>" }),
       ),
     ).toBeUndefined();
-    // Plain text with no tags at all is not escaped markup.
     expect(lintCardShape(note({ body: "Codex has 62% left; 3 &lt; 4." }))).toBeUndefined();
   });
 
@@ -367,11 +364,9 @@ describe("lintCardShape (both boundaries)", () => {
         (heading) =>
           `<h3>${heading}</h3><p>Tests pass.</p>${heading === "Before" || heading === "After" ? PICTURE : ""}`,
       ).join("");
-      // The crewmate declared only the merge; the host wrote the pair.
       expect(
         lintCrewmateCard(decision({ body: outline, actions: [...COMPLETION_PAIR] })),
       ).toBeUndefined();
-      // One action the crewmate added beside the pair still fits; two do not.
       const own = actions(3).map(({ default: _default, ...action }) => action);
       expect(
         lintCrewmateCard(
@@ -496,7 +491,6 @@ describe("lintCardShape (both boundaries)", () => {
       ],
     };
     expect(lintCardShape(moving)).toBeUndefined();
-    // The question rules read it: a required question that arrives answered is refused.
     const answered =
       '<fieldset><legend>Ship it?</legend><label><input type="radio" name="ship" value="yes" required checked> Yes</label></fieldset>';
     expect(lintCardShape({ ...moving, body: `${moving.body}${answered}` })).toContain(
@@ -804,7 +798,6 @@ describe("lintCrewmateCard", () => {
 
     it("accepts four sections opening at Why, without an answer paragraph before them", () => {
       expect(lintCrewmateCard(completion(outline))).toBeUndefined();
-      // Extra headings, a list, a figure and closing details impose no recipe.
       expect(
         lintCrewmateCard(
           completion(
@@ -843,7 +836,6 @@ describe("lintCrewmateCard", () => {
         const local = (heading: string, index: number) =>
           `<h3>${heading}</h3><p>Task-specific content.</p>${index >= 2 ? PICTURE : ""}`;
         expect(lintCrewmateCard(completion(translated.map(local).join("")))).toBeUndefined();
-        // English stays accepted beside it.
         expect(lintCrewmateCard(completion(outline))).toBeUndefined();
         // The picture rule reads the translated Before and After sections.
         const pictureless = translated.map((heading) => `<h3>${heading}</h3><p>Text.</p>`).join("");
@@ -1096,7 +1088,6 @@ describe("lintFirstmateCard", () => {
     expect(lintFirstmateCard(note({ taskId: "ab12cd34", reviewTaskId: "rv01" }), known)).toBe(
       undefined,
     );
-    // A related task must name a record.
     expect(
       lintFirstmateCard(
         note({ relatedTaskIds: ["INF-9999"] }),
@@ -1204,7 +1195,6 @@ describe("lintFirstmateCard", () => {
       );
       expect(refusal, id).toMatch(/reads like a merge but carries no merge effect/);
     }
-    // The label alone is a claim too.
     expect(
       lintFirstmateCard(
         { ...base, actions: [{ id: "ship", label: "Merge it now", default: true }] },
@@ -1285,7 +1275,6 @@ describe("lintFirstmateCard", () => {
     expect(refusal).toBe(steerNotAnswerRefusal("t58", crew));
     expect(refusal).toContain("emit_card with id card-t58-3");
     expect(refusal).toContain("expected_revision");
-    // A decision acting on that task is held the same way.
     expect(lintFirstmateCard(decision({ taskId: "t58" }), ctx)).toBe(
       steerNotAnswerRefusal("t58", crew),
     );
@@ -1302,7 +1291,6 @@ describe("lintFirstmateCard", () => {
     expect(
       lintFirstmateCard(decision({ taskId: "t77", relatedTaskIds: ["t58"], actions: choice }), ctx),
     ).toBe(steerNotAnswerRefusal("t58", crew));
-    // A task without a crewmate card on screen is the Firstmate's to answer.
     expect(lintFirstmateCard({ ...answer, relatedTaskIds: ["t77"] }, ctx)).toBeUndefined();
     expect(
       lintFirstmateCard(decision({ relatedTaskIds: ["t77"], actions: choice }), ctx),

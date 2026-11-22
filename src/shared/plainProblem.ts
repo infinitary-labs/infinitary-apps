@@ -72,7 +72,6 @@ type Rule = {
   readsClass?: true;
 };
 
-/** A failure a typed backend reported: its cut-off class, when it has one. */
 /**
  * A typed failure: its cut-off class and, for a lost sign-in on Claude
  * access set up for Claude Code, where that access comes from, which is

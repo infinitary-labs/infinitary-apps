@@ -144,7 +144,6 @@ async function openedOnBitbucket() {
       page,
       bitbucket,
       bare,
-      /** The task's working copy, where the app keeps it. */
       worktreeDir: join(userDataDir, "worktrees", task.id),
       card,
       task,
@@ -183,7 +182,6 @@ async function openedOnBitbucket() {
 }
 
 test("a crewmate opens a pull request on bitbucket.org, its build statuses read as the checks, and the captain's click squash-merges that version", async () => {
-  // The completion card cleared the checks gate on Bitbucket's build statuses.
   const opened = await openedOnBitbucket();
   const { launched, page, bitbucket, bare, card, task, branch } = opened;
   const cardTitle = MOCK_GITHUB_CHANGE_CARD_TITLE;
@@ -191,7 +189,6 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
   try {
     const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
     expect(bitbucket.requests()).toContain(`POST ${API_PROJECT}/pullrequests`);
-    // The checks are the statuses on the version the crewmate pushed, by its full id.
     expect(bitbucket.requests()).toContain(`GET ${API_PROJECT}/commit/${sentUp}/statuses`);
     const webUrl = `https://bitbucket.org/${BITBUCKET_STUB_PROJECT}/pull-requests/1`;
     const facts = factsStrip(cardBody(page, cardTitle));
@@ -225,8 +222,6 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
     if (pictures)
       writeFileSync(join(pictures, "bitbucket-pull-request-description.md"), description);
 
-    // The captain's click: one squash of that pull request at the version the
-    // crewmate pushed, under its title and the story's plain summary.
     await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
     await expect(putInLine(page, task.key)).toBeVisible({ timeout: 30_000 });
     expect(bitbucket.merges()).toEqual([
@@ -245,7 +240,6 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
   }
 });
 
-/** What the task's record says stopped a merge: its notes, their problems, and its checks. */
 function stopOf(task: TaskDetail | null): {
   notes: string;
   problem: string;
@@ -523,7 +517,6 @@ test("a merge Bitbucket accepted and has not finished merges nothing yet, is not
       .toContain(task.delivery?.changeLabel ?? "#1");
     expect(bitbucket.merges()).toEqual([]);
     expect(bitbucket.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(1);
-    // One notice in Activity says why, and the crewmate's work is still in its working copy.
     await expect(noteLines(page, task.key)).toHaveCount(1);
     await expect(noteLines(page, task.key)).toContainText(/Cannot merge|Your merge/);
     await expect(putInLine(page, task.key)).toHaveCount(0);
@@ -561,7 +554,6 @@ test("a Bitbucket project added before pull requests, with no sign-in on file, m
   const merge = await seededMerge(() => {}, "ready", false);
   try {
     const { page, key, detail, bitbucket } = merge;
-    // The refusal names the task and the host whose sign-in it needs.
     await expect
       .poll(async () => {
         const { notes } = stopOf(await detail());

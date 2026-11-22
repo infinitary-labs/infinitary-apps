@@ -16,11 +16,9 @@ type FakeAccount = {
   connected?: boolean;
   /** Connected, but withheld from serving: its reason (a missing client, a standing cut-off). */
   withheld?: string;
-  /** A standing cut-off on the account, as the vault records it. */
   cutOff?: { class: "signed_out" | "no_headroom" | "refused"; resetsAt?: number };
   /** Simulates a non-Pi store (the Claude backend, phase 7). */
   via?: string;
-  /** Its Keep going on credits switch. */
   keepGoingOnCredits?: boolean;
 };
 
@@ -158,7 +156,6 @@ describe("Flagship", () => {
       baseRuntime,
     });
     const binding = await flagship.resolveBinding("openai-codex");
-    // A Pi binding on the account's own runtime (the seat seam's shape).
     expect(binding).toEqual({
       backend: "pi",
       accountId: "acct_high",

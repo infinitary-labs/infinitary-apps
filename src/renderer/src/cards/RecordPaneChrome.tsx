@@ -270,9 +270,7 @@ export function RecordPaneFooter({
   move?: RecordMove;
   closeDone?: RecordCloseDone;
 }) {
-  /** The one confirm that asks, Drop task's or Close as done's, if any. */
   const [confirming, setConfirming] = useState<"drop" | "close-done" | null>(null);
-  /** Close as done's close while it runs. */
   const [closingDone, setClosingDone] = useState(false);
   const [pending, setPending] = useState<TaskLifecycleOp | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -177,7 +177,6 @@ describe("the task protocol (task-system P3)", () => {
         why: "the meter test failed",
         prompt: "p",
       });
-      // The rest of the history: a chain of crew filings, each closed.
       let from = "origin";
       for (let i = 0; i < history; i++) {
         const { record } = f.tasks.fileFollowup({
@@ -322,7 +321,6 @@ describe("the task protocol (task-system P3)", () => {
     ).toEqual(new Set([keyOf("part")]));
     expect(long.waiting.blockedBy).toEqual([keyOf("owner")]);
     expect(long.found.map((task) => task.id)).toEqual(["origin"]);
-    // The same record reads the same, however long the history behind it.
     expect(long.subject).toEqual(short.subject);
     expect(long.found).toEqual(short.found);
     expect(long.rows.search).toBeGreaterThan(0);
@@ -579,11 +577,9 @@ describe("the task protocol (task-system P3)", () => {
     });
     // Membership moved on the way: rows entered, aged out, were shown for a card and left.
     expect(seen.size).toBeGreaterThan(3);
-    // The row nothing reached is the row the first read built, by identity.
     expect(protocol.board().tasks.find((task) => task.id === "untouched")).toBe(
       first.tasks.find((task) => task.id === "untouched"),
     );
-    // A purge rebuilds from nothing.
     tasks.archive.purge();
     expect(same("after a purge").tasks).toEqual([]);
   });
@@ -620,7 +616,6 @@ describe("the task protocol (task-system P3)", () => {
           });
       }
       f.protocol.board();
-      // The board's own work after a change: the rows it reads and the views it builds.
       const measure = (change: () => void) => {
         change();
         built.length = 0;

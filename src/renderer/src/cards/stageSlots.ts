@@ -167,7 +167,6 @@ export function expireSlot<V>(state: StageSlots<V>, key: string): StageSlots<V> 
   return withOrder({ ...state, revealed: true, outgoing: null });
 }
 
-/** The mounted slots in birth order, each with its role. */
 export function slotRoles<V>(state: StageSlots<V>): (Slot & { role: SlotRole })[] {
   const roles: (Slot & { role: SlotRole })[] = [];
   if (state.parked) roles.push({ id: state.parked.id, key: state.parked.key, role: "parked" });

@@ -43,7 +43,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: the flagship binding and the Claude seat (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 const claudeSays = {
@@ -73,7 +72,6 @@ const claudeSays = {
   }),
 };
 
-/** A client that answers every prompt with one clean turn. */
 function answersEveryPrompt(message: SDKUserMessage, emit: (message: unknown) => void): void {
   emit(claudeSays.running);
   emit(claudeSays.ack(message));
@@ -168,7 +166,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       (event) => event.type === "firstmate_note" && event.text.includes("moved to Work #2"),
     );
     expect(note).toBeDefined();
-    // The second turn ran on the rebound session.
     expect((t.sessions[1] as FakeSession).prompts[0]).toContain("second");
   });
 
@@ -303,7 +300,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       m.cardSavedResetsNow({ account: "Codex · Work", count: live.available }),
     );
     expect(applies.body).toContain(`<a href="${SAVED_RESETS_PAGE.codex}"`);
-    // Its button uses one, ahead of the others.
     expect(applies.actions.map((action) => action.id)).toEqual([
       "use-saved-reset",
       "recheck-allowance",
@@ -325,7 +321,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     t.setHeadroom("acct_b", 40);
     await t.agent.converse("start");
     t.setHeadroom("acct_a", 0);
-    // Mid-turn user text steers the same attachment; no rebind happens.
     await t.agent.converse("mid-turn steer");
     expect(t.specs).toHaveLength(1);
     expect((t.sessions[0] as FakeSession).steers).toHaveLength(1);
@@ -474,7 +469,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(t.agent.boundAccount()).toBe("acct_grok");
     expect(t.specs[1]?.model).toEqual({ provider: "xai", id: "grok-4.6" });
     expect(runtimeKind(t.specs[1])).toBe("runtime-acct_grok");
-    // The new seat's first turn is told it moved.
     await tick();
     const grok = t.sessions[1] as FakeSession;
     expect(grok.prompts[0]).toContain("Your seat moved on the captain's word");
@@ -599,7 +593,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     const parked = t.db.prepare("SELECT COUNT(*) AS n FROM inbox").get() as { n: number };
     expect(parked.n).toBe(1);
 
-    // The user says move: model + account settings change, rebind, drain.
     t.supervisor.cardActions.act(card.id, "move-flagship");
     await tick();
     expect(t.settings.getFirstmateModel()).toEqual({
@@ -608,7 +601,6 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     });
     expect(t.settings.getFirstmateAccount()).toBe("acct_grok");
     expect(runtimeKind(t.specs[1])).toBe("runtime-acct_grok");
-    // The parked user turn delivered on the new binding.
     expect((t.sessions[1] as FakeSession).prompts[0]).toContain("second");
   });
 

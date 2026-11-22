@@ -43,7 +43,6 @@ export const SERVED_FRAME_PREFIX = `${SERVED_FRAME_MARK}FIRSTMATE_OP: `;
 
 export const SERVED_FRAME_VERSION = "v1";
 
-/** What one framed segment is. */
 export type ServedSegmentKind = "context" | "wake" | "user";
 
 export const SERVED_SEGMENT_KINDS: readonly ServedSegmentKind[] = ["context", "wake", "user"];
@@ -67,15 +66,12 @@ export const SERVED_ORIGINS = [
 
 export type ServedOrigin = (typeof SERVED_ORIGINS)[number];
 
-/** A wake's origin: every origin except the captain's own words. */
 export type ServedWakeOrigin = Exclude<ServedOrigin, "captain">;
 
-/** The segment kind an origin is served as. */
 export function segmentKindOf(origin: ServedOrigin): "user" | "wake" {
   return origin === "captain" ? "user" : "wake";
 }
 
-/** Segments are joined by exactly this separator. */
 export const SERVED_FRAME_JOIN = "\n\n";
 
 export type ServedSegmentInput =
@@ -140,7 +136,6 @@ export function neutralizeFrameMarks(body: string): { body: string; removed: num
   return { body: parts.join(""), removed: parts.length - 1 };
 }
 
-/** Frame an input from its typed segments, in order. */
 export function frameServedInput(segments: ServedSegmentInput[]): FramedInput {
   let text = "";
   let neutralized = 0;
@@ -179,7 +174,6 @@ export function frameServedInput(segments: ServedSegmentInput[]): FramedInput {
   return { text, segments: out, neutralized };
 }
 
-/** Whether the text opens with the frame header (a current served input). */
 export function isFramedInput(text: string): boolean {
   return text.startsWith(`${SERVED_FRAME_PREFIX}${SERVED_FRAME_VERSION} `);
 }

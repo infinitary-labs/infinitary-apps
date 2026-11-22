@@ -2,7 +2,6 @@ import type { Scenario } from "../mockProvider";
 
 /** The ask's marker, in the title the first mate gives its crewmate. */
 export const FIRST_CREWMATE_ASK = "fix the readme typo";
-/** The crewmate's first card, a choice it brings back. */
 export const FIRST_CREWMATE_CARD_TITLE = "The readme typo is fixed";
 
 /**

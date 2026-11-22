@@ -577,7 +577,6 @@ export function placeWords(forge: Forge): string {
   return forge.place ? `on ${forge.place}` : "where the project lives";
 }
 
-/** What a crewmate hears when the project's host needs the captain's sign-in. */
 export function crewSignInText(fact: SignInFact): string {
   return `${notSignedInText(fact.name, fact.host)}. Report this as a blocker: the captain signs in to ${fact.name} in the app's Settings. Do not sign in yourself, and do not look for another way in.`;
 }

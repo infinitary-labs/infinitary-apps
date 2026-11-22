@@ -1,7 +1,6 @@
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import type { Scenario } from "../mockProvider";
 
-/** Marker prompt: the mock crewmate emits a note, a decision and a scripted card, each with a local-subdomain link. */
 export const LOCAL_LINK_CARDS_PROMPT_MARKER = "show the local link cards";
 
 export const LOCAL_LINK_HREF =
@@ -44,7 +43,6 @@ function localLinkCardToolCalls(): ScriptedCall[] {
   ];
 }
 
-/** The model shows cards that link to files on this computer. */
 export const localLinkCards: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

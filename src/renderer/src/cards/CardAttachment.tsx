@@ -116,7 +116,6 @@ const HANDOFF_TINT: Partial<Record<NonNullable<TaskBrowserLine["driver"]>, strin
   captain: "var(--captain-dim)",
 };
 
-/** The strip itself, drawn from its reading. */
 export function CardAttachmentStrip({
   attachment,
   reading,

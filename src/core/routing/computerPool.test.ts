@@ -192,7 +192,6 @@ describe("computerPool", () => {
       NOW,
     );
     const sol = { provider: "openai-codex", id: "gpt-6-sol" };
-    // Both list GPT-6 Sol there.
     const listed = {
       ...pool,
       servedBy: new Map([["openai-codex/gpt-6-sol", new Set(["acct_spent", "acct_left"])]]),

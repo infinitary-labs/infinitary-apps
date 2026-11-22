@@ -484,7 +484,6 @@ describe.skipIf(!chrome)("Google Chrome as the task browser's second engine", ()
     expect(await until(() => textOf(page, "answer"))).toBe("answer granted, now granted");
     expect(recorded.asks).toEqual(["notifications"]);
     await page.revokeAsks();
-    // Taken back, the site asks again, and this time the core says no.
     allow = false;
     await page.load(local("/asks"));
     await press(page, "Notify");

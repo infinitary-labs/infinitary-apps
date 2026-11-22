@@ -20,7 +20,6 @@ describe("the frame stylesheet", () => {
       expect(faces).toContain(`url(app-frame://fonts/${name})`);
     }
     expect([...names].sort()).toEqual(readdirSync(fontsDir).sort());
-    // The two families the design system speaks in.
     expect(faces).toContain('font-family: "Space Grotesk"');
     expect(faces).toContain('font-family: "JetBrains Mono"');
   });

@@ -285,7 +285,6 @@ export class AccountVault {
     return new AccountVault(paths, options);
   }
 
-  /** Eagerly read every enabled account's status so snapshots are warm. */
   async warm(): Promise<void> {
     await Promise.all(
       this.liveAccounts()
@@ -326,7 +325,6 @@ export class AccountVault {
     return this.registry.pins[providerId];
   }
 
-  /** The backend serving an account, from its provider's catalog entry. */
   backendIdOf(accountId: string): BackendId | undefined {
     const account = this.get(accountId);
     return account ? backendForProvider(account.providerId) : undefined;
@@ -857,7 +855,6 @@ export class AccountVault {
     }
   }
 
-  /** The cut-off standing on this account, if any. */
   cutOff(accountId: string): AccountCutOff | undefined {
     const account = this.registry.accounts.find((entry) => entry.id === accountId);
     const standing = account?.cutOff;
@@ -1331,7 +1328,6 @@ export class AccountVault {
     return dir;
   }
 
-  /** Whether the Codex CLI keeps a sign-in in the account's Codex home. */
   codexSignedIn(accountId: string): boolean {
     const account = this.get(accountId);
     return account
@@ -1345,7 +1341,6 @@ export class AccountVault {
     return attempt ? { ...attempt } : undefined;
   }
 
-  /** Keeps (or, with undefined, clears) the account's saved-reset attempt. */
   setSavedResetAttempt(
     accountId: string,
     attempt: { key: string; creditId?: string } | undefined,
@@ -1356,7 +1351,6 @@ export class AccountVault {
     this.saveRegistry();
   }
 
-  /** Whether the account's Keep going on credits switch is on. */
   keepsGoingOnCredits(accountId: string): boolean {
     return this.get(accountId)?.keepGoingOnCredits === true;
   }
@@ -1488,7 +1482,6 @@ export class AccountVault {
     for (const listener of this.cutOffListeners) queueMicrotask(() => listener(accountId));
   }
 
-  /** The reason a standing cut-off withholds the account with, if it does. */
   private withholdingReason(accountId: string): string | undefined {
     const standing = this.cutOff(accountId);
     if (standing?.class === "refused") return CUT_OFF_REFUSED;
@@ -1547,7 +1540,6 @@ export class AccountVault {
     return join(this.paths.accountsDir, providerId, accountId);
   }
 
-  /** Delete an account's store; drop the provider dir too once it empties. */
   private removeStoreDir(providerId: string, accountId: string): void {
     rmSync(this.storeDir(providerId, accountId), { recursive: true, force: true });
     try {

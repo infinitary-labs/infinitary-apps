@@ -73,7 +73,6 @@ async function watch(page: Page): Promise<void> {
 const states = (page: Page) => page.evaluate(() => window.__fmStates ?? []);
 const reaches = (page: Page) => page.evaluate(() => window.__fmReach ?? []);
 
-/** Starts the record over, so it holds the next turn alone. */
 const restart = (page: Page) =>
   page.evaluate(() => {
     window.__fmStates?.splice(0);
@@ -116,7 +115,6 @@ test("the first mate draws itself tight while it shortens its conversation", asy
     const before = (await reaches(page)).filter((sample) => !sample.folding);
     expect(before.length).toBeGreaterThan(0);
     const rest = Math.min(...before.map((sample) => sample.reach));
-    // While it runs, the body is drawn tight: its ink pulls well inside where it reached.
     await expect
       .poll(async () =>
         Math.min(
@@ -129,7 +127,6 @@ test("the first mate draws itself tight while it shortens its conversation", asy
       await heroShot(app, page, { region: character, name: "character-cinch" });
     }
 
-    // It ends inside the same turn, and the answer comes.
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible({ timeout: 45_000 });
     await turnEnded(page);
     expect(await states(page)).toEqual([

@@ -25,7 +25,6 @@ import { useShellStore } from "./store";
 /** The reason whose notice was put away with Not now, while this window runs. */
 const useFolded = create<{ reason: WorkSetupReason | null }>(() => ({ reason: null }));
 
-/** Why this computer's work cannot run, or null while nothing stops it. */
 function blockedReason(thisMac: ThisMac | null): WorkSetupReason | null {
   if (thisMac?.role !== "view" || thisMac.workSetup?.state !== "blocked") return null;
   return thisMac.workSetup.reason ?? "not-reached";
@@ -44,7 +43,6 @@ function useNoticeFolded(): boolean {
   return reason !== null && folded === reason;
 }
 
-/** The notice's words for a view's work half, or null while nothing stops it. */
 export function workSetupNoticeText(thisMac: ThisMac | null): string | null {
   const reason = blockedReason(thisMac);
   return reason && thisMac?.role === "view" ? noticeWords(reason, thisMac.name) : null;

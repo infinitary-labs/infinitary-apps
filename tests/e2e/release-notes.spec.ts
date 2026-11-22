@@ -187,7 +187,6 @@ test("an upgrade puts one release note on top of the stack, a restart keeps it, 
       noteId = top?.id ?? "";
       await expect(shownCard(launched.page, top?.title ?? "")).toBeVisible();
       await expect(pagerAt(launched.page, 1, 2)).toBeVisible();
-      // The shown note lists what is new since the earlier version, and not what it already had.
       const body = cardBody(launched.page, top?.title ?? "");
       for (const id of NEW_SINCE_EARLIER)
         await expect(body.getByText(titleOf(id), { exact: true }).first()).toBeAttached();
@@ -252,7 +251,6 @@ test("a first installation that needs no setup shows no note and records its ver
     await expect
       .poll(() => launched.page.evaluate(() => window.infinitary.app.healthcheck()))
       .toMatchObject({ ok: true });
-    // A clean new installation starts clean: no What's new card, and nothing to read again.
     expect(await stack(launched.page)).toEqual([]);
     expect(await launched.page.evaluate(() => window.infinitary.releaseNotes.list())).toMatchObject(
       {
@@ -328,7 +326,6 @@ test("the lead highlight shows its picture in your theme, opens it whole, and ke
     previous: { version: "0.0.0", source: null, recordedAt: Date.now() - 2 * 86_400_000 },
   });
   db.close();
-  /** The one hero picture a person sees, decoded to the size the release packaged. */
   const shownPicture = async (page: Page, title: string) => {
     const body = cardBody(page, title);
     const picture = body
@@ -356,7 +353,6 @@ test("the lead highlight shows its picture in your theme, opens it whole, and ke
       expect(top?.pictures?.map((picture) => picture.alt)).toEqual([HERO_ALT, HERO_ALT]);
       const picture = await shownPicture(page, top?.title ?? "");
       await expect(picture).toHaveAttribute("data-inf-theme", "dark");
-      // A click opens it in the viewer, the same picture.
       await clickInBody(picture);
       const viewer = page.getByRole("dialog", { name: /^Pictures from / });
       await expect(viewer).toBeVisible();
@@ -368,7 +364,6 @@ test("the lead highlight shows its picture in your theme, opens it whole, and ke
       await expect(viewer).toHaveCount(0);
       await page.screenshot({ path: test.info().outputPath("release-note-picture-dark.png") });
 
-      // A theme switch swaps in the light picture, live.
       await setThemeViaSettings(page, "light");
       await expect(await shownPicture(page, top?.title ?? "")).toHaveAttribute(
         "data-inf-theme",

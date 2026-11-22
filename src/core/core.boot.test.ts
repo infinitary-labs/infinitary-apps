@@ -317,7 +317,6 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
       ).rejects.toThrow(
         "Only the command for another user on this computer adds one that only runs work",
       );
-      // No new link makes a Mac that only controls.
       await expect(booted.dispatch("inf:devices:invite", [{ kind: "view" }])).rejects.toThrow(
         "A new link adds a computer that can control your first mate and run work",
       );
@@ -394,7 +393,6 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
       const detach = booted.services.workDevices.attach({
         ask: async (_deviceId, channel) => {
           orders.push(channel);
-          // Asked its sign-ins, it says it is signed in to Claude alone.
           if (channel === "inf:sign-ins:list")
             return {
               providers: [],
@@ -409,7 +407,6 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
                   pinned: false,
                   createdAt: 1,
                 },
-                // And to Codex, which its own turn found signed out there.
                 {
                   id: "acct_codex_there",
                   providerId: "openai-codex",
@@ -606,8 +603,6 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
     expect(feed.map((line) => line.text)).not.toContain(LINE);
     expect((await booted.dispatch("inf:app:first-run", [])).gateOpen).toBe(true);
     expect(existsSync(join(userDataDir, "dev", "local-orchestrator"))).toBe(false);
-    // The Settings side of the same choice: the view says there is no
-    // control, and the write a control would make is refused outright.
     expect(await booted.dispatch("inf:settings:local-orchestrator:get", [])).toEqual({
       available: false,
       setting: { enabled: false, baseUrl: "http://localhost:11434/v1", model: "" },
@@ -787,7 +782,6 @@ describe("the knowledge browser's reads, gated at the protocol", () => {
   it("an alpha answers them, and reading them makes no collection file", async () => {
     const booted = await boot("0.2.0-alpha.1");
     expect(existsSync(join(userDataDir, "knowledge"))).toBe(false);
-    // Nothing recorded yet: the build keeps knowledge, and has none to show.
     expect(await booted.dispatch("inf:knowledge:enabled", [])).toEqual({
       enabled: true,
       held: false,

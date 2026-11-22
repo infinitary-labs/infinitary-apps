@@ -15,7 +15,6 @@ export class MovedGoogleKeys {
     return join(this.integrationsDir, "secrets", "google");
   }
 
-  /** Whether the earlier file, or its folder, is still there. */
   present(): boolean {
     try {
       readFileSync(join(this.folder, "secrets.json"));
@@ -25,7 +24,6 @@ export class MovedGoogleKeys {
     }
   }
 
-  /** The lasting key the earlier file holds, or undefined when it holds none or cannot be read. */
   lastingKey(): string | undefined {
     try {
       const parsed: unknown = JSON.parse(readFileSync(join(this.folder, "secrets.json"), "utf8"));

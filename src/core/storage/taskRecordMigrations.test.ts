@@ -11,9 +11,6 @@ import { TaskService } from "../tasks/taskService";
 import type { AppDatabase } from "./db";
 import { openDatabase, openInMemoryDatabase } from "./db";
 
-// The task record's migrations (taskRecordMigrations.ts): the record itself, its hygiene
-// backfill, follow-ups, parked decisions and the delivered status.
-
 describe("migrations 17-19 (the task record, P0)", () => {
   type MappedRow = {
     id: string;
@@ -304,7 +301,6 @@ describe("migrations 17-19 (the task record, P0)", () => {
       .all();
     expect(links).toEqual([{ from_id: "idle1", to_id: "q-after", type: "blocks", actor: "host" }]);
 
-    // Every row carries the record invariants and a birth event.
     for (const row of rows.values()) {
       expect(row.updated_at).toBeGreaterThan(0);
       expect(row.priority).toBe(2);
@@ -464,8 +460,6 @@ describe("migration 23 (fleet hygiene backfill, WI-7)", () => {
       { task_id: "done-legacy", column_name: "closed_at", old_value: null, new_value: "8000" },
     ]);
 
-    // Reversible: restoring every logged old value and dropping the log
-    // table gives back the v22 rows exactly.
     upgraded.exec(`
       UPDATE tasks SET closed_at = NULL
         WHERE id IN (SELECT task_id FROM task_hygiene_backfill WHERE column_name = 'closed_at');
@@ -531,8 +525,6 @@ describe("migration 26 (follow-ups stop being children)", () => {
       upgraded.prepare("SELECT from_id, to_id, type FROM task_links WHERE type = 'blocks'").all(),
     ).toEqual([{ from_id: "blocking", to_id: "origin", type: "blocks" }]);
 
-    // Reversible: every detached parent is recorded, so restoring them and
-    // dropping the table returns the version-25 shape.
     const backfill = upgraded
       .prepare("SELECT task_id, parent_id FROM followup_parent_backfill ORDER BY task_id")
       .all() as { task_id: string; parent_id: string }[];
@@ -628,7 +620,6 @@ describe("migration 28 (parked decisions retire, cards/tasks/agents P0)", () => 
         gate_until: null,
       },
     ]);
-    // Each close explains itself on the timeline, off the feed.
     expect(
       upgraded.prepare("SELECT task_id, kind, text, feed FROM task_events ORDER BY task_id").all(),
     ).toEqual(
@@ -645,7 +636,6 @@ describe("migration 28 (parked decisions retire, cards/tasks/agents P0)", () => 
         .get(),
     ).toEqual({ n: 0 });
 
-    // Reversible: the backfill table names every closed row with its gate.
     const backfill = upgraded
       .prepare("SELECT task_id, gate_ref, gate_until FROM park_row_backfill ORDER BY task_id")
       .all() as { task_id: string; gate_ref: string; gate_until: number }[];
@@ -710,8 +700,6 @@ describe("migration 30 (retire the delivered status, cards/tasks/agents P2)", ()
       upgraded.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status = 'delivered'").get(),
     ).toEqual({ n: 0 });
 
-    // Reversible: the backfill names every rewritten row with the reason it
-    // closed under, so restoring status per row and dropping the table undoes it.
     const backfill = upgraded
       .prepare("SELECT task_id, closed_reason FROM delivered_status_backfill ORDER BY task_id")
       .all() as { task_id: string; closed_reason: string | null }[];

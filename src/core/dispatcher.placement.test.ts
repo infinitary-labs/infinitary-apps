@@ -10,7 +10,6 @@ import { startCore } from "./index";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { git } from "./workspace/git";
 
-// The dispatcher split must preserve the project placement action and its trail.
 it("records and broadcasts a project's move from automatic placement to this computer", async () => {
   vi.stubEnv("PI_OFFLINE", "1");
   const userData = scratchDir("dispatcher-placement-home-");

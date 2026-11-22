@@ -37,7 +37,6 @@ import {
 import { completionAction, showCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
-/** A build status on a batch pull request's version, as its check service posts it. */
 const build = (state: BitbucketStubStatus["state"]): BitbucketStubStatus[] => [
   { key: "unit-tests", name: "unit-tests", state },
 ];
@@ -179,7 +178,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       await expect.poll(cardTitles, { timeout: 20_000 }).not.toContain(title);
     };
 
-    // Each change is a pushed branch with its story: none has a pull request of its own.
     for (const change of changes) expect(idOf(change)).not.toBe("");
     expect(bitbucket.pullRequests()).toEqual([]);
 
@@ -191,7 +189,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     expect(first?.branch.startsWith(BATCH_BRANCH_PREFIX)).toBe(true);
     expect(first?.description).toContain(ownBatchChanged("dates"));
 
-    // The two approved while its build runs wait in line, in approval order.
     await approve("export");
     await approve("legend");
     const pair = [ownBatchTitle("export"), ownBatchTitle("legend")];
@@ -202,7 +199,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       .toEqual(pair);
     expect(bitbucket.merges()).toEqual([]);
 
-    // Its build passes: Bitbucket squashes it under the change's own title, and its task closes.
     bitbucket.setPullRequestStatuses(1, build("SUCCESSFUL"));
     await expect.poll(() => bitbucket.merges().length, { timeout: 30_000 }).toBe(1);
     expect(bitbucket.merges()[0]).toMatchObject({ id: 1, strategy: "squash" });
@@ -215,7 +211,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       receipt: { sha: git(["rev-parse", "main"]) },
     });
 
-    // The next batch carries the two that waited: one pull request for both.
     await expect.poll(() => bitbucket.pullRequests().length, { timeout: 30_000 }).toBe(2);
     const second = bitbucket.pullRequests()[1];
     const title = batchTitle(
@@ -225,7 +220,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     expect(second).toMatchObject({ id: 2, title, state: "OPEN" });
     for (const each of pair) expect(second?.description).toContain(each);
 
-    // Its build fails: the batch holds and nothing merges.
     const heldHead = async () => (await notes())?.batch?.open?.head ?? "";
     await expect.poll(heldHead, { timeout: 30_000 }).not.toBe("");
     const failedAt = await heldHead();
@@ -239,7 +233,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
       });
     expect(bitbucket.merges()).toHaveLength(1);
 
-    // Settings shows the held batch under the project, naming its pull request as Bitbucket does.
     await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
     await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
     await pressKey(projectLine(page, "repo-notes").getByRole("button"), "Enter");
@@ -256,7 +249,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     // Bitbucket takes the next merge with a 202 and keeps reading its task as pending.
     bitbucket.mergeLater(true);
 
-    // Try again, by keys: the same pull request takes a new version, and the hold ends.
     await pressKey(panel.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain }), "Enter");
     await expect(panel).toHaveCount(0, { timeout: 30_000 });
     await expect.poll(heldHead, { timeout: 30_000 }).not.toBe(failedAt);
@@ -318,7 +310,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     expect(bitbucket.deletedBranches()).toEqual([first?.branch, second?.branch]);
     expect(mergeAsked()).toBe(1);
 
-    // The new version's build passes: Bitbucket answers the merge with its queue, which reads as queued.
     bitbucket.setPullRequestStatuses(3, build("SUCCESSFUL"), retriedAt);
     await expect
       .poll(async () => (await notes())?.batch?.open?.queued ?? null, { timeout: 30_000 })
@@ -327,7 +318,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
     expect(bitbucket.merges()).toHaveLength(1);
     expect(saved("export")?.closedReason ?? null).toBeNull();
 
-    // The queue merges it with a rebase merge under the batch's title, and both tasks close.
     bitbucket.landQueued(3);
     expect(bitbucket.merges()[1]).toMatchObject({ id: 3, strategy: "rebase_merge" });
     expect(bitbucket.merges()[1]?.message.split("\n")[0]).toBe(title);
@@ -342,7 +332,6 @@ test("approved changes of a Bitbucket project merge in batches of the captain's 
         timeout: 30_000,
       })
       .toEqual(["merged", "merged"]);
-    // Each task's receipt names its own rebased commit on main.
     expect(saved("export")?.delivery?.mergeAuthorization).toMatchObject({
       status: "consumed",
       receipt: { sha: git(["rev-parse", "main^2~1"]) },

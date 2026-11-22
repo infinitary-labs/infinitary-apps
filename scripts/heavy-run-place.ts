@@ -13,7 +13,6 @@ import { PHONE_LANE_NEEDS } from "./phone-test-plan.ts";
  */
 export type HeavyRunPlace = { close(): void };
 
-/** What runs: a phone gate or a journey run. */
 export type HeavyRunKind = "phone" | "journeys";
 
 /** INF-2165: local journeys default to two workers; CLI overrides are resolved by Playwright. */
@@ -60,7 +59,6 @@ export const HEAVY_RUN_NEEDS: Record<HeavyRunKind, { processors: number; memoryM
   journeys: journeyRunNeeds(LOCAL_JOURNEY_WORKERS),
 };
 
-/** What a run says about the path it took. */
 export const heavyRunWords = {
   asking: (kind: HeavyRunKind, needs = HEAVY_RUN_NEEDS[kind]) =>
     `Asking this computer's load line for ${needs.processors} processors and ${needs.memoryMib} MiB (${LOAD_COMMAND}).`,

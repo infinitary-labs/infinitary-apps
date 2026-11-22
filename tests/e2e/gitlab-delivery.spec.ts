@@ -197,7 +197,6 @@ for (const host of HOSTS) {
     try {
       const { page } = launched;
       await resizeWindow(launched.app, page, { width: 1280, height: 800 });
-      // The project is GitLab's, with the key sign-in on file.
       await expect
         .poll(async () => (await addedProjects(page))[0]?.host)
         .toEqual({ kind: "gitlab", name: host });
@@ -303,8 +302,6 @@ for (const host of HOSTS) {
     const { bare } = seedNotesProject(userDataDir, host);
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
-    // GitLab ran a pipeline for the project's version, whose measurement job
-    // failed and kept its archive.
     const main = git("-C", bare, "rev-parse", "refs/heads/main");
     gitlab.headOf(() => main);
     gitlab.openMergeRequest({ branch: "measure-notes", title: "test: measure the notes" });

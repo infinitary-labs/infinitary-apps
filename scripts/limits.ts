@@ -803,7 +803,6 @@ export function namedLimitsIn(path: string, text: string): NamedLimit[] {
   return limits;
 }
 
-/** Whether the ledger reads this file. */
 export function readsFile(path: string): boolean {
   return (
     LIMIT_ROOTS.some((root) => path === root || path.startsWith(`${root}/`)) &&
@@ -812,7 +811,6 @@ export function readsFile(path: string): boolean {
   );
 }
 
-/** Every way the code and the ledger are out of step. */
 export function limitProblems(
   limits: readonly NamedLimit[],
   ledger: Record<string, Record<string, LimitEntry>>,

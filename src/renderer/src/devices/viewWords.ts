@@ -321,7 +321,6 @@ export const JOIN_CONFIRM_WORDS = {
 /** The confirm question's line for a link that adds a Mac that also runs work. */
 export const JOIN_RUNS_WORK = "It can also run work you give it, with sign-ins of its own.";
 
-/** The sentence a refused join says, with the address the link names. */
 export function joinRefusalWords(
   refused: Exclude<JoinOutcome, { ok: true }>["refused"],
   address: string | null,

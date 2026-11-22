@@ -130,7 +130,6 @@ struct PhoneCardRowGlide {
 /// INF-4541: Home's row is a ring, as the Mac's pager goes round: past the last card comes the first, and before the first
 /// the last.
 enum PhoneCardRing {
-    /// `place` brought inside a stack of `count` cards, going round.
     static func index(_ place: Int, count: Int) -> Int {
         count > 0 ? ((place % count) + count) % count : 0
     }

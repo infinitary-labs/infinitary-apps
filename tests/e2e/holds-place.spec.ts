@@ -133,7 +133,6 @@ test("a declared continuity card waits as new while the captain types in the sho
     await input.fill(CONTINUITY_HELD_ASK);
     await pressKey(input, "Enter");
     await expect.poll(() => provider.heldThreadAnswers()).toBe(1);
-    // Meanwhile the captain types in the shown card's own field.
     const field = cardBody(page, typing).locator("#meet");
     await focusOn(field);
     await typeInto(field, "North dock");
@@ -141,7 +140,6 @@ test("a declared continuity card waits as new while the captain types in the sho
     provider.releaseThreadAnswer();
     await expect(pager(page, 2)).toBeVisible();
     await expect(shownCard(page, typing)).toBeVisible();
-    // The captain types on without looking up, and the words land in the field.
     await typeInto(field, " by the crane");
     await expect(field).toHaveValue("North dock by the crane");
     // The marked card waits as new, one page away.

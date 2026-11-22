@@ -78,7 +78,6 @@ describe("ReadExecutor", () => {
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
     expect(read).toHaveBeenCalledTimes(2);
     expect(values).toEqual([rowsOf(1, 3)]);
-    // New rows are.
     set(rowsOf(2, 4));
     emit({ type: "turn_end", taskId: "firstmate" });
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
@@ -105,11 +104,9 @@ describe("ReadExecutor", () => {
     await flush();
     expect(values).toEqual(["v1"]);
     set("v2");
-    // An unrelated event is not an invalidation.
     emit({ type: "firstmate_note", text: "hi" });
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
     expect(read).toHaveBeenCalledTimes(1);
-    // A burst of matching events is one read.
     for (let i = 0; i < 5; i++) {
       emit({ type: "crew_counts", working: i, idle: 0, queued: 0 });
     }
@@ -175,7 +172,6 @@ describe("ReadExecutor", () => {
     resolveRead({ seq: 1 });
     await flush();
     expect(values).toEqual([{ seq: 2 }]);
-    // Every later push is a value, synchronously, with no read behind it.
     push("inf:tasks", { seq: 3 });
     push("inf:tasks", { seq: 4 });
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
@@ -525,10 +521,8 @@ describe("ReadExecutor", () => {
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
     expect(read).toHaveBeenCalledTimes(3);
     expect(values.at(-1)).toEqual({ seq: 9, n: 99 });
-    // And the next delta folds onto that fresh value.
     push("inf:tasks:delta", { baseSeq: 9, seq: 10, add: 1 });
     expect(values.at(-1)).toEqual({ seq: 10, n: 100 });
-    // A snapshot push still replaces the value outright.
     push("inf:tasks", { seq: 20, n: 0 });
     push("inf:tasks:delta", { baseSeq: 20, seq: 21, add: 2 });
     expect(values.at(-1)).toEqual({ seq: 21, n: 2 });

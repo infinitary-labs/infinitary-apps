@@ -21,7 +21,6 @@ export const PROJECT_SKILL_DIRS = [join(".claude", "skills"), join(".agents", "s
 
 export type ProjectInstructions = { path: string; content: string };
 
-/** The working copy's own instruction file and its text, when it has one. */
 export function projectInstructions(cwd: string): ProjectInstructions | undefined {
   for (const name of PROJECT_INSTRUCTION_FILES) {
     const path = join(cwd, name);

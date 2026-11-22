@@ -46,7 +46,6 @@ import { assertReadableSettingsFeedback, assertSettingsFits, settingRow } from "
 
 type PickerProbe = { infinitaryPickerOpenedAt?: (string | undefined)[] };
 
-/** The next folder picker answers with `answer`, or is cancelled when null. */
 async function answerFolderPicker(app: ElectronApplication, answer: string | null) {
   await app.evaluate(({ dialog }, answer) => {
     const probe = globalThis as PickerProbe;
@@ -215,7 +214,6 @@ test("a cancelled pick changes nothing, and a folder the app cannot use is refus
     const row = await openProjectsSettings(page);
     await expect(row.locator("[data-projects-folder-path]")).toHaveText(fleet);
 
-    // Cancelled: nothing is saved and nothing is said.
     await answerFolderPicker(app, null);
     await row.getByRole("button", { name: "Choose folder" }).click();
     await expect.poll(() => pickerOpenedAt(app)).toHaveLength(1);
@@ -223,8 +221,6 @@ test("a cancelled pick changes nothing, and a folder the app cannot use is refus
     await expect(row.getByRole("alert")).toHaveCount(0);
     await expect(row.locator("[data-projects-folder-path]")).toHaveText(fleet);
 
-    // Inside the app's own data: refused with the reason, and the row keeps
-    // the folder it had.
     const inside = join(userDataDir, "infinitary-not-here");
     mkdirSync(inside, { recursive: true });
     await answerFolderPicker(app, inside);

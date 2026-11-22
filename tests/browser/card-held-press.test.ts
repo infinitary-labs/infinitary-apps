@@ -32,7 +32,6 @@ import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
  * click the bridge makes is not trusted.
  */
 
-/** The frame's name, by which the browser reaches into it. */
 const FRAME = "held-press-card";
 
 const PICTURE = "Blue harbour survey";

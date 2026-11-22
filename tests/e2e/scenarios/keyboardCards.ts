@@ -28,7 +28,6 @@ function keyboardCardToolCalls(): ScriptedCall[] {
   ];
 }
 
-/** The crewmate shows its two note fields. */
 export const keyboardCards: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

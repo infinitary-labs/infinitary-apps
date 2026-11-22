@@ -169,16 +169,13 @@ export function loadImages(refs: readonly AttachmentRef[]): TurnImage[] {
   return images;
 }
 
-/** What a path is on disk without following a link: a regular file, a folder, a shortcut or other. */
 export async function inspectPath(path: string): Promise<DroppedPath> {
   try {
     const stat = await lstat(path);
     if (stat.isSymbolicLink()) return { kind: "shortcut" };
     if (stat.isDirectory()) return { kind: "folder", path };
     if (stat.isFile()) return { kind: "regular", path };
-  } catch {
-    // fall through
-  }
+  } catch {}
   return { kind: "other" };
 }
 

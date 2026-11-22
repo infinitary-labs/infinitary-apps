@@ -144,7 +144,6 @@ function withReferences(
   return composed;
 }
 
-/** A task's change evidence and permission rows, as `TaskDeliveryStore` holds them. */
 type DeliveryRecords = { evidence?: EvidenceRow; permissions?: PermissionRow };
 
 /**
@@ -356,7 +355,6 @@ export function oldestFirst(records: TaskRecord[]): TaskRecord[] {
   return records.sort((a, b) => a.createdAt - b.createdAt || a.seq - b.seq);
 }
 
-/** The columns a patch may touch, mapped from record field to column. */
 const PATCH_COLUMNS = {
   key: "key",
   seq: "seq",
@@ -767,7 +765,6 @@ export class TaskStore {
     this.projectChange(record.id);
   }
 
-  /** An open or active row that already names this test, oldest first. */
   openByTestPath(testPath: string): TaskRecord | undefined {
     const row = this.db
       .prepare(
@@ -1328,7 +1325,6 @@ export class TaskStore {
     return row.n;
   }
 
-  /** How many rows of this kind hold this status, counted without reading them. */
   count(status: TaskStatus, kind: TaskKind): number {
     const row = prepared(
       this.db,
@@ -1522,7 +1518,6 @@ export class TaskStore {
     return oldestFirst(this.read(rows));
   }
 
-  /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
     const key = `children:${parentId}`;
     const known = this.projection?.lists.get(key);

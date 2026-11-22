@@ -48,7 +48,6 @@ function soundNote(clip: string): ScriptedCall {
   };
 }
 
-/** The sound crewmate: write the files, offer the recording, then the clip once it was refused. */
 export const soundCard: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

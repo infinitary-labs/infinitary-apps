@@ -293,7 +293,6 @@ export class ProjectChanges {
     };
   }
 
-  /** A move's checked facts now, as its card stored them, to refuse a stale offer. */
   private ready(): CoreDispatch {
     if (!this.dispatch) throw new Error("Project changes are not ready yet.");
     return this.dispatch;

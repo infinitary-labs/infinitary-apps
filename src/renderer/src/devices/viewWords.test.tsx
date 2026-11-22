@@ -84,7 +84,6 @@ describe("controlling another Mac", () => {
       freshness: "reaching",
     });
     expect(topLine({ ...PRO, readOnly: "newer-there" }, null, NOW).tail).toBe("· read only");
-    // Out of reach the same day says the time; another day names the day too.
     const today = topLine(AWAY, null, NOW);
     expect(today).toMatchObject({ tail: "is out of reach · since", freshness: "out-of-reach" });
     expect(today.when).not.toMatch(/Oct/);
@@ -108,7 +107,6 @@ describe("controlling another Mac", () => {
     // A welcome that reloaded raised the count the window has not read through yet.
     expect(catchUpOf({ ...PRO, caughtUp: 2 }, 1)).toBe("reload");
     expect(catchUpOf({ ...PRO, replaying: true }, 1)).toBe("replay");
-    // Out of reach is said over any catch-up.
     expect(catchUpOf({ ...AWAY, caughtUp: 2, replaying: true }, 1)).toBeNull();
   });
 
@@ -199,7 +197,6 @@ describe("controlling another Mac", () => {
     });
     for (const target of ["subscriptions", "projects", "settings", "devices"] as const)
       expect(doneThereWords(PRO, open(target))).toBeNull();
-    // A first mate too old to answer a view's devices asks for its update instead.
     const noDevices: ViewMac = { ...PRO, devicesNeedUpdateThere: true };
     expect(doneThereWords(noDevices, open("devices"))).toBe(updateThereWords(noDevices));
     expect(doneThereWords(noDevices, open("settings"))).toBeNull();
@@ -328,7 +325,6 @@ describe("joining another Mac at first launch", () => {
     const paste = render({ step: "paste", notALink: false });
     expect(paste).toContain("Paste the link from Infinitary on your other computer");
     expect(paste).toContain('placeholder="infinitary://join?…"');
-    // Continue waits for a link.
     expect(paste).toMatch(/<button[^>]*disabled=""[^>]*>Continue/);
     expect(render({ step: "paste", notALink: true }, "hello")).toContain(
       "That is not a link from Infinitary. Copy it again on your other computer.",
@@ -348,7 +344,6 @@ describe("joining another Mac at first launch", () => {
     );
     expect(confirm).toContain("Control it from here");
     expect(confirm).not.toContain(JOIN_RUNS_WORK);
-    // A link for a Mac says it can also run work there.
     expect(render({ step: "confirm", address: "192.168.1.20", runsWork: true })).toContain(
       JOIN_RUNS_WORK,
     );
@@ -427,16 +422,12 @@ describe("joining another computer by its address at first launch", () => {
     expect(html).toContain('placeholder="kun@studio"');
     expect(html).toContain('aria-label="Port"');
     expect(html).toContain('placeholder="Port 22"');
-    // Continue waits for an address.
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Continue/);
-    // Your account sits above the list, and each row fills that account at the computer's name.
     expect(html.indexOf("Your account")).toBeLessThan(html.indexOf("Studio.local"));
     expect(html).toContain('value="kun"');
     expect(html).toContain(">kun@Studio.local<");
     expect(html).toContain(">kun@Mac-mini.local<");
-    // With no account typed, a row fills the computer's name alone.
     expect(render({ step: "address" }, { nearby: STUDIO_NEARBY })).toContain(">Studio.local<");
-    // While nothing is nearby there is no Your account field.
     expect(render({ step: "address" })).not.toContain("Your account");
   });
 

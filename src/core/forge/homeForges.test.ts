@@ -25,7 +25,6 @@ const API = "https://api.bitbucket.test/2.0";
 const ORIGIN = "https://bitbucket.org/field-team/field-notes.git";
 const FIRST_KEY = "ATATT3xFfGF0disposable_first-key=0A1B2C3D";
 const NEW_KEY = "ATATT3xFfGF0disposable_new-key=4E5F6A7B";
-/** What git says when the host refuses the credential it sent for a clone. */
 const GIT_REFUSED = `remote: You may not have access to this repository or it no longer exists in this workspace.\nfatal: Authentication failed for '${ORIGIN}/'`;
 
 afterEach(() => {
@@ -103,7 +102,6 @@ describe("a Bitbucket sign-in at the home", () => {
     expect(forges.signIns.stateOf(HOST)).toBe("ok");
     await vi.waitFor(() => expect(tasks.get(taskId)?.status).toBe("active"));
     expect(tasks.get(taskId)?.gate).toBeNull();
-    // Its record names the sign-in it waited for.
     expect(tasks.timeline(taskId).map((event) => event.text)).toEqual(
       expect.arrayContaining([expect.stringContaining("the Bitbucket sign-in is ready")]),
     );

@@ -134,7 +134,6 @@ export function withDictationKey(hint: string, keyLabel: string): string {
   return hint.replace("right ⌥", keyLabel);
 }
 
-/** The first-run hint applies from the welcome until the first captain turn. */
 export function isFirstRunHint(view: Pick<FirstRunView, "welcomedAt" | "firstTurnAt">): boolean {
   return view.welcomedAt !== null && view.firstTurnAt === null;
 }

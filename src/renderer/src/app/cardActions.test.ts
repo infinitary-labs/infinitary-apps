@@ -212,7 +212,6 @@ describe("card action receipts", () => {
       cardActionErrors: {},
     });
 
-    // A refused folder shows on the card and sends nothing.
     chooseFolder.mockResolvedValueOnce(meter);
     setup.mockRejectedValueOnce(new Error(`${meter} is already inside the fleet root.`));
     await useShellStore.getState().actOnCard("which-folder", "choose");
@@ -221,7 +220,6 @@ describe("card action receipts", () => {
       "which-folder": `${meter} is already inside the fleet root.`,
     });
 
-    // A pick is added, then the click goes, and the window stays where it is.
     chooseFolder.mockResolvedValueOnce(meter);
     await useShellStore.getState().actOnCard("which-folder", "choose");
     expect(setup).toHaveBeenLastCalledWith({ kind: "adopt", path: meter });

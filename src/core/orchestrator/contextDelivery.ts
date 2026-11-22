@@ -50,7 +50,6 @@ export class ContextDelivery {
   private offers = new Map<string, Offer>();
   private expected = new Map<string, Offer[]>();
 
-  /** Whether the next built context is a complete one. */
   get completeNext(): boolean {
     return this.view === undefined;
   }

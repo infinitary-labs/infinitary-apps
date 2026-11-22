@@ -583,7 +583,6 @@ export async function createServices(
   let savedResets: SavedResets | undefined;
   // A computer that runs work said its sign-ins: its accounts' credits lines and offers.
   let onDeviceCredits: (deviceId: string) => void = () => {};
-  // The routing pool, the slot record and the router (routing/homeRouting.ts).
   const homeRouting = startHomeRouting({
     onSpentAt: (piProviders, deviceId) => onSpentAt(piProviders, deviceId),
     onCreditsAt: (piProviders, deviceId) => onCreditsAt(piProviders, deviceId),
@@ -748,7 +747,6 @@ export async function createServices(
     runtimeFor: (accountId) => vault.runtimeFor(accountId),
     baseRuntime: auth.modelRuntime,
   });
-  // The usage ledger and each task's cost limit (homeUsage.ts).
   const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
     appLimit: () => settings.getTaskCostLimit(),
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
@@ -795,10 +793,6 @@ export async function createServices(
     resourcesPath: host.app.resourcesDir,
     appPath: host.app.appDir,
   });
-  // check_pr_ci's host side: typed CI status per task and the fresh-green
-  // record used by the emit_card land gate. The CI cap (delivery rigor
-  // phase 3) reaches the supervisor, constructed below, through a closure
-  // that only ever runs on a later reading - never during construction.
   const workflowEvidence = new WorkflowEvidenceService({
     tasks,
     repos,
@@ -1006,7 +1000,6 @@ export async function createServices(
   });
   // The class's first consumer (S7a): what a spawn IS, so the captain's table can route it.
   const classifier = new DecisionKindClassifier(decisions);
-  // Each task's own browser and its task channel (browser/homeTaskBrowsers.ts).
   const browsers = startTaskBrowsers({
     host,
     paths,
@@ -1075,7 +1068,6 @@ export async function createServices(
     homeName: sourceComputer,
     now: ticker.now,
   });
-  // The crew (orchestrator/homeCrew.ts).
   const supervisor: CrewSupervisor = startHomeCrew({
     captainPlaces,
     decisions,
@@ -1344,7 +1336,6 @@ export async function createServices(
     repos,
     ticker,
   });
-  // The first mate (orchestrator/homeFirstmate.ts).
   const firstmate = startHomeFirstmate({
     corrections,
     workDevices,

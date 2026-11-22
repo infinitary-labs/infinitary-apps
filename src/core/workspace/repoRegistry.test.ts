@@ -212,7 +212,6 @@ describe("RepoRegistry.ensurePersonal", () => {
     expect(() => registry.unregister(personal.id)).toThrow(/personalize/);
     expect(registry.get(personal.id)).toBeDefined();
 
-    // An ordinary repository is a project and takes every patch.
     const other = await registry.setup({ kind: "init", name: "notes" });
     expect(other.repo.path).toBe(join(fleetRoot, "notes"));
     expect(other.repo.kind).toBe("project");
@@ -283,7 +282,6 @@ describe("RepoRegistry delivery through batched pull requests", () => {
       delivery: "queue-pr",
       host: { kind: "github" },
     });
-    // GitLab and Bitbucket take batch pull requests too: the project may move there.
     expect(registry.configure(repo.id, { origin: gitlab })).toMatchObject({
       delivery: "queue-pr",
       host: { kind: "gitlab" },
@@ -348,15 +346,12 @@ describe("RepoRegistry's record that a project runs no pull request checks", () 
   it("turns Require pull request checks off only where the project's changes go through pull requests on GitHub or GitLab", async () => {
     const { registry } = setup();
     const { repo } = await registry.setup({ kind: "init", name: "meter" });
-    // Kept on this computer, merged locally.
     expect(() => registry.configure(repo.id, { requireChecks: false })).toThrow(NO_CHECKS_REFUSAL);
-    // A pull request on a plain Git host carries no checks.
     registry.configure(repo.id, {
       origin: "https://git.example.org/o/meter.git",
       delivery: "direct-pr",
     });
     expect(() => registry.configure(repo.id, { requireChecks: false })).toThrow(NO_CHECKS_REFUSAL);
-    // The patch that moves the project to pull requests on GitHub may turn it off.
     expect(
       registry.configure(repo.id, {
         origin: "https://github.com/o/meter.git",
@@ -372,7 +367,6 @@ describe("RepoRegistry's record that a project runs no pull request checks", () 
     expect(() =>
       registry.configure(repo.id, { requireChecks: false, delivery: "local-only" }),
     ).toThrow(NO_CHECKS_REFUSAL);
-    // The refused patch changed nothing: still pull requests, with no record.
     expect(registry.get(repo.id)?.delivery).toBe("direct-pr");
     expect(registry.get(repo.id)?.noChecks).toBeUndefined();
   });
@@ -464,7 +458,6 @@ describe("RepoRegistry projects folder", () => {
     const before = await registry.setup({ kind: "init", name: "older" });
 
     expect(registry.setProjectsFolder(chosen)).toEqual({ path: chosen, custom: true });
-    // The next launch reads the same choice.
     expect(registryOn().projectsFolder()).toEqual({ path: chosen, custom: true });
 
     const created = await registryOn().setup({ kind: "init", name: "nebula" });
@@ -479,12 +472,9 @@ describe("RepoRegistry projects folder", () => {
     }
     expect(created.repo.setupKind).toBe("init");
     expect(cloned.repo).toMatchObject({ setupKind: "clone", origin, delivery: "direct-pr" });
-    // A project set up before the change stays where it was.
     expect(registry.get(before.repo.id)?.path).toBe(join(fleetRoot, "older"));
     expect(lstatSync(join(fleetRoot, "older")).isDirectory()).toBe(true);
 
-    // Back to the default: new projects go in the fleet root again, and the
-    // ones made in the chosen folder stay there.
     expect(registry.setProjectsFolder(null)).toEqual({ path: fleetRoot, custom: false });
     const after = await registry.setup({ kind: "init", name: "later" });
     expect(after.repo.path).toBe(join(fleetRoot, "later"));
@@ -504,7 +494,6 @@ describe("RepoRegistry projects folder", () => {
     expect(cloned.repo.path).toBe(join(chosen, "taken-2"));
     expect(readFileSync(join(chosen, "taken", "mine.txt"), "utf8")).toBe("the person's own\n");
 
-    // A folder already in the projects folder is adopted in place, as itself.
     mkdirSync(join(chosen, "sketches"));
     const adopted = await registry.setup({ kind: "adopt", path: join(chosen, "sketches") });
     expect(adopted.repo).toMatchObject({ name: "sketches", path: join(chosen, "sketches") });
@@ -604,7 +593,6 @@ describe("RepoRegistry chosen task key", () => {
     await git(origin, [...APP_GIT_IDENTITY, "commit", "-q", "--allow-empty", "-m", "chore: init"]);
     const folder = scratchDir("infinitary-adopt-");
 
-    // Without a key, the name decides, as it always has.
     const derived = await registry.setup({ kind: "init", name: "infinitary" });
     expect(keyOf(derived.repo.id)).toBe("INFI");
     const created = await registry.setup({ kind: "init", name: "infinitary-app", key: " inf " });
@@ -620,7 +608,6 @@ describe("RepoRegistry chosen task key", () => {
     expect(projects.allocateSeq(project.id).key).toBe("INF-1");
     expect(projects.allocateSeq(project.id).key).toBe("INF-2");
 
-    // A project already on the list is answered as it is, its key unchanged.
     const again = await registry.setup({ kind: "adopt", path: folder, key: "ZZ" });
     expect(again).toMatchObject({ created: false, repo: { id: adopted.repo.id } });
     expect(keyOf(adopted.repo.id)).toBe("N0TE");
@@ -682,12 +669,10 @@ describe("RepoRegistry chosen task key", () => {
     await expect(registry.setup({ kind: "adopt", path: folder, key: "Inf" })).rejects.toThrow(
       inUse,
     );
-    // Nothing was created, cloned, linked or started in git.
     expect(readdirSync(fleetRoot).sort()).toEqual(["first"]);
     expect(existsSync(join(folder, ".git"))).toBe(false);
     expect(registry.list().map((repo) => repo.name)).toEqual(["first"]);
 
-    // The setup card's check reads the same refusal, and a free key normalized.
     await expect(registry.check({ kind: "init", name: "second", key: "INF" })).rejects.toThrow(
       inUse,
     );
@@ -819,7 +804,6 @@ describe("a project of several repositories", () => {
       "harbor-ledger",
       "harbor-ledger-api",
     ]);
-    // No second project was made for the joining repository.
     expect(projects.list().map((one) => one.key)).toEqual(["SCR", "HBL"]);
   });
 
@@ -850,7 +834,6 @@ describe("a project of several repositories", () => {
     const { db, registry, projects, project, api } = harborLedger();
     registry.configure(api.id, { name: "wallet-service" });
     expect(projects.get(project.id)?.name).toBe("harbor-ledger");
-    // A project of one is renamed with its repository, as before.
     const solo = seedProject(db, {
       id: "r-solo",
       name: "solo",

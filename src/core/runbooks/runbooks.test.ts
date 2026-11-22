@@ -438,7 +438,6 @@ describe("runbooks over existing prompt and skill doors", () => {
       for (const file of ["quick.json", "default.json", "careful.json"])
         expect(none).not.toContain(section(file));
     }
-    // The skill travels with the runbook, and the first mate reads its guide.
     expect(books.crew(code).skills.map((skill) => skill.name)).toContain("careful-change");
     expect(books.firstmate().text).toContain("# Rigor levels");
     books.set("care", false);
@@ -609,7 +608,6 @@ describe("runbooks over existing prompt and skill doors", () => {
     for (const text of served) for (const line of guidance) expect(text).not.toContain(line);
     // The first mate's one pointer, in its Secrets tool.
     expect(ASK_SECRET_TOOL_DESCRIPTION).toContain("bring-secrets");
-    // A crewmate that opens the skill finds its rules and each tool's file beside it.
     const staged = await stageRunbookSkills(
       books.crew(look).skills,
       join(scratchDir("inf-bring-secrets-"), "skills"),
@@ -620,7 +618,6 @@ describe("runbooks over existing prompt and skill doors", () => {
       expect(readFileSync(join(skill?.dir ?? "", file))).toEqual(
         readFileSync(join(skillRoot, file)),
       );
-    // Each recipe's example is a bring the command takes.
     const examples = files.flatMap((file) =>
       [
         ...readFileSync(join(skillRoot, file), "utf8").matchAll(

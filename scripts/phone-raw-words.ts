@@ -150,7 +150,6 @@ function inCodePosition(source: string, literal: Literal): boolean {
   return false;
 }
 
-/** Each run of raw words in one Swift file's text. */
 export function phoneRawWordsIn(source: string): RawWords[] {
   const lines = source.split("\n");
   const lineOf = (offset: number) => source.slice(0, offset).split("\n").length - 1;

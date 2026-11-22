@@ -40,7 +40,6 @@ export class EndedCards {
     return this.cards.has(id);
   }
 
-  /** The card the stack still draws, ended, under this id. */
   get(id: string): Card | undefined {
     return this.cards.get(id);
   }
@@ -68,7 +67,6 @@ export class EndedCards {
     return kept;
   }
 
-  /** Hold the ended card, or forget the id when its author's ending kept none. */
   hold(id: string, kept: Card | undefined): void {
     if (kept) this.cards.set(id, kept);
     else this.cards.delete(id);

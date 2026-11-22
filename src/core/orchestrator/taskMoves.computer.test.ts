@@ -422,7 +422,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     const cwd = h.tasks.get(taskId)?.worktreeDir ?? "";
     h.branch = h.tasks.get(taskId)?.branch ?? "";
-    // Mid-turn work of every kind: a commit, a staged file, an edit, an untracked file, evidence.
     writeFileSync(join(cwd, "meter.ts"), "export const unit = 'Wh';\n");
     await git(cwd, [...author, "commit", "--quiet", "-am", "fix: meter unit"]);
     writeFileSync(join(cwd, "staged.ts"), "export const staged = true;\n");
@@ -481,20 +480,17 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     }, REAL_GIT_WAIT);
     expect(h.crewmate.promptCalls).toHaveLength(1);
     const work = join(h.there, "work");
-    // The commit, the staged file, the edit, the untracked file and the evidence all arrived.
     expect(await git(work, ["log", "-1", "--format=%s"])).toBe("fix: meter unit");
     expect(await git(work, ["diff", "--cached", "--name-only"])).toBe("staged.ts");
     expect(readFileSync(join(work, "meter.ts"), "utf8")).toBe("export const unit = 'mWh';\n");
     expect(readFileSync(join(work, "notes.md"), "utf8")).toBe("untracked notes\n");
     expect(readFileSync(join(h.there, "evidence", "before.txt"), "utf8")).toBe("evidence\n");
-    // The same task, key and branch; its old working copy here is gone.
     expect(h.tasks.get(h.taskId)).toMatchObject({
       status: "active",
       worktreeDir: "",
       branch: h.branch,
     });
     expect(existsSync(h.cwd)).toBe(false);
-    // A new conversation there, told it moved, with the steer that waited.
     expect(h.opened).toHaveLength(1);
     expect(h.opened[0]).toMatchObject({ machine: MINI });
     // Never the conversation it left here.
@@ -547,7 +543,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.tasks.timeline(h.taskId).map((event) => event.text)).toContain(
       `its move to Kun's Mac mini did not finish: the Mac mini's disk is full. It stays on ${HERE.this}`,
     );
-    // Its conversation here reopens as it was.
     await h.supervisor.steer.steerCrewmate(h.taskId, "carry on");
     await vi.waitFor(
       () => expect(h.crewmate.promptCalls.at(-1)).toContain("carry on"),
@@ -609,7 +604,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.retireMoved).toHaveBeenLastCalledWith(MINI, h.taskId);
     expect(existsSync(h.thereOf(MINI))).toBe(false);
     expect(h.opened.map((spec) => spec.machine)).toEqual([MINI, AIR]);
-    // Told it moved with the next thing on its lane, there and never on the Mac mini.
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
       "mid-turn",
     );
@@ -664,7 +658,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     );
     const options = await h.supervisor.moves.moveOptions(h.taskId);
     expect(options).toMatchObject({ ok: true, from: "Kun's Mac mini", leftBehind: line });
-    // Without leave behind, it says what stays behind and moves nothing.
     const refused = await h.supervisor.moves.requestComputerMove(h.taskId, AIR, "firstmate");
     expect(refused.ok).toBe(false);
     expect(refused.text).toContain(line);
@@ -692,7 +685,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.tasks.timeline(h.taskId).map((event) => event.text)).toContain(
       `the captain moved it from Kun's Mac mini, out of reach, to Kun's MacBook Air; it continues from commit ${h.held.slice(0, 7)}, which ${HERE.this} held, and keeps its key, cards and branch; what only Kun's Mac mini held stays there`,
     );
-    // Its new conversation there hears it moved and what may be missing.
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
       "mid-turn",
     );
@@ -726,14 +718,12 @@ describe("a started task moves to another computer (INF-1713, real git)", {
   it("offers a move waiting on a computer that went out of reach to go without it", async () => {
     const h = await onMiniWithWorkThere();
     const record = () => h.tasks.get(h.taskId) as TaskRecord;
-    // Mid-turn on the Mac mini, a move to the Air waits for the turn's end.
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
       "mid-turn",
     );
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, AIR, "captain")).ok).toBe(true);
     expect(h.supervisor.moves.computerMoveFacts(record()).computerMove?.leftBehind).toBeUndefined();
-    // The Mac mini goes out of reach with its turn: the waiting move offers to go without it.
     h.reach.mini = false;
     expect(h.supervisor.moves.computerMoveFacts(record())).toEqual({
       computerMove: {
@@ -786,7 +776,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(existsSync(cwd)).toBe(false);
     expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
     expect(await git(h.repo.path, ["rev-parse", `refs/heads/${h.branch}`])).toBe(h.held);
-    // So the captain can ask again, from the same commit.
     expect(await h.supervisor.moves.moveOptions(h.taskId)).toMatchObject({ ok: true });
     await h.supervisor.disposeAll();
   });
@@ -836,7 +825,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
     }, REAL_GIT_WAIT);
     await adopting;
-    // One conversation there, the one the move opened, and it is the task's.
     expect(h.opened.map((spec) => spec.machine)).toEqual([MINI]);
     expect(existsSync(h.cwd)).toBe(false);
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
@@ -874,7 +862,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.opened[0]).toMatchObject({ machine: MINI });
     expect(JSON.stringify(h.opened[0])).not.toContain("s1.jsonl");
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledWith(MINI, h.taskId), REAL_GIT_WAIT);
-    // Nothing on its lane starts a turn while its dependencies install.
     await fresh.watch.sweepGates(Date.now());
     expect(h.boot.promptCalls).toHaveLength(0);
     installing.resolve({ outcome: "online", ms: 900 });
@@ -930,7 +917,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
   it("keeps a move that waits for a safe pause across a quit, and moves at the next launch", async () => {
     const h = await startedHere();
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
-    // Quit mid-turn: the move waits on the record.
     await h.supervisor.disposeAll();
     expect(h.tasks.get(h.taskId)?.shape?.computer_move).toMatchObject({
       to: MINI,
@@ -943,13 +929,11 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
     }, REAL_GIT_WAIT);
-    // A new conversation there; the copy it left here is gone.
     expect(h.opened).toEqual([expect.objectContaining({ machine: MINI })]);
     expect(existsSync(h.cwd)).toBe(false);
     expect(readFileSync(join(h.there, "work", "meter.ts"), "utf8")).toBe(
       "export const unit = 'mWh';\n",
     );
-    // Its old conversation here never reopened.
     expect(reopened.promptCalls).toHaveLength(0);
     await fresh.disposeAll();
   });
@@ -962,7 +946,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       () => expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined(),
       REAL_GIT_WAIT,
     );
-    // It copied there, then failed: what it made there is removed, and the task stays here whole.
     expect(h.retireMoved).toHaveBeenCalledWith(MINI, h.taskId);
     expect(existsSync(h.there)).toBe(false);
     expect(h.tasks.get(h.taskId)).toMatchObject({ deviceId: null, worktreeDir: h.cwd });
@@ -1026,7 +1009,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // reported wait and a reply the captain sends while it moves all survive.
     const installing = deferred<DependencyInstall>();
     const h = await startedHere({ install: () => installing.promise });
-    // Its crewmate asks the captain, says it waits on that card, then its turn ends with the card up.
     const cardId = await h.specs[0]?.onCard?.({
       title: "Which unit should the meter show?",
       body: "<p>The meter can show watt-hours or kilowatt-hours.</p>",
@@ -1047,7 +1029,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       .messages.map(({ who, text }) => ({ who, text }));
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
-    // It moved; its new conversation there waits on its dependencies.
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledWith(MINI, h.taskId), REAL_GIT_WAIT);
     expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
     expect(h.cardStore.get(card.id)).toMatchObject({ status: "ready", taskId: h.taskId });
@@ -1058,7 +1039,6 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       reason: "Which unit the meter shows",
       cardId: card.id,
     });
-    // The captain replies meanwhile: the reply waits for the conversation there.
     h.supervisor.cardActions.replyToCard(card.id, "Use watt-hours for the small screen.");
     await h.supervisor.watch.sweepGates(Date.now());
     expect(h.boot.promptCalls).toHaveLength(0);

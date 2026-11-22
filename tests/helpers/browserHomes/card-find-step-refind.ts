@@ -2,7 +2,6 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The first mate's card the card-find-step-refind test finds words in. */
 const CARD_ID = "card-find";
 
 /** What the card-find-step-refind test's story reads back: the card's words and its thread's question. */

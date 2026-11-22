@@ -126,7 +126,6 @@ describe("the in-app Windows update", () => {
         page: PAGE,
       }),
     );
-    // The new copy follows the channel it came from.
     expect(JSON.parse(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8"))).toEqual({
       schemaVersion: 1,
       channel: "alpha",

@@ -256,7 +256,6 @@ test("a crewmate checks a local page in its task's own browser, and the next tas
     if (evidence) {
       copyFileSync(picture, join(evidence, "task-browser-signed-up.png"));
       writeFileSync(join(evidence, "task-browser-first-report.txt"), `${first.outcome}\n`);
-      // What the crewmate read, answer by answer: the product's own words.
       const served = (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
         body.includes(`${siteUrl} as Sam`),
       );
@@ -345,7 +344,6 @@ test("a crewmate reads a page too long for one answer by its map, finds words pa
   const task = (await detail()) as TaskDetail;
   const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
   if (evidence) {
-    // What the crewmate read, answer by answer: the product's own words.
     const served = (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
       body.includes(title),
     );
@@ -405,7 +403,6 @@ const VISITS_PAGE = `<!doctype html>
   </body>
 </html>`;
 
-/** A page that reaches for another task's server: its data and its picture. */
 const neighbourPage = (other: string): string => `<!doctype html>
 <html>
   <head><title>Neighbour</title></head>
@@ -489,7 +486,6 @@ test("one task's browser reaches nothing of another's, nor a private address a r
       expect(outcome).toContain(
         `"Blocked what the page asked for from other servers on ${HERE.this}: ${otherSite} (2).`,
       );
-      // A request to take over the other task's site is refused, and nothing paused.
       expect(outcome).toContain(
         `${MOCK_FENCE_B_SAID.request} "Card refused: browser_handoff names ${otherSite}, but this task's browser is on ${ownSite}. Name the site it is on."`,
       );
@@ -509,7 +505,6 @@ test("one task's browser reaches nothing of another's, nor a private address a r
       );
       // Opening the other task's page itself starts with none of that task's site data.
       expect(outcome).toContain(`${MOCK_FENCE_B_SAID.otherPage} "Visited 1 time in this browser"`);
-      // The first task's browser is where it was.
       expect((await detail(first.title))?.browser).toMatchObject({
         state: "open",
         site: otherSite,

@@ -551,7 +551,6 @@ describe("ModelSlots.nameOf - the one model-name lookup", () => {
     };
     const { slots } = build([codex], catalog);
     slots.reconcile();
-    // Listed, and reachable only by name: the same lookup either way.
     expect(slots.view().models.some((model) => model.id === "gpt-6.1-sol")).toBe(true);
     expect(slots.view().byName.some((model) => model.id === "gpt-6-sol")).toBe(true);
     expect(slots.nameOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toBe("GPT-6.1 Sol");
@@ -723,7 +722,6 @@ describe("ModelSlots.departures - only successful reads say a model left", () =>
     slots.setSlotMembership("xai/grok-4.6", "low", true);
     slots.departures([snapshot(["grok-build-0.1", "grok-4.7", "grok-4.6", "grok-4.5"])]);
     expect(slots.departures([snapshot(["grok-build-0.1", "grok-4.7"])])).toEqual([
-      // Kept: announced with the slot it sat in, which it keeps.
       { providerId: "xai", id: "grok-4.6", slots: ["low"] },
     ]);
     // grok-4.5 was an older generation nobody kept: it leaves silently.

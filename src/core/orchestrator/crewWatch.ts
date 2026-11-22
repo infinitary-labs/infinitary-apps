@@ -48,7 +48,6 @@ const TURN_WALL_CLOCK_MS = JOB_BOUND_MS;
 
 const WATCHDOG_TICK_MS = 60 * 1000;
 
-/** A few names for one feed line, the rest counted. */
 function listSome(items: string[], limit = 5): string {
   const shown = items.slice(0, limit).join(", ");
   return items.length > limit ? `${shown}, and ${items.length - limit} more` : shown;
@@ -68,7 +67,6 @@ export class CrewWatch {
   private readonly sweeping = new Set<Promise<void>>();
   /** Serializes inbox sweeps: a resume-heavy pass must not overlap itself. */
   private sweepingInbox = false;
-  /** The host's watch on crewmates' checks; absent when no read is wired. */
   private readonly checkWatch: CheckWatcher | undefined;
   /** Wakes baseline waits when the default branch's own run of that check passes. */
   private readonly mainCheckWake: MainCheckWatcher | undefined;
@@ -159,7 +157,6 @@ export class CrewWatch {
    */
   async reconcileFleetHygiene(): Promise<void> {
     const kept: TaskRecord[] = [];
-    // Only the rows still holding a working copy, never every task.
     for (const record of this.core.options.tasks.withPresentWorkspace()) {
       if (record.kind !== "work" || !record.worktreeDir || record.workspaceState !== "present") {
         continue;
@@ -741,7 +738,6 @@ export class CrewWatch {
     };
   }
 
-  /** The quiet watchdog's alerts for one turn, as quiet as it is at `now`. */
   private quietAlerts(task: TaskRuntime, now: number): void {
     if (!task.turn.busy) return;
     // Two hours on one turn escalates whatever runs (INF-2603): a job

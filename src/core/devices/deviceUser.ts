@@ -31,7 +31,6 @@ export type DeviceUserLook = {
   platform: NodeJS.Platform;
   /** This user's name, and its number where the system gives one. */
   user?: () => { username: string; uid: number };
-  /** The number of the user this process runs as, where the system has one. */
   getuid?: (() => number) | undefined;
   /** Runs `whoami /user /fo csv /nh` and answers what it printed, or null. */
   whoami?: () => Promise<string | null>;

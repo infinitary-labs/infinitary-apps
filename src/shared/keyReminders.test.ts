@@ -18,7 +18,6 @@ describe("the key reminder", () => {
     expect(remindsOf(DEFAULT_KEY_REMINDERS, vim, "cards.minimize")).toBe(true);
     const pressed = withPressed(DEFAULT_KEY_REMINDERS, vim, "cards.minimize");
     expect(remindsOf(pressed, vim, "cards.minimize")).toBe(false);
-    // Another command still shows its own.
     expect(remindsOf(pressed, vim, "settings.open")).toBe(true);
     expect(remindsOf({ ...DEFAULT_KEY_REMINDERS, on: false }, vim, "settings.open")).toBe(false);
   });

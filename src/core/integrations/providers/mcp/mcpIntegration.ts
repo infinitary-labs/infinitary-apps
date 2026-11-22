@@ -79,7 +79,6 @@ export type McpIntegrationOptions = {
   env: () => NodeJS.ProcessEnv;
   /** The command to spawn so a program runs below the UI (`atUtilityQos`). */
   belowUi: (file: string, args: readonly string[]) => { file: string; args: string[] };
-  /** The folder a program starts in. */
   cwd: () => string;
   /** The app's version, which the client gives as its own. */
   version: string;
@@ -93,7 +92,6 @@ export type McpIntegrationOptions = {
   keys?: IntegrationKeys;
 };
 
-/** The one event an MCP server can tell. */
 export const MCP_RESOURCE_EVENT = "resource_changed";
 /** The action that reads a resource, beside the server's own tools. */
 export const MCP_READ_RESOURCE = "read_resource";
@@ -158,7 +156,6 @@ export function mcpIntegration(
     options.changed();
   };
 
-  /** The host's environment, as every program gets it. */
   const hostEnv = (): Record<string, string> => {
     const env: Record<string, string> = {};
     for (const [name, value] of Object.entries(options.env()))
@@ -180,7 +177,6 @@ export function mcpIntegration(
     return program;
   };
 
-  /** A program's pipes, below the UI, its stderr kept for the words when it fails. */
   const stdioOf = (
     program: { program: string; args: string[]; cwd: string; env: Record<string, string> },
     link: Link,
@@ -214,7 +210,6 @@ export function mcpIntegration(
     );
   };
 
-  /** A new client and the link that tracks it, not yet connected. */
   const newLink = (): Link => {
     const client = new Client(
       { name: "infinitary", version: options.version },
@@ -241,7 +236,6 @@ export function mcpIntegration(
     return link;
   };
 
-  /** Connect a link over its transport, or throw words saying why it could not. */
   const connectOver = async (link: Link, transport: () => Transport): Promise<Link> => {
     let made: Transport;
     try {
@@ -344,7 +338,6 @@ export function mcpIntegration(
     );
   };
 
-  /** Start a server and connect to it, or throw words saying why it could not. */
   const connect = async (
     server: Pick<McpSavedServer, "id" | "name" | "runs" | "network">,
   ): Promise<Link> => {
@@ -360,7 +353,6 @@ export function mcpIntegration(
     return connectOver(link, () => transportOf(server, link));
   };
 
-  /** The server's link, started now if it is not running. */
   const linkOf = async (id: string): Promise<Link> => {
     const running = links.get(id);
     if (running) {
@@ -403,7 +395,6 @@ export function mcpIntegration(
     await link.client.close().catch(() => undefined);
   };
 
-  /** Read the server's tools and resources again, and keep them for its row. */
   const refresh = async (id: string, link: Link) => {
     const lists = await listed(link.client);
     update(id, { ...savedLists(lists, serverOf(id)), health: "ok" });
@@ -704,7 +695,6 @@ function namedRefs(servers: readonly Pick<McpSavedServer, "runs">[]): Set<string
   return named;
 }
 
-/** Why a server's start through Secrets ended without it, in the person's words. */
 function keptWords(state: UseState, name: string, keys: IntegrationKeys): string {
   switch (state) {
     case "denied":
@@ -722,7 +712,6 @@ function keptWords(state: UseState, name: string, keys: IntegrationKeys): string
   }
 }
 
-/** What a server lists, every page of it. */
 async function listed(client: Client): Promise<{
   tools: Tool[];
   resources: Resource[];
@@ -861,7 +850,6 @@ function clip(text: string, length: number): string {
   return text.length <= length ? text : `${cutText(text, length - 1)}…`;
 }
 
-/** A tool's answer as words: its text, and what it sent that is not text, named. */
 function toolAnswer(result: CallToolResult | { toolResult: unknown }): IntegrationAnswer {
   if ("toolResult" in result) return { text: JSON.stringify(result.toolResult) };
   const parts = (result.content ?? []).map((block) => {
@@ -922,7 +910,6 @@ function freeId(
   return id;
 }
 
-/** Why a server could not be reached, in the person's words. */
 function wordsOf(error: unknown, link?: Link): string {
   if (
     error instanceof McpAddressError ||

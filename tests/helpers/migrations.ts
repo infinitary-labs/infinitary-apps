@@ -12,7 +12,6 @@ import { taskRecordRetirementReverseSql } from "./taskRecordRetirement";
  * columns first, so each chain names the newer one it starts from.
  */
 
-/** Every migration shipped today; the head moves as migrations are added. */
 export const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) => index + 1);
 /**
  * INF-1610 piece 2's ending of each captain message, undone, with the
@@ -167,7 +166,6 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** A project's record that it runs no checks, undone: the newest project column. */
 /** A batched project's batch gap (docs/forge.md, "The batch gap"), the newest project column, undone first. */
 export const REVERSE_PROJECT_BATCH_GAP = "ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n";
 /** The no-checks record, undone after the later batch gap. */

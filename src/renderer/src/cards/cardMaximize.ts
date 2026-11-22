@@ -26,7 +26,6 @@ export function isMaximized(
 /** Where a person is reading in a scrolled body: its end, or how far down its top edge is. */
 export type ReadingAnchor = { at: "end" } | { at: "fraction"; fraction: number };
 
-/** A scroller's position and extent. */
 type Scrolled = { top: number; height: number; scrollHeight: number };
 
 /** The reading place in a scroller, read before its width changes. */

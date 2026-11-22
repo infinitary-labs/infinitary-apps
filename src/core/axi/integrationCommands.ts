@@ -51,7 +51,6 @@ function refusal(answer: IntegrationChannelAnswer, lead = ""): never {
   );
 }
 
-/** What an answer prints: its rows as TOON, or a call's own words, then how to go on. */
 function answerOutput(answer: IntegrationChannelAnswer, help: string[]): string {
   const body = answer.data ? encode(answer.data) : (answer.text ?? "");
   return `${body}\n${encode({ help })}\n`;
@@ -92,7 +91,6 @@ export function renderIntegrationReply(
   }
 }
 
-/** The input a crewmate typed: one JSON object, or none. */
 function inputArg(raw: string | undefined): unknown {
   if (raw === undefined) return {};
   let parsed: unknown;

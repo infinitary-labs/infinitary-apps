@@ -50,7 +50,6 @@ test("the first mate's own close holds for an open pull request, and the captain
   const headSha = git("-C", worktreeDir, "rev-parse", "HEAD").trim();
 
   const github = await startGitHubStub();
-  // The task's own pull request reads open where the project lives.
   github.serveNumbered({ number: PULL, branch, title: "fix: the meter reads on time", headSha });
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
@@ -97,7 +96,6 @@ test("the first mate's own close holds for an open pull request, and the captain
         (body) => latestServedTurn(body)?.toolResults ?? [],
       );
 
-    // Closing on its own, the first mate meets the delivery proof hold.
     await promptInput(page).fill(`${CLOSE_ALONE_MARKER}${TITLE}`);
     await pressKey(promptInput(page), "Enter");
     const proofHold = softHoldWords("proof", "firstmate");
@@ -105,13 +103,11 @@ test("the first mate's own close holds for an open pull request, and the captain
     expect(toolResults().find((text) => text.includes(proofHold))).toContain(`#${PULL}`);
     await expect.poll(detail).toMatchObject({ status: "active" });
 
-    // The captain's words in this turn pass it: done, the pull request left open.
     await promptInput(page).fill(`${CLOSE_ON_WORDS_MARKER}${TITLE}`);
     await pressKey(promptInput(page), "Enter");
     await expect
       .poll(detail, { timeout: 20_000 })
       .toMatchObject({ status: "done", closedReason: "finished" });
-    // The saved close event records the captain's word and the pull request it read.
     const close = readSavedData(userDataDir, (saved) =>
       (
         saved
@@ -125,7 +121,6 @@ test("the first mate's own close holds for an open pull request, and the captain
     const pullFact = deliveryFactsOf(close).find((fact) => fact.kind === "pull-request");
     expect(pullFact).toMatchObject({ basis: "checked" });
     expect(pullFact?.text).toContain(`#${PULL}`);
-    // Nothing closed it where the project lives: it reads open there still.
     expect(
       github.requests().filter((request) => request.startsWith(`PATCH /repos/o/r/pulls/${PULL}`)),
     ).toEqual([]);

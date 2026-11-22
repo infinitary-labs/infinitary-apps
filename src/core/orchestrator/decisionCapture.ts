@@ -40,7 +40,6 @@ type OpenDecision = {
   toolCalls: Map<string, { id: string; name: string; isError: boolean }>;
 };
 
-/** A served input's segments, with the inbox row each came from when known. */
 export type ServedInput = {
   framed: FramedInput;
   /** Per segment, in order: the durable row it was delivered from. */

@@ -11,7 +11,6 @@ import { hostPlatform } from "../platform";
  * is sent.
  */
 
-/** One host key, as SSH printed it and as the check line says it. */
 export const hostKeySchema = z.strictObject({
   /** SSH's name for the key, such as `ssh-ed25519`. */
   type: z.string().min(1).max(64),
@@ -90,7 +89,6 @@ export function hostAlias(address: string): string {
   return `fm${createHash("sha256").update(address).digest("hex").slice(0, 32)}`;
 }
 
-/** One known-hosts line for a remembered yes. */
 export function knownHostsLine(address: string, key: HostKey): string {
   return `${hostAlias(address)} ${key.type} ${key.publicKey}`;
 }

@@ -50,7 +50,6 @@ test("only a computer in reach on this version offers the move, and Move now sta
   bridge.answer("inf:devices:sign-ins", []);
   bridge.answer("inf:devices:nearby", { state: "off", user: null, macs: [] });
   const label = deviceLabel(BOX);
-  // The core's own Ready list, as its answer carries it: one gap that blocks and one note.
   const blocking = `${label} runs a first mate of its own now.`;
   const noting = `You sign in to Claude again on ${label}.`;
   bridge.answer("inf:home-move:ready", {
@@ -74,7 +73,6 @@ test("only a computer in reach on this version offers the move, and Move now sta
   expect(rowActs("studio")).not.toContain("home-move");
   await selectDevice("box");
   await shown('[data-device-row="box"]');
-  // It waits in the computer's ⋯ menu, before Remove.
   expect(rowActs("box")).toEqual(["home-move", "standby-keep", "remove"]);
   const ask = await rowAction("box", "home-move");
   expect(ask.closest('[role="menu"]')?.getAttribute("aria-label")).toBe(

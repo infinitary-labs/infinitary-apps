@@ -70,7 +70,6 @@ export type CrewUpdatesHost = {
   sweepTaskLane(taskId: string, now: number): Promise<void>;
   /** Run the ready sweep now. */
   sweepGates(now: number): Promise<void>;
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
 };
 

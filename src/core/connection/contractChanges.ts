@@ -27,19 +27,16 @@ import { fileURLToPath } from "node:url";
  * the folder.
  */
 
-/** The folder of change files, beside the contract's source in `src/shared/`. */
 export function contractChangesDir(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "shared", "contract-changes");
 }
 
-/** The change files in a folder: every Markdown file but its README. */
 export function contractChangeFiles(dir: string = contractChangesDir()): string[] {
   return readdirSync(dir)
     .filter((name) => name.endsWith(".md") && name !== "README.md")
     .sort();
 }
 
-/** What a folder of change files says: the current major, and each minor change's name. */
 export type ContractChanges = { major: number; names: readonly string[] };
 
 const MAJOR_FILE = /^major-(\d+)\.md$/;
@@ -152,10 +149,6 @@ export function viewsDeclaration(text: string): "keep" | "break" {
   return said[0] as "keep" | "break";
 }
 
-/**
- * Whether a view floor agrees with its major's declaration: a major that
- * breaks views is the floor, and one that keeps them leaves the floor below it.
- */
 export function viewFloorAgrees(major: number, views: "keep" | "break", floor: number): boolean {
   return views === "break" ? floor === major : floor < major;
 }

@@ -43,7 +43,6 @@ export type RunbookPanelEntry = {
   /** Where its saved data is kept: its runbook's, never its shown id (`runbookPanelSlice`). */
   slice: string;
   dir: string;
-  /** The runbook it comes with, by id and name. */
   runbook: { id: string; name: string };
   grants: "own" | "unasked" | PluginCapabilities;
 };

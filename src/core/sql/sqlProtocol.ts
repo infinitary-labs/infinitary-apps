@@ -6,7 +6,6 @@ export type SqlParentMessage =
   | { type: "open"; path: string }
   | { type: "query"; id: number; request: SqlRequest };
 
-/** The query process to the core. */
 export type SqlChildMessage =
   | { type: "ready" }
   | { type: "failed"; message: string }

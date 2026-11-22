@@ -24,7 +24,6 @@ const programProcess = forkChildProcess(
   fileURLToPath(new URL("../program/programProcess.ts", import.meta.url)),
 );
 
-/** A when-ready program in "meterlab", a git project, running `script`. */
 async function running(script: string, extras: SetupExtras = {}) {
   const crewmate: FakeCrewmate = fakeCrewmate();
   const h = setup(crewmate, { ...extras, programProcess });

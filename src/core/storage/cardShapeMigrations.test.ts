@@ -18,9 +18,6 @@ import { CardStore } from "./cardStore";
 import { openDatabase } from "./db";
 import { MIGRATIONS } from "./migrations";
 
-// The card record's shape migrations (cardMigrations.ts): card lineage, one card shape with
-// effects, and revision threads.
-
 describe("migrations 24-25 (card lineage and the duplicate label, interaction P1)", () => {
   it("adds card_revisions and three nullable duplicate columns, keeps existing cards, and reverses", () => {
     const dir = tmpUserData();
@@ -180,7 +177,6 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
       null,
       null,
     );
-    // An open Firstmate decision with an ordinary reply and a Later.
     insert.run(
       "card-fm-plan",
       null,
@@ -205,7 +201,6 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
       null,
       null,
     );
-    // A closed settle card: history, untouched.
     insert.run(
       "card-t2-9",
       "t2",
@@ -219,7 +214,6 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
       6,
       "land",
     );
-    // An open note with nothing to rewrite.
     insert.run("card-fm-note", null, "note", "A fact", "[]", 7, null, null);
     atTwentyEight.close();
 
@@ -283,7 +277,6 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
     ]);
     expect(byId("card-fm-note")?.actions).toEqual([]);
     for (const card of open) expect(card).not.toHaveProperty("kind");
-    // The closed card is history and keeps its old ids verbatim.
     expect(
       (
         upgraded.prepare("SELECT actions_json FROM cards WHERE id = 'card-t2-9'").get() as {
@@ -414,7 +407,6 @@ describe("the one merge effect (INF-2744)", () => {
       review: "mr-7",
       after: "continue",
     });
-    // The closed card stays as saved, and its read is the merge it was.
     const saved = upgraded
       .prepare("SELECT actions_json FROM cards WHERE id = 'card-past'")
       .get() as { actions_json: string };
@@ -497,7 +489,6 @@ describe("the close controls the 0.6.4 upgrade dropped (INF-3108)", () => {
       null,
     );
     backup.run("card-fm-revised", JSON.stringify(question));
-    // Closed since the upgrade: history, untouched.
     insert.run(
       "card-fm-closed",
       "Choose when to review the site",
@@ -531,7 +522,6 @@ describe("the close controls the 0.6.4 upgrade dropped (INF-3108)", () => {
     expect(store.get("card-fm-review")?.actions).toEqual(question);
     expect(store.get("card-merge-keep")?.actions[0]).toEqual({ id: "keep", label: "Keep" });
 
-    // Reversible: each restored card's actions before the restore are kept.
     const restored = upgraded
       .prepare("SELECT card_id, actions_json FROM card_close_control_restore ORDER BY card_id")
       .all() as { card_id: string; actions_json: string }[];

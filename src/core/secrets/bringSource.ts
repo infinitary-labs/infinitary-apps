@@ -5,7 +5,6 @@ import { BRING_OUTPUT_MAX_BYTES, readRunOutput, type SourceOutput } from "./brin
 import { sha256 } from "./custody";
 import { digestFile, RECIPIENT_VARIABLES, regularFile, scriptInterpreter } from "./recipient";
 
-/** Where a bring's secrets come from: a program it runs, or a file it reads. */
 export type BringSourceInput = { run: string[]; folder?: string } | { file: string };
 
 /** A file the card names and a press must find unchanged, by its real path and digest. */

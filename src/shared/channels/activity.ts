@@ -22,7 +22,6 @@ import {
 } from "../usage";
 import type { ChannelDeclaration } from "./common";
 
-/** Observe, Automation and usage. */
 export const activityChannels = {
   "inf:observe:enabled": {
     effect: "read",

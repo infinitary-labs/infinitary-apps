@@ -31,7 +31,6 @@ export function windowDragAt(page: Page, points: readonly Point[]): Promise<bool
   }, points);
 }
 
-/** `count` points evenly along the straight line from `from` to `to`, both included. */
 export function pointsAlong(from: Point, to: Point, count: number): Point[] {
   return Array.from({ length: count }, (_, i) => {
     const t = count === 1 ? 0 : i / (count - 1);

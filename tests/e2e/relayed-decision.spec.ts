@@ -46,7 +46,6 @@ test.afterAll(async () => {
 /** The plan card's buttons: its crewmate's choices and the app's Decline (INF-3108). */
 const PLAN_BUTTONS = [...MOCK_CLAUDE_PLAN_ACTIONS, DECLINE_LABEL].sort();
 
-/** A card's actions by label, whatever order the stack draws them in. */
 function actionLabels(card: { actions: { label: string }[] } | undefined): string[] {
   return (card?.actions ?? []).map((action) => action.label).sort();
 }
@@ -64,7 +63,6 @@ function servedTexts(body: string, needle: string): string[] {
   return found;
 }
 
-/** The thread column beside the shown card. */
 function thread(page: Page) {
   return page.locator("[data-card-thread]");
 }
@@ -98,13 +96,11 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
     .toEqual(PLAN_BUTTONS);
   await showCard(page, MOCK_CLAUDE_PLAN_CARD_TITLE);
 
-  // The captain approves it by reply, not by its button.
   const reply = cardReply(page).field;
   await reply.click();
   await reply.fill(CLAUDE_RELAY_APPROVAL);
   await cardReply(page).send.click();
 
-  // The crewmate answers in the thread with one line...
   await showCard(page, MOCK_CLAUDE_PLAN_CARD_TITLE);
   await expect(
     thread(page)
@@ -112,7 +108,6 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
       .filter({ hasText: MOCK_CLAUDE_RELAY_ANSWER }),
   ).toBeVisible({ timeout: 45_000 });
 
-  // ...and the Firstmate is served the report with what it must do.
   await expect
     .poll(() => firstmateHeard(`It asks the first mate to act: ${MOCK_CLAUDE_RELAY_ASK}.`), {
       timeout: 45_000,
@@ -124,7 +119,6 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
     .flatMap((body) => servedTexts(body, "It asks the first mate to act"));
   writeFileSync(test.info().outputPath("firstmate-wake.txt"), `${served.at(-1) ?? ""}\n`);
 
-  // His reply chose nothing: the plan card is still up with both buttons.
   expect(actionLabels(await planCard())).toEqual(PLAN_BUTTONS);
   await page.locator("[data-card-layer]").screenshot({
     path: test.info().outputPath("relayed-decision-thread.png"),

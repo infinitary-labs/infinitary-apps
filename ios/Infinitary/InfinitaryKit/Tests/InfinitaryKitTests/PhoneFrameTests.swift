@@ -19,7 +19,6 @@ struct PhoneFrameTests {
         String(decoding: try JSONSerialization.data(withJSONObject: object), as: UTF8.self)
     }
 
-    /// The board a busy home pushes: two hundred tasks in one frame.
     private func boardPush(seq: Int = 7) throws -> String {
         try text(["t": "push", "seq": seq, "channel": "inf:tasks",
                   "payload": ["seq": 41, "tasks": (1...200).map(row), "projects": [["id": "proj-harbour", "name": "Harbour"]]]])

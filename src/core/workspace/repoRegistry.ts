@@ -316,7 +316,6 @@ export class RepoRegistry {
     this.costLimits = new CostLimitStore(db);
   }
 
-  /** Where new projects go: the folder the person chose, else the fleet root. */
   projectsFolder(): ProjectsFolderView {
     const chosen = this.options.settings?.getProjectsFolder() ?? null;
     return chosen ? { path: chosen, custom: true } : { path: this.fleetRoot, custom: false };
@@ -549,7 +548,6 @@ export class RepoRegistry {
     return { project: { key: joined.key, name: joined.name } };
   }
 
-  /** The project a new repository joins, by its task key, or the refusal in words. */
   private joining(projectKey: string, key: string | undefined): ProjectRecord {
     if (key !== undefined)
       throw new Error("A repository joins a project or gets a task key of its own, never both.");
@@ -593,7 +591,6 @@ export class RepoRegistry {
     return { ...repo, autonomy: true };
   }
 
-  /** The personal workspace's row, when it has been registered. */
   personal(): RepoView | undefined {
     const row = this.db
       .prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE name = ?`)
@@ -891,7 +888,6 @@ export class RepoRegistry {
     return row?.queue_offered === 0;
   }
 
-  /** Keep that the app looked in this project for the team queue's files. */
   recordTeamQueueLooked(id: string): void {
     this.db.prepare("UPDATE repos SET queue_offered = 0 WHERE id = ?").run(id);
   }
@@ -1261,7 +1257,6 @@ export class RepoRegistry {
   }
 }
 
-/** The folder's real path, or its resolved one when it cannot be read. */
 function realPath(path: string): string {
   try {
     return realpathSync(path);
@@ -1270,7 +1265,6 @@ function realPath(path: string): string {
   }
 }
 
-/** True for `parent` itself and anything beneath it. */
 function sameOrInside(path: string, parent: string): boolean {
   return path === parent || path.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 }

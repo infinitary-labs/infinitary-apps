@@ -21,7 +21,6 @@ type MicWindow = {
   __realGetUserMedia?: MediaDevices["getUserMedia"];
 };
 
-/** Counts microphone opens; with `ask`, the next one waits for `answerMac`. */
 async function standInForMac(page: Page, ask: boolean): Promise<void> {
   await page.evaluate((ask) => {
     const w = window as unknown as MicWindow;
@@ -74,7 +73,6 @@ async function holdToTalk(page: Page, took: Locator): Promise<void> {
     .toBe(true);
 }
 
-/** Tabs forward until `target` has the focus, as a person reaching it by keys. */
 async function tabTo(page: Page, target: Locator): Promise<void> {
   await expect
     .poll(
@@ -144,7 +142,6 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
     const openSettings = off.getByRole("button", { name: "Open System Settings" });
     const close = off.getByRole("button", { name: "Close" });
 
-    // The first ask, answered Don't Allow after the key is already up.
     await standInForMac(page, true);
     await holdToTalk(page, page.getByRole("button", { name: "Abandon" }));
     await expect(page.locator('[data-voice-notice="mic-asking"]')).toBeVisible();
@@ -153,7 +150,6 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
     await expect(off).toBeVisible();
     await expect(page.getByRole("button", { name: "Abandon" })).toHaveCount(0);
 
-    // Its buttons are reached by keys; Open System Settings opens the microphone pane.
     await tabTo(page, openSettings);
     await page.keyboard.press("Enter");
     await expect
@@ -163,7 +159,6 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
     await page.keyboard.press("Enter");
     await expect(off).toHaveCount(0);
 
-    // A later hold while access is off: the line at once, and the microphone never opens.
     await standInForMac(page, false);
     await page.keyboard.down("AltRight");
     await expect(off).toBeVisible();
@@ -183,7 +178,6 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
     expect(await micOpens(page)).toBe(1);
     await expect(page.locator("[data-voice-notice^='mic-']")).toHaveCount(0);
 
-    // Access turned off again: the next hold says so.
     await setMacAnswer(launched, "denied");
     await page.keyboard.down("AltRight");
     await expect(off).toBeVisible();

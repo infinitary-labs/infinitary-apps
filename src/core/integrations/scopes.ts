@@ -35,7 +35,6 @@ function segments(path: string, encodedAt?: number): { parts: string[]; unsafe: 
   };
 }
 
-/** The path without its query or fragment, with one leading slash. */
 function bare(path: string): string {
   const head = path.split(/[?#]/, 1)[0] ?? "";
   return head.startsWith("/") ? head : `/${head}`;
@@ -125,7 +124,6 @@ const NOTIFIES: Record<string, string> = {
   externalOnly: "notifying guests outside your organization",
 };
 
-/** A calendar change: the calendar, primary when omitted, and whom it notifies. */
 export function calendarScope(input: unknown): IntegrationScope {
   const { calendar = "primary", send_updates = "none" } = input as {
     calendar?: string;
@@ -137,7 +135,6 @@ export function calendarScope(input: unknown): IntegrationScope {
   };
 }
 
-/** A message sent: exactly these recipients, to and cc together, in any order. */
 export function recipientsScope(input: unknown): IntegrationScope {
   const { to, cc = [] } = input as { to: string[]; cc?: string[] };
   const all = [...new Set([...to, ...cc].map((address) => address.trim().toLowerCase()))].sort();

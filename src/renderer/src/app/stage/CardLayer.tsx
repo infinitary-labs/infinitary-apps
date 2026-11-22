@@ -257,8 +257,6 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   // successor's (below): its history decides the width it is drawn at.
   const replyable = card !== undefined && !isHeldEntry(card) && cardTakesReplies(card);
   const cardId = card?.id;
-  // The version on screen is the one the captain has seen, while the window
-  // is in front of them; the card's next revision is compared with it.
   useEffect(() => {
     if (replyable && cardId) loadThread(cardId);
   }, [replyable, cardId, loadThread]);
@@ -874,7 +872,6 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     ? { open: finding, start: () => openCardFind(true), field: <CardFindField />, ...findKeys }
     : null;
   useCardFindStage(cardId && findable ? `${cardId}:${card?.recordView ?? ""}` : undefined);
-  // The field closes when the stage shows something it cannot find in.
   useEffect(() => {
     if (!findable) closeCardFind();
   }, [findable]);
@@ -1215,7 +1212,6 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           log={viewing.log}
           onClose={() => {
             setViewer(null);
-            // Back to the log's line inside the frame that opened it.
             giveFocusBack(viewing.opener);
           }}
         />
@@ -1249,7 +1245,6 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           onSounding={setDemoSounding}
           onClose={() => {
             setViewer(null);
-            // Back to the picture inside the frame that opened it.
             giveFocusBack(viewing.opener);
           }}
         />

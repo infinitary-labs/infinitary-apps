@@ -115,7 +115,6 @@ function mergesOwn(actions: readonly { effect?: unknown }[] | undefined): boolea
   });
 }
 
-/** Whether a card merges or discards anything. */
 function settles(actions: readonly { effect?: unknown }[] | undefined): boolean {
   return (actions ?? []).some((action) => {
     const typed = action as Parameters<typeof mergeEffectOf>[0];
@@ -126,7 +125,6 @@ function settles(actions: readonly { effect?: unknown }[] | undefined): boolean 
 /** What a crewmate's cards reach of the supervisor beyond its options. */
 export type CrewmateCardsHost = {
   now(): number;
-  /** The card stack: the open cards and every write to them. */
   readonly cards: CardService;
   /** Settling and closing, for the merge approval a new merge card replaces. */
   readonly settling: SettleOwners;
@@ -177,14 +175,6 @@ export class CrewmateCards {
     this.browser = new CardBrowserActions(options, (id) => this.host.cards.get(id));
   }
 
-  /**
-   * A card emitted by a crewmate through its emit_card tool (D-9, Q3). A
-   * merge decision on a direct-pr task clears the standing CI gate first
-   * (`pendingCiGate`); every other card - notes, non-merge decisions, a
-   * local-only task's "Put the work in" - publishes exactly as before, so this
-   * stays synchronous whenever the gate does not apply, which is what most
-   * of this file's tests exercise.
-   */
   /**
    * A crewmate's emit_card: its own card as ever, or a contribution to
    * someone else's (docs/card-threads.md, "Shared cards"), which keeps that
@@ -985,7 +975,6 @@ export class CrewmateCards {
       if (this.contributing(task.id) && presentationChecked && input.actions.length === 0)
         this.recordCompletionOffer(task.id, id, checked, presentationChecked, false, true);
       if (declaredMerge) {
-        // A merge card is up: an earlier refusal no longer stands.
         this.options.tasks.delivery.clearCardRefusal(task.id);
         if (!declaredMerge.review)
           this.recordCompletionOffer(
@@ -1120,7 +1109,6 @@ export class CrewmateCards {
     return taken;
   }
 
-  /** The card the app merges from keeps no buttons, only the merging line. */
   private showMerging(taskId: string, card: Card): void {
     const source = this.options.tasks.policiesOf(this.options.tasks.get(taskId))?.autonomy.source;
     this.host.cards.put({
@@ -1678,13 +1666,11 @@ export class CrewmateCards {
     return `<section class="inf-panel"><h3>Validation action</h3><dl>${entries.map(([name, value]) => `<dt>${escapeCardText(name)}</dt><dd>${escapeCardText(value)}</dd>`).join("")}</dl>${exact}<p>This choice grants no merge permission and covers only this action.</p></section>`;
   }
 
-  /** Whether this task ships nothing: its deliverable is an answer. */
   private isAnswerTask(taskId: string): boolean {
     return deliverableOf(this.options.tasks.get(taskId)) === "answer";
   }
 }
 
-/** The validation requests one card binds: its request, then any further gaps of its checklist. */
 function validationRequestsOf(binding: { request: string; gaps?: string[] }): string[] {
   return [binding.request, ...(binding.gaps ?? [])];
 }

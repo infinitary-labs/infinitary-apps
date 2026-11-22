@@ -95,10 +95,6 @@ export const cardFiles: Scenario =
     return undefined;
   };
 
-/**
- * The repair pack crewmate: write the five files, then show the card naming
- * them all in `files`, in the pack's order.
- */
 export const cardFilesPack: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {

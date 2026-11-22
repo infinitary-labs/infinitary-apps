@@ -100,11 +100,9 @@ describe("the window's answer about its panels", () => {
     expect(mine?.why).toBe(
       `side-panel: "activity" from "personal-activity" is already registered by "${BUILTIN_PLUGIN_ID}"`,
     );
-    // The app's own Activity answers for itself, never for the refused one.
     expect(of(mounts, "activity", "app")).toMatchObject({ kind: "app", version: null });
     expect(of(mounts, "activity", "app")?.state).not.toBe("refused");
 
-    // Renamed, it mounts, and its body has not drawn yet.
     const renamed: PersonalSnapshot = { extensions: [view({ id: "my-activity" })] };
     plugins.apply(renamed);
     expect(railRefusals.list().size).toBe(0);
@@ -139,7 +137,6 @@ describe("the window's answer about its panels", () => {
       plugins.apply(snapshot);
       const mounts = answer(host, snapshot);
       const kind = source === "yours" ? "personal" : "installed";
-      // The panel that keeps the id answers for itself on its own row.
       const kept = mounts.filter(
         (mount) => mount.id === "desk-reading" && mount.kind === kind && !mount.runbook,
       );
@@ -379,7 +376,6 @@ describe("the window's answer about its panels", () => {
       await Promise.resolve();
       expect(sent.length).toBe(before + 1);
       expect(sent.at(-1)?.panels.find((mount) => mount.id === "clock")?.state).toBe("loading");
-      // The same answer again sends nothing.
       noteMountSnapshot(snapshot);
       await Promise.resolve();
       expect(sent.length).toBe(before + 1);

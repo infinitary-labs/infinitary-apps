@@ -43,7 +43,6 @@ export type Mp4Options = {
   codec?: string;
   /** A second track with a sound handler. */
   audio?: boolean;
-  /** A second video track. */
   secondVideo?: boolean;
   /** The ftyp's major and only brand. */
   brand?: string;

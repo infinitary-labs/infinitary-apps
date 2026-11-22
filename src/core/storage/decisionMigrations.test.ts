@@ -31,9 +31,6 @@ import type { AppDatabase } from "./db";
 import { openDatabase, openInMemoryDatabase } from "./db";
 import { dropViews } from "./views";
 
-// The decision ledger's migrations: supervision provenance, the missed-escalation label, one
-// decision ledger, and the work shape's rule and served tier.
-
 const PROVENANCE_COLUMNS = [
   "card_id",
   "model",

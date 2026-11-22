@@ -20,7 +20,6 @@ export function holdingWaits(input: {
   record: TaskRecord;
   /** Every task a `blocks` edge into this one runs from. */
   blockers: readonly TaskRecord[];
-  /** Reads the task a standing baseline wait names. */
   tasks: { get(id: string): TaskRecord | undefined };
   /** A projection shares this row's derived baseline waits with its date read. */
   baseline?: readonly DependencyWait[];

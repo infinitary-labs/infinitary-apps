@@ -13,12 +13,10 @@ const asking = new AsyncLocalStorage<true>();
 /** The `through` an event the captain's command caused carries in its data. */
 export { THROUGH_THE_COMMAND };
 
-/** Runs one request of the captain's command. */
 export function asTheCommand<T>(work: () => T): T {
   return asking.run(true, work);
 }
 
-/** Whether the work running now began with a request of the captain's command. */
 export function askedFromTheCommand(): boolean {
   return asking.getStore() === true;
 }

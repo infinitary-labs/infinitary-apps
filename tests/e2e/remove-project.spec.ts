@@ -37,7 +37,6 @@ test("removes a project from its page after one question, leaves its folder, and
     writeFileSync(join(folder, "keep.txt"), "mine\n");
     const repo = await addFolder(page, folder);
     await openProjects(page);
-    // The list carries no Remove; the personal workspace never does.
     await expect(projectLine(page, repo.id)).toBeVisible();
     await expect(page.getByRole("button", { name: `Remove ${repo.name}` })).toHaveCount(0);
     const row = await openProject(page, repo.id);
@@ -57,7 +56,6 @@ test("removes a project from its page after one question, leaves its folder, and
     );
     await line.getByRole("button", { name: `Remove ${repo.name}` }).click();
     await line.getByRole("button", { name: "Remove", exact: true }).click();
-    // The page closes with its project, back on a list without it.
     await expect(row).toHaveCount(0);
     await expect(projectLine(page, repo.id)).toHaveCount(0);
     expect(

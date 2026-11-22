@@ -148,7 +148,6 @@ function sse(raw: string): WireEvent[] {
     });
 }
 
-/** The calls and text one streamed answer carried, read the way each dialect's client reads it. */
 function answerOf(dialect: Dialect, events: WireEvent[]) {
   const calls: Array<{ name: string; args: string }> = [];
   let text = "";
@@ -180,7 +179,6 @@ function answerOf(dialect: Dialect, events: WireEvent[]) {
 }
 
 type Sent = {
-  /** The system or instructions text. */
   system?: string;
   /** The request's messages in its dialect's own shape. */
   messages: unknown[];
@@ -231,7 +229,6 @@ function post(dialect: Dialect, sent: Sent): Promise<Response> {
   });
 }
 
-/** One streamed turn: its status, its events, and the calls and text they carried. */
 async function ask(dialect: Dialect, sent: Sent) {
   const response = await post(dialect, sent);
   const raw = await response.text();
@@ -240,10 +237,8 @@ async function ask(dialect: Dialect, sent: Sent) {
   return { status: response.status, raw, events, ...answerOf(dialect, events) };
 }
 
-/** The calls' names, the shortest way to read which branch answered. */
 const names = (answer: { calls: Array<{ name: string }> }) => answer.calls.map((call) => call.name);
 
-/** The newest user message, in each dialect's shape. */
 function user(dialect: Dialect, text: string) {
   if (dialect === "chat") return { role: "user", content: text };
   if (dialect === "responses") return { role: "user", content: [{ type: "input_text", text }] };
@@ -253,7 +248,6 @@ function user(dialect: Dialect, text: string) {
 /** A tool call as an earlier leg carries it on the wire: the served name and whatever arguments were sent. */
 type SentCall = { name: string; args: unknown };
 
-/** A tool loop's two legs after an input, in each dialect's shape: the calls, then one result each. */
 function loop(dialect: Dialect, calls: SentCall[], result = "ok") {
   const ids = calls.map((_, index) => `call_${index + 1}`);
   if (dialect === "chat")
@@ -307,7 +301,6 @@ function turn(ask: string, crew: unknown[] = [], repos: unknown[] = []): string 
   ]).text;
 }
 
-/** One first mate turn on Pi's completions wire, after `history`. */
 const firstmate = (
   words: string,
   history: unknown[] = [],
@@ -376,7 +369,6 @@ describe("the stand-in's own paths", () => {
   });
 });
 
-// G1: each wire's whole answer, event by event, for one text turn and one tool turn.
 describe("each wire carries a text turn and a tool turn the way its client reads them", () => {
   const CALLS: ScriptedCall[] = [
     { name: "note_progress", args: { text: "Halfway." } },
@@ -660,7 +652,6 @@ describe("a crewmate's merge card goes out with the risk it must declare", () =>
   });
 });
 
-// G2: what a scenario reads of a request, the same facts on each wire.
 describe("what a scenario reads of a request", () => {
   async function seen(dialect: Dialect, sent: Sent): Promise<ScenarioRequest> {
     let request: ScenarioRequest | undefined;
@@ -1166,7 +1157,6 @@ describe("the first mate's spawn", () => {
 describe("the panel-building crewmate", () => {
   const BRIEF = `${BUILD_IN_PLACE_OPENING}: a Tokyo clock panel on the rail.`;
 
-  /** Runs the crewmate's turns on Pi's wire, each answer's calls answered, until it reports. */
   async function build(brief: string) {
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     const provider = await start();

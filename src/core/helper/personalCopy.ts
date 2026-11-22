@@ -179,7 +179,6 @@ export class PersonalCopy {
   }
 }
 
-/** The answer to `inf:session:personal`: the home's set kept here, by the copy this computer keeps. */
 export function keepOrdered(
   copy: PersonalCopy | undefined,
   request: WorkOrderRequest<"inf:session:personal">,

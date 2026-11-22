@@ -33,7 +33,6 @@ import type { GitLink } from "./tree";
  */
 export type Froms = readonly string[];
 
-/** `value` with the older folder in front replaced by `to`, or undefined when it does not start with it. */
 export function movedPath(value: string, froms: Froms, to: string): string | undefined {
   for (const from of froms) {
     if (value === from) return to;
@@ -42,7 +41,6 @@ export function movedPath(value: string, froms: Froms, to: string): string | und
   return undefined;
 }
 
-/** Every string in a JSON value that is a whole path into `from`, rewritten; the rest as it was. */
 export function movedJson(value: unknown, from: Froms, to: string): unknown {
   if (typeof value === "string") return movedPath(value, from, to) ?? value;
   if (Array.isArray(value)) return value.map((item) => movedJson(item, from, to));
@@ -52,8 +50,6 @@ export function movedJson(value: unknown, from: Froms, to: string): unknown {
     );
   return value;
 }
-
-// --- the databases ----------------------------------------------------------
 
 /** The app's databases, relative to the folder: the move checks each one and rewrites the first. */
 export const DATABASES = ["firstmate.db", join("knowledge", KNOWLEDGE_DB_FILE)] as const;
@@ -163,8 +159,6 @@ export function rewriteDatabases(staged: string, from: Froms, to: string): strin
   return rewritten;
 }
 
-// --- the app's own files ----------------------------------------------------
-
 /**
  * Files of the app's own that hold whole paths into its folder: what the
  * background work set up (its kept copy of the app) and what a removal could
@@ -191,7 +185,6 @@ export async function rewritePathFiles(staged: string, from: Froms, to: string):
   return rewritten;
 }
 
-/** Symbolic links whose absolute target is inside the older folder now point inside the new one. */
 export function rewriteLinks(
   staged: string,
   links: readonly string[],
@@ -209,8 +202,6 @@ export function rewriteLinks(
   }
   return rewritten;
 }
-
-// --- git's links between working copies and repositories --------------------
 
 const GITDIR_LINE = /^gitdir: (.+?)\r?\n?$/;
 

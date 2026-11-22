@@ -288,7 +288,6 @@ async function clickInFrame(target: ReturnType<Page["locator"]>): Promise<void> 
   await target.evaluate((el) => (el as HTMLElement).click());
 }
 
-/** Open a task's record from its row in the Tasks panel. */
 async function openRecord(page: Page, taskId: string): Promise<void> {
   await pressRow(page, keys[taskId] as string);
   await expect(pane(page)).toHaveAttribute("data-task-record", taskId);
@@ -352,17 +351,14 @@ test("Start starts a planned task on request and dismisses its record; Drop task
     contentType: "application/json",
   });
   expect(await expectRecordBar(page)).toMatchObject({ end: "drop-task", next: "start" });
-  // Drop task holds the end slot; Start is the next slot's primary that begins the work.
   await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);
   await expect(next(page)).toHaveAccessibleName(RECORD_NEXT_LABELS.start);
   await expect(recordCard(page).locator("[data-record-goal]")).toBeVisible();
-  // Tab reaches them in the order shown: Drop task, then Start.
   await pressKey(end(page), "Tab");
   await expect(next(page)).toBeFocused();
   await page.screenshot({ path: test.info().outputPath("record-start.png") });
   await next(page).click();
 
-  // The record leaves once the start is accepted; the crewmate then begins.
   await expect(page.locator('[data-task-record="rc-start"]')).toHaveCount(0, { timeout: 30_000 });
   await expect(nowRow(page, keys["rc-start"] as string)).not.toHaveAttribute("data-now-selected");
   await expect
@@ -380,7 +376,6 @@ test("Start starts a planned task on request and dismisses its record; Drop task
   await expect.poll(() => nowRowGroup(page, keys["rc-start"] as string)).toBe("working");
   await page.screenshot({ path: test.info().outputPath("record-start-dismissed.png") });
 
-  // Reopened from its row, the started task's record still ends with Drop task.
   await openRecord(page, "rc-start");
   await expect(footer(page)).toHaveAttribute("data-record-end", "stop-task", { timeout: 30_000 });
   await expectRecordBar(page);
@@ -405,8 +400,6 @@ test("Start starts a planned task on request and dismisses its record; Drop task
   // A second click on the same spot cancels; the confirm sits in the next slot.
   await end(page).click();
   await next(page).click();
-  // Dropped: the record leaves once the drop is accepted, and opened again
-  // it reads the task closed as cancelled.
   await reopenDropped(page, "rc-start");
   await expectRecordTaskStatus(page);
   await expectRecordBar(page);
@@ -424,7 +417,6 @@ test("interrupted work reads in danger and offers Continue beside Drop task; Con
   );
   await expectRecordTaskStatus(page);
   expect(await expectRecordBar(page)).toMatchObject({ end: "stop-task", next: "continue" });
-  // Continue is the next slot's one primary, after Drop task.
   await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);
   await expect(next(page)).toHaveAccessibleName(RECORD_NEXT_LABELS.continue);
   await page.screenshot({ path: test.info().outputPath("record-interrupted.png") });
@@ -490,7 +482,6 @@ const HOLD_WINDOW_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES + 3_00
 
 test("while a decision card waits the bar keeps Drop task, and Show the card brings it forward", async () => {
   const { page } = launched;
-  // Page the stack away from the decision.
   await showCard(page, NOTE_TITLE);
   await expect(shownCard(page, DECISION_TITLE)).toHaveCount(0);
   // The record is open when the card is elsewhere - here opened by the
@@ -587,7 +578,6 @@ test("a press on the bar that goes down before the record's body draws lands on 
     const body = pane(page).locator("[data-record-body]");
     await expect(body.locator("[data-frame-mount-pending]")).toBeVisible();
     await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);
-    // The press goes where the revealed card rests.
     await atRest(end(page));
     const drop = await end(page).boundingBox();
     const pending = await body.boundingBox();
@@ -604,7 +594,6 @@ test("a press on the bar that goes down before the record's body draws lands on 
     await page.mouse.up();
     down = false;
     await expect(footer(page)).toHaveAttribute("data-record-footer", "confirm");
-    // Released, the card takes the room its drawn body needs.
     await expect
       .poll(async () => (await cardSurface(page).boundingBox())?.height)
       .toBeGreaterThan(card.height);
@@ -732,7 +721,6 @@ test("a blocked backlog task can be dropped, and so can a parent, whose open par
   await closeRecord(page);
 });
 
-/** The chip shows every character of the model's name: inside it, nothing scrolls out of view. */
 const readsWhole = (chip: Locator) =>
   chip.evaluate((el) =>
     [el, ...el.querySelectorAll("*")].every(

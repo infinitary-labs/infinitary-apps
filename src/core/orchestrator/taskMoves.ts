@@ -54,7 +54,6 @@ function warnMove(caught: unknown): void {
   console.warn("[crew] a move to another computer could not go on yet:", caught);
 }
 
-/** The model a task routed again to, the account it binds here or there, and how it opens. */
 export type RoutedAgain = {
   model: { provider: string; id: string };
   /** This Mac's account for it. */
@@ -90,7 +89,6 @@ export type RoutedAgain = {
 /** What a rerouted conversation opened on: its model, and the account a computer that runs work says it bound. */
 export type OpenedOn = { model?: { provider: string; id: string }; account?: string };
 
-/** What a rerouted conversation's open came to (`RoutedAgain.commit`). */
 export type RerouteOutcome = "committed" | "stale" | "again";
 
 /**
@@ -116,7 +114,6 @@ export class NotAcceptedError extends Error {}
  */
 export class OpenedNothingError extends NotAcceptedError {}
 
-/** Why a reopen waits while this Mac's accounts have not said what they serve. */
 const UNREAD_ACCOUNTS_WAIT =
   // i18n-exempt: an internal outcome and error; no person reads it.
   "This Mac's accounts have not said yet which models they serve, so its conversation waits.";
@@ -143,19 +140,13 @@ function bindingThere(
 /** Why a task waits for a model (`TaskMoves.modelWaitCause`). */
 export type ModelWaitCause = "none" | "update" | "unread";
 
-/** What the task moves reach of the supervisor beyond its options. */
-
 export type TaskMovesHost = {
   now(): number;
   /** Where each task runs: the computer a move names, read as Runs on reads it. */
   readonly placement: TaskPlacement;
-  /** The crewmate running a task here now, if one is. */
   runtime(taskId: string): TaskRuntime | undefined;
-  /** Let go of a crewmate's session (`CrewSessions.releaseSession`). */
   releaseSession(runtime: TaskRuntime): void;
-  /** The supervisor stops tracking a task's crewmate. */
   forgetRuntime(taskId: string): void;
-  /** Open a task's conversation again, on the model a move names when it names one. */
   resumeTask(taskId: string, move?: MoveTarget): Promise<TaskRuntime>;
   /** Hand an idle crewmate what waits on its lane. */
   deliverPendingToTask(task: TaskRuntime): void;
@@ -163,7 +154,6 @@ export type TaskMovesHost = {
   deliverLane(taskId: string): void;
   /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
   machineOf(taskId: string): string;
-  /** The task builds in the personal workspace. */
   isPersonalTask(taskId: string): boolean;
   /** The work shape a task is routed by. */
   queuedShape(record: TaskRecord): WorkShape;
@@ -171,13 +161,10 @@ export type TaskMovesHost = {
   clientJobStart(taskId: string): number | undefined;
   /** A model by its Settings name. */
   modelName(model: { provider: string; id: string }): string;
-  /** A computer that runs work is being updated now. */
   beingUpdated(deviceId: string): boolean;
-  /** Take down the sign-in card a task's provider raised. */
   clearSignInCard(taskId: string): void;
   /** The app is quitting: no move starts now. */
   disposed(): boolean;
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
 };
 
@@ -225,12 +212,10 @@ export class TaskMoves {
     private readonly host: TaskMovesHost,
   ) {}
 
-  /** The task is moving to another provider or another computer right now. */
   isMoving(taskId: string): boolean {
     return this.moving.has(taskId) || this.computerMoving.has(taskId);
   }
 
-  /** The task's move to another computer is being carried out right now. */
   isCrossing(taskId: string): boolean {
     return this.computerMoving.has(taskId);
   }
@@ -262,12 +247,10 @@ export class TaskMoves {
     return this.providerName(provider);
   }
 
-  /** The name a person knows a provider by: its catalog name, else its id. */
   private providerName(provider: string): string {
     return PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name ?? provider;
   }
 
-  /** The providers a move routes among, in words: this Mac's own, or the computer's the task runs on. */
   private signedInWhere(taskId: string): string {
     const machine = this.host.machineOf(taskId);
     return machine === LOCAL_MACHINE_ID
@@ -275,7 +258,6 @@ export class TaskMoves {
       : `provider signed in on ${this.computerName(machine)}`;
   }
 
-  /** Why a move refuses the model its card offered, when the app would now pick another. */
   private offerGone(
     plan: { record: TaskRecord; choice: { provider: string; id: string } },
     ask: MoveAsk,
@@ -615,7 +597,6 @@ export class TaskMoves {
   async routeAgainIfLeft(
     taskId: string,
     asking: {
-      /** The computer the conversation opens on; the task's own by default. */
       machine?: string;
       /** This open is a move's own, so that move does not supersede it. */
       ownMove?: boolean;
@@ -868,7 +849,6 @@ export class TaskMoves {
     return false;
   }
 
-  /** Why the task waits for a model, while it does (`waitsForModel`). */
   modelWaitCause(taskId: string): ModelWaitCause | undefined {
     return this.waitsForModel(taskId) ? (this.waitCauses.get(taskId) ?? "none") : undefined;
   }
@@ -1178,7 +1158,6 @@ export class TaskMoves {
     );
   }
 
-  /** Cancel a move that has not started crossing; a refusal is text. */
   cancelComputerMove(taskId: string, by: "captain" | "firstmate"): { ok: boolean; text: string } {
     const record = this.options.tasks.get(taskId) ?? this.options.tasks.resolve(taskId);
     if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
@@ -1247,7 +1226,6 @@ export class TaskMoves {
     return others.length ? { movable: true } : {};
   }
 
-  /** A computer that runs work by its device id, or `this-mac`, as the record holds it. */
   computerOf(record: TaskRecord): string {
     return record.deviceId ?? RUNS_ON_THIS_MAC;
   }
@@ -1258,7 +1236,6 @@ export class TaskMoves {
       : (this.options.machines?.nameOf(id) ?? `the other ${COMPUTER.one}`);
   }
 
-  /** Why a task cannot move to another computer at all, or undefined when it can. */
   private moveRefusal(record: TaskRecord, replacing = false): string | undefined {
     return this.moveBlocker(record, replacing)?.();
   }
@@ -1294,7 +1271,6 @@ export class TaskMoves {
     return undefined;
   }
 
-  /** Why `to` cannot take this task now, or undefined when it can. */
   private async destinationRefusal(record: TaskRecord, to: string): Promise<string | undefined> {
     const name = this.computerName(to);
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -1328,7 +1304,6 @@ export class TaskMoves {
     return eligible();
   }
 
-  /** The model a task runs on: its newest routing choice, else its record's. */
   private modelOfTask(record: TaskRecord): { provider: string; id: string } | undefined {
     const routed = this.options.router?.servedChoice(record.id)?.model;
     if (routed) return { provider: routed.provider, id: routed.id };
@@ -1337,7 +1312,6 @@ export class TaskMoves {
     return parsed.provider ? { provider: parsed.provider, id: parsed.id } : undefined;
   }
 
-  /** What still stops a safe pause for a task's move, in words; empty when nothing does. */
   private pauseBlockers(taskId: string): string[] {
     const record = this.options.tasks.get(taskId);
     if (!record) return [];
@@ -1384,7 +1358,6 @@ export class TaskMoves {
     return blockers;
   }
 
-  /** The task's own folders a move carries, here (`MOVED_FOLDERS`). */
   private localMoveFolders(taskId: string): MovedFolders {
     const paths = this.options.paths;
     return {
@@ -1486,7 +1459,6 @@ export class TaskMoves {
     let move = record?.shape?.computer_move;
     if (!record || move?.phase !== "waiting") return;
     if (move.away && !this.isAway(move.from, taskId)) {
-      // Back before its work crossed: the move carries everything it holds.
       const { away: _back, ...whole } = move;
       move = whole;
       this.options.tasks.placement.setComputerMove(taskId, whole, {

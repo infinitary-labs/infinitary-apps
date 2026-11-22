@@ -79,7 +79,6 @@ public struct PhonePanelCards: Sendable, Equatable {
         return PhonePanelCardEntry.entryID(panel: panel.id, id: id)
     }
 
-    /// Takes one of `panel`'s cards off Home; an id that is not open does nothing.
     public mutating func close(panel: String, id: String) {
         entries.removeAll { $0.panel == panel && $0.id == id }
         unread.remove(PhonePanelCardEntry.entryID(panel: panel, id: id))

@@ -15,17 +15,12 @@
  * once and rests on its last frame.
  */
 
-/** The longest a GIF demo may play. */
 export const MAX_GIF_DEMO_SECONDS = 10;
-/** The most frames a second a GIF demo may play. */
 export const MAX_GIF_DEMO_FRAME_RATE = 10;
-/** A GIF demo's longer side, at most. */
 export const MAX_GIF_DEMO_LONG_SIDE = 1280;
-/** A GIF demo's shorter side, at most. */
 export const MAX_GIF_DEMO_SHORT_SIDE = 720;
 /** The largest GIF demo a card may play: the fallback is shorter and smaller than an MP4. */
 export const MAX_GIF_DEMO_BYTES = 8 * 1024 * 1024;
-/** The most frames a GIF demo may hold: its longest length at its highest frame rate. */
 export const MAX_GIF_DEMO_FRAMES = MAX_GIF_DEMO_SECONDS * MAX_GIF_DEMO_FRAME_RATE;
 /** A refusal's words for a GIF told to loop; a scripted stand-in recognizes them. */
 export const GIF_LOOP_WORDS = "carries a loop instruction";
@@ -43,7 +38,6 @@ export type DemoGif = {
   height: number;
   /** How long it plays once, as Chromium times its frames. */
   durationMs: number;
-  /** How many frames it holds. */
   frames: number;
 };
 
@@ -76,7 +70,6 @@ export function readDemoGif(bytes: Buffer): DemoGifRead {
   }
 }
 
-/** A walk over the file's bytes that refuses any read past its end. */
 class Reader {
   at = 0;
   readonly bytes: Buffer;
@@ -107,7 +100,6 @@ class Reader {
     this.at += count;
   }
 
-  /** A run of data sub-blocks to its zero terminator, each a slice of the file. */
   subBlocks(): Buffer[] {
     const blocks: Buffer[] = [];
     for (;;) {
@@ -120,7 +112,6 @@ class Reader {
   }
 }
 
-/** The bytes a color table takes, from a descriptor's packed field. */
 function colorTableBytes(packed: number): number {
   return packed & 0x80 ? 3 * (1 << ((packed & 0x07) + 1)) : 0;
 }

@@ -35,7 +35,6 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** The installed keys, drawn again at every install. */
 export function useInstalledKeymap(): KeymapSnapshot {
   return useSyncExternalStore(subscribe, installedKeymap, installedKeymap);
 }

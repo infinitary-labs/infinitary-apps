@@ -187,7 +187,6 @@ describe("the channel casks", () => {
       () =>
         renderCask(channel, { version, sha256, downloadUrl }, NOTICE);
     const alphaUrl = download("infinitary-alpha-v0.1.26-alpha.43", "0.1.26-alpha.43");
-    // Stable never carries an alpha version.
     expect(refused("stable", "0.1.26-alpha.43", alphaUrl)).toThrow(/not a stable version/);
     // Neither channel carries anything but X.Y.Z or X.Y.Z-alpha.N.
     for (const version of [
@@ -220,7 +219,6 @@ describe("the channel casks", () => {
       download("v0.1.25", "0.1.25"),
       download("other-tool-v0.1.25", "0.1.25"),
       download("infinitary-v0.1.24", "0.1.25"),
-      // A stable version under the alpha prefix.
       download("infinitary-alpha-v0.1.25", "0.1.25"),
       // Not a zip asset, or a path that leaves the release.
       "https://github.com/infinitary-labs/homebrew-tap/releases/download/infinitary-v0.1.25/Infinitary-0.1.25-universal.dmg",
@@ -229,7 +227,6 @@ describe("the channel casks", () => {
       expect(refused("stable", "0.1.25", url), url).toThrow(/public release asset/);
       expect(refused("alpha", "0.1.25", url), url).toThrow(/public release asset/);
     }
-    // An alpha version under the stable prefix.
     expect(
       refused(
         "alpha",
@@ -298,7 +295,6 @@ describe("the update targets writer", () => {
       advance(undefined, publication("stable", "0.1.26")).targets,
       publication("alpha", "0.1.27-alpha.43"),
     ).targets;
-    // A late, older alpha.
     expect(() => advance(withAlpha, publication("alpha", "0.1.27-alpha.42"))).toThrow(
       /alpha already carries 0.1.27-alpha.43, newer than 0.1.27-alpha.42/,
     );
@@ -306,7 +302,6 @@ describe("the update targets writer", () => {
     expect(() => advance(withAlpha, publication("alpha", "0.1.26-alpha.9"))).toThrow(
       /stable 0.1.26 is newer than alpha 0.1.26-alpha.9/,
     );
-    // A late, older stable.
     expect(() => advance(withAlpha, publication("stable", "0.1.25"))).toThrow(
       /stable already carries 0.1.26, newer than 0.1.25/,
     );
@@ -453,7 +448,6 @@ describe("the tap files of one publication", () => {
       "0.1.26-alpha.43",
     );
 
-    // An identical retry writes nothing at all.
     expect(
       tapFilesFor(alpha.targets, publication("alpha", "0.1.26-alpha.43"), NOTICE).files,
     ).toEqual({});
@@ -530,7 +524,6 @@ describe("the transition from the single stable cask", () => {
     expect(() =>
       advanceUpdateTargets(undefined, publication("alpha", "0.1.24-alpha.9"), legacy),
     ).toThrow(/already carries 0.1.24, newer than 0.1.24-alpha.9/);
-    // The same version, or a newer one, publishes; both channels when stable.
     expect(
       advanceUpdateTargets(undefined, publication("stable", "0.1.24"), legacy).changed,
     ).toEqual(["stable", "alpha"]);
@@ -548,7 +541,6 @@ describe("the transition from the single stable cask", () => {
 });
 
 describe("republishing the casks", () => {
-  /** The targets file a tap stores after these publications, as JSON. */
   const tapAfter = (...publications: Publication[]): unknown => {
     let current: unknown;
     for (const next of publications) {
@@ -653,7 +645,6 @@ describe("republishing the casks", () => {
       expect(() => republishCasks(current, { ...casks, stable: stableCask }, NOTICE)).toThrow(
         pattern,
       );
-    // Another version, other bytes, another download, or nothing readable.
     refused(
       renderCask(
         "stable",
@@ -712,7 +703,6 @@ describe("activating the alpha channel", () => {
     expect(alphaActivationProblem(undefined)).toMatch(
       /no infinitary-updates.json yet; a protected stable \(newer than 0.1.24\) has to be published first/,
     );
-    // A targets file with no stable target, or one whose stable predates the guard.
     expect(alphaActivationProblem(targetsAfter(publication("alpha", "0.1.25-alpha.3")))).toMatch(
       /names no stable target/,
     );
@@ -720,7 +710,6 @@ describe("activating the alpha channel", () => {
       /stable's target 0.1.24 predates the saved-data guard/,
     );
     expect(alphaActivationProblem({ schemaVersion: 1, targets: { beta: {} } })).toMatch(/invalid/);
-    // The bootstrap stable activates it, and later publications keep it so.
     expect(alphaActivationProblem(targetsAfter(publication("stable", "0.1.25")))).toBeNull();
     expect(
       alphaActivationProblem(

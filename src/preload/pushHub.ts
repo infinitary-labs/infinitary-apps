@@ -16,7 +16,6 @@ export type PushSource = {
   off(channel: string, handler: (event: unknown, raw: unknown) => void): void;
 };
 
-/** A payload the contract accepted, or nothing when it refused it. */
 export type Validated = { ok: true; value: unknown } | { ok: false };
 
 export type PushHub = {

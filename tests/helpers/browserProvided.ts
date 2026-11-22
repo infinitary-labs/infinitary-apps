@@ -32,19 +32,15 @@ export type StoryPush =
  * pushes between them in the order the core sent them.
  */
 export type CrewStory = {
-  /** The fresh home's board, with no crew. */
   fresh: TaskBoard;
   /** Sent as one crewmate goes out and goes idle. */
   arrive: StoryPush[];
   /** The board with that idle crewmate. */
   crewed: TaskBoard;
-  /** Sent as it is cancelled. */
   cancel: StoryPush[];
-  /** The board after, its task dropped. */
   dropped: TaskBoard;
 };
 
-/** The media a person's system sets for motion. */
 export type ReducedMotion = "reduce" | "no-preference";
 
 /** Where one layout probe box stands, in CSS pixels, and whether its control is gone (`layoutReadings`). */

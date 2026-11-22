@@ -172,7 +172,6 @@ test("the captain's Discard drops unmerged work and keeps its edits saved", asyn
     // The record closes first; the working copy is retired after it, and
     // only once its work is saved. Its removal is that retirement's end.
     await expect.poll(() => existsSync(worktreeDir)).toBe(false);
-    // The edits that were never merged are saved on the task's kept ref.
     expect(git("-C", repoDir, "show", `${keptRefFor("feedback")}:unlanded.txt`)).toBe(work);
 
     await launched.close();

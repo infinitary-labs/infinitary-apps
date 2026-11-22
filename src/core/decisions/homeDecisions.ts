@@ -35,7 +35,6 @@ export function startHomeDecisions(options: {
   >;
   vault: Pick<AccountVault, "runtimeFor" | "list" | "connectedSync" | "piModelRuntimes" | "renew">;
   baseRuntime: ModelRuntime;
-  /** The adapter's pools, its model lookup, its quota and its sessions. */
   adapted: Pick<
     AdaptedDecisionModelOptions,
     "availableModels" | "namedModels" | "capabilityFor" | "quotaModels" | "sessions" | "noteCutOff"

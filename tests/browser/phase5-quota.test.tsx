@@ -49,7 +49,6 @@ function account(
   };
 }
 
-/** The accounts the core lists, in the order they were added. */
 const ACCOUNTS: AccountView[] = [
   account(0, {
     id: CODEX_PERSONAL,
@@ -221,7 +220,6 @@ function answerModels(bridge: FakeBridge): void {
   });
 }
 
-/** The levels panel open on `label`. */
 const panelOf = (label: string) =>
   page.getByRole("complementary", { name: `${label} levels`, exact: true });
 
@@ -242,14 +240,12 @@ test("a model at the bottom of the shortest window can still be taken out of use
   const key = offeringKey(model);
   const rowIn = (slot: string) =>
     document.querySelector<HTMLElement>(`[data-slot-group="${slot}"] [data-model-row="${key}"]`);
-  // The Models board, unfolded.
   const models = page.getByRole("region", { name: "Models" });
   const head = models.getByRole("button", { name: /^Models/ });
   await expect.element(head).toBeVisible();
   if (head.element().getAttribute("aria-expanded") !== "true") await userEvent.click(head);
   await expect.element(head).toHaveAttribute("aria-expanded", "true");
 
-  // The shortest window the app allows, at today's width.
   await page.viewport(APP_WINDOW.width, SMALLEST_WINDOW.height);
   try {
     await expect.poll(() => rowIn("low")).not.toBeNull();
@@ -266,7 +262,6 @@ test("a model at the bottom of the shortest window can still be taken out of use
     );
     await expect.poll(() => rowIn("off")).not.toBeNull();
     await expect.poll(() => rowIn("low")).toBeNull();
-    // And back where it was, from the bottom edge again.
     rowIn("off")?.scrollIntoView({ block: "end" });
     await userEvent.click(
       panel.getByRole("checkbox", {

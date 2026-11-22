@@ -133,7 +133,7 @@ describe("the status command", () => {
     expect(statusText(result)).toContain(RUN_WORDS.updated[0]);
     expect(statSync(join(dir, RUN_LAST_STOP)).mode & 0o777).toBe(0o600);
     expect(() => statSync(join(dir, RUN_MARKER))).toThrow();
-    end(); // A second shutdown cannot replace the first reason.
+    end();
     expect(readRunStatus(dir).lastStop?.reason).toBe("updated");
   });
 

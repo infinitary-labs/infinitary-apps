@@ -325,7 +325,6 @@ export class TaskBrowsers {
     void this.keptGuard?.then((guard) => guard?.recheck?.());
   }
 
-  /** How many task browsers run now. */
   get openCount(): number {
     return this.browsers.size;
   }
@@ -551,8 +550,6 @@ export class TaskBrowsers {
       pages: () => this.queues.run(taskId, async () => this.held(taskId) ?? commands.pages(taskId)),
     };
   }
-
-  // ---- the handoff -------------------------------------------------------
 
   /**
    * The crewmate asks the captain to take over (docs/task-browser.md,
@@ -937,8 +934,6 @@ export class TaskBrowsers {
     );
   }
 
-  // ---- a page from the project -------------------------------------------
-
   /**
    * The captain's click on a page from the task's project
    * (docs/task-browser.md, "A page from the project"): the page opens in the
@@ -988,7 +983,6 @@ export class TaskBrowsers {
     });
   }
 
-  /** Serves a project folder, or nothing when the server could not start. */
   private async serveFolder(folder: string): Promise<ProjectServer | undefined> {
     try {
       return await (this.options.serve ?? serveProjectFolder)(folder);
@@ -997,7 +991,6 @@ export class TaskBrowsers {
     }
   }
 
-  /** Loads a project page in a browser the captain holds, serving its folder. */
   private async loadPage(
     taskId: string,
     browser: Browser,
@@ -1026,8 +1019,6 @@ export class TaskBrowsers {
     this.options.onChange?.(taskId);
     return { ok: true, handle: { session: this.session, generation: browser.generation } };
   }
-
-  // ---- signed-in sites (`savedSignInGrants.ts`) ----------------------------
 
   /** The signed-in sites this computer keeps, by site, as Settings lists them. */
   savedSignIns(): SavedSignIn[] {
@@ -1181,8 +1172,6 @@ export class TaskBrowsers {
     this.keptGuard = undefined;
     void guard?.then((handle) => handle?.close());
   }
-
-  // ---- lifecycle ---------------------------------------------------------
 
   /**
    * A fresh browser for the task, about to load `url`; `opened` is its
@@ -1882,8 +1871,6 @@ export class TaskBrowsers {
       this.options.note?.(taskId, `its browser stopped after ${minutes} minutes unused`);
     });
   }
-
-  // ---- helpers -----------------------------------------------------------
 
   /** The size a task's pages lay out at: its maximized view's room, or the check's own. */
   private pageSize(taskId: string): HostBrowserViewport {

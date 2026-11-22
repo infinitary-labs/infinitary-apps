@@ -16,7 +16,6 @@ import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type NamedModel, namedModelWords } from "./namedModel";
 import type { KindWords, TypedWake, WakeFacts, WakeKeyedTask, WakeTask } from "./wakes";
 
-/** The facts of starting work. */
 export type StartFacts =
   | {
       /**
@@ -264,7 +263,6 @@ export function computerLeftOutWake(
   };
 }
 
-/** One reason a computer was left out, as the first mate reads it. */
 function leftOutReasonWords(reason: LeftOutReason, name: string, system?: DeviceSystem): string {
   switch (reason.kind) {
     case "chip":
@@ -278,7 +276,6 @@ function leftOutReasonWords(reason: LeftOutReason, name: string, system?: Device
   }
 }
 
-/** Starting work, worded. */
 export const START_WORDS: KindWords<StartFacts> = {
   "program-bound": (facts) =>
     facts.to === "crewmate"

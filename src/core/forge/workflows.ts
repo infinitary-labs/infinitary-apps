@@ -44,7 +44,6 @@ export type WorkflowArtifact = {
   expiresAt: string | null;
 };
 
-/** One job as the short read prints it: number, name, state, and where a failure failed. */
 export type WorkflowJobLine = {
   id: number;
   name: string;

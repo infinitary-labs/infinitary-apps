@@ -40,7 +40,6 @@ import { dropViews } from "./views";
 // without losing a card.
 
 type CardColumnCase = {
-  /** The describe block the test sits in, when it has one. */
   describe?: string;
   it: string;
   /** The newest migration the older database ran. */
@@ -54,7 +53,6 @@ type CardColumnCase = {
   everyVersion?: false;
   /** What the older card reads as once upgraded. */
   legacy: (old: Card, store: CardStore) => void;
-  /** Saves the new value through today's writer. */
   write: (old: Card, store: CardStore, db: AppDatabase) => void;
   /** False to read the value back on the same connection instead of after a restart. */
   restart?: false;
@@ -86,7 +84,6 @@ const LETTER = {
   computer: "device-mac-mini",
 };
 
-/** Drops these card columns, newest last, one statement each. */
 const dropCardColumns = (...columns: string[]) =>
   columns.map((column) => `ALTER TABLE cards DROP COLUMN ${column};\n`).join("");
 
@@ -149,7 +146,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     added: "pictures_json",
     card: olderCard("m"),
     id: "card-old",
-    // A card from before the column shows no pictures.
     legacy: (old) => expect(old).not.toHaveProperty("pictures"),
     write: (old, store) => store.upsert({ ...old, id: "card-new", pictures: PICTURES }),
     restart: false,
@@ -206,7 +202,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     added: "width",
     card: olderCard("m"),
     id: "card-old",
-    // A card from before the column is a regular card.
     legacy: (old) => expect(old).not.toHaveProperty("width"),
     write: (old, store) => store.upsert({ ...old, id: "card-wide", width: "wide" }),
     readBack: (store) => expect(store.get("card-wide")?.width).toBe("wide"),
@@ -220,7 +215,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     added: "model",
     card: olderCard("Build it · GPT-6 Sol"),
     id: "card-old",
-    // A card written before the column keeps its meta as it was, and names no model.
     legacy: (old) => {
       expect(old.meta).toBe("Build it · GPT-6 Sol");
       expect(old).not.toHaveProperty("model");
@@ -239,7 +233,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     added: "attachment_json",
     card: "INSERT INTO cards (id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('card-old', 'card', 'crewmate', 30, 'A card', 'crewmate 1', 'Body.', '[]', 'ready', 1)",
     id: "card-old",
-    // A card written before the column points at nothing.
     legacy: (old) => expect(old.attachment).toBeUndefined(),
     write: (_old, _store, db) =>
       db
@@ -263,7 +256,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     card: `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, body, actions_json, status, created_at)
            VALUES ('card-old', 't1', 'card', 'crewmate', 30, 'Before', 'footer · on Mac mini', 'GPT-6 Sol', '<p>Old.</p>', '[]', 'ready', 1)`,
     id: "card-old",
-    // A card written before the column keeps its meta as it was, and names no place.
     legacy: (old) => {
       expect(old.meta).toBe("footer · on Mac mini");
       expect(old).not.toHaveProperty("place");
@@ -288,7 +280,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     added: "risk_json",
     card: olderCard("footer"),
     id: "card-old",
-    // A card written before the column carries no risk.
     legacy: (old) => expect(old).not.toHaveProperty("risk"),
     write: (old, store) => store.upsert({ ...old, id: "card-new", risk: RISK, createdAt: 3 }),
     readBack: (store) => expect(store.get("card-new")?.risk).toEqual(RISK),
@@ -304,7 +295,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
     card: `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at)
            VALUES ('card-old', NULL, 'card', 'firstmate', 15, 'Before', 'firstmate', '<p>Old.</p>', '[]', 'ready', 1)`,
     id: "card-old",
-    // A card written before the column takes replies as its author allows.
     legacy: (old) => expect(old).not.toHaveProperty("replies"),
     write: (old, store) =>
       store.upsert({
@@ -376,7 +366,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
         status: "ready",
         title: answer.title,
       });
-      // A revision without the mark removes it.
       store.upsert(answer);
       expect(store.get(answer.id)).not.toHaveProperty("answering");
     },
@@ -416,7 +405,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
         status: "ready",
         title: consent.title,
       });
-      // A revision without the declaration removes it.
       store.upsert(consent);
       expect(store.get(consent.id)).not.toHaveProperty("continues");
     },
@@ -451,7 +439,6 @@ const CARD_COLUMNS: CardColumnCase[] = [
           waitsFor: ["INF-2779"],
         },
       ]);
-      // A revision whose story lists none draws none.
       store.upsert(offer);
       expect(store.get(offer.id)).not.toHaveProperty("afterMerge");
     },
@@ -525,12 +512,10 @@ function checkCardColumn(row: CardColumnCase): void {
   let db = upgraded;
   if (row.restart !== false) {
     upgraded.close();
-    // An app restart reads the value back from disk.
     db = openDatabase(dir);
   }
   row.readBack(new CardStore(db), old);
 
-  // Reversible: the older shape comes back with every card.
   if (row.dropViews) dropViews(db);
   db.exec(row.reverse);
   expect(columnNames(db, "cards")).toEqual(columns);

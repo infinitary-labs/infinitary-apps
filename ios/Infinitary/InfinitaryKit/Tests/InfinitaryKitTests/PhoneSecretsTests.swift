@@ -199,13 +199,11 @@ import Testing
         #expect(secrets.standing == .none)
         #expect(secrets.problem == ApprovalKey.notKept)
 
-        // Still locked: the tap says so, and nothing is written or offered.
         await secrets.setUp(label: "iPhone")
         #expect(secrets.problem == ApprovalKey.notKept)
         #expect(keychain.writes == writes)
         #expect(home.offered.isEmpty)
 
-        // Unlocked: the tap reads the kept key, and the computer still holds it.
         keychain.reading = errSecSuccess
         await secrets.setUp(label: "iPhone")
         #expect(secrets.problem == nil)
@@ -260,7 +258,6 @@ import Testing
         #expect(secrets.key == nil)
         #expect(secrets.problem == nil, "A damaged record is not a phone to unlock")
 
-        // Turning on Approves secret uses refuses the damaged record: nothing is written or offered.
         await secrets.setUp(label: "iPhone")
         #expect(secrets.standing == .damaged)
         #expect(secrets.problem == nil)
@@ -290,7 +287,6 @@ import Testing
         await secrets.read()
         #expect(secrets.standing == .damaged)
 
-        // A write that fails leaves the damaged bytes, and Settings still offers the same choice.
         keychain.writing = errSecInteractionNotAllowed
         await secrets.setUpAgain(label: "iPhone")
         #expect(secrets.problem == ApprovalKey.notKept)

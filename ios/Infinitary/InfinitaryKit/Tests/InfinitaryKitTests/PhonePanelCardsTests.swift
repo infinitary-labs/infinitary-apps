@@ -48,7 +48,6 @@ struct PhonePanelCardsTests {
         #expect(cards.entries.count == 1)
         #expect(cards.entries.first?.revision == 2)
         #expect(cards.entries.first?.data == .string("again"))
-        // A name whose view the panel does not have puts up nothing.
         #expect(cards.emitNamed(panel, name: "stray", data: nil) == nil)
     }
 

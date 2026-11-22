@@ -29,7 +29,6 @@ const LOCK_FILE = "running.lock";
 /** The folders this process holds now, so it cannot take one twice. */
 const heldHere = new Set<string>();
 
-/** Another process holds the folder. */
 export class FolderBusyError extends Error {
   constructor(readonly pid: number) {
     super(`Process ${pid} already works from this folder.`);
@@ -37,7 +36,6 @@ export class FolderBusyError extends Error {
   }
 }
 
-/** Whether a process with this number is running now. */
 export function processAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -94,7 +92,6 @@ export function holderAlive(
   return !predatesBoot(path) && alive(pid);
 }
 
-/** The process that holds the folder now, or null when none does. */
 export function folderHolder(dir: string, alive = processAlive): number | null {
   const path = join(dir, LOCK_FILE);
   const pid = holderIn(path);

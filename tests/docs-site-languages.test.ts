@@ -26,7 +26,6 @@ import {
 const site = readSiteLanguages();
 const [tag, language] = [...site.languages][0] ?? [];
 
-/** The site with the first shipped language's pages changed. */
 function withPages(change: (pages: Map<string, string>) => void): SiteLanguages {
   if (!tag || !language) throw new Error("the site ships no translated language");
   const pages = new Map(language.pages);
@@ -34,7 +33,6 @@ function withPages(change: (pages: Map<string, string>) => void): SiteLanguages 
   return { ...site, languages: new Map(site.languages).set(tag, { ...language, pages }) };
 }
 
-/** The site with one translated page of the first shipped language rewritten. */
 function withPage(name: string, edit: (text: string) => string): SiteLanguages {
   return withPages((pages) => {
     const text = pages.get(name);
@@ -43,7 +41,6 @@ function withPage(name: string, edit: (text: string) => string): SiteLanguages {
   });
 }
 
-/** A translated page, written by a person, that holds what the pattern matches. */
 function pageWith(pattern: RegExp): string {
   const name = [...(language?.pages ?? [])].find(
     ([page, text]) => !GENERATED_PAGES.has(page) && pattern.test(text),
@@ -52,7 +49,6 @@ function pageWith(pattern: RegExp): string {
   return name;
 }
 
-/** The site's problems that name a translated page. */
 function problemsOf(changed: SiteLanguages, name: string): string[] {
   return languageProblems(changed).filter((problem) =>
     problem.includes(`${language?.segment}/${name}`),

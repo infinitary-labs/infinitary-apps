@@ -40,7 +40,6 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
   private asked = false;
   /** A result arrived: the client exits on its own once its input ends. */
   private answered = false;
-  /** The request in flight, as it streams. */
   private readonly request: RequestReading = {};
   private markClosed!: () => void;
   private readonly closedPromise = new Promise<void>((resolve) => {
@@ -252,7 +251,6 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     this.rejectTurn(new Error("Claude stopped before it answered."));
   }
 
-  /** The store is free: the lease is back, and the session is closed. */
   private release(): void {
     this.releaseLease();
     this.markClosed();
@@ -270,7 +268,6 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     turn?.reject(caught instanceof Error ? caught : new Error(String(caught)));
   }
 
-  /** The one answer: its events, the closing words, and the client let go. */
   private answer(result: ClaudeNormalizeResult, text: string | undefined): void {
     // A result the stopped client still delivers after a cut-short answer
     // was read is not a second answer.

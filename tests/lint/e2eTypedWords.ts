@@ -254,7 +254,6 @@ function standInCopy(
   return undefined;
 }
 
-/** A test's, step's or group's own name: the first argument of `test(…)` and its kin. */
 function isTitle(node: ts.Node): boolean {
   const call = node.parent;
   return (
@@ -298,7 +297,6 @@ function unwrap(node: ts.Expression): ts.Expression {
   return inner;
 }
 
-/** A literal bound to a name: `const NAME = "…"` or `{ name: "…" }`. */
 function boundLiteral(node: ts.Node): { name: string; literal: ts.Expression } | undefined {
   if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name)) {
     const literal = unwrap(node.initializer);
@@ -313,7 +311,6 @@ function boundLiteral(node: ts.Node): { name: string; literal: ts.Expression } |
   return undefined;
 }
 
-/** A literal's typed text, in pieces: a template's parts around its holes, a regex's words. */
 function typedParts(node: ts.Node): string[] | undefined {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node.text];
   if (ts.isTemplateExpression(node))
@@ -368,7 +365,6 @@ function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => /\p{L}/u.test(word)).length;
 }
 
-/** Whitespace collapsed and the punctuation at either end dropped. */
 function trimPhrase(text: string): string {
   return text.replace(/\s+/g, " ").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 }

@@ -62,7 +62,6 @@ it("keeps streamed reply pieces and tool events out of the numbering, so a short
   for (const view of [current, older, phone])
     await view.push((push) => push.seq === cursor.seq + 2);
   const streamed = Array.from({ length: 4 }, () => turn).flat();
-  // A current view reads them live, outside the numbering.
   expect(current.lives).toEqual(streamed.map((payload) => ({ channel: "inf:event", payload })));
   expect(current.pushes.map((push) => push.seq)).toEqual([
     cursor.seq,
@@ -123,7 +122,6 @@ it("sends the computers' readings outside the numbering, and none to a phone", a
 
   for (const view of [current, older, phone])
     await view.push((push) => push.seq === cursor.seq + 1);
-  // A current view reads them live, outside the numbering.
   expect(current.lives).toEqual(
     readings.map((payload) => ({ channel: "inf:computers:resources", payload })),
   );

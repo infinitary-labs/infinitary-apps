@@ -198,7 +198,6 @@ describe("a put-off choice the app keeps (Not until…)", () => {
       await h.tick();
     }
     expect(idleWakes(h.ops)).toEqual([]);
-    // The task reads as waiting on another task's work.
     expect(h.supervisor.postures.workPosture(h.tasks.get(h.taskId) as TaskRecord)).toMatchObject({
       state: "idle",
       reason: "dependency",
@@ -224,7 +223,6 @@ describe("a put-off choice the app keeps (Not until…)", () => {
     await h.tick();
     expect(h.rules.list()).toEqual([]);
 
-    // Its answer now is an ordinary choice.
     h.supervisor.cardActions.act(card.id, "yes");
     await settle();
     expect(h.shown()).toBeUndefined();

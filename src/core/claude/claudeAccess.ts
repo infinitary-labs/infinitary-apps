@@ -95,7 +95,6 @@ export async function assertClaudeWorkSettings(
   }
 }
 
-/** One tier's command and address, each only when it is a non-empty string. */
 function tierKeys(settings: unknown): { command?: string; address?: string } {
   if (!settings || typeof settings !== "object") return {};
   const record = settings as Record<string, unknown>;

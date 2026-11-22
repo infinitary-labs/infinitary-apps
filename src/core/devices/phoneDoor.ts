@@ -76,7 +76,6 @@ export class PhoneDoor {
     private readonly server: Server,
   ) {}
 
-  /** Empty the door's folder, listen on a loopback port and write its two files. */
   static async open(options: PhoneDoorOptions): Promise<PhoneDoor> {
     const { dir } = options;
     rmSync(dir, { recursive: true, force: true });

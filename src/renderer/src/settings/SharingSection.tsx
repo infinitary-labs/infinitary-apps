@@ -72,7 +72,6 @@ export function sharingRowDescription(view: SharingView, channel: SharingChannel
   return m.settingsSharingContributionDescription();
 }
 
-/** A channel the person turned on and has not yet seen the payload of. */
 export function channelsAwaitingView(view: SharingView): SharingChannel[] {
   return CHANNELS.filter(
     (channel) =>
@@ -85,7 +84,6 @@ export function channelsAwaitingView(view: SharingView): SharingChannel[] {
 /** Everything the section paints, from the values alone (tested as markup). */
 export type SharingSectionViewProps = {
   view: SharingView | null;
-  /** Why a switch's last change was refused, beside that switch. */
   refusal?: { channel: SharingChannel; message: string } | null;
   /** A change is still being saved: the switches wait for its answer. */
   saving?: boolean;

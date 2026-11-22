@@ -66,7 +66,6 @@ export type TaskIntakeHost = {
   runtime(taskId: string): TaskRuntime | undefined;
   /** Let go of a crewmate's session (`CrewSessions.releaseSession`). */
   releaseSession(runtime: TaskRuntime): void;
-  /** The supervisor stops tracking a task's crewmate. */
   forgetRuntime(taskId: string): void;
   /** The interrupt request or outcome's timeline event. */
   recordInterrupt(
@@ -79,7 +78,6 @@ export type TaskIntakeHost = {
   personalFacts(): PersonalBriefFacts | undefined;
   /** A task's delivery posture: whether it delivers through a pull request. */
   taskDelivery(taskId: string): RepoDelivery | undefined;
-  /** The live review task of a builder, if one is open. */
   openReviewOf(builderId: string): TaskRecord | undefined;
   /** Start one task: worktree, routing, account, session, first turn. */
   startTask(spec: {
@@ -113,7 +111,6 @@ export type TaskIntakeHost = {
   announceReach(taskId: string): void;
   /** A program being dropped stops at once and never runs again. */
   haltProgram(programId: string): void;
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
   /** Run the ready sweep now. */
   sweepGates(now: number): Promise<void>;
@@ -353,7 +350,6 @@ export class TaskIntake {
           );
     };
     const taskId = randomUUID().slice(0, 8);
-    // With no title of its own the task is named by the host, from its goal.
     const title = input.title.trim() || shortTaskTitle(intent.goal || "Task");
     // Where the captain said it runs is checked before a row exists
     // (docs/helper.md, "A task's own Runs on").
@@ -664,7 +660,6 @@ export class TaskIntake {
     return status ? status.dirty : null;
   }
 
-  /** The personal workspace as a repo (Step 4), or a loud refusal when this build has none. */
   private personalRepo(): RepoView {
     const personal = this.options.personal;
     if (!personal) {
@@ -1001,7 +996,6 @@ export class TaskIntake {
     void this.host.sweepGates(this.host.now());
   }
 
-  /** A task by id or key, or a loud error naming the parameter at fault. */
   resolveTaskRef(ref: string, param: string): TaskRecord {
     const record = this.options.tasks.resolve(ref);
     if (!record) {

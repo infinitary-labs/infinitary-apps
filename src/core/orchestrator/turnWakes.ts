@@ -13,7 +13,6 @@ import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
 import { keptReportWords, sameAccountWords } from "./outageWakes";
 import type { KindWords, TypedWake, WakeTask } from "./wakes";
 
-/** The facts of a crewmate's turns. */
 export type TurnFacts =
   | {
       kind: "possible-repetition";
@@ -46,7 +45,6 @@ export type TurnFacts =
       error: string;
     }
   | {
-      /** A task closed as failed. */
       kind: "task-failed";
       task: WakeTask;
       error: string;
@@ -209,12 +207,10 @@ function callsList(calls: readonly OpenCallFact[]): string {
   return calls.map((call) => `${call.tool} since ${isoOf(call.since)}`).join(", ");
 }
 
-/** The open calls a wake names, as one sentence, or nothing when none is open. */
 function openCallsText(calls: readonly OpenCallFact[] | undefined): string {
   return calls?.length ? ` It is inside ${callsList(calls)}.` : "";
 }
 
-/** A crewmate's turns, worded. */
 export const TURN_WORDS: KindWords<TurnFacts> = {
   "turn-failed": (facts) =>
     `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}.${keptReportWords(facts.keptReport)}${sameAccountWords(facts.sameAccount)} The crewmate is still steerable; you can retry, steer, or interrupt it.`,

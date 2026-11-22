@@ -87,7 +87,6 @@ describe("the pairing link", () => {
     expect(parsePairingLink(linkDialingFirst(text, "192.168.1.20")).also).toEqual([
       "100.101.102.103:47623",
     ]);
-    // No host, one that is no dial address, or a link that reaches its home another way: unchanged.
     expect(linkDialingFirst(text, null)).toBe(text);
     expect(linkDialingFirst(text, "bad_host")).toBe(text);
     const overSsh = buildPairingLink({ ...link, kind: "work", at: "127.0.0.1:1", via: "ssh" });

@@ -116,7 +116,6 @@ export function FirstRunGate() {
     };
   }, [shown, waits, refresh]);
 
-  // A provider that signs in either way asks which first; one way goes at once.
   const [methodChoice, setMethodChoice] = useState<ProviderView | null>(null);
   const connect = (provider: ProviderView) => {
     const methods = connectMethods(provider);

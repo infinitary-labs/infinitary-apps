@@ -35,7 +35,6 @@ export function runName(at: Date, pid: number): string {
     .replace(/\.\d+Z$/, "Z")}-${pid}`;
 }
 
-/** The runner's pid a run's name carries. */
 export function runPid(name: string): number {
   return Number(/-(\d+)$/.exec(name)?.[1]);
 }

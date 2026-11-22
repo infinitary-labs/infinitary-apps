@@ -270,7 +270,6 @@ export function requestLinkAtRepo(repo: ForgeRepo, link: string | undefined): bo
   return !!host && !!owner && !!name && requestAtRepo(repo, { host, owner, name });
 }
 
-/** Where a repository lives, as the seam needs it. */
 export function forgeLocationOf(repo: ForgeRepo): ForgeLocation {
   const parsed = forgeOf(repo.origin);
   return {

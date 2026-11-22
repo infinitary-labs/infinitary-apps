@@ -68,7 +68,6 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
   return { state: "idle", reason: "inactive" };
 }
 
-/** A change's place in its batch while it waits there, read from the batch check its reading carries. */
 function pendingBatch(record: TaskRecord): WorkPosture["batch"] {
   const delivery = record.delivery;
   const head = delivery?.headSha;
@@ -84,7 +83,6 @@ function pendingBatch(record: TaskRecord): WorkPosture["batch"] {
 /** What a posture reads of the supervisor beyond its options. */
 export type WorkPostureHost = {
   now(): number;
-  /** The idle ladder's typed facts for a task (`IdleLadder.witnesses`). */
   witnesses: IdleLadder["witnesses"];
   /** The account and cut-off a task's lane is held on (`IdleLadder.heldBy`). */
   heldBy: IdleLadder["heldBy"];

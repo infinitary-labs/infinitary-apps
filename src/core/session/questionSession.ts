@@ -21,7 +21,6 @@ export function questionSessionSpec(input: {
   binding: SessionBinding;
   /** The shopped cheap model (LOW slot first, never premium). */
   model: { provider: string; id: string };
-  /** The question's own system instruction. */
   instruction: string;
   /**
    * A JSON answer (a program's ask(), INF-799): its length is the answer's

@@ -20,7 +20,6 @@ const sha256 = (text: string) => createHash("sha256").update(text).digest("hex")
 
 type Entry = { type: string; id: string; parentId: string | null; message?: unknown };
 
-/** Message payloads on the branch that ends at `entryId`, oldest first. */
 function messageBranch(byId: Map<string, Entry>, entryId: string | null): unknown[] {
   const branch: unknown[] = [];
   for (
@@ -104,7 +103,6 @@ describe("served state (R2 provenance)", () => {
       const promptEntry = byId.get(second?.prompt?.entryId ?? "");
       expect(messageText(promptEntry)).toBe("turn two: report our position");
       expect(promptEntry?.parentId).toBe(second?.prompt?.parentEntryId);
-      // The prefix is exactly the messages on the branch before the prompt.
       const branch = messageBranch(byId, second?.prompt?.parentEntryId ?? null);
       expect(second?.prompt?.prefix?.messageCount).toBe(branch.length);
       expect(branch.length).toBeGreaterThanOrEqual(2);

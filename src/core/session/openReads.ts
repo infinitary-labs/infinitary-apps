@@ -73,7 +73,6 @@ export class OpenReads {
     private readonly mark: () => number = now,
   ) {}
 
-  /** The tools as the conversation serves them: each app read answerable here. */
   serve(tools: readonly BoundTool[]): BoundTool[] {
     return tools.map((tool) =>
       isAppRead(tool.name)

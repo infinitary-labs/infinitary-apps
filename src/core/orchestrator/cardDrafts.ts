@@ -29,7 +29,6 @@ const ANSWER = "answer:";
 const WORDS = "words";
 const NOTES = "notes";
 
-/** The draft the rows of one card make. */
 function draftOf(cardId: string, lifecycle: string | null, rows: readonly Row[]): CardDraft {
   const draft: CardDraft = { ...emptyDraft(cardId), ...(lifecycle ? { lifecycle } : {}) };
   for (const row of rows) {
@@ -42,7 +41,6 @@ function draftOf(cardId: string, lifecycle: string | null, rows: readonly Row[])
   return draft;
 }
 
-/** What one change asks to set, by part. */
 function partsOf(change: CardDraftChange): Map<string, string> {
   const parts = new Map<string, string>();
   for (const answer of change.answers ?? [])

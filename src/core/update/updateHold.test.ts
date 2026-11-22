@@ -18,7 +18,6 @@ describe("the crew's saved work, held for the window that installs an update", (
     };
   }
 
-  /** A crew with one running turn, which saves when the test says so. */
   function crew() {
     let finish: (outcome: "saved" | "withdrawn") => void = () => {};
     const released = vi.fn();
@@ -41,7 +40,6 @@ describe("the crew's saved work, held for the window that installs an update", (
     const hold = createUpdateHold(work, replaced);
     const asker = window();
     const saving = hold("save", asker.viewer);
-    // While it saves, the window reads which tasks it waits for.
     expect(await hold("status", asker.viewer)).toEqual({
       saved: false,
       work: { state: "saving", tasks: ["Fix the flaky test"] },

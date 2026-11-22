@@ -267,7 +267,6 @@ test("a press the window hears of only after the card appeared keeps the Tasks p
     await expect.poll(async () => (await held()).answered).toBe(true);
     expect((await held()).released).toBe(true);
     await expect(shownCard(page, DECISION)).toBeVisible();
-    // The card appeared without taking the focus the press holds in the Tasks panel.
     expect(await focusedRegion(page)).toBe("panel:now");
 
     // The press ends in its click, which opens the idle task's record.

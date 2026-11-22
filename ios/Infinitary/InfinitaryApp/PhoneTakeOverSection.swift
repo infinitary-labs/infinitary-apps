@@ -110,7 +110,6 @@ struct PhoneTakeOverSection: View {
         }
     }
 
-    /// Reads that computer, and again while a takeover runs there, until it answered it.
     private func readUntilAnswered(_ standby: PhoneStandby) async {
         while !Task.isCancelled {
             offers[standby.deviceID] = await read(standby)

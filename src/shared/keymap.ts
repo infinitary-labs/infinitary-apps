@@ -56,7 +56,6 @@ const bindingSchema = chordSchema.extend({
   when: z.literal("not-typing").optional(),
 });
 
-/** The most keys one command keeps. */
 export const MAX_KEYS_PER_COMMAND = 8;
 
 /** The commands whose keys a person changed, each with the keys that replace its own. */
@@ -90,7 +89,6 @@ export const savedKeymapSchema = z.strictObject({
 });
 export type SavedKeymap = z.infer<typeof savedKeymapSchema>;
 
-/** A preset with nothing changed. */
 export function presetKeymap(preset: PresetId): SavedKeymap {
   return { version: 2, preset, keys: {}, kept: {} };
 }
@@ -117,7 +115,6 @@ export const RETIRED_COMMANDS: Readonly<Record<string, PanelCommandId>> = {
   "tasks.board-move": "panel:now/board-move",
 };
 
-/** Changed keys with every retired command's under the command that took it over. */
 function carriedOver(changed: SavedKeymap["keys"]): SavedKeymap["keys"] {
   const keys: SavedKeymap["keys"] = {};
   for (const [id, bindings] of Object.entries(changed)) {
@@ -280,7 +277,6 @@ const panelCommandSchema = z.object({
   own: z.literal(true).optional(),
 });
 
-/** The panels' commands the window is told about, at most this many in all. */
 export const MAX_PANEL_COMMANDS = 256;
 
 export const panelCommandsSchema = z.array(panelCommandSchema).max(MAX_PANEL_COMMANDS);
@@ -318,7 +314,6 @@ export const DEFAULT_KEYMAP_SNAPSHOT: KeymapSnapshot = {
   panels: [],
 };
 
-/** Whether a command is one this window runs: the catalog's, or a panel's it has now. */
 function isKnown(id: string, panels: readonly PanelCommand[]): id is AnyCommandId {
   return commandEntry(id, panels) !== undefined;
 }
@@ -334,7 +329,6 @@ export function unknownCommands(
   return Object.keys(saved.keys).filter((id) => !isKnown(id, panels));
 }
 
-/** Whether a person changed a command's keys. */
 export function isChanged(saved: SavedKeymap, id: AnyCommandId): boolean {
   return Object.hasOwn(saved.keys, id);
 }
@@ -364,8 +358,6 @@ function ownKeys(
     ? entryOf(id, panels, system).keys
     : presetKeys(saved.preset, id, system, prefixOf(saved));
 }
-
-// --- Which keys a command may take ---------------------------------------
 
 const LETTER = /^[a-z]$/;
 const FUNCTION_KEY = /^F([1-9]|1[0-9]|2[0-4])$/;
@@ -419,7 +411,6 @@ const PLATFORM_KEYS: readonly ReservedKey[] = [
   { chord: { key: "3", meta: true, shift: true }, job: "takes a screenshot" },
   { chord: { key: "4", meta: true, shift: true }, job: "takes a screenshot" },
   { chord: { key: "5", meta: true, shift: true }, job: "takes a screenshot" },
-  // A text field's own Control keys on a Mac.
   { chord: { key: "a", ctrl: true }, job: "moves to the start of the line", field: true },
   { chord: { key: "e", ctrl: true }, job: "moves to the end of the line", field: true },
   { chord: { key: "b", ctrl: true }, job: "moves back a character", field: true },
@@ -460,7 +451,6 @@ const CTRL_SYSTEM_KEYS: readonly ReservedKey[] = [
   })),
 ];
 
-/** The keys a system and the app's native items keep for themselves. */
 function reservedKeys(system: KeySystem): readonly ReservedKey[] {
   return system === "mac" ? PLATFORM_KEYS : CTRL_SYSTEM_KEYS;
 }
@@ -517,7 +507,6 @@ const TEXT_MOVES: readonly { chord: KeyChord; command: AnyCommandId }[] = [
   { chord: { key: "v", ctrl: true }, command: "move.page-down" },
 ];
 
-/** Whether a chord is the Mac text key that does what this movement command does. */
 function isTextMove(chord: KeyChord, id: AnyCommandId | undefined, system: KeySystem): boolean {
   return (
     system === "mac" &&
@@ -666,11 +655,8 @@ export function bindingWarning(
   return null;
 }
 
-// --- Where two commands' keys clash ---------------------------------------
-
 const CONTEXTS: readonly KeyContext[] = [{}, { field: "main-message" }, { field: "reply" }];
 
-/** Whether two scopes share some place a key is pressed. */
 export function scopesOverlap(a: CommandScope, b: CommandScope): boolean {
   return CONTEXTS.some((context) => scopeIsActive(a, context) && scopeIsActive(b, context));
 }
@@ -750,8 +736,6 @@ export function clashWords(
       ? `${keys} runs “${theirs.label}” ${where}, and starts with this key`
       : `${keys} runs “${theirs.label}” ${where}, so it can't start two keys`;
 }
-
-// --- The installed map -----------------------------------------------------
 
 type Taken = { id: AnyCommandId; scope: CommandScope; binding: KeyBinding };
 
@@ -902,7 +886,6 @@ export function keymapRefusal(
     : `“${label}” can't keep ${bindingLabel(moved.binding, system)}`;
 }
 
-/** The installed map for what is saved, with the panels' commands the window has now. */
 export function keymapSnapshot(
   read: SavedKeymapRead,
   version: number,
@@ -944,7 +927,6 @@ export function withKeys(
     : { ...saved, keys: { ...rest, [id]: keys.map(plainBinding) } };
 }
 
-/** A command back to its own keys. */
 export function withCatalogKeys(saved: SavedKeymap, id: AnyCommandId): SavedKeymap {
   const { [id]: _previous, ...rest } = saved.keys;
   return { ...saved, keys: rest };
@@ -959,7 +941,6 @@ export function withAllCatalogKeys(
   saved: SavedKeymap,
   panels: readonly PanelCommand[] = [],
 ): SavedKeymap {
-  // On tmux its prefix goes back to ⌃B with the rest.
   const { prefix, ...rest } = saved;
   return {
     ...rest,

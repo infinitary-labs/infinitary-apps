@@ -125,7 +125,6 @@ export function IntelligenceBoard({
   );
 }
 
-/** One account the Firstmate account picker lists, and why it cannot be picked when it cannot. */
 export type FirstmateAccountChoice = { id: string; label: string; unavailable?: string };
 
 /**

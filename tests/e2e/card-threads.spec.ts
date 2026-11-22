@@ -137,7 +137,6 @@ test.afterAll(async () => {
   await launched.close();
 });
 
-/** The second line of a reply typed over two. */
 const MULTILINE_REPLY_TAIL = "only if it passes on the second try";
 
 /**
@@ -151,7 +150,6 @@ function askedUnder(title: string): RegExp {
   return new RegExp(`${literal(before)}.+${literal(after)}`);
 }
 
-/** The captain's own input under the shown card. */
 const replyBox = (page: LaunchedApp["page"]) => cardReply(page).field;
 
 async function sendReply(page: LaunchedApp["page"], text: string): Promise<void> {
@@ -209,7 +207,6 @@ test("a captain reply revises the card in place, or is answered in the thread", 
   const cardLeft = await watchCardLeaves(page);
   await sendReply(page, THREAD_REVISE_REPLY);
 
-  // The first sent message opens the thread beside the card.
   const thread = shownEntry(page).locator("[data-card-thread]");
   await expect(thread).toBeVisible({ timeout: 30_000 });
   expect(await cardLeft()).toBe(false);
@@ -221,7 +218,6 @@ test("a captain reply revises the card in place, or is answered in the thread", 
   await expect(shownCard(page, THREAD_CARD_REVISED_TITLE)).toBeVisible({ timeout: 30_000 });
   await expect(shownCard(page, THREAD_CARD_TITLE)).toHaveCount(0);
   await expect(thread.getByText(`revised: ${THREAD_CARD_REVISED_TITLE}`)).toBeVisible();
-  // The revision carries the author's short answer, after the revised line.
   await expect(thread.getByText(THREAD_REVISE_ANSWER)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Next card" })).toHaveCount(0);
 
@@ -308,7 +304,6 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   ).toBeVisible();
   await reply.fill("a draft that waits");
 
-  // ⌘\ again puts it beside the card, with the draft where it was.
   await pressWindowKey(app, "\\", ["meta"]);
   await expect(thread.getByText(THREAD_ACK_TEXT)).toBeVisible();
   await expect(cue).toHaveCount(0);
@@ -333,7 +328,6 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await page.keyboard.press("Enter");
   await expect(thread).toBeVisible();
   await expect(collapse).toBeFocused();
-  // Resting there, the collapse names its key; ⌘\ takes the label with it.
   const label = page.locator("[data-icon-label]").filter({ hasText: "Collapse thread" });
   await expect(label).toBeVisible();
   await expect(label).toContainText(hintOf("cards.thread"));
@@ -342,7 +336,6 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await expect(cue).toBeFocused();
   await expect(label).toBeHidden();
 
-  // Command search lists it and runs it the same way.
   await runFromSearch(app, page, "cards.thread");
   await expect(thread).toBeVisible();
   await expect(collapse).toBeFocused();
@@ -350,7 +343,6 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await expect(thread).toHaveCount(0);
   await expect(cue).toBeFocused();
 
-  // The author's next line opens the collapsed thread by itself.
   mockProvider?.releaseThreadAnswer();
   await expect(thread.getByText(`revised: ${THREAD_ACK_REVISED_TITLE}`)).toBeVisible({
     timeout: 30_000,
@@ -358,7 +350,6 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await expect(shownCard(page, THREAD_ACK_REVISED_TITLE)).toBeVisible();
   await waitForFirstmateIdle(page);
 
-  // So does the captain's own reply, sent from the collapsed card.
   await pressWindowKey(app, "\\", ["meta"]);
   await expect(cue).toBeVisible();
   await expect(reply).toHaveValue("a draft that waits");
@@ -428,8 +419,6 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
   const cardId = (await cardReply(page).row.getAttribute("data-card-reply")) ?? "";
   expect(cardId).toBeTruthy();
 
-  // Past a reply's limit the row says so, and neither Enter nor the send
-  // control sends: the draft stays and the thread is still empty.
   const box = replyBox(page);
   await box.fill("x".repeat(CARD_REPLY_MAX_CHARS + 1));
   const limit = page.locator("[data-card-reply-limit]");
@@ -462,7 +451,6 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
     "",
   );
   await expect(thread.getByText(`revised: ${FM_THREAD_CARD_REVISED_TITLE}`)).toBeVisible();
-  // The revision carries the Firstmate's short answer, after the revised line.
   await expect(thread.getByText(FM_THREAD_REVISE_ANSWER)).toBeVisible({ timeout: 30_000 });
   expect(
     (await page.evaluate((id) => window.infinitary.cards.thread(id), cardId)).messages
@@ -507,12 +495,10 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
         ),
       ),
   ).toBe(true);
-  // Rendered with its lines: the message's own text breaks where it was typed.
   const multiLine = thread
     .locator('[data-thread-message="captain"]')
     .filter({ hasText: MULTILINE_REPLY_TAIL });
   expect(await multiLine.innerText()).toContain(`${THREAD_PROSE_REPLY}\n${MULTILINE_REPLY_TAIL}`);
-  // The settings sit under his words, collapsed until he opens them.
   const settings = multiLine.locator("[data-thread-settings-toggle]");
   await expect(settings).toHaveAttribute("aria-expanded", "false");
   await expect(multiLine.locator("[data-thread-settings]")).toHaveCount(0);
@@ -548,8 +534,6 @@ test("a card reply takes the shell keys and undoes typing by the run, but never 
   await reply.field.press("Control+P");
   await expect(reply.field).toHaveValue("");
   await reply.field.pressSequentially("merge it now");
-  // Cmd+Z takes back what was typed, not its last character, and
-  // Cmd+Shift+Z puts it back.
   await reply.field.press("Meta+Z");
   await expect(reply.field).toHaveValue("");
   await reply.field.press("Meta+Shift+Z");
@@ -648,8 +632,6 @@ test("a reply keeps the card shown with its thread while another card waits; an 
   const askedBefore = await asked.count();
   const thread = shownEntry(page).locator("[data-card-thread]");
   await sendReply(page, THREAD_ACK_REPLY);
-  // One feed line while the crewmate works; the card stays shown with its
-  // thread beside it, and the pager still counts both cards.
   await expect(asked).toHaveCount(askedBefore + 1, { timeout: 20_000 });
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
   await expect(thread.getByText(THREAD_ACK_REPLY)).toBeVisible();
@@ -657,7 +639,6 @@ test("a reply keeps the card shown with its thread while another card waits; an 
   await expect(newBadge).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("reply-kept-card.png") });
 
-  // The acknowledgement is on the record and the crewmate is still at work.
   await expect.poll(() => mockProvider?.heldThreadAnswers() ?? 0, { timeout: 30_000 }).toBe(1);
   const said = await page.evaluate(
     async (id) =>
@@ -672,12 +653,10 @@ test("a reply keeps the card shown with its thread while another card waits; an 
     ["crewmate", THREAD_ACK_TEXT],
   ]);
   await windowCaughtUp(page, cardId);
-  // The acknowledgement moves nothing and marks nothing new.
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
   await expect(pager(page, 2)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
 
-  // A reload keeps the replied-under card on the stack, in its place.
   await page.reload();
   await page.waitForLoadState("domcontentloaded");
   await expect(page.getByRole("textbox", { name: "Task prompt" })).toBeVisible({ timeout: 20_000 });
@@ -718,13 +697,11 @@ test("INF-1879: a lone replied-under card stays open while put away and returns 
   );
   expect(taskId).toBeTruthy();
 
-  // The lone card stays while its crewmate works on the answer.
   await sendReply(page, THREAD_ACK_REPLY);
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible({ timeout: 20_000 });
   await expect.poll(() => mockProvider?.heldThreadAnswers() ?? 0, { timeout: 30_000 }).toBe(1);
   await windowCaughtUp(page, cardId);
 
-  // Put aside preserves the unanswered thread instead of withdrawing its card.
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
   await cardLeave(page, shownEntry(page).locator("[data-card-pair]")).click();
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeHidden();
@@ -914,7 +891,6 @@ test("ready waiting follows reachable choices through a reply, reload and return
     await page.reload();
     await expect(promptInput(page)).toBeVisible();
     await expect.poll(() => nowRowGroup(page, key)).toBe("working");
-    // The waiting card stayed on the stage, showing what it showed at the reply.
     await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
     // A ready return waits behind the record, rather than stealing its place.
     await pressRow(page, key);

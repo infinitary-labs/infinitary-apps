@@ -191,7 +191,6 @@ export type TaskFactsInput = TaskStatusInput & { waits?: readonly TaskWait[] } &
     browser?: TaskBrowserFact;
   };
 
-/** Why this model, from the routing decision's reason and its saved comparison. */
 function modelWhyOf(
   task: Pick<TaskFactsInput, "modelReason" | "modelChoice">,
   modelName: (model: string) => string,

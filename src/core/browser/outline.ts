@@ -62,7 +62,6 @@ export type RefEntry = { ref: string; target: number; role: string; name: string
 /** A ref as the outline writes it: its book, then its control, as in `g3:e5`. */
 export const REF_PATTERN = "g\\d+:e\\d+";
 
-/** A ref's book and control, or nothing when the words are not a whole ref. */
 export function parseRef(ref: string): { book: number; control: number } | undefined {
   const match = /^g(\d+):e(\d+)$/.exec(ref.trim().toLowerCase());
   return match ? { book: Number(match[1]), control: Number(match[2]) } : undefined;
@@ -85,7 +84,6 @@ export class RefBook {
 
   constructor(private readonly mint: () => number) {}
 
-  /** This book's number, once a read has named a ref from it. */
   get number(): number | undefined {
     return this.book;
   }
@@ -145,16 +143,13 @@ export type RefStanding =
   | { kind: "earlier-page" }
   /** A page from before the captain last handed this browser back. */
   | { kind: "handed-back" }
-  /** A browser this task had before, which has stopped. */
   | { kind: "earlier-browser" }
   /** No book this browser's task has had. */
   | { kind: "unknown" };
 
-/** What a refused ref from a page that moved or closed says after the ref. */
 export const REF_FROM_EARLIER_PAGE =
   "is from a page this browser showed before it moved to a new address or closed";
 
-/** What a refused ref from before the captain handed the browser back says after the ref. */
 export const REF_FROM_BEFORE_HANDBACK =
   "is from before the captain handed this browser back, and refs from then are gone";
 
@@ -274,10 +269,8 @@ const NAME_MAX = TEXT_SHOWN;
 /** Chromium draws a password field's value as bullets; such a value is never read out. */
 const HIDDEN_VALUE = /^•+$/;
 
-/** What a field whose value is never read out says in its place. */
 export const HIDDEN_VALUE_WORDS = "(value hidden)";
 
-/** The line for an editable part of the page whose text is not read out. */
 const HIDDEN_TEXT_LINE = `editable text ${HIDDEN_VALUE_WORDS}`;
 
 function flat(text: string): string {
@@ -289,7 +282,6 @@ function squash(text: string): string {
   return line.length > NAME_MAX ? `${cutText(line, NAME_MAX - 1)}…` : line;
 }
 
-/** Whether `squash` cut this text. */
 function cutShort(text: string): boolean {
   return flat(text).length > NAME_MAX;
 }
@@ -502,7 +494,6 @@ const HUMAN_CHECKS: readonly { host: RegExp; path?: RegExp }[] = [
   { host: /(^|\.)captcha-delivery\.com$/ },
 ];
 
-/** A frame's host, from its document's address; nothing for one with no web origin. */
 function frameHost(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -513,7 +504,6 @@ function frameHost(url: string | undefined): string | undefined {
   }
 }
 
-/** The host of the human check a frame's address belongs to, or nothing. */
 export function humanCheckOf(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -528,7 +518,6 @@ export function humanCheckOf(url: string | undefined): string | undefined {
   }
 }
 
-/** What a frame that is a human check says after its site. */
 export const HUMAN_CHECK_WORDS = "a human check, which only the captain answers";
 
 /** One line of the outline, and what a window needs to know of it (`window.ts`). */
@@ -550,7 +539,6 @@ export type OutlineLine = {
 export type Outline = {
   /** Every line of the outline, joined: the whole page as the crewmate reads it. */
   text: string;
-  /** Every line of the outline, in order, from the page's top. */
   lines: OutlineLine[];
   /** Every piece of text the page shows, for a wait on some words to appear. */
   words: string;

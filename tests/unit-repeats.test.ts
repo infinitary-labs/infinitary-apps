@@ -347,7 +347,6 @@ describe("the pull request's direct-reader round", () => {
     expect(runLinuxReach(files, run, report, root)).toBe(0);
     expect(run).toHaveBeenCalledOnce();
     expect(report).not.toHaveBeenCalled();
-    // The report's folder goes with the round.
     expect(existsSync(dirname(reportFile))).toBe(false);
   });
 

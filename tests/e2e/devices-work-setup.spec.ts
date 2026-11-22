@@ -97,13 +97,11 @@ test("a Mac whose background was refused says why on both computers, and Try aga
   await expect(notice.getByRole("button")).toHaveCount(2);
   await expect(tryAgain).toBeVisible();
 
-  // The home's row says the same reason instead of a bare out of reach, with Fix it.
   await openDevices(pro.page);
   const row = await selectDevice(pro.page, deviceId);
   await expect(row.locator('[data-device-work-setup="background-off"]')).toBeVisible();
   await expect(row.locator(`[data-device-fix-work="${deviceId}"]`)).toBeVisible();
 
-  // Try again, from the keyboard: the second start runs, and the work reaches the home.
   await pressKey(tryAgain, "Enter");
   await expect(air.page.locator("[data-work-setup-notice]")).toHaveCount(0);
   await expect(row.locator("[data-device-work-setup]")).toHaveCount(0);

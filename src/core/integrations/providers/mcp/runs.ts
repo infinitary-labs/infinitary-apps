@@ -41,7 +41,6 @@ const KEPT = /^\{secret:([^{}]+)\}$/;
  */
 export const STAYS_ON_LINE: ReadonlySet<string> = new Set(["PATH"]);
 
-/** The reference a NAME={secret:REF} value names, or undefined for a plain value. */
 function keptRef(value: string): string | undefined {
   const ref = KEPT.exec(value)?.[1];
   return ref !== undefined && secretRefSchema.safeParse(ref).success ? ref : undefined;

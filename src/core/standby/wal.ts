@@ -36,7 +36,6 @@ export type WalPlace = {
   bigEndian: boolean;
 };
 
-/** What a reading found since its place. */
 export type WalReading =
   | {
       kind: "frames";
@@ -51,7 +50,6 @@ export type WalReading =
   /** There is no log, and none was read before. */
   | { kind: "none" };
 
-/** SQLite's log checksum over `data`, continuing from `sum`. */
 export function walChecksum(
   data: Buffer,
   sum: [number, number],
@@ -68,7 +66,6 @@ export function walChecksum(
   return [s0, s1];
 }
 
-/** The log's header as a place at its first frame, or null when it is not a valid header. */
 function headerPlace(header: Buffer): WalPlace | null {
   if (header.length < HEADER_BYTES) return null;
   const magic = header.readUInt32BE(0);

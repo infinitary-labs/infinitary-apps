@@ -4,7 +4,6 @@ import { answering } from "../providerRequest";
 /** The captain's question under the stuck alert, in their own words (INF-1670). */
 export const STUCK_ALERT_QUESTION = "is it stuck because the secret PR hasn't landed yet?";
 
-/** The first mate's answer, the reply it writes on the alert. */
 export const STUCK_ALERT_ANSWER =
   "Yes. It waits on the secrets change, which waits on your merge of its pull request.";
 

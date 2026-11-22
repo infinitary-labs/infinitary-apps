@@ -59,7 +59,6 @@ export function finishAnthropicStream(
   res.end();
 }
 
-/** A text block's events, at `index`. */
 export function writeAnthropicText(res: ServerResponse, index: number, text: string): void {
   writeAnthropicEvent(res, "content_block_start", {
     type: "content_block_start",
@@ -93,7 +92,6 @@ export function writeAnthropicToolUse(
   writeAnthropicEvent(res, "content_block_stop", { type: "content_block_stop", index });
 }
 
-/** An API error reply, the way the Messages API answers one. */
 export function writeAnthropicError(
   res: ServerResponse,
   status: number,

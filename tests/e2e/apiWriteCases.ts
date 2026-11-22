@@ -55,7 +55,6 @@ export function mergeWriteCases(kind: "github" | "gitlab", project: string): Git
 }
 
 /** A scripted crewmate prepares a merge past the branch rules, then asks for it on a card. */
-/** The check that failed on the release pull request, which the merge skips. */
 export const SKIP_RULES_FAILED_CHECK = "PR must be raised via no-mistakes";
 export const SKIP_RULES_MERGE_MARKER = "prepare the release merge past the rules";
 export const SKIP_RULES_CARD_TITLE = "Merge the release past its rules";
@@ -84,7 +83,6 @@ export const PAGED_REPOSITORY = { fullName: "octo/website", id: 77 } as const;
  * once the captain's click sent it, asks again with the same id.
  */
 export const WRITE_ASK_MARKER = "ask before writing";
-/** The same, spawned as a task that only answers, in its project. */
 export const WRITE_ASK_ANSWER_MARKER = "answer, then ask before writing";
 export const WRITE_ASK_CARD_TITLE = "Send this write for me?";
 /** What the crewmate hears once the captain's click sent it. */

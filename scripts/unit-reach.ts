@@ -156,7 +156,6 @@ export function directUnitReach(
     const file = resolved === undefined ? undefined : relative(root, resolved);
     return file && !file.startsWith("..") ? file : undefined;
   };
-  /** Import, re-export, `import()` and `require` specifiers, as written. */
   const specifiers = (node: ts.Node): string | undefined => {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&

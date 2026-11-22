@@ -256,7 +256,6 @@ struct PhoneProjectView: View {
     }
 }
 
-/// One choice's mark in a list where exactly one is chosen.
 private struct PhoneRadio: View {
     let on: Bool
     var body: some View {

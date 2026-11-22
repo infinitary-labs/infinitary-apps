@@ -18,6 +18,7 @@ Two switches on Settings → General → Sharing are the only switches that send
 
 Whatever the switches say, the update check an installed copy already makes carries a yes/no active mark ("The update check's active mark" below), and the section says so in a line under them.
 The one other thing that reaches a service of ours is a card notification for a paired phone that turned them on, sealed under that phone's key so we cannot read it, through the push relay (`docs/phone-push.md`, and the draft terms' section 2).
+That relay is the one service of ours a person's work passes through, and it cannot open what it forwards.
 
 ### The policy: no personal data, no user content
 
@@ -180,7 +181,7 @@ The words telemetry, analytics and the vendor's name reach no user surface; the 
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The two switches (roadmap 1.4, captain lock F4c; Diagnostics on by default and set to the event set with an anonymous install ID by the captain on 2026-09-22; `docs/sharing.md` is the one home): what may leave this machine FOR US is Settings → General → Sharing, no feature gated on either, beside the update check's yes/no active mark ("The update check's active mark" above).
   Diagnostics sends ONLY the events `src/shared/diagnostics.ts` declares (`app_launch`, `main_agent_turn_end`/`_failed`, the `ftue_*` first-run funnel, each first-run step once per install), each with allowlisted enum/boolean/number fields, the app version and the anonymous install ID (a random UUID, dropped when the switch goes off and minted anew when it comes back; Umami 3.1 makes it the session).

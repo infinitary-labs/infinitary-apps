@@ -164,7 +164,7 @@ Unit coverage: `taskTools.test.ts` (a planned step's constraint and delivery not
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Sequences (captain-approved 2026-09-24, task `fm3000-opinionated-workflows-s1`; `docs/sequences.md` is the one home): opinionated ways of working (plan before an unclear feature, reproduce before a fix) are GUIDANCE the first mate follows, never a runner.
   The app-managed `userData/fleet/personal/.claude/skills/sequences/SKILL.md` is refreshed from the packaged seed on updates (`src/core/personal/sequencesSkill.ts`), served as Pi's appended prompt section after the byte-stable prompt and re-served only when it changed, at an idle boundary; its sha rides the `fm-contract` entry as `instructions_sha` while `prompt_sha` stays the prompt's alone.

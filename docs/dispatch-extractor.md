@@ -171,7 +171,7 @@ The replay engine keeps its own tool sets, which the same change updates (`docs/
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The dispatch extractor (PoC-2 capture C5, `scripts/extract-dispatch-corpus.ts`, `docs/dispatch-extractor.md`) is an OFFLINE dev tool over data the app already writes: Pi session JSONL joined to `tasks`/`repos`/`cards`, emitting the six-way classify-first turns as a weakly-labelled JSONL corpus, each stamped with the contract `{ version, prompt_sha }` the rolling session recorded (`fm-contract` custom entry, null = v1 and stays null - a historical input is never re-badged with the version this checkout serves, which the manifest reports separately as `exporter_contract_version`).
   No schema change, no product surface, nothing leaves the box.

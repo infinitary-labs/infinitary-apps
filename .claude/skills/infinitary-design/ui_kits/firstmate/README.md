@@ -4,7 +4,7 @@ The Electron desktop app, as a click-through mock.
 One window, four states:
 
 - **Null state** (`Home`) — the first mate big and centered, one pill input below. ~90% empty space by design.
-- **Listening** — click the input (stands in for holding right ⌥).
+- **Listening** — press right ⌥ (a real right-⌥ keydown, with the skill directory served over HTTP), or click the input, which stands in for holding it.
   The first mate breathes, input becomes a waveform with abandon / accept / submit.
 - **Working** — submit.
   The first mate docks top-right (small, energetic), the card stack takes center, crew strip wakes up bottom-left.

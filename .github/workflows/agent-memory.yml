@@ -1,0 +1,42 @@
+name: agent-memory
+
+# The size check on AGENTS.md's warning line (docs/testing.md, "The size
+# check on AGENTS.md"). `pnpm check` refuses the file past 1,500 words; this
+# check fails past the 1,200-word warning line, after a change reaches main.
+# Nothing waits on it: no pull request starts it, and the batch, main's
+# release check, the alpha and every release never read it. A red run on
+# main starts one trim task through an Automation rule on "A workflow run
+# fails".
+
+on:
+  push:
+    branches: [main]
+    # The file, or the check itself.
+    paths:
+      - AGENTS.md
+      - scripts/agent-memory.ts
+      - .github/workflows/agent-memory.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each push reads main afresh; a newer push replaces an older reading.
+concurrency:
+  group: agent-memory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agent-memory:
+    name: ${{ github.event_name == 'push' && 'Main push' || 'Manual request' }} · AGENTS.md warning line
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      # Plain Node type stripping: the script needs no install.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: node scripts/agent-memory.ts --warn

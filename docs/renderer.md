@@ -46,7 +46,7 @@ The original before/after measurements and pictures were local evidence and are 
 
 ## Notes
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Live mic RMS is a module ref (`src/renderer/src/voice/liveVoiceLevel.ts`), not Zustand.
   Streaming card bodies are subscribed only by `CardLayer` in `src/renderer/src/app/stage/CardLayer.tsx`, so they do not re-render `Firstmate` or `VoiceInput`.

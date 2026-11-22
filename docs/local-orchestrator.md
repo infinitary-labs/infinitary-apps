@@ -105,7 +105,7 @@ The section's words are the dev checkout's, outside the plain-language vocabular
 
 ## Notes moved from AGENTS.md
 
-Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - The dev-only local-model orchestrator (roadmap 1.7, captain decisions 2026-09-21; `docs/local-orchestrator.md` is the one home): an UNPACKAGED checkout runs the first mate - only the first mate - on a named OpenAI-compatible endpoint (Ollama or its equivalent), so a local model can be felt in the orchestrator's chair before any collected label is evaluated.
   Two ways make the same choice: Settings → General → "Local model (dev checkout)" (a switch, the endpoint, the model - the row persists across launches of the checkout and speaks when it is on) and the `INFINITARY_LOCAL_ORCHESTRATOR_URL` / `_MODEL` variables for a headless run.

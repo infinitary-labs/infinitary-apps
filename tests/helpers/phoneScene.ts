@@ -243,9 +243,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           const nodes = runningParts(reading.parts.filter((part) => local.has(part.id)));
           return {
             computerID,
-            places: Object.fromEntries(
-              layoutProgram(nodes, { x: 0, y: 0 }, Number.POSITIVE_INFINITY).places,
-            ),
+            places: Object.fromEntries(layoutProgram(nodes, { x: 0, y: 0 }).places),
           };
         });
         const ordinary = crew.filter((id) => !liveParts.includes(id));

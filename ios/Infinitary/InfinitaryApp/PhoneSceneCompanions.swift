@@ -55,14 +55,10 @@ enum PhoneSceneCompanions {
                 (s * sin(incline), -c * sin(incline), cos(incline)))
     }
 
-    /// INF-1532, the captain's choice A: the full radius, or the largest smaller one whose whole circle stays
-    /// within `reach` of the computer's center around a blocker at `point`, so a waiter near the edge keeps
-    /// circling on a tighter circle instead of leaving it. Zero when the blocker itself is past the reach.
-    static func radius(orbit: PhoneSceneRoster.Orbit, around point: CGPoint, reach: CGSize, share: Double) -> Double {
-        let (radial, normal) = axes(orbit)
-        let spanX = hypot(radial.0, normal.0), spanY = hypot(radial.1, normal.1)
-        let full = CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * share
-        return max(0, min(full, (reach.width - abs(point.x)) / spanX, (reach.height - abs(point.y)) / spanY))
+    /// The full radius at the computer's share: no bound holds a circle in, so it may pass beyond the
+    /// scene's edge or over another computer's crew (INF-5726).
+    static func radius(share: Double) -> Double {
+        CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * share
     }
 
     static func offset(_ cue: Cue, orbit: PhoneSceneRoster.Orbit, time: Double, settled: Bool, radius: Double) -> (point: CGPoint, z: Double) {

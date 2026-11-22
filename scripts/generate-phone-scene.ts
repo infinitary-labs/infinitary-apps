@@ -92,12 +92,12 @@ try {
     departureIndex: (shown: Array<{ id: string }>, unread: readonly string[], action: "depart", neighbours: readonly string[]) => number;
     neighboursOf: (ids: readonly string[], left: string) => string[];
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
-  const { SCENE_REACH_PX, satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
+  const { satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
       orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: Object.fromEntries(Object.entries(CONSTELLATION).filter(([, value]) => typeof value === "number")),
-      firstmateID: FIRSTMATE_SESSION_ID, dependency: { ...DEPENDENCY_VISUAL, sceneReachPx: SCENE_REACH_PX, phase: satellitePhase(0, 1, 0, true) },
+      firstmateID: FIRSTMATE_SESSION_ID, dependency: { ...DEPENDENCY_VISUAL, phase: satellitePhase(0, 1, 0, true) },
       targets: FM_STATES, durations: EMOTE_DURATION_MS, fidgets: FIDGET_DURATION_MS,
       solids: TIER_SOLIDS, gemWires: GEM_WIRES, planes: CROWDED_PLANES,
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,

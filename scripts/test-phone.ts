@@ -12,7 +12,7 @@ import { capturePhoneIdleTimeout, capturePhoneKeyboardTimeout, phoneLaunchOwner,
 import { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
 import { capturePhoneWebStacks } from "../tests/helpers/phoneWebStacks.ts";
 import { libraryPhotoAdded, photosOpened } from "../tests/helpers/phonePhotos.ts";
-import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
+import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, phoneTouchDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
@@ -276,6 +276,15 @@ const recording = {
   pickerPreview: async (since: number) => {
     if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
     return keyboard.preview(since);
+  },
+  // INF-6074: whether the system's keyboard took back the caret a text field of the app took after the key the runner
+  // pressed at `since`, read from the same renewed subscription and, when it holds no proof, the kept log.
+  caretOutcome: async (since: number) => {
+    if (!simulator || !keyboard) throw new Error("No owned simulator keyboard observer exists");
+    const [owned, observer] = [simulator, keyboard];
+    const deadline = phoneTouchDeadline();
+    const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
+    return observer.caret(phoneApplicationPid(services, phoneBundle), since, deadline);
   },
   keyboardReady: async (chord: PhoneChord) => {
     if (!simulator || !keyboard) throw new Error("No owned simulator keyboard observer exists");

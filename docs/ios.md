@@ -1245,6 +1245,11 @@ Subscription renewal happens only at the explicit launch boundary, never as a ti
 An evidence-writer failure stops the observer, rejects readiness and waits for both output streams before simulator cleanup.
 An app-side command list is not that acknowledgement; a missing witness fails before sending the chord, without a delay, another priming attempt or a repeated chord.
 For Return, the driver checks the router's carriage-return registration but supplies newline to XCTest: Xcode 26.4 emits the physical Return key for newline and no key for its Return constant.
+A key that puts the caret in a text field can lose it again on a starved simulator: the field's keyboard comes up slowly, the app's connection to the system's keyboard arbiter fails, and UIKit resigns the field while XCTest still waits for the app to go idle after the key (INF-6074).
+The phone puts an empty task search away when its caret goes, so `talk-tasks` then finds no search after Find a task.
+Only when the app's own log proves that does the part open the search again by pulling the list down and put the caret back with one tap (the captain's choice "Check only"); anything else fails the part, and the key is never pressed a second time.
+The proof is the test home's `caret-outcome`: UIKit's keyboard scene line for a text field becoming the responder after the key, then the arbiter's failed connection and its order to resign, with no text field taking the caret after them.
+It reads them from the same subscription and, when that holds no proof, from the kept log by `phoneTouchDeadline`.
 Every tap a native journey sends, on an element or a point, goes through `tapOnPhone`, the one way a journey sends a tap again besides the photo pick below (INF-1477, the captain's "Allow a proven second tap").
 The tap check (`scripts/phone-taps.ts`, in `pnpm check`) refuses a plain XCTest `.tap()` anywhere in the UI tests but inside `tapOnPhone` itself (INF-2485).
 A swipe, a drag or a key is sent once, as before.

@@ -187,8 +187,20 @@ extension PhoneJourney {
         XCTAssertTrue(search.waitForPresence(timeout: 10))
         tapOnPhone(app.buttons["close-task-search"])
         XCTAssertTrue(search.waitForAbsence(timeout: 10))
+        // The runner's and the app's log records share the simulator's clock; the key goes after this.
+        let pressed = Date().timeIntervalSince1970 * 1000
         try await pressPhoneKey("f", modifiers: [.command, .shift], in: app)
-        XCTAssertTrue(search.waitForPresence(timeout: 10))
+        if !search.waitForPresence(timeout: 10) {
+            // INF-6074 (the captain's choice "Check only"): on a starved simulator the system's keyboard can take back the
+            // caret Find a task put in the search while XCTest waits for the app after the key, and the phone puts an empty
+            // search away when its caret goes. Only the app's own log proving that opens the search again, by the same
+            // pull, and puts the caret back once; the key is never pressed a second time.
+            let proof = try XCTUnwrap(phoneCaretTakenBack(since: pressed),
+                "Find a task did not open the search, and the log shows no caret the system took back")
+            print("The system took back the search's caret: \(proof)")
+            app.scrollViews["tasks-list"].swipeDown()
+            focusForPhoneTyping(search, in: app)
+        }
         search.typeText("harbour")
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         // A search keeps the groups and opens them, as the Mac's does.

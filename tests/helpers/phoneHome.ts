@@ -67,6 +67,7 @@ import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
+  PhoneCaretOutcome,
   PhoneChord,
   PhoneDisplayReport,
   PhoneKeyOutcome,
@@ -144,6 +145,8 @@ export async function startPhoneHome(
     keyboardBeforeLaunch?(): Promise<{ generation: number }>;
     keyboardReady?(chord: PhoneChord): Promise<PhoneKeyWitness>;
     touchOutcome?(since: number): Promise<PhoneTouchOutcome>;
+    // INF-6074: whether the system's keyboard took back the caret a text field of the app took since `since`.
+    caretOutcome?(since: number): Promise<PhoneCaretOutcome>;
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
     // INF-4794: a push the stand-in relay hands the part's simulator, as Apple would deliver it.
     push?(payload: Record<string, unknown>): Promise<void>;
@@ -774,6 +777,20 @@ export async function startPhoneHome(
             throw new Error("A touch request must name when its tap began");
           result = await controls.touchOutcome(since);
           observations.push({ check: "touch-outcome", result });
+          break;
+        }
+        case "POST caret-outcome": {
+          if (!controls?.caretOutcome) throw new Error("No simulator caret observer is available");
+          let body = "";
+          for await (const chunk of request) {
+            body += chunk.toString();
+            if (body.length > 1024) throw new Error("A caret request is too large");
+          }
+          const { since } = JSON.parse(body);
+          if (typeof since !== "number" || !Number.isFinite(since))
+            throw new Error("A caret request must name when its key was pressed");
+          result = await controls.caretOutcome(since);
+          observations.push({ check: "caret-outcome", result });
           break;
         }
         case "POST picker-preview": {

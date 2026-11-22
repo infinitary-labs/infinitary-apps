@@ -1,6 +1,8 @@
 {
   "commandAllowanceRecheck": "Verificar a franquia de novo",
   "commandAllowanceRecheckWords": "cota, atualizar, uso, limite, conta, trocar",
+  "commandAmbientStyle": "Escolher a música ambiente",
+  "commandAmbientStyleWords": "música, estilo, lofi, som, ambiente, escolher, trocar",
   "commandAmbientToggle": "Tocar ou pausar a música ambiente",
   "commandAmbientToggleWords": "música, lofi, som, ambiente, parar",
   "commandAutomationPauseAll": "Pausar todas as automações",

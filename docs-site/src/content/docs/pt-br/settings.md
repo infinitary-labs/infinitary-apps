@@ -1,5 +1,5 @@
 ---
-source: bf8e88fb9d4b4300
+source: ae7178f2ee99eec5
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -90,7 +90,8 @@ Ela fica desligada até você ligá-la, e **Volume** define o quanto ela toca al
 
 Enquanto ela está ligada, um botão de som fica logo antes de **Ajustes**, no topo da janela.
 Pressione-o para pausar ou retomar.
-A busca de comandos também tem **Tocar ou pausar a música ambiente**.
+Deixe o ponteiro sobre ele e ele mostra o nome da música que está tocando; deixe-o sobre o nome, ou pressione o nome, para escolher outro estilo na lista que aparece abaixo.
+A busca de comandos também tem **Tocar ou pausar a música ambiente** e **Escolher a música ambiente**.
 
 ## Manuais {#runbooks}
 

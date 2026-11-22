@@ -2,6 +2,7 @@
   "shellAmbientPause": "暫停環境音樂",
   "shellAmbientPlay": "播放環境音樂",
   "shellAmbientQuiet": "說話時靜音",
+  "shellAmbientStyleNamed": "風格：{name}",
   "shellCardFoldPanels": "摺疊面板",
   "shellCardMateAnswering": "你的大副正在這張卡片上回覆",
   "shellCardNotesFirst": "請先把筆記當作回覆送出",

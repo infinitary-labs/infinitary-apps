@@ -2,6 +2,7 @@
   "shellAmbientPause": "Pausar música ambiente",
   "shellAmbientPlay": "Reproduzir música ambiente",
   "shellAmbientQuiet": "Em silêncio enquanto você fala",
+  "shellAmbientStyleNamed": "Estilo: {name}",
   "shellCardFoldPanels": "Recolher painéis",
   "shellCardMateAnswering": "Seu imediato está respondendo neste cartão",
   "shellCardNotesFirst": "Envie as notas como resposta primeiro",

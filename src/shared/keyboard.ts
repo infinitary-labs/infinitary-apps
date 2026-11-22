@@ -1198,6 +1198,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandAmbientToggleWords());
     },
   },
+  // The sound button's style list (docs/ambient-music.md), open on the
+  // chosen style; it turns the music on first if it was off. No default key.
+  "ambient.style": {
+    get label() {
+      return m.commandAmbientStyle();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandAmbientStyleWords());
+    },
+  },
   // Tokens or estimated dollars, everywhere in Usage at once; it opens
   // Usage, so the switch is seen, and the core remembers the choice.
   "usage.unit": {

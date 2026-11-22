@@ -1,6 +1,8 @@
 {
   "commandAllowanceRecheck": "重新檢查額度",
   "commandAllowanceRecheckWords": "額度, 重新整理, 用量, 上限, 帳號, 切換",
+  "commandAmbientStyle": "選擇環境音樂",
+  "commandAmbientStyleWords": "音樂, 風格, lofi, 聲音, 氛圍, 選擇, 更換",
   "commandAmbientToggle": "播放或暫停環境音樂",
   "commandAmbientToggleWords": "音樂, lofi, 聲音, 背景音, 停止",
   "commandAutomationPauseAll": "暫停所有自動化",

@@ -89,7 +89,8 @@ It is off until you turn it on, and **Volume** sets how loud it plays.
 
 While it is on, a sound button sits just before **Settings** at the top of the window.
 Press it to pause or resume.
-Command search has **Play or pause ambient music** too.
+Rest the pointer on it and it names the music that is playing; rest on the name, or press it, to pick another style from the list below it.
+Command search has **Play or pause ambient music** and **Choose ambient music** too.
 
 ## Runbooks
 

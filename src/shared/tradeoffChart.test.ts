@@ -1,4 +1,4 @@
-import { parseDocument } from "htmlparser2";
+import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
 import { cardBodyMarkup } from "./cardBodyMarkup";
 import { tradeoffProblem, tradeoffTables, withTradeoffCharts } from "./tradeoffChart";
@@ -108,6 +108,27 @@ describe("a review question's tradeoff table", () => {
     expect(html).toContain(
       '<span data-inf-tradeoff-words>Keep only pages the site sent you through, not ones you opened <span class="inf-muted">medium</span></span>',
     );
+  });
+
+  it("stands outside an option's flex row, so the chart keeps the question's width", () => {
+    // INF-6099's review card wrote each option as a control and a label
+    // naming it in a div.inf-row; the chart drawn inside the first row was
+    // squeezed beside it to about 115 px, its words broken a letter or two a line.
+    const rows = `<div class="inf-row"><input type="radio" id="via-as-built" name="via" value="as-built" required data-inf-current><label for="via-as-built">Keep every page you open while you hold control <span class="inf-muted">no further change</span></label></div>
+<div class="inf-row"><input type="radio" id="via-redirects" name="via" value="redirects-only" required data-inf-recommended><label for="via-redirects">Keep only pages the site sent you through, not ones you opened <span class="inf-muted">medium</span></label></div>
+<div class="inf-row"><input type="radio" id="via-site" name="via" value="site-only" required><label for="via-site">Keep no extra pages, only the site itself <span class="inf-muted">small</span></label></div>
+<div class="inf-row"><label><input type="radio" name="via" value="something-else" data-inf-write-in> Something else</label></div>`;
+    for (const table of [TWO, THREE]) {
+      const html = withTradeoffCharts(question(table).replace(OPTIONS, rows));
+      const [chart] = DomUtils.findAll(
+        (each) => "data-inf-tradeoff-chart" in each.attribs,
+        parseDocument(html).children,
+      );
+      expect(chart?.parent && "name" in chart.parent ? chart.parent.name : undefined).toBe(
+        "fieldset",
+      );
+      expect(html.indexOf("data-inf-tradeoff-chart")).toBeLessThan(html.indexOf('class="inf-row"'));
+    }
   });
 
   it("reaches High at the outer ring, so a shape grows outward with more of a heading", () => {

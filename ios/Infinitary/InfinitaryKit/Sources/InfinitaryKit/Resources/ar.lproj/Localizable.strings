@@ -3607,6 +3607,7 @@
 "shellUpdateAvailable" = "يتوفر تحديث: %1$@";
 "shellUpdateInstall" = "تثبيت";
 "shellUpdateInstalled" = "لديك %1$@";
+"shellUpdateSource" = "التحديثات من %1$@";
 "shellUpdateStable" = "التحديثات المستقرة";
 "shellVoiceAskingDesktop" = "يسأل سطح المكتب هل يمكن لـ Infinitary استخدام الميكروفون. يتحول ما تقوله إلى نص على هذا الحاسوب ولا يُخزَّن أبدًا.";
 "shellVoiceAskingMac" = "يسأل macOS هل يمكن لـ Infinitary استخدام الميكروفون. يتحول ما تقوله إلى نص على هذا الحاسوب ولا يُخزَّن أبدًا.";
@@ -3752,6 +3753,17 @@
 "updateDownloadStopped" = "توقّف التنزيل قبل أن يكتمل. حاول مرة أخرى.";
 "updateDownloadUnreachable" = "تعذّر على Infinitary الوصول إلى التنزيل. تحقّق من اتصالك وحاول مرة أخرى.";
 "updateInstallerNoStart" = "تعذّر بدء المثبّت، لذا لم يُثبَّت شيء.";
+"updateSourceAhead" = "في هذه النسخة إيداعات ليست في %1$@، لذا لا يمكنها التقدّم.";
+"updateSourceAlreadyUpdating" = "هذه النسخة قيد التحديث بالفعل.";
+"updateSourceBuildFailed" = "تعذّر بناء %2$@، لذا عادت هذه النسخة إلى %1$@.";
+"updateSourceDetached" = "هذه النسخة ليست على أي فرع، لذا لا يمكنها تحديث نفسها.";
+"updateSourceEdited" = "في هذه النسخة تعديلات غير مُودَعة. أودِعها أو ضعها جانبًا، ثم تحقّق مرة أخرى.";
+"updateSourceInstallFailed" = "تعذّر تثبيت حزم %2$@، لذا عادت هذه النسخة إلى %1$@.";
+"updateSourceNoUpstream" = "الفرع %1$@ لا يتبع فرعًا في مكان المشروع، لذا لا يمكن لهذه النسخة تحديث نفسها.";
+"updateSourceNotAsked" = "تعذّر على Infinitary تسليم التحديث، لذا لم يتغيّر شيء.";
+"updateSourceNotMoved" = "تعذّر على هذه النسخة التقدّم إلى %2$@، لذا بقيت على %1$@.";
+"updateSourceNothingToTake" = "لا يوجد الآن تحديث يمكن لهذه النسخة أخذه.";
+"updateSourceUpToDate" = "محدّثة مع %1$@.";
 "updateWindowsChannelNotPutBack" = "تعذّر على Infinitary إعادة قناة التحديث التي كان يتبعها من قبل، لذا تحقّق من القناة في الإعدادات ← عام.";
 "updateWindowsInstallFailed" = "توقّف المثبّت قبل أن يكتمل، لذا أُبقيت هذه النسخة.";
 "updateWindowsNoCopy" = "تعذّر على Infinitary أن يفتح مجددًا بعد تحديثه. نزّل المثبّت من %1$@ وشغّله؛ مهامك وإعداداتك محفوظة.";

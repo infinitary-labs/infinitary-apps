@@ -6,6 +6,7 @@ import type { HostAppInfo } from "../host";
 import { hostEnv } from "../hostEnv";
 import { thisDeviceSystem } from "../platform";
 import { ACTIVE_MARK_HEADER, type ActiveMarks, createActiveMarks } from "./activeMark";
+import { DEV_STARTER_SETTING, readStarterSession } from "./devStarter";
 import {
   createLinuxInstaller,
   INSTALLS_IN_APP,
@@ -23,6 +24,7 @@ import {
   WINDOWS_INSTALLER,
 } from "./releaseBuilds";
 import { PUBLIC_RELEASE_NAMES, publicBuildsUrl, releaseSource } from "./releaseSource";
+import { createSourceUpdateChecker } from "./sourceUpdates";
 import {
   parseUpdateTargets,
   releasesPageFor,
@@ -557,7 +559,9 @@ export type InstalledUpdateCheckerOptions = {
    * new copy; absent, a Windows installation names its update and installs
    * nothing. Only the copy's own first mate is handed one: a window
    * controlling another computer also runs that computer's work, which the
-   * installer would end mid-run.
+   * installer would end mid-run. A copy run by `pnpm dev`'s starter ends
+   * the same way for the starter, which starts it again; absent, it offers
+   * no Update and restart.
    */
   endForInstaller?: () => void;
   /** Read for the development stand-ins below; the process's own by default. */
@@ -609,6 +613,20 @@ export function createInstalledUpdateChecker(
         windowsInstaller: settingFrom(env, "UPDATE_WINDOWS_INSTALLER")?.trim() === "1",
       };
   const currentVersion = overrides.currentVersion ?? app.version;
+  // A copy run by `pnpm dev`'s starter updates from source (./sourceUpdates.ts,
+  // docs/alpha.md "Updates from source"); a test may still ask for the made-up offer.
+  const starterDir = app.packaged ? undefined : settingFrom(env, DEV_STARTER_SETTING)?.trim();
+  const starter = starterDir ? readStarterSession(starterDir) : null;
+  if (starterDir && starter && settingFrom(env, "SIMULATE_UPDATE") !== "1")
+    return createSourceUpdateChecker({
+      starterDir,
+      session: starter,
+      channel: () => resolveUpdateChannel(app.userDataDir, currentVersion),
+      saving: createUpdateSaving(options.work),
+      // The app ends and its starter starts it again.
+      ...(options.endForInstaller ? { end: options.endForInstaller } : {}),
+      openExternal: options.openExternal,
+    });
   const installation = options.macDriver?.installation;
   // A copy this checker cannot update offers nothing: one whose installation
   // the app could not confirm.
@@ -724,8 +742,9 @@ export function createInstalledUpdateChecker(
     openExternal: options.openExternal,
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
     saving,
-    // Dev/source builds are never behind a release, so force the indicator
-    // on there to make it visible while developing; e2e opts out.
+    // A run from source not started by `pnpm dev`'s starter, as a journey's,
+    // is never behind a release, so the indicator shows a made-up offer
+    // there to keep it visible; a journey opts out.
     simulateUpdate: !app.packaged && settingFrom(env, "SIMULATE_UPDATE") !== "0",
   });
 }

@@ -2649,5 +2649,41 @@
       <string>· %1$ld ignorées</string>
     </dict>
   </dict>
+  <key>updateSourceAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ a %3$ld commit plus récent, jusqu’à %2$@.</string>
+      <key>many</key>
+      <string>%1$@ a %3$ld commits plus récents, jusqu’à %2$@.</string>
+      <key>other</key>
+      <string>%1$@ a %3$ld commits plus récents, jusqu’à %2$@.</string>
+    </dict>
+  </dict>
+  <key>updateSourceStillAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ a encore %3$ld commit plus récent, jusqu’à %2$@.</string>
+      <key>many</key>
+      <string>%1$@ a encore %3$ld commits plus récents, jusqu’à %2$@.</string>
+      <key>other</key>
+      <string>%1$@ a encore %3$ld commits plus récents, jusqu’à %2$@.</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

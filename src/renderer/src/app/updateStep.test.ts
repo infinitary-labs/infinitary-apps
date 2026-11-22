@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { UpdateStatus } from "@shared/update";
 import {
   UPDATE_LATER,
@@ -244,5 +245,36 @@ describe("the update ladder", () => {
       primary: { action: "release", label: UPDATE_WORDS.releasesPage },
     });
     expect(blocked?.secondary).toBeUndefined();
+  });
+
+  // INF-5635's approved plan, piece 2: a copy run by pnpm dev names main's newer
+  // commits, offers Update and restart when it can move forward to them, and
+  // says why when it cannot.
+  it("names a source copy's newer commits, or why it cannot move forward to them", () => {
+    const source: UpdateStatus = {
+      ...OFFERED,
+      currentVersion: "1a2b3c4",
+      latestVersion: "5d6e7f8",
+      releaseUrl: null,
+      channelChoice: undefined,
+      source: { branch: "main", behind: 3 },
+    };
+    expect(reads(source)).toEqual([
+      `${m.updateSourceAvailable({ branch: "main", count: 3, commit: "5d6e7f8" })} Checked just now. ${UPDATE_STEP_WORDS.restarts}`,
+      UPDATE_WORDS.check,
+      UPDATE_WORDS.restart,
+    ]);
+    expect(step({ ...source, phase: "error", problem: UPDATE_PROBLEMS.checkFailed })?.line).toBe(
+      `${UPDATE_PROBLEMS.checkFailed} ${m.updateSourceStillAvailable({ branch: "main", count: 3, commit: "5d6e7f8" })} ${UPDATE_STEP_WORDS.restarts}`,
+    );
+    const held = { ...source, install: undefined };
+    expect(reads({ ...held, source: { branch: "main", behind: 1, held: "edited" } })).toEqual([
+      `${m.updateSourceAvailable({ branch: "main", count: 1, commit: "5d6e7f8" })} Checked just now. ${m.updateSourceEdited()}`,
+      null,
+      UPDATE_WORDS.check,
+    ]);
+    expect(step({ ...held, source: { branch: "main", behind: 1, held: "ahead" } })?.line).toBe(
+      `${m.updateSourceAvailable({ branch: "main", count: 1, commit: "5d6e7f8" })} Checked just now. ${m.updateSourceAhead({ branch: "main" })}`,
+    );
   });
 });

@@ -123,6 +123,21 @@ describe("each computer's installed source", () => {
     });
   });
 
+  // INF-5635's approved plan, piece 2: a clean copy pnpm dev's starter started
+  // names its commit, and stays mutable, since the copy can still change.
+  it("names a clean starter run's commit, still mutable", () => {
+    const installed = sourceInstall(scratchDir("source-starter-"));
+    const commit = "c".repeat(40);
+    const started = {
+      ...installed.location,
+      isPackaged: false,
+      appPath: installed.root,
+      sourceCommit: commit,
+    };
+    expect(readSelfSource(started)).toMatchObject({ mutable: true, commit });
+    expect(readSelfSourceIdentity(started)).toEqual(sourceIdentity(readSelfSource(started)));
+  });
+
   it.each(["pi", "claude"] as const)(
     "serves %s local facts before stamping, and sends only home identity for placed work",
     (backend) => {

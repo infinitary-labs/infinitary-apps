@@ -189,8 +189,8 @@ function offeredStep(
     disabled: pressed.busy,
   };
   const found = checkFailed
-    ? `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable(version)}`
-    : [UPDATE_NOTICES.available(version), read.checked].filter(Boolean).join(" ");
+    ? `${UPDATE_PROBLEMS.checkFailed} ${stillAvailable(status, version)}`
+    : [available(status, version), read.checked].filter(Boolean).join(" ");
   const offer = { version, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
   if (problem !== null)
     // The app installs it here and the failure can pass on a retry; with no
@@ -198,7 +198,7 @@ function offeredStep(
     return install
       ? {
           state: "retry",
-          line: `${problem} ${UPDATE_NOTICES.stillAvailable(version)}`,
+          line: `${problem} ${stillAvailable(status, version)}`,
           problem: true,
           ...offer,
           primary: {
@@ -238,5 +238,38 @@ function offeredStep(
       primary: { action: "copy", label: UPDATE_WORDS.copy },
       secondary: check,
     };
-  return { state: "available", line: found, problem: checkFailed, version, primary: check };
+  // A copy run from source says why it cannot move forward to what it found.
+  const held = status.source?.held;
+  return {
+    state: "available",
+    line: held ? `${found} ${SOURCE_HELD[held](status.source?.branch ?? "")}` : found,
+    problem: checkFailed,
+    version,
+    primary: check,
+  };
+}
+
+/**
+ * Why a copy run from source cannot move forward to the newer commits it
+ * found (docs/alpha.md, "Updates from source").
+ */
+const SOURCE_HELD = {
+  edited: () => m.updateSourceEdited(),
+  ahead: (branch: string) => m.updateSourceAhead({ branch }),
+} as const;
+
+/** What a read found, as a release or, for a copy run from source, as newer commits. */
+function available(status: UpdateStatus, version: string): string {
+  const source = status.source;
+  return source
+    ? m.updateSourceAvailable({ branch: source.branch, count: source.behind, commit: version })
+    : UPDATE_NOTICES.available(version);
+}
+
+/** After a failed check or update: what the last read found still waits. */
+function stillAvailable(status: UpdateStatus, version: string): string {
+  const source = status.source;
+  return source
+    ? m.updateSourceStillAvailable({ branch: source.branch, count: source.behind, commit: version })
+    : UPDATE_NOTICES.stillAvailable(version);
 }

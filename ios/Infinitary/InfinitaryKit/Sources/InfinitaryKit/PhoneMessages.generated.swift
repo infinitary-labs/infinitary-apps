@@ -3755,6 +3755,7 @@ public enum PhoneMessages {
     public static func `shellUpdateAvailable`(`version`: String) -> String { PhoneWords.format("shellUpdateAvailable", [`version`]) }
     public static func `shellUpdateInstall`() -> String { PhoneWords.format("shellUpdateInstall", []) }
     public static func `shellUpdateInstalled`(`version`: String) -> String { PhoneWords.format("shellUpdateInstalled", [`version`]) }
+    public static func `shellUpdateSource`(`branch`: String) -> String { PhoneWords.format("shellUpdateSource", [`branch`]) }
     public static func `shellUpdateStable`() -> String { PhoneWords.format("shellUpdateStable", []) }
     public static func `shellVoiceAskingDesktop`() -> String { PhoneWords.format("shellVoiceAskingDesktop", []) }
     public static func `shellVoiceAskingMac`() -> String { PhoneWords.format("shellVoiceAskingMac", []) }
@@ -3904,6 +3905,19 @@ public enum PhoneMessages {
     public static func `updateDownloadStopped`() -> String { PhoneWords.format("updateDownloadStopped", []) }
     public static func `updateDownloadUnreachable`() -> String { PhoneWords.format("updateDownloadUnreachable", []) }
     public static func `updateInstallerNoStart`() -> String { PhoneWords.format("updateInstallerNoStart", []) }
+    public static func `updateSourceAhead`(`branch`: String) -> String { PhoneWords.format("updateSourceAhead", [`branch`]) }
+    public static func `updateSourceAlreadyUpdating`() -> String { PhoneWords.format("updateSourceAlreadyUpdating", []) }
+    public static func `updateSourceAvailable`(`branch`: String, `commit`: String, `count`: Int) -> String { PhoneWords.format("updateSourceAvailable", [`branch`, `commit`, `count`]) }
+    public static func `updateSourceBuildFailed`(`from`: String, `to`: String) -> String { PhoneWords.format("updateSourceBuildFailed", [`from`, `to`]) }
+    public static func `updateSourceDetached`() -> String { PhoneWords.format("updateSourceDetached", []) }
+    public static func `updateSourceEdited`() -> String { PhoneWords.format("updateSourceEdited", []) }
+    public static func `updateSourceInstallFailed`(`from`: String, `to`: String) -> String { PhoneWords.format("updateSourceInstallFailed", [`from`, `to`]) }
+    public static func `updateSourceNoUpstream`(`branch`: String) -> String { PhoneWords.format("updateSourceNoUpstream", [`branch`]) }
+    public static func `updateSourceNotAsked`() -> String { PhoneWords.format("updateSourceNotAsked", []) }
+    public static func `updateSourceNotMoved`(`from`: String, `to`: String) -> String { PhoneWords.format("updateSourceNotMoved", [`from`, `to`]) }
+    public static func `updateSourceNothingToTake`() -> String { PhoneWords.format("updateSourceNothingToTake", []) }
+    public static func `updateSourceStillAvailable`(`branch`: String, `commit`: String, `count`: Int) -> String { PhoneWords.format("updateSourceStillAvailable", [`branch`, `commit`, `count`]) }
+    public static func `updateSourceUpToDate`(`branch`: String) -> String { PhoneWords.format("updateSourceUpToDate", [`branch`]) }
     public static func `updateWindowsChannelNotPutBack`() -> String { PhoneWords.format("updateWindowsChannelNotPutBack", []) }
     public static func `updateWindowsInstallFailed`() -> String { PhoneWords.format("updateWindowsInstallFailed", []) }
     public static func `updateWindowsNoCopy`(`page`: String) -> String { PhoneWords.format("updateWindowsNoCopy", [`page`]) }
@@ -7734,6 +7748,7 @@ extension PhoneWords {
         "shellUpdateAvailable": ["version"],
         "shellUpdateInstall": [],
         "shellUpdateInstalled": ["version"],
+        "shellUpdateSource": ["branch"],
         "shellUpdateStable": [],
         "shellVoiceAskingDesktop": [],
         "shellVoiceAskingMac": [],
@@ -7883,6 +7898,19 @@ extension PhoneWords {
         "updateDownloadStopped": [],
         "updateDownloadUnreachable": [],
         "updateInstallerNoStart": [],
+        "updateSourceAhead": ["branch"],
+        "updateSourceAlreadyUpdating": [],
+        "updateSourceAvailable": ["branch", "commit", "count"],
+        "updateSourceBuildFailed": ["from", "to"],
+        "updateSourceDetached": [],
+        "updateSourceEdited": [],
+        "updateSourceInstallFailed": ["from", "to"],
+        "updateSourceNoUpstream": ["branch"],
+        "updateSourceNotAsked": [],
+        "updateSourceNotMoved": ["from", "to"],
+        "updateSourceNothingToTake": [],
+        "updateSourceStillAvailable": ["branch", "commit", "count"],
+        "updateSourceUpToDate": ["branch"],
         "updateWindowsChannelNotPutBack": [],
         "updateWindowsInstallFailed": [],
         "updateWindowsNoCopy": ["page"],
@@ -8108,5 +8136,7 @@ extension PhoneWords {
         "uiTaskFactsFoldedDone": "count",
         "uiTaskFactsFoldedMore": "count",
         "uiTaskFactsPlanSkipped": "count",
+        "updateSourceAvailable": "count",
+        "updateSourceStillAvailable": "count",
     ]
 }

@@ -3531,5 +3531,53 @@
       <string>· تم تخطي %1$ld</string>
     </dict>
   </dict>
+  <key>updateSourceAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>في %1$@ %3$ld إيداع أحدث، حتى %2$@.</string>
+      <key>one</key>
+      <string>في %1$@ إيداع واحد أحدث، حتى %2$@.</string>
+      <key>two</key>
+      <string>في %1$@ إيداعان أحدث، حتى %2$@.</string>
+      <key>few</key>
+      <string>في %1$@ %3$ld إيداعات أحدث، حتى %2$@.</string>
+      <key>many</key>
+      <string>في %1$@ %3$ld إيداعًا أحدث، حتى %2$@.</string>
+      <key>other</key>
+      <string>في %1$@ %3$ld إيداع أحدث، حتى %2$@.</string>
+    </dict>
+  </dict>
+  <key>updateSourceStillAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لا يزال في %1$@ %3$ld إيداع أحدث، حتى %2$@.</string>
+      <key>one</key>
+      <string>لا يزال في %1$@ إيداع واحد أحدث، حتى %2$@.</string>
+      <key>two</key>
+      <string>لا يزال في %1$@ إيداعان أحدث، حتى %2$@.</string>
+      <key>few</key>
+      <string>لا يزال في %1$@ %3$ld إيداعات أحدث، حتى %2$@.</string>
+      <key>many</key>
+      <string>لا يزال في %1$@ %3$ld إيداعًا أحدث، حتى %2$@.</string>
+      <key>other</key>
+      <string>لا يزال في %1$@ %3$ld إيداع أحدث، حتى %2$@.</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

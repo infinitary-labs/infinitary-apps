@@ -3607,6 +3607,7 @@
 "shellUpdateAvailable" = "Update verfügbar: %1$@";
 "shellUpdateInstall" = "Installieren";
 "shellUpdateInstalled" = "Du hast %1$@";
+"shellUpdateSource" = "Updates von %1$@";
 "shellUpdateStable" = "Stabile Updates";
 "shellVoiceAskingDesktop" = "Dein Desktop fragt, ob Infinitary das Mikrofon verwenden darf. Was du sagst, wird auf diesem Computer zu Text und nie gespeichert.";
 "shellVoiceAskingMac" = "macOS fragt, ob Infinitary das Mikrofon verwenden darf. Was du sagst, wird auf diesem Computer zu Text und nie gespeichert.";
@@ -3752,6 +3753,17 @@
 "updateDownloadStopped" = "Der Download brach vor dem Ende ab. Versuche es erneut.";
 "updateDownloadUnreachable" = "Infinitary konnte den Download nicht erreichen. Prüfe deine Verbindung und versuche es erneut.";
 "updateInstallerNoStart" = "Das Installationsprogramm konnte nicht starten, daher wurde nichts installiert.";
+"updateSourceAhead" = "Diese Kopie hat Commits, die %1$@ nicht hat, und kann daher nicht vorrücken.";
+"updateSourceAlreadyUpdating" = "Diese Kopie wird bereits aktualisiert.";
+"updateSourceBuildFailed" = "%2$@ ließ sich nicht bauen, daher ist diese Kopie zu %1$@ zurückgekehrt.";
+"updateSourceDetached" = "Diese Kopie ist auf keinem Branch und kann sich daher nicht selbst aktualisieren.";
+"updateSourceEdited" = "Diese Kopie hat nicht committete Änderungen. Committe sie oder lege sie beiseite, dann prüfe erneut.";
+"updateSourceInstallFailed" = "Die Pakete für %2$@ ließen sich nicht installieren, daher ist diese Kopie zu %1$@ zurückgekehrt.";
+"updateSourceNoUpstream" = "Der Branch %1$@ folgt keinem Branch dort, wo das Projekt liegt, daher kann sich diese Kopie nicht selbst aktualisieren.";
+"updateSourceNotAsked" = "Infinitary konnte das Update nicht übergeben, daher hat sich nichts geändert.";
+"updateSourceNotMoved" = "Diese Kopie konnte nicht zu %2$@ vorrücken und ist daher bei %1$@ geblieben.";
+"updateSourceNothingToTake" = "Für diese Kopie gibt es gerade kein Update, das sie übernehmen kann.";
+"updateSourceUpToDate" = "Auf dem Stand von %1$@.";
 "updateWindowsChannelNotPutBack" = "Infinitary konnte den zuvor verwendeten Update-Kanal nicht wiederherstellen. Prüfe den Kanal unter Einstellungen → Allgemein.";
 "updateWindowsInstallFailed" = "Das Installationsprogramm hielt vor dem Ende an, daher blieb diese Kopie erhalten.";
 "updateWindowsNoCopy" = "Infinitary konnte nach dem Update nicht wieder öffnen. Lade das Installationsprogramm von %1$@ herunter und führe es aus; deine Aufgaben und Einstellungen bleiben erhalten.";

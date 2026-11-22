@@ -6,6 +6,25 @@
   "updateDownloadStopped": "ダウンロードが途中で止まりました。もう一度お試しください。",
   "updateDownloadUnreachable": "Infinitary がダウンロード先に接続できませんでした。接続を確認して、もう一度お試しください。",
   "updateInstallerNoStart": "インストーラーを起動できなかったため、何もインストールしませんでした。",
+  "updateSourceAhead": "このコピーには {branch} にないコミットがあるため、先へ進められません。",
+  "updateSourceAlreadyUpdating": "このコピーはすでにアップデート中です。",
+  "updateSourceAvailable": {
+    "plural": "count",
+    "other": "{branch} に新しいコミットが {count} 件あります（{commit} まで）。"
+  },
+  "updateSourceBuildFailed": "{to} をビルドできなかったため、このコピーは {from} に戻りました。",
+  "updateSourceDetached": "このコピーはどのブランチにも乗っていないため、自分ではアップデートできません。",
+  "updateSourceEdited": "このコピーにはコミットされていない編集があります。コミットするか退避してから、もう一度確認してください。",
+  "updateSourceInstallFailed": "{to} のパッケージをインストールできなかったため、このコピーは {from} に戻りました。",
+  "updateSourceNoUpstream": "ブランチ {branch} はプロジェクトの置き場所のブランチを追跡していないため、このコピーは自分ではアップデートできません。",
+  "updateSourceNotAsked": "Infinitary はアップデートを引き渡せなかったため、何も変わっていません。",
+  "updateSourceNotMoved": "このコピーは {to} へ進めなかったため、{from} のままです。",
+  "updateSourceNothingToTake": "このコピーがいま取り込めるアップデートはありません。",
+  "updateSourceStillAvailable": {
+    "plural": "count",
+    "other": "{branch} にはまだ新しいコミットが {count} 件あります（{commit} まで）。"
+  },
+  "updateSourceUpToDate": "{branch} と同じ状態です。",
   "updateWindowsChannelNotPutBack": "Infinitary は以前のアップデートチャンネルに戻せませんでした。設定 → 一般 でチャンネルを確認してください。",
   "updateWindowsInstallFailed": "インストーラーが途中で止まったため、このコピーをそのまま残しました。",
   "updateWindowsNoCopy": "Infinitary はアップデート後に再び開けませんでした。{page} からインストーラーをダウンロードして実行してください。タスクと設定はそのまま残ります。",

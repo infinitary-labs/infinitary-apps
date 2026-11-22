@@ -36073,6 +36073,30 @@
               "tasks"
             ]
           },
+          "source": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "held": {
+                "type": "string",
+                "enum": [
+                  "edited",
+                  "ahead"
+                ]
+              }
+            },
+            "required": [
+              "branch",
+              "behind"
+            ]
+          },
           "askedFrom": {
             "type": "string"
           }
@@ -36195,6 +36219,30 @@
             "required": [
               "state",
               "tasks"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "held": {
+                "type": "string",
+                "enum": [
+                  "edited",
+                  "ahead"
+                ]
+              }
+            },
+            "required": [
+              "branch",
+              "behind"
             ]
           },
           "askedFrom": {
@@ -36329,6 +36377,30 @@
             "required": [
               "state",
               "tasks"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "held": {
+                "type": "string",
+                "enum": [
+                  "edited",
+                  "ahead"
+                ]
+              }
+            },
+            "required": [
+              "branch",
+              "behind"
             ]
           },
           "askedFrom": {
@@ -36517,6 +36589,30 @@
             "required": [
               "state",
               "tasks"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "held": {
+                "type": "string",
+                "enum": [
+                  "edited",
+                  "ahead"
+                ]
+              }
+            },
+            "required": [
+              "branch",
+              "behind"
             ]
           },
           "askedFrom": {
@@ -73057,6 +73153,30 @@
                         "required": [
                           "state",
                           "tasks"
+                        ]
+                      },
+                      "source": {
+                        "type": "object",
+                        "properties": {
+                          "branch": {
+                            "type": "string"
+                          },
+                          "behind": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "held": {
+                            "type": "string",
+                            "enum": [
+                              "edited",
+                              "ahead"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "branch",
+                          "behind"
                         ]
                       },
                       "askedFrom": {

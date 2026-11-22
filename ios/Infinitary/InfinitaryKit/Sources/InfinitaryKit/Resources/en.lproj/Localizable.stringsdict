@@ -2355,5 +2355,37 @@
       <string>· %1$ld skipped</string>
     </dict>
   </dict>
+  <key>updateSourceAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ has %3$ld newer commit, up to %2$@.</string>
+      <key>other</key>
+      <string>%1$@ has %3$ld newer commits, up to %2$@.</string>
+    </dict>
+  </dict>
+  <key>updateSourceStillAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ still has %3$ld newer commit, up to %2$@.</string>
+      <key>other</key>
+      <string>%1$@ still has %3$ld newer commits, up to %2$@.</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

@@ -2649,5 +2649,41 @@
       <string>· %1$ld pulados</string>
     </dict>
   </dict>
+  <key>updateSourceAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>O %1$@ tem %3$ld commit mais recente, até %2$@.</string>
+      <key>many</key>
+      <string>O %1$@ tem %3$ld commits mais recentes, até %2$@.</string>
+      <key>other</key>
+      <string>O %1$@ tem %3$ld commits mais recentes, até %2$@.</string>
+    </dict>
+  </dict>
+  <key>updateSourceStillAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>O %1$@ ainda tem %3$ld commit mais recente, até %2$@.</string>
+      <key>many</key>
+      <string>O %1$@ ainda tem %3$ld commits mais recentes, até %2$@.</string>
+      <key>other</key>
+      <string>O %1$@ ainda tem %3$ld commits mais recentes, até %2$@.</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

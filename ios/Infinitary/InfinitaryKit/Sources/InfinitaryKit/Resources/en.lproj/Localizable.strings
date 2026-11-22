@@ -3607,6 +3607,7 @@
 "shellUpdateAvailable" = "Update available: %1$@";
 "shellUpdateInstall" = "Install";
 "shellUpdateInstalled" = "You have %1$@";
+"shellUpdateSource" = "Updates from %1$@";
 "shellUpdateStable" = "Stable updates";
 "shellVoiceAskingDesktop" = "Your desktop is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.";
 "shellVoiceAskingMac" = "macOS is asking whether Infinitary may use the microphone. What you say becomes text on this computer and is never stored.";
@@ -3752,6 +3753,17 @@
 "updateDownloadStopped" = "The download stopped before it finished. Try again.";
 "updateDownloadUnreachable" = "Infinitary could not reach the download. Check your connection and try again.";
 "updateInstallerNoStart" = "The installer could not start, so nothing was installed.";
+"updateSourceAhead" = "This copy has commits that %1$@ does not have, so it cannot move forward.";
+"updateSourceAlreadyUpdating" = "This copy is already updating.";
+"updateSourceBuildFailed" = "%2$@ did not build, so this copy went back to %1$@.";
+"updateSourceDetached" = "This copy is not on a branch, so it cannot update itself.";
+"updateSourceEdited" = "This copy has edits that are not committed. Commit them or set them aside, then check again.";
+"updateSourceInstallFailed" = "The packages for %2$@ did not install, so this copy went back to %1$@.";
+"updateSourceNoUpstream" = "Branch %1$@ does not follow a branch where the project lives, so this copy cannot update itself.";
+"updateSourceNotAsked" = "Infinitary could not hand the update over, so nothing changed.";
+"updateSourceNotMoved" = "This copy could not move forward to %2$@, so it stayed on %1$@.";
+"updateSourceNothingToTake" = "There is no update this copy can take now.";
+"updateSourceUpToDate" = "Up to date with %1$@.";
 "updateWindowsChannelNotPutBack" = "Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.";
 "updateWindowsInstallFailed" = "The installer stopped before it finished, so this copy was kept.";
 "updateWindowsNoCopy" = "Infinitary could not open again after its update. Download the installer from %1$@ and run it; your tasks and settings are kept.";

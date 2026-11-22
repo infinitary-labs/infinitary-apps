@@ -6,6 +6,25 @@
   "updateDownloadStopped": "下載在完成前中斷。請再試一次。",
   "updateDownloadUnreachable": "Infinitary 無法連線到下載位址。請檢查網路連線後再試一次。",
   "updateInstallerNoStart": "安裝程式無法啟動，因此未安裝任何內容。",
+  "updateSourceAhead": "這份副本有 {branch} 沒有的提交，因此無法往前移。",
+  "updateSourceAlreadyUpdating": "這份副本正在更新。",
+  "updateSourceAvailable": {
+    "plural": "count",
+    "other": "{branch} 有 {count} 個較新的提交，最新到 {commit}。"
+  },
+  "updateSourceBuildFailed": "{to} 無法建置，因此這份副本已回到 {from}。",
+  "updateSourceDetached": "這份副本不在任何分支上，因此無法自行更新。",
+  "updateSourceEdited": "這份副本有尚未提交的修改。請先提交或暫存這些修改，再檢查一次。",
+  "updateSourceInstallFailed": "{to} 的套件無法安裝，因此這份副本已回到 {from}。",
+  "updateSourceNoUpstream": "分支 {branch} 沒有追蹤專案所在之處的分支，因此這份副本無法自行更新。",
+  "updateSourceNotAsked": "Infinitary 無法交出這次更新，因此沒有任何變更。",
+  "updateSourceNotMoved": "這份副本無法往前移到 {to}，因此仍停在 {from}。",
+  "updateSourceNothingToTake": "這份副本現在沒有可以採用的更新。",
+  "updateSourceStillAvailable": {
+    "plural": "count",
+    "other": "{branch} 仍有 {count} 個較新的提交，最新到 {commit}。"
+  },
+  "updateSourceUpToDate": "已與 {branch} 同步。",
   "updateWindowsChannelNotPutBack": "Infinitary 無法還原先前使用的更新通道，請在 設定 → 一般 中檢查通道。",
   "updateWindowsInstallFailed": "安裝程式在完成前停止，因此保留了這份副本。",
   "updateWindowsNoCopy": "Infinitary 更新後無法再次開啟。請從 {page} 下載安裝程式並執行；你的任務和設定都會保留。",

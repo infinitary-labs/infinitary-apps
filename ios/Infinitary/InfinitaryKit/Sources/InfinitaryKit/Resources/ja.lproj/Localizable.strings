@@ -3607,6 +3607,7 @@
 "shellUpdateAvailable" = "アップデートがあります：%1$@";
 "shellUpdateInstall" = "インストール";
 "shellUpdateInstalled" = "現在のバージョンは %1$@ です";
+"shellUpdateSource" = "%1$@ からのアップデート";
 "shellUpdateStable" = "安定版のアップデート";
 "shellVoiceAskingDesktop" = "デスクトップが、Infinitary にマイクの使用を許可するか確認しています。話した内容はこのコンピューター上で文字になり、保存されることはありません。";
 "shellVoiceAskingMac" = "macOS が、Infinitary にマイクの使用を許可するか確認しています。話した内容はこのコンピューター上で文字になり、保存されることはありません。";
@@ -3752,6 +3753,17 @@
 "updateDownloadStopped" = "ダウンロードが途中で止まりました。もう一度お試しください。";
 "updateDownloadUnreachable" = "Infinitary がダウンロード先に接続できませんでした。接続を確認して、もう一度お試しください。";
 "updateInstallerNoStart" = "インストーラーを起動できなかったため、何もインストールしませんでした。";
+"updateSourceAhead" = "このコピーには %1$@ にないコミットがあるため、先へ進められません。";
+"updateSourceAlreadyUpdating" = "このコピーはすでにアップデート中です。";
+"updateSourceBuildFailed" = "%2$@ をビルドできなかったため、このコピーは %1$@ に戻りました。";
+"updateSourceDetached" = "このコピーはどのブランチにも乗っていないため、自分ではアップデートできません。";
+"updateSourceEdited" = "このコピーにはコミットされていない編集があります。コミットするか退避してから、もう一度確認してください。";
+"updateSourceInstallFailed" = "%2$@ のパッケージをインストールできなかったため、このコピーは %1$@ に戻りました。";
+"updateSourceNoUpstream" = "ブランチ %1$@ はプロジェクトの置き場所のブランチを追跡していないため、このコピーは自分ではアップデートできません。";
+"updateSourceNotAsked" = "Infinitary はアップデートを引き渡せなかったため、何も変わっていません。";
+"updateSourceNotMoved" = "このコピーは %2$@ へ進めなかったため、%1$@ のままです。";
+"updateSourceNothingToTake" = "このコピーがいま取り込めるアップデートはありません。";
+"updateSourceUpToDate" = "%1$@ と同じ状態です。";
 "updateWindowsChannelNotPutBack" = "Infinitary は以前のアップデートチャンネルに戻せませんでした。設定 → 一般 でチャンネルを確認してください。";
 "updateWindowsInstallFailed" = "インストーラーが途中で止まったため、このコピーをそのまま残しました。";
 "updateWindowsNoCopy" = "Infinitary はアップデート後に再び開けませんでした。%1$@ からインストーラーをダウンロードして実行してください。タスクと設定はそのまま残ります。";

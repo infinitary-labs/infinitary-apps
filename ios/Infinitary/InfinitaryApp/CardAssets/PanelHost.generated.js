@@ -84212,6 +84212,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `You have ${version2}`;
   }
+  function shellUpdateSource(input2) {
+    const branch = input2.branch;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التحديثات من ${branch}`;
+      case "de":
+        return `Updates von ${branch}`;
+      case "es":
+        return `Actualizaciones desde ${branch}`;
+      case "fr":
+        return `Mises à jour depuis ${branch}`;
+      case "ja":
+        return `${branch} からのアップデート`;
+      case "ko":
+        return `${branch}의 업데이트`;
+      case "pt-BR":
+        return `Atualizações do ${branch}`;
+      case "zh-Hans":
+        return `来自 ${branch} 的更新`;
+      case "zh-Hant":
+        return `來自 ${branch} 的更新`;
+      case "en-XA":
+        return `[Ûþðáţéš ƒŕöɱ ${branch} ~~~~~]`;
+      case "ar-XB":
+        return `‮Updates from ‬${branch}`;
+    }
+    return `Updates from ${branch}`;
+  }
   function shellUpdateStable() {
     switch (currentLanguage()) {
       case "ar":
@@ -88533,6 +88561,504 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮The installer could not start, so nothing was installed.‬`;
     }
     return `The installer could not start, so nothing was installed.`;
+  }
+  function updateSourceAhead(input2) {
+    const branch = input2.branch;
+    switch (currentLanguage()) {
+      case "ar":
+        return `في هذه النسخة إيداعات ليست في ${branch}، لذا لا يمكنها التقدّم.`;
+      case "de":
+        return `Diese Kopie hat Commits, die ${branch} nicht hat, und kann daher nicht vorrücken.`;
+      case "es":
+        return `Esta copia tiene confirmaciones que ${branch} no tiene, así que no puede avanzar.`;
+      case "fr":
+        return `Cette copie a des commits que ${branch} n’a pas ; elle ne peut donc pas avancer.`;
+      case "ja":
+        return `このコピーには ${branch} にないコミットがあるため、先へ進められません。`;
+      case "ko":
+        return `이 사본에는 ${branch}에 없는 커밋이 있어 앞으로 옮길 수 없어요.`;
+      case "pt-BR":
+        return `Esta cópia tem commits que o ${branch} não tem, então não pode avançar.`;
+      case "zh-Hans":
+        return `这份副本有 ${branch} 没有的提交，因此无法前移。`;
+      case "zh-Hant":
+        return `這份副本有 ${branch} 沒有的提交，因此無法往前移。`;
+      case "en-XA":
+        return `[Ţĥîš çöþý ĥáš çöɱɱîţš ţĥáţ ${branch} ðöéš ñöţ ĥáṽé, šö îţ çáññöţ ɱöṽé ƒöŕŵáŕð. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This copy has commits that ‬${branch}‮ does not have, so it cannot move forward.‬`;
+    }
+    return `This copy has commits that ${branch} does not have, so it cannot move forward.`;
+  }
+  function updateSourceAlreadyUpdating() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه النسخة قيد التحديث بالفعل.`;
+      case "de":
+        return `Diese Kopie wird bereits aktualisiert.`;
+      case "es":
+        return `Esta copia ya se está actualizando.`;
+      case "fr":
+        return `Cette copie est déjà en cours de mise à jour.`;
+      case "ja":
+        return `このコピーはすでにアップデート中です。`;
+      case "ko":
+        return `이 사본은 이미 업데이트 중이에요.`;
+      case "pt-BR":
+        return `Esta cópia já está sendo atualizada.`;
+      case "zh-Hans":
+        return `这份副本正在更新。`;
+      case "zh-Hant":
+        return `這份副本正在更新。`;
+      case "en-XA":
+        return `[Ţĥîš çöþý îš áļŕéáðý ûþðáţîñĝ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This copy is already updating.‬`;
+    }
+    return `This copy is already updating.`;
+  }
+  function updateSourceAvailable(input2) {
+    const branch = input2.branch;
+    const commit = input2.commit;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `في ${branch} ${count} إيداع أحدث، حتى ${commit}.`;
+          case "one":
+            return `في ${branch} إيداع واحد أحدث، حتى ${commit}.`;
+          case "two":
+            return `في ${branch} إيداعان أحدث، حتى ${commit}.`;
+          case "few":
+            return `في ${branch} ${count} إيداعات أحدث، حتى ${commit}.`;
+          case "many":
+            return `في ${branch} ${count} إيداعًا أحدث، حتى ${commit}.`;
+          default:
+            return `في ${branch} ${count} إيداع أحدث، حتى ${commit}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} hat ${count} neueren Commit, bis ${commit}.`;
+          default:
+            return `${branch} hat ${count} neuere Commits, bis ${commit}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} tiene ${count} confirmación más reciente, hasta ${commit}.`;
+          case "many":
+            return `${branch} tiene ${count} de confirmaciones más recientes, hasta ${commit}.`;
+          default:
+            return `${branch} tiene ${count} confirmaciones más recientes, hasta ${commit}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} a ${count} commit plus récent, jusqu’à ${commit}.`;
+          case "many":
+            return `${branch} a ${count} commits plus récents, jusqu’à ${commit}.`;
+          default:
+            return `${branch} a ${count} commits plus récents, jusqu’à ${commit}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} に新しいコミットが ${count} 件あります（${commit} まで）。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch}에 새 커밋이 ${count}개 있어요(${commit}까지).`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O ${branch} tem ${count} commit mais recente, até ${commit}.`;
+          case "many":
+            return `O ${branch} tem ${count} commits mais recentes, até ${commit}.`;
+          default:
+            return `O ${branch} tem ${count} commits mais recentes, até ${commit}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} 有 ${count} 个更新的提交，最新到 ${commit}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} 有 ${count} 個較新的提交，最新到 ${commit}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${branch} ĥáš ${count} ñéŵéŕ çöɱɱîţ, ûþ ţö ${commit}. ~~~~~~~~~]`;
+          default:
+            return `[${branch} ĥáš ${count} ñéŵéŕ çöɱɱîţš, ûþ ţö ${commit}. ~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${branch}‮ has ‬${count}‮ newer commit, up to ‬${commit}‮.‬`;
+          default:
+            return `${branch}‮ has ‬${count}‮ newer commits, up to ‬${commit}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${branch} has ${count} newer commit, up to ${commit}.`;
+      default:
+        return `${branch} has ${count} newer commits, up to ${commit}.`;
+    }
+  }
+  function updateSourceBuildFailed(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر بناء ${to}، لذا عادت هذه النسخة إلى ${from}.`;
+      case "de":
+        return `${to} ließ sich nicht bauen, daher ist diese Kopie zu ${from} zurückgekehrt.`;
+      case "es":
+        return `${to} no se pudo compilar, así que esta copia volvió a ${from}.`;
+      case "fr":
+        return `${to} n’a pas pu être compilé ; cette copie est donc revenue à ${from}.`;
+      case "ja":
+        return `${to} をビルドできなかったため、このコピーは ${from} に戻りました。`;
+      case "ko":
+        return `${to}을(를) 빌드하지 못해 이 사본을 ${from}(으)로 되돌렸어요.`;
+      case "pt-BR":
+        return `Não foi possível compilar ${to}, então esta cópia voltou para ${from}.`;
+      case "zh-Hans":
+        return `${to} 未能构建，因此这份副本已回到 ${from}。`;
+      case "zh-Hant":
+        return `${to} 無法建置，因此這份副本已回到 ${from}。`;
+      case "en-XA":
+        return `[${to} ðîð ñöţ ƀûîļð, šö ţĥîš çöþý ŵéñţ ƀáçķ ţö ${from}. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${to}‮ did not build, so this copy went back to ‬${from}‮.‬`;
+    }
+    return `${to} did not build, so this copy went back to ${from}.`;
+  }
+  function updateSourceDetached() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه النسخة ليست على أي فرع، لذا لا يمكنها تحديث نفسها.`;
+      case "de":
+        return `Diese Kopie ist auf keinem Branch und kann sich daher nicht selbst aktualisieren.`;
+      case "es":
+        return `Esta copia no está en ninguna rama, así que no puede actualizarse sola.`;
+      case "fr":
+        return `Cette copie n’est sur aucune branche ; elle ne peut donc pas se mettre à jour seule.`;
+      case "ja":
+        return `このコピーはどのブランチにも乗っていないため、自分ではアップデートできません。`;
+      case "ko":
+        return `이 사본은 어떤 분기에도 있지 않아 스스로 업데이트할 수 없어요.`;
+      case "pt-BR":
+        return `Esta cópia não está em nenhum branch, então não pode se atualizar sozinha.`;
+      case "zh-Hans":
+        return `这份副本不在任何分支上，因此无法自行更新。`;
+      case "zh-Hant":
+        return `這份副本不在任何分支上，因此無法自行更新。`;
+      case "en-XA":
+        return `[Ţĥîš çöþý îš ñöţ öñ á ƀŕáñçĥ, šö îţ çáññöţ ûþðáţé îţšéļƒ. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This copy is not on a branch, so it cannot update itself.‬`;
+    }
+    return `This copy is not on a branch, so it cannot update itself.`;
+  }
+  function updateSourceEdited() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `في هذه النسخة تعديلات غير مُودَعة. أودِعها أو ضعها جانبًا، ثم تحقّق مرة أخرى.`;
+      case "de":
+        return `Diese Kopie hat nicht committete Änderungen. Committe sie oder lege sie beiseite, dann prüfe erneut.`;
+      case "es":
+        return `Esta copia tiene cambios sin confirmar. Confírmalos o guárdalos aparte y vuelve a comprobarlo.`;
+      case "fr":
+        return `Cette copie a des modifications non validées. Validez-les ou mettez-les de côté, puis vérifiez à nouveau.`;
+      case "ja":
+        return `このコピーにはコミットされていない編集があります。コミットするか退避してから、もう一度確認してください。`;
+      case "ko":
+        return `이 사본에 커밋하지 않은 수정 사항이 있어요. 커밋하거나 따로 보관한 뒤 다시 확인하세요.`;
+      case "pt-BR":
+        return `Esta cópia tem alterações sem commit. Faça o commit ou guarde-as à parte e verifique de novo.`;
+      case "zh-Hans":
+        return `这份副本有尚未提交的修改。请先提交或暂存这些修改，再检查一次。`;
+      case "zh-Hant":
+        return `這份副本有尚未提交的修改。請先提交或暫存這些修改，再檢查一次。`;
+      case "en-XA":
+        return `[Ţĥîš çöþý ĥáš éðîţš ţĥáţ áŕé ñöţ çöɱɱîţţéð. Çöɱɱîţ ţĥéɱ öŕ šéţ ţĥéɱ ášîðé, ţĥéñ çĥéçķ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This copy has edits that are not committed. Commit them or set them aside, then check again.‬`;
+    }
+    return `This copy has edits that are not committed. Commit them or set them aside, then check again.`;
+  }
+  function updateSourceInstallFailed(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر تثبيت حزم ${to}، لذا عادت هذه النسخة إلى ${from}.`;
+      case "de":
+        return `Die Pakete für ${to} ließen sich nicht installieren, daher ist diese Kopie zu ${from} zurückgekehrt.`;
+      case "es":
+        return `Los paquetes de ${to} no se instalaron, así que esta copia volvió a ${from}.`;
+      case "fr":
+        return `Les paquets de ${to} n’ont pas pu être installés ; cette copie est donc revenue à ${from}.`;
+      case "ja":
+        return `${to} のパッケージをインストールできなかったため、このコピーは ${from} に戻りました。`;
+      case "ko":
+        return `${to}의 패키지를 설치하지 못해 이 사본을 ${from}(으)로 되돌렸어요.`;
+      case "pt-BR":
+        return `Os pacotes de ${to} não foram instalados, então esta cópia voltou para ${from}.`;
+      case "zh-Hans":
+        return `${to} 的软件包未能安装，因此这份副本已回到 ${from}。`;
+      case "zh-Hant":
+        return `${to} 的套件無法安裝，因此這份副本已回到 ${from}。`;
+      case "en-XA":
+        return `[Ţĥé þáçķáĝéš ƒöŕ ${to} ðîð ñöţ îñšţáļļ, šö ţĥîš çöþý ŵéñţ ƀáçķ ţö ${from}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The packages for ‬${to}‮ did not install, so this copy went back to ‬${from}‮.‬`;
+    }
+    return `The packages for ${to} did not install, so this copy went back to ${from}.`;
+  }
+  function updateSourceNoUpstream(input2) {
+    const branch = input2.branch;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الفرع ${branch} لا يتبع فرعًا في مكان المشروع، لذا لا يمكن لهذه النسخة تحديث نفسها.`;
+      case "de":
+        return `Der Branch ${branch} folgt keinem Branch dort, wo das Projekt liegt, daher kann sich diese Kopie nicht selbst aktualisieren.`;
+      case "es":
+        return `La rama ${branch} no sigue ninguna rama del lugar donde vive el proyecto, así que esta copia no puede actualizarse sola.`;
+      case "fr":
+        return `La branche ${branch} ne suit aucune branche de l’endroit où vit le projet ; cette copie ne peut donc pas se mettre à jour seule.`;
+      case "ja":
+        return `ブランチ ${branch} はプロジェクトの置き場所のブランチを追跡していないため、このコピーは自分ではアップデートできません。`;
+      case "ko":
+        return `분기 ${branch}이(가) 프로젝트가 있는 곳의 분기를 따르지 않아 이 사본은 스스로 업데이트할 수 없어요.`;
+      case "pt-BR":
+        return `O branch ${branch} não segue nenhum branch do lugar onde o projeto fica, então esta cópia não pode se atualizar sozinha.`;
+      case "zh-Hans":
+        return `分支 ${branch} 没有跟随项目所在之处的分支，因此这份副本无法自行更新。`;
+      case "zh-Hant":
+        return `分支 ${branch} 沒有追蹤專案所在之處的分支，因此這份副本無法自行更新。`;
+      case "en-XA":
+        return `[Ɓŕáñçĥ ${branch} ðöéš ñöţ ƒöļļöŵ á ƀŕáñçĥ ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš, šö ţĥîš çöþý çáññöţ ûþðáţé îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Branch ‬${branch}‮ does not follow a branch where the project lives, so this copy cannot update itself.‬`;
+    }
+    return `Branch ${branch} does not follow a branch where the project lives, so this copy cannot update itself.`;
+  }
+  function updateSourceNotAsked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary تسليم التحديث، لذا لم يتغيّر شيء.`;
+      case "de":
+        return `Infinitary konnte das Update nicht übergeben, daher hat sich nichts geändert.`;
+      case "es":
+        return `Infinitary no pudo entregar la actualización, así que no cambió nada.`;
+      case "fr":
+        return `Infinitary n’a pas pu transmettre la mise à jour ; rien n’a changé.`;
+      case "ja":
+        return `Infinitary はアップデートを引き渡せなかったため、何も変わっていません。`;
+      case "ko":
+        return `Infinitary가 업데이트를 넘기지 못해 아무것도 바뀌지 않았어요.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu repassar a atualização, então nada mudou.`;
+      case "zh-Hans":
+        return `Infinitary 无法移交这次更新，因此没有任何改动。`;
+      case "zh-Hant":
+        return `Infinitary 無法交出這次更新，因此沒有任何變更。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ ĥáñð ţĥé ûþðáţé öṽéŕ, šö ñöţĥîñĝ çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not hand the update over, so nothing changed.‬`;
+    }
+    return `Infinitary could not hand the update over, so nothing changed.`;
+  }
+  function updateSourceNotMoved(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على هذه النسخة التقدّم إلى ${to}، لذا بقيت على ${from}.`;
+      case "de":
+        return `Diese Kopie konnte nicht zu ${to} vorrücken und ist daher bei ${from} geblieben.`;
+      case "es":
+        return `Esta copia no pudo avanzar hasta ${to}, así que se quedó en ${from}.`;
+      case "fr":
+        return `Cette copie n’a pas pu avancer jusqu’à ${to} ; elle est donc restée sur ${from}.`;
+      case "ja":
+        return `このコピーは ${to} へ進めなかったため、${from} のままです。`;
+      case "ko":
+        return `이 사본을 ${to}(으)로 옮기지 못해 ${from}에 그대로 있어요.`;
+      case "pt-BR":
+        return `Esta cópia não conseguiu avançar até ${to}, então continuou em ${from}.`;
+      case "zh-Hans":
+        return `这份副本无法前移到 ${to}，因此仍停留在 ${from}。`;
+      case "zh-Hant":
+        return `這份副本無法往前移到 ${to}，因此仍停在 ${from}。`;
+      case "en-XA":
+        return `[Ţĥîš çöþý çöûļð ñöţ ɱöṽé ƒöŕŵáŕð ţö ${to}, šö îţ šţáýéð öñ ${from}. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This copy could not move forward to ‬${to}‮, so it stayed on ‬${from}‮.‬`;
+    }
+    return `This copy could not move forward to ${to}, so it stayed on ${from}.`;
+  }
+  function updateSourceNothingToTake() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يوجد الآن تحديث يمكن لهذه النسخة أخذه.`;
+      case "de":
+        return `Für diese Kopie gibt es gerade kein Update, das sie übernehmen kann.`;
+      case "es":
+        return `Ahora no hay ninguna actualización que esta copia pueda tomar.`;
+      case "fr":
+        return `Aucune mise à jour ne peut être prise par cette copie pour l’instant.`;
+      case "ja":
+        return `このコピーがいま取り込めるアップデートはありません。`;
+      case "ko":
+        return `지금 이 사본이 받을 수 있는 업데이트가 없어요.`;
+      case "pt-BR":
+        return `Agora não há nenhuma atualização que esta cópia possa receber.`;
+      case "zh-Hans":
+        return `这份副本现在没有可以采用的更新。`;
+      case "zh-Hant":
+        return `這份副本現在沒有可以採用的更新。`;
+      case "en-XA":
+        return `[Ţĥéŕé îš ñö ûþðáţé ţĥîš çöþý çáñ ţáķé ñöŵ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮There is no update this copy can take now.‬`;
+    }
+    return `There is no update this copy can take now.`;
+  }
+  function updateSourceStillAvailable(input2) {
+    const branch = input2.branch;
+    const commit = input2.commit;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لا يزال في ${branch} ${count} إيداع أحدث، حتى ${commit}.`;
+          case "one":
+            return `لا يزال في ${branch} إيداع واحد أحدث، حتى ${commit}.`;
+          case "two":
+            return `لا يزال في ${branch} إيداعان أحدث، حتى ${commit}.`;
+          case "few":
+            return `لا يزال في ${branch} ${count} إيداعات أحدث، حتى ${commit}.`;
+          case "many":
+            return `لا يزال في ${branch} ${count} إيداعًا أحدث، حتى ${commit}.`;
+          default:
+            return `لا يزال في ${branch} ${count} إيداع أحدث، حتى ${commit}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} hat noch ${count} neueren Commit, bis ${commit}.`;
+          default:
+            return `${branch} hat noch ${count} neuere Commits, bis ${commit}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} todavía tiene ${count} confirmación más reciente, hasta ${commit}.`;
+          case "many":
+            return `${branch} todavía tiene ${count} de confirmaciones más recientes, hasta ${commit}.`;
+          default:
+            return `${branch} todavía tiene ${count} confirmaciones más recientes, hasta ${commit}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${branch} a encore ${count} commit plus récent, jusqu’à ${commit}.`;
+          case "many":
+            return `${branch} a encore ${count} commits plus récents, jusqu’à ${commit}.`;
+          default:
+            return `${branch} a encore ${count} commits plus récents, jusqu’à ${commit}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} にはまだ新しいコミットが ${count} 件あります（${commit} まで）。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch}에 아직 새 커밋이 ${count}개 있어요(${commit}까지).`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O ${branch} ainda tem ${count} commit mais recente, até ${commit}.`;
+          case "many":
+            return `O ${branch} ainda tem ${count} commits mais recentes, até ${commit}.`;
+          default:
+            return `O ${branch} ainda tem ${count} commits mais recentes, até ${commit}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} 仍有 ${count} 个更新的提交，最新到 ${commit}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${branch} 仍有 ${count} 個較新的提交，最新到 ${commit}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${branch} šţîļļ ĥáš ${count} ñéŵéŕ çöɱɱîţ, ûþ ţö ${commit}. ~~~~~~~~~~~]`;
+          default:
+            return `[${branch} šţîļļ ĥáš ${count} ñéŵéŕ çöɱɱîţš, ûþ ţö ${commit}. ~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${branch}‮ still has ‬${count}‮ newer commit, up to ‬${commit}‮.‬`;
+          default:
+            return `${branch}‮ still has ‬${count}‮ newer commits, up to ‬${commit}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${branch} still has ${count} newer commit, up to ${commit}.`;
+      default:
+        return `${branch} still has ${count} newer commits, up to ${commit}.`;
+    }
+  }
+  function updateSourceUpToDate(input2) {
+    const branch = input2.branch;
+    switch (currentLanguage()) {
+      case "ar":
+        return `محدّثة مع ${branch}.`;
+      case "de":
+        return `Auf dem Stand von ${branch}.`;
+      case "es":
+        return `Al día con ${branch}.`;
+      case "fr":
+        return `À jour avec ${branch}.`;
+      case "ja":
+        return `${branch} と同じ状態です。`;
+      case "ko":
+        return `${branch}와(과) 같은 상태예요.`;
+      case "pt-BR":
+        return `Em dia com o ${branch}.`;
+      case "zh-Hans":
+        return `已与 ${branch} 保持同步。`;
+      case "zh-Hant":
+        return `已與 ${branch} 同步。`;
+      case "en-XA":
+        return `[Ûþ ţö ðáţé ŵîţĥ ${branch}. ~~~~~~]`;
+      case "ar-XB":
+        return `‮Up to date with ‬${branch}‮.‬`;
+    }
+    return `Up to date with ${branch}.`;
   }
   function updateWindowsChannelNotPutBack() {
     switch (currentLanguage()) {
@@ -93261,6 +93787,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellUpdateAvailable,
     shellUpdateInstall,
     shellUpdateInstalled,
+    shellUpdateSource,
     shellUpdateStable,
     shellVoiceAskingDesktop,
     shellVoiceAskingMac,
@@ -93410,6 +93937,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     updateDownloadStopped,
     updateDownloadUnreachable,
     updateInstallerNoStart,
+    updateSourceAhead,
+    updateSourceAlreadyUpdating,
+    updateSourceAvailable,
+    updateSourceBuildFailed,
+    updateSourceDetached,
+    updateSourceEdited,
+    updateSourceInstallFailed,
+    updateSourceNoUpstream,
+    updateSourceNotAsked,
+    updateSourceNotMoved,
+    updateSourceNothingToTake,
+    updateSourceStillAvailable,
+    updateSourceUpToDate,
     updateWindowsChannelNotPutBack,
     updateWindowsInstallFailed,
     updateWindowsNoCopy,
@@ -96172,6 +96712,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellUpdateAvailable": ["version"],
     "shellUpdateInstall": [],
     "shellUpdateInstalled": ["version"],
+    "shellUpdateSource": ["branch"],
     "shellUpdateStable": [],
     "shellVoiceAskingDesktop": [],
     "shellVoiceAskingMac": [],
@@ -96321,6 +96862,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "updateDownloadStopped": [],
     "updateDownloadUnreachable": [],
     "updateInstallerNoStart": [],
+    "updateSourceAhead": ["branch"],
+    "updateSourceAlreadyUpdating": [],
+    "updateSourceAvailable": ["branch", "commit", "count"],
+    "updateSourceBuildFailed": ["from", "to"],
+    "updateSourceDetached": [],
+    "updateSourceEdited": [],
+    "updateSourceInstallFailed": ["from", "to"],
+    "updateSourceNoUpstream": ["branch"],
+    "updateSourceNotAsked": [],
+    "updateSourceNotMoved": ["from", "to"],
+    "updateSourceNothingToTake": [],
+    "updateSourceStillAvailable": ["branch", "commit", "count"],
+    "updateSourceUpToDate": ["branch"],
     "updateWindowsChannelNotPutBack": [],
     "updateWindowsInstallFailed": [],
     "updateWindowsNoCopy": ["page"],

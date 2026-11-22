@@ -3607,6 +3607,7 @@
 "shellUpdateAvailable" = "Atualização disponível: %1$@";
 "shellUpdateInstall" = "Instalar";
 "shellUpdateInstalled" = "Você tem a %1$@";
+"shellUpdateSource" = "Atualizações do %1$@";
 "shellUpdateStable" = "Atualizações estáveis";
 "shellVoiceAskingDesktop" = "Seu desktop está perguntando se o Infinitary pode usar o microfone. O que você diz vira texto neste computador e nunca é armazenado.";
 "shellVoiceAskingMac" = "O macOS está perguntando se o Infinitary pode usar o microfone. O que você diz vira texto neste computador e nunca é armazenado.";
@@ -3752,6 +3753,17 @@
 "updateDownloadStopped" = "O download parou antes de terminar. Tente de novo.";
 "updateDownloadUnreachable" = "O Infinitary não conseguiu acessar o download. Verifique sua conexão e tente de novo.";
 "updateInstallerNoStart" = "O instalador não conseguiu iniciar, então nada foi instalado.";
+"updateSourceAhead" = "Esta cópia tem commits que o %1$@ não tem, então não pode avançar.";
+"updateSourceAlreadyUpdating" = "Esta cópia já está sendo atualizada.";
+"updateSourceBuildFailed" = "Não foi possível compilar %2$@, então esta cópia voltou para %1$@.";
+"updateSourceDetached" = "Esta cópia não está em nenhum branch, então não pode se atualizar sozinha.";
+"updateSourceEdited" = "Esta cópia tem alterações sem commit. Faça o commit ou guarde-as à parte e verifique de novo.";
+"updateSourceInstallFailed" = "Os pacotes de %2$@ não foram instalados, então esta cópia voltou para %1$@.";
+"updateSourceNoUpstream" = "O branch %1$@ não segue nenhum branch do lugar onde o projeto fica, então esta cópia não pode se atualizar sozinha.";
+"updateSourceNotAsked" = "O Infinitary não conseguiu repassar a atualização, então nada mudou.";
+"updateSourceNotMoved" = "Esta cópia não conseguiu avançar até %2$@, então continuou em %1$@.";
+"updateSourceNothingToTake" = "Agora não há nenhuma atualização que esta cópia possa receber.";
+"updateSourceUpToDate" = "Em dia com o %1$@.";
 "updateWindowsChannelNotPutBack" = "O Infinitary não conseguiu restaurar o canal de atualização que seguia antes; confira o canal em Ajustes → Geral.";
 "updateWindowsInstallFailed" = "O instalador parou antes de terminar, então esta cópia foi mantida.";
 "updateWindowsNoCopy" = "O Infinitary não conseguiu abrir de novo depois da atualização. Baixe o instalador em %1$@ e execute-o; suas tarefas e ajustes são mantidos.";

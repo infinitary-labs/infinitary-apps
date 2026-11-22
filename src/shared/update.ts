@@ -62,6 +62,20 @@ export const updateStatusSchema = z.object({
   /** The crew's work around this update, while there is any to save or resume. */
   work: updateWorkSchema.optional(),
   /**
+   * A copy run from source by `pnpm dev`'s starter (docs/alpha.md, "Updates
+   * from source"): the branch it follows where the project lives, how many
+   * commits that branch has that this copy lacks, and, when it has some,
+   * why the copy cannot move forward to them. Its versions are short
+   * commits. Absent for an installed copy, and from an older core.
+   */
+  source: z
+    .object({
+      branch: z.string(),
+      behind: z.number().int().min(0),
+      held: z.enum(["edited", "ahead"]).optional(),
+    })
+    .optional(),
+  /**
    * The paired phone or Mac, by its name, that started the update under way
    * (`home-update.md`): the notice says so, beside Update later.
    */

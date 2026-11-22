@@ -2033,5 +2033,33 @@
       <string>· %1$ld개 건너뜀</string>
     </dict>
   </dict>
+  <key>updateSourceAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$@에 새 커밋이 %3$ld개 있어요(%2$@까지).</string>
+    </dict>
+  </dict>
+  <key>updateSourceStillAvailable</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%3$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$@에 아직 새 커밋이 %3$ld개 있어요(%2$@까지).</string>
+    </dict>
+  </dict>
 </dict>
 </plist>

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ci-housekeeping",
+      "reason": "Check-workflow housekeeping only (narrower docs-site triggers, a shared base step, the batch watch on a light queue); nothing a person using the app notices."
+    }
+  ]
+}

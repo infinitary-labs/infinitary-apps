@@ -201,7 +201,10 @@ jobs:
   watch:
     needs: batch
     name: ${{ format('{0} · Watch for a stop', inputs.trigger) }}
-    runs-on: ubuntu-24.04
+    # A reading every half minute for as long as the batch runs, about 40
+    # minutes, so it takes the light kind's queue and bills no hosted minutes.
+    # Only this project's own batch branches reach this file.
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     continue-on-error: true
     outputs:
       stop: ${{ steps.watch.outputs.stop }}

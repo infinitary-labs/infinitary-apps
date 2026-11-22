@@ -739,7 +739,7 @@ The `windows` job builds the Windows installer and checks it on a fresh Windows 
 The last job, `Merge batch · Batch passed (tree T; base B)`, passes once the sweep, the critical path and the startup fixtures passed, or once every failed job's test files passed their confirm, and in either case the release notes check passed and the Windows check passed or skipped; it names the tree T of the batch's version and the main version B its branch left `main` at.
 The batch's first job, `Read the batch`, reads T and B with git from the commits alone, fetched without their trees or files, and never asks GitHub's compare answer, which builds the batch's whole diff first and can refuse it under heavy load, holding the batch on one reading (INF-4683).
 The batch stops at its first code-check failure (the captain's pick on INF-3925), and once a confirm fails again on the test files it named (the captain's pick on INF-5113, "Start now: stop at a failed confirm").
-Its `watch` job, `Merge batch · Watch for a stop`, reads the run every half minute until every other job ended (`scripts/batch-stop.mjs`).
+Its `watch` job, `Merge batch · Watch for a stop`, reads the run every half minute until every other job ended (`scripts/batch-stop.mjs`), on the `light` Linux kind so the 40-minute wait bills no hosted minutes.
 It stops the batch when the sweep's `Code checks and build (Linux)` job failed, or when a confirm job failed and its log shows a round that failed on the files it named: `scripts/batch-confirm.ts` prints `Confirm round N of 3:` with the files before each round and `Failed in round N of 3.` after a failed one.
 A confirm that failed before any round ran, because its failed job's log named no test file, as when a test machine dropped out, never stops the batch, and neither does one whose log GitHub cannot give yet, which the watch reads again.
 A failed test group alone never stops it either: a failed group is often a flake its confirm passes, and a stop before the confirm would leave the repair no evidence and hide another change's failure later in the run.
@@ -977,7 +977,7 @@ No pull request runs the Linux startup fixtures, the node-headers proof or the a
 
 The same jobs run for a pushed branch as for its pull request, named `Branch push · Code checks (Linux)`, `Branch push · Tests a change reaches (Linux)` and `Branch push · Build and critical path (Linux)` (INF-3759's plan, piece 2).
 A pull request's change starts at the base parent of its merge commit; a pushed branch has no merge commit, so its change starts at the commit the branch left `main` at.
-Each job's `Find the change's base` step finds that commit, and the release notes check, the paths step, the reader of changed files and the critical path all measure the change from it, so commits `main` gained since are never read as the branch's own.
+Each job's `Find the change's base` step, one shared action (`.github/actions/change-base`), finds that commit, and the release notes check, the paths step, the reader of changed files and the critical path all measure the change from it, so commits `main` gained since are never read as the branch's own.
 A branch built on a batch's version, as a held batch's repair is ("A held batch's repair"), starts instead at the newest version of a batch branch, `infinitary-batch/<id>`, that the branch holds and that holds the commit it left `main` at (INF-5379's plan, piece 2).
 The step then names that version as its `batch` output and in a notice, `Checked in the batch`, and every later step skips, so the check passes in about a minute.
 Each check it skips runs in the batch's own run once the branch joins, with every change beside it ("The swept batch"): the typecheck, `pnpm check` and the build in the sweep's `Code checks and build (Linux)` job, the tests that read a changed file and the browser tests in its Linux test groups, the critical path in the `critical-path` job, and the release notes check and the phone contract flag in the `notes` job.
@@ -1657,7 +1657,7 @@ So a journey request's Linux part that holds one (`FAR_LINUX_JOURNEYS`, `tests/e
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
-| `light` | `verify.yml`'s `request`, `size-warning.yml`'s `size-warning`, and `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first) | `LINUX_RUNNER` |
+| `light` | `verify.yml`'s `request`, `size-warning.yml`'s `size-warning`, `batch-checks.yml`'s `watch` (it reads the batch's run for about 40 minutes, so it holds no hosted machine), and `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first) | `LINUX_RUNNER` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), the two choosers a Mac job waits on (INF-5387's plan, piece 1) | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |

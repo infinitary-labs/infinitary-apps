@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { hostEnv } from "@core/hostEnv";
 import { describe, expect, it } from "vitest";
@@ -36,6 +36,15 @@ describe("the required tsrs check", () => {
         include: ["*.ts"],
       }),
     );
+    // Build mode skips a project whose sources are not newer than its build record, and
+    // a clock with coarse ticks gives a file written just after a check the record's own
+    // time: each write is dated a second past the record the last check wrote.
+    const record = join(cwd, "tsconfig.words.tsbuildinfo");
+    const write = (file: string, text: string) => {
+      writeFileSync(file, text);
+      const after = statSync(record).mtimeMs / 1000 + 1;
+      utimesSync(file, after, after);
+    };
     const run = () =>
       spawnSync(process.execPath, [script, "--pretty", "false"], {
         cwd,
@@ -55,18 +64,18 @@ describe("the required tsrs check", () => {
     };
     clean();
     clean();
-    writeFileSync(source, original.replace("`Add ${name}?`", "name.length"));
+    write(source, original.replace("`Add ${name}?`", "name.length"));
     broken("runbookWords.ts", "TS2322");
     broken("runbookWords.ts", "TS2322");
-    writeFileSync(source, original);
+    write(source, original);
     clean();
     const consumer = join(cwd, "consumer.ts");
-    writeFileSync(
+    write(
       consumer,
       'import { runbookConsentTitle } from "./runbookWords";\nexport const text: string = runbookConsentTitle("a runbook");\n',
     );
     clean();
-    writeFileSync(
+    write(
       source,
       original.replace(
         "runbookConsentTitle(name: string)",
@@ -75,7 +84,7 @@ describe("the required tsrs check", () => {
     );
     clean();
     // A changed imported return type must invalidate the already-checked consumer.
-    writeFileSync(
+    write(
       source,
       original.replace(
         "runbookConsentTitle(name: string): string",
@@ -85,7 +94,7 @@ describe("the required tsrs check", () => {
     broken("consumer.ts", "TS2322");
     rmSync(source);
     broken("consumer.ts", "TS2307");
-    writeFileSync(source, original);
+    write(source, original);
     clean();
     rmSync(consumer);
     clean();

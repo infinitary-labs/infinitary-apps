@@ -11,7 +11,7 @@ extension PhoneJourney {
     /// to. The captain: "after the "point at" annotation selects an element, we should deactivate annotation, not leaving
     /// it still activated". Data: a first mate card whose body holds two paragraphs and a list, behind a card shown ahead
     /// of it. Completion: the pager moves to the notes card, whose body drew beside the shown card, and words long-pressed
-    /// there open the note editor from the selection's Annotate with nothing touched before;
+    /// there open the note editor from the selection's Annotate with nothing on it touched before;
     /// Point at, then a tap on the first paragraph, opens the note editor under it inside the card, whose
     /// comment stays in view above the keyboard and queues one note, and Point at is off once it picked; words
     /// long-pressed in the second paragraph open it again from the selection's Annotate, and it queues as-is; on an
@@ -23,11 +23,12 @@ extension PhoneJourney {
         try await launchJoined()
         let fixture = try await home("note-card")
         let lead = try XCTUnwrap(fixture["lead"] as? String)
+        let leadLine = try XCTUnwrap(fixture["leadLine"] as? String)
         let title = try XCTUnwrap(fixture["title"] as? String)
         let part = try XCTUnwrap(fixture["part"] as? String)
         let words = try XCTUnwrap(fixture["words"] as? String)
         let editor = app.descendants(matching: .any).matching(identifier: "note-editor").firstMatch
-        verifyAnnotateAfterPaging(from: lead, to: title, words: words, editor: editor)
+        verifyAnnotateAfterPaging(from: lead, line: leadLine, to: title, words: words, editor: editor)
         let first = app.webViews.staticTexts[part].firstMatch
         XCTAssertTrue(first.waitForPresence(timeout: 20), app.debugDescription)
         // Point at, then a tap on a whole part: the note editor opens under it with its comment ready.
@@ -136,10 +137,20 @@ extension PhoneJourney {
     }
 
     /// INF-4353: the pager moves from the card shown first to the notes card, whose body drew beside it with no pane
-    /// listening. Words long-pressed there, before Point at or any note, open the note editor from the selection's Annotate.
-    private func verifyAnnotateAfterPaging(from lead: String, to title: String, words: String, editor: XCUIElement) {
+    /// listening. Words long-pressed there, before Point at, any note or any other touch on that card, open the note editor
+    /// from the selection's Annotate.
+    private func verifyAnnotateAfterPaging(from lead: String, line: String, to title: String, words: String, editor: XCUIElement) {
         XCTAssertTrue(cardHeading(lead).waitForPresence(timeout: 10), "\(lead) is not the card shown first\n\(app.debugDescription)")
         waitForShownBodyRevealed()
+        // INF-6042: the first touch in a card body makes the app's first text responder, and UIKit then opens its
+        // keyboard connection, once per launch, holding the main thread: 0.57 s on a busy runner against 0.02 s on a
+        // quiet one. Paid inside the long press below, it started the selection after the 1.2 s hold had ended, so no
+        // menu came. A tap on the shown card's words pays it here, and XCTest waits for the main thread to idle before
+        // its next action, so the press starts with the connection open and the notes card stays untouched until it.
+        let shownLine = app.webViews.staticTexts[line].firstMatch
+        XCTAssertTrue(shownLine.waitForPresence(timeout: 20), app.debugDescription)
+        reveal(shownLine)
+        tapOnPhone(shownLine)
         let probe = app.descendants(matching: .any).matching(identifier: "card-row-probe").firstMatch
         let beside = NSPredicate { _, _ in probe.exists && probe.label.hasPrefix("beside drawn") }
         XCTAssertEqual(waitForPhonePredicate(beside, object: nil, timeout: 30), .completed,

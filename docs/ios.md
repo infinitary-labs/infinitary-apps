@@ -1314,6 +1314,10 @@ Any other such check waits on the load clock until XCTest finds the control's ta
 A typed field waits for keyboard focus after its tap (`focusForPhoneTyping`), so a dropped tap fails where it happened rather than at the typing.
 A steady reading says only that the target holds still now: a card shows before its body draws, and the body then grows from its 48-point placeholder and carries the reply row under it down.
 So a step that presses a card's reply row right after showing the card first waits for the shown body's reveal (`waitForShownBodyRevealed`), since a tap whose point XCTest read before that move lands where the field was and focuses nothing (INF-4820).
+A long press that selects a card's words holds a fixed 1.2 seconds, and WebKit starts the selection only once the app's main thread is free.
+The first touch in a card body makes the app's first text responder, and UIKit then opens its keyboard connection, once per launch, holding the main thread for over half a second on a busy runner.
+Paid inside such a press, it starts the selection after the press has ended, and the selection's menu never shows.
+So a part whose first touch in a body would be that press first taps words on another card, and XCTest's run loop wait orders the press after the connection opened (INF-6042).
 A display change, such as dark appearance or the largest type, waits until a still part of the screen draws differently than before the change and settles (`waitForRedraw`), and its pictures are taken after that.
 It settles only on one picture read twice in a row, never on two in turn, since the one picture read before the change cannot tell a redraw from the capture's own other picture.
 The runner confirms each display change from the simulator's own log before it answers the journey (INF-1785, the captain's "Confirm each change from the simulator's log, and set it once more only when the log proves the phone missed it").

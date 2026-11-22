@@ -39,6 +39,11 @@ jobs:
     # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').build || 'mini-mac-virtual' }}
     timeout-minutes: 180
+    # The cut's stop enters this job's own group with cancel-in-progress once
+    # one of the cut's jobs failed (release.yml's `stop`, scripts/batch-stop.mjs);
+    # nothing else enters it.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-mac-installer-build', github.run_id, github.run_attempt) }}
     env:
       SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
     steps:
@@ -146,6 +151,9 @@ jobs:
     if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.reuse != '' && needs.build.result == 'skipped')) }}
     runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 60
+    # The cut's stop's group, as the build's.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-mac-installer-installed', github.run_id, github.run_attempt) }}
     steps:
       - id: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

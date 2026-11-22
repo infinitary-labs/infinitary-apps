@@ -27,6 +27,17 @@
  * of its own points at the real failure rather than twenty stops. The
  * batch's code holds only a read of the project, and GitHub cancels a single
  * job only through its concurrency group, never through the run's API.
+ *
+ * An alpha cut, rehearsals included, stops at its first failed job (INF-6038,
+ * the captain's approved plan; docs/alpha.md, "Failed alpha checks"): a
+ * failed cut can never publish, yet its journeys, signing, Linux packages,
+ * Windows installer and signed installer check ran on to the slowest one's
+ * end. release.yml's watch reads the run with the cut's rule (`cut` below),
+ * its stop jobs enter each job's own group the same way, and the watch then
+ * fails itself naming the failed job, so GitHub's Re-run failed jobs re-runs
+ * the watch beside the jobs it re-runs. The cut retries nothing before it
+ * stops (the captain's direction to fix a flaky test's cause rather than
+ * rely on re-runs).
  */
 
 /** How the code checks' job name ends, at every level of a batch run's names. */
@@ -120,25 +131,119 @@ const wait = (seconds) => new Promise((resolve) => setTimeout(resolve, seconds *
 const lastPart = (name) => name.split(" · ").at(-1);
 
 /**
- * The watch job: reads the run's latest jobs every half minute until every
- * other job ended, and writes the output `stop`: `code-checks` when the code
- * checks failed, `confirm` when a confirm failed again on the test files it
- * named, and `none` otherwise; on a stop, the output `failed` says what failed
- * in words (`codeChecksFailure`, or the confirm and its files). It reads a
- * failed confirm's log once; a log GitHub cannot give yet is read again. A
- * job is created only once the jobs it needs end, so a run without its last
- * check job ends the watch only when two readings in a row find nothing else
- * running. A reading GitHub refuses is read again; the job's
- * continue-on-error keeps a watch that never ends from failing a batch.
+ * The merge batch's rule: it stops when the code checks failed, or a confirm
+ * failed again on the test files it named, and ends once its last check job
+ * is among the ended ones (`runState`). It reads a failed confirm's log once;
+ * a log GitHub cannot give yet is read again.
  */
-export async function watch({ github, context, core, everySeconds = 30 }) {
+export const batch = {
+  async stop(jobs, { github, context, core, read }) {
+    if (codeChecksState(jobs) === "failed") {
+      return {
+        kind: "code-checks",
+        failed: codeChecksFailure(jobs),
+        notice: "The code checks failed, so the stop jobs cancel the rest of this batch.",
+      };
+    }
+    for (const job of failedConfirms(jobs)) {
+      if (read.has(job.id)) continue;
+      let log;
+      try {
+        const { data } = await github.rest.actions.downloadJobLogsForWorkflowRun({ ...context.repo, job_id: job.id });
+        log = typeof data === "string" ? data : Buffer.from(data).toString("utf8");
+      } catch (error) {
+        core.warning(`The log of ${lastPart(job.name)} could not be read, so the watch reads it again: ${error.message}`);
+        continue;
+      }
+      read.add(job.id);
+      const files = confirmedAgain(log);
+      if (files.length) {
+        return {
+          kind: "confirm",
+          failed: `${lastPart(job.name)} failed again on ${files.join(" ")}`,
+          notice: "A confirm failed again on the test files it named, so the stop jobs cancel the rest of this batch.",
+        };
+      }
+      core.notice(`${lastPart(job.name)} failed before it ran a test file, so the batch runs on.`);
+    }
+    return null;
+  },
+  state: runState,
+  none: "Every check ended with no failed code checks and no confirm that failed again, so nothing stops this batch.",
+};
+
+/** What a cut's stop job's name holds (release.yml's `stop`). */
+export const STOP_CUT = " · Stop the cut (";
+
+/**
+ * How a cut's upload job's name ends, a publishing run's and a rehearsal's
+ * (release.yml's `upload`). It starts only once every job before it passed,
+ * so a reading that lists it ends the watch, and its failure, or the
+ * publication's after it, is never the watch's to stop: nothing runs beside
+ * them.
+ */
+export const UPLOAD = [" · Upload every download", " · Preview uploads; upload nothing"];
+
+const watched = (job) =>
+  !job.name.endsWith(WATCH) && !job.name.includes(STOP_CUT) && !UPLOAD.some((end) => job.name.endsWith(end));
+
+/**
+ * The cut's failed jobs in one reading, the first to end first, by their
+ * last name part: every job of the run but the watch, its stops and the
+ * upload whose conclusion is a failure or a timeout. A cancelled or skipped
+ * job is no failure of its own.
+ */
+export function cutFailures(jobs) {
+  return jobs
+    .filter((job) => watched(job) && job.status === "completed" && FAILED.includes(job.conclusion))
+    .sort((a, b) => String(a.completed_at ?? "").localeCompare(String(b.completed_at ?? "")))
+    .map((job) => lastPart(job.name));
+}
+
+/**
+ * Whether one reading of a cut shows every job before the upload ended:
+ * `ended` once the upload job is listed, `quiet` while every listed job but
+ * the watch and its stops ended and a job that waits on them may still be
+ * created, `running` otherwise.
+ */
+export function cutState(jobs) {
+  if (jobs.some((job) => UPLOAD.some((end) => job.name.endsWith(end)))) return "ended";
+  return jobs.filter(watched).every((job) => job.status === "completed") ? "quiet" : "running";
+}
+
+/**
+ * An alpha cut's rule, a rehearsal's too: it stops at the first job that
+ * failed or timed out, whatever job it is, and ends once the upload job is
+ * listed. The output `failed` names the failed jobs.
+ */
+export const cut = {
+  async stop(jobs) {
+    const failed = cutFailures(jobs);
+    if (!failed.length) return null;
+    return {
+      kind: "failed",
+      failed: failed.join(", "),
+      notice: `${failed[0]} failed, so the stop jobs cancel the rest of this cut.`,
+    };
+  },
+  state: cutState,
+  none: "Every job before the upload ended with none failed, so nothing stops this cut.",
+};
+
+/**
+ * The watch job: reads the run's latest jobs every half minute until its
+ * rule says every other job ended, and writes the output `stop`: the kind of
+ * stop the rule found (the batch's `code-checks` or `confirm`, the cut's
+ * `failed`), or `none`; on a stop, the output `failed` says what failed in
+ * words. A job is created only once the jobs it needs end, so a run without
+ * the job that marks its end ends the watch only when two readings in a row
+ * find nothing else running. A reading GitHub refuses is read again; the
+ * batch's watch job is continue-on-error, and the cut's watch step is, so a
+ * watch that never ends fails neither.
+ */
+export async function watch({ github, context, core, everySeconds = 30, rule = batch }) {
   let quiet = 0;
   const read = new Set();
-  const stop = (kind, failed, notice) => {
-    core.notice(notice);
-    core.setOutput("stop", kind);
-    core.setOutput("failed", failed);
-  };
   for (;;) {
     let jobs = null;
     try {
@@ -152,40 +257,17 @@ export async function watch({ github, context, core, everySeconds = 30 }) {
       core.warning(`The run's jobs could not be read, so the watch reads them again: ${error.message}`);
     }
     if (jobs) {
-      if (codeChecksState(jobs) === "failed") {
-        stop(
-          "code-checks",
-          codeChecksFailure(jobs),
-          "The code checks failed, so the stop jobs cancel the rest of this batch.",
-        );
+      const found = await rule.stop(jobs, { github, context, core, read });
+      if (found) {
+        core.notice(found.notice);
+        core.setOutput("stop", found.kind);
+        core.setOutput("failed", found.failed);
         return;
       }
-      for (const job of failedConfirms(jobs)) {
-        if (read.has(job.id)) continue;
-        let log;
-        try {
-          const { data } = await github.rest.actions.downloadJobLogsForWorkflowRun({ ...context.repo, job_id: job.id });
-          log = typeof data === "string" ? data : Buffer.from(data).toString("utf8");
-        } catch (error) {
-          core.warning(`The log of ${lastPart(job.name)} could not be read, so the watch reads it again: ${error.message}`);
-          continue;
-        }
-        read.add(job.id);
-        const files = confirmedAgain(log);
-        if (files.length) {
-          stop(
-            "confirm",
-            `${lastPart(job.name)} failed again on ${files.join(" ")}`,
-            "A confirm failed again on the test files it named, so the stop jobs cancel the rest of this batch.",
-          );
-          return;
-        }
-        core.notice(`${lastPart(job.name)} failed before it ran a test file, so the batch runs on.`);
-      }
-      const state = runState(jobs);
+      const state = rule.state(jobs);
       quiet = state === "quiet" ? quiet + 1 : 0;
       if (state === "ended" || quiet >= 2) {
-        core.notice("Every check ended with no failed code checks and no confirm that failed again, so nothing stops this batch.");
+        core.notice(rule.none);
         core.setOutput("stop", "none");
         return;
       }

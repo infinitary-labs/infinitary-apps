@@ -73,6 +73,11 @@ jobs:
     # Every job runs where LINUX_RUNNER sends it (ci.yml says how), and on
     # GitHub's hosted Ubuntu when it is unset or a release calls it without a release queue.
     runs-on: ${{ inputs.release_runner || inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    # The cut's stop enters this job's own group with cancel-in-progress once
+    # one of the cut's jobs failed (release.yml's `stop`, scripts/batch-stop.mjs);
+    # nothing else enters it.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-linux-packages-build', github.run_id, github.run_attempt) }}
     outputs:
       version: ${{ steps.version.outputs.version }}
       # The list every check job compares its downloaded copy with, carried
@@ -267,6 +272,10 @@ jobs:
     # LINUX_RUNNER label with -2604 (shell-pc-linux-2604); inside a release
     # each leg takes the release queue when named, else its hosted machine.
     runs-on: ${{ inputs.release_runner && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', inputs.release_runner) || inputs.release_runner) || !inputs.hosted && vars.LINUX_RUNNER && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', vars.LINUX_RUNNER) || vars.LINUX_RUNNER) || matrix.runner }}
+    # The cut's stop's group, as the build's, one for each system: its image,
+    # or its runner when it installs on the machine itself.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-linux-packages-check-{2}-{3}', github.run_id, github.run_attempt, matrix.system, matrix.image || matrix.runner) }}
     steps:
       - id: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

@@ -17,8 +17,9 @@ export type Scenario = {
   needs?: Record<string, { result?: string; outputs?: Record<string, string> }>;
 };
 
-type Job = {
+export type Job = {
   name?: string;
+  concurrency?: { group?: string; "cancel-in-progress"?: boolean | string };
   if?: string | boolean;
   uses?: string;
   with?: Record<string, unknown>;
@@ -103,8 +104,19 @@ function jobOutputs(workflow: Workflow, scenario: Scenario, run: Record<string, 
   return needs;
 }
 
+/** One job a run shows: its full name, its definition and what its expressions read. */
+export type RunJob = { name: string; job: Job; contexts: Record<string, unknown> };
+
 /** The full name of every job a run of `file` shows in `scenario`. */
 export function runJobNames(file: string, scenario: Scenario, called = false): string[] {
+  return runJobs(file, scenario, called).map((each) => each.name);
+}
+
+/**
+ * Every job a run of `file` shows in `scenario`, with the contexts its own
+ * expressions read: a called workflow's jobs in place of its caller.
+ */
+export function runJobs(file: string, scenario: Scenario, called = false): RunJob[] {
   const workflow = loadYamlFile(`.github/workflows/${file}`) as unknown as Workflow;
   const event = called ? "workflow_call" : String(scenario.github.event_name);
   const inputs = { ...inputDefaults(workflow, event), ...scenario.inputs };
@@ -125,14 +137,15 @@ export function runJobNames(file: string, scenario: Scenario, called = false): s
       };
       if (!held(job.if, contexts)) return [];
       const name = job.name === undefined ? id : workflowString(job.name, contexts);
-      if (!job.uses) return [name];
+      if (!job.uses) return [{ name, job, contexts }];
       const child = job.uses.replace(/^\.\/\.github\/workflows\//, "");
       const passed = Object.fromEntries(
         Object.entries(job.with ?? {}).map(([key, value]) => [key, evaluated(value, contexts)]),
       );
-      return runJobNames(child, { ...scenario, inputs: passed }, true).map(
-        (each) => `${name} / ${each}`,
-      );
+      return runJobs(child, { ...scenario, inputs: passed }, true).map((each) => ({
+        ...each,
+        name: `${name} / ${each.name}`,
+      }));
     });
   });
 }

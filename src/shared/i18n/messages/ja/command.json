@@ -1,6 +1,8 @@
 {
   "commandAllowanceRecheck": "利用枠を再確認",
   "commandAllowanceRecheckWords": "上限, 更新, 使用量, 制限, アカウント, 切り替え",
+  "commandAmbientStyle": "アンビエント音楽を選ぶ",
+  "commandAmbientStyleWords": "音楽, スタイル, ローファイ, サウンド, 環境音, 選ぶ, 変更",
   "commandAmbientToggle": "アンビエント音楽を再生または一時停止",
   "commandAmbientToggleWords": "音楽, lofi, サウンド, 環境音, 停止",
   "commandAutomationPauseAll": "すべての自動化を一時停止",

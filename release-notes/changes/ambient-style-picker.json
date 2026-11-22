@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-style-picker",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Pick the ambient music from the sound button",
+      "body": "Rest the pointer on the sound button beside Settings and it now names the music that is playing. Rest on the name, or press it, and the list of styles drops below, your own styles under Yours: a pick plays at once, even while the music is paused, and the list stays open so you can try another. Describe your own is at the end of the list. Choose ambient music in command search opens the same list from the keyboard.",
+      "picture": {
+        "dark": "ambient-style-picker-dark.webp",
+        "light": "ambient-style-picker-light.webp",
+        "alt": "The sound button's pill naming the style Late shift beside the volume, with the style list open below it: Space, Pirate, Nautical, Island and Yours, the line for Harbor dawn and Describe your own"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

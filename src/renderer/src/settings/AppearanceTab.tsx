@@ -3,11 +3,11 @@ import { currentLanguage } from "@shared/i18n/current";
 import { ownLanguageName, SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
 import { choosableLanguages, FOLLOWS_COMPUTER } from "@shared/i18n/start";
-import { type AmbientStyle, ambientStyleIn, UI_SIZES, type UiSize } from "@shared/preferences";
+import { ambientStyleIn, UI_SIZES, type UiSize } from "@shared/preferences";
 import { useEffect, useRef, useState } from "react";
 import { usePresence } from "../ambient/presence";
+import { describeOwnStyle, STYLE_GROUPS, STYLE_WORDS, styleWords } from "../ambient/styleList";
 import type { AppearanceChoice } from "../app/appearance";
-import { mainMessageRefusal } from "../app/composer";
 import { useCommandKeys } from "../app/keyHints";
 import { notePickerChange, takePickerFocus, windowDefaultLanguage } from "../app/language";
 import { useShellStore } from "../app/store";
@@ -303,71 +303,6 @@ export function AppearanceTab() {
   );
 }
 
-/** Each ambient style's name and one line on how it sounds. */
-const STYLE_WORDS: Record<AmbientStyle, { name: () => string; description: () => string }> = {
-  "deep-drift": {
-    name: m.settingsSoundStyleDeepDrift,
-    description: m.settingsSoundStyleDeepDriftDescription,
-  },
-  "star-cruise": {
-    name: m.settingsSoundStyleStarCruise,
-    description: m.settingsSoundStyleStarCruiseDescription,
-  },
-  "cold-sleep": {
-    name: m.settingsSoundStyleColdSleep,
-    description: m.settingsSoundStyleColdSleepDescription,
-  },
-  "quiet-cove": {
-    name: m.settingsSoundStyleQuietCove,
-    description: m.settingsSoundStyleQuietCoveDescription,
-  },
-  "tavern-embers": {
-    name: m.settingsSoundStyleTavernEmbers,
-    description: m.settingsSoundStyleTavernEmbersDescription,
-  },
-  "moonlit-deck": {
-    name: m.settingsSoundStyleMoonlitDeck,
-    description: m.settingsSoundStyleMoonlitDeckDescription,
-  },
-  "harbor-dawn": {
-    name: m.settingsSoundStyleHarborDawn,
-    description: m.settingsSoundStyleHarborDawnDescription,
-  },
-  "fair-winds": {
-    name: m.settingsSoundStyleFairWinds,
-    description: m.settingsSoundStyleFairWindsDescription,
-  },
-  "wayfinder-night": {
-    name: m.settingsSoundStyleWayfinderNight,
-    description: m.settingsSoundStyleWayfinderNightDescription,
-  },
-  "island-morning": {
-    name: m.settingsSoundStyleIslandMorning,
-    description: m.settingsSoundStyleIslandMorningDescription,
-  },
-};
-
-/** The styles in the picker, under the four kinds of journey they come from. */
-const STYLE_GROUPS: [() => string, AmbientStyle[]][] = [
-  [m.settingsSoundStyleGroupSpace, ["star-cruise", "deep-drift", "cold-sleep"]],
-  [m.settingsSoundStyleGroupPirate, ["quiet-cove", "tavern-embers", "moonlit-deck"]],
-  [m.settingsSoundStyleGroupNautical, ["harbor-dawn", "fair-winds"]],
-  [m.settingsSoundStyleGroupIsland, ["wayfinder-night", "island-morning"]],
-];
-
-/**
- * Describe your own (docs/ambient-music.md, "Your own styles"): home, with
- * the message box starting the ask to the first mate and the caret after
- * it, for the person to describe the music. Nothing is sent from here.
- * Refused, as Go to the main message is, while the box is held.
- */
-function describeOwnStyle(): void {
-  const shell = useShellStore.getState();
-  if (mainMessageRefusal(shell) !== null) return;
-  shell.focusMainMessage();
-  shell.beginDraft(m.settingsSoundOwnDraft());
-}
-
 /**
  * The Sound group (docs/ambient-music.md): the ambient music's switch, its
  * style and its volume, kept for this window like the rest of its look.
@@ -415,11 +350,7 @@ function SoundRows() {
           id="ambient-style"
           error={errorFor("ambientStyle")}
           title={m.settingsSoundStyle()}
-          description={
-            ownChosen
-              ? ownChosen.words || m.settingsSoundOwnNoWords()
-              : STYLE_WORDS[style as AmbientStyle].description()
-          }
+          description={styleWords(style, own).description}
           control={
             <select
               aria-label={m.settingsSoundStyle()}

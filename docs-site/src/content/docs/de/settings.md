@@ -1,5 +1,5 @@
 ---
-source: bf8e88fb9d4b4300
+source: ae7178f2ee99eec5
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -90,7 +90,8 @@ Sie ist aus, bis du sie einschaltest, und **Lautstärke** legt fest, wie laut si
 
 Solange sie an ist, sitzt ein Ton-Knopf direkt vor **Einstellungen** oben im Fenster.
 Drück ihn, um zu pausieren oder fortzusetzen.
-Auch die Befehlssuche hat **Ambient-Musik abspielen oder pausieren**.
+Lass den Zeiger darauf ruhen, und er zeigt den Namen der Musik, die gerade spielt; lass ihn auf dem Namen ruhen oder drück ihn, um einen anderen Stil aus der Liste darunter zu wählen.
+Auch die Befehlssuche hat **Ambient-Musik abspielen oder pausieren** und **Ambient-Musik auswählen**.
 
 ## Leitfäden {#runbooks}
 

@@ -126,11 +126,20 @@ test.describe("a panel from elsewhere changes settings only after the captain ag
       const add = page.getByRole("button", { name: "Add it", exact: true });
       await add.waitFor({ timeout: 30_000 });
       const body = shownCardFrame(page).locator("body");
-      await expect(body).toContainText(englishOf(said("panelChangesIntro")));
-      await expect(body.locator("li")).toHaveText([
-        englishOf(said("panelChangeTheme")),
-        englishOf(said("panelChangeWindowSize")),
-      ]);
+      // The Changes row, beside Reads, Uses and Moves: one value for each setting.
+      await expect(
+        body
+          .getByRole("term")
+          .filter({ hasText: new RegExp(`^${englishOf(said("cardConsentChanges"))}$`) })
+          .first(),
+      ).toBeVisible();
+      for (const setting of ["panelChangeTheme", "panelChangeWindowSize"] as const)
+        await expect(
+          body
+            .getByRole("definition")
+            .filter({ hasText: new RegExp(`^${englishOf(said(setting))}$`) })
+            .first(),
+        ).toBeVisible();
       await add.click();
     });
 

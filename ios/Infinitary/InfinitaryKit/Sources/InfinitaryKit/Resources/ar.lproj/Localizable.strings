@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "لا شيء يستجيب على %1$@، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserUnansweredWorking" = "لا شيء يستجيب على %1$@، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserWord" = "المتصفح";
+"cardConsentChanges" = "يغيّر";
+"cardConsentChangesDetail" = "هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.";
+"cardConsentChangesLine" = "يمكنه تغيير إعداد عند نقرك: %1$@";
 "cardConsentFrom" = "من";
 "cardConsentFullDetails" = "كل التفاصيل";
 "cardConsentGuidanceOnly" = "يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "فحص مهمة محفوظة";
 "panelChangeLanguage" = "اللغة";
 "panelChangeModelPins" = "النموذج لكل نوع من المهام";
+"panelChangeNoDelete" = "لا تحذف اللوحة أي شيء يخصك أبدًا. لم يتغير شيء.";
 "panelChangeNotAsked" = "لا يغيّر إعدادًا إلا نقرك أو ضغطك مفتاحًا بنفسك في هذه اللوحة. لم يتغير شيء.";
 "panelChangeNotGranted" = "لا يمكن لهذه اللوحة تغيير %1$@. لم يتغير شيء.";
 "panelChangeNotifications" = "الإشعارات";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "نموذج الصوت";
 "panelChangeWindowSize" = "حجم النص";
 "panelChangeWindowWash" = "تلوين النافذة";
-"panelChangesIntro" = "يمكنها تغيير هذه الإعدادات، كلٌّ منها فقط عندما تنقر أو تضغط مفتاحًا داخلها:";
 "panelCollapse" = "طي %1$@";
 "panelCommandGone" = "لوحتها غير موجودة الآن";
 "panelCommandHidden" = "لوحة %1$@ مخفية";

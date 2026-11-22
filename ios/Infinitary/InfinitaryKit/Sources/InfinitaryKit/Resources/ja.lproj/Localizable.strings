@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "%1$@ が応答しないため、Infinitary が再起動しています。応答するとページがここに表示されます。";
 "cardBrowserUnansweredWorking" = "%1$@ が応答しません。乗組員は現在作業中です。応答するとページがここに表示されます。";
 "cardBrowserWord" = "ブラウザ";
+"cardConsentChanges" = "変更";
+"cardConsentChangesDetail" = "これらの設定は、パネル内でクリックかキーを押したときだけ変更します。何かを削除することはありません。";
+"cardConsentChangesLine" = "クリックしたときに設定を変更できます: %1$@";
 "cardConsentFrom" = "提供元";
 "cardConsentFullDetails" = "詳細";
 "cardConsentGuidanceOnly" = "ガイダンス、HTML パーツ、画像を提供し、何も実行しません。";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "保持中のジョブを確認";
 "panelChangeLanguage" = "言語";
 "panelChangeModelPins" = "タスクの種類ごとのモデル";
+"panelChangeNoDelete" = "パネルがあなたのものを削除することはありません。何も変更されていません。";
 "panelChangeNotAsked" = "設定を変更できるのは、このパネル内でのあなた自身のクリックやキー操作だけです。何も変更していません。";
 "panelChangeNotGranted" = "このパネルは %1$@ を変更できません。何も変更していません。";
 "panelChangeNotifications" = "通知";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "音声モデル";
 "panelChangeWindowSize" = "文字サイズ";
 "panelChangeWindowWash" = "ウインドウの色合い";
-"panelChangesIntro" = "次の設定を変更できます。いずれも、パネル内であなたがクリックするかキーを押したときだけです:";
 "panelCollapse" = "%1$@ を折りたたむ";
 "panelCommandGone" = "そのパネルは今ここにありません";
 "panelCommandHidden" = "%1$@ パネルは非表示です";

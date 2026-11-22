@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "Rien ne répond sur %1$@, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.";
 "cardBrowserUnansweredWorking" = "Rien ne répond sur %1$@, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.";
 "cardBrowserWord" = "Navigateur";
+"cardConsentChanges" = "Modifie";
+"cardConsentChangesDetail" = "Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.";
+"cardConsentChangesLine" = "Peut modifier un réglage quand vous cliquez : %1$@";
 "cardConsentFrom" = "De";
 "cardConsentFullDetails" = "Tous les détails";
 "cardConsentGuidanceOnly" = "Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "Vérifier une tâche conservée";
 "panelChangeLanguage" = "Langue";
 "panelChangeModelPins" = "Le modèle de chaque type de tâche";
+"panelChangeNoDelete" = "Un panneau ne supprime jamais rien qui vous appartient. Rien n’a été modifié.";
 "panelChangeNotAsked" = "Seul votre propre clic ou appui sur une touche dans ce panneau modifie un réglage. Rien n’a été modifié.";
 "panelChangeNotGranted" = "Ce panneau ne peut pas modifier %1$@. Rien n’a été modifié.";
 "panelChangeNotifications" = "Notifications";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "Modèle vocal";
 "panelChangeWindowSize" = "Taille du texte";
 "panelChangeWindowWash" = "Voile de la fenêtre";
-"panelChangesIntro" = "Il peut modifier ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dedans :";
 "panelCollapse" = "Replier %1$@";
 "panelCommandGone" = "Son panneau n’est pas là pour l’instant";
 "panelCommandHidden" = "Le panneau %1$@ est masqué";

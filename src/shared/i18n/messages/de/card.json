@@ -83,6 +83,9 @@
     "one": "{items} wird mit deiner Wahl gesendet",
     "other": "{items} werden mit deiner Wahl gesendet"
   },
+  "cardConsentChanges": "Ändert",
+  "cardConsentChangesDetail": "Diese Einstellungen, jede nur, wenn du im Panel klickst oder eine Taste drückst. Es löscht nie etwas.",
+  "cardConsentChangesLine": "Kann eine Einstellung auf deinen Klick ändern: {setting}",
   "cardConsentFrom": "Von",
   "cardConsentFullDetails": "Alle Details",
   "cardConsentGuidanceOnly": "Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.",

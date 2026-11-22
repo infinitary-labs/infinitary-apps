@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "%1$@에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserUnansweredWorking" = "%1$@에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserWord" = "브라우저";
+"cardConsentChanges" = "변경";
+"cardConsentChangesDetail" = "이 설정들은 패널 안에서 클릭하거나 키를 누를 때만 바꿔요. 아무것도 삭제하지 않아요.";
+"cardConsentChangesLine" = "클릭할 때 설정을 바꿀 수 있어요: %1$@";
 "cardConsentFrom" = "제공";
 "cardConsentFullDetails" = "자세히";
 "cardConsentGuidanceOnly" = "안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "유지 중인 작업 확인";
 "panelChangeLanguage" = "언어";
 "panelChangeModelPins" = "작업 종류별 모델";
+"panelChangeNoDelete" = "패널은 내 것을 절대 삭제하지 않아요. 아무것도 바뀌지 않았어요.";
 "panelChangeNotAsked" = "이 패널 안에서 직접 클릭하거나 키를 누를 때만 설정이 바뀝니다. 아무것도 바뀌지 않았습니다.";
 "panelChangeNotGranted" = "이 패널은 %1$@을(를) 바꿀 수 없습니다. 아무것도 바뀌지 않았습니다.";
 "panelChangeNotifications" = "알림";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "음성 모델";
 "panelChangeWindowSize" = "글자 크기";
 "panelChangeWindowWash" = "창 색조";
-"panelChangesIntro" = "다음 설정을 바꿀 수 있습니다. 각각 패널 안에서 직접 클릭하거나 키를 누를 때만 바뀝니다:";
 "panelCollapse" = "%1$@ 접기";
 "panelCommandGone" = "해당 패널이 지금 여기에 없어요";
 "panelCommandHidden" = "%1$@ 패널이 숨겨져 있어요";

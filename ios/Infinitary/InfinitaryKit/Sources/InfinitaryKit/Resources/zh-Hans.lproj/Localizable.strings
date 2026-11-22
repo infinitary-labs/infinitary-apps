@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "%1$@ 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。";
 "cardBrowserUnansweredWorking" = "%1$@ 没有响应，船员正在工作。它一响应，页面就会显示在这里。";
 "cardBrowserWord" = "浏览器";
+"cardConsentChanges" = "更改";
+"cardConsentChangesDetail" = "这些设置，每次仅在你于面板中点击或按键时更改。它从不删除任何内容。";
+"cardConsentChangesLine" = "在你点击时可更改设置：%1$@";
 "cardConsentFrom" = "来自";
 "cardConsentFullDetails" = "完整详情";
 "cardConsentGuidanceOnly" = "它提供指导、HTML 部件和图片，不运行任何东西。";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "检查保留的作业";
 "panelChangeLanguage" = "语言";
 "panelChangeModelPins" = "每类任务使用的模型";
+"panelChangeNoDelete" = "面板从不删除你的任何内容。没有任何更改。";
 "panelChangeNotAsked" = "只有你在此面板中亲自点按或按键才会更改设置。没有任何更改。";
 "panelChangeNotGranted" = "此面板不能更改 %1$@。没有任何更改。";
 "panelChangeNotifications" = "通知";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "语音模型";
 "panelChangeWindowSize" = "文字大小";
 "panelChangeWindowWash" = "窗口底色";
-"panelChangesIntro" = "它可以更改以下设置，每项都只在你于其中点按或按键时更改：";
 "panelCollapse" = "收起 %1$@";
 "panelCommandGone" = "它的面板现在不在这里";
 "panelCommandHidden" = "%1$@ 面板已隐藏";

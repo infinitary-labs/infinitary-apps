@@ -76,6 +76,9 @@
     "plural": "count",
     "other": "将随你的选择一起发送：{items}"
   },
+  "cardConsentChanges": "更改",
+  "cardConsentChangesDetail": "这些设置，每次仅在你于面板中点击或按键时更改。它从不删除任何内容。",
+  "cardConsentChangesLine": "在你点击时可更改设置：{setting}",
   "cardConsentFrom": "来自",
   "cardConsentFullDetails": "完整详情",
   "cardConsentGuidanceOnly": "它提供指导、HTML 部件和图片，不运行任何东西。",

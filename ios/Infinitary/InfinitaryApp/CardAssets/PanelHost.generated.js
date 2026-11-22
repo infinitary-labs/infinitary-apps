@@ -5074,6 +5074,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "window-size": true,
     "crew-model-names": true,
     "ambient-music": true,
+    // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
     "ambient-away": true,
     "card-size": true,
@@ -13729,6 +13730,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `${items} go with your choice`;
     }
+  }
+  function cardConsentChanges() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يغيّر`;
+      case "de":
+        return `Ändert`;
+      case "es":
+        return `Cambia`;
+      case "fr":
+        return `Modifie`;
+      case "ja":
+        return `変更`;
+      case "ko":
+        return `변경`;
+      case "pt-BR":
+        return `Altera`;
+      case "zh-Hans":
+        return `更改`;
+      case "zh-Hant":
+        return `更改`;
+      case "en-XA":
+        return `[Çĥáñĝéš ~~~]`;
+      case "ar-XB":
+        return `‮Changes‬`;
+    }
+    return `Changes`;
+  }
+  function cardConsentChangesDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.`;
+      case "de":
+        return `Diese Einstellungen, jede nur, wenn du im Panel klickst oder eine Taste drückst. Es löscht nie etwas.`;
+      case "es":
+        return `Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.`;
+      case "fr":
+        return `Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.`;
+      case "ja":
+        return `これらの設定は、パネル内でクリックかキーを押したときだけ変更します。何かを削除することはありません。`;
+      case "ko":
+        return `이 설정들은 패널 안에서 클릭하거나 키를 누를 때만 바꿔요. 아무것도 삭제하지 않아요.`;
+      case "pt-BR":
+        return `Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.`;
+      case "zh-Hans":
+        return `这些设置，每次仅在你于面板中点击或按键时更改。它从不删除任何内容。`;
+      case "zh-Hant":
+        return `這些設定，每次僅在你於面板中點按或按鍵時更改。它從不刪除任何內容。`;
+      case "en-XA":
+        return `[Ţĥéšé šéţţîñĝš, éáçĥ öñļý ŵĥéñ ýöû çļîçķ öŕ þŕéšš á ķéý îñ ţĥé þáñéļ. Îţ ñéṽéŕ ðéļéţéš áñýţĥîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These settings, each only when you click or press a key in the panel. It never deletes anything.‬`;
+    }
+    return `These settings, each only when you click or press a key in the panel. It never deletes anything.`;
+  }
+  function cardConsentChangesLine(input2) {
+    const setting = input2.setting;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنه تغيير إعداد عند نقرك: ${setting}`;
+      case "de":
+        return `Kann eine Einstellung auf deinen Klick ändern: ${setting}`;
+      case "es":
+        return `Puede cambiar un ajuste cuando haces clic: ${setting}`;
+      case "fr":
+        return `Peut modifier un réglage quand vous cliquez : ${setting}`;
+      case "ja":
+        return `クリックしたときに設定を変更できます: ${setting}`;
+      case "ko":
+        return `클릭할 때 설정을 바꿀 수 있어요: ${setting}`;
+      case "pt-BR":
+        return `Pode alterar uma configuração quando você clica: ${setting}`;
+      case "zh-Hans":
+        return `在你点击时可更改设置：${setting}`;
+      case "zh-Hant":
+        return `在你點按時可更改設定：${setting}`;
+      case "en-XA":
+        return `[Çáñ çĥáñĝé á šéţţîñĝ ŵĥéñ ýöû çļîçķ: ${setting} ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Can change a setting when you click: ‬${setting}`;
+    }
+    return `Can change a setting when you click: ${setting}`;
   }
   function cardConsentFrom() {
     switch (currentLanguage()) {
@@ -34634,6 +34717,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Which model each kind of task uses`;
   }
+  function panelChangeNoDelete() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تحذف اللوحة أي شيء يخصك أبدًا. لم يتغير شيء.`;
+      case "de":
+        return `Ein Panel löscht nie etwas von dir. Nichts wurde geändert.`;
+      case "es":
+        return `Un panel nunca borra nada tuyo. No se cambió nada.`;
+      case "fr":
+        return `Un panneau ne supprime jamais rien qui vous appartient. Rien n’a été modifié.`;
+      case "ja":
+        return `パネルがあなたのものを削除することはありません。何も変更されていません。`;
+      case "ko":
+        return `패널은 내 것을 절대 삭제하지 않아요. 아무것도 바뀌지 않았어요.`;
+      case "pt-BR":
+        return `Um painel nunca apaga nada seu. Nada foi alterado.`;
+      case "zh-Hans":
+        return `面板从不删除你的任何内容。没有任何更改。`;
+      case "zh-Hant":
+        return `面板從不刪除你的任何內容。沒有任何更改。`;
+      case "en-XA":
+        return `[Å þáñéļ ñéṽéŕ ðéļéţéš áñýţĥîñĝ öƒ ýöûŕš. Ñöţĥîñĝ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A panel never deletes anything of yours. Nothing was changed.‬`;
+    }
+    return `A panel never deletes anything of yours. Nothing was changed.`;
+  }
   function panelChangeNotAsked() {
     switch (currentLanguage()) {
       case "ar":
@@ -35390,33 +35500,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Window wash‬`;
     }
     return `Window wash`;
-  }
-  function panelChangesIntro() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `يمكنها تغيير هذه الإعدادات، كلٌّ منها فقط عندما تنقر أو تضغط مفتاحًا داخلها:`;
-      case "de":
-        return `Es kann diese Einstellungen ändern, jede nur, wenn du darin klickst oder eine Taste drückst:`;
-      case "es":
-        return `Puede cambiar estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en él:`;
-      case "fr":
-        return `Il peut modifier ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dedans :`;
-      case "ja":
-        return `次の設定を変更できます。いずれも、パネル内であなたがクリックするかキーを押したときだけです:`;
-      case "ko":
-        return `다음 설정을 바꿀 수 있습니다. 각각 패널 안에서 직접 클릭하거나 키를 누를 때만 바뀝니다:`;
-      case "pt-BR":
-        return `Ele pode alterar estas configurações, cada uma só quando você clica ou pressiona uma tecla nele:`;
-      case "zh-Hans":
-        return `它可以更改以下设置，每项都只在你于其中点按或按键时更改：`;
-      case "zh-Hant":
-        return `它可以變更以下設定，每項都只在你於其中點按或按鍵時變更：`;
-      case "en-XA":
-        return `[Îţ çáñ çĥáñĝé ţĥéšé šéţţîñĝš, éáçĥ öñļý ŵĥéñ ýöû çļîçķ öŕ þŕéšš á ķéý îñ îţ: ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮It can change these settings, each only when you click or press a key in it:‬`;
-    }
-    return `It can change these settings, each only when you click or press a key in it:`;
   }
   function panelCollapse(input2) {
     const title = input2.title;
@@ -92717,6 +92800,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardCarriedNotes,
     cardCarriedPictures,
     cardCarriedWithChoice,
+    cardConsentChanges,
+    cardConsentChangesDetail,
+    cardConsentChangesLine,
     cardConsentFrom,
     cardConsentFullDetails,
     cardConsentGuidanceOnly,
@@ -93416,6 +93502,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeKeptJobCheck,
     panelChangeLanguage,
     panelChangeModelPins,
+    panelChangeNoDelete,
     panelChangeNotAsked,
     panelChangeNotGranted,
     panelChangeNotifications,
@@ -93444,7 +93531,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeVoiceModel,
     panelChangeWindowSize,
     panelChangeWindowWash,
-    panelChangesIntro,
     panelCollapse,
     panelCommandGone,
     panelCommandHidden,
@@ -95692,6 +95778,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardCarriedNotes": ["count"],
     "cardCarriedPictures": ["count"],
     "cardCarriedWithChoice": ["count", "items"],
+    "cardConsentChanges": [],
+    "cardConsentChangesDetail": [],
+    "cardConsentChangesLine": ["setting"],
     "cardConsentFrom": [],
     "cardConsentFullDetails": [],
     "cardConsentGuidanceOnly": [],
@@ -96391,6 +96480,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeKeptJobCheck": [],
     "panelChangeLanguage": [],
     "panelChangeModelPins": [],
+    "panelChangeNoDelete": [],
     "panelChangeNotAsked": [],
     "panelChangeNotGranted": ["setting"],
     "panelChangeNotifications": [],
@@ -96419,7 +96509,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeVoiceModel": [],
     "panelChangeWindowSize": [],
     "panelChangeWindowWash": [],
-    "panelChangesIntro": [],
     "panelCollapse": ["title"],
     "panelCommandGone": [],
     "panelCommandHidden": ["title"],

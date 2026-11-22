@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "Nothing answers at %1$@, so Infinitary is starting it again. The page shows here once it answers.";
 "cardBrowserUnansweredWorking" = "Nothing answers at %1$@, and its crewmate is working now. The page shows here once it answers.";
 "cardBrowserWord" = "Browser";
+"cardConsentChanges" = "Changes";
+"cardConsentChangesDetail" = "These settings, each only when you click or press a key in the panel. It never deletes anything.";
+"cardConsentChangesLine" = "Can change a setting when you click: %1$@";
 "cardConsentFrom" = "From";
 "cardConsentFullDetails" = "Full details";
 "cardConsentGuidanceOnly" = "It supplies guidance, HTML parts and pictures, and runs nothing.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "Check a kept job";
 "panelChangeLanguage" = "Language";
 "panelChangeModelPins" = "Which model each kind of task uses";
+"panelChangeNoDelete" = "A panel never deletes anything of yours. Nothing was changed.";
 "panelChangeNotAsked" = "Only your own click or key press in this panel changes a setting. Nothing was changed.";
 "panelChangeNotGranted" = "This panel may not change %1$@. Nothing was changed.";
 "panelChangeNotifications" = "Notifications";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "Voice model";
 "panelChangeWindowSize" = "Text size";
 "panelChangeWindowWash" = "Window wash";
-"panelChangesIntro" = "It can change these settings, each only when you click or press a key in it:";
 "panelCollapse" = "Collapse %1$@";
 "panelCommandGone" = "Its panel is not here now";
 "panelCommandHidden" = "The %1$@ panel is hidden";

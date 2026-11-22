@@ -90,6 +90,9 @@
     "many": "{items} van con tu elección",
     "other": "{items} van con tu elección"
   },
+  "cardConsentChanges": "Cambia",
+  "cardConsentChangesDetail": "Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.",
+  "cardConsentChangesLine": "Puede cambiar un ajuste cuando haces clic: {setting}",
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Todos los detalles",
   "cardConsentGuidanceOnly": "Aporta guías, partes HTML e imágenes, y no ejecuta nada.",

@@ -349,6 +349,9 @@ public enum PhoneMessages {
     public static func `cardCarriedNotes`(`count`: Int) -> String { PhoneWords.format("cardCarriedNotes", [`count`]) }
     public static func `cardCarriedPictures`(`count`: Int) -> String { PhoneWords.format("cardCarriedPictures", [`count`]) }
     public static func `cardCarriedWithChoice`(`count`: Int, `items`: String) -> String { PhoneWords.format("cardCarriedWithChoice", [`count`, `items`]) }
+    public static func `cardConsentChanges`() -> String { PhoneWords.format("cardConsentChanges", []) }
+    public static func `cardConsentChangesDetail`() -> String { PhoneWords.format("cardConsentChangesDetail", []) }
+    public static func `cardConsentChangesLine`(`setting`: String) -> String { PhoneWords.format("cardConsentChangesLine", [`setting`]) }
     public static func `cardConsentFrom`() -> String { PhoneWords.format("cardConsentFrom", []) }
     public static func `cardConsentFullDetails`() -> String { PhoneWords.format("cardConsentFullDetails", []) }
     public static func `cardConsentGuidanceOnly`() -> String { PhoneWords.format("cardConsentGuidanceOnly", []) }
@@ -1408,6 +1411,7 @@ public enum PhoneMessages {
     public static func `panelChangeKeptJobCheck`() -> String { PhoneWords.format("panelChangeKeptJobCheck", []) }
     public static func `panelChangeLanguage`() -> String { PhoneWords.format("panelChangeLanguage", []) }
     public static func `panelChangeModelPins`() -> String { PhoneWords.format("panelChangeModelPins", []) }
+    public static func `panelChangeNoDelete`() -> String { PhoneWords.format("panelChangeNoDelete", []) }
     public static func `panelChangeNotAsked`() -> String { PhoneWords.format("panelChangeNotAsked", []) }
     public static func `panelChangeNotGranted`(`setting`: String) -> String { PhoneWords.format("panelChangeNotGranted", [`setting`]) }
     public static func `panelChangeNotifications`() -> String { PhoneWords.format("panelChangeNotifications", []) }
@@ -1436,7 +1440,6 @@ public enum PhoneMessages {
     public static func `panelChangeVoiceModel`() -> String { PhoneWords.format("panelChangeVoiceModel", []) }
     public static func `panelChangeWindowSize`() -> String { PhoneWords.format("panelChangeWindowSize", []) }
     public static func `panelChangeWindowWash`() -> String { PhoneWords.format("panelChangeWindowWash", []) }
-    public static func `panelChangesIntro`() -> String { PhoneWords.format("panelChangesIntro", []) }
     public static func `panelCollapse`(`title`: String) -> String { PhoneWords.format("panelCollapse", [`title`]) }
     public static func `panelCommandGone`() -> String { PhoneWords.format("panelCommandGone", []) }
     public static func `panelCommandHidden`(`title`: String) -> String { PhoneWords.format("panelCommandHidden", [`title`]) }
@@ -4392,6 +4395,9 @@ extension PhoneWords {
         "cardCarriedNotes": ["count"],
         "cardCarriedPictures": ["count"],
         "cardCarriedWithChoice": ["count", "items"],
+        "cardConsentChanges": [],
+        "cardConsentChangesDetail": [],
+        "cardConsentChangesLine": ["setting"],
         "cardConsentFrom": [],
         "cardConsentFullDetails": [],
         "cardConsentGuidanceOnly": [],
@@ -5451,6 +5457,7 @@ extension PhoneWords {
         "panelChangeKeptJobCheck": [],
         "panelChangeLanguage": [],
         "panelChangeModelPins": [],
+        "panelChangeNoDelete": [],
         "panelChangeNotAsked": [],
         "panelChangeNotGranted": ["setting"],
         "panelChangeNotifications": [],
@@ -5479,7 +5486,6 @@ extension PhoneWords {
         "panelChangeVoiceModel": [],
         "panelChangeWindowSize": [],
         "panelChangeWindowWash": [],
-        "panelChangesIntro": [],
         "panelCollapse": ["title"],
         "panelCommandGone": [],
         "panelCommandHidden": ["title"],

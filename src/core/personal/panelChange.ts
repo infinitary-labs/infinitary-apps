@@ -8,6 +8,11 @@ import { errorText } from "./errorText";
 /** The project fields that say where its code lives or goes, never a panel's to change. */
 const PLACE_FIELDS = ["origin", "path", "contributionDestination"] as const;
 
+/** The value fields of an allowed line that delete something of the captain's, never a panel's to send. */
+const DELETING_FIELDS: Partial<Record<string, readonly string[]>> = {
+  "ambient-own-style": ["remove"],
+};
+
 /** What a panel's settings change answers (`inf:plugins:settings:change`). */
 export type PanelChangeAnswer = { ok: true } | { ok: false; text: string };
 
@@ -39,6 +44,9 @@ export async function panelChange(
     if (changes && typeof changes === "object" && PLACE_FIELDS.some((field) => field in changes))
       return refused(englishOf(said("panelChangeOrigin")));
   }
+  // A panel never deletes: a line that saves and removes keeps only its save.
+  if (DELETING_FIELDS[action]?.some((field) => field in value))
+    return refused(englishOf(said("panelChangeNoDelete")));
   const actor = { kind: "captain", panel } as const;
   const asked: CoreDispatch = (channel, rawArgs) => dispatch(channel, rawArgs, actor);
   try {

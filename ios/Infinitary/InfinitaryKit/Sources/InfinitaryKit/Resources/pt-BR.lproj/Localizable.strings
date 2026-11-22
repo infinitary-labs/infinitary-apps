@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "Nada responde em %1$@, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.";
 "cardBrowserUnansweredWorking" = "Nada responde em %1$@, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.";
 "cardBrowserWord" = "Navegador";
+"cardConsentChanges" = "Altera";
+"cardConsentChangesDetail" = "Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.";
+"cardConsentChangesLine" = "Pode alterar uma configuração quando você clica: %1$@";
 "cardConsentFrom" = "De";
 "cardConsentFullDetails" = "Todos os detalhes";
 "cardConsentGuidanceOnly" = "Fornece orientações, partes HTML e imagens, e não executa nada.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "Verificar um trabalho mantido";
 "panelChangeLanguage" = "Idioma";
 "panelChangeModelPins" = "Qual modelo cada tipo de tarefa usa";
+"panelChangeNoDelete" = "Um painel nunca apaga nada seu. Nada foi alterado.";
 "panelChangeNotAsked" = "Só o seu próprio clique ou tecla neste painel altera uma configuração. Nada foi alterado.";
 "panelChangeNotGranted" = "Este painel não pode alterar %1$@. Nada foi alterado.";
 "panelChangeNotifications" = "Notificações";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "Modelo de voz";
 "panelChangeWindowSize" = "Tamanho do texto";
 "panelChangeWindowWash" = "Véu da janela";
-"panelChangesIntro" = "Ele pode alterar estas configurações, cada uma só quando você clica ou pressiona uma tecla nele:";
 "panelCollapse" = "Recolher %1$@";
 "panelCommandGone" = "O painel dele não está aqui agora";
 "panelCommandHidden" = "O painel %1$@ está oculto";

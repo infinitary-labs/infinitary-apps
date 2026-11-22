@@ -322,6 +322,9 @@
 "cardBrowserUnansweredStarting" = "Nada responde en %1$@, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.";
 "cardBrowserUnansweredWorking" = "Nada responde en %1$@ y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.";
 "cardBrowserWord" = "Navegador";
+"cardConsentChanges" = "Cambia";
+"cardConsentChangesDetail" = "Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.";
+"cardConsentChangesLine" = "Puede cambiar un ajuste cuando haces clic: %1$@";
 "cardConsentFrom" = "De";
 "cardConsentFullDetails" = "Todos los detalles";
 "cardConsentGuidanceOnly" = "Aporta guías, partes HTML e imágenes, y no ejecuta nada.";
@@ -1329,6 +1332,7 @@
 "panelChangeKeptJobCheck" = "Comprobar un trabajo conservado";
 "panelChangeLanguage" = "Idioma";
 "panelChangeModelPins" = "Qué modelo usa cada tipo de tarea";
+"panelChangeNoDelete" = "Un panel nunca borra nada tuyo. No se cambió nada.";
 "panelChangeNotAsked" = "Solo tu propio clic o pulsación de tecla en este panel cambia un ajuste. No se cambió nada.";
 "panelChangeNotGranted" = "Este panel no puede cambiar %1$@. No se cambió nada.";
 "panelChangeNotifications" = "Notificaciones";
@@ -1357,7 +1361,6 @@
 "panelChangeVoiceModel" = "Modelo de voz";
 "panelChangeWindowSize" = "Tamaño del texto";
 "panelChangeWindowWash" = "Velo de la ventana";
-"panelChangesIntro" = "Puede cambiar estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en él:";
 "panelCollapse" = "Contraer %1$@";
 "panelCommandGone" = "Su panel no está aquí ahora";
 "panelCommandHidden" = "El panel %1$@ está oculto";

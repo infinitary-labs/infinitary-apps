@@ -917,8 +917,13 @@ describe('a panel that names settings it may change (docs/ui-plugins.md, "Changi
     try {
       await h.installer.install({ source: "path", spec: source });
       const card = h.cards().find((entry) => entry.id === consentCardId("look"));
-      expect(card?.body).toContain(englishOf(said("panelChangesIntro")));
-      const lines = [...(card?.body ?? "").matchAll(/<li><span [^>]*>([^<]*)<\/span><\/li>/g)].map(
+      // The Changes row: one value for each setting, beside Reads, Uses and Moves.
+      const row = (card?.body ?? "").match(
+        new RegExp(
+          `<dt [^>]*>${englishOf(said("cardConsentChanges"))}</dt>((?:<dd [^>]*>[^<]*</dd>)+)`,
+        ),
+      );
+      const lines = [...(row?.[1] ?? "").matchAll(/<dd [^>]*>([^<]*)<\/dd>/g)].map(
         (match) => match[1],
       );
       expect(lines).toEqual(

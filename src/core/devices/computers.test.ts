@@ -2,6 +2,7 @@ import { X509Certificate } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
+import { APP_UPDATE_LIVE } from "@shared/appFollow";
 import {
   computerPresenceOf,
   type DeviceKind,
@@ -340,6 +341,47 @@ describe("each copy's version", () => {
     // A second app of the same device, from before apps said their version, reads as the older.
     open(imac, null);
     expect(row(imac)?.appVersion).toEqual({});
+  });
+
+  // INF-5372's plan, piece 2: the home's row follows an app catching up by itself, and the
+  // captain's "i think we should still provide a manual update flow in the devices view".
+  it("says an app's step of catching up while it is behind, sends Update app to it, and forgets the step when it goes", async () => {
+    const { pairing, connection, computers } = homeAt("192.168.65.2", HOME);
+    const second = joinAs(pairing, "view", "MacBook Pro", "macos");
+    const row = () => computers.list().find((device) => device.id === second);
+    connection.running.push({ deviceId: second, role: "view", version: "0.8.3" });
+    connection.tellView({ deviceId: second, contact: "in-reach" });
+    const view = { kind: "captain" as const, view: second };
+
+    await computers.appFollowAsked([{ version: "0.8.4", step: "getting", percent: 40 }], view);
+    expect(row()?.appVersion).toEqual({
+      app: "0.8.3",
+      than: "older",
+      follow: { version: "0.8.4", step: "getting", percent: 40 },
+    });
+    // A step of another version than this computer's is not this computer's to show.
+    await computers.appFollowAsked([{ version: "0.8.5", step: "waiting" }], view);
+    expect(row()?.appVersion?.follow).toBeUndefined();
+    // Only that app's own connection tells it.
+    await expect(
+      computers.appFollowAsked([{ version: "0.8.4", step: "waiting" }], { kind: "captain" }),
+    ).rejects.toThrow();
+
+    expect(computers.updateApp(second)).toBe(true);
+    expect(connection.live.at(-1)).toEqual({
+      deviceId: second,
+      channel: APP_UPDATE_LIVE,
+      payload: { deviceId: second },
+    });
+
+    await computers.appFollowAsked([{ version: "0.8.4", step: "waiting" }], view);
+    connection.tellView({ deviceId: second, contact: "gone" });
+    connection.running.splice(0);
+    connection.running.push({ deviceId: second, role: "view", version: "0.8.3" });
+    connection.tellView({ deviceId: second, contact: "in-reach" });
+    expect(row()?.appVersion).toEqual({ app: "0.8.3", than: "older" });
+    connection.tellView({ deviceId: second, contact: "gone" });
+    expect(computers.updateApp(second)).toBe(false);
   });
 });
 

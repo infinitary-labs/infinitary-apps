@@ -598,6 +598,16 @@ function HomeDevicesTab() {
     }
   }, []);
 
+  // Update app: the app open there gets this computer's version, and its row says each step.
+  const updateApp = useCallback(async (deviceId: string) => {
+    setProblem(null);
+    try {
+      await window.infinitary.devices.updateApp(deviceId);
+    } catch (caught) {
+      setProblem(caught instanceof Error ? caught.message : m.settingsDevicesTryAgainFailed());
+    }
+  }, []);
+
   // Change address: its row says where this Mac looks; a refusal is said here too.
   const changeAddress = useCallback(
     async (deviceId: string, address: string) => {
@@ -835,6 +845,7 @@ function HomeDevicesTab() {
       onCarry={(from, to) => void carry(from, to)}
       onTryAgain={(id) => void tryAgain(id)}
       onFixWork={(id) => void fixWork(id)}
+      onUpdateApp={(id) => void updateApp(id)}
       onAskChangeAddress={setChanging}
       onChangeAddress={(id, address) => void changeAddress(id, address)}
       onCopyWay={(what) => void make(what, true)}

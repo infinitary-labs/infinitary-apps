@@ -42,6 +42,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   The full logical version, not only Get Info's numeric core, determines precedence.
   Selecting Stable while ahead waits for a newer compatible stable, with no downgrade.
   A missing channel feed offers nothing.
+  An app open on another computer follows the version its home runs instead, whatever its channel, by that version's own manifest (`docs/view.md`, "Following the home's version").
   The native library's channel setter enables downgrades, so the adapter explicitly disables them afterward.
 - **No identifier.**
   Unpatched, `electron-updater` keeps a random per-install ID in the data folder (`.updaterId`) and sends it as `x-user-staging-id` with every feed read, whatever the Diagnostics switch says.
@@ -54,8 +55,9 @@ The host enables native replacement only for an installed release Mac, not a dev
   The adapter sets it on the library's request headers for that check alone and clears them, so a download never carries it.
 - **Consent before replacement.**
   Checking never downloads; Update and restart (Install on Linux, and Try again after an install that can pass) first reads the release source, so it installs the newest version on the channel, falling back to the version already offered when that read fails; a staged update reads nothing.
+  An app following the version of the computer it controls is the one exception: its offer is that exact version, read from its own manifest whatever the channel, and its install refuses any other (`docs/view.md`, "Following the home's version").
   It then downloads, checks the checksum, saves the crew's work ("Saving work before an update" below), stages through native signature verification, awaits core shutdown, and restarts.
-  Automatic downloads and automatic installation on quit are disabled.
+  Automatic downloads and automatic installation on quit are disabled, except that an app following the computer it controls downloads that version in the background and starts again on it while nobody uses it (`docs/view.md`, "Following the home's version").
   The notice shows progress and bounded errors, with a link to the release page for recovery.
   The app refuses updates from a mounted or translocated copy, an unwritable installation, or an unsupported system.
   Such a problem cannot pass on a retry, so the core withdraws Update and restart for the rest of that run (`blocked` in `src/core/update/macUpdates.ts`) and Open the releases page becomes the next step; a failure that can pass, such as a stopped download, offers Try again beside Check for updates.

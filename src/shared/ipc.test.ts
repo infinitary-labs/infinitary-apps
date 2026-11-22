@@ -246,7 +246,9 @@ describe("ipc contract", () => {
    * the window's keys, which belong to the Mac whose keyboard pressed them
    * (docs/keyboard.md), and the two buttons of the notice over a window
    * whose command stopped, which start this program again or quit it
-   * (docs/run.md, "When the command stops").
+   * (docs/run.md, "When the command stops"), and whether the window holds
+   * words not yet sent, which an app following its home's version waits on
+   * before it starts again (docs/view.md, "Following the home's version").
    * Everything else is the core's, so a channel added without a deliberate
    * classification lands on the protocol - and fails here if that was wrong.
    */
@@ -294,6 +296,7 @@ describe("ipc contract", () => {
       // The save sheet for Secrets history, metadata only, on the window the
       // captain chose it in (docs/secrets.md).
       "inf:secrets:export",
+      "inf:update:unsent",
       "inf:voice:mic-access",
       "inf:voice:open-mic-settings",
       // This Mac's voice helper and the recordings the window hands it
@@ -435,6 +438,7 @@ describe("ipc contract", () => {
       "inf:devices:add",
       "inf:devices:address:set",
       "inf:devices:addresses",
+      "inf:devices:app-follow",
       "inf:devices:carry-on",
       "inf:devices:change-address",
       "inf:devices:custom:address",
@@ -470,6 +474,7 @@ describe("ipc contract", () => {
       "inf:devices:stop",
       "inf:devices:try-again",
       "inf:devices:update",
+      "inf:devices:update-app",
       "inf:devices:work-setup",
       "inf:feed:recent",
       "inf:forges:cancel",

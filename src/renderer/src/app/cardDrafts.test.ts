@@ -1,8 +1,10 @@
 import { CARD_DRAFTS, type CardDraft, type CardDraftChange } from "@shared/cardDrafts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pageQueue } from "../cards/markedPictures";
 import { startCardDrafts } from "./cardDrafts";
 import { DRAFT_QUIET_MS } from "./draftSync";
 import type { ShellState } from "./store";
+import { holdsUnsentWords } from "./unsentWords";
 
 // Intent (INF-5446's plan): a window whose first mate's computer lacks the
 // `card-drafts` change keeps today's behavior - it reads no draft and sends
@@ -24,7 +26,7 @@ const VIEW = {
 function windowWith(
   changes: string[],
   thisMac: object = { role: "home", left: null },
-  start: Partial<Record<"cardAnswers" | "replyDrafts" | "replyNotes", object>> = {},
+  start: Partial<ShellState> = {},
 ) {
   /** The drafts the first mate's computer holds, as a reading answers them. */
   const held: CardDraft[] = [];
@@ -72,7 +74,7 @@ function windowWith(
   );
   const type = (words: string) => {
     const previous = state;
-    state = { ...state, replyDrafts: { "card-1": words } };
+    state = { ...state, replyDrafts: { ...state.replyDrafts, "card-1": words } };
     listener(state, previous);
   };
   /** The link to the first mate came back, as `ThisMac` says it. */
@@ -141,6 +143,66 @@ describe("startCardDrafts", () => {
     await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
     expect(at.draft).toHaveBeenCalledTimes(1);
     expect(at.draft.mock.calls[0]?.[1]).toMatchObject({ words: "Start after the tide" });
+  });
+
+  // Intent (the captain's typed-there choice on INF-5374's review): a card's
+  // words or notes taken from another window hold no app's restart here, as
+  // the home keeps them; words typed in this window do, even over them.
+  it("holds a restart only for card words and notes typed in this window", async () => {
+    vi.useFakeTimers();
+    stubStorage();
+    const at = windowWith([CARD_DRAFTS], VIEW, {
+      inputText: "",
+      attachments: [],
+      pastes: [],
+      replyPastes: {},
+      replyImages: {},
+    });
+    at.stack([{ id: "card-1" }]);
+    await vi.runAllTimersAsync();
+    expect(holdsUnsentWords(at.state())).toBe(false);
+    const note = { id: "note-1", target: { kind: "point" }, comment: "Too dark" };
+    at.live({
+      cardId: "card-1",
+      revision: 1,
+      answers: [],
+      words: "Start after the tide",
+      notes: [note],
+    } as unknown as CardDraft);
+    expect(at.state().replyDrafts["card-1"]).toBe("Start after the tide");
+    expect(at.state().replyNotes["card-1"]).toHaveLength(1);
+    expect(holdsUnsentWords(at.state())).toBe(false);
+    at.type("Start after the tide, then wait");
+    expect(holdsUnsentWords(at.state())).toBe(true);
+    // The card leaves, and with it what this window took for it.
+    at.stack([]);
+  });
+
+  // Intent (the captain's wait-for-draft and typed-there choices on INF-5374's
+  // review): a card answered or withdrawn at another computer leaves the
+  // stack, and the words it held here show in no field, so they hold nothing;
+  // a page's own queue of notes, with no card, still does.
+  it("holds a restart for nothing a card answered elsewhere left behind", async () => {
+    vi.useFakeTimers();
+    stubStorage();
+    const at = windowWith([CARD_DRAFTS], VIEW, {
+      inputText: "",
+      attachments: [],
+      pastes: [],
+      replyPastes: {},
+      replyImages: {},
+    });
+    at.stack([{ id: "card-1" }]);
+    await vi.runAllTimersAsync();
+    at.type("Start after the tide");
+    expect(holdsUnsentWords(at.state())).toBe(true);
+    // The card was answered at the other computer: the next snapshot no longer holds it.
+    at.stack([]);
+    expect(at.state().replyDrafts["card-1"]).toBe("Start after the tide");
+    expect(holdsUnsentWords(at.state())).toBe(false);
+    const note = { id: "note-1", target: { kind: "point" }, comment: "Too dark" };
+    const page = { ...at.state(), replyNotes: { [pageQueue("task-1")]: [note] } };
+    expect(holdsUnsentWords(page as unknown as ShellState)).toBe(true);
   });
 
   it("reads every draft again when a view's link comes back, however short the drop", async () => {

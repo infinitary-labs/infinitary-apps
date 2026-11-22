@@ -125,6 +125,7 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "thisMac",
     "tryAgain",
     "update",
+    "updateApp",
   ]);
   expect(probe.forgeKeys.sort()).toEqual([
     "cancel",

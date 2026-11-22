@@ -32,3 +32,15 @@ Not now holds the card away until a version changes, and nothing updates that co
 **When.**
 Once per gap, one feed line; it comes down by itself when the computer runs this computer's version.
 The first mate's offer to update the same computer never makes a second card.
+
+**The app open on another computer.**
+That app updates itself to this computer's version while nobody uses it there, with no card (`DevicesTab.prompt.md`, "Each copy's version").
+A card of its own goes up only when the app said it cannot do it by itself, or tried and it did not go through.
+Meta: the computer's name.
+Title: "Update the app on Mac mini".
+First paragraph: "The app open on Mac mini has Infinitary 0.8.3, and the first mate runs Infinitary 0.8.4."
+Second paragraph, for one that cannot: "Its app cannot update to Infinitary 0.8.4 by itself." and what to do there, such as "A package manager installed it there, so update it there with that package manager."; for one that failed: "It tried to update by itself, and it did not go through.
+Update app on its row in Settings → Devices tries again."
+A third paragraph, "It said: …", carries the app's own words when it gave any.
+Buttons: Got it alone for one that cannot, since nothing here installs it; Open Devices (default) and Not now for one that failed.
+Not now holds it for that gap and step; it comes down by itself once the app follows, runs this computer's version, or closes.

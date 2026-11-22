@@ -53,7 +53,7 @@ Every device's row has the same shape, a head, plain facts, and strips:
 - The facts, inset under the name: the mono line that says what the device is and where, ending "Infinitary 0.8.4" when every copy on it runs this computer's version; the summary; any version line that is only a fact; where its copy stands; and the phone's approvals.
 - One strip per thing that needs the captain, each a `--text-sm` sentence with its one small secondary button on the right, over a 1px `--line-1` rule.
   A strip in `--warn` says something is wrong; the rest read `--fg-1`.
-  The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Update" or "Install older version"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; and an app behind this computer's, with no button.
+  The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Update" or "Install older version"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; an app behind this computer's, with no button; and the step that app is at as it follows this computer's version, with "Update app".
 
 The ⋯ holds the rare actions, in this order: "Change address", "Move your first mate here", "Keep a copy here" or "Ready to take over", then a separator and "Remove" in the danger tone.
 Each item stands only where the rules below offer it; a phone's ⋯ holds Remove alone, and a row with nothing to offer has no ⋯.
@@ -335,10 +335,15 @@ Otherwise it is a line of its own among the facts, `--text-sm --fg-2`.
 The app open there comes first: "Its app has Infinitary 0.8.4, as this computer does.", or "Its app has Infinitary 0.8.3, older than this computer's."
 (or "newer").
 An app too old to say its version reads "Its app has an older Infinitary, too old to say its version."
-An app behind this computer's - older, or too old to say - turns the line into the last strip, in `--warn`, so a copy left behind stands out.
+An app behind this computer's - older, or too old to say - turns the line into a strip, in `--warn`, so a copy left behind stands out.
 A computer whose work runs this computer's version while its app does not adds "Its work runs Infinitary 0.8.4, as this computer does."
 A phone's app has versions of its own, never compared: "Its app has version 0.1.0 (212).", the version and build its own Settings shows.
 A copy out of reach or not open says nothing of its version, and while a computer updates the line gives way to the update's own.
+An app behind this computer's updates itself to this computer's version while nobody uses it there, and a strip after the version's says each step: "Its app updates to Infinitary 0.8.4 by itself: 40% downloaded.", "Its app has Infinitary 0.8.4 ready and starts again on it once nobody uses it there.", after Update app "Its app has Infinitary 0.8.4 ready and starts again on it once the words typed there are sent or cleared.", "Its app starts again on Infinitary 0.8.4."
+One that cannot says so in `--warn` with what to do there ("Its app cannot update to Infinitary 0.8.4 by itself.
+It updates only from its own window there, so update it there."), and one that tried says "Its app could not update to Infinitary 0.8.4 by itself.
+Update app tries again."
+While it gets the version, waits or failed, that strip's button is Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it get the version at once and start again as soon as no words are left unsent there, even with its window in front.
 
 **Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Update or Remove until it is done (`AddAMac.prompt.md`).
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".

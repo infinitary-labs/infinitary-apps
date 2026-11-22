@@ -45,6 +45,25 @@ export function macFeed(manifest: ReleaseManifest): string {
   )}\n`;
 }
 
+/** Where one version's own manifest sits in the release feed, beside the channel feeds. */
+export function versionManifestUrl(feedUrl: string, version: string): URL {
+  return new URL(`versions/${encodeURIComponent(version)}.json`, feedUrl);
+}
+
+/**
+ * The update metadata for one exact version, from its own published
+ * manifest (`versions/<version>.json`, docs/view.md "Following the home's
+ * version"): the same metadata a channel feed would carry for it, with the
+ * download address built from the configured release source and never read
+ * from the network. Refuses a manifest that is not that version's.
+ */
+export function versionFeed(text: string, version: string): unknown {
+  const manifest = releaseManifestSchema.parse(JSON.parse(text));
+  if (manifest.version !== version)
+    throw new Error("The published manifest does not describe the version asked for.");
+  return JSON.parse(macFeed(manifest));
+}
+
 /** INF-640: verified immutable artifacts first, then one atomic, forward-only channel commit. */
 export function releaseFeedFiles(options: {
   currentTargets?: unknown;

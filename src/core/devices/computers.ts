@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ActionActor } from "@shared/actions";
+import { APP_FOLLOW_ONLY, APP_UPDATE_LIVE, type AppFollowReport } from "@shared/appFollow";
 import { takesDownload, takesUpdate } from "@shared/contractFeatures";
 import { HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
@@ -220,6 +221,8 @@ export class Computers {
   private readonly connectedSince = new Map<string, number>();
   /** What each Mac's window last found of its work half, and when (`heardWorkSetup`). */
   private readonly workSetups = new Map<string, { report: WorkSetupReport; at: number }>();
+  /** What each app open on another computer last said of catching up with this computer's version (`heardAppFollow`). */
+  private readonly appFollows = new Map<string, AppFollowReport>();
   /** Reads the list again once a run the window found has had its moment to reach this Mac. */
   private readonly graceTimers = new Map<string, () => void>();
   private said = "";
@@ -1113,13 +1116,19 @@ export class Computers {
       }
       // A phone's app has versions of its own: never measured against this computer's.
       const order = isPhone(device) || home === undefined ? null : compareSemver(app, home);
+      // What it said of catching up, while it is behind this computer's version and said it of that version.
+      const follow = this.appFollows.get(device.id);
       apps.set(
         device.id,
         order === null
           ? { app }
           : order === 0
             ? { app, same: true }
-            : { app, than: order < 0 ? "older" : "newer" },
+            : {
+                app,
+                than: order < 0 ? "older" : "newer",
+                ...(order < 0 && follow && follow.version === home ? { follow } : {}),
+              },
       );
     }
     return apps;
@@ -1265,6 +1274,37 @@ export class Computers {
   }
 
   /**
+   * How the app open on another computer catches up with this computer's
+   * version is that app's alone, so only the connection of an app that
+   * controls this computer tells it (docs/devices.md, "Updating the app open
+   * there").
+   */
+  async appFollowAsked(rawArgs: unknown, actor: ActionActor | { kind: "device" } | undefined) {
+    if (actor?.kind !== "captain" || !actor.view) throw new Error(APP_FOLLOW_ONLY);
+    const [report] = parseInvokeRequest("inf:devices:app-follow", rawArgs);
+    this.heardAppFollow(actor.view, report);
+    return { ok: true as const };
+  }
+
+  /** An app said a step of catching up: kept while it is connected, so its row and card say it. */
+  heardAppFollow(deviceId: string, report: AppFollowReport): void {
+    if (!this.options.pairing.list().some((entry) => entry.id === deviceId))
+      throw new Error("No computer with that id is on the list.");
+    this.appFollows.set(deviceId, report);
+    this.changed();
+  }
+
+  /**
+   * Update on the row of an app behind this computer's version: that app,
+   * connected now, catches up and starts again as soon as it has the
+   * version and no words are left unsent there. False when no app of that computer is connected, or the one
+   * there is from before.
+   */
+  updateApp(deviceId: string): boolean {
+    return this.options.work.liveToView(deviceId, APP_UPDATE_LIVE, { deviceId });
+  }
+
+  /**
    * Fix it on a Mac's row: its window, connected now, is asked to check its
    * work half and set it up again. False when no window of that Mac is
    * connected, or the one there is from before.
@@ -1322,6 +1362,7 @@ export class Computers {
     // What its window found is said again at its next connection.
     if (contact.contact === "gone") {
       this.workSetups.delete(id);
+      this.appFollows.delete(id);
       this.graceTimers.get(id)?.();
       this.graceTimers.delete(id);
     }

@@ -557,6 +557,17 @@ A refused update (`device_update`, stage `refused`) raises the card once more wi
 It comes down by itself, with one feed line, when that computer runs this Mac's version, and while an update by itself is under way.
 The first mate's offer to update the same computer answers that the card is standing instead of making a second.
 
+### Updating the app open there
+
+The app open on another computer follows this computer's version by itself while nobody uses it there (`docs/view.md`, "Following the home's version"), and says each step to this computer (`inf:devices:app-follow`), kept per device while that app is connected as `appVersion.follow`.
+The home keeps only what an app behind its version said of that version, and forgets it when the app goes.
+The row says the step in a strip after the app's version, beside Update app while it is offered: how much of the version it downloaded, that it waits for nobody to use it there, that it starts again, that it could not, or that it cannot by itself and what to do there (`appFollowLine`).
+Update app on the row (`inf:devices:update-app`, `appUpdateOffered`) has that app get the version at once and start again as soon as it has it, even with a window open in front there, once no words are left unsent there; it is offered while the app gets the version, waits or failed, and never while it restarts or cannot.
+While a press waits for those words, the app says `waiting` with `pressed`, and the row says it starts again once the words typed there are sent or cleared, so the press shows it arrived; a reconnect ends the press and the row says it waits for nobody to use it again.
+The card "Update the app on Mac mini" goes up only when the app said it cannot follow by itself or that following did not go through (`appUpdateCard`, `DeviceUpdateNudge.appsChanged`): both versions, why, what to do there and, when it said any, the app's own words.
+A copy that cannot follow offers Got it, since nothing here installs it; one that failed offers Open Devices, where Update app tries again, beside Not now.
+Its answers carry both versions and the step in their action ids (`not-now@app:<this>><that>:<step>`), so Not now holds for that gap and step only; it comes down by itself once the app follows, runs this computer's version, or goes.
+
 ### Each copy's version
 
 Every copy tells the home the version of Infinitary it runs in its hello (`appVersion`, `docs/connection.md`): a computer's work, the app open on another computer, and the phone, which says its own version and build as its Settings shows them (`PhoneAppVersion`).

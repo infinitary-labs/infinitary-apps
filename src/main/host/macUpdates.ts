@@ -9,10 +9,18 @@ import {
   MacUpdateProblem,
   MacUpdateReadyProblem,
 } from "@core/update/macUpdates";
+import { versionFeed, versionManifestUrl } from "@core/update/releaseFeeds";
 import { releaseSource } from "@core/update/releaseSource";
 import { UPDATE_PROBLEMS } from "@shared/updateWords";
 import { app, autoUpdater } from "electron";
-import type { MacUpdater, UpdateCheckResult } from "electron-updater";
+import type {
+  MacUpdater,
+  Provider,
+  ResolvedUpdateFileInfo,
+  UpdateCheckResult,
+  UpdateInfo,
+} from "electron-updater";
+import type { ProviderRuntimeOptions } from "electron-updater/out/providers/Provider";
 import { readMacInstallation } from "./macInstallation";
 
 /**
@@ -24,13 +32,50 @@ import { readMacInstallation } from "./macInstallation";
  */
 export const UPDATER_ID_FILE = ".updaterId";
 
+/** The release feed the library reads a channel from. */
+const CHANNEL_FEED = {
+  provider: "generic",
+  url: releaseSource.feedUrl,
+  useMultipleRangeRequest: false,
+} as const;
+
+/**
+ * A provider the library reads one exact version from, its own published
+ * manifest beside the channel feeds (docs/view.md, "Following the home's
+ * version"), with the same metadata and checks a channel's feed gets.
+ */
+function versionProvider(base: typeof Provider) {
+  return class VersionFeed extends base<UpdateInfo> {
+    constructor(
+      private readonly feed: { version: string },
+      _updater: unknown,
+      runtimeOptions: ProviderRuntimeOptions,
+    ) {
+      super(runtimeOptions);
+    }
+    async getLatestVersion(): Promise<UpdateInfo> {
+      const url = versionManifestUrl(releaseSource.feedUrl, this.feed.version);
+      const text = await this.httpRequest(url);
+      if (text === null) throw new Error("The published manifest was empty.");
+      return versionFeed(text, this.feed.version) as UpdateInfo;
+    }
+    resolveFiles(info: UpdateInfo): ResolvedUpdateFileInfo[] {
+      return info.files.map((file) => ({ url: new URL(file.url), info: file }));
+    }
+  };
+}
+
 /** Electron/Squirrel owns signed app replacement; core owns subscription and consent (INF-640). */
 export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacUpdateDriver {
   // The library's own place for it this run; nothing reads it any more.
   void rm(join(app.getPath("userData"), UPDATER_ID_FILE), { force: true }).catch(() => {});
   let updater: MacUpdater | undefined;
+  let exact: ReturnType<typeof versionProvider> | undefined;
   let checked: UpdateCheckResult | null = null;
-  let nativeReady = false;
+  /** The version Squirrel staged; it applies at the next start until another is staged in its place. */
+  let nativeReady: string | undefined;
+  /** The version whose archive the last download finished and checked, the only one Squirrel can stage. */
+  let archive: string | undefined;
   let queue: Promise<unknown> = Promise.resolve();
   // The library shares the checked offer with downloadUpdate. Serialize checks so an older
   // channel request can never replace a newer request's provider or download target.
@@ -46,12 +91,9 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
   async function engine(): Promise<MacUpdater> {
     requireDirectCopy();
     if (!updater) {
-      const { MacUpdater } = await import("electron-updater");
-      updater = new MacUpdater({
-        provider: "generic",
-        url: releaseSource.feedUrl,
-        useMultipleRangeRequest: false,
-      });
+      const { MacUpdater, Provider } = await import("electron-updater");
+      exact = versionProvider(Provider);
+      updater = new MacUpdater(CHANNEL_FEED);
       updater.autoDownload = false;
       updater.autoInstallOnAppQuit = false;
       updater.disableDifferentialDownload = true;
@@ -100,6 +142,32 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             }
           : null;
       }),
+    checkVersion: (version) =>
+      serial(async () => {
+        const current = await engine();
+        if (!exact) throw new Error("The update library did not load.");
+        // This read alone goes to the version's manifest; the download keeps the provider it found.
+        current.setFeedURL({ provider: "custom", updateProvider: exact, version } as never);
+        current.allowDowngrade = false;
+        current.requestHeaders = null;
+        try {
+          checked = await current.checkForUpdates();
+        } catch (error) {
+          checked = null;
+          // A version with no manifest is not published: nothing to offer.
+          if ((error as { statusCode?: number }).statusCode === 404) return null;
+          throw error;
+        } finally {
+          current.setFeedURL(CHANNEL_FEED);
+        }
+        // As a channel's read, the offer is the version read; the core decides it is newer.
+        return checked
+          ? {
+              version: checked.updateInfo.version,
+              releaseUrl: releaseSource.releaseUrl(checked.updateInfo.version),
+            }
+          : null;
+      }),
     download: (offer: MacUpdateOffer, progress, signal) =>
       serial(async () => {
         if (!app.isPackaged || Number(release().split(".")[0]) < 21)
@@ -131,18 +199,27 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
         const onProgress = (info: { percent: number }) => progress(info.percent);
         signal.addEventListener("abort", cancel, { once: true });
         current.on("download-progress", onProgress);
+        archive = undefined;
         try {
           await current.downloadUpdate(cancellation);
+          archive = offer.version;
         } finally {
           signal.removeEventListener("abort", cancel);
           current.removeListener("download-progress", onProgress);
         }
       }),
-    install: async () => {
+    install: async (version, stillWanted) => {
+      // Asked before native staging, which Squirrel applies at the next start whatever
+      // follows: someone using the app by then keeps it running, with nothing staged.
+      if (stillWanted && !stillWanted()) return "unstaged";
       const current = await engine();
       // With autoInstallOnAppQuit=false, the library has only downloaded and checksummed the
       // ZIP. Native staging (including signature verification) starts only after consent.
-      if (!nativeReady)
+      // Squirrel's completion names no version, so only the archive downloaded last is staged,
+      // and only when it is the version asked for; a version staged already quits as it is.
+      if (nativeReady !== version && archive !== version)
+        throw new Error("The update offer changed.");
+      if (nativeReady !== version)
         await new Promise<void>((resolve, reject) => {
           const cleanup = () => {
             autoUpdater.removeListener("error", failed);
@@ -153,7 +230,7 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           };
           const ready = () => {
-            nativeReady = true;
+            nativeReady = version;
             cleanup();
             resolve();
           };
@@ -166,6 +243,10 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           }
         });
+      // Asked again once staged, before shutdown: someone who came back while Squirrel staged
+      // keeps the app running. The staged version stays, so a later install of it quits with
+      // no staging, and one of another version stages that one in its place.
+      if (stillWanted && !stillWanted()) return "staged";
       // Squirrel's quitAndInstall must not outrun the app's asynchronous task/session shutdown.
       try {
         await prepareRestart();

@@ -329,6 +329,27 @@ export function startHomeQuota(options: {
     stamp: (snapshot) => stampSnapshot(snapshot, keepsGoing),
     broadcast: options.broadcast,
   });
+  // The captain's Try again on a spent allowance ends the vault's hold and
+  // the refused readings laid over its meter together, so the seat, the crew
+  // and the meter never read two answers. Every other way a hold ends keeps
+  // its own way with the readings: a reset ends them at their own reset, a
+  // reading with more left ends them, credits serve past them, and another
+  // login forgets them.
+  const spentHeld = new Set(
+    vault
+      .list()
+      .filter((account) => vault.cutOff(account.id)?.class === "no_headroom")
+      .map((account) => account.id),
+  );
+  vault.onCutOffChange((accountId) => {
+    if (vault.cutOff(accountId)?.class === "no_headroom") {
+      spentHeld.add(accountId);
+      return;
+    }
+    if (!spentHeld.delete(accountId) || !vault.goesByAnswers(accountId)) return;
+    endRefusedReadings(accountId);
+    void quota.refresh("pushed");
+  });
   return {
     quota,
     pushed: pushedQuota,

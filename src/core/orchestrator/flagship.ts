@@ -70,6 +70,10 @@ export type FlagshipVaultView = {
   cutOff(accountId: string): { class: CutOffClass; resetsAt?: number } | undefined;
   /** The captain's "Try again" on a refusal; answers whether one stood. */
   tryAgain(accountId: string): boolean;
+  /** The captain's "Try again" on a spent allowance a recheck saw unchanged (`AccountVault`). */
+  tryPastSpent?(accountId: string): void;
+  /** Whether the account goes by its provider's answers past its reading (`AccountVault`). */
+  goesByAnswers?(accountId: string): boolean;
   /** Where a Claude account's access comes from when it is not a subscription. */
   accessSync?(accountId: string): ClaudeAccessSource | undefined;
   /** Who the account's own client last said is signed in, when it says. */
@@ -109,6 +113,9 @@ export type FlagshipOptions = {
   /** The one decision ledger the seat's binding decisions are recorded in. */
   decisions?: { recordAccount(input: AccountDecisionInput): number };
 };
+
+/** The ledger reason for the captain's Try again, on a refused account or past a spent reading. */
+const CAPTAIN_TRIED_AGAIN = "the captain chose to try again";
 
 export class Flagship {
   private readonly binder: SessionBinder;
@@ -319,7 +326,9 @@ export class Flagship {
       };
     }
     // An account that keeps going on credits answers past a spent
-    // allowance; only the provider's own refusal (the cut-off above) stops it.
+    // allowance, and so does one the captain tried past its reading; only
+    // the provider's own refusal (the cut-off above) stops either.
+    if (vault.goesByAnswers?.(accountId)) return undefined;
     const effective = effectiveFromProvider(this.snapshotRow(accountId), Date.now());
     return allowanceSpent(effective) ? { class: "no_headroom" } : undefined;
   }
@@ -385,8 +394,18 @@ export class Flagship {
    */
   tryAgain(accountId: string): boolean {
     const cleared = this.options.vault.tryAgain(accountId);
-    if (cleared) this.record("try-again", accountId, ["the captain chose to try again"]);
+    if (cleared) this.record("try-again", accountId, [CAPTAIN_TRIED_AGAIN]);
     return cleared;
+  }
+
+  /**
+   * The captain's "Try again" on a spent allowance a recheck saw unchanged:
+   * the hold ends on their word, the account goes by its provider's
+   * answers until it refuses again, and the next turn is the attempt.
+   */
+  tryPastSpent(accountId: string): void {
+    this.options.vault.tryPastSpent?.(accountId);
+    this.record("try-again", accountId, [CAPTAIN_TRIED_AGAIN]);
   }
 
   /**

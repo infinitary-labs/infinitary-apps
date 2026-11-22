@@ -129,8 +129,12 @@ export type FirstmateHooks = {
   ) => void;
   /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
   moveFlagship?: (providerId: string) => void;
-  /** The refused card's "Try again": clear the account's refusal and drain once. */
-  tryAgain?: (accountId: string) => void;
+  /**
+   * A pause card's "Try again": a refusal clears and the lane drains once;
+   * on a spent allowance it rechecks, or attempts once when its argument
+   * says so (`spentAttemptArg`).
+   */
+  tryAgain?: (arg: string) => void;
   /** A run-out card's "Keep going on credits": the account's switch goes on. */
   keepGoingOnCredits?: (accountId: string) => void;
   /** A card's "Use a saved reset", by the account's key (`FirstmateAgentOptions.redeemSavedReset`). */

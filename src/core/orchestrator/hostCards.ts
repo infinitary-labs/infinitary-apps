@@ -36,7 +36,7 @@ const HOST_NOTE_PRIORITY = 25;
 /** The paused seat's cards (W1 S9): the move offer, the refusal, and the rest. */
 const FIRSTMATE_MOVE_CARD_ID = "card-fm-flagship-move";
 const FIRSTMATE_REFUSED_CARD_ID = "card-fm-refused";
-const FIRSTMATE_BENCH_CARD_ID = "card-fm-no-headroom";
+export const FIRSTMATE_BENCH_CARD_ID = "card-fm-no-headroom";
 export const FIRSTMATE_MOVE_BACK_CARD_ID = "card-fm-move-back";
 export const FIRSTMATE_PAUSE_CARD_IDS = [
   FIRSTMATE_MOVE_CARD_ID,
@@ -64,6 +64,13 @@ export type FirstmatePauseCard = {
   /** A spent allowance is being read again: no second recheck is offered. */
   checking?: boolean;
   /**
+   * The captain's recheck read the spent allowance unchanged: the card
+   * offers one attempt beside another recheck (`spentAttemptArg`), for a
+   * login the reading does not see, such as a token the client's launcher
+   * passes.
+   */
+  attempt?: boolean;
+  /**
    * The provider says the paused account has credits and its Keep going on
    * credits switch is off (docs/quota.md): the card offers to turn it on.
    */
@@ -79,6 +86,27 @@ export type FirstmatePauseCard = {
    */
   access?: ClaudeAccessSource;
 };
+
+/** A pause card's attempt on the paused account: a refusal's, or a spent allowance's after a recheck. */
+function tryAgainLabel(providerName: string): string {
+  return `Try ${providerName} again`;
+}
+
+/**
+ * The spent-allowance card's attempt, on the same `try-again` op as its
+ * recheck: its argument names the account under this prefix, which no
+ * account id carries, so the seat tells the two apart (`spentAttemptOf`).
+ */
+const SPENT_ATTEMPT_PREFIX = "attempt:";
+
+export function spentAttemptArg(accountId: string): string {
+  return `${SPENT_ATTEMPT_PREFIX}${accountId}`;
+}
+
+/** The account a `try-again` argument attempts past its spent allowance, else undefined. */
+export function spentAttemptOf(arg: string): string | undefined {
+  return arg.startsWith(SPENT_ATTEMPT_PREFIX) ? arg.slice(SPENT_ATTEMPT_PREFIX.length) : undefined;
+}
 
 /** The spent-allowance card's way back: read the allowance again. */
 export const RECHECK_ALLOWANCE_LABEL = "Recheck allowance";
@@ -244,6 +272,20 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
         ...(credits ? {} : { default: true }),
         effect: { kind: "host", op: "try-again", arg: input.accountId },
       },
+      ...(input.attempt
+        ? [
+            {
+              id: "try-again",
+              label: tryAgainLabel(input.providerName),
+              variant: "secondary" as const,
+              effect: {
+                kind: "host" as const,
+                op: "try-again" as const,
+                arg: spentAttemptArg(input.accountId),
+              },
+            },
+          ]
+        : []),
       input.move
         ? {
             id: "move-flagship",
@@ -264,7 +306,7 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
       ? [
           {
             id: "try-again",
-            label: `Try ${input.providerName} again`,
+            label: tryAgainLabel(input.providerName),
             variant: input.move ? "secondary" : "primary",
             ...(input.move ? {} : { default: true }),
             effect: { kind: "host", op: "try-again", arg: input.accountId },

@@ -249,6 +249,7 @@
   "cardSinceSeenSaw": "前に見たカードから · {when}",
   "cardSoundUnplayable": "このサウンドを再生できませんでした。",
   "cardSoundWord": "サウンド",
+  "cardSpentTryOnce": "一等航海士が別のサインイン（ご自身の設定が渡すトークンなど）で {provider} に届く場合は、もう一度試すとメッセージを一度だけ送ります。利用枠がまだ使い切られていれば、再び一時停止します。",
   "cardTabStripLabel": "タスクカード",
   "cardThreadAddFiles": "この返信にファイルを追加",
   "cardThreadCard": "カード",

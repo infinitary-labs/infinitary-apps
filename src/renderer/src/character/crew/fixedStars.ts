@@ -17,7 +17,7 @@ const DEG = Math.PI / 180;
 export const FIXED_STARS = {
   /** Room kept between a star and the widest reach of either orbit beneath it, scene px. */
   clearOfOrbitPx: 50,
-  /** A star keeps this far from the center on each axis, scene px; the stage reaches 262. */
+  /** A star keeps this far from the center on each axis, scene px, inside the home formation's 560 px square. */
   edgePx: 240,
   /** The long rays, up and down, in glyph heights; the side rays are `sideRay` of them. */
   rays: 1.4,

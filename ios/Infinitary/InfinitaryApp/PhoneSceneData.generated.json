@@ -41,7 +41,6 @@
     "maxCompanions": 3,
     "edgeLanes": 3,
     "gutterPx": 36,
-    "sceneReachPx": 262,
     "phase": 1.2
   },
   "targets": {

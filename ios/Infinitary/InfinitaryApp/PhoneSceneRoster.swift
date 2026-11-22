@@ -381,7 +381,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var target: [String: Glyph] = [:], marks: [Mark] = []
         let parts = Set(roster.computers.flatMap { $0.programParts })
         let cues = PhoneSceneCompanions.cues(roster.tasks, parts: parts)
-        var circles: [String: (cue: PhoneSceneCompanions.Cue, share: Double, time: Double, reach: CGSize)] = [:]
+        var circles: [String: (cue: PhoneSceneCompanions.Cue, share: Double, time: Double)] = [:]
         // Each computer hangs its own constellation over its own orbits (INF-3634): places from its center, and the joins.
         var starPlaces: [String: CGPoint] = [:], starJoins: [(from: String, to: String)] = []
         // Re-spacing and a resized orbit glide each crewmate around its orbit, never straight across it.
@@ -413,26 +413,15 @@ final class PhoneSceneMotion: @unchecked Sendable {
             }
             // A fixed star gives up its seat, so the crew left on its orbit close the gap; it keeps its orbit membership.
             var excluded = computer.programParts.union(eligible.keys).union(stars)
-            // The native scene can be smaller than the desktop square, so a circle's reach also
-            // respects its actual canvas. Near that edge the circle shrinks (INF-1532); only a
-            // blocker past the reach leaves its group on the main orbit for this frame. Each pass
-            // removes a group, so resolution always terminates.
-            let reach = CharacterCatalog.shared.dependency["sceneReachPx"]! * PhoneSceneRoster.ringScale * computer.share
-            let glyphHalf = CharacterCatalog.shared.orbit["glyph"]! * (0.84 + 0.32) / 2
-            let circleReach = CGSize(width: min(reach, computer.width / 2 - glyphHalf), height: min(reach, roster.height / 2 - glyphHalf))
+            // No bound holds a circle in: only a blocker without a seat leaves its group on the main orbit for
+            // this frame. Each pass removes a group, so resolution always terminates.
             let startingSeats = book
             while true {
                 book = startingSeats
                 book.show(excluding: excluded)
                 var rejected = Set<String>()
                 for (blocker, group) in Dictionary(grouping: eligible.filter { excluded.contains($0.key) }, by: { $0.value.blocker }) {
-                    guard let seat = book.crew[blocker] else { rejected.formUnion(group.map(\.key)); continue }
-                    var at = orbit(plane: seat.plane, slot: seat.slot)
-                    if var previous = members[blocker]?.glyph.orbit, eased < 1 {
-                        Self.glide(&previous, toward: at, eased); at = previous
-                    }
-                    let projected = PhoneSceneRoster.projected(at)
-                    if abs(projected.point.x) > circleReach.width || abs(projected.point.y) > circleReach.height { rejected.formUnion(group.map(\.key)) }
+                    if book.crew[blocker] == nil { rejected.formUnion(group.map(\.key)) }
                 }
                 if rejected.isEmpty { break }
                 excluded.subtract(rejected)
@@ -446,7 +435,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
             if CharacterCatalog.shared.fixedStars.joined {
                 starJoins += sky.joins.map { (from: computer.pinned[$0.0], to: computer.pinned[$0.1]) }
             }
-            for (id, cue) in eligible where excluded.contains(id) { circles[id] = (cue, computer.share, localTime, circleReach) }
+            for (id, cue) in eligible where excluded.contains(id) { circles[id] = (cue, computer.share, localTime) }
             var positions: [String: (CGPoint, Double, PhoneSceneRoster.Orbit?)] = [:]
             for (id, seat) in book.crew {
                 let at = orbit(plane: seat.plane, slot: seat.slot), (point, depth) = place(at, around: center)
@@ -562,8 +551,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
             let slot = member.glyph.point
             var base: (blocker: String, origin: CGPoint, slot: CGPoint)?
             if let circle = circles[id], let builder = bases[circle.cue.blocker], let at = builder.orbit {
-                let radius = PhoneSceneCompanions.radius(orbit: at, around: CGPoint(x: builder.point.x - builder.center.x, y: builder.point.y - builder.center.y),
-                                                         reach: circle.reach, share: circle.share)
+                let radius = PhoneSceneCompanions.radius(share: circle.share)
                 let delta = PhoneSceneCompanions.offset(circle.cue, orbit: at, time: circle.time, settled: settled, radius: radius)
                 base = (circle.cue.blocker, builder.point, slot)
                 if let previous = member.companionBase, previous.blocker == circle.cue.blocker, eased < 1 {

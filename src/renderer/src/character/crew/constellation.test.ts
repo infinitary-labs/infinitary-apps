@@ -13,6 +13,7 @@ import { applyCrewDependencies, seedCrew } from "./crewSignal";
 import { crewHit } from "./hover";
 import { stageMarks } from "./marks";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
+import { CROWDED_PLANES } from "./orbitalPlanes";
 import { crewFacts } from "./useCrewBoard";
 
 /**
@@ -159,7 +160,7 @@ describe("layoutProgram", () => {
     expect(ring?.tilt).toBeCloseTo(CONSTELLATION.tiltDeg * DEG);
     if (!ring) throw new Error("No ring for four parts");
     for (const seconds of [0, 1, 2.5]) {
-      const { places } = layoutProgram(live(4), root, 1000, CONSTELLATION.crewGapPx, seconds);
+      const { places } = layoutProgram(live(4), root, CONSTELLATION.crewGapPx, seconds);
       for (let i = 0; i < 4; i++) {
         const at = ringPoint(ring, (i * Math.PI) / 2 + seconds * CONSTELLATION.speedDegS * DEG);
         const place = places.get(`p${i}`);
@@ -191,7 +192,7 @@ describe("layoutProgram", () => {
           CONSTELLATION.ringStepPx - 1e-9,
         );
       // Every part has its own place on a ring.
-      const { places } = layoutProgram(live(n), root, 1000);
+      const { places } = layoutProgram(live(n), root);
       expect(places.size).toBe(n);
     }
     // A remote computer's group, at half the scene's size, asks for twice the room.
@@ -204,31 +205,49 @@ describe("layoutProgram", () => {
         { x: 120, y: -90 },
         { x: -150, y: 40 },
       ]) {
-        const here = layoutProgram(parts, root, 1000, CONSTELLATION.crewGapPx, 3).places;
-        const there = layoutProgram(parts, at, 1000, CONSTELLATION.crewGapPx, 3).places;
+        const here = layoutProgram(parts, root, CONSTELLATION.crewGapPx, 3).places;
+        const there = layoutProgram(parts, at, CONSTELLATION.crewGapPx, 3).places;
         for (const [id, place] of here) {
           expect((there.get(id)?.x ?? 0) - at.x).toBeCloseTo(place.x - root.x);
           expect((there.get(id)?.y ?? 0) - at.y).toBeCloseTo(place.y - root.y);
         }
       }
   });
-
-  it("scales the whole about its mark when a part would leave the stage", () => {
-    const edge = { x: 0, y: 190 };
-    const free = layoutProgram(live(8), edge, 1000);
-    const fitted = layoutProgram(live(8), edge, 200);
-    for (const place of fitted.places.values())
-      expect(Math.abs(place.y)).toBeLessThanOrEqual(200 + 1e-9);
-    const k = (fitted.rings[0]?.radius ?? 0) / (free.rings[0]?.radius ?? 1);
-    expect(k).toBeLessThan(1);
-    for (const [id, place] of free.places) {
-      expect((fitted.places.get(id)?.x ?? 0) - edge.x).toBeCloseTo((place.x - edge.x) * k);
-      expect((fitted.places.get(id)?.y ?? 0) - edge.y).toBeCloseTo((place.y - edge.y) * k);
-    }
-  });
 });
 
 describe("the program on the orbit", () => {
+  // The captain's ask (INF-5726): no box holds a crewmate in. A task's moons
+  // keep their rings' full size through a whole trip of its mark, even where
+  // the outer ring passes the formation's square.
+  it("keeps a task's rings at full size wherever its mark sits on its trip", () => {
+    for (const n of [40, 60]) {
+      // A crowded home, so the mark rides the full outer orbit.
+      const model = adaptive();
+      seedCrew(
+        model,
+        [
+          view({ id: "survey", parentId: null, status: "open", activity: null, program: true }),
+          ...live(n).map((part, i) => view({ id: part.id, parentId: "survey", createdAt: i })),
+          ...Array.from({ length: 24 }, (_, i) =>
+            view({ id: `crew-${i}`, parentId: null, createdAt: n + i }),
+          ),
+        ],
+        0,
+      );
+      const outer = moonRings(n).at(-1)?.radius ?? 0;
+      const tripMs = (360 / Math.abs(CROWDED_PLANES[0].speedDegPerSec)) * 1000;
+      for (let t = 0; t <= tripMs; t += 250) {
+        const program = model.update(t, true).programs[0];
+        if (!program) throw new Error("No program drawn");
+        // A ring's line reaches its full radius from the mark where it meets the line of nodes.
+        const reach = Math.max(
+          ...program.rings.flat().map((p) => Math.hypot(p.x - program.x, p.y - program.y)),
+        );
+        expect(reach, `${n} parts at ${t} ms`).toBeCloseTo(outer, 0);
+      }
+    }
+  });
+
   it("draws only the running parts, each a crewmate circling the mark on one faint ring", () => {
     const { tasks } = reviewBoard();
     const model = adaptive();

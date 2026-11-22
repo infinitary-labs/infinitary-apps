@@ -217,10 +217,9 @@ import XCTest
         try await capture("capture-stop")
     }
 
-    /// INF-1532, the captain's choice A: near the scene's edge a waiter's circle shrinks instead of throwing the
-    /// waiter back to its main orbit for part of each loop. Through a whole turn of its blocker on a crowded home,
-    /// the waiter stays on its circle and its glyph stays inside the scene.
-    func testWaiterKeepsItsShrinkingCircleInsideTheScene() throws {
+    /// The captain's ask (INF-5726): no box holds a crewmate in. Through a whole turn of its blocker on a crowded
+    /// home, a waiter keeps its full circle, even where the circle passes the scene's edge.
+    func testWaiterKeepsItsFullCircleThroughAWholeLoop() throws {
         for count in [19, 24] {
             let crew = (1...count).map { "crew-\($0)" }
             let arrived = Dictionary(uniqueKeysWithValues: crew.enumerated().map { ($1, $0 + 1) })
@@ -228,20 +227,20 @@ import XCTest
                                           presence: [], homeName: "Mac", inReach: true, generation: 1)
             let computer = try XCTUnwrap(roster.computers.first { $0.id == "home" })
             let plane = try XCTUnwrap(computer.book.crew["crew-1"]?.plane)
-            let full = CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * computer.share
-            let motion = PhoneSceneMotion(), start = 4.0, turn = 360 / abs(CharacterCatalog.shared.planes[plane].speedDegPerSec)
-            var worstGap = 0.0
-            // Let the waiter glide onto its circle, then follow every frame of one loop.
-            for step in 0...Int((start + turn) * 60) {
-                let now = Double(step) / 60, frame = motion.frame(roster: roster, now: now, settled: false)
-                guard now >= start else { continue }
+            let full = PhoneSceneCompanions.radius(share: computer.share)
+            XCTAssertEqual(full, CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * computer.share)
+            let cue = PhoneSceneCompanions.Cue(blocker: "crew-1", index: 0, count: 1, circles: true)
+            let motion = PhoneSceneMotion(), turn = 360 / abs(CharacterCatalog.shared.planes[plane].speedDegPerSec)
+            // Settled frames seat the waiter exactly on its circle; follow its blocker through one loop.
+            for step in 0...Int(turn * 4) {
+                let now = Double(step) / 4, frame = motion.frame(roster: roster, now: now, settled: true)
                 let glyphs = Dictionary(uniqueKeysWithValues: frame.glyphs.map { ($0.task.id, $0) })
                 let waiter = try XCTUnwrap(glyphs["crew-2"]), blocker = try XCTUnwrap(glyphs["crew-1"])
-                worstGap = max(worstGap, hypot(waiter.point.x - blocker.point.x, waiter.point.y - blocker.point.y))
-                XCTAssertLessThanOrEqual(abs(waiter.point.x - waiter.center.x) + waiter.size / 2, computer.width / 2, "\(count) crew at \(now) s")
-                XCTAssertLessThanOrEqual(abs(waiter.point.y - waiter.center.y) + waiter.size / 2, roster.height / 2, "\(count) crew at \(now) s")
+                let orbit = try XCTUnwrap(blocker.orbit, "\(count) crew at \(now) s")
+                let expected = PhoneSceneCompanions.offset(cue, orbit: orbit, time: now, settled: true, radius: full).point
+                XCTAssertEqual(waiter.point.x - blocker.point.x, expected.x, accuracy: 0.01, "\(count) crew at \(now) s")
+                XCTAssertEqual(waiter.point.y - blocker.point.y, expected.y, accuracy: 0.01, "\(count) crew at \(now) s")
             }
-            XCTAssertLessThanOrEqual(worstGap, full + 1, "\(count) crew: the waiter left its circle")
         }
     }
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "public-ci-security-controls-order",
+      "reason": "Documentation correction for the order of repository security settings; no change to the app."
+    }
+  ]
+}

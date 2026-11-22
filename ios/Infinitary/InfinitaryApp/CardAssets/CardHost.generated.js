@@ -10986,6 +10986,129 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `Used a saved reset on ${account}. It has ${count} left.`;
     }
   }
+  function accountsSavedResetUsedAuto(input2) {
+    const account = input2.account;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. لم يتبقَّ أي منها.`;
+          case "one":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت واحدة.`;
+          case "two":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت اثنتان.`;
+          case "few":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          case "many":
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+          default:
+            return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. تبقّت ${count}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleibt ${count}.`;
+          default:
+            return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es bleiben ${count}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Queda ${count}.`;
+          case "many":
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+          default:
+            return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Quedan ${count}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          case "many":
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+          default:
+            return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il en reste ${count}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。残りは ${count} 回分です。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. ${count}개 남았어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Resta ${count}.`;
+          case "many":
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+          default:
+            return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Restam ${count}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置，还剩 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設，還剩 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ ĥáš ${count} ļéƒţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+          default:
+            return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It has ‬${count}‮ left.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+      default:
+        return `Infinitary used a saved reset on ${account} so waiting work could continue. It has ${count} left.`;
+    }
+  }
+  function accountsSavedResetUsedAutoChecking(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم Infinitary إعادة تعيين محفوظة لـ ${account} كي يستمر العمل المنتظر. يعيد التحقق من الرصيد.`;
+      case "de":
+        return `Infinitary hat einen gespeicherten Reset von ${account} eingelöst, damit wartende Arbeit weitergeht. Es prüft das Kontingent erneut.`;
+      case "es":
+        return `Infinitary usó un restablecimiento guardado de ${account} para que el trabajo en espera continúe. Vuelve a consultar la asignación.`;
+      case "fr":
+        return `Infinitary a utilisé une réinitialisation enregistrée de ${account} pour que le travail en attente continue. Il revérifie l’allocation.`;
+      case "ja":
+        return `待っている作業を続けるため、Infinitary が ${account} の保存済みのリセットを使いました。利用枠を読み取り直しています。`;
+      case "ko":
+        return `기다리는 작업을 계속하도록 Infinitary가 ${account}의 저장된 재설정을 사용했어요. 사용량을 다시 확인하고 있어요.`;
+      case "pt-BR":
+        return `O Infinitary usou uma redefinição salva de ${account} para o trabalho em espera continuar. Ele está lendo a franquia de novo.`;
+      case "zh-Hans":
+        return `为让等待中的工作继续，Infinitary 使用了 ${account} 的一次已保存的重置。它正在重新检查额度。`;
+      case "zh-Hant":
+        return `為讓等待中的工作繼續，Infinitary 使用了 ${account} 的一次已儲存的重設。它正在重新檢查額度。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ûšéð á šáṽéð ŕéšéţ öñ ${account} šö ŵáîţîñĝ ŵöŕķ çöûļð çöñţîñûé. Îţ îš çĥéçķîñĝ ţĥé áļļöŵáñçé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary used a saved reset on ‬${account}‮ so waiting work could continue. It is checking the allowance again.‬`;
+    }
+    return `Infinitary used a saved reset on ${account} so waiting work could continue. It is checking the allowance again.`;
+  }
   function accountsSavedResetUsedChecking(input2) {
     const account = input2.account;
     switch (currentLanguage()) {
@@ -11013,6 +11136,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Used a saved reset on ‬${account}‮. Infinitary is checking its allowance again.‬`;
     }
     return `Used a saved reset on ${account}. Infinitary is checking its allowance again.`;
+  }
+  function accountsUseSavedResetsSignInFirst(input2) {
+    const account = input2.account;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يسجّل Codex الدخول إلى ${account} بعد، لذا يبقى «استخدام إعادات التعيين المحفوظة تلقائيًا» متوقفًا. شغّله من صف الحساب في الإعدادات ليسجّل Codex الدخول.`;
+      case "de":
+        return `Codex ist noch nicht bei ${account} angemeldet, daher bleibt „Gespeicherte Resets selbst einlösen“ aus. Schalte es in den Einstellungen bei der Zeile des Kontos ein, um Codex anzumelden.`;
+      case "es":
+        return `Codex todavía no inició sesión en ${account}, así que «Usar restablecimientos guardados por sí solo» sigue desactivado. Actívalo en la fila de la cuenta en Ajustes para iniciar sesión en Codex.`;
+      case "fr":
+        return `Codex n’est pas encore connecté à ${account}, donc « Utiliser les réinitialisations enregistrées d’office » reste désactivé. Activez-le sur la ligne du compte dans les réglages pour connecter Codex.`;
+      case "ja":
+        return `Codex はまだ ${account} にサインインしていないため、「保存済みのリセットを自動で使う」はオフのままです。設定でこのアカウントの行からオンにすると、Codex がサインインします。`;
+      case "ko":
+        return `Codex가 아직 ${account}에 로그인하지 않아 ‘저장된 재설정 자동 사용’은 꺼져 있어요. 설정에서 계정 행에서 켜면 Codex에 로그인해요.`;
+      case "pt-BR":
+        return `O Codex ainda não fez login em ${account}, então “Usar redefinições salvas por conta própria” continua desligado. Ligue na linha da conta nas configurações para fazer login no Codex.`;
+      case "zh-Hans":
+        return `Codex 尚未登录 ${account}，因此“自动使用已保存的重置”保持关闭。请在设置中该账户那一行打开它，让 Codex 登录。`;
+      case "zh-Hant":
+        return `Codex 尚未登入 ${account}，因此「自動使用已儲存的重設」保持關閉。請在設定中該帳號那一列開啟它，讓 Codex 登入。`;
+      case "en-XA":
+        return `[Çöðéẋ îš ñöţ šîĝñéð îñ ţö ${account} ýéţ, šö Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ šţáýš öƒƒ. Ţûŕñ îţ öñ ƒŕöɱ ţĥé áççöûñţ'š ŕöŵ îñ Šéţţîñĝš ţö šîĝñ Çöðéẋ îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Codex is not signed in to ‬${account}‮ yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.‬`;
+    }
+    return `Codex is not signed in to ${account} yet, so Use saved resets on their own stays off. Turn it on from the account's row in Settings to sign Codex in.`;
   }
   function attachCancelled(input2) {
     const name = input2.name;
@@ -11354,6 +11505,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Every event‬`;
     }
     return `Every event`;
+  }
+  function batchesReadWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دفعاتك من التغييرات المعتمدة`;
+      case "de":
+        return `deine Bündel freigegebener Änderungen`;
+      case "es":
+        return `tus lotes de cambios aprobados`;
+      case "fr":
+        return `vos lots de modifications approuvées`;
+      case "ja":
+        return `承認済みの変更をまとめた一括プルリクエスト`;
+      case "ko":
+        return `승인된 변경을 묶은 일괄 끌어오기 요청`;
+      case "pt-BR":
+        return `seus lotes de alterações aprovadas`;
+      case "zh-Hans":
+        return `你已批准改动的批量拉取请求`;
+      case "zh-Hant":
+        return `你已核准變更的批次`;
+      case "en-XA":
+        return `[ýöûŕ ƀáţçĥéš öƒ áþþŕöṽéð çĥáñĝéš ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮your batches of approved changes‬`;
+    }
+    return `your batches of approved changes`;
   }
   function cardAfterMergeDoerCrewmate() {
     switch (currentLanguage()) {
@@ -13107,6 +13285,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Nothing answers at ${site}, so its crewmate was asked to start it again. The page shows here once it answers.`;
   }
+  function cardBrowserUnansweredStarting(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء يستجيب على ${site}، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.`;
+      case "de":
+        return `Unter ${site} antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.`;
+      case "es":
+        return `Nada responde en ${site}, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.`;
+      case "fr":
+        return `Rien ne répond sur ${site}, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.`;
+      case "ja":
+        return `${site} が応答しないため、Infinitary が再起動しています。応答するとページがここに表示されます。`;
+      case "ko":
+        return `${site}에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.`;
+      case "pt-BR":
+        return `Nada responde em ${site}, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.`;
+      case "zh-Hans":
+        return `${site} 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。`;
+      case "zh-Hant":
+        return `${site} 沒有回應，Infinitary 正在重新啟動它。它一回應，頁面就會顯示在這裡。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ áñšŵéŕš áţ ${site}, šö Îñƒîñîţáŕý îš šţáŕţîñĝ îţ áĝáîñ. Ţĥé þáĝé šĥöŵš ĥéŕé öñçé îţ áñšŵéŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing answers at ‬${site}‮, so Infinitary is starting it again. The page shows here once it answers.‬`;
+    }
+    return `Nothing answers at ${site}, so Infinitary is starting it again. The page shows here once it answers.`;
+  }
   function cardBrowserUnansweredWorking(input2) {
     const site = input2.site;
     switch (currentLanguage()) {
@@ -13161,6 +13367,1420 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Browser‬`;
     }
     return `Browser`;
+  }
+  function cardCarriedNotes(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} ملاحظة`;
+          case "one":
+            return `ملاحظة واحدة`;
+          case "two":
+            return `ملاحظتان`;
+          case "few":
+            return `${count} ملاحظات`;
+          case "many":
+            return `${count} ملاحظةً`;
+          default:
+            return `${count} ملاحظة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Notiz`;
+          default:
+            return `${count} Notizen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} nota`;
+          case "many":
+            return `${count} de notas`;
+          default:
+            return `${count} notas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} note`;
+          case "many":
+            return `${count} notes`;
+          default:
+            return `${count} notes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `メモ${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `메모 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} nota`;
+          case "many":
+            return `${count} notas`;
+          default:
+            return `${count} notas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 条批注`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 則筆記`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñöţé ~~]`;
+          default:
+            return `[${count} ñöţéš ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ note‬`;
+          default:
+            return `${count}‮ notes‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} note`;
+      default:
+        return `${count} notes`;
+    }
+  }
+  function cardCarriedPictures(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} صورة`;
+          case "one":
+            return `صورة واحدة`;
+          case "two":
+            return `صورتان`;
+          case "few":
+            return `${count} صور`;
+          case "many":
+            return `${count} صورةً`;
+          default:
+            return `${count} صورة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Bild`;
+          default:
+            return `${count} Bilder`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} imagen`;
+          case "many":
+            return `${count} de imágenes`;
+          default:
+            return `${count} imágenes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} image`;
+          case "many":
+            return `${count} images`;
+          default:
+            return `${count} images`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `画像${count}枚`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `사진 ${count}장`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} imagem`;
+          case "many":
+            return `${count} imagens`;
+          default:
+            return `${count} imagens`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 张图片`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 張圖片`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} þîçţûŕé ~~~]`;
+          default:
+            return `[${count} þîçţûŕéš ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ picture‬`;
+          default:
+            return `${count}‮ pictures‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} picture`;
+      default:
+        return `${count} pictures`;
+    }
+  }
+  function cardCarriedWithChoice(input2) {
+    formatNumber(input2.count);
+    const items = input2.items;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${items} تُرسل مع اختيارك`;
+          case "one":
+            return `${items} تُرسل مع اختيارك`;
+          case "two":
+            return `${items} تُرسلان مع اختيارك`;
+          case "few":
+            return `${items} تُرسل مع اختيارك`;
+          case "many":
+            return `${items} تُرسل مع اختيارك`;
+          default:
+            return `${items} تُرسل مع اختيارك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} wird mit deiner Wahl gesendet`;
+          default:
+            return `${items} werden mit deiner Wahl gesendet`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} va con tu elección`;
+          case "many":
+            return `${items} van con tu elección`;
+          default:
+            return `${items} van con tu elección`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} part avec votre choix`;
+          case "many":
+            return `${items} partent avec votre choix`;
+          default:
+            return `${items} partent avec votre choix`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `選択と一緒に送るもの：${items}`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `선택과 함께 보낼 항목: ${items}`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} vai com sua escolha`;
+          case "many":
+            return `${items} vão com sua escolha`;
+          default:
+            return `${items} vão com sua escolha`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `将随你的选择一起发送：${items}`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `將隨你的選擇一起送出：${items}`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${items} ĝöéš ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~~]`;
+          default:
+            return `[${items} ĝö ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${items}‮ goes with your choice‬`;
+          default:
+            return `${items}‮ go with your choice‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${items} goes with your choice`;
+      default:
+        return `${items} go with your choice`;
+    }
+  }
+  function cardConsentFrom() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `من`;
+      case "de":
+        return `Von`;
+      case "es":
+        return `De`;
+      case "fr":
+        return `De`;
+      case "ja":
+        return `提供元`;
+      case "ko":
+        return `제공`;
+      case "pt-BR":
+        return `De`;
+      case "zh-Hans":
+        return `来自`;
+      case "zh-Hant":
+        return `來自`;
+      case "en-XA":
+        return `[Ƒŕöɱ ~~]`;
+      case "ar-XB":
+        return `‮From‬`;
+    }
+    return `From`;
+  }
+  function cardConsentFullDetails() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل التفاصيل`;
+      case "de":
+        return `Alle Details`;
+      case "es":
+        return `Todos los detalles`;
+      case "fr":
+        return `Tous les détails`;
+      case "ja":
+        return `詳細`;
+      case "ko":
+        return `자세히`;
+      case "pt-BR":
+        return `Todos os detalhes`;
+      case "zh-Hans":
+        return `完整详情`;
+      case "zh-Hant":
+        return `完整詳情`;
+      case "en-XA":
+        return `[Ƒûļļ ðéţáîļš ~~~~]`;
+      case "ar-XB":
+        return `‮Full details‬`;
+    }
+    return `Full details`;
+  }
+  function cardConsentGuidanceOnly() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.`;
+      case "de":
+        return `Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.`;
+      case "es":
+        return `Aporta guías, partes HTML e imágenes, y no ejecuta nada.`;
+      case "fr":
+        return `Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.`;
+      case "ja":
+        return `ガイダンス、HTML パーツ、画像を提供し、何も実行しません。`;
+      case "ko":
+        return `안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.`;
+      case "pt-BR":
+        return `Fornece orientações, partes HTML e imagens, e não executa nada.`;
+      case "zh-Hans":
+        return `它提供指导、HTML 部件和图片，不运行任何东西。`;
+      case "zh-Hant":
+        return `它提供指引、HTML 元件和圖片，不執行任何東西。`;
+      case "en-XA":
+        return `[Îţ šûþþļîéš ĝûîðáñçé, ĤŢṀĻ þáŕţš áñð þîçţûŕéš, áñð ŕûñš ñöţĥîñĝ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It supplies guidance, HTML parts and pictures, and runs nothing.‬`;
+    }
+    return `It supplies guidance, HTML parts and pictures, and runs nothing.`;
+  }
+  function cardConsentKeeps() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحفظ`;
+      case "de":
+        return `Speichert`;
+      case "es":
+        return `Guarda`;
+      case "fr":
+        return `Conserve`;
+      case "ja":
+        return `保存`;
+      case "ko":
+        return `보관`;
+      case "pt-BR":
+        return `Guarda`;
+      case "zh-Hans":
+        return `保存`;
+      case "zh-Hant":
+        return `保存`;
+      case "en-XA":
+        return `[Ķééþš ~~]`;
+      case "ar-XB":
+        return `‮Keeps‬`;
+    }
+    return `Keeps`;
+  }
+  function cardConsentKeepsLittle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قليلًا من البيانات الخاصة بها`;
+      case "de":
+        return `Ein wenig eigene Daten`;
+      case "es":
+        return `Algunos datos propios`;
+      case "fr":
+        return `Un peu de données à lui`;
+      case "ja":
+        return `独自のデータを少し`;
+      case "ko":
+        return `자체 데이터 약간`;
+      case "pt-BR":
+        return `Alguns dados próprios`;
+      case "zh-Hans":
+        return `少量自己的数据`;
+      case "zh-Hant":
+        return `少量自己的資料`;
+      case "en-XA":
+        return `[Å ļîţţļé ðáţá öƒ îţš öŵñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A little data of its own‬`;
+    }
+    return `A little data of its own`;
+  }
+  function cardConsentKeepsUpTo(input2) {
+    const size = input2.size;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حتى ${size} من البيانات الخاصة بها`;
+      case "de":
+        return `Bis zu ${size} eigene Daten`;
+      case "es":
+        return `Hasta ${size} de datos propios`;
+      case "fr":
+        return `Jusqu’à ${size} de données à lui`;
+      case "ja":
+        return `最大 ${size} の独自データ`;
+      case "ko":
+        return `자체 데이터 최대 ${size}`;
+      case "pt-BR":
+        return `Até ${size} de dados próprios`;
+      case "zh-Hans":
+        return `最多 ${size} 自己的数据`;
+      case "zh-Hant":
+        return `最多 ${size} 自己的資料`;
+      case "en-XA":
+        return `[Ûþ ţö ${size} öƒ ðáţá öƒ îţš öŵñ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Up to ‬${size}‮ of data of its own‬`;
+    }
+    return `Up to ${size} of data of its own`;
+  }
+  function cardConsentMoves() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ينقل`;
+      case "de":
+        return `Bewegt`;
+      case "es":
+        return `Mueve`;
+      case "fr":
+        return `Déplace`;
+      case "ja":
+        return `操作`;
+      case "ko":
+        return `이동`;
+      case "pt-BR":
+        return `Move`;
+      case "zh-Hans":
+        return `操作`;
+      case "zh-Hant":
+        return `操作`;
+      case "en-XA":
+        return `[Ṁöṽéš ~~]`;
+      case "ar-XB":
+        return `‮Moves‬`;
+    }
+    return `Moves`;
+  }
+  function cardConsentMovesDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهامك، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يمكنها أبدًا الدمج أو التجاهل.`;
+      case "de":
+        return `Deine Aufgaben, jede nur, wenn du darin klickst oder eine Taste drückst. Es kann nie zusammenführen oder verwerfen.`;
+      case "es":
+        return `Tus tareas, cada una solo cuando haces clic o pulsas una tecla en el panel. Nunca puede fusionar ni descartar.`;
+      case "fr":
+        return `Vos tâches, chacune seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne peut jamais fusionner ni abandonner.`;
+      case "ja":
+        return `タスクは、パネル内でクリックかキーを押したときだけ1件ずつ扱います。マージや破棄は決してできません。`;
+      case "ko":
+        return `내 작업은 패널 안에서 클릭하거나 키를 누를 때만 하나씩 다뤄요. 병합하거나 폐기할 수는 없어요.`;
+      case "pt-BR":
+        return `Suas tarefas, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca pode mesclar nem descartar.`;
+      case "zh-Hans":
+        return `你的任务，每次仅在你于面板中点击或按键时。它永远不能合并或丢弃。`;
+      case "zh-Hant":
+        return `你的任務，每次僅在你於面板中點按或按鍵時。它永遠不能合併或捨棄。`;
+      case "en-XA":
+        return `[Ýöûŕ ţášķš, éáçĥ öñļý ŵĥéñ ýöû çļîçķ öŕ þŕéšš á ķéý îñ îţ. Îţ çáñ ñéṽéŕ ɱéŕĝé öŕ ðîšçáŕð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your tasks, each only when you click or press a key in it. It can never merge or discard.‬`;
+    }
+    return `Your tasks, each only when you click or press a key in it. It can never merge or discard.`;
+  }
+  function cardConsentMovesLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنه وضع مهامك في قائمة الانتظار وبدؤها وإسقاطها عند نقرك`;
+      case "de":
+        return `Kann deine Aufgaben auf deinen Klick einreihen, starten und aufgeben`;
+      case "es":
+        return `Puede poner en cola, iniciar y abandonar tus tareas cuando haces clic`;
+      case "fr":
+        return `Peut mettre en file, démarrer et écarter vos tâches quand vous cliquez`;
+      case "ja":
+        return `クリックしたときにタスクをキューに入れ、開始し、取りやめにできます`;
+      case "ko":
+        return `클릭할 때 작업을 대기열에 넣고, 시작하고, 중단할 수 있어요`;
+      case "pt-BR":
+        return `Pode enfileirar, iniciar e abandonar suas tarefas quando você clica`;
+      case "zh-Hans":
+        return `在你点击时可将你的任务排队、开始和放弃`;
+      case "zh-Hant":
+        return `在你點按時可將你的任務排入佇列、開始和放棄`;
+      case "en-XA":
+        return `[Çáñ ǫûéûé, šţáŕţ áñð ðŕöþ ýöûŕ ţášķš ŵĥéñ ýöû çļîçķ ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Can queue, start and drop your tasks when you click‬`;
+    }
+    return `Can queue, start and drop your tasks when you click`;
+  }
+  function cardConsentMovesValue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهامك عند نقرك: وضعها في قائمة الانتظار وبدؤها وإسقاطها`;
+      case "de":
+        return `Deine Aufgaben auf deinen Klick: einreihen, starten und aufgeben`;
+      case "es":
+        return `Tus tareas cuando haces clic: poner en cola, iniciar y abandonar`;
+      case "fr":
+        return `Vos tâches, quand vous cliquez : mettre en file, démarrer et écarter`;
+      case "ja":
+        return `クリックしたときのタスク: キューに入れる、開始、取りやめ`;
+      case "ko":
+        return `클릭할 때 내 작업: 대기열에 넣기, 시작, 중단`;
+      case "pt-BR":
+        return `Suas tarefas quando você clica: enfileirar, iniciar e abandonar`;
+      case "zh-Hans":
+        return `你点击时的任务：排队、开始和放弃`;
+      case "zh-Hant":
+        return `你點按時的任務：排入佇列、開始和放棄`;
+      case "en-XA":
+        return `[Ýöûŕ ţášķš ŵĥéñ ýöû çļîçķ: ǫûéûé, šţáŕţ áñð ðŕöþ ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your tasks when you click: queue, start and drop‬`;
+    }
+    return `Your tasks when you click: queue, start and drop`;
+  }
+  function cardConsentNothingOfYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء من بياناتك`;
+      case "de":
+        return `Nichts von dir`;
+      case "es":
+        return `Nada tuyo`;
+      case "fr":
+        return `Rien de vos données`;
+      case "ja":
+        return `あなたのデータはなし`;
+      case "ko":
+        return `내 데이터 없음`;
+      case "pt-BR":
+        return `Nada seu`;
+      case "zh-Hans":
+        return `不读取你的内容`;
+      case "zh-Hant":
+        return `不讀取你的內容`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ öƒ ýöûŕš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing of yours‬`;
+    }
+    return `Nothing of yours`;
+  }
+  function cardConsentPanelNote(input2) {
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+      case "de":
+        return `Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg.`;
+      case "es":
+        return `No ejecuta código propio en la app y no envía nada fuera de ${here}.`;
+      case "fr":
+        return `Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}.`;
+      case "ja":
+        return `アプリ内で独自のコードを実行せず、${here}の外には何も送りません。`;
+      case "ko":
+        return `앱에서 자체 코드를 실행하지 않고 ${here} 밖으로 아무것도 보내지 않아요.`;
+      case "pt-BR":
+        return `Ele não executa código próprio no app e não envia nada para fora de ${here}.`;
+      case "zh-Hans":
+        return `它不在应用中运行自己的代码，也不会把任何内容发出${here}。`;
+      case "zh-Hant":
+        return `它不在應用程式中執行自己的程式碼，也不會把任何內容送出${here}。`;
+      case "en-XA":
+        return `[Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It runs no code of its own in the app and sends nothing off ‬${here}‮.‬`;
+    }
+    return `It runs no code of its own in the app and sends nothing off ${here}.`;
+  }
+  function cardConsentPanelNoteThrough(input2) {
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+      case "de":
+        return `Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg, außer über diese Integrationen.`;
+      case "es":
+        return `No ejecuta código propio en la app y no envía nada fuera de ${here}, salvo a través de esas integraciones.`;
+      case "fr":
+        return `Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}, sauf par ces intégrations.`;
+      case "ja":
+        return `アプリ内で独自のコードを実行せず、これらの連携を通す場合を除き、${here}の外には何も送りません。`;
+      case "ko":
+        return `앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 ${here} 밖으로 아무것도 보내지 않아요.`;
+      case "pt-BR":
+        return `Ele não executa código próprio no app e não envia nada para fora de ${here}, exceto por essas integrações.`;
+      case "zh-Hans":
+        return `它不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出${here}。`;
+      case "zh-Hant":
+        return `它不在應用程式中執行自己的程式碼，除透過這些整合外，也不會把任何內容送出${here}。`;
+      case "en-XA":
+        return `[Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It runs no code of its own in the app and sends nothing off ‬${here}‮ except through those integrations.‬`;
+    }
+    return `It runs no code of its own in the app and sends nothing off ${here} except through those integrations.`;
+  }
+  function cardConsentReaches() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النطاق`;
+      case "de":
+        return `Gilt für`;
+      case "es":
+        return `Alcance`;
+      case "fr":
+        return `Portée`;
+      case "ja":
+        return `適用範囲`;
+      case "ko":
+        return `적용 범위`;
+      case "pt-BR":
+        return `Alcance`;
+      case "zh-Hans":
+        return `适用范围`;
+      case "zh-Hant":
+        return `適用範圍`;
+      case "en-XA":
+        return `[Ŕéáçĥéš ~~~]`;
+      case "ar-XB":
+        return `‮Reaches‬`;
+    }
+    return `Reaches`;
+  }
+  function cardConsentReachesAll() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل مشروع ومساحة عملك الشخصية`;
+      case "de":
+        return `Jedes Projekt und deinen persönlichen Arbeitsbereich`;
+      case "es":
+        return `Todos los proyectos y tu espacio de trabajo personal`;
+      case "fr":
+        return `Tous les projets et votre espace de travail personnel`;
+      case "ja":
+        return `すべてのプロジェクトと個人ワークスペース`;
+      case "ko":
+        return `모든 프로젝트와 개인 작업 공간`;
+      case "pt-BR":
+        return `Todos os projetos e seu espaço de trabalho pessoal`;
+      case "zh-Hans":
+        return `所有项目和你的个人工作区`;
+      case "zh-Hant":
+        return `所有專案和你的個人工作區`;
+      case "en-XA":
+        return `[Éṽéŕý þŕöĵéçţ áñð ýöûŕ þéŕšöñáļ ŵöŕķšþáçé ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every project and your personal workspace‬`;
+    }
+    return `Every project and your personal workspace`;
+  }
+  function cardConsentReachesNamed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشاريع التي يسمّيها`;
+      case "de":
+        return `Die Projekte, die er nennt`;
+      case "es":
+        return `Los proyectos que nombra`;
+      case "fr":
+        return `Les projets qu’elle nomme`;
+      case "ja":
+        return `指定されたプロジェクト`;
+      case "ko":
+        return `지정한 프로젝트`;
+      case "pt-BR":
+        return `Os projetos que ele nomeia`;
+      case "zh-Hans":
+        return `它指定的项目`;
+      case "zh-Hant":
+        return `它指定的專案`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţš îţ ñáɱéš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The projects it names‬`;
+    }
+    return `The projects it names`;
+  }
+  function cardConsentReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ`;
+      case "de":
+        return `Liest`;
+      case "es":
+        return `Lee`;
+      case "fr":
+        return `Lit`;
+      case "ja":
+        return `読み取り`;
+      case "ko":
+        return `읽기`;
+      case "pt-BR":
+        return `Lê`;
+      case "zh-Hans":
+        return `读取`;
+      case "zh-Hant":
+        return `讀取`;
+      case "en-XA":
+        return `[Ŕéáðš ~~]`;
+      case "ar-XB":
+        return `‮Reads‬`;
+    }
+    return `Reads`;
+  }
+  function cardConsentReadsList(input2) {
+    const list = input2.list;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ ${list}`;
+      case "de":
+        return `Liest ${list}`;
+      case "es":
+        return `Lee ${list}`;
+      case "fr":
+        return `Lit ${list}`;
+      case "ja":
+        return `読み取り: ${list}`;
+      case "ko":
+        return `읽기: ${list}`;
+      case "pt-BR":
+        return `Lê ${list}`;
+      case "zh-Hans":
+        return `读取${list}`;
+      case "zh-Hant":
+        return `讀取${list}`;
+      case "en-XA":
+        return `[Ŕéáðš ${list} ~~]`;
+      case "ar-XB":
+        return `‮Reads ‬${list}`;
+    }
+    return `Reads ${list}`;
+  }
+  function cardConsentReadsNothing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقرأ شيئًا من بياناتك`;
+      case "de":
+        return `Liest nichts von dir`;
+      case "es":
+        return `No lee nada tuyo`;
+      case "fr":
+        return `Ne lit rien de vos données`;
+      case "ja":
+        return `あなたのデータは読み取りません`;
+      case "ko":
+        return `내 데이터를 읽지 않아요`;
+      case "pt-BR":
+        return `Não lê nada seu`;
+      case "zh-Hans":
+        return `不读取你的任何内容`;
+      case "zh-Hant":
+        return `不讀取你的任何內容`;
+      case "en-XA":
+        return `[Ŕéáðš ñöţĥîñĝ öƒ ýöûŕš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reads nothing of yours‬`;
+    }
+    return `Reads nothing of yours`;
+  }
+  function cardConsentRunbookPanels(input2) {
+    formatNumber(input2.count);
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "one":
+            return `إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "two":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "few":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          case "many":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+          default:
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg.`;
+          default:
+            return `Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von ${here} weg.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de ${here}.`;
+          case "many":
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}.`;
+          default:
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}.`;
+          case "many":
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}.`;
+          default:
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `追加すると、そのパネルにも同意したことになります。パネルはアプリ内で独自のコードを実行せず、${here}の外には何も送りません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고 ${here} 밖으로 아무것도 보내지 않아요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ao adicioná-lo, você também concorda com o painel dele. Ele não executa código próprio no app e não envia nada para fora de ${here}.`;
+          case "many":
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}.`;
+          default:
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，也不会把任何内容发出${here}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增它即表示你也同意它的面板。面板不在應用程式中執行自己的程式碼，也不會把任何內容送出${here}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļ ţöö. Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļš ţöö. Ţĥéý ŕûñ ñö çöðé öƒ ţĥéîŕ öŵñ îñ ţĥé áþþ áñð šéñð ñöţĥîñĝ öƒƒ ${here}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ‬${here}‮.‬`;
+          default:
+            return `‮Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ‬${here}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ${here}.`;
+      default:
+        return `Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ${here}.`;
+    }
+  }
+  function cardConsentRunbookPanelsThrough(input2) {
+    formatNumber(input2.count);
+    const here = input2.here;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "one":
+            return `إضافته موافقة على لوحته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "two":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "few":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          case "many":
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+          default:
+            return `إضافته موافقة على لوحاته أيضًا. لا تشغّل أي شيفرة خاصة بها في التطبيق ولا ترسل شيئًا خارج ${here} إلا عبر تلك التكاملات.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Wenn du ihn hinzufügst, stimmst du auch seinem Panel zu. Es führt keinen eigenen Code in der App aus und sendet nichts von ${here} weg, außer über diese Integrationen.`;
+          default:
+            return `Wenn du ihn hinzufügst, stimmst du auch seinen Panels zu. Sie führen keinen eigenen Code in der App aus und senden nichts von ${here} weg, außer über diese Integrationen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Al agregarlo, también aceptas su panel. No ejecuta código propio en la app y no envía nada fuera de ${here}, salvo a través de esas integraciones.`;
+          case "many":
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}, salvo a través de esas integraciones.`;
+          default:
+            return `Al agregarlo, también aceptas sus paneles. No ejecutan código propio en la app y no envían nada fuera de ${here}, salvo a través de esas integraciones.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `L’ajouter vaut aussi accord pour son panneau. Il n’exécute aucun code à lui dans l’app et n’envoie rien hors de ${here}, sauf par ces intégrations.`;
+          case "many":
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}, sauf par ces intégrations.`;
+          default:
+            return `L’ajouter vaut aussi accord pour ses panneaux. Ils n’exécutent aucun code à eux dans l’app et n’envoient rien hors de ${here}, sauf par ces intégrations.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `追加すると、そのパネルにも同意したことになります。パネルはアプリ内で独自のコードを実行せず、これらの連携を通す場合を除き、${here}の外には何も送りません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `추가하면 패널에도 동의하게 돼요. 패널은 앱에서 자체 코드를 실행하지 않고, 이 연동을 통하는 경우를 빼면 ${here} 밖으로 아무것도 보내지 않아요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ao adicioná-lo, você também concorda com o painel dele. Ele não executa código próprio no app e não envia nada para fora de ${here}, exceto por essas integrações.`;
+          case "many":
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}, exceto por essas integrações.`;
+          default:
+            return `Ao adicioná-lo, você também concorda com os painéis dele. Eles não executam código próprio no app e não enviam nada para fora de ${here}, exceto por essas integrações.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加它即表示你也同意它的面板。面板不在应用中运行自己的代码，除通过这些集成外，也不会把任何内容发出${here}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增它即表示你也同意它的面板。面板不在應用程式中執行自己的程式碼，除透過這些整合外，也不會把任何內容送出${here}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļ ţöö. Îţ ŕûñš ñö çöðé öƒ îţš öŵñ îñ ţĥé áþþ áñð šéñðš ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Åððîñĝ îţ áĝŕééš ţö îţš þáñéļš ţöö. Ţĥéý ŕûñ ñö çöðé öƒ ţĥéîŕ öŵñ îñ ţĥé áþþ áñð šéñð ñöţĥîñĝ öƒƒ ${here} éẋçéþţ ţĥŕöûĝĥ ţĥöšé îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ‬${here}‮ except through those integrations.‬`;
+          default:
+            return `‮Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ‬${here}‮ except through those integrations.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Adding it agrees to its panel too. It runs no code of its own in the app and sends nothing off ${here} except through those integrations.`;
+      default:
+        return `Adding it agrees to its panels too. They run no code of their own in the app and send nothing off ${here} except through those integrations.`;
+    }
+  }
+  function cardConsentShowsPanels(input2) {
+    formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `يعرض لوحات`;
+          case "one":
+            return `يعرض لوحة`;
+          case "two":
+            return `يعرض لوحات`;
+          case "few":
+            return `يعرض لوحات`;
+          case "many":
+            return `يعرض لوحات`;
+          default:
+            return `يعرض لوحات`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Zeigt ein Panel`;
+          default:
+            return `Zeigt Panels`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Muestra un panel`;
+          case "many":
+            return `Muestra paneles`;
+          default:
+            return `Muestra paneles`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Affiche un panneau`;
+          case "many":
+            return `Affiche des panneaux`;
+          default:
+            return `Affiche des panneaux`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `表示するパネル`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `표시하는 패널`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Mostra um painel`;
+          case "many":
+            return `Mostra painéis`;
+          default:
+            return `Mostra painéis`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `显示面板`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `顯示面板`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Šĥöŵš á þáñéļ ~~~~~]`;
+          default:
+            return `[Šĥöŵš þáñéļš ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Shows a panel‬`;
+          default:
+            return `‮Shows panels‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Shows a panel`;
+      default:
+        return `Shows panels`;
+    }
+  }
+  function cardConsentTurnBackOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنك تشغيله مجددًا.`;
+      case "de":
+        return `Du kannst ihn wieder einschalten.`;
+      case "es":
+        return `Puedes volver a activarlo.`;
+      case "fr":
+        return `Vous pouvez la réactiver.`;
+      case "ja":
+        return `あとでオンに戻せます。`;
+      case "ko":
+        return `다시 켤 수 있어요.`;
+      case "pt-BR":
+        return `Você pode ativá-lo de novo.`;
+      case "zh-Hans":
+        return `你可以重新开启它。`;
+      case "zh-Hant":
+        return `你可以重新開啟它。`;
+      case "en-XA":
+        return `[Ýöû çáñ ţûŕñ îţ ƀáçķ öñ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You can turn it back on.‬`;
+    }
+    return `You can turn it back on.`;
+  }
+  function cardConsentTurnsOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يوقف`;
+      case "de":
+        return `Schaltet aus`;
+      case "es":
+        return `Desactiva`;
+      case "fr":
+        return `Désactive`;
+      case "ja":
+        return `オフにする`;
+      case "ko":
+        return `끄는 항목`;
+      case "pt-BR":
+        return `Desativa`;
+      case "zh-Hans":
+        return `关闭`;
+      case "zh-Hant":
+        return `關閉`;
+      case "en-XA":
+        return `[Ţûŕñš öƒƒ ~~~]`;
+      case "ar-XB":
+        return `‮Turns off‬`;
+    }
+    return `Turns off`;
+  }
+  function cardConsentUses() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم`;
+      case "de":
+        return `Nutzt`;
+      case "es":
+        return `Usa`;
+      case "fr":
+        return `Utilise`;
+      case "ja":
+        return `使用`;
+      case "ko":
+        return `사용`;
+      case "pt-BR":
+        return `Usa`;
+      case "zh-Hans":
+        return `使用`;
+      case "zh-Hant":
+        return `使用`;
+      case "en-XA":
+        return `[Ûšéš ~~]`;
+      case "ar-XB":
+        return `‮Uses‬`;
+    }
+    return `Uses`;
+  }
+  function cardConsentUsesActions(input2) {
+    formatNumber(input2.count);
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "one":
+            return `${integration}، الإجراء ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "two":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "few":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          case "many":
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+          default:
+            return `${integration}، الإجراءات ${names}، وفق قاعدته في الإعدادات → التكاملات.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, Aktion ${names}, nach ihrer Regel unter Einstellungen → Integrationen.`;
+          default:
+            return `${integration}, Aktionen ${names}, nach ihrer Regel unter Einstellungen → Integrationen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, acción ${names}, según su regla en Configuración → Integraciones.`;
+          case "many":
+            return `${integration}, acciones ${names}, según su regla en Configuración → Integraciones.`;
+          default:
+            return `${integration}, acciones ${names}, según su regla en Configuración → Integraciones.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, action ${names}, selon sa règle dans Réglages → Intégrations.`;
+          case "many":
+            return `${integration}, actions ${names}, selon sa règle dans Réglages → Intégrations.`;
+          default:
+            return `${integration}, actions ${names}, selon sa règle dans Réglages → Intégrations.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}、アクション ${names}。設定 → 連携のルールに従います。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}, 액션 ${names}, 설정 → 연동의 규칙을 따라요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, ação ${names}, sob a regra dela em Ajustes → Integrações.`;
+          case "many":
+            return `${integration}, ações ${names}, sob a regra dela em Ajustes → Integrações.`;
+          default:
+            return `${integration}, ações ${names}, sob a regra dela em Ajustes → Integrações.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，操作 ${names}，遵循“设置” → “集成”中的规则。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，動作 ${names}，遵循「設定 → 整合」中的規則。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${integration}, áçţîöñ ${names}, ûñðéŕ îţš ŕûļé îñ Šéţţîñĝš → Îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${integration}, áçţîöñš ${names}, ûñðéŕ îţš ŕûļé îñ Šéţţîñĝš → Îñţéĝŕáţîöñš. ~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${integration}‮, action ‬${names}‮, under its rule in Settings → Integrations.‬`;
+          default:
+            return `${integration}‮, actions ‬${names}‮, under its rule in Settings → Integrations.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${integration}, action ${names}, under its rule in Settings → Integrations.`;
+      default:
+        return `${integration}, actions ${names}, under its rule in Settings → Integrations.`;
+    }
+  }
+  function cardConsentUsesEvents(input2) {
+    formatNumber(input2.count);
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${integration}، الأحداث ${names}.`;
+          case "one":
+            return `${integration}، الحدث ${names}.`;
+          case "two":
+            return `${integration}، الأحداث ${names}.`;
+          case "few":
+            return `${integration}، الأحداث ${names}.`;
+          case "many":
+            return `${integration}، الأحداث ${names}.`;
+          default:
+            return `${integration}، الأحداث ${names}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, Ereignis ${names}.`;
+          default:
+            return `${integration}, Ereignisse ${names}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, evento ${names}.`;
+          case "many":
+            return `${integration}, eventos ${names}.`;
+          default:
+            return `${integration}, eventos ${names}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, événement ${names}.`;
+          case "many":
+            return `${integration}, événements ${names}.`;
+          default:
+            return `${integration}, événements ${names}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}、イベント ${names}。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}, 이벤트 ${names}.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${integration}, evento ${names}.`;
+          case "many":
+            return `${integration}, eventos ${names}.`;
+          default:
+            return `${integration}, eventos ${names}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，事件 ${names}。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${integration}，事件 ${names}。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${integration}, éṽéñţ ${names}. ~~~]`;
+          default:
+            return `[${integration}, éṽéñţš ${names}. ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${integration}‮, event ‬${names}‮.‬`;
+          default:
+            return `${integration}‮, events ‬${names}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${integration}, event ${names}.`;
+      default:
+        return `${integration}, events ${names}.`;
+    }
+  }
+  function cardConsentUsesLine(input2) {
+    const integration = input2.integration;
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم ${integration}: ${names}`;
+      case "de":
+        return `Nutzt ${integration}: ${names}`;
+      case "es":
+        return `Usa ${integration}: ${names}`;
+      case "fr":
+        return `Utilise ${integration} : ${names}`;
+      case "ja":
+        return `${integration} を使用: ${names}`;
+      case "ko":
+        return `${integration} 사용: ${names}`;
+      case "pt-BR":
+        return `Usa ${integration}: ${names}`;
+      case "zh-Hans":
+        return `使用 ${integration}：${names}`;
+      case "zh-Hant":
+        return `使用 ${integration}：${names}`;
+      case "en-XA":
+        return `[Ûšéš ${integration}: ${names} ~~~]`;
+      case "ar-XB":
+        return `‮Uses ‬${integration}‮: ‬${names}`;
+    }
+    return `Uses ${integration}: ${names}`;
+  }
+  function cardConsentUsesWhy(input2) {
+    const why = input2.why;
+    switch (currentLanguage()) {
+      case "ar":
+        return `السبب، بكلماتها: «${why}»`;
+      case "de":
+        return `Warum, in seinen Worten: „${why}“`;
+      case "es":
+        return `Por qué, en sus palabras: “${why}”`;
+      case "fr":
+        return `Pourquoi, selon lui : « ${why} »`;
+      case "ja":
+        return `理由（パネル自身の言葉）:「${why}」`;
+      case "ko":
+        return `이유(패널의 말): “${why}”`;
+      case "pt-BR":
+        return `Por quê, nas palavras dele: “${why}”`;
+      case "zh-Hans":
+        return `原因，用它自己的话说：“${why}”`;
+      case "zh-Hant":
+        return `原因，用它自己的話說：「${why}」`;
+      case "en-XA":
+        return `[Ŵĥý, îñ îţš ŵöŕðš: “${why}” ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Why, in its words: “‬${why}‮”‬`;
+    }
+    return `Why, in its words: “${why}”`;
   }
   function cardCrewmateLog() {
     switch (currentLanguage()) {
@@ -15179,6 +16799,101 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `past card`;
   }
+  function cardPastPictures(input2) {
+    formatNumber(input2.count);
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `الصور: ${names}`;
+          case "one":
+            return `الصورة: ${names}`;
+          case "two":
+            return `الصورتان: ${names}`;
+          case "few":
+            return `الصور: ${names}`;
+          case "many":
+            return `الصور: ${names}`;
+          default:
+            return `الصور: ${names}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Bild: ${names}`;
+          default:
+            return `Bilder: ${names}`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagen: ${names}`;
+          case "many":
+            return `Imágenes: ${names}`;
+          default:
+            return `Imágenes: ${names}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Image : ${names}`;
+          case "many":
+            return `Images : ${names}`;
+          default:
+            return `Images : ${names}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `画像：${names}`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `사진: ${names}`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagem: ${names}`;
+          case "many":
+            return `Imagens: ${names}`;
+          default:
+            return `Imagens: ${names}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `图片：${names}`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `圖片：${names}`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Þîçţûŕé: ${names} ~~~]`;
+          default:
+            return `[Þîçţûŕéš: ${names} ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Picture: ‬${names}`;
+          default:
+            return `‮Pictures: ‬${names}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Picture: ${names}`;
+      default:
+        return `Pictures: ${names}`;
+    }
+  }
   function cardPastSentLead() {
     switch (currentLanguage()) {
       case "ar":
@@ -16578,33 +18293,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
-  function cardRunbookAddPanels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
-      case "de":
-        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
-      case "es":
-        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
-      case "fr":
-        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
-      case "ja":
-        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
-      case "ko":
-        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
-      case "pt-BR":
-        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
-      case "zh-Hans":
-        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
-      case "zh-Hant":
-        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
-      case "en-XA":
-        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
-    }
-    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
-  }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
       case "ar":
@@ -16921,6 +18609,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Sound‬`;
     }
     return `Sound`;
+  }
+  function cardSpentTryOnce(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إذا كان نائب القبطان يصل إلى ${provider} بتسجيل دخول آخر، مثل رمز يمرّره إعدادك الخاص، فإن المحاولة مرة أخرى ترسل رسائلك مرة واحدة؛ وإذا كان الرصيد لا يزال مستنفدًا، يتوقف مؤقتًا مرة أخرى.`;
+      case "de":
+        return `Wenn dein erster Offizier ${provider} über eine andere Anmeldung erreicht, etwa einen Token, den deine eigene Einrichtung übergibt, sendet ein neuer Versuch deine Nachrichten einmal; ist das Kontingent noch aufgebraucht, pausiert er wieder.`;
+      case "es":
+        return `Si tu primer oficial llega a ${provider} con otro inicio de sesión, como un token que pasa tu propia configuración, volver a intentarlo envía tus mensajes una vez; si la asignación sigue agotada, vuelve a pausarse.`;
+      case "fr":
+        return `Si votre second atteint ${provider} avec une autre connexion, comme un jeton que votre propre configuration transmet, réessayer envoie vos messages une fois ; si l’allocation est toujours épuisée, il se remet en pause.`;
+      case "ja":
+        return `一等航海士が別のサインイン（ご自身の設定が渡すトークンなど）で ${provider} に届く場合は、もう一度試すとメッセージを一度だけ送ります。利用枠がまだ使い切られていれば、再び一時停止します。`;
+      case "ko":
+        return `일등항해사가 다른 로그인(직접 설정한 환경이 넘겨주는 토큰 등)으로 ${provider}에 닿는다면, 다시 시도하면 메시지를 한 번 보내요. 사용량이 여전히 소진됐다면 다시 일시 중지돼요.`;
+      case "pt-BR":
+        return `Se o seu imediato chega ao ${provider} por outro login, como um token que a sua própria configuração passa, tentar de novo envia suas mensagens uma vez; se a franquia continuar esgotada, ele pausa de novo.`;
+      case "zh-Hans":
+        return `如果你的大副通过另一个登录（例如你自己的设置传入的令牌）连接 ${provider}，再试一次会把你的消息发送一次；如果额度仍已用完，它会再次暂停。`;
+      case "zh-Hant":
+        return `如果你的大副透過另一個登入（例如你自己的設定傳入的權杖）連到 ${provider}，再試一次會把你的訊息送出一次；如果額度仍已用完，它會再次暫停。`;
+      case "en-XA":
+        return `[Îƒ ýöûŕ ƒîŕšţ ɱáţé ŕéáçĥéš ${provider} öñ áñöţĥéŕ šîĝñ-îñ, šûçĥ áš á ţöķéñ ýöûŕ öŵñ šéţûþ þáššéš, ţŕýîñĝ áĝáîñ šéñðš ýöûŕ ɱéššáĝéš öñçé; îƒ ţĥé áļļöŵáñçé îš šţîļļ ûšéð ûþ, îţ þáûšéš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮If your first mate reaches ‬${provider}‮ on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.‬`;
+    }
+    return `If your first mate reaches ${provider} on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.`;
   }
   function cardTabStripLabel() {
     switch (currentLanguage()) {
@@ -18105,6 +19821,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use a saved reset`;
   }
+  function cardUseSavedResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
+  }
   function closeYourFirstMate(input2) {
     const sentence = input2.sentence;
     switch (currentLanguage()) {
@@ -18298,6 +20041,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮quota, refresh, usage, limit, account, switch‬`;
     }
     return `quota, refresh, usage, limit, account, switch`;
+  }
+  function commandAmbientStyle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختيار الموسيقى الهادئة`;
+      case "de":
+        return `Ambient-Musik auswählen`;
+      case "es":
+        return `Elegir la música ambiental`;
+      case "fr":
+        return `Choisir la musique d’ambiance`;
+      case "ja":
+        return `アンビエント音楽を選ぶ`;
+      case "ko":
+        return `앰비언트 음악 고르기`;
+      case "pt-BR":
+        return `Escolher a música ambiente`;
+      case "zh-Hans":
+        return `选择环境音乐`;
+      case "zh-Hant":
+        return `選擇環境音樂`;
+      case "en-XA":
+        return `[Çĥööšé áɱƀîéñţ ɱûšîç ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Choose ambient music‬`;
+    }
+    return `Choose ambient music`;
+  }
+  function commandAmbientStyleWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير`;
+      case "de":
+        return `Musik, Stil, Lofi, Klang, Ambiente, wählen, ändern`;
+      case "es":
+        return `música, estilo, lofi, sonido, ambiente, elegir, cambiar`;
+      case "fr":
+        return `musique, style, lofi, son, ambiance, choisir, changer`;
+      case "ja":
+        return `音楽, スタイル, ローファイ, サウンド, 環境音, 選ぶ, 変更`;
+      case "ko":
+        return `음악, 스타일, 로파이, 소리, 분위기, 고르기, 바꾸기`;
+      case "pt-BR":
+        return `música, estilo, lofi, som, ambiente, escolher, trocar`;
+      case "zh-Hans":
+        return `音乐, 风格, lofi, 声音, 氛围, 选择, 更换`;
+      case "zh-Hant":
+        return `音樂, 風格, lofi, 聲音, 氛圍, 選擇, 更換`;
+      case "en-XA":
+        return `[ɱûšîç, šţýļé, ļöƒî, šöûñð, áɱƀîéñçé, þîçķ, çĥáñĝé ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮music, style, lofi, sound, ambience, pick, change‬`;
+    }
+    return `music, style, lofi, sound, ambience, pick, change`;
   }
   function commandAmbientToggle() {
     switch (currentLanguage()) {
@@ -26488,6 +28285,65 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${project}‮: ‬${label}‮ is held because its checks failed. Changes approved meanwhile wait for it.‬`;
     }
     return `${project}: ${label} is held because its checks failed. Changes approved meanwhile wait for it.`;
+  }
+  function feedBatchMergeRunning(input2) {
+    const label = input2.label;
+    const place = input2.place;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: قبِل ${place} دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة في الإعدادات ← المشاريع تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
+      case "de":
+        return `${project}: ${place} hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen unter Einstellungen → Projekte schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
+      case "es":
+        return `${project}: ${place} aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar en Configuración → Proyectos cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
+      case "fr":
+        return `${project} : ${place} a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
+      case "ja":
+        return `${project}：${place} が ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。「設定 → プロジェクト」で再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
+      case "ko":
+        return `${project}: ${place}이(가) ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 설정 → 프로젝트에서 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
+      case "pt-BR":
+        return `${project}: o ${place} aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.`;
+      case "zh-Hans":
+        return `${project}：${place} 已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。在“设置” → “项目”中重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
+      case "zh-Hant":
+        return `${project}：${place} 已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
+      case "en-XA":
+        return `[${project}: ${place} ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${place}‮ took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.‬`;
+    }
+    return `${project}: ${place} took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.`;
+  }
+  function feedBatchMergeRunningHost(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: قبِل مستضيف المشروع دمج الدفعة ${label} وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة في الإعدادات ← المشاريع تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
+      case "de":
+        return `${project}: Der Host des Projekts hat das Zusammenführen von ${label} angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen unter Einstellungen → Projekte schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
+      case "es":
+        return `${project}: el sitio que aloja el proyecto aceptó la fusión de ${label} y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar en Configuración → Proyectos cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
+      case "fr":
+        return `${project} : l’hébergeur du projet a accepté la fusion de ${label} et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer dans Réglages → Projets ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
+      case "ja":
+        return `${project}：プロジェクトのホストが ${label} のマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。「設定 → プロジェクト」で再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
+      case "ko":
+        return `${project}: 프로젝트 호스트가 ${label}의 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 설정 → 프로젝트에서 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
+      case "pt-BR":
+        return `${project}: o host do projeto aceitou a mesclagem de ${label} e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo em Ajustes → Projetos fecha essa solicitação de pull e reúne as alterações em uma nova.`;
+      case "zh-Hans":
+        return `${project}：项目的托管平台已接受 ${label} 的合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。在“设置” → “项目”中重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
+      case "zh-Hant":
+        return `${project}：專案的主機已接受 ${label} 的合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。在「設定 → 專案」中按再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
+      case "en-XA":
+        return `[${project}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé öƒ ${label} áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ îñ Šéţţîñĝš → Þŕöĵéçţš çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: the project's host took the merge of ‬${label}‮ and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.‬`;
+    }
+    return `${project}: the project's host took the merge of ${label} and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again in Settings → Projects closes that pull request and combines the changes on a new one.`;
   }
   function feedBatchMergedMany(input2) {
     const count = formatNumber(input2.count);
@@ -40727,6 +42583,250 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Save encrypted Secrets archive`;
   }
+  function secretsAskAskedFirstMate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبه نائب القبطان، بكلماته.`;
+      case "de":
+        return `Vom ersten Offizier erbeten, in seinen eigenen Worten.`;
+      case "es":
+        return `Lo pidió el primer oficial, con sus propias palabras.`;
+      case "fr":
+        return `Demandé par le second, dans ses propres mots.`;
+      case "ja":
+        return `一等航海士が、自分の言葉で頼んでいます。`;
+      case "ko":
+        return `일등항해사가 직접 쓴 말로 요청했어요.`;
+      case "pt-BR":
+        return `Pedido pelo imediato, com as próprias palavras.`;
+      case "zh-Hans":
+        return `由大副用自己的话提出。`;
+      case "zh-Hant":
+        return `由大副用自己的話提出。`;
+      case "en-XA":
+        return `[Åšķéð ƀý ţĥé ƒîŕšţ ɱáţé, îñ îţš öŵñ ŵöŕðš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Asked by the first mate, in its own words.‬`;
+    }
+    return `Asked by the first mate, in its own words.`;
+  }
+  function secretsAskAskedTask(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبه فرد الطاقم في «${task}»، بكلماته.`;
+      case "de":
+        return `Vom Crewmitglied an „${task}“ erbeten, in seinen eigenen Worten.`;
+      case "es":
+        return `Lo pidió el tripulante de «${task}», con sus propias palabras.`;
+      case "fr":
+        return `Demandé par l’équipier de « ${task} », dans ses propres mots.`;
+      case "ja":
+        return `「${task}」の乗組員が、自分の言葉で頼んでいます。`;
+      case "ko":
+        return `“${task}”의 선원이 직접 쓴 말로 요청했어요.`;
+      case "pt-BR":
+        return `Pedido pelo tripulante de “${task}”, com as próprias palavras.`;
+      case "zh-Hans":
+        return `由“${task}”的船员用自己的话提出。`;
+      case "zh-Hant":
+        return `由「${task}」的船員用自己的話提出。`;
+      case "en-XA":
+        return `[Åšķéð ƀý ţĥé çŕéŵɱáţé öñ “${task}”, îñ îţš öŵñ ŵöŕðš. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Asked by the crewmate on “‬${task}‮”, in its own words.‬`;
+    }
+    return `Asked by the crewmate on “${task}”, in its own words.`;
+  }
+  function secretsAskByCrewmate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتبه فرد الطاقم. تحقّق من كل عنوان قبل أن تسجّل الدخول.`;
+      case "de":
+        return `Vom Crewmitglied geschrieben. Prüfe jede Adresse, bevor du dich anmeldest.`;
+      case "es":
+        return `Lo escribió el tripulante. Revisa cada dirección antes de iniciar sesión.`;
+      case "fr":
+        return `Écrit par l’équipier. Vérifiez chaque adresse avant de vous connecter.`;
+      case "ja":
+        return `乗組員が書いた手順です。サインインする前に、各アドレスを確認してください。`;
+      case "ko":
+        return `선원이 쓴 내용이에요. 로그인하기 전에 각 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Escrito pelo tripulante. Confira cada endereço antes de entrar.`;
+      case "zh-Hans":
+        return `由船员编写。登录前请核对每个地址。`;
+      case "zh-Hant":
+        return `由船員撰寫。登入前請核對每個網址。`;
+      case "en-XA":
+        return `[Ŵŕîţţéñ ƀý ţĥé çŕéŵɱáţé. Çĥéçķ éáçĥ áððŕéšš ƀéƒöŕé ýöû šîĝñ îñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Written by the crewmate. Check each address before you sign in.‬`;
+    }
+    return `Written by the crewmate. Check each address before you sign in.`;
+  }
+  function secretsAskByFirstMate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتبه نائب القبطان. تحقّق من كل عنوان قبل أن تسجّل الدخول.`;
+      case "de":
+        return `Vom ersten Offizier geschrieben. Prüfe jede Adresse, bevor du dich anmeldest.`;
+      case "es":
+        return `Lo escribió el primer oficial. Revisa cada dirección antes de iniciar sesión.`;
+      case "fr":
+        return `Écrit par le second. Vérifiez chaque adresse avant de vous connecter.`;
+      case "ja":
+        return `一等航海士が書いた手順です。サインインする前に、各アドレスを確認してください。`;
+      case "ko":
+        return `일등항해사가 쓴 내용이에요. 로그인하기 전에 각 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Escrito pelo imediato. Confira cada endereço antes de entrar.`;
+      case "zh-Hans":
+        return `由大副编写。登录前请核对每个地址。`;
+      case "zh-Hant":
+        return `由大副撰寫。登入前請核對每個網址。`;
+      case "en-XA":
+        return `[Ŵŕîţţéñ ƀý ţĥé ƒîŕšţ ɱáţé. Çĥéçķ éáçĥ áððŕéšš ƀéƒöŕé ýöû šîĝñ îñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Written by the first mate. Check each address before you sign in.‬`;
+    }
+    return `Written by the first mate. Check each address before you sign in.`;
+  }
+  function secretsAskClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُغلقت المهمة التي طلبت، لذا لم يُحفظ شيء.`;
+      case "de":
+        return `Die Aufgabe, die gefragt hat, ist geschlossen, daher wurde nichts gespeichert.`;
+      case "es":
+        return `La tarea que lo pidió se cerró, así que no se guardó nada.`;
+      case "fr":
+        return `La tâche qui a demandé est fermée, donc rien n’a été enregistré.`;
+      case "ja":
+        return `頼んだタスクが閉じられたため、何も保存されませんでした。`;
+      case "ko":
+        return `요청한 작업이 닫혀서 아무것도 저장되지 않았어요.`;
+      case "pt-BR":
+        return `A tarefa que pediu foi fechada, então nada foi salvo.`;
+      case "zh-Hans":
+        return `提出请求的任务已关闭，因此没有保存任何内容。`;
+      case "zh-Hant":
+        return `提出請求的任務已關閉，因此沒有儲存任何內容。`;
+      case "en-XA":
+        return `[Ţĥé ţášķ ţĥáţ ášķéð ĥáš çļöšéð, šö ñöţĥîñĝ ŵáš šáṽéð. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The task that asked has closed, so nothing was saved.‬`;
+    }
+    return `The task that asked has closed, so nothing was saved.`;
+  }
+  function secretsAskDontSave() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عدم الحفظ`;
+      case "de":
+        return `Nicht speichern`;
+      case "es":
+        return `No guardar`;
+      case "fr":
+        return `Ne pas enregistrer`;
+      case "ja":
+        return `保存しない`;
+      case "ko":
+        return `저장 안 함`;
+      case "pt-BR":
+        return `Não salvar`;
+      case "zh-Hans":
+        return `不保存`;
+      case "zh-Hant":
+        return `不儲存`;
+      case "en-XA":
+        return `[Ðöñ'ţ šáṽé ~~~~]`;
+      case "ar-XB":
+        return `‮Don't save‬`;
+    }
+    return `Don't save`;
+  }
+  function secretsAskElsewhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يظهر حقل هنا؟ أجب عن هذه البطاقة في Infinitary على حاسوب نائب القبطان، أو حدِّث Infinitary على هذا الحاسوب.`;
+      case "de":
+        return `Hier ist kein Feld zu sehen? Beantworte diese Karte in Infinitary auf dem Computer deines ersten Offiziers, oder aktualisiere Infinitary auf diesem.`;
+      case "es":
+        return `¿No ves ningún campo aquí? Responde esta tarjeta en Infinitary en la computadora del primer oficial, o actualiza Infinitary en esta.`;
+      case "fr":
+        return `Aucun champ ici ? Répondez à cette carte dans Infinitary sur l’ordinateur du second, ou mettez Infinitary à jour sur celui-ci.`;
+      case "ja":
+        return `ここに入力欄が表示されませんか？一等航海士のコンピュータの Infinitary でこのカードに答えるか、このコンピュータの Infinitary を更新してください。`;
+      case "ko":
+        return `여기에 입력란이 보이지 않나요? 일등항해사의 컴퓨터에 있는 Infinitary에서 이 카드에 답하거나, 이 컴퓨터의 Infinitary를 업데이트하세요.`;
+      case "pt-BR":
+        return `Nenhum campo aparece aqui? Responda este cartão no Infinitary no computador do imediato, ou atualize o Infinitary neste.`;
+      case "zh-Hans":
+        return `这里没有输入框？请在大副所在电脑上的 Infinitary 中回答这张卡片，或在这台电脑上更新 Infinitary。`;
+      case "zh-Hant":
+        return `這裡沒有輸入欄位？請在大副所在電腦上的 Infinitary 回答這張卡片，或在這台電腦上更新 Infinitary。`;
+      case "en-XA":
+        return `[Ñö ƒîéļð šĥöŵš ĥéŕé? Åñšŵéŕ ţĥîš çáŕð îñ Îñƒîñîţáŕý öñ ţĥé ƒîŕšţ ɱáţé'š çöɱþûţéŕ, öŕ ûþðáţé Îñƒîñîţáŕý öñ ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.‬`;
+    }
+    return `No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.`;
+  }
+  function secretsAskEmpty() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب قيمة في كل حقل قبل الحفظ.`;
+      case "de":
+        return `Gib in jedes Feld einen Wert ein, bevor du speicherst.`;
+      case "es":
+        return `Escribe un valor en cada campo antes de guardar.`;
+      case "fr":
+        return `Saisissez une valeur dans chaque champ avant d’enregistrer.`;
+      case "ja":
+        return `保存する前に、すべての欄に値を入力してください。`;
+      case "ko":
+        return `저장하기 전에 모든 입력란에 값을 입력하세요.`;
+      case "pt-BR":
+        return `Digite um valor em cada campo antes de salvar.`;
+      case "zh-Hans":
+        return `保存前请在每个输入框中填写值。`;
+      case "zh-Hant":
+        return `儲存前請在每個欄位中輸入值。`;
+      case "en-XA":
+        return `[Ţýþé á ṽáļûé îñ éṽéŕý ƒîéļð ƀéƒöŕé šáṽîñĝ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Type a value in every field before saving.‬`;
+    }
+    return `Type a value in every field before saving.`;
+  }
+  function secretsAskEnded() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتهى هذا الطلب لسر.`;
+      case "de":
+        return `Diese Anfrage nach einem Geheimnis ist beendet.`;
+      case "es":
+        return `Esta solicitud de un secreto terminó.`;
+      case "fr":
+        return `Cette demande de secret est terminée.`;
+      case "ja":
+        return `このシークレットの依頼は終了しました。`;
+      case "ko":
+        return `이 비밀 정보 요청이 끝났어요.`;
+      case "pt-BR":
+        return `Este pedido de segredo terminou.`;
+      case "zh-Hans":
+        return `这次机密请求已结束。`;
+      case "zh-Hant":
+        return `這次機密請求已結束。`;
+      case "en-XA":
+        return `[Ţĥîš ŕéǫûéšţ ƒöŕ á šéçŕéţ éñðéð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This request for a secret ended.‬`;
+    }
+    return `This request for a secret ended.`;
+  }
   function secretsAskFields() {
     switch (currentLanguage()) {
       case "ar":
@@ -40754,32 +42854,714 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Type each secret`;
   }
-  function secretsAskNote() {
+  function secretsAskGone() {
     switch (currentLanguage()) {
       case "ar":
-        return `تذهب كل قيمة مباشرةً إلى الأسرار. لا يعرضها Infinitary مرة أخرى، ولا يحصل عليها نائب القبطان ولا الطاقم.`;
+        return `لم تعد هذه البطاقة تطلب شيئًا. لم يُحفظ شيء.`;
       case "de":
-        return `Jeder Wert geht direkt in Geheimnisse. Infinitary zeigt ihn nie wieder, und weder der erste Offizier noch die Crew bekommt ihn.`;
+        return `Diese Karte fragt nicht mehr. Nichts wurde gespeichert.`;
       case "es":
-        return `Cada valor va directamente a Secretos. Infinitary no vuelve a mostrarlo, y ni el primer oficial ni la tripulación lo reciben.`;
+        return `Esta tarjeta ya no pide nada. No se guardó nada.`;
       case "fr":
-        return `Chaque valeur va directement dans Secrets. Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.`;
+        return `Cette carte ne demande plus rien. Rien n’a été enregistré.`;
       case "ja":
-        return `各値はそのままシークレットに保管されます。Infinitary が再び表示することはなく、一等航海士にも乗組員にも渡りません。`;
+        return `このカードはもう頼んでいません。何も保存されませんでした。`;
       case "ko":
-        return `각 값은 바로 비밀 정보에 보관됩니다. Infinitary는 이 값을 다시 보여 주지 않으며, 일등항해사와 선원들도 받지 않습니다.`;
+        return `이 카드는 더 이상 요청하지 않아요. 아무것도 저장되지 않았어요.`;
       case "pt-BR":
-        return `Cada valor vai direto para Segredos. O Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.`;
+        return `Este cartão não pede mais nada. Nada foi salvo.`;
       case "zh-Hans":
-        return `每个值都直接存入机密。Infinitary 不会再显示它，大副和船员们也拿不到它。`;
+        return `这张卡片已不再请求。没有保存任何内容。`;
       case "zh-Hant":
-        return `每個值都直接存入機密。Infinitary 不會再顯示它，大副和船員也拿不到它。`;
+        return `這張卡片已不再請求。沒有儲存任何內容。`;
       case "en-XA":
-        return `[Éáçĥ ṽáļûé ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš. Îñƒîñîţáŕý ñéṽéŕ šĥöŵš îţ áĝáîñ, áñð ñéîţĥéŕ ţĥé ƒîŕšţ ɱáţé ñöŕ ţĥé çŕéŵ ĝéţš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ţĥîš çáŕð ñö ļöñĝéŕ ášķš. Ñöţĥîñĝ ŵáš šáṽéð. ~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.‬`;
+        return `‮This card no longer asks. Nothing was saved.‬`;
     }
-    return `Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.`;
+    return `This card no longer asks. Nothing was saved.`;
+  }
+  function secretsAskHowMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كيف تحصل عليها`;
+      case "de":
+        return `So bekommst du sie`;
+      case "es":
+        return `Cómo conseguirlos`;
+      case "fr":
+        return `Comment les obtenir`;
+      case "ja":
+        return `入手方法`;
+      case "ko":
+        return `받는 방법`;
+      case "pt-BR":
+        return `Como obter cada um`;
+      case "zh-Hans":
+        return `获取方法`;
+      case "zh-Hant":
+        return `取得方法`;
+      case "en-XA":
+        return `[Ĥöŵ ţö ĝéţ ţĥéɱ ~~~~~]`;
+      case "ar-XB":
+        return `‮How to get them‬`;
+    }
+    return `How to get them`;
+  }
+  function secretsAskHowOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كيف تحصل عليه`;
+      case "de":
+        return `So bekommst du es`;
+      case "es":
+        return `Cómo conseguirlo`;
+      case "fr":
+        return `Comment l’obtenir`;
+      case "ja":
+        return `入手方法`;
+      case "ko":
+        return `받는 방법`;
+      case "pt-BR":
+        return `Como obter`;
+      case "zh-Hans":
+        return `获取方法`;
+      case "zh-Hant":
+        return `取得方法`;
+      case "en-XA":
+        return `[Ĥöŵ ţö ĝéţ îţ ~~~~~]`;
+      case "ar-XB":
+        return `‮How to get it‬`;
+    }
+    return `How to get it`;
+  }
+  function secretsAskLocked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تخزين الأسرار مقفل. افتح قفله، ثم احفظ مرة أخرى.`;
+      case "de":
+        return `Der Speicher für Geheimnisse ist gesperrt. Entsperre ihn und speichere dann erneut.`;
+      case "es":
+        return `El almacén de Secretos está bloqueado. Desbloquéalo y vuelve a guardar.`;
+      case "fr":
+        return `Le stockage de Secrets est verrouillé. Déverrouillez-le, puis enregistrez à nouveau.`;
+      case "ja":
+        return `シークレットの保管場所がロックされています。ロックを解除してから、もう一度保存してください。`;
+      case "ko":
+        return `비밀 정보 저장소가 잠겨 있어요. 잠금을 해제한 다음 다시 저장하세요.`;
+      case "pt-BR":
+        return `O armazenamento de Segredos está bloqueado. Desbloqueie e salve de novo.`;
+      case "zh-Hans":
+        return `机密存储已锁定。请先解锁，再重新保存。`;
+      case "zh-Hant":
+        return `機密儲存區已鎖定。請先解鎖，再重新儲存。`;
+      case "en-XA":
+        return `[Šéçŕéţš šţöŕáĝé îš ļöçķéð. Ûñļöçķ îţ, ţĥéñ šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets storage is locked. Unlock it, then save again.‬`;
+    }
+    return `Secrets storage is locked. Unlock it, then save again.`;
+  }
+  function secretsAskNoteMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يذهب كلٌّ منها مباشرةً إلى الأسرار ولا يُعرض مرة أخرى. يحصل نائب القبطان والطاقم على أسمائها، لا على قيمها أبدًا، وكل استخدام يسألك كما من قبل.`;
+      case "de":
+        return `Jedes geht direkt in Geheimnisse und wird nie wieder gezeigt. Dein erster Offizier und deine Crew bekommen ihre Namen, nie die Werte, und jede Nutzung fragt dich weiterhin.`;
+      case "es":
+        return `Cada uno va directamente a Secretos y no vuelve a mostrarse. Tu primer oficial y tu tripulación reciben sus nombres, nunca los valores, y cada uso te lo sigue preguntando.`;
+      case "fr":
+        return `Chacun va directement dans Secrets et n’est plus jamais affiché. Votre second et votre équipage reçoivent leurs noms, jamais leurs valeurs, et chaque utilisation vous est encore demandée.`;
+      case "ja":
+        return `各値はそのままシークレットに保存され、二度と表示されません。一等航海士と乗組員には名前だけが渡り、値は渡りません。使うたびに、引き続きあなたに確認します。`;
+      case "ko":
+        return `각각 바로 비밀 정보에 저장되고 다시 표시되지 않아요. 일등항해사와 선원들은 이름만 받고 값은 받지 않으며, 사용할 때마다 계속 물어봐요.`;
+      case "pt-BR":
+        return `Cada um vai direto para Segredos e nunca é mostrado de novo. Seu imediato e sua tripulação recebem os nomes, nunca os valores, e cada uso ainda pergunta a você.`;
+      case "zh-Hans":
+        return `每个都会直接存入机密，之后不再显示。大副和船员们只拿到名称，拿不到值，每次使用仍会问你。`;
+      case "zh-Hant":
+        return `每個都會直接存入機密，之後不再顯示。大副和船員只拿到名稱，拿不到值，每次使用仍會詢問你。`;
+      case "en-XA":
+        return `[Éáçĥ ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš áñð îš ñéṽéŕ šĥöŵñ áĝáîñ. Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ĝéţ ţĥéîŕ ñáɱéš, ñéṽéŕ ţĥé ṽáļûéš, áñð éáçĥ ûšé šţîļļ ášķš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each goes straight into Secrets and is never shown again. Your first mate and crew get their names, never the values, and each use still asks you.‬`;
+    }
+    return `Each goes straight into Secrets and is never shown again. Your first mate and crew get their names, never the values, and each use still asks you.`;
+  }
+  function secretsAskNoteOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يذهب مباشرةً إلى الأسرار ولا يُعرض مرة أخرى. يحصل نائب القبطان والطاقم على اسمه، لا على قيمته أبدًا، وكل استخدام يسألك كما من قبل.`;
+      case "de":
+        return `Es geht direkt in Geheimnisse und wird nie wieder gezeigt. Dein erster Offizier und deine Crew bekommen seinen Namen, nie den Wert, und jede Nutzung fragt dich weiterhin.`;
+      case "es":
+        return `Va directamente a Secretos y no vuelve a mostrarse. Tu primer oficial y tu tripulación reciben su nombre, nunca el valor, y cada uso te lo sigue preguntando.`;
+      case "fr":
+        return `Il va directement dans Secrets et n’est plus jamais affiché. Votre second et votre équipage reçoivent son nom, jamais sa valeur, et chaque utilisation vous est encore demandée.`;
+      case "ja":
+        return `値はそのままシークレットに保存され、二度と表示されません。一等航海士と乗組員には名前だけが渡り、値は渡りません。使うたびに、引き続きあなたに確認します。`;
+      case "ko":
+        return `바로 비밀 정보에 저장되고 다시 표시되지 않아요. 일등항해사와 선원들은 이름만 받고 값은 받지 않으며, 사용할 때마다 계속 물어봐요.`;
+      case "pt-BR":
+        return `Ele vai direto para Segredos e nunca é mostrado de novo. Seu imediato e sua tripulação recebem o nome dele, nunca o valor, e cada uso ainda pergunta a você.`;
+      case "zh-Hans":
+        return `它会直接存入机密，之后不再显示。大副和船员们只拿到它的名称，拿不到值，每次使用仍会问你。`;
+      case "zh-Hant":
+        return `它會直接存入機密，之後不再顯示。大副和船員只拿到它的名稱，拿不到值，每次使用仍會詢問你。`;
+      case "en-XA":
+        return `[Îţ ĝöéš šţŕáîĝĥţ îñţö Šéçŕéţš áñð îš ñéṽéŕ šĥöŵñ áĝáîñ. Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ ĝéţ îţš ñáɱé, ñéṽéŕ ţĥé ṽáļûé, áñð éáçĥ ûšé šţîļļ ášķš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It goes straight into Secrets and is never shown again. Your first mate and crew get its name, never the value, and each use still asks you.‬`;
+    }
+    return `It goes straight into Secrets and is never shown again. Your first mate and crew get its name, never the value, and each use still asks you.`;
+  }
+  function secretsAskPlace(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `المكان: ${place}`;
+      case "de":
+        return `Ort: ${place}`;
+      case "es":
+        return `Lugar: ${place}`;
+      case "fr":
+        return `Emplacement : ${place}`;
+      case "ja":
+        return `場所: ${place}`;
+      case "ko":
+        return `장소: ${place}`;
+      case "pt-BR":
+        return `Local: ${place}`;
+      case "zh-Hans":
+        return `位置：${place}`;
+      case "zh-Hant":
+        return `位置：${place}`;
+      case "en-XA":
+        return `[Þļáçé: ${place} ~~~]`;
+      case "ar-XB":
+        return `‮Place: ‬${place}`;
+    }
+    return `Place: ${place}`;
+  }
+  function secretsAskPlaceholder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصق القيمة أو اكتبها`;
+      case "de":
+        return `Wert einfügen oder eintippen`;
+      case "es":
+        return `Pega o escribe el valor`;
+      case "fr":
+        return `Collez ou saisissez la valeur`;
+      case "ja":
+        return `値を貼り付けるか入力`;
+      case "ko":
+        return `값을 붙여넣거나 입력하세요`;
+      case "pt-BR":
+        return `Cole ou digite o valor`;
+      case "zh-Hans":
+        return `粘贴或输入值`;
+      case "zh-Hant":
+        return `貼上或輸入值`;
+      case "en-XA":
+        return `[Þášţé öŕ ţýþé ţĥé ṽáļûé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paste or type the value‬`;
+    }
+    return `Paste or type the value`;
+  }
+  function secretsAskRecovery() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتاج تخزين الأسرار إلى استرداد قبل أن يحفظ أي شيء. افتح الإعدادات ← الأسرار لترى الخيارات.`;
+      case "de":
+        return `Der Speicher für Geheimnisse muss wiederhergestellt werden, bevor er etwas speichern kann. Öffne Einstellungen → Geheimnisse, um die Möglichkeiten zu sehen.`;
+      case "es":
+        return `El almacén de Secretos necesita recuperarse antes de poder guardar nada. Abre Ajustes → Secretos para ver las opciones.`;
+      case "fr":
+        return `Le stockage de Secrets doit être récupéré avant de pouvoir enregistrer quoi que ce soit. Ouvrez Réglages → Secrets pour voir les options.`;
+      case "ja":
+        return `シークレットの保管場所は、何かを保存する前に復旧が必要です。設定 → シークレットを開いて、方法を確認してください。`;
+      case "ko":
+        return `비밀 정보 저장소는 무엇이든 저장하기 전에 복구가 필요해요. 설정 → 비밀 정보를 열어 방법을 확인하세요.`;
+      case "pt-BR":
+        return `O armazenamento de Segredos precisa de recuperação antes de salvar qualquer coisa. Abra Ajustes → Segredos para ver as opções.`;
+      case "zh-Hans":
+        return `机密存储需要先恢复才能保存内容。打开设置 → 机密查看可选做法。`;
+      case "zh-Hant":
+        return `機密儲存區需要先復原才能儲存內容。打開設定 → 機密查看可用做法。`;
+      case "en-XA":
+        return `[Šéçŕéţš šţöŕáĝé ñééðš ŕéçöṽéŕý ƀéƒöŕé îţ çáñ šáṽé áñýţĥîñĝ. Öþéñ Šéţţîñĝš → Šéçŕéţš ţö šéé ţĥé öþţîöñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets storage needs recovery before it can save anything. Open Settings → Secrets to see the options.‬`;
+    }
+    return `Secrets storage needs recovery before it can save anything. Open Settings → Secrets to see the options.`;
+  }
+  function secretsAskReplaceMany(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `هل تستبدل ${count} سر؟`;
+          case "one":
+            return `هل تستبدل سرًا واحدًا؟`;
+          case "two":
+            return `هل تستبدل سرّين؟`;
+          case "few":
+            return `هل تستبدل ${count} أسرار؟`;
+          case "many":
+            return `هل تستبدل ${count} سرًا؟`;
+          default:
+            return `هل تستبدل ${count} سر؟`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Geheimnis ersetzen?`;
+          default:
+            return `${count} Geheimnisse ersetzen?`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `¿Reemplazar ${count} secreto?`;
+          case "many":
+            return `¿Reemplazar ${count} secretos?`;
+          default:
+            return `¿Reemplazar ${count} secretos?`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Remplacer ${count} secret ?`;
+          case "many":
+            return `Remplacer ${count} secrets ?`;
+          default:
+            return `Remplacer ${count} secrets ?`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のシークレットを置き換えますか？`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `비밀 정보 ${count}개를 바꿀까요?`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Substituir ${count} segredo?`;
+          case "many":
+            return `Substituir ${count} segredos?`;
+          default:
+            return `Substituir ${count} segredos?`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `替换 ${count} 个机密？`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `取代 ${count} 個機密？`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ŕéþļáçé ${count} šéçŕéţ? ~~~~~~]`;
+          default:
+            return `[Ŕéþļáçé ${count} šéçŕéţš? ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Replace ‬${count}‮ secret?‬`;
+          default:
+            return `‮Replace ‬${count}‮ secrets?‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Replace ${count} secret?`;
+      default:
+        return `Replace ${count} secrets?`;
+    }
+  }
+  function secretsAskReplaceOne(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تستبدل ${name} في الأسرار؟`;
+      case "de":
+        return `${name} in Geheimnisse ersetzen?`;
+      case "es":
+        return `¿Reemplazar ${name} en Secretos?`;
+      case "fr":
+        return `Remplacer ${name} dans Secrets ?`;
+      case "ja":
+        return `シークレットの ${name} を置き換えますか？`;
+      case "ko":
+        return `비밀 정보의 ${name}을(를) 바꿀까요?`;
+      case "pt-BR":
+        return `Substituir ${name} em Segredos?`;
+      case "zh-Hans":
+        return `替换机密中的 ${name}？`;
+      case "zh-Hant":
+        return `取代機密中的 ${name}？`;
+      case "en-XA":
+        return `[Ŕéþļáçé ${name} îñ Šéçŕéţš? ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replace ‬${name}‮ in Secrets?‬`;
+    }
+    return `Replace ${name} in Secrets?`;
+  }
+  function secretsAskReplaceTwo(input2) {
+    const first = input2.first;
+    const second = input2.second;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تستبدل ${first} و${second} في الأسرار؟`;
+      case "de":
+        return `${first} und ${second} in Geheimnisse ersetzen?`;
+      case "es":
+        return `¿Reemplazar ${first} y ${second} en Secretos?`;
+      case "fr":
+        return `Remplacer ${first} et ${second} dans Secrets ?`;
+      case "ja":
+        return `シークレットの ${first} と ${second} を置き換えますか？`;
+      case "ko":
+        return `비밀 정보의 ${first}, ${second}을(를) 바꿀까요?`;
+      case "pt-BR":
+        return `Substituir ${first} e ${second} em Segredos?`;
+      case "zh-Hans":
+        return `替换机密中的 ${first} 和 ${second}？`;
+      case "zh-Hant":
+        return `取代機密中的 ${first} 和 ${second}？`;
+      case "en-XA":
+        return `[Ŕéþļáçé ${first} áñð ${second} îñ Šéçŕéţš? ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replace ‬${first}‮ and ‬${second}‮ in Secrets?‬`;
+    }
+    return `Replace ${first} and ${second} in Secrets?`;
+  }
+  function secretsAskReplaces(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستبدل النسخة ${version2}`;
+      case "de":
+        return `Ersetzt Version ${version2}`;
+      case "es":
+        return `Reemplaza la versión ${version2}`;
+      case "fr":
+        return `Remplace la version ${version2}`;
+      case "ja":
+        return `バージョン ${version2} を置き換えます`;
+      case "ko":
+        return `버전 ${version2}을(를) 바꿉니다`;
+      case "pt-BR":
+        return `Substitui a versão ${version2}`;
+      case "zh-Hans":
+        return `替换版本 ${version2}`;
+      case "zh-Hant":
+        return `取代版本 ${version2}`;
+      case "en-XA":
+        return `[Ŕéþļáçéš ṽéŕšîöñ ${version2} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Replaces version ‬${version2}`;
+    }
+    return `Replaces version ${version2}`;
+  }
+  function secretsAskSaveMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ الأسرار`;
+      case "de":
+        return `Geheimnisse speichern`;
+      case "es":
+        return `Guardar secretos`;
+      case "fr":
+        return `Enregistrer les secrets`;
+      case "ja":
+        return `シークレットを保存`;
+      case "ko":
+        return `비밀 정보 저장`;
+      case "pt-BR":
+        return `Salvar segredos`;
+      case "zh-Hans":
+        return `保存机密`;
+      case "zh-Hant":
+        return `儲存機密`;
+      case "en-XA":
+        return `[Šáṽé šéçŕéţš ~~~~]`;
+      case "ar-XB":
+        return `‮Save secrets‬`;
+    }
+    return `Save secrets`;
+  }
+  function secretsAskSaveOne() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ السر`;
+      case "de":
+        return `Geheimnis speichern`;
+      case "es":
+        return `Guardar secreto`;
+      case "fr":
+        return `Enregistrer le secret`;
+      case "ja":
+        return `シークレットを保存`;
+      case "ko":
+        return `비밀 정보 저장`;
+      case "pt-BR":
+        return `Salvar segredo`;
+      case "zh-Hans":
+        return `保存机密`;
+      case "zh-Hant":
+        return `儲存機密`;
+      case "en-XA":
+        return `[Šáṽé šéçŕéţ ~~~~]`;
+      case "ar-XB":
+        return `‮Save secret‬`;
+    }
+    return `Save secret`;
+  }
+  function secretsAskStale() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيّر هذا السر منذ أن طلبته البطاقة. تذكر البطاقة الآن نسخته الحالية.`;
+      case "de":
+        return `Dieses Geheimnis hat sich geändert, seit die Karte gefragt hat. Die Karte nennt jetzt seine aktuelle Version.`;
+      case "es":
+        return `Este secreto cambió desde que la tarjeta lo pidió. La tarjeta ahora indica su versión actual.`;
+      case "fr":
+        return `Ce secret a changé depuis la demande de la carte. La carte indique maintenant sa version actuelle.`;
+      case "ja":
+        return `カードが頼んだ後に、このシークレットが変更されました。カードには現在のバージョンが表示されています。`;
+      case "ko":
+        return `카드가 요청한 뒤로 이 비밀 정보가 바뀌었어요. 이제 카드에 현재 버전이 표시돼요.`;
+      case "pt-BR":
+        return `Este segredo mudou desde que o cartão pediu. O cartão agora mostra a versão atual.`;
+      case "zh-Hans":
+        return `卡片提出请求后，这个机密有了变化。卡片现在显示它的当前版本。`;
+      case "zh-Hant":
+        return `卡片提出請求後，這個機密有了變化。卡片現在顯示它的目前版本。`;
+      case "en-XA":
+        return `[Ţĥîš šéçŕéţ çĥáñĝéð šîñçé ţĥé çáŕð ášķéð. Ţĥé çáŕð ñöŵ ñáɱéš îţš çûŕŕéñţ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This secret changed since the card asked. The card now names its current version.‬`;
+    }
+    return `This secret changed since the card asked. The card now names its current version.`;
+  }
+  function secretsAskTitleMany(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `هل تضيف ${count} سر؟`;
+          case "one":
+            return `هل تضيف سرًا واحدًا؟`;
+          case "two":
+            return `هل تضيف سرّين؟`;
+          case "few":
+            return `هل تضيف ${count} أسرار؟`;
+          case "many":
+            return `هل تضيف ${count} سرًا؟`;
+          default:
+            return `هل تضيف ${count} سر؟`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Geheimnis hinzufügen?`;
+          default:
+            return `${count} Geheimnisse hinzufügen?`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `¿Añadir ${count} secreto?`;
+          case "many":
+            return `¿Añadir ${count} secretos?`;
+          default:
+            return `¿Añadir ${count} secretos?`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ajouter ${count} secret ?`;
+          case "many":
+            return `Ajouter ${count} secrets ?`;
+          default:
+            return `Ajouter ${count} secrets ?`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のシークレットを追加しますか？`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `비밀 정보 ${count}개를 추가할까요?`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Adicionar ${count} segredo?`;
+          case "many":
+            return `Adicionar ${count} segredos?`;
+          default:
+            return `Adicionar ${count} segredos?`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `添加 ${count} 个机密？`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `新增 ${count} 個機密？`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åðð ${count} šéçŕéţ? ~~~~]`;
+          default:
+            return `[Åðð ${count} šéçŕéţš? ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Add ‬${count}‮ secret?‬`;
+          default:
+            return `‮Add ‬${count}‮ secrets?‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Add ${count} secret?`;
+      default:
+        return `Add ${count} secrets?`;
+    }
+  }
+  function secretsAskTitleOne(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تضيف ${name} إلى الأسرار؟`;
+      case "de":
+        return `${name} zu Geheimnisse hinzufügen?`;
+      case "es":
+        return `¿Añadir ${name} a Secretos?`;
+      case "fr":
+        return `Ajouter ${name} à Secrets ?`;
+      case "ja":
+        return `${name} をシークレットに追加しますか？`;
+      case "ko":
+        return `${name}을(를) 비밀 정보에 추가할까요?`;
+      case "pt-BR":
+        return `Adicionar ${name} a Segredos?`;
+      case "zh-Hans":
+        return `将 ${name} 添加到机密？`;
+      case "zh-Hant":
+        return `將 ${name} 新增到機密？`;
+      case "en-XA":
+        return `[Åðð ${name} ţö Šéçŕéţš? ~~~~~~]`;
+      case "ar-XB":
+        return `‮Add ‬${name}‮ to Secrets?‬`;
+    }
+    return `Add ${name} to Secrets?`;
+  }
+  function secretsAskTitleTwo(input2) {
+    const first = input2.first;
+    const second = input2.second;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تضيف ${first} و${second} إلى الأسرار؟`;
+      case "de":
+        return `${first} und ${second} zu Geheimnisse hinzufügen?`;
+      case "es":
+        return `¿Añadir ${first} y ${second} a Secretos?`;
+      case "fr":
+        return `Ajouter ${first} et ${second} à Secrets ?`;
+      case "ja":
+        return `${first} と ${second} をシークレットに追加しますか？`;
+      case "ko":
+        return `${first}, ${second}을(를) 비밀 정보에 추가할까요?`;
+      case "pt-BR":
+        return `Adicionar ${first} e ${second} a Segredos?`;
+      case "zh-Hans":
+        return `将 ${first} 和 ${second} 添加到机密？`;
+      case "zh-Hant":
+        return `將 ${first} 和 ${second} 新增到機密？`;
+      case "en-XA":
+        return `[Åðð ${first} áñð ${second} ţö Šéçŕéţš? ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add ‬${first}‮ and ‬${second}‮ to Secrets?‬`;
+    }
+    return `Add ${first} and ${second} to Secrets?`;
+  }
+  function secretsAskUnavailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على الأسرار حفظ هذا الآن. لم يُحفظ شيء؛ جرّب «حفظ» مرة أخرى.`;
+      case "de":
+        return `Geheimnisse konnte das gerade nicht speichern. Nichts wurde gespeichert; versuche es mit Speichern erneut.`;
+      case "es":
+        return `Secretos no pudo guardar esto ahora. No se guardó nada; vuelve a intentar Guardar.`;
+      case "fr":
+        return `Secrets n’a pas pu enregistrer cela pour l’instant. Rien n’a été enregistré ; réessayez Enregistrer.`;
+      case "ja":
+        return `シークレットは今これを保存できませんでした。何も保存されていません。もう一度「保存」を押してください。`;
+      case "ko":
+        return `비밀 정보가 지금은 이것을 저장하지 못했어요. 아무것도 저장되지 않았어요. 저장을 다시 눌러 보세요.`;
+      case "pt-BR":
+        return `Segredos não conseguiu salvar isso agora. Nada foi salvo; tente Salvar de novo.`;
+      case "zh-Hans":
+        return `机密暂时无法保存它。没有保存任何内容；请再试一次保存。`;
+      case "zh-Hant":
+        return `機密暫時無法儲存它。沒有儲存任何內容；請再試一次儲存。`;
+      case "en-XA":
+        return `[Šéçŕéţš çöûļð ñöţ šáṽé ţĥîš ñöŵ. Ñöţĥîñĝ ŵáš šáṽéð; ţŕý Šáṽé áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets could not save this now. Nothing was saved; try Save again.‬`;
+    }
+    return `Secrets could not save this now. Nothing was saved; try Save again.`;
+  }
+  function secretsAskUnlock() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح القفل`;
+      case "de":
+        return `Entsperren`;
+      case "es":
+        return `Desbloquear`;
+      case "fr":
+        return `Déverrouiller`;
+      case "ja":
+        return `ロック解除`;
+      case "ko":
+        return `잠금 해제`;
+      case "pt-BR":
+        return `Desbloquear`;
+      case "zh-Hans":
+        return `解锁`;
+      case "zh-Hant":
+        return `解鎖`;
+      case "en-XA":
+        return `[Ûñļöçķ ~~]`;
+      case "ar-XB":
+        return `‮Unlock‬`;
+    }
+    return `Unlock`;
   }
   function secretsBringCannotEmpty() {
     switch (currentLanguage()) {
@@ -48017,6 +50799,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.‬`;
     }
     return `Each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. It reads the task's title, goal and your words, its project and related work.`;
+  }
+  function settingsDecisionUseSavedResetName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادة تعيين محفوظة أو الانتظار`;
+      case "de":
+        return `Gespeicherten Reset einlösen oder warten`;
+      case "es":
+        return `Usar un restablecimiento guardado o esperar`;
+      case "fr":
+        return `Utiliser une réinitialisation enregistrée ou attendre`;
+      case "ja":
+        return `保存済みのリセットを使うか待つか`;
+      case "ko":
+        return `저장된 재설정 사용 또는 대기`;
+      case "pt-BR":
+        return `Usar uma redefinição salva ou esperar`;
+      case "zh-Hans":
+        return `使用已保存的重置还是等待`;
+      case "zh-Hant":
+        return `使用已儲存的重設還是等待`;
+      case "en-XA":
+        return `[Ûšé á šáṽéð ŕéšéţ öŕ ŵáîţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use a saved reset or wait‬`;
+    }
+    return `Use a saved reset or wait`;
+  }
+  function settingsDecisionUseSavedResetReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما ينتظر العمل حسابًا في Codex شُغّل له «استخدام إعادات التعيين المحفوظة تلقائيًا»، يوازن بين استخدام إحدى إعادات التعيين المحفوظة وانتظار تجدد الرصيد. يقرأ خطة الحساب، وما تبقّى من كل رصيد وموعد تجدده، وعدد إعادات التعيين المحفوظة لديه، وأي عمل ينتظر.`;
+      case "de":
+        return `Wenn Arbeit auf ein Codex-Konto wartet, bei dem „Gespeicherte Resets selbst einlösen“ an ist, wägt es ab, ob ein gespeicherter Reset eingelöst oder auf das Auffüllen des Kontingents gewartet wird. Es liest den Plan des Kontos, wie viel von jedem Kontingent übrig ist und wann es sich auffüllt, wie viele gespeicherte Resets es hat und welche Arbeit wartet.`;
+      case "es":
+        return `Cuando hay trabajo esperando una cuenta de Codex con «Usar restablecimientos guardados por sí solo» activado, sopesa usar uno de sus restablecimientos guardados frente a esperar a que se renueve la asignación. Lee el plan de la cuenta, cuánto queda de cada asignación y cuándo se renueva, cuántos restablecimientos guardados tiene y qué trabajo espera.`;
+      case "fr":
+        return `Quand du travail attend un compte Codex dont « Utiliser les réinitialisations enregistrées d’office » est activé, il compare l’utilisation d’une de ses réinitialisations enregistrées avec l’attente du renouvellement de l’allocation. Il lit le forfait du compte, ce qui reste de chaque allocation et quand elle se renouvelle, combien de réinitialisations enregistrées il détient et quel travail attend.`;
+      case "ja":
+        return `「保存済みのリセットを自動で使う」がオンの Codex アカウントで作業が待っているとき、保存済みのリセットを使うか、利用枠の回復を待つかを判断します。アカウントのプラン、各利用枠の残りと回復までの時間、保存済みのリセットの数、待っている作業を読み取ります。`;
+      case "ko":
+        return `‘저장된 재설정 자동 사용’이 켜진 Codex 계정에서 작업이 기다릴 때, 저장된 재설정을 쓸지 사용 한도가 다시 채워지길 기다릴지 판단해요. 계정의 요금제, 각 사용 한도의 남은 양과 다시 채워지는 시점, 저장된 재설정 수, 기다리는 작업을 읽어요.`;
+      case "pt-BR":
+        return `Quando há trabalho esperando uma conta do Codex com “Usar redefinições salvas por conta própria” ligado, ele pesa usar uma das redefinições salvas contra esperar a franquia se renovar. Ele lê o plano da conta, quanto resta de cada franquia e quando ela se renova, quantas redefinições salvas a conta tem e qual trabalho espera.`;
+      case "zh-Hans":
+        return `当工作在等待一个开启了“自动使用已保存的重置”的 Codex 账户时，它权衡是使用一次已保存的重置，还是等待额度恢复。它读取该账户的套餐、每项额度的剩余量和恢复时间、持有的已保存的重置次数，以及等待中的工作。`;
+      case "zh-Hant":
+        return `當工作在等待一個開啟了「自動使用已儲存的重設」的 Codex 帳號時，它權衡是使用一次已儲存的重設，還是等待額度恢復。它讀取該帳號的方案、每項額度的剩餘量和恢復時間、持有的已儲存的重設次數，以及等待中的工作。`;
+      case "en-XA":
+        return `[Ŵĥéñ ŵöŕķ ŵáîţš öñ á Çöðéẋ áççöûñţ ŵĥöšé Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ îš öñ, îţ ŵéîĝĥš ûšîñĝ öñé öƒ îţš šáṽéð ŕéšéţš áĝáîñšţ ŵáîţîñĝ ƒöŕ ţĥé áļļöŵáñçé ţö ŕéƒîļļ. Îţ ŕéáðš ţĥé áççöûñţ'š þļáñ, ĥöŵ ɱûçĥ öƒ éáçĥ áļļöŵáñçé îš ļéƒţ áñð ŵĥéñ îţ ŕéƒîļļš, ĥöŵ ɱáñý šáṽéð ŕéšéţš îţ ĥöļðš, áñð ŵĥîçĥ ŵöŕķ ŵáîţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.‬`;
+    }
+    return `When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.`;
   }
   function settingsDecisionsActions() {
     switch (currentLanguage()) {
@@ -57348,6 +60184,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Enter this code on ${host}:`;
   }
+  function settingsForgeKeyDataCenterScopes() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `امنح الرمز صلاحيتي Project read وRepository write.`;
+      case "de":
+        return `Gib dem Token die Berechtigungen Project read und Repository write.`;
+      case "es":
+        return `Dale al token los permisos Project read y Repository write.`;
+      case "fr":
+        return `Donnez au jeton les autorisations Project read et Repository write.`;
+      case "ja":
+        return `トークンに Project read と Repository write の権限を付与します。`;
+      case "ko":
+        return `토큰에 Project read 및 Repository write 권한을 주세요.`;
+      case "pt-BR":
+        return `Dê ao token as permissões Project read e Repository write.`;
+      case "zh-Hans":
+        return `为令牌授予 Project read 和 Repository write 权限。`;
+      case "zh-Hant":
+        return `為權杖授予 Project read 和 Repository write 權限。`;
+      case "en-XA":
+        return `[Ĝîṽé ţĥé ţöķéñ Þŕöĵéçţ ŕéáð áñð Ŕéþöšîţöŕý ŵŕîţé þéŕɱîššîöñš. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Give the token Project read and Repository write permissions.‬`;
+    }
+    return `Give the token Project read and Repository write permissions.`;
+  }
+  function settingsForgeKeyNotDataCenter(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يستجب ${host} كما يستجيب Bitbucket Data Center 8.19 أو أحدث. تحقّق من العنوان.`;
+      case "de":
+        return `${host} hat nicht wie Bitbucket Data Center 8.19 oder neuer geantwortet. Prüf die Adresse.`;
+      case "es":
+        return `${host} no respondió como Bitbucket Data Center 8.19 o posterior. Revisa la dirección.`;
+      case "fr":
+        return `${host} n’a pas répondu comme Bitbucket Data Center 8.19 ou plus récent. Vérifiez l’adresse.`;
+      case "ja":
+        return `${host} は Bitbucket Data Center 8.19 以降として応答しませんでした。アドレスを確認してください。`;
+      case "ko":
+        return `${host}이(가) Bitbucket Data Center 8.19 이상처럼 응답하지 않았어요. 주소를 확인하세요.`;
+      case "pt-BR":
+        return `${host} não respondeu como o Bitbucket Data Center 8.19 ou mais recente. Confira o endereço.`;
+      case "zh-Hans":
+        return `${host} 没有像 Bitbucket Data Center 8.19 或更新版本那样响应。请检查地址。`;
+      case "zh-Hant":
+        return `${host} 沒有像 Bitbucket Data Center 8.19 或更新版本那樣回應。請檢查位址。`;
+      case "en-XA":
+        return `[${host} ðîð ñöţ áñšŵéŕ áš Ɓîţƀûçķéţ Ðáţá Çéñţéŕ 8.19 öŕ ñéŵéŕ ðöéš. Çĥéçķ ţĥé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ did not answer as Bitbucket Data Center 8.19 or newer does. Check the address.‬`;
+    }
+    return `${host} did not answer as Bitbucket Data Center 8.19 or newer does. Check the address.`;
+  }
   function settingsForgeMakeKey(input2) {
     const host = input2.host;
     switch (currentLanguage()) {
@@ -65421,6 +68312,147 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Try again`;
   }
+  function settingsProjectsBatchWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة تنتظر دمجها`;
+      case "de":
+        return `Bündel wartet auf sein Zusammenführen`;
+      case "es":
+        return `Lote esperando su fusión`;
+      case "fr":
+        return `Lot en attente de sa fusion`;
+      case "ja":
+        return `一括プルリクエストのマージを待機中`;
+      case "ko":
+        return `일괄 끌어오기 요청 병합 대기 중`;
+      case "pt-BR":
+        return `Lote esperando sua mesclagem`;
+      case "zh-Hans":
+        return `这批改动正在等待合并`;
+      case "zh-Hant":
+        return `批次正在等待合併`;
+      case "en-XA":
+        return `[Ɓáţçĥ ŵáîţîñĝ ƒöŕ îţš ɱéŕĝé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch waiting for its merge‬`;
+    }
+    return `Batch waiting for its merge`;
+  }
+  function settingsProjectsBatchWaitingSince(input2) {
+    const place = input2.place;
+    const since = input2.since;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تنتظر منذ ${since}: قبِل ${place} الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
+      case "de":
+        return `Wartet seit ${since}: ${place} hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
+      case "es":
+        return `Esperando desde las ${since}: ${place} aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
+      case "fr":
+        return `En attente depuis ${since} : ${place} a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
+      case "ja":
+        return `${since} から待機中：${place} がマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
+      case "ko":
+        return `${since}부터 대기 중: ${place}이(가) 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
+      case "pt-BR":
+        return `Esperando desde as ${since}: o ${place} aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.`;
+      case "zh-Hans":
+        return `自 ${since} 起等待：${place} 已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
+      case "zh-Hant":
+        return `從 ${since} 起等待：${place} 已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ šîñçé ${since}: ${place} ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting since ‬${since}‮: ‬${place}‮ took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.‬`;
+    }
+    return `Waiting since ${since}: ${place} took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.`;
+  }
+  function settingsProjectsBatchWaitingSinceHost(input2) {
+    const since = input2.since;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تنتظر منذ ${since}: قبِل مستضيف المشروع الدمج وما زال يعرضه قيد التنفيذ، لذا لا يُرسل شيء مرة أخرى وتنتظر التغييرات الموافق عليها في الأثناء. إعادة المحاولة تغلق طلب السحب ذاك وتجمع التغييرات في طلب جديد.`;
+      case "de":
+        return `Wartet seit ${since}: Der Host des Projekts hat das Zusammenführen angenommen und meldet es noch als laufend, deshalb wird nichts erneut gesendet, und inzwischen bestätigte Änderungen warten. Erneut versuchen schließt diesen Pull Request und fasst die Änderungen in einem neuen zusammen.`;
+      case "es":
+        return `Esperando desde las ${since}: el sitio que aloja el proyecto aceptó la fusión y todavía la indica como en curso, así que no se vuelve a enviar nada y los cambios aprobados mientras tanto esperan. Volver a intentar cierra esa solicitud de incorporación de cambios y reúne los cambios en una nueva.`;
+      case "fr":
+        return `En attente depuis ${since} : l’hébergeur du projet a accepté la fusion et l’indique toujours comme en cours, donc rien n’est renvoyé et les modifications approuvées entre-temps attendent. Réessayer ferme cette demande de tirage et regroupe les modifications dans une nouvelle.`;
+      case "ja":
+        return `${since} から待機中：プロジェクトのホストがマージを受け付け、まだ実行中と表示しているため、何も再送信せず、その間に承認された変更は待ちます。再試行すると、そのプルリクエストを閉じて、変更を新しいプルリクエストにまとめます。`;
+      case "ko":
+        return `${since}부터 대기 중: 프로젝트 호스트가 병합을 받았고 아직 진행 중으로 표시해서, 아무것도 다시 보내지 않고 그동안 승인된 변경은 기다려요. 다시 시도하면 그 끌어오기 요청을 닫고 변경을 새 요청으로 묶어요.`;
+      case "pt-BR":
+        return `Esperando desde as ${since}: o host do projeto aceitou a mesclagem e ainda a mostra como em andamento, então nada é enviado de novo e as alterações aprovadas enquanto isso esperam. Tentar de novo fecha essa solicitação de pull e reúne as alterações em uma nova.`;
+      case "zh-Hans":
+        return `自 ${since} 起等待：项目的托管平台已接受合并，仍显示为进行中，因此不会再次发送任何内容，期间批准的改动也在等待。重试会关闭那个拉取请求，并把这些改动组合到一个新的拉取请求中。`;
+      case "zh-Hant":
+        return `從 ${since} 起等待：專案的主機已接受合併，仍顯示為進行中，因此不會再次傳送任何內容，期間核准的變更也在等待。再試一次會關閉那個 pull request，並把這些變更組合到新的 pull request 中。`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ šîñçé ${since}: ţĥé þŕöĵéçţ'š ĥöšţ ţööķ ţĥé ɱéŕĝé áñð šţîļļ ŕéáðš îţ áš ŕûññîñĝ, šö ñöţĥîñĝ îš šéñţ áĝáîñ áñð çĥáñĝéš áþþŕöṽéð ɱéáñŵĥîļé ŵáîţ. Ţŕý áĝáîñ çļöšéš ţĥáţ þûļļ ŕéǫûéšţ áñð çöɱƀîñéš ţĥé çĥáñĝéš öñ á ñéŵ öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting since ‬${since}‮: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.‬`;
+    }
+    return `Waiting since ${since}: the project's host took the merge and still reads it as running, so nothing is sent again and changes approved meanwhile wait. Try again closes that pull request and combines the changes on a new one.`;
+  }
+  function settingsProjectsBatchWaitingStillOpen(input2) {
+    const label = input2.label;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُغلق ${place} طلب السحب ${label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.`;
+      case "de":
+        return `${place} hat ${label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.`;
+      case "es":
+        return `${place} no cerró ${label}, así que su fusión aún podría terminar. El lote sigue esperando y no se envió nada nuevo.`;
+      case "fr":
+        return `${place} n’a pas fermé ${label}, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.`;
+      case "ja":
+        return `${place} が ${label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。`;
+      case "ko":
+        return `${place}이(가) ${label}을(를) 닫지 않아서 그 병합이 아직 끝날 수 있어요. 일괄 끌어오기 요청은 계속 기다리고, 새로 보낸 것은 없어요.`;
+      case "pt-BR":
+        return `O ${place} não fechou ${label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.`;
+      case "zh-Hans":
+        return `${place} 没有关闭 ${label}，所以它的合并仍可能完成。这批改动继续等待，没有发送任何新内容。`;
+      case "zh-Hant":
+        return `${place} 沒有關閉 ${label}，所以它的合併仍可能完成。批次會繼續等待，沒有傳送任何新內容。`;
+      case "en-XA":
+        return `[${place} ðîð ñöţ çļöšé ${label}, šö îţš ɱéŕĝé ɱáý šţîļļ ƒîñîšĥ. Ţĥé ƀáţçĥ ķééþš ŵáîţîñĝ, áñð ñöţĥîñĝ ñéŵ ŵáš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${place}‮ did not close ‬${label}‮, so its merge may still finish. The batch keeps waiting, and nothing new was sent.‬`;
+    }
+    return `${place} did not close ${label}, so its merge may still finish. The batch keeps waiting, and nothing new was sent.`;
+  }
+  function settingsProjectsBatchWaitingStillOpenHost(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُغلق مستضيف المشروع طلب السحب ${label}، لذا قد يكتمل دمجه بعد. تظل الدفعة في الانتظار، ولم يُرسل شيء جديد.`;
+      case "de":
+        return `Der Host des Projekts hat ${label} nicht geschlossen, das Zusammenführen kann also noch fertig werden. Das Bündel wartet weiter, und nichts Neues wurde gesendet.`;
+      case "es":
+        return `El sitio que aloja el proyecto no cerró ${label}, así que su fusión aún podría terminar. El lote sigue esperando y no se envió nada nuevo.`;
+      case "fr":
+        return `L’hébergeur du projet n’a pas fermé ${label}, donc sa fusion peut encore aboutir. Le lot reste en attente, et rien de nouveau n’a été envoyé.`;
+      case "ja":
+        return `プロジェクトのホストが ${label} を閉じなかったため、そのマージはまだ完了する可能性があります。一括プルリクエストは待機を続け、新しいものは何も送っていません。`;
+      case "ko":
+        return `프로젝트 호스트가 ${label}을(를) 닫지 않아서 그 병합이 아직 끝날 수 있어요. 일괄 끌어오기 요청은 계속 기다리고, 새로 보낸 것은 없어요.`;
+      case "pt-BR":
+        return `O host do projeto não fechou ${label}, então a mesclagem ainda pode terminar. O lote continua esperando, e nada novo foi enviado.`;
+      case "zh-Hans":
+        return `项目的托管平台没有关闭 ${label}，所以它的合并仍可能完成。这批改动继续等待，没有发送任何新内容。`;
+      case "zh-Hant":
+        return `專案的主機沒有關閉 ${label}，所以它的合併仍可能完成。批次會繼續等待，沒有傳送任何新內容。`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţ'š ĥöšţ ðîð ñöţ çļöšé ${label}, šö îţš ɱéŕĝé ɱáý šţîļļ ƒîñîšĥ. Ţĥé ƀáţçĥ ķééþš ŵáîţîñĝ, áñð ñöţĥîñĝ ñéŵ ŵáš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The project's host did not close ‬${label}‮, so its merge may still finish. The batch keeps waiting, and nothing new was sent.‬`;
+    }
+    return `The project's host did not close ${label}, so its merge may still finish. The batch keeps waiting, and nothing new was sent.`;
+  }
   function settingsProjectsCare() {
     switch (currentLanguage()) {
       case "ar":
@@ -70206,6 +73238,196 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sound`;
   }
+  function settingsSoundOwn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `موسيقاك الخاصة`;
+      case "de":
+        return `Deine eigene Musik`;
+      case "es":
+        return `Tu propia música`;
+      case "fr":
+        return `Votre propre musique`;
+      case "ja":
+        return `自分だけの音楽`;
+      case "ko":
+        return `나만의 음악`;
+      case "pt-BR":
+        return `Sua própria música`;
+      case "zh-Hans":
+        return `你自己的音乐`;
+      case "zh-Hant":
+        return `你自己的音樂`;
+      case "en-XA":
+        return `[Ýöûŕ öŵñ ɱûšîç ~~~~~]`;
+      case "ar-XB":
+        return `‮Your own music‬`;
+    }
+    return `Your own music`;
+  }
+  function settingsSoundOwnDescribe() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف موسيقاك`;
+      case "de":
+        return `Eigene beschreiben`;
+      case "es":
+        return `Describe la tuya`;
+      case "fr":
+        return `Décrire la vôtre`;
+      case "ja":
+        return `自分で説明する`;
+      case "ko":
+        return `직접 설명하기`;
+      case "pt-BR":
+        return `Descrever a sua`;
+      case "zh-Hans":
+        return `描述你自己的`;
+      case "zh-Hant":
+        return `描述你自己的`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ýöûŕ öŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe your own‬`;
+    }
+    return `Describe your own`;
+  }
+  function settingsSoundOwnDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف الموسيقى التي تريدها، فيكتبها نائب القبطان نمطًا لآلات التطبيق نفسه، ويضعه تحت أنماطك.`;
+      case "de":
+        return `Beschreib die Musik, die du möchtest, und dein erster Offizier schreibt sie als Stil für die eigenen Instrumente der App, aufgeführt unter Deine.`;
+      case "es":
+        return `Describe la música que quieres y tu primer oficial la escribe como un estilo para los instrumentos propios de la app, en la lista Tuyos.`;
+      case "fr":
+        return `Décrivez la musique que vous voulez, et votre second l’écrit comme un style pour les instruments de l’app, listé sous Les vôtres.`;
+      case "ja":
+        return `聴きたい音楽を説明すると、一等航海士がアプリの楽器で鳴らすスタイルとして書き、「あなたのスタイル」に並べます。`;
+      case "ko":
+        return `원하는 음악을 설명하면 일등항해사가 앱의 악기로 연주할 스타일로 만들어 내 스타일 아래에 둡니다.`;
+      case "pt-BR":
+        return `Descreva a música que você quer, e seu imediato a escreve como um estilo para os instrumentos do próprio app, listado em Seus.`;
+      case "zh-Hans":
+        return `描述你想听的音乐，你的大副会把它写成一种用应用自带乐器演奏的风格，列在“你的”下面。`;
+      case "zh-Hant":
+        return `描述你想聽的音樂，你的大副會把它寫成一種用應用程式內建樂器演奏的風格，列在「你的」下面。`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ţĥé ɱûšîç ýöû ŵáñţ, áñð ýöûŕ ƒîŕšţ ɱáţé ŵŕîţéš îţ áš á šţýļé ƒöŕ ţĥé áþþ’š öŵñ îñšţŕûɱéñţš, ļîšţéð ûñðéŕ Ýöûŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe the music you want, and your first mate writes it as a style for the app’s own instruments, listed under Yours.‬`;
+    }
+    return `Describe the music you want, and your first mate writes it as a style for the app’s own instruments, listed under Yours.`;
+  }
+  function settingsSoundOwnDraft() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب موسيقاي الهادئة الخاصة: `;
+      case "de":
+        return `Schreib meine eigene Ambient-Musik: `;
+      case "es":
+        return `Escribe mi propia música ambiental: `;
+      case "fr":
+        return `Écris ma propre musique d’ambiance : `;
+      case "ja":
+        return `自分だけのアンビエント音楽を書いてください：`;
+      case "ko":
+        return `나만의 앰비언트 음악을 만들어 주세요: `;
+      case "pt-BR":
+        return `Escreva minha própria música ambiente: `;
+      case "zh-Hans":
+        return `为我写一段自己的环境音乐：`;
+      case "zh-Hant":
+        return `為我寫一段自己的環境音樂：`;
+      case "en-XA":
+        return `[Ŵŕîţé ɱý öŵñ áɱƀîéñţ ɱûšîç:  ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Write my own ambient music: ‬`;
+    }
+    return `Write my own ambient music: `;
+  }
+  function settingsSoundOwnNoWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نمط كتبه لك نائب القبطان.`;
+      case "de":
+        return `Ein Stil, den dein erster Offizier für dich geschrieben hat.`;
+      case "es":
+        return `Un estilo que tu primer oficial escribió para ti.`;
+      case "fr":
+        return `Un style que votre second a écrit pour vous.`;
+      case "ja":
+        return `一等航海士があなたのために書いたスタイルです。`;
+      case "ko":
+        return `일등항해사가 당신을 위해 만든 스타일입니다.`;
+      case "pt-BR":
+        return `Um estilo que seu imediato escreveu para você.`;
+      case "zh-Hans":
+        return `你的大副为你写的风格。`;
+      case "zh-Hant":
+        return `你的大副為你寫的風格。`;
+      case "en-XA":
+        return `[Å šţýļé ýöûŕ ƒîŕšţ ɱáţé ŵŕöţé ƒöŕ ýöû. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A style your first mate wrote for you.‬`;
+    }
+    return `A style your first mate wrote for you.`;
+  }
+  function settingsSoundOwnRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Supprimer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `삭제`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsSoundOwnRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Supprimer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 삭제`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
   function settingsSoundPauseWhenAway() {
     switch (currentLanguage()) {
       case "ar":
@@ -70317,29 +73539,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleColdSleepDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء.`;
+        return `بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء وريح هادئة.`;
       case "de":
-        return `Vor allem Klavier: ein sanftes Filzklavier in einem weiten, kalten Raum über einem tiefen Bordun und einem langsamen Herzschlag.`;
+        return `Vor allem Klavier: ein sanftes Filzklavier in einem weiten, kalten Raum über einem tiefen Bordun, einem langsamen Herzschlag und leisem Wind.`;
       case "es":
-        return `Sobre todo piano: un piano suave con fieltro en una sala enorme y fría, sobre un bordón grave y un latido lento.`;
+        return `Sobre todo piano: un piano suave con fieltro en una sala enorme y fría, sobre un bordón grave, un latido lento y un viento suave.`;
       case "fr":
-        return `Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave et un battement de cœur lent.`;
+        return `Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave, un battement de cœur lent et un vent léger.`;
       case "ja":
-        return `ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動の上で鳴ります。`;
+        return `ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動、かすかな風の上で鳴ります。`;
       case "ko":
-        return `피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동 위에서 흐릅니다.`;
+        return `피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동, 잔잔한 바람 위에서 흐릅니다.`;
       case "pt-BR":
-        return `Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave e um batimento lento.`;
+        return `Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave, um batimento lento e um vento suave.`;
       case "zh-Hans":
-        return `以钢琴为主：空旷寒冷的房间里，柔和的毛毡钢琴伴着低沉的持续音和缓慢的心跳。`;
+        return `以钢琴为主：空旷寒冷的房间里，柔和的毛毡钢琴伴着低沉的持续音、缓慢的心跳和轻柔的风声。`;
       case "zh-Hant":
-        return `以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音和緩慢的心跳。`;
+        return `以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音、緩慢的心跳和輕柔的風聲。`;
       case "en-XA":
-        return `[Ṁöšţļý þîáñö: á šöƒţ ƒéļţ þîáñö îñ á ṽášţ, çöļð ŕööɱ öṽéŕ á ļöŵ ðŕöñé áñð á šļöŵ ĥéáŕţƀéáţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ṁöšţļý þîáñö: á šöƒţ ƒéļţ þîáñö îñ á ṽášţ, çöļð ŕööɱ öṽéŕ á ļöŵ ðŕöñé, á šļöŵ ĥéáŕţƀéáţ áñð šöƒţ ŵîñð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat.‬`;
+        return `‮Mostly piano: a soft felt piano in a vast, cold room over a low drone, a slow heartbeat and soft wind.‬`;
     }
-    return `Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat.`;
+    return `Mostly piano: a soft felt piano in a vast, cold room over a low drone, a slow heartbeat and soft wind.`;
   }
   function settingsSoundStyleDeepDrift() {
     switch (currentLanguage()) {
@@ -70557,6 +73779,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Space`;
   }
+  function settingsSoundStyleGroupYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنماطك`;
+      case "de":
+        return `Deine`;
+      case "es":
+        return `Tuyos`;
+      case "fr":
+        return `Les vôtres`;
+      case "ja":
+        return `あなたのスタイル`;
+      case "ko":
+        return `내 스타일`;
+      case "pt-BR":
+        return `Seus`;
+      case "zh-Hans":
+        return `你的`;
+      case "zh-Hant":
+        return `你的`;
+      case "en-XA":
+        return `[Ýöûŕš ~~]`;
+      case "ar-XB":
+        return `‮Yours‬`;
+    }
+    return `Yours`;
+  }
   function settingsSoundStyleHarborDawn() {
     switch (currentLanguage()) {
       case "ar":
@@ -70695,29 +73944,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleMoonlitDeckDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة.`;
+        return `متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة وريح ليلية.`;
       case "de":
-        return `Spärlich und ein wenig geheimnisvoll: ein tiefer Bordun, eine Spieluhr und eine langsame Harfe über sanften Wellen.`;
+        return `Spärlich und ein wenig geheimnisvoll: ein tiefer Bordun, eine Spieluhr und eine langsame Harfe über sanften Wellen und Nachtwind.`;
       case "es":
-        return `Escaso y algo misterioso: un bordón grave, una caja de música y un arpa lenta sobre olas suaves.`;
+        return `Escaso y algo misterioso: un bordón grave, una caja de música y un arpa lenta sobre olas suaves y viento nocturno.`;
       case "fr":
-        return `Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces.`;
+        return `Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces et un vent de nuit.`;
       case "ja":
-        return `まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音が重なります。`;
+        return `まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音と夜風が重なります。`;
       case "ko":
-        return `드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리가 흐릅니다.`;
+        return `드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리와 밤바람이 흐릅니다.`;
       case "pt-BR":
-        return `Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves.`;
+        return `Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves e vento noturno.`;
       case "zh-Hans":
-        return `稀疏而略带神秘：低沉的持续音、八音盒和缓慢的竖琴，伴着轻柔的海浪声。`;
+        return `稀疏而略带神秘：低沉的持续音、八音盒和缓慢的竖琴，伴着轻柔的海浪声和夜风。`;
       case "zh-Hant":
-        return `稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲。`;
+        return `稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲和夜風。`;
       case "en-XA":
-        return `[Šþáŕšé áñð á ļîţţļé ɱýšţéŕîöûš: á ļöŵ ðŕöñé, á ɱûšîç ƀöẋ áñð á šļöŵ ĥáŕþ öṽéŕ šöƒţ ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Šþáŕšé áñð á ļîţţļé ɱýšţéŕîöûš: á ļöŵ ðŕöñé, á ɱûšîç ƀöẋ áñð á šļöŵ ĥáŕþ öṽéŕ šöƒţ ŵáṽéš áñð á ñîĝĥţ ŵîñð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves.‬`;
+        return `‮Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves and a night wind.‬`;
     }
-    return `Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves.`;
+    return `Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves and a night wind.`;
   }
   function settingsSoundStyleQuietCove() {
     switch (currentLanguage()) {
@@ -70857,29 +74106,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleTavernEmbersDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق أمواج هادئة.`;
+        return `فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق مطر خفيف وأمواج هادئة.`;
       case "de":
-        return `Ein leiser Walzer in Moll mit gezupften Saiten und Akkordeon über sanften Wellen.`;
+        return `Ein leiser Walzer in Moll mit gezupften Saiten und Akkordeon über leisem Regen und sanften Wellen.`;
       case "es":
-        return `Un vals tranquilo en tono menor con cuerdas punteadas y acordeón sobre olas suaves.`;
+        return `Un vals tranquilo en tono menor con cuerdas punteadas y acordeón sobre lluvia suave y olas.`;
       case "fr":
-        return `Une valse paisible en mineur avec des cordes pincées et un accordéon sur des vagues douces.`;
+        return `Une valse paisible en mineur avec des cordes pincées et un accordéon sur une pluie douce et des vagues.`;
       case "ja":
-        return `爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい波の音が流れます。`;
+        return `爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい雨音と波の音が流れます。`;
       case "ko":
-        return `뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 파도 소리가 흐릅니다.`;
+        return `뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 빗소리와 파도 소리가 흐릅니다.`;
       case "pt-BR":
-        return `Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre ondas suaves.`;
+        return `Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre chuva suave e ondas.`;
       case "zh-Hans":
-        return `拨弦乐器和手风琴奏出安静的小调华尔兹，伴着轻柔的海浪声。`;
+        return `拨弦乐器和手风琴奏出安静的小调华尔兹，伴着轻柔的雨声和海浪声。`;
       case "zh-Hant":
-        return `撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的海浪聲。`;
+        return `撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的雨聲和海浪聲。`;
       case "en-XA":
-        return `[Å ǫûîéţ ɱîñöŕ-ķéý ŵáļţž ŵîţĥ þļûçķéð šţŕîñĝš áñð áñ áççöŕðîöñ öṽéŕ šöƒţ ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Å ǫûîéţ ɱîñöŕ-ķéý ŵáļţž ŵîţĥ þļûçķéð šţŕîñĝš áñð áñ áççöŕðîöñ öṽéŕ šöƒţ ŕáîñ áñð ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮A quiet minor-key waltz with plucked strings and an accordion over soft waves.‬`;
+        return `‮A quiet minor-key waltz with plucked strings and an accordion over soft rain and waves.‬`;
     }
-    return `A quiet minor-key waltz with plucked strings and an accordion over soft waves.`;
+    return `A quiet minor-key waltz with plucked strings and an accordion over soft rain and waves.`;
   }
   function settingsSoundStyleWayfinderNight() {
     switch (currentLanguage()) {
@@ -72794,6 +76043,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Stop preferring for crew work`;
   }
+  function settingsSubscriptionsMenuStopUsingResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets nicht mehr selbst einlösen`;
+      case "es":
+        return `Dejar de usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Ne plus utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットの自動使用をやめる`;
+      case "ko":
+        return `저장된 재설정 자동 사용 그만하기`;
+      case "pt-BR":
+        return `Parar de usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `停止自动使用已保存的重置`;
+      case "zh-Hant":
+        return `停止自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Šţöþ ûšîñĝ šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stop using saved resets on their own‬`;
+    }
+    return `Stop using saved resets on their own`;
+  }
   function settingsSubscriptionsMenuUseReset() {
     switch (currentLanguage()) {
       case "ar":
@@ -72847,6 +76123,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Codex signs in and uses the one that expires first‬`;
     }
     return `Codex signs in and uses the one that expires first`;
+  }
+  function settingsSubscriptionsMenuUseResets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام إعادات التعيين المحفوظة تلقائيًا`;
+      case "de":
+        return `Gespeicherte Resets selbst einlösen`;
+      case "es":
+        return `Usar restablecimientos guardados por sí solo`;
+      case "fr":
+        return `Utiliser les réinitialisations enregistrées d’office`;
+      case "ja":
+        return `保存済みのリセットを自動で使う`;
+      case "ko":
+        return `저장된 재설정 자동 사용`;
+      case "pt-BR":
+        return `Usar redefinições salvas por conta própria`;
+      case "zh-Hans":
+        return `自动使用已保存的重置`;
+      case "zh-Hant":
+        return `自動使用已儲存的重設`;
+      case "en-XA":
+        return `[Ûšé šáṽéð ŕéšéţš öñ ţĥéîŕ öŵñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use saved resets on their own‬`;
+    }
+    return `Use saved resets on their own`;
+  }
+  function settingsSubscriptionsMenuUseResetsDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فقط عندما ينتظر العمل ولا يبقى رصيد في أي حساب`;
+      case "de":
+        return `Nur wenn Arbeit wartet und kein Konto Kontingent hat`;
+      case "es":
+        return `Solo cuando hay trabajo en espera y ninguna cuenta tiene asignación`;
+      case "fr":
+        return `Seulement quand du travail attend et qu’aucun compte n’a d’allocation`;
+      case "ja":
+        return `作業が待っていて、どのアカウントにも利用枠がないときだけ`;
+      case "ko":
+        return `작업이 기다리고 남은 사용 한도가 있는 계정이 없을 때만`;
+      case "pt-BR":
+        return `Só quando há trabalho esperando e nenhuma conta tem franquia`;
+      case "zh-Hans":
+        return `仅在有工作等待且没有账户还有额度时`;
+      case "zh-Hant":
+        return `僅在有工作等待且沒有帳號還有額度時`;
+      case "en-XA":
+        return `[Öñļý ŵĥéñ ŵöŕķ ŵáîţš áñð ñö áççöûñţ ĥáš ŕööɱ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only when work waits and no account has room‬`;
+    }
+    return `Only when work waits and no account has room`;
   }
   function settingsSubscriptionsNoReader() {
     switch (currentLanguage()) {
@@ -78704,6 +82034,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Quiet while you talk‬`;
     }
     return `Quiet while you talk`;
+  }
+  function shellAmbientStyleNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `النمط: ${name}`;
+      case "de":
+        return `Stil: ${name}`;
+      case "es":
+        return `Estilo: ${name}`;
+      case "fr":
+        return `Style : ${name}`;
+      case "ja":
+        return `スタイル: ${name}`;
+      case "ko":
+        return `스타일: ${name}`;
+      case "pt-BR":
+        return `Estilo: ${name}`;
+      case "zh-Hans":
+        return `风格：${name}`;
+      case "zh-Hant":
+        return `風格：${name}`;
+      case "en-XA":
+        return `[Šţýļé: ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Style: ‬${name}`;
+    }
+    return `Style: ${name}`;
   }
   function shellCardFoldPanels() {
     switch (currentLanguage()) {
@@ -87477,7 +90835,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsSavedResetUnclear,
     accountsSavedResetUnverified,
     accountsSavedResetUsed,
+    accountsSavedResetUsedAuto,
+    accountsSavedResetUsedAutoChecking,
     accountsSavedResetUsedChecking,
+    accountsUseSavedResetsSignInFirst,
     attachCancelled,
     automationEventsSkipped,
     automationRunAlsoSkipped,
@@ -87488,6 +90849,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationWaitsFor,
     automationWaitsForNote,
     automationWaitsForPlaceholder,
+    batchesReadWords,
     cardAfterMergeDoerCrewmate,
     cardAfterMergeDoerFirstmate,
     cardAfterMergeLead,
@@ -87542,8 +90904,41 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserStop,
     cardBrowserSurface,
     cardBrowserUnansweredAsked,
+    cardBrowserUnansweredStarting,
     cardBrowserUnansweredWorking,
     cardBrowserWord,
+    cardCarriedNotes,
+    cardCarriedPictures,
+    cardCarriedWithChoice,
+    cardConsentFrom,
+    cardConsentFullDetails,
+    cardConsentGuidanceOnly,
+    cardConsentKeeps,
+    cardConsentKeepsLittle,
+    cardConsentKeepsUpTo,
+    cardConsentMoves,
+    cardConsentMovesDetail,
+    cardConsentMovesLine,
+    cardConsentMovesValue,
+    cardConsentNothingOfYours,
+    cardConsentPanelNote,
+    cardConsentPanelNoteThrough,
+    cardConsentReaches,
+    cardConsentReachesAll,
+    cardConsentReachesNamed,
+    cardConsentReads,
+    cardConsentReadsList,
+    cardConsentReadsNothing,
+    cardConsentRunbookPanels,
+    cardConsentRunbookPanelsThrough,
+    cardConsentShowsPanels,
+    cardConsentTurnBackOn,
+    cardConsentTurnsOff,
+    cardConsentUses,
+    cardConsentUsesActions,
+    cardConsentUsesEvents,
+    cardConsentUsesLine,
+    cardConsentUsesWhy,
     cardCrewmateLog,
     cardCrewmateSendFailed,
     cardCrewmateSurface,
@@ -87608,6 +91003,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteUnavailable,
     cardPastMark,
     cardPastMeta,
+    cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
@@ -87652,7 +91048,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
-    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -87662,6 +91057,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardSinceSeenSaw,
     cardSoundUnplayable,
     cardSoundWord,
+    cardSpentTryOnce,
     cardTabStripLabel,
     cardThreadAddFiles,
     cardThreadCard,
@@ -87698,6 +91094,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadWrittenByAfterClose,
     cardTradeoffTable,
     cardUseSavedReset,
+    cardUseSavedResets,
     closeYourFirstMate,
     closedDropped,
     closedFinished,
@@ -87705,6 +91102,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     closedReleased,
     commandAllowanceRecheck,
     commandAllowanceRecheckWords,
+    commandAmbientStyle,
+    commandAmbientStyleWords,
     commandAmbientToggle,
     commandAmbientToggleWords,
     commandAutomationPauseAll,
@@ -87991,6 +91390,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchHeldUnanswered,
     feedBatchHeldUnansweredHost,
     feedBatchHeldUnnamed,
+    feedBatchMergeRunning,
+    feedBatchMergeRunningHost,
     feedBatchMergedMany,
     feedBatchMergedOne,
     feedBatchNoStory,
@@ -88461,8 +91862,37 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     secretsArchiveOpenTitle,
     secretsArchiveSaveMessage,
     secretsArchiveSaveTitle,
+    secretsAskAskedFirstMate,
+    secretsAskAskedTask,
+    secretsAskByCrewmate,
+    secretsAskByFirstMate,
+    secretsAskClosed,
+    secretsAskDontSave,
+    secretsAskElsewhere,
+    secretsAskEmpty,
+    secretsAskEnded,
     secretsAskFields,
-    secretsAskNote,
+    secretsAskGone,
+    secretsAskHowMany,
+    secretsAskHowOne,
+    secretsAskLocked,
+    secretsAskNoteMany,
+    secretsAskNoteOne,
+    secretsAskPlace,
+    secretsAskPlaceholder,
+    secretsAskRecovery,
+    secretsAskReplaceMany,
+    secretsAskReplaceOne,
+    secretsAskReplaceTwo,
+    secretsAskReplaces,
+    secretsAskSaveMany,
+    secretsAskSaveOne,
+    secretsAskStale,
+    secretsAskTitleMany,
+    secretsAskTitleOne,
+    secretsAskTitleTwo,
+    secretsAskUnavailable,
+    secretsAskUnlock,
     secretsBringCannotEmpty,
     secretsBringCannotNotText,
     secretsBringCannotTooLarge,
@@ -88713,6 +92143,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsCostLimitSwitchLabel,
     settingsCostLimitTitle,
     settingsDecisionUseKindReads,
+    settingsDecisionUseSavedResetName,
+    settingsDecisionUseSavedResetReads,
     settingsDecisionsActions,
     settingsDecisionsAnswerWith,
     settingsDecisionsAuto,
@@ -89031,6 +92463,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsForgeConnecting,
     settingsForgeDeviceRole,
     settingsForgeEnterCode,
+    settingsForgeKeyDataCenterScopes,
+    settingsForgeKeyNotDataCenter,
     settingsForgeMakeKey,
     settingsForgeNewCode,
     settingsForgeNotSignedIn,
@@ -89307,6 +92741,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchSendBack,
     settingsProjectsBatchSentBack,
     settingsProjectsBatchTryAgain,
+    settingsProjectsBatchWaiting,
+    settingsProjectsBatchWaitingSince,
+    settingsProjectsBatchWaitingSinceHost,
+    settingsProjectsBatchWaitingStillOpen,
+    settingsProjectsBatchWaitingStillOpenHost,
     settingsProjectsCare,
     settingsProjectsCareNone,
     settingsProjectsCarePersonal,
@@ -89478,6 +92917,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSoundAmbientMusic,
     settingsSoundAmbientMusicDescription,
     settingsSoundHeading,
+    settingsSoundOwn,
+    settingsSoundOwnDescribe,
+    settingsSoundOwnDescription,
+    settingsSoundOwnDraft,
+    settingsSoundOwnNoWords,
+    settingsSoundOwnRemove,
+    settingsSoundOwnRemoveNamed,
     settingsSoundPauseWhenAway,
     settingsSoundPauseWhenAwayDescription,
     settingsSoundStyle,
@@ -89491,6 +92937,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSoundStyleGroupNautical,
     settingsSoundStyleGroupPirate,
     settingsSoundStyleGroupSpace,
+    settingsSoundStyleGroupYours,
     settingsSoundStyleHarborDawn,
     settingsSoundStyleHarborDawnDescription,
     settingsSoundStyleIslandMorning,
@@ -89573,8 +93020,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsMenuResume,
     settingsSubscriptionsMenuStopKeepingGoing,
     settingsSubscriptionsMenuStopPreferring,
+    settingsSubscriptionsMenuStopUsingResets,
     settingsSubscriptionsMenuUseReset,
     settingsSubscriptionsMenuUseResetDetail,
+    settingsSubscriptionsMenuUseResets,
+    settingsSubscriptionsMenuUseResetsDetail,
     settingsSubscriptionsNoReader,
     settingsSubscriptionsNoReaderKey,
     settingsSubscriptionsNotChosenYet,
@@ -89787,6 +93237,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellAmbientPause,
     shellAmbientPlay,
     shellAmbientQuiet,
+    shellAmbientStyleNamed,
     shellCardFoldPanels,
     shellCardMateAnswering,
     shellCardNotesFirst,
@@ -90299,7 +93750,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsSavedResetUnclear": ["account"],
     "accountsSavedResetUnverified": ["account"],
     "accountsSavedResetUsed": ["account", "count"],
+    "accountsSavedResetUsedAuto": ["account", "count"],
+    "accountsSavedResetUsedAutoChecking": ["account"],
     "accountsSavedResetUsedChecking": ["account"],
+    "accountsUseSavedResetsSignInFirst": ["account"],
     "attachCancelled": ["name"],
     "automationEventsSkipped": [],
     "automationRunAlsoSkipped": ["count"],
@@ -90310,6 +93764,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationWaitsFor": [],
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],
+    "batchesReadWords": [],
     "cardAfterMergeDoerCrewmate": [],
     "cardAfterMergeDoerFirstmate": [],
     "cardAfterMergeLead": [],
@@ -90364,8 +93819,41 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserStop": [],
     "cardBrowserSurface": [],
     "cardBrowserUnansweredAsked": ["site"],
+    "cardBrowserUnansweredStarting": ["site"],
     "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
+    "cardCarriedNotes": ["count"],
+    "cardCarriedPictures": ["count"],
+    "cardCarriedWithChoice": ["count", "items"],
+    "cardConsentFrom": [],
+    "cardConsentFullDetails": [],
+    "cardConsentGuidanceOnly": [],
+    "cardConsentKeeps": [],
+    "cardConsentKeepsLittle": [],
+    "cardConsentKeepsUpTo": ["size"],
+    "cardConsentMoves": [],
+    "cardConsentMovesDetail": [],
+    "cardConsentMovesLine": [],
+    "cardConsentMovesValue": [],
+    "cardConsentNothingOfYours": [],
+    "cardConsentPanelNote": ["here"],
+    "cardConsentPanelNoteThrough": ["here"],
+    "cardConsentReaches": [],
+    "cardConsentReachesAll": [],
+    "cardConsentReachesNamed": [],
+    "cardConsentReads": [],
+    "cardConsentReadsList": ["list"],
+    "cardConsentReadsNothing": [],
+    "cardConsentRunbookPanels": ["count", "here"],
+    "cardConsentRunbookPanelsThrough": ["count", "here"],
+    "cardConsentShowsPanels": ["count"],
+    "cardConsentTurnBackOn": [],
+    "cardConsentTurnsOff": [],
+    "cardConsentUses": [],
+    "cardConsentUsesActions": ["count", "integration", "names"],
+    "cardConsentUsesEvents": ["count", "integration", "names"],
+    "cardConsentUsesLine": ["integration", "names"],
+    "cardConsentUsesWhy": ["why"],
     "cardCrewmateLog": [],
     "cardCrewmateSendFailed": [],
     "cardCrewmateSurface": [],
@@ -90430,6 +93918,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteUnavailable": [],
     "cardPastMark": [],
     "cardPastMeta": [],
+    "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
@@ -90474,7 +93963,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
-    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],
@@ -90484,6 +93972,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardSinceSeenSaw": ["when"],
     "cardSoundUnplayable": [],
     "cardSoundWord": [],
+    "cardSpentTryOnce": ["provider"],
     "cardTabStripLabel": [],
     "cardThreadAddFiles": [],
     "cardThreadCard": [],
@@ -90520,6 +94009,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadWrittenByAfterClose": ["label"],
     "cardTradeoffTable": [],
     "cardUseSavedReset": [],
+    "cardUseSavedResets": [],
     "closeYourFirstMate": ["sentence"],
     "closedDropped": ["key"],
     "closedFinished": ["key"],
@@ -90527,6 +94017,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "closedReleased": ["key"],
     "commandAllowanceRecheck": [],
     "commandAllowanceRecheckWords": [],
+    "commandAmbientStyle": [],
+    "commandAmbientStyleWords": [],
     "commandAmbientToggle": [],
     "commandAmbientToggleWords": [],
     "commandAutomationPauseAll": [],
@@ -90813,6 +94305,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchHeldUnanswered": ["label", "place", "project"],
     "feedBatchHeldUnansweredHost": ["label", "project"],
     "feedBatchHeldUnnamed": ["label", "project"],
+    "feedBatchMergeRunning": ["label", "place", "project"],
+    "feedBatchMergeRunningHost": ["label", "project"],
     "feedBatchMergedMany": ["count", "label", "project"],
     "feedBatchMergedOne": ["label", "project"],
     "feedBatchNoStory": ["label", "project", "titles"],
@@ -91283,8 +94777,37 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "secretsArchiveOpenTitle": [],
     "secretsArchiveSaveMessage": [],
     "secretsArchiveSaveTitle": [],
+    "secretsAskAskedFirstMate": [],
+    "secretsAskAskedTask": ["task"],
+    "secretsAskByCrewmate": [],
+    "secretsAskByFirstMate": [],
+    "secretsAskClosed": [],
+    "secretsAskDontSave": [],
+    "secretsAskElsewhere": [],
+    "secretsAskEmpty": [],
+    "secretsAskEnded": [],
     "secretsAskFields": [],
-    "secretsAskNote": [],
+    "secretsAskGone": [],
+    "secretsAskHowMany": [],
+    "secretsAskHowOne": [],
+    "secretsAskLocked": [],
+    "secretsAskNoteMany": [],
+    "secretsAskNoteOne": [],
+    "secretsAskPlace": ["place"],
+    "secretsAskPlaceholder": [],
+    "secretsAskRecovery": [],
+    "secretsAskReplaceMany": ["count"],
+    "secretsAskReplaceOne": ["name"],
+    "secretsAskReplaceTwo": ["first", "second"],
+    "secretsAskReplaces": ["version"],
+    "secretsAskSaveMany": [],
+    "secretsAskSaveOne": [],
+    "secretsAskStale": [],
+    "secretsAskTitleMany": ["count"],
+    "secretsAskTitleOne": ["name"],
+    "secretsAskTitleTwo": ["first", "second"],
+    "secretsAskUnavailable": [],
+    "secretsAskUnlock": [],
     "secretsBringCannotEmpty": [],
     "secretsBringCannotNotText": [],
     "secretsBringCannotTooLarge": [],
@@ -91535,6 +95058,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsCostLimitSwitchLabel": [],
     "settingsCostLimitTitle": [],
     "settingsDecisionUseKindReads": [],
+    "settingsDecisionUseSavedResetName": [],
+    "settingsDecisionUseSavedResetReads": [],
     "settingsDecisionsActions": [],
     "settingsDecisionsAnswerWith": ["model"],
     "settingsDecisionsAuto": [],
@@ -91853,6 +95378,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsForgeConnecting": [],
     "settingsForgeDeviceRole": [],
     "settingsForgeEnterCode": ["host"],
+    "settingsForgeKeyDataCenterScopes": [],
+    "settingsForgeKeyNotDataCenter": ["host"],
     "settingsForgeMakeKey": ["host"],
     "settingsForgeNewCode": [],
     "settingsForgeNotSignedIn": ["host"],
@@ -92129,6 +95656,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchSendBack": [],
     "settingsProjectsBatchSentBack": ["count"],
     "settingsProjectsBatchTryAgain": [],
+    "settingsProjectsBatchWaiting": [],
+    "settingsProjectsBatchWaitingSince": ["place", "since"],
+    "settingsProjectsBatchWaitingSinceHost": ["since"],
+    "settingsProjectsBatchWaitingStillOpen": ["label", "place"],
+    "settingsProjectsBatchWaitingStillOpenHost": ["label"],
     "settingsProjectsCare": [],
     "settingsProjectsCareNone": [],
     "settingsProjectsCarePersonal": [],
@@ -92300,6 +95832,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSoundAmbientMusic": [],
     "settingsSoundAmbientMusicDescription": [],
     "settingsSoundHeading": [],
+    "settingsSoundOwn": [],
+    "settingsSoundOwnDescribe": [],
+    "settingsSoundOwnDescription": [],
+    "settingsSoundOwnDraft": [],
+    "settingsSoundOwnNoWords": [],
+    "settingsSoundOwnRemove": [],
+    "settingsSoundOwnRemoveNamed": ["name"],
     "settingsSoundPauseWhenAway": [],
     "settingsSoundPauseWhenAwayDescription": [],
     "settingsSoundStyle": [],
@@ -92313,6 +95852,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSoundStyleGroupNautical": [],
     "settingsSoundStyleGroupPirate": [],
     "settingsSoundStyleGroupSpace": [],
+    "settingsSoundStyleGroupYours": [],
     "settingsSoundStyleHarborDawn": [],
     "settingsSoundStyleHarborDawnDescription": [],
     "settingsSoundStyleIslandMorning": [],
@@ -92395,8 +95935,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsMenuResume": [],
     "settingsSubscriptionsMenuStopKeepingGoing": [],
     "settingsSubscriptionsMenuStopPreferring": [],
+    "settingsSubscriptionsMenuStopUsingResets": [],
     "settingsSubscriptionsMenuUseReset": [],
     "settingsSubscriptionsMenuUseResetDetail": [],
+    "settingsSubscriptionsMenuUseResets": [],
+    "settingsSubscriptionsMenuUseResetsDetail": [],
     "settingsSubscriptionsNoReader": [],
     "settingsSubscriptionsNoReaderKey": ["apiKey"],
     "settingsSubscriptionsNotChosenYet": [],
@@ -92609,6 +96152,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellAmbientPause": [],
     "shellAmbientPlay": [],
     "shellAmbientQuiet": [],
+    "shellAmbientStyleNamed": ["name"],
     "shellCardFoldPanels": [],
     "shellCardMateAnswering": [],
     "shellCardNotesFirst": [],
@@ -98952,7 +102496,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     // chosen style; it turns the music on first if it was off. No default key.
     "ambient.style": {
       get label() {
-        return (void 0)();
+        return commandAmbientStyle();
       },
       scope: "window",
       runs: "shell",
@@ -98960,7 +102504,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       risk: "view",
       keys: [],
       get searchWords() {
-        return searchWords((void 0)());
+        return searchWords(commandAmbientStyleWords());
       }
     },
     // Tokens or estimated dollars, everywhere in Usage at once; it opens

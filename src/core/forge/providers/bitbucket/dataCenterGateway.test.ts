@@ -14,7 +14,13 @@ import {
   IntegrationsService,
 } from "../../../integrations";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
-import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
+import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
+import {
+  DOWNLOAD_ARTIFACT_TOOL,
+  GITHUB_READ_TOOL,
+  GITHUB_WRITE_TOOL,
+  READ_WORKFLOW_TOOL,
+} from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
@@ -144,7 +150,18 @@ async function fixture() {
   });
   const read = bindTool(GITHUB_READ_TOOL, { onGithubRead: (i) => service.read("task-1", i) });
   const write = bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write("task-1", i) });
-  return { read, write, seen, tasks, dir, service };
+  const evidence = new WorkflowEvidenceService({
+    tasks,
+    repos: new RepoRegistry(db, join(dir, "fleet")),
+    forgeFor: () => forge,
+  });
+  const readWorkflow = bindTool(READ_WORKFLOW_TOOL, {
+    onReadWorkflow: (i) => evidence.read("task-1", i),
+  });
+  const downloadArtifact = bindTool(DOWNLOAD_ARTIFACT_TOOL, {
+    onDownloadArtifact: (i) => evidence.download("task-1", i),
+  });
+  return { read, write, readWorkflow, downloadArtifact, seen, tasks, dir, service };
 }
 
 describe("the gateway on a Bitbucket Data Center repository, through crewmate tools", () => {
@@ -244,6 +261,19 @@ describe("the gateway on a Bitbucket Data Center repository, through crewmate to
       expect(seen).toEqual([]);
     },
   );
+
+  it("answers a run read and an artifact download in words saying the server keeps no runs, sending nothing", async () => {
+    const { readWorkflow, downloadArtifact, seen } = await fixture();
+    for (const answer of [
+      (await readWorkflow.run({ runId: 10 })).text,
+      (await readWorkflow.run({ runId: 10, jobId: 20 })).text,
+      (await downloadArtifact.run({ runId: 10, artifactId: 30 })).text,
+    ]) {
+      expect(answer).toContain("keeps no runs, logs or release files of its own");
+      expect(answer).toContain("each one's link names where to read it");
+    }
+    expect(seen).toEqual([]);
+  });
 
   it("refuses a release file in words saying the server keeps none, sending nothing", async () => {
     const { write, seen, dir } = await fixture();

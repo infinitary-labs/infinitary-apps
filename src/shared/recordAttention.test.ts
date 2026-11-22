@@ -4,6 +4,7 @@
 // window with the Info tab; each case is the frame test it was ported from.
 import { describe, expect, it } from "vitest";
 import { recordAttentionOf, recordClosedLineOf } from "./recordAttention";
+import { waitChainWords } from "./taskPresentation";
 import type { TaskDetail } from "./tasks";
 
 const now = new Date("2026-09-16T14:30:00Z").getTime();
@@ -226,6 +227,27 @@ describe("the record's attention sentence", () => {
     const waiting = say(task({ blockedBy: ["WEB-41"], waits }));
     expect(waiting?.title).toContain("WEB-41 · time unknown");
     expect(waiting?.title).toContain("start time was due");
+  });
+
+  // INF-5578 finding 4: the tile named where a line of waits stops while the
+  // record named only the task waited on; the record says the same as the tile.
+  it("names where a lone task wait's line stops, keeping when the wait was recorded", () => {
+    const waits: NonNullable<TaskDetail["waits"]> = [
+      { id: "dependency:web", kind: "dependency", label: "WEB-41", since: now - 60000 },
+    ];
+    for (const waitChain of [
+      { on: "WEB-41", end: "WEB-40", update: true as const },
+      { on: "WEB-41", until: now + 3_600_000 },
+    ]) {
+      const title = say(task({ activity: "idle", blockedBy: ["WEB-41"], waits, waitChain }))?.title;
+      expect(title?.startsWith(`${waitChainWords(waitChain, now)} · wait recorded `)).toBe(true);
+      expect(title).not.toContain("time unknown");
+    }
+    // A line that stops at the task waited on, with no hold, keeps the wait's own words.
+    const plain = say(
+      task({ activity: "idle", blockedBy: ["WEB-41"], waits, waitChain: { on: "WEB-41" } }),
+    );
+    expect(plain?.title).toMatch(/^WEB-41 · time unknown · wait recorded/);
   });
 });
 

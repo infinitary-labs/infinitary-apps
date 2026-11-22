@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { dateTimeFormat } from "./i18n/format.ts";
-import type { TaskStatusInput, TaskStatusReading } from "./taskPresentation";
+import { type TaskStatusInput, type TaskStatusReading, waitChainWords } from "./taskPresentation";
 
 /** Read-only standing facts; absent on older homes, empty when nothing stands. */
 export const taskWaitSchema = z.object({
@@ -16,7 +16,13 @@ export const taskWaitSchema = z.object({
 export type TaskWait = z.infer<typeof taskWaitSchema>;
 
 /** Self-contained so the sandboxed record uses exactly the same local-clock formatter. */
-export function taskWaitText(wait: TaskWait, now: number, detail = true, zone?: string): string {
+export function taskWaitText(
+  wait: TaskWait,
+  now: number,
+  detail = true,
+  zone?: string,
+  line?: NonNullable<TaskStatusInput["waitChain"]>,
+): string {
   const clock = (at: number) => {
     const date = new Date(at);
     const day = (value: number) =>
@@ -44,7 +50,12 @@ export function taskWaitText(wait: TaskWait, now: number, detail = true, zone?: 
   const event = wait.next
     ? `${words[wait.next.kind]}${wait.next.at <= now ? " was due" : ""} ${clock(wait.next.at)}`
     : "time unknown";
-  return `${detail ? `${wait.label} · ` : ""}${event}${detail && wait.since !== undefined ? ` · wait recorded ${clock(wait.since)}` : ""}`;
+  const recorded =
+    detail && wait.since !== undefined ? ` · wait recorded ${clock(wait.since)}` : "";
+  // A lone task wait whose line goes further, or ends in a hold, says where
+  // it stops in place of its label and unknown time, as the tile does (INF-5578).
+  if (line) return `${waitChainWords(line, now)}${recorded}`;
+  return `${detail ? `${wait.label} · ` : ""}${event}${recorded}`;
 }
 
 /** Group only names, never facts; a standing overdue event stays before a later event. */
@@ -85,6 +96,25 @@ export function taskWaitSummary(
 
 export const checksWait = (wait: TaskWait): boolean =>
   wait.kind === "checks" || wait.kind === "run";
+
+/**
+ * Where a lone task wait's line stops (`TaskView.waitChain`), only when that
+ * says more than the task waited on: a further task, a time or an app
+ * update (INF-5578). The board tile and the task card both name it.
+ */
+export function waitStopsOf(task: {
+  waits?: readonly TaskWait[];
+  waitChain?: TaskStatusInput["waitChain"];
+}): { wait: TaskWait; line: NonNullable<TaskStatusInput["waitChain"]> } | undefined {
+  const wait = task.waits?.length === 1 ? task.waits[0] : undefined;
+  const line = task.waitChain;
+  return wait?.kind === "dependency" &&
+    line &&
+    wait.label === line.on &&
+    (line.end !== undefined || line.until !== undefined || line.update)
+    ? { wait, line }
+    : undefined;
+}
 
 /** The record's existing attention box owns everything except checks and a lone job check-back. */
 export function recordAttentionWaits(task: {

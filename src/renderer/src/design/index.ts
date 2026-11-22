@@ -65,7 +65,7 @@ export {
   waitChainWords,
   waitRecordedTime,
 } from "@shared/taskPresentation";
-export { taskWaitSummary } from "@shared/taskWaits";
+export { taskWaitSummary, waitStopsOf } from "@shared/taskWaits";
 export { CARD_STACK_WIDTH, CardStack, type CardStackProps } from "./cards/CardStack";
 export { ResponseCard, type ResponseCardKind, type ResponseCardProps } from "./cards/ResponseCard";
 export { Badge, type BadgeProps, type BadgeTone } from "./core/Badge";

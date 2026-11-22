@@ -23,6 +23,7 @@ import {
   useMinute,
   waitChainWords,
   waitRecordedTime,
+  waitStopsOf,
 } from "@infinitary/ui";
 import {
   type CSSProperties,
@@ -1616,15 +1617,8 @@ function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
   if (!wait) return null;
   // A lone task wait names where its line stops and until when (INF-5578 finding 4),
   // only when that says more than the task it waits on: a further task, a time or an update.
-  const lone = task.waits?.length === 1 ? task.waits[0] : undefined;
-  const line = task.waitChain;
-  const chain =
-    lone?.kind === "dependency" &&
-    line &&
-    lone.label === line.on &&
-    (line.end !== undefined || line.until !== undefined || line.update)
-      ? waitChainWords(line, now)
-      : undefined;
+  const stops = waitStopsOf(task);
+  const chain = stops ? waitChainWords(stops.line, now) : undefined;
   return (
     <span className="fm-board-wait" data-board-wait="" id={`wait-${task.id}`}>
       <span className="fm-board-wait-head">

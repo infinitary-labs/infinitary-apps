@@ -219,6 +219,7 @@ A task-less first mate question offers explicit Decline beside Show the card; it
 
 Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528), its status naming where a lone wait's line stops (INF-5578).
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
+A lone dependency whose line goes further or ends in a hold names where it stops there, in the tile's words, before its recorded date (INF-5578).
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
 Unknown end times remain unknown, and a past event says was due rather than resumed.

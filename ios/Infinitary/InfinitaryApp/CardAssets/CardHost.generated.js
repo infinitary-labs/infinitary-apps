@@ -109322,6 +109322,119 @@ ${startersHtml()}`;
     storage: array(originStorageSchema),
     session: array(originStorageSchema).optional()
   });
+  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
+  const words = {
+    backlog: "Backlog",
+    queued: "Queued",
+    starting: "Starting",
+    working: "Working",
+    idle: "Idle",
+    interrupted: "Interrupted",
+    waiting: "Waiting on you",
+    done: "Done",
+    dropped: "Dropped"
+  };
+  function taskStatusOf(task, now = Date.now()) {
+    const reading = (mark, reason2) => ({
+      mark,
+      word: words[mark],
+      reason: reason2 === words[mark] ? "" : reason2
+    });
+    const connecting = task.place?.reach === "connecting";
+    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
+    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
+    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+    const awayReading = (mark, reason2) => ({
+      ...reading(mark, reason2 ?? awayWords),
+      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
+    });
+    if (task.status === "done") {
+      return reading(
+        "done",
+        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
+      );
+    }
+    if (task.status === "dropped") {
+      return reading(
+        "dropped",
+        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
+      );
+    }
+    if (task.requiredAction)
+      return reading(
+        "waiting",
+        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
+      );
+    if (task.answerNoteId)
+      return {
+        ...reading(
+          "waiting",
+          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
+        ),
+        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
+      };
+    if (task.waitingCardId) {
+      return reading(
+        "waiting",
+        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
+      );
+    }
+    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
+      return reading("starting", "");
+    }
+    if (task.status === "active" && task.backlogSince !== void 0) {
+      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
+    }
+    if (task.startNotice && (task.status === "open" || task.status === "active")) {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      return reading(mark, "Could not start");
+    }
+    if (task.status === "open") {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      if (task.queueWait) return reading(mark, task.queueWait.line);
+      const parts = task.children.total;
+      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
+      if (away) return awayReading(mark, holds);
+      return reading(
+        mark,
+        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
+      );
+    }
+    const waits = task.blockedBy ?? [];
+    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
+    const chain = task.status === "active" && task.waitChain && (dependency ? waits.length === 1 && waits[0] === task.waitChain.on : task.workPosture?.reason === "inactive" && !task.workPosture.atProvider) ? task.waitChain : void 0;
+    const reason = chain ? waitChainWords(chain, now) : dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
+    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
+      if (away) return awayReading("working", null);
+      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
+      if (wait === "checks" && task.workPosture?.batch)
+        return { ...reading("working", reason), wait: "batch" };
+      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
+    }
+    if (task.activity === "interrupted") return reading("interrupted", reason);
+    if (away) return awayReading("idle", null);
+    if (!dependency) return reading("idle", reason);
+    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
+    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
+  }
+  function dependencyWaitWords(blockedBy) {
+    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
+  }
+  function waitChainWords(chain, now = Date.now()) {
+    const { on, end } = chain;
+    if (chain.update) return end ? taskWaitChainUpdate({ on, end }) : taskWaitOnUpdate({ on });
+    if (chain.until !== void 0) {
+      const time2 = waitRecordedTime(chain.until, now);
+      return end ? taskWaitChainUntil({ on, end, time: time2 }) : taskWaitOnUntil({ on, time: time2 });
+    }
+    return end ? taskWaitChainVia({ on, end }) : taskWaitOn({ on });
+  }
+  function waitRecordedTime(at, now) {
+    const date2 = new Date(at);
+    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
+    if (date2.toDateString() === new Date(now).toDateString()) return time2;
+    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
+  }
   const taskWaitSchema = object({
     id: string(),
     kind: _enum(["dependency", "checks", "run", "job", "allowance", "start", "decision", "backlog"]),
@@ -111453,119 +111566,6 @@ ${startersHtml()}`;
   }
   function viewsOf(grant) {
     return (grant?.sql ?? []).join(",");
-  }
-  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
-  const words = {
-    backlog: "Backlog",
-    queued: "Queued",
-    starting: "Starting",
-    working: "Working",
-    idle: "Idle",
-    interrupted: "Interrupted",
-    waiting: "Waiting on you",
-    done: "Done",
-    dropped: "Dropped"
-  };
-  function taskStatusOf(task, now = Date.now()) {
-    const reading = (mark, reason2) => ({
-      mark,
-      word: words[mark],
-      reason: reason2 === words[mark] ? "" : reason2
-    });
-    const connecting = task.place?.reach === "connecting";
-    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
-    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
-    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
-    const awayReading = (mark, reason2) => ({
-      ...reading(mark, reason2 ?? awayWords),
-      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
-    });
-    if (task.status === "done") {
-      return reading(
-        "done",
-        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
-      );
-    }
-    if (task.status === "dropped") {
-      return reading(
-        "dropped",
-        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
-      );
-    }
-    if (task.requiredAction)
-      return reading(
-        "waiting",
-        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
-      );
-    if (task.answerNoteId)
-      return {
-        ...reading(
-          "waiting",
-          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
-        ),
-        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
-      };
-    if (task.waitingCardId) {
-      return reading(
-        "waiting",
-        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
-      );
-    }
-    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
-      return reading("starting", "");
-    }
-    if (task.status === "active" && task.backlogSince !== void 0) {
-      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
-    }
-    if (task.startNotice && (task.status === "open" || task.status === "active")) {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      return reading(mark, "Could not start");
-    }
-    if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      if (task.queueWait) return reading(mark, task.queueWait.line);
-      const parts = task.children.total;
-      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
-      if (away) return awayReading(mark, holds);
-      return reading(
-        mark,
-        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
-      );
-    }
-    const waits = task.blockedBy ?? [];
-    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
-    const chain = task.status === "active" && task.waitChain && (dependency ? waits.length === 1 && waits[0] === task.waitChain.on : task.workPosture?.reason === "inactive" && !task.workPosture.atProvider) ? task.waitChain : void 0;
-    const reason = chain ? waitChainWords(chain, now) : dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
-    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
-      if (away) return awayReading("working", null);
-      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
-      if (wait === "checks" && task.workPosture?.batch)
-        return { ...reading("working", reason), wait: "batch" };
-      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
-    }
-    if (task.activity === "interrupted") return reading("interrupted", reason);
-    if (away) return awayReading("idle", null);
-    if (!dependency) return reading("idle", reason);
-    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
-    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
-  }
-  function dependencyWaitWords(blockedBy) {
-    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
-  }
-  function waitChainWords(chain, now = Date.now()) {
-    const { on, end } = chain;
-    if (chain.update) return end ? taskWaitChainUpdate({ on, end }) : taskWaitOnUpdate({ on });
-    if (chain.until !== void 0) {
-      const time2 = waitRecordedTime(chain.until, now);
-      return end ? taskWaitChainUntil({ on, end, time: time2 }) : taskWaitOnUntil({ on, time: time2 });
-    }
-    return end ? taskWaitChainVia({ on, end }) : taskWaitOn({ on });
-  }
-  function waitRecordedTime(at, now) {
-    const date2 = new Date(at);
-    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
-    if (date2.toDateString() === new Date(now).toDateString()) return time2;
-    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
   }
   function recordBarOf(task) {
     if (task.status === "done") return null;

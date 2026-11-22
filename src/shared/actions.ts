@@ -798,7 +798,6 @@ const actionLines = {
             m.devicesSourceCardBody({ device: label, commit: shortCommit(source.commit) }),
             m.devicesSourceCardOnce({ device: label }),
             m.devicesSourceCardKeychain({ device: label }),
-            stops,
           ],
           label: m.devicesSourceCardMatch(),
           decline: m.devicesAppCardNotNow(),

@@ -470,8 +470,9 @@ it("words a source target as the app's own card, and refuses it for a computer t
   const offer = makeOffer({ deviceId: device.id }, [device], { platform: "darwin" });
   const card = sourceMatchCard({ deviceId: device.id, device: "Mac mini", commit });
   expect(offer.title).toBe(card.title);
-  for (const paragraph of offer.paragraphs.slice(0, 3))
-    expect(card.body).toContain(`<p>${paragraph}</p>`);
+  // Every paragraph is the card's own: none says its work stops only for a moment.
+  expect(offer.paragraphs).toHaveLength(3);
+  for (const paragraph of offer.paragraphs) expect(card.body).toContain(`<p>${paragraph}</p>`);
   expect(offer.label).toBe(card.actions[0]?.label);
   expect(offer.arrival).toEqual({ update: device.id });
   expect(() =>

@@ -331,6 +331,18 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
       github: { event_name: "issue_comment", event: { issue: { pull_request: { url: "u" } } } },
     },
   },
+  // The check-file flag (check-file-flag.yml, docs/public-ci.md "Outside
+  // contributors"): an outside pull request, and a run started by hand.
+  {
+    file: "check-file-flag.yml",
+    trigger: "Pull request",
+    scenario: { github: { event_name: "pull_request_target" } },
+  },
+  {
+    file: "check-file-flag.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
   // A batch pull request's run (batch-pull-request.yml), whose one job calls
   // batch-checks.yml on the pull request's version; its checks passed, so
   // its last job runs.

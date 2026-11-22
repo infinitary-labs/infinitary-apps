@@ -589,6 +589,8 @@ export async function startApp(
     app.setPath("userData", userDataChoice.dir);
   }
   const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
+  // pnpm dev on the person's own data folder: a run from source with nothing isolating it.
+  const sourceOnOwnData = !app.isPackaged && userDataChoice.kind === "flavor";
   // An isolated run is started from outside, which starts it again; only a person's app starts
   // itself again. A development one notes the words it would start with in the file
   // `INFINITARY_RELAUNCH_NOTE` names, so a journey starts what it asked for
@@ -599,7 +601,7 @@ export async function startApp(
     if (!isolatedUserDataDir) app.relaunch({ args, ...(execPath ? { execPath } : {}) });
     else if (relaunchNote) writeFileSync(relaunchNote, JSON.stringify(args));
   };
-  // The e2e that launches the dev flavor without an isolated dir still keeps
+  // The e2e that launches from source without an isolated dir still keeps
   // its window hidden (captain directive: e2e runs are windowless).
   const hideWindow =
     Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
@@ -939,7 +941,14 @@ export async function startApp(
         console.warn(`[app] the refused launch could not finish: ${(error as Error).message}`);
         app.quit();
       });
-    } else app.quit();
+    } else {
+      // One app writes a data folder: pnpm dev says in its terminal why it ended.
+      if (sourceOnOwnData)
+        console.warn(
+          `[data folder] Infinitary is already open on ${dataDir}; quit it to run this copy on your saved data.`,
+        );
+      app.quit();
+    }
   } else {
     // On a Windows PC, whose lock names no holder, a command holds a pipe of its own from once it
     // holds the lock until it ends, so a window launch refused the lock tells it from a window
@@ -1733,6 +1742,26 @@ export async function startApp(
       // another computer reads none, and ends below. Once a stop was asked, the stop alone ends
       // the run, with its own reason, after that disposal.
       if (windowless) deferCoreDisposal(app, () => shell.dispose());
+      // Before a run from source first opens the person's own record, and
+      // before any run whose build would migrate it past what the installed
+      // app opens, it keeps a copy to go back to
+      // (src/core/storage/sourceRunCopy.ts); beside a command,
+      // the command's first mate holds the record and this window opens none.
+      if (sourceOnOwnData && !besideRun) {
+        try {
+          const kept = keepRecordBeforeSourceRun(dataDir);
+          if (kept)
+            console.warn(
+              `[data folder] Kept a copy of your saved record from before this source run in ${kept}. To go back, quit Infinitary and copy its files back into ${dataDir}.`,
+            );
+        } catch (error) {
+          console.warn(
+            `[data folder] Could not keep a copy of your saved record: ${(error as Error).message}`,
+          );
+          app.quit();
+          return;
+        }
+      }
       try {
         await shell.start();
       } catch (error) {

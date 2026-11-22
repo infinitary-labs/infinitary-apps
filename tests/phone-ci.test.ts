@@ -178,6 +178,11 @@ function stepsThatRun(
 const RESULTS = "Keep native results and connection readings";
 const SAVE_PACKAGES = "Save the Swift packages from main";
 const KEEP_PASSES = "Keep the passes for a rerun of this job";
+// INF-6039's plan, part 1: a dealt request's first job builds and shares, its other jobs fetch; a call runs none of them.
+const BUILD_ONCE = "Build the app once for this check's jobs";
+const SHARE_BUILD = "Share the build with this check's other jobs";
+const FETCH_BUILD = "Fetch the build this check's first job shared";
+const SHARED_BUILD_STEPS = [BUILD_ONCE, SHARE_BUILD, FETCH_BUILD];
 // The steps a plain branch request skips: none since INF-2582, whose edited-part passes ride the
 // ordinary gate and its evidence.
 const SKIPPED_STEPS: string[] = [];
@@ -500,6 +505,7 @@ describe("the native gate on an affected request", () => {
             name !== SAVE_PACKAGES &&
             name !== KEEP_PASSES &&
             name !== "Restore the passes of this run's earlier attempts" &&
+            !SHARED_BUILD_STEPS.includes(name) &&
             !SKIPPED_STEPS.includes(name),
         ),
       );
@@ -727,6 +733,7 @@ describe("a failing phone check", () => {
           each.uses?.startsWith("actions/upload-artifact") &&
           workflowString(String(each.with?.name ?? ""), {
             inputs: {},
+            github: BRANCH_REQUEST,
             matrix: FULL_JOBS[1]!,
           }) === `${name}-job-2`,
       );
@@ -810,6 +817,42 @@ describe("the phone check on request", () => {
         }),
       ),
     ).toEqual(["every", "ipad", "duo", "iphone"].map((device) => [{ device, key: device }]));
+  });
+  // INF-6039's plan, part 1: only a dealt request's jobs share a build, the first job's, within their own run attempt; the
+  // gate then decides whether it may use it (tests/phone-build.test.ts). A call, the phone release's among them, builds
+  // in its gate as before.
+  it("shares the first job's build with the other jobs of its own run attempt, and only in a dealt request", () => {
+    const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
+    const ran = (matrix: Plain) =>
+      names(stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix)).filter((name) =>
+        SHARED_BUILD_STEPS.includes(name),
+      );
+    const [first = {}, ...others] = FULL_JOBS;
+    expect(ran(first)).toEqual([BUILD_ONCE, SHARE_BUILD]);
+    for (const job of others) expect(ran(job)).toEqual([FETCH_BUILD]);
+    for (const device of ["every", "ipad", "duo", "iphone"])
+      expect(ran({ device, key: device })).toEqual([]);
+    const named = (name: string, field: "name" | "pattern", attempt: string) =>
+      workflowString(String(steps.find((step) => step.name === name)?.with?.[field]), {
+        github: { ...BRANCH_REQUEST, run_attempt: attempt },
+      });
+    for (const attempt of ["1", "2"]) {
+      expect(named(SHARE_BUILD, "name", attempt)).toBe(`phone-build-${attempt}`);
+      expect(named(FETCH_BUILD, "pattern", attempt)).toBe(`phone-build-${attempt}`);
+    }
+    // Sharing is a saving only: a failed upload or download never fails the check.
+    for (const name of [SHARE_BUILD, FETCH_BUILD])
+      expect(steps.find((step) => step.name === name)).toHaveProperty("continue-on-error", true);
+    // The dealt gate reads the folder both steps use.
+    const folder = (name: string) =>
+      String(
+        steps.find((step) => step.name === name)?.with?.path ??
+          steps.find((step) => step.name === name)?.run,
+      );
+    for (const name of [SHARE_BUILD, FETCH_BUILD])
+      expect(folder(name)).toBe("${{ runner.temp }}/phone-build");
+    expect(folder(BUILD_ONCE)).toContain('--out "$RUNNER_TEMP/phone-build"');
+    expect(steps.find(isGate)?.run).toContain('--shared-build "$RUNNER_TEMP/phone-build"');
   });
 });
 

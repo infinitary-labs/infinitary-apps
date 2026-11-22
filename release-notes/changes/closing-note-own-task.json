@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "closing-note-own-task",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Dropped work gets its own note instead of reopening an unrelated card",
+      "body": "When your first mate drops work, the news now goes on a short note named for that work. Before, a card you had already answered about other work could come back with the drop written on it.",
+      "noPicture": "The closing note already exists; this changes which card carries the outcome, not how any card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

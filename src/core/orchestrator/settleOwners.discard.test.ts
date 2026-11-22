@@ -243,11 +243,11 @@ describe("CrewSupervisor", () => {
       expect(left(h.cards(), taskId)).toEqual([]);
     });
 
-    // INF-1533, the plan's at-most-one rule (INF-1610 piece 2): the captain
-    // closed the crewmate's answer note, then the first mate dropped the
-    // work. No closing note goes up; the note they accepted comes back
-    // revised with the drop and the first mate's sentence, once.
-    it("brings the answer the captain accepted back revised with a later drop, and adds no note (INF-1533)", async () => {
+    // INF-6115, the captain's pick "Its own note": the captain chose on
+    // the crewmate's answering card, then the first mate dropped the work.
+    // The card they chose on stays down; the drop is told once, on its own
+    // short note named for the dropped task, beside the answer they accepted.
+    it("keeps the answer the captain chose on down on a later drop, and tells it on one note of its own (INF-6115)", async () => {
       const h = await idleTask();
       await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for my choice.");
       await tick();
@@ -276,19 +276,19 @@ describe("CrewSupervisor", () => {
       );
       await tick();
       const up = h.cards().filter((card) => card.taskId === h.taskId);
-      expect(up.map((card) => ({ id: card.id, actions: card.actions }))).toEqual([
-        { id: answer.id, actions: [] },
+      expect(up.map((card) => ({ title: card.title, actions: card.actions }))).toEqual([
+        { title: closingNoteTitle(h.key, "dropped"), actions: [] },
       ]);
-      expect(up[0]?.body).toContain(closingNoteTitle(h.key, "dropped"));
+      expect(up[0]?.id).not.toBe(answer.id);
       expect(up[0]?.body).toContain(SENTENCE);
-      expect(up[0]?.body).toContain("The notice now reads");
+      // The message already has its answer, so the note is not marked as one.
+      expect(up[0]?.answering).toBeUndefined();
     });
 
     // INF-2718, from the captain's pick "Refuse re-showing a closed note"
     // and DOP-201's note raised again with its "dropped" line: an ordinary
     // note read through the actual corner stays down on a later drop, and
-    // no closing note goes up beside it. The decision case above still
-    // comes back, since what it offered is gone.
+    // no closing note goes up beside it.
     it("keeps a read note closed on a later drop, and adds no note (INF-2718)", async () => {
       const h = await idleTask();
       await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for me to read.");

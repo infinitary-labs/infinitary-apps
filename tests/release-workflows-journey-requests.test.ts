@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -34,33 +34,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       jobs: Record<string, { "runs-on": string; steps: Step[]; with?: Record<string, string> }>;
     };
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"):
-    // a request starts it, and this project's own pull request never does.
-    // The one call is an outside contributor's pull request, which cannot
-    // request a run (INF-5002's choice; docs/public-ci.md, "Outside contributors").
-    expect(Object.keys(journeys.on)).toEqual(["workflow_dispatch", "workflow_call"]);
-    const callers = readdirSync(join(root, ".github/workflows"))
-      .filter((file) => file.endsWith(".yml"))
-      .flatMap((file) =>
-        Object.entries(
-          (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, { uses?: string }> })
-            .jobs,
-        )
-          .filter(([, each]) => each.uses === "./.github/workflows/journeys.yml")
-          .map(([id]) => `${file}:${id}`),
-      );
-    expect(callers).toEqual(["contributors.yml:journeys"]);
-    const contributors = loadYamlFile(".github/workflows/contributors.yml") as {
-      jobs: Record<string, { if?: string }>;
-    };
-    const outside = (headRepo: string) =>
-      workflowValue(contributors.jobs.paths?.if ?? "", {
-        github: {
-          repository: "infinitary-labs/infinitary",
-          event: { pull_request: { head: { repo: { full_name: headRepo } } } },
-        },
-      });
-    expect(outside("infinitary-labs/infinitary")).toBe(false);
-    expect(outside("someone/infinitary")).toBe(true);
+    // only a request starts it; no pull request and no other workflow does,
+    // an outside contributor's pull request included (docs/public-ci.md,
+    // "Outside contributors": it runs the swept batch's full check instead).
+    expect(Object.keys(journeys.on)).toEqual(["workflow_dispatch"]);
     const job = journeys.jobs["affected-journeys"];
     // INF-2259: queued Linux proof keeps the chooser's exact source, not a
     // mutable branch that may advance before the job receives a runner.

@@ -276,8 +276,9 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     },
   },
   // An outside contributor's pull request (contributors.yml, docs/public-ci.md
-  // "Outside contributors"), whose change reaches journeys and the Windows
-  // installer, so both calls run under its trigger.
+  // "Outside contributors"), whose change reaches the Windows installer, so
+  // the batch's full check, the startup fixtures and the Windows build all
+  // run under its trigger.
   {
     file: "contributors.yml",
     trigger: "Pull request",
@@ -288,33 +289,7 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
         sha: "a".repeat(40),
         event: { pull_request: { head: { repo: { full_name: "someone/infinitary" } } } },
       },
-      needs: {
-        paths: {
-          ...pass,
-          outputs: {
-            base: "b".repeat(40),
-            journeys: "tests/e2e/critical-path.spec.ts",
-            windows: "true",
-          },
-        },
-        "choose-journeys": {
-          ...pass,
-          outputs: {
-            count: "1",
-            "linux-count": "1",
-            linux: JSON.stringify({
-              include: [
-                {
-                  lane: "desktop",
-                  files: "tests/e2e/critical-path.spec.ts",
-                  estimatedMs: 1,
-                  part: "1/1",
-                },
-              ],
-            }),
-          },
-        },
-      },
+      needs: { paths: { ...pass, outputs: { windows: "true" } } },
     },
   },
   // The contributor agreement check (contributor-agreement.yml, docs/public-ci.md

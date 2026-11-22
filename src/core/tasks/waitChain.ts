@@ -55,10 +55,22 @@ export function waitChainOf(input: {
   };
 }
 
-/** The change's recorded verdict came after this review opened (`TaskGraph.verdictReviewOf`). */
+/**
+ * The change's recorded verdict is this review's: given after it opened
+ * (`TaskGraph.verdictReviewOf`) and for the version it is assigned, the one
+ * the host accepts its verdict for (`reviews.ts`). In a later round the
+ * change still carries the earlier round's verdict, which answers nothing yet.
+ */
 const answered = (review: TaskRecord, change: TaskRecord) => {
   const at = change.delivery?.reviewedAt;
-  return change.delivery?.reviewVerdict !== undefined && at !== undefined && review.createdAt <= at;
+  const assigned = review.delivery?.headSha;
+  return (
+    change.delivery?.reviewVerdict !== undefined &&
+    at !== undefined &&
+    review.createdAt <= at &&
+    assigned !== undefined &&
+    change.delivery?.reviewSha === assigned
+  );
 };
 
 const isLive = (task: TaskRecord) => task.status === "open" || task.status === "active";

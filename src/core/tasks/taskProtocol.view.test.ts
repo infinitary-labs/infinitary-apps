@@ -672,10 +672,15 @@ describe("the task protocol (task-system P3)", () => {
     // A review that has not answered yet waits on nothing: it is stalled, not held by its change.
     expect(chain("review")).toBeUndefined();
     const review = tasks.get("review");
+    seedDelivery(tasks, "review", { headSha: "b".repeat(40) });
+    // A verdict from an earlier round, for another version, answers nothing yet.
     seedDelivery(tasks, "landing", {
       reviewVerdict: "pass",
+      reviewSha: "a".repeat(40),
       reviewedAt: (review?.createdAt ?? 0) + 1,
     });
+    expect(chain("review")).toBeUndefined();
+    seedDelivery(tasks, "landing", { reviewSha: "b".repeat(40) });
     // Its change, and the task that change waits on, which nothing holds.
     expect(chain("review")).toEqual({ on: key("landing"), end: key("docs") });
     // A read of a few rows, as the review's record card makes, names the same end as the board.

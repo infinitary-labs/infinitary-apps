@@ -142,15 +142,21 @@ extension PhoneJourney {
     private func verifyAnnotateAfterPaging(from lead: String, line: String, to title: String, words: String, editor: XCUIElement) {
         XCTAssertTrue(cardHeading(lead).waitForPresence(timeout: 10), "\(lead) is not the card shown first\n\(app.debugDescription)")
         waitForShownBodyRevealed()
-        // INF-6042: the first touch in a card body makes the app's first text responder, and UIKit then opens its
-        // keyboard connection, once per launch, holding the main thread: 0.57 s on a busy runner against 0.02 s on a
-        // quiet one. Paid inside the long press below, it started the selection after the 1.2 s hold had ended, so no
-        // menu came. A tap on the shown card's words pays it here, and XCTest waits for the main thread to idle before
-        // its next action, so the press starts with the connection open and the notes card stays untouched until it.
+        // INF-6042: the first long press in a card body sets up UIKit's keyboard tracking and opens its keyboard
+        // connection, once per launch, on the main thread; a tap does neither. On a busy runner that setup held the main
+        // thread 0.57 s, against 0.02 s on a quiet one, so the notes card's selection began after its 1.2 s hold had
+        // ended and no menu came. A long press on the shown card's words pays it here, and a tap beside its selection
+        // clears it. XCTest waits for the main thread to idle before each action, so the notes card's press starts
+        // with that setup done, and nothing on the notes card is touched before it.
         let shownLine = app.webViews.staticTexts[line].firstMatch
         XCTAssertTrue(shownLine.waitForPresence(timeout: 20), app.debugDescription)
         reveal(shownLine)
-        tapOnPhone(shownLine)
+        shownLine.press(forDuration: 1.2)
+        tapOnPhone(shownLine.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)), steady: shownLine)
+        let menuItem = app.menuItems.firstMatch, annotate = app.buttons["Annotate"]
+        let menuGone = NSPredicate { _, _ in !menuItem.exists && !annotate.exists }
+        XCTAssertEqual(waitForPhonePredicate(menuGone, object: nil, timeout: 10), .completed,
+                       "The shown card's selection menu stayed\n\(app.debugDescription)")
         let probe = app.descendants(matching: .any).matching(identifier: "card-row-probe").firstMatch
         let beside = NSPredicate { _, _ in probe.exists && probe.label.hasPrefix("beside drawn") }
         XCTAssertEqual(waitForPhonePredicate(beside, object: nil, timeout: 30), .completed,

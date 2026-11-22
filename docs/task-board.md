@@ -194,7 +194,7 @@ Desktop kanban tiles replace their generic status reason with grouped standing w
 A tile whose one wait is a task whose line goes further or ends in a hold shows where that line stops in place of the event (`TaskView.waitChain`).
 The Tasks list and board list rows retain their existing presentation.
 Kanban columns keep their existing minimum and expand to the recorded event’s intrinsic width, using horizontal scrolling rather than clipping the time or shrinking text; where a line stops wraps instead, so a long key never widens the column.
-The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528).
+The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
 Only recorded events carry clock times: next read, check-back, reset or start time.

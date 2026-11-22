@@ -417,7 +417,7 @@ Once the record's read answers, the whole projection is that read's, the same on
 
 | Line | Content | Source |
 | --- | --- | --- |
-| first | task key, the shared status mark and word with its short reason, never a wait's wording or time; wrapping when long | `tasks.board`, then `tasks.detail`: `taskStatusOf` |
+| first | task key, the shared status mark and word with its short reason, never a wait's recorded time, a lone wait naming where its line stops and that task's hold; wrapping when long | `tasks.board`, then `tasks.detail`: `taskStatusOf` |
 | BLOCKED BY | each standing blocker's key; its recorded and end times are the record's | `tasks.board` `waits` (`dependency`), else `blockedBy` |
 | TASK | the task's title, wrapping in full | `tasks.board`, then `tasks.detail` |
 | PROJECT | the project's display name, wrapping, under Task; absent when the board has no name for it | the Tasks row's own lookup, `projectNameOf`: `tasks.board` `projects` by `projectId`, else empty |

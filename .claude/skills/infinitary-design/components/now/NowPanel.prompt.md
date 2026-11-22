@@ -169,7 +169,7 @@ Starting is a still open ring, cyan on the arc and neutral on the rest, with no 
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.
 Tooltips and accessible labels say the status followed by its reason.
-The summary shows the status's own short reason, the Tasks row's, and never a wait's wording or any time (INF-2528); the record shows a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in its existing Checks or hold fields; posture phrases never become extra statuses.
+The summary shows the status's own short reason, the Tasks row's, and never a wait's recorded time (INF-2528), except that a lone wait names where its line stops and that task's hold, its time included (INF-5578, kept by the captain since the Tasks row shows no reason); the record shows a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in its existing Checks or hold fields; posture phrases never become extra statuses.
 Closed lifecycle wins over old activity; a reachable ready decision wins over activity on live work; evidenced continuing work wins over interruption, otherwise interruption wins over idle.
 Unknown or paused posture stays Idle with an honest reason, never Working.
 Stage geometry and color remain unchanged.
@@ -285,7 +285,7 @@ Click or Enter brings back that task’s minimized cards with keyboard focus at 
 
 ## Recorded wait details
 
-Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528).
+Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528), its status naming where a lone wait's line stops (INF-5578).
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.

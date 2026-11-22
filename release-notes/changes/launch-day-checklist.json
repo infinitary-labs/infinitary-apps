@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "launch-day-checklist",
+      "reason": "Internal: a docs page orders the steps for making the project public; nothing in the app changes."
+    }
+  ]
+}

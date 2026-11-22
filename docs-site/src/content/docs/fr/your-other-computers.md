@@ -1,5 +1,5 @@
 ---
-source: d29b96f163790a41
+source: 74a47dce3e95b0a3
 title: Vos autres ordinateurs
 description: Ajoutez vos autres ordinateurs pour piloter votre second depuis n’importe lequel d’entre eux, leur confier le travail de vos projets et garder une copie capable de prendre le relais.
 ---
@@ -27,22 +27,33 @@ Pendant qu’il est en veille ou hors de portée :
 
 1. Sur l’ordinateur où vit votre second, ouvrez Réglages → **Appareils**.
 2. Appuyez sur **+ Un ordinateur**.
-3. Choisissez l’une des trois façons.
-   Chacune ajoute le même type d’ordinateur.
+3. Tapez l’adresse de l’autre ordinateur et appuyez sur **L’ajouter**.
 
-**Coller un lien dans Infinitary, là-bas.**
+Ajouter un ordinateur par son adresse est la façon de commencer : cet ordinateur tient ensuite l’autre à jour et le joint de lui-même, sans visite là-bas après la configuration.
+Tapez l’adresse que vous utilisez avec SSH pour l’autre ordinateur, comme `you@mini.local`.
+Session à distance doit y être activée ; sous Linux, son serveur SSH.
+Les ordinateurs du même réseau sont listés sous **Sur ce réseau**, pour que vous puissiez en choisir un.
+Vous pouvez aussi demander à votre second d’ajouter un ordinateur, et il recommande l’adresse.
+
+Sur un nouveau Mac ou un nouvel ordinateur Linux x64, le premier lancement d’Infinitary affiche l’adresse à taper : choisissez **Configurer depuis l’ordinateur de votre second**.
+Il affiche d’abord l’adresse de cet ordinateur sur le réseau privé, comme celle de Tailscale, puis son adresse sur le réseau local, chacune avec **Copier**.
+Une fois que l’ordinateur où vit votre second l’a ajouté, cette fenêtre ouvre votre second d’elle-même, tant que rien n’y a encore été configuré.
+Une fenêtre où vous vous êtes déjà connecté, avez ajouté un projet ou parlé à son second garde son propre second, tout comme une fenêtre à côté d’un Infinitary que vous avez lancé vous-même depuis Terminal.
+Un PC Windows et un ordinateur Linux Arm rejoignent plutôt avec **Coller son lien**.
+
+Sous l’adresse, **Impossible d’y activer la Session à distance ?** propose deux autres façons.
+Chacune ajoute le même type d’ordinateur.
+
+**Coller un lien dans Infinitary là-bas**, quand vous êtes devant cet ordinateur, ou que c’est un PC Windows.
 Copiez le lien, puis ouvrez Infinitary pour la première fois sur l’autre ordinateur.
 Sous **Votre second est sur un autre ordinateur**, choisissez **Coller son lien**, collez-le et appuyez sur **Continuer**.
 Infinitary demande une fois s’il faut piloter votre second depuis là ; appuyez sur **Le contrôler d’ici**.
 
-**Exécuter une commande là-bas.**
+**Exécuter une commande là-bas**, quand vous pouvez taper dans Terminal là-bas mais que Session à distance est désactivée.
 Copiez la commande et exécutez-la une fois dans Terminal sur l’autre ordinateur, sous l’utilisateur qui doit exécuter son travail.
 Elle récupère Infinitary depuis cet ordinateur, les deux doivent donc être sur le même réseau.
 
-**Par son adresse.**
-Tapez l’adresse que vous utilisez avec SSH pour l’autre ordinateur, comme `you@mini.local`.
-Session à distance doit y être activée ; sous Linux, son serveur SSH.
-Les ordinateurs du même réseau sont listés sous **Sur ce réseau**, pour que vous puissiez en choisir un.
+Quand votre second vit sur un PC Windows, **+ Un ordinateur** ne propose que le lien et la commande.
 
 Un lien ou une commande fonctionne une fois, pendant dix minutes, et vous pouvez appuyer sur **L’arrêter** avant.
 Vous pouvez aussi rejoindre depuis l’autre ordinateur : à son premier lancement, choisissez **Rejoindre par son adresse** et tapez l’adresse de l’ordinateur où vit votre second.

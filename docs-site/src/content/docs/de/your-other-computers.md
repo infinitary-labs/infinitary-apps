@@ -1,5 +1,5 @@
 ---
-source: d29b96f163790a41
+source: 74a47dce3e95b0a3
 title: Deine anderen Computer
 description: Füge deine anderen Computer hinzu, damit du deinen ersten Offizier von jedem aus steuern kannst, sie die Arbeit deiner Projekte ausführen lassen kannst und eine Kopie behältst, die übernehmen kann.
 ---
@@ -27,22 +27,33 @@ Solange er schläft oder außer Reichweite ist:
 
 1. Öffne auf dem Computer, auf dem dein erster Offizier lebt, die Einstellungen → **Geräte**.
 2. Drück **+ Einen Computer**.
-3. Wähl einen von drei Wegen.
-   Jeder Weg fügt dieselbe Art von Computer hinzu.
+3. Tipp die Adresse des anderen Computers ein und drück **Hinzufügen**.
 
-**Einen Link dort in Infinitary einfügen.**
+Einen Computer über seine Adresse hinzuzufügen ist der Weg für den Anfang: Dieser Computer hält den anderen dann aktuell und erreicht ihn von selbst, ohne dass du nach der Einrichtung dorthin musst.
+Tipp die Adresse ein, die du mit SSH für den anderen Computer benutzt, etwa `you@mini.local`.
+Dort muss die „Entfernte Anmeldung“ aktiviert sein; unter Linux sein SSH-Server.
+Computer im selben Netzwerk stehen unter **In diesem Netzwerk**, du kannst also einen auswählen.
+Du kannst auch deinen ersten Offizier bitten, einen Computer hinzuzufügen, und er empfiehlt die Adresse.
+
+Auf einem neuen Mac oder x64-Linux-Computer zeigt der erste Start von Infinitary die Adresse, die du eintippst: Wähl **Vom Computer deines ersten Offiziers einrichten**.
+Es zeigt zuerst die Adresse dieses Computers im privaten Netzwerk, etwa die von Tailscale, dann seine Adresse im lokalen Netzwerk, jeweils mit **Kopieren**.
+Sobald der Computer, auf dem dein erster Offizier lebt, ihn hinzufügt, öffnet jenes Fenster deinen ersten Offizier von selbst, solange darin noch nichts eingerichtet wurde.
+Ein Fenster, in dem du dich schon angemeldet, ein Projekt hinzugefügt oder mit seinem ersten Offizier gesprochen hast, behält seinen eigenen ersten Offizier, und ebenso ein Fenster neben einem Infinitary, das du selbst im Terminal gestartet hast.
+Ein Windows-PC und ein Arm-Linux-Computer treten stattdessen mit **Link einfügen** bei.
+
+Unter der Adresse bietet **Kannst du dort „Entfernte Anmeldung“ nicht aktivieren?** zwei andere Wege.
+Jeder fügt dieselbe Art von Computer hinzu.
+
+**Einen Link dort in Infinitary einfügen**, wenn du an jenem Computer bist oder er ein Windows-PC ist.
 Kopier den Link und öffne dann Infinitary auf dem anderen Computer zum ersten Mal.
 Wähl unter **Dein erster Offizier ist auf einem anderen Computer** die Option **Link einfügen**, füg den Link ein und drück **Weiter**.
 Infinitary fragt einmal, ob du deinen ersten Offizier von dort aus steuern willst; drück **Von hier aus steuern**.
 
-**Dort einen Befehl ausführen.**
+**Dort einen Befehl ausführen**, wenn du dort im Terminal tippen kannst, aber die „Entfernte Anmeldung“ aus ist.
 Kopier den Befehl und führ ihn einmal im Terminal auf dem anderen Computer aus, als der Benutzer, der dessen Arbeit ausführen soll.
 Er holt Infinitary von diesem Computer, daher brauchen beide dasselbe Netzwerk.
 
-**Über seine Adresse.**
-Tipp die Adresse ein, die du mit SSH für den anderen Computer benutzt, etwa `you@mini.local`.
-Dort muss die „Entfernte Anmeldung“ aktiviert sein; unter Linux sein SSH-Server.
-Computer im selben Netzwerk stehen unter **In diesem Netzwerk**, du kannst also einen auswählen.
+Wenn dein erster Offizier auf einem Windows-PC lebt, bietet **+ Einen Computer** nur den Link und den Befehl an.
 
 Ein Link oder Befehl funktioniert einmal, zehn Minuten lang, und du kannst vorher **Stoppen** drücken.
 Du kannst auch vom anderen Computer aus beitreten: Wähl beim ersten Start **Über die Adresse beitreten** und tipp die Adresse des Computers ein, auf dem dein erster Offizier lebt.

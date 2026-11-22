@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
-import { folderHolder, holderAlive, processAlive } from "../helper/lock";
+import { folderHolder, processAlive } from "../helper/lock";
 import { isWordState } from "@shared/wordProfiles";
 import { assertSavedDataCompatible } from "../storage/db";
 import {

@@ -163,7 +163,7 @@ Each takes three filters: the repository as owner/name, which is required; the w
 A GitHub Enterprise row tells the same two; GitLab's tells none.
 A rule looks every two minutes through the app's GitHub sign-in (`GithubGatewayService.readForLook`), the host's own read on its tick as the run watch's is, so it spends no task's or the first mate's call allowance; a look that cannot read throws, and the rule keeps its place.
 Its cursor is the moment it listens from: each look lists the repository's runs created since then, and the cursor moves to the oldest matching run still going, so a run is read again until it is told, or else to the newest run listed.
-A run that fails is told once by its id, at its first failed job while it still runs or when it ends failed, timed out or unable to start; a run that finishes is told once when it ends, whatever its conclusion.
+A run that fails is told once by its id, at its first failed job while it still runs or when it ends failed, timed out or unable to start, or cancelled with a failed or timed-out job in its latest attempt, as a run that stops its own jobs at a failure ends; a run cancelled with no failed job is not told; a run that finishes is told once when it ends, whatever its conclusion.
 Runs from a fork are left out.
 Each item's summary carries the run's typed facts from GitHub's answers: its id, workflow and file, repository, branch, event, attempt and version, its state or conclusion, each failed job with its first failed step, the newest passing run of the same workflow on the same branch with its version when this one did not pass, and its page.
 It never carries a commit message.

@@ -43,7 +43,7 @@ type StandInRun = {
   head_sha: string;
   event: string;
   status: "queued" | "in_progress" | "completed";
-  conclusion: "success" | "failure" | null;
+  conclusion: "success" | "failure" | "cancelled" | null;
   workflow_id: number;
   html_url: string;
   created_at: string;
@@ -95,7 +95,7 @@ const red = (ended: boolean) =>
 
 const job = (
   name: string,
-  conclusion: "success" | "failure" | "skipped" | null,
+  conclusion: "success" | "failure" | "skipped" | "cancelled" | null,
   step?: string,
 ) => ({
   name,
@@ -123,6 +123,56 @@ const RED_JOBS_ENDED = [
   ),
   job("Verify signed installer and updater", "skipped"),
   job("linux-checks", "success"),
+];
+
+/**
+ * Merge batch run 33 on Nov 21, which stopped its own jobs once a test
+ * group failed again: GitHub ended it cancelled with three failed jobs.
+ */
+const STOPPED_ID = 44963568384;
+const STOPPED = run(STOPPED_ID, {
+  name: "batch",
+  path: ".github/workflows/batch-pull-request.yml",
+  head_branch: "infinitary-batch/73a07a49",
+  head_sha: "ca1f10d1c1eb0ba55521a9ff808986c643b2352c",
+  event: "pull_request",
+  conclusion: "cancelled",
+  workflow_id: 424213309,
+  created_at: "2026-11-21T23:48:25Z",
+});
+const GROUP = "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch ·";
+const STOPPED_JOBS = [
+  job(
+    `${GROUP} Integration tests (Linux; group 1/2)`,
+    "failure",
+    'Run pnpm test $PROJECTS --shard="$SHARD/$SHARDS"',
+  ),
+  job(
+    `${GROUP} Integration tests (Linux; group 2/2)`,
+    "cancelled",
+    'Run pnpm test $PROJECTS --shard="$SHARD/$SHARDS"',
+  ),
+  job("Merge batch · Batch checks / Merge batch · Code checks (Linux)", "success"),
+];
+/** A branch's ci run on Nov 22, cancelled by its branch's next push with no failed job. */
+const SUPERSEDED = run(44985522751, {
+  name: "ci",
+  path: ".github/workflows/ci.yml",
+  head_branch: "inf/ssh-address-default-add-computer-247f",
+  head_sha: "ee9b2a33cae700abccc6fd6269e910a5b83bb53d",
+  event: "push",
+  conclusion: "cancelled",
+  workflow_id: 424213310,
+  created_at: "2026-11-22T04:32:43Z",
+});
+const SUPERSEDED_JOBS = [
+  job("Branch push · Code checks (Linux)", "success"),
+  job(
+    "Branch push · Tests a change reaches (Linux)",
+    "cancelled",
+    "Unit, integration and browser tests that read a changed file",
+  ),
+  job("Manual request · Unit tests (Linux)", "skipped"),
 ];
 
 const cleanup: (() => Promise<void> | void)[] = [];
@@ -154,9 +204,9 @@ async function setup() {
       json({ total_count: workflow_runs.length, workflow_runs });
     };
     const jobs = url.pathname.match(/\/actions\/runs\/(\d+)\/jobs$/);
+    const workflow = url.pathname.match(/^\/repos\/[^/]+\/[^/]+\/actions\/workflows\/(\d+)\/runs$/);
     if (url.pathname === `/repos/${REPO}/actions/runs`) listed(github.runs);
-    else if (url.pathname === `/repos/${REPO}/actions/workflows/${VERIFY}/runs`)
-      listed(github.runs.filter((r) => r.workflow_id === VERIFY));
+    else if (workflow) listed(github.runs.filter((r) => r.workflow_id === Number(workflow[1])));
     else if (jobs) {
       const all = github.jobs.get(Number(jobs[1])) ?? [];
       json({ total_count: all.length, jobs: all });
@@ -313,6 +363,21 @@ describe("GitHub's workflow run events (INF-2146)", () => {
     );
     await tick();
     expect(served()).toEqual([]);
+  });
+
+  it("tells a run cancelled after a job failed, as one that stops its own jobs ends, and not one cancelled with none", async () => {
+    const { github, tick, served, rule } = await setup();
+    rule("workflow_run_failed", { repository: REPO });
+    await tick();
+    github.runs.unshift(SUPERSEDED, STOPPED);
+    github.jobs.set(STOPPED.id, STOPPED_JOBS);
+    github.jobs.set(SUPERSEDED.id, SUPERSEDED_JOBS);
+    await tick();
+    expect(served()).toHaveLength(1);
+    expect(served()[0]).toContain(
+      `Run ${STOPPED_ID} of workflow "batch" (.github/workflows/batch-pull-request.yml) in ${REPO} on branch infinitary-batch/73a07a49, from pull_request: ended cancelled, attempt 1, at version ${STOPPED.head_sha}. Failed jobs: ${STOPPED_JOBS[0]?.name} at step "${STOPPED_JOBS[0]?.steps[0]?.name}".`,
+    );
+    expect(served()[0]).not.toContain(String(SUPERSEDED.id));
   });
 
   it("tells a finished run once it ends, whatever its conclusion, holding its place while it runs", async () => {

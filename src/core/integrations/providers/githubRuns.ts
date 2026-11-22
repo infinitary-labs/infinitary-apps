@@ -23,7 +23,7 @@ export const GITHUB_RUN_EVENTS: readonly IntegrationEventSpec[] = [
     name: WORKFLOW_RUN_FAILED,
     label: "A workflow run fails",
     description:
-      "A GitHub Actions run in the repository fails: told once per run, at its first failed job while it still runs, or when it ends failed, timed out or unable to start. Filter by workflow (its name, its file such as build.yml, or the file without .yml) and branch. The summary carries the run's id, workflow, branch, event, attempt, version, each failed job with its failed step, the newest passing run of that workflow on that branch and its version, and the run's page. Runs from a fork are left out.",
+      "A GitHub Actions run in the repository fails: told once per run, at its first failed job while it still runs, or when it ends failed, timed out or unable to start, or cancelled after a job failed. Filter by workflow (its name, its file such as build.yml, or the file without .yml) and branch. The summary carries the run's id, workflow, branch, event, attempt, version, each failed job with its failed step, the newest passing run of that workflow on that branch and its version, and the run's page. Runs from a fork are left out.",
     every: 2,
     filters: FILTERS,
   },
@@ -178,8 +178,15 @@ export async function lookForRuns(
       continue;
     }
     if (ended) {
-      if (!FAILED.has(run.conclusion ?? "")) continue;
-      items.push(await told(read, base, run, await failedJobs(read, base, run.id), ended));
+      // A run that stops its own jobs once one fails, such as a merge
+      // batch's or an alpha cut's, ends cancelled: its failed job still
+      // makes it a failed run. One cancelled with no failed job is not.
+      if (FAILED.has(run.conclusion ?? "")) {
+        items.push(await told(read, base, run, await failedJobs(read, base, run.id), ended));
+      } else if (run.conclusion === "cancelled") {
+        const jobs = await failedJobs(read, base, run.id);
+        if (jobs.length > 0) items.push(await told(read, base, run, jobs, ended));
+      }
       continue;
     }
     // A run still going is told at its first failed job.

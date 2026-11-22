@@ -1,9 +1,14 @@
 {
-  "entries": [],
-  "exclusions": [
+  "entries": [
     {
-      "id": "stop-alpha-cut-at-first-failure",
-      "reason": "Internal: an alpha cut, rehearsals included, stops its other release checks about two minutes after its first failed check instead of running them to their end; the app itself is unchanged."
+      "id": "workflow-run-fails-cancelled",
+      "kind": "fix",
+      "area": "other",
+      "title": "An Automation rule on a failed GitHub workflow run also hears a run that stopped itself",
+      "body": "A GitHub Actions run that stops its other jobs once one fails can end as cancelled instead of failed. An Automation rule on \"A workflow run fails\" now hears such a run, naming its failed jobs. A run cancelled with no failed job, such as one a newer push replaced, is still left out.",
+      "noPicture": "This changes when an existing Automation event fires and what it reports; no screen changes.",
+      "provenance": { "origin": "change" }
     }
-  ]
+  ],
+  "exclusions": []
 }

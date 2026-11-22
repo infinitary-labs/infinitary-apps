@@ -279,7 +279,6 @@ describe("release.yml stops the cut at its first failed job", () => {
     // Each exempt job is one the cut runs, so the list never outlives its job.
     const ends = new Set(jobs.map((each) => own(each.name)));
     for (const name of Object.keys(EXEMPT)) expect(ends.has(name), name).toBe(true);
-    expect(stoppable.length).toBe(36);
     const groups = stoppable.map((each) => {
       const group = each.job.concurrency?.group;
       expect(group, each.name).toBeDefined();

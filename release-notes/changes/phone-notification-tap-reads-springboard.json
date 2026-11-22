@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-notification-tap-reads-springboard",
+      "reason": "Phone check only: a tap on a notification while the app is in the background reads the screen from the home screen instead of the app, so the homes and push parts no longer stall; nothing a person using the app notices."
+    }
+  ]
+}

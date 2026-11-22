@@ -44,6 +44,40 @@ const picture = (name: string) => test.info().outputPath(`${name}.png`);
 const openTitles = async (page: LaunchedApp["page"]) =>
   (await page.evaluate(() => window.infinitary.cards.list())).map((card) => card.title);
 
+/**
+ * What a card's stage part drew (INF-5609: the first-run cards show the
+ * center's own first mate and crew, smaller): for each canvas under the
+ * host, how many of its pixels hold paint and a digest of them, so two reads
+ * apart show whether the drawing moves.
+ */
+const stageReading = (host: ReturnType<ReturnType<typeof cardBody>["locator"]>) =>
+  host.locator("canvas").evaluateAll((canvases) =>
+    (canvases as HTMLCanvasElement[]).map((canvas) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx || canvas.width === 0 || canvas.height === 0) return { painted: 0, digest: 0 };
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let painted = 0;
+      let digest = 0;
+      for (let i = 3; i < data.length; i += 4) {
+        const alpha = data[i] ?? 0;
+        if (alpha > 0) painted++;
+        digest = (digest * 31 + alpha + (data[i - 1] ?? 0)) % 1_000_000_007;
+      }
+      return { painted, digest };
+    }),
+  );
+
+/** As many of the host's canvases as `painted` hold paint, and a later read differs: it is live. */
+async function expectLiveStage(host: Parameters<typeof stageReading>[0], painted: number) {
+  await expect
+    .poll(async () => (await stageReading(host)).filter((c) => c.painted > 0).length)
+    .toBe(painted);
+  const first = (await stageReading(host)).map((c) => c.digest).join();
+  await expect
+    .poll(async () => (await stageReading(host)).map((c) => c.digest).join())
+    .not.toBe(first);
+}
+
 const launch = (profile?: { userDataDir: string; homeDir: string }) =>
   launchApp({
     withMockProvider: true,
@@ -74,6 +108,10 @@ test("a new person's first crewmate shows its note once, in place of the welcome
       await aside.getByRole("button", { name: "Submit" }).click();
       await expect(input).toBeEnabled();
       await expect(shownCard(page, WELCOME_TITLE)).toBeVisible();
+      // The welcome's picture draws the live first mate in place of its still.
+      const welcome = cardBody(page, WELCOME_TITLE);
+      await expectLiveStage(welcome.locator('[data-inf-stage="firstmate"]'), 1);
+      await expect(welcome.locator('[data-part="firstmate"][data-inf-stage-still]')).toBeHidden();
     });
 
     let noteId = "";
@@ -100,6 +138,13 @@ test("a new person's first crewmate shows its note once, in place of the welcome
       const body = cardBody(page, FIRST_CREWMATE_TITLE);
       await expect(body.locator('[data-part="now"]')).toBeVisible();
       await expect(body.locator('[data-part="later"]')).toBeVisible();
+      // The send-off stage draws the first mate between a crew layer behind
+      // it and one in front, the crewmate on one of them at a time, and the
+      // Now panel's crewmate is live in place of its still.
+      await expect(body.locator('[data-inf-stage="sendoff"] canvas')).toHaveCount(3);
+      await expectLiveStage(body.locator('[data-inf-stage="sendoff"]'), 2);
+      await expectLiveStage(body.locator('[data-inf-stage="crewmate"]'), 1);
+      await expect(body.locator("[data-inf-stage-still]")).toBeHidden();
       await stageAtRest(page);
       await windowShot(page, picture("1-note"));
     });

@@ -16,8 +16,25 @@ const TITLE: Said = said("firstCrewmateTitle");
 /** The title in English, as the record keeps it. */
 export const FIRST_CREWMATE_TITLE = englishOf(TITLE);
 
-/** A small crewmate, the tetrahedron the stage draws, as a still. */
-const CREWMATE_GLYPH = `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="flex:none"><path d="M16 4L5 22L19 28L27 18Z M16 4L19 28" style="fill:none;stroke:var(--hot);stroke-width:1.4;stroke-linejoin:round"/><path d="M5 22L27 18" style="fill:none;stroke:var(--hot);stroke-width:1.1;stroke-dasharray:2 3;opacity:.6"/></svg>`;
+/**
+ * The stage part (`APP_ONLY_PARTS`, ./appParts; INF-5609's approved plan):
+ * the home stage's own first mate and crewmate, drawn by the center's
+ * painters, calm, in the marks below. A reader without the part shows the
+ * stills marked `data-inf-stage-still` instead, and never the stage above
+ * the panels, which stays `hidden`. Its reference sits inside the stage's
+ * figure, so the note stays prose (`isPreviewBody`, ./cards).
+ */
+const STAGE_PART = '<script data-inf-part="stage"></script>';
+
+/** The Now panel's crewmate: the real one at 40 px, turning, over its still. */
+const CREWMATE_GLYPH = `<div style="position:relative;width:40px;height:40px;flex:none"><svg data-inf-stage-still viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="display:block;margin:4px"><path d="M16 4L5 22L19 28L27 18Z M16 4L19 28" style="fill:none;stroke:var(--hot);stroke-width:1.4;stroke-linejoin:round"/><path d="M5 22L27 18" style="fill:none;stroke:var(--hot);stroke-width:1.1;stroke-dasharray:2 3;opacity:.6"/></svg><div data-inf-stage="crewmate" aria-hidden="true" style="position:absolute;inset:0"></div></div>`;
+
+/**
+ * The send-off, above the panels: the first mate sends the crewmate out to
+ * its orbit once as the note first shows, and the crewmate then orbits. The
+ * captain's size: 180 px wide, at most the card's width.
+ */
+const SENDOFF_STAGE = `<figure data-inf-stage="sendoff" hidden aria-hidden="true" style="width:180px;max-width:100%;aspect-ratio:3/2;margin:var(--space-3) auto 0">${STAGE_PART}</figure>`;
 
 /** A card with lines on it, in the accent: what comes back. */
 const CARD_GLYPH = `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="flex:none"><rect x="6" y="3" width="20" height="26" rx="3" style="fill:none;stroke:var(--accent);stroke-width:1.4"/><path d="M10 11h12M10 16h12M10 21h7" style="stroke:var(--accent);stroke-width:1.4"/></svg>`;
@@ -29,8 +46,9 @@ const LABEL =
 const panel = (glyph: string, label: Said, first: Said, second: Said, look: string, part: string) =>
   `<div data-part="${part}" style="flex:1 1 200px;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-s);${look}">${glyph}<div>${saidMark(label, "div", LABEL)}${saidMark(first, "div", 'style="color:var(--fg-1)"')}${saidMark(second, "div", 'style="color:var(--fg-2)"')}</div></div>`;
 
-/** The note's body: the handoff, a picture of now and later, then what needs the person. */
+/** The note's body: the handoff, the send-off, a picture of now and later, then what needs the person. */
 export const FIRST_CREWMATE_BODY = `${cardWordsMark([TITLE])}${saidMark(said("firstCrewmateHandoff"), "p")}
+${SENDOFF_STAGE}
 <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:var(--space-2);margin:var(--space-3) 0">${panel(
   CREWMATE_GLYPH,
   said("firstCrewmateNow"),

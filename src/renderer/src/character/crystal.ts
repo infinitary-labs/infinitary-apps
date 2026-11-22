@@ -9,7 +9,7 @@ import { clamp01, easeInOut } from "./face";
 // answer one band comes back down while the form unfolds.
 //
 // Crystal is a PARAMETER over the working state, like busy - never a state
-// (the machine carries it and never acts on it). Firstmate.tsx owns the
+// (the machine carries it and never acts on it). firstmatePainter.ts owns the
 // easing (`k`), the tesseract projection and the halo; this module owns the
 // crystal's geometry, its edges and its light, and hands the host the
 // restyle it needs. The light is cool white (accent mixed toward white) and

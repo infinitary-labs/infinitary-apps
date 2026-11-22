@@ -10,7 +10,7 @@ import { clamp01, easeInOut, TAU } from "./face";
 //
 // Folding is a PARAMETER over the working state, like busy and the crystal -
 // never a state (the machine carries it and never acts on it), so the
-// canvas's aria-label stays the state name. Firstmate.tsx owns the gate
+// canvas's aria-label stays the state name. firstmatePainter.ts owns the gate
 // (attention and emotes ease the cinch out; it comes back if the shortening
 // is still running), the projection and the halo; this module owns the
 // envelope, the motes and the ring, and hands the host the restyle it needs.

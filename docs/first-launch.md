@@ -74,9 +74,9 @@ The captain's redesign of 2026-10-06 (FI3-1164, direction C, the interactive pre
 This one introductory note is explicitly allowed to suggest a starter without footer actions; other cards retain the normal action rule.
 
 The note is titled “How we work”, and everything in it is app copy in `src/shared/welcome.ts`, never a model's.
-Its body is a picture of the window, 520 by 190 units drawn at its pixel width, that shows one part per press, each with its words inside the picture beside the thing it names; no sentence sits above or below the picture.
+Its body is a picture of the window, 520 by 212 units drawn at its pixel width, that shows one part per press, each with its words inside the picture beside the thing it names; no sentence sits above or below the picture.
 
-1. At rest: the first mate, drawn the way the real character draws itself - the tesseract projected the same way, wires shaded from the far cell to the near one, a faint glow, and its two soft-light eyes, a little larger and closer than the real ones, each with a highlight - large in the middle over the lit message box, and under the box “Type what you want done in the message box under this card.”
+1. At rest: the first mate, large in the middle over the lit message box, and under the box “Type what you want done in the message box under this card.”
 2. A card rises over the first mate carrying “I bring back answers and choices as cards like this one.”, while the first mate fades behind it in the same pass, as the window hides the character while a card is up.
 3. Activity appears on the left with its label and report rows, a crewmate (a small tetrahedron) beside the card's top corner with a dashed leader into Activity, and the column reads “Crewmates do the work in the background and report here.”
    The crewmate beside the card is a teaching liberty: the real window hides the crew while a card is up.
@@ -90,6 +90,10 @@ Next moves one pass of `--dur-med`, which reduced motion zeroes to a cut; Back i
 Back and Next are buttons Tab reaches and Enter or Space presses; nothing about them is a command, because nobody repeats them.
 The presentation is the figure's own script, inside the `<figure>`, with styles as attributes and no style sheet, so the body stays prose (`docs/card-authoring.md` "Scripting") and takes the mount path any scripted card does.
 Without the script the card reads whole: the full picture with every part and its words, the card over the first mate, and no controls, so nothing on it looks pressable that is not.
+
+The first mate and the crewmate in the picture are the real ones, smaller (INF-5609, the captain's “render the same real animations we use in the center animation area”): the app's own stage part (`docs/card-authoring.md`, "The app's own stage") draws them with the center's painters, the first mate 176 units wide, fading behind the picture's card as the still did, and the crewmate live from chapter 3.
+Their motion is calm: the first mate drifts and blinks, with no greeting, fidget or turn toward the pointer.
+A reader without the part, such as an older phone, shows the still drawings in their place: the tesseract projected the way the character draws itself, with its two soft-light eyes, and the crewmate's tetrahedron.
 
 Below the picture, always: “To begin, press one and finish the sentence:” and three starters - Clone a project, Start a new project, Work in a folder on my computer.
 A press of Clone a project or Start a new project puts “Clone the project at ” or “Start a new project called ” in the message box under the card, with the caret after the words and focus in the box, through the store's `beginDraft` as the create-your-own-panel slot does: words already typed stay after them, and another starter's words replace the first one's while the box still starts with them.
@@ -191,6 +195,8 @@ Everything in it is app copy in `src/shared/firstCrewmateNote.ts`, never a model
 The body says the ask went to a crewmate that works in the background and can take a while, then draws two panels side by side: Now, “A crewmate works” and “No need to watch it”, beside the crewmate's tetrahedron in ember; Later, “A card comes back here” and “An answer or a choice”, beside a card in `--accent`.
 Under them it says that an answer or a choice comes back as a card like this one and that cards are the only part that needs the person, and that the card can be put away while the work goes on.
 The panels are boxes of text that wrap, not a drawing, so every language fits; on a narrow card the second panel moves under the first.
+Between the first sentence and the panels, a send-off stage 180 px wide shows the real first mate sending a crewmate off into its orbit, as the center does when a crewmate starts, and Now's crewmate is the real one, 40 px, working (INF-5609).
+Both are the app's own stage part (`docs/card-authoring.md`, "The app's own stage"), in the calm motion the welcome uses; a reader without the part shows no stage and Now's still tetrahedron.
 Every run of words is a saved fact (`saidMark`) and the title's fact rides `cardWordsMark` (docs/i18n.md, "Saved facts"), so the window and the phone word the note in their own language when they draw it.
 Its record keeps the note's sentences in English as its answer, without the panels.
 

@@ -6,7 +6,7 @@ const SIZE = 280;
 const C = SIZE / 2;
 const R = SIZE * 0.27;
 
-// The listening form's rings as Firstmate.tsx hands them over.
+// The listening form's rings as firstmatePainter.ts hands them over.
 const LAYOUT: SaturnLayout = {
   outer: [0, 1, 5, 4, 12, 8],
   inner: [9, 11, 10, 14, 15, 13],

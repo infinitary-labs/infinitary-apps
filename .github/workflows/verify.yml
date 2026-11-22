@@ -142,15 +142,6 @@ on:
         required: false
         type: string
         default: ''
-      installer_chip:
-        description: With installer_only or installer_reuse, which installed checks run - both, arm64 or x64
-        required: false
-        type: choice
-        options:
-          - both
-          - arm64
-          - x64
-        default: both
       perf:
         description: Also grade the e2e paint and latency budgets and the unit tests' time limits (run this on a quiet host)
         required: false
@@ -178,7 +169,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: ${{ github.workflow == 'verify' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('verify-request-{0}-profile={1}-full_system={2}-mac_only={3}-installer_only={4}-installer_reuse={5}-installer_chip={6}-perf={7}-all_journeys={8}-mac_runner={9}-linux_only={10}', github.ref, inputs.profile || 'stable', inputs.full_system, inputs.mac_only, inputs.installer_only, inputs.installer_reuse, inputs.installer_chip, inputs.perf, inputs.all_journeys, inputs.mac_runner, inputs.linux_only) || format('verify-{0}-{1}', github.run_id, github.run_attempt) }}
+  group: ${{ github.workflow == 'verify' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('verify-request-{0}-profile={1}-full_system={2}-mac_only={3}-installer_only={4}-installer_reuse={5}-perf={6}-all_journeys={7}-mac_runner={8}-linux_only={9}', github.ref, inputs.profile || 'stable', inputs.full_system, inputs.mac_only, inputs.installer_only, inputs.installer_reuse, inputs.perf, inputs.all_journeys, inputs.mac_runner, inputs.linux_only) || format('verify-{0}-{1}', github.run_id, github.run_attempt) }}
   cancel-in-progress: ${{ github.workflow == 'verify' }}
 
 jobs:
@@ -248,7 +239,6 @@ jobs:
       trigger: ${{ inputs.trigger || 'Manual request' }}
       ref: ${{ inputs.ref || (github.repository == 'infinitary-labs/infinitary' && github.ref || github.sha) }}
       reuse: ${{ inputs.installer_reuse || '' }}
-      chip: ${{ inputs.installer_chip || 'both' }}
     # A called workflow reads its job environment's credentials only when its
     # caller hands its secrets on (docs/public-ci.md, "Release environments").
     secrets: inherit

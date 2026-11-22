@@ -1393,6 +1393,10 @@ jobs:
     with:
       trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.installer_source }}
+      # A publishing run's build takes the release_build queue, which the
+      # placement service starts before release_sign, once MAC_QUEUES names it
+      # (docs/testing.md, "Each Mac job's kind and size").
+      runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_build || '' }}
     # A called workflow reads its job environment's credentials only when its
     # caller hands its secrets on; this project keeps none outside environments.
     secrets: inherit

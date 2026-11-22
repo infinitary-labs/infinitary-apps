@@ -15,11 +15,11 @@ on:
         required: false
         type: string
         default: ''
-      chip:
-        description: Which installed checks run - both, or only arm64 or x64 for a recheck the captain approved for one Mac type
+      runner:
+        description: The build's queue label; a publishing release passes its release_build kind's, and empty asks for the build kind's
         required: false
         type: string
-        default: both
+        default: ''
 
 permissions:
   contents: read
@@ -34,8 +34,10 @@ jobs:
     if: ${{ inputs.reuse == '' && (github.repository == 'infinitary-labs/infinitary' || (github.ref == 'refs/heads/main' && (inputs.ref == github.sha || github.workflow_ref == format('{0}/{1}/workflows/release.yml@refs/heads/main', github.repository, '.github')))) }}
     name: ${{ format('{0} · Build signed test copies (Mac)', inputs.trigger) }}
     # DOP-42: request a disposable guest, with the kernel guard still required below;
-    # the build kind's virtual-only queue once MAC_QUEUES names it.
-    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').build || 'mini-mac-virtual' }}
+    # the caller's queue (a publishing release's release_build kind, started
+    # before its signing job), else the build kind's virtual-only queue once
+    # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').build || 'mini-mac-virtual' }}
     timeout-minutes: 180
     env:
       SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
@@ -135,17 +137,14 @@ jobs:
           path: ${{ runner.temp }}/installer-build-evidence
           if-no-files-found: ignore
 
+  # Apple silicon only (INF-5571, the captain's choice): no Intel Mac runs
+  # the installed check; Intel stays a best-effort side effect of the
+  # universal build, as for the release's update check (docs/alpha.md).
   installed:
-    name: ${{ format('{0} · Install and update (Mac; {1})', inputs.trigger, matrix.chip == 'arm64' && 'Apple silicon' || 'Intel') }}
+    name: ${{ format('{0} · Install and update (Mac; Apple silicon)', inputs.trigger) }}
     needs: build
     if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.reuse != '' && needs.build.result == 'skipped')) }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # A one-chip recheck leaves the other Mac type out of the run rather than skipping it green.
-        # Runner and name follow the chip: an include entry for an absent chip would add it back.
-        chip: ${{ fromJSON(inputs.chip == 'arm64' && '["arm64"]' || inputs.chip == 'x64' && '["x64"]' || '["arm64","x64"]') }}
-    runs-on: ${{ matrix.chip == 'arm64' && (fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual') || 'macos-15-intel' }}
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 60
     steps:
       - id: checkout
@@ -174,9 +173,7 @@ jobs:
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
       - name: Confirm the native architecture
-        env:
-          EXPECTED_CHIP: ${{ matrix.chip }}
-        run: node -e 'if(process.arch !== process.env.EXPECTED_CHIP) throw new Error("This runner does not provide the requested native architecture");'
+        run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         # Version 8.0.2 gives up on a transfer that stalls for 30 seconds and
         # fetches it again, and fails on a differing digest. The older pin cut
@@ -205,6 +202,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: installer-evidence-${{ matrix.chip }}
+          name: installer-evidence-arm64
           path: ${{ runner.temp }}/installer-evidence
           if-no-files-found: error

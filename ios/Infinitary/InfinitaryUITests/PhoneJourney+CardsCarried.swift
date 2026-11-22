@@ -35,7 +35,13 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["note-queue"])
         XCTAssertTrue(editor.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["queued-notes-count"].waitForPresence(timeout: 10), app.debugDescription)
-        try await dismissKeyboardForProbe()
+        // The keyboard may close with the editor or stay up with its Done button; put it down only when it stayed.
+        let keyboard = app.keyboards.firstMatch
+        let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
+        let settled = NSPredicate { _, _ in !keyboard.exists || done.exists }
+        XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed, app.debugDescription)
+        if keyboard.exists { tapOnPhone(done) }
+        XCTAssertTrue(keyboard.waitForAbsence(timeout: 10), app.debugDescription)
         // A library photo in the card's field.
         addPhoneCardPhoto(app: app)
         // The footer names what goes with whichever choice is pressed, in the Mac's words, and the choices stay lit.

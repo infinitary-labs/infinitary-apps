@@ -88,6 +88,7 @@ import {
   THREAD_CHANNELS,
   threadLinesFor,
 } from "./cardCompatibility";
+import { type CatchUpWatch, describeCatchUp, type PhoneCatchUp, watchCatchUp } from "./catchUpLog";
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import { heldAsks, type LiveToViewArgs } from "./heldAsks";
@@ -381,6 +382,8 @@ export type ConnectionOptions = {
   maxBufferedBytes?: number;
   /** Where the connection says it could not listen. */
   onProblem?: (text: string) => void;
+  /** Hears each phone's catch-up once it ends; logged as one line by default (`describeCatchUp`). */
+  onCatchUp?: (catchUp: PhoneCatchUp) => void;
   /**
    * The local door's folder (docs/connection.md, "The local door"): with
    * one, the connection listens on a loopback port of its own for as long
@@ -589,6 +592,10 @@ type Client = {
   nameOnly: boolean;
   /** A phone (its hello says `ios`): its welcome and `inf:home:routes` name each copy (`standby-phone`). */
   phone: boolean;
+  /** Where its socket came from, read only for the route its catch-up names (`routeOf`). */
+  readonly remote: string | undefined;
+  /** A phone's catch-up while it goes (`CatchUpWatch`). */
+  catchUp?: CatchUpWatch;
   /**
    * As a view, the one that watches a task's browser through it, made at its
    * first request: its pictures go out as `live` frames to it alone.
@@ -695,6 +702,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     aheadBytes: Math.floor(maxBufferedBytes / 2),
   };
   const onProblem = options.onProblem ?? ((text) => console.warn(`[connection] ${text}`));
+  const onCatchUp =
+    options.onCatchUp ?? ((catchUp) => console.info(`[connection] ${describeCatchUp(catchUp)}`));
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
   const viewFloor = options.viewFloor ?? VIEW_FLOOR;
   const homeChanges = options.changes ?? CONTRACT_CHANGES.names;
@@ -888,6 +897,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       client.out.send(frame);
     };
+    /** A frame of a phone's catch-up, counted toward it; then, once all is written, its answer. */
+    const sendCatchUp = (client: Client, frame: string) => {
+      client.catchUp?.sent(frame);
+      send(client, frame);
+    };
+    const settleCatchUp = (client: Client) =>
+      client.out.whenAnswered((answered) => client.catchUp?.end(answered));
     // What is happening in a turn now (`isStreamedEvent`), and the
     // computers' readings: outside the numbering, so a stream of them never
     // pushes a dropped view's place out of the journal, and only to the views
@@ -1033,6 +1049,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     };
 
     const welcome = (client: Client, hello: Extract<ClientFrame, { t: "hello" }>) => {
+      const helloAt = Date.now();
       const role = roleOf(client, hello);
       if (!deviceMayBe(client.device.kind, role)) {
         cut(client, CONNECTION_CLOSE.protocol, `a ${client.device.kind} device is never a ${role}`);
@@ -1105,7 +1122,19 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.phone = role === "view" && hello.system === "ios";
       const name = homeName();
       const takeOverId = devices.takeOver?.() ?? null;
-      send(
+      if (client.phone)
+        client.catchUp = watchCatchUp({
+          lost: hello.cursor ? journal.lost(hello.cursor) : "no-place",
+          replay,
+          replaying: Boolean(missed),
+          weight: replay ? reload : reloadBytes(),
+          remote: client.remote,
+          appVersion: hello.appVersion,
+          helloAt,
+          reads: RELOAD_READS,
+          tell: onCatchUp,
+        });
+      sendCatchUp(
         client,
         JSON.stringify({
           t: "welcome",
@@ -1141,7 +1170,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         }),
       );
       for (const { entry, replaced } of missed ?? [])
-        send(
+        sendCatchUp(
           client,
           replaced
             ? replacedFrame(entry.seq, channelIn(REPLACED_PUSH_CHANNEL, client.spelling))
@@ -1155,6 +1184,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
               ),
         );
       client.welcomed = true;
+      if (client.catchUp && !client.catchUp.waiting) settleCatchUp(client);
       // A client of the local door is no device: pairing hears nothing of it.
       if (client.local) return;
       if (hello.system || hello.chip || hello.automaticStartup)
@@ -1194,6 +1224,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         if (outcome.ok && RELOAD_READ_SET.has(frame.channel))
           reloadWeights.set(frame.channel, Buffer.byteLength(text));
         send(client, text);
+        if (client.catchUp?.answered(frame.channel, text)) settleCatchUp(client);
       };
       if (!CORE_CHANNELS.has(frame.channel)) {
         reply({ ok: false, error: `${frame.channel} is not a request this home answers.` });
@@ -1308,9 +1339,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
     };
 
-    const attach = (ws: WebSocket, device: PairedDevice, viaDoor: boolean) => {
+    const attach = (ws: WebSocket, device: PairedDevice, viaDoor: boolean, remote?: string) => {
       const client: Client = {
         ws,
+        remote,
         device,
         local: viaDoor,
         welcomed: false,
@@ -1362,6 +1394,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
+        client.catchUp?.end(false);
         windowAsked.left(client);
         const heard = client.gone;
         client.gone = [];
@@ -1624,7 +1657,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       if (!device || run?.clients !== clients || !devices.holds(device.id))
         return refuse(socket, "401 Unauthorized");
       const admitted = device;
-      sockets.handleUpgrade(request, socket, head, (ws) => attach(ws, admitted, false));
+      sockets.handleUpgrade(request, socket, head, (ws) =>
+        attach(ws, admitted, false, request.socket.remoteAddress),
+      );
     };
 
     // The captain's own command on the door's listener: by the door's key

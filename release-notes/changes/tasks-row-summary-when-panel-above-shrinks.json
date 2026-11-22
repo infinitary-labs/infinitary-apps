@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "tasks-row-summary-when-panel-above-shrinks",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A Tasks row's summary stays open while the pointer rests on it",
+      "body": "When the Tasks list is scrolled to its end and a panel above it gets shorter, the summary beside the task under your pointer now stays open. Before, it could close by itself though the row had not moved.",
+      "noPicture": "This changes when the existing summary closes, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -903,19 +903,26 @@ jobs:
             cp -R "$RUNNER_TEMP/release-notes/release-notes/pictures/." packaging/generated/release-notes/pictures/
           fi
 
+      # The notarization key stays in the job's temporary folder, never the
+      # Mac's home folder, where it would outlive the job: notarytool reads it
+      # by path, and the removal step after the disk image names the same
+      # folder, so the key leaves the Mac whether the job passed, failed or
+      # was cancelled.
       - name: Restore App Store Connect API key
         id: asc-key
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          KEY_DIR: ${{ runner.temp }}/app-store-connect-key
         run: |
           set -euo pipefail
           : "${APP_STORE_CONNECT_KEY_ID:?Missing APP_STORE_CONNECT_KEY_ID secret}"
           : "${APP_STORE_CONNECT_ISSUER_ID:?Missing APP_STORE_CONNECT_ISSUER_ID secret}"
           : "${APP_STORE_CONNECT_API_KEY:?Missing APP_STORE_CONNECT_API_KEY secret}"
-          mkdir -p "$HOME/private_keys"
-          KEY_PATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          umask 077
+          mkdir -p "$KEY_DIR"
+          KEY_PATH="$KEY_DIR/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
           export KEY_PATH
           python3 <<'PY'
           import base64
@@ -1252,6 +1259,15 @@ jobs:
             echo "::error title=The disk image failed::Building, signing, notarizing or checking the disk image ended with status ${STATUS:-unknown}; its log is above." >&2
             exit 1
           fi
+
+      # The disk image is the key's last reader. Runs after a failure or a
+      # cancel too, and names the key's folder itself rather than the restore
+      # step's output, so it removes a key that step wrote before it stopped.
+      - name: Remove the App Store Connect API key
+        if: always()
+        env:
+          KEY_DIR: ${{ runner.temp }}/app-store-connect-key
+        run: rm -rf "$KEY_DIR"
 
       - name: Prepare the checked files for publication
         id: handoff

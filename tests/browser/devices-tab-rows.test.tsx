@@ -1,4 +1,5 @@
 import { type DeviceView, deviceLabel } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { expect, test } from "vitest";
@@ -29,7 +30,7 @@ import { openSize, openWindow } from "./window";
 /**
  * A computer's row in Settings -> Devices (docs/devices.md, "Updating",
  * "Changing its address", "Through the home's SSH", "Remove"; design skill
- * components/devices/DevicesTab): Update, with its password asked once even
+ * components/devices/DevicesTab): Match, with its password asked once even
  * beside the address question; Change address and Remove from the row's ⋯
  * menu; Try again; Keep it; a card's Remove that lands here; and the problem line, where a "could
  * not reach" refusal goes once that computer answers again at the address
@@ -100,12 +101,14 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   expect(row("this-mac")).not.toBeNull();
   await selectDevice("mini");
 
-  // Section: Update asks the user's password beside an open address question,
+  // Section: Match asks the user's password beside an open address question,
   // and Cancel on it leaves that question open.
   {
     await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
     await shown("[data-device-address-question]");
-    await userEvent.click(button(row("mini") as HTMLElement, `Update ${mini}`));
+    await userEvent.click(
+      button(row("mini") as HTMLElement, m.settingsDevicesMatchNamed({ device: mini })),
+    );
     expect(bridge.requests("inf:devices:update")).toEqual([["mini", {}]]);
     const question = {
       asks: "password",
@@ -133,7 +136,9 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   // Section: the password goes on the update's one call, and the row follows
   // the update's count until the computer runs this version.
   {
-    await userEvent.click(button(row("mini") as HTMLElement, `Update ${mini}`));
+    await userEvent.click(
+      button(row("mini") as HTMLElement, m.settingsDevicesMatchNamed({ device: mini })),
+    );
     updates[1]?.resolve({
       asks: "password",
       for: "update",
@@ -153,7 +158,9 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
     ]);
     await gone("[data-device-password-question]");
     await expect.poll(() => row("mini")?.textContent).toContain(remoteLoginWords.updatingRow(MINI));
-    expect(row("mini")?.querySelector(`[aria-label="Update ${mini}"]`)).toBeNull();
+    expect(
+      row("mini")?.querySelector(`[aria-label="${m.settingsDevicesMatchNamed({ device: mini })}"]`),
+    ).toBeNull();
     const sent = 96 * 1024 * 1024;
     bridge.push("inf:event", {
       type: "device_update",
@@ -174,11 +181,15 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
     await expect
       .poll(() => row("mini")?.textContent)
       .not.toContain(remoteLoginWords.sendingRow(mini, sent));
-    expect(row("mini")?.querySelector(`[aria-label="Update ${mini}"]`)).toBeNull();
+    expect(
+      row("mini")?.querySelector(`[aria-label="${m.settingsDevicesMatchNamed({ device: mini })}"]`),
+    ).toBeNull();
     // Back on the older version for the refusals that follow.
     listed = [AIR, MINI, STUDIO];
     bridge.push("inf:devices", listed);
-    await shown(`[data-device-row="mini"] [aria-label="Update ${mini}"]`);
+    await shown(
+      `[data-device-row="mini"] [aria-label="${m.settingsDevicesMatchNamed({ device: mini })}"]`,
+    );
   }
 
   // Section: an update that could not reach it says so, and the line goes
@@ -188,7 +199,9 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
       address: "sam@mini.local",
       doing: "update",
     });
-    await userEvent.click(button(row("mini") as HTMLElement, `Update ${mini}`));
+    await userEvent.click(
+      button(row("mini") as HTMLElement, m.settingsDevicesMatchNamed({ device: mini })),
+    );
     updates[3]?.resolve({ refused: "unreachable", lines });
     await expect.poll(problemLine).toBe(lines.join("\n"));
     // A list that says nothing newer keeps the line.
@@ -206,7 +219,9 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
       address: "sam@mini.local",
       doing: "update",
     });
-    await userEvent.click(button(row("mini") as HTMLElement, `Update ${mini}`));
+    await userEvent.click(
+      button(row("mini") as HTMLElement, m.settingsDevicesMatchNamed({ device: mini })),
+    );
     updates[4]?.resolve({ refused: "key-refused", lines });
     await expect.poll(problemLine).toBe(lines.join("\n"));
     listed = [AIR, { ...MINI, connectedAt: Date.now() + 1 }, STUDIO];

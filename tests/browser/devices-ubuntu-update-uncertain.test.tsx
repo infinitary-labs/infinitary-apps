@@ -1,4 +1,5 @@
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { expect, test } from "vitest";
@@ -43,7 +44,12 @@ test("an Ubuntu update that may already have installed after its typed address, 
 
   // No address is known, so the worker's form opens empty and the captain types one.
   await selectDevice(worker.id);
-  await userEvent.click(button(await shown('[data-device-row="mini"]'), "Update Ubuntu worker"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="mini"]'),
+      m.settingsDevicesMatchNamed({ device: "Ubuntu worker" }),
+    ),
+  );
   answer.resolve({ asks: "package-address" });
   const form = await shown('[data-worker-update="mini"] [data-device-address-question]');
   answer = held<UpdateAnswer>();

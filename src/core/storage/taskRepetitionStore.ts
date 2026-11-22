@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
+import type { RepetitionNotice, RepetitionOutcome, ToolObservation } from "@shared/toolCompletion";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 
@@ -30,6 +30,18 @@ type Operation = {
   latest_call: string;
   latest_at: number;
   notice: string | null;
+};
+
+/**
+ * How many identical completions, original included, wake the first mate.
+ * Failed repeats keep the captain's INF-1996 count of three; repeats that
+ * worked wait for a higher count (INF-6091 finding 4), and a work computer
+ * that does not say keeps three.
+ */
+export const REPETITION_WAKE_AT: Record<RepetitionOutcome, number> = {
+  failed: 3,
+  unknown: 3,
+  worked: 10,
 };
 
 export class TaskRepetitionStore {
@@ -70,8 +82,11 @@ export class TaskRepetitionStore {
           latest_at: event.at,
           notice: same ? previous.notice : null,
         };
-        // Captain's accepted INF-1996 choice: original plus two repeats.
-        const notices = next.count === 3 && next.notice === null;
+        // The streak's results are identical, error flag included, so the
+        // latest completion's flag is every one's.
+        const outcome: RepetitionOutcome =
+          fact.failed === undefined ? "unknown" : fact.failed ? "failed" : "worked";
+        const notices = next.count >= REPETITION_WAKE_AT[outcome] && next.notice === null;
         if (notices)
           next.notice = `repetition:${createHash("sha256")
             .update(JSON.stringify([task, event.stream, event.sequence]))
@@ -91,9 +106,7 @@ export class TaskRepetitionStore {
             identity: next.notice,
             toolName: next.tool,
             count: next.count,
-            // The streak's results are identical, error flag included, so the
-            // latest completion's flag is every one's.
-            outcome: fact.failed === undefined ? "unknown" : fact.failed ? "failed" : "worked",
+            outcome,
             first: { source: next.first_source, callId: next.first_call, at: next.first_at },
             latest: { source: next.latest_source, callId: next.latest_call, at: next.latest_at },
           });

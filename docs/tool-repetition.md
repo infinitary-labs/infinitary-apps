@@ -1,7 +1,10 @@
 # Completed-operation repetition
 
-INF-1996's accepted three-total choice observes exact completed operations, not whether work is useful.
-The original result plus two unchanged repeats sends one possible-repetition wake directly to the first mate through the lifecycle router and durable inbox.
+Repetition observation counts exact completed operations, not whether work is useful.
+For calls that failed, INF-1996's accepted three-total choice holds: the original result plus two unchanged repeats sends one possible-repetition wake directly to the first mate through the lifecycle router and durable inbox.
+For calls that worked, the wake waits for ten identical completions (INF-6091 finding 4): three identical working reads or polls are usually ordinary work, and alerts at three woke the first mate for nothing.
+A work computer that does not say whether its calls failed keeps the count of three.
+`REPETITION_WAKE_AT` in `TaskRepetitionStore` holds these counts.
 The first mate judges the evidence against the original task: prescribed repeated tests, rereads and polling may be legitimate, and steering or interruption stays within the original scope.
 There is no automatic interruption, no-edit judgment, spending cap or quiet-time delay.
 
@@ -33,7 +36,7 @@ After pairing and hashing, only compact digests and references remain in the det
 `TaskService` is the sole writer of `task_repetition_cursors` and `task_repetitions`, through `TaskRepetitionStore`.
 One indexed operation row retains the latest result digest, streak count, first/latest call references and times, and notice identity.
 An unchanged completion increments only that operation's streak; a changed result or error starts its streak at one.
-Other operations do not reset it, so `A → B → C → A → B → C → A` notifies for A on its third unchanged completion.
+Other operations do not reset it, so with failed results `A → B → C → A → B → C → A` notifies for A on its third unchanged completion.
 Further unchanged completions update the count without sending another logical notice.
 Delivered guidance retires the previous observation period's operation rows without deleting original sessions or notice evidence.
 Normal compaction, including Claude's compact summary, does not reset counts.

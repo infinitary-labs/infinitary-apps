@@ -63,6 +63,13 @@ describe("RepoRegistry.setup initial history", () => {
     vi.unstubAllEnvs();
   });
 
+  // The review of INF-5409: the first launch asks whether a project was added with one row's read.
+  it("says a project was added once the captain adds one", async () => {
+    expect(registry.hasProject()).toBe(false);
+    await registry.setup({ kind: "init", name: "observatory" });
+    expect(registry.hasProject()).toBe(true);
+  });
+
   it("INF-1117: saves, preserves and clears the captain's project scope", async () => {
     const { repo } = await registry.setup({ kind: "init", name: "observatory" });
     const scope =
@@ -176,6 +183,8 @@ describe("RepoRegistry.ensurePersonal", () => {
     });
     expect(registry.ensurePersonal(workspaceDir)).toEqual(repo);
     expect(registry.list()).toHaveLength(1);
+    // The personal workspace is not a project the captain added (the first launch's `hasPriorActivity`).
+    expect(registry.hasProject()).toBe(false);
     expect(registry.get(repo.id)).toEqual(repo);
     expect(registry.personal()).toEqual(repo);
     const project = new ProjectStore(db).list().find((row) => row.repoId === repo.id);

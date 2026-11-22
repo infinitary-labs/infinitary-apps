@@ -3,6 +3,7 @@ import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import type { Card } from "@shared/cards";
 import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
+import { wordedCardText, wordSaidMarks } from "@shared/i18n/said";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { SECRETS_AREAS } from "@shared/secrets";
 import { parseServedInput } from "@shared/servedFrame";
@@ -269,8 +270,6 @@ describe("FirstmateAgent", () => {
     expect(
       (await change("device-invite", { how: "address", address: "-oProxyCommand=evil" })).text,
     ).not.toMatch(/offered on/);
-    expect((await change("device-invite", { how: "address" })).text).toContain("Pass the address");
-
     expect((await change("device-update", { deviceId: "mini-1" })).text).toMatch(/offered on/);
     const update = card("Update Infinitary on Mac mini");
     expect(update.body).toBe(
@@ -316,6 +315,37 @@ describe("FirstmateAgent", () => {
     expect(supervisor.cardActions.act(add.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
+    // INF-4926's plan: how "address" with no address offers a card that opens the form.
+    expect((await change("device-invite", { how: "address", name: "Mac mini" })).text).toMatch(
+      /offered on/,
+    );
+    const form = card(m.devicesAddressFormTitleNamed({ device: "Mac mini" }));
+    // The card keeps its words' facts, so a view in another language words it there.
+    expect(wordSaidMarks(form.body ?? "")).toContain(
+      `>${m.devicesAddressFormSetUp()}</p>\n<p data-inf-said=`,
+    );
+    expect(wordSaidMarks(form.body ?? "")).toContain(`>${m.devicesAddressFormOpen()}</p>`);
+    expect(wordedCardText(form.title, form.body)).toBe(
+      m.devicesAddressFormTitleNamed({ device: "Mac mini" }),
+    );
+    inLanguage("fr", () => {
+      expect(wordSaidMarks(form.body ?? "")).toContain(`>${m.devicesAddressFormOpen()}</p>`);
+      expect(wordedCardText(form.title, form.body)).toBe(
+        m.devicesAddressFormTitleNamed({ device: "Mac mini" }),
+      );
+    });
+    expect(form.actions.find((action) => action.default)).toMatchObject({
+      label: m.devicesAddressFormOpenButton(),
+      effect: { kind: "open", target: "devices", addressForm: true },
+    });
+    expect(form.actions.find((action) => !action.default)).toMatchObject({
+      label: m.devicesAddressFormNotNow(),
+    });
+    const openForm = form.actions.find((action) => action.default);
+    expect(supervisor.cardActions.act(form.id, openForm?.id ?? "")).toEqual({
+      effect: { kind: "open", target: "devices", addressForm: true },
+    });
+
     session.emitTurnEnd("Offered.");
     session.resolveNextPrompt();
     await tick();

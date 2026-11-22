@@ -153,26 +153,28 @@ function DevicesTab(){
         </>}
       <div style={boxRow}>
         <span style={{...mono,letterSpacing:"var(--tracking-label)",textTransform:"uppercase"}}>Add</span>
-        <button type="button" onClick={()=>setChoosing("how")} style={chip}><span aria-hidden="true" style={{color:"var(--fg-3)"}}>+</span>A computer</button>
+        <button type="button" onClick={()=>setChoosing("address")} style={chip}><span aria-hidden="true" style={{color:"var(--fg-3)"}}>+</span>A computer</button>
         <button type="button" onClick={()=>open("user")} style={chip}><span aria-hidden="true" style={{color:"var(--fg-3)"}}>+</span>Running as another user</button>
       </div>
-      {choosing==="how"&&<div style={{...boxRow,display:"block"}}>
-        <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>How do you want to add it?</div>
-        <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)",marginBottom:10}}>Each way adds the same kind of computer. Pick the one that suits it.</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <Button variant="secondary" size="sm" onClick={()=>open("link")}>Paste a link into Infinitary there</Button>
-          <Button variant="secondary" size="sm" onClick={()=>open("mac")}>Run a command there</Button>
-          <Button variant="secondary" size="sm" onClick={()=>setChoosing("address")}>By its address</Button>
-          <Button variant="ghost" size="sm" onClick={()=>setChoosing(null)}>Cancel</Button>
-        </div>
-      </div>}
       {choosing==="address"&&<div style={{...boxRow,display:"block"}}>
         <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>The other computer’s address</div>
-        <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)",marginBottom:10}}>The one you use with SSH. Remote Login must be on there.</div>
+        <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)"}}>The one you use with SSH. Remote Login must be on there.</div>
+        <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)",marginBottom:10}}>This computer then keeps it updated and reaches it by itself.</div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <Input mono placeholder="you@mini.local" value={remote} onChange={e=>setRemote(e.target.value)} style={{flex:1}}/>
+          <Input mono placeholder="you@mini.local" value={remote} onChange={e=>setRemote(e.target.value)} style={{flex:1}} autoFocus/>
           <Button size="sm" onClick={addByAddress}>Add it</Button>
           <Button variant="ghost" size="sm" onClick={()=>setChoosing(null)}>Cancel</Button>
+        </div>
+        <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--line-1)"}}>
+          <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Can’t turn on Remote Login there?</div>
+          <div style={{display:"flex",gap:"4px 10px",alignItems:"center",flexWrap:"wrap",marginTop:8}}>
+            <Button variant="secondary" size="sm" onClick={()=>open("link")}>Paste a link into Infinitary there</Button>
+            <span style={{fontSize:"var(--text-sm)",color:"var(--fg-2)"}}>You’re at that computer, or it is a Windows PC.</span>
+          </div>
+          <div style={{display:"flex",gap:"4px 10px",alignItems:"center",flexWrap:"wrap",marginTop:8}}>
+            <Button variant="secondary" size="sm" onClick={()=>open("mac")}>Run a command there</Button>
+            <span style={{fontSize:"var(--text-sm)",color:"var(--fg-2)"}}>You can type in Terminal there.</span>
+          </div>
         </div>
       </div>}
     </div>

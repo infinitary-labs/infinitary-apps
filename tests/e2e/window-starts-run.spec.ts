@@ -1,17 +1,36 @@
-import { cpSync, existsSync, readFileSync, readlinkSync, renameSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
+import electronPath from "electron";
+import { STOPPED_RUN_WAIT_MS } from "../../src/core/helper/lock";
 import { HOST_CARD_PRIORITY } from "../../src/core/orchestrator/hostCards";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { SAVED_DATA_REFUSAL_TITLE } from "../../src/core/storage/savedDataCompatibility";
+import { LET_GO_JOB_ARG, START_HERE_ARG } from "../../src/main/besideRun";
 import { RUN_MARKER, RunMarkerSchema, windowProfileDir } from "../../src/main/runCommand";
+import { TOLD_THE_PERSON } from "../../src/main/runReopen";
 import { COMMAND_STOP_WORDS } from "../../src/renderer/src/settings/commandStopWords";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { COMMAND_NOTICE_WORDS } from "../../src/shared/commandNotice";
+import { setCurrentLanguage } from "../../src/shared/i18n/current";
+import { SOURCE_LANGUAGE } from "../../src/shared/i18n/languages";
+import * as m from "../../src/shared/i18n/messages.generated";
+import { defaultLanguage } from "../../src/shared/i18n/start";
+import { claimedPort } from "../helpers/claimedPort";
+import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedMockModelCatalog } from "./accountFixtures";
-import { type LaunchedApp, launchApp } from "./launch";
+import {
+  builtAppDir,
+  defaultClaudeStubDir,
+  hermeticEnv,
+  type LaunchedApp,
+  launchApp,
+} from "./launch";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import { mockModelsJson } from "./mockModels";
 import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -20,9 +39,14 @@ import {
   HELD_MOVE_TURN_REPORT,
   heldMoveTurn,
 } from "./scenarios/heldMoveTurn";
-import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceManagerStandIn";
+import {
+  afterStandIn,
+  type ServiceManagerStandIn,
+  serviceManagerStandIn,
+} from "./serviceManagerStandIn";
 import { settingRow, settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -41,11 +65,13 @@ const CARD_TITLE = "A card the first mate in its own program shows";
 let standIn: ServiceManagerStandIn | null = null;
 test.afterEach(() => {
   const testInfo = test.info();
-  standIn?.stopAll();
-  // A failed run keeps the service manager's records and each command's output with its results.
-  if (standIn && testInfo.status !== testInfo.expectedStatus)
-    cpSync(standIn.dir, testInfo.outputPath("service-manager"), { recursive: true });
+  const kept = standIn;
   standIn = null;
+  // A failed run, or one whose service manager did not stop, keeps that manager's records and each
+  // command's output with its results.
+  afterStandIn(kept, testInfo.status !== testInfo.expectedStatus, () =>
+    testInfo.outputPath("service-manager"),
+  );
 });
 
 function seededDataDir(port: number): string {
@@ -73,6 +99,27 @@ function seededDataDir(port: number): string {
 /** The command that holds the data folder now, by the note it keeps there. */
 function commandPid(userDataDir: string): number {
   return RunMarkerSchema.parse(JSON.parse(readFileSync(join(userDataDir, RUN_MARKER), "utf8"))).pid;
+}
+
+/**
+ * Freezes the command numbered `pid` once its note says a force stop can end it (`recovers`), so
+ * the window's recovery is armed before it, and confirms through the supervisor that started it
+ * that the run is suspended.
+ */
+async function freeze(userDataDir: string, standIn: ServiceManagerStandIn, pid: number) {
+  await expect
+    .poll(
+      () => {
+        const marker = RunMarkerSchema.parse(
+          JSON.parse(readFileSync(join(userDataDir, RUN_MARKER), "utf8")),
+        );
+        return marker.pid === pid && marker.recovers === true;
+      },
+      { timeout: 60_000 },
+    )
+    .toBe(true);
+  expect(await standIn.signal(LABEL, "SIGSTOP", pid)).toBe("sent");
+  await expect.poll(() => standIn.state(LABEL, pid), { timeout: 30_000 }).toBe("stopped");
 }
 
 const alive = (pid: number) => {
@@ -245,9 +292,10 @@ test("the window starts the command in the background, quits alone, and stops it
  * The captain, on INF-4622's fix: "can we not give an option that's force
  * restart the background process?" Promised result: a window opened beside
  * the command it started, which runs and does not answer, offers Restart it
- * on its notice; pressing it ends that command by force through the service
- * manager, which starts it again, and the window joins the new one and shows
- * its card. Data: the throwaway data folder above, its command frozen with
+ * on its notice; pressing it ends that command by force (the window lets the
+ * frozen command go on, and the command ends itself by its process and
+ * start), the service manager starts it again, and the window joins the new
+ * one and shows its card. Data: the throwaway data folder above, its command frozen with
  * SIGSTOP (the stand-in for one stuck on its way to answering), and a
  * one-second answer wait. Completion: the service manager's record of a
  * second run, the frozen run gone, and the card with no notice.
@@ -275,7 +323,7 @@ test("Restart it ends a command that does not answer and the window joins the on
     } finally {
       await opened.close();
     }
-    process.kill(first, "SIGSTOP");
+    await freeze(userDataDir, standIn, first);
 
     // Section: the window opened again says its first mate is not answering, and Restart it restarts it.
     opened = await open();
@@ -290,19 +338,276 @@ test("Restart it ends a command that does not answer and the window joins the on
       const restart = noticeOver(page).getByRole("button", { name: COMMAND_NOTICE_WORDS.restart });
       await pressKey(restart, "Enter");
       await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
-      await expect.poll(() => alive(first)).toBe(false);
+      // The frozen run ended, by its supervisor's own record of its exit.
+      expect(standIn.exits(LABEL)).toEqual([null]);
       await expect(shownCard(page, CARD_TITLE)).toBeVisible({ timeout: 60_000 });
       await expect(noticeOver(page)).toHaveCount(0);
       expect(commandPid(userDataDir)).toBe(standIn.runs(LABEL)[1]);
     } finally {
       await opened.close();
-      // A frozen command acts on no polite stop: one Restart it did not end goes by force.
-      if (alive(first)) process.kill(first, "SIGKILL");
+      // A frozen command acts on no polite stop: one Restart it did not end goes by force, through
+      // its supervisor, only while it is still that run.
+      expect(await standIn.signal(LABEL, "SIGKILL", first)).not.toBe("timeout");
     }
   } finally {
     await provider.close();
   }
 });
+
+/**
+ * The review of INF-5409: Start it here over a command that does not answer ends it by force and
+ * starts the app again, while the agent's job starts the command again. Promised result: the app
+ * started again with Start it here opens beside the command the job started again, as its own,
+ * whether that command already noted that it holds the data folder or holds its lock and has not
+ * noted it yet; the card is usable, and the service manager starts and stops nothing more. Data:
+ * the throwaway data folder above, its command frozen with SIGSTOP, a one-second answer wait, and
+ * a file the development build's command waits on before it notes that it holds the folder. An
+ * isolated window never starts itself again: the development build notes the start it asks for in
+ * a file, and the journey starts that. The frozen run is signalled only through the supervisor that
+ * started it, while it is still that run. Completion: the service manager's record of each run,
+ * exit and start or stop asked of it, the command's note, the folder's lock, the start's own end
+ * and what it said, the window's ownership of the command, and the card with no notice.
+ */
+test("Start it here ends a command that does not answer and opens beside the one its job started again", async () => {
+  test.setTimeout(420_000);
+  const provider = await startMockProvider();
+  const hold = join(scratchDir("infinitary-window-starts-run-hold-"), "hold");
+  const relaunchNote = join(scratchDir("infinitary-window-starts-run-relaunch-"), "relaunch.json");
+  let waiting: ReturnType<typeof spawn> | null = null;
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    /**
+     * The words of the start the app last asked for, which the journey starts: the built app and
+     * this data folder, checked and then left for the journey's own launch to add again, and every
+     * other word as asked, a mode such as `run` included. Only the switches the journey's own
+     * launches add (`launchApp`) are set aside.
+     */
+    const askedStart = () => {
+      const words = JSON.parse(readFileSync(relaunchNote, "utf8")) as string[];
+      rmSync(relaunchNote, { force: true });
+      const [entry, ...rest] = words.filter((arg) => !launcherSwitch(arg));
+      expect(entry).toBe(builtAppDir());
+      const folder = (arg: string) => arg.startsWith("--user-data-dir=");
+      expect(rest.filter(folder)).toEqual([`--user-data-dir=${userDataDir}`]);
+      return rest.filter((arg) => !folder(arg));
+    };
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    standIn = serviceManagerStandIn(homeDir);
+    const env = {
+      ...standIn.env,
+      INFINITARY_WINDOW_STARTS_RUN: "1",
+      INFINITARY_RUN_ANSWER_WAIT_MS: "1000",
+      INFINITARY_RUN_NOTE_HOLD: hold,
+      INFINITARY_RELAUNCH_NOTE: relaunchNote,
+    };
+    const open = (args: string[] = []) => launchApp({ userDataDir, homeDir, env, args });
+    const gone = join(standIn.dir, "state", `${LABEL}.gone`);
+    const noted = () =>
+      existsSync(join(userDataDir, RUN_MARKER)) ? commandPid(userDataDir) : null;
+    /**
+     * Launches the app with `args` while the run the job started holds the folder's lock and has
+     * not noted it: the launch waits with no window, past a stopped run's wait, never taking that
+     * run for a window, and ends once the run notes itself as `run`. Answers what it said.
+     */
+    const waitBeside = async (args: string[], run: number) => {
+      const started = spawn(
+        electronPath as unknown as string,
+        [builtAppDir(), `--user-data-dir=${userDataDir}`, ...args],
+        {
+          env: {
+            ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+            INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+            ...env,
+          },
+          cwd: scratchDir("infinitary-window-starts-run-cwd-"),
+        },
+      );
+      waiting = started;
+      let said = "";
+      started.stdout?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      started.stderr?.on("data", (chunk) => {
+        said += String(chunk);
+      });
+      const ended = new Promise<void>((resolve) => started.once("exit", () => resolve()));
+      await new Promise((resolve) => setTimeout(resolve, STOPPED_RUN_WAIT_MS + 2_000));
+      expect(started.exitCode).toBeNull();
+      expect(started.signalCode).toBeNull();
+      rmSync(hold, { force: true });
+      await expect.poll(noted, { timeout: 60_000 }).toBe(run);
+      await ended;
+      return said;
+    };
+
+    // Section: the window starts the command, then quits; the command is frozen.
+    let opened = await open();
+    let first: number;
+    let managerAsks: string[] = [];
+    try {
+      await showCard(opened.page, CARD_TITLE);
+      first = commandPid(userDataDir);
+    } finally {
+      await opened.close();
+    }
+    await freeze(userDataDir, standIn, first);
+
+    // Section: Start it here ends the frozen command by force; the window starts again, which an
+    // isolated window does by ending, and the job starts the command again.
+    opened = await open();
+    try {
+      const { page } = opened;
+      const windowEnded = new Promise<void>((resolve) =>
+        opened.app.process().once("exit", () => resolve()),
+      );
+      await expect(noticeOver(page).getByRole("alertdialog")).toContainText(
+        COMMAND_NOTICE_WORDS.line({ state: "stopped", ending: "not-answering", byWindow: true }),
+        { timeout: 60_000 },
+      );
+      const startHere = noticeOver(page).getByRole("button", {
+        name: COMMAND_NOTICE_WORDS.startHere,
+      });
+      // Every start or stop asked of the service manager from the press on is compared with this.
+      managerAsks = standIn.asks();
+      await pressKey(startHere, "Enter");
+      await windowEnded;
+      // The frozen run ended before any cleanup, by its supervisor's own record of its exit.
+      await expect.poll(() => standIn?.exits(LABEL), { timeout: 60_000 }).toEqual([null]);
+    } finally {
+      await opened.close();
+      expect(await standIn.signal(LABEL, "SIGKILL", first)).not.toBe("timeout");
+    }
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(2);
+    const [, second] = standIn.runs(LABEL) as [number, number];
+    // Ended by force, the run asked its service manager for nothing, and the window asked to
+    // start again here, letting the job go.
+    expect(standIn.asks()).toEqual(managerAsks);
+    const restartedWith = askedStart();
+    expect(restartedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
+
+    // Section: started again with the command's note already there, the app opens beside it,
+    // as its own.
+    await expect.poll(noted, { timeout: 60_000 }).toBe(second);
+    opened = await open(restartedWith);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.thisMac())).toMatchObject({
+        byCommand: true,
+      });
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
+    } finally {
+      await opened.close();
+    }
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first, second]);
+    expect(standIn.exits(LABEL)).toEqual([null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(second);
+
+    // Section: started again while the command the job started holds the folder's lock and has
+    // not noted it yet, the start waits with no window, past a stopped run's wait, never taking
+    // that command for a window; once the command notes it, the start ends to start again.
+    writeFileSync(hold, "");
+    expect(await standIn.signal(LABEL, "SIGKILL", second)).toBe("sent");
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(3);
+    const [, , third] = standIn.runs(LABEL) as [number, number, number];
+    await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(third);
+    expect(noted()).toBe(second);
+    let said = await waitBeside([START_HERE_ARG, LET_GO_JOB_ARG], third);
+    expect(said).toContain("[app] Start it here found the folder held by a run");
+    const startedWith = askedStart();
+    expect(startedWith).toEqual([START_HERE_ARG, LET_GO_JOB_ARG]);
+
+    // Section: the start that one asked for opens beside the command the job started again, as
+    // its own.
+    opened = await open(startedWith);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
+    } finally {
+      await opened.close();
+    }
+    // The run the journey ended was started again by its job alone: nothing asked the service
+    // manager to start or stop anything.
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first, second, third]);
+    expect(standIn.exits(LABEL)).toEqual([null, null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(third);
+
+    // Section: an ordinary launch, with no Start it here, while the command the job started again
+    // holds the folder's lock and has not noted it yet, waits the same way, never quitting with no
+    // window, and starts again once the command notes it.
+    writeFileSync(hold, "");
+    expect(await standIn.signal(LABEL, "SIGKILL", third)).toBe("sent");
+    await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 60_000 }).toBe(4);
+    const [, , , fourth] = standIn.runs(LABEL) as [number, number, number, number];
+    await expect.poll(() => profileHolder(userDataDir), { timeout: 60_000 }).toBe(fourth);
+    expect(noted()).toBe(third);
+    said = await waitBeside([], fourth);
+    expect(said).toContain("[app] the launch found the folder held by a run");
+    const ordinaryWith = askedStart();
+    expect(ordinaryWith).toEqual([]);
+
+    // Section: the start that ordinary launch asked for opens a usable window beside the command.
+    opened = await open(ordinaryWith);
+    try {
+      const { page } = opened;
+      await showCard(page, CARD_TITLE);
+      await expect(noticeOver(page)).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+        joins: true,
+        outside: false,
+      });
+    } finally {
+      await opened.close();
+    }
+    // Nothing asked the service manager to start or stop anything for that launch either.
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first, second, third, fourth]);
+    expect(standIn.exits(LABEL)).toEqual([null, null, null]);
+    expect(standIn.running(LABEL)).toBe(true);
+    expect(existsSync(gone)).toBe(false);
+    expect(noted()).toBe(fourth);
+  } finally {
+    rmSync(hold, { force: true });
+    // Set only inside `waitBeside`, which the compiler does not follow.
+    const left = waiting as ReturnType<typeof spawn> | null;
+    if (left && left.exitCode === null && left.signalCode === null) left.kill("SIGKILL");
+    await provider.close();
+  }
+});
+
+/**
+ * Whether `arg` is a switch the journey's own launches add (`launchApp`, and Playwright's own
+ * debugging switches), which a start the app asks for carries along from its own launch.
+ */
+function launcherSwitch(arg: string): boolean {
+  return (
+    [
+      "--use-fake-device-for-media-stream",
+      "--use-fake-ui-for-media-stream",
+      "--enable-gpu-benchmarking",
+      "--disable-lcd-text",
+      "--disable-gpu",
+    ].includes(arg) || /^--(inspect|remote-debugging-port|force-device-scale-factor)=/.test(arg)
+  );
+}
 
 /** The process holding a browser profile folder, by the lock Chromium keeps there (`<host>-<pid>`). */
 function profileHolder(dir: string): number {
@@ -320,6 +625,193 @@ function profileHolder(dir: string): number {
  * Completion: the held step still open after Quit and after the reopen, the
  * task's state, and the report once the step is let go.
  */
+// The review of INF-5409: Start it here lets go of the agent's job only once its window opens its own
+// first mate on the folder. On saved data from a newer version it opens nothing there, so the job
+// its window registered is asked nothing and stays as it was.
+test("Start it here on saved data from a newer version asks the background job nothing", async () => {
+  test.setTimeout(240_000);
+  const provider = await startMockProvider();
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    standIn = serviceManagerStandIn(homeDir);
+    const env = { ...standIn.env, INFINITARY_WINDOW_STARTS_RUN: "1" };
+
+    // Section: the window registers the job, which starts the command; the window quits and the
+    // command is stopped through its supervisor, leaving the job registered.
+    let opened = await launchApp({ userDataDir, homeDir, env });
+    let first: number;
+    try {
+      await showCard(opened.page, CARD_TITLE);
+      first = commandPid(userDataDir);
+    } finally {
+      await opened.close();
+    }
+    expect(await standIn.signal(LABEL, "SIGTERM", first)).toBe("sent");
+    await expect.poll(() => standIn?.running(LABEL), { timeout: 60_000 }).toBe(false);
+    await expect.poll(() => existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
+
+    // Section: Start it here, letting go of the job, on saved data a newer version wrote.
+    const db = openDatabase(userDataDir);
+    recordNewerMigration(db);
+    db.close();
+    const managerAsks = standIn.asks();
+    opened = await launchApp({
+      userDataDir,
+      homeDir,
+      env,
+      args: [START_HERE_ARG, LET_GO_JOB_ARG],
+      shell: false,
+    });
+    try {
+      await expect(
+        opened.page.getByRole("heading", { name: SAVED_DATA_REFUSAL_TITLE }),
+      ).toBeVisible();
+    } finally {
+      await opened.close();
+    }
+    expect(standIn.asks()).toEqual(managerAsks);
+    expect(standIn.runs(LABEL)).toEqual([first]);
+  } finally {
+    await provider.close();
+  }
+});
+
+// The review of INF-5409: Start it here lets go of the agent's job only once its window opens its own
+// first mate on the folder. A folder joined to a first mate on another computer opens as a view of
+// it and starts nothing here, so Start it here's words on that folder ask the job nothing: the view
+// becomes usable and the service manager is asked to stop nothing. Data: a home window and a
+// joined one, each on a throwaway folder, and a stand-in service manager for the joined one.
+test("Start it here on a folder joined to another computer opens the view and asks the background job nothing", async () => {
+  test.setTimeout(240_000);
+  const opened: LaunchedApp[] = [];
+  try {
+    const home = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Pro" } });
+    opened.push(home);
+    const invite = await home.page.evaluate(() =>
+      window.infinitary.devices.invite({ kind: "mac" }),
+    );
+    const userDataDir = scratchDir("infinitary-window-starts-run-joined-");
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    const name = { INFINITARY_DEVICE_NAME: "MacBook Air" };
+    const view = await launchApp({ userDataDir, homeDir, env: name });
+    opened.push(view);
+    // Joining starts the window over, so its answer may never return to this page.
+    await view.page.evaluate((link) => {
+      void window.infinitary.devices.join(link);
+    }, invite.link);
+    await expect(view.page.locator("[data-remote-control]")).toHaveAttribute(
+      "data-remote-control",
+      "in-reach",
+    );
+    await view.close();
+    opened.pop();
+
+    // Section: the joined folder opened with Start it here's words, by a window that would ask the
+    // service manager for a job of its own.
+    standIn = serviceManagerStandIn(homeDir);
+    const before = standIn.asks();
+    const again = await launchApp({
+      userDataDir,
+      homeDir,
+      env: { ...name, ...standIn.env, INFINITARY_WINDOW_STARTS_RUN: "1" },
+      args: [START_HERE_ARG, LET_GO_JOB_ARG],
+    });
+    opened.push(again);
+    await expect(again.page.locator("[data-remote-control]")).toHaveAttribute(
+      "data-remote-control",
+      "in-reach",
+    );
+    await again.close();
+    opened.pop();
+    // Whatever a view asks of its own, it asks no job to stop.
+    const stopped = standIn
+      .asks()
+      .slice(before.length)
+      .filter((ask) => /\b(bootout|stop)\b/.test(ask));
+    expect(stopped).toEqual([]);
+  } finally {
+    for (const app of opened.reverse()) await app.close();
+  }
+});
+
+// The review of INF-5409: a launch refused the folder's lock by a window from before windows
+// answered a launch tells it by what it runs as and ends, starting nothing. On a Mac it sends that
+// window nothing, since macOS reaches one process of several only with the person's consent to
+// control the app, so that window hears no reopen; with no window's answer to confirm it, the launch
+// tells the person to click Infinitary in the Dock, in the language a launch speaks at its start: English for a German
+// computer that chose nothing, and a pseudo-language as itself; a check's hidden launch says those words in its output
+// instead of showing them. The older window keeps the folder and its first mate. Only a Mac has a
+// Dock to name; elsewhere the launch quits at once, as for any window.
+test("a launch refused by a window that answers no launch ends, telling the person where it is", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
+  test.skip(process.platform !== "darwin", "only a Mac has a Dock to name");
+  test.setTimeout(180_000);
+  const provider = await startMockProvider();
+  let launch: ReturnType<typeof spawn> | null = null;
+  try {
+    const userDataDir = seededDataDir(provider.port);
+    const homeDir = scratchDir("infinitary-window-starts-run-home-");
+    const older = await launchApp({
+      userDataDir,
+      homeDir,
+      env: { INFINITARY_ANSWERS_NO_LAUNCH: "1" },
+    });
+    try {
+      await showCard(older.page, CARD_TITLE);
+      // What reaches the older window from macOS: a reopen, as a click in the Dock sends, counted.
+      await older.app.evaluate(({ app }) => {
+        const counted = globalThis as { reopens?: number };
+        counted.reopens = 0;
+        app.on("activate", () => {
+          counted.reopens = (counted.reopens ?? 0) + 1;
+        });
+      });
+      for (const computer of ["de", "en-XA"]) {
+        launch = spawn(
+          electronPath as unknown as string,
+          [builtAppDir(), `--user-data-dir=${userDataDir}`],
+          {
+            env: {
+              ...hermeticEnv({ userDataDir, homeDir, loopbackPort: String(await claimedPort()) }),
+              INFINITARY_CLAUDE_CLI: writeMockClaudeClient(defaultClaudeStubDir(userDataDir)),
+              INFINITARY_LANGUAGE: computer,
+            },
+            cwd: scratchDir("infinitary-window-starts-run-cwd-"),
+          },
+        );
+        let said = "";
+        launch.stdout?.on("data", (chunk) => {
+          said += String(chunk);
+        });
+        launch.stderr?.on("data", (chunk) => {
+          said += String(chunk);
+        });
+        const started = launch;
+        const code = await new Promise<number | null>((resolve) =>
+          started.once("exit", (exitCode) => resolve(exitCode)),
+        );
+        expect(code, said).toBe(0);
+        expect(said).toContain("[app] the launch found the folder held by a window");
+        setCurrentLanguage(defaultLanguage(computer));
+        const dock = `${TOLD_THE_PERSON} ${m.dialogOpenInDock()} ${m.dialogOpenInDockDetail()}`;
+        setCurrentLanguage(SOURCE_LANGUAGE);
+        expect(said, computer).toContain(dock);
+      }
+      expect(older.app.process().exitCode).toBeNull();
+      expect(profileHolder(userDataDir)).toBe(older.app.process().pid);
+      expect(await older.app.evaluate(() => (globalThis as { reopens?: number }).reopens)).toBe(0);
+      await showCard(older.page, CARD_TITLE);
+    } finally {
+      await older.close();
+    }
+  } finally {
+    if (launch && launch.exitCode === null && launch.signalCode === null) launch.kill("SIGKILL");
+    await provider.close();
+  }
+});
+
 test("a task keeps running while the window quits, and the window opened again finds it", async () => {
   test.setTimeout(240_000);
   const provider = await startMockProvider({ scenarios: [heldMoveTurn] });

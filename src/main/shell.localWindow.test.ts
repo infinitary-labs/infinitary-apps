@@ -90,6 +90,8 @@ describe("the window on the first mate's own computer", () => {
           throw new Error("Out of reach.");
         },
         state: () => ({ contact: heard.welcomed ? "in-reach" : "reaching" }) as never,
+        // One connection, open while welcomed.
+        connection: () => (heard.welcomed ? { welcome: 1, run: null } : null),
         close: () => {
           heard.closed = true;
         },

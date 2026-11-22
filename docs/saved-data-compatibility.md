@@ -100,6 +100,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
    The Mac's copier runs with `-v`, naming each entry it copies, so the window counts the copy as it goes.
    Each attempt builds in a folder of its own, because a Mac's copier outlives an app that was stopped hard and keeps writing where it was told.
    Chromium's locks and caches, `worktree-trash` and `task-channel` stay behind (`LEFT_BEHIND`, `src/core/folderMove/tree.ts`), and so do sockets and pipes.
+   So do the profile a refused launch's word uses and its record (`isWordState`, `src/shared/wordProfiles.ts`, `docs/run.md`), which belong to the folder they are in.
    In `work/`, what a live run, its service manager or a controller may still write while the copy is made stays behind too: Electron's own `chromium/`, `service.log`, `work.log`, the route and its lock, `running.lock`, the display's key, `worktree-trash` and `task-channel` (`WORK_LEFT_BEHIND`); the next run makes each again.
 5. It checks the copy file by file: the same names, kinds, sizes, permissions and link targets.
    A file the disk cloned shares its source's bytes, so the same modification time, to the nanosecond, proves it unchanged since the clone.
@@ -113,7 +114,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
    Prose keeps the paths it was written with, and Claude's transcript copies stay byte for byte.
    Opening the copied database replays its committed write-ahead log, so work the older app had not folded in comes over; the move then folds it in and checks every table keeps its rows and SQLite's own check passes.
 7. It writes the record `verified`, writes `retired-profile.json` into the older folder, and renames the staged copy into place in one rename.
-   A folder already there with no saved work - an installer's channel marker and nothing else - hands its marker over first, so the newer install's marker is kept.
+   A folder already there with no saved work - an installer's channel marker, a word's profile and its record, and nothing else - hands them over first as they are, so the newer install's marker and the word's profile are kept, never removed.
 8. After that commit it changes git's links in repositories kept outside both folders, keeping each file's earlier text in the record, copies Claude's session folders under the new working folders' names (`~/.claude/projects/<encoded folder>`, beside the old ones, never changing them), and writes the record `done`.
    The working folders are read from the new folder, two levels down from it and from its `work/`: the home's `worktrees/<task>`, and the `work/worktrees/<task>` a computer that runs work keeps (`src/core/folderMove/claudeSessions.ts`).
 
@@ -124,7 +125,7 @@ A full disk, the older app's window still open, an older copy that will not stop
 When both folders hold saved work, the hand-over asks which to open and never merges them.
 Bringing the older work moves the app's own folder aside first, to `<folder>-set-aside-<time>` beside it, and names that folder in the record.
 It never sets aside a folder Infinitary runs from: when this app's own program is inside it - the copy a computer that runs work keeps in `work/app` - or the background work holds its `work` folder, Bring stops with nothing changed, since a running app whose folder moves loses its helper programs and freezes (INF-5226).
-A launch stopped hard before its copy was checked leaves that folder named nowhere, so the next launch puts the newest set-aside folder back in place before it asks again, when no move holds the lock, no checked copy waits and the app's own folder holds no saved work; an installer's channel marker written there since is kept, as when a checked copy goes in.
+A launch stopped hard before its copy was checked leaves that folder named nowhere, so the next launch puts the newest set-aside folder back in place before it asks again, when no move holds the lock, no checked copy waits and the app's own folder holds no saved work; an installer's channel marker or a word's profile written there since is kept, as when a checked copy goes in.
 Keeping the app's own work records `kept-own` in its folder, so the question is not asked again, and leaves the older folder as it is.
 
 The hand-over window (`src/main/handOver.ts`, its page in `src/main/handOverPage.ts`) is a standalone page like the refusal windows: no preload and no script of its own, its buttons a form whose navigation the window reads and stops.

@@ -104,7 +104,6 @@ test("a computer's row updates, moves, tries again and removes, and a reach refu
   // and Cancel on it leaves that question open.
   {
     await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
-    await userEvent.click(button(await shown("[data-device-chooser]"), "By its address"));
     await shown("[data-device-address-question]");
     await userEvent.click(button(row("mini") as HTMLElement, `Update ${mini}`));
     expect(bridge.requests("inf:devices:update")).toEqual([["mini", {}]]);

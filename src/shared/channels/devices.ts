@@ -30,7 +30,13 @@ import {
   forgeKeySignInSchema,
 } from "../forges";
 import { homeMoveReadySchema } from "../homeMove";
-import { joinAtAnswerSchema, joinAtOptionsSchema, linkAtAnswerSchema } from "../joinByAddress";
+import {
+  joinAtAnswerSchema,
+  joinAtOptionsSchema,
+  linkAtAnswerSchema,
+  setUpHereSchema,
+  setUpReadsSchema,
+} from "../joinByAddress";
 import { nearbyMacsViewSchema } from "../nearbyMacs";
 import { phonePushAnswerSchema, phonePushRegistrationSchema } from "../phonePush";
 import {
@@ -606,6 +612,39 @@ export const deviceChannels = {
     surface: "host",
     request: z.tuple([z.enum(["join", "forget"])]),
     response: joinOutcomeSchema,
+  },
+  // Set up from your first mate's computer, at this app's first launch
+  // (docs/view.md, "Joining"): this computer's addresses, its Remote Login
+  // state and its check line, read without an administrator; its Sharing
+  // settings on a Mac; and following along once that computer added this
+  // one, which the window asks while its first launch is up.
+  "inf:devices:set-up-here": {
+    effect: "read",
+    surface: "host",
+    // The account and addresses, then the keys, read only while the aside is open.
+    request: z.tuple([setUpReadsSchema]),
+    response: setUpHereSchema,
+  },
+  "inf:devices:open-sharing": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: okSchema,
+  },
+  "inf:devices:follow-added": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    // `follows`: this window would follow along once added; `joins`: Join by its address works here;
+    // `pastes`: Paste its link works here, as it also does while no command this window starts runs;
+    // `outside`: a first mate started outside this window runs beside it, never one still starting.
+    response: z.strictObject({
+      followed: z.boolean(),
+      follows: z.boolean(),
+      joins: z.boolean(),
+      pastes: z.boolean(),
+      outside: z.boolean(),
+    }),
   },
   // One step of Join by its address asked of the first mate a command runs
   // (docs/run.md, "Joining another computer"): it keeps this computer's SSH

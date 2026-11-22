@@ -103,6 +103,8 @@
   "commandMoveRightWords": "seta, direita, próximo",
   "commandMoveUp": "Mover para cima",
   "commandMoveUpWords": "seta, cima, anterior",
+  "commandNoticeNotAnsweringRetry": "Seu imediato está em execução, mas não responde. Espere por ele, ou inicie-o aqui para se conectar a ele de novo.",
+  "commandNoticeStopping": "Seu imediato está sendo parado. Esta janela o inicia aqui assim que ele parar.",
   "commandNoticeWindowCrashed": "Seu imediato parou sem dizer por quê e não iniciou de novo. Inicie-o aqui para iniciá-lo de novo.",
   "commandNoticeWindowNotAnswering": "Seu imediato está em execução, mas não responde. Reinicie-o para pará-lo e iniciá-lo de novo, ou espere por ele.",
   "commandNoticeWindowRestarting": "Seu imediato parou e está iniciando de novo. Esta janela espera por ele.",

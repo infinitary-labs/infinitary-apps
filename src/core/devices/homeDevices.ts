@@ -252,6 +252,8 @@ export async function startHomeDevices(options: {
       : hostPlatform() === "win32"
         ? { firewall: () => windowsFirewallKeepsOut(CONNECTION_PORT, process.execPath) }
         : {}),
+    // A Windows PC's own ssh keeps no control connection, which adding by an address needs.
+    ...(hostPlatform() === "win32" ? { addsByAddress: false as const } : {}),
     // One feed line when a device joins, or finds this Mac again; it names
     // the device, never the link. A computer that runs work then gets its
     // setup card (docs/devices.md, "Finishing its setup").

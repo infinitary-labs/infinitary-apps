@@ -1,5 +1,5 @@
 ---
-source: 01b32db6f45c0f7c
+source: 714fca51d75af858
 title: Premier lancement
 description: Ce qu’Infinitary affiche la première fois que vous l’ouvrez, comment connecter un abonnement et comment ajouter votre premier projet.
 ---
@@ -45,7 +45,12 @@ Si un abonnement est connecté mais ne peut toujours pas répondre, la fenêtre 
 ## Si votre second se trouve déjà sur un autre ordinateur {#if-your-first-mate-already-lives-on-another-computer}
 
 Sous les boutons des fournisseurs, un second groupe indique « Votre second est sur un autre ordinateur ».
-Utilisez **Coller son lien** ou **Rejoindre par son adresse** pour piloter ce second d’ici au lieu d’en configurer un nouveau.
+Sur un Mac ou un ordinateur Linux x64, **Configurer depuis l’ordinateur de votre second** apparaît en premier : il affiche l’adresse de cet ordinateur, à taper sur l’ordinateur où vit votre second.
+Une fois que cet ordinateur a ajouté celui-ci, cette fenêtre ouvre votre second d’elle-même, tant que rien n’y a encore été configuré, comme une connexion ou un projet.
+Une fenêtre où vous avez déjà configuré quelque chose garde son propre second : utilisez plutôt **Coller son lien** ou **Rejoindre par son adresse** pour piloter ce second d’ici.
+Si Infinitary était fermé quand cet ordinateur a ajouté celui-ci, il ouvre votre second au prochain lancement, quoi qu’on y ait configuré.
+Une fenêtre à côté d’un Infinitary que vous avez lancé vous-même depuis Terminal garde le second de celui-ci et ne propose aucune de ces deux façons ; arrêtez d’abord cet Infinitary pour les utiliser.
+Un PC Windows et un ordinateur Linux Arm n’affichent que les deux autres façons.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/).
 
 ## L’avis sur les diagnostics {#the-diagnostics-notice}

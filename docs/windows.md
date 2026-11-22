@@ -114,7 +114,7 @@ That journey checks, in order:
 3. The Git for Windows offer is up; the journey presses its install button through Windows' accessibility tree, and the pinned Git installs for this person and the app's saved data appears.
    That first window started no command, since a run could not have found Git then.
    Opened again from the Start menu, the window starts the command with no window through this person's Task Scheduler (`docs/run.md`, "On Windows"): the run's task runs `Infinitary.exe run` as this person in their session, its sign-in trigger off, and closing the window leaves that run going until a stop asked through the data folder ends it.
-   `Infinitary.exe start-at-boot` then turns the task's sign-in trigger on and starts it, and `start-at-boot --off` takes the task away.
+   `Infinitary.exe start-at-boot` then turns the task's sign-in trigger on and starts it, and `start-at-boot --off` takes the task away; Task Scheduler's own answer for that task, which a refused removal reads, is there before and not found after.
 4. Launched again with the mock provider and the `tests/windows/windowsCrew.ts` scenario, the app adds a small Node project whose origin is a bare copy elsewhere on the PC, so it runs on Automatic.
    Its task starts on the PC with none of Automatic's checks refusing it, the task's activity says Automatic chose this computer, and the PC's own reading is fresh with a memory figure.
    Its crewmate runs `git status`, `pnpm install`, one test file, a build and a task command in that Git's Git Bash, each step printing its mark only when it succeeded.

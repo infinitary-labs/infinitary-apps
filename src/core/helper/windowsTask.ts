@@ -1,6 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "../devices/identity";
+import { hostEnv } from "../hostEnv";
+import { encodedCommand, windowsPowerShell } from "../storage/ownerOnly";
 import type { Launchctl, Launcher } from "./background";
 
 /**
@@ -26,8 +29,20 @@ import type { Launchctl, Launcher } from "./background";
  * systemd keep the work alive on a Mac and Linux.
  */
 
-/** `schtasks.exe`, asked as `launchctl` is: its arguments, then what it answered. */
-export type Schtasks = Launchctl;
+/**
+ * `schtasks.exe`, asked as `launchctl` is: its arguments, then what it
+ * answered; with `lookup`, Task Scheduler's own answer for one task, which
+ * `schtasks.exe` cannot give, since it fails alike for a task it does not
+ * hold and one it will not show, in words that follow the system's language.
+ */
+export type Schtasks = Launchctl & { lookup?: TaskLookup };
+
+/**
+ * One task in Task Scheduler's root folder, as Task Scheduler itself answers
+ * for it by name: gone only on its own not-found answer; there; or unknown,
+ * a refusal, a timeout or no answer at all.
+ */
+export type TaskLookup = (label: string) => Promise<"gone" | "there" | "unknown">;
 
 /** The task as it was registered, in the data folder: what `schtasks /Create /XML` reads. */
 export const RUN_TASK_FILE = "run-task.xml";
@@ -101,12 +116,21 @@ export function runTaskXml(options: {
   account: string;
   atLogin: boolean;
   settings?: string;
+  /**
+   * The label of this app's own agent the task is, which its run reads as
+   * Task Scheduler sets no variable (`--agent`, src/main/runCommand.ts).
+   */
+  agent?: string;
 }): string {
   return taskXml({
     launcher: options.launcher,
     account: options.account,
     atLogin: options.atLogin,
-    words: ["run", ...(options.settings ? ["--settings", options.settings] : [])],
+    words: [
+      "run",
+      ...(options.settings ? ["--settings", options.settings] : []),
+      ...(options.agent ? ["--agent", options.agent] : []),
+    ],
     description: "Starts Infinitary with no window (docs/run.md).",
     again: false,
   });
@@ -310,60 +334,210 @@ export async function startRunTask(schtasks: Schtasks, label: string): Promise<b
  * Takes the task away and its file with it. A run it started keeps going
  * until it stops: Task Scheduler's own end of a task ends its program at
  * once, with no clean stop, so a stop is asked of the run itself instead.
+ * A task Task Scheduler would not take away keeps its file for a later
+ * removal and rejects, so its caller says so, unless Task Scheduler answers
+ * that it holds no task by that name (`Schtasks.lookup`): a list of tasks
+ * leaves out one this account cannot read, and a task still registered may
+ * or may not start at sign-in.
  */
 export async function removeRunTask(
   schtasks: Schtasks,
   options: { label: string; file: string },
 ): Promise<boolean> {
   const was = existsSync(options.file);
+  const out = await schtasks(["/Delete", "/TN", options.label, "/F"]);
+  const record = out.ok
+    ? "gone"
+    : await (schtasks.lookup?.(options.label) ?? Promise.resolve("unknown" as const)).catch(
+        () => "unknown" as const,
+      );
+  if (record === "there")
+    throw new Error(
+      `Task Scheduler did not take Infinitary's task away, so it is still registered: ${out.output}`,
+    );
+  if (record === "unknown")
+    throw new Error(
+      `Task Scheduler did not take Infinitary's task away, and could not say whether it is still registered: ${out.output}`,
+    );
   rmSync(options.file, { force: true });
-  await schtasks(["/Delete", "/TN", options.label, "/F"]);
   return was;
 }
 
 /**
+ * Task Scheduler's own answer for one task in its root folder, through its
+ * scripting interface in Windows' own PowerShell: its not-found error
+ * (0x80070002) for that exact task is gone, and any other error, a PowerShell that cannot start
+ * included, is unknown (`TaskLookup`).
+ */
+export function powerShellTaskLookup(
+  env: NodeJS.ProcessEnv,
+  label: string,
+): Promise<"gone" | "there" | "unknown"> {
+  return new Promise((resolve) => {
+    execFile(
+      windowsPowerShell(env),
+      [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        encodedCommand(TASK_LOOKUP_SCRIPT),
+      ],
+      { env: { ...hostEnv(), INFINITARY_TASK_LABEL: label }, timeout: 15_000, windowsHide: true },
+      (error, stdout) => {
+        const answer = String(stdout).trim();
+        resolve(!error && (answer === "gone" || answer === "there") ? answer : "unknown");
+      },
+    );
+  });
+}
+
+/**
+ * Asks Task Scheduler for the task its setting names. Only the exact task's
+ * lookup can answer gone: an error reaching the service or its root folder,
+ * not-found included, is unknown. Each wrapped error is followed to its own code.
+ */
+const TASK_LOOKUP_SCRIPT = String.raw`
+$ErrorActionPreference = 'Stop'
+try {
+  $service = New-Object -ComObject Schedule.Service
+  $service.Connect()
+  $root = $service.GetFolder('\')
+} catch {
+  'unknown'
+  exit 0
+}
+try {
+  [void]$root.GetTask($env:INFINITARY_TASK_LABEL)
+  'there'
+} catch {
+  $e = $_.Exception
+  while ($e) {
+    if ($e.HResult -eq -2147024894) { 'gone'; exit 0 }
+    $e = $e.InnerException
+  }
+  'unknown'
+}
+`;
+
+/**
  * A stop asked of the run on this data folder where no signal can ask it
  * (docs/run.md, "On Windows"): Windows ends a program another one signals at
- * once, with no clean stop, so Stop, a window that lets the command go and
- * Ctrl-C's equivalent from another program write this file instead, and the
- * run stops as a signal stops it on a Mac or Linux (`watchRunStop`).
+ * once, with no clean stop, so Stop and Ctrl-C's equivalent from another
+ * program write this file instead, and the run stops as a signal stops it on
+ * a Mac or Linux (`watchRunStop`).
  */
 export const RUN_STOP_FILE = "run-stop.json";
 
-/** Asks the run on this data folder to stop cleanly; false where the request could not be written. */
-export function requestRunStop(dataDir: string, now: Date = new Date()): boolean {
+/**
+ * A stop asked of one run alone, by its process and start, on every system:
+ * a signal goes to a process number, which another program may have taken by
+ * the time it arrives. A file of its own, which a run from an earlier version
+ * never reads, so only the run it names acts on it (`watchRunStop`).
+ */
+export const RUN_STOP_FOR_FILE = "run-stop-for.json";
+
+/** The run's own record in its data folder, which the window reads as the command's status. */
+export const RUN_RECORD_FILE = "run.json";
+
+/**
+ * Whether a program holds Windows' lock file: Chromium opens it for writing
+ * and lets others only read it, so opening it for writing fails while it is
+ * held. A file no program holds is opened and closed again, changed in nothing.
+ */
+export function windowsLockHeld(file: string): boolean {
+  let fd: number;
   try {
-    writePrivate(join(dataDir, RUN_STOP_FILE), `${JSON.stringify({ at: now.toISOString() })}\n`);
+    fd = openSync(file, "r+");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === "EBUSY" || code === "EPERM" || code === "EACCES";
+  }
+  closeSync(fd);
+  return false;
+}
+
+/** One run on a data folder: its process and the start its own note keeps, so a reused process number is another run. */
+export type RunInstance = { pid: number; startedAt: string };
+
+/**
+ * Asks the run on this data folder to stop cleanly; with `run`, only that
+ * run, in a file only a run that knows itself reads, so another there, a
+ * process number reused or an earlier version included, leaves it alone.
+ * False where the request could not be written.
+ */
+export function requestRunStop(
+  dataDir: string,
+  now: Date = new Date(),
+  run?: RunInstance,
+): boolean {
+  try {
+    if (run)
+      writePrivate(
+        join(dataDir, RUN_STOP_FOR_FILE),
+        `${JSON.stringify({ at: now.toISOString(), pid: run.pid, startedAt: run.startedAt })}\n`,
+      );
+    else
+      writePrivate(join(dataDir, RUN_STOP_FILE), `${JSON.stringify({ at: now.toISOString() })}\n`);
     return true;
   } catch {
     return false;
   }
 }
 
-/** How often a run on Windows reads whether a stop was asked of it. */
+/** How often a run reads whether a stop was asked of it through its folder. */
 export const RUN_STOP_READ_MS = 1_000;
 
 /**
- * A run on Windows reads whether a stop was asked of it once a second and
- * stops once one written after its own start is there; a request left from
- * before it started is taken away. Answers what ends the reading.
+ * A run reads whether a stop was asked of it through its folder once a
+ * second and stops once one written after its own start is there: with
+ * `anyRun`, on Windows, where no signal asks it, one for whichever
+ * runs here (`RUN_STOP_FILE`), and everywhere one naming this run, `run`, by
+ * its process and start (`RUN_STOP_FOR_FILE`). On a Mac or Linux a signal
+ * asks a stop of whichever runs, so the file for any run is never read
+ * there. A request left from before it started, one
+ * naming another run, one naming a run when this one knows no identity, and
+ * a file that holds no request are taken away. Answers what ends the reading.
  */
 export function watchRunStop(
   dataDir: string,
   startedAt: Date,
   stop: () => void,
   every: number = RUN_STOP_READ_MS,
+  run?: RunInstance,
+  anyRun = true,
 ): () => void {
-  const file = join(dataDir, RUN_STOP_FILE);
-  const asked = (): boolean => {
-    let at: number;
+  /** The request in `name`, taken away once read; null where there is none. */
+  const take = (name: string): Record<string, unknown> | null => {
+    const file = join(dataDir, name);
+    let request: unknown;
     try {
-      at = Date.parse((JSON.parse(readFileSync(file, "utf8")) as { at?: string }).at ?? "");
+      request = JSON.parse(readFileSync(file, "utf8"));
     } catch {
-      return false;
+      return null;
     }
-    rmSync(file, { force: true });
-    return Number.isFinite(at) && at >= startedAt.getTime();
+    // A request that cannot be taken away still counts; the next reading meets it again.
+    try {
+      rmSync(file, { force: true });
+    } catch {}
+    return typeof request === "object" && request !== null
+      ? (request as Record<string, unknown>)
+      : null;
+  };
+  const after = (request: Record<string, unknown>): boolean => {
+    const when = typeof request.at === "string" ? Date.parse(request.at) : Number.NaN;
+    return Number.isFinite(when) && when >= startedAt.getTime();
+  };
+  const asked = (): boolean => {
+    const forAny = anyRun ? take(RUN_STOP_FILE) : null;
+    const named = take(RUN_STOP_FOR_FILE);
+    const forThis =
+      named !== null &&
+      run !== undefined &&
+      named.pid === run.pid &&
+      named.startedAt === run.startedAt &&
+      after(named);
+    return forThis || (forAny !== null && after(forAny));
   };
   if (asked()) {
     stop();

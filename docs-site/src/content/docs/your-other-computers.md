@@ -26,22 +26,34 @@ While it sleeps or is out of reach:
 
 1. On the computer where your first mate lives, open Settings → **Devices**.
 2. Press **+ A computer**.
-3. Pick one of three ways.
-   Each way adds the same kind of computer.
+3. Type the other computer's address and press **Add it**.
 
-**Paste a link into Infinitary there.**
+Adding a computer by its address is the way to start with: this computer then keeps the other one updated and reaches it by itself, with no visit there after setup.
+Type the address you use with SSH for the other computer, such as `you@mini.local`.
+Remote Login must be on there; on Linux, its SSH server.
+Computers on the same network are listed under **On this network**, so you can pick one.
+You can also ask your first mate to add a computer, and it recommends the address.
+
+On a new Mac or x64 Linux computer, Infinitary's first launch shows the address to type: choose **Set up from your first mate's computer**.
+It shows this computer's private network address first, such as Tailscale's, then its address on the local network, each with **Copy**.
+Once the computer where your first mate lives adds it, that window opens your first mate by itself, as long as nothing was set up in it yet.
+A window where you already signed in, added a project or talked to its first mate keeps its own first mate, and so does a window beside an Infinitary you started yourself from Terminal.
+If Infinitary was closed on that computer when it was added, it opens your first mate the next time it starts, whatever was set up in it.
+A Windows PC and an Arm Linux computer join with **Paste its link** instead.
+
+Under the address, **Can't turn on Remote Login there?** offers two other ways.
+Each adds the same kind of computer.
+
+**Paste a link into Infinitary there**, when you are at that computer, or it is a Windows PC.
 Copy the link, then open Infinitary on the other computer for the first time.
 Under **Your first mate is on another computer**, choose **Paste its link**, paste it and press **Continue**.
 Infinitary asks once whether to control your first mate from there; press **Control it from here**.
 
-**Run a command there.**
+**Run a command there**, when you can type in Terminal there but Remote Login is off.
 Copy the command and run it once in Terminal on the other computer, as the user who should run its work.
 It gets Infinitary from this computer, so both need the same network.
 
-**By its address.**
-Type the address you use with SSH for the other computer, such as `you@mini.local`.
-Remote Login must be on there; on Linux, its SSH server.
-Computers on the same network are listed under **On this network**, so you can pick one.
+When your first mate lives on a Windows PC, **+ A computer** offers only the link and the command.
 
 A link or command works once, for ten minutes, and you can press **Stop it** before then.
 You can also join from the other computer: on its first launch, choose **Join by its address** and type the address of the computer where your first mate lives.

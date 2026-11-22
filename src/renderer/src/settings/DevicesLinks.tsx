@@ -286,22 +286,10 @@ function OpenLink({
   onStop: () => void;
 }) {
   const here = useHereAs();
-  const [copied, setCopied] = useState<"copied" | "failed" | null>(startCopied ? "copied" : null);
-  useEffect(() => {
-    if (copied !== "copied") return;
-    const reset = setTimeout(() => setCopied(null), 1500);
-    return () => clearTimeout(reset);
-  }, [copied]);
   const words = PANEL_WORDS[make];
   const text = invite.command?.text ?? invite.link;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied("copied");
-    } catch {
-      setCopied("failed");
-    }
-  };
+  const [copied, copyText] = useCopied(startCopied);
+  const copy = () => copyText(text);
   return (
     <div className="fm-devices-panel" data-panel-state="open" data-panel-holds={words.thing}>
       <SectionLabel>{words.label}</SectionLabel>
@@ -340,4 +328,28 @@ function OpenLink({
       )}
     </div>
   );
+}
+
+/**
+ * A Copy button's state: Copied for a moment after the copy, or failed when
+ * the clipboard refused it, which stays so the person copies it themselves.
+ */
+export function useCopied(
+  startCopied = false,
+): ["copied" | "failed" | null, (text: string) => Promise<void>] {
+  const [copied, setCopied] = useState<"copied" | "failed" | null>(startCopied ? "copied" : null);
+  useEffect(() => {
+    if (copied !== "copied") return;
+    const reset = setTimeout(() => setCopied(null), 1500);
+    return () => clearTimeout(reset);
+  }, [copied]);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied("copied");
+    } catch {
+      setCopied("failed");
+    }
+  };
+  return [copied, copy];
 }

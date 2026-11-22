@@ -1,16 +1,19 @@
-import { existsSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { Launchctl } from "./background";
 import {
   RUN_STOP_FILE,
+  RUN_STOP_FOR_FILE,
   readRunTask,
   registerRunTask,
   removeRunTask,
   requestRunStop,
   runTaskFile,
   runTaskXml,
+  type Schtasks,
+  type TaskLookup,
   watchRunStop,
   windowsAccount,
   windowsWord,
@@ -65,6 +68,10 @@ describe("the task", () => {
     expect(xml).toContain("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>");
     expect(xml).toContain(`<Command>${LAUNCHER.executable}</Command>`);
     expect(xml).toContain("<Arguments>run</Arguments>");
+    // This app's own task names its agent, as a variable does elsewhere.
+    expect(
+      runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true, agent: LABEL }),
+    ).toContain(`<Arguments>run --agent ${LABEL}</Arguments>`);
   });
 
   it("keeps a settings file with a space, a quote and an ampersand, read back as written", () => {
@@ -106,6 +113,59 @@ describe("the task", () => {
     expect(asked.at(-1)).toEqual(["/Delete", "/TN", LABEL, "/F"]);
     expect(await removeRunTask(program, { label: LABEL, file })).toBe(false);
   });
+
+  // The review of INF-5409: a task Task Scheduler would not take away, or may still hold, is said,
+  // and its file kept; only Task Scheduler's own not-found answer for that task lets the file go,
+  // since a list of tasks leaves out one this account cannot read.
+  it("keeps its file and rejects unless Task Scheduler answers it holds no such task", async () => {
+    const file = runTaskFile(scratchDir("windows-task-"));
+    const xml = runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true });
+    const asked: string[] = [];
+    const refused = (lookup?: TaskLookup): Schtasks =>
+      Object.assign(
+        async (args: readonly string[]) =>
+          args[0] === "/Delete"
+            ? { ok: false, output: "ERROR: Access is denied." }
+            : { ok: true, output: "SUCCESS" },
+        lookup
+          ? {
+              lookup: async (label: string) => {
+                asked.push(label);
+                return lookup(label);
+              },
+            }
+          : {},
+      );
+    await registerRunTask(refused(), { label: LABEL, file, xml });
+    await expect(
+      removeRunTask(
+        refused(async () => "there"),
+        { label: LABEL, file },
+      ),
+    ).rejects.toThrow("so it is still registered: ERROR: Access is denied.");
+    expect(existsSync(file)).toBe(true);
+    expect(asked).toEqual([LABEL]);
+    // A refusal or a lookup that cannot run, or none to ask, is not an answer that it is gone.
+    for (const unsure of [
+      refused(async () => "unknown"),
+      refused(async () => {
+        throw new Error("PowerShell could not start");
+      }),
+      refused(),
+    ]) {
+      await expect(removeRunTask(unsure, { label: LABEL, file })).rejects.toThrow(
+        "could not say whether it is still registered: ERROR: Access is denied.",
+      );
+      expect(existsSync(file)).toBe(true);
+    }
+    expect(
+      await removeRunTask(
+        refused(async () => "gone"),
+        { label: LABEL, file },
+      ),
+    ).toBe(true);
+    expect(existsSync(file)).toBe(false);
+  });
 });
 
 describe("a stop asked of the run on Windows", () => {
@@ -124,6 +184,136 @@ describe("a stop asked of the run on Windows", () => {
       end();
     }
   });
+
+  // The review of INF-5409: a window that joined or followed along asks its own run to stop by its
+  // process and start, and a run started by hand in its place, a reused process number included,
+  // reads that request as another's.
+  it("leaves a run alone for a request naming another run, and takes that request away", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    let stops = 0;
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, own);
+    try {
+      for (const other of [
+        { pid: 4242, startedAt: own.startedAt },
+        { pid: own.pid, startedAt: "2026-10-25T17:00:00.000Z" },
+      ]) {
+        expect(requestRunStop(dataDir, new Date(), other)).toBe(true);
+        // It goes in a file of its own, which a run from an earlier version never reads.
+        expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+        await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FOR_FILE))).toBe(false);
+        expect(stops).toBe(0);
+      }
+      requestRunStop(dataDir, new Date(), own);
+      await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: a request naming a run is never for a reader that knows no run of its
+  // own, such as a work run.
+  it("leaves a run that knows no identity alone for a request naming a run", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10);
+    try {
+      requestRunStop(dataDir, new Date(), { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" });
+      await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FOR_FILE))).toBe(false);
+      expect(stops).toBe(0);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: Stop and older callers name no run, and whichever runs here stops.
+  it("stops for a request naming no run", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, own);
+    try {
+      requestRunStop(dataDir);
+      await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: on a Mac or Linux a signal asks a stop of whichever run is there, so a
+  // run there reads only the stop naming it, and leaves the file for any run unread.
+  it("reads only the stop naming it where the file for any run is not its platform's", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    const end = watchRunStop(
+      dataDir,
+      new Date(Date.now() - 1_000),
+      () => (stops += 1),
+      10,
+      own,
+      false,
+    );
+    try {
+      requestRunStop(dataDir);
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(stops).toBe(0);
+      expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(true);
+      requestRunStop(dataDir, new Date(), own);
+      await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: a stop file that holds no request, such as JSON null, is no stop, and
+  // reading it as a run starts throws nothing.
+  it("reads a stop file that holds no request as no stop", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    for (const name of [RUN_STOP_FILE, RUN_STOP_FOR_FILE])
+      for (const content of ["null", "42", '"stop"']) {
+        writeFileSync(join(dataDir, name), content);
+        let stops = 0;
+        const end = watchRunStop(
+          dataDir,
+          new Date(Date.now() - 1_000),
+          () => (stops += 1),
+          10,
+          own,
+        );
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          expect(stops).toBe(0);
+          expect(existsSync(join(dataDir, name))).toBe(false);
+        } finally {
+          end();
+        }
+      }
+  });
+
+  // The review of INF-5409: a stop file that cannot be taken away cancels no other request, and
+  // reading it throws nothing as the run starts.
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "stops for Stop's request though neither request can be taken away",
+    () => {
+      const dataDir = scratchDir("windows-stop-");
+      requestRunStop(dataDir);
+      requestRunStop(dataDir, new Date(), { pid: 4242, startedAt: "2026-10-25T17:05:00.000Z" });
+      // A folder whose files cannot be removed, as a file another program holds open on Windows.
+      chmodSync(dataDir, 0o500);
+      let stops = 0;
+      try {
+        watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, {
+          pid: 5151,
+          startedAt: "2026-10-25T17:05:00.000Z",
+        })();
+        expect(stops).toBe(1);
+      } finally {
+        chmodSync(dataDir, 0o700);
+      }
+    },
+  );
 
   it("leaves a run alone for a request older than its own start, and takes that request away", async () => {
     const dataDir = scratchDir("windows-stop-");

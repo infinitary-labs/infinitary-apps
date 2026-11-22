@@ -12,6 +12,7 @@ import spacing from "../renderer/src/design/tokens/spacing.css?raw";
 import typography from "../renderer/src/design/tokens/typography.css?raw";
 import { frameFontFiles } from "./frames/fontFiles";
 import { REQUIRED_WEB_PREFERENCES } from "./security/baseline";
+import { markRefusalWindow } from "./windows";
 
 const SAVED_DATA_REFUSAL: DataRefusal = {
   title: SAVED_DATA_REFUSAL_TITLE,
@@ -27,6 +28,8 @@ export async function showSavedDataRefusal(hidden: boolean): Promise<void> {
 /** The same standalone refusal window, with the words of the refusal given. */
 export async function showDataRefusal(hidden: boolean, refusal: DataRefusal): Promise<void> {
   const win = standaloneWindow({ title: "Infinitary", width: 640, height: 360 });
+  // The window a second launch brings forward (./windows.ts), unless held hidden for a capture.
+  if (!hidden) markRefusalWindow(win);
   win.on("closed", () => app.quit());
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   const html = standaloneDocument({

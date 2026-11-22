@@ -30,6 +30,7 @@ Card pictures and project fonts it has shown are kept in memory for the run, up 
 ## Joining
 
 The first-launch stage carries a second group under the provider chips, `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address" (`src/renderer/src/devices/JoinAnotherMac.tsx`).
+On a Mac or an x64 Linux computer, which its first mate's computer can add by its address, "+ Set up from your first mate's computer" leads them, and the three chips sit on their own line; a Windows PC and an Arm Linux computer keep the two (below, "Set up from your first mate's computer").
 A link joins only by being pasted there and confirmed: nothing on either Mac answers the link's scheme.
 
 1. The window reads the pasted text as a link (`parsePairingLink`) and refuses text that is not one before anything is sent.
@@ -63,6 +64,64 @@ A Windows PC signs in with Windows' own SSH, `ssh.exe` in `System32\OpenSSH`, wh
 Each stop is one warning line with the address kept: Infinitary not open there, which starts nothing there; too old; controlling another computer; this computer itself; no curl on Linux; or Remote Login's own refusals.
 Nothing reaches the feed or the record until the join itself.
 
+### Set up from your first mate's computer
+
+"+ Set up from your first mate's computer" opens an aside with what the person types or compares on that computer to add this one by its address, which then keeps this one updated and reaches it by itself (INF-4931, design skill `components/devices/JoinAnotherMac`).
+`inf:devices:set-up-here` reads it all without an administrator (`setUpHere`, `src/core/devices/setUpHere.ts`): the chip asks only whether the way is offered here, and the open aside asks the account and addresses, which answer at once, and the keys beside them, again every few seconds while it is open, so it follows this computer's addresses.
+When no address can be read yet, the aside says "Could not find this computer's address yet." and reads again.
+
+- **The address**: the account Infinitary runs as at this computer's private network address (100.64.0.0/10, such as Tailscale's) first, with Copy, and "Its private network address, such as Tailscale's, reaches it wherever both computers are on it."; then "On the same network only:" with its local network name, the one the nearby list fills on the other computer, and its own Copy.
+- **Remote Login**: whether this computer's SSH server answers with a key, on loopback or at the address shown first (`readOwnHostKey`), so a server that listens on that address alone reads on; it reads off only where both refuse the connection, and says nothing while it cannot tell, so "Remote Login is on here." or "Remote Login is off here.
+  Turn it on, then add this computer.", with Open Sharing settings on a Mac (`inf:devices:open-sharing`); on Linux it names its SSH server.
+- **The check line**: while Remote Login is on, the line the other computer's question shows, under "Your first mate's computer asks you to compare this line."
+- **The wait**: "Waiting for your first mate's computer to add this one.
+  This window then opens your first mate by itself.", over Cancel.
+
+### Following along
+
+While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
+When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
+A window opened beside a command's first mate follows the same way, and joins at all (`joinable`), only beside the run its starter owns (`ownedRun`): one the window's own run agent started, as that run's own note says.
+While no command runs, the shell accepts a pasted link's join alone (`Shell.join`, `followsAdded`'s `pastes`): that join names no run to stop, so the agent is let go with no stop file and no signal, its Mac or Linux job ending only a run it started itself, and a command started by hand meanwhile keeps going; Join by its address and following along wait for the run the starter owns.
+That is the shell's answer, not a chip on screen: with no command running, the window draws its stopped notice and no first-launch group, since the group comes from the command's first mate.
+A command the window started or restarted that has not welcomed it yet is not one that is stopped, however long it takes, as on Windows, where Task Scheduler accepts the start before the run begins: no join is accepted until it welcomes the window, and a join then stops that run (`BesideWindow.joinState`'s `starting`).
+That start ends only on a welcome, on the connection open now, through the local door of the run this app's own agent started, read again at each join reading: a run started by hand that welcomes the window and leaves before the started run writes its record ends nothing (`BesideWindow.settleStart`).
+Restart it replaces the run its notice names, and its starter ends that run by its process and start, ending nothing where another run holds the folder.
+During Restart it, a welcome from the run being replaced, reconnecting before it ends, is not the run started again, so the join still waits.
+The join waits until the starter has answered, a first mate has welcomed the window on the connection still open now, and the records name a run this app's own agent started that is not the one replaced; a welcome on a connection that has since dropped counts for nothing, even while the link dials through the drop at once.
+That connection must also have come through the replacement's own local door, which names its run by process and start (`docs/connection.md`, "The local door"): a welcome from the replaced run came through that run's door, which named it, however late the window handles it and whatever the clocks say (`HomeLink.connection`'s `run`).
+A replacement whose door names no run, from a version before, is never taken for the run started again.
+One reading of the records both ends that wait and names the run a join stops, so the two never describe different runs; records unreadable at the welcome are read again at each join reading, so the join is offered once they recover, with no further welcome.
+A restart that did not happen offers the join again only where that same run, by its process and start, still runs, read again once records unreadable at the starter's answer recover; an absent or different run gets no such exception.
+Where that run welcomed the window through its own door while the restart was under way, it was the only run there was, so the join comes back at once, as after its first welcome, even when this window started it and Restart it was pressed before that welcome.
+While the starter has not answered, every notice says the first mate is starting again, so none offers a second Restart it or Start it here, even past the wait for a reconnected run's answers or after the run replaced ends.
+Once the starter answers, the notice asked for meanwhile shows: none for a first mate that answered in the meantime, and Restart it again for one that welcomed and has not answered.
+The same holds when the starter could not restart it: a run that answered meanwhile, on a new connection or late on the one it timed out on, keeps the notice its own answer, or its wait for one, gives, so a run that answered is never offered an end by force, and the window stops counting it as silent; one that neither welcomed nor answered meanwhile is still the one that does not answer.
+The notice that a first mate does not answer is about the run that timed out, as its door named it: Restart it and Start it here end that run alone, a run that took the folder before the wait was over is not called silent and gets a wait of its own, and a notice redrawn once the starter answers is dropped where its run no longer holds the folder.
+Start it here and Restart it are refused while a join is under way.
+Which run is the window's own comes from the same reading of the command's records as whether one runs (`ownedRunOf`), and records that cannot be read say neither that a join works nor that a command started outside the window runs.
+The agent's definition marks each run it starts with its label in `INFINITARY_RUN_AGENT` (`runAgentEnv`, `src/core/helper/background.ts`), and on Windows, where Task Scheduler sets no variable, the task's `--agent` word (`runTaskXml`); the run takes the variable out of its environment as it starts (`takeRunAgentMark`), so no program it starts inherits it, and notes the mark in its run marker's `agent` (`startedByAgent`).
+A command started by hand in Terminal, from inside another run, or by an agent an older version set up, carries no mark, keeps its own first mate, and the window stays beside it, offering neither the switch nor a join that would stop it.
+The window reads which run it owns, by its process and the start its note keeps, once for each join or follow (`joinTarget`), so the check and the stop name the same run; following along reads it again after its first mate's answer and follows only when the same run still runs.
+Joining or following along then stops that run alone, on every platform by a stop asked through the folder, never a signal, since a signal goes to a process number another program may have taken by the time it arrives: the stop names its process and start in its own file, `run-stop-for.json`, which another run there ignores, a reused process number included, a run from an older version never reads, and a run that cannot tell its own process and start refuses (`requestRunStop`, `watchRunStop`, `BesideWindow.leave`, `stopRunningCommand`'s `only`).
+The file any run there reads, `run-stop.json`, is Windows' alone, where Stop asks through the folder; on a Mac or Linux Stop signals whichever run is there, and a run reads only the file that names it.
+That stop for one run is separate from letting the run agent go at the join, below.
+The run agent is let go as well, and on a Mac or Linux computer its launchd job or user service stops whichever run it holds then, a run it started again during the join included: that job only ever runs the agent's own runs, so none is left holding the data folder beside the view, and a run started by hand, never under the job, keeps going (`stopRunAgent`).
+A job the service manager would not end, or a Windows task Task Scheduler would not take away and does not itself answer it holds no longer, is said in the window's log, unless the service manager answers that it holds no such job or shows it stopped (launchd's no such service; systemd's ActiveState inactive or failed, never activating, which a unit waiting to start its run again shows), which is let go quietly; the window still opens as the view, and nothing stops a run it did not name.
+On Windows, where the task's stop is a file every run there reads, the agent's stop names the run as above.
+A grant waiting decides the window's starter (`keepsStarterBesideGrant`, `src/main/runCommand.ts`): with no command running the window keeps none and opens as that home's view, as below; a window reopened while the command its run agent started still runs keeps that command's starter, so it can stop the command when it follows along; beside a command started by hand the window keeps no starter.
+A grant the window kept its own first mate beside counts as no grant here, so that window keeps its starter as ever.
+The window asks its first mate whether anything was done only once a grant is waiting in the work folder, so most of its asks read nothing of the profile.
+Where something was done, the window notes that it keeps its own first mate beside that grant (`JoinedHome.keepOwn`, `kept-own.json`), so it stays itself after a restart too: neither a reopened window nor a reopened starter adopts that grant.
+A window opened with a grant waiting and no such note - the grant came while it was closed, or the note cannot be read - opens as that home's view at once, whatever was done here, as a computer added by a command or its address always has (`Shell.start`, below); it starts no first mate of its own and asks none whether anything was done.
+A run with no window never adopts a waiting grant itself (`ShellOptions.headless`): only a window opens one, following along beside it, so the window and the command never both take it, and a run a configured home keeps in the background goes on running after its window quits.
+A switch that has saved the grant opens as the home's view even when its own first mate does not stop cleanly (`Shell.switchToView`).
+Each answer of `inf:devices:follow-added` says what the window would do (`followsAdded`), all four read from one reading of the command beside it: `follows` when it would follow along, `joins` when Join by its address works here, which beside a command means one its starter owns, `pastes` when Paste its link works, which also holds while no command runs, and `outside` only while the records say a command started outside this window runs, never one it started that is still starting, nor records that cannot be read.
+The status line promises only that: the switch where it follows; where something was done, that it keeps its own first mate, naming Paste its link and Join by its address to join after it; and beside a command started outside it (`outside`), that it stays beside that command, with Paste its link and Join by its address unavailable and a line asking to stop that first mate first.
+Until the shell first answers, or while it cannot be asked, the status line promises nothing and Paste its link and Join by its address stay unavailable, and the window keeps asking, so they become available once that command stops or the answer changes.
+While a command the window started is still starting, it promises nothing either, with both unavailable and no line naming a first mate started outside it.
+A computer whose own first mate has a sign-in, a connection, a project or a turn stays as it is, even while its gate is up.
+
 ## A Mac that runs work
 
 A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its window and runs its work with no window (`docs/helper.md`, "A Mac that also controls"): one device on that Mac's list, whose window and work keep the same grant, each connection saying which it is (`as`, `docs/connection.md`).
@@ -70,7 +129,7 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
 - **Joined here at its first launch**: the grant goes to this user's work folder too, and the work starts in the background from this app (`setUpWork`, below): a LaunchAgent on a Mac, a systemd user service on Linux (`docs/helper.md`, "In the background").
   A Linux computer joins a Mac's or a Linux computer's first mate this way, and a Mac a Linux computer's, each with its own system's Infinitary.
   Nothing runs there until a project is set to run on it.
-- **Added by a command or its address**: Infinitary opened here with no grant of its own starts as a view of the home its work runs for, with that grant and no new link (`Shell.start`, `windowFromWork`).
+- **Added by a command or its address**: Infinitary opened here with no grant of its own starts as a view of the home its work runs for, with that grant and no new link (`Shell.start`, `windowFromWork`); one already open at its first launch follows along (above, "Following along").
   It follows where the work's grant dials, and dials through the route the home's SSH keeps when the home reaches it that way.
 - **Clicking Infinitary there** while its work runs opens its window as a view of the home, however it joined.
   On a Mac joined here at its first launch the work runs this same app, so macOS may hand the click to the work, which opens the app beside itself as a new copy that becomes this view (`docs/helper.md`, "What it is").

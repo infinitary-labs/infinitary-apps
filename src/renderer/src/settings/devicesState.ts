@@ -300,9 +300,7 @@ export type DevicesTabViewProps = {
   changing: string | null;
   /** Computers whose address is changing. */
   moving: MovingMac[];
-  /** + A Mac's question, how to add it, is open. */
-  choosing: boolean;
-  /** The question for the other Mac's address is open. */
+  /** + A computer's address form is open. */
   askingAddress: boolean;
   packageUpdate?: DeviceView | undefined;
   /** Macs nearby with Remote Login on, while that question is open. */
@@ -342,8 +340,6 @@ export type DevicesTabViewProps = {
   busy: Busy;
   problem: string | null;
   onAddMac: () => void;
-  onCancelChoose: () => void;
-  onAskAddress: () => void;
   onCancelAddress: () => void;
   onAddAt: (address: string) => void;
   /** The captain's yes on the check line. */

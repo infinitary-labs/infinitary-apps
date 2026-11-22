@@ -57,6 +57,8 @@ stopEachTest();
 function shell(
   joinedDir = join(scratchDir("infinitary-shell-"), "joined"),
   work?: ShellOptions["work"],
+  /** The rest of the shell's options, such as a run's `headless`. */
+  more: Partial<ShellOptions> = {},
 ) {
   const own = ownCore();
   // This Mac's Notification Center, and whether its window is in front.
@@ -95,6 +97,7 @@ function shell(
     }),
   );
   const made = new Shell({
+    ...more,
     joined,
     ...(work ? { work } : {}),
     startCore,
@@ -779,6 +782,35 @@ describe("the app as a view of another Mac", () => {
  * A Mac that both controls Firstmate on another and runs its work (docs/view.md, "A Mac that
  * runs work"): one device on that Mac's list, whose window and work keep the same grant.
  */
+// A run asked to stop while its first mate is still starting (docs/run.md, "Quit and Stop") quits
+// cleanly: its core and connection stop as a quit stops them, never left running as the app ends.
+describe("a quit while this computer's own first mate starts", () => {
+  it("stops that first mate once it started, before the quit goes on", async () => {
+    const mini = shell(undefined, undefined, { headless: true });
+    let started: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    mini.startCore.mockImplementationOnce(async () => {
+      await held;
+      return mini.own.core;
+    });
+    const starting = mini.shell.start();
+    await mini.until(() => mini.startCore.mock.calls.length === 1);
+    let disposed = false;
+    const disposing = mini.shell.dispose().then(() => {
+      disposed = true;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(disposed).toBe(false);
+    started();
+    await starting;
+    await disposing;
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    expect(mini.closeConnection).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("a Mac that controls another and runs its work", () => {
   const workDir = () => join(scratchDir("infinitary-shell-work-"), "work");
   const sam = { name: "sam", uid: 501 };
@@ -962,7 +994,9 @@ describe("a Mac that controls another and runs its work", () => {
     const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
     const mini = shell(joinedDir, { dataDir });
     await mini.shell.start();
+    // It opens straight as the home's view: no first mate of its own starts here.
     expect(mini.startCore).not.toHaveBeenCalled();
+    expect(mini.shell.thisMac().role).toBe("view");
     await mini.until(() => mini.view().contact === "in-reach");
     expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
     expect({ ...mini.joined.read()?.grant, also: undefined }).toEqual(grant);
@@ -1033,6 +1067,179 @@ describe("a Mac that controls another and runs its work", () => {
     pro.pairing.remove(works.deviceId);
     await air.until(() => air.shell.thisMac().role === "home");
     expect(air.shell.thisMac()).toMatchObject({ left: { reason: "removed" } });
+  });
+
+  // INF-4931's plan, step 1: "while the gate is up and nothing has been done here, an address add
+  // from another home turns the window into a view without a relaunch".
+  it("follows along when its home adds it by its address while its first launch is still up", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const mini = shell(undefined, { dataDir });
+    const firstRun = { gateOpen: true, firstTurnAt: null, untouched: true };
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
+    await mini.shell.start();
+    expect(mini.shell.thisMac().role).toBe("home");
+    const asked = () =>
+      mini.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run").length;
+    const before = asked();
+    // Nothing has been added yet: it stays this computer's own first launch, and a poll with no
+    // grant waiting asks its first mate nothing.
+    expect(await mini.shell.followAdded()).toBe(false);
+    expect(asked()).toBe(before);
+    expect(mini.own.dispose).not.toHaveBeenCalled();
+
+    // The home sets this computer up over SSH, which leaves the grant in its work folder.
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    expect(await mini.shell.followAdded()).toBe(true);
+    await mini.until(() => mini.shell.thisMac().role === "view");
+    await mini.until(() => mini.view().contact === "in-reach");
+    expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
+    // The empty first mate beside it stops, and the window starts over with no relaunch.
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    expect(mini.restartWindows).toHaveBeenCalled();
+    expect(mini.relaunch).not.toHaveBeenCalled();
+    // A computer that was not open when the home added it opens as that home's view at once.
+    const fresh = shell(undefined, { dataDir });
+    await fresh.shell.start();
+    expect(fresh.shell.thisMac().role).toBe("view");
+    expect(fresh.startCore).not.toHaveBeenCalled();
+  });
+
+  it("does not follow along once something was done here, after a restart too", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
+    const mini = shell(joinedDir, { dataDir });
+    // The person saved a sign-in or a project here, though the first launch is still up: its core
+    // answers the gate open with no turn yet, and without `untouched`.
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null }
+        : { ownCore: channel }) as never);
+    await mini.shell.start();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    expect(await mini.shell.followAdded()).toBe(false);
+    expect(mini.shell.thisMac().role).toBe("home");
+    expect(mini.own.dispose).not.toHaveBeenCalled();
+    expect(mini.shell.followsAdded()).toEqual({
+      follows: true,
+      joins: true,
+      pastes: true,
+      outside: false,
+    });
+
+    // The review of INF-5409: reopened with that grant still waiting, it stays its own first mate,
+    // and a poll asks nothing more of it.
+    await mini.shell.dispose();
+    const again = shell(joinedDir, { dataDir });
+    await again.shell.start();
+    expect(again.shell.thisMac().role).toBe("home");
+    expect(again.startCore).toHaveBeenCalledTimes(1);
+    expect(await again.shell.followAdded()).toBe(false);
+    expect(
+      again.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+    ).toEqual([]);
+  });
+
+  // The captain's choice on INF-4930: a grant that arrived while the window was closed opens it as
+  // that home's view, as it always has, whatever was done here; only a window that kept its own
+  // first mate beside that grant while it was open stays itself.
+  it("opens over a grant that waited while it was closed unless it kept its own first mate beside it", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    for (const note of ["none", "broken", "kept"] as const) {
+      const dataDir = workDir();
+      const grant = await claimLink(await pro.link("mac"), {
+        kind: "mac",
+        name: "Mac mini",
+        user: sam,
+      });
+      new JoinedHome(dataDir).join(grant, Date.now());
+      const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
+      mkdirSync(joinedDir, { recursive: true });
+      // A note that cannot be read keeps nothing by itself.
+      if (note === "broken") writeFileSync(join(joinedDir, "kept-own.json"), "{broken");
+      if (note === "kept") new JoinedHome(joinedDir).keepOwn(grant.deviceId);
+      const mini = shell(joinedDir, { dataDir });
+      await mini.shell.start();
+      if (note === "kept") {
+        expect(mini.shell.thisMac().role).toBe("home");
+        expect(mini.joined.read()).toBeNull();
+        expect(mini.startCore).toHaveBeenCalledTimes(1);
+      } else {
+        expect(mini.shell.thisMac().role).toBe("view");
+        expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
+        expect(mini.startCore).not.toHaveBeenCalled();
+      }
+      // It never asks a first mate whether anything was done here at its start.
+      expect(
+        mini.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+      ).toEqual([]);
+    }
+  });
+
+  // The review of INF-5409: a command with no window never opens a grant waiting in the work
+  // folder, which the window beside it opens by following along, so the two never both take it and
+  // the command never ends as a view for its service manager to start again.
+  it("leaves a grant waiting to the window when it runs with no window", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    const run = shell(undefined, { dataDir }, { headless: true });
+    run.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null, untouched: true }
+        : { ownCore: channel }) as never);
+    await run.shell.start();
+    expect(run.shell.thisMac().role).toBe("home");
+    expect(run.shell.core()).not.toBeNull();
+    expect(run.joined.read()).toBeNull();
+    expect(run.own.dispose).not.toHaveBeenCalled();
+    expect(
+      run.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+    ).toEqual([]);
+  });
+
+  // The review of INF-5409: the grant is kept before the switch, so a first mate whose connection
+  // does not close cleanly still stops, and the window starts as that home's view.
+  it("opens as the home's view when its own first mate does not stop cleanly", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    const mini = shell(undefined, { dataDir });
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null, untouched: true }
+        : { ownCore: channel }) as never);
+    await mini.shell.start();
+    // Added while its first launch is up, it follows along.
+    new JoinedHome(dataDir).join(grant, Date.now());
+    mini.closeConnection.mockRejectedValueOnce(new Error("the connection did not close"));
+    expect(await mini.shell.followAdded()).toBe(true);
+    await mini.until(() => mini.shell.thisMac().role === "view");
+    expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
+    // Its SSH connections and core still stop after the connection failed to close.
+    expect(mini.own.stopSsh).toHaveBeenCalledTimes(1);
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("stays its own Firstmate when the work here only runs work", async () => {

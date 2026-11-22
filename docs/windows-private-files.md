@@ -19,10 +19,12 @@ SYSTEM, the PC's administrators and the creator and owner placeholders may keep 
 ## An unsafe place
 
 The app refuses a data folder it cannot make owner-only, with the same refusal window as a folder that moved, "Infinitary could not keep this folder private" (`dataFolderRefusal`, `src/core/storage/dataFolderRefusal.ts`).
-That is a folder another ordinary account owns, which could change its list back; a drive that keeps no access lists, such as one formatted FAT32 or exFAT; and a folder whose list Windows would not read or write.
+That is a folder another ordinary account owns, which could change its list back, even one with no list at all, where the app writes nothing; a drive that keeps no access lists, such as one formatted FAT32 or exFAT; and a folder whose list Windows would not read or write.
 A set that failed part way is refused too, even when the folder's own list now reads owner-only, since Windows may have handed the new list down to only some of its files.
 Each refusal says which it is: a place that cannot be kept private keeps the words above and the advice to move the folder; a folder Windows could not be asked about, as when a policy blocks Windows PowerShell, says "Infinitary could not check this folder"; and a set that did not finish says "Infinitary could not finish keeping this folder private" (`UNCHECKED_FOLDER_TITLE`, `UNFINISHED_FOLDER_TITLE`).
 The reason and Windows' own answer go to the app's log as one `[data folder]` line.
+A list or owner Windows answers that the app cannot read whole, as a list holding a conditional entry, an entry of a kind the app does not judge, or one whose flags, rights, object fields or account are missing or not in the form Windows writes them (an account number cut short or past Windows' bounds, as an authority past 32 bits not written as `0x` and twelve hex digits the way Windows writes it, rights or flags no letters name, an object field on a plain entry), an owner or group not in that form, even beside Windows' word for no list, or a descriptor with no access list section at all, is refused as a folder Windows could not be checked and never set, so the entries the app could not read, denies among them, stay as they are.
+Rights are judged by the number they stand for, so a right written as letters and the same right written as its number are judged alike: all of a key's rights (`KA`) take in deleting and re-permitting, as their number says.
 Before a set, the app writes `.owner-only-unfinished` in the folder and removes it once the folder reads owner-only; while it is there, as after a set that failed or a launch that ended during one, the next launch sets the list again (`UNFINISHED_MARK`).
 A command run (`<app> run`) ends with the same words.
 
@@ -32,6 +34,7 @@ The app writes some private files in the system's temporary folder: short-lived 
 Windows' own temporary folder is inside the profile and reaches no other account.
 When it reaches another account, as a `TEMP` moved to `C:\Temp` does, the app points itself and every program it starts at `private-temp` inside the data folder (`TEMP` and `TMP`), which takes the data folder's list.
 The system's own temporary folder is only read, never changed.
+A launch whose data folder was refused makes no browser profile for a word it would show while another window holds the folder (`wordProfilePrivate`, `docs/run.md`); a launch whose data folder was kept private keeps that profile in the data folder itself (`word-profile-` and six random letters, named in `word-profile.json`), where it takes the data folder's owner-only list as it is made, is used only while its list, read before each copy starts, lets in no one else and hands that down to all made in it (`keepsToOwner`), and the copy's temporary files go in that profile, never in the private temporary folder a holder clears at its start.
 Windows' own cleanup never reaches `private-temp`, so the launch that holds the data folder clears what earlier launches left there before it starts anything (`clearPrivateTemp`); a window opened beside a run leaves it to the run, and a file still open elsewhere stays until a later launch.
 
 ## How the lists are read and written

@@ -1,8 +1,15 @@
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { RUN_FORCE_DIR } from "../../src/core/helper/runForce";
+import { RUN_STOP_FILE, RUN_STOP_FOR_FILE } from "../../src/core/helper/windowsTask";
 import { describeCapture } from "../../src/core/hostEnv";
 import { writeLoginShellStub } from "../../src/core/loginShellStub";
+import { openDatabase } from "../../src/core/storage/db";
+import {
+  SAVED_DATA_REFUSAL_MESSAGE,
+  SAVED_DATA_REFUSAL_TITLE,
+} from "../../src/core/storage/savedDataCompatibility";
 import {
   RUN_LAST_STOP,
   RUN_MARKER,
@@ -12,9 +19,12 @@ import {
   type RunStop,
 } from "../../src/main/runCommand";
 import { readRunSettings } from "../../src/main/runSettings";
+import { runLabelOf } from "../../src/shared/codeNames";
+import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
 import { readSavedData } from "./savedData";
+import { serviceManagerStandIn } from "./serviceManagerStandIn";
 
 /**
  * Infinitary started by a command (docs/run.md; INF-1228's approved plan,
@@ -31,8 +41,15 @@ const SYSTEM_PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
 
 test.afterEach(endCommands);
 
-/** The lines a run that cannot go on says, apart from Chromium's own notes on stderr. */
-const said = (error: string) => error.split("\n").filter((line) => line && !line.startsWith("["));
+/**
+ * The lines a run that cannot go on says, apart from Chromium's own notes on stderr: its
+ * `[pid:...]` lines, and the `ERR: <file>.cpp:<line>` lines its graphics layer (ANGLE) writes when
+ * a run past Electron's start has no display to draw on, as on Linux with none.
+ */
+const said = (error: string) =>
+  error
+    .split("\n")
+    .filter((line) => line && !line.startsWith("[") && !/^ERR: \S+\.cpp:\d+ /.test(line));
 
 test("a command starts the whole app with no window, and a stop signal stops it cleanly", async () => {
   const userDataDir = scratchDir("infinitary-run-command-");
@@ -140,6 +157,94 @@ test("a settings file a run cannot use ends it with 78 and why, kept as its last
   ).toMatchObject({ reason: "start-failed", exitCode: RUN_SETTINGS_EXIT, lines: words });
   expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
 });
+
+// The review of INF-5409: a run its own agent started reads a stop or force stop asked of it only
+// once its folder and saved data are accepted. On saved data from a newer version it ends with
+// the refusal, leaving the stops left in the folder unread - the one for any run Windows reads and
+// the one naming a run every system reads - making no folder of force stops, and asking this
+// account's service manager nothing, so the agent's job stays as it was.
+test("a run on saved data from a newer version ends with its refusal and recovers nothing on the folder", async () => {
+  const userDataDir = scratchDir("infinitary-run-command-");
+  const db = openDatabase(userDataDir);
+  recordNewerMigration(db);
+  db.close();
+  const now = new Date().toISOString();
+  const stops = [
+    [join(userDataDir, RUN_STOP_FILE), `${JSON.stringify({ at: now })}\n`],
+    [
+      join(userDataDir, RUN_STOP_FOR_FILE),
+      `${JSON.stringify({ at: now, pid: process.pid, startedAt: now })}\n`,
+    ],
+  ] as const;
+  // e2e-fixture: input -- the stops a window leaves for a run, which a refusing run must leave unread
+  for (const [file, asked] of stops) writeFileSync(file, asked);
+  const manager = serviceManagerStandIn(scratchDir("infinitary-run-command-home-"));
+  const ran = run(await runEnv(userDataDir, manager.env), ["--agent", runLabelOf("dev")]);
+  expect(await ran.exited, ran.error()).toBe(1);
+  expect(said(ran.error())).toEqual(
+    RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: SAVED_DATA_REFUSAL_MESSAGE }),
+  );
+  for (const [file, asked] of stops) expect(readFileSync(file, "utf8")).toBe(asked);
+  expect(existsSync(join(userDataDir, RUN_FORCE_DIR))).toBe(false);
+  expect(manager.asks()).toEqual([]);
+});
+
+// The review of INF-5409: a stop asked while a run's first mate starts is the run's end. The run
+// stops once that start is done with, as a quit stops it, keeps the stop as its reason, and ends
+// with 0; it starts no first mate after the stop. Held by a development file at the core's start,
+// before its saved data is accepted, and once that start returned to the startup, after it. Once
+// the run took the stop, it stays up while the start is held; after it, the core's own disposal
+// marks the launch a clean quit (`LaunchWatch`) only once the hold is let go, and the run exits
+// after that. A long launch window keeps that mark from settling on its own.
+const launchMark = (userDataDir: string) =>
+  readSavedData(userDataDir, (db) => {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'launch'").get() as
+      | { value: string }
+      | undefined;
+    return row ? (JSON.parse(row.value) as { pending: boolean }).pending : null;
+  });
+for (const [when, setting] of [
+  ["before its saved data is accepted", "INFINITARY_RUN_START_HOLD"],
+  ["after its saved data is accepted", "INFINITARY_RUN_STARTED_HOLD"],
+] as const) {
+  test(`a stop signal while the first mate starts ends the run cleanly, with the stop as its reason, ${when}`, async () => {
+    const userDataDir = scratchDir("infinitary-run-command-");
+    const hold = join(scratchDir("infinitary-run-command-hold-"), "hold");
+    // e2e-fixture: input -- holds the run's start back until the stop is asked
+    writeFileSync(hold, "");
+    const ran = run({
+      ...(await runEnv(userDataDir)),
+      [setting]: hold,
+      INFINITARY_EARLY_LAUNCH_MS: "600000",
+    });
+    await expect.poll(() => existsSync(`${hold}.reached`)).toBe(true);
+    const accepted = setting === "INFINITARY_RUN_STARTED_HOLD";
+    // Past acceptance the core is up and its launch not yet marked a clean quit.
+    if (accepted) expect(launchMark(userDataDir)).toBe(true);
+    ran.child.kill("SIGTERM");
+    await expect.poll(() => existsSync(`${hold}.stopping`)).toBe(true);
+    // The stop is taken, and the run stays up while its start is held.
+    expect(ran.child.exitCode).toBeNull();
+    expect(ran.child.signalCode).toBeNull();
+    if (accepted) expect(launchMark(userDataDir)).toBe(true);
+    rmSync(hold);
+    expect(await ran.exited, ran.error()).toBe(0);
+    expect(ran.lines()).toEqual([RUN_WORDS.stopped]);
+    expect(
+      JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
+    ).toMatchObject({ reason: "signal", exitCode: 0 });
+    expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
+    if (accepted) {
+      // The core opened the app's own record and closed it cleanly, its log folded back in.
+      expect(existsSync(join(userDataDir, "firstmate.db-wal"))).toBe(false);
+      expect(
+        readSavedData(userDataDir, (db) => db.prepare("SELECT COUNT(*) AS n FROM tasks").get()),
+      ).toEqual({ n: 0 });
+      // The core's disposal ran before the run exited.
+      expect(launchMark(userDataDir)).toBe(false);
+    }
+  });
+}
 
 test("words after run say how to use it and exit 2", async () => {
   const ran = run(await runEnv(scratchDir("infinitary-run-command-")), ["--anything"]);

@@ -152,6 +152,31 @@ describe("the status command", () => {
     expect(readRunStatus(dir).running).toBe(false);
   });
 
+  // The review of INF-5409: a run whose Windows birth cannot be read beside a held lock (stood in
+  // by a lock link that cannot be read, naming no holder, as Windows' own lock) may be the one
+  // holding it. Status says it is unknown and keeps the stop written before, never one made up for
+  // that run; once its exit is known, the run ended unrecorded.
+  it("keeps the earlier stop while a run's exit is not known", () => {
+    const { dir, end } = fixture();
+    end({ reason: "updated", exitCode: RUN_UPDATED_EXIT, lines: [...RUN_WORDS.updated] });
+    markRunning(dir, 4242, new Date(started.getTime() + 1000), undefined, true, "win:1");
+    rmSync(join(dir, "SingletonLock"));
+    writeFileSync(join(dir, "SingletonLock"), "held, naming no holder");
+    const unread = (pid: number, birth?: string) => (pid !== 4242 ? false : birth ? null : true);
+    const unknown = readRunStatus(dir, unread);
+    expect(unknown).toMatchObject({
+      running: null,
+      run: null,
+      lastStop: { reason: "updated", startedAt: started.toISOString() },
+    });
+    expect(statusText(unknown)).toContain(STATUS_WORDS.unknown);
+    expect(statusText(unknown)).toContain(RUN_WORDS.updated[0]);
+    expect(statusText(unknown)).not.toContain(STATUS_WORDS.interrupted);
+    const gone = readRunStatus(dir, () => false);
+    expect(gone.lastStop).toMatchObject({ pid: 4242, reason: "unrecorded" });
+    expect(statusText(gone)).toContain(STATUS_WORDS.interrupted);
+  });
+
   it("keeps malformed, incompatible and unreadable records unknown instead of stopped", () => {
     const dir = scratchDir("run-status-bad-");
     for (const value of [

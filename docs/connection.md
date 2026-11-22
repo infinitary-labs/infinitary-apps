@@ -59,6 +59,9 @@ It follows the phone door's pattern (`docs/devices.md`, "A phone that joins by i
 - **Its files.**
   When the connection starts it empties the door's folder (`<userData>/local-door`, `paths.localDoorDir`), makes it again only its owner can open (0700), and writes three files only their owner can read (0600): `address` (`127.0.0.1:port`), `pin` (the pin of the door's own TLS key) and `key` (256 random bits, hex), the key last.
   Each start is a new port and a new key; quit removes the folder, so a key from an earlier run opens nothing.
+  A run started by a command also writes `run` (0600) before the key: its process and start, as its run record names them (`localDoorRun`).
+  Only that run's door admits the key beside it, so a client that read both knows which run admitted it; `readLocalDoor` keeps the run only where a reading before the key and one after it agree, and `localDoorRunOf` names the run a socket `dialLocalDoor` returned reached.
+  The window beside a command tells a restarted run from the one it replaced by it (`docs/view.md`, "Joining").
   `localDoor()` answers the address while the door is open.
 - **Reading the key is the permission.**
   Only the account the home runs as can read it, and that account could already read the home's record.

@@ -192,6 +192,12 @@ export type IntegrationBinding = {
   /** The connections of this kind that exist now. */
   connections: () => IntegrationConnection[];
   /**
+   * Whether a connection of this kind may be saved here, read from whether
+   * its saved record is present alone, never its secrets; true when a record
+   * is there but cannot be read. Without it, `connections` answers.
+   */
+  saved?: () => boolean;
+  /**
    * Add a connection from the person's own words (an MCP server's name and
    * what it runs) and answer its id; throws words when it cannot connect.
    * `claim` holds a candidate id for this addition before the binding waits

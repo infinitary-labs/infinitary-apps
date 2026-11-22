@@ -375,6 +375,16 @@ export class RepoRegistry {
     return this.projectsFolder();
   }
 
+  /**
+   * Whether the captain added a project: any repo but the personal
+   * workspace, read as one row, never building a view of each.
+   */
+  hasProject(): boolean {
+    // i18n-exempt: a database statement, read by no person
+    const any = "SELECT 1 FROM repos WHERE kind != 'personal' LIMIT 1";
+    return prepared(this.db, any).get() !== undefined;
+  }
+
   list(): RepoView[] {
     const rows = this.db
       .prepare(`SELECT ${ROW_COLUMNS} FROM repos ORDER BY added_at`)

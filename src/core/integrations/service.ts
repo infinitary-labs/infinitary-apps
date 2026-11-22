@@ -256,6 +256,17 @@ export class IntegrationsService {
 
   constructor(private readonly options: IntegrationsServiceOptions) {}
 
+  /**
+   * Whether any connection may be set up here, working or not, read from
+   * whether its record is present without parsing any secret; a record that
+   * cannot be read counts as one.
+   */
+  hasConnections(): boolean {
+    return this.options.bindings.some(
+      (binding) => binding.saved?.() ?? binding.connections().length > 0,
+    );
+  }
+
   view(): IntegrationsView {
     const rows = this.rows();
     const connected = new Set(rows.map((row) => row.binding.kind));

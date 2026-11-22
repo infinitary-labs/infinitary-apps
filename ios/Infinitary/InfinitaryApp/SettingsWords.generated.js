@@ -13046,7 +13046,11 @@ ${events}` : prompt;
     "not-answering"
   ]);
   const commandNoticeSchema = strictObject({
-    /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+    /**
+     * `waiting` while its start entry is expected to start it again, or, on
+     * `not-answering`, while Start it here waits for that run to stop;
+     * `stopped` once Start it here is offered.
+     */
     state: _enum(["waiting", "stopped"]),
     ending: commandEndingSchema,
     /**
@@ -13054,7 +13058,14 @@ ${events}` : prompt;
      * window starts it"): the person never ran a command, so the line speaks
      * of their first mate, and Start it here starts that program again.
      */
-    byWindow: literal(true).optional()
+    byWindow: literal(true).optional(),
+    /**
+     * Set on `not-answering` when the notice names no run that does not
+     * answer: its door named none, or another run holds the folder now.
+     * Start it here then stops nothing, and the app starting again connects
+     * to whichever run is there; the line says so.
+     */
+    retries: literal(true).optional()
   });
   const workSetupReasonSchema = _enum([
     "other-home",
@@ -13374,7 +13385,13 @@ ${events}` : prompt;
     name: string().min(1).max(253).optional(),
     firewall: deviceFirewallSchema.optional(),
     /** On a Windows home, its firewall that may keep devices out; absent when none is known to. */
-    windowsFirewall: windowsFirewallSchema.optional()
+    windowsFirewall: windowsFirewallSchema.optional(),
+    /**
+     * False on a home that cannot set a computer up by its address (a Windows
+     * PC): + A computer offers the link and the command instead of the address
+     * form. Absent where it can.
+     */
+    addsByAddress: literal(false).optional()
   });
   strictObject({
     /** The address that answered last, dialed first. */

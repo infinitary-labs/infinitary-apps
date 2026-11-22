@@ -10,6 +10,7 @@ import {
   type JoinAtOptions,
   type JoinAtRefusal,
   joinAtRefusalWords,
+  type SetUpHere,
 } from "@shared/joinByAddress";
 import { NEARBY_OFF, NEARBY_RENEW_MS, type NearbyMacsView } from "@shared/nearbyMacs";
 import {
@@ -20,9 +21,12 @@ import {
 } from "@shared/remoteLogin";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useShellStore } from "../app/store";
 import { Button, Input, MicroLabel, StatusDot } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { focusWithRing } from "../design/focus";
+import { useCopied } from "../settings/DevicesLinks";
+import { SettingError } from "../settings/settingRows";
 import { NearbyList, PortField, sshMustBeOn } from "./NearbyList";
 import { JOIN_CONFIRM_WORDS, JOIN_RUNS_WORK, joinRefusalWords } from "./viewWords";
 import "./joinAnotherMac.css";
@@ -33,8 +37,12 @@ import * as m from "@shared/i18n/messages.generated";
 
 /**
  * Joining Firstmate on another Mac from this app's first launch (design
- * skill `components/devices/JoinAnotherMac`, docs/view.md): two chips under
- * the provider chips, and the aside each opens. Paste its link: paste the
+ * skill `components/devices/JoinAnotherMac`, docs/view.md): the chips under
+ * the provider chips - Set up from your first mate's computer first, where
+ * this computer can be added by its address, then Paste its link and Join
+ * by its address - and the aside each opens. Set up from your first mate's
+ * computer: this computer's address to type there, and the wait until that
+ * computer adds this one. Paste its link: paste the
  * link, confirm the address it names, reach that Mac, or say why this Mac
  * did not join. A link joins only by being pasted here, and only after the
  * person confirms; it lives in this component's memory and nowhere else.
@@ -47,6 +55,7 @@ import * as m from "@shared/i18n/messages.generated";
 
 type Step =
   | { step: "closed" }
+  | { step: "set-up" }
   | { step: "paste"; notALink: boolean }
   | { step: "address"; refused?: JoinAtRefusal; at?: string }
   | { step: "key"; address: string; line: string }
@@ -102,6 +111,160 @@ function linkAddress(text: string): { address: string; kind: string; alsoPrivate
   }
 }
 
+/** How often the first launch asks whether its first mate's computer added it (docs/view.md, "Joining"). */
+const FOLLOW_EVERY_MS = 5_000;
+/** How often the open aside reads this computer again, so it follows its addresses and Remote Login. */
+const SET_UP_RENEW_MS = 5_000;
+
+/**
+ * What the window promises once its first mate's computer adds this one
+ * (`useFollowAdded`); `unknown` promises nothing until the shell answers.
+ */
+type AfterAdd = "waits" | "keeps" | "stays" | "unknown";
+
+/**
+ * Following along at first launch (docs/view.md, "Joining"): while this
+ * group is up, the window asks the shell now and then whether its first
+ * mate's computer added this one by its address; the shell itself decides,
+ * and on a yes the window starts over as that first mate's. The shell says
+ * too what it would do: it follows along only while nothing was done here
+ * (`FirstRunView.untouched`) and, beside a command, only from one this
+ * window's starter owns; otherwise this window keeps its own first mate,
+ * and beside a command started elsewhere it cannot join at all. Until the
+ * shell answers, joining is unknown and not offered, and the status
+ * promises nothing; the window keeps
+ * asking, so the answer follows a command that ends or is replaced. A
+ * profile with something done is asked too, so the shell keeps that answer
+ * after a restart.
+ */
+function useFollowAdded(
+  can: boolean,
+  untouched: boolean,
+): { afterAdd: AfterAdd; joins: boolean | null; pastes: boolean | null; outside: boolean } {
+  const [answer, setAnswer] = useState<{
+    follows: boolean;
+    joins: boolean;
+    pastes: boolean;
+    outside: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (!can) return;
+    let live = true;
+    // Asked on and on, so the answer follows the command beside it: one that
+    // ends, or one started in its place, changes whether a join works here.
+    const ask = () => {
+      void window.infinitary.devices.followAdded().then(
+        (said) => {
+          if (live)
+            setAnswer({
+              follows: said.follows,
+              joins: said.joins,
+              pastes: said.pastes,
+              outside: said.outside,
+            });
+        },
+        // An answer that cannot be read leaves joining unknown, never allowed.
+        () => {
+          if (live) setAnswer(null);
+        },
+      );
+    };
+    ask();
+    const every = setInterval(ask, FOLLOW_EVERY_MS);
+    return () => {
+      live = false;
+      clearInterval(every);
+    };
+  }, [can]);
+  // Only a first mate started outside this window keeps it beside that one. While no command
+  // this window starts runs, or one it started is still starting, there is nothing to promise.
+  const afterAdd: AfterAdd = !answer
+    ? "unknown"
+    : answer.outside
+      ? "stays"
+      : !answer.pastes || !answer.joins
+        ? "unknown"
+        : untouched && answer.follows
+          ? "waits"
+          : "keeps";
+  return {
+    afterAdd,
+    joins: answer?.joins ?? null,
+    pastes: answer?.pastes ?? null,
+    outside: answer?.outside === true,
+  };
+}
+
+/**
+ * Whether the address way sets this computer up, read once for the chips
+ * with no account, address or key, so the chip never waits for a key.
+ */
+function useSetUpOffered(): boolean {
+  const [offered, setOffered] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void window.infinitary.devices
+      .setUpHere("offered")
+      .then((read) => {
+        if (live) setOffered(read.offered);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  return offered;
+}
+
+/**
+ * This computer as its first mate's computer reaches it, read only while
+ * the Set up aside is open: the account and addresses at once, then the
+ * keys, one read at a time, the next a moment after the last answered, so
+ * an older answer never replaces a newer one. `unread` says the addresses
+ * could not be read yet; the next read tries again.
+ */
+function useSetUpHere(open: boolean): { here: SetUpHere | null; unread: boolean } {
+  const [here, setHere] = useState<SetUpHere | null>(null);
+  const [unread, setUnread] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    let keyed = false;
+    let next: ReturnType<typeof setTimeout> | undefined;
+    void window.infinitary.devices
+      .setUpHere("addresses")
+      .then((read) => {
+        if (live && !keyed) setHere(read);
+      })
+      .catch(() => {
+        if (live && !keyed) setUnread(true);
+      });
+    const read = () =>
+      void window.infinitary.devices
+        .setUpHere("keys")
+        .then((read) => {
+          if (!live) return;
+          keyed = true;
+          setHere(read);
+          setUnread(false);
+        })
+        .catch(() => {
+          if (live) setUnread(true);
+        })
+        .finally(() => {
+          if (live) next = setTimeout(read, SET_UP_RENEW_MS);
+        });
+    read();
+    return () => {
+      live = false;
+      clearTimeout(next);
+      setHere(null);
+      setUnread(false);
+    };
+  }, [open]);
+  return { here, unread };
+}
+
 export type JoinAnotherMacProps = {
   /** The aside opened or closed; the stage hides its chips while it is open. */
   onOpenChange?: (open: boolean) => void;
@@ -150,6 +313,13 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   /** The address as asked, with its port: each later step asks it again. */
   const asked = useRef("");
   const nearby = useNearby(step.step === "address");
+  const setUpOffered = useSetUpOffered();
+  const { here, unread } = useSetUpHere(step.step === "set-up");
+  const firstRun = useShellStore((s) => s.firstRun);
+  const { afterAdd, joins, pastes, outside } = useFollowAdded(
+    firstRun?.gateOpen === true,
+    firstRun?.untouched === true,
+  );
   const setStep = (next: Step) => {
     setStepState(next);
     onOpenChange?.(next.step !== "closed");
@@ -236,6 +406,15 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       value={value}
       onValue={setValue}
       onOpen={() => setStep({ step: "paste", notALink: false })}
+      here={here}
+      unread={unread}
+      setUpOffered={setUpOffered}
+      afterAdd={afterAdd}
+      joins={joins}
+      pastes={pastes}
+      outside={outside}
+      onOpenSetUp={() => setStep({ step: "set-up" })}
+      onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
       onConfirm={(computer) => {
         if (step.step === "confirm" && step.byAddress) void joinHeld(computer);
@@ -260,6 +439,32 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
 
 export type JoinAnotherMacViewProps = {
   step: Step;
+  /** This computer as its first mate's computer reaches it; null until read. */
+  here?: SetUpHere | null;
+  /** This computer's addresses could not be read yet; the next read tries again. */
+  unread?: boolean;
+  /** Set up from your first mate's computer leads the chips: the address way sets this computer up. */
+  setUpOffered?: boolean;
+  /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
+  afterAdd?: AfterAdd;
+  /**
+   * Whether Join by its address works here, as the shell last said: false
+   * beside a first mate started outside this window or while no command this
+   * window starts runs, null while not yet known. Absent, as a view drawn
+   * alone, it works.
+   */
+  joins?: boolean | null;
+  /**
+   * Whether Paste its link works here, as the shell last said: false beside
+   * a first mate started outside this window or while a command this window
+   * started is still starting, null while not yet known. Absent, as a view
+   * drawn alone, it works.
+   */
+  pastes?: boolean | null;
+  /** The shell said a first mate started outside this window runs beside it: the line says so. */
+  outside?: boolean;
+  onOpenSetUp?: () => void;
+  onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
   note?: React.ReactNode;
   value: string;
@@ -302,16 +507,35 @@ function withAddress(words: string, address: string | null): React.ReactNode {
 /** The chip group or the aside, for each step; drawn alone by the tests. */
 export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   const { step, value } = props;
-  if (step.step === "closed")
+  if (step.step === "closed") {
+    // Only a computer its first mate's computer can add by its address offers it, first.
+    const setUp = Boolean(props.setUpOffered);
+    // Neither join is offered until the shell says it works here: beside a first
+    // mate started outside this window, joining would stop it, and while no command
+    // this window starts runs, no first mate asks the other computer for a link.
+    const joins = props.joins === undefined || props.joins === true;
+    const pastes = props.pastes === undefined || props.pastes === true;
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
-        <div className="fm-join-row">
+        <div className="fm-join-row" data-join-chips-alone={setUp ? "" : undefined}>
           <MicroLabel>{m.devicesJoinElsewhere({ computer: COMPUTER.one })}</MicroLabel>
           <div className="fm-connect-chips" data-connect-chips="stage">
+            {setUp && (
+              <button
+                type="button"
+                className="fm-connect-chip"
+                data-join-set-up-chip=""
+                onClick={props.onOpenSetUp}
+              >
+                {plusIcon}
+                <span>{m.devicesJoinSetUpChip()}</span>
+              </button>
+            )}
             <button
               type="button"
               className="fm-connect-chip"
               data-join-chip=""
+              disabled={!pastes}
               onClick={props.onOpen}
             >
               {plusIcon}
@@ -321,6 +545,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               type="button"
               className="fm-connect-chip"
               data-join-address-chip=""
+              disabled={!joins}
               onClick={props.onOpenAddress}
             >
               {plusIcon}
@@ -328,9 +553,15 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             </button>
           </div>
         </div>
+        {props.outside === true && (
+          <p className="fm-join-sub" data-join-stays="">
+            {m.devicesJoinStaysBeside()}
+          </p>
+        )}
         {props.note}
       </div>
     );
+  }
   return (
     <div className="fm-connect-aside-frame fm-join-aside" data-join-another-mac={step.step}>
       {step.step === "paste" && (
@@ -371,6 +602,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
           )}
         </form>
       )}
+      {step.step === "set-up" && <SetUpStep here={props.here ?? null} {...props} />}
       {step.step === "address" && <AddressStep {...props} step={step} />}
       {step.step === "key" && (
         <div data-join-key={step.address}>
@@ -460,6 +692,122 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** One address to type on the first mate's computer, with its own Copy. */
+function CopyLine({ text, name, autoFocus }: { text: string; name: string; autoFocus: boolean }) {
+  const [copied, copy] = useCopied();
+  return (
+    <>
+      <div className="fm-join-copy" data-join-set-up-address={name}>
+        <code className="fm-devices-link">{text}</code>
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          autoFocus={autoFocus}
+          onClick={() => void copy(text)}
+        >
+          {copied === "copied" ? m.settingsDevicesCopied() : m.devicesJoinSetUpCopy()}
+        </Button>
+      </div>
+      {copied === "failed" && <SettingError error={m.devicesJoinSetUpCopyFailed()} />}
+    </>
+  );
+}
+
+/**
+ * Set up from your first mate's computer (design skill JoinAnotherMac, "Set
+ * up from your first mate's computer"): the address to type there, private
+ * network first, the local name for the same network, whether Remote Login
+ * is on here, the check line that computer asks about, and the wait that
+ * ends when this window follows along by itself.
+ */
+function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) {
+  const { here } = props;
+  const at = (address: string) => (here?.user ? `${here.user}@${address}` : address);
+  // On Linux, Remote Login is its SSH server.
+  const mac = thisDesktop().mac;
+  const remoteLogin =
+    here?.remoteLogin === "on"
+      ? mac
+        ? m.devicesJoinSetUpOn()
+        : m.devicesJoinSetUpSshOn()
+      : mac
+        ? m.devicesJoinSetUpOff()
+        : m.devicesJoinSetUpSshOff();
+  // Focus lands on the first address to copy, or on Cancel before this computer is read.
+  const first = here?.privateAddress ? "private" : here?.localName ? "local" : null;
+  return (
+    <div data-join-set-up="">
+      <p className="fm-join-head">{m.devicesJoinSetUpHead()}</p>
+      <p className="fm-join-sub">{m.devicesJoinSetUpSub()}</p>
+      {here?.privateAddress && (
+        <>
+          <CopyLine name="private" text={at(here.privateAddress)} autoFocus={first === "private"} />
+          <p className="fm-join-sub fm-join-under">{m.devicesJoinSetUpPrivate()}</p>
+        </>
+      )}
+      {here?.localName && (
+        <>
+          {here.privateAddress && (
+            <p className="fm-join-sub fm-join-under">{m.devicesJoinSetUpLocal()}</p>
+          )}
+          <CopyLine name="local" text={at(here.localName)} autoFocus={first === "local"} />
+        </>
+      )}
+      {((props.unread && !here) || (here && !here.privateAddress && !here.localName)) && (
+        <p className="fm-join-sub" role="alert" data-join-set-up-unread="">
+          {m.devicesJoinSetUpUnread()}
+        </p>
+      )}
+      {here && here.remoteLogin !== "unknown" && (
+        <div className="fm-join-state" data-join-remote-login={here.remoteLogin}>
+          <StatusDot
+            tone={here.remoteLogin === "on" ? "ok" : "warn"}
+            label={remoteLogin}
+            nativeTitle={false}
+          />
+          <span>{remoteLogin}</span>
+          {here.remoteLogin === "off" && here.opensSharing && (
+            <Button variant="secondary" size="sm" type="button" onClick={props.onOpenSharing}>
+              {m.devicesJoinSetUpOpenSharing()}
+            </Button>
+          )}
+        </div>
+      )}
+      {here?.line && here.lineAt && (
+        <>
+          <p className="fm-join-sub fm-join-under">
+            {m.devicesJoinSetUpCompare({ address: at(here.lineAt) })}
+          </p>
+          <div className="fm-devices-check" data-join-set-up-line="">
+            {here.line}
+          </div>
+        </>
+      )}
+      <p className="fm-join-sub fm-join-waiting" role="status">
+        {props.afterAdd === "unknown"
+          ? null
+          : props.afterAdd === "waits"
+            ? m.devicesJoinSetUpWaiting()
+            : props.afterAdd === "stays"
+              ? m.devicesJoinSetUpStays()
+              : m.devicesJoinSetUpKept()}
+      </p>
+      <div className="fm-join-buttons">
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          autoFocus={first === null}
+          onClick={props.onCancel}
+        >
+          {m.devicesJoinCancel()}
+        </Button>
+      </div>
     </div>
   );
 }

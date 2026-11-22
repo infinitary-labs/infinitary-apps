@@ -3,5 +3,10 @@
   "dialogAttach": "첨부",
   "dialogCancel": "취소",
   "dialogChoose": "선택",
-  "dialogExport": "내보내기"
+  "dialogExport": "내보내기",
+  "dialogLeaveIt": "그대로 두기",
+  "dialogOnceClosedDetail": "해당 창을 사용하세요. 창이 앞으로 나오지 않았다면 아직 작업을 마무리하는 중일 수 있으며, 닫힌 후 여기에서 Infinitary를 열 수 있습니다.",
+  "dialogOpenInDock": "Infinitary가 이미 열려 있습니다.",
+  "dialogOpenInDockDetail": "Dock에서 Infinitary를 클릭하면 창이 표시됩니다.",
+  "dialogOpenOnceClosed": "닫히면 여기에서 열기"
 }

@@ -433,6 +433,7 @@ export function googleIntegration(
     identity: { id: GOOGLE_ID, name: INTEGRATION_KIND_NAMES.google },
     fence: GOOGLE_DATA_FENCE,
     kept: GOOGLE_DATA_KEPT,
+    saved: () => store.present(),
     connections: () => {
       const record = store.read();
       if (!record) return [];

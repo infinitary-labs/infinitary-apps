@@ -184,6 +184,9 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/placed/placedAccounts.test.ts` | real git for each side's workspace of a placed task, at the run's own priority | 5 s default |
 | `src/core/placed/placedCutOff.test.ts` | real git for each side's workspace of a placed task whose sign-in there is cut off, at the run's own priority | 10 s |
 | `src/core/helper/cleanUp.test.ts` | real git: what a removal takes from a computer's clones and working copies, at the run's own priority; a worker thread holding the route's lock, and that lock's fixed 2 s wait | 30 s |
+| `src/core/helper/runForce.test.ts` | stuck Node processes ending themselves on a worker thread at a force stop, and a stop no program acts on held for its 1 s wait; on a Mac or Linux a run of its own starting the command's own reading and helper from the source, a FIFO this account may not open | 15 s |
+| `src/main/personWord.integration.test.ts` | real Node processes standing in for the copy of the program that shows a refused launch's word, started through the source: replies said late, malformed or by a crashed copy, a copy that cannot start, a profile that cannot be made, one made and recorded in the data folder and used again, a private folder no record names, a recorded folder others may reach, a macOS access list that lets someone else in, and a file or link at a record's name all left as they are, a word taken away from a copy that ignores its end or whose box holds its main thread, and a requester that dies while its copy's temporary files outlive the next holder's clearing | 10 s |
+| `tests/serviceManagerStandIn.test.ts` | the journeys' stand-in service manager running a real job under its detached supervisor, which dies before its run exits (Mac and Linux) | 15 s |
 | `src/core/claude/claudeModelProbe.test.ts` | the installed Claude client | 10 s |
 | `tests/replay-captain-session.test.ts` | the replay CLI, git | 60 to 240 s |
 | `tests/replay-synthetic-recordings.test.ts` | the replay engine's git, over recordings each test writes | 5 s default, 60 s on each card-thread, crewmate-turn and labels-and-surfaces replay |
@@ -303,6 +306,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/main/host/linuxSecretCustody.thread.test.ts` | actual native worker identity through libc, with no credential-store access | 5 s default |
 | `src/core/utilityQos.test.ts` | taskpolicy children | 5 s default |
 | `src/core/orchestrator/firstmateAgent.actions.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.addressWay.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.capture.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.context.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.delivery.test.ts` | real git, at the run's own priority | 5 s default |

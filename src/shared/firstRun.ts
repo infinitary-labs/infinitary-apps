@@ -77,6 +77,12 @@ export const firstRunViewSchema = firstRunRecordSchema.extend({
   gateOpen: z.boolean(),
   /** Only while the gate is open: the connection whose fresh check would close it. */
   freshCheck: freshCheckSchema.optional(),
+  /**
+   * Only while the gate is open and nothing was done here: no turn, no saved
+   * sign-in or connection, no ask, task, card or project. A home that added
+   * this computer by its address may then take it over in place.
+   */
+  untouched: z.literal(true).optional(),
 });
 export type FirstRunView = z.infer<typeof firstRunViewSchema>;
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-notes-first-press-warm",
+      "reason": "Test-only repair: the iPhone notes journey long-presses the shown card's words before paging, so the keyboard setup UIKit does on the first long press of a launch no longer delays the selection past the notes card's long press; app behavior and assertions are unchanged."
+    }
+  ]
+}

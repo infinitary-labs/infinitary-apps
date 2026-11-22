@@ -1909,10 +1909,11 @@ export async function startPhoneHome(
           // with no pane, and shows only once the pager moves to it. Like the notes card it asks a choice, so the
           // stack's order (priority, then oldest) puts it first.
           const lead = "The harbour survey is booked";
+          const leadLine = "The survey boat leaves on Monday.";
           core.services.supervisor.addFirstmateCard({
             id: "phone-notes-lead",
             title: lead,
-            body: "<p>The survey boat leaves on Monday.</p>",
+            body: `<p>${leadLine}</p>`,
             actions: [
               { id: "keep", label: "Keep Monday", default: true },
               { id: "move", label: "Move to Tuesday" },
@@ -1932,7 +1933,7 @@ export async function startPhoneHome(
           });
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
-          result = { lead, title, part, words };
+          result = { lead, leadLine, title, part, words };
           break;
         }
         // The notes card's thread as the computer keeps it, each captain line with its notes.

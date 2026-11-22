@@ -425,9 +425,9 @@ describe("the Linux packages", () => {
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       jobs: Record<string, { steps?: Step[] }>;
     };
-    // A device's job may name its uploads by its matrix device (INF-2970's fix 1), so each
-    // name is read as the iPhone's job reads it; the bundles are the upload the gathering
-    // job's phone-results* pattern collects.
+    // A device's job may name its uploads by its matrix device (INF-2970's fix 1), and the shared
+    // app build by its run attempt, so each name is read as the iPhone's first attempt reads it;
+    // the bundles are the upload the gathering job's phone-results* pattern collects.
     const bundles = Object.values(phone.jobs)
       .flatMap((job) => job.steps ?? [])
       .find(
@@ -436,6 +436,7 @@ describe("the Linux packages", () => {
           workflowString(String(step.with?.name ?? ""), {
             inputs: {},
             matrix: { device: "iphone" },
+            github: { run_attempt: 1 },
           }).startsWith("phone-results"),
       );
     const days = (recording: boolean) =>

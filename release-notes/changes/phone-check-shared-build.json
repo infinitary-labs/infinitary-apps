@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-shared-build",
+      "reason": "The phone check's jobs share one build of the phone app within a check instead of each building it, so they wait less for a Mac; only how the project is checked changes."
+    }
+  ]
+}

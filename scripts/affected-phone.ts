@@ -23,6 +23,8 @@ const INPUTS = [
   "scripts/phone-leftovers.ts",
   // INF-5387 piece 1: the deadline of every command the gate runs.
   "scripts/phone-deadlines.ts",
+  // INF-6039's plan, part 1: the build a check's first job shares with its other jobs, and the gate's check of it.
+  "scripts/phone-build.ts",
   // INF-1066: native geometry generation and the scene journey's real home fixture.
   "scripts/generate-phone-scene.ts", "tests/helpers/phoneScene.ts", "scripts/phone-recording.ts",
   "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts", "tests/helpers/phoneWebContent.ts",

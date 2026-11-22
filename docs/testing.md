@@ -840,7 +840,7 @@ A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull jour
 INF-2539 removed its pull request selection; an affected request chooses parts, and the phone release runs every part ("Main's desktop release check").
 An affected request selects the device gates for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, the launcher `scripts/test-phone.ts` and every module it loads short of the app's own code and the test home `tests/helpers/phoneHome.ts`: among them `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, the failure timers and load clock `tests/helpers/budgets.ts`, the scratch folders `tests/helpers/scratchDirs.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the command deadlines `scripts/phone-deadlines.ts`, the simulator selector `scripts/phone-simulator.ts`, the Duo's hinge helper `scripts/phone-hinge.ts` and the test plan helper `scripts/phone-test-plan.ts`.
+The setup inputs are `phone.yml`, the launcher `scripts/test-phone.ts` and every module it loads short of the app's own code and the test home `tests/helpers/phoneHome.ts`: among them `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, the failure timers and load clock `tests/helpers/budgets.ts`, the scratch folders `tests/helpers/scratchDirs.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the command deadlines `scripts/phone-deadlines.ts`, the shared build `scripts/phone-build.ts`, the simulator selector `scripts/phone-simulator.ts`, the Duo's hinge helper `scripts/phone-hinge.ts` and the test plan helper `scripts/phone-test-plan.ts`.
 The test home is an input itself, and so are the helpers chosen for it one by one, such as the Google stand-in `tests/helpers/phoneGoogle.ts` and the journey stand-in `tests/e2e/mockProvider.ts`.
 `tests/phone-ci.test.ts` walks the launcher's imports, stopping at the app's code under `src/` and at the test home, and fails when a module it reaches is not an input (INF-1242).
 What the launcher reads is an input too: the simulator pin `scripts/phone-pin.json`, the part times `scripts/phone-part-times.json`, each part's recorded work `scripts/phone-work.json`, the hinge helper's source `scripts/phone-hinge.m` and the library photo a part chooses.
@@ -866,6 +866,12 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on any device fails its job and the run, and a complete branch selection or a request with edited-part passes stops at the first failed part ("The phone check on request").
 That gate checks and builds once, starts as many simulators of its device as the phone Mac holds, and runs the phone journey's parts on them, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+A dealt request's jobs share one build (INF-6039's plan, part 1): its first job builds the app for testing in a step of its own (`node scripts/phone-build.ts`) and uploads it as `phone-build-<attempt>`, named for the run attempt, before its gate starts.
+Each other job downloads that artifact if it is there when the job starts, and its gate uses it in place of its own build only when its record names this job's own commit, a checkout with no changes, the same Xcode, simulator SDK and chip, and its archive's SHA-256 matches (`phoneBuildRefusal`, `useSharedPhoneBuild`).
+Otherwise the gate says why in a notice and builds the app itself, as every job did before, so a job that starts before the first job shared its build, or finds it broken, still runs.
+The archive holds the first job's built products folder whole, its test plan included; a failed upload or download fails nothing, and the phone release's call and wait-clock or tool requests build in their gate as before.
+A check dealt into one job shares nothing and its job builds in its gate as before.
+When every job starts at once, the first job starts its parts later than it would building in its gate, by its upload's minutes and about a minute more, since its simulators no longer start during the build.
 Each placed guest runs simulators of only the devices its job holds.
 
 ### The phone parts a request runs
@@ -901,6 +907,7 @@ Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
 A dealt job is stopped at 25 minutes and its gate step at 21, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run.
+The first job of a check dealt into several jobs is stopped at 37 minutes instead, its build step's 12 more, since it builds and uploads the app before its gate.
 The recorded part times come from a full gate that ran two simulators at once.
 A phone Mac with one simulator runs a job's parts one after another at up to 1.08 of their recorded minutes, and its gate step also builds the app for up to 3.1 minutes and starts the first part about a minute late.
 So a gate of 14 recorded minutes ends near 19.5 minutes there, inside its 21, and sooner on a phone Mac with two simulators.

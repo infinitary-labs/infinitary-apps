@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -22,8 +22,8 @@ description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让
 
 行末的菜单包含：
 
+- “**已暂停**”：开关打开时，谁都无法访问它。
 - “**立即检查**”，用于检查连接是否仍然可用。
-- “**暂停**”：在你点击“**继续**”之前，谁都无法访问它。
 - “**退出登录并移除**”，MCP 服务器则为“**移除**”。
 
 列表下方的按钮用于连接新的东西，例如“**GitHub**”“**Google**”或“**MCP 服务器**”。

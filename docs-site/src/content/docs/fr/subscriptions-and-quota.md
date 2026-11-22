@@ -1,5 +1,5 @@
 ---
-source: f2b6491db2dbaf8c
+source: e1f49458875e9674
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -50,10 +50,11 @@ Amazon Bedrock est facturé à l’usage sur votre compte AWS ; sa ligne affic
 ## Choisir quel compte fait quoi {#choose-which-account-does-what}
 
 Ouvrez le menu d’un compte, les trois points sur sa ligne, pour ces choix.
+Ses réglages viennent en premier, chacun avec un interrupteur qui montre s’il est activé ; en choisir un l’active ou le désactive, et le menu reste ouvert.
 
 - **Privilégier pour le travail de l’équipage** fait utiliser ce compte en premier par votre équipage.
   Un ✱ le signale.
-- **Mettre en pause** arrête tout travail sur ce compte jusqu’à ce que vous choisissiez **Reprendre**.
+- **En pause** arrête tout travail sur ce compte tant que son interrupteur est activé.
 - **Déconnecter** retire le compte d’Infinitary.
 
 Quand vous avez au moins deux comptes du fournisseur qu’utilise votre second, les Réglages vous laissent choisir celui sur lequel votre second répond.

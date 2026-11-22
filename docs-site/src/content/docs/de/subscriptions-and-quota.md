@@ -1,5 +1,5 @@
 ---
-source: f2b6491db2dbaf8c
+source: e1f49458875e9674
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -50,10 +50,11 @@ Amazon Bedrock wird nach Nutzung über dein AWS-Konto abgerechnet; seine Zeile z
 ## Wählen, welches Konto was tut {#choose-which-account-does-what}
 
 Öffne das Menü eines Kontos, die drei Punkte in seiner Zeile, für diese Auswahl.
+Seine Einstellungen stehen oben, jede mit einem Schalter, der zeigt, ob sie an ist; ein Klick schaltet sie um, und das Menü bleibt offen.
 
 - **Für Crew-Arbeit bevorzugen** lässt deine Crew zuerst dieses Konto nutzen.
   Ein ✱ markiert es.
-- **Pausieren** hält alle Arbeit auf diesem Konto an, bis du **Fortsetzen** wählst.
+- **Pausiert** hält alle Arbeit auf diesem Konto an, solange sein Schalter an ist.
 - **Trennen** entfernt das Konto aus Infinitary.
 
 Wenn du zwei oder mehr Konten des Anbieters hast, den dein erster Offizier nutzt, lässt dich Einstellungen wählen, auf welchem dein erster Offizier antwortet.

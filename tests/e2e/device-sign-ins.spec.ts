@@ -647,12 +647,13 @@ test("a computer's own Claude account keeps going on credits, turned on by keys 
   await expect(page.locator('[data-menu-item="prefer"]')).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(item).toBeFocused();
+  await expect(item).toHaveAttribute("aria-checked", "false");
   await page.keyboard.press("Enter");
   await expect(claudeRow).toContainText(m.settingsSubscriptionsCreditsKeepsGoing());
 
-  // The same menu now offers to stop.
-  await pressKey(kebab, "Enter");
-  await expect(item).toHaveText(new RegExp(m.settingsSubscriptionsMenuStopKeepingGoing()));
+  // The menu stays open on the same item, its switch now on.
+  await expect(item).toHaveAttribute("aria-checked", "true");
+  await expect(item).toBeFocused();
   await page.keyboard.press("Escape");
 });
 
@@ -676,6 +677,8 @@ test("a computer's own account is preferred, renamed and paused by keys from its
   await expect(prefer).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(row.locator("[data-crew-preferred]")).toBeVisible();
+  await expect(prefer).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
 
   // Rename asks for its new name in the row, and Enter saves it there.
   await pressKey(kebab, "Enter");
@@ -687,14 +690,14 @@ test("a computer's own account is preferred, renamed and paused by keys from its
   await page.keyboard.press("Enter");
   await expect(row.locator("[data-account-name]")).toContainText("Studio router");
 
-  // Pause keeps its sign-in and marks the row paused.
+  // Paused keeps its sign-in and marks the row paused; its switch turns on.
   await pressKey(kebab, "Enter");
   const pause = page.locator('[data-menu-item="pause"]');
-  await expect(pause).toHaveText(m.settingsSubscriptionsMenuPause());
+  await expect(pause).toHaveText(m.settingsMenuPaused());
+  await expect(pause).toHaveAttribute("aria-checked", "false");
   await pressKey(pause, "Enter");
   await expect(row).toHaveAttribute("data-paused", "true");
-  await pressKey(kebab, "Enter");
-  await expect(pause).toHaveText(m.settingsSubscriptionsMenuResume());
+  await expect(pause).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
   // The computer's own account store keeps all three; the home's keeps none

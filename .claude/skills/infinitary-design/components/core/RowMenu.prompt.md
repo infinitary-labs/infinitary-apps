@@ -1,16 +1,22 @@
 The ⋯ at the end of a list row: every action the row offers, out of the glance path.
 ```jsx
 <RowMenu label="Work #2 actions" items={[
-  {id:"prefer",label:"Prefer for crew work",trailing:<span style={{color:"var(--accent)"}}>✱</span>},
+  {id:"prefer",label:"Prefer for crew work",checked:true,trailing:<span style={{color:"var(--accent)"}}>✱</span>},
+  {id:"pause",label:"Paused",checked:false},
+  {separator:true},
   {id:"rename",label:"Rename"},
-  {id:"pause",label:"Pause"},
   {separator:true},
   {id:"disconnect",label:"Disconnect",tone:"danger"},
 ]}/>
 ```
-A 28px IconButton kebab opening a `--bg-2` popover (hairline `--line-2`, `--radius-m`, `--shadow-2`) anchored bottom-right, flipped above the kebab when it would run past the window's bottom edge, clamped at either horizontal edge, and scrollable when taller than the window (a menu is never off-screen); closes on Escape, an outside click, or a pick.
+A 28px IconButton kebab opening a `--bg-2` popover (hairline `--line-2`, `--radius-m`, `--shadow-2`) anchored bottom-right, flipped above the kebab when it would run past the window's bottom edge, clamped at either horizontal edge, and scrollable when taller than the window (a menu is never off-screen); closes on Escape, an outside click, or a pick of an action.
 It grows from the kebab and fades out as it closes, like every popover (Motion in the readme).
 Sentence-case labels, one destructive item at most and it goes last behind the separator.
+Settings: an item that is an on/off setting rather than a one-time action passes `checked`, keeps one fixed label that names the setting (Paused, never Pause and Resume), and draws a small switch at its end in the Switch's look at menu size (28 by 16, `--accent` when on).
+It is a `menuitemcheckbox` with `aria-checked`; a pick, by click, Enter or Space, flips it and the menu stays open with focus on it, so the person sees the switch move.
+Settings come first, then a separator, then the actions, then the one destructive item behind its own separator.
+A setting that cannot change now keeps its state's fill, dimmed, with its `detail` saying why (Switch's "off").
+A glyph that belongs to the setting (the ✱ of Prefer for crew work) sits beside its label, since the switch holds the end.
 Use it when a row would otherwise carry three or more controls; the one action that must stay inline is the one nothing moves without (a "Sign in" on a row that needs it).
 In a row of chrome whose other controls are words, a word may stand in for the kebab as a small ghost Button (`word="More"`, a task's browser view); the popover is the same, right-aligned under it.
 An item that cannot run now stays listed, dim (`--fg-3`), with its `detail` saying why, and a pick on it does nothing; any item may carry a `detail` sub-line in `--text-xs` (`--fg-3`) under its label saying what it does ("Asks once").

@@ -242,9 +242,8 @@ export function keepGoingItem(
   const off = !account.keepGoingOnCredits && quotaRow?.credits?.state === "off";
   return {
     id: "keep-going",
-    label: account.keepGoingOnCredits
-      ? m.settingsSubscriptionsMenuStopKeepingGoing()
-      : m.settingsSubscriptionsMenuKeepGoing(),
+    label: m.settingsSubscriptionsMenuKeepGoing(),
+    checked: account.keepGoingOnCredits === true,
     detail: off
       ? provider === "codex"
         ? m.settingsSubscriptionsMenuKeepGoingOffCodex({ site: CREDITS_SITE.codex ?? "" })
@@ -267,9 +266,8 @@ export function autoResetsItem(
 ): RowMenuItem {
   return {
     id: "use-saved-resets",
-    label: account.useSavedResets
-      ? m.settingsSubscriptionsMenuStopUsingResets()
-      : m.settingsSubscriptionsMenuUseResets(),
+    label: m.settingsSubscriptionsMenuUseResets(),
+    checked: account.useSavedResets === true,
     detail: off ?? m.settingsSubscriptionsMenuUseResetsDetail(),
     ...(off ? { disabled: true } : {}),
     onSelect,
@@ -297,10 +295,11 @@ export function savedResetItem(
 }
 
 /**
- * Prefer for crew work, Rename (never for Claude, which follows its own
- * identity) and Pause or Resume, in that order: one account's own settings,
- * the same on this Mac and on a computer that runs work. `off` dims each,
- * saying why, while that computer cannot take them yet.
+ * One account's own settings and its Rename (never for Claude, which follows
+ * its own identity), the same on this Mac and on a computer that runs work:
+ * Prefer for crew work and Paused are on/off settings, drawn as switches at
+ * the menu's top (design skill RowMenu, "Settings"); Rename is an action.
+ * `off` dims each, saying why, while that computer cannot take them yet.
  */
 export function accountSettingItems(
   account: AccountView,
@@ -310,14 +309,13 @@ export function accountSettingItems(
     onSetEnabled: (enabled: boolean) => void;
   },
   off?: string,
-): RowMenuItem[] {
+): { prefer: RowMenuItem; paused: RowMenuItem; rename: RowMenuItem | null } {
   const dim = off ? { detail: off, disabled: true } : {};
-  return [
-    {
+  return {
+    prefer: {
       id: "prefer",
-      label: account.pinned
-        ? m.settingsSubscriptionsMenuStopPreferring()
-        : m.settingsSubscriptionsMenuPrefer(),
+      label: m.settingsSubscriptionsMenuPrefer(),
+      checked: account.pinned,
       trailing: (
         <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>
           {CREW_PREFERRED_MARK}
@@ -326,25 +324,40 @@ export function accountSettingItems(
       onSelect: on.onTogglePin,
       ...dim,
     },
-    ...(account.providerId === CLAUDE_PROVIDER_ID
-      ? []
-      : [
-          {
+    paused: {
+      id: "pause",
+      label: m.settingsMenuPaused(),
+      checked: !account.enabled,
+      onSelect: () => on.onSetEnabled(!account.enabled),
+      ...dim,
+    },
+    rename:
+      account.providerId === CLAUDE_PROVIDER_ID
+        ? null
+        : {
             id: "rename",
             label: m.settingsSubscriptionsMenuRename(),
             onSelect: on.onStartRename,
             ...dim,
           },
-        ]),
-    {
-      id: "pause",
-      label: account.enabled
-        ? m.settingsSubscriptionsMenuPause()
-        : m.settingsSubscriptionsMenuResume(),
-      onSelect: () => on.onSetEnabled(!account.enabled),
-      ...dim,
-    },
-  ];
+  };
+}
+
+/**
+ * The account menu's order (design skill RowMenu, "Settings"): its on/off
+ * settings first, a line, its actions, a line, and Disconnect last.
+ */
+export function accountMenu(
+  settings: (RowMenuItem | null)[],
+  actions: (RowMenuItem | null)[],
+  last: RowMenuItem[],
+): RowMenuItem[] {
+  const present = (items: (RowMenuItem | null)[]) =>
+    items.filter((item): item is RowMenuItem => item !== null);
+  const groups = [present(settings), present(actions), last].filter((group) => group.length > 0);
+  return groups.flatMap((group, index) =>
+    index === 0 ? group : [{ separator: true } as const, ...group],
+  );
 }
 
 export function AccountRow({
@@ -434,36 +447,43 @@ export function AccountRow({
         : undefined;
   const repeatedFit = useOverflowTitle(repeated);
 
-  const [prefer, ...settings] = accountSettingItems(account, {
-    onTogglePin,
-    onStartRename,
-    onSetEnabled,
-  });
-  const reset = onUseSavedReset ? savedResetItem(quotaRow, onUseSavedReset) : null;
-  const items: RowMenuItem[] = menu ?? [
-    ...(prefer ? [prefer] : []),
-    ...(onKeepGoing ? [keepGoingItem(account, quotaRow, onKeepGoing)] : []),
-    ...(reset ? [reset] : []),
-    ...(onUseSavedResets ? [autoResetsItem(account, onUseSavedResets)] : []),
-    ...settings,
-    ...(hasModels
-      ? [
-          { id: "models", label: m.settingsSubscriptionsMenuModelSlots(), onSelect: onShowModels },
-          {
-            id: "reset-slots",
-            label: m.settingsSubscriptionsMenuResetSlots(),
-            onSelect: () => setResetArmed(true),
-          },
-        ]
-      : []),
-    { separator: true },
-    {
-      id: "disconnect",
-      label: m.settingsSubscriptionsMenuDisconnect(),
-      tone: "danger",
-      onSelect: onDisconnect,
-    },
-  ];
+  const own = accountSettingItems(account, { onTogglePin, onStartRename, onSetEnabled });
+  const items: RowMenuItem[] =
+    menu ??
+    accountMenu(
+      [
+        own.prefer,
+        onKeepGoing ? keepGoingItem(account, quotaRow, onKeepGoing) : null,
+        onUseSavedResets ? autoResetsItem(account, onUseSavedResets) : null,
+        own.paused,
+      ],
+      [
+        onUseSavedReset ? savedResetItem(quotaRow, onUseSavedReset) : null,
+        own.rename,
+        ...(hasModels
+          ? [
+              {
+                id: "models",
+                label: m.settingsSubscriptionsMenuModelSlots(),
+                onSelect: onShowModels,
+              },
+              {
+                id: "reset-slots",
+                label: m.settingsSubscriptionsMenuResetSlots(),
+                onSelect: () => setResetArmed(true),
+              },
+            ]
+          : []),
+      ],
+      [
+        {
+          id: "disconnect",
+          label: m.settingsSubscriptionsMenuDisconnect(),
+          tone: "danger",
+          onSelect: onDisconnect,
+        },
+      ],
+    );
 
   return (
     <>
@@ -1319,7 +1339,7 @@ export function SubscriptionsTab() {
             onShowModels={() => {}}
             onResetSlots={() => {}}
             menu={(() => {
-              const [prefer, ...settings] = accountSettingItems(
+              const own = accountSettingItems(
                 row.account,
                 {
                   onTogglePin: () => void thereSaid(row.settings.togglePin()),
@@ -1328,41 +1348,38 @@ export function SubscriptionsTab() {
                 },
                 row.settings.updateNote,
               );
-              return [
-                ...(prefer ? [prefer] : []),
-                ...(row.keepGoing
-                  ? [
-                      {
+              return accountMenu(
+                [
+                  own.prefer,
+                  row.keepGoing
+                    ? {
                         ...keepGoingItem(row.account, row.quotaRow, row.keepGoing.onSelect),
                         ...(row.keepGoing.updateNote
                           ? { detail: row.keepGoing.updateNote, disabled: true }
                           : {}),
-                      },
-                    ]
-                  : []),
-                ...(() => {
-                  const reset = row.savedReset
+                      }
+                    : null,
+                  row.autoResets
+                    ? autoResetsItem(
+                        row.account,
+                        row.autoResets.onSelect,
+                        row.autoResets.updateNote,
+                      )
+                    : null,
+                  own.paused,
+                ],
+                [
+                  row.savedReset
                     ? savedResetItem(
                         row.quotaRow,
                         row.savedReset.onSelect,
                         row.savedReset.updateNote,
                       )
-                    : null;
-                  return reset ? [reset] : [];
-                })(),
-                ...(row.autoResets
-                  ? [
-                      autoResetsItem(
-                        row.account,
-                        row.autoResets.onSelect,
-                        row.autoResets.updateNote,
-                      ),
-                    ]
-                  : []),
-                ...settings,
-                { separator: true },
-                ...row.menu,
-              ];
+                    : null,
+                  own.rename,
+                ],
+                row.menu,
+              );
             })()}
             place={row.place}
           />

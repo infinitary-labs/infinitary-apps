@@ -2823,10 +2823,8 @@
 "settingsIntegrationsAs" = "como %1$@";
 "settingsIntegrationsCheckNow" = "Verificar agora";
 "settingsIntegrationsCopying" = "Copiando...";
-"settingsIntegrationsPause" = "Pausar";
 "settingsIntegrationsPauseDetail" = "Ninguém acessa até você retomar";
 "settingsIntegrationsPaused" = "pausada";
-"settingsIntegrationsResume" = "Retomar";
 "settingsIntegrationsRowCollapsed" = "%1$@, recolhido";
 "settingsIntegrationsRowExpanded" = "%1$@, expandido";
 "settingsIntegrationsRuleNote" = "Escolha “Pergunta a você” ou “Sempre permitida”";
@@ -2960,6 +2958,7 @@
 "settingsLocalSeatModelLabel" = "Modelo local";
 "settingsLocalSeatRun" = "Rodar seu imediato em um modelo local";
 "settingsLocalSeatSaveFailed" = "Não foi possível salvar o ajuste do modelo local. Tente de novo.";
+"settingsMenuPaused" = "Pausada";
 "settingsModelsAutomaticChoice" = "O Infinitary escolhe um modelo para cada tarefa. Indique um modelo ou fixe os modelos que quer tentar primeiro.";
 "settingsModelsDormantPins" = "Estes modelos fixados estavam inativos antes da atualização. O Infinitary só os tenta se você os restaurar. Para voltar a deixar o Infinitary escolher o computador do projeto, selecione Automático em Projetos → Roda em.";
 "settingsModelsHeading" = "Modelos";
@@ -3309,13 +3308,9 @@
 "settingsSubscriptionsMenuKeepGoingOffClaude" = "O uso extra está desativado em %1$@";
 "settingsSubscriptionsMenuKeepGoingOffCodex" = "Sem créditos em %1$@";
 "settingsSubscriptionsMenuModelSlots" = "Níveis dos modelos";
-"settingsSubscriptionsMenuPause" = "Pausar";
 "settingsSubscriptionsMenuPrefer" = "Preferir para o trabalho da tripulação";
 "settingsSubscriptionsMenuRename" = "Renomear";
 "settingsSubscriptionsMenuResetSlots" = "Redefinir níveis dos modelos";
-"settingsSubscriptionsMenuResume" = "Retomar";
-"settingsSubscriptionsMenuStopKeepingGoing" = "Parar de gastar créditos";
-"settingsSubscriptionsMenuStopPreferring" = "Deixar de preferir para o trabalho da tripulação";
 "settingsSubscriptionsMenuStopUsingResets" = "Parar de usar redefinições salvas por conta própria";
 "settingsSubscriptionsMenuUseReset" = "Usar uma redefinição salva";
 "settingsSubscriptionsMenuUseResetDetail" = "O Codex faz login e usa a que vence primeiro";

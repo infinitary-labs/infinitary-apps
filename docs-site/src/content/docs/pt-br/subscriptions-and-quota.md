@@ -1,5 +1,5 @@
 ---
-source: f2b6491db2dbaf8c
+source: e1f49458875e9674
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -50,10 +50,11 @@ O Amazon Bedrock é cobrado pelo uso na sua conta da AWS; a linha dele mostra a 
 ## Escolher qual conta faz o quê {#choose-which-account-does-what}
 
 Abra o menu de uma conta, os três pontos na linha dela, para estas opções.
+As configurações vêm primeiro, cada uma com um interruptor que mostra se está ligada; escolher uma liga ou desliga e deixa o menu aberto.
 
 - **Preferir para o trabalho da tripulação** faz sua tripulação usar esta conta primeiro.
   Um ✱ a marca.
-- **Pausar** para todo o trabalho nesta conta até você escolher **Retomar**.
+- **Pausada** para todo o trabalho nesta conta enquanto o interruptor estiver ligado.
 - **Desconectar** remove a conta do Infinitary.
 
 Quando você tem duas ou mais contas do provedor que seu imediato usa, os Ajustes deixam você escolher em qual delas seu imediato responde.

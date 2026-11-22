@@ -2823,10 +2823,8 @@
 "settingsIntegrationsAs" = "as %1$@";
 "settingsIntegrationsCheckNow" = "Check now";
 "settingsIntegrationsCopying" = "Copying...";
-"settingsIntegrationsPause" = "Pause";
 "settingsIntegrationsPauseDetail" = "Nobody reaches it until you resume it";
 "settingsIntegrationsPaused" = "paused";
-"settingsIntegrationsResume" = "Resume";
 "settingsIntegrationsRowCollapsed" = "%1$@, collapsed";
 "settingsIntegrationsRowExpanded" = "%1$@, expanded";
 "settingsIntegrationsRuleNote" = "Choose Asks you or Always allowed";
@@ -2960,6 +2958,7 @@
 "settingsLocalSeatModelLabel" = "Local model";
 "settingsLocalSeatRun" = "Run your first mate on a local model";
 "settingsLocalSeatSaveFailed" = "The local model setting could not be saved. Try again.";
+"settingsMenuPaused" = "Paused";
 "settingsModelsAutomaticChoice" = "Infinitary chooses a model for each task. Name one for a task, or pin models to try first.";
 "settingsModelsDormantPins" = "These pins were off before the upgrade. Infinitary won’t try them unless you restore them. To let Infinitary choose where a project runs again, choose Automatic in Projects → Runs on.";
 "settingsModelsHeading" = "Models";
@@ -3309,13 +3308,9 @@
 "settingsSubscriptionsMenuKeepGoingOffClaude" = "Extra usage is off on %1$@";
 "settingsSubscriptionsMenuKeepGoingOffCodex" = "No credits on %1$@";
 "settingsSubscriptionsMenuModelSlots" = "Model slots";
-"settingsSubscriptionsMenuPause" = "Pause";
 "settingsSubscriptionsMenuPrefer" = "Prefer for crew work";
 "settingsSubscriptionsMenuRename" = "Rename";
 "settingsSubscriptionsMenuResetSlots" = "Reset model slots";
-"settingsSubscriptionsMenuResume" = "Resume";
-"settingsSubscriptionsMenuStopKeepingGoing" = "Stop spending credits";
-"settingsSubscriptionsMenuStopPreferring" = "Stop preferring for crew work";
 "settingsSubscriptionsMenuStopUsingResets" = "Stop using saved resets on their own";
 "settingsSubscriptionsMenuUseReset" = "Use a saved reset";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex signs in and uses the one that expires first";

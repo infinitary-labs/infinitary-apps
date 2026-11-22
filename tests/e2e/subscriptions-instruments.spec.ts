@@ -4,6 +4,7 @@ import {
   noReaderText,
   SUBSCRIPTIONS_WORDS,
 } from "../../src/renderer/src/settings/subscriptionsWords";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { SLOTS } from "../../src/shared/modelSlots";
 import type { QuotaSnapshotView } from "../../src/shared/quota";
 import { providerScopes } from "../../src/shared/quotaSignals";
@@ -464,15 +465,20 @@ test("the kebab holds the row's actions; rename rides the row", async () => {
   await work.getByRole("button", { name: "Save" }).click();
   await expect(row(page, ID.codexWork).getByText("Work #2")).toBeVisible({ timeout: 10_000 });
 
-  // Pause and resume through the menu; the row dims and says so.
+  // Pause and resume through the menu's Paused switch, which keeps the menu
+  // open; the row dims and says so.
   await work.getByRole("button", { name: "Work #2 actions" }).click();
-  await page.getByRole("menuitem", { name: "Pause" }).click();
+  const paused = page.getByRole("menuitemcheckbox", { name: m.settingsMenuPaused() });
+  await expect(paused).toHaveAttribute("aria-checked", "false");
+  await paused.click();
   await expect(row(page, ID.codexWork)).toHaveAttribute("data-paused", "true", { timeout: 10_000 });
-  await work.getByRole("button", { name: "Work #2 actions" }).click();
-  await page.getByRole("menuitem", { name: "Resume" }).click();
+  await expect(paused).toHaveAttribute("aria-checked", "true");
+  await paused.click();
   await expect(row(page, ID.codexWork)).not.toHaveAttribute("data-paused", "true", {
     timeout: 10_000,
   });
+  await expect(paused).toHaveAttribute("aria-checked", "false");
+  await page.keyboard.press("Escape");
 });
 
 test("Models starts expanded and a row's menu reopens it after collapse", async () => {

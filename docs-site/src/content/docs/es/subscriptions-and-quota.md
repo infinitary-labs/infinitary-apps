@@ -1,5 +1,5 @@
 ---
-source: f2b6491db2dbaf8c
+source: e1f49458875e9674
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -50,10 +50,11 @@ Amazon Bedrock se factura por uso en tu cuenta de AWS; su fila muestra la estima
 ## Elegir qué cuenta hace qué {#choose-which-account-does-what}
 
 Abre el menú de una cuenta, los tres puntos de su fila, para estas opciones.
+Sus ajustes van primero, cada uno con un interruptor que muestra si está activado; al elegir uno se activa o desactiva y el menú sigue abierto.
 
 - **Preferir para el trabajo de la tripulación** hace que tu tripulación use primero esta cuenta.
   Un ✱ la marca.
-- **Pausar** detiene todo el trabajo en esta cuenta hasta que elijas **Reanudar**.
+- **En pausa** detiene todo el trabajo en esta cuenta mientras su interruptor está activado.
 - **Desconectar** quita la cuenta de Infinitary.
 
 Cuando tienes dos o más cuentas del proveedor que usa tu primer oficial, Configuración te deja elegir en cuál responde tu primer oficial.

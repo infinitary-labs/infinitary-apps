@@ -1,4 +1,5 @@
 import type { AccountView } from "@shared/accounts";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeChannel } from "@shared/ipc";
 import { parseOfferingKey, providerLabel, STARTER_SLOTS } from "@shared/modelSlots";
 import type { PiModelRefView, QuotaSnapshotView } from "@shared/quota";
@@ -296,11 +297,13 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
       document.querySelector<HTMLElement>(`[data-account-row="${ACCOUNT_ID}"]`);
     const feedback = () =>
       document.querySelector<HTMLElement>(`[data-account-error="${ACCOUNT_ID}"]`);
-    const choose = async (item: string | RegExp) => {
-      await userEvent.click(
-        page.elementLocator(accountRow() as HTMLElement).getByRole("button", { name: /actions$/ }),
-      );
-      await userEvent.click(page.getByRole("menuitem", { name: item }));
+    // A setting is a switch that leaves the menu open when picked; an action closes it.
+    const choose = async (item: string | RegExp, role: "menuitem" | "menuitemcheckbox") => {
+      const kebab = page
+        .elementLocator(accountRow() as HTMLElement)
+        .getByRole("button", { name: /actions$/ });
+      if (kebab.element().getAttribute("aria-expanded") !== "true") await userEvent.click(kebab);
+      await userEvent.click(page.getByRole("menu").getByRole(role, { name: item }));
     };
     const edits: {
       channel: InvokeChannel;
@@ -310,7 +313,7 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
     }[] = [
       {
         channel: "inf:accounts:set-enabled",
-        act: () => choose("Pause"),
+        act: () => choose(m.settingsMenuPaused(), "menuitemcheckbox"),
         unchanged: async () => {
           expect(accountRow()?.hasAttribute("data-paused")).toBe(false);
         },
@@ -321,7 +324,7 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
       {
         channel: "inf:accounts:rename",
         act: async () => {
-          await choose("Rename");
+          await choose("Rename", "menuitem");
           const name = page
             .elementLocator(accountRow() as HTMLElement)
             .getByPlaceholder("Account name");
@@ -345,7 +348,7 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
       },
       {
         channel: "inf:accounts:pin",
-        act: () => choose(/^Prefer for crew work/),
+        act: () => choose(/^Prefer for crew work/, "menuitemcheckbox"),
         unchanged: async () => {
           expect(accountRow()?.querySelectorAll("[data-crew-preferred]")).toHaveLength(0);
         },
@@ -357,7 +360,7 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
       },
       {
         channel: "inf:accounts:remove",
-        act: () => choose("Disconnect"),
+        act: () => choose("Disconnect", "menuitem"),
         unchanged: async () => {
           await expect.element(accountRow() as HTMLElement).toBeVisible();
         },

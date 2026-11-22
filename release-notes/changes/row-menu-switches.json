@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "row-menu-switches",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "Account settings in a row's menu show whether they are on",
+      "body": "An account's menu in Subscriptions now lists its settings first, each with a switch: Prefer for crew work, Keep going on credits, Use saved resets on their own and Paused. Its one-time actions follow below a line. Picking a setting turns it on or off and leaves the menu open, so you see the switch move. A connection's menu in Integrations shows Paused the same way.",
+      "picture": {
+        "dark": "row-menu-switches-dark.webp",
+        "light": "row-menu-switches-light.webp",
+        "alt": "A Codex account's menu in Subscriptions with four settings at the top, Prefer for crew work and Keep going on credits switched on, and the actions below a line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

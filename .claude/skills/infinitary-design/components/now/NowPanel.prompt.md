@@ -152,9 +152,9 @@ Keep rows otherwise minimal.
 
 A started crewmate idle on other work names it as its reason: `Idle · Waiting on INF-12`, or `Idle · Waiting on 2 tasks` for several, so no one key stands for the others.
 When it waits on one task, the reason also says where that wait stops (INF-5578): following each task's own lone wait to the last one, it names that task and its hold, as `Idle · Waiting on INF-12 · INF-9 waits until Nov 21, 12:00 PM`, `Idle · Waiting on INF-12 · INF-9 waits for an app update`, or `Idle · Waiting on INF-12 · which waits on INF-9`; the one task's own hold reads `Idle · Waiting on INF-9 · it waits until …`.
-A review whose change is still open waits on that change the same way, `Idle · Waiting on INF-12`, rather than reading as no continuing work.
+A review that has answered, whose change is still open, waits on that change the same way, `Idle · Waiting on INF-12`, rather than reading as no continuing work; one that has not answered yet keeps its own reason.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
-A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; list rows and older homes keep their previous presentation.
+A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; when its one wait's line goes further or ends in a hold, it names where that line stops instead of the event, wrapping in the column; list rows and older homes keep their previous presentation.
 The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its unknown end time and its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.

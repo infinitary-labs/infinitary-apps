@@ -8,8 +8,10 @@ export type WaitChain = NonNullable<TaskView["waitChain"]>;
  * its row names that task and until when instead of the first link alone.
  *
  * The first task is the one it waits on: its lone holding wait, or, with
- * none, the change a review waits for while that change is still live (a
- * review's own report leaves it idle until its change merges). From there
+ * none, the change a review waits for once that change's record carries
+ * this review's verdict and the change is still live; a review that has not
+ * answered yet is not waiting on its change but stalled, and keeps reading
+ * so. From there
  * each task's own lone holding wait is followed, through typed links only,
  * until a task holds no lone wait, is held (its `at-time` gate, the hold
  * the first mate gives), or the line comes back on itself. Several waits at
@@ -29,7 +31,7 @@ export function waitChainOf(input: {
   const first =
     holding.length === 1
       ? holding[0]
-      : holding.length === 0 && reviewed && isLive(reviewed)
+      : holding.length === 0 && reviewed && isLive(reviewed) && answered(record, reviewed)
         ? reviewed
         : undefined;
   if (!first) return undefined;
@@ -52,6 +54,12 @@ export function waitChainOf(input: {
         : {}),
   };
 }
+
+/** The change's recorded verdict came after this review opened (`TaskGraph.verdictReviewOf`). */
+const answered = (review: TaskRecord, change: TaskRecord) => {
+  const at = change.delivery?.reviewedAt;
+  return change.delivery?.reviewVerdict !== undefined && at !== undefined && review.createdAt <= at;
+};
 
 const isLive = (task: TaskRecord) => task.status === "open" || task.status === "active";
 

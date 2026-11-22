@@ -53,6 +53,12 @@ export type Graph = {
   durableDecisions: Set<string>;
   /** What carries each dropped or superseded row's work on (`TaskService.graph.replacementsOf`). */
   replacedBy: Map<string, string>;
+  /**
+   * The rows whose every edge the graph holds, when it was read around a
+   * few rows (`graphFor`); absent, every row's edges are held (the board).
+   * A wait chain reads any other task's waits from the store.
+   */
+  edgesOf?: ReadonlySet<string>;
 };
 
 /** A project's counts while it has no tasks. */
@@ -111,7 +117,9 @@ export function graphFor(
   // What replaced each dropped row, read for all of them at once; one at
   // a time, each read its task's whole timeline (INF-2070).
   const replacedBy = tasks.graph.replacementsOf(rows.filter(replaced).map((record) => record.id));
-  return graphOf(options, all, links, replacedBy, tasks.childCounts(ids), cards);
+  const graph = graphOf(options, all, links, replacedBy, tasks.childCounts(ids), cards);
+  graph.edgesOf = known;
+  return graph;
 }
 
 export function graphOf(
@@ -457,23 +465,38 @@ function projectView(
 export function waitChainIn(
   options: Pick<TaskProtocolOptions, "tasks">,
   record: TaskRecord,
-  graph: Pick<Graph, "byId" | "blockersOf">,
+  graph: Pick<Graph, "byId" | "blockersOf" | "edgesOf">,
   holding?: readonly TaskRecord[],
 ): TaskView["waitChain"] {
   if (record.status !== "active") return undefined;
+  // A graph read around a few rows holds only their own edges, so a task
+  // further along the line is read from the store, as the board holds it.
+  const held = (task: TaskRecord) => !graph.edgesOf || graph.edgesOf.has(task.id);
+  const blockersOf = (task: TaskRecord) => {
+    if (held(task)) return graph.blockersOf.get(task.id) ?? [];
+    const from = options.tasks.graph
+      .linksTouching([task.id])
+      .filter((link) => link.type === "blocks" && link.toId === task.id)
+      .map((link) => link.fromId);
+    return from.length > 0 ? options.tasks.getMany(from) : [];
+  };
   const holdingOf = (task: TaskRecord) =>
     holdingWaits({
       record: task,
-      blockers: graph.blockersOf.get(task.id) ?? [],
-      tasks: graph.byId,
-      baseline: standingDependencyWaits(graph.byId, task.delivery, options.tasks),
+      blockers: blockersOf(task),
+      tasks: held(task) ? graph.byId : options.tasks,
+      baseline: standingDependencyWaits(
+        held(task) ? graph.byId : options.tasks,
+        task.delivery,
+        options.tasks,
+      ),
     });
   const reviewOf = record.kind === "work" ? reviewBuilderOf(record) : null;
   return waitChainOf({
     record,
     holding: holding ?? holdingOf(record),
     holdingOf,
-    reviewed: reviewOf ? graph.byId.get(reviewOf) : undefined,
+    reviewed: reviewOf ? (graph.byId.get(reviewOf) ?? options.tasks.get(reviewOf)) : undefined,
   });
 }
 

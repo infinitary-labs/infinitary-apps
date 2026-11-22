@@ -8,11 +8,17 @@ import { useEffect, useState } from "react";
  * captain's press - and tries to on its own as it opens, and once for a
  * setting its manifest does not name.
  */
-const say = (result: { ok: true } | { ok: false; text: string }) =>
-  result.ok ? "changed" : result.text;
+type ChangeResult = { ok: true } | { ok: false; text: string };
+const say = (result: ChangeResult) => (result.ok ? "changed" : result.text);
+
+type Press = "light" | "dark" | "larger" | "unlisted";
 
 export default function Panel({ settings }: PanelProps) {
-  const [said, setSaid] = useState("");
+  const [feedback, setFeedback] = useState<{ press: Press; text: string }>();
+  const report = (press: Press, request: Promise<ChangeResult>) => {
+    setFeedback({ press, text: "pending" });
+    void request.then((result) => setFeedback({ press, text: say(result) }));
+  };
   const [unasked, setUnasked] = useState("");
   // A change from no press of the captain's: refused, nothing changed.
   useEffect(() => {
@@ -24,37 +30,29 @@ export default function Panel({ settings }: PanelProps) {
     <div data-fixture-look="">
       <Button
         data-look-light=""
-        onClick={() =>
-          void settings.change("theme", { theme: "light" }).then((r) => setSaid(say(r)))
-        }
+        onClick={() => report("light", settings.change("theme", { theme: "light" }))}
       >
         Light
       </Button>
       <Button
         data-look-dark=""
-        onClick={() =>
-          void settings.change("theme", { theme: "dark" }).then((r) => setSaid(say(r)))
-        }
+        onClick={() => report("dark", settings.change("theme", { theme: "dark" }))}
       >
         Dark
       </Button>
       <Button
         data-look-larger=""
-        onClick={() =>
-          void settings.change("window-size", { size: 110 }).then((r) => setSaid(say(r)))
-        }
+        onClick={() => report("larger", settings.change("window-size", { size: 110 }))}
       >
         Larger
       </Button>
       <Button
         data-look-unlisted=""
-        onClick={() =>
-          void settings.change("crew-model-names", { visible: false }).then((r) => setSaid(say(r)))
-        }
+        onClick={() => report("unlisted", settings.change("crew-model-names", { visible: false }))}
       >
         Hide model names
       </Button>
-      <p data-look-said="">{said}</p>
+      <p data-look-said={feedback?.press ?? ""}>{feedback?.text}</p>
       <p data-look-unasked="">{unasked}</p>
     </div>
   );

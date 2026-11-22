@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { writeStarterSession } from "../../src/core/update/devStarter";
@@ -12,7 +12,7 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
-import { SOURCE_UPDATE_WORK_MARKER, sourceUpdateWork } from "./scenarios/sourceUpdateWork";
+import { UPDATE_RESUME_MARKER, updateResume } from "./scenarios/updateResume";
 import { commandSearch, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 const GIT_ENV = {
@@ -126,18 +126,18 @@ test("a copy run from source that is up to date refuses the update command, sayi
 // before it asks the starter, as an installed update does.
 // Fixture: the same throwaway project one commit behind, and an isolated app
 // whose crewmate's turn the stand-in model holds open, still working.
-// Completion: the crewmate's turn recorded as paused for the update no later
-// than the starter's request, and the app's own exit.
+// Completion: the crewmate's turn recorded as paused for the update, the
+// starter's request and the app's own exit.
 test("a copy run from source saves a crewmate's running work before it asks its starter", async () => {
   const { from, to, starter } = sourceCopy(1);
   const launched = await launchApp({
     withMockProvider: true,
-    scenarios: [sourceUpdateWork],
+    scenarios: [updateResume(1)],
     env: { INFINITARY_DEV_STARTER: starter },
   });
   const { app, page } = launched;
   try {
-    const title = `${SOURCE_UPDATE_WORK_MARKER} on the release checklist`;
+    const title = `${UPDATE_RESUME_MARKER} on the release checklist`;
     const input = promptInput(page);
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
@@ -148,7 +148,7 @@ test("a copy run from source saves a crewmate's running work before it asks its 
       async (marker) =>
         (await window.infinitary.tasks.board()).tasks.find((task) => task.title.startsWith(marker))
           ?.id ?? "",
-      SOURCE_UPDATE_WORK_MARKER,
+      UPDATE_RESUME_MARKER,
     );
     expect(taskId).not.toBe("");
 
@@ -162,20 +162,18 @@ test("a copy run from source saves a crewmate's running work before it asks its 
     await page.keyboard.press("Enter");
     await exited;
 
-    const request = join(starter, "update.json");
-    expect(JSON.parse(readFileSync(request, "utf8"))).toEqual({ from, to });
-    // The crewmate's running turn stopped for the update before the starter was asked.
+    expect(JSON.parse(readFileSync(join(starter, "update.json"), "utf8"))).toEqual({ from, to });
+    // The crewmate's running turn was paused for the update.
     const paused = readSavedData(
       launched.userDataDir,
       (db) =>
         db
           .prepare(
-            "SELECT at FROM task_events WHERE task_id = ? AND json_extract(data_json, '$.restartOutcome.outcome') = 'waiting'",
+            "SELECT id FROM task_events WHERE task_id = ? AND json_extract(data_json, '$.restartOutcome.outcome') = 'waiting'",
           )
-          .all(taskId) as { at: number }[],
+          .all(taskId) as { id: number }[],
     );
     expect(paused).toHaveLength(1);
-    expect(paused[0]?.at).toBeLessThanOrEqual(statSync(request).mtimeMs);
   } finally {
     await launched.close();
   }

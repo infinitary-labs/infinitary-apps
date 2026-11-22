@@ -399,9 +399,9 @@ export class TaskGraph {
    * The tasks a merge of this task filed or set to start from its story's
    * after-merge steps (INF-3846 piece 4), each with when the merge linked it:
    * the discovered-from links the host wrote, which only
-   * `TaskDeliveries.activateAfterMergeSteps` writes. They do the rest of this
-   * task's work, so the message it serves covers them, as work that joined
-   * it at that link's time.
+   * `TaskDeliveries.activateAfterMergeSteps` writes (`linkMergeStep`). They
+   * do the rest of this task's work, so the message it serves covers them,
+   * as work that joined it at that link's time.
    */
   continuations(id: string): { id: string; at: number }[] {
     return this.linksTo(id)
@@ -414,6 +414,34 @@ export class TaskGraph {
     return this.linksFrom(id)
       .filter((link) => link.type === "discovered-from" && link.actor === "host")
       .map((link) => ({ id: link.toId, at: link.createdAt }));
+  }
+
+  /**
+   * Link a task a merge filed or set to start to that merged task: the
+   * host-written discovered-from link `continuations` reads. Its `linked`
+   * line saves whether the merge filed the task in the same write (`filed`)
+   * or set a task that already existed to start, which `mergesThatFiled`
+   * reads, so the order is a fact the merge knew, never two times compared
+   * (INF-5647).
+   */
+  linkMergeStep(taskId: string, mergedId: string, at: number, filed: boolean): boolean {
+    return this.insertLink(taskId, mergedId, "discovered-from", "host", at, false, at, { filed });
+  }
+
+  /**
+   * The tasks whose merge filed this one (`linkMergeStep`), leaving out a
+   * merge that set it to start after it was filed: that link is not where
+   * its work came from. A link saved before its line said which reads as
+   * filed when it was written no later than the task.
+   */
+  mergesThatFiled(id: string): string[] {
+    const filedAt = this.writer.store.get(id)?.createdAt;
+    return this.continuedFrom(id).flatMap((from) => {
+      const filed =
+        this.writer.events.linkFiled(from.id, id, "discovered-from") ??
+        (filedAt !== undefined && from.at <= filedAt);
+      return filed ? [from.id] : [];
+    });
   }
 
   /** The task that replaced this one, including the older stronger-model lineage. */
@@ -1204,6 +1232,8 @@ export class TaskGraph {
     at: number,
     holdsMerge = false,
     createdAt = at,
+    /** Facts the link's writer saves on its `linked` line, such as `linkMergeStep`'s `filed`. */
+    saved: { filed?: boolean } = {},
   ): boolean {
     const from = this.writer.mustGet(fromId);
     const to = this.writer.mustGet(toId);
@@ -1246,7 +1276,7 @@ export class TaskGraph {
               : type === "replaced-by"
                 ? `replaces "${from.title}" (${keyOrId(from)})`
                 : `follow-up filed: "${from.title}" (${keyOrId(from)})`,
-        data: { fromId, type },
+        data: { fromId, type, ...saved },
         ref: fromId,
         feed: false,
       });

@@ -1293,8 +1293,9 @@ export class TaskDeliveries {
         allow(named.id, step);
         // The same link a filed step carries: the named task does the rest
         // of this work, so the message this task served covers it and its
-        // brief reads this task's report and card (INF-3846 piece 4).
-        this.tasks.graph.insertLink(named.id, sourceId, "discovered-from", "host", at);
+        // brief reads this task's report and card (INF-3846 piece 4). Its line
+        // says the merge did not file it, so its own origin stays its line's.
+        this.tasks.graph.linkMergeStep(named.id, sourceId, at, false);
         if (named.startPolicy !== "when-ready") {
           this.writer.patch(named.id, { startPolicy: "when-ready", updatedAt: at });
           note(
@@ -1347,7 +1348,7 @@ export class TaskDeliveries {
         actor: "host",
         createdAt: at,
       });
-      this.tasks.graph.insertLink(record.id, sourceId, "discovered-from", "host", at);
+      this.tasks.graph.linkMergeStep(record.id, sourceId, at, true);
       waitOn(record.id, step);
       holdOn(record, step);
       allow(record.id, step);

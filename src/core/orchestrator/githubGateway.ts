@@ -29,7 +29,7 @@ import {
   releaseFileIn,
   smallerPage,
 } from "../forge";
-import { type RawApiKind, rawApiKind } from "../forge/api";
+import { type ApiDialect, apiDialectAt, rawApiKind } from "../forge/api";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import { IntegrationOutcomeUnknown } from "../integrations";
 import { storyLedgers } from "../storage/changeProjection";
@@ -237,7 +237,7 @@ export class GithubGatewayService {
         );
         if (!route.write)
           throw new ForgeError("refused", "A change sends POST, PATCH, PUT or DELETE only.");
-        const kind = rawApiKind(forge.kind);
+        const kind = apiDialectAt(forge.kind, forge.host);
         if (kind) await guardApiWrite(kind, route, parsed, () => forge.defaultBranch());
         const response = await this.send(
           calls,
@@ -320,7 +320,7 @@ export class GithubGatewayService {
         if (!route.write)
           throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
         // Merges and default-branch moves keep the merge card, asked or not (piece 1).
-        const kind = rawApiKind(forge.kind);
+        const kind = apiDialectAt(forge.kind, forge.host);
         if ((route.own || target.via === "account") && kind) {
           await guardApiWrite(kind, route, parsed, () => forge.defaultBranch());
         }
@@ -375,8 +375,8 @@ export class GithubGatewayService {
       throw new ForgeError("refused", PLACED_RELEASE_FILE_REFUSAL);
     }
     const located = this.locateFile(taskId, input.file ?? "");
-    const route = this.releaseRoute(api, input.path, located.filename);
-    const kind = rawApiKind(forge.kind);
+    const route = this.releaseRoute(api, input.path, located.filename, forge);
+    const kind = apiDialectAt(forge.kind, forge.host);
     if ((route.own || target.via === "account") && kind) {
       await guardApiWrite(kind, route, undefined, () => forge.defaultBranch());
     }
@@ -444,7 +444,7 @@ export class GithubGatewayService {
           throw new ForgeError("refused", PLACED_RELEASE_FILE_REFUSAL);
         }
         located = this.locateFile(taskId, ask.file);
-        route = this.releaseRoute(target.api, ask.path, located.filename);
+        route = this.releaseRoute(target.api, ask.path, located.filename, target.forge);
       } else {
         route = target.api.route(
           ask.method,
@@ -454,7 +454,7 @@ export class GithubGatewayService {
       }
       if (!route.write) throw new ForgeError("refused", "only a write is asked for.");
       const { forge } = target;
-      const kind = rawApiKind(forge.kind);
+      const kind = apiDialectAt(forge.kind, forge.host);
       if ((route.own || target.via === "account") && kind) {
         await guardApiWrite(
           kind,
@@ -515,11 +515,11 @@ export class GithubGatewayService {
       .map((part) => decodeURIComponent(part))
       .join("/")
       .replace(/\/+$/, "");
-    const kind = rawApiKind(forge.kind) ?? "github";
+    const kind = apiDialectAt(forge.kind, forge.host) ?? "github";
     if (route.method === "POST" && rest === KIND_REST[kind].opensChange)
       throw new ForgeError(
         "refused",
-        `Use prepare_change and open_change to publish this task's saved story with its ${CHANGE_REQUEST_HOSTS[kind].changeWord}. Native media hosts confirm every selected attachment first.`,
+        `Use prepare_change and open_change to publish this task's saved story with its ${CHANGE_REQUEST_HOSTS[rawApiKind(forge.kind) ?? "github"].changeWord}. Native media hosts confirm every selected attachment first.`,
       );
     // Every change keeps its own story (INF-2490), so each one's description is guarded.
     const delivery = record?.delivery;
@@ -601,8 +601,8 @@ export class GithubGatewayService {
       at: this.options.now(),
     };
     this.options.tasks.delivery.keepWriteAsk(taskId, ask);
-    const raw = rawApiKind(ask.kind);
-    const numbered = raw ? KIND_REST[raw].numberedProject : undefined;
+    const dialect = apiDialectAt(ask.kind, ask.host);
+    const numbered = dialect ? KIND_REST[dialect].numberedProject : undefined;
     const byNumber =
       numbered && target.via === "project" && numbered.path.test(ask.path)
         ? ` If it is your own project, ${numbered.hint}, and the write goes at once.`
@@ -653,9 +653,12 @@ export class GithubGatewayService {
     return located;
   }
 
-  private releaseRoute(api: ForgeApi, rawPath: string, filename: string): ApiRoute {
+  private releaseRoute(api: ForgeApi, rawPath: string, filename: string, forge?: Forge): ApiRoute {
     if (!api.releaseUpload || !api.upload) {
-      throw new ForgeError("refused", "This host does not take a release file.");
+      throw new ForgeError(
+        "refused",
+        forge?.noRunsWords ?? "This host does not take a release file.",
+      );
     }
     return api.releaseUpload(rawPath, filename);
   }
@@ -859,7 +862,7 @@ export class GithubGatewayService {
     rest: string,
     response: ForgeApiResponse,
   ): void {
-    const kind = rawApiKind(forge.kind);
+    const kind = apiDialectAt(forge.kind, forge.host);
     const write = kind ? KIND_REST[kind].commentWrite : undefined;
     if (!write?.test((rest.split("?")[0] ?? "").replace(/\/+$/, ""))) return;
     let id: unknown;
@@ -906,11 +909,17 @@ export class GithubGatewayService {
         const body = responseObject(response);
         if (dispatch) runId = body.workflow_run_id;
         else if (pipeline)
-          runId = body[KIND_REST[rawApiKind(target.forge.kind) ?? "github"].startedRun ?? "id"];
+          runId =
+            body[
+              KIND_REST[apiDialectAt(target.forge.kind, target.forge.host) ?? "github"]
+                .startedRun ?? "id"
+            ];
         else {
           const run = rest.match(/^(?:actions\/runs|pipelines)\/(\d+)\//);
           if (run) runId = Number(run[1]);
-          else if (KIND_REST[rawApiKind(target.forge.kind) ?? "github"].retryNamesRun)
+          else if (
+            KIND_REST[apiDialectAt(target.forge.kind, target.forge.host) ?? "github"].retryNamesRun
+          )
             runId = objectOf(body.pipeline).id;
           else {
             // GitHub's job rerun is empty: the job itself supplies the parent run number.
@@ -1155,7 +1164,7 @@ function isDispatch(forge: Forge, rest: string): boolean {
 
 /** A pipeline start, such as GitLab's or Bitbucket's, by its path under the project. */
 function isPipelineStart(forge: Forge, rest: string): boolean {
-  const kind = rawApiKind(forge.kind);
+  const kind = apiDialectAt(forge.kind, forge.host);
   return kind !== undefined && KIND_REST[kind].startsPipeline === rest.replace(/\/+$/, "");
 }
 
@@ -1166,7 +1175,7 @@ function isPipelineStart(forge: Forge, rest: string): boolean {
  * change, and how a project is named by an id rather than its path.
  */
 const KIND_REST: Record<
-  RawApiKind,
+  ApiDialect,
   {
     opensChange: string;
     /** The call that rewrites a change's description: its path, method and the fields that carry it. */
@@ -1217,6 +1226,13 @@ const KIND_REST: Record<
       // i18n-exempt: served to the crewmate in the kept ask's answer
       hint: "name it by its workspace and repository slugs instead of an id in braces",
     },
+  },
+  // Data Center runs no pipelines of its own; its paths name their API first.
+  "bitbucket-data-center": {
+    opensChange: "api/pull-requests",
+    description: { path: /^api\/pull-requests\/(\d+)$/, method: "PUT", fields: ["description"] },
+    retryNamesRun: false,
+    commentWrite: /^api\/pull-requests\/\d+\/comments$/,
   },
 };
 

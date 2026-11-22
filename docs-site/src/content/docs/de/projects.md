@@ -1,5 +1,5 @@
 ---
-source: 023b6be0be6240d0
+source: d57581294d6dfbfc
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -50,7 +50,8 @@ Bei Bitbucket erstellst du in deinem Atlassian-Konto ein API-Token und fügst es
 Das Schlüsselformular nennt die Berechtigungen, die du auf der Seite von Atlassian ankreuzen musst.
 Für deinen eigenen Bitbucket-Data-Center-Server ab Version 8.19 gibst du seine Adresse ein und fügst ein HTTP-Zugriffstoken mit den Berechtigungen Project read und Repository write ein.
 Die Änderungen eines Data-Center-Projekts werden als Pull Requests angeboten, und zusammengeführt wird nur die Version, die du freigegeben hast: Wenn in der Zwischenzeit jemand pusht, wird nichts zusammengeführt, und die Aufgabe sagt das.
-Bei Data Center gibt es gebündelte Pull Requests, Forks und den eigenen Zugriff der Crew auf den Server noch nicht.
+Ein Data-Center-Projekt kann auch gebündelte Pull Requests wählen, und deine Crew kann auf dem Server lesen und schreiben, über deinen Fork beitragen und bei neuen Kommentaren zu ihrem Pull Request und bei einer fehlgeschlagenen Überprüfung auf dem Hauptbranch aufwachen.
+Ein Data-Center-Server hat keine eigenen Prüfprotokolle, Läufe oder Release-Dateien: Seine Überprüfungen kommen von einem anderen Dienst, und jede verlinkt, wo ihr Protokoll steht.
 Deine Bitbucket-Projekte werden aus den Arbeitsbereichen aufgelistet, zu denen du gehörst; bei vielen sind vielleicht nicht alle geprüft, und die Liste sagt das.
 Die Änderungen eines Bitbucket-Projekts werden als Pull Requests angeboten, wie bei GitHub und GitLab; ein Projekt, das du vorher hinzugefügt hast, funktioniert ab seiner nächsten Aufgabe genauso.
 Die Beschreibung eines Bitbucket-Pull-Requests enthält die Geschichte als Text, und ihre Bilder bleiben auf der Karte.

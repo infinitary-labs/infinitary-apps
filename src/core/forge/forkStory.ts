@@ -1,18 +1,24 @@
 import { changePageUrl } from "@shared/forgeKinds";
 import { isForkReview, type MergeReview } from "@shared/mergeReview";
-import { API_PER_PAGE_MAX, OversizedAnswer, type RawApiKind, rawApiKind, smallerPage } from "./api";
+import {
+  API_PER_PAGE_MAX,
+  type ApiDialect,
+  apiDialectAt,
+  OversizedAnswer,
+  smallerPage,
+} from "./api";
 import type { Forge, ForgeChange } from "./forge";
 import { ForgeError, ForgeWriteError } from "./forge";
 import { presentationRegionMarkers } from "./presentation";
 
 /**
  * Where each kind keeps a change's comments, and how one is rewritten.
- * Bitbucket has none yet: reviewing someone else's pull request from a fork
- * there comes later.
+ * Bitbucket Cloud and Data Center have none yet: reviewing someone else's
+ * pull request from a fork there comes later.
  */
 const STORY_COMMENTS: Partial<
   Record<
-    RawApiKind,
+    ApiDialect,
     {
       list: (project: string, number: number) => string;
       update: (
@@ -52,7 +58,7 @@ export function forkStoryForge(forge: Forge, review: MergeReview, taskId: string
     throw new ForgeError("unsupported", "This host cannot publish a review story comment.");
   const readPull = forge.pull.bind(forge);
   const project = `${review.owner}/${review.name}`;
-  const storyComments = STORY_COMMENTS[rawApiKind(forge.kind) ?? "github"];
+  const storyComments = STORY_COMMENTS[apiDialectAt(forge.kind, forge.host) ?? "github"];
   if (!storyComments)
     throw new ForgeError("unsupported", "This host cannot publish a review story comment.");
   const root = storyComments.list(project, review.number);

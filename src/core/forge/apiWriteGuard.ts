@@ -1,5 +1,5 @@
 import { fixedHoldWords } from "@shared/holds";
-import type { ApiRoute, RawApiKind } from "./api";
+import type { ApiDialect, ApiRoute } from "./api";
 import { ForgeError } from "./forge";
 
 /** Raw API writes never substitute for the version-pinned merge card. */
@@ -22,7 +22,7 @@ type WriteGrammar = {
   }) => Promise<string | undefined>;
 };
 
-const WRITE_GRAMMAR: Record<RawApiKind, WriteGrammar> = {
+const WRITE_GRAMMAR: Record<ApiDialect, WriteGrammar> = {
   github: {
     merges: (rest) =>
       /^pulls\/\d+\/(?:merge(?:-async)?|update-branch)(?:\/|$)/.test(rest) ||
@@ -72,6 +72,28 @@ const WRITE_GRAMMAR: Record<RawApiKind, WriteGrammar> = {
       return undefined;
     },
   },
+  // Data Center's paths name their API first: `api/pull-requests/3/merge`.
+  "bitbucket-data-center": {
+    // Auto-merge (8.15+) merges later at whatever version is there; ref sync
+    // brings a fork's branch up to date with its origin, as merge-upstream does.
+    merges: (rest) =>
+      /^api\/pull-requests\/\d+\/(?:merge|auto-merge)(?:\/|$)/.test(rest) ||
+      /^git\/pull-requests\/\d+\/rebase(?:\/|$)/.test(rest) ||
+      rest === "sync/synchronize",
+    branchOf: async ({ rest, data, query, readDefault, refuse }) => {
+      // The repository's own write names its main branch in `defaultBranch`.
+      if (rest === "api" && "defaultBranch" in data) refuse();
+      if (rest === "api/default-branch" || rest === "api/branches/default") refuse();
+      if ((rest === "branch-utils/branches" || rest === "api/branches") && "name" in data)
+        return typeof data.name === "string" ? data.name : refuse();
+      // A commit through `browse` lands on the branch it names, or the main branch.
+      if (/^api\/browse(?:\/|$)/.test(rest)) {
+        const branchInput = data.branch ?? query.get("branch");
+        return typeof branchInput === "string" ? branchInput : await readDefault();
+      }
+      return undefined;
+    },
+  },
 };
 
 /**
@@ -80,7 +102,7 @@ const WRITE_GRAMMAR: Record<RawApiKind, WriteGrammar> = {
  * could move it; an unreadable destination refuses the write, never guesses.
  */
 export async function guardApiWrite(
-  kind: RawApiKind,
+  kind: ApiDialect,
   route: ApiRoute,
   body: unknown,
   defaultBranch: () => Promise<string>,

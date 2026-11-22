@@ -374,7 +374,7 @@ export class WorkflowEvidenceService {
     if (!forge.workflows)
       throw new ForgeError(
         "unsupported",
-        "This project's host has no workflow log or artifact reader.",
+        forge.noRunsWords ?? "This project's host has no workflow log or artifact reader.",
       );
     return { workflows: forge.workflows, cwd: task.worktreeDir, deviceId };
   }

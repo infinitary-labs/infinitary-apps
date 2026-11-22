@@ -1,8 +1,9 @@
-import { type SignInKind, serverFactsAt } from "@shared/forgeKinds";
+import type { SignInKind } from "@shared/forgeKinds";
 import type { ForgeSignInState } from "@shared/forges";
 import { INTEGRATION_KIND_NAMES, INTEGRATIONS_SIGN_IN_HOST } from "@shared/integrations";
 import { z } from "zod";
 import type { GithubReadInput, GithubWriteInput } from "../../forge";
+import { type ApiDialect, apiDialectAt } from "../../forge/api";
 import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
 import { forgeScope } from "../scopes";
 import { GITHUB_RUN_EVENTS, lookForRuns } from "./githubRuns";
@@ -86,9 +87,11 @@ const ACTIONS: readonly IntegrationActionSpec[] = [
  * Each kind's own REST API in the actions' words, and whether its runs are
  * the events an Automation rule looks at: GitHub's runs API, which GitLab's
  * pipelines are not, nor Bitbucket's (`docs/integrations.md`, "Bitbucket").
+ * A Bitbucket Data Center server speaks its own API, whose paths start with
+ * `/rest/` after the server's address.
  */
 const KIND_API: Record<
-  SignInKind,
+  ApiDialect,
   {
     description: (action: IntegrationActionSpec, label: string) => string;
     runEvents: boolean;
@@ -109,6 +112,19 @@ const KIND_API: Record<
       restDescription(action, "Bitbucket Cloud", "/2.0", "/repositories/{workspace}?role=member"),
     runEvents: false,
   },
+  "bitbucket-data-center": {
+    description: (action) =>
+      restDescription(
+        action,
+        // i18n-exempt: the product's name
+        "Bitbucket Data Center",
+        // i18n-exempt: served to the model in the action's description
+        "the server's address, starting with /rest/",
+        "/rest/api/latest/repos?permission=REPO_WRITE",
+        "/rest/api/latest/dashboard/pull-requests",
+      ),
+    runEvents: false,
+  },
 };
 
 /**
@@ -120,9 +136,10 @@ function restDescription(
   name: string,
   after: string,
   example: string,
+  another = "/user",
 ): string {
   return action.name === "read"
-    ? `GET or HEAD one relative ${name} REST API path (the part after ${after}), such as ${example} or /user. JSON only; nextPath reads the next page.`
+    ? `GET or HEAD one relative ${name} REST API path (the part after ${after}), such as ${example} or ${another}. JSON only; nextPath reads the next page.`
     : `POST, PATCH, PUT or DELETE one relative ${name} REST API path, with body as JSON text. The integration approval rule decides when it runs. Merges and default-branch moves require the merge card.`;
 }
 
@@ -138,10 +155,11 @@ export function githubIntegration(
 ): IntegrationBinding {
   const { host, id, name, label, kind } = target;
   // A server running another product than the kind's public host (Bitbucket
-  // Data Center) offers no actions until its own REST API is reached.
-  const api = serverFactsAt(kind, host) ? null : KIND_API[kind];
+  // Data Center) speaks its own REST API.
+  const dialect = apiDialectAt(kind, host) ?? kind;
+  const api = KIND_API[dialect];
   // Allow for the rest of this task covers one kind of request to one repository or project.
-  const scope = api ? forgeScope(kind) : undefined;
+  const scope = api ? forgeScope(dialect) : undefined;
   const actions =
     api && scope
       ? ACTIONS.map((action) => ({

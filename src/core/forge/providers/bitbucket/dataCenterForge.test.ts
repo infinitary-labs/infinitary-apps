@@ -428,9 +428,10 @@ describe("Bitbucket Data Center pull requests", () => {
 });
 
 describe("Bitbucket Data Center in Integrations", () => {
-  it("lists the server's sign-in as a Bitbucket row that offers no Cloud actions", () => {
+  it("lists the server's sign-in as a Bitbucket row whose actions reach the server's own REST API", async () => {
+    const reads: { host: string; path: string }[] = [];
     const unused = () => {
-      throw new Error("no gateway call is expected");
+      throw new Error("no write is expected");
     };
     const binding = forgeHostIntegration("bitbucket", {
       signIns: {
@@ -455,11 +456,33 @@ describe("Bitbucket Data Center in Integrations", () => {
         checkNow: async () => {},
         signOut: () => {},
       },
-      gateway: () => ({ read: unused, write: unused, readAsSeat: unused, writeAsSeat: unused }),
+      gateway: (host) => ({
+        read: async (_task, input) => {
+          reads.push({ host, path: input.path });
+          return "answered";
+        },
+        write: unused,
+        readAsSeat: unused,
+        writeAsSeat: unused,
+      }),
     });
-    expect(binding.connections()).toEqual([
-      expect.objectContaining({ host: HOST, name: HOST, account: "jane.doe", actions: [] }),
-    ]);
+    const [row] = binding.connections();
+    expect(row).toMatchObject({ host: HOST, name: HOST, account: "jane.doe" });
+    const read = row?.actions.find((action) => action.name === "read");
+    expect(row?.actions.map((action) => action.name)).toEqual(["read", "write"]);
+    expect(read?.description).toContain("Bitbucket Data Center REST API path");
+    expect(read?.description).toContain("/rest/");
+    // Allow for the rest of this task covers one repository, whichever of the server's APIs a path names.
+    const path = "/rest/api/latest/projects/FLD/repos/field-notes/pull-requests?state=OPEN";
+    expect(read?.scope?.({ method: "GET", path })).toEqual(
+      read?.scope?.({
+        method: "GET",
+        path: "/rest/build-status/latest/projects/fld/repos/field-notes/commits",
+      }),
+    );
+    expect(read?.scope?.({ method: "GET", path })?.words).toBe("GET requests to fld/field-notes");
+    await binding.call(row?.id ?? "", "read", { path }, { kind: "task", taskId: "t1" });
+    expect(reads).toEqual([{ host: HOST, path }]);
   });
 });
 

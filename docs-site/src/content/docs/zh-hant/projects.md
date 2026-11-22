@@ -1,5 +1,5 @@
 ---
-source: 023b6be0be6240d0
+source: d57581294d6dfbfc
 title: 專案
 description: 如何把專案加入 Infinitary、讓視窗聚焦在一個專案、選擇變更的合併方式，以及移除專案。
 ---
@@ -50,7 +50,8 @@ Bitbucket 的話，你要在 Atlassian 帳號上建立一個 API token 並貼上
 金鑰表單會列出你要在 Atlassian 頁面上勾選的權限範圍。
 如果是你自己的 Bitbucket Data Center 伺服器（8.19 或更新版本），你要輸入它的位址，並貼上一個具有 Project read 和 Repository write 權限的 HTTP 存取權杖。
 Data Center 專案的變更會以 pull request 提出，而且只會在你核准的版本上合併：如果有人在這段期間推送，就不會合併任何東西，任務也會註明這一點。
-在 Data Center 上，批次 pull request、fork 以及船員自己連到伺服器的能力目前都還沒有。
+Data Center 專案也可以選擇批次 pull request，你的船員可以在伺服器上讀寫、透過你的 fork 貢獻，並在它的 pull request 有新留言、主要分支上有檢查失敗時被喚醒。
+Data Center 伺服器沒有自己的檢查記錄、執行紀錄或發行檔案：它的檢查來自另一個服務，每個檢查都會連到記錄所在的位置。
 你的 Bitbucket 專案會從你所屬的工作區列出；工作區很多時，可能有些沒有被讀到，清單會註明這一點。
 Bitbucket 專案的變更會以 pull request 提出，和 GitHub、GitLab 一樣；在這之前加入的專案，從它的下一項任務起也會這樣運作。
 Bitbucket pull request 的說明會以文字承載變更故事，圖片則留在卡片上。

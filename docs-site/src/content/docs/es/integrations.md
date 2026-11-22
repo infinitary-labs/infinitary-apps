@@ -1,5 +1,5 @@
 ---
-source: a2f4b38f0b300f73
+source: 2070be28c53de438
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -41,7 +41,7 @@ Consulta [Proyectos](/es/projects/#your-github-gitlab-or-bitbucket-sign-in) para
 - **GitHub Enterprise**: creas una clave en tu propio servidor y la pegas aquí.
 - **Bitbucket**: creas un token de API en tu cuenta de Atlassian y lo pegas aquí, para bitbucket.org.
   Para tu propio servidor de Bitbucket Data Center, versión 8.19 o posterior, escribes su dirección y pegas un token de acceso HTTP que creas en él, con los permisos Project read y Repository write.
-  Una fila de Data Center todavía no ofrece acciones.
+  Una fila de Data Center ofrece las mismas acciones de lectura y escritura, en las rutas propias del servidor, y **Permitir durante el resto de esta tarea** abarca un repositorio.
 
 Cada fila tiene dos acciones: una que lee y otra que cambia algo, como **Cambiar algo en GitHub**.
 Son las que usan tu primer oficial y tu tripulación para consultar cosas o actuar ahí más allá del trabajo propio de una tarea.

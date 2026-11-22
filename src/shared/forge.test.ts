@@ -150,17 +150,19 @@ describe("a Bitbucket Data Center server", () => {
     );
   });
 
-  it("offers no compare page and no batches until they are built for it", () => {
+  it("takes batches, linking a batched change to the server's own compare page", () => {
     const where = {
       kind: "bitbucket" as const,
       owner: "scm/prj",
       name: "app",
       base: "main",
-      branch: "x",
+      branch: "inf/fix-dates",
     };
-    expect(branchComparePage({ ...where, host: "bitbucket.example.com" })).toBeNull();
+    expect(branchComparePage({ ...where, host: "bitbucket.example.com" })).toBe(
+      "https://bitbucket.example.com/projects/PRJ/repos/app/compare/commits?sourceBranch=refs%2Fheads%2Finf%2Ffix-dates&targetBranch=refs%2Fheads%2Fmain",
+    );
     expect(branchComparePage({ ...where, host: "bitbucket.org" })).not.toBeNull();
-    expect(hostTakesBatches({ kind: "bitbucket", name: "bitbucket.example.com" })).toBe(false);
+    expect(hostTakesBatches({ kind: "bitbucket", name: "bitbucket.example.com" })).toBe(true);
     expect(hostTakesBatches({ kind: "bitbucket", name: "bitbucket.org" })).toBe(true);
   });
 });

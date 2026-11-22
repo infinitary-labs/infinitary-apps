@@ -853,9 +853,11 @@ describe("a release's hosted machines", () => {
       "batch-checks.yml:critical-path",
       "batch-checks.yml:sweep",
       // An outside contributor's pull request (docs/public-ci.md, "Outside
-      // contributors"): its journeys and Windows build, and journeys.yml's
-      // Linux part on what its caller passed.
+      // contributors"): the swept batch's full check, its edited journeys'
+      // rounds and its Windows build, and journeys.yml's Linux part on what
+      // its caller passed.
       "contributors.yml:journeys",
+      "contributors.yml:sweep",
       "contributors.yml:windows",
       "journeys.yml:linux-overflow",
       "main.yml:verify",

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-pull-requests-run-batch-tests",
+      "reason": "Changes only which of the project's own checks run on an outside contributor's pull request and on which hosted machines; nothing in the app changes."
+    }
+  ]
+}

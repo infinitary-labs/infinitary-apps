@@ -775,6 +775,7 @@ describe("public CI admission", () => {
     if?: string;
     needs?: string;
     "runs-on"?: string;
+    strategy?: { matrix?: Record<string, unknown> | string };
     uses?: string;
     with?: Record<string, unknown>;
   };
@@ -835,57 +836,130 @@ describe("public CI admission", () => {
   it("runs every job an outside pull request reaches on GitHub's own machines", () => {
     const github = pullRequest(contributor, "inf/ordinary");
     const reached: string[] = [];
-    const runner = (where: string, job: Job | undefined, inputs: Record<string, unknown>) => {
+    const runner = (
+      where: string,
+      job: Job | undefined,
+      inputs: Record<string, unknown>,
+      matrix: Record<string, unknown> = {},
+    ) => {
       const value = job?.["runs-on"] ?? "";
       const label = !value.includes("${{")
         ? value
-        : workflowValue(value, {
-            github,
-            inputs,
-            vars: ownMachines,
-            matrix: {},
-          });
+        : workflowValue(value, { github, inputs, vars: ownMachines, matrix });
       reached.push(`${where} ${label}`);
       expect(label, where).toMatch(hostedLabel);
+    };
+    /** Each matrix a job's lanes take, from its declared values or its expression. */
+    const lanes = (job: Job, inputs: Record<string, unknown>): Record<string, unknown>[] => {
+      const matrix = job.strategy?.matrix;
+      if (!matrix || typeof matrix === "string") return [{}];
+      const rows: Record<string, unknown>[] = [];
+      for (const [key, declared] of Object.entries(matrix)) {
+        const value =
+          typeof declared === "string" && declared.includes("${{")
+            ? workflowValue(declared, { github, inputs, vars: ownMachines })
+            : declared;
+        if (!Array.isArray(value)) continue;
+        if (key === "include") rows.push(...value);
+        else rows.push(...value.map((one) => ({ [key]: one })));
+      }
+      return rows.length ? rows : [{}];
+    };
+    /** Every job a call reaches, with the inputs GitHub gives it: the caller's, over the defaults. */
+    const follow = (file: string, passed: Record<string, unknown>) => {
+      const workflow = loadYamlFile(file) as {
+        on: { workflow_call?: { inputs?: Record<string, { default?: unknown }> } };
+        jobs: Record<string, Job>;
+      };
+      const defaults = Object.fromEntries(
+        Object.entries(workflow.on.workflow_call?.inputs ?? {}).map(([name, input]) => [
+          name,
+          input.default ?? null,
+        ]),
+      );
+      const inputs = { ...defaults, ...passed };
+      for (const [jobId, job] of Object.entries(workflow.jobs)) {
+        const where = `${file}:${jobId}`;
+        // A job the call skips by its own condition takes no machine; one
+        // that waits on an earlier job's outputs is counted as reached.
+        if (job.if && !job.if.includes("needs.") && !workflowValue(job.if, { github, inputs }))
+          continue;
+        if (job.uses) {
+          const given = Object.fromEntries(
+            Object.entries(job.with ?? {}).map(([name, value]) => [
+              name,
+              // A whole expression is read; text around one, such as an
+              // artifact name, decides no machine and passes on as written.
+              typeof value === "string" && /^\$\{\{[^}]*\}\}$/.test(value.trim())
+                ? workflowValue(value, { github, inputs, matrix: {}, strategy: {} })
+                : value,
+            ]),
+          );
+          follow(String(job.uses).replace("./", ""), given);
+          continue;
+        }
+        for (const matrix of lanes(job, inputs))
+          runner([where, ...Object.values(matrix).map(String)].join(" "), job, inputs, matrix);
+      }
     };
     const [ci = {}, docs = {}, , contributors = {}] = paths.map(jobsOf);
     for (const id of BRANCH_CHECK) runner(`ci.yml:${id}`, ci[id], { sweep: false });
     runner("docs-site.yml:build-and-check", docs["build-and-check"], {});
     runner("contributors.yml:paths", contributors.paths, {});
-    // Each called workflow's jobs, with the inputs the contributor's call passes.
     const calls = Object.entries(contributors).filter(([, job]) => job.uses);
     expect(calls.map(([id, job]) => `${id} ${job.uses}`)).toEqual([
+      "sweep ./.github/workflows/verify.yml",
       "journeys ./.github/workflows/journeys.yml",
+      "startup ./.github/workflows/linux-startup.yml",
       "windows ./.github/workflows/windows.yml",
     ]);
-    for (const [id, call] of calls) {
-      expect(call.with?.hosted, id).toBe(true);
-      const file = String(call.uses).replace("./", "");
-      const inputs = { ...call.with, mac_runner: "" };
-      for (const [jobId, job] of Object.entries(jobsOf(file))) {
-        const where = `${file}:${jobId}`;
-        // A job the hosted call skips by its own condition takes no machine;
-        // one that waits on an earlier job's outputs is counted as reached.
-        if (job.if && !job.if.includes("needs.") && !workflowValue(job.if, { github, inputs }))
-          continue;
-        if (job.uses) {
-          // journeys.yml's Linux part passes its caller's hosted on.
-          expect(workflowValue(String(job.with?.hosted), { inputs }), where).toBe(true);
-          const source = jobsOf(String(job.uses).replace("./", ""))["source-desktop"];
-          runner(`${where} -> source-desktop`, source, { hosted: true });
-          continue;
-        }
-        runner(where, job, inputs);
-      }
-    }
-    // The Mac and Windows parts reached GitHub's Mac and Windows; the PC's
-    // fresh Windows 11 check and the request-replacing job took none.
+    for (const [, call] of calls) follow(String(call.uses).replace("./", ""), { ...call.with });
+    // The batch's Mac lanes reached GitHub's Mac, its Linux test groups and
+    // journeys hosted Ubuntu, and the Windows build GitHub's Windows; the
+    // PC's fresh Windows 11 check and the signed installer checks took none.
+    for (const lane of ["mac", "parallel", "desktop"])
+      expect(reached).toContain(`.github/workflows/verify.yml:lane ${lane} macos-15`);
+    expect(reached).toContain(".github/workflows/verify.yml:lane linux-checks ubuntu-24.04");
+    expect(
+      reached.some((line) => /verify\.yml:linux-tests Unit tests .* ubuntu-24\.04$/.test(line)),
+    ).toBe(true);
+    expect(reached).toContain(
+      ".github/workflows/source-journeys.yml:source-desktop desktop 3 3 ubuntu-24.04",
+    );
+    // The edited journeys' rounds reached hosted Ubuntu and GitHub's Mac, and
+    // the request-replacing job, which only a request needs, took none.
+    expect(reached).toContain(".github/workflows/journeys.yml:choose-journeys ubuntu-24.04");
     expect(reached).toContain(".github/workflows/journeys.yml:affected-journeys macos-15");
+    expect(reached.some((line) => line.includes("replace-older-request"))).toBe(false);
+    expect(reached).toContain(".github/workflows/linux-startup.yml:runtime-facts ubuntu-24.04");
     expect(reached).toContain(".github/workflows/windows.yml:build windows-2025");
     expect(reached.some((line) => line.startsWith(".github/workflows/windows.yml:check"))).toBe(
       false,
     );
-    expect(reached.some((line) => line.includes("replace-older-request"))).toBe(false);
+    expect(reached.some((line) => line.includes("mac-installer.yml"))).toBe(false);
+  });
+
+  // The captain's route on INF-3559: "GitHub's machines run your batch's
+  // tests, then you merge their pull request". The outside run calls each
+  // workflow the batch calls, its sweep with the batch's selection, and
+  // differs only in where it runs: the critical path runs among the sweep's
+  // every Linux journey and in the branch check, and no failed test is
+  // confirmed again, since the owner reads the run.
+  it("runs the swept batch's selection on an outside pull request", () => {
+    const batch = jobsOf(".github/workflows/batch-checks.yml");
+    const contributors = jobsOf(".github/workflows/contributors.yml");
+    const called = (jobs: Record<string, Job>) =>
+      new Set(Object.values(jobs).flatMap((job) => (job.uses ? [job.uses] : [])));
+    const outside = called(contributors);
+    for (const uses of called(batch))
+      if (uses !== "./.github/workflows/source-journeys.yml")
+        expect(outside.has(uses), uses).toBe(true);
+    const selection = (job: Job | undefined) => {
+      const { trigger, ref, mac_runner, fleet_tests, confirm, ...rest } = job?.with ?? {};
+      return rest;
+    };
+    expect(selection(contributors.sweep)).toEqual(selection(batch.sweep));
+    expect(contributors.sweep?.with?.mac_runner).toBe("macos-15");
   });
 
   it("keeps the ordinary and swept internal PR routes, and starts no contributor job", () => {

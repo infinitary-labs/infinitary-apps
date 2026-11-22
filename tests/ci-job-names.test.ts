@@ -276,8 +276,9 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     },
   },
   // An outside contributor's pull request (contributors.yml, docs/public-ci.md
-  // "Outside contributors"), whose change reaches journeys and the Windows
-  // installer, so both calls run under its trigger.
+  // "Outside contributors"), whose change edits a journey and reaches the
+  // Windows installer, so the batch's full check, the startup fixtures, the
+  // edited journey's rounds and the Windows build all run under its trigger.
   {
     file: "contributors.yml",
     trigger: "Pull request",

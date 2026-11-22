@@ -19,8 +19,8 @@ name: windows
 #
 # An outside contributor's pull request (docs/public-ci.md, "Outside
 # contributors") calls it with hosted: the build runs on GitHub's hosted
-# Windows and the fresh Windows 11 check waits for the batch, since it needs
-# the PC's clean machine.
+# Windows and the fresh Windows 11 check waits for the next alpha's release
+# check, since it needs the PC's clean machine.
 
 on:
   workflow_dispatch:

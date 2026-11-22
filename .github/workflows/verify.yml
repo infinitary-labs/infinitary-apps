@@ -5,7 +5,9 @@ name: verify
 # Playwright e2e suite on hosted Linux, then Mac-specific unit files, the e2e
 # suite, the replay gate and the universal package smoke on macOS. It runs
 # inside every alpha before signing, on every push to main through main.yml
-# (main's desktop release check, INF-2146), and on demand for any ref:
+# (main's desktop release check, INF-2146), on an outside contributor's pull
+# request on GitHub's machines alone (contributors.yml, the swept batch's
+# selection), and on demand for any ref:
 #
 #   See docs/forge.md: manual full-system requests must opt in explicitly.
 #
@@ -77,8 +79,8 @@ on:
         required: false
         type: string
         default: all
-      # An alpha's and the swept batch's calls run every journey on the Mac;
-      # main.yml's call runs the tagged ones.
+      # An alpha's, the swept batch's and an outside contributor's calls run
+      # every journey on the Mac; main.yml's call runs the tagged ones.
       all_journeys:
         description: Run every journey on the Mac, not only the tests that need a Mac
         required: false
@@ -588,9 +590,9 @@ jobs:
         run: pnpm codesign:local
       # electron-builder refuses to sign pull-request builds by default, which
       # would skip the one step this smoke exists for: the fuse-flipped
-      # binary has to be re-signed or Apple Silicon SIGKILLs it at exec. This
-      # workflow never runs on a pull request, but the flag stays so the smoke
-      # keeps signing if a PR trigger is ever added. The flag's usual security
+      # binary has to be re-signed or Apple Silicon SIGKILLs it at exec, and
+      # an outside contributor's pull request calls this workflow
+      # (contributors.yml), so the flag keeps the smoke signing there. The flag's usual security
       # concern is a fork reaching a stored certificate; there is none here -
       # `pnpm codesign:local` generated this runner's own local certificate
       # (docs/local-code-signing.md) and it dies with the runner.

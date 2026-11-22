@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: 初回起動
 description: Infinitary を初めて開いたときに表示されるもの、サブスクリプションの接続方法、最初のプロジェクトの追加方法を説明します。
 ---

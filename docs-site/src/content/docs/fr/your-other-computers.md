@@ -1,5 +1,5 @@
 ---
-source: 74a47dce3e95b0a3
+source: bed187b080af2f4a
 title: Vos autres ordinateurs
 description: Ajoutez vos autres ordinateurs pour piloter votre second depuis n’importe lequel d’entre eux, leur confier le travail de vos projets et garder une copie capable de prendre le relais.
 ---

@@ -1,5 +1,5 @@
 ---
-source: 74a47dce3e95b0a3
+source: bed187b080af2f4a
 title: Tus otras computadoras
 description: Agrega tus otras computadoras para controlar a tu primer oficial desde cualquiera de ellas, dejar que hagan el trabajo de tus proyectos y guardar una copia que pueda tomar el relevo.
 ---

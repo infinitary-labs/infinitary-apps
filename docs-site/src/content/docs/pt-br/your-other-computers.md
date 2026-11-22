@@ -1,5 +1,5 @@
 ---
-source: 74a47dce3e95b0a3
+source: bed187b080af2f4a
 title: Seus outros computadores
 description: Adicione seus outros computadores para controlar seu imediato de qualquer um deles, deixar que eles rodem o trabalho dos seus projetos e manter uma cópia que possa assumir.
 ---

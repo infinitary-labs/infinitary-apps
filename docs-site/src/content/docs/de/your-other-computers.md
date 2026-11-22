@@ -1,5 +1,5 @@
 ---
-source: 74a47dce3e95b0a3
+source: bed187b080af2f4a
 title: Deine anderen Computer
 description: Füge deine anderen Computer hinzu, damit du deinen ersten Offizier von jedem aus steuern kannst, sie die Arbeit deiner Projekte ausführen lassen kannst und eine Kopie behältst, die übernehmen kann.
 ---

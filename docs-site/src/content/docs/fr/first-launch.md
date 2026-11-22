@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: Premier lancement
 description: Ce qu’Infinitary affiche la première fois que vous l’ouvrez, comment connecter un abonnement et comment ajouter votre premier projet.
 ---

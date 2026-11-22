@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: 第一次啟動
 description: 第一次打開 Infinitary 時會看到什麼、如何連結訂閱方案，以及如何加入你的第一個專案。
 ---

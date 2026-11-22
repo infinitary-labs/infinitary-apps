@@ -1,5 +1,5 @@
 ---
-source: 74a47dce3e95b0a3
+source: bed187b080af2f4a
 title: 你的其他電腦
 description: 加入你的其他電腦，從任何一台控制大副、讓它們執行專案的工作，並保留一份能接手的副本。
 ---

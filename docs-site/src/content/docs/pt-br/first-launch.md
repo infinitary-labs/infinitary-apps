@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: Primeira abertura
 description: O que o Infinitary mostra na primeira vez que você o abre, como conectar uma assinatura e como adicionar seu primeiro projeto.
 ---

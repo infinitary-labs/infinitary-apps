@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: 처음 실행하기
 description: Infinitary를 처음 열면 무엇이 보이는지, 구독을 연결하는 방법, 그리고 첫 프로젝트를 추가하는 방법이에요.
 ---

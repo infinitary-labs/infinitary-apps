@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: Primer inicio
 description: Lo que Infinitary muestra la primera vez que lo abres, cómo conectar una suscripción y cómo agregar tu primer proyecto.
 ---

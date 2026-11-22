@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: Der erste Start
 description: Was Infinitary beim ersten Öffnen zeigt, wie du ein Abo verbindest und wie du dein erstes Projekt hinzufügst.
 ---

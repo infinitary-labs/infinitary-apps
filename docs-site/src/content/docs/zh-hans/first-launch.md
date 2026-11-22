@@ -1,5 +1,5 @@
 ---
-source: 5bc9765e37782345
+source: 714fca51d75af858
 title: 首次启动
 description: 你第一次打开 Infinitary 时会看到什么，如何连接订阅，以及如何添加你的第一个项目。
 ---

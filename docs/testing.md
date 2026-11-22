@@ -846,8 +846,9 @@ That gate checks and builds once, starts as many simulators of its device as the
 A dealt request's jobs share one build (INF-6039's plan, part 1): its first job builds the app for testing in a step of its own (`node scripts/phone-build.ts`) and uploads it as `phone-build-<attempt>`, named for the run attempt, before its gate starts.
 Each other job downloads that artifact if it is there when the job starts, and its gate uses it in place of its own build only when its record names this job's own commit, a checkout with no changes, the same Xcode, simulator SDK and chip, and its archive's SHA-256 matches (`phoneBuildRefusal`, `useSharedPhoneBuild`).
 Otherwise the gate says why in a notice and builds the app itself, as every job did before, so a job that starts before the first job shared its build, or finds it broken, still runs.
-The archive holds the test plan and only the products it names; a failed upload or download fails nothing, and the phone release's call and wait-clock or tool requests build in their gate as before.
-When every job starts at once, the first job starts its parts about a minute later than it would building in its gate, since its simulators no longer start during the build.
+The archive holds the first job's built products folder whole, its test plan included; a failed upload or download fails nothing, and the phone release's call and wait-clock or tool requests build in their gate as before.
+A check dealt into one job shares nothing and its job builds in its gate as before.
+When every job starts at once, the first job starts its parts later than it would building in its gate, by its upload's minutes and about a minute more, since its simulators no longer start during the build.
 Each placed guest runs simulators of only the devices its job holds.
 
 ### The phone parts a request runs

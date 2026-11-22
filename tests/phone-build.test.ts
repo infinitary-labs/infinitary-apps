@@ -1,7 +1,8 @@
-import { writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  keepPhoneBuild,
   PHONE_BUILD_ARCHIVE,
   PHONE_BUILD_MANIFEST,
   type PhoneBuildIdentity,
@@ -89,5 +90,38 @@ describe("a shared phone build", () => {
       /^its archive's SHA-256 is [0-9a-f]{64}, not the /,
     );
     expect(commands).toEqual([]);
+  });
+
+  it("keeps the whole products folder of a real Xcode test plan, and a job of the same version takes it", async () => {
+    // Xcode 26.4's own test plan names the whole configuration folder and joined `__TESTROOT__` paths, so the archive
+    // holds the products folder whole rather than the files the plan names one by one.
+    const folder = scratchDir("phone-build-");
+    const products = join(folder, "Products");
+    mkdirSync(products);
+    const plan = "Infinitary_Infinitary_iphonesimulator26.4-arm64.xctestrun";
+    copyFileSync(
+      join(import.meta.dirname, "fixtures", "phone-test-plan", "xcode-26.4.json"),
+      join(products, plan),
+    );
+    const out = join(folder, "shared");
+    const archive = join(out, PHONE_BUILD_ARCHIVE);
+    const kept: string[][] = [];
+    const manifest = await keepPhoneBuild(products, plan, OWN, out, async (command, args) => {
+      kept.push([command, ...args]);
+      writeFileSync(archive, "the products folder");
+      return "";
+    });
+    expect(kept).toEqual([["tar", "-cf", archive, "-C", products, "."]]);
+    expect(manifest).toMatchObject({ ...OWN, plan });
+    const into = join(folder, "job-2", "Products");
+    const unpacked: string[][] = [];
+    const answer = await useSharedPhoneBuild(out, into, OWN, async (command, args) => {
+      unpacked.push([command, ...args]);
+      copyFileSync(join(products, plan), join(into, plan));
+      return "";
+    });
+    expect(answer).toEqual({ plan });
+    expect(unpacked).toEqual([["tar", "-xf", archive, "-C", into]]);
+    expect(existsSync(join(into, plan))).toBe(true);
   });
 });

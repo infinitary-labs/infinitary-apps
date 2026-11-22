@@ -80,7 +80,7 @@ type Step = {
   "timeout-minutes"?: number;
   env?: Record<string, string>;
 };
-type Plain = { [key: string]: string | boolean | Plain | readonly unknown[] };
+type Plain = { [key: string]: string | number | boolean | Plain | readonly unknown[] };
 const STATUS = ["success", "always", "cancelled", "failure"];
 
 function toData(value: Plain): data.Dictionary {
@@ -147,6 +147,7 @@ function stepsThatRun(
   github: Plain = BRANCH_REQUEST,
   outputs: Record<string, Plain> = {},
   matrix: Plain = { device: "iphone", key: "iphone" },
+  strategy: Plain = { "job-total": 1 },
 ): Step[] {
   const seen: Plain = {};
   const ran: Step[] = [];
@@ -161,6 +162,7 @@ function stepsThatRun(
         inputs,
         github,
         matrix,
+        strategy,
       },
       { failed },
     );
@@ -823,15 +825,25 @@ describe("the phone check on request", () => {
   // in its gate as before.
   it("shares the first job's build with the other jobs of its own run attempt, and only in a dealt request", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
-    const ran = (matrix: Plain) =>
-      names(stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix)).filter((name) =>
-        SHARED_BUILD_STEPS.includes(name),
+    const ran = (matrix: Plain, jobs: number) =>
+      names(stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix, { "job-total": jobs })).filter(
+        (name) => SHARED_BUILD_STEPS.includes(name),
       );
     const [first = {}, ...others] = FULL_JOBS;
-    expect(ran(first)).toEqual([BUILD_ONCE, SHARE_BUILD]);
-    for (const job of others) expect(ran(job)).toEqual([FETCH_BUILD]);
+    expect(others.length).toBeGreaterThan(0);
+    expect(ran(first, FULL_JOBS.length)).toEqual([BUILD_ONCE, SHARE_BUILD]);
+    for (const job of others) expect(ran(job, FULL_JOBS.length)).toEqual([FETCH_BUILD]);
     for (const device of ["every", "ipad", "duo", "iphone"])
-      expect(ran({ device, key: device })).toEqual([]);
+      expect(ran({ device, key: device }, 1)).toEqual([]);
+    // A request dealt into one job, as any request within 14 recorded minutes is, shares nothing.
+    const lone = requestJobs(selection(), TIMES);
+    expect(lone).toHaveLength(1);
+    expect(ran(lone[0] ?? {}, 1)).toEqual([]);
+    const sharing = (jobs: number) =>
+      workflowValue(String(steps.find(isGate)?.env?.PHONE_SHARED), {
+        strategy: { "job-total": jobs },
+      });
+    expect([sharing(1), sharing(FULL_JOBS.length)]).toEqual([false, true]);
     const named = (name: string, field: "name" | "pattern", attempt: string) =>
       workflowString(String(steps.find((step) => step.name === name)?.with?.[field]), {
         github: { ...BRANCH_REQUEST, run_attempt: attempt },
@@ -852,7 +864,7 @@ describe("the phone check on request", () => {
     for (const name of [SHARE_BUILD, FETCH_BUILD])
       expect(folder(name)).toBe("${{ runner.temp }}/phone-build");
     expect(folder(BUILD_ONCE)).toContain('--out "$RUNNER_TEMP/phone-build"');
-    expect(steps.find(isGate)?.run).toContain('--shared-build "$RUNNER_TEMP/phone-build"');
+    expect(steps.find(isGate)?.run).toContain('shared=(--shared-build "$RUNNER_TEMP/phone-build")');
   });
 });
 

@@ -21,7 +21,6 @@ import { phoneXcode } from "./phone-simulator.ts";
 /** The archive of the built products and the record of what they were built from, side by side in a shared folder. */
 export const PHONE_BUILD_ARCHIVE = "phone-build.tar";
 export const PHONE_BUILD_MANIFEST = "phone-build.json";
-const TEST_ROOT = "__TESTROOT__/";
 
 /** What a build for testing is made from: the checked-out version and whether it has changes, Xcode, the SDK, the chip. */
 export type PhoneBuildIdentity = { commit: string; clean: boolean; xcode: string; sdk: string; arch: string };
@@ -63,42 +62,22 @@ export function phoneBuildRefusal(shared: unknown, own: PhoneBuildIdentity): str
   return undefined;
 }
 
-/**
- * The products a test plan reads, relative to the folder it sits in (Xcode's `__TESTROOT__`): every path it names
- * there, without one inside another it names. A path outside that folder is refused, so the archive holds the plan
- * and what it runs, and nothing else.
- */
-export function testRootPaths(plan: unknown): string[] {
-  const found = new Set<string>();
-  const walk = (value: unknown) => {
-    if (typeof value === "string" && value.startsWith(TEST_ROOT)) {
-      const path = value.slice(TEST_ROOT.length).replace(/\/+$/, "");
-      if (!path || path.split("/").includes("..")) throw new Error(`The test plan names ${value}, outside its own folder`);
-      found.add(path);
-    } else if (Array.isArray(value)) value.forEach(walk);
-    else if (value && typeof value === "object") Object.values(value).forEach(walk);
-  };
-  walk(plan);
-  const paths = [...found].sort();
-  return paths.filter((path) => !paths.some((other) => other !== path && path.startsWith(`${other}/`)));
-}
-
 async function sha256(file: string): Promise<string> {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(file)) hash.update(chunk);
   return hash.digest("hex");
 }
 
-/** Keeps the built products a test plan reads, with the plan and its identity, in `out` for the check's other jobs. */
+/**
+ * Keeps the built products folder whole, with its test plan's name and the build's identity, in `out` for the check's
+ * other jobs. Whole, since Xcode's test plan names the whole configuration folder its tests load libraries from.
+ */
 export async function keepPhoneBuild(products: string, plan: string, identity: PhoneBuildIdentity, out: string,
   run: PhoneBuildRun): Promise<PhoneBuildManifest> {
-  const reading = JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", join(products, plan)]));
-  const paths = testRootPaths(reading);
-  const missing = paths.filter((path) => !existsSync(join(products, path)));
-  if (!paths.length || missing.length) throw new Error(`The test plan ${plan} names products the build did not make: ${missing.join(", ") || "none at all"}`);
+  if (!existsSync(join(products, plan))) throw new Error(`The build's products hold no test plan ${plan}`);
   mkdirSync(out, { recursive: true });
   const archive = join(out, PHONE_BUILD_ARCHIVE);
-  await run("tar", ["-cf", archive, "-C", products, plan, ...paths]);
+  await run("tar", ["-cf", archive, "-C", products, "."]);
   const manifest: PhoneBuildManifest = { ...identity, plan, sha256: await sha256(archive) };
   writeFileSync(join(out, PHONE_BUILD_MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;

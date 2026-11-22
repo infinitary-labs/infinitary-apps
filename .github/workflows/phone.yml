@@ -234,7 +234,9 @@ jobs:
       cancel-in-progress: false
     # INF-5387's plan, piece 2, and INF-5546: a dealt job of at most 14 recorded minutes, a later device's start
     # included, ends its gate near 19.5 minutes on a phone Mac with one simulator and sooner on one with two, and setup
-    # and evidence upload add up to about 3, so it is stopped at 25. A call keeps its limit for setup,
+    # and evidence upload add up to about 3, so it is stopped at 25. INF-6039's plan, part 1: in a check of several jobs,
+    # job 1 builds the app (2.4 to 3.8 minutes measured, stopped at 12) and uploads it before its gate, whose own build
+    # it then skips, so job 1 of a full 14 minutes on a one-simulator Mac can reach its 25 before its gate's 21. A call keeps its limit for setup,
     # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
     # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
     timeout-minutes: ${{ matrix.passes && 25 || 345 }}
@@ -338,14 +340,15 @@ jobs:
       # uses a shared build only when it was made from this very version, from a checkout with no changes, with the same
       # Xcode, simulator SDK and chip, and its archive is whole (scripts/phone-build.ts); otherwise it builds, as before.
       # Sharing is only a saving: a failed upload or download leaves every job to build for itself.
+      # A request dealt into one job shares nothing: its job builds in its gate as before.
       - name: Build the app once for this check's jobs
-        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' }}
+        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' && strategy.job-total > 1 }}
         timeout-minutes: 12
         run: node scripts/phone-build.ts --out "$RUNNER_TEMP/phone-build" --evidence "$RUNNER_TEMP/phone"
         env:
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
       - name: Share the build with this check's other jobs
-        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' }}
+        if: ${{ steps.scope.outputs.gate == 'true' && matrix.passes && matrix.key == 'job-1' && strategy.job-total > 1 }}
         continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -366,7 +369,8 @@ jobs:
       - id: both
         name: Read and recover on iPhone and iPad
         # A dealt job's gate is stopped at 21 minutes, inside its job's 25, so an over-long gate fails the job and its
-        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes.
+        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes. Job 1 of a check of several
+        # jobs spends its build and upload steps' minutes of those 25 before its gate starts (INF-6039's plan, part 1).
         timeout-minutes: ${{ matrix.passes && 21 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
@@ -375,7 +379,8 @@ jobs:
           # only the request's first job runs the phone's Swift package tests.
           if [ -n "$PHONE_PLAN" ]; then
             package=(); [ "$PHONE_FIRST_JOB" = true ] || package=(--skip-package-tests)
-            node scripts/test-phone.ts --plan "$PHONE_PLAN" "${package[@]}" --shared-build "$RUNNER_TEMP/phone-build" --passes "$PHONE_PASSES" --evidence "$evidence"
+            shared=(); [ "$PHONE_SHARED" != true ] || shared=(--shared-build "$RUNNER_TEMP/phone-build")
+            node scripts/test-phone.ts --plan "$PHONE_PLAN" "${package[@]}" "${shared[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
             exit
           fi
           case "$PHONE_DEVICE" in
@@ -388,6 +393,7 @@ jobs:
           PHONE_DEVICE: ${{ matrix.device }}
           PHONE_PLAN: ${{ matrix.passes && toJSON(matrix.passes) || '' }}
           PHONE_FIRST_JOB: ${{ matrix.key == 'job-1' }}
+          PHONE_SHARED: ${{ strategy.job-total > 1 }}
           PHONE_PASSES: ${{ runner.temp }}/phone-passes/passes.json
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_PHONE_TOOLS_ONLY: ${{ inputs.tools && '1' || '0' }}

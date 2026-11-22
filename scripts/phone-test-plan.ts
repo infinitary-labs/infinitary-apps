@@ -132,6 +132,9 @@ export const PHONE_PARTS = [
   // they drive no screen, so they run on the Mac itself (`mac`), beside the simulated devices: a test target of the
   // phone's package of their own (its suite names the target and the class), against the part's own disposable home.
   { name: "weak-link", suite: "PhoneWeakLinkTests/PhoneWeakLinkTests", photos: false, mac: true },
+  // INF-5608's plan, piece 2 (INF-5487): a card's choice carries the photo and note in its field to the computer, and
+  // the past card names them; it chooses a photo, so it runs with the parts that do.
+  { name: "cards-carried", test: "testCardChoiceCarries", photos: true },
   { name: "talk-compose", test: "testComposeAndSend", photos: true, devices: ["ipad"], why: "the composer turned beside the wide layout's sidebar, and the iPad's own photo picker" },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.

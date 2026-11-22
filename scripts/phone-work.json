@@ -63,6 +63,12 @@
       "launches": 2
     }
   },
+  "cards-carried": {
+    "iphone": {
+      "reads": 600,
+      "launches": 1
+    }
+  },
   "cards-place": {
     "iphone": {
       "reads": 165,

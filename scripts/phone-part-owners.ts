@@ -107,6 +107,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "tests/helpers/phoneSecondHome.ts",
     "tests/helpers/phoneSecondHomeProcess.ts",
   ] },
+  // INF-5608's plan, piece 2: the cards-carried part's card on the test home.
+  { parts: ["cards-carried"], files: ["tests/helpers/phoneCarried.ts"] },
   { parts: family("cards"), files: [
     "ios/Infinitary/CardRuntime/cardHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/CardHost.generated.js",
@@ -128,10 +130,12 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/CardLogView.swift",
     "ios/Infinitary/InfinitaryApp/CardMediaView.swift",
     "ios/Infinitary/InfinitaryApp/CardWebView.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCardCarry.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardNotes.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardParts.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneCardDeparture.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneChoiceCarry.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecretAsk.swift",
   ] },
   // INF-5531 piece 2: the reads a card's page and a panel's page run, and the test home's live card.

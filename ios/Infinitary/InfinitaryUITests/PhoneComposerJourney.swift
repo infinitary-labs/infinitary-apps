@@ -269,6 +269,28 @@ struct PhonePhotoObservation {
 @MainActor func addPhoneJourneyPhoto(app: XCUIApplication) {
     let photos = app.buttons["add-photos"]
     XCTAssertTrue(waitForPhonePress(photos)); tapOnPhone(photos)
+    choosePhoneLibraryPhoto(app: app)
+    // INF-662 piece 2: with other simulators beside this one, Photos has taken just over 10 seconds
+    // to hand the picked photo's bytes over; the chip appears once they have loaded.
+    XCTAssertTrue(app.buttons["photo-chip"].waitForPresence(timeout: 30), app.debugDescription)
+}
+
+/// INF-5608 piece 2: a library photo added to a card's field, through its photo menu's Choose photos; its chip appears
+/// once Photos handed the bytes over, as the message box's does.
+@MainActor func addPhoneCardPhoto(app: XCUIApplication) {
+    let menu = app.buttons["reply-photos"]
+    XCTAssertTrue(waitForPhonePress(menu), app.debugDescription); tapOnPhone(menu)
+    guard let item = [app.buttons["choose-photos"], app.menuItems["choose-photos"]].first(where: { $0.waitForPresence(timeout: 5) }) else {
+        XCTFail("The card's photo menu offers no Choose photos\n\(app.debugDescription)")
+        return
+    }
+    tapOnPhone(item)
+    choosePhoneLibraryPhoto(app: app)
+    XCTAssertTrue(app.buttons["reply-photo-chip"].waitForPresence(timeout: 30), app.debugDescription)
+}
+
+/// Chooses the library's first photo in the open picker and adds it.
+@MainActor private func choosePhoneLibraryPhoto(app: XCUIApplication) {
     // INF-1576: a library photo's cell reads its kind, a comma and its date ("Photo, October 27, 12:04 AM"); the iPad
     // picker's sidebar comes first with an icon read "Photo on a rectangle", and pressing it picks nothing.
     let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo, ' OR label BEGINSWITH 'Screenshot, '")).firstMatch
@@ -276,9 +298,6 @@ struct PhonePhotoObservation {
     let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
     pickPhoneJourneyPhoto(photo, add: add, in: app)
     XCTAssertTrue(add.waitForPresence(timeout: 10)); XCTAssertTrue(add.isEnabled); tapOnPhone(add)
-    // INF-662 piece 2: with other simulators beside this one, Photos has taken just over 10 seconds
-    // to hand the picked photo's bytes over; the chip appears once they have loaded.
-    XCTAssertTrue(app.buttons["photo-chip"].waitForPresence(timeout: 30), app.debugDescription)
 }
 
 /// INF-230: the actual footer contains every visible row and does not overlap the keyboard; INF-1062: it sits in Home's
